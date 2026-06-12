@@ -4,7 +4,26 @@ package: orbit
 category: ui-positioning
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
 related: [craft, sigil, grip]
-exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, compose, limitShift]
+exports:
+  [
+    float,
+    computePosition,
+    computeOnce,
+    getRects,
+    detectOverflow,
+    autoUpdate,
+    offset,
+    flip,
+    shift,
+    autoPlacement,
+    arrow,
+    size,
+    hide,
+    compose,
+    limitShift,
+    getSide,
+    getAlignment,
+  ]
 ---
 
 # @vielzeug/orbit
@@ -18,7 +37,7 @@ exports: [float, computePosition, autoUpdate, offset, flip, shift, arrow, size, 
 
 **Package:** `@vielzeug/orbit` &nbsp;·&nbsp; **Category:** UI Positioning
 
-**Key exports:** `float`, `computePosition`, `autoUpdate`, `offset`, `flip`, `shift`, `arrow`, `size`, `compose`, `limitShift`
+**Key exports:** `float`, `computePosition`, `computeOnce`, `getRects`, `detectOverflow`, `autoUpdate`, `offset`, `flip`, `shift`, `autoPlacement`, `arrow`, `size`, `hide`, `compose`, `limitShift`, `getSide`, `getAlignment`
 
 **When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 

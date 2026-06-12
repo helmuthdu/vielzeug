@@ -217,7 +217,7 @@ await container.load(dbModule, authModule, serviceModule);
 container.freeze(); // seal — no further registrations allowed
 
 // Later in application code:
-container.value(SomeToken, x); // throws: Container 'app' is frozen ...
+container.value(SomeToken, x); // throws ContainerFrozenError: Container 'app' is frozen ...
 ```
 
 ## Named Containers

@@ -1,4 +1,4 @@
-import { createBus } from '../index';
+import { createBehaviorBus, createBus } from '../index';
 import { pipeEvents } from '../pipe';
 
 type Events = {
@@ -271,5 +271,69 @@ describe('pipeEvents - event remapping', () => {
     expect(listener).toHaveBeenCalledOnce();
 
     source.dispose();
+  });
+});
+
+describe('pipeEvents - BehaviorBus as source', () => {
+  it('forwards replayed value synchronously on pipe registration when source has current value', () => {
+    type Source = { count: number };
+    type Target = { count: number };
+
+    const source = createBehaviorBus<Source>({ count: 42 });
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+
+    // pipeEvents subscribes via on() — BehaviorBus replays 42 synchronously to the pipe listener,
+    // which forwards it to target. Listener receives the replayed value.
+    pipeEvents(source, target, ['count']);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(42);
+
+    listener.mockClear();
+
+    // Future emits are forwarded normally.
+    source.emit('count', 99);
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(99);
+
+    source.dispose();
+    target.dispose();
+  });
+
+  it('no replay forwarded when BehaviorBus source has no initial value', () => {
+    type Source = { count: number };
+    type Target = { count: number };
+
+    const source = createBehaviorBus<Source>();
+    const target = createBus<Target>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    pipeEvents(source, target, ['count']);
+
+    expect(listener).not.toHaveBeenCalled();
+
+    source.emit('count', 7);
+
+    expect(listener).toHaveBeenCalledWith(7);
+
+    source.dispose();
+    target.dispose();
+  });
+});
+
+describe('pipeEvents - runtime guards', () => {
+  it('throws RangeError when entries array is empty (bypassed type system)', () => {
+    const source = createBus<Events>();
+    const target = createBus<Events>();
+
+    expect(() => pipeEvents(source, target, [] as any)).toThrow(RangeError);
+
+    source.dispose();
+    target.dispose();
   });
 });

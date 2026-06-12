@@ -1,8 +1,9 @@
 import type { LegendConfig, LegendPosition } from '../types';
 
 export interface LegendState {
-  el: HTMLDivElement;
-  destroy(): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
+  el: HTMLDivElement | null;
   update(series: { color: string; name: string }[]): void;
 }
 
@@ -24,11 +25,14 @@ export function createLegend(container: HTMLElement, config: LegendConfig | true
     container.appendChild(el);
   }
 
+  const disposeHandle = (): void => {
+    el.remove();
+  };
+
   return {
-    destroy() {
-      el.remove();
-    },
+    dispose: disposeHandle,
     el,
+    [Symbol.dispose]: disposeHandle,
     update(series) {
       el.innerHTML = '';
       for (const s of series) {

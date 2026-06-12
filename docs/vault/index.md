@@ -13,6 +13,7 @@ exports:
     createMemory,
     table,
     ttl,
+    defaultCodec,
     scheduleExpiredPrune,
     defineMigration,
     VaultError,

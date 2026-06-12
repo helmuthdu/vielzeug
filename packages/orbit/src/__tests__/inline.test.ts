@@ -68,6 +68,24 @@ describe('inline', () => {
     expect(withInline.y).toBe(withoutInline.y);
   });
 
+  it('falls back gracefully when getClientRects returns an empty array', () => {
+    const reference = document.createElement('span');
+    const floating = document.createElement('div');
+
+    vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(
+      createDomRect({ height: 20, width: 100, x: 200, y: 300 }),
+    );
+    vi.spyOn(reference, 'getClientRects').mockReturnValue([] as unknown as DOMRectList);
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 40 }));
+
+    // With zero client rects, inline is a no-op — same result as without inline.
+    const withInline = computePosition(reference, floating, { middleware: [inline()], placement: 'bottom' });
+    const withoutInline = computePosition(reference, floating, { placement: 'bottom' });
+
+    expect(withInline.x).toBe(withoutInline.x);
+    expect(withInline.y).toBe(withoutInline.y);
+  });
+
   it('chooses the closest rect by y proximity for left/right placements', () => {
     // Two vertically-stacked rects: the bottom one is taller so its center is
     // closer to the float's projected y midpoint.

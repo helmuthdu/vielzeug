@@ -105,4 +105,20 @@ describe('search scored mode', () => {
 
     expect(() => search([record], 'tag-42', { mode: 'scored' })).not.toThrow();
   });
+
+  it('does not stack overflow on deeply nested objects beyond MAX_SEEK_DEPTH', () => {
+    let nested: Record<string, unknown> = { value: 'target' };
+
+    for (let i = 0; i < 20; i++) nested = { child: nested };
+
+    expect(() => search([nested], 'target')).not.toThrow();
+  });
+
+  it('does not stack overflow on deeply nested objects in scored mode', () => {
+    let nested: Record<string, unknown> = { value: 'target' };
+
+    for (let i = 0; i < 20; i++) nested = { child: nested };
+
+    expect(() => search([nested], 'target', { mode: 'scored' })).not.toThrow();
+  });
 });

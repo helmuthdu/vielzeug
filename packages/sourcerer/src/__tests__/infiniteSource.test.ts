@@ -460,6 +460,98 @@ describe('createInfiniteSource', () => {
     });
   });
 
+  describe('restoreQuery', () => {
+    it('is a no-op when nothing changed', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
+
+      await source.restoreQuery({ limit: 10 });
+
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('resets and refetches when limit changes', async () => {
+      const pages = [
+        ['a', 'b'],
+        ['c', 'd'],
+      ];
+      const fetch = vi.fn(async ({ page }: { page: number }) => ({
+        items: pages[page - 1] ?? [],
+        total: 4,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+      await source.reset();
+      await source.loadMore();
+      expect(source.current).toEqual(['a', 'b', 'c', 'd']);
+
+      await source.restoreQuery({ limit: 2 }); // same — no-op
+      expect(fetch).toHaveBeenCalledTimes(2);
+
+      await source.restoreQuery({ limit: 5 }); // changed
+      expect(source.current).toEqual(['a', 'b']); // reset to page 1 result
+      expect(source.meta.loadedPages).toBe(1);
+    });
+
+    it('resets and refetches when search changes', async () => {
+      const fetch = vi.fn(async ({ search }: { search?: string }) => ({
+        items: search ? ['filtered'] : ['all'],
+        total: 1,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      await source.reset();
+      expect(source.current).toEqual(['all']);
+
+      await source.restoreQuery({ search: 'x' });
+      expect(source.current).toEqual(['filtered']);
+    });
+
+    it('treats absent search key as no-op for search', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch });
+
+      await source.reset();
+
+      const callsBefore = fetch.mock.calls.length;
+
+      await source.restoreQuery({}); // no keys — no-op
+
+      expect(fetch.mock.calls.length).toBe(callsBefore);
+    });
+  });
+
+  describe('current consistency', () => {
+    it('current is stable reference between notifications', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 5 }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+      await source.reset();
+
+      const ref1 = source.current;
+
+      // Access again without any change
+      const ref2 = source.current;
+
+      expect(ref1).toBe(ref2);
+    });
+
+    it('current updates after loadMore', async () => {
+      const pages = [['a', 'b'], ['c']];
+      const fetch = vi.fn(async ({ page }: { page: number }) => ({
+        items: pages[page - 1] ?? [],
+        total: 3,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+      await source.reset();
+      expect(source.current).toEqual(['a', 'b']);
+
+      await source.loadMore();
+      expect(source.current).toEqual(['a', 'b', 'c']);
+    });
+  });
+
   describe('dispose', () => {
     it('stops notifying listeners after dispose', async () => {
       const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));

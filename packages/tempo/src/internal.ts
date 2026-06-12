@@ -48,6 +48,9 @@ export function toInstant(input: TimeInput, options: TimeOptions = {}): Temporal
 
 /**
  * Projects any {@link TimeInput} into a specific timezone as a `ZonedDateTime`.
+ *
+ * When `input` is already a `ZonedDateTime`, it is **re-projected** into `options.tz`
+ * via `withTimeZone()` — the wall-clock time changes but the absolute instant is preserved.
  */
 export function toZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime {
   const tz = validateTz(options.tz);

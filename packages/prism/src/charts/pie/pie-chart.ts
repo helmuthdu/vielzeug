@@ -1,11 +1,10 @@
-import { isSignal } from '@vielzeug/ripple';
-
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
 import { createChartScaffold } from '../../core/chart-scaffold';
+import { resolve } from '../../core/resolve';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
 import { type Arc, arcCentroid, arcPath, computeArcs } from './pie-renderer';
@@ -35,6 +34,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
   // Current arcs shared between renderFn and event handlers via closure.
   let currentArcs: Arc[] = [];
+  let activeRaf: number | null = null;
 
   function renderLabels(slices: PieSliceConfig[]): void {
     while (labelGroup.children.length > currentArcs.length) labelGroup.removeChild(labelGroup.lastChild!);
@@ -67,7 +67,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     }
   }
 
-  return createChartScaffold(
+  const handle = createChartScaffold(
     container,
     { ariaLabel: config.ariaLabel, plugins: config.plugins, tooltip: config.tooltip },
     (ctx): ChartEventHandlers => {
@@ -90,7 +90,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
       const outerR = Math.max(inner + 1, outer);
 
-      const slices = isSignal(config.data) ? config.data.value : config.data;
+      const slices = resolve(config.data);
       const { end, start } = semiAngles(variant);
 
       currentArcs = computeArcs(
@@ -107,7 +107,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         false,
       );
 
-      setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner + padPixels : 0 });
+      setAttributes(bgCircle, { cx, cy, r: inner > 0 ? inner : 0 });
       bgCircle.setAttribute('style', 'fill:var(--prism-bg,#fff)');
 
       while (pieGroup.children.length > currentArcs.length) pieGroup.removeChild(pieGroup.lastChild!);
@@ -129,6 +129,11 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         path.setAttribute('fill', arc.color);
         path.setAttribute('stroke', 'none');
         path.style.cursor = config.onClick || config.onHover ? 'pointer' : '';
+      }
+
+      if (activeRaf !== null) {
+        cancelAnimationFrame(activeRaf);
+        activeRaf = null;
       }
 
       if (dur > 0) {
@@ -155,11 +160,15 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
             }
           }
 
-          if (t < 1) requestAnimationFrame(frame);
-          else renderLabels(slices);
+          if (t < 1) {
+            activeRaf = requestAnimationFrame(frame);
+          } else {
+            activeRaf = null;
+            renderLabels(slices);
+          }
         };
 
-        requestAnimationFrame(frame);
+        activeRaf = requestAnimationFrame(frame);
       } else {
         for (let j = 0; j < currentArcs.length; j++) {
           const a = currentArcs[j];
@@ -218,6 +227,21 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       return { onClick, onMouseLeave, onMouseMove };
     },
   );
+
+  return {
+    dispose() {
+      if (activeRaf !== null) {
+        cancelAnimationFrame(activeRaf);
+        activeRaf = null;
+      }
+
+      handle.dispose();
+    },
+    el: handle.el,
+    [Symbol.dispose]() {
+      this.dispose();
+    },
+  };
 }
 
 function hitTestArc(arcs: Arc[], mx: number, my: number, variant: PieChartConfig['variant']): number {
@@ -228,19 +252,15 @@ function hitTestArc(arcs: Arc[], mx: number, my: number, variant: PieChartConfig
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < arc.outerRadius && dist >= arc.innerRadius) {
-      let angle = Math.atan2(dx, -dy);
-
-      if (angle < 0) angle += TWO_PI;
+      const rawAngle = Math.atan2(dx, -dy);
 
       if (variant === 'semi') {
-        let normAngle = Math.atan2(dx, -dy);
+        if (rawAngle >= arc.startAngle - 1e-9 && rawAngle <= arc.endAngle + 1e-9) return i;
+      } else {
+        const angle = rawAngle < 0 ? rawAngle + TWO_PI : rawAngle;
 
-        if (normAngle >= 0) normAngle -= TWO_PI;
-
-        if (normAngle >= arc.startAngle - 1e-9 && normAngle <= arc.endAngle + 1e-9) return i;
+        if (angle >= arc.startAngle - 1e-9 && angle <= arc.endAngle + 1e-9) return i;
       }
-
-      if (angle >= arc.startAngle - 1e-9 && angle <= arc.endAngle + 1e-9) return i;
     }
   }
 

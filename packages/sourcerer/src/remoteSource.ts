@@ -44,7 +44,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     items = cfg.snapshot.items;
     total = cfg.snapshot.total;
 
-    if (cfg.snapshot.page) page = cfg.snapshot.page;
+    if (cfg.snapshot.page !== undefined) page = cfg.snapshot.page;
 
     if (cfg.snapshot.search) search = cfg.snapshot.search;
 
@@ -286,6 +286,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     restoreQuery(patch) {
+      core.cancelTimer();
+
       let changed = false;
 
       if (patch.limit !== undefined) {
@@ -385,6 +387,10 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
     subscribe(listener) {
       return core.subscribe(listener);
+    },
+
+    [Symbol.dispose]() {
+      this.dispose();
     },
 
     toQuery() {

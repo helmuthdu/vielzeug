@@ -81,8 +81,8 @@ export interface DropZoneOptions {
    * @default 'copy'
    */
   dropEffect?: DataTransfer['dropEffect'];
-  /** Called when files are dropped. Receives accepted files only. */
-  onDrop?: (files: File[], event: DragEvent) => void;
+  /** Called when files are dropped or pasted (when `paste: true` and `onPaste` is omitted). Receives accepted files only. */
+  onDrop?: (files: File[], event: DragEvent | ClipboardEvent) => void;
   /**
    * Called when dropped or pasted files are rejected by the `accept` filter, `maxFiles` limit, or `onValidate`.
    * When files are rejected via paste the event will be a `ClipboardEvent`, not a `DragEvent`.
@@ -322,6 +322,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   const handleDrop = (e: DragEvent): void => {
+    // Reset counter first (idempotent at 0) so hover never sticks even when disabled.
     resetCounter();
 
     if (resolveDisabled(disabled)) return;
@@ -346,7 +347,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     dispatchWithValidation(
       Array.from(clipFiles),
       e,
-      options.onPaste ? (f, ev) => options.onPaste!(f, ev) : (f, ev) => onDrop?.(f, ev as unknown as DragEvent),
+      options.onPaste ? (f, ev) => options.onPaste!(f, ev) : (f, ev) => onDrop?.(f, ev),
       onDropRejected,
     );
   };

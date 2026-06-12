@@ -5,6 +5,9 @@ import { createTextElement } from '../svg/text';
 
 type AnyScale = BandScale | Scale<Date> | Scale<number>;
 
+const defaultTickFormat = (v: Date | number | string): string =>
+  v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
+
 export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisConfig, length: number): void {
   while (parent.firstChild) parent.removeChild(parent.firstChild);
 
@@ -24,7 +27,7 @@ export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisCon
   parent.appendChild(axisLine);
 
   const ticks = scale.ticks(config.tickCount ?? 10);
-  const format = config.tickFormat ?? String;
+  const format = config.tickFormat ?? defaultTickFormat;
 
   for (const tick of ticks) {
     const pos = (scale as Scale<Date | number | string>).map(tick as Date | number | string);

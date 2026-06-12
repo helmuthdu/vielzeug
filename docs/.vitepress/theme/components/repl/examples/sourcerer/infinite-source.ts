@@ -26,9 +26,12 @@ await source.loadMore()
 await source.loadMore()
 console.log('After exhaustion:', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
 
-// reset() also clears items immediately — current is [] until the new fetch resolves
-await source.reset()
-console.log('After reset:', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
+// restoreQuery({ limit?, search? }) resets and refetches if values changed — no-op otherwise
+await source.restoreQuery({ limit: 5 }) // new limit — clears accumulated items and restarts
+console.log('After restoreQuery(limit:5):', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
+
+await source.restoreQuery({ limit: 5 }) // same value — no fetch, no-op
+console.log('No-op restoreQuery:', source.current.length, 'items')
 
 source.dispose()`,
   name: 'Infinite Source',

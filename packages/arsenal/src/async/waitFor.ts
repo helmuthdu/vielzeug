@@ -43,6 +43,8 @@ export async function waitFor(
   merged.throwIfAborted();
 
   while (true) {
+    merged.throwIfAborted();
+
     if (await condition(merged)) return;
 
     await sleep(interval, merged);

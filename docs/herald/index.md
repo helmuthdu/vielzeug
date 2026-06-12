@@ -5,7 +5,7 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedError]
+exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedError, debugBus, createTestBus]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -113,7 +113,7 @@ const auditBus = createBus<AppEvents>();
 const unpipe = pipeEvents(bus, auditBus, ['user:login', 'user:logout']);
 
 // Disposal signal — use as an AbortSignal for external cleanup
-otherBus.on('count', handler, bus.disposalSignal);
+otherBus.on('count', handler, { signal: bus.disposalSignal });
 
 try {
   await bus.wait('user:login', { signal: AbortSignal.timeout(500) });

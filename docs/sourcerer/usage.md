@@ -268,6 +268,17 @@ await source.reset(); // clear all, restart from page 1
 
 `meta.isLoadingMore` is `true` only during `loadMore()` — distinct from `meta.isLoading` which is `true` during `reset()` and the initial fetch.
 
+### Restoring from URL state
+
+Use `restoreQuery()` to restore `limit` and `search` from URL params. It clears accumulated items and refetches from page 1 if any value changed — a no-op otherwise.
+
+```ts
+import { decodeQuery } from '@vielzeug/sourcerer';
+
+const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
+await source.restoreQuery({ limit: query.limit, search: query.search });
+```
+
 ## Error Handling
 
 All sources expose `meta.error` as a `SourceError | null`. `SourceError` extends `Error` and carries structured context for logging and display:
@@ -399,6 +410,17 @@ dispose();
 ```
 
 > Always call `dispose()` when the source is no longer needed. It unsubscribes from the source and releases the computed signals and their internal tick signal.
+
+All sources and `toSignals()` return objects implement `[Symbol.dispose]()`. Use the TC39 `using` declaration to auto-dispose on scope exit:
+
+```ts
+{
+  using signals = toSignals(source);
+  // signals.current and signals.meta are available here
+} // signals.dispose() is called automatically on block exit
+```
+
+`toSignals()` requires a source with a `meta` field — `MergedSource<T>` has no `meta`, so it cannot be passed to `toSignals()`. Use `subscribe()` directly with `MergedSource`.
 
 ## URL Query Param Sync
 
@@ -602,3 +624,5 @@ effect(() => {
 - For URL sync, prefer `decodeQuery()` + `restoreQuery()` over manually reconstructing source state from params.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.
+- When using `decodeQuery()`, validate the parsed `filter` and `sort` with a type guard before passing to the server — they are returned as-is without runtime validation.
+- For infinite sources, use `restoreQuery({ limit, search })` for URL state sync — `page` is not restorable since items accumulate across pages.

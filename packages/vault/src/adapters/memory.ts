@@ -20,6 +20,9 @@ function makeBroadcastMsgGuard(codec: { decode<T>(raw: unknown): (StoredRecord<T
 
     if (typeof d['table'] !== 'string' || typeof d['type'] !== 'string') return false;
 
+    // Guard against prototype-polluting table names from crafted cross-tab messages.
+    if (d['table'] === '__proto__' || d['table'] === 'constructor' || d['table'] === 'prototype') return false;
+
     switch (d['type']) {
       case 'clear':
         return true;

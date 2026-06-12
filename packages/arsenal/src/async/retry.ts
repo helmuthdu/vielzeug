@@ -76,7 +76,8 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>
  *   Receives the error and the number of failures so far (0-indexed: `0` on the first failure,
  *   `1` on the second, etc.). Return `false` to abort immediately. **Not called on the final attempt**
  *   (use `onError` to observe the final error unconditionally).
- * @param [options.onError] - Called with the final error before rethrowing.
+ * @param [options.onError] - Called with the last error before rethrowing — both on final attempt exhaustion
+ *   and when `shouldRetry` returns `false` to abort early.
  * @returns The resolved value.
  * @throws The last error if all attempts fail.
  */

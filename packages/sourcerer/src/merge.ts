@@ -59,5 +59,9 @@ export function mergeSource<T>(
     subscribe(listener) {
       return core.subscribe(listener);
     },
+
+    [Symbol.dispose]() {
+      this.dispose();
+    },
   };
 }

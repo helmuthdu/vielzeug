@@ -4,10 +4,14 @@
  */
 export class VaultError extends Error {
   constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
-    super(`[vault] ${message}`, opts);
+    super(`[@vielzeug/vault] ${message}`, opts);
     this.name = new.target.name;
     // Ensures `instanceof` works correctly when transpiled to ES5.
     Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is VaultError {
+    return err instanceof VaultError;
   }
 }
 
@@ -16,13 +20,29 @@ export class VaultDisposedError extends VaultError {
   constructor(message = 'adapter is disposed', opts?: ErrorOptions) {
     super(message, opts);
   }
+
+  static is(err: unknown): err is VaultDisposedError {
+    return err instanceof VaultDisposedError;
+  }
 }
 
 /** Thrown when a `batch()` callback accesses a table not declared in the scope. */
-export class VaultScopeError extends VaultError {}
+export class VaultScopeError extends VaultError {
+  static is(err: unknown): err is VaultScopeError {
+    return err instanceof VaultScopeError;
+  }
+}
 
 /** Thrown when a WebStorage write exceeds the storage quota. */
-export class VaultQuotaError extends VaultError {}
+export class VaultQuotaError extends VaultError {
+  static is(err: unknown): err is VaultQuotaError {
+    return err instanceof VaultQuotaError;
+  }
+}
 
 /** Thrown when an IndexedDB `onupgradeneeded` migration callback throws. */
-export class VaultMigrationError extends VaultError {}
+export class VaultMigrationError extends VaultError {
+  static is(err: unknown): err is VaultMigrationError {
+    return err instanceof VaultMigrationError;
+  }
+}

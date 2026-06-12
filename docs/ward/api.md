@@ -17,14 +17,14 @@ description: Complete API reference for @vielzeug/ward.
 | `ward.can(principal, resource, action, data?)`                           | Evaluate one decision                                | Sync       | Invalid principal throws; `null` is valid for anonymous                           |
 | `ward.canAll(principal, resource, actions, data?)`                       | Require all actions to be allowed                    | Sync       | Empty array always returns `true` without validating the principal                |
 | `ward.canAny(principal, resource, actions, data?)`                       | Require at least one allowed action                  | Sync       | Empty array always returns `false` without validating the principal               |
-| `ward.checkAll(principal, checks)`                                       | Evaluate multiple decisions in one call              | Sync       | Empty array returns `[]` without validating the principal                         |
+| `ward.checkAll(principal, checks)`                                       | Evaluate multiple decisions in one call              | Sync       | Returns `WardDecisionResult[]` — each entry includes originating `resource`+`action`   |
 | `ward.explain(principal, resource, action, data?)`                       | Full decision object with deny reason                | Sync       | `rule` only present on `'allow'` and `'explicit-deny'` variants                   |
 | `ward.trace(principal, resource, action, data?)`                         | Decision trace with all matching candidates          | Sync       | Also fires the logger; audit-safe replacement for `explain`                       |
 | `ward.allowedActions(principal, resource, knownActions, data?)`          | List allowed actions; no logger                      | Sync       | Wildcard-action rules require a non-empty `knownActions`                          |
 | `ward.rulesInScope(principal, resource, data?)`                          | Rules in scope for introspection; no logger          | Sync       | Without `data`, predicate rules appear unfiltered                                 |
 | `ward.detectConflicts()`                                                 | Lazily detect and cache policy conflicts             | Sync       | O(n²); predicate-gated rules excluded from static analysis                        |
 | `ward.forUser(principal)`                                                | Create a principal-bound ward view                   | Sync       | Principal is deep-snapshotted at bind time                                        |
-| `guardRequest(ward, principal, resource, action, data?)`                 | Framework-agnostic async guard — direct principal    | Async      | Use `guardRequestWith` when the principal must be extracted from a request object |
+| `guardRequest(ward, principal, resource, action, data?)`                 | Framework-agnostic sync guard — direct principal     | Sync       | Use `guardRequestWith` when the principal must be extracted from a request object |
 | `guardRequestWith(ward, req, extractPrincipal, resource, action, data?)` | Framework-agnostic async guard — request + extractor | Async      | Extractor may be async (e.g. JWT verification)                                    |
 | `createExpressGuard(ward, extractPrincipal, resource, action, options?)` | Express middleware guard factory                     | Sync/Async | Calls `next()` on allow, `403` on deny; supports `options.data`                   |
 | `createHonoGuard(ward, extractPrincipal, resource, action, options?)`    | Hono middleware guard factory                        | Async      | Extractor errors propagate to `app.onError`; supports `options.data`              |
@@ -182,12 +182,12 @@ ward.canAny({ id: 'u1', roles: ['editor'] }, 'posts', ['update', 'delete'], { au
 ward.checkAll(
   principal: Principal,
   checks: readonly WardCheck<TAction, TData>[],
-): WardDecision<TAction, TData>[]
+): WardDecisionResult<TAction, TData>[]
 ```
 
-Evaluates each check independently and returns one `WardDecision` per entry in the same order. Returns `[]` for an empty array without validating the principal.
+Evaluates each check independently and returns one `WardDecisionResult` per entry in the same order. Each result includes the originating `resource` and `action` fields, so callers do not need to zip the input array by index. Returns `[]` for an empty array without validating the principal.
 
-**Returns:** `WardDecision<TAction, TData>[]`
+**Returns:** `WardDecisionResult<TAction, TData>[]`
 
 **Example:**
 
@@ -363,7 +363,7 @@ Creates a principal-bound view of the ward. The principal — including nested `
 | `can`            | `(resource, action, data?) => boolean`         | Single action check            |
 | `canAll`         | `(resource, actions, data?) => boolean`        | All-actions check              |
 | `canAny`         | `(resource, actions, data?) => boolean`        | Any-action check               |
-| `checkAll`       | `(checks) => WardDecision[]`                   | Batch decisions                |
+| `checkAll`       | `(checks) => WardDecisionResult[]`             | Batch decisions                |
 | `allowedActions` | `(resource, knownActions, data?) => TAction[]` | Action enumeration (no logger) |
 | `explain`        | `(resource, action, data?) => WardDecision`    | Full decision with reason      |
 | `rulesInScope`   | `(resource, data?) => WardRule[]`              | Rule introspection (no logger) |
@@ -532,10 +532,10 @@ guardRequest<TAction, TData>(
   resource: string,
   action: TAction,
   data?: TData,
-): Promise<GuardResult<TAction, TData>>
+): GuardResult<TAction, TData>
 ```
 
-Framework-agnostic async guard for a known principal. Returns a `GuardResult`:
+Framework-agnostic synchronous guard for a known principal. Returns a `GuardResult`:
 
 ```ts
 type GuardResult =
@@ -550,7 +550,7 @@ Use `guardRequestWith` when the principal must be resolved asynchronously from a
 ```ts
 import { guardRequest } from '@vielzeug/ward';
 
-const result = await guardRequest(ward, principal, 'posts', 'update');
+const result = guardRequest(ward, principal, 'posts', 'update');
 
 if (!result.granted) {
   return response.status(403).json({ reason: result.reason });
@@ -619,9 +619,13 @@ const ward = createWard([{ role: 'editor', resource: 'posts:*', action: 'update'
 
 const requireEdit = createExpressGuard(ward, (req) => req.user ?? null, 'posts:*', 'update');
 
-// With static data forwarded to predicates:
-const requireEditOwn = createExpressGuard(ward, (req) => req.user ?? null, 'posts:*', 'update', {
-  data: { postId: req.params.id },
+// With static data forwarded to when predicates.
+// Note: options.data is a static value set at guard-creation time, not per-request.
+// For per-request data (e.g. req.params.id), resolve it inside the extractor or
+// create the guard inside the route handler:
+app.put('/posts/:id', async (req, res, next) => {
+  const guard = createExpressGuard(ward, () => req.user ?? null, `posts:${req.params.id}`, 'update');
+  return guard(req, res, next);
 });
 
 app.put('/posts/:id', requireEdit, handler);
@@ -848,6 +852,54 @@ Wraps `createWard()` with a `logger` pre-wired to `console.debug`. Returns the s
 Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
 
 Accepts the same `options` as `createWard()` except `logger`, which is reserved for the debug output. All other options (`maxConflicts`, `onConflict`) pass through unchanged.
+
+### `WardDecisionAllowed` / `WardDecisionDenied` / `WardDecisionResult`
+
+```ts
+type WardDecisionAllowed<TAction, TData> = { allowed: true; rule: WardRule<TAction, TData> };
+
+type WardDecisionDenied<TAction, TData> =
+  | { allowed: false; reason: 'explicit-deny'; rule: WardRule<TAction, TData> }
+  | { allowed: false; reason: 'no-matching-rule' };
+
+type WardDecisionResult<TAction, TData> = WardDecision<TAction, TData> & {
+  action: TAction;
+  resource: string;
+};
+```
+
+`WardDecisionAllowed` and `WardDecisionDenied` are named aliases for the two branches of `WardDecision` — use them to annotate variables that hold a pre-narrowed branch. `WardDecisionResult` is the return type of `checkAll()` — a `WardDecision` with the originating `resource` and `action` attached.
+
+---
+
+### `RoleStep` / `ResourceStep` / `ActionStep` / `FinalStep`
+
+Intermediate types for the fluent `rule()` builder chain. Export these to annotate partially-constructed builder pipelines:
+
+```ts
+import type { ActionStep, FinalStep, ResourceStep, RoleStep } from '@vielzeug/ward';
+
+// Annotate a stored builder step
+const editorStep: RoleStep<'read' | 'update', { authorId: string }> =
+  rule<'read' | 'update', { authorId: string }>().allow('editor');
+
+const resourceStep: ResourceStep<'read' | 'update', { authorId: string }> =
+  editorStep.on('posts');
+
+const actionStep: ActionStep<'read' | 'update', { authorId: string }> =
+  resourceStep.to('update');
+
+const finalStep: FinalStep<'read' | 'update', { authorId: string }> =
+  actionStep.when(owns('authorId'));
+```
+
+### `WardRequest`
+
+```ts
+type WardRequest = Record<string, unknown>;
+```
+
+Base constraint for the request object type used in `guardRequestWith` and `createExpressGuard`. Any object type satisfies this constraint.
 
 ### `Ward` / `BoundWard`
 

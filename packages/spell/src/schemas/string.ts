@@ -290,9 +290,9 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     });
   }
 
-  nanoid(message: MessageFn<{ value: string }> = () => _messages().string.nanoid()): this {
+  nanoid(length?: number, message: MessageFn<{ value: string }> = () => _messages().string.nanoid()): this {
     return this._addConstraint((value) => {
-      if (isNanoid(value as string)) return null;
+      if (isNanoid(value as string, length)) return null;
 
       return fail(ErrorCode.invalid_string, resolveMessage(message, { value: value as string }), { format: 'nanoid' });
     });
@@ -400,14 +400,26 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
     });
   }
 
+  /**
+   * **Note:** `trim()` adds a preprocessor. Preprocessors are not serializable —
+   * `toDescriptor()` / `fromDescriptor()` round-trips will silently lose this transform.
+   */
   trim(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.trim() : v));
   }
 
+  /**
+   * **Note:** `lowercase()` adds a preprocessor. Preprocessors are not serializable —
+   * `toDescriptor()` / `fromDescriptor()` round-trips will silently lose this transform.
+   */
   lowercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toLowerCase() : v));
   }
 
+  /**
+   * **Note:** `uppercase()` adds a preprocessor. Preprocessors are not serializable —
+   * `toDescriptor()` / `fromDescriptor()` round-trips will silently lose this transform.
+   */
   uppercase(): this {
     return this.preprocess((v: unknown) => (typeof v === 'string' ? v.toUpperCase() : v));
   }

@@ -138,16 +138,16 @@ export class StoreImpl<T extends object> {
   private readonly readonlyProxy_: Readonly<T>;
   private readonly version_: SignalImpl<number>;
 
-  /** @internal Installed by `storeWithHistory` to observe each top-level key change. */
-  _onMutation_?: (key: string, newValue: unknown) => void;
+  private readonly onMutation_?: (key: string, newValue: unknown) => void;
 
-  constructor(initial: T, name?: string) {
+  constructor(initial: T, name?: string, onMutation?: (key: string, newValue: unknown) => void) {
     this[IS_SIGNAL] = true;
     this[IS_STORE] = true;
     this.name = name;
 
     if (name !== undefined) registerSignal(this, name);
 
+    this.onMutation_ = onMutation;
     this.current_ = structuredClone(initial);
     this.initial_ = structuredClone(initial);
     this.lensCache_ = new Map();
@@ -179,7 +179,11 @@ export class StoreImpl<T extends object> {
     let sig = this.propSignals_.get(key);
 
     if (sig === undefined) {
-      sig = new SignalImpl((this.current_ as Record<string, unknown>)[key], undefined, key);
+      sig = new SignalImpl(
+        (this.current_ as Record<string, unknown>)[key],
+        undefined,
+        this.name !== undefined ? `${this.name}.${key}` : key,
+      );
       this.propSignals_.set(key, sig);
     }
 
@@ -200,6 +204,10 @@ export class StoreImpl<T extends object> {
    * R4: No batch() wrapper — callers that need atomicity must wrap themselves.
    */
   applyTopLevelChange_(key: string, newValue: unknown): void {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      throw new StateError('INVALID_STORE', `Unsafe key "${key}" rejected to prevent prototype pollution.`);
+    }
+
     const current = (this.current_ as Record<string, unknown>)[key];
 
     if (Object.is(current, newValue)) return;
@@ -207,7 +215,7 @@ export class StoreImpl<T extends object> {
     (this.current_ as Record<string, unknown>)[key] = newValue;
     this.propSignalFor_(key).value = newValue as never;
     this.version_.value = this.version_.peek() + 1;
-    this._onMutation_?.(key, newValue);
+    this.onMutation_?.(key, newValue);
   }
 
   /**
@@ -313,6 +321,10 @@ export class StoreImpl<T extends object> {
     };
 
     const parts = path.split('.');
+
+    if (parts.length > 32) {
+      throw new StateError('INVALID_STORE', `Lens path exceeds maximum depth of 32 segments: "${path}".`);
+    }
 
     for (const part of parts) {
       if (part === '__proto__' || part === 'constructor' || part === 'prototype') {

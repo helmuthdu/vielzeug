@@ -154,4 +154,20 @@ describe('createPieChart', () => {
     expect(chart.el.getAttribute('role')).toBe('img');
     chart.dispose();
   });
+
+  it('calls onClick callback on click event without throwing', () => {
+    const onClick = vi.fn();
+    const chart = createPieChart(container, { data: DATA, onClick, transition: { duration: 0 } });
+
+    expect(() =>
+      chart.el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 0, clientY: 0 })),
+    ).not.toThrow();
+    chart.dispose();
+  });
+
+  it('cancels in-flight animation RAF on dispose', () => {
+    const chart = createPieChart(container, { data: DATA, transition: { duration: 500 } });
+
+    expect(() => chart.dispose()).not.toThrow();
+  });
 });

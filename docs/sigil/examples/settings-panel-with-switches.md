@@ -1,6 +1,6 @@
 ---
 title: 'Sigil Examples — Settings Panel with Switches'
-description: 'Settings Panel with Switches examples for block.'
+description: 'Settings Panel with Switches examples for @vielzeug/sigil.'
 ---
 
 ## Settings Panel with Switches
@@ -191,6 +191,12 @@ const handleToggle = (key: keyof typeof settings) => {
 ```
 
 :::
+
+### Pitfalls
+
+- Read `e.detail.checked` from the `change` event to get the new state — do not rely on the `checked` attribute value, which may not have updated yet.
+- `<sg-switch>` emits `change`, not `input`. Listening for `input` will never fire.
+- In Vue, use `:checked` (property binding), not `checked` (attribute), to pass a reactive boolean; attribute binding coerces to a string.
 
 ### Related
 

@@ -17,7 +17,7 @@ import '@vielzeug/prism/theme';
 <div id="chart" style="width: 100%; height: 300px;"></div>
 ```
 
-Prism observes the container size via `ResizeObserver` and re-renders automatically on resize.
+Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `devWarn` is emitted in development — ensure the container has layout before calling the chart factory.
 
 ## Reactivity with Signals
 
@@ -317,6 +317,7 @@ spark.dispose();
 - **`line`** — simple polyline path (default)
 - **`area`** — filled area + line overlay
 - **`bar`** — vertical bar for each data point
+- **`stack`** — horizontal proportional segments; use `StackSegment[]` for `data` with per-segment colors
 
 ### Reactive Data
 
@@ -380,6 +381,19 @@ Enable with `tooltip: true` for default rendering, or provide a custom `render` 
       <strong>${series.name}</strong><br/>
       Value: ${point.y.toLocaleString()}
     `,
+  },
+}
+```
+
+The `render` output is injected via `innerHTML`. If you interpolate user-supplied data, pass a `sanitize` function to guard against XSS:
+
+```ts
+import DOMPurify from 'dompurify';
+
+{
+  tooltip: {
+    render: (point, series) => `<b>${series.name}</b>: ${point.y}`,
+    sanitize: (html) => DOMPurify.sanitize(html),
   },
 }
 ```
@@ -488,7 +502,7 @@ Pass a `transition` config to animate enter and update transitions:
 }
 ```
 
-Line and area charts use CSS transitions on the SVG path `d` attribute. Bar charts use a requestAnimationFrame loop — `stagger` delays each bar in sequence, creating a cascade effect on first render.
+All chart types use requestAnimationFrame-based interpolation. Bar charts additionally support `stagger` — a per-bar delay that creates a cascade effect on first render.
 
 ## Theming
 

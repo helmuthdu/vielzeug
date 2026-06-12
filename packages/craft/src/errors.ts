@@ -11,10 +11,15 @@ export class CraftitError extends Error {
   readonly phase: ComponentPhase;
 
   constructor(message: string, options: { cause: Error; component: string; phase: ComponentPhase }) {
-    super(message, { cause: options.cause });
-    this.name = 'CraftitError';
+    super(`[@vielzeug/craft] ${message}`, { cause: options.cause });
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.component = options.component;
     this.phase = options.phase;
+  }
+
+  static is(err: unknown): err is CraftitError {
+    return err instanceof CraftitError;
   }
 }
 

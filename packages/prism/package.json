@@ -63,7 +63,6 @@
     "./dist/theme/**"
   ],
   "dependencies": {
-    "@vielzeug/familiar": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },

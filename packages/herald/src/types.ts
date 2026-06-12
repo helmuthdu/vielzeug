@@ -80,6 +80,9 @@ export type BusOptions<T extends EventMap = EventMap> = {
    * Optional display name for this bus instance.
    * Appears in debug log prefixes and in `BusDisposedError` messages.
    * Useful when running multiple buses concurrently to identify which bus produced a log or error.
+   *
+   * **Note:** The name is embedded in `BusDisposedError` messages and debug logs — avoid using
+   * sensitive or user-derived values that could leak via error trackers or log aggregators.
    */
   name?: string;
   /**

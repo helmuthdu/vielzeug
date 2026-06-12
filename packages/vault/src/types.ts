@@ -44,8 +44,14 @@ export type SchemaEntry<T extends Record<string, unknown>, Key extends keyof T &
  *  concrete `SchemaEntry<T, Key>` values satisfy it without covariance constraints. */
 export type AnySchema = Record<string, { defaultTtl?: TtlMs; indexes?: readonly string[]; key: string }>;
 
-/** Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` and `.index()` chaining. */
-type TableBuilder<T extends Record<string, unknown>, Key extends keyof T & string> = SchemaEntry<T, Key> & {
+/**
+ * Fluent builder returned by `table()` — satisfies `SchemaEntry` and adds `.ttl()` and `.index()` chaining.
+ * Export this type to annotate schema entry variables without using `ReturnType<typeof table<T, K>>`.
+ */
+export type TableBuilder<
+  T extends Record<string, unknown>,
+  Key extends keyof T & string = keyof T & string,
+> = SchemaEntry<T, Key> & {
   /**
    * Register a secondary index on the given field. Can be chained multiple times.
    * Only used by the IndexedDB adapter; other adapters fall back to in-memory filtering.

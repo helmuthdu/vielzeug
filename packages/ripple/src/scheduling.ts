@@ -6,6 +6,11 @@ import { _NONE } from './symbols';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
+// NOTE: These are module-level singletons. In SSR environments with concurrent requests,
+// signal writes from different requests share the same flush queue. The /ripple/ssr
+// sub-path isolates reactive *tracking* per request via AsyncLocalStorage, but does NOT
+// isolate the flush queue. Ripple signals are designed for use in a single synchronous
+// render context per module instance (e.g. one Node.js worker per request via isolation).
 let batchDepth = 0;
 const pendingSubscribers = new Set<Subscriber>();
 const dirtyWithEffectSubs = new Set<ComputedBase<unknown>>();

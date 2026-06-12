@@ -11,9 +11,9 @@ export interface AnimationTarget {
 export function animate(targets: AnimationTarget[], config?: TransitionConfig): Promise<void> {
   const duration = config?.duration ?? 300;
   const easing = resolveEasing(config?.easing);
-  const stagger = config?.stagger ?? 0;
+  const stagger = Math.max(0, config?.stagger ?? 0);
 
-  if (duration === 0) {
+  if (duration === 0 || targets.length === 0) {
     for (const target of targets) {
       for (const [attr, { to }] of Object.entries(target.attrs)) {
         target.el.setAttribute(attr, String(to));
@@ -25,7 +25,7 @@ export function animate(targets: AnimationTarget[], config?: TransitionConfig): 
 
   return new Promise((done) => {
     let startTime: number | null = null;
-    const totalDuration = duration + stagger * (targets.length - 1);
+    const totalDuration = Math.max(duration, duration + stagger * (targets.length - 1));
 
     function frame(timestamp: number) {
       if (startTime === null) startTime = timestamp;

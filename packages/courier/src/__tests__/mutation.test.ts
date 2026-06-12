@@ -334,6 +334,56 @@ describe('Mutation', () => {
     });
   });
 
+  describe('Lifecycle callbacks — abort behavior', () => {
+    it('onSettled receives null error when mutation is cancelled', async () => {
+      const settled: Array<{ data: unknown; error: unknown }> = [];
+
+      const mutation = createMutation(
+        (_: void, signal: AbortSignal) =>
+          new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+          }),
+        {
+          onSettled: (data, error) => {
+            settled.push({ data, error });
+          },
+        },
+      );
+
+      const running = mutation.mutate(undefined);
+
+      await mutation.cancel();
+      await running.catch(() => {});
+
+      expect(settled).toHaveLength(1);
+      expect(settled[0].error).toBeNull();
+      expect(settled[0].data).toBeUndefined();
+    });
+
+    it('onError is NOT called when mutation is cancelled', async () => {
+      let errorCallCount = 0;
+
+      const mutation = createMutation(
+        (_: void, signal: AbortSignal) =>
+          new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+          }),
+        {
+          onError: () => {
+            errorCallCount++;
+          },
+        },
+      );
+
+      const running = mutation.mutate(undefined);
+
+      await mutation.cancel();
+      await running.catch(() => {});
+
+      expect(errorCallCount).toBe(0);
+    });
+  });
+
   describe('activeRun lifecycle', () => {
     it('activeRun is null after a completed mutation (regression: synchronous race)', async () => {
       // Regression: activeRun was previously set AFTER the operation IIFE,
@@ -365,6 +415,45 @@ describe('Mutation', () => {
       await running.catch(() => {});
 
       expect(mutation.getState().status).toBe('idle');
+    });
+  });
+
+  describe('Lifecycle', () => {
+    it('dispose() sets disposed to true and is idempotent', () => {
+      const mutation = createMutation(async () => 'ok');
+
+      expect(mutation.disposed).toBe(false);
+      mutation.dispose();
+      expect(mutation.disposed).toBe(true);
+      expect(() => mutation.dispose()).not.toThrow();
+    });
+
+    it('[Symbol.dispose] delegates to dispose()', () => {
+      const mutation = createMutation(async () => 'ok');
+
+      mutation[Symbol.dispose]();
+
+      expect(mutation.disposed).toBe(true);
+    });
+
+    it('dispose() aborts an in-flight mutation', async () => {
+      let aborted = false;
+      const mutation = createMutation(
+        (_: void, signal: AbortSignal) =>
+          new Promise<string>((_resolve, reject) => {
+            signal.addEventListener('abort', () => {
+              aborted = true;
+              reject(new DOMException('Aborted', 'AbortError'));
+            });
+          }),
+      );
+
+      const running = mutation.mutate(undefined).catch(() => {});
+
+      mutation.dispose();
+      await running;
+
+      expect(aborted).toBe(true);
     });
   });
 });

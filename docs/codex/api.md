@@ -23,11 +23,11 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 ## Package Entry Points
 
-| Import                      | Purpose                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------- |
-| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, and all types |
-| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)               |
-| `@vielzeug/codex/generator` | `generateBundledData` (build-time use only)                                     |
+| Import                      | Purpose                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------- |
+| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, all types including CEM    |
+| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)                            |
+| `@vielzeug/codex/generator` | `generateBundledData`, `GeneratorOptions`, `GeneratorResult` (build-time use only)           |
 
 The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
 
@@ -157,10 +157,24 @@ Returns Sigil component tag names from bundled CEM metadata.
 
 ```json
 [
-  { "name": "Button", "tagName": "sg-button" },
-  { "name": "Input", "tagName": "sg-input" }
+  {
+    "tagName": "sg-button",
+    "description": "A clickable button element.",
+    "attrs": [
+      { "name": "variant", "type": "string", "default": "primary" },
+      { "name": "disabled", "type": "boolean" }
+    ]
+  }
 ]
 ```
+
+Each entry includes:
+
+| Field         | Type                                              | Description                                        |
+| ------------- | ------------------------------------------------- | -------------------------------------------------- |
+| `tagName`     | `string`                                          | HTML custom element tag name, e.g. `"sg-button"`   |
+| `description` | `string`                                          | Component description from the CEM (may be empty)  |
+| `attrs`       | `Array<{ name, type, default? }>` | Attribute list; `default` omitted when not defined |
 
 **Error cases:** Sigil CEM not present in this snapshot → `isError: true`.
 
@@ -345,9 +359,9 @@ interface BundledPackage {
 Stripped version returned by tools — no `docs`, `apiSource`, or `components`.
 
 ```ts
-interface PackageMeta extends Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> {
+type PackageMeta = Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> & {
   hasSource: boolean;
-}
+};
 ```
 
 ### `SearchHit`
@@ -356,8 +370,8 @@ Result shape for `search-packages`.
 
 ```ts
 interface SearchHit {
-  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata'>;
-  matchedPages?: string[];
+  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'source'>;
+  matchedPages?: DocPage[];
   name: string;
   score: number;
   slug: string;
@@ -368,6 +382,83 @@ interface SearchHit {
 
 ```ts
 type DocPage = 'api' | 'examples' | 'index' | 'usage';
+```
+
+### CEM Types
+
+These types describe the Custom Elements Manifest (CEM) shape used by `get-component` and `list-components`. Import them from `@vielzeug/codex` when processing component declarations in TypeScript.
+
+```ts
+interface CemTypeRef {
+  text: string;
+}
+
+interface CemAttribute {
+  default?: string;
+  description?: string;
+  fieldName?: string;
+  name: string;
+  type?: CemTypeRef;
+}
+
+interface CemCssPart {
+  description?: string;
+  name: string;
+}
+
+interface CemCssProperty {
+  default?: string;
+  description?: string;
+  name: string;
+}
+
+interface CemEvent {
+  description?: string;
+  name: string;
+  type?: CemTypeRef;
+}
+
+interface CemMember {
+  description?: string;
+  kind?: 'field' | 'method';
+  name: string;
+  type?: CemTypeRef;
+}
+
+interface CemSlot {
+  description?: string;
+  name: string;
+}
+
+interface CemDeclaration {
+  attributes?: CemAttribute[];
+  cssProperties?: CemCssProperty[];
+  cssParts?: CemCssPart[];
+  description?: string;
+  events?: CemEvent[];
+  members?: CemMember[];
+  name?: string;
+  slots?: CemSlot[];
+  superclass?: { name: string; package?: string };
+  tagName?: string;
+  [key: string]: unknown;
+}
+```
+
+### `GeneratorOptions` / `GeneratorResult`
+
+Available from `@vielzeug/codex/generator` (build-time subpath only).
+
+```ts
+interface GeneratorOptions {
+  incremental?: boolean;
+  repoRoot?: string;
+}
+
+interface GeneratorResult {
+  data: BundledData;
+  hashes?: Record<string, string>;
+}
 ```
 
 ## Errors
@@ -390,7 +481,7 @@ All tool-level failures return a text content item with `isError: true`. The err
 - The bundled data file is missing (`ENOENT`): includes the regen command
 - The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
 - The file is malformed JSON: includes the regen command
-- The parsed data fails schema validation: includes the regen command
+- The parsed data fails schema validation: includes the regen command. Validated fields per package entry: `slug` (non-empty string), `name` (non-empty string), `exports` (array), `keywords` (array), `availableDocPages` (array), `docs` (object), `components` (array)
 
 ## Runtime Behavior
 

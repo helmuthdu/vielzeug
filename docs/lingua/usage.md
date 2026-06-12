@@ -43,8 +43,8 @@ i18n.tp('position', 1, { vars: { name: 'Alice' }, ordinal: true }); // ordinal w
 
 ## Scoped Helpers
 
-`scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix. Use it inside a component or module
-to avoid repeating the same key segment.
+`scope(prefix)` returns a `{ fmt, bind, bindPlural, t, tp, has }` helper bound to a key prefix. Use it inside a component or module
+to avoid repeating the same key segment. The `bind()` and `bindPlural()` methods on the scoped object automatically prepend the prefix.
 
 ```ts
 const nav = i18n.scope('nav');
@@ -52,9 +52,30 @@ nav.t('home'); // resolves 'nav.home'
 nav.t('menu.settings'); // resolves 'nav.menu.settings'
 nav.has('logout'); // checks 'nav.logout'
 nav.fmt.number(1234); // same as i18n.fmt.number(1234)
+
+// Hot-path: bind a scoped key — equivalent to i18n.bind('nav.home')
+const homeLabel = nav.bind('home');
+users.forEach(() => homeLabel()); // cached lookup, invalidates on locale change
+
+// Plural hot-path
+const itemCount = nav.bindPlural('items'); // equivalent to i18n.bindPlural('nav.items')
+itemCount(5); // '5 items'
 ```
 
 `scope()` creates a new object on each call — do not compare references.
+
+## Key Inspection
+
+Use `has(key)` to check whether a leaf key exists in the active fallback chain. Use `hasBranch(key)` when the key may be a plural branch or pipe-plural shorthand — pipe-plural base keys are expanded at registration time, so `has()` returns `false` for them.
+
+```ts
+// catalog: { inbox: 'One message|{count} messages' }  (expands to inbox.one, inbox.other)
+i18n.has('inbox')        // false — base key was replaced by inbox.one / inbox.other
+i18n.has('inbox.one')    // true
+i18n.hasBranch('inbox')  // true — checks for any CLDR form under 'inbox'
+```
+
+`hasBranch()` also checks the full fallback chain, so it returns `true` if any fallback locale provides the branch.
 
 ## Locale Lifecycle
 
@@ -125,7 +146,9 @@ const price = i18n.fmt.currency(49.95, 'USD');
 Namespaces let you load partial catalogs on demand (e.g. per-route or per-feature translations) without using `merge()` manually for each locale.
 
 ```ts
-// Register once at startup
+// Register once at startup.
+// The outer arrow is the NamespaceFactory (called with the locale).
+// The inner arrow is the Loader — a () => Promise<M> — so the import runs lazily on loadNamespace().
 i18n.registerNamespace(
   'settings',
   (locale) => () => import(`./locales/${locale}/settings.json`).then((m) => m.default),
@@ -166,6 +189,8 @@ if (warnings.length > 0) {
 ```
 
 The function inspects the catalog for keys that look like plural branches (i.e. have at least one CLDR form as a child) and compares the present forms against the full CLDR set for the given locale. It uses `Intl.PluralRules` internally.
+
+`validateCatalog` also warns when a `other`, `two`, `few`, or `many` form template does not contain `{count}`. Since `tp()` injects `count` automatically, omitting it from a non-singleton form is almost always a catalog authoring error. These warnings have `form: '<form>:missing-count'` (e.g. `'other:missing-count'`). The `zero` and `one` forms are exempt.
 
 ## Bound Translation Functions
 
@@ -350,6 +375,10 @@ router.subscribe(() => {
 - Register additional locales with `register()` at runtime rather than including them in the initial catalogs.
 - Use `registerNamespace` + `loadNamespace` for per-route key sets instead of calling `merge()` manually.
 - Use `subscribe({ signal })` for lifecycle-safe subscriptions in components; use `subscribe()` when you need the `Unsubscribe` return value.
+- Use `isLoaded(locale)` before calling `getState()` in SSR to avoid silently omitting async-loader locales.
+- Use `isRegistered(locale)` to check if a locale is configured at all; use `isLoaded(locale)` to check if it is ready. The combination covers all three states: unconfigured, pending, and resolved.
+- Call `dispose()` on route-level or request-scoped `fork()` instances when they are no longer needed to release subscriber and catalog memory.
+- Use `hasBranch(key)` instead of `has(key)` when checking for pipe-plural expanded branch keys.
 - Use `getState()` / `restoreState()` for SSR hydration instead of re-fetching catalogs on the client.
 - Enable `compile: true` for hot render paths (e.g. high-frequency reactive lists) where regex overhead is measurable.
 - Use `tp()` for pluralizable branch keys — `count` is injected automatically. Pass `{ ordinal: true }` for ordinal plural forms.
@@ -375,6 +404,15 @@ i18n.restoreState(window.__I18N__);
 ```
 
 `restoreState()` stores all catalogs as flat dot-notation maps. It notifies subscribers once and switches the active locale.
+
+**Warning:** `getState()` silently omits locales that were registered as async loaders but not yet preloaded. Use `isLoaded()` to verify all locales are resolved before calling `getState()`:
+
+```ts
+// Ensure all registered locales are preloaded before serialising
+const locales = i18n.getSupportedLocales();
+await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
+const state = i18n.getState(); // all locales guaranteed to be present
+```
 
 ## Template Pre-compilation
 

@@ -16,10 +16,10 @@ Use `dateRange()` for step-based sequences between two dates. Use `recurrence()`
 #### Calendar Grid (Month View)
 
 ```ts
-import { dateRange } from '@vielzeug/tempo';
+import { dateRange, parseZoned } from '@vielzeug/tempo';
 
-const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[America/New_York]');
-const end = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[America/New_York]');
+const start = parseZoned('2026-03-01T00:00:00[America/New_York]');
+const end = parseZoned('2026-03-31T00:00:00[America/New_York]');
 
 // ZonedDateTime inputs — tz inferred, no options needed
 const days = [...dateRange(start, end, { days: 1 })];
@@ -29,10 +29,10 @@ const days = [...dateRange(start, end, { days: 1 })];
 #### Lazy Iteration with Early Exit
 
 ```ts
-import { dateRange } from '@vielzeug/tempo';
+import { dateRange, parseZoned } from '@vielzeug/tempo';
 
-const rangeStart = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
-const rangeEnd = Temporal.ZonedDateTime.from('2026-12-31T00:00:00[UTC]');
+const rangeStart = parseZoned('2026-01-01T00:00:00[UTC]');
+const rangeEnd = parseZoned('2026-12-31T00:00:00[UTC]');
 
 // Process only until a condition is met — the generator is never fully materialized
 for (const day of dateRange(rangeStart, rangeEnd, { days: 1 })) {
@@ -44,10 +44,10 @@ for (const day of dateRange(rangeStart, rangeEnd, { days: 1 })) {
 #### Weekly Meetings with a Deadline
 
 ```ts
-import { recurrence } from '@vielzeug/tempo';
+import { parseZoned, recurrence } from '@vielzeug/tempo';
 
-const meetingStart = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
-const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
+const meetingStart = parseZoned('2026-01-05T09:00:00[Europe/Berlin]');
+const deadline = parseZoned('2026-06-30T00:00:00[Europe/Berlin]');
 
 // ZonedDateTime start — tz inferred automatically
 for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: deadline })) {
@@ -58,9 +58,9 @@ for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: dea
 #### Bi-Weekly Sprint Planning (Count-Based)
 
 ```ts
-import { recurrence } from '@vielzeug/tempo';
+import { parseZoned, recurrence } from '@vielzeug/tempo';
 
-const sprintStart = Temporal.ZonedDateTime.from('2026-01-05T10:00:00[UTC]');
+const sprintStart = parseZoned('2026-01-05T10:00:00[UTC]');
 
 // 6 sprints, every 2 weeks
 const sprints = [...recurrence(sprintStart, { frequency: 'weekly', interval: 2, count: 6 })];
@@ -70,9 +70,9 @@ const sprints = [...recurrence(sprintStart, { frequency: 'weekly', interval: 2, 
 #### Quarterly Reports
 
 ```ts
-import { recurrence } from '@vielzeug/tempo';
+import { parseZoned, recurrence } from '@vielzeug/tempo';
 
-const quarterStart = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+const quarterStart = parseZoned('2026-01-01T00:00:00[UTC]');
 
 const quarters = [...recurrence(quarterStart, { frequency: 'monthly', interval: 3, count: 4 })];
 // Jan 1, Apr 1, Jul 1, Oct 1
@@ -81,13 +81,13 @@ const quarters = [...recurrence(quarterStart, { frequency: 'monthly', interval: 
 #### Plain Inputs Require `tz`
 
 ```ts
-import { dateRange, recurrence } from '@vielzeug/tempo';
+import { dateRange, parsePlainDate, recurrence } from '@vielzeug/tempo';
 
 // PlainDate inputs — must pass tz explicitly
 const days = [
   ...dateRange(
-    Temporal.PlainDate.from('2026-03-01'),
-    Temporal.PlainDate.from('2026-03-31'),
+    parsePlainDate('2026-03-01'),
+    parsePlainDate('2026-03-31'),
     { days: 1 },
     { tz: 'UTC' },
   ),

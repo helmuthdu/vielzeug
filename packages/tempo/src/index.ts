@@ -15,7 +15,7 @@ export {
   shift,
 } from './core';
 
-// ─── Internal utilities (public API) ─────────────────────────────────────────
+// ─── Conversion utilities ─────────────────────────────────────────────────────
 export { toInstant, toZoned } from './internal';
 
 // ─── Boundary ─────────────────────────────────────────────────────────────────

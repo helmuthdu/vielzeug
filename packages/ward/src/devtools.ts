@@ -45,7 +45,7 @@ export function debugWard<TAction extends string = string, TData = unknown>(
         : ctx.principal.id
       : 'anonymous';
     const decision = ctx.decision.padEnd(16);
-    const effect = ctx.decision !== 'no-matching-rule' ? `(${ctx.rule.effect})` : '        ';
+    const effect = ctx.decision !== 'no-matching-rule' ? `(${ctx.rule.effect})`.padEnd(8) : '        ';
 
     console.debug(`[ward:decision] ${decision}  ${effect}  ${principal}  ${ctx.resource}  ${ctx.action}`);
   };

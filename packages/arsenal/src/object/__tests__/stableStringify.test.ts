@@ -78,4 +78,11 @@ describe('stableStringify', () => {
     expect(() => stableStringify(arr)).not.toThrow();
     expect(stableStringify(arr)).toContain('[Circular]');
   });
+
+  it('public API accepts exactly two arguments — _visited is not a public parameter', () => {
+    // Verify the function has arity 2 (value, options) — not 3
+    expect(stableStringify.length).toBe(2);
+    // And still works correctly
+    expect(stableStringify({ a: 1 })).toBe('{"a":1}');
+  });
 });

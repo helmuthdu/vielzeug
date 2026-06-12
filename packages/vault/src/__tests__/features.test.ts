@@ -631,6 +631,37 @@ describe('AbortSignal cancellation', () => {
     expect(calls).toHaveLength(0); // no further calls
   });
 
+  test('observeMany() — already-aborted signal never fires the callback', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+
+    controller.abort(); // abort BEFORE observe is called
+
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps), {
+      signal: controller.signal,
+    });
+
+    await flushMicrotasks();
+    await db.put('users', { id: 1, name: 'Alice' });
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(0); // already aborted — no snapshots ever delivered
+  });
+
+  test('watch() — already-aborted signal terminates iterator before first next()', async () => {
+    const db = createMemory({ schema });
+    const controller = new AbortController();
+
+    controller.abort(); // abort BEFORE watch is called
+
+    const iter = db.watch('users', { signal: controller.signal })[Symbol.asyncIterator]();
+    const result = await iter.next();
+
+    expect(result.done).toBe(true); // should be done immediately
+  });
+
   test('watch() — signal abort terminates the async iterator', async () => {
     const db = createMemory({ schema });
     const controller = new AbortController();
@@ -673,6 +704,26 @@ describe('pruneExpired() with table filter', () => {
     const result2 = await db.pruneExpired(['posts']);
 
     expect(result2.posts).toBe(1);
+
+    vi.useRealTimers();
+  });
+
+  test('count() reflects evicted records after pruneExpired()', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Bob' }); // no TTL
+
+    expect(await db.count('users')).toBe(2); // prime the cache
+
+    vi.advanceTimersByTime(2000); // Alice expires
+
+    const result = await db.pruneExpired(['users']);
+
+    expect(result.users).toBe(1);
+    expect(await db.count('users')).toBe(1); // cache must be invalidated
 
     vi.useRealTimers();
   });

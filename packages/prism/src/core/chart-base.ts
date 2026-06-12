@@ -4,6 +4,7 @@ import { signal } from '@vielzeug/ripple';
 
 import type { ChartDimensions, ChartMargin } from '../types';
 
+import { warn } from '../_warn';
 import { createSvgElement, setAttributes } from '../svg/element';
 import { resolveMargin } from './layout';
 import { observeResize } from './responsive';
@@ -35,6 +36,13 @@ export function createChartBase(
   svg.appendChild(chartAreaGroup);
 
   const rect = container.getBoundingClientRect();
+
+  if (rect.width === 0 || rect.height === 0) {
+    warn(
+      'Chart container has zero dimensions. Ensure the container has a defined width and height before mounting a chart.',
+    );
+  }
+
   const dimensions = signal<ChartDimensions>({
     height: rect.height || 300,
     margin,

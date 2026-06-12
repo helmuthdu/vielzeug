@@ -42,5 +42,5 @@ export function curry(fn: Fn, arity = fn.length) {
     return (...rest: unknown[]) => curried(...args, ...rest);
   };
 
-  return curried as any;
+  return curried as Curried<readonly unknown[], unknown>;
 }

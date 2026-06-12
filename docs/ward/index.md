@@ -19,6 +19,14 @@ exports:
     createHonoGuard,
     WILDCARD,
     ANONYMOUS,
+    RoleStep,
+    ResourceStep,
+    ActionStep,
+    FinalStep,
+    WardRequest,
+    WardDecisionAllowed,
+    WardDecisionDenied,
+    WardDecisionResult,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -41,17 +49,17 @@ function deletePost(user: User, post: Post) {
 }
 
 // After — Ward declarative rules with typed enforcement
-import { createWard } from '@vielzeug/ward';
+import { createWard, owns } from '@vielzeug/ward';
 
-const ward = createWard([
+const ward = createWard<'delete' | 'edit', { authorId: string }>([
   { role: 'admin', action: '*', resource: '*', effect: 'allow' },
-  { role: 'author', action: ['delete', 'edit'], resource: 'post',
-    effect: 'allow', predicate: (ctx) => ctx.resource.authorId === ctx.principal.id },
+  { role: 'author', action: 'delete', resource: 'post', effect: 'allow', when: owns('authorId') },
+  { role: 'author', action: 'edit', resource: 'post', effect: 'allow', when: owns('authorId') },
 ]);
 
 const guard = ward.forUser(currentUser);
-guard.can('delete', post);           // boolean — typed, predictable
-guard.explain('delete', post);       // { effect, rule } — auditable
+guard.can('post', 'delete', post);           // boolean — typed, predictable
+guard.explain('post', 'delete', post);       // WardDecision — auditable
 ```
 
 | Feature                           | Ward                                       | CASL    | AccessControl        |
@@ -154,7 +162,7 @@ bound.rulesInScope('posts');
 - Ownership helper via `owns(attributeKey)`
 - Typed rule slice factory via `defineRules()`
 - Principal-bound API via `ward.forUser(principal)`
-- Fluent rule builder via `rule()` with `.priority()` support
+- Fluent rule builder via `rule()` with `.priority()` support; builder step types (`RoleStep`, `ResourceStep`, `ActionStep`, `FinalStep`) exported for type annotations
 - Built-in Express and Hono middleware guards via `createExpressGuard`, `createHonoGuard`, `guardRequest`, and `guardRequestWith`
 - **Debug logging** via `debugWard()` (`@vielzeug/ward/devtools`) — logs every authorization decision (`can`, `explain`, `trace`, etc.) with `[ward:decision]` prefixes including rule effect; tree-shaken from production bundles
 

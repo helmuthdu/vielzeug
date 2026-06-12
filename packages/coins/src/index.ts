@@ -11,6 +11,7 @@ export {
   greaterThan,
   greaterThanOrEqual,
   isEqual,
+  isMoney,
   isNegative,
   isNonNegative,
   isNonPositive,
@@ -31,6 +32,7 @@ export {
   toJSON,
   toCurrencyCode,
   toNumber,
+  withAmount,
   zero,
 } from './money';
 export type {

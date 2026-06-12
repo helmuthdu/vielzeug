@@ -11,31 +11,38 @@ export type SearchOptions<T> = {
   threshold?: number;
 };
 
-function seekValue(item: unknown, query: string, threshold: number): boolean {
+const MAX_SEEK_DEPTH = 10;
+
+function seekValue(item: unknown, query: string, threshold: number, depth = 0): boolean {
+  if (depth > MAX_SEEK_DEPTH) return false;
+
   if (isNil(item)) return false;
 
   if (isString(item) || isNumber(item)) return similarity(String(item), query) >= threshold;
 
-  if (Array.isArray(item)) return (item as unknown[]).some((v) => seekValue(v, query, threshold));
+  if (Array.isArray(item)) return (item as unknown[]).some((v) => seekValue(v, query, threshold, depth + 1));
 
   if (typeof item === 'object')
     return Object.values(item as Record<string, unknown>).some((v) =>
-      isNil(v) ? false : seekValue(v, query, threshold),
+      isNil(v) ? false : seekValue(v, query, threshold, depth + 1),
     );
 
   return false;
 }
 
-function seekScore(item: unknown, query: string): number {
+function seekScore(item: unknown, query: string, depth = 0): number {
+  if (depth > MAX_SEEK_DEPTH) return 0;
+
   if (isNil(item)) return 0;
 
   if (isString(item) || isNumber(item)) return similarity(String(item), query);
 
-  if (Array.isArray(item)) return (item as unknown[]).reduce<number>((max, v) => Math.max(max, seekScore(v, query)), 0);
+  if (Array.isArray(item))
+    return (item as unknown[]).reduce<number>((max, v) => Math.max(max, seekScore(v, query, depth + 1)), 0);
 
   if (typeof item === 'object')
     return Object.values(item as Record<string, unknown>).reduce<number>(
-      (max, v) => Math.max(max, seekScore(v, query)),
+      (max, v) => Math.max(max, seekScore(v, query, depth + 1)),
       0,
     );
 

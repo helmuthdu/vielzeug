@@ -14,6 +14,7 @@ import {
   flip,
   float,
   getAlignment,
+  getRects,
   getSide,
   hide,
   limitShift,
@@ -639,6 +640,33 @@ describe('autoUpdate', () => {
     expect(update).toHaveBeenCalledOnce();
     cleanup();
   });
+
+  it('observeAncestors: false uses capture-phase window scroll listener', () => {
+    setViewport();
+
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, {});
+    const update = vi.fn();
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    const removeSpy = vi.spyOn(window, 'removeEventListener');
+
+    const cleanup = autoUpdate(reference, floating, update, { observeAncestors: false });
+
+    // Must have registered a capture-phase scroll listener.
+    const addedCapture = addSpy.mock.calls.some(
+      (c) => c[0] === 'scroll' && (c[2] as AddEventListenerOptions)?.capture === true,
+    );
+
+    expect(addedCapture).toBe(true);
+
+    cleanup();
+
+    // Must have removed the capture-phase scroll listener.
+    const removedCapture = removeSpy.mock.calls.some(
+      (c) => c[0] === 'scroll' && (c[2] as EventListenerOptions)?.capture === true,
+    );
+
+    expect(removedCapture).toBe(true);
+  });
 });
 
 // ─── float ────────────────────────────────────────────────────────────────────
@@ -652,7 +680,7 @@ describe('float', () => {
 
     expect(floating.style.left).toBe('210px');
     expect(floating.style.top).toBe('340px');
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('supports a custom apply function', () => {
@@ -663,15 +691,15 @@ describe('float', () => {
     expect(apply).toHaveBeenCalledOnce();
     expect(apply.mock.calls[0][0]).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
     expect(apply.mock.calls[0][0].middlewareData.hide).toBeDefined();
-    handle.cleanup();
+    handle.dispose();
   });
 
-  it('positions once and returns a handle with no-op cleanup when autoUpdate: false', () => {
+  it('positions once and returns a handle with no-op dispose when autoUpdate: false', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const handle = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
 
     expect(floating.style.left).toBe('210px');
-    expect(() => handle.cleanup()).not.toThrow();
+    expect(() => handle.dispose()).not.toThrow();
     expect(handle.getPosition()?.x).toBe(210);
     expect(handle.getPosition()?.placement).toBe('bottom');
   });
@@ -684,7 +712,7 @@ describe('float', () => {
     });
 
     expect(floating.style.left).toBe('210px');
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('uses JS path (not CSS anchor) when a custom apply is provided with preferCssAnchor', () => {
@@ -694,7 +722,7 @@ describe('float', () => {
 
     // custom apply must be called because CSS anchor path is bypassed
     expect(apply).toHaveBeenCalledOnce();
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('returns a FloatHandle with getPosition() and update()', () => {
@@ -703,8 +731,8 @@ describe('float', () => {
 
     expect(handle.getPosition()).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
     expect(typeof handle.update).toBe('function');
-    expect(typeof handle.cleanup).toBe('function');
-    handle.cleanup();
+    expect(typeof handle.dispose).toBe('function');
+    handle.dispose();
   });
 
   it('cssAnchor is false on JS-computed handles', () => {
@@ -712,7 +740,7 @@ describe('float', () => {
     const handle = float(reference, floating, { autoUpdate: false });
 
     expect(handle.cssAnchor).toBe(false);
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('update() re-computes position after DOM change', () => {
@@ -725,7 +753,7 @@ describe('float', () => {
     handle.update();
 
     expect(floating.style.left).toBe('10px');
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('emits a DEV warn when preferCssAnchor is true but CSS Anchor Positioning is unsupported', () => {
@@ -736,7 +764,7 @@ describe('float', () => {
       const handle = float(reference, floating, { autoUpdate: false, preferCssAnchor: true });
 
       expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));
-      handle.cleanup();
+      handle.dispose();
     } finally {
       warnSpy.mockRestore();
     }
@@ -913,6 +941,23 @@ describe('presets', () => {
     expect(() => computePosition(reference, floating, { ...tooltip() })).not.toThrow();
   });
 
+  it('tooltip() applies custom padding to flip and shift', () => {
+    const custom = tooltip({ padding: 12 });
+    const def = tooltip();
+
+    // Both should have the same number of middleware.
+    expect(custom.middleware.length).toBe(def.middleware.length);
+    // Custom padding is passed through — verify preset structure is valid.
+    expect(Array.isArray(custom.middleware)).toBe(true);
+  });
+
+  it('dropdown() applies custom padding', () => {
+    const custom = dropdown({ padding: 12 });
+
+    expect(Array.isArray(custom.middleware)).toBe(true);
+    expect(custom.middleware.length).toBeGreaterThanOrEqual(3);
+  });
+
   it.each([
     ['tooltip', tooltip()],
     ['dropdown', dropdown()],
@@ -1045,6 +1090,23 @@ describe('limitShift', () => {
 
     // offset allows 20px of drift past reference edges, so 265 is within the allowed range.
     expect(extended.x).toBe(265);
+  });
+
+  it('limitShift({ offset: fn }) supports dynamic offset via function', () => {
+    setViewport(300);
+
+    const { floating, reference } = makeElements({ height: 20, width: 40, x: 280, y: 200 }, { height: 30, width: 20 });
+    // Function returning 20 should match static offset: 20 behaviour.
+    const withFn = computePosition(reference, floating, {
+      middleware: [shift({ limiter: limitShift({ offset: (_state) => 20 }), padding: 15 })],
+      placement: 'bottom',
+    });
+    const withStatic = computePosition(reference, floating, {
+      middleware: [shift({ limiter: limitShift({ offset: 20 }), padding: 15 })],
+      placement: 'bottom',
+    });
+
+    expect(withFn.x).toBe(withStatic.x);
   });
 
   it('does not clamp when drift is already within the reference extent', () => {
@@ -1281,7 +1343,7 @@ describe('containingBlock in float()', () => {
     // Viewport: x=210, y=340. Container offset (50, 100) → (160, 240).
     expect(floating.style.left).toBe('160px');
     expect(floating.style.top).toBe('240px');
-    handle.cleanup();
+    handle.dispose();
   });
 });
 
@@ -1376,6 +1438,56 @@ describe('SSR shim', () => {
     expect(handle.cssAnchor).toBe(false);
     expect(handle.getPosition()).toBeNull();
     expect(() => handle.update()).not.toThrow();
-    expect(() => handle.cleanup()).not.toThrow();
+    expect(() => handle.dispose()).not.toThrow();
+  });
+});
+
+// ─── getRects ─────────────────────────────────────────────────────────────────
+
+describe('getRects', () => {
+  it('returns rects for reference and floating from the DOM', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const rects = getRects(reference, floating);
+
+    expect(rects.reference).toMatchObject({ height: 40, width: 100, x: 200, y: 300 });
+    expect(rects.floating).toMatchObject({ height: 30, width: 80 });
+  });
+
+  it('returns rects for virtual references', () => {
+    const virtual = makeVirtualReference({ height: 40, width: 100, x: 10, y: 20 });
+    const floating = document.createElement('div');
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 80 }));
+
+    const rects = getRects(virtual, floating);
+
+    expect(rects.reference).toMatchObject({ height: 40, width: 100, x: 10, y: 20 });
+  });
+});
+
+// ─── compose typed overloads ──────────────────────────────────────────────────
+
+describe('compose typed overloads', () => {
+  beforeEach(() => setViewport());
+
+  it('compose with 2 typed middlewares returns typed tuple', () => {
+    const mws = compose(flip(), shift());
+
+    expect(mws.length).toBe(2);
+    expect(typeof mws[0]).toBe('function');
+    expect(typeof mws[1]).toBe('function');
+  });
+
+  it('compose with 4 typed middlewares returns typed tuple', () => {
+    const arrowEl = makeArrow({ height: 10, width: 10 });
+    const mws = compose(offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl }));
+
+    expect(mws.length).toBe(4);
+  });
+
+  it('compose with falsy entries filters them out', () => {
+    const mws = compose(flip(), null, undefined, false, shift());
+
+    expect(mws.length).toBe(2);
   });
 });

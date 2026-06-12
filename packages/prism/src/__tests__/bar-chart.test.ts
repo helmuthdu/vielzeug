@@ -157,10 +157,10 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
-  it('installs and destroys plugins', () => {
+  it('installs and disposes plugins', () => {
     const install = vi.fn();
-    const destroy = vi.fn();
-    const plugin: ChartPlugin = { destroy, install };
+    const dispose = vi.fn();
+    const plugin: ChartPlugin = { dispose, install };
 
     const chart = createBarChart(container, {
       plugins: [plugin],
@@ -169,7 +169,7 @@ describe('createBarChart', () => {
 
     expect(install).toHaveBeenCalledWith(chart.el, container);
     chart.dispose();
-    expect(destroy).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it('renders bar elements for each data point', () => {

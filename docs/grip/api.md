@@ -44,7 +44,7 @@ interface DropZoneOptions {
   onValidate?: (files: File[]) => boolean | Promise<boolean>;
   disabled?: boolean | (() => boolean);
   dropEffect?: DataTransfer['dropEffect'];
-  onDrop?: (files: File[], event: DragEvent) => void;
+  onDrop?: (files: File[], event: DragEvent | ClipboardEvent) => void;
   onDropRejected?: (files: File[], event: DragEvent | ClipboardEvent) => void;
   onHoverChange?: (hovered: boolean) => void;
   paste?: boolean;
@@ -130,7 +130,7 @@ Attaches drag-and-drop file handling to a DOM element. Returns a `DropZone` hand
 | `onValidate`     | `(files: File[]) => boolean \| Promise<boolean>`              | —        | Optional async gating step. Called after type/`accept`/`maxFiles` filtering, before `onDrop`. Return or resolve `false` to reject all accepted files. `zone.validating` is `true` while a promise is pending. Only receives type-accepted files.       |
 | `disabled`       | `boolean \| (() => boolean)`                                  | —        | When truthy, all drag and paste events are ignored. Accepts a boolean or a function. A disabled zone does not call `preventDefault` on `dragenter`, `dragover`, `drop`, or `paste`, so underlying elements (text editors, etc.) receive them normally. |
 | `dropEffect`     | `'copy' \| 'move' \| 'link' \| 'none'`                        | `'copy'` | The `dropEffect` set on `dataTransfer` during `dragover`. Controls the cursor indicator.                                                                                                                                                               |
-| `onDrop`         | `(files: File[], event: DragEvent) => void`                   | —        | Called with accepted files only. Not called if all dropped files are rejected.                                                                                                                                                                         |
+| `onDrop`         | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —        | Called with accepted files only. Not called if all dropped files are rejected. Also receives paste events when `paste: true` and `onPaste` is omitted — in that case the event is a `ClipboardEvent`.                                                  |
 | `onDropRejected` | `(files: File[], event: DragEvent \| ClipboardEvent) => void` | —        | Called with files that did not match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`. The event is a `ClipboardEvent` for paste rejections.                                                                                            |
 | `onHoverChange`  | `(hovered: boolean) => void`                                  | —        | Called when hover state toggles. Use this callback for drag-over styling.                                                                                                                                                                              |
 | `paste`          | `boolean`                                                     | `false`  | When `true`, attaches a `paste` listener to `window`. Pasted files run through the same `accept`, `maxFiles`, and `onValidate` pipeline as dropped files.                                                                                              |

@@ -101,6 +101,10 @@ function expandScientific(s: string): string {
  * parseRational('-0.5')  → { numerator: 5n,  denominator: 10n, negative: true  }
  * parseRational('3')     → { numerator: 3n,  denominator: 1n,  negative: false }
  * parseRational('1e-7')  → { numerator: 1n,  denominator: 10000000n, negative: false }
+ *
+ * Note: `'-0'` and `'-0.0'` produce `{ negative: true, numerator: 0n, ... }`.
+ * Callers that compute `negative ? -result : result` on `0n` remain correct
+ * because `-0n === 0n` in bigint arithmetic.
  */
 export function parseRational(str: string): { denominator: bigint; negative: boolean; numerator: bigint } {
   // Expand scientific notation (e.g. from String(1e-7) = '1e-7') before validation.

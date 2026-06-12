@@ -49,6 +49,17 @@ export type WardRule<TAction extends string = string, TData = unknown> = Readonl
   when?: WardPredicate<TData>;
 }>;
 
+/** The `allowed: true` branch of `WardDecision`. */
+export type WardDecisionAllowed<TAction extends string = string, TData = unknown> = {
+  allowed: true;
+  rule: WardRule<TAction, TData>;
+};
+
+/** The `allowed: false` branch of `WardDecision` when a deny rule explicitly matched. */
+export type WardDecisionDenied<TAction extends string = string, TData = unknown> =
+  | { allowed: false; reason: 'explicit-deny'; rule: WardRule<TAction, TData> }
+  | { allowed: false; reason: 'no-matching-rule' };
+
 /**
  * The result of an authorization decision.
  *
@@ -56,15 +67,26 @@ export type WardRule<TAction extends string = string, TData = unknown> = Readonl
  * - `allowed: true` — access granted; the winning rule is always present.
  * - `allowed: false, reason: 'explicit-deny'` — a deny rule matched; the winning rule is present.
  * - `allowed: false, reason: 'no-matching-rule'` — no rule matched; no rule is attached.
+ *
+ * Use `WardDecisionAllowed` / `WardDecisionDenied` to annotate variables that hold a
+ * pre-narrowed branch of this union.
  */
 export type WardDecision<TAction extends string = string, TData = unknown> =
-  | { allowed: true; rule: WardRule<TAction, TData> }
-  | { allowed: false; reason: 'explicit-deny'; rule: WardRule<TAction, TData> }
-  | { allowed: false; reason: 'no-matching-rule' };
+  | WardDecisionAllowed<TAction, TData>
+  | WardDecisionDenied<TAction, TData>;
 
 export type WardCheck<TAction extends string = string, TData = unknown> = {
   action: TAction;
   data?: TData;
+  resource: string;
+};
+
+/**
+ * The result of a single check in `checkAll` — a `WardDecision` annotated with
+ * the originating `resource` and `action` so callers do not need to zip by index.
+ */
+export type WardDecisionResult<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
+  action: TAction;
   resource: string;
 };
 
@@ -121,14 +143,15 @@ export type Ward<TAction extends string = string, TData = unknown> = {
    * Returns allowed concrete actions for a principal on a resource.
    * Pass `knownActions` to resolve wildcard-action rules.
    *
-   * @remarks This is a side-effect-free enumeration helper and does **not**
-   * invoke the logger. Use `checkAll` if you need an auditable batch decision.
+   * **Does not invoke the logger** — this is a side-effect-free enumeration helper.
+   * Use `checkAll` if you need an auditable batch decision that fires the logger
+   * for each action checked.
    */
   allowedActions(principal: Principal, resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
   can(principal: Principal, resource: string, action: TAction, data?: TData): boolean;
   canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
   canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean;
-  checkAll(principal: Principal, checks: readonly WardCheck<TAction, TData>[]): WardDecision<TAction, TData>[];
+  checkAll(principal: Principal, checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
   /** Returns all rule conflicts in the policy. Lazily computed and cached after first call. @complexity O(n²) */
   detectConflicts(): WardConflict<TAction, TData>[];
   explain(principal: Principal, resource: string, action: TAction, data?: TData): WardDecision<TAction, TData>;
@@ -163,8 +186,8 @@ export type BoundWard<TAction extends string = string, TData = unknown> = {
   canAll(resource: string, actions: readonly TAction[], data?: TData): boolean;
   /** Returns `true` if this principal is allowed to perform **any** of the given `actions` on `resource`. */
   canAny(resource: string, actions: readonly TAction[], data?: TData): boolean;
-  /** Evaluates multiple checks in a single call and returns one `WardDecision` per check. */
-  checkAll(checks: readonly WardCheck<TAction, TData>[]): WardDecision<TAction, TData>[];
+  /** Evaluates multiple checks in a single call and returns one `WardDecisionResult` per check — each result includes the originating `resource` and `action`. */
+  checkAll(checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
   /** Returns the full `WardDecision` for this principal on the given resource and action. */
   explain(resource: string, action: TAction, data?: TData): WardDecision<TAction, TData>;
   /**
@@ -233,6 +256,10 @@ export type WardOptions<TAction extends string = string, TData = unknown> = {
    * When `true`, `createWard` throws immediately if any rule conflicts are
    * detected. Use `detectConflicts()` on the returned ward for non-throwing
    * inspection.
+   *
+   * @remarks When both `strict` and `onConflict` are set, `onConflict` is
+   * called for each conflict **before** the throw, so all conflicts are
+   * reported even in strict mode.
    */
   strict?: boolean;
 };

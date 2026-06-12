@@ -506,3 +506,111 @@ describe('createBehaviorBus - reset()', () => {
     bus.dispose();
   });
 });
+
+describe('createBehaviorBus - middleware passthrough', () => {
+  it('middleware runs before listeners', () => {
+    const order: string[] = [];
+    const bus = createBehaviorBus<TestEvents>(
+      {},
+      {
+        middleware: [
+          (_event, _payload, next) => {
+            order.push('middleware');
+            next();
+          },
+        ],
+      },
+    );
+
+    bus.on('count', () => order.push('listener'));
+    bus.emit('count', 1);
+
+    expect(order).toEqual(['middleware', 'listener']);
+
+    bus.dispose();
+  });
+
+  it('middleware blocking dispatch does not update the replay buffer', () => {
+    const bus = createBehaviorBus<TestEvents>(
+      { count: 0 },
+      {
+        middleware: [
+          (_event, _payload, _next) => {
+            // deliberately not calling next() — blocks dispatch
+          },
+        ],
+      },
+    );
+
+    bus.emit('count', 99);
+
+    // Buffer must still hold the initial value since middleware blocked
+    expect(bus.current('count')).toBe(0);
+
+    bus.dispose();
+  });
+});
+
+describe('createBehaviorBus - validatePayload interaction', () => {
+  it('does not update buffer when validatePayload throws (no onError)', () => {
+    const bus = createBehaviorBus<TestEvents>(
+      { count: 1 },
+      {
+        validatePayload: (_event, payload) => {
+          if (typeof payload === 'number' && payload < 0) throw new RangeError('negative not allowed');
+        },
+      },
+    );
+
+    expect(() => bus.emit('count', -5)).toThrow(RangeError);
+
+    // Buffer must still hold the initial value, not the rejected -5
+    expect(bus.current('count')).toBe(1);
+
+    const listener = vi.fn();
+
+    bus.on('count', listener);
+
+    expect(listener).toHaveBeenCalledWith(1);
+
+    bus.dispose();
+  });
+
+  it('updates buffer when validatePayload passes', () => {
+    const bus = createBehaviorBus<TestEvents>(
+      {},
+      {
+        validatePayload: (_event, payload) => {
+          if (typeof payload === 'number' && payload < 0) throw new RangeError('negative not allowed');
+        },
+      },
+    );
+
+    bus.emit('count', 10);
+
+    expect(bus.current('count')).toBe(10);
+
+    bus.dispose();
+  });
+
+  it('does not update buffer when validatePayload throws and onError swallows the error', () => {
+    const errors: unknown[] = [];
+    const bus = createBehaviorBus<TestEvents>(
+      { count: 1 },
+      {
+        onError: ({ err }) => errors.push(err),
+        validatePayload: (_event, payload) => {
+          if (typeof payload === 'number' && payload < 0) throw new RangeError('negative not allowed');
+        },
+      },
+    );
+
+    bus.emit('count', -99);
+
+    expect(errors).toHaveLength(1);
+    // Buffer must still hold the initial value, not the rejected -99
+    expect(bus.current('count')).toBe(1);
+
+    bus.dispose();
+  });
+});

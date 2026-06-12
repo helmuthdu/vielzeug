@@ -5,7 +5,7 @@ package: grip
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
 related: [craft, scroll, sigil]
-exports: [createDropZone, createSortable, createSortableScope, applyReorder]
+exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 environments: [browser]
 ---
 
@@ -143,13 +143,6 @@ using sortable = createSortable({
 - **Zero dependencies** — <PackageInfo package="grip" type="size" /> gzipped, <PackageInfo package="grip" type="dependencies" /> dependencies
 
 </div>
-
-
-### Prerequisites
-
-- Browser runtime with HTML Drag and Drop API support.
-- Render targets must be real DOM elements before calling `createDropZone()` or `createSortable()`.
-- Provide accessible labels and keyboard alternatives for drag interactions in production UIs.
 
 ## Documentation
 

@@ -89,6 +89,35 @@ describe('subscribe / getSnapshot', () => {
     router.dispose();
   });
 
+  it('unsubscribing inside a notification callback does not crash', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        about: { path: '/about' },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+
+    let unsub: (() => void) | undefined;
+    const calls: string[] = [];
+
+    // eslint-disable-next-line prefer-const
+    unsub = router.subscribe((state) => {
+      calls.push(state.location.pathname);
+      unsub?.();
+    });
+
+    await router.navigate({ path: '/about' });
+    await router.navigate({ path: '/' });
+
+    // Only the first notification should have fired; unsubscribe in it prevented the second.
+    expect(calls).toEqual(['/about']);
+    router.dispose();
+  });
+
   it('unsubscribe stops further notifications', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({

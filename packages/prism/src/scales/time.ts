@@ -40,10 +40,23 @@ function chooseInterval(range: number, count: number): number {
   return YEAR;
 }
 
+function niceDomain(domain: [Date, Date], count: number): [Date, Date] {
+  const [d0, d1] = domain;
+  const range = d1.getTime() - d0.getTime();
+  const interval = chooseInterval(range, count);
+
+  return [
+    new Date(Math.floor(d0.getTime() / interval) * interval),
+    new Date(Math.ceil(d1.getTime() / interval) * interval),
+  ];
+}
+
 export function timeScale(config: TimeScaleConfig): Scale<Date> {
   return {
     get domain(): [Date, Date] {
-      return resolve(config.domain);
+      const raw = resolve(config.domain);
+
+      return config.nice === false ? raw : niceDomain(raw, 10);
     },
 
     invert(pixel: number): Date {

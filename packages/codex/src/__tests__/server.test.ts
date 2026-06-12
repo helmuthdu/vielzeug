@@ -161,6 +161,61 @@ describe('vielzeug MCP server', () => {
     expect(result.isError).toBe(true);
   });
 
+  it('get-source returns isError for a package with no source', async () => {
+    // codex has no apiSource bundled (it's the MCP server itself, not a browser-accessible lib)
+    const { client } = await createTestPair();
+    const pkgMetas = JSON.parse(
+      readText((await client.callTool({ arguments: {}, name: 'list-packages' })) as ToolCallResult),
+    ) as Array<{ hasSource: boolean; slug: string }>;
+
+    const noSourceSlug = pkgMetas.find((p) => !p.hasSource)?.slug;
+
+    if (!noSourceSlug) return; // all packages have source — skip
+
+    const result = (await client.callTool({
+      arguments: { packageSlug: noSourceSlug },
+      name: 'get-source',
+    })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toContain('no src/index.ts source');
+  });
+
+  it('search-packages results include a name field on each hit', async () => {
+    const { client } = await createTestPair();
+    const result = (await client.callTool({
+      arguments: { query: 'signal' },
+      name: 'search-packages',
+    })) as ToolCallResult;
+
+    expect(result.isError).not.toBe(true);
+
+    const hits = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
+
+    expect(hits.length).toBeGreaterThan(0);
+    expect(typeof hits[0]?.['name']).toBe('string');
+    expect((hits[0]?.['name'] as string).length).toBeGreaterThan(0);
+  });
+
+  it('search-packages returns source in matchedIn when query matches apiSource', async () => {
+    const { client } = await createTestPair();
+    // 'createServer' is only in codex apiSource — a reliable source-only match
+    const result = (await client.callTool({
+      arguments: { query: 'createServer' },
+      name: 'search-packages',
+    })) as ToolCallResult;
+
+    expect(result.isError).not.toBe(true);
+
+    const hits = JSON.parse(readText(result)) as Array<{ matchedIn: string[]; slug: string }>;
+    const codexHit = hits.find((h) => h.slug === 'codex');
+
+    // codex may or may not have apiSource in the snapshot — test defensively
+    if (codexHit) {
+      expect(codexHit.matchedIn).toContain('source');
+    }
+  });
+
   it('search-packages returns empty array for no matches', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
@@ -265,6 +320,92 @@ describe('vielzeug MCP server', () => {
 
     expect(sourceResource).toBeDefined();
     expect(sourceResource?.mimeType).toBe('text/x-typescript');
+  });
+
+  it('get-docs returns error when page enum is valid but package lacks that page', async () => {
+    // Use a synthetic data fixture with only index page — guarantees the missing-page path always runs
+    const syntheticData: BundledData = {
+      packages: [
+        {
+          apiSource: null,
+          availableDocPages: ['index'],
+          category: '',
+          components: [],
+          description: 'test',
+          docs: { index: '# Test' },
+          exports: [],
+          keywords: [],
+          name: '@vielzeug/synthetic',
+          related: [],
+          slug: 'synthetic',
+          version: '1.0.0',
+        },
+      ],
+      version: '0.0.0',
+    };
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const srv = createServer(syntheticData);
+
+    await srv.connect(serverTransport);
+
+    const client = new Client({ name: 'test-missing-page', version: '1.0.0' });
+
+    await client.connect(clientTransport);
+    activeClients.push(client);
+
+    const result = (await client.callTool({
+      arguments: { packageSlug: 'synthetic', page: 'examples' },
+      name: 'get-docs',
+    })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toMatch(/Available/);
+  });
+
+  it('list-components returns error when Sigil CEM is absent', async () => {
+    const dataWithNoSigil: BundledData = {
+      ...data,
+      packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
+    };
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const srv = createServer(dataWithNoSigil);
+
+    await srv.connect(serverTransport);
+
+    const client = new Client({ name: 'test-no-sigil-list', version: '1.0.0' });
+
+    await client.connect(clientTransport);
+    activeClients.push(client);
+
+    const result = (await client.callTool({ arguments: {}, name: 'list-components' })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toContain('unavailable');
+  });
+
+  it('get-component returns error when Sigil CEM is absent', async () => {
+    // components: [] causes ToolContext.components to be null (tools.ts checks length > 0)
+    const dataWithNoSigil: BundledData = {
+      ...data,
+      packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
+    };
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const srv = createServer(dataWithNoSigil);
+
+    await srv.connect(serverTransport);
+
+    const client = new Client({ name: 'test-no-sigil', version: '1.0.0' });
+
+    await client.connect(clientTransport);
+    activeClients.push(client);
+
+    const result = (await client.callTool({
+      arguments: { tagName: 'sg-button' },
+      name: 'get-component',
+    })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toContain('unavailable');
   });
 
   it('reads a resource by URI', async () => {

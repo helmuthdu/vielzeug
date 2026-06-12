@@ -1,8 +1,66 @@
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { getChoiceLabel, getLightChildrenByTag } from '../light-dom';
 import { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from '../numbers';
 import { parseStringTriggers } from '../parse';
+import { syncedSignal } from '../utils';
+
+// ── syncedSignal ─────────────────────────────────────────────────────────────
+
+describe('syncedSignal()', () => {
+  it('initialises with the source value', () => {
+    const controller = new AbortController();
+    const source = signal('hello');
+    const local = syncedSignal(source, controller.signal);
+
+    expect(local.value).toBe('hello');
+  });
+
+  it('stays in sync when the source changes', () => {
+    const controller = new AbortController();
+    const source = signal('a');
+    const local = syncedSignal(source, controller.signal);
+
+    source.value = 'b';
+
+    expect(local.value).toBe('b');
+  });
+
+  it('applies the transform function to each incoming value', () => {
+    const controller = new AbortController();
+    const source = signal<string | undefined>(undefined);
+    const local = syncedSignal(source, controller.signal, (v) => String(v ?? ''));
+
+    expect(local.value).toBe('');
+
+    source.value = 'test';
+
+    expect(local.value).toBe('test');
+  });
+
+  it('stops syncing after signal is aborted', () => {
+    const controller = new AbortController();
+    const source = signal('initial');
+    const local = syncedSignal(source, controller.signal);
+
+    controller.abort();
+    source.value = 'updated';
+
+    expect(local.value).toBe('initial');
+  });
+
+  it('local signal remains writable after abort', () => {
+    const controller = new AbortController();
+    const source = signal('a');
+    const local = syncedSignal(source, controller.signal);
+
+    controller.abort();
+    local.value = 'manual';
+
+    expect(local.value).toBe('manual');
+  });
+});
 
 // ── light-dom ─────────────────────────────────────────────────────────────────
 

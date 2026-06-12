@@ -88,14 +88,32 @@ describe('createStream — sse()', () => {
     expect(messages).toEqual(['hello world']);
   });
 
+  it('[Symbol.dispose] closes the SSE connection', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    fetchMock.mockResolvedValue(sseResponse(sseStream('data: hello\n\n')));
+
+    const source = stream.sse('/events');
+    const messages = collect<string>(source);
+
+    await waitFor(() => messages.length > 0);
+    source[Symbol.dispose]();
+
+    expect(() => source.on('message', () => {})).not.toThrow();
+
+    const unsub = source.on('message', () => {});
+
+    expect(typeof unsub).toBe('function');
+  });
+
   it('dispatches typed named events', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
     fetchMock.mockResolvedValue(sseResponse(sseStream('event: user-joined\ndata: {"id":1,"name":"Alice"}\n\n')));
 
-    interface Events {
+    type Events = {
       'user-joined': { id: number; name: string };
-    }
+    };
 
     const source = stream.sse<Events>('/events');
     const joined: Events['user-joined'][] = [];
@@ -599,6 +617,20 @@ describe('createStream — readable()', () => {
     expect(items).toEqual([{ val: 1 }, { val: 2 }]);
   });
 
+  it('yields trailing ndjson line not terminated with a newline', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    fetchMock.mockResolvedValue(textStreamResponse(['{"id":1}\n', '{"id":2}']));
+
+    const rows: { id: number }[] = [];
+
+    for await (const row of stream.readable<{ id: number }>('/stream', { parse: 'ndjson' })) {
+      rows.push(row);
+    }
+
+    expect(rows).toEqual([{ id: 1 }, { id: 2 }]);
+  });
+
   it('throws a descriptive error when an ndjson line is malformed', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
@@ -712,6 +744,52 @@ describe('createStream — readable()', () => {
     expect(stream.disposed).toBe(false);
     stream[Symbol.dispose]();
     expect(stream.disposed).toBe(true);
+  });
+
+  it('throws a descriptive error when response body is null (e.g. 204 No Content)', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(async () => {
+      for await (const _ of stream.readable('/empty')) {
+        /* consume */
+      }
+    }).rejects.toThrow('[courier] Response has no body');
+  });
+
+  it('early break from for-await loop aborts the underlying fetch connection', async () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+    let signalAborted = false;
+
+    const encoder = new TextEncoder();
+
+    fetchMock.mockImplementation((_url: string, init: RequestInit) => {
+      init.signal?.addEventListener('abort', () => {
+        signalAborted = true;
+      });
+
+      return Promise.resolve(
+        new Response(
+          new ReadableStream({
+            start(c) {
+              c.enqueue(encoder.encode('chunk1\n'));
+              c.enqueue(encoder.encode('chunk2\n'));
+              c.enqueue(encoder.encode('chunk3\n'));
+            },
+          }),
+          { headers: { 'content-type': 'text/plain' }, status: 200 },
+        ),
+      );
+    });
+
+    // Only consume first chunk then break
+    for await (const chunk of stream.readable('/stream')) {
+      expect(chunk).toBe('chunk1\n');
+      break;
+    }
+
+    expect(signalAborted).toBe(true);
   });
 
   it('cancelAll() aborts all in-flight streams', async () => {

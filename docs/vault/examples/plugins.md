@@ -54,7 +54,7 @@ const db = createMemory({
   },
 });
 
-// throws a sieve validation error — nothing is written to storage
+// throws a spell validation error — nothing is written to storage
 await db.put('users', { id: 1, name: 'Alice', age: -5 });
 ```
 

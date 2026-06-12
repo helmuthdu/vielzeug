@@ -14,10 +14,10 @@ Standard millisecond math with `Date` loses DST context. Adding one hour to a wa
 Use `shift()` to add or subtract duration. It delegates to the Temporal calendar system, which resolves DST transitions correctly using the target timezone.
 
 ```ts
-import { difference, parsePlainDateTime, shift, toInstant } from '@vielzeug/tempo';
+import { difference, parsePlainDateTime, parseZoned, shift, toInstant } from '@vielzeug/tempo';
 
 // Spring forward: March 8, 2026 — clocks jump 1:59 AM → 3:00 AM EDT
-const before = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
+const before = parseZoned('2026-03-08T01:30:00-05:00[America/New_York]');
 const after = shift(before, { hours: 1 });
 // → '2026-03-08T03:30:00-04:00[America/New_York]'  (skips the gap)
 
@@ -35,8 +35,10 @@ const second = toInstant(ambiguous, { tz: 'America/New_York', prefer: 'later' })
 `difference()` works correctly even when the range spans a DST transition.
 
 ```ts
-const lo = Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]');
-const hi = Temporal.ZonedDateTime.from('2026-03-08T04:00:00-04:00[America/New_York]');
+import { difference, parseZoned } from '@vielzeug/tempo';
+
+const lo = parseZoned('2026-03-08T01:30:00-05:00[America/New_York]');
+const hi = parseZoned('2026-03-08T04:00:00-04:00[America/New_York]');
 
 const duration = difference(lo, hi, { largestUnit: 'hour' });
 console.log(duration.toString()); // PT2H30M — correct wall-clock difference

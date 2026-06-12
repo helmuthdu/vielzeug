@@ -115,6 +115,16 @@ describe('exchange', () => {
     });
   });
 
+  describe('zero rate', () => {
+    it('converts any amount to zero when rate is "0"', () => {
+      // rate='0' is a valid non-negative decimal; result is always 0 minor units
+      const rate: ExchangeRate = { from: usd, rate: '0', to: eur };
+
+      expect(exchange(money('100.00', 'USD'), rate)).toEqual({ amount: 0n, currency: 'EUR' });
+      expect(exchange(money('-100.00', 'USD'), rate)).toEqual({ amount: 0n, currency: 'EUR' });
+    });
+  });
+
   describe('negative amounts', () => {
     it('handles negative money', () => {
       const result = exchange(money('-1000.00', 'USD'), { from: usd, rate: '0.85', to: eur });
@@ -128,7 +138,9 @@ describe('exchange', () => {
       const rate: ExchangeRate = { from: eur, rate: '0.85', to: gbp };
 
       expect(() => exchange(money('100.00', 'USD'), rate)).toThrow(TypeError);
-      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow('Currency mismatch: USD and EUR');
+      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow(
+        'exchange: money.currency (USD) does not match rate.from (EUR)',
+      );
     });
 
     it('throws RangeError for invalid rate string', () => {

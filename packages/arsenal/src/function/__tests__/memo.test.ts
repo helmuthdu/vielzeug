@@ -242,4 +242,44 @@ describe('memoize', () => {
     await expect(p1).resolves.toBe(10);
     await expect(p2).resolves.toBe(20);
   });
+
+  it('ttl: 0 re-executes on every call (no caching)', () => {
+    vi.useFakeTimers();
+
+    const mockFn = vi.fn((x: number) => x * 2);
+    const memoizedFn = memo(mockFn, { ttl: 0 });
+
+    expect(memoizedFn(5)).toBe(10);
+    expect(memoizedFn(5)).toBe(10);
+    expect(mockFn).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
+  it('ttl: Infinity caches forever', () => {
+    vi.useFakeTimers();
+
+    const mockFn = vi.fn((x: number) => x * 3);
+    const memoizedFn = memo(mockFn, { ttl: Infinity });
+
+    expect(memoizedFn(4)).toBe(12);
+    vi.advanceTimersByTime(Number.MAX_SAFE_INTEGER);
+    expect(memoizedFn(4)).toBe(12);
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
+  });
+
+  it('concurrent async callers share a single rejection', async () => {
+    const mockFn = vi.fn(() => Promise.reject(new Error('boom')));
+    const memoizedFn = memo(mockFn);
+
+    const p1 = memoizedFn();
+    const p2 = memoizedFn();
+
+    expect(mockFn).toHaveBeenCalledTimes(1);
+
+    await expect(p1).rejects.toThrow('boom');
+    await expect(p2).rejects.toThrow('boom');
+  });
 });

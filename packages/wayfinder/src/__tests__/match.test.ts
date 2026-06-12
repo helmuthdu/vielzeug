@@ -143,4 +143,33 @@ describe('match()', () => {
     expect(router.getSnapshot().location.pathname).toBe('/');
     router.dispose();
   });
+
+  it('forwards the provided signal to the data loader', async () => {
+    let capturedSignal: AbortSignal | undefined;
+    const controller = new AbortController();
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          data: async ({ signal }: { signal: AbortSignal }) => {
+            capturedSignal = signal;
+
+            return { ok: true };
+          },
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    controller.abort();
+    await router.match('/page', { signal: controller.signal });
+
+    expect(capturedSignal).toBeDefined();
+    expect(capturedSignal?.aborted).toBe(true);
+    router.dispose();
+  });
 });

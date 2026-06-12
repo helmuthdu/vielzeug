@@ -297,6 +297,63 @@ describe('ObjectSchema.relaxed() preserves fluent chain', () => {
   });
 });
 
+describe('ObjectSchema.merge()', () => {
+  it('merges two object schemas into one', () => {
+    const a = s.object({ x: s.string() });
+    const b = s.object({ y: s.number() });
+    const merged = a.merge(b);
+
+    expect(merged.parse({ x: 'hello', y: 42 })).toEqual({ x: 'hello', y: 42 });
+  });
+
+  it('later schema keys override earlier ones', () => {
+    const a = s.object({ x: s.string() });
+    const b = s.object({ x: s.number() });
+    const merged = a.merge(b);
+
+    expect(merged.parse({ x: 1 })).toEqual({ x: 1 });
+    expect(() => merged.parse({ x: 'str' })).toThrow();
+  });
+
+  it('merged schema rejects unknown keys (strict by default)', () => {
+    const merged = s.object({ a: s.string() }).merge(s.object({ b: s.number() }));
+
+    expect(merged.safeParse({ a: 'hi', b: 1, extra: true }).success).toBe(false);
+  });
+});
+
+describe('ObjectSchema.strict() after relaxed()', () => {
+  it('strict() after relaxed() reverts to rejecting unknown keys', () => {
+    const schema = s.object({ a: s.string() }).relaxed().strict();
+
+    expect(schema.safeParse({ a: 'hello', extra: true }).success).toBe(false);
+    expect(schema.parse({ a: 'hello' })).toEqual({ a: 'hello' });
+  });
+});
+
+describe('ObjectSchema.defaults()', () => {
+  it('returns default-filled object when all fields have defaults', () => {
+    const schema = s.object({
+      host: s.string().default('localhost'),
+      port: s.number().default(3000),
+    });
+
+    expect(schema.defaults()).toEqual({ host: 'localhost', port: 3000 });
+  });
+
+  it('throws when required fields lack defaults', () => {
+    const schema = s.object({ name: s.string() });
+
+    expect(() => schema.defaults()).toThrow();
+  });
+
+  it('partial() fields default to undefined', () => {
+    const schema = s.object({ name: s.string() }).partial();
+
+    expect(schema.defaults()).toEqual({});
+  });
+});
+
 describe('ObjectSchema shape-transform methods preserve metadata', () => {
   it('pick() preserves check() validators', () => {
     const schema = s.object({ a: s.string(), b: s.number() }).check(() => 'always fails');

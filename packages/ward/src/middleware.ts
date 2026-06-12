@@ -19,13 +19,13 @@ export type GuardResult<TAction extends string, TData> =
  * For request-object based flows where the principal must be extracted asynchronously,
  * use `guardRequestWith` instead.
  */
-export async function guardRequest<TAction extends string, TData>(
+export function guardRequest<TAction extends string, TData>(
   ward: Ward<TAction, TData>,
   principal: Principal,
   resource: string,
   action: TAction,
   data?: TData,
-): Promise<GuardResult<TAction, TData>> {
+): GuardResult<TAction, TData> {
   const decision = ward.explain(principal, resource, action, data);
 
   if (decision.allowed) {
@@ -157,7 +157,7 @@ export function createHonoGuard<TAction extends string, TData>(
 ): HonoMiddleware {
   return async (c, next) => {
     const principal = await extractPrincipal(c);
-    const result = await guardRequest(ward, principal, resource, action, options.data);
+    const result = guardRequest(ward, principal, resource, action, options.data);
 
     if (result.granted) {
       return next();

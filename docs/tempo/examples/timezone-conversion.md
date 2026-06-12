@@ -14,9 +14,9 @@ When working with times across different timezones, you need to preserve the exa
 Use `toZoned()` to project a `Temporal.Instant` into any IANA timezone. Use `now()` to get the current time pre-pinned to a timezone. All values represent the same moment — only the display offset changes.
 
 ```ts
-import { format, now, toZoned } from '@vielzeug/tempo';
+import { format, now, parseInstant, toZoned } from '@vielzeug/tempo';
 
-const utc = Temporal.Instant.from('2026-03-21T10:15:30Z');
+const utc = parseInstant('2026-03-21T10:15:30Z');
 
 // Project the same instant into three timezones
 const tokyo = toZoned(utc, { tz: 'Asia/Tokyo' });
@@ -31,7 +31,9 @@ newyork.hour; // 6  (6:15 AM EDT)
 #### Display in Multiple Timezones
 
 ```ts
-const event = Temporal.Instant.from('2026-04-15T14:00:00Z');
+import { format, parseInstant, toZoned } from '@vielzeug/tempo';
+
+const event = parseInstant('2026-04-15T14:00:00Z');
 const zones = ['America/New_York', 'Europe/Berlin', 'Asia/Tokyo', 'Australia/Sydney'];
 
 for (const tz of zones) {

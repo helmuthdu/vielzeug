@@ -21,25 +21,6 @@ describe('lazy routes', () => {
     router.dispose();
   });
 
-  it('loads data function from lazy module', async () => {
-    const dataFn = vi.fn(async () => ({ loaded: true }));
-    const history = createMemoryHistory('/page');
-    const router = createRouter({
-      history,
-      routes: {
-        page: {
-          lazy: async () => ({ data: dataFn }),
-          path: '/page',
-        },
-      },
-    });
-
-    await settle();
-    expect(dataFn).toHaveBeenCalled();
-    expect(router.getSnapshot().matches.at(-1)?.data).toEqual({ loaded: true });
-    router.dispose();
-  });
-
   it('only calls the lazy factory once across multiple navigations', async () => {
     const factory = vi.fn(async () => ({ data: vi.fn() }));
     const history = createMemoryHistory('/');

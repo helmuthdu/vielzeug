@@ -10,9 +10,11 @@ import { gripExamples } from './grip';
 import { heraldExamples } from './herald';
 import { linguaExamples } from './lingua';
 import { orbitExamples } from './orbit';
+import { prismExamples } from './prism';
 import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
 import { scrollExamples } from './scroll';
+import { sigilExamples } from './sigil';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
 import { tempoExamples } from './tempo';
@@ -33,9 +35,11 @@ export const examples = {
   herald: heraldExamples,
   lingua: linguaExamples,
   orbit: orbitExamples,
+  prism: prismExamples,
   ripple: rippleExamples,
   rune: runeExamples,
   scroll: scrollExamples,
+  sigil: sigilExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,
   tempo: tempoExamples,

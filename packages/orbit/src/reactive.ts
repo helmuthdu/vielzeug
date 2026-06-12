@@ -15,6 +15,7 @@ import { signal } from '@vielzeug/ripple';
 import type { FloatOptions } from './float';
 import type { ComputePositionResult, FloatHandle, ReferenceElement } from './types';
 
+import { warn } from './_warn';
 import { float } from './float';
 
 export interface ReactiveFloatHandle {
@@ -26,7 +27,8 @@ export interface ReactiveFloatHandle {
   /** `true` when position is managed natively by CSS Anchor Positioning. */
   readonly cssAnchor: boolean;
   /** Removes all event listeners and observers. Always call on teardown. */
-  cleanup(): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
   /** Manually trigger a position recalculation. */
   update(): void;
 }
@@ -40,7 +42,7 @@ export interface ReactiveFloatHandle {
  * import { createFloatState } from '@vielzeug/orbit/reactive';
  * import { effect } from '@vielzeug/ripple';
  *
- * const { position, cleanup } = createFloatState(reference, tooltip, {
+ * const { position, dispose } = createFloatState(reference, tooltip, {
  *   placement: 'top',
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
  * });
@@ -53,7 +55,7 @@ export interface ReactiveFloatHandle {
  * });
  *
  * // on teardown:
- * cleanup();
+ * dispose();
  * ```
  */
 export function createFloatState(
@@ -71,16 +73,19 @@ export function createFloatState(
   });
 
   if (import.meta.env.DEV && handle.cssAnchor) {
-    console.warn(
-      '[orbit/reactive] createFloatState: CSS Anchor Positioning is active — ' +
+    warn(
+      'createFloatState: CSS Anchor Positioning is active — ' +
         '`position` will remain null. Use a CSS rule or effect instead of reading the signal.',
     );
   }
 
   return {
-    cleanup: handle.cleanup.bind(handle),
     cssAnchor: handle.cssAnchor,
+    dispose: handle.dispose.bind(handle),
     position,
+    [Symbol.dispose](): void {
+      handle.dispose();
+    },
     update: handle.update.bind(handle),
   };
 }

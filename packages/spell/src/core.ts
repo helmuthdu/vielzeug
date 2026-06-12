@@ -2,7 +2,7 @@ import { isPlainObject } from '@vielzeug/arsenal';
 
 import { fail, resolveMessage, ValidationError } from './errors';
 import { descriptorToJsonSchema } from './json-schema';
-import { _messages } from './messages';
+import { _messages, _warn } from './messages';
 import { defineOwnProperty } from './safe-object';
 import {
   type AnySchema,
@@ -427,6 +427,13 @@ export class Schema<Output = unknown, Input = Output> {
    * ```
    */
   toDescriptor(): SchemaDescriptor {
+    if (this.state.preprocessors.length > 0) {
+      _warn(
+        '[@vielzeug/spell] toDescriptor(): this schema has preprocessors (e.g. trim(), lowercase(), coerce()). ' +
+          'Preprocessors are not serializable and will not be restored by fromDescriptor().',
+      );
+    }
+
     return this._toDescriptorImpl();
   }
 
@@ -578,6 +585,14 @@ export class Schema<Output = unknown, Input = Output> {
     return next;
   }
 
+  /**
+   * Creates a clone of this schema with the given state. Uses `Object.assign` over a
+   * new instance sharing the same prototype, then copies `_annotations` shallowly.
+   *
+   * **Subclass note:** Only `state` and `_annotations` are explicitly handled.
+   * Subclasses that add extra instance properties (beyond those already on `this`)
+   * must override `_clone()` and call `_construct()` to copy those properties too.
+   */
   protected _construct(state: SchemaState<any>): this {
     const next = Object.assign(Object.create(Object.getPrototypeOf(this)), this, { state }) as this;
 
@@ -782,6 +797,7 @@ export class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extend
     return this.state.description ?? this.inner.description;
   }
 
+  /** @internal */
   _withMode<NewMode extends WrapperMode>(mode: NewMode): WrapperSchema<T, NewMode> {
     return this._copyStateToWithFlags(
       new WrapperSchema(this.inner, mode),

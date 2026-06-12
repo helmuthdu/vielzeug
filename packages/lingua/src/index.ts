@@ -30,4 +30,4 @@ export type {
 export type { DurationFormatOptions, DurationValue, Formatter, ListFormatOptions } from './format';
 
 export { createFormatter } from './format';
-export { createI18n } from './i18n';
+export { createI18n, createNamespace } from './i18n';

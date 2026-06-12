@@ -267,6 +267,8 @@ const state = await router.waitFor('dashboard');
 
 Waits for the router to reach `status: 'idle'` with the named route active in the matched branch. Rejects immediately if `status === 'error'`. Resolves immediately if the router is already idle on the target route. Also rejects if `router.dispose()` is called while the promise is pending.
 
+> **Note:** `waitFor` skips intermediate `'streaming'` states — it only resolves once the status reaches `'idle'`. It does not resolve while the route is still streaming partial data.
+
 **Returns:** `Promise<RouteState>`
 
 ---
@@ -322,6 +324,8 @@ const requireAuth = redirectTo({ name: 'login' }, { replace: true });
 Creates middleware that navigates to `target` and short-circuits the middleware chain (does not call `next()`). Useful for auth guards and route aliases in middleware.
 
 For permanent declarative redirects (URL aliases), use the `redirect` field on the route definition instead.
+
+> **Note:** `redirectTo()` internally calls `ctx.navigate()`, which runs `beforeLeave` guards. If a guard blocks navigation, the redirect will not complete. Declarative `redirect` on a route definition bypasses guards entirely.
 
 **Returns:** `Middleware`
 
@@ -650,9 +654,16 @@ interface HistoryDriver {
     readonly search: string;
     readonly state: unknown;
   };
+  /** Navigate one entry back in history, equivalent to the browser back button. */
+  back(): void;
   push(url: string, state?: unknown): void;
   replace(url: string, state?: unknown): void;
-  /** Subscribe to location changes. Returns an unsubscribe function. */
+  /**
+   * Subscribe to backwards/forwards navigation (popstate-equivalent).
+   * `push()` and `replace()` are silent — they do not notify subscribers.
+   * Only `back()` (and browser popstate events) trigger notifications.
+   * Returns an unsubscribe function.
+   */
   subscribe(listener: () => void): () => void;
 }
 ```

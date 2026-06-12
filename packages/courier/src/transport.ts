@@ -148,9 +148,12 @@ export function createTransportCore(opts: TransportOptions = {}) {
       return disposed;
     },
     getHeaders,
+    /** Returns the configured request timeout in ms. */
+    getTimeout(): number {
+      return timeout;
+    },
     headers,
     mergeHeaders,
-    timeout,
     track,
     use,
   };

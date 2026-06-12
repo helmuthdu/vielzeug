@@ -24,7 +24,9 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `hydrateQueryCache()`   | Read persisted entries and seed the cache              | Async          | Runs all keys in parallel; restores original `updatedAt`             |
 | `resolveRetryDelay()`   | Compute a jitter-based retry delay for a given attempt | Sync           | Useful for custom retry strategies consistent with Courier defaults  |
 | `NO_RETRY`              | Constant (`1`) for "no retries" — one attempt total    | —              | Equivalent to `times: 1`; exported for explicit, readable code       |
+| `anySignal()`           | Combine multiple `AbortSignal`s into one               | Sync           | Returns `undefined` when called with no signals                      |
 | `HttpError`             | Structured HTTP/network/abort/timeout errors           | Sync           | Prefer `HttpError.is(err, status?)` for narrowing                    |
+| `SchemaValidationError` | Thrown when `schema.parse()` rejects the response body | Sync           | Wraps the original parse error; `data` holds the raw pre-parse body  |
 
 ## Package Entry Point
 
@@ -99,8 +101,8 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | `staleTime`   | `number`                        | `0`         | ms a successful entry is served from cache before the next `fetch()` refetches |
 | `gcTime`      | `number`                        | `300000`    | ms before an unobserved cache entry is collected; `Infinity` disables GC       |
 | `times`       | `number`                        | `1`         | Total attempts per fetch; `1` means a single try with no retries               |
-| `delay`       | `number \| (attempt) => number` | full jitter | Delay between retries                                                          |
-| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying for a specific error                           |
+| `delay`       | `number \| (attempt) => number` | full jitter | Delay between retries; `attempt` is **zero-based** (0 = before the 2nd try)   |
+| `shouldRetry` | `(error, attempt) => boolean`   | —           | Return `false` to stop retrying; `attempt` is **zero-based**                  |
 
 **Methods:**
 
@@ -113,10 +115,13 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | `getState`         | `<T>(key) => QueryState<T> \| null`                        | Full state snapshot                                                         |
 | `subscribe`        | `<T, S>(key, listener, opts?) => Unsubscribe`              | Subscribe to future state changes; **not** called immediately on attach     |
 | `watch`            | `<T, S>(key, opts?) => SyncStore<QueryState<S>>`           | Build a framework-friendly external store without an immediate callback     |
+| `watchMany`        | `<T>(keys: QueryKey[]) => SyncStore<QueryState<T>[]>`      | Observe multiple keys as one combined store; updates on any key change      |
 | `invalidate`       | `(key) => void`                                            | Evict or background-revalidate a key/prefix                                 |
 | `cancel`           | `(key) => void`                                            | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success |
 | `clear`            | `() => void`                                               | Clear all entries; active subscribers see `'idle'`                          |
 | `refetchStale`     | `() => void`                                               | Manually revalidate all stale observed entries                              |
+| `keys`             | `() => QueryKey[]`                                         | Returns all currently cached keys — useful for SSR serialization            |
+| `size`             | `number` (getter)                                          | Number of entries currently held in the cache                               |
 | `dispose`          | `() => void`                                               | Cancel all in-flight requests and clear all timers                          |
 | `disposed`         | `boolean` (getter)                                         | Whether `dispose()` has been called                                         |
 | `[Symbol.dispose]` | —                                                          | Delegates to `dispose()`                                                    |
@@ -153,23 +158,26 @@ Creates a standalone, observable mutation handle.
 | Option            | Type                                                             | Default     | Description                                                                             |
 | ----------------- | ---------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------- |
 | `times`           | `number`                                                         | `1`         | Total attempts; `1` means a single try with no retries                                  |
-| `delay`           | `number \| (attempt) => number`                                  | full jitter | Delay between retries                                                                   |
-| `shouldRetry`     | `(error, attempt) => boolean`                                    | —           | Return `false` to skip retrying for a specific error class                              |
+| `delay`           | `number \| (attempt) => number`                                  | full jitter | Delay between retries; `attempt` is **zero-based** (0 = before the 2nd try)            |
+| `shouldRetry`     | `(error, attempt) => boolean`                                    | —           | Return `false` to skip retrying; `attempt` is **zero-based**                           |
 | `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>`  | —           | Called after a successful run                                                           |
 | `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>` | —           | Called after a failed run; **not** called on abort                                      |
-| `onSettled`       | `(data, error, variables: TVariables) => void \| Promise<void>`  | —           | Called after every run including aborts (`error` is `null` for success and abort)       |
+| `onSettled`       | `(data, error, variables: TVariables, isAborted: boolean) => void \| Promise<void>` | — | Called after every run; `error` is `null` for success and abort; use `isAborted` to distinguish abort from success-with-no-data |
 | `onCallbackError` | `(error: Error) => void`                                         | —           | Called when `onSuccess`/`onError`/`onSettled` throws; does not affect `mutate()` result |
 
 **Mutation methods:**
 
-| Method      | Signature                               | Description                                    |
-| ----------- | --------------------------------------- | ---------------------------------------------- |
-| `mutate`    | `(variables, opts?) => Promise<TData>`  | Execute a run                                  |
-| `cancel`    | `() => Promise<void>`                   | Abort the active run and wait for it to settle |
-| `getState`  | `() => MutationState<TData>`            | Read current state                             |
-| `subscribe` | `(listener) => Unsubscribe`             | Subscribe immediately to mutation state        |
-| `toStore`   | `() => SyncStore<MutationState<TData>>` | Build a framework-friendly external store      |
-| `reset`     | `() => void`                            | Reset back to the idle state                   |
+| Method             | Signature                               | Description                                              |
+| ------------------ | --------------------------------------- | -------------------------------------------------------- |
+| `mutate`           | `(variables, opts?) => Promise<TData>`  | Execute a run                                            |
+| `cancel`           | `() => Promise<void>`                   | Abort the active run and wait for it to settle           |
+| `getState`         | `() => MutationState<TData>`            | Read current state                                       |
+| `subscribe`        | `(listener) => Unsubscribe`             | Subscribe immediately to mutation state                  |
+| `toStore`          | `() => SyncStore<MutationState<TData>>` | Build a framework-friendly external store                |
+| `reset`            | `() => void`                            | Reset back to the idle state                             |
+| `dispose`          | `() => void`                            | Abort active run, clear observers, and mark as disposed  |
+| `disposed`         | `boolean` (getter)                      | Whether `dispose()` has been called                      |
+| `[Symbol.dispose]` | —                                       | Delegates to `dispose()`; enables `using` declarations  |
 
 **Example:**
 
@@ -310,7 +318,7 @@ Exposes the shared transport used internally by both `createApi()` and `createSt
 | `cancelAll`    | `() => void`                                             | Abort all tracked controllers                      |
 | `dispose`      | `() => void`                                             | Abort controllers and clear interceptors           |
 | `baseUrl`      | `string`                                                 | Shared base URL                                    |
-| `timeout`      | `number`                                                 | Shared default timeout                             |
+| `getTimeout`   | `() => number`                                           | Returns the configured request timeout in ms       |
 | `disposed`     | `boolean`                                                | Whether the transport is disposed                  |
 
 **Example:**
@@ -353,6 +361,28 @@ try {
 }
 ```
 
+### `SchemaValidationError`
+
+Thrown when `schema.parse()` rejects the parsed response body.
+
+- `name`: `'SchemaValidationError'`
+- `data`: the raw (pre-validation) response body
+- `cause`: the original error thrown by `schema.parse()`
+- Static helper: `SchemaValidationError.is(err)`
+
+```ts
+import { SchemaValidationError } from '@vielzeug/courier';
+
+try {
+  const user = await api.get<User>('/users/1', { schema: UserSchema });
+} catch (err) {
+  if (SchemaValidationError.is(err)) {
+    console.error('Validation failed for body:', err.data);
+    console.error('Cause:', err.cause);
+  }
+}
+```
+
 ## Request and Stream Config
 
 ### `TransportOptions`
@@ -380,12 +410,13 @@ type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
 
 | Field          | Type           | Description                                                          |
 | -------------- | -------------- | -------------------------------------------------------------------- |
-| `body`         | `unknown`      | Plain objects are serialized as JSON; `BodyInit` values pass through |
-| `dedupe`       | `boolean`      | Set to `false` to opt out of in-flight deduplication                 |
-| `dedupeKey`    | `StableValue`  | Explicit stable key for deduplicating non-idempotent writes          |
-| `query`        | `Params`       | Query string parameters                                              |
-| `responseType` | `ResponseType` | Response parsing strategy                                            |
-| `timeout`      | `number`       | Per-request timeout override                                         |
+| `body`         | `unknown`                          | Plain objects are serialized as JSON; `BodyInit` values pass through                      |
+| `dedupe`       | `boolean`                          | Set to `false` to opt out of in-flight deduplication                                      |
+| `dedupeKey`    | `StableValue`                      | Explicit stable key for deduplicating non-idempotent writes                               |
+| `query`        | `Params`                           | Query string parameters                                                                   |
+| `responseType` | `ResponseType`                     | Response parsing strategy                                                                 |
+| `schema`       | `{ parse(data: unknown): T }`      | Response validation schema; `T` matches the request return type. Throws `SchemaValidationError` on failure |
+| `timeout`      | `number`                           | Per-request timeout override                                                              |
 
 Idempotent requests (`GET`, `HEAD`, `OPTIONS`) dedupe by **method + URL + responseType** automatically. `DELETE` does not auto-dedupe (it has side effects); provide an explicit `dedupeKey` to opt in. Request headers are not part of the automatic dedupe key.
 
@@ -408,6 +439,16 @@ type StreamRequestConfig<P extends string = string> = {
 ```
 
 Streaming requests default to `Infinity` timeout per connection when `timeout` is omitted.
+
+### `ReadableConfig<P>`
+
+```ts
+type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
+  parse?: 'ndjson' | 'text';
+};
+```
+
+Extends `StreamRequestConfig` with a `parse` option for `stream.readable()`. `'text'` (default) yields raw decoded string chunks; `'ndjson'` splits by newline and JSON-parses each complete line — use the type parameter `T` to type the parsed values.
 
 ### `SseOptions<P>`
 
@@ -480,12 +521,17 @@ type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSig
 type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   onCallbackError?: (error: Error) => void;
   onError?: (error: Error, variables: TVariables) => void | Promise<void>;
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void | Promise<void>;
+  onSettled?: (
+    data: TData | undefined,
+    error: Error | null,
+    variables: TVariables,
+    isAborted: boolean,
+  ) => void | Promise<void>;
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
 ```
 
-`onError` is not called when the mutation is aborted. `onSettled` is always called — `error` is `null` for both success and abort outcomes.
+`onError` is not called when the mutation is aborted. `onSettled` is always called — `error` is `null` for both success and abort outcomes. Use the `isAborted` flag (fourth argument) to distinguish an abort from a successful run that returned no data.
 
 ### `RetryOptions`
 
@@ -577,6 +623,7 @@ type MutationState<TData = unknown> = AsyncState<TData>;
 type SseSource<TEvents extends Record<string, unknown> = Record<string, string>> = {
   close(): void;
   on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void;
+  [Symbol.dispose](): void;
 };
 ```
 
@@ -619,7 +666,9 @@ type Batcher<K, V> = {
 
 ```ts
 interface PersistOptions {
+  all?: boolean;
   include?: (key: QueryKey) => boolean;
+  keys?: QueryKey[];
   maxAge?: number;
   onError?: (err: unknown, key: QueryKey) => void;
   prefix?: string;
@@ -627,12 +676,14 @@ interface PersistOptions {
 }
 ```
 
+- **`all`** — when `true`, snapshots `qc.keys()` at call time and persists every entry. Keys added afterwards are not observed automatically.
+- **`keys`** — explicit list of keys to observe. When omitted and `all` is falsy, falls back to `qc.keys()` if the client exposes it.
+
 ### `PersistStorage`
 
 ```ts
 interface PersistStorage {
   getItem(key: string): Promise<string | null> | string | null;
-  removeItem(key: string): Promise<void> | void;
   setItem(key: string, value: string): Promise<void> | void;
 }
 ```
@@ -677,6 +728,50 @@ A named constant for "no retries" — equivalent to `times: 1`. Use it in `Retry
 import { createQuery, NO_RETRY } from '@vielzeug/courier';
 
 const qc = createQuery({ times: NO_RETRY });
+```
+
+---
+
+### `anySignal()`
+
+```ts
+anySignal(...signals: (AbortSignal | undefined)[]): AbortSignal | undefined;
+```
+
+Combines multiple `AbortSignal`s into one composite signal that aborts as soon as **any** of the input signals aborts. Returns `undefined` when called with no arguments or all-undefined inputs — safe to pass as a `signal` option without an extra null-check.
+
+**Returns:** `AbortSignal | undefined`
+
+**Example:**
+
+```ts
+import { anySignal } from '@vielzeug/courier';
+
+// Combine a user-supplied signal with a timeout signal
+const combined = anySignal(externalSignal, AbortSignal.timeout(5_000));
+await fetch('/api/data', { signal: combined });
+```
+
+---
+
+### `resolveRetryDelay()`
+
+```ts
+resolveRetryDelay(attempt: number, userDelay?: number | ((attempt: number) => number)): number;
+```
+
+Computes the inter-attempt delay in ms from a `RetryOptions` configuration. `attempt` is zero-based. When `userDelay` is omitted, uses the same full-jitter exponential backoff as the built-in retry logic.
+
+**Returns:** `number` (ms to wait before the next attempt)
+
+**Example:**
+
+```ts
+import { resolveRetryDelay } from '@vielzeug/courier';
+
+// Custom retry with Courier-compatible delays
+const delay = resolveRetryDelay(attempt, retryOptions.delay);
+await new Promise((r) => setTimeout(r, delay));
 ```
 
 ---
@@ -767,7 +862,6 @@ interface PersistOptions {
 
 interface PersistStorage {
   getItem(key: string): Promise<string | null> | string | null;
-  removeItem(key: string): Promise<void> | void;
   setItem(key: string, value: string): Promise<void> | void;
 }
 ```

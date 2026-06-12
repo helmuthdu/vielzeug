@@ -389,8 +389,16 @@ controller.abort();
 await db.batch(['users', 'posts'], async (tx) => {
   await tx.put('users', { id: 1, name: 'Alice', age: 30 });
   await tx.put('posts', { id: 10, title: 'Hello', userId: 1 });
+});
+```
 
-  // query and delete are also available inside the callback
+`query()` and `query().delete()` are also available inside `batch()` callbacks:
+
+```ts
+await db.batch(['users', 'posts'], async (tx) => {
+  await tx.put('users', { id: 1, name: 'Alice', age: 30 });
+
+  // query and delete inside the batch scope
   await tx
     .query('posts')
     .filter((p) => p.title.startsWith('H'))
@@ -498,7 +506,7 @@ import { createMemory } from '@vielzeug/vault';
 const db = createMemory({
   schema,
   validators: {
-    users: v.object({ id: v.number(), name: v.string(), age: v.number() }),
+    users: s.object({ id: s.number(), name: s.string(), age: s.number() }),
   },
 });
 ```
@@ -718,7 +726,7 @@ const db = createMemory({
   },
 });
 
-// throws a sieve validation error before writing
+// throws a spell validation error before writing
 await db.put('users', { id: 1, name: 'Alice', age: -1 });
 ```
 

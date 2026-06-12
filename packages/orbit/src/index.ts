@@ -1,5 +1,5 @@
 // Core engine
-export { computeOnce, computePosition } from './core';
+export { computeOnce, computePosition, getRects } from './core';
 export { detectOverflow } from './overflow';
 
 // High-level API

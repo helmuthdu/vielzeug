@@ -51,7 +51,13 @@ export interface GroupVirtualizerOptions<T> {
   sections: Array<GroupSection<T>>;
 }
 
-export type GroupVirtualizer<T> = Omit<Virtualizer, 'prepend' | 'update'> & {
+export type GroupVirtualizer<T> = Omit<Virtualizer, 'items' | 'prepend' | 'update'> & {
+  /**
+   * Currently rendered data items. These are the typed `GroupVirtualItem<T>` entries
+   * from the last `onChange` state — NOT the raw flat-index `VirtualItem[]` from the
+   * underlying virtualizer. Prefer consuming items via the `onChange` callback.
+   */
+  readonly items: ReadonlyArray<GroupVirtualItem<T>>;
   scrollToItem: (sectionIndex: number, itemIndex: number, options?: ScrollToIndexOptions) => void;
   scrollToSection: (sectionIndex: number, options?: ScrollToIndexOptions) => void;
   update: (sections: Array<GroupSection<T>>) => void;
@@ -140,6 +146,8 @@ export function createGroupedVirtualizer<T>(
     return globalIndex;
   }
 
+  let lastItems: Array<GroupVirtualItem<T>> = [];
+
   function mapState(state: VirtualizerState): GroupVirtualizerState<T> {
     const items: Array<GroupVirtualItem<T>> = [];
     const headers: GroupVirtualHeader[] = [];
@@ -166,6 +174,8 @@ export function createGroupedVirtualizer<T>(
       }
     }
 
+    lastItems = items;
+
     return { headers, items, stickyHeader, totalSize: state.totalSize };
   }
 
@@ -175,7 +185,11 @@ export function createGroupedVirtualizer<T>(
     getItemKey,
     horizontal: options.horizontal,
     measurementCache: options.measurementCache,
-    onChange: options.onChange ? (state) => options.onChange!(mapState(state)) : undefined,
+    onChange: (state) => {
+      const mapped = mapState(state);
+
+      options.onChange?.(mapped);
+    },
     overscan: options.overscan ?? DEFAULT_OVERSCAN,
     sticky: (i) => flat[i]?.isHeader ?? false,
   });
@@ -211,7 +225,7 @@ export function createGroupedVirtualizer<T>(
       virtualizer.invalidate();
     },
     get items() {
-      return virtualizer.items;
+      return lastItems;
     },
     measure(index: number, size: number) {
       virtualizer.measure(index, size);

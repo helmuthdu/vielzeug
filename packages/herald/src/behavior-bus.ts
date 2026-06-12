@@ -8,6 +8,7 @@ import type {
   EventKey,
   EventMap,
   Listener,
+  Middleware,
   SubscribeOptions,
   Unsubscribe,
 } from './types';
@@ -46,9 +47,37 @@ export function createBehaviorBus<T extends EventMap>(
   if (!Number.isInteger(replayCount) || replayCount < 1)
     throw new RangeError('createBehaviorBus: replay must be a positive integer');
 
-  // Pass options through to createBus unchanged. Capture values by wrapping emit() instead.
-  const { replay: _replay, ...busOptions } = options ?? {};
-  const bus = createBus<T>(busOptions as BusOptions<T>);
+  // Strip replay and validatePayload from options before forwarding — both are wrapped below.
+  const { middleware: userMiddleware, replay: _replay, validatePayload: _vp, ...busOptions } = options ?? {};
+
+  // Flags used to guard buffer updates in emit().
+  let validationRejected = false;
+  let dispatchReached = false;
+
+  // Intercept validatePayload to set a flag when it rejects — lets emit() skip the buffer update.
+  const wrappedValidate = options?.validatePayload
+    ? (event: EventKey<T>, payload: T[EventKey<T>]): void => {
+        try {
+          options.validatePayload!(event, payload);
+        } catch (err) {
+          validationRejected = true;
+          throw err;
+        }
+      }
+    : undefined;
+
+  // Sentinel middleware appended after user middleware — runs only when all upstream
+  // middleware have called next(), meaning dispatch will actually execute.
+  const sentinelMiddleware: Middleware<T> = (_event, _payload, next) => {
+    dispatchReached = true;
+    next();
+  };
+
+  const bus = createBus<T>({
+    ...busOptions,
+    middleware: [...(userMiddleware ?? []), sentinelMiddleware],
+    validatePayload: wrappedValidate,
+  } as BusOptions<T>);
 
   // Replay buffers: Map<eventKey, last N payloads>. Seeded from initial values.
   const buffers = new Map<string, unknown[]>(Object.entries(initial ?? {}).map(([k, v]) => [k, [v]]));
@@ -67,20 +96,35 @@ export function createBehaviorBus<T extends EventMap>(
     }
   }
 
-  // R4: Wrap emit() to capture current values before dispatching to listeners.
-  // This is explicit and decoupled from onDispatch — current() always returns the latest value
-  // for the currently-dispatching event, even inside a listener callback.
+  // Wrap emit() to record dispatched values in the replay buffer.
+  // Buffer is updated AFTER bus.emit() returns so a validatePayload throw (no onError)
+  // never pollutes the buffer with a rejected payload.
+  // The wrappedValidate above sets this flag when validation rejects — both the throw
+  // path (no onError) and the swallow path (onError set) are guarded.
+
   function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [T[K]]): number {
     const payload = (args as unknown[])[0];
-    const buf = buffers.get(event as string) ?? [];
 
-    buf.push(payload);
+    validationRejected = false;
+    dispatchReached = false;
 
-    if (buf.length > replayCount) buf.shift();
+    // Dispatch first — validatePayload throw (no onError) leaves buffer clean.
+    const result = (bus.emit as (event: EventKey<T>, payload?: unknown) => number)(event, payload);
 
-    buffers.set(event as string, buf);
+    // Only update buffer when dispatch actually ran (middleware called next() through to listeners).
+    // Blocked middleware (no next()) leaves dispatchReached=false; validation rejection sets
+    // validationRejected=true — both prevent the buffer from capturing the payload.
+    if (dispatchReached && !validationRejected) {
+      const buf = buffers.get(event as string) ?? [];
 
-    return (bus.emit as (event: EventKey<T>, payload?: unknown) => number)(event, (args as unknown[])[0]);
+      buf.push(payload);
+
+      if (buf.length > replayCount) buf.shift();
+
+      buffers.set(event as string, buf);
+    }
+
+    return result;
   }
 
   function getCurrent<K extends EventKey<T>>(event: K): T[K] | undefined {

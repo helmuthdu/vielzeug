@@ -1,6 +1,8 @@
 import type { Point } from '../../svg/path';
 import type { Scale, TransitionConfig, XScale } from '../../types';
 
+import { resolveEasing } from '../../animation/easing';
+import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 
@@ -12,19 +14,16 @@ export interface AreaRenderOptions {
   transition?: TransitionConfig;
 }
 
-function cssEasing(t: TransitionConfig['easing']): string {
-  if (!t || t === 'ease-out') return 'ease-out';
+const activeAreaAnimations = new WeakMap<SVGGElement, number>();
+const previousPoints = new WeakMap<SVGGElement, Point[]>();
 
-  if (typeof t === 'function') return 'ease-out';
-
-  return t;
+function buildLinePath(pts: Point[], curve: AreaRenderOptions['curve']): string {
+  return curve === 'monotone' ? monotonePath(pts) : curve === 'step' ? stepPath(pts) : linePath(pts);
 }
 
 export function renderArea(parent: SVGGElement, points: Point[], baselineY: number, options: AreaRenderOptions): void {
-  const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
   const dur = options.transition?.duration ?? (options.transition ? 300 : 0);
-  const ease = cssEasing(options.transition?.easing);
-  const cssTransition = dur > 0 ? `d ${dur}ms ${ease}` : '';
+  const easing = resolveEasing(options.transition?.easing);
 
   let fill = parent.querySelector<SVGPathElement>('.prism-area-fill');
 
@@ -33,34 +32,81 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
     parent.appendChild(fill);
   }
 
-  fill.style.transition = cssTransition;
-  setAttributes(fill, {
-    d: areaPath(points, bottomPoints),
-    fill: options.color,
-    'fill-opacity': options.fillOpacity,
-    stroke: 'none',
-  });
+  setAttributes(fill, { fill: options.color, 'fill-opacity': options.fillOpacity, stroke: 'none' });
+
+  let line: SVGPathElement | null = null;
 
   if (options.showLine) {
-    const pathD =
-      options.curve === 'monotone'
-        ? monotonePath(points)
-        : options.curve === 'step'
-          ? stepPath(points)
-          : linePath(points);
-
-    let line = parent.querySelector<SVGPathElement>('.prism-area-line');
+    line = parent.querySelector<SVGPathElement>('.prism-area-line');
 
     if (!line) {
       line = createSvgElement('path', { class: 'prism-area-line', fill: 'none' });
       parent.appendChild(line);
     }
 
-    line.style.transition = cssTransition;
-    setAttributes(line, { d: pathD, stroke: options.color, 'stroke-width': 2 });
+    setAttributes(line, { stroke: options.color, 'stroke-width': 2 });
   } else {
     parent.querySelector('.prism-area-line')?.remove();
   }
+
+  if (dur === 0) {
+    const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
+
+    setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
+
+    if (line) setAttributes(line, { d: buildLinePath(points, options.curve) });
+
+    return;
+  }
+
+  const prevRafId = activeAreaAnimations.get(parent);
+
+  if (prevRafId !== undefined) cancelAnimationFrame(prevRafId);
+
+  const hasExisting = fill.hasAttribute('d');
+
+  if (!hasExisting) {
+    const bottomPoints = points.map((p) => ({ x: p.x, y: baselineY }));
+
+    setAttributes(fill, { d: areaPath(points, bottomPoints, options.curve) });
+
+    if (line) setAttributes(line, { d: buildLinePath(points, options.curve) });
+
+    previousPoints.set(parent, points);
+
+    return;
+  }
+
+  const rawFrom = previousPoints.get(parent) ?? points;
+  const fromPoints: Point[] = points.map((_, i) => rawFrom[i] ?? rawFrom[rawFrom.length - 1] ?? points[i]);
+
+  let startTime: number | null = null;
+
+  function frame(ts: number) {
+    if (startTime === null) startTime = ts;
+
+    const t = Math.min(1, (ts - startTime) / dur);
+    const e = easing(t);
+    const interpolated: Point[] = points.map((to, i) => ({
+      x: tweenNumber(fromPoints[i].x, to.x, e),
+      y: tweenNumber(fromPoints[i].y, to.y, e),
+    }));
+    const interpolatedBottom = interpolated.map((p) => ({ x: p.x, y: baselineY }));
+
+    setAttributes(fill!, { d: areaPath(interpolated, interpolatedBottom, options.curve) });
+
+    if (line) setAttributes(line, { d: buildLinePath(interpolated, options.curve) });
+
+    if (t < 1) {
+      activeAreaAnimations.set(parent, requestAnimationFrame(frame));
+    } else {
+      activeAreaAnimations.delete(parent);
+      previousPoints.set(parent, points);
+    }
+  }
+
+  previousPoints.set(parent, fromPoints);
+  activeAreaAnimations.set(parent, requestAnimationFrame(frame));
 }
 
 export function computeAreaPoints(

@@ -552,6 +552,28 @@ describe('Memory adapter', () => {
       }
     });
 
+    test('message with __proto__ table name is rejected by isBroadcastMsg guard', async () => {
+      const db1 = createMemory({ name: 'sec-proto-table', schema: userSchema });
+      const db2 = createMemory({ name: 'sec-proto-table', schema: userSchema });
+
+      try {
+        const attacker = new BroadcastChannel('vault-memory:sec-proto-table');
+
+        attacker.postMessage({ key: '1', stored: { value: { id: 1 } }, table: '__proto__', type: 'put' });
+        attacker.postMessage({ key: '1', stored: { value: { id: 1 } }, table: 'constructor', type: 'put' });
+        attacker.close();
+
+        await Promise.resolve();
+
+        // Prototype-polluting table names must be silently discarded
+        expect(await db2.count('users')).toBe(0);
+        expect(Object.prototype).not.toHaveProperty('id');
+      } finally {
+        db1.dispose();
+        db2.dispose();
+      }
+    });
+
     test('put message for an unknown table is discarded', async () => {
       const db1 = createMemory({ name: 'sec-unknown-table', schema: userSchema });
       const db2 = createMemory({ name: 'sec-unknown-table', schema: userSchema });

@@ -50,11 +50,36 @@ export function createReactiveVirtualizer(
     },
   });
 
-  return new Proxy(v as unknown as ReactiveVirtualizer, {
-    get(target, prop, receiver) {
-      if (prop === 'state') return state;
-
-      return Reflect.get(target as object, prop, receiver);
+  return {
+    get count() {
+      return v.count;
     },
-  });
+    destroy: () => v.destroy(),
+    invalidate: () => v.invalidate(),
+    get items() {
+      return v.items;
+    },
+    measure: (index, size) => v.measure(index, size),
+    measureBatch: (entries) => v.measureBatch(entries),
+    measureEl: (index, el) => v.measureEl(index, el),
+    prepend: (n) => v.prepend(n),
+    redraw: () => v.redraw(),
+    refresh: () => v.refresh(),
+    get scrollOffset() {
+      return v.scrollOffset;
+    },
+    scrollToBottom: (opts) => v.scrollToBottom(opts),
+    scrollToIndex: (index, opts) => v.scrollToIndex(index, opts),
+    scrollToOffset: (offset, opts) => v.scrollToOffset(offset, opts),
+    scrollToTop: (opts) => v.scrollToTop(opts),
+    state,
+    get stickyItems() {
+      return v.stickyItems;
+    },
+    [Symbol.dispose]: () => v[Symbol.dispose](),
+    get totalSize() {
+      return v.totalSize;
+    },
+    update: (next) => v.update(next),
+  };
 }

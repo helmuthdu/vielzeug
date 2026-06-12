@@ -1,5 +1,6 @@
 import type { StoreWithHistory } from './types';
 
+import { SignalImpl } from './signal';
 import { StoreImpl } from './store';
 
 /**
@@ -30,22 +31,17 @@ export const storeWithHistory = <T extends object>(
 ): StoreWithHistory<T> => {
   const maxHistory = options?.maxHistory ?? 50;
   const snapshots: Readonly<T>[] = [Object.freeze(structuredClone({ ...initial }))];
-  let cursor = 0; // index into snapshots[] pointing at current state
+  // cursor_ is a reactive signal so that canUndo/canRedo participate in the reactive graph.
+  // Reading h.canUndo inside an effect() will re-run when cursor changes.
+  const cursor_ = new SignalImpl(0, undefined, options?.name ? `${options.name}.cursor` : undefined);
   let pauseHistory = false;
-
-  const baseImpl = new StoreImpl(initial, options?.name) as StoreImpl<T> & {
-    patch: (partial: Partial<T>) => void;
-    replace: (fn: (state: Readonly<T>) => T) => void;
-    reset: () => void;
-  };
-  const base = baseImpl as unknown as StoreWithHistory<T>;
 
   // Push a new snapshot after every mutation, truncating redo history.
   const pushSnapshot = (state: Readonly<T>): void => {
     if (pauseHistory) return;
 
     // Truncate any redo states ahead of cursor
-    snapshots.splice(cursor + 1);
+    snapshots.splice(cursor_.peek() + 1);
     // Spread through the proxy to get a plain object before cloning.
     // store.peek() returns a read-only Proxy; structuredClone fails on raw Proxies
     // in some environments (jsdom). Spreading copies enumerable own properties.
@@ -56,20 +52,27 @@ export const storeWithHistory = <T extends object>(
       snapshots.splice(0, snapshots.length - maxHistory);
     }
 
-    cursor = snapshots.length - 1;
+    cursor_.value = snapshots.length - 1;
   };
 
-  // Use the _onMutation_ hook to observe each top-level key change without
+  // Use the onMutation constructor callback to observe each top-level key change without
   // monkey-patching applyTopLevelChange_. patch/replace/reset already batch
   // all key changes internally, so we guard with `highLevelMutating` to push
   // only one snapshot per high-level operation rather than one per key.
   let highLevelMutating = false;
 
-  baseImpl._onMutation_ = (): void => {
+  const onMutation = (): void => {
     if (!highLevelMutating && !pauseHistory) {
       pushSnapshot(baseImpl.peek());
     }
   };
+
+  const baseImpl = new StoreImpl(initial, options?.name, onMutation) as StoreImpl<T> & {
+    patch: (partial: Partial<T>) => void;
+    replace: (fn: (state: Readonly<T>) => T) => void;
+    reset: () => void;
+  };
+  const base = baseImpl as unknown as StoreWithHistory<T>;
 
   const originalPatch = baseImpl.patch.bind(baseImpl);
   const originalReplace = baseImpl.replace.bind(baseImpl);
@@ -112,26 +115,26 @@ export const storeWithHistory = <T extends object>(
   };
 
   const undo = (): void => {
-    if (cursor <= 0) return;
+    if (cursor_.peek() <= 0) return;
 
-    cursor--;
+    cursor_.value = cursor_.peek() - 1;
     pauseHistory = true;
 
     try {
-      originalReplace(() => snapshots[cursor] as T);
+      originalReplace(() => snapshots[cursor_.peek()] as T);
     } finally {
       pauseHistory = false;
     }
   };
 
   const redo = (): void => {
-    if (cursor >= snapshots.length - 1) return;
+    if (cursor_.peek() >= snapshots.length - 1) return;
 
-    cursor++;
+    cursor_.value = cursor_.peek() + 1;
     pauseHistory = true;
 
     try {
-      originalReplace(() => snapshots[cursor] as T);
+      originalReplace(() => snapshots[cursor_.peek()] as T);
     } finally {
       pauseHistory = false;
     }
@@ -143,9 +146,24 @@ export const storeWithHistory = <T extends object>(
     return snapshots[index];
   };
 
-  // Use defineProperties so the historyLength getter is preserved as a live accessor.
-  // Object.assign would evaluate the getter once at call time and freeze the value.
+  const dispose = (): void => {
+    cursor_.dispose();
+  };
+
+  // Use defineProperties so live getters (historyLength, canUndo, canRedo) are preserved
+  // as accessors. Object.assign would evaluate them once at call time and freeze the value.
   Object.defineProperties(baseImpl, {
+    canRedo: {
+      configurable: true,
+      enumerable: true,
+      get: () => cursor_.value < snapshots.length - 1,
+    },
+    canUndo: {
+      configurable: true,
+      enumerable: true,
+      get: () => cursor_.value > 0,
+    },
+    dispose: { configurable: true, enumerable: true, value: dispose, writable: true },
     historyAt: { configurable: true, enumerable: true, value: historyAt, writable: true },
     historyLength: {
       configurable: true,

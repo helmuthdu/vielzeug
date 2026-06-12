@@ -23,14 +23,40 @@ export function validateBundledData(raw: unknown): BundledData {
   const { packages } = raw as { packages: unknown[]; version: string };
 
   for (const pkg of packages) {
+    if (typeof pkg !== 'object' || pkg === null) {
+      throw new Error(
+        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    const p = pkg as Record<string, unknown>;
+
     if (
-      typeof pkg !== 'object' ||
-      pkg === null ||
-      typeof (pkg as Record<string, unknown>)['slug'] !== 'string' ||
-      typeof (pkg as Record<string, unknown>)['name'] !== 'string'
+      typeof p['slug'] !== 'string' ||
+      p['slug'].length === 0 ||
+      typeof p['name'] !== 'string' ||
+      p['name'].length === 0
     ) {
       throw new Error(
-        `Bundled MCP data is malformed: package entry missing "slug" or "name". Regenerate with ${REGEN_CMD}.`,
+        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (!Array.isArray(p['exports']) || !Array.isArray(p['keywords']) || !Array.isArray(p['availableDocPages'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "exports", "keywords", or "availableDocPages". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (typeof p['docs'] !== 'object' || p['docs'] === null || Array.isArray(p['docs'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "docs". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (!Array.isArray(p['components'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "components". Regenerate with ${REGEN_CMD}.`,
       );
     }
   }

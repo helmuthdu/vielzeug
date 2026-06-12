@@ -1,6 +1,6 @@
 ---
 title: Herald — Examples
-description: Practical examples and recipes for relay.
+description: Practical examples and recipes for herald.
 ---
 
 ## Examples

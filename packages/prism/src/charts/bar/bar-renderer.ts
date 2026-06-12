@@ -24,7 +24,9 @@ export function renderBars(
   options: BarRenderOptions,
 ): void {
   while (parent.children.length > data.length) {
-    parent.removeChild(parent.lastChild!);
+    const last = parent.lastElementChild;
+
+    if (last) parent.removeChild(last);
   }
 
   const bandwidth = xScale.bandwidth();

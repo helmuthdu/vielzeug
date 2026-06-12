@@ -108,6 +108,11 @@ describe('patternCovers', () => {
     expect(patternCovers('posts:*', 'posts:*')).toBe(true);
   });
 
+  it('namespace wildcard covers nested namespace wildcards', () => {
+    expect(patternCovers('posts:*', 'posts:sub:*')).toBe(true);
+    expect(patternCovers('posts:*', 'posts:draft:42')).toBe(true);
+  });
+
   it('namespace wildcard does not cover different namespace', () => {
     expect(patternCovers('posts:*', 'comments:123')).toBe(false);
     expect(patternCovers('posts:*', 'comments:*')).toBe(false);

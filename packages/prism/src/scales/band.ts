@@ -1,5 +1,6 @@
 import type { BandScale, BandScaleConfig } from '../types';
 
+import { warn } from '../_warn';
 import { resolve } from '../core/resolve';
 
 export function bandScale(config: BandScaleConfig): BandScale {
@@ -30,7 +31,11 @@ export function bandScale(config: BandScaleConfig): BandScale {
       const domain = this.domain;
       const idx = domain.indexOf(value);
 
-      if (idx === -1) return 0;
+      if (idx === -1) {
+        warn(`bandScale.map: unknown category "${value}"`);
+
+        return 0;
+      }
 
       const [r0] = this.range;
       const bw = this.bandwidth();
@@ -44,8 +49,14 @@ export function bandScale(config: BandScaleConfig): BandScale {
       return resolve(config.range);
     },
 
-    ticks(): string[] {
-      return this.domain;
+    ticks(count?: number): string[] {
+      const domain = this.domain;
+
+      if (!count || count >= domain.length) return [...domain];
+
+      const step = Math.ceil(domain.length / count);
+
+      return domain.filter((_, i) => i % step === 0);
     },
   };
 }

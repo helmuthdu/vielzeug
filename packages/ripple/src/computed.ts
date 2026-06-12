@@ -190,6 +190,9 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     return this.value_ as T;
   }
 
+  // Note: peek() throws on a disposed computed, unlike SignalImpl.peek() which returns
+  // the last value silently. Computeds have no stable "last value" guarantee after
+  // their deps are torn down — throwing prevents stale-data bugs.
   peek(): T {
     if (this.disposed_) {
       const label = this.name ? ` "${this.name}"` : '';

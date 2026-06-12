@@ -10,7 +10,6 @@ const memStorage = new Map()
 const storage = {
   getItem: (key) => memStorage.get(key) ?? null,
   setItem: (key, value) => { memStorage.set(key, value) },
-  removeItem: (key) => { memStorage.delete(key) },
 }
 
 const KEYS = [['posts', 1], ['users', 1]]

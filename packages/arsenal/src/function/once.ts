@@ -1,6 +1,12 @@
 import type { Fn } from '../types';
 
 /**
+ * A wrapped function that executes `fn` at most once and exposes a `.reset()` method
+ * to allow re-invocation.
+ */
+export type Once<T extends Fn> = T & { reset: () => void };
+
+/**
  * Create a function that runs once and returns the first result.
  *
  * @example
@@ -9,7 +15,7 @@ import type { Fn } from '../types';
  * onceRandom() // 0.3
  * onceRandom() // 0.3
  *
- * onceRandom.reset()
+ * onceRandom.reset() // clears the cached result — allows one more invocation
  *
  * onceRandom() // 0.2
  * onceRandom() // 0.2
@@ -17,9 +23,9 @@ import type { Fn } from '../types';
  *
  * @param fn - The function to wrap.
  *
- * @returns A function that can only be called once.
+ * @returns A `Once<T>` — the wrapped function with a `.reset()` method to clear the cached result.
  */
-export const once = <T extends Fn>(fn: T): T & { reset: () => void } => {
+export const once = <T extends Fn>(fn: T): Once<T> => {
   let result: ReturnType<T> | undefined;
   let called = false;
 
@@ -30,7 +36,7 @@ export const once = <T extends Fn>(fn: T): T & { reset: () => void } => {
     }
 
     return result as ReturnType<T>;
-  }) as T & { reset: () => void };
+  }) as Once<T>;
 
   wrappedFn.reset = () => {
     result = undefined;

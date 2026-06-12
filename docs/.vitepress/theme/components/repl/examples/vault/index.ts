@@ -6,6 +6,7 @@ import { indexedDbExample } from './indexed-db';
 import { queryBuilderExample } from './query-builder';
 import { reactiveObserveExample } from './reactive-observe';
 import { ttlExpirationExample } from './ttl-expiration';
+import { watchStreamExample } from './watch-stream';
 
 export const vaultExamples = {
   'basic-setup': basicSetupExample,
@@ -15,5 +16,6 @@ export const vaultExamples = {
   'indexed-db': indexedDbExample,
   'query-builder': queryBuilderExample,
   'reactive-observe': reactiveObserveExample,
+  'reactive-watch': watchStreamExample,
   'ttl-expiration': ttlExpirationExample,
 };

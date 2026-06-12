@@ -5,15 +5,22 @@ export const NO_RETRY = 1;
 
 export type RetryOptions = {
   /**
-   * Delay between retry attempts in ms, or a zero-based function where
-   * `attempt` is the number of failures so far (0 = waiting before the 2nd try).
-   * Defaults to full-jitter exponential backoff: a random delay in
-   * `[0, min(1 s × 2ⁿ, 30 s)]` where `n` is the zero-based attempt index.
+   * Delay between retry attempts in ms, or a function receiving the zero-based
+   * attempt index (`attempt = 0` means the wait before the 2nd try, after the
+   * 1st failure). Defaults to full-jitter exponential backoff: a random delay
+   * in `[0, min(1 s × 2ⁿ, 30 s)]` where `n` is the zero-based attempt index.
+   *
+   * @example
+   * ```ts
+   * // Linear backoff: 500 ms, 1 000 ms, 1 500 ms, …
+   * delay: (attempt) => (attempt + 1) * 500
+   * ```
    */
   delay?: number | ((attempt: number) => number);
   /**
    * Return `false` to skip retrying for a specific error (e.g. 4xx HTTP errors).
-   * `attempt` is 0-based (0 = deciding whether to retry after the 1st failure).
+   * `attempt` is zero-based: `0` means "deciding whether to retry after the 1st
+   * failure", `1` means "after the 2nd failure", and so on.
    */
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   /** Total number of attempts including the first. `1` means a single try with no retries. Defaults to `1`. */

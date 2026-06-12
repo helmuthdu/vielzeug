@@ -1,4 +1,11 @@
 import { createFormatter, type Formatter } from './format';
+import {
+  compileTemplate,
+  type CompiledTemplate,
+  INTERPOLATION_PATTERN,
+  parsePipePlural,
+  renderTemplate,
+} from './template';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +60,17 @@ export type TpOptions = {
 };
 
 export type ScopedI18n = {
+  /**
+   * Returns a bound translation function for a specific key within this scope.
+   * Caches the key lookup and invalidates on any catalog or locale change.
+   * Equivalent to `i18n.bind('prefix.key')`.
+   */
+  bind(key: string): (vars?: TranslateVars) => string;
+  /**
+   * Returns a bound plural-translation function for a specific branch key within this scope.
+   * Equivalent to `i18n.bindPlural('prefix.key')`.
+   */
+  bindPlural(key: string): (count: number, options?: TpOptions) => string;
   /** Intl formatter inherited from the parent instance. Follows locale changes automatically. */
   readonly fmt: Formatter;
   has(key: string): boolean;
@@ -89,98 +107,6 @@ export type MessageBranchKeys<T, P extends string = '', D extends number = 4> = 
       }[string & keyof T]
     : never;
 
-// ─── Pipe-plural shorthand (F1) ───────────────────────────────────────────────
-// A leaf string containing '|' is parsed as a pipe-delimited plural shorthand.
-// Supported part counts and their form mappings (positional, left-to-right):
-//   2 parts → one | other
-//   3 parts → zero | one | other
-//   6 parts → zero | one | two | few | many | other
-// Any other part count is treated as a plain string with no expansion.
-
-const PIPE_FORM_MAPS: Readonly<Record<number, readonly string[]>> = {
-  2: ['one', 'other'],
-  3: ['zero', 'one', 'other'],
-  6: ['zero', 'one', 'two', 'few', 'many', 'other'],
-};
-
-function parsePipePlural(value: string): Messages | null {
-  const pipeIdx = value.indexOf('|');
-
-  if (pipeIdx === -1) return null;
-
-  const parts = value.split('|');
-  const forms = PIPE_FORM_MAPS[parts.length];
-
-  if (!forms) return null;
-
-  // An empty part is almost certainly a catalog authoring error.
-  // Treat the whole value as a plain string rather than silently producing an empty form.
-  if (parts.some((p) => p.trim() === '')) return null;
-
-  const result: Messages = {};
-
-  for (let i = 0; i < parts.length; i++) {
-    result[forms[i]] = parts[i];
-  }
-
-  return result;
-}
-
-// ─── Template compilation ─────────────────────────────────────────────────────
-// When `compile: true` is passed in I18nOptions, message strings are parsed once
-// into a pre-compiled form: an array of static strings and variable names.
-// Rendering a compiled template skips the regex entirely.
-
-type TemplatePart = string | { var: string };
-type CompiledTemplate = TemplatePart[];
-
-const INTERPOLATION_PATTERN = /\{([\p{ID_Continue}-]+)\}/gu;
-
-function compileTemplate(template: string): CompiledTemplate {
-  const parts: CompiledTemplate = [];
-  let lastIndex = 0;
-
-  for (const match of template.matchAll(INTERPOLATION_PATTERN)) {
-    const { index } = match;
-    const start = index ?? 0;
-
-    if (start > lastIndex) {
-      parts.push(template.slice(lastIndex, start));
-    }
-
-    parts.push({ var: match[1] });
-    lastIndex = start + match[0].length;
-  }
-
-  if (lastIndex < template.length) {
-    parts.push(template.slice(lastIndex));
-  }
-
-  return parts;
-}
-
-function renderTemplate(
-  parts: CompiledTemplate,
-  vars: TranslateVars | undefined,
-  key: string,
-  locale: Locale,
-  onMissingVar: (varName: string, key: string, locale: Locale) => string,
-): string {
-  let result = '';
-
-  for (const part of parts) {
-    if (typeof part === 'string') {
-      result += part;
-    } else {
-      const value = vars?.[part.var];
-
-      result += value == null ? onMissingVar(part.var, key, locale) : String(value);
-    }
-  }
-
-  return result;
-}
-
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 export type I18nOptions<M extends Messages = Messages> = {
@@ -209,7 +135,11 @@ export type I18nOptions<M extends Messages = Messages> = {
    * Defaults to returning `{varName}`.
    */
   onMissingVar?: (varName: string, key: string, locale: Locale) => string;
-  /** Called when a subscriber callback throws. Defaults to `console.error`. */
+  /**
+   * Called when a subscriber callback throws. Defaults to `console.error`.
+   * Override in production to route errors to a structured logger rather than the browser console,
+   * to avoid accidentally leaking stack traces or internal state via console output.
+   */
   onSubscriberError?: (error: unknown) => void;
 };
 
@@ -240,6 +170,16 @@ export type I18n<M extends Messages = Messages> = {
    * inbox(1, { ordinal: true }); // ordinal plural
    */
   bindPlural(key: MessageBranchKeys<M> | (string & {})): (count: number, options?: TpOptions) => string;
+  /**
+   * Disposes this i18n instance: removes all subscribers and clears catalog, loader, and namespace state.
+   * After calling `dispose()`, translation methods fall back to `onMissingKey` for every key
+   * (returning the key string by default). Predicate methods (`isLoaded`, `isRegistered`) return `false`.
+   * The instance should not be used after disposal.
+   *
+   * Primarily useful for long-lived SPA instances that are replaced at runtime (e.g. route-level
+   * i18n instances) to prevent subscriber and catalog memory from accumulating.
+   */
+  dispose(): void;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
   /**
@@ -270,6 +210,10 @@ export type I18n<M extends Messages = Messages> = {
    * Serialises the currently loaded catalogs and active locale into a plain object.
    * Pass the result to `restoreState()` to hydrate a client-side instance without re-fetching.
    *
+   * **Warning:** Only fully resolved catalogs are included. Locales registered as async loaders
+   * that have not yet been `preload()`ed are silently omitted. Use `isLoaded(locale)` to verify
+   * before calling `getState()` in SSR to avoid silent hydration gaps.
+   *
    * @example
    * // Server:
    * const state = i18n.getState();
@@ -288,9 +232,44 @@ export type I18n<M extends Messages = Messages> = {
    *
    * **Pipe-plural keys:** pipe-delimited shorthand (e.g. `'One|{count}'`) is expanded into
    * sub-keys at registration time (e.g. `inbox.one`, `inbox.other`). Calling `has('inbox')`
-   * returns `false` because the base key is no longer present — use `has('inbox.one')` instead.
+   * returns `false` because the base key is no longer present — use `hasBranch('inbox')` or
+   * `has('inbox.one')` to check for plural branches.
    */
   has(key: MessageLeafKeys<M> | (string & {})): boolean;
+  /**
+   * Returns `true` if any CLDR plural form (`zero`, `one`, `two`, `few`, `many`, `other`) exists
+   * under the given branch key in the active fallback chain.
+   *
+   * Useful for checking whether a plural branch (including pipe-plural expanded keys) exists
+   * without knowing which exact forms are present.
+   *
+   * @example
+   * // catalog: { inbox: 'One message|{count} messages' }  (expands to inbox.one / inbox.other)
+   * i18n.has('inbox')        // false — base key was expanded away
+   * i18n.hasBranch('inbox')  // true  — inbox.one / inbox.other exist
+   */
+  hasBranch(key: MessageBranchKeys<M> | (string & {})): boolean;
+  /**
+   * Returns `true` if the catalog for `locale` is fully resolved (i.e. not still a pending loader).
+   * Use this to avoid a redundant `preload()` call when you already know the locale is ready.
+   *
+   * Note: returns `false` for locales that were registered but never loaded, and also for
+   * unregistered locales.
+   */
+  isLoaded(locale: Locale): boolean;
+  /**
+   * Returns `true` if `locale` is in the known locale registry — either as a resolved catalog
+   * or as a pending async loader. Returns `false` for locales that have never been registered.
+   *
+   * Use this to distinguish:
+   * - `isRegistered(l)` — locale is known (may or may not be loaded yet)
+   * - `isLoaded(l)` — locale is known **and** fully resolved
+   *
+   * @example
+   * if (!i18n.isRegistered('fr')) throw new Error('fr locale not configured');
+   * if (!i18n.isLoaded('fr')) await i18n.preload('fr');
+   */
+  isRegistered(locale: Locale): boolean;
   /**
    * Loads a registered namespace's translations for a locale and merges them into the catalog.
    * Deduplicates concurrent and repeated calls — the namespace source is loaded at most once per locale.
@@ -313,6 +292,11 @@ export type I18n<M extends Messages = Messages> = {
    * **Note:** `source` accepts any `Messages`-shaped object, intentionally looser than `M`, so
    * partial overlays do not need to satisfy the full catalog shape. Calling `register()` after
    * a merge replaces the entire catalog, discarding all merged keys.
+   *
+   * **Concurrency note:** `merge()` waits for in-flight `preload()` tasks but does not
+   * coordinate with concurrent `loadNamespace()` tasks for the same locale. If both run
+   * concurrently on the same locale, the final key set is non-deterministic for overlapping
+   * keys — last write wins.
    */
   merge(locale: Locale, source: LocaleSource<Messages>): Promise<void>;
   preload(locale: Locale): Promise<void>;
@@ -322,7 +306,7 @@ export type I18n<M extends Messages = Messages> = {
    * the target locale and returns a `LocaleSource` for that locale's namespace messages.
    * Factories may also return a `Promise<M>` directly (async factory pattern).
    */
-  registerNamespace(ns: string, factory: NamespaceFactory<Messages>): void;
+  registerNamespace(ns: string, factory: NamespaceFactory<M>): void;
   /**
    * Hydrates the instance with pre-loaded state (e.g. from a server-rendered payload).
    * Replaces catalogs for the locales in the state and sets the active locale.
@@ -363,6 +347,10 @@ export type I18n<M extends Messages = Messages> = {
    * - Default: callback runs only on changes.
    * - `{ immediate: true }`: callback runs immediately with the current snapshot and on every change.
    * - `{ signal }`: unsubscribes automatically when the AbortSignal fires.
+   *
+   * @note When `{ immediate: true }` is passed and the callback throws synchronously on the first
+   * call, `onSubscriberError` is invoked and the subscription is **not** registered — the callback
+   * will not fire on future changes. This prevents a broken callback from being called repeatedly.
    */
   subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe;
   /**
@@ -383,7 +371,9 @@ export type I18n<M extends Messages = Messages> = {
    * Pipe-delimited shorthand in the catalog is expanded at registration time:
    * `{ inbox: 'One message|{count} messages' }` → `{ inbox: { one: '...', other: '...' } }`.
    *
-   * @security Returns a raw, unsanitized string — see `t()` for guidance on safe rendering.
+   * @security Returns a raw, unsanitized string. If `options.vars` values originate from
+   * untrusted input, sanitize the output before inserting into the DOM via `innerHTML`.
+   * `.textContent` is always safe.
    */
   tp(key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string;
 };
@@ -392,8 +382,20 @@ export type I18n<M extends Messages = Messages> = {
 
 // Module-level canonical-locale cache — Intl.getCanonicalLocales is pure.
 // Bounded at CANON_CACHE_MAX to prevent unbounded growth from dynamic locale strings.
+//
+// Note: this cache is shared across ALL createI18n() instances in the same module scope
+// (typical for a browser SPA or Node process). This is intentional — Intl.getCanonicalLocales
+// is a pure function and the cache is only a performance aid.
+// In test environments with heavy isolation requirements, the cache is bounded by CANON_CACHE_MAX
+// and cannot grow beyond that size, so no cleanup is needed between test runs.
 const CANON_CACHE_MAX = 256;
 const canonCache = new Map<string, string>();
+
+// Module-level plural-rules cache — Intl.PluralRules is locale+type keyed and pure.
+// Sharing across instances avoids duplicating PluralRules objects in SSR fork-per-request workloads.
+// Bounded by PLURAL_CACHE_MAX to prevent unbounded growth from exotic locale tags.
+const PLURAL_CACHE_MAX = 128;
+const pluralRulesCache = new Map<string, Intl.PluralRules>();
 
 function canon(locale: string): string {
   const cached = canonCache.get(locale);
@@ -410,7 +412,7 @@ function canon(locale: string): string {
 
   if (!canonical) throw new Error(`[lingua/E004] Invalid BCP 47 locale tag: "${locale}".`);
 
-  if (canonCache.size >= CANON_CACHE_MAX) canonCache.clear();
+  if (canonCache.size >= CANON_CACHE_MAX) canonCache.delete(canonCache.keys().next().value as string);
 
   canonCache.set(locale, canonical);
 
@@ -466,6 +468,9 @@ function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]
 // defense-in-depth in case a plain-object path is introduced in future.
 const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
+// CLDR plural form suffixes — used by hasBranch() to check for plural-branch presence.
+const CLDR_FORMS = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
+
 function flattenStrings(messages: Messages, result = new Map<string, string>(), prefix?: string): Map<string, string> {
   for (const [key, value] of Object.entries(messages)) {
     if (UNSAFE_KEYS.has(key)) continue;
@@ -488,18 +493,17 @@ function flattenStrings(messages: Messages, result = new Map<string, string>(), 
   return result;
 }
 
-function selectPluralForm(
-  cache: Map<string, Intl.PluralRules>,
-  locale: Locale,
-  count: number,
-  ordinal: boolean,
-): string {
+function selectPluralForm(locale: Locale, count: number, ordinal: boolean): string {
   const key = `${locale}:${ordinal ? 'ordinal' : 'cardinal'}`;
-  let rules = cache.get(key);
+  let rules = pluralRulesCache.get(key);
 
   if (!rules) {
     rules = new Intl.PluralRules(locale, { type: ordinal ? 'ordinal' : 'cardinal' });
-    cache.set(key, rules);
+
+    if (pluralRulesCache.size >= PLURAL_CACHE_MAX)
+      pluralRulesCache.delete(pluralRulesCache.keys().next().value as string);
+
+    pluralRulesCache.set(key, rules);
   }
 
   return rules.select(count);
@@ -512,7 +516,7 @@ export function createI18n<M extends Messages>(config: I18nOptions<M>): I18n<M>;
 /** Overload: no type parameter (loose typing, allows heterogeneous catalogs) */
 export function createI18n(config?: I18nOptions<Messages>): I18n<Messages>;
 export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M>): I18n<M> {
-  const cfg = (config ?? {}) as I18nOptions<M>;
+  const cfg: I18nOptions<M> = config ?? {};
   const withCompile = cfg.compile === true;
   let locale = canon(cfg.locale ?? 'en');
   const fallback = Array.isArray(cfg.fallback) ? cfg.fallback.map(canon) : cfg.fallback ? [canon(cfg.fallback)] : [];
@@ -532,7 +536,6 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   const namespaceTasks = new Map<string, Promise<void>>();
 
   const subscribers = new Set<(snapshot: I18nSnapshot) => void>();
-  const pluralCache = new Map<string, Intl.PluralRules>();
 
   const onMissingKey = cfg.onMissingKey ?? ((key: string) => key);
   const onMissingVar = cfg.onMissingVar ?? ((varName: string) => `{${varName}}`);
@@ -709,7 +712,11 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     return interpolate(base, found, vars);
   };
 
-  const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string => {
+  const translatePlural: I18n<M>['tp'] = (
+    key: MessageBranchKeys<M> | (string & {}),
+    count: number,
+    options?: TpOptions,
+  ): string => {
     if (!Number.isFinite(count)) {
       throw new TypeError('[lingua/E002] `count` must be a finite number.');
     }
@@ -722,7 +729,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     }
 
     const base = String(key);
-    const mergedVars = vars ? { ...vars, count } : { count };
+    const mergedVars = vars ? { count, ...vars } : { count };
 
     // Walk the fallback chain locale by locale, selecting the CLDR plural form using
     // each locale's own rules. This ensures that when a translation is resolved from a
@@ -733,7 +740,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
       if (!catalog) continue;
 
-      const form = selectPluralForm(pluralCache, candidate, count, ordinal);
+      const form = selectPluralForm(candidate, count, ordinal);
 
       // Priority order for cardinal count=0:
       //   1. explicit .zero override (locale-independent zero string)
@@ -786,6 +793,8 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     return unsubscribe;
   };
 
+  let disposed = false;
+
   return {
     bind(key: MessageLeafKeys<M> | (string & {})): (vars?: TranslateVars) => string {
       const base = String(key);
@@ -813,8 +822,30 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       return (count: number, options?: TpOptions): string => translatePlural(base, count, options);
     },
 
+    dispose(): void {
+      if (disposed) return;
+
+      disposed = true;
+      subscribers.clear();
+      catalogs.clear();
+      loaders.clear();
+      loadingTasks.clear();
+      knownLocales.clear();
+      namespaceRegistry.clear();
+      loadedNamespaces.clear();
+      namespaceTasks.clear();
+    },
+
     fmt,
 
+    /**
+     * Creates an isolated child instance. Inherits resolved catalogs, pending loaders, and the
+     * namespace registry, but has its own locale, fallback chain, version counter, and subscribers.
+     *
+     * @note Namespace load markers are **not** copied. If the parent has already loaded a namespace,
+     * the fork will re-load it when `loadNamespace()` is called. Pre-call `loadNamespace()` on the
+     * fork after forking, or pre-load before forking, to avoid unnecessary re-fetches in SSR.
+     */
     fork(overrides?: Omit<I18nOptions<M>, 'catalogs' | 'compile'>): I18n<M> {
       const forkedCatalogs: Record<Locale, LocaleSource<M>> = {};
 
@@ -874,6 +905,38 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       return findEntry(String(key)) !== undefined;
     },
 
+    hasBranch(key: MessageBranchKeys<M> | (string & {})): boolean {
+      const base = `${String(key)}.`;
+
+      for (const candidate of activeChain) {
+        const catalog = catalogs.get(candidate);
+
+        if (!catalog) continue;
+
+        for (const form of CLDR_FORMS) {
+          if (catalog.strings.has(`${base}${form}`)) return true;
+        }
+      }
+
+      return false;
+    },
+
+    isLoaded(loc: Locale): boolean {
+      try {
+        return catalogs.has(canon(loc));
+      } catch {
+        return false;
+      }
+    },
+
+    isRegistered(loc: Locale): boolean {
+      try {
+        return knownLocales.has(canon(loc));
+      } catch {
+        return false;
+      }
+    },
+
     loadNamespace(ns: string, loc?: Locale): Promise<void> {
       const normalized = loc ? canon(loc) : locale;
       const taskKey = `${ns}\x00${normalized}`;
@@ -890,7 +953,8 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
       const raw = factory(normalized);
       // Normalize: factory may return LocaleSource<M> or Promise<M> directly.
-      const source: LocaleSource<M> = raw instanceof Promise ? () => raw as Promise<M> : (raw as LocaleSource<M>);
+      const isPromise = raw != null && typeof (raw as { then?: unknown }).then === 'function';
+      const source: LocaleSource<M> = isPromise ? () => raw as Promise<M> : (raw as LocaleSource<M>);
       const task = merge(normalized, source).then(
         () => {
           loadedNamespaces.add(taskKey);
@@ -954,6 +1018,27 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       const pre = String(prefix);
 
       return {
+        bind: (key) => {
+          const fullKey = `${pre}.${key}`;
+          let snapshotRef = snapshot;
+          let cached = findEntry(fullKey);
+
+          return (vars?: TranslateVars): string => {
+            if (snapshot !== snapshotRef) {
+              snapshotRef = snapshot;
+              cached = findEntry(fullKey);
+            }
+
+            if (!cached) return onMissingKey(fullKey, locale);
+
+            return interpolate(fullKey, cached, vars);
+          };
+        },
+        bindPlural: (key) => {
+          const fullKey = `${pre}.${key}`;
+
+          return (count: number, options?: TpOptions): string => translatePlural(fullKey, count, options);
+        },
         fmt,
         has: (key) => findEntry(`${pre}.${key}`) !== undefined,
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
@@ -982,6 +1067,29 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     subscribe: subscribeInternal,
 
     t: translate,
-    tp: translatePlural as I18n<M>['tp'],
+    tp: translatePlural,
   };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Typed identity helper for `registerNamespace()` factories.
+ *
+ * Wraps a namespace factory with an explicit catalog type `M` so TypeScript validates
+ * that the factory's return type satisfies the full catalog shape. Without this helper,
+ * `registerNamespace` accepts any `Messages`-shaped return value.
+ *
+ * @example
+ * import type { MyMessages } from './locales/en/settings.json';
+ *
+ * i18n.registerNamespace(
+ *   'settings',
+ *   createNamespace<MyMessages>((locale) =>
+ *     import(`./locales/${locale}/settings.json`).then((m) => m.default),
+ *   ),
+ * );
+ */
+export function createNamespace<M extends Messages = Messages>(factory: NamespaceFactory<M>): NamespaceFactory<M> {
+  return factory;
 }

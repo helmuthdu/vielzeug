@@ -77,4 +77,54 @@ describe('validateCatalog()', () => {
 
     expect(warnings).toEqual([]);
   });
+
+  test('warns when an "other" form template omits {count}', () => {
+    const warnings = validateCatalog({ inbox: { one: 'One message', other: 'Many messages' } }, 'en');
+    const countWarning = warnings.find((w) => w.form === 'other:missing-count');
+
+    expect(countWarning).toEqual({ form: 'other:missing-count', key: 'inbox', locale: 'en' });
+  });
+
+  test('does not warn when "other" form template includes {count}', () => {
+    const warnings = validateCatalog({ inbox: { one: 'One message', other: '{count} messages' } }, 'en');
+    const countWarning = warnings.find((w) => w.form === 'other:missing-count');
+
+    expect(countWarning).toBeUndefined();
+  });
+
+  test('does not warn about {count} in "zero" or "one" forms (intentional omission is fine)', () => {
+    const warnings = validateCatalog(
+      { inbox: { one: 'One message', other: '{count} messages', zero: 'No messages' } },
+      'en',
+    );
+    const zeroWarn = warnings.find((w) => w.form === 'zero:missing-count');
+    const oneWarn = warnings.find((w) => w.form === 'one:missing-count');
+
+    expect(zeroWarn).toBeUndefined();
+    expect(oneWarn).toBeUndefined();
+  });
+
+  test('skips __proto__, constructor, and prototype keys in catalog (prototype pollution guard)', () => {
+    const evil = JSON.parse('{"__proto__": {"one":"x","other":"y"}, "hello": "world"}') as Record<string, unknown>;
+
+    expect(() => validateCatalog(evil as any, 'en')).not.toThrow();
+
+    const warnings = validateCatalog(evil as any, 'en');
+
+    expect(warnings.every((w) => w.key !== '__proto__')).toBe(true);
+  });
+
+  test('falls back to [one, other] when getExpectedPluralForms throws for an unrecognised locale', () => {
+    // Force the try/catch in getExpectedPluralForms by passing a locale that throws in Intl.PluralRules.
+    // The fallback set is ['one', 'other'], so a catalog with only 'one' produces one warning.
+    const badLocale = '!!bad!!';
+    const warnings = validateCatalog({ items: { one: 'One' } }, badLocale);
+
+    // Whether Intl throws or falls back, the result must have exactly 'other' missing.
+    const forms = warnings.map((w) => w.form);
+
+    expect(forms).toContain('other');
+    expect(warnings.every((w) => w.locale === badLocale)).toBe(true);
+    expect(warnings.every((w) => w.key === 'items')).toBe(true);
+  });
 });

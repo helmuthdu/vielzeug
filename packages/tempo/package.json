@@ -37,7 +37,6 @@
     "vitest": "^4.1.7"
   },
   "dependencies": {
-    "@js-temporal/polyfill": "^0.5.1",
-    "@vielzeug/arsenal": "workspace:*"
+    "@js-temporal/polyfill": "^0.5.1"
   }
 }

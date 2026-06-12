@@ -1,5 +1,6 @@
 import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
 
+import { warn } from '../_warn';
 import { getAvailableSpace, getBoundaryRect, getPlacementOverflow, totalOverflow } from '../overflow';
 import { tagMiddleware, toSideObject } from '../utils';
 
@@ -48,7 +49,7 @@ export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
     const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
     if (import.meta.env.DEV && placements.length === 0) {
-      console.warn('[orbit] autoPlacement: allowedPlacements is empty — no placement will be evaluated.');
+      warn('autoPlacement: allowedPlacements is empty — no placement will be evaluated.');
     }
 
     let bestPlacement = state.placement;

@@ -268,4 +268,46 @@ describe('stash', () => {
     expect(c.size).toBe(0);
     expect(c.get('key')).toBeUndefined();
   });
+
+  it('delete() during in-flight does not re-populate the store after the promise resolves', async () => {
+    vi.useRealTimers();
+
+    let resolve!: (v: string) => void;
+    const c = stash<string>({ hash: (k: string) => k });
+    const factory = vi.fn(
+      () =>
+        new Promise<string>((r) => {
+          resolve = r;
+        }),
+    );
+
+    const p = c.getOrSet('key', factory);
+
+    expect(c.size).toBe(0);
+
+    c.delete('key'); // delete before in-flight resolves
+
+    resolve('hello');
+
+    const value = await p; // caller still receives the resolved value
+
+    expect(value).toBe('hello');
+    expect(c.size).toBe(0); // must NOT be re-added to store
+    expect(c.get('key')).toBeUndefined();
+  });
+
+  it('getOrSet() sync: caches undefined — factory not called again', () => {
+    const factory = vi.fn(() => undefined as undefined);
+    const c = stash<undefined, string>({ hash: (k) => k });
+
+    const v1 = c.getOrSet('k', factory);
+
+    expect(v1).toBeUndefined();
+    expect(factory).toHaveBeenCalledTimes(1);
+
+    const v2 = c.getOrSet('k', factory);
+
+    expect(v2).toBeUndefined();
+    expect(factory).toHaveBeenCalledTimes(1);
+  });
 });

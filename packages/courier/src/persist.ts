@@ -8,11 +8,18 @@ import { stableStringify } from './serialize';
  */
 export interface PersistStorage {
   getItem(key: string): Promise<string | null> | string | null;
-  removeItem(key: string): Promise<void> | void;
   setItem(key: string, value: string): Promise<void> | void;
 }
 
 export interface PersistOptions {
+  /**
+   * When `true`, persists every key currently held in the cache at the time
+   * `persistQueryCache` is called. Equivalent to passing `keys: qc.keys()`.
+   * Keys added to the cache after this call are **not** automatically observed —
+   * call `persistQueryCache` again or pass an explicit `keys` array to cover them.
+   * Requires the query client to expose `keys()`.
+   */
+  all?: boolean;
   /**
    * Predicate to decide which query keys are persisted or hydrated.
    * Applied consistently by both `persistQueryCache` and `hydrateQueryCache`.
@@ -22,8 +29,10 @@ export interface PersistOptions {
   /**
    * The query keys to persist or hydrate. Only these keys are observed /
    * read from storage; use `include` to further filter them.
+   * When omitted, `persistQueryCache` uses `qc.keys()` to enumerate all
+   * currently cached keys (requires the query client to expose `keys()`).
    */
-  keys: QueryKey[];
+  keys?: QueryKey[];
   /**
    * Maximum age in ms for a persisted entry to be eligible for hydration.
    * Entries whose `updatedAt` timestamp is older than `Date.now() - maxAge` are
@@ -71,6 +80,7 @@ type SerializedEntry = {
 export function persistQueryCache(
   qc: {
     getState(key: QueryKey): { data: unknown; status: string; updatedAt?: number } | null;
+    keys?(): QueryKey[];
     subscribe(
       key: QueryKey,
       listener: (state: { data: unknown; status: string; updatedAt?: number }) => void,
@@ -78,7 +88,8 @@ export function persistQueryCache(
   },
   opts: PersistOptions,
 ): () => void {
-  const { include, keys, onError, prefix = 'courier:', storage } = opts;
+  const { all, include, keys: optsKeys, onError, prefix = 'courier:', storage } = opts;
+  const keys = optsKeys ?? (all ? (qc.keys?.() ?? []) : []);
   const unsubs: Array<() => void> = [];
 
   function storageKey(key: QueryKey): string {
@@ -134,10 +145,11 @@ export function persistQueryCache(
  * ```
  */
 export async function hydrateQueryCache(
-  qc: { set(key: QueryKey, data: unknown, opts?: { updatedAt?: number }): void },
+  qc: { keys?(): QueryKey[]; set(key: QueryKey, data: unknown, opts?: { updatedAt?: number }): void },
   opts: PersistOptions,
 ): Promise<void> {
-  const { include, keys, maxAge, onError, prefix = 'courier:', storage } = opts;
+  const { all, include, keys: optsKeys, maxAge, onError, prefix = 'courier:', storage } = opts;
+  const keys = optsKeys ?? (all ? (qc.keys?.() ?? []) : []);
 
   const eligibleKeys = include ? keys.filter((key) => include(key)) : keys;
 

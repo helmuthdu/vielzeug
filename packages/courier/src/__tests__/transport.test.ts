@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { anySignal as anySignalFromIndex } from '../index';
 import { anySignal, buildTimeoutSignal, createTransportCore, validateTimeout } from '../transport';
 
 describe('validateTimeout', () => {
@@ -198,5 +199,31 @@ describe('createTransportCore', () => {
   it('throws on invalid timeout', () => {
     expect(() => createTransportCore({ timeout: 0 })).toThrow(TypeError);
     expect(() => createTransportCore({ timeout: -100 })).toThrow(TypeError);
+  });
+
+  it('headers() sets and updates global headers', () => {
+    const transport = createTransportCore({ headers: { 'x-app': 'v1' } });
+
+    expect(transport.getHeaders()['x-app']).toBe('v1');
+
+    transport.headers({ 'x-app': 'v2', 'x-new': 'yes' });
+
+    expect(transport.getHeaders()['x-app']).toBe('v2');
+    expect(transport.getHeaders()['x-new']).toBe('yes');
+  });
+
+  it('headers() deletes a header when value is undefined', () => {
+    const transport = createTransportCore({ headers: { 'x-old': 'keep', 'x-remove': 'gone' } });
+
+    transport.headers({ 'x-remove': undefined });
+
+    expect(transport.getHeaders()['x-remove']).toBeUndefined();
+    expect(transport.getHeaders()['x-old']).toBe('keep');
+  });
+});
+
+describe('anySignal (public export)', () => {
+  it('is exported from the public index', () => {
+    expect(anySignalFromIndex).toBe(anySignal);
   });
 });

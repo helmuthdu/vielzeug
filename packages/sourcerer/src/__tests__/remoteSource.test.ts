@@ -1,7 +1,7 @@
 import { decodeQuery, encodeQuery } from '../codecs';
 import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
-import { SourceTimeoutError } from '../types';
+import { SourceDisposedError, SourceTimeoutError } from '../types';
 
 describe('createRemoteSource', () => {
   beforeEach(() => {
@@ -890,6 +890,68 @@ describe('createRemoteSource', () => {
     });
   });
 
+  describe('onFetch', () => {
+    it('calls onFetch with success event after a successful fetch', async () => {
+      const onFetch = vi.fn();
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch, onFetch });
+
+      await source.refresh();
+
+      expect(onFetch).toHaveBeenCalledOnce();
+
+      const event = onFetch.mock.calls[0]![0];
+
+      expect(event.status).toBe('success');
+      expect(event.durationMs).toBeGreaterThanOrEqual(0);
+      expect(event.query).toMatchObject({ page: 1 });
+      expect(event.error).toBeUndefined();
+    });
+
+    it('calls onFetch with error event after a failed fetch', async () => {
+      const onFetch = vi.fn();
+      const fetch = vi.fn(async () => {
+        throw new Error('down');
+      });
+      const source = createRemoteSource({ autoFetch: false, fetch, onFetch });
+
+      await source.refresh();
+
+      expect(onFetch).toHaveBeenCalledOnce();
+
+      const event = onFetch.mock.calls[0]![0];
+
+      expect(event.status).toBe('error');
+      expect(event.error?.message).toBe('down');
+    });
+  });
+
+  describe('snapshot', () => {
+    it('pre-populates items and total from snapshot', async () => {
+      const fetch = vi.fn(async () => ({ items: ['fresh'], total: 1 }));
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch,
+        snapshot: { items: ['snap-a', 'snap-b'], page: 3, total: 50 },
+      });
+
+      expect(source.current).toEqual(['snap-a', 'snap-b']);
+      expect(source.meta.totalItems).toBe(50);
+      expect(source.meta.pageNumber).toBe(3);
+    });
+
+    it('respects page: 0 in snapshot (not treated as falsy)', async () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createRemoteSource({
+        autoFetch: false,
+        fetch,
+        snapshot: { items: [], page: 0, total: 0 },
+      });
+
+      expect(source.meta.pageNumber).toBe(1); // clampPage(0, ...) = 1, not silently skipped
+    });
+  });
+
   describe('dispose', () => {
     it('stops notifying listeners and aborts inflight requests', async () => {
       let capturedSignal: AbortSignal | undefined;
@@ -913,6 +975,62 @@ describe('createRemoteSource', () => {
       await vi.runAllTimersAsync();
 
       expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('ready() rejects with SourceDisposedError when disposed while waiting', async () => {
+      const fetch = vi.fn(
+        () =>
+          new Promise<{ items: string[]; total: number }>((resolve) =>
+            setTimeout(() => resolve({ items: [], total: 0 }), 500),
+          ),
+      );
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      source.refresh();
+
+      const readyPromise = source.ready();
+
+      source.dispose();
+
+      await expect(readyPromise).rejects.toBeInstanceOf(SourceDisposedError);
+    });
+
+    it('Symbol.dispose calls dispose()', async () => {
+      const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+      const listener = vi.fn();
+
+      source.subscribe(listener);
+      source[Symbol.dispose]();
+
+      await source.refresh().catch(() => {});
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('restoreQuery cancels pending debounce', () => {
+    it('cancels a pending search debounce before applying restore', async () => {
+      const fetch = vi.fn(async (q: { search?: string }) => ({
+        items: q.search === 'hello' ? ['hello-result'] : ['default'],
+        total: 1,
+      }));
+      const source = createRemoteSource({ autoFetch: false, debounceMs: 300, fetch });
+
+      await source.refresh();
+      fetch.mockClear();
+
+      source.search('hello');
+
+      await source.restoreQuery({ search: 'world' });
+
+      vi.advanceTimersByTime(400);
+      await vi.runAllTimersAsync();
+
+      const searchArgs = fetch.mock.calls.map((c) => (c[0] as { search?: string }).search);
+
+      expect(searchArgs).not.toContain('hello');
+      expect(searchArgs).toContain('world');
     });
   });
 });

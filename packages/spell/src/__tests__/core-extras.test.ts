@@ -1,4 +1,4 @@
-import { descriptorToJsonSchema, fromDescriptor, s } from '../index';
+import { configure, descriptorToJsonSchema, fromDescriptor, s } from '../index';
 
 // ---------------------------------------------------------------------------
 // descriptorToJsonSchema() as standalone function
@@ -155,5 +155,80 @@ describe('fromDescriptor() reconstructible fidelity', () => {
     expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
     expect(reconstructed.parse('dG9rZW4=')).toBe('dG9rZW4=');
     expect(() => reconstructed.parse('plain-text')).toThrow();
+  });
+
+  it('round-trips never descriptor', () => {
+    const schema = s.never();
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.safeParse('anything').success).toBe(false);
+  });
+
+  it('round-trips bigint descriptor', () => {
+    const schema = s.bigint().optional().label('Big');
+    const reconstructed = fromDescriptor(schema.toDescriptor());
+
+    expect(reconstructed.toDescriptor()).toEqual(schema.toDescriptor());
+    expect(reconstructed.parse(42n)).toBe(42n);
+    expect(reconstructed.parse(undefined)).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// toDescriptor() preprocessor warning
+// ---------------------------------------------------------------------------
+
+describe('toDescriptor() preprocessor warning', () => {
+  it('emits a warning when the schema has preprocessors', () => {
+    const warnings: string[] = [];
+
+    configure({ logger: (msg) => warnings.push(msg) });
+
+    s.string().trim().toDescriptor();
+
+    configure({ logger: null });
+
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toMatch(/preprocessor/i);
+  });
+
+  it('does not warn for schemas without preprocessors', () => {
+    const warnings: string[] = [];
+
+    configure({ logger: (msg) => warnings.push(msg) });
+
+    s.string().min(3).toDescriptor();
+
+    configure({ logger: null });
+
+    expect(warnings.length).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UnionSchema async — non-ValidationError re-throw
+// ---------------------------------------------------------------------------
+
+describe('UnionSchema async non-ValidationError re-throw', () => {
+  it('re-throws unexpected non-ValidationError errors from async branches', async () => {
+    const boom = new TypeError('unexpected internal error');
+    const badSchema = s.string().checkAsync(async () => {
+      throw boom;
+    });
+    const schema = s.union(s.number(), badSchema);
+
+    await expect(schema.safeParseAsync('hello')).rejects.toThrow('unexpected internal error');
+  });
+
+  it('collects ValidationError branch failures normally', async () => {
+    const schema = s.union(s.number(), s.string());
+    const result = await schema.safeParseAsync(true);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].code).toBe('invalid_union');
+    }
   });
 });

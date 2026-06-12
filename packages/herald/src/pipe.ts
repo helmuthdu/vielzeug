@@ -27,6 +27,8 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
   entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
   signal?: AbortSignal,
 ): Unsubscribe {
+  if (entries.length === 0) throw new RangeError('pipeEvents() requires at least one entry');
+
   // Stop when target disposes or when the caller's signal fires.
   const pipeSignal = combineSignals(target.disposalSignal, signal);
 

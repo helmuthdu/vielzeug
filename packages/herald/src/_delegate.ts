@@ -13,6 +13,8 @@ import type { Bus, EventMap } from './types';
  * @internal Not re-exported from the public index.
  */
 export function makeBusDelegate<T extends EventMap>(bus: Bus<T>): Bus<T> {
+  type BusMethods<T extends EventMap> = Omit<Bus<T>, 'disposed' | 'disposalSignal'>;
+
   const delegate = {
     dispose: () => bus.dispose(),
     emit: bus.emit,
@@ -26,8 +28,7 @@ export function makeBusDelegate<T extends EventMap>(bus: Bus<T>): Bus<T> {
     [Symbol.dispose]: () => bus.dispose(),
     wait: bus.wait,
     waitAny: bus.waitAny,
-  } as Bus<T>; // Cast is safe: getters (disposed, disposalSignal) are added via defineProperty below.
-  // Note: if Bus<T> gains a new required field, TypeScript won't catch the omission here — keep in sync manually.
+  } satisfies BusMethods<T> as Bus<T>; // satisfies catches any missing method; cast is safe — getters added below.
 
   Object.defineProperty(delegate, 'disposalSignal', {
     configurable: true,

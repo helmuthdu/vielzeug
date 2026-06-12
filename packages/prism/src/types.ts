@@ -51,10 +51,10 @@ export interface Series<T extends DataPoint = DataPoint> {
 // ─── Scale Types ─────────────────────────────────────────────────────────────
 
 export interface Scale<T> {
-  domain: [T, T];
+  readonly domain: readonly [T, T];
   invert(pixel: number): T;
   map(value: T): number;
-  range: [number, number];
+  readonly range: readonly [number, number];
   ticks(count?: number): T[];
 }
 
@@ -62,11 +62,11 @@ export type XScale = Scale<Date> | Scale<number>;
 
 export interface BandScale {
   bandwidth(): number;
-  domain: string[];
+  readonly domain: readonly string[];
   gap(): number;
   map(value: string): number;
-  range: [number, number];
-  ticks(): string[];
+  readonly range: readonly [number, number];
+  ticks(count?: number): string[];
 }
 
 export interface LinearScaleConfig {
@@ -103,14 +103,25 @@ export interface AxisConfig {
   label?: string;
   position: AxisPosition;
   tickCount?: number;
-  tickFormat?: (value: unknown) => string;
+  tickFormat?: (value: Date | number | string) => string;
 }
 
 // ─── Interaction Types ───────────────────────────────────────────────────────
 
 export interface TooltipConfig {
   offset?: number;
+  /**
+   * Custom HTML renderer for the tooltip. The returned string is set via `innerHTML` —
+   * ensure any user-supplied data (series names, data point values) is sanitized before
+   * interpolation to prevent XSS.
+   */
   render?: (point: DataPoint, series: Series) => string;
+  /**
+   * Optional sanitizer applied to the `render` output before DOM injection.
+   * Use this to plug in DOMPurify or a similar HTML sanitizer.
+   * @example sanitize: (html) => DOMPurify.sanitize(html)
+   */
+  sanitize?: (html: string) => string;
 }
 
 export interface CrosshairConfig {
@@ -144,7 +155,7 @@ export interface TransitionConfig {
 // ─── Plugin Types ────────────────────────────────────────────────────────────
 
 export interface ChartPlugin {
-  destroy(): void;
+  dispose(): void;
   install(svg: SVGSVGElement, container: HTMLElement): void;
 }
 
@@ -213,17 +224,13 @@ export interface PieSliceConfig {
   value: number;
 }
 
-export interface PieChartConfig {
-  ariaLabel?: string;
+export interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
   data: MaybeSignal<PieSliceConfig[]>;
   innerRadius?: number;
   onClick?: (slice: PieSliceConfig, index: number) => void;
   onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
   padPixels?: number;
-  plugins?: ChartPlugin[];
-  tooltip?: TooltipConfig | boolean;
-  transition?: TransitionConfig;
   variant?: PieVariant;
 }
 
@@ -238,6 +245,7 @@ export interface StackSegment {
 }
 
 export interface SparklineConfig {
+  ariaLabel?: string;
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';

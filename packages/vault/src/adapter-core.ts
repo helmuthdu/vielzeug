@@ -362,11 +362,18 @@ export function buildAdapterOps<S extends AnySchema>(
     options?.onMutation?.(table);
   };
 
+  // Cross-tab notifications must NOT call onMutation (which would re-publish to BroadcastChannel,
+  // creating an infinite loop). They only need to invalidate the count cache and notify observers.
+  const notifyExternal = (table: keyof S & string): void => {
+    countCache.delete(table);
+    observers.notify(table);
+  };
+
   // R6: Resolve optional backend capabilities once at construction — no per-call checks.
   const pruneAll = core.pruneAllExpired?.bind(core);
   const rawCountFn = core.getRawCount?.bind(core);
 
-  const disconnectExternal = options?.onCrossTabMessage?.(observers.notify) ?? undefined;
+  const disconnectExternal = options?.onCrossTabMessage?.(notifyExternal) ?? undefined;
 
   if (signals) {
     for (const [tableName, signal] of Object.entries(signals)) {
@@ -517,6 +524,8 @@ export function buildAdapterOps<S extends AnySchema>(
       const pairs = await Promise.all(
         tableNames.map(async (name) => {
           const pruned = await core.pruneExpiredInTable(name);
+
+          if (pruned > 0) countCache.delete(name);
 
           return [name, pruned] as const;
         }),

@@ -27,4 +27,10 @@ describe('isPromise', () => {
 
     expect(isPromise(fn())).toBe(false);
   });
+
+  it('returns true for custom thenables', () => {
+    const thenable = { then: (cb: (v: number) => void) => cb(1) };
+
+    expect(isPromise(thenable)).toBe(true);
+  });
 });

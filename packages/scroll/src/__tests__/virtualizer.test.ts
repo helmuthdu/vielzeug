@@ -551,6 +551,25 @@ describe('createVirtualizer – onRangeChange', () => {
     expect(order).toEqual(['onRangeChange', 'onChange']);
     v.destroy();
   });
+
+  it('v.items stays [] when only onRangeChange is provided (zero-alloc path)', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const ranges: [number, number][] = [];
+    const v = createVirtualizer(el, {
+      count: 50,
+      estimateSize: 20,
+      onRangeChange: (first, last) => ranges.push([first, last]),
+      overscan: { end: 0, start: 0 },
+    });
+
+    expect(v.items).toHaveLength(0);
+
+    scrollEl(el, 100);
+
+    expect(v.items).toHaveLength(0);
+    expect(ranges.length).toBeGreaterThan(0);
+    v.destroy();
+  });
 });
 
 // ─── prepend ──────────────────────────────────────────────────────────────────
@@ -1055,6 +1074,65 @@ describe('exported constants', () => {
 
   it('DEFAULT_OVERSCAN is 3', () => {
     expect(DEFAULT_OVERSCAN).toBe(3);
+  });
+});
+
+// ─── estimateSize throw guard ───────────────────────────────────────────────
+
+describe('createVirtualizer – throwing estimateSize', () => {
+  it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize throws', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, {
+      count: 3,
+      estimateSize: () => {
+        throw new Error('oops');
+      },
+    });
+
+    expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
+    v.destroy();
+  });
+
+  it('virtualizer remains functional after a throwing estimateSize', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    let shouldThrow = true;
+    const v = createVirtualizer(el, {
+      count: 3,
+      estimateSize: () => {
+        if (shouldThrow) throw new Error();
+
+        return 20;
+      },
+    });
+
+    shouldThrow = false;
+    v.update({ estimateSize: () => 20 });
+
+    expect(v.totalSize).toBe(3 * 20);
+    v.destroy();
+  });
+});
+
+// ─── update measurementCache ──────────────────────────────────────────────────
+
+describe('createVirtualizer – update measurementCache', () => {
+  it('hot-swaps the measurement cache via update()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const cache1 = new Map<number | string, number>();
+    const cache2 = new Map<number | string, number>([[0, 80]]);
+    const v = createVirtualizer(el, {
+      count: 5,
+      estimateSize: 20,
+      measurementCache: cache1,
+      overscan: { end: 0, start: 0 },
+    });
+
+    expect(v.items.find((i) => i.index === 0)?.size).toBe(20);
+
+    v.update({ measurementCache: cache2 });
+
+    expect(v.items.find((i) => i.index === 0)?.size).toBe(80);
+    v.destroy();
   });
 });
 

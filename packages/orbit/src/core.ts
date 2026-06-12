@@ -9,10 +9,12 @@ import type {
   ReferenceElement,
 } from './types';
 
+import { warn } from './_warn';
 import { baseCoords, toRect } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
+/** Reads the bounding rects of the reference and floating elements from the DOM. */
 export function getRects(reference: ReferenceElement, floating: HTMLElement): MiddlewareState['rects'] {
   return {
     floating: toRect(floating.getBoundingClientRect()),
@@ -33,6 +35,11 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
     y: result.y ?? state.y,
   };
 }
+
+// ── Constants ─────────────────────────────────────────────────────────────────────────────────
+
+/** Maximum number of pipeline restarts allowed per `computePosition` call before throwing. */
+const MAX_RESETS = 8;
 
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
 
@@ -72,20 +79,20 @@ export function computePosition(
 ): ComputePositionResult {
   if (import.meta.env.DEV) {
     if (reference === floating) {
-      console.warn('[orbit] reference and floating are the same element.');
+      warn('computePosition: reference and floating are the same element.');
     }
 
     const rect = floating.getBoundingClientRect();
 
     if (rect.width === 0 && rect.height === 0) {
-      console.warn('[orbit] Floating element has zero dimensions — is it hidden or detached from the DOM?');
+      warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
     }
 
     const pos = getComputedStyle(floating).position;
 
     if (pos !== 'fixed' && pos !== 'absolute') {
-      console.warn(
-        `[orbit] Floating element has \`position: ${pos}\`. ` +
+      warn(
+        `computePosition: floating element has \`position: ${pos}\`. ` +
           'Orbit computes viewport-relative coordinates and expects position: fixed ' +
           '(or absolute for scoped stacking contexts).',
       );
@@ -97,7 +104,7 @@ export function computePosition(
   let middlewareData: MiddlewareData = {};
   let rects = getRects(reference, floating);
 
-  for (let resets = 0; resets < 8; resets += 1) {
+  for (let resets = 0; resets < MAX_RESETS; resets += 1) {
     let state: MiddlewareState = {
       ...baseCoords(currentPlacement, rects.reference, rects.floating),
       boundary,
@@ -140,8 +147,8 @@ export function computePosition(
 
     if (reset.rects === 'remeasure') {
       rects = getRects(reference, floating);
-    } else if (reset.rects) {
-      rects = reset.rects as MiddlewareState['rects'];
+    } else if (reset.rects != null) {
+      rects = reset.rects;
     }
 
     currentPlacement = reset.placement ?? state.placement;

@@ -14,9 +14,14 @@ export class StateError extends Error {
   readonly code: StateErrorCode;
 
   constructor(code: StateErrorCode, message: string) {
-    super(`[ripple/${code}] ${message}`);
-    this.name = 'StateError';
+    super(`[@vielzeug/ripple/${code}] ${message}`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;
+  }
+
+  static is(err: unknown): err is StateError {
+    return err instanceof StateError;
   }
 }
 

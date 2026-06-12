@@ -38,8 +38,14 @@ export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions &
   /**
    * Called after every run regardless of outcome, including aborts.
    * `error` is `null` for both success and abort; `data` is `undefined` for error and abort.
+   * Use `isAborted` to distinguish an abort from a successful run that returned no data.
    */
-  onSettled?: (data: TData | undefined, error: Error | null, variables: TVariables) => void | Promise<void>;
+  onSettled?: (
+    data: TData | undefined,
+    error: Error | null,
+    variables: TVariables,
+    isAborted: boolean,
+  ) => void | Promise<void>;
   /** Called after a successful run, before `mutate()` resolves. */
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
@@ -55,6 +61,7 @@ export function createMutation<TData, TVariables = void>(
   let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
   const observers = new Set<() => void>();
   let cachedStore: SyncStore<MutationState<TData>> | null = null;
+  let disposed = false;
 
   function notify() {
     observers.forEach((l) => l());
@@ -74,8 +81,13 @@ export function createMutation<TData, TVariables = void>(
     }
   }
 
-  async function fireSettled(data: TData | undefined, error: Error | null, variables: TVariables): Promise<void> {
-    await safeCall(() => mutOpts?.onSettled?.(data, error, variables));
+  async function fireSettled(
+    data: TData | undefined,
+    error: Error | null,
+    variables: TVariables,
+    isAborted: boolean,
+  ): Promise<void> {
+    await safeCall(() => mutOpts?.onSettled?.(data, error, variables, isAborted));
   }
 
   return {
@@ -86,6 +98,20 @@ export function createMutation<TData, TVariables = void>(
 
       run.controller.abort();
       await run.promise.catch(() => {});
+    },
+
+    dispose(): void {
+      if (disposed) return;
+
+      disposed = true;
+      activeRun?.controller.abort();
+      activeRun = null;
+      observers.clear();
+      cachedStore = null;
+    },
+
+    get disposed(): boolean {
+      return disposed;
     },
 
     getState(): MutationState<TData> {
@@ -124,7 +150,7 @@ export function createMutation<TData, TVariables = void>(
             delay: (attempt) => resolveRetryDelay(attempt, mutOpts?.delay),
             shouldRetry: mutOpts?.shouldRetry,
             signal,
-            times: mutOpts?.times ?? 1,
+            times: mutOpts?.times ?? 1, // 1 = single attempt, no retries — same as NO_RETRY
           });
 
           if (run === currentRun) {
@@ -134,7 +160,7 @@ export function createMutation<TData, TVariables = void>(
 
           await safeCall(() => mutOpts?.onSuccess?.(data, variables));
 
-          await fireSettled(data, null, variables);
+          await fireSettled(data, null, variables, false);
 
           return data;
         } catch (err) {
@@ -152,7 +178,7 @@ export function createMutation<TData, TVariables = void>(
             await safeCall(() => mutOpts?.onError?.(error, variables));
           }
 
-          await fireSettled(undefined, isAborted ? null : error, variables);
+          await fireSettled(undefined, isAborted ? null : error, variables, isAborted);
 
           throw error;
         } finally {
@@ -178,6 +204,10 @@ export function createMutation<TData, TVariables = void>(
       observers.add(wrapped);
 
       return () => observers.delete(wrapped);
+    },
+
+    [Symbol.dispose](): void {
+      this.dispose();
     },
 
     toStore(): SyncStore<MutationState<TData>> {
@@ -210,7 +240,10 @@ export function createMutation<TData, TVariables = void>(
 }
 
 export interface Mutation<TData, TVariables = void> {
+  [Symbol.dispose](): void;
   cancel(): Promise<void>;
+  dispose(): void;
+  get disposed(): boolean;
   getState(): MutationState<TData>;
   mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
   reset(): void;

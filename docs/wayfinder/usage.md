@@ -194,6 +194,8 @@ const routes = {
 };
 ```
 
+> **Note:** `redirectTo()` calls `ctx.navigate()` internally, so `beforeLeave` guards will run and can block it. Declarative `redirect` on a route definition bypasses all leave guards.
+
 ### Leave Guards
 
 Register a global leave guard with `router.beforeLeave()`. Return `false` to cancel navigation.

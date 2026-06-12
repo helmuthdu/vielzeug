@@ -1,4 +1,6 @@
-import { errorsAt, s, ValidationError } from '../index';
+import { vi } from 'vitest';
+
+import { configure, errorsAt, prependIssuePath, reset, s, ValidationError } from '../index';
 
 describe('ValidationError message and shaping', () => {
   it('formats a root-level issue with fallback path label', () => {
@@ -181,5 +183,64 @@ describe('ValidationError.bestMatch()', () => {
     ]);
 
     expect(error.bestMatch()).toBeNull();
+  });
+});
+
+describe('prependIssuePath()', () => {
+  it('prepends a string segment to all issue paths', () => {
+    const issues = prependIssuePath([{ code: 'custom', message: 'Bad', path: ['name'] }], 'user');
+
+    expect(issues[0].path).toEqual(['user', 'name']);
+  });
+
+  it('prepends a number segment (array index)', () => {
+    const issues = prependIssuePath([{ code: 'custom', message: 'Bad', path: [] }], 0);
+
+    expect(issues[0].path).toEqual([0]);
+  });
+
+  it('does not mutate the original issues array', () => {
+    const original = [{ code: 'custom', message: 'Bad', path: ['field'] }];
+    const result = prependIssuePath(original, 'root');
+
+    expect(result).not.toBe(original);
+    expect(original[0].path).toEqual(['field']);
+    expect(result[0].path).toEqual(['root', 'field']);
+  });
+
+  it('handles empty issues array', () => {
+    expect(prependIssuePath([], 'x')).toEqual([]);
+  });
+});
+
+describe('configure({ logger: null }) — warning silencing', () => {
+  afterEach(() => {
+    reset();
+  });
+
+  it('silences internal warnings when logger is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    configure({ logger: null });
+    configure({
+      messages: Object.assign(
+        {},
+        { string: Object.create(null, { constructor: { enumerable: true, value: () => 'x' } }) },
+      ) as any,
+    });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('routes warnings to a custom logger function', () => {
+    const logs: string[] = [];
+    const unsafeMessages = { string: Object.create(null, { constructor: { enumerable: true, value: () => 'x' } }) };
+
+    configure({ logger: (msg) => logs.push(msg) });
+    configure({ messages: unsafeMessages as any });
+
+    expect(logs.length).toBeGreaterThan(0);
+    expect(logs[0]).toContain('constructor');
   });
 });

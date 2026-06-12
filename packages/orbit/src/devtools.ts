@@ -80,7 +80,7 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  * - **Orange dashed outline** — the reference element's bounding rect.
  * - **Blue label** — the active placement string (e.g. `"top-start"`).
  *
- * The overlay is automatically removed when `handle.cleanup()` is called.
+ * The overlay is automatically removed when `handle.dispose()` is called.
  *
  * Use only in development. Tree-shaken from production bundles via the sub-path import.
  *
@@ -93,7 +93,7 @@ function createOutlineBox(x: number, y: number, width: number, height: number, c
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
  * });
  * // on teardown:
- * handle.cleanup();
+ * handle.dispose();
  * ```
  */
 export function debugFloat(
@@ -139,13 +139,16 @@ export function debugFloat(
 
   const handle = float(reference, floating, { ...options, apply: wrappedApply });
 
+  const disposeHandle = (): void => {
+    handle.dispose();
+    overlay.remove();
+  };
+
   return {
-    cleanup(): void {
-      handle.cleanup();
-      overlay.remove();
-    },
     cssAnchor: handle.cssAnchor,
+    dispose: disposeHandle,
     getPosition: () => handle.getPosition(),
+    [Symbol.dispose]: disposeHandle,
     update: () => handle.update(),
   };
 }

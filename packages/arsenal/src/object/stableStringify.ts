@@ -17,7 +17,7 @@
  * stableStringify(new MyClass(), { strict: true }) // throws TypeError
  * ```
  */
-export function stableStringify(value: unknown, options?: { strict?: boolean }, _visited = new Set<object>()): string {
+function _stableStringify(value: unknown, options: { strict?: boolean } | undefined, visited: Set<object>): string {
   if (value === undefined) return 'undefined';
 
   if (value === null) return 'null';
@@ -26,9 +26,9 @@ export function stableStringify(value: unknown, options?: { strict?: boolean }, 
 
   if (typeof value !== 'object') return JSON.stringify(value);
 
-  if (_visited.has(value as object)) return '[Circular]';
+  if (visited.has(value as object)) return '[Circular]';
 
-  _visited.add(value as object);
+  visited.add(value as object);
 
   if (value instanceof Date) return `[Date:${Number.isNaN(value.getTime()) ? 'Invalid' : value.toISOString()}]`;
 
@@ -36,7 +36,7 @@ export function stableStringify(value: unknown, options?: { strict?: boolean }, 
 
   if (value instanceof Set)
     return `[Set:${[...value]
-      .map((v) => stableStringify(v, options, _visited))
+      .map((v) => _stableStringify(v, options, visited))
       .sort()
       .join(',')}]`;
 
@@ -44,7 +44,7 @@ export function stableStringify(value: unknown, options?: { strict?: boolean }, 
     const entries = [...value.entries()]
       .map(
         ([key, entryValue]) =>
-          [stableStringify(key, options, _visited), stableStringify(entryValue, options, _visited)] as const,
+          [_stableStringify(key, options, visited), _stableStringify(entryValue, options, visited)] as const,
       )
       .sort(([leftKey, leftValue], [rightKey, rightValue]) =>
         leftKey === rightKey ? leftValue.localeCompare(rightValue) : leftKey.localeCompare(rightKey),
@@ -53,7 +53,7 @@ export function stableStringify(value: unknown, options?: { strict?: boolean }, 
     return `[Map:${entries.map(([key, entryValue]) => `${key}=>${entryValue}`).join(',')}]`;
   }
 
-  if (Array.isArray(value)) return `[${value.map((v) => stableStringify(v, options, _visited)).join(',')}]`;
+  if (Array.isArray(value)) return `[${value.map((v) => _stableStringify(v, options, visited)).join(',')}]`;
 
   const proto = Object.getPrototypeOf(value) as unknown;
 
@@ -74,5 +74,9 @@ export function stableStringify(value: unknown, options?: { strict?: boolean }, 
     .filter((k) => rec[k] !== undefined)
     .sort();
 
-  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableStringify(rec[k], options, _visited)}`).join(',')}}`;
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${_stableStringify(rec[k], options, visited)}`).join(',')}}`;
+}
+
+export function stableStringify(value: unknown, options?: { strict?: boolean }): string {
+  return _stableStringify(value, options, new Set<object>());
 }

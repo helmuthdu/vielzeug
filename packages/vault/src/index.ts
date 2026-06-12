@@ -8,7 +8,7 @@ export { defineMigration } from './migration';
 export type { MigrationStep } from './migration';
 export type { QueryBuilder } from './query';
 export { scheduleExpiredPrune } from './prune';
-export { ttl } from './ttl';
+export { defaultCodec, ttl } from './ttl';
 export { table } from './types';
 export type {
   Adapter,
@@ -25,6 +25,7 @@ export type {
   RecordOf,
   RecordValidator,
   SchemaEntry,
+  TableBuilder,
   TableSignals,
   TableValidators,
   TransactionContext,

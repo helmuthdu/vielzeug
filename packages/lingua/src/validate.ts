@@ -37,10 +37,14 @@ function getExpectedPluralForms(locale: Locale): Set<string> {
   }
 }
 
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
 function findPluralBranches(messages: Messages, prefix = ''): Array<{ key: string; obj: Messages }> {
   const result: Array<{ key: string; obj: Messages }> = [];
 
   for (const [k, v] of Object.entries(messages)) {
+    if (UNSAFE_KEYS.has(k)) continue;
+
     if (typeof v === 'string') continue;
 
     const obj = v as Messages;
@@ -57,9 +61,17 @@ function findPluralBranches(messages: Messages, prefix = ''): Array<{ key: strin
   return result;
 }
 
+// Plural form values that typically reference the count (i.e. non-singleton forms).
+// 'zero' and 'one' often intentionally omit {count} (e.g. 'No messages', 'One message').
+const FORMS_EXPECTING_COUNT = new Set(['other', 'two', 'few', 'many']);
+
 /**
  * Validates a catalog against the expected CLDR plural forms for the given locale.
- * Returns an array of warnings for plural branches that are missing expected forms.
+ * Returns an array of warnings for:
+ * 1. Plural branches missing one or more expected CLDR forms.
+ * 2. Plural form templates for `other`, `two`, `few`, or `many` that do not interpolate
+ *    `{count}` — since `count` is injected automatically by `tp()`, omitting it is almost
+ *    always a catalog authoring error. Warnings for these use `form: '<form>:missing-count'`.
  *
  * Uses `Intl.PluralRules#resolvedOptions().pluralCategories` — the authoritative CLDR
  * category list, not heuristic sampling.
@@ -76,6 +88,12 @@ export function validateCatalog(messages: Messages, locale: Locale): ValidationW
     for (const form of expectedForms) {
       if (!(form in obj)) {
         warnings.push({ form, key, locale });
+      } else if (FORMS_EXPECTING_COUNT.has(form)) {
+        const template = obj[form];
+
+        if (typeof template === 'string' && !template.includes('{count}')) {
+          warnings.push({ form: `${form}:missing-count`, key, locale });
+        }
       }
     }
   }

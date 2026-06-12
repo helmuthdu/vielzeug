@@ -84,6 +84,50 @@ describe('deriveSource', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('does not throw when initial transform throws — returns empty current', () => {
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, () => {
+      throw new Error('bad transform');
+    });
+
+    expect(derived.current).toEqual([]);
+    derived.dispose();
+  });
+
+  it('preserves last good current when transform throws on update', async () => {
+    let shouldThrow = false;
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, (items) => {
+      if (shouldThrow) throw new Error('bad');
+
+      return items.map((n) => n * 2);
+    });
+
+    expect(derived.current).toEqual([2, 4, 6]);
+
+    shouldThrow = true;
+
+    const listener = vi.fn();
+
+    derived.subscribe(listener);
+    await parent.setData([4, 5, 6]);
+
+    expect(derived.current).toEqual([2, 4, 6]);
+    expect(listener).toHaveBeenCalled();
+    derived.dispose();
+  });
+
+  it('Symbol.dispose calls dispose()', () => {
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, (items) => items);
+    const listener = vi.fn();
+
+    derived.subscribe(listener);
+    derived[Symbol.dispose]();
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
   it('meta proxy reflects live parent meta updates', async () => {
     const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
     const derived = deriveSource(source, (items) => items.map(String));

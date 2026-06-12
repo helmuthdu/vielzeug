@@ -15,19 +15,23 @@ exports:
     mergeSource,
     MergedSource,
     toSignals,
+    SourceDisposedError,
     SourceError,
+    SourceSignals,
     SourceTimeoutError,
     sourceState,
     itemRange,
     prefetchSource,
     prefetchSourceWithSource,
     composeFetch,
+    FetchEvent,
     filterContains,
     filterEquals,
     filterRange,
     sortBy,
     encodeQuery,
     decodeQuery,
+    DecodeQueryOptions,
   ]
 environments: [browser, node, ssr, deno]
 ---

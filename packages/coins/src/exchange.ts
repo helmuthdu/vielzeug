@@ -13,7 +13,8 @@ import { applyRounding, parseRational } from './utils';
  * @param mode Rounding mode applied when the converted amount is not a whole minor unit.
  *             Defaults to `'half-away-from-zero'`.
  *
- * @throws {TypeError}  If `money.currency` does not match `rate.from` (programming error).
+ * @throws {TypeError}   If `money.currency` does not match `rate.from` (programming error).
+ * @throws {RangeError}  If `rate.rate` is an empty string or a negative value.
  *
  * @example
  * ```ts
@@ -24,7 +25,7 @@ import { applyRounding, parseRational } from './utils';
  */
 export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'half-away-from-zero'): Money {
   if (m.currency !== rate.from) {
-    throw new TypeError(`Currency mismatch: ${m.currency} and ${rate.from}`);
+    throw new TypeError(`exchange: money.currency (${m.currency}) does not match rate.from (${rate.from})`);
   }
 
   if (rate.rate === '') throw new RangeError('Exchange rate must be a non-empty decimal string');

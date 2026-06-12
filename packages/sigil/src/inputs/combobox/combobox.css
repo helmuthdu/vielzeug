@@ -34,9 +34,9 @@
     padding: 0;
     margin: -1px;
     overflow: hidden;
-    clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border-width: 0;
+    clip-path: inset(50%);
   }
 
   /* sg-input cursor override so the field still feels like a text input */

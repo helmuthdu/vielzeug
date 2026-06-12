@@ -5,7 +5,7 @@ description: Install, run, and connect AI clients to the Vielzeug MCP server.
 
 [[toc]]
 
-::: tip New to Mcp?
+::: tip New to MCP?
 Start with the [Overview](./index.md), then use this page for setup and client configuration.
 :::
 
@@ -189,6 +189,11 @@ An AI agent can then call:
 ```
 
 This returns the complete `spell` API reference, letting an agent write correct validation schemas without browsing external docs.
+
+## Security Notes
+
+- **HTTP mode binds with `Access-Control-Allow-Origin: *`** — any local web page can make cross-origin requests to the server. Do not expose the HTTP port on a publicly accessible interface. Use stdio mode for production/shared environments.
+- **Never expose the HTTP port through a firewall or proxy** — the MCP endpoint has no authentication. Treat it as a local-only service.
 
 ## Best Practices
 

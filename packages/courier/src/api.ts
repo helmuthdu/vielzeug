@@ -1,6 +1,6 @@
 import type { HttpRequestConfig, Params } from './url';
 
-import { HttpError } from './errors';
+import { HttpError, SchemaValidationError } from './errors';
 import { parseResponse } from './response';
 import { buildRequestInit, stableStringify } from './serialize';
 import {
@@ -52,7 +52,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     full: string,
     m: string,
     responseType: HttpRequestConfig['responseType'],
-    schema?: { parse(data: unknown): unknown },
+    schema?: { parse(data: unknown): T },
   ): Promise<T> {
     const signal = init.signal as AbortSignal | undefined;
     let res: Response;
@@ -77,13 +77,23 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
       throw HttpError.fromResponse(res, body, m, full);
     }
 
-    try {
-      const raw = await parseResponse(res, responseType ?? 'auto');
+    let raw: unknown;
 
-      return (schema ? schema.parse(raw) : raw) as T;
+    try {
+      raw = await parseResponse(res, responseType ?? 'auto');
     } catch (err) {
       throw HttpError.fromCause(err, m, full, signal);
     }
+
+    if (schema) {
+      try {
+        return schema.parse(raw);
+      } catch (err) {
+        throw new SchemaValidationError(err, raw);
+      }
+    }
+
+    return raw as T;
   }
 
   async function request<T, P extends string = string>(
@@ -93,8 +103,16 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
   ) {
     if (transport.disposed) throw new Error('[courier] ApiClient has been disposed');
 
-    const full = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
     const m = method.toUpperCase();
+
+    let full: string;
+
+    try {
+      full = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
+    } catch (err) {
+      throw HttpError.fromCause(err, m, url);
+    }
+
     const {
       body,
       dedupe = true,
@@ -121,7 +139,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     const requestAc = new AbortController();
     const untrack = transport.track(requestAc);
     const combinedExt = anySignal(extSignal, requestAc.signal) ?? requestAc.signal;
-    const signal = buildTimeoutSignal(cfgTimeout ?? transport.timeout, combinedExt);
+    const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), combinedExt);
 
     const init = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
     const p = execute<T>(init, full, m, responseType, schema);

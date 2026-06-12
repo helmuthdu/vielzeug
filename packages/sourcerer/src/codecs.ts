@@ -7,6 +7,9 @@ import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } fr
  *
  * ⚠️ `filter` and `sort` are serialised with `stableStringify`. Circular object references
  * will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+ *
+ * ⚠️ Round-trip fidelity: `page` and `limit` must be positive integers. `encodeQuery` will
+ * serialise any number (including 0), but `decodeQuery` clamps non-positive values to 1/defaultLimit.
  */
 export const encodeQuery = <TFilter = unknown, TSort = unknown>(
   query: RemoteSourceQuery<TFilter, TSort> | SourceQuery,

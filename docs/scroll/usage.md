@@ -218,6 +218,24 @@ for (const item of virt.items) {
 }
 ```
 
+## Zero-Allocation Range Callback
+
+Use `onRangeChange` instead of (or alongside) `onChange` when you only need the first/last visible index — for analytics, prefetching, or infinite-scroll triggers — without paying the cost of building a `VirtualItem[]` array on every scroll event.
+
+```ts
+createVirtualizer(scrollEl, {
+  count: 10_000,
+  estimateSize: 36,
+  // No onChange → v.items stays [] (zero allocation on scroll)
+  onRangeChange(first, last) {
+    // Prefetch rows in [first, last]
+    prefetchRows(first, last);
+  },
+});
+```
+
+When both `onChange` and `onRangeChange` are provided, `onRangeChange` fires first (before `onChange`) and `v.items` is populated normally.
+
 ## Overscan
 
 `overscan` controls how many extra items render outside the visible viewport on each side. Higher values reduce the chance of blank rows during fast scrolling; lower values keep the DOM smaller.

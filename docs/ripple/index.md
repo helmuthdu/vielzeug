@@ -28,6 +28,8 @@ exports:
     getSignalName,
     getDevToolsHook,
     StateError,
+    StateErrorCode,
+    PathValue,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -186,7 +188,7 @@ label.dispose();
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
-- **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`
+- **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties; call `dispose()` to release the internal cursor signal
 - **`getSignalName(signal)`** — look up the registered name for a named signal; returns `undefined` for unnamed signals
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot

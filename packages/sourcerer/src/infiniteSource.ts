@@ -30,7 +30,8 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   // ── In-flight deduplication ─────────────────────────────────────────────────
   const fm = createFetchManager<InfiniteSourceQuery>(keyOf);
 
-  // ── Cached meta ─────────────────────────────────────────────────────────────
+  // ── Cached accessors ─────────────────────────────────────────────────────────
+  let cachedCurrent: readonly T[] = [];
   let cachedMeta: InfiniteMeta = {
     error: null,
     hasMore: false,
@@ -43,6 +44,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   };
 
   const refreshMeta = () => {
+    cachedCurrent = items;
     cachedMeta = {
       error,
       hasMore: items.length < total,
@@ -130,7 +132,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   // ── Public API ──────────────────────────────────────────────────────────────
   return {
     get current() {
-      return items;
+      return cachedCurrent;
     },
 
     dispose() {
@@ -175,6 +177,38 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return doFetch();
     },
 
+    restoreQuery(patch) {
+      let changed = false;
+
+      if (patch.limit !== undefined) {
+        const n = Math.max(1, Math.trunc(patch.limit));
+
+        if (n !== limit) {
+          limit = n;
+          changed = true;
+        }
+      }
+
+      if ('search' in patch) {
+        const s = patch.search ?? '';
+
+        if (s !== search) {
+          search = s;
+          changed = true;
+        }
+      }
+
+      if (!changed) return Promise.resolve();
+
+      core.cancelTimer();
+      currentPage = 1;
+      loadedPages = 0;
+      items = [];
+      total = 0;
+
+      return doFetch();
+    },
+
     search(q) {
       if (q === search) return;
 
@@ -186,8 +220,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       core.schedule(() => {
         void doFetch();
       }, debounceMs);
-      refreshMeta();
-      core.notify();
+      commit();
     },
 
     searchNow(q) {
@@ -219,6 +252,10 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
     subscribe(listener) {
       return core.subscribe(listener);
+    },
+
+    [Symbol.dispose]() {
+      this.dispose();
     },
 
     toQuery() {

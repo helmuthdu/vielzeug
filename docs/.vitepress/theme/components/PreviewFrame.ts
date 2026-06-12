@@ -9,15 +9,9 @@ export interface PreviewFrameOptions {
 }
 
 export function buildFrameSrcdoc(opts: PreviewFrameOptions): string {
-  const { html, script, sigilStyles, prismStyles, dir = 'ltr' } = opts;
+  const { dir = 'ltr', html, prismStyles, script, sigilStyles } = opts;
 
-  const scriptBlock = script
-    ? `<script>
-(function() {
-${script}
-})();
-<\/script>`
-    : '';
+  const scriptBlock = script ? `<script> (function() { ${script} })();</script>` : '';
 
   return `<!DOCTYPE html>
 <html dir="${dir}">

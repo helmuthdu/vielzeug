@@ -625,8 +625,8 @@ describe('invokes', () => {
   });
 });
 
-describe('debug options (R12: grouped)', () => {
-  it('fires debug events with onGuard callback (R2)', () => {
+describe('debug options', () => {
+  it('fires debug events with onGuard callback', () => {
     type Event = { type: 'GO' };
 
     const onDebug = vi.fn();
@@ -739,7 +739,7 @@ describe('persistence', () => {
     expect(save).toHaveBeenCalled();
   });
 
-  it('does NOT save snapshot on hydrate (R8)', () => {
+  it('does NOT save snapshot on hydrate', () => {
     type Event = { type: 'GO' };
 
     const save = vi.fn();
@@ -758,7 +758,7 @@ describe('persistence', () => {
   });
 });
 
-describe('subscribe (R7: change-detection)', () => {
+describe('subscribe', () => {
   it('calls subscriber on state change', () => {
     const m = interpret(trafficDefinition);
     const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
@@ -803,7 +803,7 @@ describe('subscribe (R7: change-detection)', () => {
   });
 });
 
-describe('middleware (R1: unified send)', () => {
+describe('middleware', () => {
   it('intercepts and allows events', () => {
     type Event = { type: 'GO' };
 
@@ -893,7 +893,7 @@ describe('middleware (R1: unified send)', () => {
   });
 });
 
-describe('hierarchical states (F5)', () => {
+describe('hierarchical states', () => {
   it('resolves initial state to leaf substate', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
@@ -1017,7 +1017,7 @@ describe('hierarchical states (F5)', () => {
   });
 });
 
-describe('after transitions (F4)', () => {
+describe('after transitions', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
@@ -1655,5 +1655,318 @@ describe('matches() edge cases', () => {
     expect(m.matches('active')).toBe(true);
     expect(m.matches('active.running')).toBe(true);
     expect(m.matches('idle')).toBe(false);
+  });
+});
+
+describe('resolveTransition — onGuard callback', () => {
+  it('calls onGuard for every guard evaluated (passed and failed)', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'a' | 'b' | 'c', { ok: boolean }, Event>({
+      context: { ok: false },
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            GO: [{ guard: ({ context }) => context.ok, target: 'b' }, { target: 'c' }],
+          },
+        },
+        b: {},
+        c: {},
+      },
+    });
+
+    const guardCalls: Array<{ passed: boolean; target: string }> = [];
+
+    const result = resolveTransition(
+      machine,
+      { context: { ok: false }, event: { type: 'GO' }, state: 'a' },
+      ({ passed, target }) => guardCalls.push({ passed, target }),
+    );
+
+    expect(result?.target).toBe('c');
+    // First guard failed (guarded → b), second has no guard so passes (→ c)
+    expect(guardCalls).toHaveLength(2);
+    expect(guardCalls[0]).toEqual({ passed: false, target: 'b' });
+    expect(guardCalls[1]).toEqual({ passed: true, target: 'c' });
+  });
+
+  it('calls onGuard with passed=true when guard succeeds', () => {
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+      context: { ok: true },
+      initial: 'a',
+      states: {
+        a: { on: { GO: [{ guard: ({ context }) => context.ok, target: 'b' }] } },
+        b: {},
+      },
+    });
+
+    const guardCalls: Array<{ passed: boolean }> = [];
+
+    resolveTransition(machine, { context: { ok: true }, event: { type: 'GO' }, state: 'a' }, ({ passed }) =>
+      guardCalls.push({ passed }),
+    );
+
+    expect(guardCalls[0]?.passed).toBe(true);
+  });
+});
+
+describe('MachineError properties', () => {
+  it('sets .code and .details correctly', () => {
+    expect.assertions(4);
+
+    try {
+      defineMachine({
+        initial: 'missing',
+        states: { idle: {} },
+      } as unknown as import('../index.js').MachineConfig<string, object, import('../index.js').MachineEvent>);
+    } catch (err) {
+      expect(err).toBeInstanceOf(MachineError);
+
+      const machineErr = err as MachineError;
+
+      expect(machineErr.code).toBe('MACHINE_INVALID_INITIAL_STATE');
+      expect(machineErr.details).toBeDefined();
+      expect(machineErr.name).toBe('MachineError');
+    }
+  });
+
+  it('sets .details with relevant context on MACHINE_UNKNOWN_TARGET', () => {
+    expect.assertions(3);
+
+    type Event = { type: 'GO' };
+
+    try {
+      defineMachine<'idle', Record<string, never>, Event>({
+        initial: 'idle',
+        states: { idle: { on: { GO: [{ target: 'ghost' as 'idle' }] } } },
+      });
+    } catch (err) {
+      expect(err).toBeInstanceOf(MachineError);
+
+      const machineErr = err as MachineError;
+
+      expect(machineErr.code).toBe('MACHINE_UNKNOWN_TARGET');
+      expect(machineErr.details?.target).toBe('ghost');
+    }
+  });
+});
+
+describe('debugInterpret — invoke lifecycle events', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('logs invoke-start and invoke-done events', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    type Event = { type: 'DONE' };
+
+    const machine = defineMachine<'done' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        done: {},
+        loading: {
+          invoke: [{ onDone: () => ({ type: 'DONE' }), src: async () => {} }],
+          on: { DONE: [{ target: 'done' }] },
+        },
+      },
+    });
+
+    const m = debugInterpret(machine);
+
+    await flush();
+
+    expect(m.state.value).toBe('done');
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('started'));
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('done'));
+  });
+
+  it('logs invoke-error events', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    type Event = { type: 'FAILED' };
+
+    const machine = defineMachine<'failed' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        failed: {},
+        loading: {
+          invoke: [
+            {
+              onError: () => ({ type: 'FAILED' }),
+              src: async () => {
+                throw new Error('boom');
+              },
+            },
+          ],
+          on: { FAILED: [{ target: 'failed' }] },
+        },
+      },
+    });
+
+    const m = debugInterpret(machine);
+
+    await flush();
+
+    expect(m.state.value).toBe('failed');
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('error'), expect.anything());
+  });
+
+  it('logs invoke-abort when state is exited before invoke completes', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+    vi.spyOn(console, 'group').mockImplementation(() => {});
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    type Event = { type: 'CANCEL' };
+
+    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+      initial: 'loading',
+      states: {
+        idle: {},
+        loading: {
+          invoke: [{ src: () => new Promise(() => {}) }],
+          on: { CANCEL: [{ target: 'idle' }] },
+        },
+      },
+    });
+
+    const m = debugInterpret(machine);
+
+    m.send({ type: 'CANCEL' });
+
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('aborted'));
+  });
+});
+
+describe('after transitions in hierarchical states', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires after transition defined on a compound state parent', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'GO' };
+
+    const machine = defineMachine<'done' | 'working', Record<string, never>, Event>({
+      initial: 'working',
+      states: {
+        done: {},
+        working: {
+          after: [{ delay: 1000, target: 'done' }],
+          initial: 'step1',
+          states: {
+            step1: { on: { GO: { target: 'working.step2' as 'done' | 'working' } } },
+            step2: {},
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    expect(m.state.value).toBe('working.step1');
+
+    vi.advanceTimersByTime(1000);
+
+    expect(m.state.value).toBe('done');
+  });
+
+  it('cancels compound-state after-timer when transitioning out via event', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'ABORT' };
+
+    const machine = defineMachine<'cancelled' | 'done' | 'working', Record<string, never>, Event>({
+      initial: 'working',
+      states: {
+        cancelled: {},
+        done: {},
+        working: {
+          after: [{ delay: 500, target: 'done' }],
+          initial: 'step1',
+          on: { ABORT: { target: 'cancelled' } },
+          states: {
+            step1: {},
+          },
+        },
+      },
+    });
+
+    const m = interpret(machine);
+
+    m.send({ type: 'ABORT' });
+    vi.advanceTimersByTime(1000);
+
+    expect(m.state.value).toBe('cancelled');
+  });
+});
+
+describe('subscribe after dispose', () => {
+  it('does not fire subscriber callback after dispose', () => {
+    const m = interpret(trafficDefinition);
+    const calls: unknown[] = [];
+
+    m.subscribe((snap) => calls.push(snap));
+    m[Symbol.dispose]();
+
+    m.send({ type: 'NEXT' });
+
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe('AfterEvent shape', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('after-action receives AfterEvent with type "$after" and correct delay', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'NOOP' };
+    type Ctx = { receivedEvent: import('../index.js').AfterEvent | null };
+
+    let captured: import('../index.js').AfterEvent | null = null;
+
+    const machine = defineMachine<'a' | 'b', Ctx, Event>({
+      context: { receivedEvent: null },
+      initial: 'a',
+      states: {
+        a: {
+          after: [
+            {
+              actions: [
+                ({ context, event }) => {
+                  captured = event;
+                  context.receivedEvent = event;
+                },
+              ],
+              delay: 250,
+              target: 'b',
+            },
+          ],
+        },
+        b: {},
+      },
+    });
+
+    interpret(machine);
+
+    vi.advanceTimersByTime(250);
+
+    expect(captured).not.toBeNull();
+    expect(captured!.type).toBe('$after');
+    expect(captured!.delay).toBe(250);
   });
 });

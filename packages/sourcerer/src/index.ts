@@ -12,6 +12,7 @@ export { prefetchSource, prefetchSourceWithSource } from './prefetch';
 export { filterContains, filterEquals, filterRange, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { toSignals } from './signals';
+export type { SourceSignals } from './signals';
 export { sourceState } from './state';
 export type {
   CursorConfig,
@@ -19,7 +20,6 @@ export type {
   CursorSource,
   CursorSourceQuery,
   DerivedSource,
-  MergedSource,
   FetchEvent,
   InfiniteConfig,
   InfiniteMeta,
@@ -27,6 +27,7 @@ export type {
   InfiniteSourceQuery,
   LocalConfig,
   LocalSource,
+  MergedSource,
   PageNavigator,
   Predicate,
   QueryParams,
@@ -44,4 +45,4 @@ export type {
   SourceSnapshot,
   SourceState,
 } from './types';
-export { SourceError, SourceTimeoutError } from './types';
+export { SourceDisposedError, SourceError, SourceTimeoutError } from './types';

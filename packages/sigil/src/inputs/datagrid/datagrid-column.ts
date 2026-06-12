@@ -1,5 +1,7 @@
 import type { DataGridColumn } from '../../headless';
 
+import { warn } from '../../_warn';
+
 // ── Declarative sg-column element ────────────────────────────────────────────
 
 /**
@@ -29,11 +31,11 @@ if (!customElements.get('sg-column'))
     class extends HTMLElement {
       connectedCallback(): void {
         if (!this.getAttribute('key')) {
-          console.warn('[sg-column] Missing required `key` attribute.', this);
+          warn('sg-column: missing required `key` attribute');
         }
 
         if (!this.getAttribute('label')) {
-          console.warn('[sg-column] Missing required `label` attribute.', this);
+          warn('sg-column: missing required `label` attribute');
         }
       }
     },

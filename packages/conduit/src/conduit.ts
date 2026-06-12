@@ -74,8 +74,13 @@ const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
 
 export class CircularDependencyError extends Error {
   constructor(path: Token<any>[]) {
-    super(`Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
-    this.name = 'CircularDependencyError';
+    super(`[@vielzeug/conduit] Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is CircularDependencyError {
+    return err instanceof CircularDependencyError;
   }
 }
 
@@ -83,15 +88,25 @@ export class ProviderNotFoundError extends Error {
   constructor(tok: Token<any>, containerName?: string) {
     const loc = containerName ? ` (in container '${containerName}')` : '';
 
-    super(`No provider registered for token: ${tokenName(tok)}${loc}`);
-    this.name = 'ProviderNotFoundError';
+    super(`[@vielzeug/conduit] No provider registered for token: ${tokenName(tok)}${loc}`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is ProviderNotFoundError {
+    return err instanceof ProviderNotFoundError;
   }
 }
 
 export class DuplicateRegistrationError extends Error {
   constructor(tok: Token<any>) {
-    super(`Token "${tokenName(tok)}" is already registered.`);
-    this.name = 'DuplicateRegistrationError';
+    super(`[@vielzeug/conduit] Token "${tokenName(tok)}" is already registered.`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is DuplicateRegistrationError {
+    return err instanceof DuplicateRegistrationError;
   }
 }
 
@@ -104,8 +119,13 @@ export class SyncResolutionError extends Error {
           ? `named-scope "${(lifetime as symbol).description ?? 'anonymous'}" instance has not been resolved yet in this scope`
           : 'the instance has not been resolved yet; call await container.resolve() or container.resolveAll() first';
 
-    super(`Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
-    this.name = 'SyncResolutionError';
+    super(`[@vielzeug/conduit] Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is SyncResolutionError {
+    return err instanceof SyncResolutionError;
   }
 }
 
@@ -115,13 +135,20 @@ export class ScopedResolutionError extends Error {
       const scopeName = requiredScope.description ?? 'anonymous';
 
       super(
-        `Token "${tokenName(tok)}" requires scope "${scopeName}" but no matching scope container was found in the hierarchy.`,
+        `[@vielzeug/conduit] Token "${tokenName(tok)}" requires scope "${scopeName}" but no matching scope container was found in the hierarchy.`,
       );
     } else {
-      super(`Token "${tokenName(tok)}" uses scoped lifetime but was resolved from the root container.`);
+      super(
+        `[@vielzeug/conduit] Token "${tokenName(tok)}" uses scoped lifetime but was resolved from the root container.`,
+      );
     }
 
-    this.name = 'ScopedResolutionError';
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is ScopedResolutionError {
+    return err instanceof ScopedResolutionError;
   }
 }
 
@@ -129,8 +156,25 @@ export class ContainerDisposedError extends Error {
   constructor(containerName?: string) {
     const loc = containerName ? ` (container '${containerName}')` : '';
 
-    super(`Cannot use a disposed container${loc}.`);
-    this.name = 'ContainerDisposedError';
+    super(`[@vielzeug/conduit] Cannot use a disposed container${loc}.`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is ContainerDisposedError {
+    return err instanceof ContainerDisposedError;
+  }
+}
+
+export class ContainerFrozenError extends Error {
+  constructor(containerName: string) {
+    super(`[@vielzeug/conduit] Container '${containerName}' is frozen and cannot accept new registrations.`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is ContainerFrozenError {
+    return err instanceof ContainerFrozenError;
   }
 }
 
@@ -171,7 +215,7 @@ export type ContainerNode = {
   description: string;
   kind: 'factory' | 'value';
   /** 'singleton', 'transient', 'scoped', or 'scope:<name>' for named scopes. */
-  lifetime?: string;
+  lifetime?: 'scoped' | 'singleton' | 'transient' | `scope:${string}`;
 };
 
 export type ContainerGraph = {
@@ -312,7 +356,7 @@ class ContainerImpl implements Container {
   }
 
   #assertNotFrozen(): void {
-    if (this.#frozen) throw new Error(`Container '${this.name}' is frozen and cannot accept new registrations.`);
+    if (this.#frozen) throw new ContainerFrozenError(this.name);
   }
 
   // Emit to local listeners then propagate up to parent.
@@ -459,10 +503,10 @@ class ContainerImpl implements Container {
           if (reg.kind === 'value') {
             nodes.push({ deps: [], description: tokenName(tok as Token<any>), kind: 'value' });
           } else {
-            const lifetime =
+            const lifetime: ContainerNode['lifetime'] =
               typeof reg.lifetime === 'symbol'
                 ? `scope:${(reg.lifetime as symbol).description ?? 'anonymous'}`
-                : reg.lifetime;
+                : (reg.lifetime as 'scoped' | 'singleton' | 'transient');
 
             nodes.push({
               deps: reg.deps.map((d: Token<any>) => tokenName(d)),

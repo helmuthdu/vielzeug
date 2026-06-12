@@ -31,7 +31,7 @@ import { createBus } from './bus';
  * ```
  */
 export function debugBus<T extends EventMap>(
-  options?: Omit<BusOptions<T>, 'logger'> & { logger?: Pick<BusLogger, 'warn'> },
+  options?: Omit<BusOptions<T>, 'logger'> & { logger?: { warn?: BusLogger['warn'] } },
 ): Bus<T> {
   const { logger, ...rest } = options ?? {};
 

@@ -25,7 +25,7 @@ function compareByUnit(a: TimeInput, b: TimeInput, options: CompareOptions): num
  *
  * @example
  * ```ts
- * isBefore(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T11:00:00Z'))
+ * isBefore(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T11:00:00Z'))
  * // true
  * ```
  */
@@ -39,7 +39,7 @@ export function isBefore(a: TimeInput, b: TimeInput, options: CompareOptions = {
  *
  * @example
  * ```ts
- * isAfter(Temporal.Instant.from('2026-03-21T11:00:00Z'), Temporal.Instant.from('2026-03-21T10:00:00Z'))
+ * isAfter(parseInstant('2026-03-21T11:00:00Z'), parseInstant('2026-03-21T10:00:00Z'))
  * // true
  * ```
  */
@@ -67,9 +67,9 @@ export function isSame(a: TimeInput, b: TimeInput, options: CompareOptions = {})
  * @example
  * ```ts
  * within(
- *   Temporal.Instant.from('2026-03-21T11:00:00Z'),
- *   Temporal.Instant.from('2026-03-21T10:00:00Z'),
- *   Temporal.Instant.from('2026-03-21T12:00:00Z'),
+ *   parseInstant('2026-03-21T11:00:00Z'),
+ *   parseInstant('2026-03-21T10:00:00Z'),
+ *   parseInstant('2026-03-21T12:00:00Z'),
  * ) // true
  * ```
  */
@@ -98,9 +98,9 @@ export function within(value: TimeInput, start: TimeInput, end: TimeInput, optio
  * @example
  * ```ts
  * clamp(
- *   Temporal.Instant.from('2026-03-21T13:00:00Z'),
- *   Temporal.Instant.from('2026-03-21T10:00:00Z'),
- *   Temporal.Instant.from('2026-03-21T12:00:00Z'),
+ *   parseInstant('2026-03-21T13:00:00Z'),
+ *   parseInstant('2026-03-21T10:00:00Z'),
+ *   parseInstant('2026-03-21T12:00:00Z'),
  * ).toString() // '2026-03-21T12:00:00Z'
  * ```
  */

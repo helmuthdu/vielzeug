@@ -1,4 +1,4 @@
-import { createApi, HttpError } from '../index';
+import { createApi, HttpError, SchemaValidationError } from '../index';
 
 async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<HttpError> {
   try {
@@ -602,6 +602,34 @@ describe('HTTP Client', () => {
       expect(http.disposed).toBe(true);
     });
 
+    it('schema validation errors propagate as-is and are NOT wrapped in HttpError', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(jsonResponse({ id: 'not-a-number' }));
+
+      class ValidationError extends Error {
+        readonly name = 'ValidationError';
+      }
+
+      const schema = {
+        parse(data: unknown): unknown {
+          throw new ValidationError(`Expected number, got ${typeof (data as { id: unknown }).id}`);
+        },
+      };
+
+      let thrown: unknown;
+
+      try {
+        await http.get('/users/1', { schema });
+      } catch (err) {
+        thrown = err;
+      }
+
+      expect(thrown).toBeInstanceOf(SchemaValidationError);
+      expect((thrown as SchemaValidationError).cause).toBeInstanceOf(ValidationError);
+      expect(thrown instanceof HttpError).toBe(false);
+    });
+
     it('cancelAll() aborts all in-flight requests', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
       let aborted = false;
@@ -626,6 +654,18 @@ describe('HTTP Client', () => {
       expect(http.disposed).toBe(false);
       fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
       await expect(http.get('/test')).resolves.toBeDefined();
+    });
+  });
+
+  describe('URL building errors', () => {
+    it('unresolved path param throws HttpError (kind: network)', async () => {
+      const http = createApi({ baseUrl: 'https://api.example.com' });
+
+      const err = await getHttpError(http.get('/users/{id}', { params: { id: undefined as unknown as string } }));
+
+      expect(err).toBeInstanceOf(HttpError);
+      expect(err.kind).toBe('network');
+      expect(err.message).toMatch(/unresolved path param/);
     });
   });
 });

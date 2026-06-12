@@ -18,6 +18,7 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `toSignals()`                | Wrap any source in Ripple computed signals                                 | Must call `dispose()` or signals leak                                         |
 | `SourceError`                | Structured error class with `message`, `cause`, `query`, `attempt`         | Extends `Error`; access context via getters, not object spread                |
 | `SourceTimeoutError`         | Error thrown when `ready()` times out                                      | Extends `Error`; check with `instanceof SourceTimeoutError`                   |
+| `SourceDisposedError`        | Error thrown by `ready()` when the source is disposed while waiting        | Distinct from `SourceTimeoutError`; catch separately if needed                |
 | `sourceState()`              | Derive a discriminated union (`loading`/`error`/`success`) from any source | —                                                                             |
 | `itemRange()`                | Compute 1-based display range from `SourceMeta`                            | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                        |
 | `prefetchSource()`           | SSR: fetch first page, return serialisable snapshot                        | **Throws `SourceError`** if fetch fails                                       |
@@ -29,6 +30,8 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `sortBy()`                   | Preset comparator: sort by a getter value                                  | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates                  |
 | `encodeQuery()`              | Serialize source query to URL params                                       | Filter and sort are JSON-stringified                                          |
 | `decodeQuery()`              | Deserialize URL params (or `URLSearchParams`) to a source query            | Malformed JSON is silently dropped by default                                 |
+| `FetchEvent<TQuery>`         | Type for `onFetch` telemetry callbacks                                     | —                                                                             |
+| `SourceSignals<T, TMeta>`    | Return type of `toSignals()` — `current` + `meta` as `ComputedSignal`s    | `[Symbol.dispose]()` included for `using` declaration support                 |
 
 ## Package Entry Point
 
@@ -60,7 +63,7 @@ type LocalConfig<T> = {
 };
 ```
 
-The default `searchFn` uses fuzzy matching from `@vielzeug/arsenal`. Provide a custom `searchFn` to use exact substring matching or any other strategy.
+The default `searchFn` performs a case-insensitive JSON substring match — i.e. it stringifies each item with `JSON.stringify` and checks if the query string appears anywhere in the result. Provide a custom `searchFn` for domain-specific relevance or exact field matching.
 
 `filterAsync` and `sortAsync` run after their synchronous counterparts. They set `meta.isLoading = true` during computation and accept an `AbortSignal` — a new call aborts any running async computation.
 
@@ -102,7 +105,7 @@ type RemoteConfig<T, TFilter, TSort> = {
   ) => Promise<{ items: readonly T[]; total: number }>;
   filter?: TFilter;
   limit?: number; // default: 20
-  onFetch?: (event: FetchEvent<TFilter, TSort>) => void; // telemetry callback
+  onFetch?: (event: FetchEvent<RemoteFetchQuery<TFilter, TSort>>) => void; // telemetry callback
   queryKey?: (q: RemoteSourceQuery<TFilter, TSort>) => string;
   refreshInterval?: number; // auto re-fetch every N ms; cancelled on dispose()
   retry?: RetryConfig;
@@ -140,7 +143,7 @@ await source.ready();
 ```ts
 createCursorSource<T, TCursor = string>(
   cfg: CursorConfig<T, TCursor>,
-): CursorSource<T>
+): CursorSource<T, TCursor>
 ```
 
 ```ts
@@ -152,11 +155,14 @@ type CursorConfig<T, TCursor = string> = {
     signal: AbortSignal,
   ) => Promise<{ items: readonly T[]; nextCursor?: TCursor; prevCursor?: TCursor; total?: number }>;
   limit?: number; // default: 20
+  onFetch?: (event: FetchEvent<CursorSourceQuery<TCursor>>) => void;
   queryKey?: (q: CursorSourceQuery<TCursor>) => string;
+  refreshInterval?: number; // auto re-fetch every N ms; cancelled on dispose()
+  retry?: RetryConfig;
 };
 ```
 
-**Returns:** `CursorSource<T>` — async source navigated by opaque cursor tokens instead of page numbers.
+**Returns:** `CursorSource<T, TCursor>` — async source navigated by opaque cursor tokens instead of page numbers.
 
 **Example:**
 
@@ -305,6 +311,7 @@ optimisticUpdate(
 | `loadMore()`          | Fetch the next page and append to `current` (no-op when `meta.hasMore === false`) |
 | `ready(timeout?)`     | Resolve when idle; optional timeout                                               |
 | `reset()`             | Clear accumulated items **immediately** and fetch from page 1                     |
+| `restoreQuery(patch)` | Apply a partial `{ limit?, search? }` snapshot; clears items and refetches if changed |
 | `search(query)`       | Debounced search — **clears items immediately**; fetch fires after debounce       |
 | `searchNow(query)`    | Immediate search — **clears items immediately** and fetches                       |
 | `setLimit(limit)`     | Set page size — **clears items immediately** and restarts from page 1             |
@@ -316,16 +323,14 @@ optimisticUpdate(
 ### `toSignals`
 
 ```ts
-toSignals<T, TMeta>(source: ReactiveSource<T, TMeta>): {
-  current: ComputedSignal<readonly T[]>;
-  dispose: () => void;
-  meta: ComputedSignal<TMeta>;
-}
+toSignals<T, TMeta>(source: ReactiveSource<T, TMeta>): SourceSignals<T, TMeta>
 ```
 
-Works with all four source types — local, remote, cursor, and infinite. `current` and `meta` are `ComputedSignal` — they update automatically when the source changes.
+Works with local, remote, cursor, and infinite source types. `current` and `meta` are `ComputedSignal` — they update automatically when the source changes.
 
-**Returns:** Object with `current`, `meta`, and `dispose`.
+> `MergedSource<T>` cannot be passed to `toSignals` — it has no `meta` field. Use a `subscribe` callback directly instead.
+
+**Returns:** `SourceSignals<T, TMeta>` — an object with `current`, `meta`, `dispose()`, and `[Symbol.dispose]()`.
 
 **Example:**
 
@@ -443,7 +448,7 @@ Fetches the first page server-side and returns a serialisable `SourceSnapshot`. 
 ```ts
 type SourceSnapshot<T> = Readonly<{
   items: readonly T[];
-  page: number;
+  page?: number; // optional — absent means page 1
   search?: string;
   total: number;
 }>;
@@ -646,14 +651,14 @@ type QueryParamsInput = Record<string, string | string[] | undefined>;
 
 type SourceSnapshot<T> = Readonly<{
   items: readonly T[];
-  page: number;
+  page?: number; // optional — absent means page 1
   search?: string;
   total: number;
 }>;
 
 type RetryConfig = {
-  attempts: number;
-  delay?: number | ((attempt: number) => number);
+  attempts?: number; // default: 0 (no retries)
+  delay?: (attempt: number) => number; // default: exponential backoff
 };
 
 type FetchEvent<TQuery = unknown> = Readonly<{
@@ -691,4 +696,47 @@ try {
     console.warn('Source did not load in time:', err.message);
   }
 }
+```
+
+### `SourceDisposedError`
+
+```ts
+class SourceDisposedError extends Error {
+  readonly name = 'SourceDisposedError';
+  // message: 'Source disposed while waiting for ready()'
+}
+```
+
+Thrown by `ready()` when `dispose()` is called on the source while a `ready()` call is still pending. Use `instanceof SourceDisposedError` to distinguish it from `SourceTimeoutError`:
+
+```ts
+import { SourceDisposedError, SourceTimeoutError } from '@vielzeug/sourcerer';
+
+try {
+  await source.ready(5000);
+} catch (err) {
+  if (err instanceof SourceDisposedError) {
+    // source was torn down — skip cleanup
+  } else if (err instanceof SourceTimeoutError) {
+    console.warn('timed out');
+  }
+}
+```
+
+### `SourceSignals`
+
+```ts
+type SourceSignals<T, TMeta> = {
+  readonly current: ComputedSignal<readonly T[]>;
+  dispose(): void;
+  readonly meta: ComputedSignal<TMeta>;
+  [Symbol.dispose](): void;
+};
+```
+
+Return type of `toSignals()`. All sources implement `[Symbol.dispose]()` for use with the TC39 `using` declaration:
+
+```ts
+using signals = toSignals(source);
+// signals is automatically disposed when the block exits
 ```

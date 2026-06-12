@@ -110,7 +110,7 @@ export function resolveUnitPair(
  *
  * @example
  * ```ts
- * startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' })
+ * startOf(parseInstant('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' })
  * // 2026-03-21T00:00:00+00:00[UTC]
  *
  * startOf(instant, 'week', { tz: 'UTC', weekStartsOn: 1 })
@@ -128,7 +128,7 @@ export function startOf(input: TimeInput, unit: BoundaryUnit, options: BoundaryO
  *
  * @example
  * ```ts
- * endOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' })
+ * endOf(parseInstant('2026-03-21T10:15:30Z'), 'day', { tz: 'UTC' })
  * // 2026-03-21T23:59:59.999999999+00:00[UTC]
  * ```
  */

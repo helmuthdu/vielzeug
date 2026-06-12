@@ -9,15 +9,15 @@ describe('createFloatState', () => {
   beforeEach(() => setViewport());
   afterEach(() => vi.restoreAllMocks());
 
-  it('returns a ReactiveFloatHandle with position signal, cleanup, and update', () => {
+  it('returns a ReactiveFloatHandle with position signal, dispose, and update', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const handle = createFloatState(reference, floating, { autoUpdate: false, placement: 'bottom' });
 
-    expect(typeof handle.cleanup).toBe('function');
+    expect(typeof handle.dispose).toBe('function');
     expect(typeof handle.update).toBe('function');
     expect(handle.position).toBeDefined();
     expect(typeof handle.position.value).not.toBe('function');
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('position signal is non-null after construction (autoUpdate: false)', () => {
@@ -26,7 +26,7 @@ describe('createFloatState', () => {
 
     expect(handle.position.value).not.toBeNull();
     expect(handle.position.value?.placement).toBe('bottom');
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('position signal reflects computed x/y coordinates', () => {
@@ -35,7 +35,7 @@ describe('createFloatState', () => {
 
     expect(handle.position.value?.x).toBe(210);
     expect(handle.position.value?.y).toBe(340);
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('position signal updates when update() is called', () => {
@@ -49,7 +49,7 @@ describe('createFloatState', () => {
 
     expect(handle.position.value).not.toBe(firstValue);
     expect(handle.position.value?.x).not.toBe(firstValue?.x);
-    handle.cleanup();
+    handle.dispose();
   });
 
   it('cssAnchor is false on JS-computed handles', () => {
@@ -57,14 +57,14 @@ describe('createFloatState', () => {
     const handle = createFloatState(reference, floating, { autoUpdate: false });
 
     expect(handle.cssAnchor).toBe(false);
-    handle.cleanup();
+    handle.dispose();
   });
 
-  it('cleanup does not throw', () => {
+  it('dispose does not throw', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const handle = createFloatState(reference, floating, { autoUpdate: false });
 
-    expect(() => handle.cleanup()).not.toThrow();
+    expect(() => handle.dispose()).not.toThrow();
   });
 
   it('emits a DEV warn when preferCssAnchor is true but browser does not support it', () => {
@@ -73,7 +73,7 @@ describe('createFloatState', () => {
 
     const handle = createFloatState(reference, floating, { autoUpdate: false, preferCssAnchor: true });
 
-    handle.cleanup();
+    handle.dispose();
 
     // jsdom does not support CSS Anchor Positioning, so a DEV warn should fire.
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));

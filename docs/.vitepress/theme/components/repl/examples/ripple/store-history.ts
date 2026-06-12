@@ -1,31 +1,36 @@
 export const storeHistoryExample = {
-  code: `import { storeWithHistory, watch } from '@vielzeug/ripple'
+  code: `import { storeWithHistory, effect } from '@vielzeug/ripple'
 
 // storeWithHistory wraps a store with snapshot-based undo/redo.
 // Every patch(), replace(), reset(), and lens() write pushes a snapshot.
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 20 })
 
-const textLens = editor.lens('text')
-
-watch(textLens, (next) => console.log('text:', JSON.stringify(next)))
+// canUndo / canRedo are reactive — this effect re-runs whenever the cursor moves
+const stopButtons = effect(() => {
+  console.log('canUndo:', editor.canUndo, '| canRedo:', editor.canRedo)
+})
 
 editor.patch({ text: 'Hello', cursor: 5 })
 editor.patch({ text: 'Hello World', cursor: 11 })
-textLens.value = 'Hello World!'
 
-console.log('historyLength:', editor.historyLength) // 4
-
-editor.undo()
-console.log('after undo:', editor.value.text) // 'Hello World'
+console.log('historyLength:', editor.historyLength) // 3
 
 editor.undo()
 console.log('after undo:', editor.value.text) // 'Hello'
 
+editor.undo()
+console.log('after undo:', editor.value.text) // ''
+
 editor.redo()
-console.log('after redo:', editor.value.text) // 'Hello World'
+console.log('after redo:', editor.value.text) // 'Hello'
 
 // Writing after undo discards the redo stack
 editor.patch({ text: 'Goodbye', cursor: 7 })
-console.log('historyLength after new write:', editor.historyLength) // 4`,
+console.log('historyLength after new write:', editor.historyLength) // 3
+
+stopButtons.dispose()
+
+// Call dispose() to release the internal cursor signal when done
+editor.dispose()`,
   name: 'Store History — Undo/Redo',
 };

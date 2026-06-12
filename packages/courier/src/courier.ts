@@ -1,8 +1,8 @@
-import { type ApiClient, createApi } from './api';
+import { createApi } from './api';
 import { createMutation, type Mutation, type MutationFn, type MutationOptions } from './mutation';
-import { createQuery, type QueryClient, type QueryClientOptions } from './query';
-import { createStream, type StreamClient } from './stream';
-import { createTransportCore, type Interceptor, type TransportOptions } from './transport';
+import { createQuery, type QueryClientOptions } from './query';
+import { createStream } from './stream';
+import { createTransportCore, type TransportOptions } from './transport';
 
 export type CourierOptions = TransportOptions & {
   /**
@@ -15,31 +15,6 @@ export type CourierOptions = TransportOptions & {
   /** Options specific to the query cache (staleTime, gcTime, refetch policies, etc.). */
   query?: QueryClientOptions;
 };
-
-export interface Courier {
-  /** HTTP request client — GET, POST, PUT, PATCH, DELETE, and generic `request()`. */
-  api: ApiClient;
-  /** Abort all in-flight requests, SSE connections, and query cache fetches. Does not dispose the client. */
-  cancelAll(): void;
-  /** Permanently dispose the client. All in-flight requests are aborted. */
-  dispose(): void;
-  /** `true` after `dispose()` is called. */
-  readonly disposed: boolean;
-  /** Update or delete global headers. Applies to both API requests and SSE streams. */
-  headers(updates: Record<string, string | undefined>): void;
-  /** Create a mutation instance with optional lifecycle callbacks. */
-  mutation<TData, TVariables = void>(
-    fn: MutationFn<TData, TVariables>,
-    opts?: MutationOptions<TData, TVariables>,
-  ): Mutation<TData, TVariables>;
-  /** Query / cache client. */
-  query: QueryClient;
-  /** SSE and ReadableStream client. */
-  stream: StreamClient;
-  /** Register a shared interceptor that applies to both API requests and SSE connections. */
-  use(interceptor: Interceptor): () => void;
-  [Symbol.dispose](): void;
-}
 
 /**
  * Create a unified Courier instance backed by a single shared transport.
@@ -61,11 +36,11 @@ export interface Courier {
  *   return next(ctx);
  * });
  *
- * const user = await client.api.get<User>('/users/{id}', { params: { id: 1 } });
+ * const user = await client.api.get<User>('/users/{id}', { params: { id: '1' } });
  * const src = client.stream.sse('/events', { reconnect: true });
  * ```
  */
-export function createCourier(opts?: CourierOptions): Courier {
+export function createCourier(opts?: CourierOptions) {
   const { mutationDefaults, query: queryOpts, ...transportOpts } = opts ?? {};
 
   // Single shared transport — interceptors, headers, and cancellation are
@@ -81,22 +56,27 @@ export function createCourier(opts?: CourierOptions): Courier {
   return {
     api,
 
+    /** Abort all in-flight requests, SSE connections, and query cache fetches. Does not dispose the client. */
     cancelAll(): void {
       transport.cancelAll();
       queryClient.cancelAll();
     },
 
+    /** Permanently dispose the client. All in-flight requests are aborted. */
     dispose(): void {
       transport.dispose();
       queryClient.dispose();
     },
 
+    /** `true` after `dispose()` is called. */
     get disposed() {
       return transport.disposed;
     },
 
+    /** Update or delete global headers. Applies to both API requests and SSE streams. */
     headers: transport.headers,
 
+    /** Create a mutation instance with optional lifecycle callbacks. */
     mutation<TData, TVariables = void>(
       fn: MutationFn<TData, TVariables>,
       mutOpts?: MutationOptions<TData, TVariables>,
@@ -104,14 +84,19 @@ export function createCourier(opts?: CourierOptions): Courier {
       return createMutation(fn, { ...mutationDefaults, ...mutOpts });
     },
 
+    /** Query / cache client. */
     query: queryClient,
 
+    /** SSE and ReadableStream client. */
     stream,
 
     [Symbol.dispose](): void {
       this.dispose();
     },
 
+    /** Register a shared interceptor that applies to both API requests and SSE connections. */
     use: transport.use,
   };
 }
+
+export type Courier = ReturnType<typeof createCourier>;

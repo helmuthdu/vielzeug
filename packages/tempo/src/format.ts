@@ -1,5 +1,4 @@
 import { Temporal } from '@js-temporal/polyfill';
-import { getOrCreate } from '@vielzeug/arsenal';
 
 import type {
   DurationFormatOptions,
@@ -22,6 +21,26 @@ type DurationFormatterConstructor = new (
 ) => DurationFormatter;
 
 // ─── Formatter caches ─────────────────────────────────────────────────────────
+
+const FORMATTER_CACHE_MAX = 128;
+
+function cappedGetOrCreate<V>(cache: Map<string, V>, key: string, factory: () => V): V {
+  const cached = cache.get(key);
+
+  if (cached !== undefined) return cached;
+
+  if (cache.size >= FORMATTER_CACHE_MAX) {
+    const oldest = cache.keys().next().value;
+
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+
+  const value = factory();
+
+  cache.set(key, value);
+
+  return value;
+}
 
 const DATE_TIME_FORMATTER_CACHE = new Map<string, Intl.DateTimeFormat>();
 const RELATIVE_TIME_FORMATTER_CACHE = new Map<string, Intl.RelativeTimeFormat>();
@@ -55,7 +74,7 @@ function makeFormatter(options: FormatOptions, fallbackTz?: string): Intl.DateTi
   if ('intl' in options) {
     const cacheKey = `${String(locale ?? '')}|intl|${tz ?? ''}|${serializeIntlOptions(options.intl)}`;
 
-    return getOrCreate(DATE_TIME_FORMATTER_CACHE, cacheKey, () => {
+    return cappedGetOrCreate(DATE_TIME_FORMATTER_CACHE, cacheKey, () => {
       const intlOptions = tz !== undefined ? { ...options.intl, timeZone: tz } : options.intl;
 
       return new Intl.DateTimeFormat(locale, intlOptions);
@@ -65,7 +84,7 @@ function makeFormatter(options: FormatOptions, fallbackTz?: string): Intl.DateTi
   const pattern = options.pattern ?? 'medium';
   const cacheKey = `${String(locale ?? '')}|${pattern}|${tz ?? ''}`;
 
-  return getOrCreate(
+  return cappedGetOrCreate(
     DATE_TIME_FORMATTER_CACHE,
     cacheKey,
     () => new Intl.DateTimeFormat(locale, { ...FORMAT_PRESETS[pattern], timeZone: tz }),
@@ -79,7 +98,7 @@ function getRelativeFormatter(options: {
 }): Intl.RelativeTimeFormat {
   const cacheKey = `${String(options.locale ?? '')}|${options.numeric ?? 'auto'}|${options.style ?? 'long'}`;
 
-  return getOrCreate(
+  return cappedGetOrCreate(
     RELATIVE_TIME_FORMATTER_CACHE,
     cacheKey,
     () =>
@@ -100,7 +119,7 @@ function getDurationFormatter(options: {
 
   const cacheKey = `${String(options.locale ?? '')}|${options.style ?? ''}`;
 
-  return getOrCreate(
+  return cappedGetOrCreate(
     DURATION_FORMATTER_CACHE,
     cacheKey,
     () => new IntlWithDurationFormat.DurationFormat!(options.locale, { style: options.style }),
@@ -258,7 +277,7 @@ export function formatRangeParts(
  *
  * @example
  * ```ts
- * formatInstant(Temporal.ZonedDateTime.from('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
+ * formatInstant(parseZoned('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
  * // '2026-03-21T10:15:30Z'
  * ```
  */
@@ -287,8 +306,8 @@ export function formatZoned(input: TimeInput, options: TimeOptions = {}): string
  *
  * @example
  * ```ts
- * formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), {
- *   base: Temporal.Instant.from('2026-03-21T10:00:00Z'),
+ * formatRelative(parseInstant('2026-03-21T12:00:00Z'), {
+ *   base: parseInstant('2026-03-21T10:00:00Z'),
  *   locale: 'en-US',
  *   numeric: 'always',
  * })

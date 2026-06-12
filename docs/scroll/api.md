@@ -133,7 +133,7 @@ interface VirtualizerState {
 
 ### `update(next)`
 
-Atomically updates one or more live options. Accepts: `count`, `estimateSize`, `gap`, `getItemKey`, `overscan`, `sticky`. Creation-time options (`horizontal`, `initialOffset`, `onChange`, `onRangeChange`, `measurementCache`) cannot be changed after construction.
+Atomically updates one or more live options. Accepts: `count`, `estimateSize`, `gap`, `getItemKey`, `measurementCache`, `overscan`, `sticky`. Creation-time options (`horizontal`, `initialOffset`, `onChange`, `onRangeChange`) cannot be changed after construction.
 
 ```ts
 virt.update({ count: rows.length });
@@ -258,6 +258,7 @@ ctrl.destroy();
 | `horizontal`       | `boolean`                                     | `false`  | Virtualize along X axis                                    |
 | `measurementCache` | `MeasurementCache`                            | —        | External measurement cache                                 |
 | `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
+| `sticky`           | `(index: number, item: T) => boolean`         | —        | Mark items as sticky headers                               |
 | `clear`            | `(listEl: HTMLElement) => void`               | —        | Custom teardown for listEl; defaults to `textContent = ''` |
 
 Without `getItemKey`, each `setItems()` call drops cached measurements.
@@ -593,7 +594,7 @@ interface ReactiveVirtualizer extends Virtualizer {
 }
 ```
 
-The `state` signal is updated synchronously whenever the visible window changes. All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current — the implementation uses a `Proxy` rather than a snapshot.
+The `state` signal is updated synchronously whenever the visible window changes. All live getters (`count`, `items`, `totalSize`, `scrollOffset`, `stickyItems`) remain current.
 
 ## Types
 
@@ -677,7 +678,57 @@ type RecycleFn = (key: VirtualKey, create: () => HTMLElement) => HTMLElement;
 
 ### `VirtualizerUpdateOptions`
 
-Explicit interface for `update()`. Accepts: `count`, `estimateSize`, `gap`, `getItemKey`, `overscan`, `sticky`.
+```ts
+interface VirtualizerUpdateOptions {
+  count?: number;
+  estimateSize?: number | ((index: number) => number);
+  gap?: number;
+  getItemKey?: (index: number) => VirtualKey;
+  /** Replace the active measurement cache. Existing entries are used immediately on the next rebuild. */
+  measurementCache?: MeasurementCache;
+  overscan?: Overscan;
+  sticky?: (index: number) => boolean;
+}
+```
+
+### `VirtualScrollerOptions<T>`
+
+`DomVirtualListOptions<T>` minus `listElement` and `scrollElement`, plus:
+
+```ts
+type VirtualScrollerOptions<T> = Omit<DomVirtualListOptions<T>, 'listElement' | 'scrollElement'> & {
+  /** CSS class applied to the generated scroll container element. */
+  containerClass?: string;
+};
+```
+
+### `GridVirtualizerUpdateOptions`
+
+```ts
+interface GridVirtualizerUpdateOptions {
+  colCount?: number;
+  colGap?: number;
+  estimateColSize?: number | ((col: number) => number);
+  estimateRowSize?: number | ((row: number) => number);
+  overscanX?: { end?: number; start?: number };
+  overscanY?: { end?: number; start?: number };
+  rowCount?: number;
+  rowGap?: number;
+}
+```
+
+### `GridRangeChangeEvent`
+
+Fired by `onRangeChange` on `createGridVirtualizer`. Zero-allocation alternative to `onChange` — no `rows`/`cols` arrays are allocated.
+
+```ts
+interface GridRangeChangeEvent {
+  colEnd: number;
+  colStart: number;
+  rowEnd: number;
+  rowStart: number;
+}
+```
 
 ### Constants
 

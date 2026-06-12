@@ -204,3 +204,19 @@ After the three passes and synthesis, output Markdown with these sections:
 5. **Risks & constraints**
 
 Be specific — reference file paths, function names, and type signatures wherever possible. Do **not** start implementing anything yet.
+
+## 6. Next step — implementation scope
+
+After presenting the full plan, ask the user the following question **verbatim** before closing:
+
+> **Ready to move on to implementation?**
+> The improvement plan above contains items across four categories (🔴 Bug, 🟠 Design, 🟡 Coverage, 🟢 Enhancement).
+> The **Future improvements** section (section 4) lists longer-term ideas that were intentionally kept out of immediate scope.
+>
+> Would you like to include any of those future improvements in the upcoming implementation step?
+>
+> - **A — No** — implement only the prioritized improvement plan as-is.
+> - **B — Some** — pick specific future improvement items to promote into the implementation plan (tell me which ones).
+> - **C — All** — include every future improvement item in the implementation plan.
+>
+> Reply with A, B (+ item numbers/names), or C — or any other instructions before we proceed.

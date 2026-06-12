@@ -16,6 +16,7 @@ exports:
     SyncResolutionError,
     ScopedResolutionError,
     ContainerDisposedError,
+    ContainerFrozenError,
   ]
 environments: [browser, node, ssr, deno]
 ---

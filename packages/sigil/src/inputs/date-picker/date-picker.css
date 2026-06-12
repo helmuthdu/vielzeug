@@ -35,20 +35,20 @@
     top: calc(100% + var(--size-1));
     left: 0;
     z-index: var(--z-dropdown, 200);
-
-    /* Hidden by default */
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
     display: flex;
+    visibility: hidden;
     flex-direction: column;
     gap: var(--size-2);
     min-width: 18rem;
     padding: var(--size-3);
+    pointer-events: none;
     background: var(--_bg);
     border: var(--border) solid var(--_border-color);
     border-radius: var(--_radius);
     box-shadow: var(--date-picker-shadow, var(--shadow-lg));
+
+    /* Hidden by default */
+    opacity: 0;
     backdrop-filter: blur(var(--blur-sm));
     transform: translateY(var(--overlay-enter-translate-y));
     transition: var(

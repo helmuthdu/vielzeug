@@ -63,13 +63,25 @@ export type ListFormatOptions = {
 };
 
 export type Formatter = {
-  /** Clears all cached formatter instances. Useful for long-running SSR servers. */
+  /**
+   * Clears all cached `Intl` formatter instances. Useful after a locale change on a long-running
+   * SSR server, or to reclaim memory.
+   *
+   * @note This clears the cache for **all callers sharing this formatter instance**. When called on
+   * `i18n.fmt`, the cache is cleared for every part of the application that reads `i18n.fmt`.
+   * `setLocale()` already calls `clear()` automatically — manual calls are rarely needed.
+   */
   clear(): void;
   currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
   date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
   /**
    * Formats a duration using `Intl.DurationFormat` when available, or a compact labeled fallback
    * (e.g. `'1h 30min'`). Returns `''` when every field of `value` is `undefined`.
+   *
+   * @note The fallback labels (`h`, `min`, `s`, `ms`, etc.) are English-only and are not
+   * locale-aware. If `Intl.DurationFormat` is unavailable in your target environment and
+   * you need localised duration output, provide your own formatter using the individual
+   * duration fields from `DurationValue`.
    */
   duration(value: DurationValue, options?: DurationFormatOptions): string;
   list(value: Array<string | number>, options?: ListFormatOptions): string;

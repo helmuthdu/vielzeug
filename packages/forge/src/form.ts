@@ -1,6 +1,7 @@
 import { isAbortError } from '@vielzeug/arsenal';
 import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
 
+import { warn } from './_warn';
 import { createArrayField } from './internal/array';
 import { createScopedForm, type ScopeContext } from './internal/scope';
 import {
@@ -367,8 +368,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     if (import.meta.env.DEV && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
       const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
 
-      console.warn(
-        `[forge] setValidator('${displayKey}'): path looks like an array item key. ` +
+      warn(
+        `setValidator('${displayKey}'): path looks like an array item key. ` +
           `Array items are stored as whole arrays — register the validator on the parent key instead.`,
       );
     }

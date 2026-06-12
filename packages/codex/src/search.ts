@@ -1,4 +1,4 @@
-import type { BundledPackage } from './types.js';
+import type { BundledPackage, DocPage } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -6,9 +6,9 @@ import type { BundledPackage } from './types.js';
 
 export interface SearchHit {
   /** All categories in which the term was found. */
-  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata'>;
-  /** Doc pages (and/or "source") where the term appeared. Present when matchedIn includes "docs". */
-  matchedPages?: string[];
+  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'source'>;
+  /** Doc pages where the term appeared. Present when matchedIn includes "docs". */
+  matchedPages?: DocPage[];
   name: string;
   /**
    * Ranking score: 3 = metadata match (name/description/category),
@@ -23,9 +23,9 @@ export interface SearchHit {
 // Scoring
 // ---------------------------------------------------------------------------
 
-/** Returns true if every term in `terms` appears in `haystack` (case-insensitive). */
+/** Returns true if every term in `terms` appears in `haystack` (case-insensitive, hyphens normalized to spaces). */
 function allTermsMatch(haystack: string, terms: string[]): boolean {
-  const lower = haystack.toLowerCase();
+  const lower = haystack.toLowerCase().replace(/-/g, ' ');
 
   return terms.every((t) => lower.includes(t));
 }
@@ -33,6 +33,7 @@ function allTermsMatch(haystack: string, terms: string[]): boolean {
 export function scorePackage(pkg: BundledPackage, query: string): SearchHit | null {
   const terms = query
     .toLowerCase()
+    .replace(/-/g, ' ')
     .split(/\s+/)
     .filter((t) => t.length > 0);
 
@@ -40,7 +41,7 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
 
   let score = 0;
   const matchedIn: SearchHit['matchedIn'] = [];
-  const matchedPages: string[] = [];
+  const matchedPages: DocPage[] = [];
 
   if ([pkg.name, pkg.description, pkg.category].some((s) => allTermsMatch(s, terms))) {
     score = Math.max(score, 3);
@@ -71,10 +72,7 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
 
   if (pkg.apiSource && allTermsMatch(pkg.apiSource, terms)) {
     score = Math.max(score, 1);
-
-    if (!matchedIn.includes('docs')) matchedIn.push('docs');
-
-    matchedPages.push('source');
+    matchedIn.push('source');
   }
 
   if (score === 0) return null;

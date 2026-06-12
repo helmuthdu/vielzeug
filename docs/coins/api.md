@@ -32,6 +32,8 @@ description: Complete API reference for @vielzeug/coins.
 | `toDecimal()`                                | Minor units → decimal string                                 | Sync      | Round-trips losslessly with `money()`                                                                                  |
 | `toNumber()`                                 | Minor units → float                                          | Sync      | Lossy — for display and charting only, never for arithmetic                                                            |
 | `toJSON()` / `fromJSON()`                    | Serialize / deserialize through JSON                         | Sync      | `amount` is a string in `MoneyJSON` because `bigint` is not JSON-serializable                                          |
+| `withAmount()`                               | Clone a `Money` with a different amount (same currency)      | Sync      |                                                                                                                        |
+| `isMoney()`                                  | Type guard — checks own `bigint` amount and `string` currency| Sync      | Does not validate the currency code — use `toCurrencyCode()` for that                                                  |
 
 ## Package Entry Point
 
@@ -318,7 +320,7 @@ function toJSON(m: Money): MoneyJSON;
 function fromJSON(json: MoneyJSON): Money;
 ```
 
-Serializes/deserializes a `Money` value to/from a plain JSON-safe object. `amount` is a bigint string to survive `JSON.stringify`. `fromJSON` validates the currency code and throws `SyntaxError` for invalid amount strings.
+Serializes/deserializes a `Money` value to/from a plain JSON-safe object. `amount` is a bigint string to survive `JSON.stringify`. `fromJSON` validates the currency code and throws `TypeError` for invalid amount strings.
 
 ```ts
 toJSON(money('1234.56', 'USD'));
@@ -413,6 +415,39 @@ exchange(money('100.00', 'USD'), { from: usd, rate: '0.92', to: eur });
 
 exchange(money('100.00', 'USD'), { from: usd, rate: '0.92', to: eur }, 'floor');
 // { amount: 9200n, currency: 'EUR' }  (same here — exact result)
+```
+
+### `withAmount(m, amount)`
+
+```ts
+function withAmount(m: Money, amount: bigint): Money;
+```
+
+Creates a new `Money` with the given `amount` and the same currency as `m`. Useful when you compute a raw `bigint` externally and need to wrap it back without re-validating the currency.
+
+```ts
+const price = money('9.99', 'USD');
+withAmount(price, 1999n); // { amount: 1999n, currency: 'USD' }
+withAmount(price, -500n); // { amount: -500n, currency: 'USD' }
+```
+
+---
+
+### `isMoney(value)`
+
+```ts
+function isMoney(value: unknown): value is Money;
+```
+
+Type guard that returns `true` if `value` is a `Money`-shaped object — has an own `bigint` `amount` and an own `string` `currency`. Uses `hasOwnProperty` to guard against prototype-chain properties.
+
+Does **not** validate the currency code. Use `toCurrencyCode()` if you also need to confirm the code is a recognised ISO 4217 value.
+
+```ts
+isMoney({ amount: 100n, currency: 'USD' });   // true
+isMoney({ amount: 1.5,  currency: 'USD' });   // false
+isMoney(null);                                 // false
+isMoney(Object.create({ amount: 100n, currency: 'USD' })); // false (prototype only)
 ```
 
 ## Rounding Modes

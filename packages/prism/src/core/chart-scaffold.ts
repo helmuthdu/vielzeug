@@ -27,15 +27,17 @@ export interface ScaffoldContext {
 }
 
 const NULL_TOOLTIP: ReturnType<typeof createTooltip> = {
-  destroy() {},
-  el: null as unknown as HTMLDivElement,
+  dispose() {},
+  el: null,
   hide() {},
   show() {},
+  [Symbol.dispose]() {},
 };
 
 const NULL_LEGEND: ReturnType<typeof createLegend> = {
-  destroy() {},
-  el: null as unknown as HTMLDivElement,
+  dispose() {},
+  el: null,
+  [Symbol.dispose]() {},
   update() {},
 };
 
@@ -140,12 +142,12 @@ export function createChartScaffold(
 
       if (config.plugins) {
         for (const plugin of config.plugins) {
-          plugin.destroy();
+          plugin.dispose();
         }
       }
 
-      tooltip.destroy();
-      legend.destroy();
+      tooltip.dispose();
+      legend.dispose();
       s.dispose();
       base.dispose();
     },

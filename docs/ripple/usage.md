@@ -464,7 +464,28 @@ editor.redo();
 console.log(editor.value.text); // 'hello world'
 ```
 
+`canUndo` and `canRedo` are reactive boolean properties — read them inside `effect()` or `computed()` and they will re-run automatically when the history cursor moves:
+
+```ts
+effect(() => {
+  undoButton.disabled = !editor.canUndo;
+  redoButton.disabled = !editor.canRedo;
+});
+```
+
 All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`, `map`, `filter`, `watch`) work as usual on a `StoreWithHistory<T>`.
+
+Call `dispose()` when the store is no longer needed to release the internal reactive cursor signal:
+
+```ts
+const s = storeWithHistory({ count: 0 });
+// ... use s
+s.dispose();
+```
+
+::: tip historyAt() after eviction
+Once the buffer reaches `maxHistory`, the oldest snapshot is evicted on each new write. `historyAt(0)` always returns the oldest *remaining* snapshot — it is not guaranteed to be the initial state once eviction has occurred.
+:::
 
 ## Stores
 
@@ -577,6 +598,8 @@ Lenses are cached: `settings.lens('theme')` called twice returns the same `Signa
 
 ::: warning Path constraints
 Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `StateError('INVALID_STORE')` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.
+
+Paths are also capped at **32 segments**. Paths exceeding this limit throw `StateError('INVALID_STORE')` with a descriptive message.
 :::
 
 ### Via `.map()`

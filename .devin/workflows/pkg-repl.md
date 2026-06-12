@@ -55,11 +55,11 @@ Cross-reference against `packages/<name>/src/index.ts` and the REPL wiring:
 
 - Are there new exports with no REPL example?
 - Do any examples use removed or renamed APIs?
-- Are any examples demonstrating anti-patterns the current docs discourage?
+- Are any examples demonstrating antipatterns the current docs discourage?
 - Is the package correctly registered in `docs/.vitepress/theme/components/repl/examples/index.ts`?
 - If the package has REPL Monaco typings, do `types/index.ts` and `types/<name>.ts` still reflect the API being demonstrated?
 
-### Step 3 — Update / create examples
+### Step 3 — Update / Remove / Create examples
 
 For each existing example module:
 
@@ -70,6 +70,7 @@ For each existing example module:
 - Prefer real-world-flavoured demos over abstract math or trivial examples.
 - Ensure the snippet logs or returns something useful in the REPL output pane.
 - Keep imports limited to `@vielzeug/<name>`.
+- Remove any duplicated, outdated, deprecated, or examples that are no longer relevant or demonstrative of the current API and usage patterns.
 
 For new examples:
 

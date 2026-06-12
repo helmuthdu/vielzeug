@@ -10,7 +10,7 @@ export type EventByType<Ev extends MachineEvent, Type extends EventType<Ev>> = E
 
 type InitEvent = { readonly type: '$init' };
 type HydrateEvent = { readonly type: '$hydrate' };
-type AfterEvent = { readonly delay: number; readonly type: '$after' };
+export type AfterEvent = { readonly delay: number; readonly type: '$after' };
 
 export type LifecycleEvent = AfterEvent | HydrateEvent | InitEvent;
 
@@ -22,6 +22,9 @@ export type ActionArgs<Ctx extends object, Ev extends MachineEvent = MachineEven
 };
 
 export type ActionFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (args: ActionArgs<Ctx, Ev>) => void;
+
+/** Convenience alias for action functions used in `after` delayed transitions. */
+export type AfterActionFn<Ctx extends object> = ActionFn<Ctx, AfterEvent>;
 
 export type GuardFn<Ctx extends object, Ev extends MachineEvent = MachineEvent> = (
   args: ActionArgs<Ctx, Ev>,
@@ -58,8 +61,9 @@ type TransitionInput<
 // ── After (delayed transitions — F4) ────────────────────────────────────────
 
 export type AfterDef<State extends string, Ctx extends object> = {
-  actions?: Array<(args: { context: Ctx; readonly event: AfterEvent }) => void>;
+  actions?: Array<AfterActionFn<Ctx>>;
   delay: number;
+  /** Guard evaluated at timer fire time. Receives only `context` — the `$after` event carries no user-relevant payload beyond `delay`. */
   guard?: (args: { readonly context: Readonly<Ctx> }) => boolean;
   target: NoInfer<State>;
 };
@@ -163,7 +167,7 @@ export type TransitionTraceEntry<State extends string, Ev extends MachineEvent> 
   readonly to: State;
 };
 
-// ── Interpret options (R12: grouped by concern) ──────────────────────────────
+// ── Interpret options ────────────────────────────────────────────────────────
 
 export type DebugOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
   onDebug?: (event: DebugEvent<State, Ctx, Ev>) => void;
@@ -172,6 +176,7 @@ export type DebugOptions<State extends string, Ctx extends object, Ev extends Ma
 };
 
 export type InterpretOptions<State extends string, Ctx extends object, Ev extends MachineEvent> = {
+  /** Custom deep-clone function. Must return a structurally equivalent object with a safe prototype. Using a function that returns poisoned prototypes (e.g. via `Object.create(null)`) is the caller's responsibility. Defaults to `structuredClone`. */
   clone?: <T>(value: T) => T;
   debug?: DebugOptions<State, Ctx, Ev>;
   maxTransitionsPerFlush?: number;
@@ -189,6 +194,7 @@ export interface MachineInstance<State extends string, Ctx extends object, Ev ex
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
   matches(...states: string[]): boolean;
+  /** Dispatches the event. Returns `true` if a transition occurred. Returns `false` if disposed, no transition matched, or the call was re-entrant (event queued for later). */
   send(event: Ev): boolean;
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;

@@ -51,6 +51,8 @@ export type DomVirtualListOptions<T> = {
   overscan?: Overscan;
   render: (args: DomVirtualListRenderArgs<T>) => void;
   scrollElement: HTMLElement | Window;
+  /** Mark items as sticky headers. Receives the item index and the item data. */
+  sticky?: (index: number, item: T) => boolean;
 };
 
 /**
@@ -231,6 +233,13 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       measurementCache: options.measurementCache,
       onChange: handleChange,
       overscan: options.overscan ?? DEFAULT_OVERSCAN,
+      sticky: options.sticky
+        ? (index) => {
+            const item = currentItems[index];
+
+            return item !== undefined && options.sticky!(index, item);
+          }
+        : undefined,
     });
 
     listEl.style.position = 'relative';
@@ -423,62 +432,16 @@ export function createVirtualScroller<T>(
     throw e;
   }
 
-  return {
-    get count() {
-      return ctrl.count;
+  function destroyScroller(): void {
+    ctrl.destroy();
+    scrollEl.remove();
+  }
+
+  return new Proxy(ctrl, {
+    get(t, prop, receiver) {
+      if (prop === 'destroy' || prop === Symbol.dispose) return destroyScroller;
+
+      return Reflect.get(t as object, prop, receiver);
     },
-    destroy() {
-      ctrl.destroy();
-      scrollEl.remove();
-    },
-    invalidate() {
-      ctrl.invalidate();
-    },
-    get items() {
-      return ctrl.items;
-    },
-    measure(index: number, size: number) {
-      ctrl.measure(index, size);
-    },
-    measureBatch(entries: Array<{ index: number; size: number }>) {
-      ctrl.measureBatch(entries);
-    },
-    measureEl(index: number, el: HTMLElement) {
-      return ctrl.measureEl(index, el);
-    },
-    redraw() {
-      ctrl.redraw();
-    },
-    refresh() {
-      ctrl.refresh();
-    },
-    get scrollOffset() {
-      return ctrl.scrollOffset;
-    },
-    scrollToBottom(scrollOptions?: { behavior?: ScrollBehavior }) {
-      ctrl.scrollToBottom(scrollOptions);
-    },
-    scrollToIndex(index: number, scrollOptions?: ScrollToIndexOptions) {
-      ctrl.scrollToIndex(index, scrollOptions);
-    },
-    scrollToOffset(offset: number, scrollOptions?: { behavior?: ScrollBehavior }) {
-      ctrl.scrollToOffset(offset, scrollOptions);
-    },
-    scrollToTop(scrollOptions?: { behavior?: ScrollBehavior }) {
-      ctrl.scrollToTop(scrollOptions);
-    },
-    setItems(items: T[]) {
-      ctrl.setItems(items);
-    },
-    get stickyItems() {
-      return ctrl.stickyItems;
-    },
-    [Symbol.dispose]() {
-      ctrl.destroy();
-      scrollEl.remove();
-    },
-    get totalSize() {
-      return ctrl.totalSize;
-    },
-  };
+  });
 }

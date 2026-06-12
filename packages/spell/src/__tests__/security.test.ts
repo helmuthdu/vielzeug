@@ -4,7 +4,6 @@
  * Findings addressed:
  *   [MEDIUM] Prototype mutation via __proto__ key in relaxed ObjectSchema and RecordSchema
  *   [MEDIUM] DoS via BigInt coercion with arbitrarily large digit strings
- *   [LOW]    withMessages does not preserve context across async boundaries → withMessagesAsync
  *   [LOW]    configure() now accepts a logger option to silence / redirect warnings
  */
 

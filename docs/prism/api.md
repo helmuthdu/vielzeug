@@ -21,8 +21,11 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `setTheme()` | Apply custom palette / CSS tokens at runtime | `void` |
 | `buildXScale()` | Shared horizontal scale builder (auto time or linear) | `Scale<Date> \| Scale<number>` |
 | `buildYScale()` | Shared vertical linear scale builder | `Scale<number>` |
+| `animate()` | Animate SVG element attributes via RAF | `Promise<void>` |
 | `devWarn()` | Dev-only console.warn helper (`/devtools` subpath) | `void` |
 | `devError()` | Dev-only console.error helper (`/devtools` subpath) | `void` |
+| `LegendState` | Live legend state object (plugin API) | type |
+| `TooltipState` | Live tooltip state object (plugin API) | type |
 
 ## Package Entry Points
 
@@ -282,8 +285,8 @@ Union type for horizontal scales. The chart auto-selects `timeScale` when `x` va
 
 ```ts
 interface Scale<T> {
-  domain: [T, T];
-  range: [number, number];
+  readonly domain: readonly [T, T];
+  readonly range: readonly [number, number];
   map(value: T): number;
   invert(pixel: number): T;
   ticks(count?: number): T[];
@@ -292,8 +295,8 @@ interface Scale<T> {
 
 | Member | Description |
 |---|---|
-| `domain` | Input domain `[min, max]` |
-| `range` | Output pixel range |
+| `domain` | Input domain `[min, max]` — readonly computed tuple |
+| `range` | Output pixel range — readonly computed tuple |
 | `map(value)` | Domain value → pixel position |
 | `invert(pixel)` | Pixel position → domain value |
 | `ticks(count?)` | Nicely-spaced tick values (default: 10) |
@@ -304,12 +307,12 @@ interface Scale<T> {
 
 ```ts
 interface BandScale {
-  domain: string[];
-  range: [number, number];
+  readonly domain: readonly string[];
+  readonly range: readonly [number, number];
   map(value: string): number;
   bandwidth(): number;
   gap(): number;
-  ticks(): string[];
+  ticks(count?: number): string[];
 }
 ```
 
@@ -317,8 +320,21 @@ interface BandScale {
 |---|---|
 | `map(value)` | Left edge pixel position of a category's band |
 | `bandwidth()` | Width of each band in pixels |
-| `gap()` | Gap between bands in pixels |
-| `ticks()` | All domain categories |
+| `gap()` | Pixel gap between adjacent bands (`bandwidth × padding`) |
+| `ticks(count?)` | All domain categories, or at most `count` evenly sampled values |
+
+---
+
+### `Point`
+
+```ts
+interface Point {
+  x: number;
+  y: number;
+}
+```
+
+A pixel-space 2D point used by path builders and area renderers. Exported for plugin authors who build custom SVG paths.
 
 ---
 
@@ -346,22 +362,80 @@ interface Series<T extends DataPoint = DataPoint> {
 
 ---
 
+### `ScaffoldContext`
+
+Passed to `renderFn` inside `createChartScaffold`. Available to plugin authors via advanced extension points.
+
+```ts
+interface ScaffoldContext {
+  chartArea: SVGGElement;
+  container: HTMLElement;
+  dimensions: Signal<ChartDimensions>;
+  groups: ScaffoldGroups;
+  legend: LegendState;
+  svg: SVGSVGElement;
+  tooltip: TooltipState;
+}
+```
+
+---
+
+### `ScaffoldGroups`
+
+```ts
+interface ScaffoldGroups {
+  grid: SVGGElement;
+  series: SVGGElement;
+  xAxis: SVGGElement;
+  yAxis: SVGGElement;
+}
+```
+
+SVG `<g>` elements created by `createChartScaffold`. Children of `chartArea`, appended in render order: `grid` → `xAxis` → `yAxis` → `series`.
+
+---
+
+### `ChartEventHandlers`
+
+```ts
+interface ChartEventHandlers {
+  onClick?: (event: MouseEvent) => void;
+  onMouseLeave?: (event: MouseEvent) => void;
+  onMouseMove?: (event: MouseEvent) => void;
+}
+```
+
+Returned by the `renderFn` passed to `createChartScaffold`. The scaffold attaches and tears down these listeners automatically before each re-render.
+
+---
+
+### `AnimationTarget`
+
+```ts
+interface AnimationTarget {
+  attrs: Record<string, { from: number; to: number }>;
+  el: SVGElement;
+}
+```
+
+One element + attribute map for use with `animate()`. Each attribute entry specifies the start (`from`) and end (`to`) pixel value.
+
+---
+
 ## Pie / Donut Types
 
 ### `PieChartConfig`
 
+Extends [`BaseChartConfig`](#basechartconfig) (inherits `ariaLabel`, `legend`, `margin`, `plugins`, `tooltip`, `transition`). Overrides `onClick`/`onHover` with pie-specific slice signatures.
+
 ```ts
-interface PieChartConfig {
-  ariaLabel?: string;
+interface PieChartConfig extends Omit<BaseChartConfig, 'onClick' | 'onHover' | 'xAxis' | 'yAxis'> {
   cornerRadius?: number;
   data: MaybeSignal<PieSliceConfig[]>;
   innerRadius?: number;
   onClick?: (slice: PieSliceConfig, index: number) => void;
   onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
   padPixels?: number;
-  plugins?: ChartPlugin[];
-  tooltip?: TooltipConfig | boolean;
-  transition?: TransitionConfig;
   variant?: PieVariant;
 }
 ```
@@ -371,14 +445,12 @@ interface PieChartConfig {
 | `data` | `MaybeSignal<PieSliceConfig[]>` | — | Slice definitions |
 | `variant` | `PieVariant` | `'pie'` | Chart style: `'pie'`, `'donut'`, or `'semi'` |
 | `innerRadius` | `number` | `55%` of outer (donut/semi), `0` (pie) | Inner hole radius in pixels |
-| `padPixels` | `number` | `4` | Pixel gap between slices (uniform across arc thickness) |
-| `cornerRadius` | `number` | `6` | Rounded arc corners (pixels) |
-| `tooltip` | `boolean \| TooltipConfig` | — | Hover tooltip |
-| `plugins` | `ChartPlugin[]` | — | Extension plugins installed at mount |
-| `transition` | `TransitionConfig` | `duration: 400` | Enter animation |
+| `padPixels` | `number` | `0` (pie), `8` (donut/semi) | Pixel gap between slices (uniform across arc thickness) |
+| `cornerRadius` | `number` | `0` (pie), `8` (donut/semi) | Rounded arc corners (pixels) |
 | `onClick` | `(slice, index) => void` | — | Fired on slice click |
 | `onHover` | `(slice\|null, index\|null) => void` | — | Fired on hover; `null` on mouseleave |
-| `ariaLabel` | `string` | — | Accessible label on the SVG element |
+
+> Inherited `BaseChartConfig` fields (`tooltip`, `transition`, `legend`, `margin`, `ariaLabel`, `plugins`) behave identically to other chart types.
 
 ### `PieSliceConfig`
 
@@ -414,6 +486,7 @@ type PieVariant = 'donut' | 'pie' | 'semi';
 
 ```ts
 interface SparklineConfig {
+  ariaLabel?: string;
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
@@ -436,11 +509,12 @@ interface SparklineConfig {
 | `curve` | `'linear' \| 'monotone' \| 'step'` | `'linear'` | Line interpolation (line/area only) |
 | `strokeWidth` | `number` | `1.5` | Line stroke width (line/area only) |
 | `fillOpacity` | `number` | `0.2` | Fill opacity (area only) |
-| `cornerRadius` | `number` | `0` | Bar corner radius in pixels (bar/stack only) |
+| `cornerRadius` | `number` | `4` (stack), `0` (bar) | Bar corner radius in pixels (bar/stack only) |
 | `padPixels` | `number` | `2` | Gap between stack segments in pixels (stack only) |
-| `transition` | `TransitionConfig` | — | Enter animation |
-| `onClick` | `(index, value) => void` | — | Called on click with nearest data index |
-| `onHover` | `(index\|null, value\|null) => void` | — | Called on mousemove; `null` on mouseleave |
+| `ariaLabel` | `string` | — | Accessible label; sets `role="img"` on the SVG. If omitted the SVG is marked `aria-hidden="true"` (decorative) |
+| `transition` | `TransitionConfig` | — | Enter animation (bar/stack only; line/area use RAF interpolation) |
+| `onClick` | `(index, value) => void` | — | Called on click with nearest data index. Not fired for 0- or 1-point data |
+| `onHover` | `(index\|null, value\|null) => void` | — | Called on mousemove; `null` on mouseleave. Not fired for 0- or 1-point data |
 
 ### `SparklineVariant`
 
@@ -463,7 +537,7 @@ interface StackSegment {
 }
 ```
 
-> **Accessibility:** The sparkline SVG is marked `aria-hidden="true"` — provide surrounding text context for screen readers.
+> **Accessibility:** Without `ariaLabel` the SVG is marked `aria-hidden="true"` (decorative). Set `ariaLabel` to expose the chart to assistive technology — the SVG will carry `role="img"` and the provided label.
 
 ---
 
@@ -551,7 +625,7 @@ interface AreaSeriesConfig extends Series {
 interface AxisConfig {
   position: 'top' | 'bottom' | 'left' | 'right';
   tickCount?: number;
-  tickFormat?: (value: unknown) => string;
+  tickFormat?: (value: Date | number | string) => string;
   label?: string;
   grid?: boolean | GridConfig;
 }
@@ -572,10 +646,13 @@ interface GridConfig {
 interface TooltipConfig {
   offset?: number;                                         // default: 8
   render?: (point: DataPoint, series: Series) => string;  // returns HTML string
+  sanitize?: (html: string) => string;                    // applied before innerHTML injection
 }
 ```
 
 The tooltip is appended inside the chart container (not `document.body`), so it is automatically scoped and cleaned up on `dispose()`.
+
+> ⚠️ **Security:** The string returned by `render` is injected via `innerHTML`. Pass `sanitize` to apply a sanitizer (e.g. DOMPurify) before injection, or ensure all user-supplied values are escaped before interpolation. A `devWarn` is emitted in development when `render` is set without `sanitize`.
 
 ### `CrosshairConfig`
 
@@ -692,6 +769,79 @@ setTheme({ colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'] });
 
 ---
 
+## Interaction Types
+
+> Exported from `@vielzeug/prism` for use in plugins and custom chart extensions. Both types reflect the live state object created internally; `el` is `null` when no legend/tooltip is configured.
+
+### `LegendState`
+
+```ts
+interface LegendState {
+  el: HTMLDivElement | null;
+  destroy(): void;
+  update(series: { color: string; name: string }[]): void;
+}
+```
+
+The live legend object available on `ctx.legend` inside `ChartPlugin.install`. Call `update()` to re-render legend items, `destroy()` to remove the element.
+
+### `TooltipState`
+
+```ts
+interface TooltipState {
+  destroy(): void;
+  el: HTMLDivElement | null;
+  hide(): void;
+  show(x: number, y: number, point: DataPoint, series: Series): void;
+}
+```
+
+The live tooltip object available on `ctx.tooltip` inside `ChartPlugin.install`. `x`/`y` are pixel coordinates relative to the chart area; `show()` positions and renders the tooltip.
+
+---
+
+## Animation Utilities
+
+> Exported from `@vielzeug/prism` for use in plugins and custom chart extensions.
+
+### `animate`
+
+```ts
+function animate(targets: AnimationTarget[], config?: TransitionConfig): Promise<void>;
+```
+
+Animates SVG element attributes from `from` to `to` values over the given `TransitionConfig` duration. Returns a `Promise` that resolves when all animations complete.
+
+- **Empty targets** — if `targets` is empty the promise resolves synchronously with no RAF calls.
+- **`duration: 0`** — final attribute values are set synchronously.
+- **Negative `stagger`** — clamped to `0`; all elements animate in parallel.
+
+**Parameters — `AnimationTarget`:**
+
+| Field | Type | Description |
+|---|---|---|
+| `el` | `SVGElement` | Target element |
+| `attrs` | `Record<string, { from: number; to: number }>` | Attribute name → start/end values |
+
+```ts
+import { animate } from '@vielzeug/prism';
+
+await animate(
+  [{ attrs: { opacity: { from: 0, to: 1 } }, el: rect }],
+  { duration: 300, easing: 'ease-out' },
+);
+```
+
+### `EasingFn`
+
+```ts
+type EasingFn = (t: number) => number;
+```
+
+A custom easing function. Receives a normalised time value `t ∈ [0, 1]` and returns a progress value (also typically `[0, 1]`). Pass as `TransitionConfig.easing`.
+
+---
+
 ## Devtools
 
 > **Import:** `@vielzeug/prism/devtools`
@@ -705,6 +855,8 @@ function devWarn(msg: string): void;
 ```
 
 Emits `console.warn('[prism] <msg>')` in development. Silent in production.
+
+> ⚠️ **Security:** Warning messages may include user-supplied data (e.g. category names from `bandScale`). Avoid using sensitive values (PII, tokens) as chart category labels.
 
 ### `devError`
 

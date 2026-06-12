@@ -87,4 +87,37 @@ describe('unflattenPaths', () => {
 
     expect(unflattenPaths(flattenPaths(input))).toEqual(input);
   });
+
+  it('overwrites a primitive intermediate with an object when a deeper path follows', () => {
+    const result = unflattenPaths({ a: 1, 'a.b': 2 });
+
+    expect(result).toEqual({ a: { b: 2 } });
+  });
+
+  it('last writer wins when two paths set the same leaf', () => {
+    const result = unflattenPaths({ 'a.b': 1, 'a.b': 2 } as Record<string, unknown>);
+
+    expect(result.a).toEqual({ b: 2 });
+  });
+});
+
+describe('isSafePath — edge cases', () => {
+  it('treats a single safe segment as safe', () => {
+    expect(isSafePath('key')).toBe(true);
+  });
+
+  it('treats an empty string as safe (no unsafe segments)', () => {
+    expect(isSafePath('')).toBe(true);
+  });
+
+  it('returns false when unsafe segment appears in the middle', () => {
+    expect(isSafePath('a.__proto__.b')).toBe(false);
+    expect(isSafePath('a.constructor.b')).toBe(false);
+  });
+
+  it('returns false for standalone unsafe segment', () => {
+    expect(isSafePath('__proto__')).toBe(false);
+    expect(isSafePath('prototype')).toBe(false);
+    expect(isSafePath('constructor')).toBe(false);
+  });
 });

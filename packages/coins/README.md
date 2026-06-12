@@ -13,7 +13,7 @@ pnpm add @vielzeug/coins
 ```ts
 import {
   add, allocate, exchange, format, formatParts,
-  money, multiply, divide, splitEvenly, toCurrencyCode,
+  money, multiply, divide, percentage, splitEvenly, toCurrencyCode,
 } from '@vielzeug/coins';
 
 // Validate and brand a currency code
@@ -47,6 +47,10 @@ formatParts(total)
 //   { type: 'decimal',  value: '.' },
 //   { type: 'fraction', value: '33' },
 // ]
+
+// Percentage
+percentage(money('199.99', 'USD'), '8.5')   // $17.00  (tax computation)
+percentage(money('100.00', 'USD'), 10, 'floor')  // $10.00
 
 // Currency exchange — rate is a decimal string for lossless bigint arithmetic
 exchange(total, { from: usd, rate: '0.92', to: eur });          // default rounding
@@ -106,6 +110,35 @@ min(first, ...rest)                 // → Money  (throws TypeError on currency 
 max(first, ...rest)                 // → Money  (throws TypeError on currency mismatch)
 ```
 
+### `zero(currency)`
+
+Creates a `Money` value with a zero amount for the given currency. Equivalent to `money(0n, currency)` but more expressive.
+
+```ts
+zero('USD')  // { amount: 0n, currency: 'USD' }
+zero('JPY')  // { amount: 0n, currency: 'JPY' }
+```
+
+### `clamp(m, lower, upper)`
+
+Clamps `m` to the inclusive range `[lower, upper]`. All three values must share the same currency. Throws `TypeError` on currency mismatch, `RangeError` if `lower > upper`.
+
+```ts
+clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD'))  // $5.00
+clamp(money('0.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD'))  // $1.00
+clamp(money('15.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD')) // $10.00
+```
+
+### `percentage(m, pct, mode?)`
+
+Returns `pct`% of `m`, i.e. `m × (pct / 100)`. Use a string percentage for lossless precision. Accepts an optional `RoundingMode`.
+
+```ts
+percentage(money('100.00', 'USD'), 10)      // $10.00
+percentage(money('199.99', 'USD'), '8.5')   // $17.00
+percentage(money('100.00', 'USD'), 10, 'floor')
+```
+
 ### Comparison
 
 All comparison functions throw `TypeError` on currency mismatch.
@@ -120,6 +153,8 @@ lessThanOrEqual(a, b)               // → boolean
 isZero(money)                       // → boolean
 isPositive(money)                   // → boolean
 isNegative(money)                   // → boolean
+isNonNegative(money)                // → boolean  (amount >= 0)
+isNonPositive(money)                // → boolean  (amount <= 0)
 ```
 
 ### Serialization
@@ -140,7 +175,7 @@ Formats a `Money` value as a locale-aware currency string. Uses bigint arithmeti
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `locale` | `string` | `'en-US'` | BCP 47 language tag |
-| `style` | `'symbol' \| 'code' \| 'name'` | `'symbol'` | Display style |
+| `style` | `'symbol' \| 'code' \| 'name' \| 'narrowSymbol'` | `'symbol'` | Display style |
 | `minimumFractionDigits` | `number` | currency default | Minimum decimal places shown |
 | `maximumFractionDigits` | `number` | currency default | Maximum decimal places shown |
 

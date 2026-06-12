@@ -6,7 +6,6 @@ export function renderGrid(
   parent: SVGGElement,
   scale: BandScale | Scale<Date> | Scale<number>,
   config: GridConfig | true,
-  _length: number,
   crossLength: number,
   direction: 'horizontal' | 'vertical',
 ): void {

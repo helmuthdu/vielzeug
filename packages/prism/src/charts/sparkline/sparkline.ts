@@ -1,5 +1,6 @@
 import { effect, isSignal, scope } from '@vielzeug/ripple';
 
+import type { Point } from '../../svg/path';
 import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
@@ -8,37 +9,40 @@ import { observeResize } from '../../core/responsive';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 
+function buildTopPoints(data: number[], width: number, height: number): Point[] {
+  if (data.length === 0) return [];
+
+  const xStep = width / Math.max(1, data.length - 1);
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const yRange = max - min || 1;
+
+  return data.map((v, i) => ({
+    x: i * xStep,
+    y: height - ((v - min) / yRange) * height,
+  }));
+}
+
+function buildAreaPath(
+  data: number[],
+  width: number,
+  height: number,
+  curve: SparklineConfig['curve'] = 'linear',
+): string {
+  if (data.length === 0) return '';
+
+  const top = buildTopPoints(data, width, height);
+  const bottom = top.map((p) => ({ x: p.x, y: height }));
+
+  return areaPath(top, bottom, curve ?? 'linear');
+}
+
 function buildPath(data: number[], width: number, height: number, curve: SparklineConfig['curve']): string {
   if (data.length === 0) return '';
 
-  const xStep = width / Math.max(1, data.length - 1);
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const yRange = max - min || 1;
-
-  const points = data.map((v, i) => ({
-    x: i * xStep,
-    y: height - ((v - min) / yRange) * height,
-  }));
+  const points = buildTopPoints(data, width, height);
 
   return curve === 'monotone' ? monotonePath(points) : curve === 'step' ? stepPath(points) : linePath(points);
-}
-
-function buildAreaPath(data: number[], width: number, height: number): string {
-  if (data.length === 0) return '';
-
-  const xStep = width / Math.max(1, data.length - 1);
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const yRange = max - min || 1;
-
-  const top = data.map((v, i) => ({
-    x: i * xStep,
-    y: height - ((v - min) / yRange) * height,
-  }));
-  const bottom = top.map((p) => ({ x: p.x, y: height }));
-
-  return areaPath(top, bottom);
 }
 
 function renderSparkBars(
@@ -58,7 +62,11 @@ function renderSparkBars(
   const dur = transition?.duration ?? 0;
   const easing = resolveEasing(transition?.easing);
 
-  while (parent.children.length > count) parent.removeChild(parent.lastChild!);
+  while (parent.children.length > count) {
+    const last = parent.lastElementChild;
+
+    if (last) parent.removeChild(last);
+  }
 
   for (let i = 0; i < count; i++) {
     const finalH = Math.max(1, ((data[i] - min) / yRange) * height);
@@ -103,7 +111,7 @@ function renderSparkBars(
 }
 
 function isStackData(data: number[] | StackSegment[]): data is StackSegment[] {
-  return data.length > 0 && typeof data[0] === 'object';
+  return data.length > 0 && data[0] !== null && typeof data[0] === 'object';
 }
 
 function buildRoundedStackRect(
@@ -149,7 +157,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   const fillOpacity = config.fillOpacity ?? 0.2;
 
   const svg = createSvgElement('svg', {
-    'aria-hidden': 'true',
+    ...(config.ariaLabel ? { 'aria-label': config.ariaLabel, role: 'img' } : { 'aria-hidden': 'true' }),
     class: 'prism-sparkline',
     style: 'display:block;width:100%;height:100%;overflow:visible',
   });
@@ -217,14 +225,9 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     } else {
       if (variant === 'area') {
         const fill = createSvgElement('path', { class: 'prism-spark-fill' });
-        const fillD = buildAreaPath(data as number[], w, h);
+        const fillD = buildAreaPath(data as number[], w, h, curve);
 
         setAttributes(fill, { d: fillD, fill: color, 'fill-opacity': fillOpacity, stroke: 'none' });
-
-        if (config.transition?.duration) {
-          fill.style.transition = `d ${config.transition.duration}ms ${String(config.transition?.easing ?? 'ease-out')}`;
-        }
-
         innerGroup.appendChild(fill);
       }
 
@@ -232,11 +235,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       const pathD = buildPath(data as number[], w, h, curve);
 
       setAttributes(path, { d: pathD, fill: 'none', stroke: color, 'stroke-width': strokeWidth });
-
-      if (config.transition?.duration) {
-        path.style.transition = `d ${config.transition.duration}ms ${String(config.transition?.easing ?? 'ease-out')}`;
-      }
-
       innerGroup.appendChild(path);
     }
 
@@ -251,9 +249,11 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
     if (!config.onHover && !config.onClick) return;
 
+    if (data.length <= 1) return;
+
     svg.style.cursor = 'crosshair';
 
-    const xStep = w / Math.max(1, data.length - 1);
+    const xStep = w / (data.length - 1);
 
     const handleMove = (e: MouseEvent) => {
       const rect = svg.getBoundingClientRect();

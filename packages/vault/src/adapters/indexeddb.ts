@@ -562,8 +562,9 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     count: (table) =>
       withStore(table, 'readonly', async (s) => {
-        // R2: drop countLiveRecordsInStore cursor. Use getAll and filter — O(n) for TTL tables,
-        // O(1) path handled by the count cache in buildAdapterOps.
+        // Must inspect each stored record to exclude TTL-expired entries.
+        // Individual put() calls can attach a TTL even when the schema has no defaultTtl,
+        // so schema[table].defaultTtl being absent does not guarantee a clean count.
         const all = await idbReq<unknown[]>(s.getAll());
 
         return all.filter((r) => decode(r) !== undefined).length;
@@ -695,7 +696,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       channel.onmessage = (event: MessageEvent<{ table?: string }>) => {
         const tableName = event.data?.table;
 
-        if (!tableName) return;
+        if (!tableName || !(tableName in schema)) return;
 
         notify(tableName as keyof S & string);
       };

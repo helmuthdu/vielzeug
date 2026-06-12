@@ -94,6 +94,8 @@ type SearchOptions<T> = {
 type ScoredResult<T> = { item: T; score: number };
 ```
 
+> **Note:** Nested object traversal is limited to **10 levels deep**. Values beyond that depth are skipped (not matched) to prevent stack overflow on malicious input.
+
 ## Async
 
 - `abortable(promise, signal)` — reject a promise when a signal fires
@@ -118,7 +120,8 @@ retry(
     shouldRetry?: (error: unknown, failureIndex: number) => boolean;
     //   failureIndex is 0-based (0 = first failure, 1 = second, …)
     //   NOT called on the final (exhausting) attempt — use onError for unconditional observation
-    onError?: (error: unknown) => void; // called with the last error before re-throwing
+    onError?: (error: unknown) => void; // called before re-throwing — on final attempt exhaustion
+    //   AND when shouldRetry returns false to abort early
   },
 ): Promise<T>
 ```
@@ -135,7 +138,7 @@ retry(
 - `curry(fn, arity?)` — auto-curried wrapper
 - `debounce(fn, delay?, options?)` — debounce with `{ leading?, trailing? }` options (default: trailing only); returns `.cancel()`, `.flush()`, `.pending()`. Use `{ leading: true, trailing: false }` to fire immediately then cool-down.
 - `identity(value)` — returns its argument unchanged
-- `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function; returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size` (number of cached entries)
+- `memo(fn, options?)` — memoize with `ttl`, `maxSize` (LRU), and custom `key` function; returns a `Memoized<T>` with `.clear()`, `.invalidate()`, and `.size` (number of cached entries); concurrent async callers with the same key share one `Promise` — if it rejects, all callers receive the same rejection and the cache entry is removed so the next call retries
 - `noneOf(...predicates)` — NOR combinator
 - `not(predicate)` — negates a predicate; returns a new predicate with the boolean result inverted
 - `once(fn)` — run once; returns `.reset()` to allow re-invocation
@@ -172,13 +175,15 @@ retry(
 
 - `cache(maxSize)` — simple bounded FIFO cache (`get` / `set`)
 - `defaults(target, ...sources)` — fills `undefined` keys from sources; first source wins (never overwrites already-set keys)
-- `diff(before?, after?, compareFn?)`
+- `diff(before?, after?, compareFn?)` — see [diff](#diff)
+- `diffArrays(before, after, compareFn?)` — set-difference between two arrays; returns `{ added, removed }`
 - `deepMerge(...items)` — arrays replaced by default
 - `deepMergeWith(options)` — `{ arrayStrategy: 'concat' }` to concatenate
 - `shallowMerge(...items)` — `Object.assign`-style one-level merge
 - `entries(obj)`
 - `filterValues(obj, predicate)`
-- `flattenPaths(obj)` — flatten nested object to `{ 'a.b': value }` map; throws `RangeError` if nesting exceeds 10 levels
+- `flattenPaths(obj)` — flatten nested object to `{ 'a.b': value }` map; nesting beyond 10 levels is treated as an opaque leaf (not recursed further)
+- `unflattenPaths(flat)` — reconstruct nested object from a dot-notation flat map; unsafe path segments are silently skipped
 - `fromEntries(input)`
 - `getOrCreate(cache, key, build)` — lazy-initialise a `Map` entry
 - `getPath(item, path, defaultValue?, options?)` — see [getPath](#getpath)
@@ -189,7 +194,7 @@ retry(
 - `mapKeys(obj, mapper)`
 - `mapValues(obj, mapper)`
 - `omit(obj, keys)`
-- `parseJSON(json, options?)` — parses JSON; `null`/`undefined` input → `defaultValue`; invalid JSON → `defaultValue`; the JSON string `"null"` returns `null` (not `defaultValue`)
+- `parseJSON(json, options?)` — parses JSON; `null`/`undefined` input → `defaultValue`; invalid JSON → `defaultValue`; the JSON string `"null"` returns `null` (not `defaultValue`); pass `validator` to reject structurally invalid results
 - `pick(obj, keys)`
 - `prune(value)`
 - `stableStringify(value, options?)` — see [stableStringify](#stablestringify)
@@ -243,9 +248,12 @@ type Stash<T, K> = {
   entries(): IterableIterator<[K, T]>;
   // Sync factory — caches result (including undefined) and returns it
   getOrSet(key: K, factory: () => T, options?: { ttlMs?: number }): T;
-  // Async factory — deduplicates in-flight calls (stampede prevention)
+  // Async factory — deduplicates in-flight calls (stampede prevention); accepts any thenable
   getOrSet(key: K, factory: () => Promise<T>, options?: { ttlMs?: number }): Promise<T>;
 };
+// delete() during an in-flight getOrSet prevents the resolved value from being written back.
+// Callers awaiting the promise still receive the resolved value.
+// clear() does the same and additionally increments the internal generation counter.
 ```
 
 ## Random
@@ -311,8 +319,17 @@ export type RetryOptions = {
   shouldRetry?: (error: unknown, attempt: number) => boolean;
   onError?: (error: unknown) => void;
 };
+export type WaitForOptions = { interval?: number; signal?: AbortSignal; timeout?: number };
 export type Queue = ReturnType<typeof queue>;
 export type DebounceOptions = { leading?: boolean; trailing?: boolean };
+export type ThrottleOptions = { leading?: boolean; trailing?: boolean };
+export type SortDirection = 'asc' | 'desc';
+export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
+export type MemoOptions<T extends Fn> = {
+  key?: (...args: Parameters<T>) => PropertyKey;
+  maxSize?: number;
+  ttl?: number;
+};
 export type Memoized<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T>) & {
   clear(): void;
   invalidate(...args: Parameters<T>): void;
@@ -325,6 +342,13 @@ export type SearchOptions<T> = {
   fields?: ReadonlyArray<keyof T & string>;
   mode?: 'filter' | 'scored';
   threshold?: number;
+};
+export type ArrayDiff<T> = { added: T[]; removed: T[] };
+export type Once<T extends Fn> = T & { reset: () => void };
+export type ParseJSONOptions<T> = {
+  defaultValue?: T;
+  reviver?: (key: string, value: unknown) => unknown;
+  validator?: (parsed: unknown) => boolean;
 };
 export const DELETED: unique symbol;
 ```

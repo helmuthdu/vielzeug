@@ -1,3 +1,4 @@
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { bandScale } from '../band';
@@ -36,5 +37,34 @@ describe('bandScale', () => {
     const loose = bandScale({ domain: ['A', 'B'], padding: 0.5, range: [0, 200] });
 
     expect(tight.bandwidth()).toBeGreaterThan(loose.bandwidth());
+  });
+
+  it('respects paddingOuter configuration', () => {
+    const noOuter = bandScale({ domain: ['A', 'B'], padding: 0, paddingOuter: 0, range: [0, 200] });
+    const withOuter = bandScale({ domain: ['A', 'B'], padding: 0, paddingOuter: 0.5, range: [0, 200] });
+
+    expect(noOuter.bandwidth()).toBeGreaterThan(withOuter.bandwidth());
+  });
+
+  it('subsamples ticks when count < domain length', () => {
+    const scale = bandScale({ domain: ['A', 'B', 'C', 'D', 'E', 'F'], range: [0, 600] });
+
+    const ticks = scale.ticks(3);
+
+    expect(ticks.length).toBeLessThan(6);
+    expect(ticks.length).toBeGreaterThanOrEqual(1);
+    expect(ticks[0]).toBe('A');
+  });
+
+  it('accepts MaybeSignal domain and range', () => {
+    const dom = signal(['A', 'B', 'C']);
+    const rng = signal<[number, number]>([0, 300]);
+    const scale = bandScale({ domain: dom, range: rng });
+
+    expect(scale.domain).toEqual(['A', 'B', 'C']);
+    expect(scale.bandwidth()).toBeGreaterThan(0);
+
+    dom.value = ['A', 'B'];
+    expect(scale.domain).toEqual(['A', 'B']);
   });
 });

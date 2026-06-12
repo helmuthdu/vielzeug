@@ -183,6 +183,8 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function scheduleGc<T>(entry: CacheEntry<T>, gcTime: number) {
+    if (disposed) return;
+
     cancelGc(entry.hash);
 
     if (entry.observers.size > 0) {
@@ -473,8 +475,8 @@ export function createQuery(opts?: QueryClientOptions) {
     entry.error = null;
     entry.status = 'success';
     entry.updatedAt = opts?.updatedAt ?? Date.now();
-    scheduleGc(entry, gcTime);
     notify(entry);
+    scheduleGc(entry, gcTime);
   }
 
   function get<T>(key: QueryKey): T | undefined {
@@ -642,14 +644,44 @@ export function createQuery(opts?: QueryClientOptions) {
     get,
     getState,
     invalidate,
+    /** Returns all currently cached query keys as an array. Useful for SSR serialization and cache debugging. */
+    keys(): QueryKey[] {
+      return [...entries.values()].map((e) => e.key);
+    },
     prefetch: prefetchQuery,
     refetchStale,
     set,
+    /** Number of entries currently held in the cache. */
+    get size(): number {
+      return entries.size;
+    },
     subscribe,
     [Symbol.dispose](): void {
       this.dispose();
     },
     watch,
+    /**
+     * Observe multiple keys as a single combined store.
+     * Returns a `SyncStore<QueryState[]>` whose value updates whenever any of
+     * the watched keys change. Useful for parallel query status aggregation.
+     */
+    watchMany<T = unknown>(keys: QueryKey[]): SyncStore<QueryState<T>[]> {
+      const stores = keys.map((k) => watch<T>(k));
+
+      return {
+        peek(): QueryState<T>[] {
+          return stores.map((s) => s.peek());
+        },
+
+        subscribe(onStoreChange: () => void): Unsubscribe {
+          const unsubs = stores.map((s) => s.subscribe(onStoreChange));
+
+          return () => {
+            for (const u of unsubs) u();
+          };
+        },
+      };
+    },
   };
 }
 

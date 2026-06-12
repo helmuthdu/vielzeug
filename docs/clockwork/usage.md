@@ -383,6 +383,10 @@ On creation, `interpret()` checks `options.snapshot` first, then `persistence.lo
 `m[Symbol.dispose]()` does **not** clear persisted state. The machine may be recreated (e.g. after HMR or component remount) and should resume from the last saved state.
 :::
 
+::: tip Validate loaded snapshots
+If context is loaded from untrusted sources (e.g. `localStorage`), run your `validateContext` guard before interpreting, or wrap `persistence.load()` with a try/catch and schema check.
+:::
+
 ## Middleware
 
 Middleware functions intercept events before they are processed. Each middleware receives the event, a snapshot of the current state, and a `next` function to continue:
@@ -447,6 +451,10 @@ The callback fires only when `state` or `context` reference changes — not on e
 ## Debugging and Tracing
 
 For quick console-based debugging, use `debugInterpret` from the dedicated sub-path. It pre-wires `onDebug` and `onTransition` to `console.debug`/`console.group` and is tree-shaken from production bundles.
+
+::: warning Development only
+`debugInterpret` writes event payloads — including full event objects and context — to the console. Do not use it in production if events or context contain PII.
+:::
 
 ```ts
 import { debugInterpret } from '@vielzeug/clockwork/devtools';

@@ -21,7 +21,8 @@ console.log('later:', expires(later, THRESHOLDS))  // 'warning'
 
 // --- classify() = expires() + timeDiff() in one call ---
 const { key, diff } = classify(soon, THRESHOLDS)
-console.log('key:', key, '|', humanize(diff)) // 'critical | 2 days'
+console.log('key:', key, '|', humanize(diff))                    // 'critical | 2 days'
+console.log('localized:', humanize(diff, { locale: 'ar-EG' }))  // Arabic numerals
 
 // --- timeDiff() ---
 const a = parseInstant('2026-01-01T00:00:00Z')

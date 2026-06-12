@@ -1,6 +1,7 @@
 import type { AnySchema, ReconstructibleSchemaDescriptor } from './core';
 
 import { Schema } from './core';
+import { _warn } from './messages';
 import { defineOwnProperty } from './safe-object';
 import { ArraySchema } from './schemas/array';
 import { BigIntSchema } from './schemas/bigint';
@@ -47,9 +48,21 @@ function applyNumberFields(
 
   if (descriptor.maximum !== undefined) result = result.max(descriptor.maximum);
 
-  if (descriptor.exclusiveMinimum === 0) result = result.positive();
+  if (descriptor.exclusiveMinimum === 0) {
+    result = result.positive();
+  } else if (descriptor.exclusiveMinimum !== undefined) {
+    _warn(
+      `[@vielzeug/spell] fromDescriptor(): non-zero exclusiveMinimum (${descriptor.exclusiveMinimum}) cannot be restored and is ignored.`,
+    );
+  }
 
-  if (descriptor.exclusiveMaximum === 0) result = result.negative();
+  if (descriptor.exclusiveMaximum === 0) {
+    result = result.negative();
+  } else if (descriptor.exclusiveMaximum !== undefined) {
+    _warn(
+      `[@vielzeug/spell] fromDescriptor(): non-zero exclusiveMaximum (${descriptor.exclusiveMaximum}) cannot be restored and is ignored.`,
+    );
+  }
 
   if (descriptor.multipleOf !== undefined) result = result.multipleOf(descriptor.multipleOf);
 
@@ -69,6 +82,10 @@ function applyStringFields(
   if (descriptor.maxLength !== undefined) result = result.max(descriptor.maxLength);
 
   if (descriptor.pattern !== undefined && descriptor.pattern !== null) {
+    if (descriptor.pattern.length > 500) {
+      throw new Error('[@vielzeug/spell] fromDescriptor(): string pattern exceeds maximum allowed length (500).');
+    }
+
     try {
       result = result.regex(new RegExp(descriptor.pattern));
     } catch {

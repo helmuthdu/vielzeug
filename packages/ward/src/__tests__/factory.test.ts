@@ -181,6 +181,28 @@ describe('ward: validation', () => {
       createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: [] as any }]);
     }).toThrow('Rule[0].role');
   });
+
+  it('throws when a principal has a whitespace-only role string', () => {
+    const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    expect(() => permit.can({ id: 'u1', roles: ['   '] }, 'posts', 'read')).toThrow(
+      'roles must be an array of non-empty strings',
+    );
+  });
+
+  it('deduplicates roles in the compiled rule', () => {
+    const permit = createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['editor', 'editor', 'viewer'] },
+    ]);
+
+    const decision = permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
+
+    expect(decision.allowed).toBe(true);
+
+    if (decision.allowed) {
+      expect(decision.rule.role).toEqual(['editor', 'viewer']);
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -306,7 +328,9 @@ describe('ward: decision APIs', () => {
     expect(decisions).toHaveLength(3);
     expect(decisions[0].allowed).toBe(true);
     expect(decisions[1].allowed).toBe(false);
-    expect(decisions[2]).toEqual({ allowed: false, reason: 'no-matching-rule' });
+    expect(decisions[0]).toMatchObject({ action: 'read', resource: 'posts' });
+    expect(decisions[1]).toMatchObject({ action: 'update', resource: 'posts' });
+    expect(decisions[2]).toEqual({ action: 'delete', allowed: false, reason: 'no-matching-rule', resource: 'posts' });
   });
 
   it('returns the normalized rule shape from explain, including priority: 0 when not authored', () => {
@@ -511,10 +535,17 @@ describe('ward: bound view', () => {
         { action: 'update', resource: 'posts' },
       ]),
     ).toEqual([
-      { allowed: true, rule: { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] } },
       {
+        action: 'read',
+        allowed: true,
+        resource: 'posts',
+        rule: { action: 'read', effect: 'allow', priority: 0, resource: 'posts', role: ['viewer'] },
+      },
+      {
+        action: 'update',
         allowed: false,
         reason: 'explicit-deny',
+        resource: 'posts',
         rule: { action: 'update', effect: 'deny', priority: 0, resource: 'posts', role: ['viewer'] },
       },
     ]);
@@ -1336,8 +1367,332 @@ describe('ward: detectConflicts — maxConflicts option', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Conflict detection — strict + onConflict combined
+// Predicate throws non-Error value
 // ---------------------------------------------------------------------------
+
+describe('ward: predicate throws non-Error value', () => {
+  it('wraps non-Error thrown values in an Error with String(err)', () => {
+    const permit = createWard<'read'>([
+      {
+        action: 'read',
+        effect: 'allow',
+        resource: 'posts',
+        role: ['editor'],
+        when: () => {
+          throw 'not-an-error-object';
+        },
+      },
+    ]);
+
+    expect(() => permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
+      'Rule[0] threw: not-an-error-object',
+    );
+  });
+
+  it('wraps numeric thrown values in an Error with String(err)', () => {
+    const permit = createWard<'read'>([
+      {
+        action: 'read',
+        effect: 'allow',
+        resource: 'posts',
+        role: ['editor'],
+        when: () => {
+          throw 42;
+        },
+      },
+    ]);
+
+    expect(() => permit.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow('Rule[0] threw: 42');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BoundWard empty array short-circuit
+// ---------------------------------------------------------------------------
+
+describe('ward: BoundWard empty array short-circuit', () => {
+  it('canAll returns true for empty actions array on BoundWard without validating principal', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+    const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
+
+    expect(bound.canAll('posts', [])).toBe(true);
+  });
+
+  it('canAny returns false for empty actions array on BoundWard without error', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+    const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
+
+    expect(bound.canAny('posts', [])).toBe(false);
+  });
+
+  it('checkAll returns empty array for empty checks on BoundWard', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+    const bound = permit.forUser({ id: 'u1', roles: ['viewer'] });
+
+    expect(bound.checkAll([])).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// WILDCARD role does not cover ANONYMOUS in conflict detection
+// ---------------------------------------------------------------------------
+
+describe('ward: WILDCARD role does not cover ANONYMOUS in conflict/shadowed detection', () => {
+  it('WILDCARD-role rule does not shadow an ANONYMOUS-role rule', () => {
+    const permit = createWard([
+      // Rule 0: allows all authenticated — WILDCARD does not cover ANONYMOUS
+      { action: 'read', effect: 'allow', priority: 10, resource: 'posts', role: WILDCARD },
+      // Rule 1: specifically for anonymous — should NOT be flagged as shadowed
+      { action: 'read', effect: 'deny', priority: 0, resource: 'posts', role: ANONYMOUS },
+    ]);
+
+    const conflicts = permit.detectConflicts();
+
+    // WILDCARD covers authenticated principals; ANONYMOUS covers unauthenticated.
+    // They are disjoint — no shadowing.
+    expect(conflicts).toHaveLength(0);
+  });
+
+  it('anonymous rule matches null principal; wildcard rule does not', () => {
+    const permit = createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: WILDCARD },
+      { action: 'read', effect: 'deny', priority: 10, resource: 'posts', role: ANONYMOUS },
+    ]);
+
+    // null principal — only ANONYMOUS rule applies (deny wins)
+    expect(permit.can(null, 'posts', 'read')).toBe(false);
+    // authenticated — only WILDCARD rule applies (allow wins)
+    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Absolute tie: first-in-array wins
+// ---------------------------------------------------------------------------
+
+describe('ward: first-in-array wins on absolute tie', () => {
+  it('first rule declared wins when priority, specificity, and effect are identical', () => {
+    const permit = createWard([
+      // Both same role, resource, action, effect=allow, priority=0, specificity=3 (all exact)
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+    ]);
+
+    // Will be flagged as duplicate — but the first one wins the decision
+    const decision = permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(decision.allowed).toBe(true);
+
+    if (decision.allowed) {
+      // The winning rule is the first declared (index 0)
+      const conflicts = permit.detectConflicts();
+
+      expect(conflicts).toHaveLength(1);
+      expect(conflicts[0].shadowedByIndex).toBe(0);
+      expect(conflicts[0].ruleIndex).toBe(1);
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// BoundWard canAll/canAny with predicate data
+// ---------------------------------------------------------------------------
+
+describe('ward: BoundWard canAll/canAny with predicate data', () => {
+  it('canAll on BoundWard evaluates data-gated rules', () => {
+    const permit = createWard<'read' | 'update', { authorId: string }>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
+
+    expect(bound.canAll('posts', ['read', 'update'], { authorId: 'u1' })).toBe(true);
+    expect(bound.canAll('posts', ['read', 'update'], { authorId: 'u2' })).toBe(false);
+  });
+
+  it('canAny on BoundWard evaluates data-gated rules', () => {
+    const permit = createWard<'read' | 'update', { authorId: string }>([
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const bound = permit.forUser({ id: 'u1', roles: ['editor'] });
+
+    expect(bound.canAny('posts', ['read', 'update'], { authorId: 'u1' })).toBe(true);
+    expect(bound.canAny('posts', ['read', 'update'], { authorId: 'u2' })).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// allowedActions — wildcard-action rules + predicate interaction
+// ---------------------------------------------------------------------------
+
+describe('ward: allowedActions', () => {
+  it('resolves wildcard-action rules via knownActions', () => {
+    const permit = createWard<'read' | 'update' | 'delete'>([
+      { action: WILDCARD, effect: 'allow', resource: 'posts', role: ['editor'] },
+      { action: 'delete', effect: 'deny', resource: 'posts', role: ['editor'] },
+    ]);
+
+    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update', 'delete']);
+
+    expect(allowed).toEqual(['read', 'update']);
+  });
+
+  it('includes predicate-gated actions when data satisfies the predicate', () => {
+    const permit = createWard<'read' | 'update', { authorId: string }>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
+      authorId: 'u1',
+    });
+
+    expect(allowed).toContain('read');
+    expect(allowed).toContain('update');
+  });
+
+  it('excludes predicate-gated actions when predicate fails', () => {
+    const permit = createWard<'read' | 'update', { authorId: string }>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['editor'] },
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const allowed = permit.allowedActions({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], {
+      authorId: 'u2',
+    });
+
+    expect(allowed).toEqual(['read']);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rulesInScope — predicate skipPredicate behaviour
+// ---------------------------------------------------------------------------
+
+describe('ward: rulesInScope predicate interaction', () => {
+  it('includes predicate-gated rules when data is omitted (skipPredicate)', () => {
+    const permit = createWard<'update', { authorId: string }>([
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const rules = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts');
+
+    expect(rules).toHaveLength(1);
+  });
+
+  it('evaluates predicates when data is provided — excludes non-matching', () => {
+    const permit = createWard<'update', { authorId: string }>([
+      { action: 'update', effect: 'allow', resource: 'posts', role: ['editor'], when: owns('authorId') },
+    ]);
+
+    const match = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u1' });
+    const noMatch = permit.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { authorId: 'u2' });
+
+    expect(match).toHaveLength(1);
+    expect(noMatch).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// checkAll — empty array short-circuit
+// ---------------------------------------------------------------------------
+
+describe('ward: checkAll empty array', () => {
+  it('returns empty array without validating principal for empty checks', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    expect(permit.checkAll({ id: '' as any, roles: [] }, [])).toEqual([]);
+  });
+
+  it('each result carries action and resource from the originating check', () => {
+    const permit = createWard<'read' | 'delete'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+    ]);
+
+    const results = permit.checkAll({ id: 'u1', roles: ['viewer'] }, [
+      { action: 'read', resource: 'posts' },
+      { action: 'delete', resource: 'posts' },
+    ]);
+
+    expect(results[0]).toMatchObject({ action: 'read', allowed: true, resource: 'posts' });
+    expect(results[1]).toMatchObject({ action: 'delete', allowed: false, resource: 'posts' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// trace — zero matching rules
+// ---------------------------------------------------------------------------
+
+describe('ward: trace with zero matching rules', () => {
+  it('returns empty candidates and no-matching-rule decision when nothing matches', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    const result = permit.trace({ id: 'u1', roles: ['admin'] }, 'posts', 'read');
+
+    expect(result.candidates).toHaveLength(0);
+    expect(result.decision).toEqual({ allowed: false, reason: 'no-matching-rule' });
+  });
+
+  it('returns all matching candidates with won flag', () => {
+    const permit = createWard<'read'>([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'read', effect: 'deny', priority: 1, resource: 'posts', role: ['viewer'] },
+    ]);
+
+    const result = permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+
+    expect(result.candidates).toHaveLength(2);
+
+    const winner = result.candidates.find((c) => c.won);
+
+    expect(winner?.rule.effect).toBe('deny');
+    expect(result.decision.allowed).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// forUser — snapshot isolation
+// ---------------------------------------------------------------------------
+
+describe('ward: forUser snapshot isolation', () => {
+  it('mutating the original principal after forUser does not affect the bound view', () => {
+    const permit = createWard<'read'>([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
+
+    const principal = { id: 'u1', roles: ['viewer'] };
+    const bound = permit.forUser(principal);
+
+    expect(bound.can('posts', 'read')).toBe(true);
+
+    // Mutate original — bound view should still use snapshot ['viewer']
+    (principal.roles as string[]).length = 0;
+
+    expect(bound.can('posts', 'read')).toBe(true);
+  });
+
+  it('mutating principal.attributes after forUser does not affect bound view', () => {
+    const permit = createWard<'update', { level: number }>([
+      {
+        action: 'update',
+        effect: 'allow',
+        resource: 'posts',
+        role: ['editor'],
+        when: ({ principal }) => (principal.attributes as { level: number }).level >= 5,
+      },
+    ]);
+
+    const principal = { attributes: { level: 5 }, id: 'u1', roles: ['editor'] };
+    const bound = permit.forUser(principal);
+
+    expect(bound.can('posts', 'update')).toBe(true);
+
+    // Mutate original attributes — bound snapshot was deep-cloned
+    principal.attributes.level = 0;
+
+    expect(bound.can('posts', 'update')).toBe(true);
+  });
+});
 
 describe('ward: detectConflicts — strict and onConflict options', () => {
   it('calls onConflict for each conflict and then throws when strict is also set', () => {

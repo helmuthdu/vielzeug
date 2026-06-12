@@ -127,7 +127,7 @@ describe('middleware pipeline', () => {
     const router = createRouter({
       history,
       routes: {
-        home: { handler, middleware: [vi.fn()], path: '/' },
+        home: { data: handler, middleware: [vi.fn()], path: '/' },
       },
     });
 

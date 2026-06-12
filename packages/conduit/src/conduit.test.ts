@@ -5,6 +5,7 @@ import {
   type Container,
   ContainerDisposedError,
   type ContainerEvent,
+  ContainerFrozenError,
   type ContainerGraph,
   type ContainerModule,
   createContainer,
@@ -31,6 +32,26 @@ describe('token', () => {
   it('produces a unique symbol for every call, even with the same description', () => {
     const a = token<string>('Same');
     const b = token<string>('Same');
+
+    expect(a).not.toBe(b);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// scope()
+// ---------------------------------------------------------------------------
+
+describe('scope()', () => {
+  it('returns a symbol whose description matches the argument', () => {
+    const s = scope('request');
+
+    expect(typeof s).toBe('symbol');
+    expect(s.description).toBe('request');
+  });
+
+  it('produces a unique symbol for every call, even with the same name', () => {
+    const a = scope('request');
+    const b = scope('request');
 
     expect(a).not.toBe(b);
   });
@@ -152,14 +173,14 @@ describe('Container — freeze()', () => {
     const T = token<string>('T');
     const c = createContainer().freeze();
 
-    expect(() => c.value(T, 'x')).toThrow(/frozen/);
+    expect(() => c.value(T, 'x')).toThrow(ContainerFrozenError);
   });
 
   it('prevents further factory() registrations', () => {
     const T = token<string>('T');
     const c = createContainer().freeze();
 
-    expect(() => c.factory(T, () => 'x')).toThrow(/frozen/);
+    expect(() => c.factory(T, () => 'x')).toThrow(ContainerFrozenError);
   });
 
   it('still allows resolve() on a frozen container', async () => {
@@ -172,10 +193,11 @@ describe('Container — freeze()', () => {
     await expect(c.resolve(T)).resolves.toBe('v');
   });
 
-  it('freeze() error includes container name', () => {
+  it('freeze() throws ContainerFrozenError with container name in message', () => {
     const T = token<string>('T');
     const c = createContainer({ name: 'sealed' }).freeze();
 
+    expect(() => c.value(T, 'x')).toThrow(ContainerFrozenError);
     expect(() => c.value(T, 'x')).toThrow('sealed');
   });
 
@@ -267,6 +289,36 @@ describe('Container — resolveOptional', () => {
     });
 
     await expect(c.resolveOptional(T)).rejects.toThrow(TypeError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveOrDefault
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveOrDefault()', () => {
+  it('returns the resolved value when the token is registered', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.value(T, 'hello');
+
+    await expect(c.resolveOrDefault(T, 'fallback')).resolves.toBe('hello');
+  });
+
+  it('returns the default value when the token is not registered', async () => {
+    const T = token<string>('T');
+
+    await expect(createContainer().resolveOrDefault(T, 'fallback')).resolves.toBe('fallback');
+  });
+
+  it('re-throws ContainerDisposedError (does not swallow it)', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    await c.dispose();
+
+    await expect(c.resolveOrDefault(T, 'fallback')).rejects.toThrow(ContainerDisposedError);
   });
 });
 
@@ -1276,6 +1328,18 @@ describe('Container — on()', () => {
     child.value(T, 'v');
 
     expect(events.some((e) => e.type === 'register' && 'description' in e && e.description === 'T')).toBe(true);
+  });
+
+  it('parent events do not propagate down to child listeners', () => {
+    const events: ContainerEvent[] = [];
+    const T = token<string>('T');
+    const root = createContainer();
+    const child = root.createChild();
+
+    child.on((e) => events.push(e));
+    root.value(T, 'v'); // registered on root, not child
+
+    expect(events).toHaveLength(0);
   });
 
   it('events from scope container propagate to parent listeners', async () => {

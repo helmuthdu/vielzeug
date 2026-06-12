@@ -15,7 +15,7 @@ export type PathConfig<P extends string> = [ExtractPathParams<P>] extends [never
   ? { params?: never }
   : { params: Record<ExtractPathParams<P>, string | number | boolean> };
 
-export type CourierRequestConfig<P extends string = string> = PathConfig<P> & {
+export type CourierRequestConfig<P extends string = string, T = unknown> = PathConfig<P> & {
   /** Request body. Plain objects → JSON. BodyInit values passed as-is. */
   body?: unknown;
   /**
@@ -35,13 +35,14 @@ export type CourierRequestConfig<P extends string = string> = PathConfig<P> & {
    * Optional schema for response validation. Any object with a `parse(data)` method
    * works — e.g. a `@vielzeug/spell` schema or a plain validator function wrapper.
    * Called after the response body is parsed; throws if validation fails.
+   * The schema's return type must be assignable to `T`.
    */
-  schema?: { parse(data: unknown): unknown };
+  schema?: { parse(data: unknown): T };
   /** Request timeout in ms. Overrides client default. */
   timeout?: number;
 };
 
-export type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
+export type HttpRequestConfig<P extends string = string, T = unknown> = CourierRequestConfig<P, T> & {
   /** Raw fetch options for advanced use (credentials, cache, mode, referrer, etc.). */
   fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
   /** Per-request headers merged with (and overriding) global client headers. */

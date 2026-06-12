@@ -8,7 +8,20 @@ import { registerTools } from './tools.js';
 
 export { loadData, packageMeta, validateBundledData } from './data.js';
 export type { SearchHit } from './search.js';
-export type { BundledData, BundledPackage, DocPage, PackageMeta } from './types.js';
+export type {
+  BundledData,
+  BundledPackage,
+  CemAttribute,
+  CemCssPart,
+  CemCssProperty,
+  CemDeclaration,
+  CemEvent,
+  CemMember,
+  CemSlot,
+  CemTypeRef,
+  DocPage,
+  PackageMeta,
+} from './types.js';
 
 export function createServer(data: BundledData): Server {
   const server = new Server(

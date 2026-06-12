@@ -65,6 +65,8 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
 
       return f ? [f] : [];
     }),
+    // Include CEM manifest so a sigil-only component change invalidates the cache
+    ...(slug === 'sigil' ? [resolve(repoRoot, 'packages/sigil/dist/custom-elements.json')] : []),
   ];
 
   const hash = createHash('sha256');
@@ -193,7 +195,10 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
         const existing = JSON.parse(readFileSync(existingDataFile, 'utf8')) as BundledData;
 
         existingPackages = new Map(existing.packages.map((p) => [p.slug, p]));
-      } catch {
+      } catch (err) {
+        process.stderr.write(
+          `codex: incremental cache read failed, falling back to full regeneration: ${err instanceof Error ? err.message : String(err)}\n`,
+        );
         hashCache = {};
         existingPackages = new Map();
       }

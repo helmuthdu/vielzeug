@@ -1552,6 +1552,28 @@ describe('combineSignals', () => {
     ctrlA.abort();
     expect(combined.aborted).toBe(true);
   });
+
+  it('cleans up cross-listener on b when a aborts first', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+
+    combineSignals(ctrlA.signal, ctrlB.signal);
+
+    // After a aborts the combined signal is done — the abort listener registered on b
+    // must be removed. Verify by checking that b aborting after does not cause double-abort errors.
+    ctrlA.abort('reason-a');
+    expect(() => ctrlB.abort('reason-b')).not.toThrow();
+  });
+
+  it('cleans up cross-listener on a when b aborts first', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+
+    combineSignals(ctrlA.signal, ctrlB.signal);
+
+    ctrlB.abort('reason-b');
+    expect(() => ctrlA.abort('reason-a')).not.toThrow();
+  });
 });
 
 describe('createBus - name option', () => {

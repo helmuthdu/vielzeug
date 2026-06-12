@@ -1,5 +1,25 @@
+/**
+ * Thrown when a response body fails schema validation (via the `schema` option).
+ * Distinct from `HttpError` so callers can separately handle network failures
+ * vs. data contract violations without inspecting the error shape.
+ */
+export class SchemaValidationError extends Error {
+  /** The raw (pre-validation) response body that failed parsing. */
+  readonly data: unknown;
+
+  constructor(cause: unknown, data: unknown) {
+    super(`[@vielzeug/courier] ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+    this.data = data;
+  }
+
+  static is(err: unknown): err is SchemaValidationError {
+    return err instanceof SchemaValidationError;
+  }
+}
+
 export class HttpError extends Error {
-  readonly name = 'HttpError';
   readonly kind: 'abort' | 'http' | 'network' | 'timeout';
   readonly url: string;
   readonly method: string;
@@ -52,7 +72,9 @@ export class HttpError extends Error {
     status?: number;
     url: string;
   }) {
-    super(opts.message, { cause: opts.cause });
+    super(`[@vielzeug/courier] ${opts.message}`, { cause: opts.cause });
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.url = opts.url;
     this.method = opts.method;
     this.status = opts.status;
@@ -75,7 +97,7 @@ export class HttpError extends Error {
     return new HttpError({
       data,
       headers: res.headers,
-      message: res.statusText || 'Non-OK response',
+      message: res.statusText || `HTTP ${res.status}`,
       method,
       status: res.status,
       url,

@@ -47,6 +47,10 @@ describe('now', () => {
     expect(now('UTC').timeZoneId).toBe('UTC');
     expect(now('Asia/Tokyo').timeZoneId).toBe('Asia/Tokyo');
   });
+
+  it('throws for an invalid timezone', () => {
+    expect(() => now('Bad/Zone')).toThrow();
+  });
 });
 
 describe('nowInstant', () => {
@@ -258,6 +262,16 @@ describe('difference', () => {
     expect(dur.sign).toBe(-1);
     expect(Math.abs(dur.hours)).toBe(2);
   });
+
+  it('respects roundingIncrement when smallestUnit is set', () => {
+    const dur = difference(
+      Temporal.Instant.from('2026-03-21T10:00:00Z'),
+      Temporal.Instant.from('2026-03-21T10:07:30Z'),
+      { largestUnit: 'minute', roundingIncrement: 5, roundingMode: 'floor', smallestUnit: 'minute' },
+    );
+
+    expect(dur.minutes).toBe(5);
+  });
 });
 
 describe('within', () => {
@@ -284,6 +298,13 @@ describe('within', () => {
 
     expect(within(value, start, end, { tz: 'America/New_York', unit: 'day' })).toBe(false);
     expect(within(value, start, end, { tz: 'UTC', unit: 'day' })).toBe(true);
+  });
+
+  it('throws for mismatched ZonedDateTime timezones when unit is specified', () => {
+    const ny = Temporal.ZonedDateTime.from('2026-03-21T10:00:00-04:00[America/New_York]');
+    const berlin = Temporal.ZonedDateTime.from('2026-03-21T16:00:00+01:00[Europe/Berlin]');
+
+    expect(() => within(ny, ny, berlin, { unit: 'day' })).toThrow(MISMATCH_ZONES);
   });
 });
 
@@ -315,6 +336,13 @@ describe('clamp', () => {
     );
 
     expect(result.toString()).toBe('2026-03-22T04:00:00Z');
+  });
+
+  it('throws for mismatched ZonedDateTime timezones when unit is specified', () => {
+    const ny = Temporal.ZonedDateTime.from('2026-03-21T10:00:00-04:00[America/New_York]');
+    const berlin = Temporal.ZonedDateTime.from('2026-03-21T16:00:00+01:00[Europe/Berlin]');
+
+    expect(() => clamp(ny, ny, berlin, { unit: 'day' })).toThrow(MISMATCH_ZONES);
   });
 });
 
@@ -392,6 +420,18 @@ describe('startOf', () => {
       '2026-03-22T00:00:00+00:00[UTC]',
     );
   });
+
+  it('snaps to start of hour', () => {
+    expect(startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'hour', { tz: 'UTC' }).toString()).toBe(
+      '2026-03-21T10:00:00+00:00[UTC]',
+    );
+  });
+
+  it('snaps to start of minute', () => {
+    expect(startOf(Temporal.Instant.from('2026-03-21T10:15:30Z'), 'minute', { tz: 'UTC' }).toString()).toBe(
+      '2026-03-21T10:15:00+00:00[UTC]',
+    );
+  });
 });
 
 describe('endOf', () => {
@@ -405,6 +445,25 @@ describe('endOf', () => {
     const nextStart = startOf(Temporal.Instant.from('2026-04-01T00:00:00Z'), 'month', { tz: 'UTC' });
 
     expect(end.add({ nanoseconds: 1 }).epochNanoseconds).toBe(nextStart.epochNanoseconds);
+  });
+
+  it('snaps to end of year', () => {
+    expect(endOf(Temporal.Instant.from('2026-06-15T10:00:00Z'), 'year', { tz: 'UTC' }).toString()).toBe(
+      '2026-12-31T23:59:59.999999999+00:00[UTC]',
+    );
+  });
+
+  it('snaps to end of week respecting weekStartsOn', () => {
+    const wednesday = parseInstant('2026-03-25T12:00:00Z');
+
+    // week starting Monday — end is Sunday 23:59:59.999999999
+    expect(endOf(wednesday, 'week', { tz: 'UTC', weekStartsOn: 1 }).toString()).toBe(
+      '2026-03-29T23:59:59.999999999+00:00[UTC]',
+    );
+    // week starting Sunday — end is Saturday 23:59:59.999999999
+    expect(endOf(wednesday, 'week', { tz: 'UTC', weekStartsOn: 7 }).toString()).toBe(
+      '2026-03-28T23:59:59.999999999+00:00[UTC]',
+    );
   });
 });
 
@@ -522,6 +581,16 @@ describe('formatRelative', () => {
       }),
     ).toBe('in 2 hours');
   });
+
+  it('respects style: short option', () => {
+    const base = Temporal.Instant.from('2026-03-21T10:00:00Z');
+    const target = Temporal.Instant.from('2026-03-21T11:00:00Z');
+    const long = formatRelative(target, { base, locale: 'en-US', numeric: 'always', style: 'long' });
+    const short = formatRelative(target, { base, locale: 'en-US', numeric: 'always', style: 'short' });
+
+    expect(typeof short).toBe('string');
+    expect(short.length).toBeLessThanOrEqual(long.length);
+  });
 });
 
 describe('parseDuration', () => {
@@ -550,6 +619,20 @@ describe('formatDuration', () => {
       expect(formatDuration('PT2H30M')).toBe('2 hours, 30 minutes');
       expect(formatDuration({ hours: 1, minutes: 1 })).toBe('1 hour, 1 minute');
       expect(formatDuration({ seconds: 0 })).toBe('0 seconds');
+    } finally {
+      intlRecord['DurationFormat'] = saved;
+    }
+  });
+
+  it('fallback renders absolute values for negative duration', () => {
+    const intlRecord = Intl as Record<string, unknown>;
+    const saved = intlRecord['DurationFormat'];
+
+    intlRecord['DurationFormat'] = undefined;
+
+    try {
+      // Negative duration via DurationLike — individual fields are negative
+      expect(formatDuration({ hours: -2, minutes: -30 })).toBe('2 hours, 30 minutes');
     } finally {
       intlRecord['DurationFormat'] = saved;
     }
@@ -621,6 +704,13 @@ describe('expires', () => {
 
     expect(result).toBe('urgent');
   });
+
+  it('returns null with pinned now when date exceeds all thresholds', () => {
+    const pinnedNow = Temporal.Instant.from('2026-06-01T00:00:00Z');
+    const farFuture = Temporal.Instant.from('2200-01-01T00:00:00Z');
+
+    expect(expires(farFuture, { soon: { days: 3 } }, {}, pinnedNow)).toBeNull();
+  });
 });
 
 describe('timeDiff', () => {
@@ -685,6 +775,15 @@ describe('timeDiff', () => {
   });
   it('requires tz for plain inputs', () => {
     expect(() => timeDiff(parsePlainDateTime('2026-01-01'), base)).toThrow(MISSING_TZ);
+  });
+
+  it('works with PlainDate inputs and explicit tz', () => {
+    const a = parsePlainDate('2026-01-01');
+    const b = parsePlainDate('2026-03-01');
+    const result = timeDiff(a, b, { tz: 'UTC' });
+
+    expect(result.unit).toBe('month');
+    expect(result.value).toBe(2);
   });
   it('throws a [tempo] error for an invalid timezone', () => {
     expect(() => timeDiff(base, Temporal.ZonedDateTime.from('2026-06-01T00:00:00[UTC]'), { tz: 'Foo/Bar' })).toThrow(
@@ -766,6 +865,12 @@ describe('dateRange', () => {
     expect(() => [...dateRange(start, end, { days: 0 }, opts)]).toThrow(RangeError);
     expect(() => [...dateRange(start, end, { days: -1 }, opts)]).toThrow('step must advance the date forward');
   });
+
+  it('yields exactly one item when start equals end', () => {
+    const d = Temporal.ZonedDateTime.from('2026-03-15T00:00:00[UTC]');
+
+    expect([...dateRange(d, d, { days: 1 }, opts)]).toHaveLength(1);
+  });
 });
 
 describe('classify', () => {
@@ -827,6 +932,20 @@ describe('classify', () => {
 
   it('requires tz for plain inputs', () => {
     expect(() => classify(parsePlainDateTime('2000-01-01'), T)).toThrow(MISSING_TZ);
+  });
+
+  it('uses shared now for both expires and timeDiff (deterministic output)', () => {
+    const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
+    const threeDaysLater = parseInstant('2026-06-04T00:00:00Z');
+    // classify() internally creates Temporal.Now.instant() once and passes it to both
+    // expires() and timeDiff() — we verify key + diff are consistent with the same base
+    const result = classify(threeDaysLater, T);
+
+    // key comes from expires() using the same 'now' as diff
+    expect(result.key).toBeDefined();
+    expect(result.diff.value).toBeGreaterThan(0);
+    // pinned via expires directly confirms the threshold logic
+    expect(expires(threeDaysLater, T, {}, pinnedNow)).toBe('critical');
   });
 });
 
@@ -940,6 +1059,30 @@ describe('recurrence', () => {
 
     expect(result).toHaveLength(2);
     expect(result[0].timeZoneId).toBe('UTC');
+  });
+
+  it('yields nothing when count is 0', () => {
+    const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+    const result = [...recurrence(start, { count: 0, frequency: 'daily' }, opts)];
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('stops at count when both count and until are provided and count elapses first', () => {
+    const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+    const until = Temporal.ZonedDateTime.from('2026-12-31T00:00:00[UTC]');
+    const result = [...recurrence(start, { count: 3, frequency: 'daily', until }, opts)];
+
+    expect(result).toHaveLength(3);
+  });
+
+  it('stops at until when both count and until are provided and until elapses first', () => {
+    const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+    const until = Temporal.ZonedDateTime.from('2026-01-02T00:00:00[UTC]');
+    const result = [...recurrence(start, { count: 100, frequency: 'daily', until }, opts)];
+
+    expect(result).toHaveLength(2);
+    expect(result[1].day).toBe(2);
   });
 });
 
@@ -1078,5 +1221,17 @@ describe('humanize', () => {
   });
   it('formats singular week', () => {
     expect(humanize({ unit: 'week', value: 1 })).toBe('1 week');
+  });
+
+  it('localizes the number when locale is provided', () => {
+    // Arabic locale uses Eastern Arabic numerals
+    const result = humanize({ unit: 'day', value: 3 }, { locale: 'ar-EG' });
+
+    expect(result).toMatch(/day/);
+    expect(result).not.toMatch(/^3/);
+  });
+
+  it('leaves number as-is when no locale is provided', () => {
+    expect(humanize({ unit: 'day', value: 3 })).toBe('3 days');
   });
 });

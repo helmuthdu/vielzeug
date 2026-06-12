@@ -1,13 +1,15 @@
+import { abortError } from './abortError';
+
 /**
  * Makes any promise abort-aware via AbortSignal.
  */
 export function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) {
-    return Promise.reject(signal.reason);
+    return Promise.reject(abortError(signal));
   }
 
   return new Promise<T>((resolve, reject) => {
-    const onAbort = () => reject(signal.reason);
+    const onAbort = () => reject(abortError(signal));
 
     signal.addEventListener('abort', onAbort, { once: true });
 

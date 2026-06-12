@@ -23,6 +23,8 @@ function niceNumber(value: number, round: boolean): number {
 }
 
 function niceRange(min: number, max: number, tickCount: number): [number, number] {
+  if (min === max) return [min - 1, max + 1];
+
   const range = niceNumber(max - min, false);
   const step = niceNumber(range / (tickCount - 1), true);
 

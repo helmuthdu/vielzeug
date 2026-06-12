@@ -62,6 +62,8 @@ export interface VirtualizerUpdateOptions {
   estimateSize?: number | ((index: number) => number);
   gap?: number;
   getItemKey?: ((index: number) => VirtualKey) | undefined;
+  /** Replace the active measurement cache. Existing entries in the new cache are used immediately on the next rebuild. */
+  measurementCache?: MeasurementCache;
   overscan?: Overscan;
   sticky?: ((index: number) => boolean) | undefined;
 }
@@ -129,7 +131,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   const needsItems = !!onChange || !onRangeChange;
 
   // External or internal measurement cache.
-  const measuredByKey: MeasurementCache = options.measurementCache ?? new Map();
+  let measuredByKey: MeasurementCache = options.measurementCache ?? new Map();
 
   let items: VirtualItem[] = [];
   let stickyItems: VirtualItem[] = [];
@@ -414,6 +416,11 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       }
     }
 
+    if (Object.hasOwn(next, 'measurementCache') && next.measurementCache !== undefined) {
+      measuredByKey = next.measurementCache;
+      needsRebuild = true;
+    }
+
     if (next.overscan !== undefined) {
       const nextOverscan = normalizeOverscan(next.overscan, DEFAULT_OVERSCAN);
 
@@ -549,7 +556,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   }
 
   function scrollToBottom(opts: { behavior?: ScrollBehavior } = {}): void {
-    scrollToOffset(ax.totalSize, opts);
+    scrollToOffset(Math.max(0, ax.totalSize - viewportSize), opts);
   }
 
   function destroy(): void {

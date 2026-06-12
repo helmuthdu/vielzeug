@@ -3,7 +3,6 @@ import type { CrosshairConfig } from '../types';
 import { createSvgElement, setAttributes } from '../svg/element';
 
 export interface CrosshairState {
-  group: SVGGElement;
   hide(): void;
   show(x: number, y: number, width: number, height: number): void;
 }
@@ -28,7 +27,6 @@ export function createCrosshair(parent: SVGGElement, config?: CrosshairConfig | 
   parent.appendChild(group);
 
   return {
-    group,
     hide() {
       group.style.display = 'none';
     },

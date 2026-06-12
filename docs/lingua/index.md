@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter, bindPlural]
+exports: [createI18n, createFormatter, createNamespace, validateCatalog]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -28,7 +28,7 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `bind`, `bindPlural`, `preload`, `setLocale`, `register`, `merge`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `getSupportedLocales`
+- Minimal API: `t`, `tp`, `bind`, `bindPlural`, `preload`, `setLocale`, `register`, `merge`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `hasBranch`, `isLoaded`, `isRegistered`, `dispose`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
@@ -134,8 +134,13 @@ i18n.getSupportedLocales();
 - Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
 - Partial catalog merging: `merge(locale, source)` adds keys without replacing the full catalog
-- Scoped translation helpers: `scope(prefix)` returns a helper bound to a key prefix
+- Scoped translation helpers: `scope(prefix)` returns a helper bound to a key prefix — including `bind()` and `bindPlural()` on the scoped object for hot-path caching
 - Bound translation functions: `bind(key)` returns a cached per-key function for render hot-paths; `bindPlural(key)` returns a reusable plural function for count-driven hot-paths
+- Plural branch detection: `hasBranch(key)` checks if any CLDR form exists under a key, including pipe-plural expanded keys where `has()` returns `false`
+- Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for SSR `getState()` guards
+- Registered-locale predicate: `isRegistered(locale)` distinguishes "never configured" from "async loader not yet called"
+- Instance disposal: `dispose()` clears all subscribers and catalog state — prevents memory leaks in route-scoped SPA instances
+- Typed namespace factories: `createNamespace<M>(factory)` enforces catalog shape on namespace factories
 - Instance forking: `fork(overrides?)` creates an isolated child for SSR or test isolation
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales

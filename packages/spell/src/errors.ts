@@ -14,6 +14,7 @@ export function fail(code: string, message: string, params?: Record<string, unkn
   return [{ code, message, params, path: [] } as Issue];
 }
 
+/** @internal */
 export function resolveMessage<Ctx extends Record<string, unknown>>(msg: MessageFn<Ctx>, ctx: Ctx): string {
   return typeof msg === 'function' ? msg(ctx) : msg;
 }
@@ -68,8 +69,9 @@ export class ValidationError extends Error {
   readonly issues: Issue[];
 
   constructor(issues: Issue[], cause?: unknown) {
-    super(formatIssues(issues), { cause });
-    this.name = 'ValidationError';
+    super(`[@vielzeug/spell] ${formatIssues(issues)}`, { cause });
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.issues = issues;
   }
 

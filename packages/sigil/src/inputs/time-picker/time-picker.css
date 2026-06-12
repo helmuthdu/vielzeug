@@ -40,19 +40,19 @@
     left: 0;
     z-index: var(--z-dropdown, 200);
     display: flex;
+    visibility: hidden;
     flex-direction: column;
     min-width: 12rem;
     overflow: hidden;
+    pointer-events: none;
     background: var(--time-picker-bg, var(--_bg));
     border: var(--border) solid var(--time-picker-border-color, var(--_border-color));
     border-radius: var(--time-picker-radius, var(--_radius));
     box-shadow: var(--time-picker-shadow, var(--shadow-lg));
-    backdrop-filter: blur(var(--blur-sm));
 
     /* Hidden by default */
     opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    backdrop-filter: blur(var(--blur-sm));
     transform: translateY(var(--overlay-enter-translate-y));
     transition: var(
       --_motion-transition,

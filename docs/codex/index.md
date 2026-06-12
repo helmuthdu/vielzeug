@@ -5,7 +5,7 @@ package: codex
 category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
 related: [sigil, spell]
-exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData]
+exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData, CemDeclaration, CemAttribute, CemEvent, CemMember, CemSlot, SearchHit, BundledData, BundledPackage, PackageMeta, DocPage]
 environments: [node]
 ---
 
@@ -76,7 +76,9 @@ npx -y @vielzeug/codex --help
 npx -y @vielzeug/codex --version
 ```
 
-Then wire it into your AI client — see the [Usage Guide](./usage.md).## What it exposes
+Then wire it into your AI client — see the [Usage Guide](./usage.md).
+
+## What it exposes
 
 ### Tools
 

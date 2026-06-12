@@ -32,10 +32,20 @@ export function deriveSource<T, U, TMeta>(
   transform: (items: readonly T[]) => readonly U[],
 ): DerivedSource<U, TMeta> {
   const core = createSourceCore();
-  let cachedCurrent: readonly U[] = transform(parent.current);
+  let cachedCurrent: readonly U[] = [];
+
+  const applyTransform = () => {
+    try {
+      cachedCurrent = transform(parent.current);
+    } catch {
+      // Swallow transform errors to avoid breaking the parent's notify chain.
+    }
+  };
+
+  applyTransform();
 
   const unsubscribeParent = parent.subscribe(() => {
-    cachedCurrent = transform(parent.current);
+    applyTransform();
     core.notify();
   });
 
@@ -55,6 +65,10 @@ export function deriveSource<T, U, TMeta>(
 
     subscribe(listener) {
       return core.subscribe(listener);
+    },
+
+    [Symbol.dispose]() {
+      this.dispose();
     },
   };
 }

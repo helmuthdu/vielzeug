@@ -109,6 +109,12 @@ describe('parseFrontmatter', () => {
 
     expect(result).not.toHaveProperty('constructor');
   });
+
+  it('parses multiline [ ... ] array block', () => {
+    const md = `---\nexports:\n  [\n    signal,\n    computed,\n    effect,\n  ]\n---`;
+
+    expect(parseFrontmatter(md)).toEqual({ exports: ['signal', 'computed', 'effect'] });
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -206,8 +212,9 @@ describe('scorePackage', () => {
     const hit = scorePackage(pkg, 'createquery');
 
     expect(hit?.score).toBe(1);
-    expect(hit?.matchedIn).toContain('docs');
-    expect(hit?.matchedPages).toContain('source');
+    expect(hit?.matchedIn).toContain('source');
+    expect(hit?.matchedIn).not.toContain('docs');
+    expect(hit?.matchedPages).toBeUndefined();
   });
 
   it('collects all match categories (multi-match)', () => {
@@ -274,6 +281,14 @@ describe('scorePackage', () => {
     const hit = scorePackage(pkg, 'ripple');
 
     expect(hit?.matchedPages).toBeUndefined();
+  });
+
+  it('matches hyphenated keywords with space-separated query terms', () => {
+    const pkg = makePkg({ keywords: ['reactive-signal'] });
+    const hit = scorePackage(pkg, 'reactive signal');
+
+    expect(hit).not.toBeNull();
+    expect(hit?.matchedIn).toContain('keywords');
   });
 
   it('is case-insensitive in both haystack and query', () => {
@@ -384,6 +399,14 @@ describe('resolvePort', () => {
   it('throws for an empty string', () => {
     expect(() => resolvePort('')).toThrow(/Invalid --port/);
   });
+
+  it('truncates float strings via parseInt (3.14 → 3)', () => {
+    expect(resolvePort('3.14')).toBe(3);
+  });
+
+  it('throws for a negative port', () => {
+    expect(() => resolvePort('-1')).toThrow(/Invalid --port/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -412,9 +435,69 @@ describe('validate', () => {
   });
 
   it('passes valid data through without throwing', () => {
-    const input = { packages: [{ name: '@vielzeug/x', slug: 'x' }], version: '1.0.0' };
+    const input = {
+      packages: [
+        { availableDocPages: [], components: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' },
+      ],
+      version: '1.0.0',
+    };
 
     expect(() => validateBundledData(input)).not.toThrow();
+  });
+
+  it('throws when slug is an empty string', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: '' }],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
+  it('throws when name is an empty string', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '', slug: 'x' }],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
+  it('throws when exports is not an array', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [{ availableDocPages: [], docs: {}, exports: 'bad', keywords: [], name: '@vielzeug/x', slug: 'x' }],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
+  it('throws when docs is not an object', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [{ availableDocPages: [], docs: 42, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' }],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
+  it('throws when components is not an array', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [
+          {
+            availableDocPages: [],
+            components: 'bad',
+            docs: {},
+            exports: [],
+            keywords: [],
+            name: '@vielzeug/x',
+            slug: 'x',
+          },
+        ],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
   });
 
   it('loadData succeeds with the bundled data file (smoke test)', () => {

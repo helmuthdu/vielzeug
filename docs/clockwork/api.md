@@ -246,18 +246,52 @@ type TransitionDef<
 
 ---
 
+### `AfterEvent`
+
+The synthetic event dispatched to `after` action functions. Part of `LifecycleEvent`.
+
+```ts
+type AfterEvent = { readonly delay: number; readonly type: '$after' };
+```
+
+`delay` reflects the configured delay in milliseconds.
+
+---
+
+### `AfterActionFn<Ctx>`
+
+Convenience alias for action functions used in `after` delayed transitions.
+
+```ts
+type AfterActionFn<Ctx extends object> = ActionFn<Ctx, AfterEvent>;
+```
+
+Use this when extracting after-actions into named functions:
+
+```ts
+import type { AfterActionFn } from '@vielzeug/clockwork';
+
+const logTimeout: AfterActionFn<{ attempts: number }> = ({ context, event }) => {
+  console.log(`Timed out after ${event.delay}ms, attempts: ${context.attempts}`);
+};
+```
+
+---
+
 ### `AfterDef<State, Ctx>`
 
 Configuration for a delayed (timer-based) transition.
 
 ```ts
 type AfterDef<State extends string, Ctx extends object> = {
-  actions?: Array<(args: { context: Ctx; readonly event: AfterEvent }) => void>;
+  actions?: Array<AfterActionFn<Ctx>>;
   delay: number; // milliseconds, must be >= 0
   guard?: (args: { readonly context: Readonly<Ctx> }) => boolean;
   target: State;
 };
 ```
+
+The `guard` receives only `context` — the `$after` event carries no user-relevant payload beyond `delay`.
 
 After-timers are automatically cleared when the owning state is exited.
 
@@ -326,7 +360,7 @@ type InterpretOptions<State extends string, Ctx extends object, Ev extends Machi
 
 | Option                   | Default           | Description                                                              |
 | ------------------------ | ----------------- | ------------------------------------------------------------------------ |
-| `clone`                  | `structuredClone` | Context clone function                                                   |
+| `clone`                  | `structuredClone` | Context clone function. Must return a structurally equivalent object. The caller is responsible for ensuring a safe prototype when providing a custom function. |
 | `debug`                  | `undefined`       | Debug options — zero overhead when omitted                               |
 | `maxTransitionsPerFlush` | `1000`            | Maximum transitions processed per flush before throwing loop-guard error |
 | `middleware`             | `[]`              | Composable event interception pipeline                                   |
@@ -443,7 +477,7 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 | `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned snapshot of current state and context.                                                                                 |
 | `getTrace()`         | `TransitionTraceEntry[]` | Recent transitions in chronological order (oldest to newest). Returns cloned entries. Empty array when tracing is disabled.        |
 | `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any.                                                     |
-| `send(event)`        | `boolean`                | Dispatches the event. Returns `true` if a transition occurred.                                                                     |
+| `send(event)`        | `boolean`                | Dispatches the event. Returns `true` if a transition occurred. Returns `false` when disposed, no transition matched, or called re-entrantly (event queued; transition fires after current one completes). |
 | `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns unsubscribe function. Fires only on reference change.                                 |
 | `[Symbol.dispose]()` | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Does **not** clear persisted state.                     |
 

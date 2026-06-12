@@ -2,6 +2,7 @@ import { computed, define, html, onMounted, prop, signal, watch } from '@vielzeu
 
 import type { ThemeColor } from '../../types';
 
+import { warn } from '../../_warn';
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
 import { announce, createSwipeControl } from '../../headless';
@@ -407,8 +408,8 @@ define<SgCarouselProps, SgCarouselEvents>(CAROUSEL_TAG, {
       const horizontal = orientation !== 'vertical';
 
       if (isMarquee.value && props.loop.value === false) {
-        console.warn(
-          '[sg-carousel] loop="false" on the marquee variant stops the scroll animation rather than ' +
+        warn(
+          'sg-carousel: loop="false" on the marquee variant stops the scroll animation rather than ' +
             'disabling navigation wrap-around. Navigation in marquee always loops. ' +
             'This is different from loop="false" on other variants.',
         );

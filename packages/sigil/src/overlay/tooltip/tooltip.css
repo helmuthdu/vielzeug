@@ -83,12 +83,12 @@
   .tooltip:popover-open {
     opacity: 1;
     transform: translate(0, 0) scale(1);
-    will-change: opacity, transform, filter;
     transition:
       opacity var(--transition-normal),
       transform var(--transition-spring),
       display var(--transition-normal) allow-discrete,
       overlay var(--transition-normal) allow-discrete;
+    will-change: opacity, transform, filter;
 
     @starting-style {
       opacity: 0;

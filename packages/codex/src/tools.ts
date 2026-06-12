@@ -160,7 +160,7 @@ const getSourceTool: ToolDefinition = {
 
 const searchPackagesTool: ToolDefinition = {
   description:
-    'Search vielzeug packages by keyword across name, description, category, keywords, exports, and docs. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports, 1=docs. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
+    'Search vielzeug packages by keyword across name, description, category, keywords, exports, docs, and source. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports, 1=docs/source. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
   inputSchema: {
     properties: { query: { description: 'Non-empty search term', minLength: 1, type: 'string' } },
     required: ['query'],

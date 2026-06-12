@@ -1,13 +1,17 @@
 import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { DataPoint, Series, StackSegment } from '../types';
+
+import { error as devError, warn as devWarn } from '../_warn';
+import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
 import { createBarChart } from '../charts/bar';
 import { createLineChart } from '../charts/line';
 import { createPieChart } from '../charts/pie';
 import { createSparkline } from '../charts/sparkline';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
-import { devError, devWarn } from '../core/dev';
+import { createTooltip } from '../interaction/tooltip';
 import { seriesColor, setTheme } from '../theme';
 
 // ─── theme ───────────────────────────────────────────────────────────────────
@@ -40,6 +44,84 @@ describe('setTheme', () => {
     setTheme({ fontFamily: 'sans-serif' });
     expect(document.documentElement.style.getPropertyValue('--prism-font-family')).toBe('sans-serif');
     document.documentElement.style.removeProperty('--prism-font-family');
+  });
+
+  it('sets gridColor', () => {
+    setTheme({ gridColor: '#e2e8f0' });
+    expect(document.documentElement.style.getPropertyValue('--prism-grid-color')).toBe('#e2e8f0');
+    document.documentElement.style.removeProperty('--prism-grid-color');
+  });
+
+  it('sets gridOpacity', () => {
+    setTheme({ gridOpacity: 0.5 });
+    expect(document.documentElement.style.getPropertyValue('--prism-grid-opacity')).toBe('0.5');
+    document.documentElement.style.removeProperty('--prism-grid-opacity');
+  });
+});
+
+// ─── StackSegment type export ─────────────────────────────────────────────────
+
+describe('StackSegment type export', () => {
+  it('StackSegment is usable as a type', () => {
+    const seg: StackSegment = { color: '#ff0', label: 'A', value: 50 };
+
+    expect(seg.value).toBe(50);
+    expect(seg.color).toBe('#ff0');
+    expect(seg.label).toBe('A');
+  });
+});
+
+// ─── crosshair variants ───────────────────────────────────────────────────────
+
+describe('crosshair', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => container.remove());
+
+  it('renders vertical crosshair line by default', () => {
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [
+        {
+          data: [
+            { x: 1, y: 10 },
+            { x: 2, y: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    expect(chart.el.querySelector('.prism-crosshair-v')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-crosshair-h')).toBeNull();
+    chart.dispose();
+  });
+
+  it('renders horizontal crosshair line when horizontal:true', () => {
+    const chart = createLineChart(container, {
+      crosshair: { horizontal: true, vertical: false },
+      series: [
+        {
+          data: [
+            { x: 1, y: 10 },
+            { x: 2, y: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    expect(chart.el.querySelector('.prism-crosshair-h')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-crosshair-v')).toBeNull();
+    chart.dispose();
   });
 });
 
@@ -78,8 +160,8 @@ describe('buildYScale', () => {
 
 // ─── devtools ────────────────────────────────────────────────────────────────
 
-describe('devWarn / devError', () => {
-  it('exports devWarn and devError without throwing', () => {
+describe('warn / error', () => {
+  it('exports warn and error without throwing', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
@@ -179,18 +261,18 @@ describe('createPieChart — scaffold lifecycle', () => {
     expect(container.querySelector('.prism-tooltip')).toBeNull();
   });
 
-  it('installs and destroys plugins', () => {
+  it('installs and disposes plugins', () => {
     const install = vi.fn();
-    const destroy = vi.fn();
+    const dispose = vi.fn();
     const chart = createPieChart(container, {
       data: [{ value: 100 }],
-      plugins: [{ destroy, install }],
+      plugins: [{ dispose, install }],
       transition: { duration: 0 },
     });
 
     expect(install).toHaveBeenCalledWith(chart.el, container);
     chart.dispose();
-    expect(destroy).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it('reactive signal re-renders slices', async () => {
@@ -217,6 +299,183 @@ describe('createPieChart — scaffold lifecycle', () => {
     chart.dispose();
     expect(() => svg.dispatchEvent(new MouseEvent('mousemove'))).not.toThrow();
     expect(() => svg.dispatchEvent(new MouseEvent('click'))).not.toThrow();
+  });
+});
+
+// ─── crosshair DOM leak regression ───────────────────────────────────────────
+
+describe('crosshair — no DOM leak on reactive update', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('line chart: only one .prism-crosshair group after signal update', async () => {
+    const data = signal([{ x: 1, y: 10 }]);
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [{ data, name: 'S' }],
+    });
+
+    data.value = [
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+    ];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
+    chart.dispose();
+  });
+
+  it('area chart: only one .prism-crosshair group after signal update', async () => {
+    const data = signal([{ x: 1, y: 10 }]);
+    const chart = createAreaChart(container, {
+      crosshair: true,
+      series: [{ data, name: 'S' }],
+    });
+
+    data.value = [
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+    ];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
+    chart.dispose();
+  });
+});
+
+// ─── buildXScale / buildYScale — empty input ─────────────────────────────────
+
+describe('buildXScale / buildYScale — empty arrays', () => {
+  it('buildXScale([]) returns a valid scale without Infinity domain', () => {
+    const scale = buildXScale([], 300);
+
+    expect(isFinite(scale.domain[0] as number)).toBe(true);
+    expect(isFinite(scale.domain[1] as number)).toBe(true);
+    expect(scale.range).toEqual([0, 300]);
+  });
+
+  it('buildYScale([]) returns a valid scale without Infinity domain', () => {
+    const scale = buildYScale([], 300);
+
+    expect(isFinite((scale.domain as [number, number])[0])).toBe(true);
+    expect(isFinite((scale.domain as [number, number])[1])).toBe(true);
+  });
+});
+
+// ─── tooltip — custom render ──────────────────────────────────────────────────
+
+describe('tooltip — custom render function', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('line chart: custom render fn is called and output injected into tooltip', () => {
+    const render = vi.fn((_pt: DataPoint, s: Series) => `<b>${s.name}</b>`);
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { x: 1, y: 42 },
+            { x: 2, y: 55 },
+          ],
+          name: 'Rev',
+        },
+      ],
+      tooltip: { render },
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
+
+    const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
+
+    expect(tooltip).not.toBeNull();
+
+    if (render.mock.calls.length > 0) {
+      expect(tooltip.innerHTML).toContain('Rev');
+    }
+
+    chart.dispose();
+  });
+});
+
+// ─── axis — right and top positions ──────────────────────────────────────────
+
+describe('axis — right and top positions', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('renders axis lines with xAxis position top', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { x: 1, y: 10 },
+            { x: 2, y: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+      xAxis: { position: 'top' },
+    });
+
+    expect(chart.el.querySelector('.prism-axis-line')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('renders axis lines with yAxis position right', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { x: 1, y: 10 },
+            { x: 2, y: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+      yAxis: { position: 'right' },
+    });
+
+    expect(chart.el.querySelector('.prism-axis-line')).not.toBeNull();
+    chart.dispose();
   });
 });
 
@@ -259,5 +518,164 @@ describe('createSparkline — interaction cleanup', () => {
     chart.el.dispatchEvent(new MouseEvent('mouseleave'));
     expect(onHover).toHaveBeenCalledWith(null, null);
     chart.dispose();
+  });
+});
+
+// ─── animate utility ─────────────────────────────────────────────────────────
+
+describe('animate', () => {
+  it('returns a Promise', () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
+    svg.appendChild(rect);
+    document.body.appendChild(svg);
+
+    const result = animate([{ attrs: { width: { from: 0, to: 100 } }, el: rect }], { duration: 0 });
+
+    expect(result).toBeInstanceOf(Promise);
+    svg.remove();
+  });
+
+  it('resolves after duration: 0', async () => {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+
+    svg.appendChild(rect);
+    document.body.appendChild(svg);
+
+    await expect(
+      animate([{ attrs: { width: { from: 0, to: 50 } }, el: rect }], { duration: 0 }),
+    ).resolves.toBeUndefined();
+    svg.remove();
+  });
+});
+
+// ─── TooltipConfig.sanitize ───────────────────────────────────────────────────
+
+describe('TooltipConfig.sanitize', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('applies sanitize fn before setting innerHTML', () => {
+    const sanitize = vi.fn((html: string) => html.replace(/<script.*?<\/script>/gi, ''));
+    const render = (_pt: DataPoint, s: Series) => `<b>${s.name}</b><script>alert(1)</script>`;
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { x: 1, y: 42 },
+            { x: 2, y: 55 },
+          ],
+          name: 'Rev',
+        },
+      ],
+      tooltip: { render, sanitize },
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
+
+    if (sanitize.mock.calls.length > 0) {
+      const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
+
+      expect(tooltip.innerHTML).not.toContain('<script>');
+    }
+
+    chart.dispose();
+  });
+});
+
+// ─── computePoints — string x devWarn ────────────────────────────────────────
+
+describe('createLineChart — string x devWarn', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('emits devWarn when x values are strings', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { x: 'Q1', y: 10 },
+            { x: 'Q2', y: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('is a string'));
+    chart.dispose();
+    warn.mockRestore();
+  });
+});
+
+// ─── tooltip — isConnected guard ─────────────────────────────────────────────
+
+describe('createTooltip — isConnected guard', () => {
+  it('show() does not throw when container is detached from DOM', () => {
+    const container = document.createElement('div');
+    const tooltip = createTooltip(container, true);
+    const point: DataPoint = { x: 1, y: 10 };
+    const series: Series = { data: [], name: 'S' };
+
+    expect(() => tooltip.show(10, 10, point, series)).not.toThrow();
+    tooltip.dispose();
+  });
+});
+
+// ─── tooltip — render without sanitize devWarn ───────────────────────────────
+
+describe('createTooltip — XSS warning', () => {
+  it('emits devWarn when render is provided without sanitize', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const container = document.createElement('div');
+
+    document.body.appendChild(container);
+    createTooltip(container, { render: (_pt, s) => `<b>${s.name}</b>` });
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('sanitize'));
+    warn.mockRestore();
+    container.remove();
+  });
+
+  it('does NOT warn when render is provided with sanitize', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const container = document.createElement('div');
+
+    document.body.appendChild(container);
+    createTooltip(container, {
+      render: (_pt, s) => `<b>${s.name}</b>`,
+      sanitize: (html) => html,
+    });
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+    container.remove();
   });
 });

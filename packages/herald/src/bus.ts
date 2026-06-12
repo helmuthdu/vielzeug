@@ -12,9 +12,14 @@ import type {
 } from './types';
 
 export class BusDisposedError extends Error {
-  override name = 'BusDisposedError';
   constructor(busName?: string) {
-    super(busName ? `Bus "${busName}" is disposed` : 'Bus is disposed');
+    super(busName ? `[@vielzeug/herald] Bus "${busName}" is disposed` : '[@vielzeug/herald] Bus is disposed');
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is BusDisposedError {
+    return err instanceof BusDisposedError;
   }
 }
 
@@ -428,7 +433,8 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
       let i = 0;
 
       // Guard prevents a misbehaving middleware from calling next() twice and
-      // triggering a double-dispatch to all listeners.
+      // triggering a double-dispatch to listeners. Note: a middleware calling next()
+      // more than twice can still invoke downstream middleware multiple times.
       function next(): void {
         const idx = i++;
 

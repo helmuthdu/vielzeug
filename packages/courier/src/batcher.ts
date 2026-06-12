@@ -122,6 +122,12 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
 
         if (queue.length >= maxSize) {
           // Force-flush immediately when the batch is full.
+          // Cancel any pending timer first so it cannot fire a second flush.
+          if (pendingTimer !== null) {
+            clearTimeout(pendingTimer);
+            pendingTimer = null;
+          }
+
           scheduled = false;
           flush();
         } else {

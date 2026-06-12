@@ -45,6 +45,39 @@ describe('createSortableScope', () => {
 // ─── createSortable ───────────────────────────────────────────────────────────
 
 describe('createSortable', () => {
+  describe('empty container', () => {
+    it('does not throw when container has no items', () => {
+      const element = document.createElement('ul');
+
+      document.body.appendChild(element);
+
+      const sortable = createSortable({ element });
+
+      expect(sortable.isDragging).toBe(false);
+
+      sortable.destroy();
+    });
+  });
+
+  describe('dragImageOffset default', () => {
+    it('calls setDragImage with [0, 0] when dragImageOffset is omitted', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a');
+      const setDragImage = vi.fn();
+      const img = document.createElement('div');
+      const sortable = createSortable({ dragImage: () => img, element });
+
+      first.dispatchEvent(makeDragEvent('dragstart', { effectAllowed: 'move', setData: vi.fn(), setDragImage }));
+
+      expect(setDragImage).toHaveBeenCalledWith(img, 0, 0);
+
+      endDrag(first);
+      sortable.destroy();
+    });
+  });
+
   describe('DOM setup', () => {
     it('sets role=list on container and role=listitem + tabindex on items', () => {
       const { element } = makeList('a', 'b');
@@ -106,6 +139,78 @@ describe('createSortable', () => {
     });
   });
 
+  describe('autoScroll', () => {
+    it('does not throw when autoScroll is false', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onReorder = vi.fn();
+      const sortable = createSortable({ autoScroll: false, element, onReorder });
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
+
+      sortable.destroy();
+    });
+
+    it('does not throw when autoScroll is true (explicit)', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onReorder = vi.fn();
+      const sortable = createSortable({ autoScroll: true, element, onReorder });
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
+
+      sortable.destroy();
+    });
+
+    it('accepts autoScroll as an options object', () => {
+      const {
+        element,
+        items: [first, second],
+      } = makeList('a', 'b');
+      const onReorder = vi.fn();
+      const sortable = createSortable({
+        autoScroll: { edgeThreshold: 40, speed: 20, viewport: false },
+        element,
+        onReorder,
+      });
+
+      Object.defineProperty(second, 'getBoundingClientRect', {
+        configurable: true,
+        value: () => ({ bottom: 60, height: 30, left: 0, right: 100, top: 30, width: 100 }),
+      });
+
+      startDrag(first);
+      second.dispatchEvent(makeDragEvent('dragover', { clientY: 50, dropEffect: 'move' }));
+      endDrag(first);
+
+      expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
+
+      sortable.destroy();
+    });
+  });
+
   describe('sync', () => {
     it('applies grip attributes to newly added items after sync', () => {
       const { element } = makeList('a');
@@ -120,6 +225,37 @@ describe('createSortable', () => {
       sortable.sync();
 
       expect(li.getAttribute('draggable')).toBe('true');
+
+      sortable.destroy();
+    });
+
+    it('re-applies handle attrs on existing items after sync', () => {
+      const element = document.createElement('ul');
+      const li1 = document.createElement('li');
+      const handle1 = document.createElement('span');
+      const handle2 = document.createElement('span');
+
+      handle1.className = 'h';
+      handle2.className = 'h';
+      li1.setAttribute('data-sort-id', 'a');
+      li1.append(handle1);
+      element.append(li1);
+      document.body.appendChild(element);
+
+      const sortable = createSortable({ element, handle: '.h' });
+
+      expect(handle1.getAttribute('draggable')).toBe('true');
+      expect(handle1.getAttribute('data-grip-handle')).toBe('');
+
+      // Replace the handle element inside the item
+      handle1.remove();
+      li1.append(handle2);
+      sortable.sync();
+
+      // New handle gets attrs after sync; old detached handle retains its own attrs
+      // (clearHandleAttributes only operates inside the container element)
+      expect(handle2.getAttribute('draggable')).toBe('true');
+      expect(handle2.getAttribute('data-grip-handle')).toBe('');
 
       sortable.destroy();
     });
@@ -324,6 +460,22 @@ describe('createSortable', () => {
       } = makeList('a');
       const setDragImage = vi.fn();
       const sortable = createSortable({ dragImage: () => null, dragImageOffset: [10, 20], element });
+
+      first.dispatchEvent(makeDragEvent('dragstart', { effectAllowed: 'move', setData: vi.fn(), setDragImage }));
+
+      expect(setDragImage).not.toHaveBeenCalled();
+
+      endDrag(first);
+      sortable.destroy();
+    });
+
+    it('skips setDragImage when dragImage callback returns undefined', () => {
+      const {
+        element,
+        items: [first],
+      } = makeList('a');
+      const setDragImage = vi.fn();
+      const sortable = createSortable({ dragImage: () => undefined, element });
 
       first.dispatchEvent(makeDragEvent('dragstart', { effectAllowed: 'move', setData: vi.fn(), setDragImage }));
 
@@ -834,6 +986,52 @@ describe('createSortable', () => {
       endDrag(l1);
 
       expect(rightReorder).not.toHaveBeenCalled();
+
+      leftSortable.destroy();
+      rightSortable.destroy();
+    });
+
+    it('fires onBeforeReorder before onReorder for cross-list drag', () => {
+      const scope = createSortableScope();
+      const {
+        element: left,
+        items: [l1],
+      } = makeList('l1', 'l2');
+      const { element: right } = makeList('r1');
+      const callOrder: string[] = [];
+      const leftBeforeReorder = vi.fn(() => callOrder.push('left-before'));
+      const leftReorder = vi.fn(() => callOrder.push('left-reorder'));
+      const rightBeforeReorder = vi.fn(() => callOrder.push('right-before'));
+      const rightReorder = vi.fn(() => callOrder.push('right-reorder'));
+
+      const leftSortable = createSortable({
+        element: left,
+        onBeforeReorder: leftBeforeReorder,
+        onReorder: leftReorder,
+        scope,
+      });
+      const rightSortable = createSortable({
+        element: right,
+        onBeforeReorder: rightBeforeReorder,
+        onReorder: rightReorder,
+        scope,
+      });
+
+      startDrag(l1);
+      right.dispatchEvent(makeDragEvent('dragover', { dropEffect: 'move' }));
+      endDrag(l1);
+
+      expect(leftBeforeReorder).toHaveBeenCalled();
+      expect(rightBeforeReorder).toHaveBeenCalled();
+
+      // before always precedes reorder for each controller
+      const leftBeforeIdx = callOrder.indexOf('left-before');
+      const leftReorderIdx = callOrder.indexOf('left-reorder');
+      const rightBeforeIdx = callOrder.indexOf('right-before');
+      const rightReorderIdx = callOrder.indexOf('right-reorder');
+
+      expect(leftBeforeIdx).toBeLessThan(leftReorderIdx);
+      expect(rightBeforeIdx).toBeLessThan(rightReorderIdx);
 
       leftSortable.destroy();
       rightSortable.destroy();

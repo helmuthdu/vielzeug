@@ -1,3 +1,5 @@
+import { isPromise } from '../typed/isPromise';
+
 type CacheRecord<K, T> = {
   key: K;
   value: T;
@@ -35,6 +37,9 @@ export type Stash<T, K = string> = {
  *
  * // Async getOrSet prevents stampedes — concurrent callers share one in-flight promise
  * const user = await myCache.getOrSet('user:1', () => fetchUser(1));
+ *
+ * // Note: `undefined` is a valid cached value — if a key is set to `undefined`,
+ * // `getOrSet` returns it without invoking the factory again.
  * ```
  *
  * @template T - The type of values stored in the cache.
@@ -46,6 +51,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
   const hash = options.hash;
   const onEvict = options.onEvict;
   let generation = 0;
+  const deletedWhileInFlight = new Set<string>();
 
   function cancelGcByHash(keyHash: string): void {
     const id = gcTimers.get(keyHash);
@@ -59,13 +65,16 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
   function deleteByHash(keyHash: string): boolean {
     const record = store.get(keyHash);
 
-    if (!record) return false;
-
     cancelGcByHash(keyHash);
-    onEvict?.(record.key, record.value);
-    store.delete(keyHash);
 
-    return true;
+    if (record) {
+      onEvict?.(record.key, record.value);
+      store.delete(keyHash);
+    }
+
+    if (inFlight.has(keyHash)) deletedWhileInFlight.add(keyHash);
+
+    return record !== undefined;
   }
 
   function scheduleGcByHash(keyHash: string, delayMs: number): void {
@@ -119,18 +128,23 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
 
     const value = factory();
 
-    if (value instanceof Promise) {
+    if (isPromise(value)) {
       const capturedGeneration = generation;
       const promise = value
         .then((resolved) => {
           inFlight.delete(keyHash);
 
-          if (generation === capturedGeneration) set(key, resolved, opts);
+          if (generation === capturedGeneration && !deletedWhileInFlight.has(keyHash)) {
+            set(key, resolved, opts);
+          }
+
+          deletedWhileInFlight.delete(keyHash);
 
           return resolved;
         })
         .catch((err: unknown) => {
           inFlight.delete(keyHash);
+          deletedWhileInFlight.delete(keyHash);
           throw err;
         });
 
@@ -161,6 +175,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T>): Stash<T, K> {
     store.clear();
     gcTimers.clear();
     inFlight.clear();
+    deletedWhileInFlight.clear();
   }
 
   function getSize(): number {

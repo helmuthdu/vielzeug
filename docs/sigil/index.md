@@ -22,11 +22,9 @@ exports:
     sg-calendar,
     sg-card,
     sg-carousel,
-    sg-carousel-slide,
     sg-checkbox,
     sg-checkbox-group,
     sg-chip,
-    sg-column,
     sg-combobox,
     sg-datagrid,
     sg-date-picker,
@@ -67,6 +65,7 @@ exports:
     sg-text,
     sg-textarea,
     sg-time-picker,
+    sg-toast,
     sg-tooltip,
   ]
 environments: [browser]

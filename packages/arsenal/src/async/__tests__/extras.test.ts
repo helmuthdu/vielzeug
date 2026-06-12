@@ -42,4 +42,33 @@ describe('async extras', () => {
     expect(second).toBe(4);
     expect(fn).toHaveBeenCalledTimes(1);
   });
+
+  it('abortable: non-aborted signal — resolves with inner value', async () => {
+    const controller = new AbortController();
+
+    await expect(abortable(Promise.resolve('value'), controller.signal)).resolves.toBe('value');
+  });
+
+  it('abortable: no-reason abort rejects with DOMException AbortError', async () => {
+    const controller = new AbortController();
+    const promise = abortable(new Promise(() => {}), controller.signal);
+
+    controller.abort();
+
+    const err = await promise.catch((e: unknown) => e);
+
+    expect((err as DOMException).name).toBe('AbortError');
+    expect((err as DOMException).code).toBe(20);
+  });
+
+  it('abortable: already-aborted signal with no reason rejects with DOMException', async () => {
+    const controller = new AbortController();
+
+    controller.abort();
+
+    const err = await abortable(Promise.resolve('x'), controller.signal).catch((e: unknown) => e);
+
+    expect((err as DOMException).name).toBe('AbortError');
+    expect((err as DOMException).code).toBe(20);
+  });
 });

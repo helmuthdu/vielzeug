@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { bindRefetch } from '../focus';
 
 describe('bindRefetch', () => {
-  let refetchStale: ReturnType<typeof vi.fn>;
+  let refetchStale: ReturnType<typeof vi.fn<() => void>>;
   let qc: { refetchStale(): void };
 
   beforeEach(() => {

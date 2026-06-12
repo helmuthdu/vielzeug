@@ -476,7 +476,7 @@ Prevents any further `value()` or `factory()` calls on this container. Useful to
 
 **Returns:** `this` (chainable)
 
-**Throws:** `Error` (containing the container name) if any registration is attempted after freeze.
+**Throws:** `ContainerFrozenError` (containing the container name) if any registration is attempted after freeze.
 
 **Example:**
 
@@ -488,7 +488,7 @@ const container = createContainer({ name: 'app' });
 container.freeze(); // seal the container
 
 // Later: this will throw
-container.value(SomeToken, value); // Error: Container 'app' is frozen ...
+container.value(SomeToken, value); // ContainerFrozenError: Container 'app' is frozen ...
 ```
 
 ---
@@ -651,6 +651,12 @@ type ContainerEvent =
 /** Listener function for container events. */
 type ContainerEventListener = (event: ContainerEvent) => void;
 
+/**
+ * Maps a tuple of Token<T> to a tuple of their resolved types.
+ * Used internally by factory() with deps and resolveMany().
+ */
+type InferTokenTypes<D extends Token<any>[]> = { [K in keyof D]: D[K] extends Token<infer U> ? U : never };
+
 /** Result type returned by tryResolve(). */
 type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
@@ -660,7 +666,7 @@ type ContainerNode = {
   kind: 'value' | 'factory';
   deps: string[];
   /** 'singleton', 'transient', 'scoped', or 'scope:<name>' for named scopes. */
-  lifetime?: string;
+  lifetime?: 'scoped' | 'singleton' | 'transient' | `scope:${string}`;
 };
 
 /** Serializable graph returned by inspect(). */
@@ -679,3 +685,4 @@ type ContainerGraph = {
 | `SyncResolutionError`        | `resolveSync()` called for a transient factory or an unresolved singleton/scoped factory                                   |
 | `ScopedResolutionError`      | `resolve()` / `resolveSync()` called on the root for a scoped or named-scope token                                         |
 | `ContainerDisposedError`     | Any operation called after `dispose()` — message includes the container name                                               |
+| `ContainerFrozenError`       | `value()` or `factory()` called after `freeze()` — message includes the container name                                     |

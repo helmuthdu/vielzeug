@@ -37,7 +37,8 @@ const settings = parseJSON(raw, {
 ### Pitfalls
 
 - Without `defaultValue`, returns `undefined` on failure — the return type includes `undefined`.
-- `null` input is treated as a parse failure, not as valid JSON `null`.
+- `null` / `undefined` input immediately returns `defaultValue` without calling `JSON.parse`.
+- The JSON string `"null"` parses to `null` (not `defaultValue`) — only the input being `null` triggers the fallback.
 
 ### Related
 

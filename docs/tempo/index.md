@@ -118,7 +118,9 @@ const text = format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/
 const stable = formatInstant(reminder);
 ```
 
-> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor.## Features
+> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor.
+
+## Features
 
 <div class="features-grid">
 

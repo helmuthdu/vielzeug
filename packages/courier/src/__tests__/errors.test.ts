@@ -124,11 +124,11 @@ describe('HttpError', () => {
       expect(err.data).toEqual({ errors: ['invalid'] });
     });
 
-    it("fromResponse() uses 'Non-OK response' when statusText is empty", () => {
+    it('fromResponse() uses HTTP status code when statusText is empty (e.g. HTTP/2)', () => {
       const res = new Response(null, { status: 500, statusText: '' });
       const err = HttpError.fromResponse(res, null, 'GET', '/');
 
-      expect(err.message).toBe('Non-OK response');
+      expect(err.message).toBe('HTTP 500');
     });
 
     it('fromCause() creates a network error from a plain Error', () => {

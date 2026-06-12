@@ -1,5 +1,7 @@
-import type { BarChartConfig, BarVariant, ChartHandle, DataPoint } from '../../types';
+import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
+import type { BarScaleContext } from './bar-scale-context';
 
+import { warn } from '../../_warn';
 import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { createChartScaffold } from '../../core/chart-scaffold';
@@ -10,97 +12,14 @@ import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement } from '../../svg/element';
 import { seriesColor } from '../../theme';
+import { findCatIdx, findSeriesIdx, isOutsideBars } from './bar-hit-test';
 import { renderBars } from './bar-renderer';
-
-// ─── Scale context ────────────────────────────────────────────────────────────
-// Uniform representation for both orientations. "band" is always the category
-// axis; "value" is always the value axis. Callers use `horizontal` to know
-// which SVG dimension each maps to.
-
-interface BarScaleContext {
-  bandCenter: (cat: string) => number;
-  bandwidth: number;
-  baselinePx: number;
-  horizontal: boolean;
-  stacked: boolean;
-  stackedTops: number[][]; // [seriesIdx][catIdx] = cumulative top value
-  valueScale: ReturnType<typeof linearScale>;
-}
 
 function variantFlags(variant: BarVariant): { horizontal: boolean; stacked: boolean } {
   return {
     horizontal: variant === 'grouped-horizontal' || variant === 'stacked-horizontal',
     stacked: variant === 'stacked' || variant === 'stacked-horizontal',
   };
-}
-
-// ─── Hit detection helpers ────────────────────────────────────────────────────
-
-function findCatIdx(pos: number, categories: string[], sc: BarScaleContext): number {
-  for (let i = 0; i < categories.length; i++) {
-    const center = sc.bandCenter(categories[i]);
-    const start = center - sc.bandwidth / 2;
-
-    if (pos >= start && pos < start + sc.bandwidth) return i;
-  }
-
-  return -1;
-}
-
-function findSeriesIdx(
-  pos: { x: number; y: number },
-  catIdx: number,
-  categories: string[],
-  _allData: DataPoint[][],
-  sc: BarScaleContext,
-  seriesCount: number,
-): number {
-  if (sc.stacked) {
-    if (sc.horizontal) {
-      // Walk series left→right; first whose right edge >= pos.x
-      for (let si = 0; si < seriesCount; si++) {
-        const rightX = sc.valueScale.map(sc.stackedTops[si]?.[catIdx] ?? 0);
-
-        if (rightX >= pos.x) return si;
-      }
-
-      return seriesCount - 1;
-    } else {
-      // Walk series bottom→top; find where bar top crosses above pos.y
-      for (let si = 0; si < seriesCount; si++) {
-        const topY = sc.valueScale.map(sc.stackedTops[si]?.[catIdx] ?? 0);
-
-        if (topY <= pos.y) return si;
-      }
-
-      return seriesCount - 1;
-    }
-  } else {
-    // Grouped: sub-division within band
-    const subSize = sc.bandwidth / seriesCount;
-    const bandStart = sc.bandCenter(categories[catIdx]) - sc.bandwidth / 2;
-    const offset = sc.horizontal ? pos.y - bandStart : pos.x - bandStart;
-    const subIdx = Math.floor(offset / subSize);
-
-    return Math.max(0, Math.min(seriesCount - 1, subIdx));
-  }
-}
-
-function isOutsideBars(
-  pos: { x: number; y: number },
-  catIdx: number,
-  allData: DataPoint[][],
-  sc: BarScaleContext,
-  seriesCount: number,
-): boolean {
-  const lastSi = seriesCount - 1;
-  const maxVal = sc.stacked
-    ? (sc.stackedTops[lastSi]?.[catIdx] ?? 0)
-    : Math.max(...Array.from({ length: seriesCount }, (_, si) => allData[si]?.[catIdx]?.y ?? 0));
-  const maxPx = sc.valueScale.map(maxVal);
-
-  // Horizontal: pos.x beyond right edge; vertical: pos.y above top edge
-  return sc.horizontal ? pos.x > maxPx : pos.y < maxPx;
 }
 
 // ─── Chart ────────────────────────────────────────────────────────────────────
@@ -115,7 +34,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     const categories = [...new Set(allData.flat().map((d) => String(d.x)))];
 
     if (categories.length === 0) {
-      if (import.meta.env?.DEV) console.warn('[prism] createBarChart: no data');
+      warn('createBarChart: no data');
 
       return;
     }
@@ -154,7 +73,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       : linearScale({ domain: [vMin, vMax], range: [area.height, 0] });
 
     const stackedTops: number[][] = [];
-    const stackTops: Record<string, number> = {};
+    const stackTops = Object.create(null) as Record<string, number>;
 
     for (const cat of categories) stackTops[cat] = 0;
 
@@ -170,7 +89,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
     // Axes & grid
     if (horizontal) {
-      if (config.xAxis?.grid) renderGrid(groups.grid, valScale, config.xAxis.grid, area.height, area.width, 'vertical');
+      if (config.xAxis?.grid) renderGrid(groups.grid, valScale, config.xAxis.grid, area.height, 'vertical');
 
       if (config.yAxis) renderAxis(groups.yAxis, catScale, config.yAxis, area.height);
 
@@ -179,8 +98,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         renderAxis(groups.xAxis, valScale, config.xAxis, area.width);
       }
     } else {
-      if (config.yAxis?.grid)
-        renderGrid(groups.grid, valScale, config.yAxis.grid, area.height, area.width, 'horizontal');
+      if (config.yAxis?.grid) renderGrid(groups.grid, valScale, config.yAxis.grid, area.width, 'horizontal');
 
       if (config.xAxis) {
         groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
@@ -192,7 +110,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
     // Series groups
     while (groups.series.children.length > seriesList.length) {
-      groups.series.removeChild(groups.series.lastChild!);
+      const last = groups.series.lastElementChild;
+
+      if (last) groups.series.removeChild(last);
     }
 
     for (let i = 0; i < seriesList.length; i++) {
@@ -269,7 +189,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         return;
       }
 
-      const seriesIdx = findSeriesIdx(pos, catIdx, categories, allData, sc, seriesList.length);
+      const seriesIdx = findSeriesIdx(pos, catIdx, categories, sc, seriesList.length);
       const point = allData[seriesIdx]?.[catIdx];
 
       if (point) {
@@ -304,7 +224,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       if (catIdx === -1) return;
 
-      const seriesIdx = findSeriesIdx(pos, catIdx, categories, allData, sc, seriesList.length);
+      const seriesIdx = findSeriesIdx(pos, catIdx, categories, sc, seriesList.length);
       const point = allData[seriesIdx]?.[catIdx];
 
       if (point) {

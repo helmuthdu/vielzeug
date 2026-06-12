@@ -3,8 +3,10 @@
  * Handles: inline arrays [a,b,c], block sequences (- item), quoted strings,
  * values containing colons, and CRLF line endings.
  */
+const MAX_FRONTMATTER_INPUT = 102_400; // 100 KB — frontmatter is always tiny; guard against crafted large inputs
+
 export function parseFrontmatter(markdown: string): Record<string, string | string[]> {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown);
+  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(markdown.slice(0, MAX_FRONTMATTER_INPUT));
 
   if (!match?.[1]) return {};
 
@@ -105,7 +107,7 @@ export function parseFrontmatter(markdown: string): Record<string, string | stri
       while (i < lines.length) {
         const next = lines[i];
 
-        if (!next) break;
+        if (!next?.trim()) break;
 
         const trimmed = next.trim();
 

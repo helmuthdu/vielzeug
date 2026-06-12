@@ -57,11 +57,12 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
       return;
     }
 
-    const idx = nearestPointX(allPoints[0], pos.x);
+    const baseSeries = allPoints[0] ?? [];
+    const idx = nearestPointX(baseSeries, pos.x);
 
     if (idx < 0) return;
 
-    const pt = allPoints[0][idx];
+    const pt = baseSeries[idx];
 
     opts.crosshair?.show(pt.x, pt.y, area.width, area.height);
 
@@ -87,7 +88,7 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
 
     const allPoints = opts.getPoints();
 
-    if (allPoints.length === 0) return;
+    if (allPoints.length === 0 || allPoints[0].length === 0) return;
 
     const dims = opts.dims();
     const pos = getMousePosition(opts.svg, event, dims.margin.left, dims.margin.top);

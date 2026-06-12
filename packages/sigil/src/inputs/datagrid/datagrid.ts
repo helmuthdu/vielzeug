@@ -1,5 +1,7 @@
 import { computed, define, html, onCleanup, onMounted, prop, signal, watch } from '@vielzeug/craft';
 
+import { warn } from '../../_warn';
+
 import '../../content/icon/icon';
 import '../../inputs/checkbox/checkbox';
 import '../../inputs/combobox/combobox';
@@ -302,10 +304,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
       const id = item['id'];
 
       if (id == null) {
-        console.warn(
-          '[sg-datagrid] Row missing `id`. Keys will collide — provide `getRowKey` or add a unique `id` field.',
-          item,
-        );
+        warn('sg-datagrid: row missing `id` — keys will collide. Provide `getRowKey` or add a unique `id` field.');
 
         return `__missing_${Math.random().toString(36).slice(2)}`;
       }

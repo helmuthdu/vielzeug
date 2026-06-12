@@ -13,6 +13,9 @@ exports:
     createGroupedVirtualizer,
     createGridVirtualizer,
     createReactiveVirtualizer,
+    createMeasurementCache,
+    DEFAULT_ESTIMATE_SIZE,
+    DEFAULT_OVERSCAN,
   ]
 environments: [browser]
 ---

@@ -48,4 +48,20 @@ describe('similarity', () => {
     expect(() => similarity(long, 'abc')).toThrow(RangeError);
     expect(() => similarity('abc', long)).toThrow(RangeError);
   });
+
+  it('does not throw at the 10 000 character boundary', () => {
+    const boundary = 'a'.repeat(10_000);
+
+    expect(() => similarity(boundary, boundary)).not.toThrow();
+  });
+
+  it('handles unicode characters', () => {
+    expect(similarity('café', 'cafe')).toBeGreaterThan(0);
+    expect(similarity('こんにちは', 'こんにちは')).toBe(1);
+  });
+
+  it('is commutative — similarity(a,b) === similarity(b,a)', () => {
+    expect(similarity('hello', 'world')).toBe(similarity('world', 'hello'));
+    expect(similarity('abc', 'xyz')).toBe(similarity('xyz', 'abc'));
+  });
 });

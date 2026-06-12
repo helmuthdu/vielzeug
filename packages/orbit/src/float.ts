@@ -7,6 +7,7 @@ import type {
   ReferenceElement,
 } from './types';
 
+import { warn } from './_warn';
 import { autoUpdate, type AutoUpdateOptions } from './auto-update';
 import { computePosition } from './core';
 
@@ -130,17 +131,17 @@ function applyDefault(result: ComputePositionResult, floating: HTMLElement): voi
 /**
  * High-level API: positions the floating element and continuously keeps it updated.
  *
- * Returns a {@link FloatHandle} with `cleanup()`, `update()`, and `getPosition()`.
- * Always call `cleanup()` on teardown to remove listeners.
+ * Returns a {@link FloatHandle} with `dispose()`, `update()`, and `getPosition()`.
+ * Always call `dispose()` on teardown to remove listeners.
  *
  * @example
  * ```ts
- * const { cleanup } = float(trigger, tooltip, {
+ * const handle = float(trigger, tooltip, {
  *   placement: 'top',
  *   middleware: [offset(8), flip(), shift({ padding: 6 })],
  * });
  * // on hide:
- * cleanup();
+ * handle.dispose();
  * ```
  */
 export function float(
@@ -158,31 +159,34 @@ export function float(
   }: FloatOptions = {},
 ): FloatHandle {
   const hasMiddleware = middleware && middleware.some(Boolean);
-  const useCssAnchor =
-    preferCssAnchor &&
-    apply == null &&
-    !hasMiddleware &&
-    reference instanceof HTMLElement &&
-    isCssAnchorPositioningSupported();
+  const cssAnchorSupported = preferCssAnchor && isCssAnchorPositioningSupported();
+  const useCssAnchor = cssAnchorSupported && apply == null && !hasMiddleware && reference instanceof HTMLElement;
 
   if (import.meta.env.DEV && preferCssAnchor && !useCssAnchor) {
     if (hasMiddleware) {
-      console.warn('[orbit] preferCssAnchor is ignored when middleware is provided. Falling back to JS positioning.');
+      warn('float: preferCssAnchor is ignored when middleware is provided. Falling back to JS positioning.');
     } else if (apply != null) {
-      console.warn(
-        '[orbit] preferCssAnchor is ignored when a custom apply callback is provided. Falling back to JS positioning.',
+      warn(
+        'float: preferCssAnchor is ignored when a custom apply callback is provided. Falling back to JS positioning.',
       );
-    } else if (!isCssAnchorPositioningSupported()) {
-      console.warn(
-        '[orbit] preferCssAnchor: CSS Anchor Positioning is not supported in this browser. Falling back to JS positioning.',
+    } else if (!cssAnchorSupported) {
+      warn(
+        'float: preferCssAnchor: CSS Anchor Positioning is not supported in this browser. Falling back to JS positioning.',
       );
     }
   }
 
   if (useCssAnchor) {
-    const cleanup = setupCssAnchorPositioning(reference, floating, placement);
+    const cleanupFn = setupCssAnchorPositioning(reference, floating, placement);
+    const disposeHandle = (): void => cleanupFn();
 
-    return { cleanup, cssAnchor: true, getPosition: () => null, update: () => {} };
+    return {
+      cssAnchor: true,
+      dispose: disposeHandle,
+      getPosition: () => null,
+      [Symbol.dispose]: disposeHandle,
+      update: () => {},
+    };
   }
 
   let lastPosition: ComputePositionResult | null = null;
@@ -198,10 +202,25 @@ export function float(
   if (autoUpdateOptions === false) {
     update();
 
-    return { cleanup: () => {}, cssAnchor: false, getPosition: () => lastPosition, update };
+    const noop = (): void => {};
+
+    return {
+      cssAnchor: false,
+      dispose: noop,
+      getPosition: () => lastPosition,
+      [Symbol.dispose]: noop,
+      update,
+    };
   }
 
-  const cleanup = autoUpdate(reference, floating, update, autoUpdateOptions);
+  const cleanupFn = autoUpdate(reference, floating, update, autoUpdateOptions);
+  const disposeHandle = (): void => cleanupFn();
 
-  return { cleanup, cssAnchor: false, getPosition: () => lastPosition, update };
+  return {
+    cssAnchor: false,
+    dispose: disposeHandle,
+    getPosition: () => lastPosition,
+    [Symbol.dispose]: disposeHandle,
+    update,
+  };
 }

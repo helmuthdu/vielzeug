@@ -1,6 +1,6 @@
 ---
 title: 'Sigil Examples — Guideline-Oriented Recipes'
-description: 'Guideline-Oriented Recipes examples for block.'
+description: 'Guideline-Oriented Recipes examples for @vielzeug/sigil.'
 ---
 
 ## Guideline-Oriented Recipes
@@ -137,6 +137,12 @@ Use component variants and semantic color tokens together with layout primitives
 ```
 
 </ComponentPreview>
+
+### Pitfalls
+
+- Delight animations must check `prefers-reduced-motion` — always provide a no-motion fallback path.
+- Avoid combining multiple semantic colors in a single bolder CTA block; pick one primary action color per card.
+- Onboard states should have exactly one recommended next action; two equal-weight primary actions reduce click-through.
 
 ### Related
 

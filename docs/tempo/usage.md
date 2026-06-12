@@ -229,7 +229,7 @@ const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 Use `expires()` to classify a date into a named threshold bucket of your choosing.
 
 ```ts
-import { classify, expires, humanize, now, parseInstant, shift, timeDiff } from '@vielzeug/tempo';
+import { classify, expires, humanize, now, parseInstant, parseZoned, shift, timeDiff } from '@vielzeug/tempo';
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days past
@@ -250,8 +250,8 @@ const { key, diff } = classify(certificateExpiry, THRESHOLDS);
 // diff: { unit: 'hour' | 'day' | ..., value: number }
 
 // Pin the reference time for deterministic behavior in tests
-const pinnedNow = Temporal.Instant.from('2026-06-01T00:00:00Z');
-expires(Temporal.Instant.from('2026-06-04T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'critical'
+const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
+expires(parseInstant('2026-06-04T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'critical'
 
 // timeDiff — largest-unit human-readable time difference
 // No tz needed when both are Instants
@@ -268,11 +268,11 @@ Use `dateRange()` to lazily generate sequences of `ZonedDateTime` values for cal
 When `start` is a `ZonedDateTime`, the timezone is inferred automatically — no need to pass `options`. For plain inputs, pass `options.tz` explicitly.
 
 ```ts
-import { dateRange, recurrence } from '@vielzeug/tempo';
+import { dateRange, parseZoned, recurrence } from '@vielzeug/tempo';
 
 // dateRange returns a Generator — use for...of or spread to collect
-const start = Temporal.ZonedDateTime.from('2026-03-01T00:00:00[UTC]');
-const end = Temporal.ZonedDateTime.from('2026-03-31T00:00:00[UTC]');
+const start = parseZoned('2026-03-01T00:00:00[UTC]');
+const end = parseZoned('2026-03-31T00:00:00[UTC]');
 
 // ZonedDateTime inputs — tz inferred, no options needed
 for (const day of dateRange(start, end, { days: 1 })) {
@@ -285,15 +285,15 @@ const days = [...dateRange(start, end, { days: 1 })];
 // Every Monday in a date range
 const mondays = [
   ...dateRange(
-    Temporal.ZonedDateTime.from('2026-03-02T00:00:00[UTC]'),
-    Temporal.ZonedDateTime.from('2026-03-30T00:00:00[UTC]'),
+    parseZoned('2026-03-02T00:00:00[UTC]'),
+    parseZoned('2026-03-30T00:00:00[UTC]'),
     { weeks: 1 },
   ),
 ];
 
 // recurrence — repeating dates with count or until
-const meetingStart = Temporal.ZonedDateTime.from('2026-01-05T09:00:00[Europe/Berlin]');
-const deadline = Temporal.ZonedDateTime.from('2026-06-30T00:00:00[Europe/Berlin]');
+const meetingStart = parseZoned('2026-01-05T09:00:00[Europe/Berlin]');
+const deadline = parseZoned('2026-06-30T00:00:00[Europe/Berlin]');
 
 // ZonedDateTime start — tz inferred, no options needed
 for (const meeting of recurrence(meetingStart, { frequency: 'weekly', until: deadline })) {
@@ -311,10 +311,10 @@ Tempo is a pure-utility library with no subscription model. Use its functions di
 ::: code-group
 
 ```tsx [React]
-import { format, now, shift } from '@vielzeug/tempo';
+import { format, now, parseInstant, shift } from '@vielzeug/tempo';
 
 function DeadlineLabel({ iso }: { iso: string }) {
-  const deadline = Temporal.Instant.from(iso);
+  const deadline = parseInstant(iso);
   const tomorrow = shift(now('UTC'), { days: 1 });
   const isUrgent = deadline.epochMilliseconds < tomorrow.toInstant().epochMilliseconds;
 
@@ -324,11 +324,11 @@ function DeadlineLabel({ iso }: { iso: string }) {
 
 ```ts [Vue 3]
 import { computed } from 'vue';
-import { format, now, shift } from '@vielzeug/tempo';
+import { format, now, parseInstant, shift } from '@vielzeug/tempo';
 
 function useDeadlineLabel(iso: string) {
   return computed(() => {
-    const deadline = Temporal.Instant.from(iso);
+    const deadline = parseInstant(iso);
     const tomorrow = shift(now('UTC'), { days: 1 });
     const isUrgent = deadline.epochMilliseconds < tomorrow.toInstant().epochMilliseconds;
     return { label: format(deadline, { locale: 'en' }), isUrgent };
@@ -338,11 +338,11 @@ function useDeadlineLabel(iso: string) {
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { format, now, shift } from '@vielzeug/tempo';
+  import { format, now, parseInstant, shift } from '@vielzeug/tempo';
 
   export let iso: string;
 
-  $: deadline = Temporal.Instant.from(iso);
+  $: deadline = parseInstant(iso);
   $: isUrgent = deadline.epochMilliseconds < shift(now('UTC'), { days: 1 }).toInstant().epochMilliseconds;
   $: label = format(deadline, { locale: 'en' });
 </script>

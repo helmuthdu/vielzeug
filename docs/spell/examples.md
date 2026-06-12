@@ -10,3 +10,4 @@ description: Practical examples and recipes for spell.
 - [Async Business Rules](./examples/async.md)
 - [Schema Introspection and Round-Trips](./examples/introspection.md)
 - [Unions, Intersections, and Variants](./examples/unions.md)
+- [Schema Traversal with walk()](./examples/walk.md)

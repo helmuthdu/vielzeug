@@ -131,6 +131,26 @@ describe('toSignals', () => {
     dispose();
   });
 
+  it('dispose unsubscribes and disposes computed signals', () => {
+    const source = createLocalSource(['a', 'b'], { limit: 10 });
+    const { current, dispose, meta } = toSignals(source);
+
+    dispose();
+
+    expect(() => current.value).toThrow();
+    expect(() => meta.value).toThrow();
+  });
+
+  it('Symbol.dispose is equivalent to dispose()', () => {
+    const source = createLocalSource(['a', 'b'], { limit: 10 });
+    const signals = toSignals(source);
+
+    signals[Symbol.dispose]();
+
+    expect(() => signals.current.value).toThrow();
+    expect(() => signals.meta.value).toThrow();
+  });
+
   it('current signal updates on infinite loadMore', async () => {
     const pages = [['a', 'b'], ['c']];
     const fetch = vi.fn(async ({ page }: { page: number }) => ({

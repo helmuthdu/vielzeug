@@ -399,3 +399,50 @@ describe('createGroupedVirtualizer – lifecycle', () => {
     expect(() => gv[Symbol.dispose]()).not.toThrow();
   });
 });
+
+// ─── gv.items typed getter ────────────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – gv.items typed getter', () => {
+  it('returns GroupVirtualItem<T>[] with data, itemIndex, sectionIndex', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 3)],
+    });
+
+    expect(gv.items.length).toBeGreaterThan(0);
+    expect(gv.items[0]).toHaveProperty('data');
+    expect(gv.items[0]).toHaveProperty('itemIndex');
+    expect(gv.items[0]).toHaveProperty('sectionIndex');
+    gv.destroy();
+  });
+
+  it('gv.items updates after update()', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 1)],
+    });
+
+    const before = gv.items.length;
+
+    gv.update([makeSection('A', 5)]);
+
+    expect(gv.items.length).toBeGreaterThanOrEqual(before);
+    gv.destroy();
+  });
+
+  it('gv.items is empty when no items in sections', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [{ items: [], label: 'Empty' }],
+    });
+
+    expect(gv.items).toHaveLength(0);
+    gv.destroy();
+  });
+});

@@ -1,7 +1,8 @@
-import { computed, onUnmounted, ref, watch, type Ref } from 'vue';
-import { buildFrameSrcdoc } from '../components/PreviewFrame';
-import sigilStyles from '@vielzeug/sigil/styles/styles.css?inline';
 import prismStyles from '@vielzeug/prism/theme/prism.css?inline';
+import sigilStyles from '@vielzeug/sigil/styles/styles.css?inline';
+import { computed, onUnmounted, ref, watch, type Ref } from 'vue';
+
+import { buildFrameSrcdoc } from '../components/PreviewFrame';
 
 export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 
@@ -11,10 +12,10 @@ export interface UseComponentPreviewOptions {
 }
 
 const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
-  mobile: 'calc(375px + (var(--size-4) * 2))',
-  tablet: 'calc(768px + (var(--size-4) * 2))',
   desktop: 'calc(1280px + (var(--size-4) * 2))',
   full: '100%',
+  mobile: 'calc(375px + (var(--size-4) * 2))',
+  tablet: 'calc(768px + (var(--size-4) * 2))',
 };
 
 function parseCode(raw: string): { html: string; script: string } {
@@ -28,6 +29,7 @@ function parseCode(raw: string): { html: string; script: string } {
     : '';
   // Strip all script blocks including multiline imports from html portion
   const html = raw.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '').trim();
+
   return { html, script };
 }
 
@@ -36,8 +38,11 @@ export function useComponentPreview(options: UseComponentPreviewOptions) {
 
   // ── Editing state ─────────────────────────────────────────────────────────
   const editableCode = ref(codeProp.value);
+
   // Keep editable in sync when the prop changes (page navigation)
-  watch(codeProp, (v) => { editableCode.value = v; });
+  watch(codeProp, (v) => {
+    editableCode.value = v;
+  });
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const isCopied = ref(false);
@@ -49,11 +54,11 @@ export function useComponentPreview(options: UseComponentPreviewOptions) {
 
   const srcdoc = computed(() =>
     buildFrameSrcdoc({
+      dir: dir.value,
       html: parsed.value.html,
+      prismStyles,
       script: parsed.value.script,
       sigilStyles,
-      prismStyles,
-      dir: dir.value,
     }),
   );
 
@@ -64,7 +69,9 @@ export function useComponentPreview(options: UseComponentPreviewOptions) {
     try {
       await navigator.clipboard.writeText(editableCode.value.trim());
       isCopied.value = true;
-      setTimeout(() => { isCopied.value = false; }, 2000);
+      setTimeout(() => {
+        isCopied.value = false;
+      }, 2000);
     } catch (e) {
       console.warn('[ComponentPreview] Copy failed:', e);
     }
@@ -86,6 +93,7 @@ export function useComponentPreview(options: UseComponentPreviewOptions) {
   function unmaximize() {
     document.body.style.overflow = savedOverflow.value;
     isMaximized.value = false;
+
     // Desktop viewport won't fit un-maximized — reset to full
     if (viewportSize.value === 'desktop') viewportSize.value = 'full';
   }
@@ -102,14 +110,14 @@ export function useComponentPreview(options: UseComponentPreviewOptions) {
   });
 
   return {
+    copyCode,
+    editableCode,
     isCopied,
     isMaximized,
-    viewportSize,
-    editableCode,
-    srcdoc,
-    viewportWidth,
-    copyCode,
     setViewportSize,
+    srcdoc,
     toggleMaximize,
+    viewportSize,
+    viewportWidth,
   };
 }

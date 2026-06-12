@@ -183,7 +183,7 @@ function createWebStorageAdapter<S extends AnySchema>(
       return false;
     },
 
-    async deleteMany<K extends keyof S & string & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
+    async deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number> {
       let deleted = 0;
 
       for (const key of keys) {

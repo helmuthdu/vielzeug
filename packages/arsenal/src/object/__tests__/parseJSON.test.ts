@@ -51,9 +51,35 @@ describe('parseJSON', () => {
 
   it('should call the reviver function if provided', () => {
     const json = '{"a":1,"b":2}';
-    const reviver = (key: string, value: any) => (key === 'a' ? value * 2 : value);
+    const reviver = (key: string, value: unknown) => (key === 'a' ? (value as number) * 2 : value);
     const result = parseJSON(json, { reviver });
 
     expect(result).toEqual({ a: 2, b: 2 });
+  });
+
+  it('returns value when validator passes', () => {
+    const result = parseJSON('{"id":1}', {
+      defaultValue: { id: 0 },
+      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+    });
+
+    expect(result).toEqual({ id: 1 });
+  });
+
+  it('returns defaultValue when validator fails', () => {
+    const result = parseJSON('{"id":"bad"}', {
+      defaultValue: { id: 0 },
+      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+    });
+
+    expect(result).toEqual({ id: 0 });
+  });
+
+  it('returns undefined when validator fails and no defaultValue', () => {
+    const result = parseJSON('{"id":"bad"}', {
+      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+    });
+
+    expect(result).toBeUndefined();
   });
 });

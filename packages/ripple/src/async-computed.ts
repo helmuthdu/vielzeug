@@ -31,7 +31,7 @@ import { untrack } from './tracking';
  * ```
  */
 export const asyncComputed = <T>(
-  factory: (abortSignal: AbortSignal) => Promise<T>,
+  factory: (signal: AbortSignal) => Promise<T>,
   options?: AsyncComputedOptions<T>,
 ): AsyncComputedSignal<T> => {
   const initialState: AsyncComputedState<T> =
@@ -71,10 +71,12 @@ export const asyncComputed = <T>(
         }
       } catch (err) {
         if (!abortSignal.aborted && !disposed) {
+          const prev = state.peek();
+
           state.value = {
             error: err,
             status: 'error',
-            value: state.value.status === 'pending' ? state.value.value : undefined,
+            value: prev.status === 'pending' ? prev.value : undefined,
           };
         }
       }

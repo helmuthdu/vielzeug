@@ -163,10 +163,10 @@ describe('createAreaChart', () => {
     chart.dispose();
   });
 
-  it('installs and destroys plugins', () => {
+  it('installs and disposes plugins', () => {
     const install = vi.fn();
-    const destroy = vi.fn();
-    const plugin: ChartPlugin = { destroy, install };
+    const dispose = vi.fn();
+    const plugin: ChartPlugin = { dispose, install };
 
     const chart = createAreaChart(container, {
       plugins: [plugin],
@@ -175,7 +175,7 @@ describe('createAreaChart', () => {
 
     expect(install).toHaveBeenCalledWith(chart.el, container);
     chart.dispose();
-    expect(destroy).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it('renders with Date x-axis (time scale)', () => {
@@ -193,6 +193,90 @@ describe('createAreaChart', () => {
     });
 
     expect(chart.el.querySelector('.prism-area-fill')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('suppresses line path when showLine is false', () => {
+    const chart = createAreaChart(container, {
+      series: [
+        {
+          data: [
+            { x: 1, y: 10 },
+            { x: 2, y: 20 },
+          ],
+          name: 'NoLine',
+          showLine: false,
+        },
+      ],
+    });
+
+    expect(chart.el.querySelector('.prism-area-line')).toBeNull();
+    expect(chart.el.querySelector('.prism-area-fill')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('renders nothing and does not throw with empty series data', () => {
+    expect(() => {
+      const chart = createAreaChart(container, {
+        series: [{ data: [], name: 'Empty' }],
+      });
+
+      chart.dispose();
+    }).not.toThrow();
+  });
+
+  it('reactive signal update re-renders area', async () => {
+    const data = signal([
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+    ]);
+    const chart = createAreaChart(container, {
+      series: [{ data, name: 'Reactive' }],
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    data.value = [
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+      { x: 3, y: 30 },
+    ];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelector('.prism-area-fill')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('emits devWarn and renders no series paths when data is empty', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chart = createAreaChart(container, {
+      series: [{ data: [], name: 'Empty' }],
+    });
+
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('createAreaChart: no data'));
+    expect(chart.el.querySelector('.prism-area-fill')).toBeNull();
+    chart.dispose();
+    warn.mockRestore();
+  });
+
+  it('creates only one crosshair group on repeated reactive renders', async () => {
+    const data = signal([
+      { x: 1, y: 10 },
+      { x: 2, y: 20 },
+    ]);
+    const chart = createAreaChart(container, {
+      crosshair: true,
+      series: [{ data, name: 'S' }],
+    });
+
+    data.value = [
+      { x: 1, y: 5 },
+      { x: 2, y: 15 },
+      { x: 3, y: 25 },
+    ];
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
     chart.dispose();
   });
 });

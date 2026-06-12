@@ -97,6 +97,10 @@ export interface AsyncComputedSignal<T> extends ComputedSignal<AsyncComputedStat
 // ── Store history / time-travel (F5) ─────────────────────────────────────────
 
 export interface StoreWithHistory<T extends object> extends Store<T> {
+  /** `true` when there is at least one snapshot to undo to. */
+  readonly canUndo: boolean;
+  /** `true` when there is at least one snapshot ahead to redo. */
+  readonly canRedo: boolean;
   /** Returns a snapshot of state at the given index (0 = oldest, history.length-1 = current). */
   historyAt(index: number): Readonly<T> | undefined;
   /** Returns the full snapshot history. */
@@ -105,6 +109,8 @@ export interface StoreWithHistory<T extends object> extends Store<T> {
   undo(): void;
   /** Jumps to the next snapshot (after undo). No-op if at the newest entry. */
   redo(): void;
+  /** Disposes the internal reactive cursor signal. Call when the store is no longer needed. */
+  dispose(): void;
 }
 
 // ── Core reactive interfaces ──────────────────────────────────────────────────

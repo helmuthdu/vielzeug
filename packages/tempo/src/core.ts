@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { DifferenceOptions, TimeInput, TimeOptions } from './types';
+import type { DifferenceOptions, TimeInput, TimeOptions, TimeOptionsWithTz } from './types';
 
 import { CALENDAR_UNITS, fail, inferSharedTimeZone, inferTimeZone, toInstant, toZoned } from './internal';
 
@@ -107,19 +107,21 @@ export function parseInstant(input: string): Temporal.Instant {
  * DST-safe date arithmetic. Adds `duration` to `input` and returns the result as a
  * `ZonedDateTime`. Handles spring-forward and fall-back correctly.
  *
- * **Always returns a `ZonedDateTime`**, regardless of the input type.
- * If you need an `Instant` back, call `.toInstant()` on the result.
+ * **Always returns a `ZonedDateTime`** — even when the input is an `Instant`.
+ * Call `.toInstant()` on the result if you need an `Instant` back.
  * Requires `options.tz` when input is an `Instant`, `PlainDate`, or `PlainDateTime`.
  *
  * @example
  * ```ts
- * shift(Temporal.ZonedDateTime.from('2026-03-08T01:30:00-05:00[America/New_York]'), { hours: 1 })
+ * shift(parseZoned('2026-03-08T01:30:00-05:00[America/New_York]'), { hours: 1 })
  * // 2026-03-08T03:30:00-04:00[America/New_York]  (skipped the missing hour)
  *
  * // Instant input — tz required, result is ZonedDateTime
- * shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: 2 }, { tz: 'UTC' }).toInstant()
+ * shift(parseInstant('2026-03-21T10:00:00Z'), { hours: 2 }, { tz: 'UTC' }).toInstant()
  * ```
  */
+export function shift(input: Temporal.ZonedDateTime, duration: Temporal.DurationLike, options?: TimeOptions): Temporal.ZonedDateTime;
+export function shift(input: Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime, duration: Temporal.DurationLike, options: TimeOptionsWithTz): Temporal.ZonedDateTime;
 export function shift(
   input: TimeInput,
   duration: Temporal.DurationLike,
@@ -140,8 +142,8 @@ export function shift(
  * @example
  * ```ts
  * difference(
- *   Temporal.ZonedDateTime.from('2026-03-08T00:00:00-05:00[America/New_York]'),
- *   Temporal.ZonedDateTime.from('2026-03-09T00:00:00-04:00[America/New_York]'),
+ *   parseZoned('2026-03-08T00:00:00-05:00[America/New_York]'),
+ *   parseZoned('2026-03-09T00:00:00-04:00[America/New_York]'),
  *   { largestUnit: 'hour' },
  * ).hours // 23  (DST spring-forward day)
  * ```
@@ -219,8 +221,8 @@ export function parseDate(input: string): TimeInput {
  *
  * @example
  * ```ts
- * isValid(Temporal.Instant.from('2026-03-21T10:00:00Z')) // true
- * isValid('2026-03-21')                                  // false
+ * isValid(parseInstant('2026-03-21T10:00:00Z')) // true
+ * isValid('2026-03-21')                         // false
  * ```
  */
 export function isValid(value: unknown): value is TimeInput {

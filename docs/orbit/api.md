@@ -15,6 +15,7 @@ description: Complete API reference for the Orbit floating positioning library.
 | `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup       | Call cleanup on teardown                               |
 | `detectOverflow()`  | Per-side overflow of the floating rect against boundary      | Sync                        | Positive = overflow, negative = remaining space        |
 | `compose()`         | Validate middleware order and return typed array             | Sync, throws                | Throws at call time on bad ordering                    |
+| `getRects()`        | Read bounding rects of reference and floating from the DOM   | Sync                        | Advanced: useful for custom update loops               |
 | `getSide()`         | Extract the primary side from a placement string             | Sync                        | —                                                      |
 | `getAlignment()`    | Extract the alignment from a placement string                | Sync                        | Returns `null` for cardinal placements                 |
 | `offset()`          | Add space between reference and floating element             | Middleware                  | Apply before `flip` so flip accounts for the gap       |
@@ -259,6 +260,29 @@ import { getAlignment } from '@vielzeug/orbit';
 getAlignment('top-start'); // → 'start'
 getAlignment('bottom'); // → null
 ```
+
+---
+
+### `getRects(reference, floating)`
+
+```ts
+getRects(reference: ReferenceElement, floating: HTMLElement): { reference: Rect; floating: Rect };
+```
+
+Reads the bounding rects of the reference and floating elements from the DOM by calling `getBoundingClientRect()` on each. Useful when building custom update loops that need access to the raw rects without running the full positioning pipeline.
+
+**Returns:** `{ reference: Rect; floating: Rect }`
+
+**Example:**
+
+```ts
+import { getRects } from '@vielzeug/orbit';
+
+const { reference, floating } = getRects(referenceEl, floatingEl);
+console.log(reference.width, floating.height);
+```
+
+---
 
 ## Middleware
 
@@ -613,7 +637,9 @@ import type { PositioningPreset, PresetOptions } from '@vielzeug/orbit';
 compose(...middleware: Array<Middleware | null | undefined | false>): Middleware[];
 ```
 
-Filters falsy entries and validates middleware ordering at call time. Throws a descriptive error if middleware are in a known-bad order (e.g. `arrow` before `flip`). Returns a typed `Middleware[]` for use in `computePosition()` or `float()`.
+Filters falsy entries and validates middleware ordering at call time. Throws a descriptive error if middleware are in a known-bad order (e.g. `arrow` before `flip`). Returns a typed array for use in `computePosition()` or `float()`.
+
+When all arguments are `TypedMiddleware` (i.e., built-in middleware like `flip()`, `shift()`, etc.), `compose()` preserves the tuple type in the return value — enabling `InferMiddlewareData` and `TypedComputePositionResult` to resolve middleware data types precisely. Up to 8 typed arguments are supported; beyond that the return type falls back to `Middleware[]`.
 
 **Example:**
 

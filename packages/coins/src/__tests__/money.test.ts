@@ -9,6 +9,7 @@ import {
   greaterThan,
   greaterThanOrEqual,
   isEqual,
+  isMoney,
   isNegative,
   isNonNegative,
   isNonPositive,
@@ -29,6 +30,7 @@ import {
   toDecimal,
   toJSON,
   toNumber,
+  withAmount,
   zero,
 } from '../money';
 
@@ -131,6 +133,11 @@ describe('money factory', () => {
     it('handles very large numbers that produce scientific notation via String()', () => {
       // String(1e21) === '1e+21' — expanded to '1000000000000000000000'
       expect(money(1e21, 'JPY')).toEqual({ amount: 1000000000000000000000n, currency: 'JPY' });
+    });
+
+    it('handles -0 (negative zero) — produces 0n minor units', () => {
+      // String(-0) === '0'; parseRational('0') → { negative: false, numerator: 0n }
+      expect(money(-0, 'USD')).toEqual({ amount: 0n, currency: 'USD' });
     });
   });
 
@@ -248,6 +255,16 @@ describe('clamp', () => {
 
   it('throws TypeError on currency mismatch (lower vs upper)', () => {
     expect(() => clamp(money('5.00', 'USD'), lower, money('10.00', 'EUR'))).toThrow(TypeError);
+  });
+
+  it('throws TypeError when only upper mismatches (m and lower same, upper different)', () => {
+    // Exercises the new upfront guard: m.currency === lower.currency but !== upper.currency
+    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'EUR'))).toThrow(TypeError);
+    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
+  });
+
+  it('throws TypeError when only lower mismatches (m and upper same, lower different)', () => {
+    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'EUR'), money('10.00', 'USD'))).toThrow(TypeError);
   });
 });
 
@@ -882,12 +899,12 @@ describe('toJSON / fromJSON', () => {
     expect(() => fromJSON({ amount: '100', currency: 'FAKE' })).toThrow(RangeError);
   });
 
-  it('throws SyntaxError for invalid amount string in fromJSON', () => {
-    expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(SyntaxError);
+  it('throws TypeError for invalid amount string in fromJSON', () => {
+    expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(TypeError);
   });
 
-  it('throws SyntaxError for decimal (float) amount string in fromJSON', () => {
-    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(SyntaxError);
+  it('throws TypeError for decimal (float) amount string in fromJSON', () => {
+    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(TypeError);
     expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow('expected an integer string');
   });
 });
@@ -917,6 +934,10 @@ describe('toDecimal', () => {
 
   it('handles zero-decimal currencies', () => {
     expect(toDecimal(money(1234n, 'JPY'))).toBe('1234');
+  });
+
+  it('handles negative zero-decimal currencies', () => {
+    expect(toDecimal(money(-1234n, 'JPY'))).toBe('-1234');
   });
 
   it('handles three-decimal currencies', () => {
@@ -1016,5 +1037,94 @@ describe('percentage', () => {
   it('preserves currency', () => {
     expect(percentage(money('100.00', 'EUR'), 10).currency).toBe('EUR');
     expect(percentage(money('1000', 'JPY'), 10).currency).toBe('JPY');
+  });
+
+  it('computes over-100% correctly (200%)', () => {
+    expect(percentage(money('50.00', 'USD'), 200)).toEqual({ amount: 10000n, currency: 'USD' });
+  });
+
+  it('computes fractional percentage on three-decimal currency (KWD)', () => {
+    expect(percentage(money('100.000', 'KWD'), 50)).toEqual({ amount: 50000n, currency: 'KWD' });
+  });
+});
+
+describe('withAmount', () => {
+  it('returns Money with given amount and same currency', () => {
+    const m = money('9.99', 'USD');
+
+    expect(withAmount(m, 1999n)).toEqual({ amount: 1999n, currency: 'USD' });
+  });
+
+  it('preserves CurrencyCode branding', () => {
+    const m = money('1.00', 'EUR');
+    const result = withAmount(m, 0n);
+
+    expect(result.currency).toBe('EUR');
+    expect(result.amount).toBe(0n);
+  });
+
+  it('accepts negative amounts', () => {
+    const m = money('5.00', 'USD');
+
+    expect(withAmount(m, -500n)).toEqual({ amount: -500n, currency: 'USD' });
+  });
+});
+
+describe('isMoney', () => {
+  it('returns true for a valid Money object', () => {
+    expect(isMoney(money('10.00', 'USD'))).toBe(true);
+    expect(isMoney({ amount: 100n, currency: 'USD' })).toBe(true);
+  });
+
+  it('returns false for null', () => {
+    expect(isMoney(null)).toBe(false);
+  });
+
+  it('returns false for non-object primitives', () => {
+    expect(isMoney(42)).toBe(false);
+    expect(isMoney('USD')).toBe(false);
+    expect(isMoney(undefined)).toBe(false);
+  });
+
+  it('returns false when amount is not bigint', () => {
+    expect(isMoney({ amount: 100, currency: 'USD' })).toBe(false);
+    expect(isMoney({ amount: '100', currency: 'USD' })).toBe(false);
+  });
+
+  it('returns false when currency is not string', () => {
+    expect(isMoney({ amount: 100n, currency: 42 })).toBe(false);
+  });
+
+  it('returns false when fields are missing', () => {
+    expect(isMoney({ amount: 100n })).toBe(false);
+    expect(isMoney({ currency: 'USD' })).toBe(false);
+    expect(isMoney({})).toBe(false);
+  });
+
+  it('returns false for arrays', () => {
+    expect(isMoney([])).toBe(false);
+    expect(isMoney([100n, 'USD'])).toBe(false);
+  });
+
+  it('returns false when properties only exist on prototype (prototype pollution guard)', () => {
+    const proto = { amount: 100n, currency: 'USD' };
+    const obj = Object.create(proto) as unknown;
+
+    expect(isMoney(obj)).toBe(false);
+  });
+
+  it('returns true for zero-amount Money', () => {
+    expect(isMoney({ amount: 0n, currency: 'USD' })).toBe(true);
+  });
+
+  it('narrows type correctly (TS)', () => {
+    const unknown: unknown = { amount: 100n, currency: 'USD' };
+
+    if (isMoney(unknown)) {
+      expect(unknown.amount).toBe(100n);
+      expect(unknown.currency).toBe('USD');
+    } else {
+      throw new Error('Expected isMoney to return true');
+    }
   });
 });

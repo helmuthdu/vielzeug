@@ -179,6 +179,47 @@ describe('createBatcher', () => {
     vi.useRealTimers();
   });
 
+  it('force-flushes immediately when maxSize is reached even with window > 0', async () => {
+    vi.useFakeTimers();
+
+    const batches: number[][] = [];
+
+    const batcher = createBatcher({
+      maxSize: 2,
+      resolve: async (keys: number[]) => {
+        batches.push([...keys]);
+
+        return keys;
+      },
+      window: 100,
+    });
+
+    // Load 3 items — at item 2 the batch is full (maxSize=2) so flush fires immediately;
+    // item 3 is scheduled via the window timer.
+    const p1 = batcher.load(1);
+    const p2 = batcher.load(2);
+    const p3 = batcher.load(3);
+
+    // First batch already flushed synchronously (force-flush at capacity)
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(batches.length).toBeGreaterThanOrEqual(1);
+    expect(batches[0]).toEqual([1, 2]);
+
+    // Advance timer to flush the remaining item
+    vi.advanceTimersByTime(100);
+
+    const [r1, r2, r3] = await Promise.all([p1, p2, p3]);
+
+    expect(batches.length).toBe(2);
+    expect(batches[1]).toEqual([3]);
+    expect(r1).toBe(1);
+    expect(r2).toBe(2);
+    expect(r3).toBe(3);
+
+    vi.useRealTimers();
+  });
+
   it('[Symbol.dispose] delegates to dispose()', async () => {
     const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
 

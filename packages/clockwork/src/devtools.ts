@@ -16,9 +16,12 @@ import { interpret } from './interpret.js';
  * that traces every guard evaluation, transition, invoke lifecycle event, and
  * skipped transition to the browser/Node console.
  *
+ * **Development only.** Do not use in production — event payloads (including
+ * any PII in context or event fields) are written to the console. Import from
+ * the dedicated sub-path so the logging code is tree-shaken from production bundles.
+ *
  * Equivalent to calling `interpret(definition, { debug: { onDebug, onTransition } })`
- * with pre-wired console output, but imported from a dedicated sub-path so the
- * logging code is tree-shaken from production bundles.
+ * with pre-wired console output.
  *
  * @example
  * ```ts

@@ -2,9 +2,12 @@ import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 
 import type { DataPoint, Series, TooltipConfig } from '../types';
 
+import { warn } from '../_warn';
+
 export interface TooltipState {
-  destroy(): void;
-  el: HTMLDivElement;
+  dispose(): void;
+  [Symbol.dispose](): void;
+  el: HTMLDivElement | null;
   hide(): void;
   show(x: number, y: number, point: DataPoint, series: Series): void;
 }
@@ -25,18 +28,31 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
 
   const tooltipOffset: number = (config !== true && config?.offset) || 8;
   const render = config !== true ? config?.render : undefined;
+  const sanitize = config !== true ? config?.sanitize : undefined;
+
+  if (render && !sanitize) {
+    warn(
+      'createTooltip: `render` is set without `sanitize` — innerHTML will be injected unsanitized. Pass `sanitize` to prevent XSS.',
+    );
+  }
+
+  const disposeHandle = (): void => {
+    el.remove();
+  };
 
   return {
-    destroy() {
-      el.remove();
-    },
+    dispose: disposeHandle,
     el,
     hide() {
       el.style.opacity = '0';
     },
     show(x: number, y: number, point: DataPoint, series: Series) {
+      if (!container.isConnected) return;
+
       if (render) {
-        el.innerHTML = render(point, series);
+        const html = render(point, series);
+
+        el.innerHTML = sanitize ? sanitize(html) : html;
       } else {
         el.textContent = `${series.name}: ${point.y}`;
       }
@@ -69,5 +85,6 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
       el.style.top = `${posY - rect.top}px`;
       el.style.opacity = '1';
     },
+    [Symbol.dispose]: disposeHandle,
   };
 }

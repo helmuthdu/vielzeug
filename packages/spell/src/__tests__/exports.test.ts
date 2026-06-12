@@ -2,6 +2,38 @@ import type { DeepPartial, Messages } from '../index';
 
 import * as spell from '../index';
 
+describe('format validators present in public API', () => {
+  const formatValidators = [
+    'isBase64',
+    'isBase64url',
+    'isCuid',
+    'isCuid2',
+    'isDuration',
+    'isEmail',
+    'isEmoji',
+    'isHex',
+    'isHexColor',
+    'isIp',
+    'isIsoDate',
+    'isIsoDateTime',
+    'isJwt',
+    'isNanoid',
+    'isNumeric',
+    'isSemver',
+    'isSlug',
+    'isTime',
+    'isUlid',
+    'isUrl',
+    'isUuid',
+  ];
+
+  for (const name of formatValidators) {
+    it(`exports ${name} as a function`, () => {
+      expect(typeof (spell as Record<string, unknown>)[name]).toBe('function');
+    });
+  }
+});
+
 describe('DeepPartial<Messages> export', () => {
   it('DeepPartial is importable and usable as a Messages override type', () => {
     const override: DeepPartial<Messages> = { string: { type: () => 'custom string type error' } };

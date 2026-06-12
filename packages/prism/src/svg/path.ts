@@ -16,9 +16,7 @@ export function linePath(points: Point[]): string {
 }
 
 export function monotonePath(points: Point[]): string {
-  if (points.length < 2) return linePath(points);
-
-  if (points.length === 2) return linePath(points);
+  if (points.length < 3) return linePath(points);
 
   const n = points.length;
   const tangents: Point[] = [];
@@ -62,10 +60,16 @@ export function stepPath(points: Point[]): string {
   return d;
 }
 
-export function areaPath(topPoints: Point[], bottomPoints: Point[]): string {
+export function areaPath(
+  topPoints: Point[],
+  bottomPoints: Point[],
+  curve: 'linear' | 'monotone' | 'step' = 'linear',
+): string {
   if (topPoints.length === 0) return '';
 
-  let d = linePath(topPoints);
+  const topPath =
+    curve === 'monotone' ? monotonePath(topPoints) : curve === 'step' ? stepPath(topPoints) : linePath(topPoints);
+  let d = topPath;
   const reversed = [...bottomPoints].reverse();
 
   if (reversed.length > 0) {

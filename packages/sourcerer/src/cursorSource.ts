@@ -251,6 +251,10 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return core.subscribe(listener);
     },
 
+    [Symbol.dispose]() {
+      this.dispose();
+    },
+
     toQuery() {
       return {
         ...(afterCursor !== undefined && { after: afterCursor }),

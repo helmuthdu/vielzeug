@@ -5,7 +5,6 @@ export const loggerOptionExample = {
 const logs = []
 
 const bus = createBus({
-  debug: true,
   maxListeners: 2,
   logger: {
     debug: (msg) => logs.push('[debug] ' + msg),

@@ -14,7 +14,7 @@ Applications that manage certificates, tokens, and licenses need to display cont
 Use `expires()` to classify a date into named threshold buckets of your choosing. Use `classify()` when you need both the bucket name and the structured time difference in a single call.
 
 ```ts
-import { classify, expires, humanize, nowInstant, timeDiff } from '@vielzeug/tempo';
+import { classify, expires, humanize, nowInstant, parseInstant, timeDiff } from '@vielzeug/tempo';
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days in the past
@@ -43,15 +43,15 @@ const label = `${key}: ${humanize(diff)} remaining`;
 Pass the optional `now` parameter to `expires()` to pin the reference time — this makes tests completely deterministic regardless of when they run.
 
 ```ts
-import { expires } from '@vielzeug/tempo';
+import { expires, parseInstant } from '@vielzeug/tempo';
 
-const pinnedNow = Temporal.Instant.from('2026-06-01T00:00:00Z');
+const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
 
-expires(Temporal.Instant.from('2026-05-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'longExpired'
-expires(Temporal.Instant.from('2026-05-25T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'expired'
-expires(Temporal.Instant.from('2026-06-03T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'critical'
-expires(Temporal.Instant.from('2026-06-10T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'warning'
-expires(Temporal.Instant.from('2030-01-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'safe'
+expires(parseInstant('2026-05-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'longExpired'
+expires(parseInstant('2026-05-25T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'expired'
+expires(parseInstant('2026-06-03T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'critical'
+expires(parseInstant('2026-06-10T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'warning'
+expires(parseInstant('2030-01-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'safe'
 ```
 
 #### UI Badge Component
@@ -59,7 +59,7 @@ expires(Temporal.Instant.from('2030-01-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow
 Combine `classify()` with a component to render a contextual status badge:
 
 ```tsx
-import { classify, humanize } from '@vielzeug/tempo';
+import { classify, humanize, parseInstant } from '@vielzeug/tempo';
 
 const CERT_THRESHOLDS = {
   expired: { days: 0 },

@@ -334,6 +334,10 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
       return core.subscribe(listener);
     },
 
+    [Symbol.dispose]() {
+      this.dispose();
+    },
+
     toQuery(): SourceQuery {
       return { ...(query && { search: query }), limit, page };
     },

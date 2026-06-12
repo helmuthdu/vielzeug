@@ -14,9 +14,6 @@ function makeStorage(initial: Record<string, string> = {}): PersistStorage & { s
 
   return {
     getItem: (key) => store[key] ?? null,
-    removeItem: (key) => {
-      delete store[key];
-    },
     setItem: (key, value) => {
       store[key] = value;
     },
@@ -137,7 +134,6 @@ describe('persistQueryCache', () => {
     const qc = createQuery();
     const errorStorage: PersistStorage = {
       getItem: () => null,
-      removeItem: () => {},
       setItem: () => {
         throw new DOMException('QuotaExceededError');
       },
@@ -158,7 +154,6 @@ describe('persistQueryCache', () => {
     const onError = vi.fn();
     const asyncErrorStorage: PersistStorage = {
       getItem: () => null,
-      removeItem: async () => {},
       setItem: async () => Promise.reject(new Error('disk full')),
     };
 
@@ -294,7 +289,6 @@ describe('hydrateQueryCache', () => {
     const onError = vi.fn();
     const failStorage: PersistStorage = {
       getItem: () => Promise.reject(new Error('read error')),
-      removeItem: () => {},
       setItem: () => {},
     };
 
@@ -458,7 +452,6 @@ describe('persistQueryCache + hydrateQueryCache round-trip', () => {
 
         return asyncStorage.store[key] ?? null;
       },
-      removeItem() {},
       setItem() {},
       store: {
         'courier:["a"]': JSON.stringify({ data: 'val-a', updatedAt: Date.now() }),

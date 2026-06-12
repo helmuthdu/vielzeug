@@ -23,6 +23,11 @@ exports:
     abs,
     negate,
     compare,
+    isEqual,
+    greaterThan,
+    greaterThanOrEqual,
+    lessThan,
+    lessThanOrEqual,
     isZero,
     isPositive,
     isNegative,
@@ -36,6 +41,8 @@ exports:
     toNumber,
     toJSON,
     fromJSON,
+    withAmount,
+    isMoney,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -143,6 +150,8 @@ exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 - `formatParts()` — typed part array for custom UI rendering (superscript cents, coloured symbols, etc.)
 - `exchange()` — currency conversion using string rates; rounding mode configurable
 - Serialization — `toDecimal`, `toNumber`, `toJSON`, `fromJSON`; safe `bigint` round-trip through JSON
+- `withAmount()` — clone a `Money` with a new bigint amount, preserving the currency
+- `isMoney()` — type guard for narrowing unknown payloads; own-property check guards against prototype pollution
 
 </div>
 

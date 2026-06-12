@@ -1,6 +1,6 @@
 ---
 title: 'Sigil Examples — Common Patterns'
-description: 'Common Patterns examples for block.'
+description: 'Common Patterns examples for @vielzeug/sigil.'
 ---
 
 ## Common Patterns
@@ -129,6 +129,12 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 ```
 
 </ComponentPreview>
+
+### Pitfalls
+
+- Import `@vielzeug/sigil/styles` before any component import or buttons and inputs render without design tokens.
+- `<sg-button-group>` requires the `attached` attribute to merge borders visually; omitting it renders buttons with gaps.
+- Use `type="submit"` and `type="reset"` on `<sg-button>` inside a `<form>` — the default type is `'button'`, which does not submit or reset.
 
 ### Related
 

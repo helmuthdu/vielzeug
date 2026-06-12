@@ -128,7 +128,13 @@ export function resolveEstimateFn(
   defaultSize: number,
 ): (index: number) => number {
   if (typeof estimate === 'function') {
-    return (index: number) => toPositiveNumber(estimate(index), defaultSize);
+    return (index: number) => {
+      try {
+        return toPositiveNumber(estimate(index), defaultSize);
+      } catch {
+        return defaultSize;
+      }
+    };
   }
 
   const size = typeof estimate === 'number' ? toPositiveNumber(estimate, defaultSize) : defaultSize;

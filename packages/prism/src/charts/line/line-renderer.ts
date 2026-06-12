@@ -1,6 +1,7 @@
 import type { Point } from '../../svg/path';
 import type { Scale, TransitionConfig, XScale } from '../../types';
 
+import { warn } from '../../_warn';
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -143,8 +144,16 @@ export function computePoints(
   xScale: XScale,
   yScale: Scale<number>,
 ): Point[] {
-  return data.map((d) => ({
-    x: (xScale as Scale<Date | number>).map(d.x as Date | number),
-    y: yScale.map(d.y),
-  }));
+  return data.map((d) => {
+    if (typeof d.x === 'string') {
+      warn(
+        `computePoints: x value "${d.x}" is a string — use bandScale for categorical data or a numeric/Date x value for line/area charts`,
+      );
+    }
+
+    return {
+      x: (xScale as Scale<Date | number>).map(d.x as Date | number),
+      y: yScale.map(d.y),
+    };
+  });
 }

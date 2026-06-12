@@ -17,6 +17,7 @@ description: Complete API reference for spell schema builders, helpers, validato
 | `descriptorToJsonSchema()`                         | Convert descriptors to JSON Schema                                            | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
 | `configure()` / `registerLocale()` / `useLocale()` | Override and switch validation messages                                       | Sync setup          | `configure()` composes with the active message set.                 |
 | `ValidationError`                                  | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
+| `prependIssuePath()`                               | Prefix a path segment to an array of issues                                   | Sync                | Use inside custom parsers that delegate to inner schemas.           |
 
 ## Package Entry Point
 
@@ -194,6 +195,7 @@ class Schema<Output = unknown, Input = Output> {
   get description(): string | undefined;
   get isOptional(): boolean;
   get isNullable(): boolean;
+  get kind(): string;
   is(value: unknown): value is Output;
 }
 ```
@@ -215,15 +217,18 @@ console.log(descriptor.description, sameShape);
 
 Use this table to decide which methods to call most often.
 
-| Method family                                       | What it does                                                                                              |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `parse*`                                            | Returns data or throws / returns an error object.                                                         |
-| `check*` / `refine`                                 | Adds synchronous or asynchronous custom validation. `refine()` is the predicate-only alias for `check()`. |
-| `optional` / `nullable` / `nullish` / `required`    | Changes missing-value semantics.                                                                          |
-| `default` / `catch`                                 | Supplies fallback output on `undefined` or validation failure.                                            |
-| `transform` / `preprocess` / `pipe`                 | Converts input before or after validation.                                                                |
-| `label` / `description`                             | Adds a human-readable description that also appears in descriptors.                                       |
-| `toDescriptor` / `toJsonSchema` / `walk` / `equals` | Supports tooling and schema introspection.                                                                |
+| Method family                                            | What it does                                                                                              |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `parse*`                                                 | Returns data or throws / returns an error object.                                                         |
+| `check*` / `refine`                                      | Adds synchronous or asynchronous custom validation. `refine()` is the predicate-only alias for `check()`. |
+| `optional` / `nullable` / `nullish` / `required`         | Changes missing-value semantics.                                                                          |
+| `default` / `catch`                                      | Supplies fallback output on `undefined` or validation failure.                                            |
+| `transform` / `preprocess` / `pipe`                      | Converts input before or after validation.                                                                |
+| `label` / `description`                                  | Adds a human-readable description that also appears in descriptors.                                       |
+| `is(value)`                                              | Type-predicate guard. Returns `true` if `value` passes `safeParse()`.                                     |
+| `kind`                                                   | Read-only string identifier for this schema's type (e.g. `'string'`, `'object'`).                        |
+| `equals(other)`                                          | Structural equality check comparing shape, constraints, and annotations (not pre/postprocessors).         |
+| `toDescriptor` / `toJsonSchema` / `walk` / `equals`      | Supports tooling and schema introspection. `toDescriptor()` emits a dev warning if the schema has preprocessors (e.g. `trim()`, `coerce`), since they cannot survive a round-trip. |
 
 ### `Schema.refine()`
 
@@ -278,6 +283,36 @@ const ProductKey = Product.keyof();
 ProductKey.parse('id'); // 'id'
 ProductKey.parse('price'); // 'price'
 // ProductKey.parse('name'); // throws
+```
+
+---
+
+### `ObjectSchema.defaults()`
+
+Returns a fully default-filled object by parsing `{}` against the schema. Every required field must have a `.default()` value set; fields without defaults cause a `ValidationError` to be thrown.
+
+```ts
+defaults(): InferObject<T>
+```
+
+**Returns:** The parsed object with all default values applied.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const Config = s.object({
+  host: s.string().default('localhost'),
+  port: s.number().default(3000),
+});
+
+Config.defaults(); // { host: 'localhost', port: 3000 }
+```
+
+Use `.partial()` before `.defaults()` if all fields should be optional:
+
+```ts
+const schema = s.object({ name: s.string() }).partial();
+schema.defaults(); // {}
 ```
 
 ---
@@ -372,6 +407,8 @@ schema.parse({ email: 'ada@example.com', age: 32 });
 ```
 
 `fromDescriptor()` restores base fields such as `description`, `isOptional`, and `isNullable`. It also restores string annotations like `format`, `pattern`, and `contentEncoding`, object strictness, and number hints emitted by built-in helpers such as `.positive()`, `.negative()`, and `.multipleOf()`. It does not accept `variant`, `pipe`, `instanceof`, or `lazy` descriptors.
+
+**Known limitation:** Non-zero exclusive bounds (e.g. `exclusiveMinimum: 5`) are not restored — only the zero-exclusive forms used by `.positive()` and `.negative()` round-trip correctly. Descriptors with other exclusive bound values produce a plain `number()` schema without those bounds.
 
 ---
 
@@ -707,7 +744,7 @@ Use these exported types when Spell drives your public TypeScript API.
 | `CheckFnResult`                                                | Allowed return type from custom checks.                                                                 |
 | `SchemaWalker<R>`                                              | Visitor interface used by `walk()`.                                                                     |
 | `OptionalSchema<T>` / `NullableSchema<T>` / `NullishSchema<T>` | Wrapper output aliases for common wrapper modes.                                                        |
-| `WrapperMode`                                                  | `'optional'                                                                                             | 'nullable' | 'nullish'`. |
+| `WrapperMode`                                                  | `'optional' \| 'nullable' \| 'nullish'`                                                                 |
 | `SchemaDescriptor`                                             | Full serializable descriptor produced by `toDescriptor()`.                                              |
 | `ReconstructibleSchemaDescriptor`                              | Descriptor subset accepted by `fromDescriptor()`. Excludes `variant`, `pipe`, `instanceof`, and `lazy`. |
 | `JsonSchema`                                                   | JSON Schema output shape returned by `toJsonSchema()` and `descriptorToJsonSchema()`.                   |
@@ -730,6 +767,7 @@ Use `ValidationError` to inspect failures from throwing and safe parsing APIs.
 ```ts
 class ValidationError extends Error {
   readonly issues: Issue[];
+  constructor(issues: Issue[], cause?: unknown);
   static is(value: unknown): value is ValidationError;
   bestMatch(): Issue[] | null;
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] };

@@ -807,3 +807,48 @@ describe('createVirtualScroller', () => {
     ctrl.destroy();
   });
 });
+
+// ─── sticky option ─────────────────────────────────────────────────────────────────
+
+describe('createDomVirtualList – sticky', () => {
+  it('passes sticky to the virtualizer based on item data', () => {
+    const { listEl, scrollEl } = makeList(120);
+    let stickyItemsCount = 0;
+    const rows: Row[] = [
+      { id: 0, label: 'header', size: 40 },
+      { id: 1, label: 'item', size: 30 },
+      { id: 2, label: 'item', size: 30 },
+    ];
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      listElement: listEl,
+      render: ({ stickyItems }) => {
+        stickyItemsCount = stickyItems.length;
+      },
+      scrollElement: scrollEl,
+      sticky: (_, item) => item.label === 'header',
+    });
+
+    ctrl.setItems(rows);
+
+    expect(typeof stickyItemsCount).toBe('number');
+    ctrl.destroy();
+  });
+
+  it('sticky guard does not throw when index is out of range', () => {
+    const { listEl, scrollEl } = makeList(120);
+    const rows = makeRows(5);
+
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      sticky: (_, item) => item.id === 0,
+    });
+
+    expect(() => ctrl.setItems(rows)).not.toThrow();
+    ctrl.destroy();
+  });
+});

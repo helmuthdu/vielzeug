@@ -1,4 +1,4 @@
-import { SourceTimeoutError } from './types';
+import { SourceDisposedError, SourceTimeoutError } from './types';
 
 /**
  * Shared source infrastructure: listener management, debounce scheduling, and ready() polling.
@@ -73,7 +73,7 @@ export function createSourceCore(): SourceCore {
       for (const waiter of readyWaiters) {
         if (waiter.timeoutId !== undefined) clearTimeout(waiter.timeoutId);
 
-        waiter.reject(new Error('Source disposed while waiting for ready()'));
+        waiter.reject(new SourceDisposedError());
       }
 
       readyWaiters.clear();

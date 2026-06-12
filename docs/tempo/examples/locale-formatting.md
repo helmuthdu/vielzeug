@@ -14,9 +14,9 @@ Displaying dates and times for international users requires locale-specific form
 Use `format()` with the `pattern` shorthand for common layouts, or pass `intl` directly for a custom `Intl.DateTimeFormatOptions`. Tempo manages formatter caching internally.
 
 ```ts
-import { format, formatInstant, formatRange, formatRelative } from '@vielzeug/tempo';
+import { format, formatInstant, formatRange, formatRelative, parseInstant } from '@vielzeug/tempo';
 
-const time = Temporal.Instant.from('2026-03-21T10:15:30Z');
+const time = parseInstant('2026-03-21T10:15:30Z');
 
 // Preset patterns
 format(time, { pattern: 'short', locale: 'en-US', tz: 'UTC' }); // '3/21/2026, 10:15 AM'
@@ -49,9 +49,9 @@ format(time, {
 #### Range Formatting
 
 ```ts
-import { formatRange } from '@vielzeug/tempo';
+import { formatRange, parseInstant } from '@vielzeug/tempo';
 
-formatRange(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from('2026-03-21T12:00:00Z'), {
+formatRange(parseInstant('2026-03-21T10:00:00Z'), parseInstant('2026-03-21T12:00:00Z'), {
   pattern: 'short',
   locale: 'en-US',
   tz: 'America/New_York',
@@ -62,17 +62,17 @@ formatRange(Temporal.Instant.from('2026-03-21T10:00:00Z'), Temporal.Instant.from
 #### Relative Formatting
 
 ```ts
-import { formatRelative } from '@vielzeug/tempo';
+import { formatRelative, parseInstant } from '@vielzeug/tempo';
 
-const base = Temporal.Instant.from('2026-03-21T10:00:00Z');
+const base = parseInstant('2026-03-21T10:00:00Z');
 
-formatRelative(Temporal.Instant.from('2026-03-21T12:00:00Z'), { base, locale: 'en-US', numeric: 'always' });
+formatRelative(parseInstant('2026-03-21T12:00:00Z'), { base, locale: 'en-US', numeric: 'always' });
 // → 'in 2 hours'
 
-formatRelative(Temporal.Instant.from('2026-03-19T10:00:00Z'), { base, locale: 'en-US' });
+formatRelative(parseInstant('2026-03-19T10:00:00Z'), { base, locale: 'en-US' });
 // → '2 days ago'
 
-formatRelative(Temporal.Instant.from('2026-03-21T10:00:45Z'), { base, locale: 'de-DE', numeric: 'auto' });
+formatRelative(parseInstant('2026-03-21T10:00:45Z'), { base, locale: 'de-DE', numeric: 'auto' });
 // → 'in 45 Sekunden'
 ```
 

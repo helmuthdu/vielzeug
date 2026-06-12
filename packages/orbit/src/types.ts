@@ -206,7 +206,7 @@ export interface ComputePositionOptions {
 /**
  * Handle returned by `float()`.
  *
- * - `cleanup()` — removes all event listeners and observers. Always call this on teardown.
+ * - `dispose()` — removes all event listeners and observers. Always call this on teardown.
  * - `cssAnchor` — `true` when the browser is handling positioning natively via CSS Anchor
  *   Positioning; `getPosition()` always returns `null` in this mode.
  * - `update()` — manually trigger a position recalculation.
@@ -221,7 +221,8 @@ export interface ComputePositionOptions {
 export interface FloatHandle {
   /** `true` when position is managed natively by CSS Anchor Positioning (JS data unavailable). */
   readonly cssAnchor: boolean;
-  cleanup(): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
   getPosition(): ComputePositionResult | null;
   update(): void;
 }

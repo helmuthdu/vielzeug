@@ -40,6 +40,15 @@ export type ReconnectOptions = {
   times?: number;
 };
 
+export type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
+  /**
+   * Response body parsing mode.
+   * - `'text'` (default) — yields raw decoded string chunks as they arrive.
+   * - `'ndjson'` — splits by newline and JSON-parses each complete line; use `T` to type the values.
+   */
+  parse?: 'ndjson' | 'text';
+};
+
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
   /**
    * Called when the connection is permanently lost (reconnect budget exhausted due to error).
@@ -59,6 +68,7 @@ export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
  * If parsing fails the raw string is delivered instead.
  */
 export type SseSource<TEvents extends Record<string, unknown> = Record<string, string>> = {
+  [Symbol.dispose](): void;
   /** Permanently closes the SSE connection. No further events will be dispatched. */
   close(): void;
   /**
@@ -357,6 +367,10 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
 
         return () => set.delete(handler as (data: unknown) => void);
       },
+
+      [Symbol.dispose](): void {
+        this.close();
+      },
     };
   }
 
@@ -386,9 +400,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
    */
   async function* readable<T = string, P extends string = string>(
     url: P,
-    config: StreamRequestConfig<P> & { parse?: 'ndjson' | 'text' } = {} as StreamRequestConfig<P> & {
-      parse?: 'ndjson' | 'text';
-    },
+    config: ReadableConfig<P> = {} as ReadableConfig<P>,
   ): AsyncGenerator<T> {
     if (transport.disposed) throw new Error('[courier] StreamClient has been disposed');
 
@@ -402,12 +414,13 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
       query,
       signal: extSignal,
       timeout: cfgTimeout,
-    } = config as StreamRequestConfig & { parse?: 'ndjson' | 'text' };
+    } = config as ReadableConfig;
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
     const ac = new AbortController();
     const untrack = transport.track(ac);
+    let naturalEnd = false;
 
     try {
       const res = await openStreamWith(transport, url, ac, {
@@ -442,6 +455,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
                 }
               }
 
+              naturalEnd = true;
               break;
             }
 
@@ -467,7 +481,10 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
           while (true) {
             const { done, value } = await reader.read();
 
-            if (done) break;
+            if (done) {
+              naturalEnd = true;
+              break;
+            }
 
             yield decoder.decode(value, { stream: true }) as unknown as T;
           }
@@ -476,6 +493,8 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
         reader.releaseLock();
       }
     } finally {
+      if (!naturalEnd) ac.abort();
+
       untrack();
     }
   }

@@ -394,10 +394,8 @@ describe('Query Client', () => {
 
       // Register a blocking fn without starting a fetch (data is still fresh, so
       // fetchQuery returns from cache but still writes entry.fn = blockingFn).
-      let abortRefetch!: () => void;
       const blockingFn = async ({ signal }: QueryFnContext): Promise<{ id: number }> =>
         new Promise<{ id: number }>((_, rej) => {
-          abortRefetch = () => rej(new DOMException('Aborted', 'AbortError'));
           signal.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')));
         });
 
@@ -890,6 +888,107 @@ describe('Query Client', () => {
     });
   });
 
+  describe('enabled / initialData', () => {
+    it('enabled:false skips the fetch and returns current cached data', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      const fn = async () => ({ id: ++calls });
+
+      const result = await qc.fetch({ enabled: false, fn, key: ['users', 1] });
+
+      expect(calls).toBe(0);
+      expect(result).toBeUndefined();
+    });
+
+    it('initialData factory form seeds the cache when no data exists', async () => {
+      const qc = createQuery();
+
+      await qc.fetch({
+        fn: async () => ({ id: 99 }),
+        initialData: () => ({ id: 42 }),
+        key: ['users', 1],
+        staleTime: 60_000,
+      });
+
+      expect(qc.get(['users', 1])).toEqual({ id: 42 });
+    });
+
+    it('initialData factory returning undefined does not seed the cache', async () => {
+      const qc = createQuery();
+      let calls = 0;
+
+      await qc.fetch({
+        fn: async () => ({ id: ++calls }),
+        initialData: () => undefined,
+        key: ['users', 1],
+      });
+
+      expect(calls).toBe(1);
+    });
+  });
+
+  describe('watch() with select + placeholderData', () => {
+    it('peek() returns placeholderData while pending when select returns undefined', async () => {
+      const qc = createQuery();
+      const store = qc.watch<{ id: number; name: string }, string>(['users', 1], {
+        placeholderData: 'Loading…',
+        select: (d) => d?.name,
+      });
+
+      const unsub = store.subscribe(() => {});
+
+      void qc.fetch({ fn: () => new Promise(() => {}), key: ['users', 1] });
+
+      const snap = store.peek();
+
+      expect(snap.status).toBe('pending');
+      expect(snap.data).toBe('Loading…');
+
+      unsub();
+    });
+
+    it('peek() returns selected data (not placeholder) once data is available', async () => {
+      const qc = createQuery();
+
+      qc.set(['users', 1], { id: 1, name: 'Alice' });
+
+      const store = qc.watch<{ id: number; name: string }, string>(['users', 1], {
+        placeholderData: 'Loading…',
+        select: (d) => d?.name,
+      });
+
+      expect(store.peek().data).toBe('Alice');
+    });
+  });
+
+  describe('invalidate() — observed vs unobserved branching', () => {
+    it('invalidate() revalidates observed entries and evicts unobserved entries', async () => {
+      const qc = createQuery();
+      let callsObserved = 0;
+      let callsUnobserved = 0;
+
+      const fnObserved = async () => ({ id: ++callsObserved });
+      const fnUnobserved = async () => ({ id: ++callsUnobserved });
+
+      await qc.fetch({ fn: fnObserved, key: ['observed'], staleTime: 60_000 });
+      await qc.fetch({ fn: fnUnobserved, key: ['unobserved'], staleTime: 60_000 });
+
+      const unsub = qc.subscribe(['observed'], () => {});
+
+      qc.invalidate(['observed']);
+      qc.invalidate(['unobserved']);
+
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(callsObserved).toBe(2);
+
+      expect(qc.get(['unobserved'])).toBeUndefined();
+
+      unsub();
+    });
+  });
+
   describe('Focus / reconnect helpers', () => {
     it('bindRefetch() triggers refetchStale() on window online event', () => {
       const qc = createQuery();
@@ -906,6 +1005,72 @@ describe('Query Client', () => {
       window.dispatchEvent(new Event('online'));
 
       expect(spyRefetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keys() and size reflect current cache contents', async () => {
+      const qc = createQuery({ staleTime: 10_000 });
+
+      expect(qc.keys()).toEqual([]);
+      expect(qc.size).toBe(0);
+
+      await qc.fetch({ fn: async () => 'a', key: ['a'] });
+      await qc.fetch({ fn: async () => 'b', key: ['b', 1] });
+
+      expect(qc.size).toBe(2);
+
+      const keys = qc.keys();
+
+      expect(keys).toHaveLength(2);
+      expect(keys).toContainEqual(['a']);
+      expect(keys).toContainEqual(['b', 1]);
+    });
+
+    it('set() with gcTime:0 — no observers — entry evicted immediately', () => {
+      const qc = createQuery();
+
+      qc.set(['key'], 42, { gcTime: 0 });
+
+      expect(qc.getState(['key'])).toBeNull();
+      expect(qc.size).toBe(0);
+    });
+
+    it('set() with gcTime:0 — active observer — notified then entry retained while subscribed', () => {
+      const qc = createQuery();
+      const notifiedData: unknown[] = [];
+
+      const unsub = qc.subscribe(['key'], (s) => {
+        notifiedData.push(s.data);
+      });
+
+      qc.set(['key'], 42, { gcTime: 0 });
+
+      expect(notifiedData).toEqual([42]);
+      expect(qc.getState(['key'])?.data).toBe(42);
+
+      unsub();
+    });
+
+    it('dispose() — scheduleGc is a no-op after dispose (race guard)', async () => {
+      vi.useFakeTimers();
+
+      try {
+        const qc = createQuery({ gcTime: 5_000 });
+        const setTimeoutSpy = vi.spyOn(globalThis, 'setTimeout');
+
+        // Seed a successful entry so we have something in cache
+        await qc.fetch({ fn: async () => 'value', key: ['x'] });
+
+        const timerCountBefore = setTimeoutSpy.mock.calls.length;
+
+        qc.dispose();
+
+        // After dispose, calling scheduleGc internally should be a no-op.
+        // Manually verify: no new setTimeout calls were made after dispose.
+        expect(setTimeoutSpy.mock.calls.length).toBe(timerCountBefore);
+        expect(qc.disposed).toBe(true);
+      } finally {
+        vi.useRealTimers();
+      }
     });
 
     it('bindRefetch() is safe in SSR environments where document/window are undefined', () => {

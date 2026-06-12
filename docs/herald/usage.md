@@ -640,7 +640,7 @@ const bus = createBus<AppEvents>();
 function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEvents[K]) => void) {
   useEffect(() => {
     const controller = new AbortController();
-    bus.on(event as any, handler as any, controller.signal);
+    bus.on(event as any, handler as any, { signal: controller.signal });
     return () => controller.abort();
   }, [event, handler]);
 }
@@ -664,7 +664,7 @@ const bus = createBus<AppEvents>();
 
 function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEvents[K]) => void) {
   const controller = new AbortController();
-  bus.on(event as any, handler as any, controller.signal);
+  bus.on(event as any, handler as any, { signal: controller.signal });
   onScopeDispose(() => controller.abort());
 }
 ```
@@ -683,7 +683,7 @@ function useEvent<K extends keyof AppEvents>(event: K, handler: (payload: AppEve
 
   // Listen to events with automatic cleanup on component destroy
   const controller = new AbortController();
-  bus.on('user:login', ({ userId }) => console.log('logged in:', userId), controller.signal);
+  bus.on('user:login', ({ userId }) => console.log('logged in:', userId), { signal: controller.signal });
   onDestroy(() => controller.abort());
 
   function login() {

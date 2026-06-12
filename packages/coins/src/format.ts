@@ -11,9 +11,8 @@ const integerFormatterCache = cache<string, Intl.NumberFormat>(32);
 
 /**
  * Resolves and validates all formatting parameters, performs scaling, and
- * produces the pre-computed strings that both `format` and `formatParts` need.
- * Throws on invalid options. Extracted to eliminate duplication between the two
- * public functions, so new options only need to be added in one place.
+ * produces the pre-computed strings shared by `format()` and `formatParts()`.
+ * Throws on invalid options. New options only need to be added in one place.
  */
 type FormatState = {
   frac: string;
@@ -65,15 +64,17 @@ function resolveFormatState(m: Money, options: FormatOptions): FormatState {
  * ```
  */
 export function format(m: Money, options: FormatOptions = {}): string {
-  const { frac, intStr, template } = resolveFormatState(m, options);
-
-  return buildFromTemplate(template, intStr, frac);
+  return formatParts(m, options)
+    .map((p) => p.value)
+    .join('');
 }
 
 /**
  * Returns the formatted parts of a `Money` value as a structured array.
  * Useful for custom rendering — apply different styles to each semantic segment
  * (currency symbol, integer, decimal separator, fraction, sign).
+ *
+ * Joining all `value` fields produces the same string as `format()`.
  *
  * @example
  * ```ts
@@ -93,6 +94,8 @@ export function formatParts(m: Money, options: FormatOptions = {}): MoneyFormatP
   let replacedInteger = false;
 
   for (const part of template) {
+    // Group separators (e.g. comma in '1,234') are already embedded in intStr by
+    // getIntegerFormatter(), so the template's group parts are intentionally discarded.
     if (part.type === 'group') continue;
 
     if (part.type === 'integer') {
@@ -176,7 +179,7 @@ function getCurrencyTemplate(
   const key = [locale, currencyCode, style, negative ? 'neg' : 'pos'].join('\0');
   const cached = currencyTemplateCache.get(key);
 
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   const formatter = new Intl.NumberFormat(locale, {
     currency: currencyCode,
@@ -196,7 +199,7 @@ function getCurrencyTemplate(
 function getIntegerFormatter(locale: string): Intl.NumberFormat {
   const cached = integerFormatterCache.get(locale);
 
-  if (cached) return cached;
+  if (cached !== undefined) return cached;
 
   const formatter = new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
@@ -207,41 +210,4 @@ function getIntegerFormatter(locale: string): Intl.NumberFormat {
   integerFormatterCache.set(locale, formatter);
 
   return formatter;
-}
-
-function buildFromTemplate(template: Intl.NumberFormatPart[], intPart: string, fracPart: string): string {
-  const hasFrac = fracPart.length > 0;
-  let replacedInteger = false;
-  let output = '';
-
-  for (const part of template) {
-    // Skip group separators — `getIntegerFormatter` already adds them via `Intl.NumberFormat`
-    // when formatting the integer part. Including them from the template too would duplicate them.
-    if (part.type === 'group') continue;
-
-    if (part.type === 'integer') {
-      if (!replacedInteger) {
-        output += intPart;
-        replacedInteger = true;
-      }
-
-      continue;
-    }
-
-    if (part.type === 'decimal') {
-      if (hasFrac) output += part.value;
-
-      continue;
-    }
-
-    if (part.type === 'fraction') {
-      if (hasFrac) output += fracPart;
-
-      continue;
-    }
-
-    output += part.value;
-  }
-
-  return output;
 }

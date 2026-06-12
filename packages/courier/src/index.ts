@@ -1,5 +1,5 @@
 // Errors
-export { HttpError } from './errors';
+export { HttpError, SchemaValidationError } from './errors';
 
 // Core types
 export type {
@@ -26,7 +26,7 @@ export type { CourierRequestConfig, HttpRequestConfig, ParamValue, Params, PathC
 export type { ResponseType } from './response';
 
 // Transport — shared pipeline exposed for advanced use
-export { createTransportCore } from './transport';
+export { anySignal, createTransportCore } from './transport';
 export type { FetchContext, Interceptor, TransportCore, TransportOptions } from './transport';
 
 // API client
@@ -46,7 +46,14 @@ export type { Mutation, MutationFn, MutationOptions } from './mutation';
 
 // Stream client (SSE + ReadableStream)
 export { createStream } from './stream';
-export type { ReconnectOptions, SseOptions, SseSource, StreamClient, StreamRequestConfig } from './stream';
+export type {
+  ReadableConfig,
+  ReconnectOptions,
+  SseOptions,
+  SseSource,
+  StreamClient,
+  StreamRequestConfig,
+} from './stream';
 
 // Root factory
 export { createCourier } from './courier';

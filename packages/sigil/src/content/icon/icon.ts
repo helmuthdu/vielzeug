@@ -1,6 +1,7 @@
 import { computed, define, html, prop, raw } from '@vielzeug/craft';
 import * as lucideModule from 'lucide';
 
+import { warn } from '../../_warn';
 import styles from './icon.css?inline';
 
 export type IconNode = Array<[string, Record<string, string | number | undefined>]>;
@@ -145,9 +146,7 @@ define<SgIconProps>(ICON_TAG, {
       const iconNode = registry.get(name) ?? registry.get(toPascalCase(name));
 
       if (!iconNode) {
-        if (import.meta.env.DEV) {
-          console.warn(`[sg-icon] Icon not found: "${String(name).slice(0, 64)}"`);
-        }
+        warn(`sg-icon: icon not found: "${String(name).slice(0, 64)}"`);
 
         return '';
       }

@@ -158,7 +158,7 @@ const zone = createDropZone({
 });
 ```
 
-When `onPaste` is omitted, accepted pasted files fall through to `onDrop`.
+When `onPaste` is omitted, accepted pasted files fall through to `onDrop`. In that case the event argument will be a `ClipboardEvent`, not a `DragEvent` — check `event instanceof ClipboardEvent` if you need to distinguish.
 
 ## Sortable
 

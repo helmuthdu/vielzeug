@@ -5,7 +5,9 @@ export type { MachineErrorCode } from './errors.js';
 export type {
   ActionArgs,
   ActionFn,
+  AfterActionFn,
   AfterDef,
+  AfterEvent,
   ContextValidator,
   DebugEvent,
   DebugOptions,

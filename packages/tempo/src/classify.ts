@@ -221,15 +221,21 @@ function pickLargestUnit(duration: Temporal.Duration): TimeDiffResult {
  * Converts a `TimeDiffResult` to a human-readable string.
  * Uses the singular unit name when value is 1, plural (unit + 's') otherwise.
  *
+ * Pass `options.locale` to localize the numeric part via `Intl.NumberFormat`.
+ * Unit names remain English — for fully localized output use {@link formatRelative}
+ * or {@link formatDuration} instead.
+ *
  * @example
  * ```ts
  * humanize({ unit: 'day', value: 1 })  // '1 day'
  * humanize({ unit: 'day', value: 3 })  // '3 days'
+ * humanize({ unit: 'day', value: 3 }, { locale: 'ar' }) // '٣ days'
  * humanize({ unit: 'millisecond', value: 0 }) // '0 milliseconds'
  * ```
  */
-export function humanize(diff: TimeDiffResult): string {
+export function humanize(diff: TimeDiffResult, options: { locale?: Intl.LocalesArgument } = {}): string {
   const { unit, value } = diff;
+  const formatted = options.locale ? new Intl.NumberFormat(options.locale).format(value) : String(value);
 
-  return `${value} ${value === 1 ? unit : `${unit}s`}`;
+  return `${formatted} ${value === 1 ? unit : `${unit}s`}`;
 }

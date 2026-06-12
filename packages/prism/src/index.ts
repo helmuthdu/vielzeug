@@ -33,6 +33,7 @@ export type {
   Series,
   SparklineConfig,
   SparklineVariant,
+  StackSegment,
   TimeScaleConfig,
   TooltipConfig,
   TransitionConfig,
@@ -50,6 +51,24 @@ export { createSparkline } from './charts/sparkline';
 export { bandScale } from './scales/band';
 export { linearScale } from './scales/linear';
 export { timeScale } from './scales/time';
+
+// Scale utilities
+export { buildXScale, buildYScale } from './core/cartesian-scales';
+
+// Animation utilities (for plugin authors)
+export { animate } from './animation/transition';
+export type { AnimationTarget } from './animation/transition';
+export type { EasingFn } from './animation/easing';
+
+// Interaction types (useful for plugin authors)
+export type { LegendState } from './interaction/legend';
+export type { TooltipState } from './interaction/tooltip';
+
+// SVG primitives (for plugin authors)
+export type { Point } from './svg/path';
+
+// Scaffold types (for typed plugins)
+export type { ChartEventHandlers, ScaffoldContext, ScaffoldGroups } from './core/chart-scaffold';
 
 // Theme utilities
 export { seriesColor, setTheme } from './theme';

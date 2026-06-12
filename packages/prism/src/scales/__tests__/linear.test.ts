@@ -1,3 +1,4 @@
+import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { linearScale } from '../linear';
@@ -47,5 +48,19 @@ describe('linearScale', () => {
 
     expect(scale.map(50)).toBe(0);
     expect(scale.ticks()).toEqual([50]);
+  });
+
+  it('accepts MaybeSignal domain and range', () => {
+    const dom = signal<[number, number]>([0, 100]);
+    const rng = signal<[number, number]>([0, 500]);
+    const scale = linearScale({ domain: dom, nice: false, range: rng });
+
+    expect(scale.map(50)).toBe(250);
+
+    dom.value = [0, 200];
+    expect(scale.map(100)).toBe(250);
+
+    rng.value = [0, 1000];
+    expect(scale.map(100)).toBe(500);
   });
 });

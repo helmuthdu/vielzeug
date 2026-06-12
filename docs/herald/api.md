@@ -28,7 +28,7 @@ description: Complete API reference for @vielzeug/herald.
 | --------------------------- | ------------------------------------- |
 | `@vielzeug/herald`          | Main runtime API and types            |
 | `@vielzeug/herald/devtools` | `debugBus` — debug wrapper (dev only) |
-| `@vielzeug/herald/test`     | Test helpers (`createTestBus`)        |
+| `@vielzeug/herald/test`     | Test helpers (`createTestBus`, `TestBus<T>` type) |
 
 ## Types
 
@@ -65,7 +65,7 @@ type BusOptions<T extends EventMap> = {
   logger?: BusLogger;
   maxListeners?: number;
   middleware?: readonly Middleware<T>[];
-  name?: string; // optional display name — appears in log prefixes and BusDisposedError messages
+  name?: string; // optional display name — appears in log prefixes and BusDisposedError messages; avoid sensitive/user-derived values
   onError?: (context: EmissionErrorContext<T>) => void;
   validatePayload?: <K extends EventKey<T>>(event: K, payload: T[K]) => void;
 };
@@ -632,6 +632,7 @@ Creates a bus that replays the last known value to new subscribers. Useful for s
 - `on()` and `once()` — replay the current value synchronously to new subscribers.
 - `events()`, `wait()`, `waitAny()` — no replay; behave like a regular bus.
 - The returned `BehaviorBus<T>` adds a `current(event)` method.
+- The replay buffer is only updated when dispatch actually runs — payloads rejected by `validatePayload` or blocked by middleware that omits `next()` are never buffered.
 
 ```ts
 import { createBehaviorBus } from '@vielzeug/herald';
@@ -692,7 +693,7 @@ Forwards a selected subset of events from a source bus to a target bus. Source a
 | --------- | -------------------------------------------------- | ------------------------------------------------- |
 | `source`  | `Bus<S>`                                           | The bus to listen on                              |
 | `target`  | `Bus<T>`                                           | The bus to forward events to                      |
-| `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames |
+| `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames — throws `RangeError` if empty |
 | `signal`  | `AbortSignal` (optional)                           | Optional signal to stop forwarding early          |
 
 **Returns:** `Unsubscribe` — call to stop forwarding manually.

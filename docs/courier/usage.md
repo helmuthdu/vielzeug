@@ -497,7 +497,7 @@ qc.clear();
 
 | Option    | Type                         | Default      | Description                                                               |
 | --------- | ---------------------------- | ------------ | ------------------------------------------------------------------------- |
-| `storage` | `PersistStorage`             | required     | Any sync or async `getItem` / `setItem` / `removeItem` backend            |
+| `storage` | `PersistStorage`             | required     | Any sync or async `getItem` / `setItem` backend                           |
 | `keys`    | `QueryKey[]`                 | required     | Which keys to persist or hydrate                                          |
 | `include` | `(key: QueryKey) => boolean` | all keys     | Predicate applied consistently in both persist and hydrate                |
 | `prefix`  | `string`                     | `'courier:'` | Storage key namespace to avoid collisions                                 |
@@ -511,7 +511,6 @@ qc.clear();
 const idbStorage: PersistStorage = {
   getItem: (key) => idb.get(key),
   setItem: (key, value) => idb.put(key, value),
-  removeItem: (key) => idb.delete(key),
 };
 
 await hydrateQueryCache(qc, {

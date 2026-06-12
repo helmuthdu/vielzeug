@@ -42,6 +42,14 @@ describe('matchesAccept', () => {
 
     expect(matchesAccept(file, ['image/jpeg', 'image/png', '.png'])).toBe(true);
   });
+
+  it('trims whitespace from accept patterns', () => {
+    const file = new File([''], 'a.png', { type: 'image/png' });
+
+    expect(matchesAccept(file, [' image/* '])).toBe(true);
+    expect(matchesAccept(file, [' .png '])).toBe(true);
+    expect(matchesAccept(file, [' image/png '])).toBe(true);
+  });
 });
 
 describe('createDropZone', () => {
@@ -679,6 +687,43 @@ describe('createDropZone', () => {
       accept = ['text/plain'];
       element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'image/png' }] }));
       expect(zone.hovered).toBe(false);
+
+      zone.destroy();
+    });
+  });
+
+  describe('paste fallback to onDrop', () => {
+    it('calls onDrop with ClipboardEvent when onPaste is omitted and paste: true', () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const file = new File(['data'], 'a.txt', { type: 'text/plain' });
+      const zone = createDropZone({ element, onDrop, paste: true });
+
+      window.dispatchEvent(makeClipboardEvent([file]));
+
+      expect(onDrop).toHaveBeenCalledTimes(1);
+
+      const [files, event] = onDrop.mock.calls[0] as [File[], Event];
+
+      expect(files).toEqual([file]);
+      expect(event.type).toBe('paste');
+
+      zone.destroy();
+    });
+  });
+
+  describe('drop with null dataTransfer', () => {
+    it('does nothing when drop event has no dataTransfer', () => {
+      const element = document.createElement('div');
+      const onDrop = vi.fn();
+      const zone = createDropZone({ element, onDrop });
+
+      const event = new Event('drop', { bubbles: true, cancelable: true }) as DragEvent;
+
+      Object.defineProperty(event, 'dataTransfer', { configurable: true, value: null });
+      element.dispatchEvent(event);
+
+      expect(onDrop).not.toHaveBeenCalled();
 
       zone.destroy();
     });

@@ -39,9 +39,9 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 
 ## Exports
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `defaultCodec`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
 
-**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `BatchDeps`, `BatchImpl`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `StorageBackend`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
+**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `BatchDeps`, `BatchImpl`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `StorageBackend`, `TableBuilder`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
 
 ## Schema Helper
 
@@ -131,6 +131,7 @@ All four factories accept the same optional plugin options and return `Adapter<S
 
 ```ts
 createLocalStorage<S extends AnySchema>(options: {
+  codec?: VaultCodec;
   logger?: VaultLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
@@ -149,6 +150,7 @@ createLocalStorage<S extends AnySchema>(options: {
 
 ```ts
 createSessionStorage<S extends AnySchema>(options: {
+  codec?: VaultCodec;
   logger?: VaultLogger;
   name: string;
   onMetrics?: (event: MetricsEvent) => void;
@@ -163,6 +165,7 @@ createSessionStorage<S extends AnySchema>(options: {
 
 ```ts
 createIndexedDB<S extends AnySchema>(options: {
+  codec?: VaultCodec;
   logger?: VaultLogger;
   migrate?: MigrationFn;
   name: string;
@@ -170,16 +173,17 @@ createIndexedDB<S extends AnySchema>(options: {
   schema: S;
   signals?: TableSignals<S>;
   validators?: TableValidators<S>;
-  version: number;
+  version?: number;
 }): IndexedDbAdapter<S>
 ```
 
-Returns an `IndexedDbAdapter<S>`, which extends `Adapter<S>` with the cursor-based `iterate()` method. The IDB adapter opens the database lazily on first operation. `migrate` is called during `onupgradeneeded` when `version` is higher than the stored version. The adapter also opens a `BroadcastChannel` (when available) so observer notifications propagate across tabs.
+Returns an `IndexedDbAdapter<S>`, which extends `Adapter<S>` with the cursor-based `iterate()` method. The IDB adapter opens the database lazily on first operation. `migrate` is called during `onupgradeneeded` when `version` is higher than the stored version. `version` defaults to `1` when omitted. The adapter also opens a `BroadcastChannel` (when available) so observer notifications propagate across tabs.
 
 ### `createMemory`
 
 ```ts
 createMemory<S extends AnySchema>(options: {
+  codec?: VaultCodec;
   logger?: VaultLogger;
   name?: string;
   onMetrics?: (event: MetricsEvent) => void;
@@ -318,6 +322,7 @@ interface Adapter<S extends AnySchema> {
   /**
    * Explicitly delete TTL-expired records from the specified tables (or all tables when
    * no filter is provided). Returns the count of records pruned per table.
+   * Does not trigger observer callbacks. Invalidates the internal `count()` cache for pruned tables.
    */
   pruneExpired(tables?: readonly (keyof S & string)[]): Promise<{ [K in keyof S & string]: number }>;
 
@@ -377,9 +382,9 @@ interface Adapter<S extends AnySchema> {
 
 `observe` **always fires immediately** with the current table state on registration — there is no deferred-first-call mode. Subsequent calls fire whenever the table is mutated.
 
-| Option   | Type          | Description                                           |
-| -------- | ------------- | ----------------------------------------------------- |
-| `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener |
+| Option   | Type          | Description                                                                    |
+| -------- | ------------- | ------------------------------------------------------------------------------ |
+| `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener. Already-aborted signals are a no-op — no initial snapshot is fired. |
 
 Returns an `Unsubscribe` function. Calling it and aborting the signal both cancel the observer — either approach works.
 
@@ -387,16 +392,18 @@ Returns an `Unsubscribe` function. Calling it and aborting the signal both cance
 
 `observeMany` always populates the snapshot map immediately on registration (once per-table snapshot is delivered). The combined listener fires as soon as all tables have reported their initial state.
 
-| Option   | Type          | Description                                         |
-| -------- | ------------- | --------------------------------------------------- |
-| `signal` | `AbortSignal` | When aborted, unsubscribes all underlying observers |
+Duplicate entries in the `tables` array are silently deduplicated. The combined snapshot will still include a key for each entry in the original array, but duplicate keys reference the same data.
+
+| Option   | Type          | Description                                                                                           |
+| -------- | ------------- | ----------------------------------------------------------------------------------------------------- |
+| `signal` | `AbortSignal` | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately. |
 
 ### `watch` options
 
 | Option   | Type                | Default    | Description                                                                                    |
 | -------- | ------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
 | `mode`   | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags |
-| `signal` | `AbortSignal`       | —          | When aborted, terminates the iteration                                                         |
+| `signal` | `AbortSignal`       | —          | When aborted, terminates the iteration. If already aborted before the first `next()` call, the iterator is done immediately. |
 
 ### `watchStream` options
 
@@ -546,6 +553,7 @@ Shared plugin options accepted by all four adapter factories.
 
 ```ts
 type BaseAdapterOptions<S extends AnySchema> = {
+  codec?: VaultCodec;
   logger?: VaultLogger;
   onMetrics?: (event: MetricsEvent) => void;
   schema: S;
@@ -582,6 +590,50 @@ type DebugStats = {
 type DebugInfo<S extends AnySchema> = {
   tables: Array<{ name: keyof S & string } & DebugStats>;
 };
+```
+
+### `VaultCodec`
+
+Pluggable serialization contract. Implement to change how vault stores values at rest (e.g. compact keys, encryption, msgpack).
+
+```ts
+type VaultCodec = {
+  /** Parse a raw stored value into `{ value, expiresAt? }`. Return `undefined` for corrupt data. */
+  decode<T>(raw: unknown): { expiresAt?: number; value: T } | undefined;
+  /** Encode a value and optional absolute expiry timestamp (epoch ms) into the storage format. */
+  encode<T>(value: T, expiresAt?: number): unknown;
+};
+```
+
+`defaultCodec` (exported) stores `{ value: T, expiresAt?: number }` verbatim — identical to the original behaviour. Use it as a reference or extend it:
+
+```ts
+import { defaultCodec, type VaultCodec } from '@vielzeug/vault';
+
+const loggingCodec: VaultCodec = {
+  decode: (raw) => {
+    const result = defaultCodec.decode(raw);
+    if (!result) console.warn('[vault] corrupt record:', raw);
+    return result;
+  },
+  encode: defaultCodec.encode,
+};
+```
+
+Pass `codec` to any factory:
+
+```ts
+const db = createLocalStorage({ name: 'app', schema, codec: loggingCodec });
+```
+
+### `TableBuilder`
+
+Fluent builder returned by `table()`. Export this type to annotate schema entry variables without using `ReturnType<typeof table<T, K>>`.
+
+```ts
+import { type TableBuilder, table } from '@vielzeug/vault';
+
+const entry: TableBuilder<User> = table<User>('id').index('email').ttl(ttl.minutes(30));
 ```
 
 ### `VaultLogger`

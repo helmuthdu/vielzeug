@@ -8,16 +8,21 @@ export { untrack };
 // ── Readonly wrapper ──────────────────────────────────────────────────────────
 //
 // Returns a thin delegation object instead of a full ComputedImpl — zero graph
-// overhead. No disposal needed. All reads delegate to the source, registering
-// the caller as a dep on the source directly rather than on an intermediary node.
+// overhead. dispose() is a no-op: the wrapper does not own the source signal.
+// All reads delegate to the source, registering the caller as a dep on the
+// source directly rather than on an intermediary node.
 
 /**
  * Wraps a signal or computed to produce a structurally read-only view.
- * The `value` setter and `update`/`dispose` are hidden. Delegates reads directly
+ * The `value` setter and `update` are hidden. Delegates reads directly
  * to the source — no extra graph node, no allocation beyond the wrapper object.
  *
- * `dispose()` delegates to the source's own dispose method if present, so
- * `readonly(computed(() => ...)).dispose()` correctly cleans up the underlying node.
+ * **Dispose semantics:** calling `dispose()` on the wrapper is a no-op — it does
+ * not affect the underlying source signal. The caller retains ownership of the
+ * source and is responsible for disposing it independently.
+ *
+ * Exception: if `source` is already a `ComputedSignal`, `readonly()` returns it
+ * directly (no wrapper), so `dispose()` will dispose the computed as expected.
  *
  * @example
  * ```ts
@@ -30,17 +35,17 @@ export { untrack };
 export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
   if (isComputed(source)) return source as ComputedSignal<T>;
 
-  const disposeSource = () => (source as Partial<{ dispose(): void }>).dispose?.();
+  const noop = (): void => {};
 
   return {
-    dispose: disposeSource,
+    dispose: noop,
     filter: (pred: (value: T) => boolean) => source.filter(pred as (value: T) => boolean),
     [IS_COMPUTED]: true as const,
     [IS_SIGNAL]: true as const,
     map: <U>(fn: (v: T) => U, opts?: ReactiveOptions<U>) => source.map(fn, opts),
     peek: () => source.peek(),
     subscribe: (l: () => void) => source.subscribe(l),
-    [Symbol.dispose]: disposeSource,
+    [Symbol.dispose]: noop,
     get value() {
       return source.value;
     },

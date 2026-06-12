@@ -242,7 +242,12 @@ const _localeRegistry = new Map<string, Messages>([['en', _defaultMessages]]);
 /** A function that receives internal warning messages from spell. */
 export type Logger = (message: string) => void;
 
-let _logger: Logger = (msg) => console.warn(msg);
+/** @internal */
+const _isDev = !(globalThis as { __SPELL_PROD__?: boolean }).__SPELL_PROD__;
+
+let _logger: Logger = (msg) => {
+  if (_isDev) console.warn(`[@vielzeug/spell] ${msg}`);
+};
 
 /** @internal */
 export function _warn(message: string): void {

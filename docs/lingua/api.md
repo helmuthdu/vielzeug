@@ -20,12 +20,18 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.merge()`             | Overlay additional keys onto a catalog               | Async          | Does not replace; a later `register()` discards merge deltas         |
 | `i18n.scope()`             | Return a prefix-bound `{ fmt, t, tp, has }` helper   | Sync           | Returns a new object on every call                                   |
 | `i18n.fork()`              | Create an isolated child instance from current state | Sync           | Namespace registry is copied; post-fork registrations are not shared |
-| `i18n.getState()`          | Serialise loaded catalogs for SSR hydration          | Sync           | Only includes already-loaded catalogs, not pending loaders           |
+| `i18n.has()`               | Check if a leaf key exists in the active chain       | Sync           | Pipe-plural base keys return `false` — use `hasBranch()` instead     |
+| `i18n.hasBranch()`         | Check if any CLDR form exists under a branch key     | Sync           | Checks all fallback locales; safe for pipe-plural expanded keys       |
+| `i18n.isLoaded()`          | Check if a locale catalog is fully resolved          | Sync           | Returns `false` for async loaders not yet preloaded; safe predicate   |
+| `i18n.isRegistered()`      | Check if a locale is in the known registry           | Sync           | `true` for both resolved catalogs and pending loaders; never throws   |
+| `i18n.dispose()`           | Release all subscribers and catalog state            | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key      |
+| `i18n.getState()`          | Serialise loaded catalogs for SSR hydration          | Sync           | Only includes already-loaded catalogs — use `isLoaded()` before call  |
+| `createNamespace()`        | Typed identity helper for namespace factories        | Sync           | Identity function — zero runtime overhead; enforces catalog shape `M` |
 | `i18n.restoreState()`      | Hydrate a client instance from server state          | Sync           | Notifies subscribers once after restoring                            |
 | `i18n.registerNamespace()` | Register a per-locale namespace source factory       | Sync           | Must be called before `loadNamespace()`                              |
 | `i18n.loadNamespace()`     | Load a namespace and merge into the catalog          | Async          | Deduplicates — source is loaded at most once per locale              |
 | `createFormatter()`        | Create a standalone Intl formatter                   | Sync           | Pass a getter `() => i18n.locale` to follow locale changes           |
-| `validateCatalog()`        | Check a catalog for missing CLDR plural forms        | Sync           | Import from `@vielzeug/lingua/validate` — not for production         |
+| `validateCatalog()`        | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production         |
 
 ## Package Entry Points
 
@@ -91,12 +97,16 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `setLocale(locale)`              | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and bump version. On load failure, locale is unchanged (rollback guarantee). |
 | `register(locale, source)`       | `(locale: Locale, source: LocaleSource<M>) => void`                                       | Replace the full catalog for a locale. Clears namespace dedup markers.                                   |
 | `merge(locale, source)`          | `(locale: Locale, source: LocaleSource<Messages>) => Promise<void>`                       | Overlay keys onto an existing catalog. Source does not need to satisfy the full `M` shape.               |
-| `scope(prefix)`                  | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper.                                                      |
+| `scope(prefix)`                  | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, bind, bindPlural, t, tp, has }` helper.                                    |
 | `fork(overrides?)`               | `(overrides?: Omit<I18nOptions<M>, 'catalogs' \| 'compile'>) => I18n<M>`                  | Create an isolated child instance. Inherits compile mode from parent.                                    |
-| `has(key)`                       | `(key: MessageLeafKeys<M> \| string) => boolean`                                          | Check if a leaf key exists in the active fallback chain. Pipe-plural base keys return `false`.           |
+| `has(key)`                       | `(key: MessageLeafKeys<M> \| string) => boolean`                                          | Check if a leaf key exists in the active fallback chain. Pipe-plural base keys return `false` — use `hasBranch()` for those. |
+| `hasBranch(key)`                 | `(key: MessageBranchKeys<M> \| string) => boolean`                                        | Check if any CLDR form (`zero`…`other`) exists under a branch key. Works for pipe-plural expanded keys. |
+| `isLoaded(locale)`               | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Returns `false` for unknown/pending/invalid locales — never throws. |
+| `isRegistered(locale)`           | `(locale: Locale) => boolean`                                                             | Return `true` if `locale` is in the known registry (resolved **or** pending loader). Never throws.      |
+| `dispose()`                      | `() => void`                                                                              | Release all subscribers, catalogs, loaders, and namespace state. Idempotent.                             |
 | `getSupportedLocales(sorted?)`   | `(sorted?: boolean) => Locale[]`                                                          | Return all registered locales.                                                                           |
 | `getSnapshot()`                  | `() => I18nSnapshot`                                                                      | Return the current `{ locale, version }` snapshot.                                                       |
-| `getState()`                     | `() => I18nState`                                                                         | Serialise loaded catalogs + active locale for SSR hydration.                                             |
+| `getState()`                     | `() => I18nState`                                                                         | Serialise loaded catalogs + active locale for SSR hydration. Loader-only locales are silently omitted — check `isLoaded()` first. |
 | `restoreState(state)`            | `(state: I18nState) => void`                                                              | Hydrate from serialised state. Throws `[lingua/E006]` if `state.locale` has no catalog in the state.     |
 | `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory<M>) => void`                                      | Register a per-locale namespace source factory.                                                          |
 | `loadNamespace(ns, locale?)`     | `(ns: string, locale?: Locale) => Promise<void>`                                          | Load a namespace for a locale (defaults to active locale).                                               |
@@ -215,13 +225,17 @@ async function onEnterSettings() {
 scope(prefix: MessageBranchKeys<M> | string): ScopedI18n
 ```
 
-Returns a `{ fmt, t, tp, has }` helper where every key is automatically prefixed with `prefix + '.'`.
+Returns a `{ fmt, bind, bindPlural, t, tp, has }` helper where every key is automatically prefixed with `prefix + '.'`. The `bind()` and `bindPlural()` methods on the scoped object behave identically to `i18n.bind()` and `i18n.bindPlural()` but prepend the scope prefix automatically.
 
 ```ts
 const nav = i18n.scope('nav');
 nav.t('home'); // equivalent to i18n.t('nav.home')
 nav.has('logout'); // equivalent to i18n.has('nav.logout')
 nav.tp('items', 3); // equivalent to i18n.tp('nav.items', 3)
+
+// Hot-path binding with scoped key
+const homeLabel = nav.bind('home'); // equivalent to i18n.bind('nav.home')
+users.forEach(() => homeLabel()); // cached lookup
 ```
 
 `scope()` returns a new object on every call — do not compare references across calls.
@@ -239,6 +253,7 @@ Creates an isolated child instance from the current catalog snapshot and loader 
 - Has its own locale, fallback chain, subscribers, and version counter.
 - Catalog and namespace mutations on the fork do not affect the parent, and vice versa.
 - Namespace registrations made **after** the fork are not propagated in either direction.
+- **Namespace load markers are not copied.** Even if the parent has already called `loadNamespace('ui')`, the fork starts with an empty dedup set — `loadNamespace('ui')` must be called again on the fork. Call `loadNamespace` on the fork (or preload before forking) to avoid re-fetching in SSR.
 
 This is the preferred pattern for SSR: fork the shared instance once per request rather than re-creating the full instance and re-registering all catalogs.
 
@@ -261,6 +276,8 @@ subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions
 Registers a callback that runs on locale or catalog changes. Returns an `Unsubscribe` function.
 Pass `{ immediate: true }` to call the callback immediately with the current snapshot.
 Pass `{ signal }` to unsubscribe automatically when an `AbortSignal` fires. If the signal is already aborted when `subscribe()` is called, no subscription is created and no callback is invoked.
+
+> **Note:** When `{ immediate: true }` is used and the callback throws synchronously on the first invocation, `onSubscriberError` is called and **the subscription is not registered** — the callback will not fire on future changes. This prevents a broken callback from being repeatedly invoked.
 
 ```ts
 // Manual unsubscribe
@@ -292,6 +309,85 @@ i18n.getSupportedLocales(); // => ['en', 'de', 'fr']  (insertion order)
 i18n.getSupportedLocales(true); // => ['de', 'en', 'fr']  (sorted)
 ```
 
+### `has()` and `hasBranch()`
+
+```ts
+has(key: MessageLeafKeys<M> | string): boolean
+hasBranch(key: MessageBranchKeys<M> | string): boolean
+```
+
+`has(key)` returns `true` if a leaf key exists in the active fallback chain. Pipe-plural shorthand is expanded at registration time — the base key is replaced by sub-keys like `inbox.one` and `inbox.other`, so `has('inbox')` returns `false` after expansion.
+
+`hasBranch(key)` returns `true` if any CLDR form (`zero`, `one`, `two`, `few`, `many`, `other`) exists under `key` in the active fallback chain. It correctly handles both explicit plural branches and pipe-plural expanded keys.
+
+```ts
+// catalog: { inbox: 'One message|{count} messages' }  (pipe-plural → inbox.one, inbox.other)
+i18n.has('inbox')        // false — base key was expanded
+i18n.has('inbox.one')    // true  — explicit sub-key
+i18n.hasBranch('inbox')  // true  — inbox.one / inbox.other exist
+```
+
+### `isLoaded()`
+
+```ts
+isLoaded(locale: Locale): boolean
+```
+
+Returns `true` if the catalog for `locale` is fully resolved (i.e. not a pending async loader). Returns `false` for unregistered locales, pending loaders, and invalid locale tags — never throws.
+
+Primary use case: guarding `getState()` in SSR to avoid silently omitting locales that were registered as async loaders but never preloaded.
+
+```ts
+// SSR guard — ensure all locales are loaded before serialising
+const locales = i18n.getSupportedLocales();
+await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
+const state = i18n.getState(); // now includes all locales
+```
+
+### `isRegistered()`
+
+```ts
+isRegistered(locale: Locale): boolean
+```
+
+Returns `true` if `locale` is in the known locale registry — either as a resolved catalog or as a pending async loader. Returns `false` for locales that have never been registered, and for invalid locale tags (never throws).
+
+Use `isRegistered` + `isLoaded` together to distinguish the three states:
+
+| Condition | `isRegistered` | `isLoaded` |
+| --------- | -------------- | ---------- |
+| Locale never configured | `false` | `false` |
+| Async loader registered, not yet called | `true` | `false` |
+| Catalog fully resolved | `true` | `true` |
+
+```ts
+if (!i18n.isRegistered('fr')) throw new Error('fr locale not configured');
+if (!i18n.isLoaded('fr')) await i18n.preload('fr');
+const state = i18n.getState(); // 'fr' guaranteed to be present
+```
+
+### `dispose()`
+
+```ts
+dispose(): void
+```
+
+Releases all subscribers, catalogs, loaders, and namespace state. Calling `dispose()` more than once is safe (idempotent).
+
+After disposal:
+- `t()` / `tp()` fall back to `onMissingKey` for every key (returning the key string by default).
+- `isLoaded()` and `isRegistered()` return `false` for all locales.
+- No subscribers are notified of further changes.
+
+Primarily useful for long-lived SPA instances that are replaced at runtime (e.g. route-level i18n) to prevent subscriber and catalog memory from accumulating.
+
+```ts
+// Clean up a route-level i18n instance when the route is destroyed
+const routeI18n = i18n.fork({ locale: 'de' });
+
+onRouteDestroy(() => routeI18n.dispose());
+```
+
 ### `registerNamespace()`
 
 ```ts
@@ -300,8 +396,17 @@ registerNamespace(ns: string, factory: NamespaceFactory<M>): void
 
 Registers a namespace source factory. The factory is called per locale when `loadNamespace()` runs. Namespaces allow lazy-loading partial catalogs (e.g. per-route translations) without polluting the main catalog.
 
+The factory may return any of:
+- **`M`** — a static message object (resolved synchronously)
+- **`() => Promise<M>`** — an async loader function (the `Loader<M>` pattern)
+- **`Promise<M>`** — a raw promise (e.g. from an async factory)
+
 ```ts
+// Async loader (most common)
 i18n.registerNamespace('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
+
+// Static object (synchronous)
+i18n.registerNamespace('labels', (_locale) => ({ save: 'Save', cancel: 'Cancel' }));
 ```
 
 ### `loadNamespace()`
@@ -331,6 +436,10 @@ validateCatalog(messages: Messages, locale: Locale): ValidationWarning[]
 Checks a flat or nested message catalog against CLDR plural rules for `locale`. Returns an array of `ValidationWarning` objects for every plural branch that is missing one or more expected forms. Import from the separate `@vielzeug/lingua/validate` entry — do not include it in your production bundle.
 
 Returns an empty array when there are no issues.
+
+**Note:** A branch is treated as a plural branch when any of its child keys is a CLDR form (`zero`, `one`, `two`, `few`, `many`, `other`). A mixed-use branch (e.g. `{ count: 'x', one: 'y' }`) will also be flagged and may produce spurious warnings for non-CLDR sibling keys.
+
+`validateCatalog` also checks for a common authoring error: a form template for `other`, `two`, `few`, or `many` that does not contain `{count}`. Since `tp()` injects `count` automatically, omitting it from a non-singleton form is almost always a mistake. These warnings use `form: '<form>:missing-count'` (e.g. `'other:missing-count'`). The `zero` and `one` forms are exempt — intentionally omitting `{count}` is normal there (e.g. `'No messages'`, `'One message'`).
 
 **Parameters:**
 
@@ -402,7 +511,7 @@ fmt.duration({ hours: 1, minutes: 30 });
 | `date(value, options?)`               | `Intl.DateTimeFormat`     | Format a `Date` or timestamp        |
 | `relative(value, unit, options?)`     | `Intl.RelativeTimeFormat` | Format a relative time value        |
 | `list(value, options?)`               | `Intl.ListFormat`         | Join an array of strings or numbers |
-| `duration(value, options?)`           | `Intl.DurationFormat`     | Format a duration object            |
+| `duration(value, options?)`           | `Intl.DurationFormat`     | Format a duration object. **Fallback labels are English-only** when `Intl.DurationFormat` is unavailable. |
 | `clear()`                             | —                         | Evict all cached `Intl` instances   |
 
 ## Types
@@ -479,13 +588,13 @@ type SubscribeOptions = {
 
 ```ts
 type ValidationWarning = {
-  form: string; // the missing CLDR plural form (e.g. 'few', 'many')
+  form: string; // missing CLDR plural form (e.g. 'few', 'many') or '<form>:missing-count' for {count} warnings
   key: string; // dot-notation path to the plural branch
   locale: Locale; // the locale being validated
 };
 ```
 
-Returned by [`validateCatalog()`](#validatecatalog).
+Returned by [`validateCatalog()`](#validatecatalog). The `form` field uses plain CLDR form names (e.g. `'other'`) for missing-form warnings, and `'<form>:missing-count'` (e.g. `'other:missing-count'`) for templates that are missing `{count}` interpolation.
 
 ### `Messages`
 
@@ -513,6 +622,8 @@ type Loader<M extends Messages = Messages> = () => Promise<M>;
 
 ```ts
 type ScopedI18n = {
+  bind(key: string): (vars?: TranslateVars) => string;
+  bindPlural(key: string): (count: number, options?: TpOptions) => string;
   readonly fmt: Formatter;
   has(key: string): boolean;
   t(key: string, vars?: TranslateVars): string;
@@ -520,7 +631,7 @@ type ScopedI18n = {
 };
 ```
 
-Returned by `i18n.scope(prefix)`. The `fmt` property is the same formatter instance as `i18n.fmt`.
+Returned by `i18n.scope(prefix)`. The `fmt` property is the same formatter instance as `i18n.fmt`. `bind()` and `bindPlural()` behave identically to their counterparts on `I18n<M>` — the scope prefix is prepended automatically. `bind()` caches the lookup and invalidates on catalog/locale change.
 
 ### `TranslateVars`
 
@@ -613,6 +724,30 @@ type ListFormatOptions = {
   style?: 'long' | 'narrow' | 'short';
   type?: 'and' | 'or';
 };
+```
+
+## createNamespace
+
+```ts
+import { createNamespace } from '@vielzeug/lingua';
+
+createNamespace<M extends Messages = Messages>(factory: NamespaceFactory<M>): NamespaceFactory<M>
+```
+
+Typed identity helper for `registerNamespace()` factories. Returns `factory` unchanged — zero runtime overhead. Its only purpose is to let TypeScript infer or enforce the catalog shape `M`.
+
+When `registerNamespace` is called directly, the `factory` parameter is typed as `NamespaceFactory<M>` of the parent instance, which accepts any `Messages`-shaped return value. `createNamespace<MyMessages>()` constrains the factory's return type to `MyMessages` without any runtime cost.
+
+```ts
+import { createNamespace } from '@vielzeug/lingua';
+import type { MyMessages } from './locales/en/settings.json';
+
+i18n.registerNamespace(
+  'settings',
+  createNamespace<MyMessages>((locale) =>
+    import(`./locales/${locale}/settings.json`).then((m) => m.default),
+  ),
+);
 ```
 
 ## Errors

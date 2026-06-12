@@ -3,7 +3,7 @@ import type { Fn } from '../types';
 import { LruMap } from '../typed/_lruMap';
 import { isPromise } from '../typed/isPromise';
 
-type MemoOptions<T extends Fn> = {
+export type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;
   maxSize?: number;
   ttl?: number;
@@ -38,6 +38,9 @@ const defaultKey = (args: unknown[]): string => {
 /**
  * Creates a function that memoizes the result of the provided function.
  * Supports sync and async functions, including in-flight deduplication for async calls.
+ * When an async call is in-flight, all concurrent callers with the same key share the same
+ * `Promise`. If that promise rejects, every waiting caller receives the same rejection —
+ * the failed entry is then removed from the cache so the next call retries `fn`.
  * The returned function exposes `.clear()` and `.invalidate(...args)` methods.
  *
  * @example
@@ -82,6 +85,11 @@ export function memo<T extends Fn>(
     }
 
     const result = fn(...args);
+
+    if (ttl === 0 && !isPromise(result)) {
+      return result as ReturnType<T>;
+    }
+
     const entry: CacheEntry<ReturnType<T>> = { expiresAt: now + ttl, value: result as ReturnType<T> };
 
     cache.set(cacheKey, entry);

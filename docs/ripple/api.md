@@ -36,7 +36,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | --------------------------- | --------------------------------------------------------------------------- |
 | `@vielzeug/ripple`          | All core exports and types (including `RippleDevToolsHook` and event types) |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from prod          |
-| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                       |
+| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
 
 ## Signal Primitives
 
@@ -327,7 +327,9 @@ effect(() => {
 function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
 ```
 
-Wraps `source` in a `computed(() => source.value)` — the returned `ComputedSignal<T>` exposes only `value`, `peek()`, `subscribe()`, `map()`, and `filter()`. Mutator methods are hidden at the type level. Call `.dispose()` when done.
+Wraps `source` in a `computed(() => source.value)` — the returned `ComputedSignal<T>` exposes only `value`, `peek()`, `subscribe()`, `map()`, and `filter()`. Mutator methods are hidden at the type level.
+
+When `source` is already a `ComputedSignal`, `readonly()` returns it unchanged (no extra node). `.dispose()` is a no-op when wrapping a plain `signal()` — the source signal owns its own lifecycle. When wrapping a `computed()`, `.dispose()` disposes that computed.
 
 ```ts
 const count = signal(0);
@@ -337,7 +339,8 @@ console.log(ro.value); // 0
 count.value = 1;
 console.log(ro.value); // 1
 
-ro.dispose(); // unlinks the internal computed
+ro.dispose(); // no-op — count remains alive
+count.dispose(); // disposes the source
 ```
 
 **Parameters**
@@ -763,7 +766,7 @@ try {
 | `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                                                                                                                  |
 | `INFINITE_LOOP`   | Flush or effect loop exceeds `maxIterations` (default 100)                                                                                                                                                                       |
 | `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                        |
-| `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; or a lens path contains a forbidden segment (`__proto__`, `constructor`, `prototype`) |
+| `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; a lens path or top-level key is a forbidden segment (`__proto__`, `constructor`, `prototype`); `store.lens()` path exceeds 32 segments; or `store.value` is mutated directly |
 
 Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
 
@@ -1050,21 +1053,27 @@ Describes the setup function accepted by `asyncScope()`. `onCleanup()` calls wit
 
 ```ts
 interface StoreWithHistory<T extends object> extends Store<T> {
+  readonly canUndo: boolean;
+  readonly canRedo: boolean;
   historyAt(index: number): Readonly<T> | undefined;
   readonly historyLength: number;
   undo(): void;
   redo(): void;
+  dispose(): void;
 }
 ```
 
 Returned by `storeWithHistory()`. Extends `Store<T>` with snapshot navigation.
 
-| Member          | Description                                                             |
-| --------------- | ----------------------------------------------------------------------- |
-| `historyAt(i)`  | Snapshot at index `i` (0 = oldest); returns `undefined` if out of range |
-| `historyLength` | Number of snapshots in the buffer                                       |
-| `undo()`        | Move cursor back one step; no-op at the oldest state                    |
-| `redo()`        | Move cursor forward one step; no-op at the newest state                 |
+| Member          | Description                                                                              |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `canUndo`       | `true` when there is at least one snapshot to undo to. **Reactive** — participates in the reactive graph |
+| `canRedo`       | `true` when there is at least one snapshot ahead to redo. **Reactive** — participates in the reactive graph |
+| `historyAt(i)`  | Snapshot at index `i` (0 = oldest); returns `undefined` if out of range. After `maxHistory` eviction, index 0 is the oldest remaining entry |
+| `historyLength` | Number of snapshots currently in the buffer (≤ `maxHistory`)                            |
+| `undo()`        | Move cursor back one step; no-op at the oldest state                                     |
+| `redo()`        | Move cursor forward one step; no-op at the newest state                                  |
+| `dispose()`     | Disposes the internal reactive cursor signal. Call when the store is no longer needed    |
 
 ---
 

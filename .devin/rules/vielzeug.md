@@ -84,6 +84,52 @@ node packages/codex/dist/index.js --port 3100
 
 Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get-docs`, `get-package-api`, `get-ai-context`, `list-components`, `get-component`.
 
+## Dev logging standard
+
+Every package follows a two-layer logging model. **Never mix the layers.**
+
+### Layer 1 — Internal validation warnings (`src/_warn.ts`)
+
+For API-misuse warnings that fire automatically in dev builds (bad config, mismatched types, missing attributes, etc.).
+
+- Lives in a **private** `src/_warn.ts` — never exported from `index.ts` or `/devtools`.
+- Gated by `isDev` (`import.meta.env.DEV` for Vite packages, `__<PKG>_PROD__` global for non-Vite).
+- Prefix format: `[@vielzeug/<pkg>] <function>: <description>` — emits via `console.warn`.
+- Add `@security` JSDoc if message text may include user-supplied data (PII risk).
+
+```typescript
+// packages/<name>/src/_warn.ts
+const isDev = import.meta.env.DEV || !(globalThis as { __NAME_PROD__?: boolean }).__NAME_PROD__;
+
+/** @internal @security Messages may include user data. */
+export function warn(msg: string): void {
+  if (isDev) console.warn(`[@vielzeug/<name>] ${msg}`);
+}
+```
+
+### Layer 2 — Consumer debug observability (`src/devtools.ts` or `src/devtools/index.ts`)
+
+For opt-in structured debug logging consumers import explicitly. Tree-shaken in production.
+
+- Exported **only** from the `/devtools` sub-path (e.g. `import { debugBus } from '@vielzeug/herald/devtools'`).
+- Uses `console.debug` (not `console.warn`).
+- Wraps the public API — does not duplicate internal logic.
+- No environment gate needed (consumers choose to import it).
+
+```typescript
+// packages/<name>/src/devtools.ts
+export function debugFoo(options?: FooOptions): Foo {
+  return createFoo({ ...options, logger: console.debug });
+}
+```
+
+### Rules
+
+- **No bare `console.warn` in source** — always go through `warn()` from `_warn.ts`.
+- **No `devWarn` / `devError` exported from `/devtools`** — internal helpers stay internal.
+- **`_warn.ts` is never re-exported** from `index.ts`.
+- Tests that assert warning output: spy on `console.warn`, do NOT import `_warn` directly.
+
 ## Common patterns
 
 ```typescript

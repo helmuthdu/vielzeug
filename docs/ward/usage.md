@@ -108,6 +108,10 @@ Malformed principal values throw errors.
 
 ## Bind a User with `forUser`
 
+::: tip Detect conflicts before binding
+`BoundWard` does not expose `detectConflicts()`. Run `ward.detectConflicts()` on the parent ward before calling `forUser()` — typically at startup or during policy initialization.
+:::
+
 ```ts
 const bound = ward.forUser({ id: 'u1', roles: ['editor'] });
 
@@ -141,7 +145,7 @@ const boundDecisions = bound.checkAll([
 ]);
 ```
 
-`checkAll()` returns one decision per input check in the same order.
+`checkAll()` returns a `WardDecisionResult[]` — each entry is a `WardDecision` with the originating `resource` and `action` fields attached, so callers do not need to zip the result by index.
 
 ## List Allowed Actions
 
@@ -537,10 +541,10 @@ Use `guardRequest` or `guardRequestWith` to wire Ward into any async middleware 
 ```ts
 import { guardRequest, guardRequestWith } from '@vielzeug/ward';
 
-// Principal is already resolved (e.g. from session)
-const result = await guardRequest(ward, principal, 'posts', 'update');
+// Principal is already resolved (e.g. from session) — sync, no await needed
+const result = guardRequest(ward, principal, 'posts', 'update');
 
-// Principal must be extracted from a request object (e.g. verify JWT)
+// Principal must be extracted from a request object (e.g. verify JWT) — async
 const result = await guardRequestWith(ward, req, getPrincipal, 'posts', 'update');
 
 if (!result.granted) {
@@ -614,13 +618,13 @@ const permit = debugWard([
 ]);
 
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
-// [ward:decision] allow             viewer  posts  read
+// [ward:decision] allow             (allow)   viewer  posts  read
 
 permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update');
-// [ward:decision] no-matching-rule  viewer  posts  update
+// [ward:decision] no-matching-rule            viewer  posts  update
 
 permit.can(null, 'posts', 'read');
-// [ward:decision] no-matching-rule  anonymous  posts  read
+// [ward:decision] no-matching-rule            anonymous  posts  read
 ```
 
 The ward returned is identical to `createWard()` — all methods (`can`, `canAll`, `explain`, `forUser`, etc.) work the same way.

@@ -16,8 +16,20 @@ exports:
     linearScale,
     timeScale,
     bandScale,
+    buildXScale,
+    buildYScale,
     seriesColor,
     setTheme,
+    animate,
+    AnimationTarget,
+    EasingFn,
+    LegendState,
+    TooltipState,
+    Point,
+    ScaffoldContext,
+    ScaffoldGroups,
+    ChartEventHandlers,
+    StackSegment,
   ]
 environments: [browser]
 ---

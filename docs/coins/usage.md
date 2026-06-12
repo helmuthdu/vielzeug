@@ -413,6 +413,49 @@ function Price({ amount, currency }: { amount: bigint; currency: string }) {
 }
 ```
 
+## Utilities
+
+### `withAmount(m, amount)`
+
+Creates a new `Money` with a different raw bigint amount while preserving the source currency. Use this when you compute a `bigint` externally and need to re-wrap it without re-validating the currency.
+
+```ts
+import { money, withAmount, toDecimal } from '@vielzeug/coins';
+
+const price = money('9.99', 'USD');
+
+// Compute externally, then wrap back
+const rawDoubled = price.amount * 2n;
+const doubled = withAmount(price, rawDoubled);
+toDecimal(doubled); // '19.98'
+
+// Useful in reduce / fold patterns on raw bigint values
+const amounts = [100n, 250n, 75n];
+const total = withAmount(price, amounts.reduce((a, b) => a + b, 0n));
+toDecimal(total); // '4.25'
+```
+
+### `isMoney(value)`
+
+Type guard that narrows `unknown` to `Money`. Checks own-property `bigint` `amount` and `string` `currency` — prototype-chain properties are rejected.
+
+```ts
+import { isMoney, toDecimal } from '@vielzeug/coins';
+
+// Narrow untrusted API payloads
+function displayPrice(raw: unknown): string {
+  if (!isMoney(raw)) throw new TypeError('Expected a Money value');
+  return toDecimal(raw);
+}
+
+displayPrice({ amount: 1999n, currency: 'USD' }); // '19.99'
+displayPrice({ amount: 9.99,  currency: 'USD' }); // throws — amount is float, not bigint
+displayPrice(null);                               // throws
+
+// isMoney does NOT validate the currency code — use toCurrencyCode() for that
+isMoney({ amount: 100n, currency: 'FAKE' }); // true — shape matches but code is unvalidated
+```
+
 ## Working with Other Vielzeug Libraries
 
 **With Tempo** — format monetary amounts alongside dates in the same pipeline:

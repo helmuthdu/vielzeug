@@ -158,7 +158,7 @@ export function createWatchIterable<T>(
     [Symbol.asyncIterator]() {
       let pending: T[][] = [];
       let waiting: ((value: IteratorResult<T[]>) => void) | null = null;
-      let done = false;
+      let done = signal?.aborted ?? false;
       let unsubscribe: (() => void) | null = null;
 
       const finish = (): void => {
@@ -246,6 +246,8 @@ export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof cr
     const distinctTables = [...new Set(tables)] as K[];
 
     if (distinctTables.length === 0) throw new VaultScopeError('observeMany requires at least one table');
+
+    if (signal?.aborted) return () => {};
 
     const snapshotMap = new Map<string, RecordOf<S, K>[]>();
     let microtaskQueued = false;

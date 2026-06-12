@@ -11,7 +11,7 @@ import { inferTimeZone, toInstant, toZoned } from './internal';
  * Returns a generator — use `for...of` for lazy consumption or spread to collect
  * into an array: `[...dateRange(...)]`.
  *
- * @throws {RangeError} when `step` does not advance the date forward.
+ * @throws {RangeError} when `step` does not advance the date forward. Thrown eagerly at call time.
  *
  * When `start` is a `ZonedDateTime`, the timezone is inferred from it. If `end` is in a
  * different timezone, it is silently re-projected into `start`'s timezone. Pass `options.tz`
@@ -31,18 +31,32 @@ import { inferTimeZone, toInstant, toZoned } from './internal';
  * const days = [...dateRange(zdtStart, zdtEnd, { days: 1 })];
  * ```
  */
-export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.DurationLike, options: TimeOptions = {}) {
+export function dateRange(
+  start: TimeInput,
+  end: TimeInput,
+  step: Temporal.DurationLike,
+  options: TimeOptions = {},
+): Generator<Temporal.ZonedDateTime> {
   const tz = inferTimeZone(start, options);
   const startZoned = toZoned(start, { ...options, tz });
   const endZoned = toZoned(end, { ...options, tz });
 
+  // Eager validation — fires at call time, not on first iteration.
   if (Temporal.ZonedDateTime.compare(startZoned.add(step), startZoned) <= 0) {
     throw new RangeError('dateRange: step must advance the date forward');
   }
 
-  let current = startZoned;
+  return dateRangeGenerator(startZoned, endZoned, step);
+}
 
-  while (Temporal.ZonedDateTime.compare(current, endZoned) <= 0) {
+function* dateRangeGenerator(
+  start: Temporal.ZonedDateTime,
+  end: Temporal.ZonedDateTime,
+  step: Temporal.DurationLike,
+): Generator<Temporal.ZonedDateTime> {
+  let current = start;
+
+  while (Temporal.ZonedDateTime.compare(current, end) <= 0) {
     yield current;
     current = current.add(step);
   }
@@ -52,9 +66,9 @@ export function* dateRange(start: TimeInput, end: TimeInput, step: Temporal.Dura
  * Lazily generates `ZonedDateTime` occurrences according to a recurrence rule.
  *
  * Supports `daily`, `weekly`, `monthly`, and `yearly` frequencies with an optional
- * `interval`, `count` limit, and `until` boundary (inclusive). The generator is
- * infinite when neither `count` nor `until` is provided — use `for...of` with
- * a `break` or a `count` limit.
+ * `interval` (defaults to `1`), `count` limit, and `until` boundary (inclusive).
+ * The generator is infinite when neither `count` nor `until` is provided — use
+ * `for...of` with a `break` or a `count` limit.
  *
  * @example
  * ```ts

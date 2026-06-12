@@ -191,9 +191,14 @@ export class WorkerError extends Error {
   readonly code: WorkerErrorCode;
 
   constructor(code: WorkerErrorCode, message: string, cause?: unknown) {
-    super(message, { cause });
-    this.name = 'WorkerError';
+    super(`[@vielzeug/familiar] ${message}`, { cause });
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;
+  }
+
+  static is(err: unknown): err is WorkerError {
+    return err instanceof WorkerError;
   }
 }
 
@@ -204,8 +209,11 @@ export class WorkerTimeoutError extends WorkerError {
 
   constructor(timeoutMs: number) {
     super('timeout', `Task timed out after ${timeoutMs}ms`);
-    this.name = 'WorkerTimeoutError';
     this.timeoutMs = timeoutMs;
+  }
+
+  static is(err: unknown): err is WorkerTimeoutError {
+    return err instanceof WorkerTimeoutError;
   }
 }
 
@@ -213,7 +221,10 @@ export class WorkerTimeoutError extends WorkerError {
 export class WorkerTaskError extends WorkerError {
   constructor(message: string, cause?: unknown) {
     super('task', message, cause);
-    this.name = 'WorkerTaskError';
+  }
+
+  static is(err: unknown): err is WorkerTaskError {
+    return err instanceof WorkerTaskError;
   }
 }
 
@@ -224,8 +235,11 @@ export class WorkerQueueFullError extends WorkerError {
 
   constructor(maxQueue: number) {
     super('queue_full', `Queue is full (maxQueue=${maxQueue})`);
-    this.name = 'WorkerQueueFullError';
     this.maxQueue = maxQueue;
+  }
+
+  static is(err: unknown): err is WorkerQueueFullError {
+    return err instanceof WorkerQueueFullError;
   }
 }
 
@@ -233,7 +247,10 @@ export class WorkerQueueFullError extends WorkerError {
 export class WorkerTerminatedError extends WorkerError {
   constructor(message = 'Worker was terminated') {
     super('terminated', message);
-    this.name = 'WorkerTerminatedError';
+  }
+
+  static is(err: unknown): err is WorkerTerminatedError {
+    return err instanceof WorkerTerminatedError;
   }
 }
 
@@ -241,7 +258,10 @@ export class WorkerTerminatedError extends WorkerError {
 export class WorkerRuntimeError extends WorkerError {
   constructor(message: string, cause?: unknown) {
     super('worker', message, cause);
-    this.name = 'WorkerRuntimeError';
+  }
+
+  static is(err: unknown): err is WorkerRuntimeError {
+    return err instanceof WorkerRuntimeError;
   }
 }
 
@@ -249,6 +269,9 @@ export class WorkerRuntimeError extends WorkerError {
 export class WorkerInvalidOptionsError extends WorkerError {
   constructor(message: string) {
     super('invalid_options', message);
-    this.name = 'WorkerInvalidOptionsError';
+  }
+
+  static is(err: unknown): err is WorkerInvalidOptionsError {
+    return err instanceof WorkerInvalidOptionsError;
   }
 }

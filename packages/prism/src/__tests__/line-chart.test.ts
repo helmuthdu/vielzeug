@@ -211,10 +211,10 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
-  it('installs and destroys plugins', () => {
+  it('installs and disposes plugins', () => {
     const install = vi.fn();
-    const destroy = vi.fn();
-    const plugin: ChartPlugin = { destroy, install };
+    const dispose = vi.fn();
+    const plugin: ChartPlugin = { dispose, install };
 
     const chart = createLineChart(container, {
       plugins: [plugin],
@@ -223,7 +223,7 @@ describe('createLineChart', () => {
 
     expect(install).toHaveBeenCalledWith(chart.el, container);
     chart.dispose();
-    expect(destroy).toHaveBeenCalledOnce();
+    expect(dispose).toHaveBeenCalledOnce();
   });
 
   it('renders with Date x-axis (time scale)', () => {
@@ -244,6 +244,16 @@ describe('createLineChart', () => {
     chart.dispose();
   });
 
+  it('renders nothing and does not throw with empty series data', () => {
+    expect(() => {
+      const chart = createLineChart(container, {
+        series: [{ data: [], name: 'Empty' }],
+      });
+
+      chart.dispose();
+    }).not.toThrow();
+  });
+
   it('removes mouse listeners after dispose (no error on synthetic events)', () => {
     const chart = createLineChart(container, {
       series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
@@ -252,5 +262,35 @@ describe('createLineChart', () => {
 
     chart.dispose();
     expect(() => svg.dispatchEvent(new MouseEvent('mousemove'))).not.toThrow();
+  });
+
+  it('renders nothing and does not throw with empty series data', () => {
+    expect(() => {
+      const chart = createLineChart(container, {
+        series: [{ data: [], name: 'Empty' }],
+      });
+
+      chart.dispose();
+    }).not.toThrow();
+  });
+
+  it('renders legend in left position', () => {
+    const chart = createLineChart(container, {
+      legend: { position: 'left' },
+      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+    });
+
+    expect(container.querySelector('.prism-legend-left')).not.toBeNull();
+    chart.dispose();
+  });
+
+  it('renders legend in right position', () => {
+    const chart = createLineChart(container, {
+      legend: { position: 'right' },
+      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+    });
+
+    expect(container.querySelector('.prism-legend-right')).not.toBeNull();
+    chart.dispose();
   });
 });

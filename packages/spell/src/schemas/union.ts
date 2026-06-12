@@ -60,9 +60,12 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
 
       return { data, issues: [], typeOk: true };
     } catch (aggregateError) {
-      const branchErrors = ((aggregateError as AggregateError).errors as unknown[])
-        .filter(ValidationError.is)
-        .map((e) => e.issues);
+      const errors = (aggregateError as AggregateError).errors as unknown[];
+      const nonValidation = errors.find((e) => !ValidationError.is(e));
+
+      if (nonValidation !== undefined) throw nonValidation;
+
+      const branchErrors = (errors as ValidationError[]).map((e) => e.issues);
 
       return this._invalidUnionResult(value, branchErrors);
     }

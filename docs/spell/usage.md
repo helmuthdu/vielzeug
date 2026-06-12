@@ -65,6 +65,17 @@ const Todo = s.object({
 
 Object schemas reject unknown keys by default. Call `.relaxed()` when you need to preserve extra properties.
 
+Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `ValidationError` is thrown.
+
+```ts
+const Config = s.object({
+  host: s.string().default('localhost'),
+  port: s.number().default(3000),
+});
+
+Config.defaults(); // { host: 'localhost', port: 3000 }
+```
+
 ## Wrapper Modes, Defaults, and Fallbacks
 
 Chain wrappers to describe missing values and recovery rules without losing schema metadata.
@@ -356,6 +367,36 @@ const profile = Profile.parse(await api.get('/profile'));
 ```
 
 Use Spell descriptors with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.
+
+## Schema Traversal with walk()
+
+Use `walk()` to inspect or transform a schema tree without importing internal implementation classes.
+
+```ts
+import { s, type SchemaWalker } from '@vielzeug/spell';
+
+const fields: string[] = [];
+
+const collectFields: SchemaWalker<void> = {
+  object(schema) {
+    for (const [key, child] of Object.entries(schema.shape)) {
+      fields.push(key);
+      child.walk(collectFields);
+    }
+  },
+  unknown() {},
+};
+
+const User = s.object({
+  email: s.string().email(),
+  profile: s.object({ name: s.string() }),
+});
+
+User.walk(collectFields);
+console.log(fields); // ['email', 'profile', 'name']
+```
+
+`walk()` dispatches by `schema.kind`. Add an `unknown` handler as a fallback for any kind not explicitly listed in your visitor.
 
 ## Best Practices
 

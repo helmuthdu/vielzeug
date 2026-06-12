@@ -87,6 +87,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   const maxTransitionsPerFlush = options.maxTransitionsPerFlush ?? 1_000;
   const clone = options.clone ?? structuredClone;
   const onDebug = debugOpts?.onDebug;
+  // Widen State keys to string so getNodeAtPath / getAncestorPaths work with plain string paths.
   const states = definition.states as unknown as Record<string, StateNode<string, Ctx, Ev>>;
   const onTransition = debugOpts?.onTransition;
   const middlewares = options.middleware ?? [];
@@ -409,6 +410,8 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
 
     const resolvedTarget = resolveLeaf(states, transition.target) as State;
+    // Widen action signature to include LifecycleEvent: executeTransition accepts a union event,
+    // but transitions only fire on user events so the cast is safe at runtime.
     const actions = (transition.actions ?? []) as Array<
       (args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void
     >;
@@ -456,6 +459,14 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     return !!resolveTransition(definition, { context: context_.value, event, state: state_.value });
   };
 
+  /**
+   * Dispatches an event synchronously. Returns `true` if a transition was taken.
+   *
+   * When called re-entrantly (e.g. from inside an action), the event is queued
+   * for processing after the current transition completes. In that case, `false`
+   * is returned immediately — not because the event was ignored, but because the
+   * transition has not yet occurred at the point of return.
+   */
   // R1: Unified send — single drain implementation for both middleware and fast path
   const send = (event: Ev): boolean => {
     if (disposed) return false;

@@ -57,9 +57,10 @@ export function autoUpdate(
  */
 export function float(_reference: ReferenceElement, _floating: HTMLElement, _options: FloatOptions = {}): FloatHandle {
   return {
-    cleanup: NOOP,
     cssAnchor: false,
+    dispose: NOOP,
     getPosition: () => null,
+    [Symbol.dispose]: NOOP,
     update: NOOP,
   };
 }

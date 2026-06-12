@@ -37,6 +37,7 @@ exports:
     persistQueryCache,
     hydrateQueryCache,
     resolveRetryDelay,
+    anySignal,
   ]
 environments: [browser, node, ssr, deno]
 ---

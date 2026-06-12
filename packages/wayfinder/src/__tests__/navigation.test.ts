@@ -497,6 +497,61 @@ describe('Navigation', () => {
   });
 });
 
+describe('waitFor edge cases', () => {
+  it('resolves immediately when the router is already idle on the target route', async () => {
+    const history = createMemoryHistory('/about');
+    const router = createRouter({
+      history,
+      routes: {
+        about: { path: '/about' },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+
+    expect(router.getSnapshot().status).toBe('idle');
+    expect(router.getSnapshot().matches.at(-1)?.name).toBe('about');
+
+    const state = await router.waitFor('about');
+
+    expect(state.location.pathname).toBe('/about');
+    router.dispose();
+  });
+
+  it('rejects immediately when status is already error', async () => {
+    const history = createMemoryHistory('/bad');
+    const router = createRouter({
+      history,
+      middleware: [
+        async (_ctx, next) => {
+          try {
+            await next();
+          } catch {
+            /* swallow so router settles */
+          }
+        },
+      ],
+      routes: {
+        bad: {
+          data: async () => {
+            throw new Error('loader boom');
+          },
+          path: '/bad',
+        },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+
+    expect(router.getSnapshot().status).toBe('error');
+
+    await expect(router.waitFor('bad')).rejects.toThrow();
+    router.dispose();
+  });
+});
+
 describe('data error propagation', () => {
   it('a throwing data fn propagates the error to the navigate() caller', async () => {
     const history = createMemoryHistory('/');

@@ -21,24 +21,22 @@ export async function prefetchSource<T, TFilter = unknown, TSort = unknown>(
 ): Promise<SourceSnapshot<T>> {
   const source = createRemoteSource<T, TFilter, TSort>({ ...cfg, autoFetch: false });
 
-  await source.refresh();
+  try {
+    await source.refresh();
 
-  if (source.meta.error) {
+    if (source.meta.error) throw source.meta.error;
+
+    const q = source.toQuery();
+
+    return {
+      items: source.current,
+      ...(q.search && { search: q.search }),
+      page: source.meta.pageNumber,
+      total: source.meta.totalItems,
+    };
+  } finally {
     source.dispose();
-    throw source.meta.error;
   }
-
-  const q = source.toQuery();
-  const snapshot: SourceSnapshot<T> = {
-    items: source.current,
-    ...(q.search && { search: q.search }),
-    page: source.meta.pageNumber,
-    total: source.meta.totalItems,
-  };
-
-  source.dispose();
-
-  return snapshot;
 }
 
 /**

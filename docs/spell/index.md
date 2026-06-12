@@ -22,6 +22,7 @@ exports:
     registerLocale,
     useLocale,
     reset,
+    prependIssuePath,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -118,7 +119,7 @@ const User = s
     name: s.string().min(1),
     role: s.enum(['admin', 'editor', 'viewer'] as const),
   })
-  .relaxed();
+  .relaxed(); // allow extra keys — omit for strict-mode (default)
 
 type User = Infer<typeof User>;
 
@@ -161,9 +162,9 @@ const user = User.parse(payload);
 
 <div class="see-also">
 
-- [Forge](/forge/) — typed form state that uses Sieve schemas as its validation layer
+- [Forge](/forge/) — typed form state that uses Spell schemas as its validation layer
 - [Courier](/courier/) — HTTP client for validating request and response payloads at service boundaries
-- [Vault](/vault/) — unified storage API that accepts Sieve schemas to type-gate persisted data
+- [Vault](/vault/) — unified storage API that accepts Spell schemas to type-gate persisted data
 
 </div>
 

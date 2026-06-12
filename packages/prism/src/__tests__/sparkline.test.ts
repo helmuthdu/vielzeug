@@ -127,6 +127,39 @@ describe('createSparkline', () => {
     chart.dispose();
   });
 
+  it('sets aria-label and role=img when ariaLabel is provided', () => {
+    const chart = createSparkline(container, { ariaLabel: 'Revenue trend', data: [1, 2, 3] });
+
+    expect(chart.el.getAttribute('aria-label')).toBe('Revenue trend');
+    expect(chart.el.getAttribute('role')).toBe('img');
+    expect(chart.el.getAttribute('aria-hidden')).toBeNull();
+    chart.dispose();
+  });
+
+  it('area fill path d starts with M (correct curve applied)', () => {
+    const chart = createSparkline(container, {
+      curve: 'monotone',
+      data: [10, 20, 15, 30, 25],
+      variant: 'area',
+    });
+    const fill = chart.el.querySelector('.prism-spark-fill');
+
+    expect(fill?.getAttribute('d')).toMatch(/^M/);
+    chart.dispose();
+  });
+
+  it('does not attach interaction for single-point data (no Infinity xStep)', () => {
+    const onHover = vi.fn();
+    const chart = createSparkline(container, { data: [42], onHover });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 32, left: 0, top: 0, width: 120 }),
+    });
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 60, clientY: 16 }));
+    expect(onHover).not.toHaveBeenCalled();
+    chart.dispose();
+  });
+
   it('applies custom color to line stroke', () => {
     const chart = createSparkline(container, { color: '#ff0000', data: [1, 2, 3] });
 

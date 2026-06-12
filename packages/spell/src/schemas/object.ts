@@ -188,6 +188,19 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   /**
+   * Returns a fully default-filled object by parsing `{}` against this schema.
+   * Every required field must have a `.default()` value set; if any required
+   * field is missing a default, this method throws a `ValidationError`.
+   *
+   * @example
+   * const Config = s.object({ host: s.string().default('localhost'), port: s.number().default(3000) });
+   * Config.defaults(); // { host: 'localhost', port: 3000 }
+   */
+  defaults(): InferObject<T> {
+    return this.parse({});
+  }
+
+  /**
    * Allow additional unknown properties (relaxed mode).
    * Default is strict mode (rejects unknown keys).
    *

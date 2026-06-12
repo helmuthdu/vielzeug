@@ -24,6 +24,14 @@ describe('StringSchema - new format validators', () => {
     expect(s.string().nanoid().safeParse('short').success).toBe(false);
   });
 
+  test('nanoid(length) validates custom-length NanoID strings', () => {
+    const schema = s.string().nanoid(10);
+
+    expect(schema.safeParse('V1StGXR8_Z').success).toBe(true);
+    expect(schema.safeParse('V1StGXR8_Z5jdHi6B-myT').success).toBe(false);
+    expect(schema.safeParse('short').success).toBe(false);
+  });
+
   test('base64() validates base64 strings', () => {
     expect(s.string().base64().safeParse('SGVsbG8=').success).toBe(true);
     expect(s.string().base64().safeParse('not!base64$$').success).toBe(false);

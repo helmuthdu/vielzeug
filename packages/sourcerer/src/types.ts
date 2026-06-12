@@ -53,16 +53,31 @@ export type InfiniteSourceQuery = Readonly<{
  * ```
  */
 export class SourceTimeoutError extends Error {
-  override readonly name = 'SourceTimeoutError';
-
   constructor(timeoutMs: number) {
-    super(`Source.ready() timed out after ${timeoutMs}ms`);
+    super(`[@vielzeug/sourcerer] Source.ready() timed out after ${timeoutMs}ms`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is SourceTimeoutError {
+    return err instanceof SourceTimeoutError;
+  }
+}
+
+/** Thrown by `ready()` when the source is disposed while waiting. */
+export class SourceDisposedError extends Error {
+  constructor() {
+    super('[@vielzeug/sourcerer] Source disposed while waiting for ready()');
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is SourceDisposedError {
+    return err instanceof SourceDisposedError;
   }
 }
 
 export class SourceError extends Error {
-  override readonly name = 'SourceError';
-
   readonly #opts: {
     readonly attempt?: number;
     readonly cause?: unknown;
@@ -77,8 +92,14 @@ export class SourceError extends Error {
       readonly query?: unknown;
     } = {},
   ) {
-    super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
+    super(`[@vielzeug/sourcerer] ${message}`, opts.cause !== undefined ? { cause: opts.cause } : undefined);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
     this.#opts = opts;
+  }
+
+  static is(err: unknown): err is SourceError {
+    return err instanceof SourceError;
   }
 
   get attempt(): number {
@@ -155,6 +176,7 @@ export type SourceState<T> =
  * Framework adapters should target this interface for maximum portability.
  */
 export type ReactiveSource<T, TMeta = SourceMeta> = {
+  [Symbol.dispose](): void;
   readonly current: readonly T[];
   dispose(): void;
   readonly meta: TMeta;
@@ -172,6 +194,7 @@ export type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
  * Returned by `mergeSource()`. Has no `meta` because the parent sources may have different meta shapes.
  */
 export type MergedSource<T> = {
+  [Symbol.dispose](): void;
   readonly current: readonly T[];
   dispose(): void;
   subscribe(listener: () => void): () => void;
@@ -366,6 +389,12 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
    */
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
+  /**
+   * Applies a partial `InfiniteSourceQuery` snapshot without resetting accumulated items.
+   * Only `limit` and `search` are restorable — page position is implicit in cursor-style infinite sources.
+   * Triggers a reset fetch if any value changed.
+   */
+  restoreQuery(patch: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void>;
   search(query: string): void;
   searchNow(query: string): Promise<void>;
   setLimit(limit: number): Promise<void>;

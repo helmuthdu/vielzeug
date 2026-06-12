@@ -85,6 +85,49 @@ export function zero(currency: string): Money {
   return money(0n, currency);
 }
 
+/**
+ * Creates a new `Money` value with the given `amount` and the same currency as `m`.
+ * Useful when you compute a raw `bigint` amount externally and need to wrap it
+ * back into a `Money` value without re-validating the currency.
+ *
+ * @example
+ * ```ts
+ * const price = money('9.99', 'USD');
+ * withAmount(price, 1999n)  // { amount: 1999n, currency: 'USD' }
+ * ```
+ */
+export function withAmount(m: Money, amount: bigint): Money {
+  return { amount, currency: m.currency };
+}
+
+/**
+ * Type guard that returns `true` if `value` is a `Money`-shaped object
+ * (has a `bigint` `amount` and a `string` `currency`).
+ * Useful for narrowing unknown payloads from APIs or deserialized storage.
+ *
+ * Note: does **not** validate the currency code — use `toCurrencyCode()` if
+ * you also need to confirm it is a recognized ISO 4217 code.
+ *
+ * @example
+ * ```ts
+ * isMoney({ amount: 100n, currency: 'USD' })  // true
+ * isMoney({ amount: 1.5, currency: 'USD' })   // false
+ * isMoney(null)                               // false
+ * ```
+ */
+export function isMoney(value: unknown): value is Money {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const v = value as Record<string, unknown>;
+
+  return (
+    Object.prototype.hasOwnProperty.call(v, 'amount') &&
+    typeof v.amount === 'bigint' &&
+    Object.prototype.hasOwnProperty.call(v, 'currency') &&
+    typeof v.currency === 'string'
+  );
+}
+
 // ─── Arithmetic ──────────────────────────────────────────────────────────────
 
 /** Adds two `Money` values. Throws if their currencies differ. */
@@ -201,6 +244,9 @@ export function allocate(m: Money, ratios: readonly (number | string)[]): [Money
   }
 
   // Distribute leftover units to the shares with the largest fractional remainders.
+  // Relies on V8/SpiderMonkey's stable sort (ECMAScript 2019+ spec-mandated): ties
+  // in fractional remainders are broken by original index (left-to-right), ensuring
+  // deterministic output for equal-weight ratios (e.g. [1, 1, 1]).
   const indices = ratios
     .map((_, i) => i)
     .sort((a, b) => {
@@ -253,7 +299,11 @@ export function sum(moneys: readonly Money[]): Money {
  * ```
  */
 export function min(first: Money, ...rest: Money[]): Money {
-  return [first, ...rest].reduce((a, b) => (compare(a, b) <= 0 ? a : b));
+  let result = first;
+
+  for (const m of rest) result = compare(result, m) <= 0 ? result : m;
+
+  return result;
 }
 
 /**
@@ -265,7 +315,11 @@ export function min(first: Money, ...rest: Money[]): Money {
  * ```
  */
 export function max(first: Money, ...rest: Money[]): Money {
-  return [first, ...rest].reduce((a, b) => (compare(a, b) >= 0 ? a : b));
+  let result = first;
+
+  for (const m of rest) result = compare(result, m) >= 0 ? result : m;
+
+  return result;
 }
 
 /**
@@ -303,6 +357,12 @@ export function splitEvenly(m: Money, parts: number): [Money, ...Money[]] {
  * ```
  */
 export function clamp(m: Money, lower: Money, upper: Money): Money {
+  // Validate currency consistency upfront so the error always names the mismatch,
+  // rather than surfacing mid-computation from min() or max().
+  if (m.currency !== lower.currency || m.currency !== upper.currency) {
+    throw new TypeError(`Currency mismatch: ${m.currency}, ${lower.currency}, and ${upper.currency}`);
+  }
+
   if (compare(lower, upper) > 0) {
     throw new RangeError(
       `clamp: lower (${toDecimal(lower)} ${lower.currency}) must be <= upper (${toDecimal(upper)} ${upper.currency})`,
@@ -333,7 +393,7 @@ export function negate(m: Money): Money {
  * @example
  * ```ts
  * percentage(money('100.00', 'USD'), 10)      // $10.00
- * percentage(money('199.99', 'USD'), '8.5')   // $16.99
+ * percentage(money('199.99', 'USD'), '8.5')   // $17.00
  * ```
  */
 export function percentage(m: Money, pct: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
@@ -455,7 +515,7 @@ export function fromJSON(json: MoneyJSON): Money {
   try {
     amount = BigInt(json.amount);
   } catch {
-    throw new SyntaxError(`Invalid money amount in JSON: "${json.amount}" (expected an integer string, e.g. '123456')`);
+    throw new TypeError(`Invalid money amount in JSON: "${json.amount}" (expected an integer string, e.g. '123456')`);
   }
 
   return { amount, currency: validCurrency };
@@ -498,5 +558,5 @@ export function toDecimal(m: Money): string {
 export function toNumber(m: Money): number {
   const decimals = getCurrencyDecimals(m.currency);
 
-  return Number(m.amount) / Math.pow(10, decimals);
+  return Number(m.amount) / Number(pow10(decimals));
 }

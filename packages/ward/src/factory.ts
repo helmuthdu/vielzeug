@@ -6,6 +6,7 @@ import type {
   WardCheck,
   WardConflict,
   WardDecision,
+  WardDecisionResult,
   WardOptions,
   WardRule,
   WardRuleInput,
@@ -94,8 +95,8 @@ function assertUserPrincipal(input: unknown): asserts input is UserPrincipal {
     throw new Error('[ward] Invalid principal: id must be a non-empty string');
   }
 
-  if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string')) {
-    throw new Error('[ward] Invalid principal: roles must be an array of strings');
+  if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string' || !(r as string).trim())) {
+    throw new Error('[ward] Invalid principal: roles must be an array of non-empty strings');
   }
 }
 
@@ -140,7 +141,8 @@ function compileEntry<TAction extends string, TData>(
   validateRuleInput(input, index);
 
   // Normalize role to readonly string[] and freeze the whole rule.
-  const roles: readonly string[] = Object.freeze(Array.isArray(input.role) ? [...input.role] : [input.role]);
+  const rawRoles = Array.isArray(input.role) ? [...input.role] : [input.role];
+  const roles: readonly string[] = Object.freeze([...new Set(rawRoles)]);
 
   const rule = Object.freeze({
     action: input.action,
@@ -520,15 +522,26 @@ export function createWard<TAction extends string = string, TData = unknown>(
     return actions.some((action) => evaluateAndLog(principal, resource, action, data).allowed);
   }
 
+  function runCheckAll(
+    principal: Principal,
+    checks: readonly WardCheck<TAction, TData>[],
+  ): WardDecisionResult<TAction, TData>[] {
+    return checks.map((check) => ({
+      ...evaluateAndLog(principal, check.resource, check.action, check.data),
+      action: check.action,
+      resource: check.resource,
+    }));
+  }
+
   function checkAll(
     principal: Principal,
     checks: readonly WardCheck<TAction, TData>[],
-  ): WardDecision<TAction, TData>[] {
+  ): WardDecisionResult<TAction, TData>[] {
     if (checks.length === 0) return [];
 
     validatePrincipal(principal);
 
-    return checks.map((check) => evaluateAndLog(principal, check.resource, check.action, check.data));
+    return runCheckAll(principal, checks);
   }
 
   function allowedActions(
@@ -604,11 +617,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
 
         return actions.some((action) => evaluateAndLog(snap, resource, action, data).allowed);
       },
-      checkAll: (checks) => {
-        if (checks.length === 0) return [];
-
-        return checks.map((check) => evaluateAndLog(snap, check.resource, check.action, check.data));
-      },
+      checkAll: (checks) => (checks.length === 0 ? [] : runCheckAll(snap, checks)),
       explain: (resource, action, data?) => evaluateAndLog(snap, resource, action, data),
       rulesInScope: (resource, data?) => coreRulesInScope(entries, snap, resource, data),
       trace: (resource, action, data?) => trace(snap, resource, action, data),
