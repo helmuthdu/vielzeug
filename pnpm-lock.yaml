@@ -266,10 +266,6 @@ importers:
         version: 4.1.7(@types/node@25.9.1)(@vitest/coverage-v8@4.1.7)(jsdom@29.1.1)(vite@8.0.15(@types/node@25.9.1)(esbuild@0.27.7)(jiti@2.7.0))
 
   packages/herald:
-    dependencies:
-      '@vielzeug/arsenal':
-        specifier: workspace:*
-        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.9.1
@@ -484,9 +480,6 @@ importers:
       '@js-temporal/polyfill':
         specifier: ^0.5.1
         version: 0.5.1
-      '@vielzeug/arsenal':
-        specifier: workspace:*
-        version: link:../arsenal
     devDependencies:
       '@types/node':
         specifier: ^25.9.1
