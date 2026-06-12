@@ -23,6 +23,7 @@ export default defineConfig({
       { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },
       { find: /^@vielzeug\/scroll$/, replacement: path.resolve(__dirname, '../scroll/src/index.ts') },
       { find: /^@vielzeug\/scroll\/dom$/, replacement: path.resolve(__dirname, '../scroll/src/dom/index.ts') },
+      { find: /^@vielzeug\/tempo$/, replacement: path.resolve(__dirname, '../tempo/src/index.ts') },
     ],
   },
   test: {

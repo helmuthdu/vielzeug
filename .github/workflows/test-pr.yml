@@ -58,5 +58,8 @@ jobs:
 
       - run: pnpm install
 
+      - name: Generate codex bundled data
+        run: pnpm --dir packages/codex run prepare:data
+
       - name: Run Tests
         run: pnpm test
