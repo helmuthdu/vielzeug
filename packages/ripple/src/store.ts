@@ -98,6 +98,10 @@ class LensSignal<V> implements Signal<V> {
     return this.source_.filter(predicate);
   }
 
+  get disposed(): boolean {
+    return this.source_.disposed;
+  }
+
   dispose(): void {
     this.evict_();
     this.disposeSource_?.();
