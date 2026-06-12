@@ -17,7 +17,7 @@ export interface SeriesInteractionOptions {
   onClick?: ((event: { originalEvent: MouseEvent; point: DataPoint; series: Series }) => void) | undefined;
   onHover?: ((event: { originalEvent: MouseEvent; point: DataPoint; series: Series } | null) => void) | undefined;
   svg: SVGSVGElement;
-  tooltip?: TooltipState | null;
+  tooltip?: TooltipState;
 }
 
 function findNearestSeries(allPoints: Point[][], idx: number, posY: number): number {

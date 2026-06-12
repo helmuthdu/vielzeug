@@ -9,7 +9,7 @@ import { getMousePosition } from '../../interaction/events';
 import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
 import { createSvgElement } from '../../svg/element';
-import { seriesColor } from '../../types';
+import { seriesColor } from '../../theme';
 import { renderBars } from './bar-renderer';
 
 // ─── Scale context ────────────────────────────────────────────────────────────

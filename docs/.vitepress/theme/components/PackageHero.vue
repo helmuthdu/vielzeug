@@ -82,23 +82,18 @@ const categoryLabel = computed(() => {
             {{ categoryLabel }}
           </sg-badge>
         </div>
-        <sg-text v-if="description" as="p" variant="body" size="md" color="secondary" class="pkg-hero-description">{{ description }}</sg-text>
+        <sg-text v-if="description" as="p" variant="body" size="md" color="secondary" class="pkg-hero-description">{{
+          description
+        }}</sg-text>
         <div class="pkg-meta-row">
-          <sg-badge v-if="packageInfo.version"  color="primary" size="xs" rounded="full">
+          <sg-badge v-if="packageInfo.version" color="primary" size="xs" rounded="full">
             v{{ packageInfo.version }}
           </sg-badge>
-          <sg-badge
-            v-if="packageInfo.size && packageInfo.size !== 'N/A'"
-
-            color="primary"
-            size="xs"
-            rounded="full">
+          <sg-badge v-if="packageInfo.size && packageInfo.size !== 'N/A'" color="primary" size="xs" rounded="full">
             {{ packageInfo.size }} gzip
           </sg-badge>
-          <sg-badge v-if="packageInfo.dependencies === 0"  color="primary" size="xs" rounded="full"
-            >0 deps</sg-badge
-          >
-          <sg-badge v-if="environments.length"  color="primary" size="xs" rounded="full">
+          <sg-badge v-if="packageInfo.dependencies === 0" color="primary" size="xs" rounded="full">0 deps</sg-badge>
+          <sg-badge v-if="environments.length" color="primary" size="xs" rounded="full">
             {{ environments.map((e) => envLabel[e] ?? e).join(' · ') }}
           </sg-badge>
         </div>
@@ -138,8 +133,8 @@ const categoryLabel = computed(() => {
 }
 
 .pkg-logo-img {
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   flex-shrink: 0;
   object-fit: contain;
   border: var(--border) solid var(--color-contrast-300);
@@ -220,6 +215,5 @@ const categoryLabel = computed(() => {
   .pkg-hero {
     padding: var(--size-5) var(--size-4);
   }
-
 }
 </style>

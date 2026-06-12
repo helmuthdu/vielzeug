@@ -21,10 +21,23 @@ export interface ScaffoldContext {
   container: HTMLElement;
   dimensions: Signal<ChartDimensions>;
   groups: ScaffoldGroups;
-  legend: ReturnType<typeof createLegend> | null;
+  legend: ReturnType<typeof createLegend>;
   svg: SVGSVGElement;
-  tooltip: ReturnType<typeof createTooltip> | null;
+  tooltip: ReturnType<typeof createTooltip>;
 }
+
+const NULL_TOOLTIP: ReturnType<typeof createTooltip> = {
+  destroy() {},
+  el: null as unknown as HTMLDivElement,
+  hide() {},
+  show() {},
+};
+
+const NULL_LEGEND: ReturnType<typeof createLegend> = {
+  destroy() {},
+  el: null as unknown as HTMLDivElement,
+  update() {},
+};
 
 export interface ChartEventHandlers {
   onClick?: (event: MouseEvent) => void;
@@ -45,8 +58,8 @@ export function createChartScaffold(
 ): ChartHandle {
   const base = createChartBase(container, { ariaLabel: config.ariaLabel, margin: config.margin });
 
-  const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
-  const legend = config.legend ? createLegend(container, config.legend) : null;
+  const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : NULL_TOOLTIP;
+  const legend = config.legend ? createLegend(container, config.legend) : NULL_LEGEND;
 
   const groups: ScaffoldGroups = {
     grid: createSvgElement('g', { class: 'prism-grid' }),
@@ -131,8 +144,8 @@ export function createChartScaffold(
         }
       }
 
-      tooltip?.destroy();
-      legend?.destroy();
+      tooltip.destroy();
+      legend.destroy();
       s.dispose();
       base.dispose();
     },

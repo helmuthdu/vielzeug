@@ -743,3 +743,62 @@ Rich HTML tooltip with custom formatting:
 ```
 
 </ComponentPreview>
+
+## Pie Chart with Plugin
+
+A donut chart that installs a custom plugin to draw a total count label in the center hole:
+
+<ComponentPreview vertical height="320px">
+
+```html
+<div id="ex-pie-plugin" style="width:100%;height:280px;"></div>
+<script>
+  const { createPieChart } = Prism;
+
+  const data = [
+    { label: 'Direct',  value: 42, color: '#6366f1' },
+    { label: 'Organic', value: 28, color: '#10b981' },
+    { label: 'Social',  value: 18, color: '#f59e0b' },
+    { label: 'Referral',value: 12, color: '#8b5cf6' },
+  ];
+
+  const total = data.reduce((s, d) => s + d.value, 0);
+  let centerLabel;
+
+  const centerPlugin = {
+    install(svg) {
+      const ns = 'http://www.w3.org/2000/svg';
+      centerLabel = document.createElementNS(ns, 'text');
+      centerLabel.setAttribute('text-anchor', 'middle');
+      centerLabel.setAttribute('dominant-baseline', 'middle');
+      centerLabel.setAttribute('font-size', '20');
+      centerLabel.setAttribute('font-weight', '600');
+      centerLabel.setAttribute('fill', 'var(--prism-text-color, #334155)');
+      centerLabel.textContent = total;
+      svg.appendChild(centerLabel);
+      // Position at SVG center once dimensions are available
+      requestAnimationFrame(() => {
+        const w = parseFloat(svg.getAttribute('width') || '0');
+        const h = parseFloat(svg.getAttribute('height') || '0');
+        if (w && h) {
+          centerLabel.setAttribute('x', String(w / 2));
+          centerLabel.setAttribute('y', String(h / 2));
+        }
+      });
+    },
+    destroy() {
+      centerLabel?.remove();
+    },
+  };
+
+  createPieChart(document.getElementById('ex-pie-plugin'), {
+    data,
+    variant: 'donut',
+    tooltip: true,
+    transition: { duration: 400, easing: 'ease-out' },
+    plugins: [centerPlugin],
+  });
+</script>
+```
+
+</ComponentPreview>

@@ -243,7 +243,12 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     if (!isStackData(data)) attachInteraction(data);
   }
 
+  let cleanupInteraction: (() => void) | undefined;
+
   function attachInteraction(data: number[]): void {
+    cleanupInteraction?.();
+    cleanupInteraction = undefined;
+
     if (!config.onHover && !config.onClick) return;
 
     svg.style.cursor = 'crosshair';
@@ -281,8 +286,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     };
   }
 
-  let cleanupInteraction: (() => void) | undefined;
-
   let disposed = false;
 
   const s = scope(() => {
@@ -290,8 +293,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       () => {
         if (disposed) return;
 
-        cleanupInteraction?.();
-        cleanupInteraction = undefined;
         renderAll();
       },
       { scheduler: 'raf' },

@@ -3,7 +3,7 @@
     {
       "packageName": "@vielzeug/rune",
       "comment": "Minor release with bug fixes and improvements",
-      "type": "minor"
+      "type": "major"
     }
   ],
   "packageName": "@vielzeug/rune",

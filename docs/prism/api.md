@@ -19,6 +19,10 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `createPieChart()` | Pie, donut, or semi-circle donut chart | `ChartHandle` |
 | `seriesColor()` | CSS variable color for series index | `string` |
 | `setTheme()` | Apply custom palette / CSS tokens at runtime | `void` |
+| `buildXScale()` | Shared horizontal scale builder (auto time or linear) | `Scale<Date> \| Scale<number>` |
+| `buildYScale()` | Shared vertical linear scale builder | `Scale<number>` |
+| `devWarn()` | Dev-only console.warn helper (`/devtools` subpath) | `void` |
+| `devError()` | Dev-only console.error helper (`/devtools` subpath) | `void` |
 
 ## Package Entry Points
 
@@ -26,6 +30,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 |---|---|
 | `@vielzeug/prism` | All chart factories, scales, types, and utilities |
 | `@vielzeug/prism/theme` | Default CSS custom properties (light + dark) |
+| `@vielzeug/prism/devtools` | `devWarn` / `devError` — dev-only helpers, tree-shaken in production |
 
 ---
 
@@ -354,6 +359,7 @@ interface PieChartConfig {
   onClick?: (slice: PieSliceConfig, index: number) => void;
   onHover?: (slice: PieSliceConfig | null, index: number | null) => void;
   padPixels?: number;
+  plugins?: ChartPlugin[];
   tooltip?: TooltipConfig | boolean;
   transition?: TransitionConfig;
   variant?: PieVariant;
@@ -368,6 +374,7 @@ interface PieChartConfig {
 | `padPixels` | `number` | `4` | Pixel gap between slices (uniform across arc thickness) |
 | `cornerRadius` | `number` | `6` | Rounded arc corners (pixels) |
 | `tooltip` | `boolean \| TooltipConfig` | — | Hover tooltip |
+| `plugins` | `ChartPlugin[]` | — | Extension plugins installed at mount |
 | `transition` | `TransitionConfig` | `duration: 400` | Enter animation |
 | `onClick` | `(slice, index) => void` | — | Fired on slice click |
 | `onHover` | `(slice\|null, index\|null) => void` | — | Fired on hover; `null` on mouseleave |
@@ -503,8 +510,6 @@ interface BarChartConfig extends BaseChartConfig {
 }
 ```
 
-**Migration from v3:** replace `stacked: true` → `variant: 'stacked'` and `orientation: 'horizontal'` → `variant: 'grouped-horizontal'`.
-
 ### `BarSeriesConfig`
 
 ```ts
@@ -617,6 +622,36 @@ interface ChartMargin {
 
 ## Utilities
 
+### `buildXScale`
+
+```ts
+function buildXScale(allX: (Date | number)[], width: number): Scale<Date> | Scale<number>;
+```
+
+Builds a horizontal scale from an array of all X values. Automatically selects `timeScale` when values are `Date` instances, `linearScale` otherwise. Used internally by `createLineChart` and `createAreaChart` — also available for custom visualizations.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `allX` | `(Date \| number)[]` | All X values across all series |
+| `width` | `number` | Chart area width in pixels |
+
+---
+
+### `buildYScale`
+
+```ts
+function buildYScale(allY: number[], height: number): Scale<number>;
+```
+
+Builds a vertical scale from all Y values. Domain minimum is clamped to `0` unless negative values are present.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `allY` | `number[]` | All Y values across all series |
+| `height` | `number` | Chart area height in pixels |
+
+---
+
 ### `seriesColor`
 
 ```ts
@@ -624,6 +659,13 @@ function seriesColor(index: number, override?: string): string;
 ```
 
 Returns the CSS variable reference for palette color at `index` (wraps at 8). If `override` is provided it is returned as-is. Used internally by all chart factories.
+
+```ts
+import { seriesColor } from '@vielzeug/prism';
+
+seriesColor(0);           // 'var(--prism-color-1)'
+seriesColor(0, '#ff0')   // '#ff0'
+```
 
 ### `setTheme`
 
@@ -644,4 +686,37 @@ Applies CSS custom properties to `document.documentElement`. Call once at app st
 import { setTheme } from '@vielzeug/prism';
 
 setTheme({ colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'] });
+```
+
+> Both `seriesColor` and `setTheme` are exported from `@vielzeug/prism` (not from the `/theme` CSS subpath).
+
+---
+
+## Devtools
+
+> **Import:** `@vielzeug/prism/devtools`
+
+Dev-only helpers. Both functions are no-ops when `globalThis.__PRISM_PROD__` is `true` (set by bundlers via `define`), so they are tree-shaken from production builds.
+
+### `devWarn`
+
+```ts
+function devWarn(msg: string): void;
+```
+
+Emits `console.warn('[prism] <msg>')` in development. Silent in production.
+
+### `devError`
+
+```ts
+function devError(msg: string): void;
+```
+
+Emits `console.error('[prism] <msg>')` in development. Silent in production.
+
+```ts
+import { devWarn } from '@vielzeug/prism/devtools';
+
+// In a plugin:
+if (!container.offsetParent) devWarn('Chart container appears to be detached from the DOM.');
 ```

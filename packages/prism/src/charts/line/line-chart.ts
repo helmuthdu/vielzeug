@@ -3,15 +3,14 @@ import type { ChartHandle, LineChartConfig } from '../../types';
 
 import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
+import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { resolve } from '../../core/resolve';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
-import { linearScale } from '../../scales/linear';
-import { timeScale } from '../../scales/time';
 import { createSvgElement } from '../../svg/element';
-import { seriesColor } from '../../types';
+import { seriesColor } from '../../theme';
 import { computePoints, renderLine } from './line-renderer';
 
 export function createLineChart(container: HTMLElement, config: LineChartConfig): ChartHandle {
@@ -26,18 +25,8 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
 
     if (allX.length === 0) return;
 
-    const isTime = allX[0] instanceof Date;
-    const xScale = isTime
-      ? timeScale({
-          domain: [new Date(Math.min(...allX.map(Number))), new Date(Math.max(...allX.map(Number)))],
-          range: [0, area.width],
-        })
-      : linearScale({
-          domain: [Math.min(...(allX as number[])), Math.max(...(allX as number[]))],
-          range: [0, area.width],
-        });
-
-    const yScale = linearScale({ domain: [Math.min(0, ...allY), Math.max(...allY)], range: [area.height, 0] });
+    const xScale = buildXScale(allX as (Date | number)[], area.width);
+    const yScale = buildYScale(allY, area.height);
 
     if (config.yAxis?.grid) renderGrid(groups.grid, yScale, config.yAxis.grid, area.height, area.width, 'horizontal');
 
@@ -79,11 +68,8 @@ export function createLineChart(container: HTMLElement, config: LineChartConfig)
       });
     }
 
-    if (legend) {
-      legend.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
-    }
-
-    if (tooltip) tooltip.hide();
+    legend.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
+    tooltip.hide();
 
     const crosshair = config.crosshair ? createCrosshair(ctx.chartArea, config.crosshair) : null;
 

@@ -42,6 +42,12 @@
       "source": "./src/theme/prism.css",
       "import": "./dist/theme/prism.css",
       "default": "./dist/theme/prism.css"
+    },
+    "./devtools": {
+      "source": "./src/devtools/index.ts",
+      "types": "./dist/devtools/index.d.ts",
+      "import": "./dist/devtools.js",
+      "require": "./dist/devtools.cjs"
     }
   },
   "scripts": {
@@ -57,6 +63,7 @@
     "./dist/theme/**"
   ],
   "dependencies": {
+    "@vielzeug/familiar": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },

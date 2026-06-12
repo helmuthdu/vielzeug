@@ -19,7 +19,7 @@ const isMaximized = ref(false);
 const viewportSize = ref<ViewportSize>('full');
 const scriptCode = ref('');
 const previewContainerRef = ref<HTMLDivElement | null>(null);
-const activeTab = ref('preview');
+const savedBodyOverflow = ref('');
 const isCopied = ref(false);
 const isRtl = ref(false);
 
@@ -40,15 +40,14 @@ const toggleDirection = () => {
 };
 
 const toggleMaximize = () => {
-  isMaximized.value = !isMaximized.value;
-  if (isMaximized.value) {
+  if (!isMaximized.value) {
+    savedBodyOverflow.value = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    isMaximized.value = true;
   } else {
-    document.body.style.overflow = '';
-    // Reset to full width when closing maximized mode
-    if (viewportSize.value === 'desktop') {
-      viewportSize.value = 'full';
-    }
+    document.body.style.overflow = savedBodyOverflow.value;
+    isMaximized.value = false;
+    if (viewportSize.value === 'desktop') viewportSize.value = 'full';
   }
 };
 
@@ -60,12 +59,6 @@ const setViewportSize = (size: ViewportSize) => {
   }
 
   viewportSize.value = size;
-
-  // Auto-maximize if viewport is too large for container
-  // Desktop (1280px) won't fit in typical VitePress content area (~1200px)
-  if (size === 'desktop' && !isMaximized.value) {
-    toggleMaximize();
-  }
 };
 
 const getViewportWidth = computed(() => {
@@ -113,9 +106,8 @@ onMounted(async () => {
           const scriptMatch = codeText.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
           if (scriptMatch) {
             scriptCode.value = scriptMatch[1]
-              .split('\n')
-              .filter((line: string) => !line.trim().startsWith('import '))
-              .join('\n')
+              .replace(/^import\s[^;]+;?\n?/gm, '')
+              .replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\n?/gm, '')
               .trim();
           }
         }
@@ -129,7 +121,7 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  document.body.style.overflow = '';
+  if (isMaximized.value) document.body.style.overflow = savedBodyOverflow.value;
   document.removeEventListener('keydown', handleKeydown);
 });
 
@@ -242,7 +234,7 @@ const backgroundStyle = computed(() => {
       </div>
 
       <!-- Tabs with proper slot structure -->
-      <sg-tabs :value="activeTab" variant="flat" class="preview-tabs">
+      <sg-tabs value="preview" variant="flat" class="preview-tabs">
         <sg-tab-item slot="tabs" value="preview">Preview</sg-tab-item>
         <sg-tab-item slot="tabs" value="code">Code</sg-tab-item>
         <!-- Actions bar above tabs -->
@@ -293,7 +285,7 @@ const backgroundStyle = computed(() => {
                 icon-only
                 :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
                 @click="setViewportSize('desktop')"
-                title="Desktop view (1280px) - Opens maximized">
+                title="Desktop view (1280px)">
                 <svg
                   width="16"
                   height="16"
@@ -417,6 +409,7 @@ const backgroundStyle = computed(() => {
           <div class="preview-code">
             <!-- Use VitePress's already-processed code block -->
             <component v-if="processedCodeBlock" :is="processedCodeBlock" />
+            <pre v-else-if="extractedCode" class="preview-code-fallback">{{ extractedCode }}</pre>
           </div>
         </sg-tab-panel>
       </sg-tabs>
@@ -670,6 +663,14 @@ const backgroundStyle = computed(() => {
 }
 
 .preview-code :deep(pre) {
+  margin: 0;
+}
+
+.preview-code-fallback {
+  padding: var(--size-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  overflow: auto;
   margin: 0;
 }
 

@@ -52,4 +52,4 @@ export { linearScale } from './scales/linear';
 export { timeScale } from './scales/time';
 
 // Theme utilities
-export { seriesColor, setTheme } from './types';
+export { seriesColor, setTheme } from './theme';

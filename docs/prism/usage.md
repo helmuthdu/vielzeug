@@ -148,6 +148,8 @@ Select the bar layout with `variant`:
 | `'grouped-horizontal'` | Horizontal grouped |
 | `'stacked-horizontal'` | Horizontal stacked |
 
+> **Note:** `tooltip` and `legend` are always available on the scaffold — omitting them uses a no-op null-object internally, so no conditional checks are needed in plugins or custom render logic.
+
 ```ts
 const chart = createBarChart(container, {
   variant: 'stacked',
@@ -440,9 +442,11 @@ const chart = createLineChart(container, {
 - `series` — the corresponding `Series` config
 - `originalEvent` — the raw `MouseEvent`
 
+> **Pie chart events differ** — `onHover` and `onClick` receive `(slice: PieSliceConfig, index: number)` instead of `ChartEvent`. See [`PieChartConfig`](./api.md#piechartconfig) for details.
+
 ## Plugins
 
-Extend any chart with custom behavior using the `ChartPlugin` interface:
+Extend any chart with custom behavior using the `ChartPlugin` interface. All chart types — including `createPieChart` — support `plugins`.
 
 ```ts
 import type { ChartPlugin } from '@vielzeug/prism';
@@ -460,6 +464,12 @@ const myPlugin: ChartPlugin = {
 
 const chart = createLineChart(container, {
   series: [{ name: 'Revenue', data }],
+  plugins: [myPlugin],
+});
+
+// Works for pie charts too:
+const pie = createPieChart(container, {
+  data,
   plugins: [myPlugin],
 });
 ```
@@ -583,14 +593,29 @@ chart.dispose();
 ```
 
 Calling `dispose()`:
+- Cancels all reactive signal effects
 - Disconnects the `ResizeObserver`
-- Cancels all reactive effects
-- Removes the SVG element from the DOM
-- Removes the tooltip and legend elements
+- Removes the SVG element, tooltip, and legend from the DOM
 - Calls `destroy()` on all plugins
+- Is idempotent — safe to call multiple times
 
 > **Reactivity is automatic** — charts re-render whenever signal data changes. There is no manual `update()` call needed.
 
 ## Responsive Behavior
 
 Charts resize automatically when the container dimensions change. Prism uses `ResizeObserver` internally — no manual `resize()` call is needed.
+
+## Devtools
+
+Import dev-only helpers from the `/devtools` subpath. Both are tree-shaken in production when `globalThis.__PRISM_PROD__` is `true`.
+
+```ts
+import { devWarn, devError } from '@vielzeug/prism/devtools';
+
+// Use in a plugin or custom renderer:
+if (!container.isConnected) {
+  devWarn('Chart container is not attached to the document.');
+}
+```
+
+> The `/devtools` subpath is separate from the main bundle — only import it in code paths that run in development.

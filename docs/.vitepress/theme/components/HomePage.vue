@@ -1,27 +1,163 @@
 <script setup lang="ts">
 import { useData } from 'vitepress';
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref } from 'vue';
 
-import { useLogoAnimation } from '../composables/useLogoAnimation';
-import type { ThemeConfig } from '../types';
+const prefersReducedMotion = ref(false);
 
-const { theme } = useData<ThemeConfig>();
-const { electrons, nucleusTailD, prefersReducedMotion } = useLogoAnimation();
+// Three orbital rings in root SVG space (viewBox 0 0 64 64).
+// Each ring: center (cx,cy), semi-axes (rx,ry), tilt angle in radians.
+// Derived from logo.svg g1 matrix(4,0,0,4,-249,-70.4) applied to the
+// Inkscape-local ring ellipses. See inline SVG comment for full derivation.
+const RINGS = [
+  { cx: 32.0, cy: 32.0, rx: 28.902, ry: 11.221, tilt: -Math.PI / 2, dur: 3800 },
+  { cx: 27.15, cy: 23.72, rx: 28.902, ry: 11.221, tilt: (-Math.PI * 5) / 6, dur: 5200 },
+  { cx: 36.84, cy: 23.71, rx: 28.902, ry: 11.221, tilt: -Math.PI / 6, dur: 4500 },
+];
 
-const packages = computed(() => theme.value.packages ?? {});
-const categories = computed(() => theme.value.categories ?? []);
-const stats = computed(() => theme.value.stats ?? []);
-const communityLinks = computed(() => theme.value.communityLinks ?? []);
-const footerLinks = computed(() => theme.value.footerLinks ?? []);
-const installCmd = computed(() => theme.value.installCmd ?? 'pnpm add @vielzeug/<package>');
+const TAIL_LEN = 18; // comet tail length (number of ghost positions)
+
+type Pt = { x: number; y: number };
+
+// Current head + ring-buffer tail per electron
+const electrons = ref(
+  RINGS.map(() => ({
+    head: { x: 0, y: 0 } as Pt,
+    tail: [] as Pt[],
+  })),
+);
+
+let rafId = 0;
+// Phase offsets (0..1) so each electron starts at a different point on its ring
+const phases = [0, -1.7 / 5.2, -0.9 / 4.5];
+
+// Nucleus comet tail animation — tail tip moves toward ball, ball stays fixed.
+// Tail tip in absolute coords: (74.014653, 20.358239)
+// Ball entry in absolute coords: tail tip + cumulative tail offsets = (69.239759, 22.948267)
+// Animation: move start point toward ball by (1-t), scale tail segments by t so they
+// still connect start→ball. Ball and everything after stays at its fixed absolute position.
+const TAIL_TIP = { x: 74.014653, y: 20.358239 };
+const BALL_ENTRY = { x: 69.239759, y: 22.948267 }; // = tail tip + sum of 3 tail segs
+
+function buildNucleusTailD(t: number): string {
+  // Start point moves toward ball as t decreases
+  const sx = TAIL_TIP.x + (BALL_ENTRY.x - TAIL_TIP.x) * (1 - t);
+  const sy = TAIL_TIP.y + (BALL_ENTRY.y - TAIL_TIP.y) * (1 - t);
+  // Tail segments scaled by t (they still sum to BALL_ENTRY - new start)
+  const sc = (v: number) => (v * t).toFixed(6);
+  // Spike tip also scales (it returns from ball side back toward tail tip)
+  return (
+    `m ${sx.toFixed(6)},${sy.toFixed(6)} ` +
+    `c 0,0 ${sc(-2.742591)},${sc(1.622434)} ${sc(-2.877972)},${sc(1.556451)} ` +
+    `${sc(-0.220497)},${sc(-0.107489)} ${sc(0.05383)},${sc(-0.610907)} ${sc(0.05383)},${sc(-0.610907)} ` +
+    `${sc(-0.650251)},${sc(0.548161)} ${sc(-1.300501)},${sc(1.096323)} ${sc(-1.950752)},${sc(1.644484)} ` +
+    `-0.0287,0.02464 -0.05675,0.05058 -0.08399,0.07782 ` +
+    `-0.605065,0.605066 -0.605065,1.585962 0,2.191027 ` +
+    `0.605065,0.605065 1.585961,0.605065 2.191026,0 ` +
+    `0.06566,-0.06566 0.175755,-0.209478 0.175755,-0.209478 ` +
+    `l ${sc(1.82801)},${sc(-2.435835)} ` +
+    `c 0,0 -0.470958,0.250084 -0.564586,-0.109137 z`
+  );
+}
+
+const nucleusTailD = ref(buildNucleusTailD(1));
+
+function posAt(r: (typeof RINGS)[0], ts: number, phase: number): Pt {
+  const frac = (ts / r.dur + phase) % 1;
+  const angle = frac * Math.PI * 2;
+  const cosT = Math.cos(r.tilt);
+  const sinT = Math.sin(r.tilt);
+  const px = r.rx * Math.cos(angle);
+  const py = r.ry * Math.sin(angle);
+  return { x: r.cx + px * cosT - py * sinT, y: r.cy + px * sinT + py * cosT };
+}
+
+function tickElectrons(ts: number) {
+  // Animate nucleus tail: breathe in toward ball and back out
+  if (!prefersReducedMotion.value) {
+    const t = 0.845 + Math.sin(ts / 700) * 0.125; // oscillates 0.72 → 0.97
+    nucleusTailD.value = buildNucleusTailD(t);
+  }
+
+  electrons.value = RINGS.map((r, i) => {
+    const head = posAt(r, ts, phases[i]);
+    // Sample tail positions by stepping back in time uniformly
+    const tail: Pt[] = [];
+    for (let t = 1; t <= TAIL_LEN; t++) {
+      tail.push(posAt(r, ts - t * 16, phases[i])); // ~1 frame (16ms) per tail segment
+    }
+    return { head, tail };
+  });
+  rafId = requestAnimationFrame(tickElectrons);
+}
+
+const { isDark, theme } = useData();
+
+const packages = computed(() => theme.value.packages || {});
+
+const categories = [
+  {
+    name: 'State & Reactivity',
+    icon: 'zap',
+    packages: [
+      { id: 'ripple', tagline: 'Signals, computed, effects' },
+      { id: 'craft', tagline: 'Web component primitives' },
+      { id: 'clockwork', tagline: 'Finite state machines' },
+      { id: 'forge', tagline: 'Form state & validation' },
+    ],
+  },
+  {
+    name: 'Data & Network',
+    icon: 'database',
+    packages: [
+      { id: 'courier', tagline: 'HTTP client & caching' },
+      { id: 'vault', tagline: 'Browser storage' },
+      { id: 'sourcerer', tagline: 'Reactive data sources' },
+      { id: 'spell', tagline: 'Schema validation' },
+    ],
+  },
+  {
+    name: 'UI & Interaction',
+    icon: 'layers',
+    packages: [
+      { id: 'sigil', tagline: 'Accessible components' },
+      { id: 'prism', tagline: 'SVG charts' },
+      { id: 'orbit', tagline: 'Floating positioning' },
+      { id: 'grip', tagline: 'Drag & drop' },
+      { id: 'scroll', tagline: 'Virtual lists' },
+    ],
+  },
+  {
+    name: 'Architecture',
+    icon: 'box',
+    packages: [
+      { id: 'conduit', tagline: 'Dependency injection' },
+      { id: 'herald', tagline: 'Typed event bus' },
+      { id: 'ward', tagline: 'RBAC & permissions' },
+      { id: 'wayfinder', tagline: 'Client-side routing' },
+      { id: 'familiar', tagline: 'Web Worker pool' },
+    ],
+  },
+  {
+    name: 'Utilities',
+    icon: 'wrench',
+    packages: [
+      { id: 'arsenal', tagline: '75+ utility functions' },
+      { id: 'tempo', tagline: 'Date & time' },
+      { id: 'lingua', tagline: 'i18n & pluralization' },
+      { id: 'rune', tagline: 'Structured logging' },
+      { id: 'coins', tagline: 'Monetary arithmetic' },
+      { id: 'codex', tagline: 'AI / MCP server' },
+    ],
+  },
+];
 
 const copied = ref(false);
 const copyError = ref(false);
-const mounted = ref(false);
+const installCmd = 'pnpm add @vielzeug/arsenal';
 
 async function copyInstall() {
   try {
-    await navigator.clipboard.writeText(installCmd.value);
+    await navigator.clipboard.writeText(installCmd);
     copied.value = true;
     copyError.value = false;
     setTimeout(() => (copied.value = false), 2000);
@@ -31,17 +167,45 @@ async function copyInstall() {
   }
 }
 
+const heroVisible = ref(false);
+const categoriesVisible = ref(false);
+
+const stats = [
+  { icon: 'package', value: '23', label: 'Packages' },
+  { icon: 'link-2', value: '0', label: 'External deps' },
+  { icon: 'cpu', value: 'ES2022', label: 'ES Target' },
+  { icon: 'scale', value: 'MIT', label: 'License' },
+];
+
 onMounted(() => {
+  const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+  prefersReducedMotion.value = mq.matches;
+  mq.addEventListener('change', (e) => {
+    prefersReducedMotion.value = e.matches;
+    if (e.matches) {
+      cancelAnimationFrame(rafId);
+    } else {
+      rafId = requestAnimationFrame(tickElectrons);
+    }
+  });
+
+  if (!prefersReducedMotion.value) {
+    rafId = requestAnimationFrame(tickElectrons);
+  }
+
   requestAnimationFrame(() => {
-    mounted.value = true;
+    heroVisible.value = true;
+    setTimeout(() => (categoriesVisible.value = true), 200);
   });
 });
+
+onUnmounted(() => cancelAnimationFrame(rafId));
 </script>
 
 <template>
   <div class="home-page">
     <!-- Hero -->
-    <section class="hero" :class="{ visible: mounted }">
+    <section class="hero" :class="{ visible: heroVisible }">
       <div class="hero-inner">
         <div class="hero-content">
           <div class="hero-badge">
@@ -71,7 +235,6 @@ onMounted(() => {
               "
               @click="copyInstall">
               <code>{{ installCmd }}</code>
-
               <sg-icon
                 :name="copied ? 'check' : 'copy'"
                 size="14"
@@ -202,8 +365,8 @@ onMounted(() => {
                     :key="t"
                     :cx="pt.x"
                     :cy="pt.y"
-                    :r="pt.r"
-                    :fill-opacity="pt.opacity"
+                    :r="1.6 * Math.pow(1 - (t + 1) / (TAIL_LEN + 1), 1.4)"
+                    :fill-opacity="0.55 * Math.pow(1 - (t + 1) / (TAIL_LEN + 1), 1.2)"
                     fill="#f0eeff" />
                   <circle :cx="e.head.x" :cy="e.head.y" r="1.8" fill="#f0eeff" />
                 </g>
@@ -252,7 +415,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     </section>
 
     <!-- Package Explorer -->
-    <section class="explorer" :class="{ visible: mounted }">
+    <section class="explorer" :class="{ visible: categoriesVisible }">
       <div class="explorer-inner">
         <h2 class="section-title">The complete toolkit</h2>
         <p class="section-subtitle">23 packages, each focused on one domain. Pick what you need.</p>
@@ -302,18 +465,44 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
         <p class="section-subtitle">Questions, bugs, or want to contribute? We'd love to hear from you.</p>
         <div class="community-links">
           <a
-            v-for="link in communityLinks"
-            :key="link.href"
-            :href="link.href"
+            href="https://github.com/helmuthdu/vielzeug/issues"
             target="_blank"
             rel="noopener noreferrer"
             class="community-card">
             <div class="community-card-icon">
-              <sg-icon :name="link.icon" size="22"></sg-icon>
+              <sg-icon name="circle-alert" size="22"></sg-icon>
             </div>
             <div class="community-card-body">
-              <span class="community-card-title">{{ link.title }}</span>
-              <span class="community-card-desc">{{ link.desc }}</span>
+              <span class="community-card-title">GitHub Issues</span>
+              <span class="community-card-desc">Report bugs or request features</span>
+            </div>
+            <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+          </a>
+          <a
+            href="https://github.com/helmuthdu/vielzeug/discussions"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="community-card">
+            <div class="community-card-icon">
+              <sg-icon name="message-circle" size="22"></sg-icon>
+            </div>
+            <div class="community-card-body">
+              <span class="community-card-title">Discussions</span>
+              <span class="community-card-desc">Ask questions and share ideas</span>
+            </div>
+            <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+          </a>
+          <a
+            href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="community-card">
+            <div class="community-card-icon">
+              <sg-icon name="git-pull-request" size="22"></sg-icon>
+            </div>
+            <div class="community-card-body">
+              <span class="community-card-title">Contributing</span>
+              <span class="community-card-desc">Learn how to contribute</span>
             </div>
             <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
           </a>
@@ -332,15 +521,30 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
           <p class="footer-tagline">Zero deps. Fully tree-shakeable.</p>
         </div>
         <div class="footer-links-col">
-          <div v-for="group in footerLinks" :key="group.heading" class="footer-link-group">
-            <h4 class="footer-link-heading">{{ group.heading }}</h4>
+          <div class="footer-link-group">
+            <h4 class="footer-link-heading">Resources</h4>
+            <a href="/guide/">Documentation</a>
+            <a href="/repl">REPL Playground</a>
+            <a href="/sigil/">Components</a>
+          </div>
+          <div class="footer-link-group">
+            <h4 class="footer-link-heading">Community</h4>
+            <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">GitHub</a>
+            <a href="https://github.com/helmuthdu/vielzeug/discussions" target="_blank" rel="noopener noreferrer"
+              >Discussions</a
+            >
             <a
-              v-for="link in group.links"
-              :key="link.href"
-              :href="link.href"
-              v-bind="link.external ? { target: '_blank', rel: 'noopener noreferrer' } : {}">
-              {{ link.label }}
-            </a>
+              href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Contributing</a
+            >
+          </div>
+          <div class="footer-link-group">
+            <h4 class="footer-link-heading">Legal</h4>
+            <a href="https://github.com/helmuthdu/vielzeug/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"
+              >MIT License</a
+            >
           </div>
         </div>
       </div>
@@ -532,7 +736,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 .hero-logo-wrapper::before {
   content: '';
   position: absolute;
-  inset: -20%;
+  inset: 0;
   background: conic-gradient(
     from 0deg at 45% 50%,
     oklch(56% 0.22 293deg),

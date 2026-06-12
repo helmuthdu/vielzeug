@@ -3,7 +3,7 @@
     {
       "packageName": "@vielzeug/familiar",
       "comment": "Minor release with bug fixes and improvements",
-      "type": "minor"
+      "type": "major"
     }
   ],
   "packageName": "@vielzeug/familiar",

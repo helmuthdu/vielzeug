@@ -44,10 +44,13 @@ new Chart(ctx, {
 import { createLineChart } from '@vielzeug/prism';
 import { signal } from '@vielzeug/ripple';
 
-const values = signal([12, 40, 28, 65, 50]);
-const chart = createLineChart({ data: values, container: '#chart' });
-// chart auto-updates when values.value changes — no manual re-render
-values.value = [...values.value, 80];
+const data = signal([{ x: 1, y: 12 }, { x: 2, y: 40 }, { x: 3, y: 28 }]);
+const chart = createLineChart(document.getElementById('chart')!, {
+  series: [{ name: 'Users', data }],
+  tooltip: true,
+});
+// chart auto-updates when data.value changes — no manual re-render
+data.value = [...data.value, { x: 4, y: 65 }];
 ```
 
 | Feature | Prism | Chart.js | Lightweight Charts | D3 |
@@ -131,8 +134,10 @@ chart.dispose();
 - **`MaybeSignal<T>`** — pass plain values or reactive signals; both work seamlessly
 - **`seriesColor(index, override?)`** — resolve CSS palette color by series index
 - **`setTheme(theme)`** — apply custom colors, font, and grid tokens at runtime
+- **`buildXScale` / `buildYScale`** — shared cartesian scale builders (auto-select time or linear scale)
 - **Event hooks** — `onClick` and `onHover` callbacks on every chart
-- **Plugin system** — extend charts with `ChartPlugin` (install/destroy lifecycle)
+- **Plugin system** — extend charts with `ChartPlugin` (install/destroy lifecycle); supported by all chart types including `createPieChart`
+- **Devtools** — `devWarn` / `devError` from `@vielzeug/prism/devtools`; silenced automatically in production
 - **CSS custom properties** — full theme control via `--prism-*` tokens
 - **Responsive** — auto-resizes via `ResizeObserver`
 - **Accessible** — ARIA labels and semantic SVG structure
@@ -146,6 +151,7 @@ chart.dispose();
 |---|---|
 | `@vielzeug/prism` | All chart factories, scales, and types |
 | `@vielzeug/prism/theme` | Default CSS (custom properties + dark mode) |
+| `@vielzeug/prism/devtools` | `devWarn` / `devError` — dev-only helpers, tree-shaken in production |
 
 ## Documentation
 

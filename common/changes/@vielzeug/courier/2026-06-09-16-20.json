@@ -3,7 +3,7 @@
     {
       "packageName": "@vielzeug/courier",
       "comment": "Minor release with bug fixes and improvements",
-      "type": "minor"
+      "type": "major"
     }
   ],
   "packageName": "@vielzeug/courier",
