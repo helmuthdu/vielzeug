@@ -1,0 +1,1 @@
+globalThis.window.URL.createObjectURL = () => '';

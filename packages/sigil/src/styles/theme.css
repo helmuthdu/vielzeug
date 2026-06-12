@@ -1,0 +1,482 @@
+@layer sigil.tokens {
+  :root {
+    /* ========================================
+       Spacing Scale
+       Based on 0.25rem (4px) increments
+       ======================================== */
+    --size-0: 0;
+    --size-px: 1px;
+    --size-0-5: 0.125rem; /* 2px */
+    --size-1: 0.25rem; /* 4px */
+    --size-1-5: 0.375rem; /* 6px */
+    --size-2: 0.5rem; /* 8px */
+    --size-2-5: 0.625rem; /* 10px */
+    --size-3: 0.75rem; /* 12px */
+    --size-3-5: 0.875rem; /* 14px */
+    --size-4: 1rem; /* 16px */
+    --size-5: 1.25rem; /* 20px */
+    --size-6: 1.5rem; /* 24px */
+    --size-7: 1.75rem; /* 28px */
+    --size-8: 2rem; /* 32px */
+    --size-9: 2.25rem; /* 36px */
+    --size-10: 2.5rem; /* 40px */
+    --size-11: 2.75rem; /* 44px */
+    --size-12: 3rem; /* 48px */
+    --size-14: 3.5rem; /* 56px */
+    --size-16: 4rem; /* 64px */
+    --size-20: 5rem; /* 80px */
+    --size-24: 6rem; /* 96px */
+    --size-28: 7rem; /* 112px */
+    --size-32: 8rem; /* 128px */
+    --size-36: 9rem; /* 144px */
+    --size-40: 10rem; /* 160px */
+    --size-44: 11rem; /* 176px */
+    --size-48: 12rem; /* 192px */
+    --size-52: 13rem; /* 208px */
+    --size-56: 14rem; /* 224px */
+    --size-60: 15rem; /* 240px */
+    --size-64: 16rem; /* 256px */
+    --size-72: 18rem; /* 288px */
+    --size-80: 20rem; /* 320px */
+    --size-96: 24rem; /* 384px */
+
+    /* Section Spacing */
+    --section-spacing: 2rem; /* 32px */
+
+    /* Container Sizes */
+    --size-2xs: 16rem; /* 256px */
+    --size-xs: 20rem; /* 320px */
+    --size-sm: 24rem; /* 384px */
+    --size-md: 28rem; /* 448px */
+    --size-lg: 32rem; /* 512px */
+    --size-xl: 36rem; /* 576px */
+    --size-2xl: 42rem; /* 672px */
+    --size-3xl: 48rem; /* 768px */
+    --size-4xl: 56rem; /* 896px */
+    --size-5xl: 64rem; /* 1024px */
+    --size-6xl: 72rem; /* 1152px */
+    --size-7xl: 80rem; /* 1280px */
+
+    /* Special Sizes */
+    --size-full: 100%;
+    --size-fit: fit-content;
+    --size-min: min-content;
+    --size-max: max-content;
+    --size-auto: auto;
+    --size-none: none;
+    --size-prose: 65ch; /* Optimal reading width */
+
+    /* Viewport Units */
+    --size-screen-width: 100dvw;
+    --size-screen-height: 100dvh;
+
+    /* Breakpoints */
+    --size-screen-xs: 480px;
+    --size-screen-sm: 640px;
+    --size-screen-md: 768px;
+    --size-screen-lg: 1024px;
+    --size-screen-xl: 1280px;
+    --size-screen-2xl: 1536px;
+
+    /* ========================================
+       3D Perspective (for transforms)
+       ======================================== */
+    --perspective-dramatic: 100px;
+    --perspective-near: 300px;
+    --perspective-normal: 500px;
+    --perspective-midrange: 800px;
+    --perspective-distant: 1200px;
+
+    /* ========================================
+       Aspect Ratios
+       ======================================== */
+    --aspect-square: 1 / 1;
+    --aspect-video: 16 / 9;
+    --aspect-wide: 21 / 9;
+    --aspect-ultrawide: 32 / 9;
+    --aspect-portrait: 3 / 4;
+    --aspect-photo: 4 / 3;
+
+    /* ========================================
+       Grid Template Columns
+       ======================================== */
+    --grid-1: repeat(1, minmax(0, 1fr));
+    --grid-2: repeat(2, minmax(0, 1fr));
+    --grid-3: repeat(3, minmax(0, 1fr));
+    --grid-4: repeat(4, minmax(0, 1fr));
+    --grid-5: repeat(5, minmax(0, 1fr));
+    --grid-6: repeat(6, minmax(0, 1fr));
+    --grid-7: repeat(7, minmax(0, 1fr));
+    --grid-8: repeat(8, minmax(0, 1fr));
+    --grid-9: repeat(9, minmax(0, 1fr));
+    --grid-10: repeat(10, minmax(0, 1fr));
+    --grid-11: repeat(11, minmax(0, 1fr));
+    --grid-12: repeat(12, minmax(0, 1fr));
+
+    /* ========================================
+       Border Widths
+       ======================================== */
+    --border-0: 0;
+    --border: 1px;
+    --border-2: 2px;
+    --border-4: 4px;
+    --border-8: 8px;
+
+    /* Ring Utilities (for focus states) */
+    --ring-0: 0 0 0 0;
+    --ring: 0 0 0 var(--border);
+    --ring-2: 0 0 0 var(--border-2);
+    --ring-4: 0 0 0 var(--border-4);
+    --ring-8: 0 0 0 var(--border-8);
+
+    /* ========================================
+       Border Radius
+       Optimized for accessibility - minimum 4px for touch targets
+       ======================================== */
+    --rounded-none: 0;
+    --rounded-xs: 0.125rem; /* 2px - minimal */
+    --rounded-sm: 0.25rem; /* 4px - small */
+    --rounded: 0.25rem; /* 4px - default */
+    --rounded-md: 0.375rem; /* 6px - medium */
+    --rounded-lg: 0.5rem; /* 8px - large */
+    --rounded-xl: 0.75rem; /* 12px - extra large */
+    --rounded-2xl: 1rem; /* 16px - 2x extra large */
+    --rounded-3xl: 1.5rem; /* 24px - 3x extra large */
+    --rounded-full: 9999px; /* Full circle/pill */
+
+    /* ========================================
+       Blur Effects
+       ======================================== */
+    --blur-none: 0;
+    --blur-xs: 4px;
+    --blur-sm: 8px;
+    --blur-md: 12px;
+    --blur-lg: 16px;
+    --blur-xl: 24px;
+    --blur-2xl: 40px;
+    --blur-3xl: 64px;
+
+    /* ========================================
+       Box Shadows
+       All shadows use light-dark() to remain visible in dark mode.
+       ======================================== */
+    --shadow-none: 0 0 transparent;
+    --shadow-2xs: light-dark(0 1px 2px rgb(0 0 0 / 3%), 0 1px 2px rgb(0 0 0 / 20%));
+    --shadow-xs: light-dark(0 2px 4px rgb(0 0 0 / 3%), 0 2px 4px rgb(0 0 0 / 22%));
+    --shadow-sm: light-dark(0 4px 10px -1px rgb(0 0 0 / 5%), 0 4px 10px -1px rgb(0 0 0 / 28%));
+    --shadow: light-dark(0 8px 16px -2px rgb(0 0 0 / 6%), 0 8px 16px -2px rgb(0 0 0 / 32%));
+    --shadow-md: light-dark(0 12px 24px -4px rgb(0 0 0 / 6%), 0 12px 24px -4px rgb(0 0 0 / 34%));
+    --shadow-lg: light-dark(0 24px 32px -8px rgb(0 0 0 / 8%), 0 24px 32px -8px rgb(0 0 0 / 38%));
+    --shadow-xl: light-dark(0 32px 64px -16px rgb(0 0 0 / 12%), 0 32px 64px -16px rgb(0 0 0 / 44%));
+    --shadow-2xl: light-dark(0 48px 80px -20px rgb(0 0 0 / 20%), 0 48px 80px -20px rgb(0 0 0 / 52%));
+
+    /* Inset Shadows — also light-dark() for dark mode depth */
+    --inset-shadow-none: inset 0 0 transparent;
+    --inset-shadow-2xs: light-dark(inset 0 1px rgb(0 0 0 / 5%), inset 0 1px rgb(255 255 255 / 4%));
+    --inset-shadow-xs: light-dark(inset 0 1px 1px rgb(0 0 0 / 5%), inset 0 1px 1px rgb(255 255 255 / 4%));
+    --inset-shadow-sm: light-dark(inset 0 2px 4px rgb(0 0 0 / 5%), inset 0 2px 4px rgb(0 0 0 / 25%));
+    --inset-shadow: light-dark(inset 0 2px 4px rgb(0 0 0 / 6%), inset 0 2px 4px rgb(0 0 0 / 28%));
+
+    /* Drop Shadows (for filters) */
+    --drop-shadow-none: 0 0 transparent;
+    --drop-shadow-xs: 0 1px 1px rgb(0 0 0 / 5%);
+    --drop-shadow-sm: 0 1px 2px rgb(0 0 0 / 15%);
+    --drop-shadow: 0 1px 2px rgb(0 0 0 / 10%), 0 1px 1px rgb(0 0 0 / 6%);
+    --drop-shadow-md: 0 3px 3px rgb(0 0 0 / 12%);
+    --drop-shadow-lg: 0 4px 4px rgb(0 0 0 / 15%);
+    --drop-shadow-xl: 0 9px 7px rgb(0 0 0 / 10%);
+    --drop-shadow-2xl: 0 25px 25px rgb(0 0 0 / 15%);
+
+    /* Text Shadows (for readability) */
+    --text-shadow-none: 0 0 transparent;
+    --text-shadow-2xs: 0 1px 0 rgb(0 0 0 / 15%);
+    --text-shadow-xs: 0 1px 1px rgb(0 0 0 / 20%);
+    --text-shadow-sm: 0 1px 0 rgb(0 0 0 / 7.5%), 0 1px 1px rgb(0 0 0 / 7.5%), 0 2px 2px rgb(0 0 0 / 7.5%);
+    --text-shadow: 0 1px 1px rgb(0 0 0 / 10%), 0 2px 2px rgb(0 0 0 / 10%);
+    --text-shadow-md: 0 1px 1px rgb(0 0 0 / 10%), 0 1px 2px rgb(0 0 0 / 10%), 0 2px 4px rgb(0 0 0 / 10%);
+    --text-shadow-lg: 0 1px 2px rgb(0 0 0 / 10%), 0 3px 2px rgb(0 0 0 / 10%), 0 4px 8px rgb(0 0 0 / 10%);
+
+    /* ========================================
+       Typography
+       Optimized for WCAG AAA readability
+       ======================================== */
+
+    /* Font Family */
+    --font-sans:
+      'Inter Variable', 'Plus Jakarta Sans Variable', system-ui, -apple-system, blinkmacsystemfont, 'Segoe UI', roboto,
+      sans-serif;
+    --font-serif: ui-serif, georgia, cambria, 'Times New Roman', times, serif;
+    --font-mono: ui-monospace, 'Cascadia Code', 'Source Code Pro', menlo, consolas, 'Liberation Mono', monospace;
+
+    /* Font Weights (Accessibility: minimum 400 for body text) */
+    --font-thin: 100;
+    --font-extralight: 200;
+    --font-light: 300;
+    --font-normal: 400; /* Minimum for body text */
+    --font-medium: 500;
+    --font-semibold: 600;
+    --font-bold: 700;
+    --font-extrabold: 800;
+    --font-black: 900;
+
+    /* Letter Spacing */
+    --tracking-tight: -0.025em; /* -2.5% — headers, display text */
+    --tracking-header: -0.025em; /* alias for --tracking-tight */
+    --tracking-normal: 0em; /* default body tracking */
+    --tracking-wide: 0.05em; /* labels, badges, uppercase caps */
+
+    /* Line Heights (Optimized for readability - WCAG recommends 1.5 for body text) */
+    --leading-none: 1;
+    --leading-tight: 1.15; /* 115% for headers */
+    --leading-snug: 1.375;
+    --leading-normal: 1.5; /* Optimal for body text (WCAG) */
+    --leading-relaxed: 1.625;
+    --leading-loose: 2;
+
+    /* Absolute Line Heights */
+    --leading-3: 0.75rem; /* 12px */
+    --leading-4: 1rem; /* 16px */
+    --leading-5: 1.25rem; /* 20px */
+    --leading-6: 1.5rem; /* 24px */
+    --leading-7: 1.75rem; /* 28px */
+    --leading-8: 2rem; /* 32px */
+    --leading-9: 2.25rem; /* 36px */
+    --leading-10: 2.5rem; /* 40px */
+
+    /* Component UI Font Sizes (7 steps — used inside components) */
+    --text-2xs: 0.625rem; /* 10px - micro labels, dot-only badges */
+    --text-xs: 0.75rem; /* 12px - small labels only */
+    --text-sm: 0.875rem; /* 14px - secondary text */
+    --text-base: 1rem; /* 16px - body text (minimum) */
+    --text-lg: 1.125rem; /* 18px - large UI / headings */
+    --text-xl: 1.25rem; /* 20px - subheadings */
+    --text-2xl: 1.5rem; /* 24px - major headings */
+    --text-3xl: 1.875rem; /* 30px - display / circular progress label */
+
+    /* Document Heading Sizes (h1–h6 — use outside components, in page/doc context) */
+    --heading-xs: 0.875rem;
+    --heading-sm: 1rem;
+    --heading-md: 1.5rem;
+    --heading-lg: 2rem;
+    --heading-xl: 3rem;
+    --heading-2xl: 4rem;
+
+    /* Semantic Text Colors (for accessibility)
+       These adapt to light/dark mode automatically */
+    --text-color-heading: var(--color-contrast-900);
+    --text-color-body: var(--color-contrast-800);
+    --text-color-secondary: var(--color-contrast-600);
+    --text-color-tertiary: var(--color-contrast-500);
+    --text-color-disabled: var(--color-contrast-400);
+    --text-color-contrast: var(--color-contrast-100);
+
+    /* ========================================
+       Transitions & Animations
+       Optimized for smooth, accessible motion
+       ======================================== */
+
+    /* Easing Functions */
+    --ease-linear: linear;
+    --ease-in: cubic-bezier(0.4, 0, 1, 1);
+    --ease-out: cubic-bezier(0, 0, 0.2, 1);
+    --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-spring: cubic-bezier(0.22, 1, 0.36, 1); /* Fast start, soft landing — no overshoot */
+
+    /* Duration (respects prefers-reduced-motion) */
+    --duration-75: 75ms;
+    --duration-100: 100ms;
+    --duration-150: 150ms;
+    --duration-200: 200ms;
+    --duration-300: 300ms;
+    --duration-500: 500ms;
+    --duration-700: 700ms;
+    --duration-1000: 1000ms;
+
+    /* Combined Transitions (most commonly used) */
+    --transition-none: none;
+    --transition-fast: 150ms var(--ease-in-out);
+    --transition-normal: 200ms var(--ease-in-out);
+    --transition-slow: 300ms var(--ease-in-out);
+    --transition-slower: 500ms var(--ease-in-out);
+    --transition-spring: 300ms var(--ease-spring);
+
+    /* Overlay entrance defaults — shared by @starting-style blocks */
+    --overlay-enter-translate-y: -4px; /* dropdown slides down from */
+    --overlay-enter-translate-y-up: 4px; /* bottom-anchored overlays slide up from */
+    --overlay-enter-scale: 0.97; /* slight scale-in for menus / panels */
+    --overlay-enter-scale-dialog: 0.96; /* slightly more pronounced for dialogs */
+
+    /* ========================================
+       CSS Color Scheme
+       ======================================== */
+    color-scheme: light dark;
+
+    /* Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline */
+    --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg));
+    --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg));
+    --color-contrast-150: light-dark(oklch(95.5% 0.001 264deg), oklch(23.5% 0.001 250deg));
+    --color-contrast-200: light-dark(oklch(94% 0.001 264deg), oklch(26% 0.001 250deg));
+    --color-contrast-300: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg));
+    --color-contrast-400: light-dark(oklch(81% 0.002 264deg), oklch(40% 0.001 250deg));
+    --color-contrast-500: light-dark(oklch(49% 0.002 264deg), oklch(58% 0.001 250deg));
+    --color-contrast-600: light-dark(oklch(40% 0.002 264deg), oklch(68% 0.001 250deg));
+    --color-contrast-700: light-dark(oklch(32% 0.002 264deg), oklch(78% 0.001 250deg));
+    --color-contrast-800: light-dark(oklch(22% 0.002 264deg), oklch(88% 0.001 250deg));
+    --color-contrast-900: light-dark(oklch(12% 0.002 264deg), oklch(95% 0.001 250deg));
+    --color-canvas: var(--color-contrast-50);
+    --color-contrast: var(--color-contrast-900);
+
+    /* Halo Shadows */
+    --halo-shadow-neutral:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(0 0 0 / 15%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(0 0 0 / 20%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(58% 0 264deg / 15%), oklch(72% 0 250deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(58% 0 264deg / 8%), oklch(72% 0 250deg / 8%));
+    --halo-shadow-primary:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(56% 0.22 293deg / 15%), oklch(72% 0.2 293deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(56% 0.22 293deg / 8%), oklch(72% 0.2 293deg / 8%));
+    --halo-shadow-secondary:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(22% 0.005 264deg / 12%), oklch(82% 0.004 250deg / 12%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(22% 0.005 264deg / 7%), oklch(82% 0.004 250deg / 7%));
+    --halo-shadow-info:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(60% 0.18 230deg / 15%), oklch(74% 0.16 230deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(60% 0.18 230deg / 8%), oklch(74% 0.16 230deg / 8%));
+    --halo-shadow-success:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(62% 0.15 160deg / 15%), oklch(78% 0.14 160deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(62% 0.15 160deg / 8%), oklch(78% 0.14 160deg / 8%));
+    --halo-shadow-warning:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(74% 0.18 70deg / 15%), oklch(84% 0.16 70deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(74% 0.18 70deg / 8%), oklch(84% 0.16 70deg / 8%));
+    --halo-shadow-error:
+      inset 0 1px 1px light-dark(rgb(0 0 0 / 5%), rgb(255 255 255 / 3%)),
+      0 0 var(--size-1) light-dark(rgb(255 255 255 / 10%), rgb(255 255 255 / 12%)) inset,
+      0 var(--size-2) var(--size-6) light-dark(oklch(54% 0.2 29deg / 15%), oklch(66% 0.18 29deg / 15%)),
+      0 var(--size-1) var(--size-3) light-dark(oklch(54% 0.2 29deg / 8%), oklch(66% 0.18 29deg / 8%));
+
+    /* ── Neutral ─────────────────────────────────────────────────────────────── */
+    --color-neutral: light-dark(oklch(56% 0 264deg), oklch(72% 0 250deg));
+    --color-neutral-backdrop: light-dark(oklch(97% 0 264deg / 83%), oklch(27% 0 250deg / 60%));
+    --color-neutral-content: light-dark(oklch(98% 0 264deg), oklch(15% 0 250deg));
+    --color-neutral-contrast: light-dark(oklch(99% 0 264deg), oklch(13% 0 250deg));
+    --color-neutral-focus: light-dark(oklch(62% 0 264deg), oklch(78% 0 250deg));
+    --color-neutral-border: light-dark(oklch(86% 0 264deg / 75%), oklch(72% 0 250deg / 40%));
+    --color-neutral-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-neutral) 40%, transparent), var(--shadow-sm);
+
+    /* ── Primary (violet) ────────────────────────────────────────────────────── */
+    --color-primary: light-dark(
+      oklch(56% 0.22 293deg),
+      oklch(72% 0.2 293deg)
+    ); /* Bright enough to read on dark canvas */
+
+    --color-primary-backdrop: light-dark(oklch(93% 0.04 293deg), oklch(24% 0.1 293deg / 40%));
+    --color-primary-content: light-dark(
+      oklch(98% 0.01 293deg),
+      oklch(15% 0.08 293deg)
+    ); /* Dark ink on bright dark-mode button */
+
+    --color-primary-contrast: light-dark(oklch(98% 0.01 293deg), oklch(14% 0.06 293deg));
+    --color-primary-focus: light-dark(oklch(62% 0.22 293deg), oklch(78% 0.2 293deg));
+    --color-primary-border: light-dark(oklch(56% 0.22 293deg / 60%), oklch(72% 0.2 293deg / 60%));
+    --color-primary-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
+
+    /* ── Secondary (near-black / near-white) ─────────────────────────────────── */
+    --color-secondary: light-dark(oklch(22% 0.005 264deg), oklch(82% 0.004 250deg));
+    --color-secondary-backdrop: light-dark(oklch(95% 0.003 264deg / 83%), oklch(20% 0.004 250deg / 60%));
+    --color-secondary-content: light-dark(oklch(98% 0.002 264deg), oklch(15% 0.005 250deg));
+    --color-secondary-contrast: light-dark(oklch(98% 0.002 264deg), oklch(13% 0.005 250deg));
+    --color-secondary-focus: light-dark(oklch(30% 0.005 264deg), oklch(88% 0.003 250deg));
+    --color-secondary-border: light-dark(oklch(22% 0.005 264deg / 60%), oklch(82% 0.004 250deg / 60%));
+    --color-secondary-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-secondary) 40%, transparent), var(--shadow-sm);
+
+    /* ── Info (cyan-blue) ────────────────────────────────────────────────────── */
+    --color-info: light-dark(oklch(60% 0.18 230deg), oklch(74% 0.16 230deg));
+    --color-info-backdrop: light-dark(oklch(92% 0.06 230deg / 83%), oklch(24% 0.08 230deg / 50%));
+    --color-info-content: light-dark(
+      oklch(15% 0.08 230deg),
+      oklch(15% 0.08 230deg)
+    ); /* Base is bright in both modes, content stays dark */
+
+    --color-info-contrast: light-dark(oklch(97% 0.02 230deg), oklch(18% 0.06 230deg));
+    --color-info-focus: light-dark(oklch(66% 0.18 230deg), oklch(80% 0.16 230deg));
+    --color-info-border: light-dark(oklch(60% 0.18 230deg / 60%), oklch(74% 0.16 230deg / 60%));
+    --color-info-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-info) 40%, transparent), var(--shadow-sm);
+
+    /* ── Success (teal-green) ────────────────────────────────────────────────── */
+    --color-success: light-dark(
+      oklch(62% 0.15 160deg),
+      oklch(78% 0.14 160deg)
+    ); /* Kept brighter than error for colorblindness */
+
+    --color-success-backdrop: light-dark(oklch(93% 0.04 160deg / 83%), oklch(22% 0.07 160deg / 50%));
+    --color-success-content: light-dark(oklch(15% 0.06 160deg), oklch(15% 0.06 160deg));
+    --color-success-contrast: light-dark(oklch(97% 0.02 160deg), oklch(17% 0.06 160deg));
+    --color-success-focus: light-dark(oklch(66% 0.15 160deg), oklch(84% 0.14 160deg));
+    --color-success-border: light-dark(oklch(62% 0.15 160deg / 60%), oklch(78% 0.14 160deg / 60%));
+    --color-success-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-success) 40%, transparent), var(--shadow-sm);
+
+    /* ── Warning (amber) ─────────────────────────────────────────────────────── */
+    --color-warning: light-dark(oklch(74% 0.18 70deg), oklch(84% 0.16 70deg));
+    --color-warning-backdrop: light-dark(oklch(93% 0.07 70deg / 83%), oklch(26% 0.08 70deg / 50%));
+    --color-warning-content: light-dark(oklch(15% 0.08 70deg), oklch(15% 0.08 70deg));
+    --color-warning-contrast: light-dark(oklch(96% 0.03 70deg), oklch(22% 0.06 70deg));
+    --color-warning-focus: light-dark(oklch(79% 0.18 70deg), oklch(90% 0.16 70deg));
+    --color-warning-border: light-dark(oklch(74% 0.18 70deg / 60%), oklch(84% 0.16 70deg / 60%));
+    --color-warning-focus-shadow:
+      0 0 0 4px color-mix(in oklch, var(--color-warning) 40%, transparent), var(--shadow-sm);
+
+    /* ── Error (red-orange) ──────────────────────────────────────────────────── */
+    --color-error: light-dark(oklch(54% 0.2 29deg), oklch(66% 0.18 29deg)); /* Deeper than success for colorblindness */
+    --color-error-backdrop: light-dark(oklch(92% 0.06 29deg / 83%), oklch(20% 0.08 29deg / 50%));
+    --color-error-content: light-dark(oklch(98% 0.03 29deg), oklch(15% 0.06 29deg));
+    --color-error-contrast: light-dark(oklch(97% 0.02 29deg), oklch(16% 0.06 29deg));
+    --color-error-focus: light-dark(oklch(60% 0.2 29deg), oklch(72% 0.18 29deg));
+    --color-error-border: light-dark(oklch(54% 0.2 29deg / 60%), oklch(66% 0.18 29deg / 60%));
+    --color-error-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-error) 40%, transparent), var(--shadow-sm);
+  }
+
+  /* ========================================
+     Reduced Motion
+     ======================================== */
+
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --duration-75: 0ms;
+      --duration-100: 0ms;
+      --duration-150: 0ms;
+      --duration-200: 0ms;
+      --duration-300: 0ms;
+      --duration-500: 0ms;
+      --duration-700: 0ms;
+      --duration-1000: 0ms;
+      --transition-fast: none;
+      --transition-normal: none;
+      --transition-slow: none;
+      --transition-slower: none;
+      --transition-spring: none;
+    }
+  }
+
+  /* VitePress dark theme: force dark color-scheme so light-dark() resolves to dark values */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* VitePress light theme: force light color-scheme so light-dark() resolves to light values */
+  html:not(.dark) {
+    color-scheme: light;
+  }
+}

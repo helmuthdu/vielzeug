@@ -1,0 +1,42 @@
+import { compare } from '../function/compare';
+import { compareBy } from '../function/compareBy';
+
+export type SortDirection = 'asc' | 'desc';
+export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
+
+/**
+ * Sorts an array by a selector function (single-field) or by a multi-field
+ * object of `{ key: 'asc' | 'desc' }` entries.
+ *
+ * @example
+ * ```ts
+ * // Single field
+ * sort([{ a: 2 }, { a: 1 }], item => item.a); // [{ a:1 }, { a:2 }]
+ * sort([{ a: 2 }, { a: 1 }], item => item.a, 'desc'); // [{ a:2 }, { a:1 }]
+ *
+ * // Multi-field
+ * sort(users, { name: 'asc', age: 'desc' });
+ * ```
+ *
+ * @param array - The array to sort.
+ * @param selector - A function extracting the sort key, or a multi-field object.
+ * @param direction - `'asc'` (default) or `'desc'` — only applies to single-field mode.
+ * @returns A new sorted array.
+ *
+ * @throws {TypeError} If the first argument is not an array.
+ */
+export function sort<T>(array: T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
+export function sort<T>(array: T[], selectors: SortSelectors<T>): T[];
+export function sort<T>(
+  array: T[],
+  selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
+  direction: SortDirection = 'asc',
+): T[] {
+  if (typeof selectorOrSelectors === 'function') {
+    const multiplier = direction === 'desc' ? -1 : 1;
+
+    return [...array].sort((a, b) => compare(selectorOrSelectors(a), selectorOrSelectors(b)) * multiplier);
+  }
+
+  return [...array].sort(compareBy(selectorOrSelectors));
+}

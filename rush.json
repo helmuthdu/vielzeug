@@ -1,0 +1,164 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/rush/v5/rush.schema.json",
+  "eventHooks": {
+    "postRushBuild": [],
+    "postRushInstall": [],
+    "postRushx": [],
+    "preRushBuild": [],
+    "preRushInstall": [],
+    "preRushx": []
+  },
+  "gitPolicy": {},
+  "nodeSupportedVersionRange": ">=20.14.0 <=22.22.3",
+  "pnpmVersion": "10.33.4",
+  "projects": [
+    {
+      "packageName": "@vielzeug/sigil",
+      "projectFolder": "packages/sigil",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/craft",
+      "projectFolder": "packages/craft",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/vault",
+      "projectFolder": "packages/vault",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/herald",
+      "projectFolder": "packages/herald",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/courier",
+      "projectFolder": "packages/courier",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/orbit",
+      "projectFolder": "packages/orbit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/prism",
+      "projectFolder": "packages/prism",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/forge",
+      "projectFolder": "packages/forge",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/lingua",
+      "projectFolder": "packages/lingua",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/rune",
+      "projectFolder": "packages/rune",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/ward",
+      "projectFolder": "packages/ward",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/wayfinder",
+      "projectFolder": "packages/wayfinder",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/ripple",
+      "projectFolder": "packages/ripple",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/sourcerer",
+      "projectFolder": "packages/sourcerer",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/arsenal",
+      "projectFolder": "packages/arsenal",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/coins",
+      "projectFolder": "packages/coins",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/tempo",
+      "projectFolder": "packages/tempo",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/spell",
+      "projectFolder": "packages/spell",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/conduit",
+      "projectFolder": "packages/conduit",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/familiar",
+      "projectFolder": "packages/familiar",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/scroll",
+      "projectFolder": "packages/scroll",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/grip",
+      "projectFolder": "packages/grip",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/codex",
+      "projectFolder": "packages/codex",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/clockwork",
+      "projectFolder": "packages/clockwork",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    }
+  ],
+  "repository": {
+    "url": "https://github.com/helmuthdu/vielzeug"
+  },
+  "rushVersion": "5.158.1"
+}

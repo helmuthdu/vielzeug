@@ -1,0 +1,43 @@
+{
+  "description": "Vielzeug (German for 'many tools') — 23 independent zero-dependency TypeScript packages in a Rush.js monorepo. Each package targets ES2022 and ships ESM + CJS via Vite library mode. Entry point: packages/<name>/src/index.ts. Tests use Vitest. Docs are VitePress at docs/. The MCP server at packages/codex/ exposes all docs and APIs to AI clients.",
+  "frameworks": [
+    "vitest",
+    "vite",
+    "vitepress",
+    "rushjs"
+  ],
+  "instructions": "./CLAUDE.md",
+  "languages": [
+    "typescript"
+  ],
+  "monorepoTool": "rush",
+  "nodeVersion": "22",
+  "packageManager": "pnpm",
+  "projectType": "monorepo",
+  "projects": [
+    "packages/arsenal",
+    "packages/clockwork",
+    "packages/codex",
+    "packages/coins",
+    "packages/conduit",
+    "packages/courier",
+    "packages/craft",
+    "packages/familiar",
+    "packages/forge",
+    "packages/grip",
+    "packages/herald",
+    "packages/lingua",
+    "packages/orbit",
+    "packages/prism",
+    "packages/ripple",
+    "packages/rune",
+    "packages/scroll",
+    "packages/sigil",
+    "packages/sourcerer",
+    "packages/spell",
+    "packages/tempo",
+    "packages/vault",
+    "packages/ward",
+    "packages/wayfinder"
+  ]
+}

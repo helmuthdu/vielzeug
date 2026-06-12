@@ -1,0 +1,20 @@
+[global]
+
+disable = ["MD013", "MD033"]
+
+# Exclude files and directories
+exclude = [
+    "node_modules",
+    "build",
+    "dist",
+    "*.tmp.md",
+]
+
+# Include only specific files
+include = [
+    "README.md",
+    "docs/**/*.md",
+]
+
+# Set global line length (used by MD013 and other line-length rules)
+line_length = 120

@@ -1,0 +1,107 @@
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import type { BundledData, BundledPackage, PackageMeta } from './types.js';
+
+const DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../data/vielzeug-data.json');
+
+const REGEN_CMD = 'pnpm --dir packages/codex run prepare:data';
+
+export function validateBundledData(raw: unknown): BundledData {
+  if (
+    typeof raw !== 'object' ||
+    raw === null ||
+    typeof (raw as Record<string, unknown>)['version'] !== 'string' ||
+    !Array.isArray((raw as Record<string, unknown>)['packages'])
+  ) {
+    throw new Error(
+      `Bundled MCP data is malformed: missing or invalid "version" or "packages". Regenerate with ${REGEN_CMD}.`,
+    );
+  }
+
+  const { packages } = raw as { packages: unknown[]; version: string };
+
+  for (const pkg of packages) {
+    if (typeof pkg !== 'object' || pkg === null) {
+      throw new Error(
+        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    const p = pkg as Record<string, unknown>;
+
+    if (
+      typeof p['slug'] !== 'string' ||
+      p['slug'].length === 0 ||
+      typeof p['name'] !== 'string' ||
+      p['name'].length === 0
+    ) {
+      throw new Error(
+        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (!Array.isArray(p['exports']) || !Array.isArray(p['keywords']) || !Array.isArray(p['availableDocPages'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "exports", "keywords", or "availableDocPages". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (typeof p['docs'] !== 'object' || p['docs'] === null || Array.isArray(p['docs'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "docs". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+
+    if (!Array.isArray(p['components'])) {
+      throw new Error(
+        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "components". Regenerate with ${REGEN_CMD}.`,
+      );
+    }
+  }
+
+  return raw as BundledData;
+}
+
+export function loadData(): BundledData {
+  let raw: string;
+
+  try {
+    raw = readFileSync(DATA_FILE, 'utf8');
+  } catch (error) {
+    const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
+
+    if (code === 'ENOENT') {
+      throw new Error(
+        `Bundled MCP data not found at ${DATA_FILE}. In the monorepo run ${REGEN_CMD}; for standalone installs, reinstall @vielzeug/codex to restore packaged data.`,
+        { cause: error },
+      );
+    }
+
+    const detail = error instanceof Error ? error.message : String(error);
+
+    throw new Error(`Failed to read bundled MCP data at ${DATA_FILE}: ${detail}.`, { cause: error });
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw);
+  } catch (error) {
+    throw new Error(`Bundled MCP data at ${DATA_FILE} is malformed JSON. Regenerate with ${REGEN_CMD}.`, {
+      cause: error,
+    });
+  }
+
+  return validateBundledData(parsed);
+}
+
+export function packageMeta(pkg: BundledPackage): PackageMeta {
+  const { apiSource, components: _components, docs: _docs, ...rest } = pkg;
+
+  return {
+    ...rest,
+    hasSource: apiSource !== null,
+  };
+}

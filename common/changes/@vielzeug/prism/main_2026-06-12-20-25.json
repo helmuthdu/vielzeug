@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Initial release",
+      "type": "major",
+      "packageName": "@vielzeug/prism"
+    }
+  ],
+  "packageName": "@vielzeug/prism",
+  "email": "helmuthdu@gmail.com"
+}

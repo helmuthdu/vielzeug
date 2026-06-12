@@ -1,0 +1,67 @@
+{
+  "name": "@vielzeug/forge",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./react": {
+      "source": "./src/adapters/react.ts",
+      "types": "./dist/adapters/react.d.ts",
+      "import": "./dist/adapters/react.js",
+      "require": "./dist/adapters/react.cjs"
+    },
+    "./svelte": {
+      "source": "./src/adapters/svelte.ts",
+      "types": "./dist/adapters/svelte.d.ts",
+      "import": "./dist/adapters/svelte.js",
+      "require": "./dist/adapters/svelte.cjs"
+    },
+    "./vue": {
+      "source": "./src/adapters/vue.ts",
+      "types": "./dist/adapters/vue.d.ts",
+      "import": "./dist/adapters/vue.js",
+      "require": "./dist/adapters/vue.cjs"
+    },
+    "./validators": {
+      "source": "./src/adapters/validators.ts",
+      "types": "./dist/adapters/validators.d.ts",
+      "import": "./dist/adapters/validators.js",
+      "require": "./dist/adapters/validators.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
+    "preview": "vite preview",
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/ripple": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
+  }
+}

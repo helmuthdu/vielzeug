@@ -1,0 +1,148 @@
+/* ── Default: translate in/out ───────────────────────────────────────────── */
+:host {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: var(--_slide-translate-after, translateX(100%));
+  transition:
+    transform var(--carousel-transition-duration, 0.35s) ease,
+    opacity var(--carousel-transition-duration, 0.35s) ease;
+}
+
+:host([data-before]) {
+  transform: var(--_slide-translate-before, translateX(-100%));
+}
+
+:host([data-active]) {
+  pointer-events: auto;
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+/* ── Fade variant ────────────────────────────────────────────────────────── */
+:host([data-variant='fade']) {
+  transform: none;
+  transition: opacity var(--carousel-transition-duration, 0.35s) ease;
+}
+
+/* ── Filmstrip variant — shared ──────────────────────────────────────────── */
+:host([data-variant='filmstrip']) {
+  position: relative;
+  inset: auto;
+  flex-shrink: 0;
+  align-self: stretch;
+  pointer-events: auto;
+  border-radius: var(--carousel-radius, var(--rounded-xl));
+  opacity: 1;
+  transform: none;
+  transition:
+    flex var(--carousel-transition-duration, 0.35s) ease,
+    opacity var(--carousel-transition-duration, 0.35s) ease;
+}
+
+/* ── Filmstrip variant (horizontal) ──────────────────────────────────────── */
+:host([data-variant='filmstrip'][data-orientation='horizontal']) {
+  flex: 0 0 var(--carousel-filmstrip-inactive, var(--size-16));
+  width: auto;
+  min-width: var(--carousel-filmstrip-inactive, var(--size-16));
+  height: 100%;
+}
+
+:host([data-variant='filmstrip'][data-orientation='horizontal'][data-active]) {
+  flex: 1 1 0;
+}
+
+/* ── Filmstrip variant (vertical) ────────────────────────────────────────── */
+:host([data-variant='filmstrip'][data-orientation='vertical']) {
+  flex: 0 0 var(--carousel-filmstrip-inactive, var(--size-10));
+  width: 100%;
+  height: auto;
+  min-height: var(--carousel-filmstrip-inactive, var(--size-10));
+}
+
+:host([data-variant='filmstrip'][data-orientation='vertical'][data-active]) {
+  flex: 1 1 0;
+}
+
+/* ── Gallery variant — shared base ───────────────────────────────────────── */
+:host([data-variant='gallery']) {
+  display: none;
+}
+
+:host([data-variant='gallery'][data-gallery-visible]) {
+  position: relative;
+  inset: auto;
+  display: block;
+  align-self: stretch;
+  overflow: hidden;
+  pointer-events: auto;
+  border-radius: var(--carousel-radius, var(--rounded-xl));
+  opacity: 0.5;
+  transform: none;
+  transition:
+    flex var(--carousel-transition-duration, 0.35s) ease,
+    opacity var(--carousel-transition-duration, 0.35s) ease;
+}
+
+:host([data-variant='gallery'][data-gallery-visible][data-active]) {
+  opacity: 1;
+}
+
+/* ── Gallery variant (horizontal) ────────────────────────────────────────── */
+:host([data-variant='gallery'][data-orientation='horizontal'][data-gallery-visible]) {
+  flex: 0 0 var(--carousel-gallery-thumbnail, var(--size-24));
+  flex-shrink: 0;
+  width: auto;
+  min-width: var(--carousel-gallery-thumbnail, var(--size-24));
+  height: 100%;
+}
+
+:host([data-variant='gallery'][data-orientation='horizontal'][data-gallery-visible][data-active]) {
+  flex: 1 1 0;
+}
+
+/* ── Gallery variant (vertical) ──────────────────────────────────────────── */
+:host([data-variant='gallery'][data-orientation='vertical'][data-gallery-visible]) {
+  flex: 1 1 0;
+  width: 100%;
+  height: auto;
+}
+
+:host([data-variant='gallery'][data-orientation='vertical'][data-gallery-visible][data-active]) {
+  flex: 4 1 0;
+}
+
+/* ── Marquee variant ─────────────────────────────────────────────────────── */
+:host([data-variant='marquee']) {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  pointer-events: auto;
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+:host([data-variant='marquee'][data-orientation='horizontal']) {
+  width: auto;
+  height: 100%;
+}
+
+:host([data-variant='marquee'][data-orientation='vertical']) {
+  width: 100%;
+  height: auto;
+}
+
+:host([data-variant='marquee'][data-marquee-clone]) {
+  pointer-events: none;
+  user-select: none;
+}
+
+::slotted(*) {
+  max-width: 100%;
+}

@@ -1,0 +1,4 @@
+export const functionDebounceExample = {
+  code: "import { debounce } from '@vielzeug/arsenal'\n\n// --- Trailing (default) ---\nlet trailingCount = 0\nconst onSearch = debounce((q) => {\n  trailingCount++\n  console.log(`Trailing #${trailingCount}: \"${q}\"`)\n}, 200)\n\nonSearch('c')\nonSearch('ca')\nonSearch('cat') // only this fires after 200ms\n\n// --- Leading-only ---\nlet leadingCount = 0\nconst onSubmit = debounce((q) => {\n  leadingCount++\n  console.log(`Leading #${leadingCount}: \"${q}\"`)\n}, 200, { leading: true, trailing: false })\n\nonSubmit('first') // fires immediately\nonSubmit('second') // silenced (within 200ms window)\nonSubmit('third')  // silenced\n\nsetTimeout(() => {\n  console.log('Trailing fires:', trailingCount, '| Leading fires:', leadingCount)\n  // trailing: 1 (only last call) | leading: 1 (only first call)\n}, 400)",
+  name: 'debounce - Trailing (default) and leading-edge options',
+};

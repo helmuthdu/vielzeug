@@ -1,0 +1,191 @@
+@layer sigil.base {
+  :host {
+    --_selected-bg: var(--time-picker-selected-bg, var(--_theme-focus));
+    --_hover-bg: var(--time-picker-option-hover-bg, color-mix(in srgb, var(--_selected-bg) 12%, transparent));
+
+    position: relative;
+    display: inline-block;
+  }
+
+  :host([fullwidth]) {
+    display: block;
+  }
+
+  :host([color='secondary']) {
+    --_selected-bg: var(--time-picker-selected-bg, var(--_theme-base));
+  }
+
+  /* Prevent display:flex/grid from overriding [hidden] attribute */
+  [hidden] {
+    display: none !important;
+  }
+
+  /* ── Trigger ─────────────────────────────────────────────────────────────── */
+
+  .trigger {
+    cursor: pointer;
+  }
+
+  .trigger::part(input) {
+    cursor: pointer;
+    caret-color: transparent;
+    user-select: none;
+  }
+
+  /* ── Dropdown ────────────────────────────────────────────────────────────── */
+
+  .dropdown {
+    position: absolute;
+    top: calc(100% + var(--size-1));
+    left: 0;
+    z-index: var(--z-dropdown, 200);
+    display: flex;
+    visibility: hidden;
+    flex-direction: column;
+    min-width: 12rem;
+    overflow: hidden;
+    pointer-events: none;
+    background: var(--time-picker-bg, var(--_bg));
+    border: var(--border) solid var(--time-picker-border-color, var(--_border-color));
+    border-radius: var(--time-picker-radius, var(--_radius));
+    box-shadow: var(--time-picker-shadow, var(--shadow-lg));
+
+    /* Hidden by default */
+    opacity: 0;
+    backdrop-filter: blur(var(--blur-sm));
+    transform: translateY(var(--overlay-enter-translate-y));
+    transition: var(
+      --_motion-transition,
+      opacity var(--transition-fast),
+      transform var(--transition-fast),
+      visibility var(--transition-fast)
+    );
+  }
+
+  .dropdown[data-open] {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    transform: translateY(0);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--overlay-enter-translate-y));
+    }
+  }
+
+  /* ── Columns row ────────────────────────────────────────────────────────── */
+
+  .cols-row {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  /* ── Columns (hours / sep / minutes / [period]) ──────────────────────────── */
+
+  .col,
+  .col-sep {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .col {
+    flex: 1;
+    min-width: var(--size-14);
+    border-block-end: var(--border) solid var(--_border-color);
+  }
+
+  .col-period {
+    flex: 0 0 auto;
+    min-width: var(--size-16);
+  }
+
+  /* ── Column header label ─────────────────────────────────────────────────── */
+
+  .col-label {
+    width: 100%;
+    padding: var(--size-1) var(--size-2);
+    font-size: var(--text-xs);
+    font-weight: var(--font-medium);
+    color: var(--color-contrast-400);
+    text-align: center;
+    letter-spacing: 0.05em;
+    border-block-end: var(--border) solid var(--_border-color);
+  }
+
+  /* ── Scrollable option list ──────────────────────────────────────────────── */
+
+  .col-scroll {
+    width: 100%;
+    max-height: 11rem;
+    padding-block: var(--size-1);
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  /* ── Separator between hours and minutes ─────────────────────────────────── */
+
+  .col-sep {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    padding-block-start: var(--size-8); /* visually align with first option row */
+    padding-inline: var(--size-0-5);
+    font-size: var(--text-lg);
+    font-weight: var(--font-semibold);
+    color: var(--color-contrast-500);
+    user-select: none;
+    border-block-end: var(--border) solid var(--_border-color);
+  }
+
+  /* ── Option cells ────────────────────────────────────────────────────────── */
+
+  .option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--size-8);
+    padding-inline: var(--size-2);
+    margin-inline: var(--size-1);
+    font-size: var(--text-sm);
+    color: var(--color-contrast-800);
+    cursor: pointer;
+    outline: none;
+    border-radius: var(--rounded-sm);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .option:hover:not([data-disabled]) {
+    color: var(--color-contrast-900);
+    background: var(--_hover-bg);
+  }
+
+  .option:focus-visible {
+    box-shadow: 0 0 0 2px var(--_selected-bg);
+  }
+
+  .option[aria-selected='true'] {
+    font-weight: var(--font-semibold);
+    color: var(--color-white, #fff);
+    background: var(--_selected-bg);
+  }
+
+  .option[data-disabled] {
+    pointer-events: none;
+    cursor: not-allowed;
+    opacity: 0.3;
+  }
+
+  /* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+  @media (prefers-reduced-motion: reduce) {
+    .option {
+      transition: none;
+    }
+  }
+}

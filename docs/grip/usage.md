@@ -1,0 +1,490 @@
+---
+title: Grip — Usage Guide
+description: Drop zones, sortable lists, explicit connected scopes, keyboard sorting, and cleanup patterns with Grip.
+---
+
+[[toc]]
+
+## Basic Usage
+
+`createDropZone` attaches drag-and-drop behavior to any DOM element and keeps hover state stable with a counter.
+
+```ts
+import { createDropZone } from '@vielzeug/grip';
+
+const zone = createDropZone({
+  element: document.getElementById('dropzone')!,
+  onDrop: (files) => {
+    uploadFiles(files);
+  },
+});
+```
+
+### Accept filtering
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*', '.pdf', 'application/json'],
+  onDrop: (files) => {
+    // accepted files only
+  },
+  onDropRejected: (files) => {
+    showToast(`${files.length} file(s) not accepted`);
+  },
+});
+```
+
+For reactive apps, `accept` can be a getter:
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: () => (isMediaMode.value ? ['image/*', 'video/*'] : ['application/pdf']),
+});
+```
+
+### Hover state
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  onHoverChange: (hovered) => {
+    dropEl.classList.toggle('drag-over', hovered);
+  },
+});
+```
+
+Read zone state imperatively:
+
+```ts
+console.log(zone.hovered);
+console.log(zone.files);
+console.log(zone.rejected);
+```
+
+### Drop effect
+
+```ts
+createDropZone({
+  element: dropEl,
+  dropEffect: 'move',
+  onDrop: (files) => {
+    // ...
+  },
+});
+```
+
+### Disabled state
+
+```ts
+createDropZone({
+  element: dropEl,
+  disabled: () => isReadOnly.value,
+  onDrop: handleFiles,
+});
+```
+
+### File limit
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*'],
+  maxFiles: 5,
+  onDrop: (files) => {
+    // 1-5 accepted files
+  },
+  onDropRejected: (files) => {
+    showToast(`Only 5 files at a time. ${files.length} were ignored.`);
+  },
+});
+```
+
+### Sortable cleanup
+
+```ts
+zone.destroy();
+// or:
+using zone = createDropZone({ element: dropEl, onDrop: handleFiles });
+```
+
+### Async validation
+
+Gate drops behind an async check with `onValidate`. The zone sets `validating: true` while the promise is pending; on resolution, accepted files go to `onDrop` and rejected files go to `onDropRejected`.
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  accept: ['image/*'],
+  onValidate: async (files) => {
+    const ok = await checkServerQuota(files);
+    return ok; // false → all files forwarded to onDropRejected
+  },
+  onDrop: (files) => uploadFiles(files),
+  onDropRejected: (files) => showError('Quota exceeded'),
+});
+
+// show a spinner while checking
+console.log(zone.validating); // true during pending check
+```
+
+A synchronous boolean return skips the microtask queue entirely:
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  onValidate: (files) => files.every((f) => f.size < 5_000_000), // sync
+  onDrop: handleFiles,
+});
+```
+
+### Clipboard paste
+
+Set `paste: true` to accept files pasted from the clipboard. The same `accept`, `maxFiles`, and `onValidate` pipeline applies.
+
+```ts
+const zone = createDropZone({
+  element: dropEl,
+  paste: true,
+  accept: ['image/*'],
+  onPaste: (files, event) => {
+    uploadFiles(files);
+  },
+  onDropRejected: (files, event) => {
+    // event is ClipboardEvent when rejected via paste
+    showError(`${files.length} file(s) not accepted`);
+  },
+});
+```
+
+When `onPaste` is omitted, accepted pasted files fall through to `onDrop`. In that case the event argument will be a `ClipboardEvent`, not a `DragEvent` — check `event instanceof ClipboardEvent` if you need to distinguish.
+
+## Sortable
+
+`createSortable` makes direct children of a container reorderable via drag.
+
+### Setup
+
+```html
+<ul id="task-list">
+  <li data-sort-id="task-1">Design</li>
+  <li data-sort-id="task-2">Develop</li>
+  <li data-sort-id="task-3">Review</li>
+</ul>
+```
+
+```ts
+const sortable = createSortable({
+  element: document.getElementById('task-list')!,
+  axis: 'vertical',
+  onReorder: (ids) => {
+    saveTaskOrder(ids);
+  },
+});
+```
+
+Grip automatically sets:
+
+- `draggable="true"` on sortable nodes (or handles)
+- `role="listitem"` on each item
+- `role="list"` on the container
+- `tabindex="0"` on each item for keyboard reordering
+
+### Drag handles
+
+```ts
+createSortable({
+  element: listEl,
+  handle: '.drag-handle',
+  onReorder: saveOrder,
+});
+```
+
+### Keyboard reordering
+
+Focus an item and use arrow keys to move it. `Home` and `End` move to the boundary positions.
+
+When an item is already at the first or last position, the boundary key press is not consumed — the browser handles it normally (for example, scrolling the page). Only keys that actually move an item call `preventDefault`.
+
+### Connected lists
+
+Create a shared scope when items should move between containers:
+
+```ts
+const boardScope = createSortableScope();
+
+createSortable({ element: todoEl, onReorder: saveTodoOrder, scope: boardScope });
+createSortable({ element: doneEl, onReorder: saveDoneOrder, scope: boardScope });
+```
+
+### Auto-scroll and drag preview
+
+```ts
+createSortable({
+  element: listEl,
+  autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
+  dragImage: (id, item) => item,
+  dragImageOffset: [8, 8],
+});
+```
+
+Viewport scrolling is opt-in. Container scrolling stays enabled by default.
+
+### Lifecycle hooks
+
+```ts
+createSortable({
+  element: listEl,
+  onDragStart: (id) => {
+    listEl.classList.add('sorting');
+  },
+  onDragEnd: (id) => {
+    listEl.classList.remove('sorting');
+  },
+  onReorder: saveOrder,
+});
+```
+
+### Custom identity attribute
+
+```ts
+createSortable({
+  element: listEl,
+  itemAttribute: 'data-id',
+  onReorder: saveOrder,
+});
+```
+
+### Dynamic lists
+
+Call `sortable.sync()` after adding, removing, or replacing sortable items.
+
+```ts
+const item = document.createElement('li');
+item.dataset.sortId = 'task-4';
+item.textContent = 'Deploy';
+listEl.appendChild(item);
+sortable.sync();
+```
+
+### Disabled state
+
+```ts
+createSortable({
+  element: listEl,
+  disabled: () => isLocked,
+  onReorder: saveOrder,
+});
+```
+
+### Placeholder styling
+
+```css
+.grip-placeholder {
+  background: var(--color-primary-50);
+  border: 2px dashed var(--color-primary-300);
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+[data-dragging] {
+  opacity: 0.35;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+```
+
+### Mapping DOM order back to data
+
+```ts
+import { applyReorder, createSortable } from '@vielzeug/grip';
+
+let items = [
+  { id: 'task-1', title: 'Design' },
+  { id: 'task-2', title: 'Develop' },
+  { id: 'task-3', title: 'Review' },
+];
+
+createSortable({
+  element: listEl,
+  onReorder: (orderedIds) => {
+    items = applyReorder(items, orderedIds, (item) => item.id);
+  },
+});
+```
+
+### Cleanup
+
+```ts
+sortable.destroy();
+// or:
+using sortable = createSortable({ element: listEl, onReorder: saveOrder });
+```
+
+### FLIP animation hook
+
+`onBeforeReorder` fires just before the DOM reorder commits, for both drag and keyboard moves. At the time of the call items are still in their pre-commit positions, making it the right place to record element bounds for FLIP animations.
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  onBeforeReorder: (from, to) => {
+    // snapshot bounds before the DOM moves
+    const snapshots = new Map(getItems().map((el) => [el.dataset.sortId!, el.getBoundingClientRect()]));
+
+    requestAnimationFrame(() => {
+      // animate from snapshot to new position
+      for (const [id, before] of snapshots) {
+        const el = listEl.querySelector(`[data-sort-id="${id}"]`) as HTMLElement;
+        const after = el.getBoundingClientRect();
+        const dy = before.top - after.top;
+        if (dy === 0) continue;
+        el.style.transform = `translateY(${dy}px)`;
+        el.style.transition = 'none';
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 200ms ease';
+          el.style.transform = '';
+        });
+      }
+    });
+  },
+  onReorder: saveOrder,
+});
+```
+
+### Optimistic updates and revert
+
+`onReorder` may return a revert function. Calling `sortable.revert()` invokes it and clears it. Use this to roll back optimistic UI updates on server failure. Only the most recent reorder can be reverted.
+
+```ts
+const sortable = createSortable({
+  element: listEl,
+  onReorder: (ids) => {
+    const prev = currentOrder;
+    setOrder(ids); // optimistic update
+    return () => setOrder(prev); // rolled back by sortable.revert()
+  },
+});
+
+// On server error:
+try {
+  await api.saveOrder(currentOrder);
+} catch {
+  sortable.revert();
+}
+```
+
+## Framework Integration
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { createSortable, applyReorder } from '@vielzeug/grip';
+
+function SortableList({ initialItems }: { initialItems: { id: string; text: string }[] }) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const items = useRef(initialItems);
+
+  useEffect(() => {
+    const sortable = createSortable({
+      element: listRef.current!,
+      onReorder: (orderedIds) => {
+        items.current = applyReorder(items.current, orderedIds, (i) => i.id);
+      },
+    });
+    return () => sortable.destroy();
+  }, []);
+
+  return (
+    <ul ref={listRef}>
+      {initialItems.map((item) => (
+        <li key={item.id} data-sort-id={item.id}>
+          {item.text}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+```ts [Vue 3]
+import { ref, onMounted, onUnmounted } from 'vue';
+import { createSortable, applyReorder, type Sortable } from '@vielzeug/grip';
+
+function useSortable(items: { id: string; text: string }[]) {
+  const listRef = ref<HTMLElement | null>(null);
+  const orderedItems = ref(items);
+  let sortable: Sortable | null = null;
+
+  onMounted(() => {
+    sortable = createSortable({
+      element: listRef.value!,
+      onReorder: (ids) => {
+        orderedItems.value = applyReorder(orderedItems.value, ids, (i) => i.id);
+      },
+    });
+  });
+
+  onUnmounted(() => sortable?.destroy());
+  return { listRef, orderedItems };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSortable, applyReorder } from '@vielzeug/grip';
+
+  export let initialItems: { id: string; text: string }[] = [];
+  let items = initialItems;
+  let listEl: HTMLUListElement;
+
+  onMount(() => {
+    const sortable = createSortable({
+      element: listEl,
+      onReorder: (ids) => { items = applyReorder(items, ids, (i) => i.id); },
+    });
+    return () => sortable.destroy();
+  });
+</script>
+
+<ul bind:this={listEl}>
+  {#each items as item (item.id)}
+    <li data-sort-id={item.id}>{item.text}</li>
+  {/each}
+</ul>
+```
+
+:::
+
+## Working with Other Vielzeug Libraries
+
+### With Craft
+
+Use Grip in custom web components by attaching behavior in component lifecycle hooks.
+
+```ts
+import { createSortable } from '@vielzeug/grip';
+import { define, onMounted, html } from '@vielzeug/craft';
+
+define('task-list', {
+  setup(_props, { host }) {
+    onMounted(() => {
+      const sortable = createSortable({ element: host.el, onReorder: (ids) => save(ids) });
+      return () => sortable.destroy();
+    });
+    return () => html`<slot></slot>`;
+  },
+});
+```
+
+## Best Practices
+
+- Attach `createDropZone` and `createSortable` after the container element is in the DOM — use `onMounted` in component frameworks.
+- Call `.destroy()` in the cleanup phase of your framework (useEffect return, onUnmounted, onDestroy) to prevent memory leaks.
+- Use `data-sort-id` attributes that match your data's identity field — do not use DOM index as an identifier.
+- Prefer `applyReorder()` over manual array splicing to keep your data array in sync with DOM order.
+- Use `createSortableScope()` only when items should genuinely move between containers.
+- Use drag handles (`.handle` selector) when the full item surface area conflicts with other interactions such as text selection.
+- Test keyboard reordering explicitly — Grip sets `tabindex` on items and supports arrow keys by default.

@@ -1,0 +1,72 @@
+{
+  "name": "@vielzeug/orbit",
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./devtools": {
+      "source": "./src/devtools.ts",
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.js",
+      "require": "./dist/devtools.cjs"
+    },
+    "./inline": {
+      "source": "./src/inline.ts",
+      "types": "./dist/inline.d.ts",
+      "import": "./dist/inline.js",
+      "require": "./dist/inline.cjs"
+    },
+    "./presets": {
+      "source": "./src/presets.ts",
+      "types": "./dist/presets.d.ts",
+      "import": "./dist/presets.js",
+      "require": "./dist/presets.cjs"
+    },
+    "./reactive": {
+      "source": "./src/reactive.ts",
+      "types": "./dist/reactive.d.ts",
+      "import": "./dist/reactive.js",
+      "require": "./dist/reactive.cjs"
+    },
+    "./ssr": {
+      "source": "./src/ssr.ts",
+      "types": "./dist/ssr.d.ts",
+      "import": "./dist/ssr.js",
+      "require": "./dist/ssr.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest",
+    "build:bundle": "vite build --config vite.bundle.config.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dependencies": {
+    "@vielzeug/arsenal": "workspace:*",
+    "@vielzeug/ripple": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.14",
+    "vitest": "^4.1.7"
+  }
+}

@@ -1,0 +1,35 @@
+import { isNil } from './isNil';
+import { isPlainObject } from './isPlainObject';
+
+/**
+ * Checks if the given argument is empty.
+ *
+ * @example
+ * ```ts
+ * isEmpty(null); // true
+ * isEmpty(undefined); // true
+ * isEmpty([]); // true
+ * isEmpty({}); // true
+ * isEmpty(''); // true
+ * isEmpty(0); // false
+ * isEmpty(123); // false
+ * isEmpty('abc'); // false
+ * isEmpty([1, 2, 3]); // false
+ * isEmpty({ a: 1, b: 2 }); // false
+ * ```
+ *
+ * @param arg - The argument to be checked.
+ *
+ * @returns `true` if all arguments are `null`, `undefined`, `{}`, `[]`, or empty strings. Otherwise, it returns `false`.
+ */
+export function isEmpty(arg: unknown): boolean {
+  if (isNil(arg) || arg === '') return true;
+
+  if (Array.isArray(arg)) return arg.length === 0;
+
+  if (arg instanceof Map || arg instanceof Set) return arg.size === 0;
+
+  if (isPlainObject(arg)) return Object.keys(arg).length === 0;
+
+  return false;
+}

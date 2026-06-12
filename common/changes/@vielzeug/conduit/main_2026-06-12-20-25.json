@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Initial release",
+      "type": "major",
+      "packageName": "@vielzeug/conduit"
+    }
+  ],
+  "packageName": "@vielzeug/conduit",
+  "email": "helmuthdu@gmail.com"
+}

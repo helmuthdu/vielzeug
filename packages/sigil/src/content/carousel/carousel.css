@@ -1,0 +1,242 @@
+@layer sigil.base {
+  :host {
+    --_bg: var(--carousel-bg, var(--color-canvas));
+    --_radius: var(--carousel-radius, var(--rounded-xl));
+    --_dot-bg: var(--carousel-dot-bg, var(--color-contrast-300));
+    --_dot-active-bg: var(--carousel-dot-active-bg, var(--color-contrast-700));
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: var(--carousel-min-height, 240px);
+    overflow: hidden;
+    touch-action: auto;
+    outline: none;
+    background: var(--_bg);
+    border-radius: var(--_radius);
+  }
+
+  /* ── Track ──────────────────────────────────────────────────────── */
+
+  .track {
+    position: relative;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
+  }
+
+  /* ── Controls (prev / next) ────────────────────────────────────────────── */
+
+  .controls {
+    position: absolute;
+    inset-block: 50%;
+    inset-inline: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 0;
+    padding-inline: var(--size-2);
+    pointer-events: none;
+  }
+
+  .nav-btn {
+    pointer-events: auto;
+  }
+
+  /* ── Variant-specific track styles ────────────────────────────────────── */
+
+  /* Gallery: flex row, fills host, shows active + two thumbnails */
+  :host([variant='gallery']) .track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-gallery-gap, var(--size-2));
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  :host([variant='gallery'][orientation='vertical']) .track {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Marquee: anchor top/bottom for definite height; width:max-content for -50% loop.
+     Host clips the overflow. */
+  :host([variant='marquee']) {
+    overflow: hidden;
+  }
+
+  :host([variant='marquee']) .track {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-marquee-gap, var(--size-4));
+    align-items: stretch;
+    width: max-content;
+    animation: carousel-marquee var(--_marquee-duration, 0s) linear infinite;
+  }
+
+  :host([variant='marquee'][orientation='vertical']) .track {
+    inset: 0 0 auto;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    height: max-content;
+    animation-name: carousel-marquee-v;
+  }
+
+  /* Filmstrip: flex row/column with absolute positioning to fill host */
+  :host([variant='filmstrip']) .track {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--carousel-filmstrip-gap, var(--size-2));
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  :host([variant='filmstrip'][orientation='vertical']) .track {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  /* ── Vertical orientation ──────────────────────────────────────────────── */
+
+  :host([orientation='vertical']) {
+    --_slide-translate-before: translateY(-100%);
+    --_slide-translate-after: translateY(100%);
+  }
+
+  :host([orientation='vertical']) .controls {
+    inset-block: 0;
+    inset-inline: auto 0;
+    flex-direction: column;
+    gap: var(--size-1);
+    justify-content: center;
+    width: 0;
+    height: 100%;
+    padding-inline: 0;
+  }
+
+  :host([orientation='vertical']) .nav-btn {
+    transform: translateX(-90%) translateY(0);
+  }
+
+  :host([orientation='vertical']) .indicators {
+    inset-block: 0;
+    inset-block-end: auto;
+    inset-inline: var(--size-3) auto;
+    flex-direction: column;
+    width: auto;
+    height: 100%;
+    padding-block: var(--size-2);
+  }
+
+  :host([orientation='vertical']) .indicator {
+    width: var(--size-1-5) !important;
+    height: var(--size-8);
+  }
+
+  /* animation properties are inherited from .indicator-active::part(fill) below */
+
+  /* ── Indicators (dots) ─────────────────────────────────────────────────── */
+
+  .indicators {
+    position: absolute;
+    inset-block-end: var(--size-3);
+    inset-inline: 0;
+    display: flex;
+    gap: var(--size-1-5);
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
+  .indicator {
+    flex-shrink: 0;
+    width: var(--size-8) !important;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: opacity var(--transition-fast);
+  }
+
+  .indicator:focus-visible {
+    outline: var(--border) solid currentcolor;
+    outline-offset: 2px;
+  }
+
+  .indicator:hover {
+    opacity: 0.8;
+  }
+
+  .indicator::part(fill) {
+    transition: width var(--transition-normal);
+  }
+
+  .indicator-active {
+    --progress-track-bg: color-mix(in srgb, var(--_dot-bg) 60%, transparent);
+  }
+
+  .indicator-active::part(fill) {
+    animation-name: var(--carousel-animation-name, none);
+    animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :host {
+    --carousel-transition-duration: 0s;
+  }
+
+  :host([variant='marquee']) .track,
+  :host([variant='marquee'][orientation='vertical']) .track {
+    animation: none;
+  }
+}
+
+@keyframes carousel-fill {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes carousel-fill-v {
+  from {
+    height: 0%;
+  }
+
+  to {
+    height: 100%;
+  }
+}
+
+@keyframes carousel-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes carousel-marquee-v {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}

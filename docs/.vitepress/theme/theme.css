@@ -1,0 +1,287 @@
+:root {
+  /* ── Brand ── */
+  --vp-c-brand-lighter: var(--color-primary-backdrop);
+  --vp-c-brand-1: var(--color-primary);
+  --vp-c-brand-2: var(--color-primary-focus);
+  --vp-c-brand-3: var(--color-primary);
+  --vp-c-brand-soft: var(--color-primary-backdrop);
+
+  /* ── Surfaces ── */
+  --vp-c-bg: var(--color-contrast-50);
+  --vp-c-bg-alt: var(--color-contrast-100);
+  --vp-c-bg-soft: var(--color-contrast-100);
+  --vp-c-bg-elv: var(--color-contrast-200);
+
+  /* ── Text ── */
+  --vp-c-text-1: var(--text-color-body);
+  --vp-c-text-2: var(--text-color-secondary);
+  --vp-c-text-3: var(--text-color-tertiary);
+
+  /* ── Borders & dividers ── */
+  --vp-c-border: var(--color-contrast-300);
+  --vp-c-divider: var(--color-contrast-200);
+
+  /* ── Gray scale (used by default/neutral containers) ── */
+  --vp-c-gray-1: var(--color-contrast-300);
+  --vp-c-gray-2: var(--color-contrast-200);
+  --vp-c-gray-3: var(--color-contrast-150);
+  --vp-c-gray-soft: var(--color-contrast-100);
+
+  /* ── Semantic: tip → primary ── */
+  --vp-c-tip-1: var(--color-primary);
+  --vp-c-tip-2: var(--color-primary-focus);
+  --vp-c-tip-3: var(--color-primary-backdrop);
+  --vp-c-tip-soft: var(--color-primary-backdrop);
+
+  /* ── Semantic: success ── */
+  --vp-c-success-1: var(--color-success);
+  --vp-c-success-2: var(--color-success-focus);
+  --vp-c-success-3: var(--color-success-backdrop);
+  --vp-c-success-soft: var(--color-success-backdrop);
+
+  /* ── Semantic: warning ── */
+  --vp-c-warning-1: var(--color-warning);
+  --vp-c-warning-2: var(--color-warning-focus);
+  --vp-c-warning-3: var(--color-warning-backdrop);
+  --vp-c-warning-soft: var(--color-warning-backdrop);
+
+  /* ── Semantic: danger → error ── */
+  --vp-c-danger-1: var(--color-error);
+  --vp-c-danger-2: var(--color-error-focus);
+  --vp-c-danger-3: var(--color-error-backdrop);
+  --vp-c-danger-soft: var(--color-error-backdrop);
+
+  /* ── Semantic: info ── */
+  --vp-c-info-1: var(--color-info);
+  --vp-c-info-2: var(--color-info-focus);
+  --vp-c-info-3: var(--color-info-backdrop);
+  --vp-c-info-soft: var(--color-info-backdrop);
+
+  /* ── Typography ── */
+  --vp-font-family-base: var(--font-sans);
+  --vp-font-family-mono: var(--font-mono);
+
+  /* ── Homepage hero ── */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: linear-gradient(120deg, var(--color-error) 20%, var(--color-primary));
+  --vp-home-hero-image-background-image: linear-gradient(-90deg, var(--color-primary) 50%, var(--color-error) 50%);
+  --vp-home-hero-image-filter: blur(75px);
+
+  /* ── Navbar ── */
+  --vp-custom-navbar-color: oklch(99% 0 0deg / 97%);
+}
+
+.dark {
+  --vp-custom-navbar-color: oklch(15% 0 0deg / 97%);
+}
+
+.VPNavBar,
+.VPNavBar.fill {
+  background: var(--vp-custom-navbar-color);
+  border-bottom: 1px solid var(--vp-c-divider);
+  backdrop-filter: saturate(50%) blur(24px);
+}
+
+.VPNavBar.fill .content-body,
+.VPNavBar.has-sidebar .content-body {
+  background: none !important;
+}
+
+.VPNavBar:not(.top) .content-body {
+  background-color: inherit !important;
+}
+
+.VPNavBar.has-sidebar .curtain {
+  display: none;
+}
+
+.VPNavBarTitle.has-sidebar .title {
+  border: none;
+}
+
+.grid-links ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.5rem;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.grid-links li {
+  margin: 0 !important;
+}
+
+.logo-highlight {
+  padding: 1rem;
+  margin: 0.5rem auto !important;
+  background: var(--color-contrast-100);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 1rem;
+}
+
+.logo-highlight-smaller {
+  float: right;
+  padding: 1rem;
+  margin: -57px -25px 0 0;
+  background: var(--color-contrast-50);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 0 12px;
+}
+
+.VPFeature:hover img {
+  border: 1px solid var(--vp-c-brand-1);
+}
+
+/* Alternative: Use a wrapper selector if VPFeature is inside VPContent */
+.VPContent .VPFeature {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.badges {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 24px;
+}
+
+/* Full-bleed homepage — remove VPDoc container constraints */
+.VPDoc:has(.home-page) {
+  padding: 0;
+}
+
+.VPDoc:has(.home-page) .container {
+  max-width: none;
+}
+
+.VPDoc:has(.home-page) .content {
+  max-width: none;
+  padding: 0;
+}
+
+/* Full-bleed REPL page — IDE fills viewport below navbar */
+.VPContent:has(#repl-container) {
+  padding: 0 !important;
+  padding-top: var(--vp-nav-height, 64px) !important;
+  margin: 0 !important;
+}
+
+html:has(#repl-container),
+body:has(#repl-container) {
+  overflow: hidden;
+}
+
+/* ── Package doc page improvements ────────────────────── */
+
+/* First h2 after pkg-hero — remove the divider border, it follows a card not prose */
+.vp-doc .pkg-hero + h2 {
+  padding-top: 0;
+  margin-top: var(--size-6);
+  border-top: none;
+}
+
+/* Protect pkg-hero sg-text[as=h1] from .vp-doc h1 global overrides */
+.vp-doc .pkg-hero h1,
+.vp-doc .pkg-hero sg-text h1 {
+  margin: 0;
+  border: none;
+  padding: 0;
+}
+
+/* Features list → 2-col grid on wider screens */
+.features-grid ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 0.4rem 1.5rem;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.features-grid li {
+  padding: var(--size-1-5) 0;
+  margin: 0 !important;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  border-bottom: var(--border) solid var(--color-contrast-200);
+}
+
+.features-grid li:last-child {
+  border-bottom: none;
+}
+
+/* Documentation links → compact pill cards */
+.doc-links ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.doc-links li {
+  margin: 0 !important;
+}
+
+.doc-links li a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--size-2);
+  padding: var(--size-2) var(--size-3-5);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--text-color-body);
+  text-decoration: none;
+  background: var(--color-contrast-100);
+  border: var(--border) solid var(--color-contrast-300);
+  border-radius: var(--rounded-lg);
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.doc-links li a:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-backdrop);
+  border-color: var(--color-primary);
+}
+
+/* See Also links → annotated inline list, no card chrome */
+.see-also ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.see-also li {
+  margin: 0 !important;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  color: var(--text-color-secondary);
+}
+
+.see-also li a {
+  font-weight: var(--font-semibold);
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.see-also li a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Decision callout — Use X when / Consider Y when summary */
+.decision-callout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2);
+  padding: var(--size-3) var(--size-4);
+  margin: var(--size-4) 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  background: var(--color-primary-backdrop);
+  border: var(--border) solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+  border-radius: var(--rounded-lg);
+}
+
+.decision-callout p {
+  margin: 0;
+}
