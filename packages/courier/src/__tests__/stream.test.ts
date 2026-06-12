@@ -83,7 +83,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length > 0);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['hello world']);
   });
@@ -121,7 +121,7 @@ describe('createStream — sse()', () => {
     source.on('user-joined', (d) => joined.push(d));
 
     await waitFor(() => joined.length > 0);
-    source.close();
+    source.dispose();
 
     expect(joined).toEqual([{ id: 1, name: 'Alice' }]);
   });
@@ -135,7 +135,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length > 0);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['plain text']);
   });
@@ -149,7 +149,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length > 0);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['line1\nline2']);
   });
@@ -163,7 +163,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length > 0);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['hi']);
   });
@@ -177,7 +177,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length === 3);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['one', 'two', 'three']);
   });
@@ -201,7 +201,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length > 0);
-    source.close();
+    source.dispose();
 
     expect(messages).toEqual(['hello']);
   });
@@ -237,7 +237,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => messages.length >= 2);
-    source.close();
+    source.dispose();
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls[1][1].headers['last-event-id']).toBe('42');
@@ -251,7 +251,7 @@ describe('createStream — sse()', () => {
     const source = stream.sse('/events');
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
-    source.close();
+    source.dispose();
 
     const { headers } = fetchMock.mock.calls[0][1];
 
@@ -267,13 +267,13 @@ describe('createStream — sse()', () => {
     const source = stream.sse('/events', { body: { filter: 'active' } });
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
-    source.close();
+    source.dispose();
 
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
     expect(fetchMock.mock.calls[0][1].body).toBe(JSON.stringify({ filter: 'active' }));
   });
 
-  it('close() stops event dispatch immediately', async () => {
+  it('dispose() stops event dispatch immediately', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
     const encoder = new TextEncoder();
 
@@ -291,7 +291,7 @@ describe('createStream — sse()', () => {
     const messages = collect<string>(source);
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
-    source.close();
+    source.dispose();
 
     // Push an event AFTER close — should not be dispatched
     controllerRef!.enqueue(encoder.encode('data: late\n\n'));
@@ -315,7 +315,7 @@ describe('createStream — sse()', () => {
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
     await new Promise((r) => setTimeout(r, 100));
-    source.close();
+    source.dispose();
 
     // Only the first event triggers the handler before unsub
     expect(callCount).toBe(1);
@@ -333,7 +333,7 @@ describe('createStream — sse()', () => {
     });
 
     await waitFor(() => errors.length > 0);
-    source.close();
+    source.dispose();
 
     // 1 initial + 2 reconnect attempts = 3 total calls
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -354,7 +354,7 @@ describe('createStream — sse()', () => {
     });
 
     await waitFor(() => errors.length > 0);
-    source.close();
+    source.dispose();
 
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toMatch(/budget exhausted/i);
@@ -386,7 +386,7 @@ describe('createStream — sse()', () => {
     source.on('message', (d: string) => messages.push(d));
 
     await waitFor(() => callCount >= 2, 1000);
-    source.close();
+    source.dispose();
 
     // The delay between the two calls should be at least ~50ms (server-advised retry)
     const elapsed = timestamps[1] - timestamps[0];
@@ -414,7 +414,7 @@ describe('createStream — sse()', () => {
     const source = stream.sse('/events');
 
     await waitFor(() => log.includes('after'));
-    source.close();
+    source.dispose();
 
     expect(log).toEqual(['before', 'after']);
   });
@@ -430,7 +430,7 @@ describe('createStream — sse()', () => {
     const source = stream.sse('/events', { headers: { 'x-tenant': 'acme' } });
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
-    source.close();
+    source.dispose();
 
     const { headers } = fetchMock.mock.calls[0][1];
 
@@ -461,7 +461,7 @@ describe('createStream — sse()', () => {
     expect(() => stream.sse('/events')).toThrow(/disposed/i);
   });
 
-  it('on() after close() returns a no-op unsubscribe without throwing', async () => {
+  it('on() after dispose() returns a no-op unsubscribe without throwing', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
     fetchMock.mockResolvedValue(sseResponse(sseStream('data: hi\n\n')));
@@ -469,7 +469,7 @@ describe('createStream — sse()', () => {
     const source = stream.sse('/events');
 
     await waitFor(() => fetchMock.mock.calls.length > 0);
-    source.close();
+    source.dispose();
 
     // on() after close() must not throw and must return a callable no-op
     const unsub = source.on('message', () => {});
@@ -500,7 +500,7 @@ describe('createStream — sse()', () => {
 
     expect(fetchMock.mock.calls.length).toBe(callsBefore);
     expect(stream.disposed).toBe(true);
-    source.close();
+    source.dispose();
   });
 
   it('cancelAll() during reconnect sleep stops the reconnect loop', async () => {
@@ -522,7 +522,7 @@ describe('createStream — sse()', () => {
 
     expect(fetchMock.mock.calls.length).toBe(callsBefore);
     expect(stream.disposed).toBe(false); // cancelAll doesn't dispose
-    source.close();
+    source.dispose();
   });
 
   it('dispose() aborts all active SSE connections', async () => {

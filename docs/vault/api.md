@@ -35,7 +35,10 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `db.watchStream(table, opts?)`        | `ReadableStream` of table snapshots                            | Sync             | `cancel()` stops the observer — always cancel the stream when done                     |
 | `db.iterate(table)`                   | Cursor-based async iteration — IDB only                        | Async            | Not available on memory or web storage adapters                                        |
 | `db.upsert(table, key, fn)`           | Read-modify-write                                              | Async            | `fn` always receives the current record; never the stale previous value                |
-| `db.dispose()`                        | Release all resources                                          | Async            | All subsequent operations throw `VaultDisposedError`                                   |
+| `db.disposalSignal`                   | `AbortSignal` aborted on disposal                              | Sync getter      | Tie external lifetimes (timers, streams) to this adapter                               |
+| `db.dispose()`                        | Release all resources                                          | Async            | Idempotent; all subsequent operations throw `VaultDisposedError`                       |
+| `db.disposed`                         | `true` after `dispose()` is called                             | Sync getter      | —                                                                                      |
+| `db[Symbol.asyncDispose]()`           | Delegates to `dispose()`                                       | Async            | Enables `await using` declarations                                                     |
 
 ## Exports
 
@@ -255,8 +258,17 @@ interface Adapter<S extends AnySchema> {
   /** Remove all records from the table. */
   clear<K extends keyof S>(table: K): Promise<void>;
 
-  /** Release all resources (observers, signal subscriptions, channel, DB connection). */
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this adapter. */
+  readonly disposalSignal: AbortSignal;
+
+  /** Release all resources (observers, signal subscriptions, channel, DB connection). Idempotent. */
   dispose(): Promise<void>;
+
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
+
+  /** Delegates to `dispose()`. Enables `await using` declarations. */
+  [Symbol.asyncDispose](): Promise<void>;
 
   /** Return all `[key, record]` pairs in the table. Expired records are excluded. */
   entries<K extends keyof S>(table: K): Promise<Array<[KeyOf<S, K>, RecordOf<S, K>]>>;

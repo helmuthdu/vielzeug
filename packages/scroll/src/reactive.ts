@@ -54,7 +54,7 @@ export function createReactiveVirtualizer(
     get count() {
       return v.count;
     },
-    destroy: () => v.destroy(),
+    dispose: () => v.dispose(),
     invalidate: () => v.invalidate(),
     get items() {
       return v.items;

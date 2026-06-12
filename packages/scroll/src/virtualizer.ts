@@ -86,7 +86,7 @@ export interface Virtualizer {
   readonly scrollOffset: number;
   readonly stickyItems: VirtualItem[];
   readonly totalSize: number;
-  destroy: () => void;
+  dispose: () => void;
   invalidate: () => void;
   measure: (index: number, size: number) => void;
   measureBatch: (entries: Array<{ index: number; size: number }>) => void;
@@ -608,7 +608,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get count() {
       return count;
     },
-    destroy,
+    dispose: destroy,
     invalidate,
     get items() {
       return items;
@@ -629,9 +629,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get stickyItems() {
       return stickyItems;
     },
-    [Symbol.dispose]() {
-      destroy();
-    },
+    [Symbol.dispose]: destroy,
     get totalSize() {
       return ax.totalSize;
     },

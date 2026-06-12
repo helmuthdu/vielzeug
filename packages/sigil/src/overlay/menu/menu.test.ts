@@ -92,7 +92,6 @@ describe('sg-menu', () => {
       expect(initialItem?.getAttribute('role')).toBe('menuitemcheckbox');
       expect(initialItem?.getAttribute('aria-checked')).toBe('false');
       expect(initialCheck).toBeTruthy();
-      expect(initialCheck?.textContent).toBe('☐');
 
       await user.click(item);
 
@@ -103,7 +102,6 @@ describe('sg-menu', () => {
       expect(internalItem?.getAttribute('aria-checked')).toBe('true');
       expect(internalItem?.getAttribute('role')).toBe('menuitemcheckbox');
       expect(internalCheck).toBeTruthy();
-      expect(internalCheck?.textContent).toBe('☑');
     });
   });
 

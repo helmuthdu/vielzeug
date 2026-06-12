@@ -5,7 +5,7 @@ package: wayfinder
 category: routing
 keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
 related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, debugRouter]
+exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo, RouterDisposedError, debugRouter]
 environments: [browser, node, ssr, deno]
 ---
 

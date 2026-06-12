@@ -83,8 +83,12 @@ export type WorkerPool<TInput, TOutput> = {
   [Symbol.dispose](): void;
   /** Gracefully drain queued/in-flight tasks then terminate workers. Rejects if timeoutMs elapses. */
   close(timeoutMs?: number): Promise<void>;
+  /** `AbortSignal` aborted when the pool is terminated (via `dispose()` or `close()` settling). Use to tie external lifetimes to the pool. */
+  readonly disposalSignal: AbortSignal;
   /** Terminate immediately, rejecting all in-flight and queued tasks. */
   dispose(): void;
+  /** `true` after `dispose()` has been called or `close()` has settled. */
+  readonly disposed: boolean;
   /**
    * Execute the task function.
    *

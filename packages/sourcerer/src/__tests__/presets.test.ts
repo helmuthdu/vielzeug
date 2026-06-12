@@ -22,8 +22,8 @@ describe('filterContains', () => {
   });
 
   it('handles null/undefined values from getter as empty string', () => {
-    const data = [{ name: null as string | null }, { name: 'foo' }];
-    const pred = filterContains((i) => i.name, 'foo');
+    const data: { name: string | null }[] = [{ name: null }, { name: 'foo' }];
+    const pred = filterContains((i: { name: string | null }) => i.name, 'foo');
 
     expect(data.filter(pred)).toEqual([{ name: 'foo' }]);
   });

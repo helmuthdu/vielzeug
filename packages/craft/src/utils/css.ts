@@ -2,6 +2,8 @@
  * CSS tagged template utility and CSSStyleSheet caching.
  */
 
+import { issue } from '../_warn';
+
 export type CSSResult = {
   content: string;
   toString(): string;
@@ -56,7 +58,7 @@ export const loadStylesheet = (style: string | CSSStyleSheet | CSSResult): CSSSt
   try {
     sheet.replaceSync(cssText);
   } catch (err) {
-    console.error('Style sheet replace failed', err);
+    issue('Style sheet replace failed', err);
   }
 
   stylesheetStringCache.set(cssText, sheet);

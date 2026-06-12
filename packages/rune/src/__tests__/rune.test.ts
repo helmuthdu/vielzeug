@@ -595,7 +595,9 @@ describe('remoteTransport', () => {
 
     expect(() => log.error('x')).not.toThrow();
 
-    await vi.waitFor(() => expect(warnSpy).toHaveBeenCalledWith('[rune] remote transport error:', expect.any(Error)));
+    await vi.waitFor(() =>
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/^\[@vielzeug\/rune\] remote transport error:/)),
+    );
   });
 
   it('timestamp field is full ISO string, not truncated', async () => {
@@ -2130,7 +2132,7 @@ describe('Logger.dispose()', () => {
     const batch = batchTransport({
       interval: 60_000,
       maxSize: 100,
-      onFlush: (entries) => flushed.push(entries),
+      onFlush: (entries) => { flushed.push(entries); },
     });
     const log = createLogger({ transports: [batch] });
 
@@ -2207,5 +2209,3 @@ describe('lazy factory throw safety', () => {
     expect(entries[0].bindings['val']).toBeUndefined();
   });
 });
-
-/* ─── Test helpers marker ─── */

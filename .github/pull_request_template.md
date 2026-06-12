@@ -1,15 +1,15 @@
 <!--
   Thanks for contributing to Vielzeug! 🎉
-  
+
   Please write in English and follow the template below.
   All sections marked with (*) are required.
-  
+
   💡 Tip: Consider opening an issue first to discuss your change idea.
 -->
 
-## Summary *
+## Summary \*
 
-<!-- 
+<!--
   Provide a clear and concise description of what this PR does.
   What problem does it solve? What feature does it add?
 -->
@@ -31,7 +31,7 @@
 
 ## Related Issue
 
-<!-- 
+<!--
   Link to the issue this PR addresses (if applicable).
   Use "Closes #123" to automatically close the issue when PR is merged.
   Use "Relates to #123" for related but not fully resolved issues.
@@ -42,14 +42,14 @@
 
 ## Motivation and Context
 
-<!-- 
+<!--
   Why is this change required? What problem does it solve?
   What are the use cases?
 -->
 
 ## Changes Made
 
-<!-- 
+<!--
   List the main changes in this PR.
   Be specific - what files/components were modified?
 -->
@@ -60,12 +60,12 @@
 
 ## Screenshots / Examples (if applicable)
 
-<!-- 
+<!--
   Add screenshots, code examples, or demos if relevant.
   Before/after comparisons are especially helpful.
 -->
 
-## Checklist *
+## Checklist \*
 
 ### General
 
@@ -95,14 +95,14 @@
 - [ ] Change file created using Rush (`rush change`)
 - [ ] Package version will be bumped appropriately (patch/minor/major)
 
-## Breaking Changes *
+## Breaking Changes \*
 
 <!-- If this PR introduces breaking changes, describe them here -->
 
 - [ ] **Yes, this PR introduces breaking changes**
 - [ ] **No breaking changes**
 
-<!-- 
+<!--
   If YES, please describe:
   - What breaks?
   - What is the impact on existing users?
@@ -115,9 +115,7 @@
 ```typescript
 // Before
 
-
 // After
-
 ```
 
 ## Affected Packages
@@ -148,7 +146,7 @@
 - [ ] @vielzeug/wayfinder
 - [ ] Documentation
 - [ ] Build/CI
-- [ ] Other: _____
+- [ ] Other: **\_**
 
 ## Additional Notes
 

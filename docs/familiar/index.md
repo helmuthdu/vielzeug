@@ -14,6 +14,9 @@ exports:
     WorkerTimeoutError,
     WorkerTaskError,
     WorkerQueueFullError,
+    WorkerTerminatedError,
+    WorkerRuntimeError,
+    WorkerInvalidOptionsError,
   ]
 environments: [browser, node, ssr, deno]
 ---

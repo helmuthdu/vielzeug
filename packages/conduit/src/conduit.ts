@@ -72,11 +72,22 @@ export type ResolveResult<T> = { ok: true; value: T } | { error: unknown; ok: fa
 
 const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
 
-export class CircularDependencyError extends Error {
-  constructor(path: Token<any>[]) {
-    super(`[@vielzeug/conduit] Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
+/** Base class for all conduit errors. Catch with `instanceof ContainerError` to handle any conduit-originated error. */
+export class ContainerError extends Error {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(`[@vielzeug/conduit] ${message}`, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is ContainerError {
+    return err instanceof ContainerError;
+  }
+}
+
+export class CircularDependencyError extends ContainerError {
+  constructor(path: Token<any>[]) {
+    super(`Circular dependency detected: ${path.map(tokenName).join(' -> ')}`);
   }
 
   static is(err: unknown): err is CircularDependencyError {
@@ -84,13 +95,11 @@ export class CircularDependencyError extends Error {
   }
 }
 
-export class ProviderNotFoundError extends Error {
+export class ProviderNotFoundError extends ContainerError {
   constructor(tok: Token<any>, containerName?: string) {
     const loc = containerName ? ` (in container '${containerName}')` : '';
 
-    super(`[@vielzeug/conduit] No provider registered for token: ${tokenName(tok)}${loc}`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(`No provider registered for token: ${tokenName(tok)}${loc}`);
   }
 
   static is(err: unknown): err is ProviderNotFoundError {
@@ -98,11 +107,9 @@ export class ProviderNotFoundError extends Error {
   }
 }
 
-export class DuplicateRegistrationError extends Error {
+export class DuplicateRegistrationError extends ContainerError {
   constructor(tok: Token<any>) {
-    super(`[@vielzeug/conduit] Token "${tokenName(tok)}" is already registered.`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(`Token "${tokenName(tok)}" is already registered.`);
   }
 
   static is(err: unknown): err is DuplicateRegistrationError {
@@ -110,7 +117,7 @@ export class DuplicateRegistrationError extends Error {
   }
 }
 
-export class SyncResolutionError extends Error {
+export class SyncResolutionError extends ContainerError {
   constructor(tok: Token<any>, lifetime: Lifetime) {
     const reason =
       lifetime === 'transient'
@@ -119,9 +126,7 @@ export class SyncResolutionError extends Error {
           ? `named-scope "${(lifetime as symbol).description ?? 'anonymous'}" instance has not been resolved yet in this scope`
           : 'the instance has not been resolved yet; call await container.resolve() or container.resolveAll() first';
 
-    super(`[@vielzeug/conduit] Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(`Token "${tokenName(tok)}" cannot be resolved synchronously: ${reason}.`);
   }
 
   static is(err: unknown): err is SyncResolutionError {
@@ -129,22 +134,17 @@ export class SyncResolutionError extends Error {
   }
 }
 
-export class ScopedResolutionError extends Error {
+export class ScopedResolutionError extends ContainerError {
   constructor(tok: Token<any>, requiredScope?: ScopeToken) {
     if (requiredScope) {
       const scopeName = requiredScope.description ?? 'anonymous';
 
       super(
-        `[@vielzeug/conduit] Token "${tokenName(tok)}" requires scope "${scopeName}" but no matching scope container was found in the hierarchy.`,
+        `Token "${tokenName(tok)}" requires scope "${scopeName}" but no matching scope container was found in the hierarchy.`,
       );
     } else {
-      super(
-        `[@vielzeug/conduit] Token "${tokenName(tok)}" uses scoped lifetime but was resolved from the root container.`,
-      );
+      super(`Token "${tokenName(tok)}" uses scoped lifetime but was resolved from the root container.`);
     }
-
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
   }
 
   static is(err: unknown): err is ScopedResolutionError {
@@ -152,13 +152,11 @@ export class ScopedResolutionError extends Error {
   }
 }
 
-export class ContainerDisposedError extends Error {
+export class ContainerDisposedError extends ContainerError {
   constructor(containerName?: string) {
     const loc = containerName ? ` (container '${containerName}')` : '';
 
-    super(`[@vielzeug/conduit] Cannot use a disposed container${loc}.`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(`Cannot use a disposed container${loc}.`);
   }
 
   static is(err: unknown): err is ContainerDisposedError {
@@ -166,11 +164,9 @@ export class ContainerDisposedError extends Error {
   }
 }
 
-export class ContainerFrozenError extends Error {
+export class ContainerFrozenError extends ContainerError {
   constructor(containerName: string) {
-    super(`[@vielzeug/conduit] Container '${containerName}' is frozen and cannot accept new registrations.`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(`Container '${containerName}' is frozen and cannot accept new registrations.`);
   }
 
   static is(err: unknown): err is ContainerFrozenError {
@@ -229,6 +225,9 @@ export type ContainerGraph = {
 export interface Container {
   /** Human-readable identifier for this container. Set via createContainer({ name }). */
   readonly name: string;
+
+  /** `AbortSignal` aborted when the container is disposed. Use to tie external lifecycles to this container. */
+  readonly disposalSignal: AbortSignal;
 
   /** Whether the container has been disposed. */
   readonly disposed: boolean;
@@ -341,6 +340,7 @@ class ContainerImpl implements Container {
   #parent?: ContainerImpl;
   #scopeTag?: ScopeToken;
   #listeners = new Set<ContainerEventListener>();
+  #disposeController = new AbortController();
   #disposed = false;
   #frozen = false;
   readonly name: string;
@@ -370,6 +370,10 @@ class ContainerImpl implements Container {
     }
 
     if (this.#parent) this.#parent.#emit(event);
+  }
+
+  get disposalSignal(): AbortSignal {
+    return this.#disposeController.signal;
   }
 
   get disposed(): boolean {
@@ -594,6 +598,7 @@ class ContainerImpl implements Container {
     if (this.#disposed) return;
 
     this.#disposed = true;
+    this.#disposeController.abort();
     this.#emit({ type: 'dispose' });
 
     const hooks: Promise<void>[] = [];

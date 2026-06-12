@@ -23,7 +23,7 @@ describe('createGridVirtualizer – visible rows and cols', () => {
 
     expect(v.rows.length).toBeGreaterThanOrEqual(3);
     expect(v.cols.length).toBeGreaterThanOrEqual(3);
-    v.destroy();
+    v.dispose();
   });
 
   it('emits no rows when rowCount is 0', () => {
@@ -32,7 +32,7 @@ describe('createGridVirtualizer – visible rows and cols', () => {
 
     expect(v.rows).toHaveLength(0);
     expect(v.cols).toHaveLength(0);
-    v.destroy();
+    v.dispose();
   });
 
   it('emits no cols when colCount is 0', () => {
@@ -41,7 +41,7 @@ describe('createGridVirtualizer – visible rows and cols', () => {
 
     expect(v.rows).toHaveLength(0);
     expect(v.cols).toHaveLength(0);
-    v.destroy();
+    v.dispose();
   });
 
   it('row and col item shapes have correct position info', () => {
@@ -57,7 +57,7 @@ describe('createGridVirtualizer – visible rows and cols', () => {
 
     expect(v.rows[0]).toMatchObject({ end: 30, index: 0, size: 30, start: 0 });
     expect(v.cols[0]).toMatchObject({ end: 40, index: 0, size: 40, start: 0 });
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -75,7 +75,7 @@ describe('createGridVirtualizer – totalSize', () => {
 
     expect(v.totalHeight).toBe(4 * 50);
     expect(v.totalWidth).toBe(5 * 80);
-    v.destroy();
+    v.dispose();
   });
 
   it('includes row and column gaps', () => {
@@ -91,7 +91,7 @@ describe('createGridVirtualizer – totalSize', () => {
 
     expect(v.totalHeight).toBe(3 * 50 + 2 * 8);
     expect(v.totalWidth).toBe(3 * 100 + 2 * 10);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -156,7 +156,7 @@ describe('createGridVirtualizer – measurement', () => {
     await flushMicrotasks();
 
     expect(v.totalHeight).toBe(80 + 9 * 50);
-    v.destroy();
+    v.dispose();
   });
 
   it('measureColumn applies in next microtask', async () => {
@@ -167,7 +167,7 @@ describe('createGridVirtualizer – measurement', () => {
     await flushMicrotasks();
 
     expect(v.totalWidth).toBe(120 + 4 * 80);
-    v.destroy();
+    v.dispose();
   });
 
   it('measureBatch batches row and col updates into one pass', async () => {
@@ -196,7 +196,7 @@ describe('createGridVirtualizer – measurement', () => {
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(v.totalHeight).toBe(70 + 90 + 2 * 50);
     expect(v.totalWidth).toBe(100 + 4 * 80);
-    v.destroy();
+    v.dispose();
   });
 
   it('measureRowEl returns a disconnect function', () => {
@@ -207,7 +207,7 @@ describe('createGridVirtualizer – measurement', () => {
 
     expect(typeof disconnect).toBe('function');
     expect(() => disconnect()).not.toThrow();
-    v.destroy();
+    v.dispose();
   });
 
   it('measureColEl returns a disconnect function', () => {
@@ -218,7 +218,7 @@ describe('createGridVirtualizer – measurement', () => {
 
     expect(typeof disconnect).toBe('function');
     expect(() => disconnect()).not.toThrow();
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -244,7 +244,7 @@ describe('createGridVirtualizer – measurementCache', () => {
 
     expect(rowCache.get(0)).toBe(70);
     expect(colCache.get(0)).toBe(110);
-    v.destroy();
+    v.dispose();
   });
 
   it('restores from pre-populated caches', () => {
@@ -262,7 +262,7 @@ describe('createGridVirtualizer – measurementCache', () => {
 
     expect(v.totalHeight).toBe(75 + 4 * 50);
     expect(v.totalWidth).toBe(120 + 2 * 80);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -281,7 +281,7 @@ describe('createGridVirtualizer – invalidate / refresh', () => {
 
     expect(v.totalHeight).toBe(5 * 50);
     expect(v.totalWidth).toBe(3 * 80);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -296,14 +296,14 @@ describe('createGridVirtualizer – update', () => {
 
     expect(v.totalHeight).toBe(6 * 50);
     expect(v.totalWidth).toBe(3 * 80);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op after destroy', () => {
     const el = makeGrid();
     const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => v.update({ rowCount: 10 })).not.toThrow();
   });
@@ -327,7 +327,7 @@ describe('createGridVirtualizer – scrollToCell', () => {
 
     expect(el.scrollTop).toBe(10 * 30);
     expect(el.scrollLeft).toBe(10 * 40);
-    v.destroy();
+    v.dispose();
   });
 
   it('no-ops when cell is already in view (auto)', () => {
@@ -348,7 +348,7 @@ describe('createGridVirtualizer – scrollToCell', () => {
 
     expect(el.scrollTop).toBe(topBefore);
     expect(el.scrollLeft).toBe(leftBefore);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -366,7 +366,7 @@ describe('createGridVirtualizer – scroll position properties', () => {
 
     expect(typeof v.scrollTop).toBe('number');
     expect(typeof v.scrollLeft).toBe('number');
-    v.destroy();
+    v.dispose();
   });
 
   it('can be used to restore scroll position via initialScrollTop/Left', () => {
@@ -378,7 +378,7 @@ describe('createGridVirtualizer – scroll position properties', () => {
     const savedTop = el.scrollTop;
     const savedLeft = el.scrollLeft;
 
-    v1.destroy();
+    v1.dispose();
 
     // Re-read scroll position from element since the virtualizer was destroyed
     Object.defineProperty(el, 'scrollTop', { configurable: true, get: () => savedTop });
@@ -397,7 +397,7 @@ describe('createGridVirtualizer – scroll position properties', () => {
 
     expect(v2.scrollTop).toBe(savedTop);
     expect(v2.scrollLeft).toBe(savedLeft);
-    v2.destroy();
+    v2.dispose();
   });
 });
 
@@ -411,7 +411,7 @@ describe('createGridVirtualizer – prependRows', () => {
     v.prependRows(3);
 
     expect(v.totalHeight).toBe(8 * 50);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op for 0', () => {
@@ -422,14 +422,14 @@ describe('createGridVirtualizer – prependRows', () => {
     v.prependRows(0);
 
     expect(v.totalHeight).toBe(before);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op after destroy', () => {
     const el = makeGrid();
     const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => v.prependRows(3)).not.toThrow();
   });
@@ -443,8 +443,8 @@ describe('createGridVirtualizer – lifecycle', () => {
     const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
 
     expect(() => {
-      v.destroy();
-      v.destroy();
+      v.dispose();
+      v.dispose();
     }).not.toThrow();
   });
 
@@ -469,7 +469,7 @@ describe('createGridVirtualizer – lifecycle', () => {
     });
     const callsBefore = onChange.mock.calls.length;
 
-    v.destroy();
+    v.dispose();
     el.dispatchEvent(new Event('scroll'));
 
     expect(onChange.mock.calls.length).toBe(callsBefore);

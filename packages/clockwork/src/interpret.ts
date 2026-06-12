@@ -142,6 +142,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
   let traceHead = 0;
   let traceCount = 0;
 
+  const disposeController = new AbortController();
   let disposed = false;
   let draining = false;
   let invokeCounter = 0;
@@ -567,21 +568,33 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     if (options.persistence) saveSnapshot();
   }
 
+  const dispose = (): void => {
+    if (disposed) return;
+
+    disposed = true;
+    disposeController.abort();
+    stopInvokes();
+    clearTimers();
+    state_.dispose();
+    context_.dispose();
+  };
+
   return {
     can,
     context: readonly(context_),
+    get disposalSignal() {
+      return disposeController.signal;
+    },
+    dispose,
+    get disposed() {
+      return disposed;
+    },
     getSnapshot,
     getTrace,
     matches,
     send,
     state: readonly(state_),
     subscribe,
-    [Symbol.dispose]: () => {
-      disposed = true;
-      stopInvokes();
-      clearTimers();
-      state_.dispose();
-      context_.dispose();
-    },
+    [Symbol.dispose]: dispose,
   };
 };

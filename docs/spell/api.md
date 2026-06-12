@@ -116,7 +116,7 @@ Builder reference:
 | `s.string()`            | `StringSchema`             | String constraints and string format helpers.           |
 | `s.number()`            | `NumberSchema`             | Numeric range, integer, sign, and multiplicity helpers. |
 | `s.boolean()`           | `BooleanSchema`            | Boolean parsing and coercion helpers.                   |
-| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`.                        |
+| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`. Constraints are runtime-only — `toDescriptor()` warns and does not serialize `min()`, `max()`, etc. |
 | `s.date()`              | `DateSchema`               | Date instance validation and range helpers.             |
 | `s.literal(value)`      | `LiteralSchema<T>`         | Exact primitive matching.                               |
 | `s.enum(values)`        | `EnumSchema<T>`            | Fixed string union from a readonly tuple.               |
@@ -258,6 +258,30 @@ const PositiveNumber = s.number().refine(
 );
 PositiveNumber.parse(5); // 5
 // PositiveNumber.parse(-1); // throws
+```
+
+---
+
+### `ObjectSchema.merge()`
+
+Use `merge()` to combine two object schemas into one. Fields from the right-hand schema override same-named fields from the left.
+
+```ts
+merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U>
+```
+
+**Returns:** A new `ObjectSchema` whose shape is the left shape plus the right shape (right wins on conflict).
+
+The merged schema inherits the **right-hand schema's strict/relaxed mode**. A strict right-hand schema produces a strict merge; a relaxed right-hand schema produces a relaxed merge.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const Base = s.object({ id: s.string() });
+const Extra = s.object({ name: s.string() }).relaxed();
+
+const Merged = Base.merge(Extra);
+Merged.parse({ extra: 'ok', id: '1', name: 'Ada' }); // relaxed — extra keys allowed
 ```
 
 ---

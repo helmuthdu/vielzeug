@@ -52,6 +52,7 @@ export function createTransportCore(opts: TransportOptions = {}) {
     Object.entries(initialHeaders).map(([k, v]) => [k.toLowerCase(), v]),
   );
   const activeControllers = new Set<AbortController>();
+  const disposeController = new AbortController();
   const interceptors: Interceptor[] = [];
   let cachedPipeline: ((ctx: FetchContext) => Promise<Response>) | null = null;
   let disposed = false;
@@ -130,7 +131,10 @@ export function createTransportCore(opts: TransportOptions = {}) {
   }
 
   function dispose(): void {
+    if (disposed) return;
+
     disposed = true;
+    disposeController.abort();
 
     for (const ac of activeControllers) ac.abort();
 
@@ -143,6 +147,9 @@ export function createTransportCore(opts: TransportOptions = {}) {
     baseUrl,
     cancelAll,
     dispatch,
+    get disposalSignal() {
+      return disposeController.signal;
+    },
     dispose,
     get disposed() {
       return disposed;

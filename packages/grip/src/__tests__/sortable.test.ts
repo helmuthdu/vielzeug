@@ -37,8 +37,8 @@ describe('createSortableScope', () => {
 
     expect(reorderB).not.toHaveBeenCalled();
 
-    sortableA.destroy();
-    sortableB.destroy();
+    sortableA.dispose();
+    sortableB.dispose();
   });
 });
 
@@ -55,7 +55,7 @@ describe('createSortable', () => {
 
       expect(sortable.isDragging).toBe(false);
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -74,7 +74,7 @@ describe('createSortable', () => {
       expect(setDragImage).toHaveBeenCalledWith(img, 0, 0);
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -90,7 +90,7 @@ describe('createSortable', () => {
         expect((child as HTMLElement).tabIndex).toBe(0);
       }
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('sets draggable on items when no handle option', () => {
@@ -102,7 +102,7 @@ describe('createSortable', () => {
 
       expect(first.getAttribute('draggable')).toBe('true');
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('sets draggable on handle elements when handle option is set', () => {
@@ -120,7 +120,7 @@ describe('createSortable', () => {
       expect(li.getAttribute('draggable')).toBeNull();
       expect(handle.getAttribute('draggable')).toBe('true');
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('removes all grip attributes on destroy', () => {
@@ -130,7 +130,7 @@ describe('createSortable', () => {
       } = makeList('a', 'b');
       const sortable = createSortable({ element });
 
-      sortable.destroy();
+      sortable.dispose();
 
       expect(element.getAttribute('role')).toBeNull();
       expect(first.getAttribute('draggable')).toBeNull();
@@ -159,7 +159,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('does not throw when autoScroll is true (explicit)', () => {
@@ -181,7 +181,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('accepts autoScroll as an options object', () => {
@@ -207,7 +207,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -226,7 +226,7 @@ describe('createSortable', () => {
 
       expect(li.getAttribute('draggable')).toBe('true');
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('re-applies handle attrs on existing items after sync', () => {
@@ -257,7 +257,7 @@ describe('createSortable', () => {
       expect(handle2.getAttribute('draggable')).toBe('true');
       expect(handle2.getAttribute('data-grip-handle')).toBe('');
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -279,7 +279,7 @@ describe('createSortable', () => {
 
       expect(sortable.isDragging).toBe(false);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('fires onDragStart and onDragEnd with the dragged id', () => {
@@ -299,7 +299,7 @@ describe('createSortable', () => {
 
       expect(onDragEnd).toHaveBeenCalledWith('a', expect.any(Event));
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('fires onReorder when drag changes the order', () => {
@@ -323,7 +323,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('does not fire onReorder when order does not change', () => {
@@ -339,7 +339,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('creates a placeholder sized by height for vertical axis', () => {
@@ -360,7 +360,7 @@ describe('createSortable', () => {
       expect(placeholder.style.height).toBe('40px');
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('creates a placeholder sized by width for horizontal axis', () => {
@@ -381,7 +381,7 @@ describe('createSortable', () => {
       expect(placeholder.style.width).toBe('120px');
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('uses custom placeholderClass', () => {
@@ -396,7 +396,7 @@ describe('createSortable', () => {
       expect(element.querySelector('.my-placeholder')).toBeTruthy();
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('uses custom drag image callback', () => {
@@ -416,7 +416,7 @@ describe('createSortable', () => {
       expect(setDragImage).toHaveBeenCalledWith(preview, 0, 0);
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('uses static dragImage element when not a function', () => {
@@ -433,7 +433,7 @@ describe('createSortable', () => {
       expect(setDragImage).toHaveBeenCalledWith(preview, 0, 0);
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('applies dragImageOffset to setDragImage', () => {
@@ -450,7 +450,7 @@ describe('createSortable', () => {
       expect(setDragImage).toHaveBeenCalledWith(preview, 12, 34);
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('skips setDragImage when dragImage callback returns null', () => {
@@ -466,7 +466,7 @@ describe('createSortable', () => {
       expect(setDragImage).not.toHaveBeenCalled();
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('skips setDragImage when dragImage callback returns undefined', () => {
@@ -482,7 +482,7 @@ describe('createSortable', () => {
       expect(setDragImage).not.toHaveBeenCalled();
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('does not move placeholder when controller becomes disabled reactively mid-drag', () => {
@@ -508,7 +508,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('cancels drag and restores original order when destroyed during active drag', () => {
@@ -526,7 +526,7 @@ describe('createSortable', () => {
 
       startDrag(first);
       third.dispatchEvent(makeDragEvent('dragover', { clientY: 90, dropEffect: 'move' }));
-      sortable.destroy();
+      sortable.dispose();
 
       const ids = Array.from(element.children).map((c) => (c as HTMLElement).getAttribute('data-sort-id'));
 
@@ -545,7 +545,7 @@ describe('createSortable', () => {
       // Dispatch dragover directly on the container (no item target)
       element.dispatchEvent(makeDragEvent('dragover', { clientY: 0, dropEffect: 'move' }));
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -568,7 +568,7 @@ describe('createSortable', () => {
 
       expect(onDragStart).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -586,7 +586,7 @@ describe('createSortable', () => {
       expect(sortable.isDragging).toBe(false);
       expect(onDragStart).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('ignores dragstart when disabled getter returns true', () => {
@@ -608,7 +608,7 @@ describe('createSortable', () => {
       expect(onDragStart).toHaveBeenCalledTimes(1);
 
       endDrag(first);
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -625,7 +625,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['a', 'c', 'b']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('moves item backward with ArrowUp', () => {
@@ -640,7 +640,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a', 'c']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('moves item to start with Home', () => {
@@ -655,7 +655,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['c', 'a', 'b']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('moves item to end with End', () => {
@@ -670,7 +670,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'c', 'a']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('moves forward with ArrowRight for horizontal axis', () => {
@@ -685,7 +685,7 @@ describe('createSortable', () => {
 
       expect(onReorder).toHaveBeenCalledWith(['b', 'a', 'c']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('does not fire onReorder when item is already at boundary', () => {
@@ -700,7 +700,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('ignores key events when keyboard: false', () => {
@@ -715,7 +715,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('ignores key events on form inputs', () => {
@@ -735,7 +735,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('ignores keyboard when disabled', () => {
@@ -750,7 +750,7 @@ describe('createSortable', () => {
 
       expect(onReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -778,7 +778,7 @@ describe('createSortable', () => {
 
       expect(onRevert).toHaveBeenCalledTimes(1);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('calls the revert function returned by onReorder after a keyboard move', () => {
@@ -795,7 +795,7 @@ describe('createSortable', () => {
 
       expect(onRevert).toHaveBeenCalledTimes(1);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('is a no-op when onReorder returns undefined', () => {
@@ -818,7 +818,7 @@ describe('createSortable', () => {
 
       expect(() => sortable.revert()).not.toThrow();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('clears the revert function after first call', () => {
@@ -845,7 +845,7 @@ describe('createSortable', () => {
 
       expect(onRevert).toHaveBeenCalledTimes(1);
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -873,7 +873,7 @@ describe('createSortable', () => {
       expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b'], ['b', 'a']);
       expect(callOrder).toEqual(['before', 'reorder']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('is not called when the drag is cancelled', () => {
@@ -889,7 +889,7 @@ describe('createSortable', () => {
 
       expect(onBeforeReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('is not called when order does not change', () => {
@@ -905,7 +905,7 @@ describe('createSortable', () => {
 
       expect(onBeforeReorder).not.toHaveBeenCalled();
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('fires with from/to arrays before onReorder for keyboard moves', () => {
@@ -923,7 +923,7 @@ describe('createSortable', () => {
       expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b', 'c'], ['a', 'c', 'b']);
       expect(callOrder).toEqual(['before', 'reorder']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
 
     it('fires onBeforeReorder for keyboard moves on horizontal axis', () => {
@@ -940,7 +940,7 @@ describe('createSortable', () => {
       expect(onBeforeReorder).toHaveBeenCalledWith(['a', 'b', 'c'], ['b', 'a', 'c']);
       expect(onReorder).toHaveBeenCalledWith(['b', 'a', 'c']);
 
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -965,8 +965,8 @@ describe('createSortable', () => {
       expect(leftReorder).toHaveBeenCalledWith(['l2']);
       expect(rightReorder).toHaveBeenCalledWith(['r1', 'l1']);
 
-      leftSortable.destroy();
-      rightSortable.destroy();
+      leftSortable.dispose();
+      rightSortable.dispose();
     });
 
     it('does not transfer items between lists without a shared scope', () => {
@@ -987,8 +987,8 @@ describe('createSortable', () => {
 
       expect(rightReorder).not.toHaveBeenCalled();
 
-      leftSortable.destroy();
-      rightSortable.destroy();
+      leftSortable.dispose();
+      rightSortable.dispose();
     });
 
     it('fires onBeforeReorder before onReorder for cross-list drag', () => {
@@ -1033,8 +1033,8 @@ describe('createSortable', () => {
       expect(leftBeforeIdx).toBeLessThan(leftReorderIdx);
       expect(rightBeforeIdx).toBeLessThan(rightReorderIdx);
 
-      leftSortable.destroy();
-      rightSortable.destroy();
+      leftSortable.dispose();
+      rightSortable.dispose();
     });
 
     it('lazy order snapshots: only participanting controllers are recorded', () => {
@@ -1061,9 +1061,9 @@ describe('createSortable', () => {
       expect(reorderA).toHaveBeenCalledWith(['a2']);
       expect(reorderC).not.toHaveBeenCalled();
 
-      sortableA.destroy();
-      sortableB.destroy();
-      sortableC.destroy();
+      sortableA.dispose();
+      sortableB.dispose();
+      sortableC.dispose();
     });
   });
 
@@ -1085,7 +1085,7 @@ describe('createSortable', () => {
       expect(onDragStart).toHaveBeenCalledWith('x', expect.any(Event));
 
       endDrag(li);
-      sortable.destroy();
+      sortable.dispose();
     });
   });
 
@@ -1202,6 +1202,6 @@ describe('dragover position resolution', () => {
 
     expect(onReorder).toHaveBeenCalledWith(['b', 'a']);
 
-    sortable.destroy();
+    sortable.dispose();
   });
 });

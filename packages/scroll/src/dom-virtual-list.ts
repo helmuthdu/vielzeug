@@ -252,11 +252,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       return virtualizer?.count ?? 0;
     },
 
-    destroy() {
+    dispose() {
       if (isDestroyed) return;
 
       isDestroyed = true;
-      virtualizer?.destroy();
+      virtualizer?.dispose();
       virtualizer = null;
       clearAndReset();
     },
@@ -336,7 +336,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       currentItems = items;
 
       if (items.length === 0) {
-        virtualizer?.destroy();
+        virtualizer?.dispose();
         virtualizer = null;
         clearAndReset();
 
@@ -378,7 +378,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     },
 
     [Symbol.dispose]() {
-      this.destroy();
+      this.dispose();
     },
 
     get totalSize() {
@@ -433,13 +433,13 @@ export function createVirtualScroller<T>(
   }
 
   function destroyScroller(): void {
-    ctrl.destroy();
+    ctrl.dispose();
     scrollEl.remove();
   }
 
   return new Proxy(ctrl, {
     get(t, prop, receiver) {
-      if (prop === 'destroy' || prop === Symbol.dispose) return destroyScroller;
+      if (prop === 'dispose' || prop === Symbol.dispose) return destroyScroller;
 
       return Reflect.get(t as object, prop, receiver);
     },

@@ -181,7 +181,7 @@ describe('bandScale', () => {
     expect(scale.ticks()).toEqual(['A', 'B', 'C', 'D', 'E']);
   });
 
-  it('emits devWarn for unknown category and returns 0', () => {
+  it('emits warn for unknown category and returns 0', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const scale = bandScale({ domain: ['A', 'B'], range: [0, 200] });
     const result = scale.map('Z');

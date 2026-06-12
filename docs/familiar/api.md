@@ -165,9 +165,9 @@ type WorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> &
 
 Individual types are also exported for use in function signatures:
 
-| Type              | Members                                                                          |
-| ----------------- | -------------------------------------------------------------------------------- |
-| `WorkerPool`      | `run`, `close`, `dispose`, `status`, `[Symbol.dispose]`, `[Symbol.asyncDispose]` |
+| Type              | Members                                                                                                          |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `WorkerPool`      | `run`, `close`, `dispose`, `disposed`, `disposalSignal`, `status`, `[Symbol.dispose]`, `[Symbol.asyncDispose]` |
 | `WorkerMetrics`   | `active`, `completed`, `concurrency`, `failed`, `queued`, `utilization`          |
 | `StreamingWorker` | `batch`, `runStream`                                                             |
 | `GroupableWorker` | `group`                                                                          |
@@ -440,6 +440,29 @@ await pool.close(5000); // must drain within 5 s
 `dispose(): void`
 
 Immediate forceful termination. Rejects all in-flight and queued tasks with `WorkerTerminatedError`. After `dispose()`, `status` is `'terminated'` and further `run()` calls reject immediately.
+
+---
+
+### `disposed`
+
+`readonly disposed: boolean`
+
+`true` after `dispose()` has been called or `close()` has settled. Use to guard against post-termination calls.
+
+---
+
+### `disposalSignal`
+
+`readonly disposalSignal: AbortSignal`
+
+`AbortSignal` aborted when the pool is terminated (via `dispose()` or `close()` settling). Use to tie external lifetimes (polling loops, SSE connections, etc.) to the pool's lifecycle.
+
+```ts
+const pool = createWorker<number, number>((n) => n * 2);
+
+startPolling({ signal: pool.disposalSignal });
+// polling stops automatically when the pool is disposed
+```
 
 ---
 

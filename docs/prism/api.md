@@ -22,8 +22,8 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `buildXScale()` | Shared horizontal scale builder (auto time or linear) | `Scale<Date> \| Scale<number>` |
 | `buildYScale()` | Shared vertical linear scale builder | `Scale<number>` |
 | `animate()` | Animate SVG element attributes via RAF | `Promise<void>` |
-| `devWarn()` | Dev-only console.warn helper (`/devtools` subpath) | `void` |
-| `devError()` | Dev-only console.error helper (`/devtools` subpath) | `void` |
+| `warn()` | Dev-only console.warn helper (`/devtools` subpath) | `void` |
+| `issue()` | Dev-only console.error helper (`/devtools` subpath) | `void` |
 | `LegendState` | Live legend state object (plugin API) | type |
 | `TooltipState` | Live tooltip state object (plugin API) | type |
 
@@ -33,7 +33,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 |---|---|
 | `@vielzeug/prism` | All chart factories, scales, types, and utilities |
 | `@vielzeug/prism/theme` | Default CSS custom properties (light + dark) |
-| `@vielzeug/prism/devtools` | `devWarn` / `devError` — dev-only helpers, tree-shaken in production |
+| `@vielzeug/prism/devtools` | `warn` / `issue` — dev-only helpers, tree-shaken in production |
 
 ---
 
@@ -652,7 +652,7 @@ interface TooltipConfig {
 
 The tooltip is appended inside the chart container (not `document.body`), so it is automatically scoped and cleaned up on `dispose()`.
 
-> ⚠️ **Security:** The string returned by `render` is injected via `innerHTML`. Pass `sanitize` to apply a sanitizer (e.g. DOMPurify) before injection, or ensure all user-supplied values are escaped before interpolation. A `devWarn` is emitted in development when `render` is set without `sanitize`.
+> ⚠️ **Security:** The string returned by `render` is injected via `innerHTML`. Pass `sanitize` to apply a sanitizer (e.g. DOMPurify) before injection, or ensure all user-supplied values are escaped before interpolation. A `warn` is emitted in development when `render` is set without `sanitize`.
 
 ### `CrosshairConfig`
 
@@ -848,27 +848,27 @@ A custom easing function. Receives a normalised time value `t ∈ [0, 1]` and re
 
 Dev-only helpers. Both functions are no-ops when `globalThis.__PRISM_PROD__` is `true` (set by bundlers via `define`), so they are tree-shaken from production builds.
 
-### `devWarn`
+### `warn`
 
 ```ts
-function devWarn(msg: string): void;
+function warn(msg: string): void;
 ```
 
 Emits `console.warn('[prism] <msg>')` in development. Silent in production.
 
 > ⚠️ **Security:** Warning messages may include user-supplied data (e.g. category names from `bandScale`). Avoid using sensitive values (PII, tokens) as chart category labels.
 
-### `devError`
+### `issue`
 
 ```ts
-function devError(msg: string): void;
+function issue(msg: string): void;
 ```
 
 Emits `console.error('[prism] <msg>')` in development. Silent in production.
 
 ```ts
-import { devWarn } from '@vielzeug/prism/devtools';
+import { warn } from '@vielzeug/prism/devtools';
 
 // In a plugin:
-if (!container.offsetParent) devWarn('Chart container appears to be detached from the DOM.');
+if (!container.offsetParent) warn('Chart container appears to be detached from the DOM.');
 ```

@@ -1,5 +1,6 @@
 import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
+import { warn } from './_warn';
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 
 export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
@@ -98,8 +99,8 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
       record.path === '/*' || record.path.endsWith('/*') || (record.path.includes(':') && record.path.endsWith('*'));
 
     if (wildcardSeen && !isCatchAll) {
-      console.warn(
-        `[wayfinder] Route "${record.leaf.name}" (${record.path}) is defined after a wildcard/catch-all route and will never match. Move specific routes before wildcards.`,
+      warn(
+        `Route "${record.leaf.name}" (${record.path}) is defined after a wildcard/catch-all route and will never match. Move specific routes before wildcards.`,
       );
     }
 

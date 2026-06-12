@@ -149,7 +149,7 @@ chart.dispose();
 - **`buildXScale` / `buildYScale`** — shared cartesian scale builders (auto-select time or linear scale)
 - **Event hooks** — `onClick` and `onHover` callbacks on every chart
 - **Plugin system** — extend charts with `ChartPlugin` (install/destroy lifecycle); supported by all chart types including `createPieChart`
-- **Devtools** — `devWarn` / `devError` from `@vielzeug/prism/devtools`; silenced automatically in production
+- **Devtools** — `warn` / `issue` from `@vielzeug/prism/devtools`; silenced automatically in production
 - **CSS custom properties** — full theme control via `--prism-*` tokens
 - **Responsive** — auto-resizes via `ResizeObserver`
 - **Accessible** — ARIA labels and semantic SVG structure
@@ -163,7 +163,7 @@ chart.dispose();
 |---|---|
 | `@vielzeug/prism` | All chart factories, scales, and types |
 | `@vielzeug/prism/theme` | Default CSS (custom properties + dark mode) |
-| `@vielzeug/prism/devtools` | `devWarn` / `devError` — dev-only helpers, tree-shaken in production |
+| `@vielzeug/prism/devtools` | `warn` / `issue` — dev-only helpers, tree-shaken in production |
 
 ## Documentation
 

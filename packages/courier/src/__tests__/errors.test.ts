@@ -119,7 +119,7 @@ describe('HttpError', () => {
 
       expect(err.kind).toBe('http');
       expect(err.status).toBe(422);
-      expect(err.message).toBe('Unprocessable Entity');
+      expect(err.message).toBe('[@vielzeug/courier] Unprocessable Entity');
       expect(err.method).toBe('POST');
       expect(err.data).toEqual({ errors: ['invalid'] });
     });
@@ -128,7 +128,7 @@ describe('HttpError', () => {
       const res = new Response(null, { status: 500, statusText: '' });
       const err = HttpError.fromResponse(res, null, 'GET', '/');
 
-      expect(err.message).toBe('HTTP 500');
+      expect(err.message).toBe('[@vielzeug/courier] HTTP 500');
     });
 
     it('fromCause() creates a network error from a plain Error', () => {
@@ -136,7 +136,7 @@ describe('HttpError', () => {
       const err = HttpError.fromCause(cause, 'GET', '/test');
 
       expect(err.kind).toBe('network');
-      expect(err.message).toBe('fetch failed');
+      expect(err.message).toBe('[@vielzeug/courier] fetch failed');
       expect(err.cause).toBe(cause);
     });
 
@@ -154,7 +154,7 @@ describe('HttpError', () => {
     it('fromCause() uses String(cause) when cause is not an Error', () => {
       const err = HttpError.fromCause('string cause', 'GET', '/test');
 
-      expect(err.message).toBe('string cause');
+      expect(err.message).toBe('[@vielzeug/courier] string cause');
     });
 
     it('is() returns true for HttpError instances', () => {

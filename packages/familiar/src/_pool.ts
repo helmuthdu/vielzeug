@@ -42,6 +42,7 @@ export function createPool<TInput, TOutput>(
 ): WorkerHandle<TInput, TOutput> {
   const { concurrency, defaultTimeout, maxQueue, onDispose, onFull } = options;
   const queue = new TaskQueue<TInput, TOutput>();
+  const disposeController = new AbortController();
   const idleResolvers: Array<() => void> = [];
   /** Waiters blocked on run() because the queue is full (onFull='wait' mode). */
   const fullWaiters: Array<() => void> = [];
@@ -165,6 +166,7 @@ export function createPool<TInput, TOutput>(
     if (terminated) return;
 
     terminated = true;
+    disposeController.abort();
     onDispose?.();
 
     while (queue.size > 0) {
@@ -396,7 +398,13 @@ export function createPool<TInput, TOutput>(
     get concurrency(): number {
       return concurrency;
     },
+    get disposalSignal(): AbortSignal {
+      return disposeController.signal;
+    },
     dispose,
+    get disposed(): boolean {
+      return terminated;
+    },
     get failed(): number {
       return failedCount;
     },

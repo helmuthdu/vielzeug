@@ -1,5 +1,6 @@
 import { effect as rawEffect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
+import { warn } from '../_warn';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
 import { removeNodes } from '../utils/dom';
 
@@ -23,8 +24,8 @@ const sanitize = (value: string): string => {
 
   if (value && !_warned) {
     _warned = true;
-    console.warn(
-      '[craft] raw() was called without a sanitizer registered. ' +
+    warn(
+      'raw() was called without a sanitizer registered. ' +
         'Passing user-supplied HTML directly to raw() is an XSS risk. ' +
         'Register a sanitizer with setRawSanitizer() — e.g. setRawSanitizer(DOMPURIFY.sanitize).',
     );

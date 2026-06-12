@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from '../';
+import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
 import { createDeferred, settle } from './test-utils';
 
 describe('lazy routes', () => {
@@ -176,6 +176,6 @@ describe('lazy routes', () => {
     await nav.catch(() => undefined);
 
     // After dispose, the router is dead; subscriptions must throw.
-    expect(() => router.subscribe(vi.fn())).toThrow('[wayfinder] Router is disposed');
+    expect(() => router.subscribe(vi.fn())).toThrow(RouterDisposedError);
   });
 });

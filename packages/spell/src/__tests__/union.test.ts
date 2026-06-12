@@ -151,6 +151,16 @@ describe('UnionSchema.schemas introspection', () => {
   });
 });
 
+describe('s.or() alias', () => {
+  it('is equivalent to s.union() with two schemas', () => {
+    const schema = s.or(s.string(), s.number());
+
+    expect(schema.parse('hello')).toBe('hello');
+    expect(schema.parse(42)).toBe(42);
+    expect(schema.safeParse(true).success).toBe(false);
+  });
+});
+
 describe('s.union() — async non-ValidationError branch throw', () => {
   it('does not include non-ValidationError branch throws in branchErrors', async () => {
     const badSchema = s.string().checkAsync(async () => {

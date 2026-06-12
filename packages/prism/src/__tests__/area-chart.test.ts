@@ -247,7 +247,7 @@ describe('createAreaChart', () => {
     chart.dispose();
   });
 
-  it('emits devWarn and renders no series paths when data is empty', () => {
+  it('emits warn and renders no series paths when data is empty', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const chart = createAreaChart(container, {
       series: [{ data: [], name: 'Empty' }],

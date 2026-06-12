@@ -312,6 +312,8 @@ export type LogMethod = {
 /* ─── Logger interface ─── */
 
 export type Logger = {
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose]: () => void;
   /** Snapshot of currently pinned bindings. */
   readonly bindings: Readonly<Bindings>;
   /** Create a child logger with config overrides. Inherits all config and bindings by default. */
@@ -319,6 +321,8 @@ export type Logger = {
   /** Snapshot of current resolved configuration. */
   readonly config: Readonly<RuneConfig>;
   debug: LogMethod;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this logger. */
+  readonly disposalSignal: AbortSignal;
   /**
    * Dispose all `BatchTransport` instances in the transport array (calls their `.dispose()`).
    * Call on app shutdown to flush pending entries and stop interval timers.
@@ -327,6 +331,8 @@ export type Logger = {
    * `pipe(...)` will not be discovered; hold a reference to the batch and dispose it manually.
    */
   dispose: () => void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Returns true if entries at this level will pass the configured threshold. */
   enabled: (type: LogLevel) => boolean;
   error: LogMethod;

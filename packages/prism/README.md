@@ -4,7 +4,7 @@ package: prism
 category: ui
 keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
 related: [ripple, sigil, orbit]
-exports: [createLineChart, createBarChart, createAreaChart, createPieChart, createSparkline, linearScale, timeScale, bandScale, seriesColor, setTheme, devWarn, devError]
+exports: [createLineChart, createBarChart, createAreaChart, createPieChart, createSparkline, linearScale, timeScale, bandScale, seriesColor, setTheme, warn, issue]
 ---
 
 # @vielzeug/prism
@@ -45,7 +45,7 @@ yarn add @vielzeug/prism
 |---|---|
 | `@vielzeug/prism` | Chart factories, scales, and types |
 | `@vielzeug/prism/theme` | Default CSS custom properties (light + dark mode) |
-| `@vielzeug/prism/devtools` | `devWarn` / `devError` helpers (dev-only, tree-shaken in production) |
+| `@vielzeug/prism/devtools` | `warn` / `issue` helpers (dev-only, tree-shaken in production) |
 
 ## Quick Start
 

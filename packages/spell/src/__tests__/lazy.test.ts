@@ -35,4 +35,21 @@ describe('s.lazy()', () => {
     });
     expect(() => Node.parse({ value: 'bad' })).toThrow();
   });
+
+  it('parseAsync() resolves the lazy schema correctly', async () => {
+    const schema = s.lazy(() => s.string().min(3));
+
+    await expect(schema.parseAsync('hello')).resolves.toBe('hello');
+    await expect(schema.parseAsync('hi')).rejects.toThrow();
+  });
+
+  it('safeParseAsync() on lazy returns success/failure correctly', async () => {
+    const schema = s.lazy(() => s.number().positive());
+
+    const ok = await schema.safeParseAsync(5);
+    const fail = await schema.safeParseAsync(-1);
+
+    expect(ok.success).toBe(true);
+    expect(fail.success).toBe(false);
+  });
 });

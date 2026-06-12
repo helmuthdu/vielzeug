@@ -146,7 +146,13 @@ export function debugFloat(
 
   return {
     cssAnchor: handle.cssAnchor,
+    get disposalSignal() {
+      return handle.disposalSignal;
+    },
     dispose: disposeHandle,
+    get disposed() {
+      return handle.disposed;
+    },
     getPosition: () => handle.getPosition(),
     [Symbol.dispose]: disposeHandle,
     update: () => handle.update(),

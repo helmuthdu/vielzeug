@@ -83,7 +83,7 @@ export interface GridVirtualizer {
   readonly scrollTop: number;
   readonly totalHeight: number;
   readonly totalWidth: number;
-  destroy: () => void;
+  dispose: () => void;
   invalidate: () => void;
   /** Measure rows and columns in a single coordinated rebuild pass (R4). */
   measureBatch: (rows: Array<{ index: number; size: number }>, cols: Array<{ index: number; size: number }>) => void;
@@ -590,7 +590,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     get cols() {
       return cols;
     },
-    destroy,
+    dispose: destroy,
     invalidate,
     measureBatch,
     measureColEl,
@@ -609,9 +609,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     get scrollTop() {
       return scrollTop;
     },
-    [Symbol.dispose]() {
-      destroy();
-    },
+    [Symbol.dispose]: destroy,
     get totalHeight() {
       return rowAx.totalSize;
     },

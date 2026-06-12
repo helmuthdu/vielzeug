@@ -120,8 +120,16 @@ export function parseInstant(input: string): Temporal.Instant {
  * shift(parseInstant('2026-03-21T10:00:00Z'), { hours: 2 }, { tz: 'UTC' }).toInstant()
  * ```
  */
-export function shift(input: Temporal.ZonedDateTime, duration: Temporal.DurationLike, options?: TimeOptions): Temporal.ZonedDateTime;
-export function shift(input: Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime, duration: Temporal.DurationLike, options: TimeOptionsWithTz): Temporal.ZonedDateTime;
+export function shift(
+  input: Temporal.ZonedDateTime,
+  duration: Temporal.DurationLike,
+  options?: TimeOptions,
+): Temporal.ZonedDateTime;
+export function shift(
+  input: Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime,
+  duration: Temporal.DurationLike,
+  options: TimeOptionsWithTz,
+): Temporal.ZonedDateTime;
 export function shift(
   input: TimeInput,
   duration: Temporal.DurationLike,

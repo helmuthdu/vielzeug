@@ -704,7 +704,7 @@ export function createSortable(options: SortableOptions): Sortable {
   };
 
   return {
-    destroy,
+    dispose: destroy,
     get isDragging() {
       return sortableScope.active?.source === controller;
     },

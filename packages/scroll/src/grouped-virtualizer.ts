@@ -218,8 +218,8 @@ export function createGroupedVirtualizer<T>(
     get count() {
       return virtualizer.count;
     },
-    destroy() {
-      virtualizer.destroy();
+    dispose() {
+      virtualizer.dispose();
     },
     invalidate() {
       virtualizer.invalidate();
@@ -275,7 +275,7 @@ export function createGroupedVirtualizer<T>(
       return virtualizer.stickyItems;
     },
     [Symbol.dispose]() {
-      virtualizer.destroy();
+      virtualizer.dispose();
     },
     get totalSize() {
       return virtualizer.totalSize;

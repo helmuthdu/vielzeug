@@ -1,3 +1,4 @@
+import { issue } from './_warn';
 import { createFormatter, type Formatter } from './format';
 import {
   compileTemplate,
@@ -146,6 +147,8 @@ export type I18nOptions<M extends Messages = Messages> = {
 // ─── Public interface ─────────────────────────────────────────────────────────
 
 export type I18n<M extends Messages = Messages> = {
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
   /**
    * Returns a bound translation function for a specific key.
    * The returned function caches the key lookup and invalidates on any catalog or locale change,
@@ -170,6 +173,8 @@ export type I18n<M extends Messages = Messages> = {
    * inbox(1, { ordinal: true }); // ordinal plural
    */
   bindPlural(key: MessageBranchKeys<M> | (string & {})): (count: number, options?: TpOptions) => string;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this instance. */
+  readonly disposalSignal: AbortSignal;
   /**
    * Disposes this i18n instance: removes all subscribers and clears catalog, loader, and namespace state.
    * After calling `dispose()`, translation methods fall back to `onMissingKey` for every key
@@ -180,6 +185,8 @@ export type I18n<M extends Messages = Messages> = {
    * i18n instances) to prevent subscriber and catalog memory from accumulating.
    */
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
   /**
@@ -539,8 +546,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
   const onMissingKey = cfg.onMissingKey ?? ((key: string) => key);
   const onMissingVar = cfg.onMissingVar ?? ((varName: string) => `{${varName}}`);
-  const onSubscriberError =
-    cfg.onSubscriberError ?? ((error: unknown) => console.error('[lingua] subscriber error', error));
+  const onSubscriberError = cfg.onSubscriberError ?? ((error: unknown) => issue('subscriber error', error));
 
   let version = 0;
   let snapshot: I18nSnapshot = { locale, version };
@@ -794,6 +800,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
   };
 
   let disposed = false;
+  const disposeController = new AbortController();
 
   return {
     bind(key: MessageLeafKeys<M> | (string & {})): (vars?: TranslateVars) => string {
@@ -822,10 +829,15 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       return (count: number, options?: TpOptions): string => translatePlural(base, count, options);
     },
 
+    get disposalSignal(): AbortSignal {
+      return disposeController.signal;
+    },
+
     dispose(): void {
       if (disposed) return;
 
       disposed = true;
+      disposeController.abort();
       subscribers.clear();
       catalogs.clear();
       loaders.clear();
@@ -834,6 +846,10 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
       namespaceRegistry.clear();
       loadedNamespaces.clear();
       namespaceTasks.clear();
+    },
+
+    get disposed(): boolean {
+      return disposed;
     },
 
     fmt,
@@ -1065,6 +1081,10 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
     },
 
     subscribe: subscribeInternal,
+
+    [Symbol.dispose](): void {
+      this.dispose();
+    },
 
     t: translate,
     tp: translatePlural,

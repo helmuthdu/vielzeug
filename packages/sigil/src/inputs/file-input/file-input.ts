@@ -313,7 +313,7 @@ define<SgFileInputProps, SgFileInputEvents>(FILE_INPUT_TAG, {
         },
       });
 
-      onCleanup(() => dropZone.destroy());
+      onCleanup(() => dropZone.dispose());
     });
 
     return html`

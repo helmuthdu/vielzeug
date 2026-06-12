@@ -60,6 +60,24 @@ Fix any failures before proceeding.
 
 ---
 
+### Propagation checkpoint (after Phase 2)
+
+Before moving to Phase 3, review the full list of completed plan items and ask:
+
+> **Which fixes or patterns from Phase 2 were propagated to other packages?**
+
+For each propagated fix, confirm:
+
+- The fix was applied to all affected sibling packages (as identified during `/pkg-implement` step 6).
+- Tests passed for every package touched.
+- No regressions were introduced.
+
+Record propagated fixes in the progress table notes column (e.g. `"type fix propagated to ripple, courier"`).
+
+If any high-value propagations were deferred (too large to apply inline), capture them as follow-up tasks before proceeding.
+
+---
+
 ### Phase 3 — Review × 3
 
 Execute the instructions from `/pkg-review` three times, rotating lenses:

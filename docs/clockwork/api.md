@@ -451,8 +451,11 @@ The live machine object returned by `interpret()`.
 ```ts
 interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
   readonly context: ReadonlySignal<Ctx>;
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
   readonly state: ReadonlySignal<State>;
   can(event: Ev): boolean;
+  dispose(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
   matches(...states: string[]): boolean;
@@ -464,10 +467,12 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 
 **Properties:**
 
-| Property  | Type                    | Description                                                   |
-| --------- | ----------------------- | ------------------------------------------------------------- |
-| `state`   | `ReadonlySignal<State>` | Current state — reactive; read inside `effect()` to subscribe |
-| `context` | `ReadonlySignal<Ctx>`   | Current context — reactive                                    |
+| Property          | Type                    | Description                                                                        |
+| ----------------- | ----------------------- | ---------------------------------------------------------------------------------- |
+| `state`           | `ReadonlySignal<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
+| `context`         | `ReadonlySignal<Ctx>`   | Current context — reactive                                                         |
+| `disposed`        | `boolean`               | `true` after `dispose()` has been called                                           |
+| `disposalSignal`  | `AbortSignal`           | Aborted when the machine is disposed. Use to tie external lifetimes to the machine |
 
 **Methods:**
 
@@ -477,9 +482,10 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 | `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned snapshot of current state and context.                                                                                 |
 | `getTrace()`         | `TransitionTraceEntry[]` | Recent transitions in chronological order (oldest to newest). Returns cloned entries. Empty array when tracing is disabled.        |
 | `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any.                                                     |
+| `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = interpret(...)`. |
 | `send(event)`        | `boolean`                | Dispatches the event. Returns `true` if a transition occurred. Returns `false` when disposed, no transition matched, or called re-entrantly (event queued; transition fires after current one completes). |
 | `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns unsubscribe function. Fires only on reference change.                                 |
-| `[Symbol.dispose]()` | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Does **not** clear persisted state.                     |
+| `[Symbol.dispose]()` | `void`                   | Delegates to `dispose()`. Enables `using` declarations.                                                                           |
 
 ---
 

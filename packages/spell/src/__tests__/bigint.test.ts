@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { s } from '../s';
 
@@ -63,6 +63,28 @@ describe('BigIntSchema', () => {
   test('optional() and nullable()', () => {
     expect(s.bigint().optional().parse(undefined)).toBeUndefined();
     expect(s.bigint().nullable().parse(null)).toBeNull();
+  });
+
+  describe('toDescriptor() — constraint warning', () => {
+    test('warns when bigint has constraints (they are not serializable)', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      s.bigint().min(1n).toDescriptor();
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining('toDescriptor(): this bigint schema has constraints'),
+      );
+      warnSpy.mockRestore();
+    });
+
+    test('does not warn when bigint has no constraints', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      s.bigint().toDescriptor();
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
   });
 
   describe('coerce', () => {

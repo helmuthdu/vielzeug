@@ -223,7 +223,7 @@ describe('createWorker', () => {
       expect(error).toBeInstanceOf(WorkerTaskError);
       expect(error.name).toBe('WorkerTaskError');
       expect(error.code).toBe('task');
-      expect(error.message).toBe('task failed');
+      expect(error.message).toBe('[@vielzeug/familiar] task failed');
       worker.dispose();
     });
 
@@ -247,7 +247,7 @@ describe('createWorker', () => {
 
       expect(error).toBeInstanceOf(WorkerError);
       expect(error.code).toBe('task');
-      expect(error.message).toBe('oops');
+      expect(error.message).toBe('[@vielzeug/familiar] oops');
       worker.dispose();
     });
 
@@ -865,7 +865,7 @@ describe('createWorker', () => {
         for await (const _ of worker.runStream(-1)) {
           // consume
         }
-      }).rejects.toMatchObject({ code: 'task', message: 'bad stream' });
+      }).rejects.toMatchObject({ code: 'task', message: '[@vielzeug/familiar] bad stream' });
       worker.dispose();
     });
 

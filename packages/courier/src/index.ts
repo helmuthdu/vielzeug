@@ -1,5 +1,5 @@
 // Errors
-export { HttpError, SchemaValidationError } from './errors';
+export { CourierError, HttpError, SchemaValidationError } from './errors';
 
 // Core types
 export type {

@@ -736,7 +736,10 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 .hero-logo-wrapper::before {
   content: '';
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  top: -10%;
   background: conic-gradient(
     from 0deg at 45% 50%,
     oklch(56% 0.22 293deg),

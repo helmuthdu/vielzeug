@@ -2,6 +2,8 @@
  * Low-level DOM utilities used throughout the runtime and binding layers.
  */
 
+import { warn } from '../_warn';
+
 export const runAll = (fns: (() => void)[]): void => {
   for (let i = fns.length - 1; i >= 0; i--) fns[i]!();
 };
@@ -41,8 +43,8 @@ const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript|data:(?:[^,]*\/html|appl
 
 export const setAttr = (el: Element, name: string, val: unknown): void => {
   if (/^on[a-z]/i.test(name)) {
-    console.warn(
-      `[craft] Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
+    warn(
+      `Blocked setAttribute("${name}", ...) — inline event handler attributes are not supported. Use @${name.slice(2)} binding syntax instead.`,
     );
     el.removeAttribute(name);
 
@@ -58,8 +60,8 @@ export const setAttr = (el: Element, name: string, val: unknown): void => {
   const strVal = val === true ? 'true' : String(val);
 
   if (URL_ATTRS.has(name.toLowerCase()) && DANGEROUS_SCHEME_RE.test(strVal)) {
-    console.warn(
-      `[craft] Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
+    warn(
+      `Blocked dangerous URL scheme in attribute "${name}". Only safe URLs are permitted in URL-accepting attributes.`,
     );
     el.removeAttribute(name);
 

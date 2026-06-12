@@ -11,6 +11,38 @@ import { warn } from './_warn';
 import { autoUpdate, type AutoUpdateOptions } from './auto-update';
 import { computePosition } from './core';
 
+function makeHandle(
+  cssAnchor: boolean,
+  rawDispose: () => void,
+  getPosition: () => ComputePositionResult | null,
+  update: () => void,
+): FloatHandle {
+  const controller = new AbortController();
+  let disposed = false;
+
+  return {
+    cssAnchor,
+    get disposalSignal() {
+      return controller.signal;
+    },
+    dispose() {
+      if (disposed) return;
+
+      disposed = true;
+      controller.abort();
+      rawDispose();
+    },
+    get disposed() {
+      return disposed;
+    },
+    getPosition,
+    [Symbol.dispose](): void {
+      this.dispose();
+    },
+    update,
+  };
+}
+
 // ── CSS Anchor Positioning (progressive enhancement) ─────────────────────────────────────────
 
 function isCssAnchorPositioningSupported(): boolean {
@@ -178,15 +210,13 @@ export function float(
 
   if (useCssAnchor) {
     const cleanupFn = setupCssAnchorPositioning(reference, floating, placement);
-    const disposeHandle = (): void => cleanupFn();
 
-    return {
-      cssAnchor: true,
-      dispose: disposeHandle,
-      getPosition: () => null,
-      [Symbol.dispose]: disposeHandle,
-      update: () => {},
-    };
+    return makeHandle(
+      true,
+      () => cleanupFn(),
+      () => null,
+      () => {},
+    );
   }
 
   let lastPosition: ComputePositionResult | null = null;
@@ -202,25 +232,20 @@ export function float(
   if (autoUpdateOptions === false) {
     update();
 
-    const noop = (): void => {};
-
-    return {
-      cssAnchor: false,
-      dispose: noop,
-      getPosition: () => lastPosition,
-      [Symbol.dispose]: noop,
+    return makeHandle(
+      false,
+      () => {},
+      () => lastPosition,
       update,
-    };
+    );
   }
 
   const cleanupFn = autoUpdate(reference, floating, update, autoUpdateOptions);
-  const disposeHandle = (): void => cleanupFn();
 
-  return {
-    cssAnchor: false,
-    dispose: disposeHandle,
-    getPosition: () => lastPosition,
-    [Symbol.dispose]: disposeHandle,
+  return makeHandle(
+    false,
+    () => cleanupFn(),
+    () => lastPosition,
     update,
-  };
+  );
 }

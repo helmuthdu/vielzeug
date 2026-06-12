@@ -10,6 +10,7 @@ exports:
     createContainer,
     token,
     scope,
+    ContainerError,
     CircularDependencyError,
     ProviderNotFoundError,
     DuplicateRegistrationError,

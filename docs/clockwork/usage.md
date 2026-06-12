@@ -585,13 +585,13 @@ const m = interpret(machine);
 
 // ... use machine
 
-m[Symbol.dispose](); // aborts invokes, clears timers, disposes reactive signals
+m.dispose(); // aborts invokes, clears timers, disposes reactive signals
 
-// Or with the explicit resource management proposal (ES2024+):
+// With the explicit resource management proposal (ES2024+):
 {
   using m = interpret(machine);
   m.send({ type: 'GO' });
-} // m[Symbol.dispose]() called automatically
+} // dispose() called automatically via [Symbol.dispose]
 ```
 
 ::: warning
@@ -734,7 +734,7 @@ function TrafficLight() {
     const unsub = m.subscribe(({ state }) => setState(state));
     return () => {
       unsub();
-      m[Symbol.dispose]();
+      m.dispose();
     };
   }, []);
 
@@ -764,7 +764,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   unsub?.();
-  m?.[Symbol.dispose]();
+  m?.dispose();
 });
 </script>
 
@@ -822,7 +822,7 @@ const m = interpret(authMachine, {
 - **Keep guards pure.** Guards must not produce side effects. All mutation belongs in `actions`.
 - **Mutate context directly in actions.** Actions receive a cloned draft — mutate it in place.
 - **Prefer shorthand transition syntax** (`on: { GO: { target: 'active' } }`) for single transitions. Use arrays only when you need multiple guarded alternatives.
-- **Dispose machines when done.** Always call `m[Symbol.dispose]()` to prevent memory leaks and abort dangling invokes.
+- **Dispose machines when done.** Always call `m.dispose()` (or `using m = interpret(...)`) to prevent memory leaks and abort dangling invokes.
 - **Test with `resolveTransition()`.** Unit-test guard logic in isolation without spinning up a full machine instance.
 - **Keep machines focused.** A machine with more than 10–15 states is usually a sign it should be split.
 - **Use after for timeouts.** Prefer `after` over manual setTimeout in entry hooks — timers are automatically cleaned up on state exit.

@@ -378,7 +378,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   };
 
   return {
-    destroy,
+    dispose: destroy,
     get files() {
       return files;
     },

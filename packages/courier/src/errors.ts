@@ -1,16 +1,31 @@
 /**
+ * Base class for all courier errors.
+ * Catch with `CourierError.is(e)` to handle any courier-originated error in one branch,
+ * then narrow further with `HttpError.is(e)` or `SchemaValidationError.is(e)`.
+ */
+export class CourierError extends Error {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(`[@vielzeug/courier] ${message}`, opts);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is CourierError {
+    return err instanceof CourierError;
+  }
+}
+
+/**
  * Thrown when a response body fails schema validation (via the `schema` option).
  * Distinct from `HttpError` so callers can separately handle network failures
  * vs. data contract violations without inspecting the error shape.
  */
-export class SchemaValidationError extends Error {
+export class SchemaValidationError extends CourierError {
   /** The raw (pre-validation) response body that failed parsing. */
   readonly data: unknown;
 
   constructor(cause: unknown, data: unknown) {
-    super(`[@vielzeug/courier] ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(cause instanceof Error ? cause.message : String(cause), { cause });
     this.data = data;
   }
 
@@ -19,7 +34,7 @@ export class SchemaValidationError extends Error {
   }
 }
 
-export class HttpError extends Error {
+export class HttpError extends CourierError {
   readonly kind: 'abort' | 'http' | 'network' | 'timeout';
   readonly url: string;
   readonly method: string;
@@ -72,9 +87,7 @@ export class HttpError extends Error {
     status?: number;
     url: string;
   }) {
-    super(`[@vielzeug/courier] ${opts.message}`, { cause: opts.cause });
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(opts.message, { cause: opts.cause });
     this.url = opts.url;
     this.method = opts.method;
     this.status = opts.status;

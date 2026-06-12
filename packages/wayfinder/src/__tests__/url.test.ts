@@ -1,7 +1,7 @@
 /**
  * router.url() — named-route URL construction.
  */
-import { createMemoryHistory, createRouter } from '../';
+import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
 import { settle } from './test-utils';
 
 describe('url()', () => {
@@ -115,9 +115,51 @@ describe('Symbol.dispose', () => {
     router[Symbol.dispose]();
 
     // subscribe() guards against post-dispose use
-    expect(() => router.subscribe(vi.fn())).toThrow('[wayfinder] Router is disposed');
+    expect(() => router.subscribe(vi.fn())).toThrow(RouterDisposedError);
     // getSnapshot() is intentionally still readable post-dispose (useSyncExternalStore teardown)
     expect(() => router.getSnapshot()).not.toThrow();
+  });
+});
+
+describe('disposalSignal', () => {
+  it('starts as a live (non-aborted) signal', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({ history, routes: { home: { path: '/' } } });
+
+    await settle();
+
+    expect(router.disposalSignal.aborted).toBe(false);
+    expect(router.disposed).toBe(false);
+
+    router.dispose();
+  });
+
+  it('fires with RouterDisposedError reason when router is disposed', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({ history, routes: { home: { path: '/' } } });
+
+    await settle();
+
+    const signal = router.disposalSignal;
+
+    router.dispose();
+
+    expect(signal.aborted).toBe(true);
+    expect(signal.reason).toBeInstanceOf(RouterDisposedError);
+    expect(router.disposed).toBe(true);
+  });
+
+  it('disposalSignal aborts are idempotent — calling dispose() twice does not re-abort', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({ history, routes: { home: { path: '/' } } });
+
+    await settle();
+
+    router.dispose();
+    router.dispose();
+
+    expect(router.disposed).toBe(true);
+    expect(router.disposalSignal.aborted).toBe(true);
   });
 });
 

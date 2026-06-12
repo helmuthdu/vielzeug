@@ -1,5 +1,7 @@
 import type { ComponentPhase } from './types';
 
+import { issue } from './_warn';
+
 // ─── Structured error types ───────────────────────────────────────────────────
 
 /**
@@ -27,7 +29,7 @@ export class CraftitError extends Error {
  * Report a runtime error via the craft:error event and console.
  */
 export function reportRuntimeError(error: CraftitError, element: HTMLElement): void {
-  console.error(`[craft] <${error.component}> setup error (phase: ${error.phase}):`, error.cause);
+  issue(`<${error.component}> setup error (phase: ${error.phase}):`, error.cause);
 
   element.dispatchEvent(
     new CustomEvent('craft:error', {

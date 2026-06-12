@@ -42,7 +42,9 @@ export type InfiniteSourceQuery = Readonly<{
 }>;
 
 /**
- * Structured error type for all data source failures.
+ * Base class for all sourcerer errors. Catch with `instanceof SourceError` to handle any
+ * sourcerer-originated error regardless of specific subtype.
+ *
  * Carries the original cause, the query that triggered the error, and the attempt number.
  *
  * @example
@@ -52,31 +54,6 @@ export type InfiniteSourceQuery = Readonly<{
  * }
  * ```
  */
-export class SourceTimeoutError extends Error {
-  constructor(timeoutMs: number) {
-    super(`[@vielzeug/sourcerer] Source.ready() timed out after ${timeoutMs}ms`);
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  static is(err: unknown): err is SourceTimeoutError {
-    return err instanceof SourceTimeoutError;
-  }
-}
-
-/** Thrown by `ready()` when the source is disposed while waiting. */
-export class SourceDisposedError extends Error {
-  constructor() {
-    super('[@vielzeug/sourcerer] Source disposed while waiting for ready()');
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  static is(err: unknown): err is SourceDisposedError {
-    return err instanceof SourceDisposedError;
-  }
-}
-
 export class SourceError extends Error {
   readonly #opts: {
     readonly attempt?: number;
@@ -92,7 +69,7 @@ export class SourceError extends Error {
       readonly query?: unknown;
     } = {},
   ) {
-    super(`[@vielzeug/sourcerer] ${message}`, opts.cause !== undefined ? { cause: opts.cause } : undefined);
+    super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
     this.#opts = opts;
@@ -109,6 +86,32 @@ export class SourceError extends Error {
   /** The query that triggered the error. May contain user-supplied values (search terms, filters) — sanitise before logging in production. */
   get query(): unknown {
     return this.#opts.query;
+  }
+}
+
+/** Thrown by `ready()` when the source timed out waiting for the first successful fetch. */
+export class SourceTimeoutError extends SourceError {
+  /** The configured timeout in milliseconds. */
+  readonly timeoutMs: number;
+
+  constructor(timeoutMs: number) {
+    super(`Source.ready() timed out after ${timeoutMs}ms`);
+    this.timeoutMs = timeoutMs;
+  }
+
+  static is(err: unknown): err is SourceTimeoutError {
+    return err instanceof SourceTimeoutError;
+  }
+}
+
+/** Thrown by `ready()` when the source is disposed while waiting. */
+export class SourceDisposedError extends SourceError {
+  constructor() {
+    super('Source disposed while waiting for ready()');
+  }
+
+  static is(err: unknown): err is SourceDisposedError {
+    return err instanceof SourceDisposedError;
   }
 }
 

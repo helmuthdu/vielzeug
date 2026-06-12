@@ -64,7 +64,7 @@ describe('createDropZone', () => {
       expect(zone.files).toEqual([file]);
       expect(zone.rejected).toEqual([]);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('separates accepted and rejected files by accept filter', () => {
@@ -82,7 +82,7 @@ describe('createDropZone', () => {
       expect(onDrop).toHaveBeenCalledWith([accepted], expect.any(Event));
       expect(onDropRejected).toHaveBeenCalledWith([rejected], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('does not call onDrop when all files are rejected', () => {
@@ -95,7 +95,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('does not call onDropRejected when all files are accepted', () => {
@@ -108,7 +108,7 @@ describe('createDropZone', () => {
 
       expect(onDropRejected).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('matches file extensions case-insensitively', () => {
@@ -120,7 +120,7 @@ describe('createDropZone', () => {
 
       expect(zone.files).toEqual([file]);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('matches MIME wildcards', () => {
@@ -133,7 +133,7 @@ describe('createDropZone', () => {
 
       expect(zone.files).toEqual([png, jpg]);
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -152,7 +152,7 @@ describe('createDropZone', () => {
       expect(onDrop).toHaveBeenCalledWith([f1, f2], expect.any(Event));
       expect(onDropRejected).toHaveBeenCalledWith([f3], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('combines type-rejected and maxFiles-excess in the same rejection callback', () => {
@@ -173,7 +173,7 @@ describe('createDropZone', () => {
       expect(rejectedFiles).toContain(img3);
       expect(rejectedFiles).toContain(text);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('accepts all when count is within limit', () => {
@@ -186,7 +186,7 @@ describe('createDropZone', () => {
 
       expect(onDropRejected).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('rejects all files when maxFiles is 0', () => {
@@ -201,7 +201,7 @@ describe('createDropZone', () => {
       expect(onDrop).not.toHaveBeenCalled();
       expect(onDropRejected).toHaveBeenCalledWith([f1], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -224,7 +224,7 @@ describe('createDropZone', () => {
       expect(zone.files).toEqual([text]);
       expect(zone.rejected).toEqual([image]);
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -244,7 +244,7 @@ describe('createDropZone', () => {
       expect(zone.hovered).toBe(false);
       expect(onHoverChange).toHaveBeenLastCalledWith(false);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('uses counter to stay hovered during child element entry/exit', () => {
@@ -264,7 +264,7 @@ describe('createDropZone', () => {
 
       expect(zone.hovered).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('keeps hover false when drag payload is rejected by accept filter', () => {
@@ -278,7 +278,7 @@ describe('createDropZone', () => {
 
       expect(zone.hovered).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('resets hover state on window dragend', () => {
@@ -293,7 +293,7 @@ describe('createDropZone', () => {
 
       expect(zone.hovered).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('does not leave hover stuck when disabled transitions true after dragenter', () => {
@@ -312,7 +312,7 @@ describe('createDropZone', () => {
 
       expect(zone.hovered).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -339,7 +339,7 @@ describe('createDropZone', () => {
       element.dispatchEvent(dropEvent);
       expect(dropPD).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('ignores drag events when disabled: true', () => {
@@ -355,7 +355,7 @@ describe('createDropZone', () => {
       expect(onHoverChange).not.toHaveBeenCalled();
       expect(onDrop).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('ignores drag events when disabled getter returns true', () => {
@@ -373,7 +373,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).toHaveBeenCalledTimes(1);
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -394,7 +394,7 @@ describe('createDropZone', () => {
 
       expect(dt.dropEffect).toBe('move');
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -410,7 +410,7 @@ describe('createDropZone', () => {
 
       expect(zone.hovered).toBe(true);
 
-      zone.destroy();
+      zone.dispose();
 
       // After destroy, events should have no effect
       element.dispatchEvent(makeDragEvent('dragenter'));
@@ -452,7 +452,7 @@ describe('createDropZone', () => {
 
       expect(onPaste).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('falls back to onDrop when onPaste is not provided', () => {
@@ -465,7 +465,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('filters pasted files by accept list', () => {
@@ -481,7 +481,7 @@ describe('createDropZone', () => {
       expect(onPaste).toHaveBeenCalledWith([img], expect.any(Event));
       expect(onDropRejected).toHaveBeenCalledWith([txt], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('ignores paste events when paste: false (default)', () => {
@@ -493,7 +493,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('ignores paste events when disabled', () => {
@@ -505,15 +505,15 @@ describe('createDropZone', () => {
 
       expect(onPaste).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
-    it('removes paste listener on destroy', () => {
+    it('removes paste listener on dispose', () => {
       const element = document.createElement('div');
       const onPaste = vi.fn();
       const zone = createDropZone({ element, onPaste, paste: true });
 
-      zone.destroy();
+      zone.dispose();
       window.dispatchEvent(makeClipboardEvent([new File([''], 'a.txt')]));
 
       expect(onPaste).not.toHaveBeenCalled();
@@ -534,7 +534,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('calls onDropRejected when onValidate resolves false', async () => {
@@ -552,7 +552,7 @@ describe('createDropZone', () => {
       expect(onDrop).not.toHaveBeenCalled();
       expect(onDropRejected).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('sets validating to true during pending validation then false after', async () => {
@@ -574,7 +574,7 @@ describe('createDropZone', () => {
 
       expect(zone.validating).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('falls back to onDropRejected when onValidate throws', async () => {
@@ -591,7 +591,7 @@ describe('createDropZone', () => {
 
       expect(onDropRejected).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('skips onValidate when all files are already rejected by type filter', async () => {
@@ -606,7 +606,7 @@ describe('createDropZone', () => {
 
       expect(onValidate).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('works synchronously when onValidate returns a boolean', () => {
@@ -619,7 +619,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).toHaveBeenCalledWith([file], expect.any(Event));
 
-      zone.destroy();
+      zone.dispose();
     });
 
     it('runs onValidate for pasted files and sets validating during pending validation', async () => {
@@ -647,7 +647,7 @@ describe('createDropZone', () => {
       expect(onPaste).toHaveBeenCalledWith([file], expect.any(Event));
       expect(zone.validating).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
       element.remove();
     });
   });
@@ -664,7 +664,7 @@ describe('createDropZone', () => {
       expect(zone.files).toEqual([accepted]);
       expect(zone.rejected).toEqual([rejected]);
 
-      zone.destroy();
+      zone.dispose();
 
       expect(zone.files).toEqual([accepted]);
       expect(zone.rejected).toEqual([rejected]);
@@ -688,7 +688,7 @@ describe('createDropZone', () => {
       element.dispatchEvent(makeDragEvent('dragenter', { items: [{ kind: 'file', type: 'image/png' }] }));
       expect(zone.hovered).toBe(false);
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -708,7 +708,7 @@ describe('createDropZone', () => {
       expect(files).toEqual([file]);
       expect(event.type).toBe('paste');
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -725,7 +725,7 @@ describe('createDropZone', () => {
 
       expect(onDrop).not.toHaveBeenCalled();
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 
@@ -742,7 +742,7 @@ describe('createDropZone', () => {
       expect(zone.hovered).toBe(true);
       element.dispatchEvent(makeDragEvent('dragleave'));
 
-      zone.destroy();
+      zone.dispose();
     });
   });
 });

@@ -1,7 +1,7 @@
 import type { MessageFn, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, resolveMessage, Schema } from '../core';
-import { _messages } from '../messages';
+import { _messages, _warn } from '../messages';
 
 export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   protected override get _kind(): string {
@@ -98,6 +98,13 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
+    if (this.state.validators.length > 0) {
+      _warn(
+        'toDescriptor(): this bigint schema has constraints (e.g. min(), max(), positive()). ' +
+          'BigInt constraints are not serializable and will not be restored by fromDescriptor().',
+      );
+    }
+
     return { ...this._describeBase(), kind: 'bigint' };
   }
 

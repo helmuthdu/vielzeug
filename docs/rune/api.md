@@ -144,14 +144,17 @@ Argument rules:
 | `time(label, fn, opts?)`            | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. When `fn` throws or rejects, `{ err }` is also included. `opts` accepts a `LogType` string or `TimeOptions`. |
 | `group(label, fn, level?)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Pass `level` to gate the group header on the configured threshold (e.g. `'debug'` suppresses when `logLevel` is `'warn'`).                                             |
 | `groupCollapsed(label, fn, level?)` | `T`       | Same as `group`, using `console.groupCollapsed`.                                                                                                                                                                                       |
-| `dispose()`                         | `void`    | Calls `.dispose()` on any `BatchTransport` in the transport array. Call on shutdown. No-op if there are no batch transports. Only inspects top-level transports (not those inside `pipe()`).                                           |
+| `dispose()`                         | `void`    | Calls `.dispose()` on any `BatchTransport` in the transport array. Idempotent. Only inspects top-level transports (not those inside `pipe()`). Call on shutdown.                                                                      |
 
 ### Properties
 
-| Property   | Type                   | Description                         |
-| ---------- | ---------------------- | ----------------------------------- |
-| `config`   | `Readonly<RuneConfig>` | Snapshot of resolved configuration  |
-| `bindings` | `Readonly<Bindings>`   | Snapshot of currently pinned fields |
+| Property          | Type                   | Description                                                              |
+| ----------------- | ---------------------- | ------------------------------------------------------------------------ |
+| `config`          | `Readonly<RuneConfig>` | Snapshot of resolved configuration                                       |
+| `bindings`        | `Readonly<Bindings>`   | Snapshot of currently pinned fields                                      |
+| `disposalSignal`  | `AbortSignal`          | Aborted when `dispose()` is called. Use to tie external lifetimes.       |
+| `disposed`        | `boolean`              | `true` after `dispose()` has been called                                 |
+| `[Symbol.dispose]`| `() => void`           | Delegates to `dispose()`. Enables `using` declarations.                  |
 
 ## Transport Factories
 
@@ -563,23 +566,26 @@ The full interface returned by `createLogger()` and `Rune`:
 
 ```ts
 type Logger = {
+  [Symbol.dispose]: () => void;
   readonly bindings: Readonly<Bindings>;
-  readonly config: Readonly<RuneConfig>;
   child: (overrides?: RuneOptions) => Logger;
+  readonly config: Readonly<RuneConfig>;
+  debug: LogMethod;
+  readonly disposalSignal: AbortSignal;
   dispose: () => void;
+  readonly disposed: boolean;
   enabled: (type: LogLevel) => boolean;
+  error: LogMethod;
+  fatal: LogMethod;
   group: <T>(label: string, fn: () => T, level?: LogType) => T;
   groupCollapsed: <T>(label: string, fn: () => T, level?: LogType) => T;
+  info: LogMethod;
   resetLevel: () => void;
   setLevel: (level: LogLevel) => void;
   time: <T>(label: string, fn: () => T, opts?: LogType | TimeOptions) => T;
   use: (middleware: LogMiddleware) => Logger;
-  withBindings: (bindings: Bindings) => Logger;
-  debug: LogMethod;
-  error: LogMethod;
-  fatal: LogMethod;
-  info: LogMethod;
   warn: LogMethod;
+  withBindings: (bindings: Bindings) => Logger;
 };
 ```
 

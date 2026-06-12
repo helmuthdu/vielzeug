@@ -189,8 +189,14 @@ export type InterpretOptions<State extends string, Ctx extends object, Ev extend
 
 export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
   readonly context: ReadonlySignal<Ctx>;
+  /** Fires when the machine is disposed. Use to tie external lifecycles to the machine's lifetime. */
+  readonly disposalSignal: AbortSignal;
+  /** Whether the machine has been permanently disposed. */
+  readonly disposed: boolean;
   readonly state: ReadonlySignal<State>;
   can(event: Ev): boolean;
+  /** Terminates the machine: aborts all active invokes, clears timers, and disposes internal signals. Idempotent. */
+  dispose(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
   matches(...states: string[]): boolean;

@@ -19,7 +19,7 @@ describe('createReactiveVirtualizer – live getters', () => {
     rv.update({ count: 10 });
     // With object spread this would return the snapshotted value 5.
     expect(rv.count).toBe(10);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('totalSize reflects current value after update', () => {
@@ -29,7 +29,7 @@ describe('createReactiveVirtualizer – live getters', () => {
     expect(rv.totalSize).toBe(100);
     rv.update({ count: 10 });
     expect(rv.totalSize).toBe(200);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('items returns current rendered items, not a snapshot', () => {
@@ -43,7 +43,7 @@ describe('createReactiveVirtualizer – live getters', () => {
     // items should reflect the new larger render window
     expect(rv.items.length).toBeGreaterThan(0);
     expect(rv.items.length).toBeGreaterThanOrEqual(initialCount);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('scrollOffset updates after scroll event', () => {
@@ -53,7 +53,7 @@ describe('createReactiveVirtualizer – live getters', () => {
     expect(rv.scrollOffset).toBe(0);
     scrollEl(el, 100);
     expect(rv.scrollOffset).toBe(100);
-    rv.destroy();
+    rv.dispose();
   });
 });
 
@@ -66,7 +66,7 @@ describe('createReactiveVirtualizer – state signal', () => {
 
     expect(rv.state.value.totalSize).toBe(100);
     expect(rv.state.value.items.length).toBeGreaterThan(0);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('state.value updates when options change', () => {
@@ -76,7 +76,7 @@ describe('createReactiveVirtualizer – state signal', () => {
     expect(rv.state.value.totalSize).toBe(100);
     rv.update({ count: 10 });
     expect(rv.state.value.totalSize).toBe(200);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('state.value updates when measurements arrive', async () => {
@@ -87,7 +87,7 @@ describe('createReactiveVirtualizer – state signal', () => {
     rv.measure(0, 60);
     await flushMicrotasks();
     expect(rv.state.value.items[0]?.size).toBe(60);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('state signal is the same reference as rv.state', () => {
@@ -96,7 +96,7 @@ describe('createReactiveVirtualizer – state signal', () => {
 
     // Accessing .state twice returns the same object
     expect(rv.state).toBe(rv.state);
-    rv.destroy();
+    rv.dispose();
   });
 });
 
@@ -109,7 +109,7 @@ describe('createReactiveVirtualizer – method passthrough', () => {
 
     rv.scrollToIndex(10, { align: 'start' });
     expect(el.scrollTop).toBe(200);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('measure + measureBatch work through the proxy', async () => {
@@ -119,7 +119,7 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     rv.measureBatch([{ index: 0, size: 50 }]);
     await flushMicrotasks();
     expect(rv.items.find((i) => i.index === 0)?.size).toBe(50);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('redraw() re-emits state', () => {
@@ -131,7 +131,7 @@ describe('createReactiveVirtualizer – method passthrough', () => {
 
     // state.value should be a new object reference (re-emitted)
     expect(rv.state.value).not.toBe(before);
-    rv.destroy();
+    rv.dispose();
   });
 
   it('destroy is idempotent', () => {
@@ -139,8 +139,8 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
 
     expect(() => {
-      rv.destroy();
-      rv.destroy();
+      rv.dispose();
+      rv.dispose();
     }).not.toThrow();
   });
 

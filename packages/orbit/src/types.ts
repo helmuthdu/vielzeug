@@ -221,10 +221,14 @@ export interface ComputePositionOptions {
 export interface FloatHandle {
   /** `true` when position is managed natively by CSS Anchor Positioning (JS data unavailable). */
   readonly cssAnchor: boolean;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this handle. */
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
-  [Symbol.dispose](): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   getPosition(): ComputePositionResult | null;
   update(): void;
+  [Symbol.dispose](): void;
 }
 
 export interface DetectOverflowOptions {

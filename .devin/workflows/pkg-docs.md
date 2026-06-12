@@ -1,6 +1,7 @@
 ---
 description: Synchronise the VitePress documentation for a Vielzeug package with its current source code, following the canonical Vielzeug Documentation Template. Updates index.md, api.md, usage.md, examples.md, and examples/*.md so they match the actual API and template rules.
 ---
+
 You are a software engineer creating a new package in a monorepo project.
 
 Your task is to scaffold and implement a new package with a clear, single responsibility, following the monorepo's established conventions and tooling.
@@ -27,11 +28,11 @@ Typical structure (adjust as needed):
 
 packages/{package-name}/
 ├── src/
-│   ├── __tests__/      # unit tests
-│   ├── index.ts        # public API exports
-│   ├── core/           # main implementation
-│   ├── utils/          # internal utilities (if any)
-│   └── types/          # TypeScript type definitions
+│ ├── **tests**/ # unit tests
+│ ├── index.ts # public API exports
+│ ├── core/ # main implementation
+│ ├── utils/ # internal utilities (if any)
+│ └── types/ # TypeScript type definitions
 ├── package.json
 ├── tsconfig.json
 └── README.md
@@ -65,11 +66,11 @@ Build Configuration:
 Documentation:
 
 - Create a README.md with:
-    - Package overview and purpose
-    - Installation instructions
-    - Basic usage example
-    - API reference (link to detailed docs if needed)
-    - Any peer dependencies or environment requirements
+  - Package overview and purpose
+  - Installation instructions
+  - Basic usage example
+  - API reference (link to detailed docs if needed)
+  - Any peer dependencies or environment requirements
 - Add inline TSDoc for all public exports.
 
 Integration into Monorepo:
@@ -84,22 +85,22 @@ Output Format:
 Provide the following deliverables:
 
 1. Package Manifest (package.json)
-    - Name, version (0.0.0 or 1.0.0), description, main entry points, scripts, dependencies.
+   - Name, version (0.0.0 or 1.0.0), description, main entry points, scripts, dependencies.
 
 2. TypeScript Configuration (tsconfig.json)
-    - Extend from root tsconfig if applicable; set compiler options for the package.
+   - Extend from root tsconfig if applicable; set compiler options for the package.
 
 3. Source Code (src/index.ts and core modules)
-    - Implementation of the package's functionality.
+   - Implementation of the package's functionality.
 
-4. Tests (__tests__/*.test.ts)
-    - Core tests covering public API and critical behavior.
+4. Tests (**tests**/\*.test.ts)
+   - Core tests covering public API and critical behavior.
 
 5. README.md
-    - Overview, installation, usage example, API summary.
+   - Overview, installation, usage example, API summary.
 
 6. Workspace Integration Notes
-    - Steps to add to monorepo (e.g., update pnpm-workspace.yaml, run install).
+   - Steps to add to monorepo (e.g., update pnpm-workspace.yaml, run install).
 
 Quality Checklist (verify before finalizing):
 
@@ -114,7 +115,7 @@ Quality Checklist (verify before finalizing):
 
 Collaboration Note:
 
-- If the new package depends on other packages in the monorepo, use workspace protocols (e.g., "workspace:*") for local dependencies.
+- If the new package depends on other packages in the monorepo, use workspace protocols (e.g., "workspace:\*") for local dependencies.
 - Ensure the dependency graph does not create cycles.
 
 # pkg-docs — Documentation Sync

@@ -17,7 +17,7 @@ import { createRemoteSource } from './remoteSource';
  * ```
  */
 export async function prefetchSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval'>,
 ): Promise<SourceSnapshot<T>> {
   const source = createRemoteSource<T, TFilter, TSort>({ ...cfg, autoFetch: false });
 
@@ -53,7 +53,7 @@ export async function prefetchSource<T, TFilter = unknown, TSort = unknown>(
  * ```
  */
 export async function prefetchSourceWithSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval' | 'snapshot'>,
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval'>,
 ): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }> {
   const source = createRemoteSource<T, TFilter, TSort>({ ...cfg, autoFetch: false });
 

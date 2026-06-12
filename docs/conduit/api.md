@@ -30,6 +30,7 @@ description: Complete API reference for @vielzeug/conduit.
 | `container.createScope()`      | Create a named-scope child container                         | Sync        | Factories with a `ScopeToken` lifetime resolve here                |
 | `container.on()`               | Subscribe to container events (register / resolve / dispose) | Sync        | Events propagate to parent container listeners                     |
 | `container.dispose()`          | Dispose container and run cleanup hooks                      | Async       | Hooks from both `value()` and `factory()` are called               |
+| `container.disposalSignal`     | `AbortSignal` aborted when the container is disposed         | Sync getter | Tie external resource lifetimes to this container                  |
 | `container.disposed`           | Whether the container has been disposed                      | Sync getter | —                                                                  |
 | `container.name`               | Human-readable container identifier                          | Sync getter | Set via `createContainer({ name })` or `createChild({ name })`     |
 
@@ -608,6 +609,22 @@ await using container = createContainer();
 
 ---
 
+### `container.disposalSignal`
+
+```ts
+get disposalSignal(): AbortSignal;
+```
+
+`AbortSignal` that is aborted when the container is disposed. Use it to tie the lifetime of external resources (e.g., SSE connections, polling loops) to the container.
+
+```ts
+const container = createContainer();
+const resource = startPolling({ signal: container.disposalSignal });
+// When container.dispose() is called, resource automatically stops.
+```
+
+---
+
 ### `container.disposed`
 
 ```ts
@@ -677,8 +694,11 @@ type ContainerGraph = {
 
 ## Errors
 
+All conduit errors extend `ContainerError`. Use `catch (e) { if (ContainerError.is(e)) ... }` to handle any conduit-originated error in one branch, or narrow further with the specific subclass `is()` guards.
+
 | Error                        | When thrown                                                                                                                |
 | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `ContainerError`             | **Base class** for all conduit errors — catch with `instanceof ContainerError` or `ContainerError.is(e)`                  |
 | `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full cycle path                                                    |
 | `ProviderNotFoundError`      | `resolve()` / `resolveSync()` / `validate()` — token not registered; message includes container name and token description |
 | `DuplicateRegistrationError` | `value()` or `factory()` called for a token that is already registered                                                     |

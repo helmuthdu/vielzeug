@@ -1,4 +1,4 @@
-import { createMemoryHistory, createRouter } from '../';
+import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
 import { boot, disposeRouter, mockHistory, mockLocation, resetMocks } from './setup';
 import { createDeferred, settle } from './test-utils';
 
@@ -259,8 +259,8 @@ describe('Navigation', () => {
       router.dispose();
       router.dispose();
 
-      expect(() => router.subscribe(vi.fn())).toThrow('[wayfinder] Router is disposed');
-      await expect(router.navigate({ name: 'home' })).rejects.toThrow('[wayfinder] Router is disposed');
+      expect(() => router.subscribe(vi.fn())).toThrow(RouterDisposedError);
+      await expect(router.navigate({ name: 'home' })).rejects.toThrow(RouterDisposedError);
     });
 
     it('waitFor() rejects when the router is disposed while the promise is pending', async () => {
@@ -288,7 +288,7 @@ describe('Navigation', () => {
 
       router.dispose();
 
-      await expect(waiting).rejects.toThrow('[wayfinder] Router is disposed');
+      await expect(waiting).rejects.toThrow(RouterDisposedError);
     });
   });
 

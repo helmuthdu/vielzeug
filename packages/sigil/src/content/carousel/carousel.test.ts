@@ -829,7 +829,7 @@ describe('sg-carousel', () => {
       fixture = await mount('sg-carousel', { attrs: { loop: 'false', variant: 'marquee' }, html: slides });
       await fixture.flush();
 
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[sg-carousel]'));
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sigil]'));
       warnSpy.mockRestore();
     });
 

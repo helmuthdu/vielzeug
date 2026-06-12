@@ -9,7 +9,7 @@ description: Complete API reference for the Orbit floating positioning library.
 
 | Symbol              | Purpose                                                      | Execution mode              | Common gotcha                                          |
 | ------------------- | ------------------------------------------------------------ | --------------------------- | ------------------------------------------------------ |
-| `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.cleanup()` on teardown                    |
+| `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.dispose()` on teardown                    |
 | `computePosition()` | Compute position once without auto-update                    | Sync                        | Does not watch for layout changes                      |
 | `computeOnce()`     | One-shot async position via microtask deferral               | Async                       | Defers to microtask queue, not next animation frame    |
 | `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup       | Call cleanup on teardown                               |
@@ -48,7 +48,7 @@ description: Complete API reference for the Orbit floating positioning library.
 float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): FloatHandle;
 ```
 
-Positions `floating` relative to `reference` and keeps it in sync. Returns a `FloatHandle` — **always call `handle.cleanup()`** to remove scroll and resize listeners.
+Positions `floating` relative to `reference` and keeps it in sync. Returns a `FloatHandle` — **always call `handle.dispose()`** to remove scroll and resize listeners.
 
 By default, writes `left` and `top` CSS properties. The floating element must have `position: fixed`.
 
@@ -721,12 +721,15 @@ cleanup();
 
 **Returns — `ReactiveFloatHandle`**
 
-| Field       | Type                                    | Description                                                                    |
-| ----------- | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `position`  | `Signal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update or when `cssAnchor` is `true`. |
-| `cssAnchor` | `boolean`                               | `true` when CSS Anchor Positioning is active.                                  |
-| `cleanup()` | `() => void`                            | Removes all listeners. Always call on teardown.                                |
-| `update()`  | `() => void`                            | Manually trigger a position recalculation.                                     |
+| Field             | Type                                    | Description                                                                    |
+| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
+| `position`        | `Signal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update or when `cssAnchor` is `true`. |
+| `cssAnchor`       | `boolean`                               | `true` when CSS Anchor Positioning is active.                                  |
+| `disposalSignal`  | `AbortSignal`                           | Aborted when `dispose()` is called. Use to tie external lifetimes.             |
+| `dispose()`       | `() => void`                            | Removes all listeners. Always call on teardown. Idempotent.                    |
+| `disposed`        | `boolean`                               | `true` after `dispose()` has been called.                                      |
+| `update()`        | `() => void`                            | Manually trigger a position recalculation.                                     |
+| `[Symbol.dispose]`| `() => void`                            | Delegates to `dispose()`. Enables `using` declarations.                        |
 
 ## SSR Stubs — `@vielzeug/orbit/ssr`
 
@@ -920,9 +923,12 @@ Always written to `middlewareData.shift` (zero when no shift was needed).
 ```ts
 interface FloatHandle {
   readonly cssAnchor: boolean;
-  cleanup(): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  readonly disposed: boolean;
   getPosition(): ComputePositionResult | null;
   update(): void;
+  [Symbol.dispose](): void;
 }
 ```
 

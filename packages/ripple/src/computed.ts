@@ -234,6 +234,10 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     });
   }
 
+  get disposed(): boolean {
+    return this.disposed_;
+  }
+
   dispose(): void {
     if (this.disposed_) return;
 

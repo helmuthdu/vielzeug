@@ -320,6 +320,22 @@ describe('ObjectSchema.merge()', () => {
 
     expect(merged.safeParse({ a: 'hi', b: 1, extra: true }).success).toBe(false);
   });
+
+  it('merge() inherits relaxed mode from the right-hand schema', () => {
+    const a = s.object({ x: s.string() });
+    const b = s.object({ y: s.number() }).relaxed();
+    const merged = a.merge(b);
+
+    expect(merged.safeParse({ extra: true, x: 'hi', y: 1 }).success).toBe(true);
+  });
+
+  it('merge() is strict when right-hand schema is strict', () => {
+    const a = s.object({ x: s.string() }).relaxed();
+    const b = s.object({ y: s.number() });
+    const merged = a.merge(b);
+
+    expect(merged.safeParse({ extra: true, x: 'hi', y: 1 }).success).toBe(false);
+  });
 });
 
 describe('ObjectSchema.strict() after relaxed()', () => {

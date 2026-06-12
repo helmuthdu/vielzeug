@@ -25,6 +25,7 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `resolveRetryDelay()`   | Compute a jitter-based retry delay for a given attempt | Sync           | Useful for custom retry strategies consistent with Courier defaults  |
 | `NO_RETRY`              | Constant (`1`) for "no retries" — one attempt total    | —              | Equivalent to `times: 1`; exported for explicit, readable code       |
 | `anySignal()`           | Combine multiple `AbortSignal`s into one               | Sync           | Returns `undefined` when called with no signals                      |
+| `CourierError`          | Base class for all courier errors                      | —              | `CourierError.is(e)` catches any courier error; narrow further after |
 | `HttpError`             | Structured HTTP/network/abort/timeout errors           | Sync           | Prefer `HttpError.is(err, status?)` for narrowing                    |
 | `SchemaValidationError` | Thrown when `schema.parse()` rejects the response body | Sync           | Wraps the original parse error; `data` holds the raw pre-parse body  |
 
@@ -235,10 +236,11 @@ Creates a unified Courier client backed by one shared transport.
 | `mutation`         | `(fn, opts?) => Mutation`     | Create a mutation using optional shared defaults       |
 | `use`              | `(interceptor) => () => void` | Register an interceptor shared by `api` and `stream`   |
 | `headers`          | `(updates) => void`           | Update shared global headers                           |
-| `cancelAll`        | `() => void`                  | Abort all active transport-backed requests and streams |
-| `dispose`          | `() => void`                  | Dispose the transport and embedded query client        |
-| `disposed`         | `boolean`                     | Whether the shared transport is disposed               |
-| `[Symbol.dispose]` | —                             | Delegates to `dispose()`                               |
+| `cancelAll`        | `() => void`                  | Abort all active transport-backed requests and streams                                          |
+| `disposalSignal`   | `AbortSignal`                 | Aborted when the client is disposed. Use to tie external lifetimes to this client.             |
+| `dispose`          | `() => void`                  | Dispose the transport and embedded query client. Idempotent.                                   |
+| `disposed`         | `boolean`                     | `true` after `dispose()` is called                                                              |
+| `[Symbol.dispose]` | —                             | Delegates to `dispose()`                                                                        |
 
 **Example:**
 
@@ -337,6 +339,21 @@ const stream = createStream({}, transport);
 ```
 
 ## Errors
+
+### `CourierError`
+
+Base class for all courier errors. Catch with `CourierError.is(e)` to handle any courier error in one branch, then narrow further.
+
+- `name`: `'CourierError'` (overridden by subclasses)
+- `message`: prefixed with `[@vielzeug/courier]`
+- Static helper: `CourierError.is(err)`
+
+Hierarchy:
+```
+CourierError
+├── HttpError
+└── SchemaValidationError
+```
 
 ### `HttpError`
 

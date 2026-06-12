@@ -39,7 +39,7 @@ describe('createDomVirtualList – rendering', () => {
 
     expect(args?.totalSize).toBe(100 * 30);
     expect(args?.items.length).toBeGreaterThan(0);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('render items have data property merged with VirtualItem fields', () => {
@@ -60,7 +60,7 @@ describe('createDomVirtualList – rendering', () => {
 
     expect(first.data).toEqual(rows[first.index]);
     expect(typeof first.start).toBe('number');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('sets height on listEl in vertical mode', () => {
@@ -78,7 +78,7 @@ describe('createDomVirtualList – rendering', () => {
 
     expect(listEl.style.height).toBe(`${50 * 30}px`);
     expect(listEl.style.width).toBe('');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('sets width (not height) in horizontal mode', () => {
@@ -97,7 +97,7 @@ describe('createDomVirtualList – rendering', () => {
 
     expect(listEl.style.width).toBe(`${20 * 30}px`);
     expect(listEl.style.height).toBe('');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('sets position:relative and contain:layout on listEl when items are set', () => {
@@ -112,7 +112,7 @@ describe('createDomVirtualList – rendering', () => {
 
     expect(listEl.style.position).toBe('relative');
     expect(listEl.style.contain).toBe('layout');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('re-renders when content changes with same length', async () => {
@@ -137,7 +137,7 @@ describe('createDomVirtualList – rendering', () => {
     ctrl.setItems(changed);
 
     expect(render.mock.calls.length).toBeGreaterThan(callsBefore);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -168,7 +168,7 @@ describe('createDomVirtualList – measurement', () => {
     await flushMicrotasks();
 
     expect(sizes[0]).toBe(100);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('drops measured sizes on setItems when no getItemKey', async () => {
@@ -193,7 +193,7 @@ describe('createDomVirtualList – measurement', () => {
     await flushMicrotasks();
 
     expect(sizes[0]).toBe(30); // back to estimate
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('measureBatch applies multiple measurements in one rebuild', async () => {
@@ -220,7 +220,7 @@ describe('createDomVirtualList – measurement', () => {
     await flushMicrotasks();
 
     expect(render.mock.calls.length).toBe(callsBefore + 1);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -255,7 +255,7 @@ describe('createDomVirtualList – recycle', () => {
     ctrl.setItems([...rows]);
 
     expect(nodeMap.get(0)).toBe(firstNode);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('recycle removes nodes from DOM that are no longer visible', () => {
@@ -284,7 +284,7 @@ describe('createDomVirtualList – recycle', () => {
 
     // Only a small window is visible initially; verify pool cleanup happens implicitly
     expect(renderedIds.length).toBeLessThan(rows.length);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('pool.clear is called on destroy, removing all live nodes', () => {
@@ -308,7 +308,7 @@ describe('createDomVirtualList – recycle', () => {
     });
 
     ctrl.setItems(rows);
-    ctrl.destroy();
+    ctrl.dispose();
 
     // All nodes should have been removed from DOM by pool.clear()
     for (const node of nodes) {
@@ -339,7 +339,7 @@ describe('createDomVirtualList – empty state', () => {
 
     expect(listEl.style.height).toBe('');
     expect(listEl.style.position).toBe('');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('setItems to empty then back to non-empty re-applies container styles', () => {
@@ -357,7 +357,7 @@ describe('createDomVirtualList – empty state', () => {
     ctrl.setItems(rows);
 
     expect(listEl.style.position).toBe('relative');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -379,7 +379,7 @@ describe('createDomVirtualList – scrollToIndex', () => {
     ctrl.scrollToIndex(50, { align: 'start' });
 
     expect(scrollEl.scrollTop).toBe(50 * 30);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -408,7 +408,7 @@ describe('createDomVirtualList – invalidate', () => {
     const args = render.mock.calls.at(-1)?.[0];
 
     expect(args?.items.find((i: { index: number }) => i.index === 0)?.size).toBe(30);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -435,7 +435,7 @@ describe('createDomVirtualList – Virtualizer interface (R11)', () => {
 
     expect(ctrl.count).toBe(10);
     expect(ctrl.totalSize).toBe(10 * 30);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('scrollToOffset is forwarded to underlying virtualizer', () => {
@@ -452,7 +452,7 @@ describe('createDomVirtualList – Virtualizer interface (R11)', () => {
     ctrl.scrollToOffset(300);
 
     expect(scrollEl.scrollTop).toBe(300);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('Symbol.dispose delegates to destroy', () => {
@@ -497,7 +497,7 @@ describe('createDomVirtualList – redraw', () => {
     const args = render.mock.calls.at(-1)?.[0];
 
     expect(args?.items.find((i: { index: number }) => i.index === 0)?.size).toBe(80);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('stable-key setItems uses redraw (not invalidate)', async () => {
@@ -524,7 +524,7 @@ describe('createDomVirtualList – redraw', () => {
 
     // measurement should still be present after redraw
     expect(renderSizes[0]).toBe(80);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -540,8 +540,8 @@ describe('createDomVirtualList – lifecycle', () => {
     });
 
     expect(() => {
-      ctrl.destroy();
-      ctrl.destroy();
+      ctrl.dispose();
+      ctrl.dispose();
     }).not.toThrow();
   });
 
@@ -554,7 +554,7 @@ describe('createDomVirtualList – lifecycle', () => {
       scrollElement: scrollEl,
     });
 
-    ctrl.destroy();
+    ctrl.dispose();
 
     const callsBefore = render.mock.calls.length;
 
@@ -573,7 +573,7 @@ describe('createDomVirtualList – lifecycle', () => {
     });
 
     ctrl.setItems(makeRows(5));
-    ctrl.destroy();
+    ctrl.dispose();
 
     const callsBefore = render.mock.calls.length;
 
@@ -594,7 +594,7 @@ describe('createDomVirtualList – lifecycle', () => {
     });
 
     ctrl.setItems(makeRows(5));
-    ctrl.destroy();
+    ctrl.dispose();
 
     expect(listEl.textContent).toBe('');
     expect(listEl.style.height).toBe('');
@@ -624,7 +624,7 @@ describe('createDomVirtualList – setItems double-render', () => {
     // Adding items changes count — render should fire exactly once more.
     ctrl.setItems(makeRows(10));
     expect(render.mock.calls.length).toBe(callsAfterFirst + 1);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('does render when count is unchanged with stable keys', () => {
@@ -648,7 +648,7 @@ describe('createDomVirtualList – setItems double-render', () => {
 
     ctrl.setItems(replaced);
     expect(render.mock.calls.length).toBeGreaterThan(callsAfterFirst);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -670,7 +670,7 @@ describe('createVirtualScroller', () => {
     const scrollEl = container.children[0] as HTMLElement;
 
     expect(scrollEl.style.overflow).toContain('auto');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('destroy() removes the scroll container from the DOM', () => {
@@ -684,7 +684,7 @@ describe('createVirtualScroller', () => {
     });
 
     expect(container.children.length).toBe(1);
-    ctrl.destroy();
+    ctrl.dispose();
     expect(container.children.length).toBe(0);
   });
 
@@ -702,7 +702,7 @@ describe('createVirtualScroller', () => {
     ctrl.setItems(makeRows(10));
     // With spread snapshot this returns 0; Proxy returns the current value.
     expect(ctrl.count).toBe(10);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('live getter totalSize reflects current value after setItems', () => {
@@ -719,7 +719,7 @@ describe('createVirtualScroller', () => {
     expect(ctrl.totalSize).toBe(5 * 30);
     ctrl.setItems(makeRows(10));
     expect(ctrl.totalSize).toBe(10 * 30);
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('applies containerClass to the scroll element', () => {
@@ -736,7 +736,7 @@ describe('createVirtualScroller', () => {
     const scrollEl = container.children[0] as HTMLElement;
 
     expect(scrollEl.className).toBe('my-scroller');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('uses overflow: hidden auto for vertical mode (default)', () => {
@@ -752,7 +752,7 @@ describe('createVirtualScroller', () => {
     const scrollEl = container.children[0] as HTMLElement;
 
     expect(scrollEl.style.overflow).toBe('hidden auto');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('uses overflow: auto hidden for horizontal mode (P1 regression)', () => {
@@ -770,7 +770,7 @@ describe('createVirtualScroller', () => {
     const scrollEl = container.children[0] as HTMLElement;
 
     expect(scrollEl.style.overflow).toBe('auto hidden');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('scrollToTop scrolls to offset 0', () => {
@@ -789,7 +789,7 @@ describe('createVirtualScroller', () => {
 
     Object.defineProperty(scrollEl, 'scrollTop', { configurable: true, get: () => 300, set: () => {} });
     expect(() => ctrl.scrollToTop()).not.toThrow();
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('scrollToBottom scrolls to the end of the list', () => {
@@ -804,7 +804,7 @@ describe('createVirtualScroller', () => {
 
     ctrl.setItems(makeRows(50));
     expect(() => ctrl.scrollToBottom()).not.toThrow();
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });
 
@@ -833,7 +833,7 @@ describe('createDomVirtualList – sticky', () => {
     ctrl.setItems(rows);
 
     expect(typeof stickyItemsCount).toBe('number');
-    ctrl.destroy();
+    ctrl.dispose();
   });
 
   it('sticky guard does not throw when index is out of range', () => {
@@ -849,6 +849,6 @@ describe('createDomVirtualList – sticky', () => {
     });
 
     expect(() => ctrl.setItems(rows)).not.toThrow();
-    ctrl.destroy();
+    ctrl.dispose();
   });
 });

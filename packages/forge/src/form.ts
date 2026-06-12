@@ -744,7 +744,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         return dirty.has(key);
       },
       /** Cancels this binding's own debounce timer. Does not affect other bindings for the same field. */
-      disconnect() {
+      dispose() {
         if (debounceTimer !== null) {
           clearTimeout(debounceTimer);
           debounceTimer = null;
@@ -768,6 +768,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         const shouldValidate = validateOnChange || (validateOnTouch && touched.has(key));
 
         if (shouldValidate) scheduleValidation();
+      },
+      [Symbol.dispose]() {
+        this.dispose();
       },
       get touched() {
         return touched.has(key);

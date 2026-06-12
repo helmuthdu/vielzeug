@@ -12,16 +12,16 @@ import { asyncRetryExample } from './async-retry';
 import { asyncWaitForExample } from './async-waitFor';
 import { functionCurryExample } from './function-curry';
 import { functionDebounceExample } from './function-debounce';
-import { functionMemoAsyncExample } from './function-memo-async';
 import { functionMemoExample } from './function-memo';
+import { functionMemoAsyncExample } from './function-memo-async';
 import { functionPipeExample } from './function-pipe';
 import { functionThrottleExample } from './function-throttle';
 import { mathAverageExample } from './math-average';
 import { objectDiffExample } from './object-diff';
 import { objectMergeExample } from './object-merge';
 import { objectParseJSONExample } from './object-parseJSON';
-import { objectStashExample } from './object-stash';
 import { objectPruneExample } from './object-prune';
+import { objectStashExample } from './object-stash';
 import { stringCamelcaseExample } from './string-camelcase';
 import { typedIsExample } from './typed-is';
 
@@ -48,8 +48,8 @@ export const arsenalExamples = {
   'object-diff': objectDiffExample,
   'object-merge': objectMergeExample,
   'object-parseJSON': objectParseJSONExample,
-  'object-stash': objectStashExample,
   'object-prune': objectPruneExample,
+  'object-stash': objectStashExample,
   'string-camelcase': stringCamelcaseExample,
   'typed-is': typedIsExample,
 };

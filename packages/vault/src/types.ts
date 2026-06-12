@@ -366,8 +366,14 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
   ): Promise<R>;
   /** Returns live record counts and expired-but-not-yet-evicted counts per table. */
   debug(): Promise<DebugInfo<S>>;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this adapter. */
+  readonly disposalSignal: AbortSignal;
   /** Releases all resources (observers, cross-tab channel, DB connection). */
   dispose(): Promise<void>;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
+  /** Delegates to `dispose()`. Enables `await using` declarations. */
+  [Symbol.asyncDispose](): Promise<void>;
   observe<K extends keyof S & string>(
     table: K,
     listener: Observer<RecordOf<S, K>>,

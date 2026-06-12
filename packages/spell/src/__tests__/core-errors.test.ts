@@ -6,13 +6,13 @@ describe('ValidationError message and shaping', () => {
   it('formats a root-level issue with fallback path label', () => {
     const error = new ValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
 
-    expect(error.message).toBe('value: Invalid [custom]');
+    expect(error.message).toBe('[@vielzeug/spell] value: Invalid [custom]');
   });
 
   it('formats nested object and array paths', () => {
     const error = new ValidationError([{ code: 'custom', message: 'Invalid', path: ['items', 0, 'name'] }]);
 
-    expect(error.message).toBe('items.0.name: Invalid [custom]');
+    expect(error.message).toBe('[@vielzeug/spell] items.0.name: Invalid [custom]');
   });
 
   it('flatten() returns structured path entries for field errors', () => {

@@ -102,6 +102,7 @@ git checkout -b fix/bug-description
 ### 3. Make Your Changes
 
 **Keep it simple:**
+
 - Write clear, readable code
 - Add tests for new features
 - Update documentation if needed
@@ -137,6 +138,7 @@ export function formatName(first: any, last: any) {
 ```
 
 **Key points:**
+
 - Use TypeScript (no `any` types)
 - Add JSDoc comments for public APIs
 - Keep functions small and focused
@@ -159,6 +161,7 @@ describe('formatName', () => {
 ```
 
 **Key points:**
+
 - Test new features
 - Use descriptive test names
 - Test edge cases
@@ -166,16 +169,19 @@ describe('formatName', () => {
 ### Documentation
 
 **When adding features:**
+
 1. Update the package README
 2. Add usage examples
 3. Update API docs if needed
 
 **Use the PackageInfo and PackageBadges components:**
+
 ```markdown
 <!-- In docs -->
 <PackageBadges package="vault" />
 
 <!-- Inline usage -->
+
 Only <PackageInfo package="vault" type="size" /> gzipped!
 ```
 
@@ -194,6 +200,7 @@ git commit -m "docs(forge): update validation examples"
 ```
 
 **Common types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -245,6 +252,7 @@ vielzeug/
 ```
 
 **Each package has:**
+
 - `src/` - Source code
 - `src/*.test.ts` - Tests
 - `README.md` - Package documentation
@@ -263,6 +271,7 @@ Be respectful and constructive in all interactions. We're all here to build some
 ## Recognition
 
 All contributors are recognized in:
+
 - Release notes
 - Package changelogs
 - GitHub contributors page

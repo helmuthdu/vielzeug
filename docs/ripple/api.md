@@ -776,10 +776,11 @@ Errors from multiple subscribers or cleanup functions in the same flush are aggr
 
 ```ts
 interface Signal<T> extends ReadonlySignal<T> {
-  update(fn: (current: T) => T): void;
   dispose(): void;
-  [Symbol.dispose](): void;
+  readonly disposed: boolean;
+  update(fn: (current: T) => T): void;
   value: T; // notifying setter — write triggers downstream notifications
+  [Symbol.dispose](): void;
 }
 ```
 
@@ -813,11 +814,12 @@ interface ReadonlySignal<T> {
 ```ts
 interface ComputedSignal<T> extends ReadonlySignal<T> {
   dispose(): void;
+  readonly disposed: boolean;
   [Symbol.dispose](): void;
 }
 ```
 
-Returned by `computed()` and `readonly()`. A read-only signal with an explicit dispose method. Inherits `map()` and `filter()` from `ReadonlySignal<T>`.
+Returned by `computed()` and `readonly()`. A read-only signal with an explicit dispose method. `disposed` is `true` after `dispose()` is called. Inherits `map()` and `filter()` from `ReadonlySignal<T>`.
 
 ---
 

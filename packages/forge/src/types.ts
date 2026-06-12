@@ -119,12 +119,13 @@ export type ScopedValues<TValues, P extends string> =
 /**
  * The live connection object returned by `form.connect()`.
  * Getters re-evaluate on every property access — store the object once per field, do not destructure.
- * Call `disconnect()` to cancel any pending debounce timers when the field unmounts.
+ * Call `dispose()` to cancel any pending debounce timers when the field unmounts.
  */
 export type ConnectionResult<V = unknown> = {
+  [Symbol.dispose](): void;
   readonly dirty: boolean;
   /** Cancels the debounce timer owned by this specific binding. Safe to call multiple times. */
-  disconnect(): void;
+  dispose(): void;
   readonly error: string | undefined;
   onBlur(): void;
   onChange(value: V): void;

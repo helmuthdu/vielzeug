@@ -1,7 +1,7 @@
 import { cursorSourceExample } from './cursor-source';
-import { errorHandlingExample } from './error-handling';
 import { deriveMergeExample } from './derive-merge';
 import { encodeDecodeQueryExample } from './encode-decode-query';
+import { errorHandlingExample } from './error-handling';
 import { infiniteSourceExample } from './infinite-source';
 import { localSourceExample } from './local-source';
 import { presetsExample } from './presets';
@@ -10,9 +10,9 @@ import { sourceStateExample } from './source-state';
 
 export const sourcererExamples = {
   'cursor-source': cursorSourceExample,
-  'error-handling': errorHandlingExample,
   'derive-merge': deriveMergeExample,
   'encode-decode-query': encodeDecodeQueryExample,
+  'error-handling': errorHandlingExample,
   'infinite-source': infiniteSourceExample,
   'local-source': localSourceExample,
   presets: presetsExample,

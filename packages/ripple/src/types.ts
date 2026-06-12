@@ -126,6 +126,8 @@ export interface ReadonlySignal<T> {
 
 export interface Signal<T> extends ReadonlySignal<T> {
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   update(fn: (current: T) => T): void;
   value: T;
   [Symbol.dispose](): void;
@@ -133,6 +135,8 @@ export interface Signal<T> extends ReadonlySignal<T> {
 
 export interface ComputedSignal<T> extends ReadonlySignal<T> {
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   [Symbol.dispose](): void;
 }
 

@@ -24,7 +24,10 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.hasBranch()`         | Check if any CLDR form exists under a branch key     | Sync           | Checks all fallback locales; safe for pipe-plural expanded keys       |
 | `i18n.isLoaded()`          | Check if a locale catalog is fully resolved          | Sync           | Returns `false` for async loaders not yet preloaded; safe predicate   |
 | `i18n.isRegistered()`      | Check if a locale is in the known registry           | Sync           | `true` for both resolved catalogs and pending loaders; never throws   |
+| `i18n.disposalSignal`      | `AbortSignal` aborted on disposal                    | Sync getter    | Tie external lifetimes (SSE, polling) to this i18n instance           |
 | `i18n.dispose()`           | Release all subscribers and catalog state            | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key      |
+| `i18n.disposed`            | `true` after `dispose()` is called                   | Sync getter    | —                                                                     |
+| `i18n[Symbol.dispose]()`   | Delegates to `dispose()`                             | Sync           | Enables `using` declarations                                          |
 | `i18n.getState()`          | Serialise loaded catalogs for SSR hydration          | Sync           | Only includes already-loaded catalogs — use `isLoaded()` before call  |
 | `createNamespace()`        | Typed identity helper for namespace factories        | Sync           | Identity function — zero runtime overhead; enforces catalog shape `M` |
 | `i18n.restoreState()`      | Hydrate a client instance from server state          | Sync           | Notifies subscribers once after restoring                            |
@@ -103,7 +106,10 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `hasBranch(key)`                 | `(key: MessageBranchKeys<M> \| string) => boolean`                                        | Check if any CLDR form (`zero`…`other`) exists under a branch key. Works for pipe-plural expanded keys. |
 | `isLoaded(locale)`               | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Returns `false` for unknown/pending/invalid locales — never throws. |
 | `isRegistered(locale)`           | `(locale: Locale) => boolean`                                                             | Return `true` if `locale` is in the known registry (resolved **or** pending loader). Never throws.      |
+| `disposalSignal`                 | `AbortSignal`                                                                             | Aborted when `dispose()` is called. Use to tie external lifetimes to this instance.                      |
 | `dispose()`                      | `() => void`                                                                              | Release all subscribers, catalogs, loaders, and namespace state. Idempotent.                             |
+| `disposed`                       | `boolean`                                                                                 | `true` after `dispose()` has been called.                                                                |
+| `[Symbol.dispose]()`             | `() => void`                                                                              | Delegates to `dispose()`. Enables `using` declarations.                                                  |
 | `getSupportedLocales(sorted?)`   | `(sorted?: boolean) => Locale[]`                                                          | Return all registered locales.                                                                           |
 | `getSnapshot()`                  | `() => I18nSnapshot`                                                                      | Return the current `{ locale, version }` snapshot.                                                       |
 | `getState()`                     | `() => I18nState`                                                                         | Serialise loaded catalogs + active locale for SSR hydration. Loader-only locales are silently omitted — check `isLoaded()` first. |
@@ -365,6 +371,48 @@ if (!i18n.isRegistered('fr')) throw new Error('fr locale not configured');
 if (!i18n.isLoaded('fr')) await i18n.preload('fr');
 const state = i18n.getState(); // 'fr' guaranteed to be present
 ```
+
+### `disposalSignal`
+
+```ts
+get disposalSignal(): AbortSignal
+```
+
+`AbortSignal` aborted when `dispose()` is called. Use to tie external resource lifetimes (SSE streams, polling intervals, child `I18n` instances) to this i18n instance.
+
+```ts
+startPolling({ signal: routeI18n.disposalSignal });
+// polling stops automatically when routeI18n.dispose() is called
+```
+
+---
+
+### `disposed`
+
+```ts
+get disposed(): boolean
+```
+
+`true` after `dispose()` has been called.
+
+---
+
+### `[Symbol.dispose]()`
+
+```ts
+[Symbol.dispose](): void
+```
+
+Delegates to `dispose()`. Enables the `using` declaration:
+
+```ts
+{
+  using i18n = createI18n({ catalogs: { en: messages } });
+  // dispose() called automatically at block exit
+}
+```
+
+---
 
 ### `dispose()`
 

@@ -81,6 +81,15 @@ describe('s.intersect() — async', () => {
   });
 });
 
+describe('s.and() alias', () => {
+  it('is equivalent to s.intersect() with two schemas', () => {
+    const schema = s.and(s.string(), s.string().min(3));
+
+    expect(schema.parse('hello')).toBe('hello');
+    expect(() => schema.parse('hi')).toThrow();
+  });
+});
+
 describe('IntersectSchema.schemas introspection', () => {
   it('exposes .schemas', () => {
     const s1 = s.string();

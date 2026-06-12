@@ -54,8 +54,33 @@ For each item in the improvement plan (in order of priority):
      - Updated to work with the new API, or
      - Clearly documented as temporarily broken where the plan has explicitly accepted a breaking change.
 
-6. **Confirm completion**
-   - Once code, tests, and lint are passing for this item, mark it as done and move to the next item.
+6. **Learn Once, Use Everywhere — cross-package propagation**
+
+   After completing each plan item, ask: _"Is this fix or pattern applicable to other packages?"_
+
+   Specifically check whether the same issue exists in sibling packages when the item falls into one of these categories:
+   - **Bug fix** — grep for the same incorrect pattern across all `packages/*/src/`. If found, apply the fix immediately (do not defer).
+   - **Type safety improvement** — check if the same loose type (`any`, unsafe cast, over-broad generic) appears in other packages with similar abstractions.
+   - **Structural pattern** — e.g. moving dev/debug utilities to `devtools/`, normalising index barrel exports, consistent error class shapes. Scan all packages and align them.
+   - **Test pattern** — e.g. a new edge-case category, a better assertion style, a discovered missing negative test for a common idiom. Apply the same test additions to packages that share the idiom.
+   - **Convention fix** — e.g. import ordering, naming scheme, file layout. Run `pnpm fix` across all affected packages after aligning.
+
+   **How to propagate:**
+   1. After fixing the issue in `<name>`, search the monorepo:
+      ```bash
+      grep -r "<pattern>" packages/*/src/ --include="*.ts" -l
+      ```
+   2. For each affected package, apply the same fix (or equivalent) cohesively.
+   3. Run tests for every package you touched:
+      ```bash
+      pnpm vitest run packages/<affected>/src/__tests__/
+      ```
+   4. Record each propagated fix as a sub-item under the original plan item (e.g. `6.1 propagated to: ripple, courier`).
+
+   **Scope discipline:** only propagate when the pattern is clearly the same problem. Do not refactor unrelated code just because you are in a file. If a package has the same structural issue but the fix would be large and risky, note it as a follow-up item in the plan rather than applying it immediately.
+
+7. **Confirm completion**
+   - Once code, tests, and lint are passing for this item (including any propagated fixes), mark it as done and move to the next item.
 
 ## Rules
 

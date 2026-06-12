@@ -56,9 +56,15 @@ export function autoUpdate(
  * (position is never computed in an SSR environment).
  */
 export function float(_reference: ReferenceElement, _floating: HTMLElement, _options: FloatOptions = {}): FloatHandle {
+  const controller = new AbortController();
+
   return {
     cssAnchor: false,
+    get disposalSignal() {
+      return controller.signal;
+    },
     dispose: NOOP,
+    disposed: false,
     getPosition: () => null,
     [Symbol.dispose]: NOOP,
     update: NOOP,

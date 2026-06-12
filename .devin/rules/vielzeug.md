@@ -41,7 +41,7 @@ All other packages are fully independent.
 ## Package catalogue
 
 | Package               | Category   | What it does                                                       |
-|-----------------------| ---------- |--------------------------------------------------------------------|
+| --------------------- | ---------- | ------------------------------------------------------------------ |
 | `@vielzeug/ripple`    | State      | Reactive signals, computed, effects, stores                        |
 | `@vielzeug/craft`     | UI         | Functional web-component authoring on top of ripple                |
 | `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
@@ -84,6 +84,19 @@ node packages/codex/dist/index.js --port 3100
 
 Available MCP tools: `list-packages`, `search-packages`, `list-docs-pages`, `get-docs`, `get-package-api`, `get-ai-context`, `list-components`, `get-component`.
 
+## Teardown / disposal convention
+
+Every resource object that requires explicit teardown exposes **both**:
+
+```typescript
+dispose(): void;           // named method — always call this directly
+[Symbol.dispose](): void;  // delegates to dispose() — enables `using` declarations
+```
+
+- **`dispose()`** is the canonical name. Never use `destroy()`, `disconnect()`, `close()`, or `cleanup()` for owned resource teardown.
+- **`[Symbol.dispose]`** is always last in the object/interface (ESLint Perfectionist sorts symbol keys after named keys).
+- Native platform APIs that return teardown functions (e.g. `autoUpdate() => () => void`) are **not** wrapped — leave them as plain functions.
+
 ## Dev logging standard
 
 Every package follows a two-layer logging model. **Never mix the layers.**
@@ -93,17 +106,23 @@ Every package follows a two-layer logging model. **Never mix the layers.**
 For API-misuse warnings that fire automatically in dev builds (bad config, mismatched types, missing attributes, etc.).
 
 - Lives in a **private** `src/_warn.ts` — never exported from `index.ts` or `/devtools`.
-- Gated by `isDev` (`import.meta.env.DEV` for Vite packages, `__<PKG>_PROD__` global for non-Vite).
-- Prefix format: `[@vielzeug/<pkg>] <function>: <description>` — emits via `console.warn`.
+- Gated by `isDev` via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
+- Prefix format: `[@vielzeug/<pkg>] <description>` — emits via `console.warn` (warnings) or `console.error` (errors).
 - Add `@security` JSDoc if message text may include user-supplied data (PII risk).
+- **No bare `console.warn` / `console.error` in source** — always go through `warn()` / `issue()` from `_warn.ts`.
 
 ```typescript
 // packages/<name>/src/_warn.ts
-const isDev = import.meta.env.DEV || !(globalThis as { __NAME_PROD__?: boolean }).__NAME_PROD__;
+const isDev = !(globalThis as { __<NAME>_PROD__?: boolean }).__<NAME>_PROD__;
 
 /** @internal @security Messages may include user data. */
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/<name>] ${msg}`);
+}
+
+/** @internal */
+export function issue(msg: string, ...args: unknown[]): void {
+  if (isDev) console.error(`[@vielzeug/<name>] ${msg}`, ...args);
 }
 ```
 
@@ -116,19 +135,11 @@ For opt-in structured debug logging consumers import explicitly. Tree-shaken in 
 - Wraps the public API — does not duplicate internal logic.
 - No environment gate needed (consumers choose to import it).
 
-```typescript
-// packages/<name>/src/devtools.ts
-export function debugFoo(options?: FooOptions): Foo {
-  return createFoo({ ...options, logger: console.debug });
-}
-```
-
 ### Rules
 
-- **No bare `console.warn` in source** — always go through `warn()` from `_warn.ts`.
-- **No `devWarn` / `devError` exported from `/devtools`** — internal helpers stay internal.
 - **`_warn.ts` is never re-exported** from `index.ts`.
-- Tests that assert warning output: spy on `console.warn`, do NOT import `_warn` directly.
+- Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_warn` directly.
+- Expected message format in tests: `'[@vielzeug/<pkg>] <description>'`.
 
 ## Common patterns
 

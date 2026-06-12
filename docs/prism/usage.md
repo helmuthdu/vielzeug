@@ -17,7 +17,7 @@ import '@vielzeug/prism/theme';
 <div id="chart" style="width: 100%; height: 300px;"></div>
 ```
 
-Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `devWarn` is emitted in development — ensure the container has layout before calling the chart factory.
+Prism observes the container size via `ResizeObserver` and re-renders automatically on resize. If the container has zero dimensions at mount time, a `warn` is emitted in development — ensure the container has layout before calling the chart factory.
 
 ## Reactivity with Signals
 
@@ -624,11 +624,11 @@ Charts resize automatically when the container dimensions change. Prism uses `Re
 Import dev-only helpers from the `/devtools` subpath. Both are tree-shaken in production when `globalThis.__PRISM_PROD__` is `true`.
 
 ```ts
-import { devWarn, devError } from '@vielzeug/prism/devtools';
+import { warn, issue } from '@vielzeug/prism/devtools';
 
 // Use in a plugin or custom renderer:
 if (!container.isConnected) {
-  devWarn('Chart container is not attached to the document.');
+  warn('Chart container is not attached to the document.');
 }
 ```
 

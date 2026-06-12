@@ -16,9 +16,9 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `deriveSource()`             | Create a reactive projection of another source                             | Derived source disposes automatically when parent disposes                    |
 | `mergeSource()`              | Combine multiple sources into one `MergedSource<T>`                        | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>` |
 | `toSignals()`                | Wrap any source in Ripple computed signals                                 | Must call `dispose()` or signals leak                                         |
-| `SourceError`                | Structured error class with `message`, `cause`, `query`, `attempt`         | Extends `Error`; access context via getters, not object spread                |
-| `SourceTimeoutError`         | Error thrown when `ready()` times out                                      | Extends `Error`; check with `instanceof SourceTimeoutError`                   |
-| `SourceDisposedError`        | Error thrown by `ready()` when the source is disposed while waiting        | Distinct from `SourceTimeoutError`; catch separately if needed                |
+| `SourceError`                | Base error class for all sourcerer errors; carries `message`, `cause`, `query`, `attempt` | Extends `Error`; access context via getters, not object spread     |
+| `SourceTimeoutError`         | Error thrown when `ready()` times out; has `timeoutMs` property            | Extends `SourceError`; also caught by `instanceof SourceError`                |
+| `SourceDisposedError`        | Error thrown by `ready()` when the source is disposed while waiting        | Extends `SourceError`; catch separately from `SourceTimeoutError` if needed   |
 | `sourceState()`              | Derive a discriminated union (`loading`/`error`/`success`) from any source | —                                                                             |
 | `itemRange()`                | Compute 1-based display range from `SourceMeta`                            | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                        |
 | `prefetchSource()`           | SSR: fetch first page, return serialisable snapshot                        | **Throws `SourceError`** if fetch fails                                       |
@@ -352,14 +352,35 @@ dispose();
 
 ```ts
 class SourceError extends Error {
-  readonly name = 'SourceError';
   get attempt(): number; // retry attempt that produced this error (0-based)
   get query(): unknown; // query that triggered the failure
+  static is(err: unknown): err is SourceError;
   // Also inherits: .message, .cause, .stack
 }
 ```
 
-Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value.
+Base class for all sourcerer errors. Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value. `SourceTimeoutError` and `SourceDisposedError` both extend this class, so a single `instanceof SourceError` check covers all sourcerer errors.
+
+### `SourceTimeoutError`
+
+```ts
+class SourceTimeoutError extends SourceError {
+  readonly timeoutMs: number;
+  static is(err: unknown): err is SourceTimeoutError;
+}
+```
+
+Thrown by `ready(timeout)` when the timeout expires before the source becomes idle. Also caught by `instanceof SourceError`.
+
+### `SourceDisposedError`
+
+```ts
+class SourceDisposedError extends SourceError {
+  static is(err: unknown): err is SourceDisposedError;
+}
+```
+
+Thrown by `ready()` when the source is disposed before becoming idle. Also caught by `instanceof SourceError`.
 
 **Example:**
 

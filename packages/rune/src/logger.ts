@@ -121,6 +121,8 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
   // R5: Resolve theme once per logger instance — theme is immutable after construction.
   // Re-resolved only in child() when theme changes.
   const resolvedTheme = resolveTheme(cfg.theme);
+  const disposeController = new AbortController();
+  let disposed = false;
 
   const passes = (type: LogType): boolean => isLevelEnabled(cfg.logLevel, type);
 
@@ -261,12 +263,25 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
 
+    get disposalSignal(): AbortSignal {
+      return disposeController.signal;
+    },
+
     dispose: (): void => {
+      if (disposed) return;
+
+      disposed = true;
+      disposeController.abort();
+
       for (const t of cfg.transports) {
         if (typeof (t as BatchTransport).dispose === 'function') {
           (t as BatchTransport).dispose();
         }
       }
+    },
+
+    get disposed(): boolean {
+      return disposed;
     },
 
     // R6: isLevelEnabled now handles 'off' → false, so no special-case needed
@@ -288,6 +303,10 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     setLevel: (level: LogLevel): void => {
       cfg.logLevel = level;
+    },
+
+    [Symbol.dispose](): void {
+      logger.dispose();
     },
 
     time: timeImpl,

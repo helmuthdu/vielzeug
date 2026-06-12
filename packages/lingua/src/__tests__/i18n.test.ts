@@ -717,7 +717,7 @@ describe('createI18n', () => {
         throw error;
       });
       await i18n.setLocale('fr');
-      expect(spy).toHaveBeenCalledWith('[lingua] subscriber error', error);
+      expect(spy).toHaveBeenCalledWith('[@vielzeug/lingua] subscriber error', error);
       spy.mockRestore();
     });
 

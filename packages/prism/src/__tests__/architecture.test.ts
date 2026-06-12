@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DataPoint, Series, StackSegment } from '../types';
 
-import { error as devError, warn as devWarn } from '../_warn';
+import { issue, warn } from '../_warn';
 import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
 import { createBarChart } from '../charts/bar';
@@ -165,8 +165,8 @@ describe('warn / error', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(() => devWarn('test warn')).not.toThrow();
-    expect(() => devError('test error')).not.toThrow();
+    expect(() => warn('test warn')).not.toThrow();
+    expect(() => issue('test error')).not.toThrow();
 
     warnSpy.mockRestore();
     errorSpy.mockRestore();
@@ -600,9 +600,9 @@ describe('TooltipConfig.sanitize', () => {
   });
 });
 
-// ─── computePoints — string x devWarn ────────────────────────────────────────
+// ─── computePoints — string x warn ────────────────────────────────────────
 
-describe('createLineChart — string x devWarn', () => {
+describe('createLineChart — string x warn', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -617,7 +617,7 @@ describe('createLineChart — string x devWarn', () => {
     container.remove();
   });
 
-  it('emits devWarn when x values are strings', () => {
+  it('emits warn when x values are strings', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const chart = createLineChart(container, {
       series: [
@@ -651,10 +651,10 @@ describe('createTooltip — isConnected guard', () => {
   });
 });
 
-// ─── tooltip — render without sanitize devWarn ───────────────────────────────
+// ─── tooltip — render without sanitize warn ───────────────────────────────
 
 describe('createTooltip — XSS warning', () => {
-  it('emits devWarn when render is provided without sanitize', () => {
+  it('emits warn when render is provided without sanitize', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const container = document.createElement('div');
 

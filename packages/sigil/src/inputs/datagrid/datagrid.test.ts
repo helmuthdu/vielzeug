@@ -1586,7 +1586,7 @@ describe('sg-datagrid', () => {
       el.rows = [{ name: 'Alice' }];
       await Promise.resolve();
 
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[sg-datagrid]'), expect.anything());
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sigil]'));
 
       warnSpy.mockRestore();
     });
@@ -1604,7 +1604,7 @@ describe('sg-datagrid', () => {
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sigil]'));
 
       col.remove();
       spy.mockRestore();
@@ -1619,7 +1619,7 @@ describe('sg-datagrid', () => {
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
+      expect(spy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sigil]'));
 
       col.remove();
       spy.mockRestore();
@@ -1635,7 +1635,7 @@ describe('sg-datagrid', () => {
       document.body.appendChild(col);
       await Promise.resolve();
 
-      expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('[sg-column]'), expect.anything());
+      expect(spy).not.toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sigil]'));
 
       col.remove();
       spy.mockRestore();

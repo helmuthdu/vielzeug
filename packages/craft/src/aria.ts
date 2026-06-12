@@ -7,6 +7,7 @@
 
 import { effect as rawEffect, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
+import { warn } from './_warn';
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
 
@@ -75,8 +76,8 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
     const registered = tryRegisterCleanup(cleanup);
 
     if (!registered) {
-      console.warn(
-        '[craft] syncAria() called with autoCleanup:true but no active setup context. ' +
+      warn(
+        'syncAria() called with autoCleanup:true but no active setup context. ' +
           'Effects will leak unless you call the returned cleanup function manually.',
       );
     }

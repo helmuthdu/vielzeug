@@ -37,6 +37,7 @@ import {
   executeMiddlewarePipeline,
   reportError,
 } from './context';
+import { RouterDisposedError } from './errors';
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
 import { createHydrationManager } from './hydration';
@@ -145,6 +146,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   readonly #beforeLeaveBlockers = new Set<RegisteredBlocker>();
   #currentState: RouteState<TMeta, TComponent>;
   #disposed = false;
+  readonly #disposeController = new AbortController();
   #lastHref = '/';
   readonly #listeners = new Set<(state: RouteState<TMeta, TComponent>) => void>();
   #navigationId = 0;
@@ -443,6 +445,14 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────
 
+  get disposalSignal(): AbortSignal {
+    return this.#disposeController.signal;
+  }
+
+  get disposed(): boolean {
+    return this.#disposed;
+  }
+
   /** Dispose event listeners and prevent further router interaction. Idempotent. */
   dispose(): void {
     if (this.#disposed) return;
@@ -455,7 +465,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#listeners.clear();
 
     // Reject all pending waitFor promises before clearing so callers are notified.
-    const disposeError = new Error('[wayfinder] Router is disposed');
+    const disposeError = new RouterDisposedError();
 
     for (const check of this.#waiters) {
       this.#waiterRejects.get(check)?.(disposeError);
@@ -465,6 +475,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#abortController?.abort();
     this.#abortController = null;
     this.#unlistenHistory();
+    this.#disposeController.abort(disposeError);
   }
 
   [Symbol.dispose](): void {
@@ -474,7 +485,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   // ─── Private: assertions ──────────────────────────────────────────────────
 
   #assertNotDisposed(): void {
-    if (this.#disposed) throw new Error('[wayfinder] Router is disposed');
+    if (this.#disposed) throw new RouterDisposedError();
   }
 
   // ─── Private: history listener ────────────────────────────────────────────

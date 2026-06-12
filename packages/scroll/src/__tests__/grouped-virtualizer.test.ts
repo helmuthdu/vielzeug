@@ -151,7 +151,7 @@ describe('createGroupedVirtualizer – navigation', () => {
     gv.scrollToSection(1, { align: 'start', behavior: 'auto' });
 
     expect(el.scrollTop).toBe(40 + 2 * 30);
-    gv.destroy();
+    gv.dispose();
   });
 
   it('scrollToSection silently no-ops for out-of-bounds index', () => {
@@ -165,7 +165,7 @@ describe('createGroupedVirtualizer – navigation', () => {
     expect(() => gv.scrollToSection(-1)).not.toThrow();
     expect(() => gv.scrollToSection(999)).not.toThrow();
     expect(el.scrollTop).toBe(0); // no scroll should have occurred
-    gv.destroy();
+    gv.dispose();
   });
 
   it('scrollToItem silently no-ops for out-of-bounds sectionIndex', () => {
@@ -178,7 +178,7 @@ describe('createGroupedVirtualizer – navigation', () => {
 
     expect(() => gv.scrollToItem(-1, 0)).not.toThrow();
     expect(() => gv.scrollToItem(999, 0)).not.toThrow();
-    gv.destroy();
+    gv.dispose();
   });
 });
 
@@ -206,7 +206,7 @@ describe('createGroupedVirtualizer – update', () => {
 
     expect(state.headers[0]?.label).toBe('B');
     expect(state.totalSize).toBe(40 + 5 * 30);
-    gv.destroy();
+    gv.dispose();
   });
 
   it('does not clear measurements on update (preserves DOM measurements)', async () => {
@@ -231,7 +231,7 @@ describe('createGroupedVirtualizer – update', () => {
 
     // estimate should still be 30 (not reset)
     expect(renderedSizes[0]).toBe(30);
-    gv.destroy();
+    gv.dispose();
   });
 
   it('handles count change from update correctly', () => {
@@ -252,7 +252,7 @@ describe('createGroupedVirtualizer – update', () => {
 
     // 2 headers + 6 items = 2×40 + 6×30 = 260
     expect(state.totalSize).toBe(2 * 40 + 6 * 30);
-    gv.destroy();
+    gv.dispose();
   });
 });
 
@@ -336,7 +336,7 @@ describe('createGroupedVirtualizer – Virtualizer passthrough', () => {
     expect(typeof gv.scrollOffset).toBe('number');
     expect(Array.isArray(gv.items)).toBe(true);
     expect(Array.isArray(gv.stickyItems)).toBe(true);
-    gv.destroy();
+    gv.dispose();
   });
 
   it('scrollToTop and scrollToBottom do not throw', () => {
@@ -349,7 +349,7 @@ describe('createGroupedVirtualizer – Virtualizer passthrough', () => {
 
     expect(() => gv.scrollToTop()).not.toThrow();
     expect(() => gv.scrollToBottom()).not.toThrow();
-    gv.destroy();
+    gv.dispose();
   });
 
   it('measure and refresh do not throw and update totalSize', async () => {
@@ -367,7 +367,7 @@ describe('createGroupedVirtualizer – Virtualizer passthrough', () => {
       gv.redraw();
     }).not.toThrow();
 
-    gv.destroy();
+    gv.dispose();
   });
 });
 
@@ -383,8 +383,8 @@ describe('createGroupedVirtualizer – lifecycle', () => {
     });
 
     expect(() => {
-      gv.destroy();
-      gv.destroy();
+      gv.dispose();
+      gv.dispose();
     }).not.toThrow();
   });
 
@@ -415,7 +415,7 @@ describe('createGroupedVirtualizer – gv.items typed getter', () => {
     expect(gv.items[0]).toHaveProperty('data');
     expect(gv.items[0]).toHaveProperty('itemIndex');
     expect(gv.items[0]).toHaveProperty('sectionIndex');
-    gv.destroy();
+    gv.dispose();
   });
 
   it('gv.items updates after update()', () => {
@@ -431,7 +431,7 @@ describe('createGroupedVirtualizer – gv.items typed getter', () => {
     gv.update([makeSection('A', 5)]);
 
     expect(gv.items.length).toBeGreaterThanOrEqual(before);
-    gv.destroy();
+    gv.dispose();
   });
 
   it('gv.items is empty when no items in sections', () => {
@@ -443,6 +443,6 @@ describe('createGroupedVirtualizer – gv.items typed getter', () => {
     });
 
     expect(gv.items).toHaveLength(0);
-    gv.destroy();
+    gv.dispose();
   });
 });

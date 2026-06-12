@@ -75,8 +75,8 @@ export class ValidationError extends Error {
     this.issues = issues;
   }
 
-  static is(value: unknown): value is ValidationError {
-    return value instanceof ValidationError;
+  static is(err: unknown): err is ValidationError {
+    return err instanceof ValidationError;
   }
 
   /**

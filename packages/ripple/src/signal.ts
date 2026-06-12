@@ -98,6 +98,10 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
    * - new subscriptions are immediately unsubscribed
    * - all existing subscriber and computed-subscriber references are dropped
    */
+  get disposed(): boolean {
+    return this.disposed_;
+  }
+
   dispose(): void {
     if (this.disposed_) return;
 

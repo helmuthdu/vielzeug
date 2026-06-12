@@ -62,7 +62,12 @@ export function createCourier(opts?: CourierOptions) {
       queryClient.cancelAll();
     },
 
-    /** Permanently dispose the client. All in-flight requests are aborted. */
+    /** `AbortSignal` aborted when the client is disposed. Use to tie other lifecycles to this client. */
+    get disposalSignal() {
+      return transport.disposalSignal;
+    },
+
+    /** Permanently dispose the client. All in-flight requests are aborted. Idempotent. */
     dispose(): void {
       transport.dispose();
       queryClient.dispose();

@@ -295,7 +295,9 @@ export function configure(opts: { logger?: Logger | null; messages?: DeepPartial
 export function reset(): void {
   _activeMessages = _defaultMessages;
   _activeLocale = 'en';
-  _logger = (msg) => console.warn(msg);
+  _logger = (msg) => {
+    if (_isDev) console.warn(`[@vielzeug/spell] ${msg}`);
+  };
 }
 
 /** @internal — for use by schema files only. */

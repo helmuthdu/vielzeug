@@ -142,7 +142,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), combinedExt);
 
     const init = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
-    const p = execute<T>(init, full, m, responseType, schema);
+    const p = execute<T>(init, full, m, responseType, schema as { parse(data: unknown): T } | undefined);
 
     if (requestDedupeKey) inFlight.set(requestDedupeKey, p);
 

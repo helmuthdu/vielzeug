@@ -1,7 +1,7 @@
 // ─── Disposable ──────────────────────────────────────────────────────────────
 
 export interface Disposable {
-  destroy(): void;
+  dispose(): void;
   [Symbol.dispose](): void;
 }
 

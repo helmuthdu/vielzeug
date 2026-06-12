@@ -10,6 +10,7 @@ import type {
   Subscription,
 } from './types';
 
+import { issue } from './_warn';
 import { getDevToolsHook } from './devtools-hook';
 import { collectErrors, rethrowWith, runAll, StateError } from './error';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
@@ -198,7 +199,7 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
   const onError =
     options?.onError ??
     ((err: unknown) => {
-      console.error('[ripple] unhandled effectAsync error:', err);
+      issue('unhandled effectAsync error:', err);
     });
 
   const syncStop = effect(() => {

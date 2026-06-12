@@ -4,6 +4,7 @@ import {
   CircularDependencyError,
   type Container,
   ContainerDisposedError,
+  ContainerError,
   type ContainerEvent,
   ContainerFrozenError,
   type ContainerGraph,
@@ -198,6 +199,7 @@ describe('Container — freeze()', () => {
     const c = createContainer({ name: 'sealed' }).freeze();
 
     expect(() => c.value(T, 'x')).toThrow(ContainerFrozenError);
+    expect(() => c.value(T, 'x')).toThrow(ContainerError);
     expect(() => c.value(T, 'x')).toThrow('sealed');
   });
 
@@ -780,7 +782,8 @@ describe('Container — dependency injection', () => {
     expect(err).toBeInstanceOf(CircularDependencyError);
     expect(err.message).toContain('Alpha');
     expect(err.message).toContain('Beta');
-    expect(err.message).toBe('Circular dependency detected: Alpha -> Beta -> Alpha');
+    expect(err.message).toBe('[@vielzeug/conduit] Circular dependency detected: Alpha -> Beta -> Alpha');
+    expect(err).toBeInstanceOf(ContainerError);
   });
 });
 

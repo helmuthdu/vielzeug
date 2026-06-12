@@ -8,6 +8,7 @@ import { localeConfigureResetExample } from './locale-configure-reset';
 import { nestedObjectsExample } from './nested-objects';
 import { numberValidationExample } from './number-validation';
 import { objectDefaultsExample } from './object-defaults';
+import { objectMergeExample } from './object-merge';
 import { optionalNullableExample } from './optional-nullable';
 import { refinementsExample } from './refinements';
 import { schemaWalkExample } from './schema-walk';
@@ -25,6 +26,7 @@ export const spellExamples = {
   'nested-objects': nestedObjectsExample,
   'number-validation': numberValidationExample,
   'object-defaults': objectDefaultsExample,
+  'object-merge': objectMergeExample,
   'optional-nullable': optionalNullableExample,
   refinements: refinementsExample,
   'schema-walk': schemaWalkExample,

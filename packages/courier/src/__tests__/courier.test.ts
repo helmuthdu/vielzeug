@@ -74,7 +74,7 @@ describe('createCourier', () => {
     source.on('message', (d: string) => messages.push(d));
 
     await new Promise((r) => setTimeout(r, 100));
-    source.close();
+    source.dispose();
 
     expect(localFetch).toHaveBeenCalledTimes(1);
     expect(localFetch.mock.calls[0][0]).toBe('https://stream.example.com/events');
@@ -151,7 +151,7 @@ describe('createCourier', () => {
     const src = client.stream.sse('/events');
 
     await new Promise((r) => setTimeout(r, 50));
-    src.close();
+    src.dispose();
 
     expect(log).toEqual(['intercepted', 'intercepted']);
   });

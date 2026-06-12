@@ -19,7 +19,7 @@ describe('createVirtualizer – normalization', () => {
 
     expect(v.count).toBe(0);
     expect(v.items).toHaveLength(0);
-    v.destroy();
+    v.dispose();
   });
 
   it('uses DEFAULT_ESTIMATE_SIZE for missing estimateSize', () => {
@@ -27,7 +27,7 @@ describe('createVirtualizer – normalization', () => {
     const v = createVirtualizer(el, { count: 3 });
 
     expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.destroy();
+    v.dispose();
   });
 
   it('falls back to DEFAULT_ESTIMATE_SIZE for invalid estimateSize function return', () => {
@@ -35,7 +35,7 @@ describe('createVirtualizer – normalization', () => {
     const v = createVirtualizer(el, { count: 3, estimateSize: () => -10 });
 
     expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.destroy();
+    v.dispose();
   });
 
   it('uses DEFAULT_OVERSCAN when overscan is omitted', () => {
@@ -43,7 +43,7 @@ describe('createVirtualizer – normalization', () => {
     const v = createVirtualizer(el, { count: 50, estimateSize: 20 });
 
     expect(v.items[0].index).toBeLessThanOrEqual(DEFAULT_OVERSCAN);
-    v.destroy();
+    v.dispose();
   });
 
   it('clamps negative gap to 0', () => {
@@ -51,7 +51,7 @@ describe('createVirtualizer – normalization', () => {
     const v = createVirtualizer(el, { count: 5, estimateSize: 20, gap: -99 });
 
     expect(v.totalSize).toBe(5 * 20);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -64,7 +64,7 @@ describe('createVirtualizer – rendering', () => {
 
     expect(v.items[0]?.index).toBe(0);
     expect(v.items.at(-1)?.index).toBe(5);
-    v.destroy();
+    v.dispose();
   });
 
   it('applies asymmetric overscan with gap', () => {
@@ -73,7 +73,7 @@ describe('createVirtualizer – rendering', () => {
 
     expect(v.items[0]?.index).toBe(0);
     expect(v.items.at(-1)?.index).toBe(3);
-    v.destroy();
+    v.dispose();
   });
 
   it('emits empty items when count is 0', () => {
@@ -102,7 +102,7 @@ describe('createVirtualizer – rendering', () => {
     const v = createVirtualizer(el, { count: 4, estimateSize: 10, gap: 5 });
 
     expect(v.totalSize).toBe(55);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -115,7 +115,7 @@ describe('createVirtualizer – horizontal', () => {
 
     expect(v.items[0]?.index).toBe(0);
     expect(v.items.at(-1)?.index).toBeLessThanOrEqual(6);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -128,7 +128,7 @@ describe('createVirtualizer – window target', () => {
 
     expect(v.items[0]?.index).toBe(0);
     expect(v.items.at(-1)?.index).toBe(4);
-    v.destroy();
+    v.dispose();
   });
 
   it('updates visible window on scroll', () => {
@@ -139,7 +139,7 @@ describe('createVirtualizer – window target', () => {
     win.dispatchEvent(new Event('scroll'));
 
     expect(v.items[0]?.index).toBe(5);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -156,7 +156,7 @@ describe('createVirtualizer – initialOffset', () => {
     });
 
     expect(v.items[0]?.index).toBe(10);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -169,7 +169,7 @@ describe('createVirtualizer – VirtualItem shape', () => {
 
     expect(v.items[0]!).toMatchObject({ end: 20, index: 0, size: 20, start: 0 });
     expect(v.items[1]!).toMatchObject({ end: 45, index: 1, size: 20, start: 25 });
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -187,7 +187,7 @@ describe('createVirtualizer – measure', () => {
 
     expect(item0.size).toBe(50);
     expect(item0.end).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('rebuilds only from the changed index forward (incremental)', async () => {
@@ -201,7 +201,7 @@ describe('createVirtualizer – measure', () => {
     expect(v.items.find((i) => i.index === 1)?.start).toBe(20);
     expect(v.items.find((i) => i.index === 2)?.size).toBe(40);
     expect(v.items.find((i) => i.index === 3)?.start).toBe(80);
-    v.destroy();
+    v.dispose();
   });
 
   it('ignores measure with invalid index or size', async () => {
@@ -215,7 +215,7 @@ describe('createVirtualizer – measure', () => {
     await flushMicrotasks();
 
     expect(v.totalSize).toBe(before);
-    v.destroy();
+    v.dispose();
   });
 
   it('skips rebuild when measured size is unchanged', async () => {
@@ -232,7 +232,7 @@ describe('createVirtualizer – measure', () => {
     await flushMicrotasks();
 
     expect(onChange.mock.calls.length).toBe(callsBefore);
-    v.destroy();
+    v.dispose();
   });
 
   it('batches multiple measure calls into one microtask rebuild', async () => {
@@ -248,7 +248,7 @@ describe('createVirtualizer – measure', () => {
     await flushMicrotasks();
 
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -270,7 +270,7 @@ describe('createVirtualizer – measureBatch', () => {
 
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('skips rebuild when size is already recorded at the same value', async () => {
@@ -287,7 +287,7 @@ describe('createVirtualizer – measureBatch', () => {
     await flushMicrotasks();
 
     expect(onChange.mock.calls.length).toBe(callsBefore);
-    v.destroy();
+    v.dispose();
   });
 
   it('ignores invalid entries', async () => {
@@ -302,7 +302,7 @@ describe('createVirtualizer – measureBatch', () => {
     await flushMicrotasks();
 
     expect(v.totalSize).toBe(before);
-    v.destroy();
+    v.dispose();
   });
 
   it('uses the last valid size for duplicate indices', async () => {
@@ -316,7 +316,7 @@ describe('createVirtualizer – measureBatch', () => {
     await flushMicrotasks();
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op for empty array', async () => {
@@ -329,7 +329,7 @@ describe('createVirtualizer – measureBatch', () => {
     await flushMicrotasks();
 
     expect(onChange.mock.calls.length).toBe(callsBefore);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -343,14 +343,14 @@ describe('createVirtualizer – measureEl', () => {
 
     expect(typeof disconnect).toBe('function');
     expect(() => disconnect()).not.toThrow();
-    v.destroy();
+    v.dispose();
   });
 
   it('returns no-op when destroyed', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    v.destroy();
+    v.dispose();
 
     const disconnect = v.measureEl(0, document.createElement('div'));
 
@@ -377,7 +377,7 @@ describe('createVirtualizer – refresh / invalidate', () => {
     v.refresh();
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('invalidate clears all measurements', async () => {
@@ -390,7 +390,7 @@ describe('createVirtualizer – refresh / invalidate', () => {
     v.invalidate();
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(20);
-    v.destroy();
+    v.dispose();
   });
 
   it('invalidate after pending measure uses estimate', async () => {
@@ -403,7 +403,7 @@ describe('createVirtualizer – refresh / invalidate', () => {
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(20);
     expect(v.totalSize).toBe(5 * 20);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -421,7 +421,7 @@ describe('createVirtualizer – redraw', () => {
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     // Sizes unchanged
     expect(v.totalSize).toBe(5 * 20);
-    v.destroy();
+    v.dispose();
   });
 
   it('preserves measured sizes (does not clear cache)', async () => {
@@ -434,14 +434,14 @@ describe('createVirtualizer – redraw', () => {
     v.redraw();
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op after destroy', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => v.redraw()).not.toThrow();
   });
@@ -458,7 +458,7 @@ describe('createVirtualizer – update', () => {
 
     expect(v.count).toBe(5);
     expect(v.totalSize).toBe(170);
-    v.destroy();
+    v.dispose();
   });
 
   it('changing estimateSize clears measurements', async () => {
@@ -471,7 +471,7 @@ describe('createVirtualizer – update', () => {
     v.update({ estimateSize: 30 });
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(30);
-    v.destroy();
+    v.dispose();
   });
 
   it('removing getItemKey clears measurements', async () => {
@@ -485,14 +485,14 @@ describe('createVirtualizer – update', () => {
     v.update({ getItemKey: undefined });
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(20);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op after destroy', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => v.update({ count: 10 })).not.toThrow();
     expect(v.count).toBe(5);
@@ -531,7 +531,7 @@ describe('createVirtualizer – onRangeChange', () => {
     scrollEl(el, 100);
 
     expect(onRangeChange).toHaveBeenLastCalledWith(5, 9);
-    v.destroy();
+    v.dispose();
   });
 
   it('fires before onChange', () => {
@@ -549,7 +549,7 @@ describe('createVirtualizer – onRangeChange', () => {
     scrollEl(el, 100);
 
     expect(order).toEqual(['onRangeChange', 'onChange']);
-    v.destroy();
+    v.dispose();
   });
 
   it('v.items stays [] when only onRangeChange is provided (zero-alloc path)', () => {
@@ -568,7 +568,7 @@ describe('createVirtualizer – onRangeChange', () => {
 
     expect(v.items).toHaveLength(0);
     expect(ranges.length).toBeGreaterThan(0);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -583,7 +583,7 @@ describe('createVirtualizer – prepend', () => {
 
     expect(v.count).toBe(8);
     expect(v.totalSize).toBe(8 * 20);
-    v.destroy();
+    v.dispose();
   });
 
   it('adjusts scrollOffset to maintain visual position', () => {
@@ -598,7 +598,7 @@ describe('createVirtualizer – prepend', () => {
 
     expect(v.scrollOffset).toBe(200);
     expect(v.items[0]?.index).toBe(firstBefore + 5);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op for 0', () => {
@@ -609,14 +609,14 @@ describe('createVirtualizer – prepend', () => {
     v.prepend(0);
 
     expect(v.totalSize).toBe(before);
-    v.destroy();
+    v.dispose();
   });
 
   it('is a no-op after destroy', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => v.prepend(3)).not.toThrow();
   });
@@ -634,7 +634,7 @@ describe('createVirtualizer – measurementCache', () => {
     await flushMicrotasks();
 
     expect(cache.get(0)).toBe(50);
-    v.destroy();
+    v.dispose();
   });
 
   it('restores measurements from a pre-populated cache', () => {
@@ -652,7 +652,7 @@ describe('createVirtualizer – measurementCache', () => {
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(80);
     expect(v.items.find((i) => i.index === 1)?.size).toBe(60);
-    v.destroy();
+    v.dispose();
   });
 
   it('persists measurements across virtualizer instances', async () => {
@@ -668,7 +668,7 @@ describe('createVirtualizer – measurementCache', () => {
 
     v1.measure(0, 99);
     await flushMicrotasks();
-    v1.destroy();
+    v1.dispose();
 
     const v2 = createVirtualizer(el, {
       count: 5,
@@ -678,7 +678,7 @@ describe('createVirtualizer – measurementCache', () => {
     });
 
     expect(v2.items.find((i) => i.index === 0)?.size).toBe(99);
-    v2.destroy();
+    v2.dispose();
   });
 });
 
@@ -693,7 +693,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     v.scrollToIndex(0);
 
     expect(el.scrollTop).toBe(before);
-    v.destroy();
+    v.dispose();
   });
 
   it('scrolls to start align', () => {
@@ -703,7 +703,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     v.scrollToIndex(10, { align: 'start' });
 
     expect(el.scrollTop).toBe(200);
-    v.destroy();
+    v.dispose();
   });
 
   it('scrolls to center align', () => {
@@ -713,7 +713,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     v.scrollToIndex(10, { align: 'center' });
 
     expect(el.scrollTop).toBe(160);
-    v.destroy();
+    v.dispose();
   });
 
   it('scrolls to end align', () => {
@@ -723,7 +723,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     v.scrollToIndex(10, { align: 'end' });
 
     expect(el.scrollTop).toBe(120);
-    v.destroy();
+    v.dispose();
   });
 
   it('clamps out-of-range index', () => {
@@ -731,7 +731,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     const v = createVirtualizer(el, { count: 10, estimateSize: 20 });
 
     expect(() => v.scrollToIndex(9999, { align: 'start' })).not.toThrow();
-    v.destroy();
+    v.dispose();
   });
 
   it('calls onComplete via microtask for non-smooth scroll', async () => {
@@ -746,7 +746,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     await flushMicrotasks();
 
     expect(onComplete).toHaveBeenCalledOnce();
-    v.destroy();
+    v.dispose();
   });
 
   it('calls onComplete when item is already visible', async () => {
@@ -759,7 +759,7 @@ describe('createVirtualizer – scrollToIndex', () => {
     await flushMicrotasks();
 
     expect(onComplete).toHaveBeenCalledOnce();
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -777,7 +777,7 @@ describe('createVirtualizer – scrollToOffset', () => {
     v.scrollToOffset(999999);
 
     expect(el.scrollTop).toBe(Math.max(0, v.totalSize - 100));
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -792,7 +792,7 @@ describe('createVirtualizer – scrollOffset property', () => {
     scrollEl(el, 80);
 
     expect(v.scrollOffset).toBe(80);
-    v.destroy();
+    v.dispose();
   });
 
   it('can be used to restore scroll via initialOffset', () => {
@@ -804,7 +804,7 @@ describe('createVirtualizer – scrollOffset property', () => {
 
     const savedOffset = v1.scrollOffset;
 
-    v1.destroy();
+    v1.dispose();
 
     const v2 = createVirtualizer(el, {
       count: 20,
@@ -814,7 +814,7 @@ describe('createVirtualizer – scrollOffset property', () => {
     });
 
     expect(v2.items[0]?.index).toBe(5);
-    v2.destroy();
+    v2.dispose();
   });
 });
 
@@ -844,7 +844,7 @@ describe('createVirtualizer – sticky', () => {
     const v = createVirtualizer(el, { count: 10, estimateSize: 20 });
 
     expect(v.stickyItems).toHaveLength(0);
-    v.destroy();
+    v.dispose();
   });
 
   it('pins the last sticky item above the fold', () => {
@@ -863,7 +863,7 @@ describe('createVirtualizer – sticky', () => {
     expect(v.stickyItems).toHaveLength(1);
     expect(v.stickyItems[0]?.index).toBe(0);
     expect(v.stickyItems[0]?.start).toBe(60);
-    v.destroy();
+    v.dispose();
   });
 
   it('pushes pinned sticky off when next sticky approaches', () => {
@@ -878,7 +878,7 @@ describe('createVirtualizer – sticky', () => {
     scrollEl(el, 90);
 
     expect(v.stickyItems[0]?.start).toBe(80);
-    v.destroy();
+    v.dispose();
   });
 
   it('sticky option can be updated via update()', () => {
@@ -892,7 +892,7 @@ describe('createVirtualizer – sticky', () => {
     v.update({ sticky: undefined });
 
     expect(v.stickyItems).toHaveLength(0);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -904,8 +904,8 @@ describe('createVirtualizer – lifecycle', () => {
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
     expect(() => {
-      v.destroy();
-      v.destroy();
+      v.dispose();
+      v.dispose();
     }).not.toThrow();
   });
 
@@ -924,7 +924,7 @@ describe('createVirtualizer – lifecycle', () => {
     const v = createVirtualizer(el, { count: 5, estimateSize: 20, onChange });
     const callsBefore = onChange.mock.calls.length;
 
-    v.destroy();
+    v.dispose();
     el.dispatchEvent(new Event('scroll'));
 
     expect(onChange.mock.calls.length).toBe(callsBefore);
@@ -934,7 +934,7 @@ describe('createVirtualizer – lifecycle', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
 
-    v.destroy();
+    v.dispose();
 
     expect(() => {
       v.measure(0, 50);
@@ -962,7 +962,7 @@ describe('createVirtualizer – overscan number shorthand', () => {
     const v = createVirtualizer(el, { count: 50, estimateSize: 20, overscan: 2 });
 
     expect(v.items[0].index).toBeLessThanOrEqual(2);
-    v.destroy();
+    v.dispose();
   });
 
   it('overscan: 0 renders only the visible window', () => {
@@ -974,7 +974,7 @@ describe('createVirtualizer – overscan number shorthand', () => {
 
     expect(firstIndex).toBe(0);
     expect(lastIndex).toBeLessThanOrEqual(4); // 100px / 20px = 5 items
-    v.destroy();
+    v.dispose();
   });
 
   it('update({overscan: number}) works as number shorthand', () => {
@@ -983,7 +983,7 @@ describe('createVirtualizer – overscan number shorthand', () => {
 
     v.update({ overscan: 1 });
     expect(v.items[0].index).toBeLessThanOrEqual(1);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -997,7 +997,7 @@ describe('createVirtualizer – scrollToTop / scrollToBottom', () => {
     v.scrollToBottom();
     v.scrollToTop();
     expect(el.scrollTop).toBe(0);
-    v.destroy();
+    v.dispose();
   });
 
   it('scrollToBottom scrolls to the end of the list', () => {
@@ -1006,7 +1006,7 @@ describe('createVirtualizer – scrollToTop / scrollToBottom', () => {
 
     v.scrollToBottom();
     expect(el.scrollTop).toBeGreaterThan(0);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -1040,8 +1040,8 @@ describe('createMeasurementCache', () => {
     const v2 = createVirtualizer(el2, { count: 5, estimateSize: 20, measurementCache: cache });
 
     expect(v2.items.find((i) => i.index === 0)?.size).toBe(99);
-    v1.destroy();
-    v2.destroy();
+    v1.dispose();
+    v2.dispose();
   });
 });
 
@@ -1053,7 +1053,7 @@ describe('createVirtualizer – Infinity estimate guard', () => {
     const v = createVirtualizer(el, { count: 3, estimateSize: () => Infinity });
 
     expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.destroy();
+    v.dispose();
   });
 
   it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize is a huge number (> 1e7)', () => {
@@ -1061,7 +1061,7 @@ describe('createVirtualizer – Infinity estimate guard', () => {
     const v = createVirtualizer(el, { count: 3, estimateSize: 2e7 });
 
     expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -1090,7 +1090,7 @@ describe('createVirtualizer – throwing estimateSize', () => {
     });
 
     expect(v.totalSize).toBe(3 * DEFAULT_ESTIMATE_SIZE);
-    v.destroy();
+    v.dispose();
   });
 
   it('virtualizer remains functional after a throwing estimateSize', () => {
@@ -1109,7 +1109,7 @@ describe('createVirtualizer – throwing estimateSize', () => {
     v.update({ estimateSize: () => 20 });
 
     expect(v.totalSize).toBe(3 * 20);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -1132,7 +1132,7 @@ describe('createVirtualizer – update measurementCache', () => {
     v.update({ measurementCache: cache2 });
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(80);
-    v.destroy();
+    v.dispose();
   });
 });
 
@@ -1181,6 +1181,6 @@ describe('createVirtualizer – empty-state dedup', () => {
 
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(onChange.mock.calls.at(-1)?.[0].items.length).toBeGreaterThan(0);
-    v.destroy();
+    v.dispose();
   });
 });

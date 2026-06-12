@@ -427,6 +427,9 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const observeMany = createObserveMany<S>(observers);
 
+  const disposeController = new AbortController();
+  let disposed = false;
+
   const adapter: Adapter<S> = {
     async batch<K extends keyof S & string, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
       if (tables.length === 0) throw new VaultScopeError('batch requires at least one table');
@@ -470,10 +473,22 @@ export function buildAdapterOps<S extends AnySchema>(
       // count cache invalidated by notifyMutation inside txCtx.deleteMany
     },
 
+    get disposalSignal(): AbortSignal {
+      return disposeController.signal;
+    },
+
     async dispose() {
+      if (disposed) return;
+
+      disposed = true;
+      disposeController.abort();
       disconnectExternal?.();
       observers.dispose();
       await core.dispose?.();
+    },
+
+    get disposed(): boolean {
+      return disposed;
     },
 
     async entries(table) {
@@ -558,6 +573,10 @@ export function buildAdapterOps<S extends AnySchema>(
       }
 
       return createQueryBuilder(ctx);
+    },
+
+    async [Symbol.asyncDispose]() {
+      await adapter.dispose();
     },
 
     async update(table, key, changes, ttl) {

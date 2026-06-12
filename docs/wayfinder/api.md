@@ -157,9 +157,27 @@ Create an in-memory `HistoryDriver`. No browser history globals required — sui
 
 #### `router.dispose()`
 
-Remove listeners, clear subscribers, and reject future router interaction.
+Remove listeners, clear subscribers, and reject future router interaction. Idempotent — safe to call multiple times.
 
 **Returns:** `void`
+
+**Throws:** Never.
+
+---
+
+#### `router.disposed`
+
+`boolean` — `true` after `dispose()` has been called.
+
+---
+
+#### `router.disposalSignal`
+
+`AbortSignal` that is aborted (with a `RouterDisposedError` reason) when the router is disposed. Use this to tie external resource lifetimes to the router's lifetime.
+
+```ts
+source.on('update', syncRouteParams, { signal: router.disposalSignal });
+```
 
 ---
 
@@ -676,17 +694,35 @@ type Unsubscribe = () => void;
 
 ## Errors
 
-Wayfinder does not export custom `Error` subclasses. All errors are thrown as native `Error` instances. The following error messages are thrown at runtime:
+### `RouterDisposedError`
 
-| Message                                                         | When                                                                      |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `[wayfinder] Router is disposed`                                | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` |
-| `[wayfinder] Unknown route name: X. Available routes: Y`        | Navigating to or resolving an unregistered route name                     |
-| `[wayfinder] Duplicate route name: X`                           | Two routes resolve to the same compound name during `createRouter()`      |
-| `[wayfinder] Redirect loop detected`                            | A declarative `redirect` chain exceeds 5 hops                             |
-| `[wayfinder] Invalid param name ":X" in path "Y"`               | A param name contains non-word characters (e.g., `:user-id`)              |
-| `[wayfinder] Wildcard "*" must be the final segment in path: X` | A `*` segment appears before the last segment                             |
-| `[wayfinder] Wildcard param must be final segment in path: X`   | A `:param*` greedy param appears before the last segment                  |
+Thrown when any guarded router method is called after `dispose()`. Also used as the `AbortSignal.reason` on `disposalSignal`.
+
+```ts
+import { RouterDisposedError } from '@vielzeug/wayfinder';
+
+try {
+  await router.navigate({ name: 'home' });
+} catch (e) {
+  if (RouterDisposedError.is(e)) {
+    // router was disposed
+  }
+}
+```
+
+### Runtime error messages
+
+The following plain errors are thrown for programmer mistakes at route-config time:
+
+| Message                                                               | When                                                                      |
+| --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `[@vielzeug/wayfinder] Router is disposed`                            | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` |
+| `[@vielzeug/wayfinder] Unknown route name: X. Available routes: Y`   | Navigating to or resolving an unregistered route name                     |
+| `[@vielzeug/wayfinder] Duplicate route name: X`                       | Two routes resolve to the same compound name during `createRouter()`      |
+| `[@vielzeug/wayfinder] Redirect loop detected`                        | A declarative `redirect` chain exceeds 5 hops                             |
+| `[@vielzeug/wayfinder] Invalid param name ":X" in path "Y"`           | A param name contains non-word characters (e.g., `:user-id`)              |
+| `[@vielzeug/wayfinder] Wildcard "*" must be the final segment in X`   | A `*` segment appears before the last segment                             |
+| `[@vielzeug/wayfinder] Wildcard param must be final segment in X`     | A `:param*` greedy param appears before the last segment                  |
 
 ## Pattern Rules
 

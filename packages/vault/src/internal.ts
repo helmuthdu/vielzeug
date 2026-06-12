@@ -1,5 +1,6 @@
 import type { AnySchema, KeyOf, RecordOf } from './types';
 
+import { issue } from './_warn';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 
 type ObserverListener<T> = (records: T[]) => void;
@@ -53,8 +54,8 @@ export function createObserverHub<S extends AnySchema>(
   const reportObserverError = (error: unknown): void => {
     if (onError) {
       onError(error);
-    } else if (typeof console !== 'undefined' && typeof console.error === 'function') {
-      console.error('[vault] observer notification failed', error);
+    } else {
+      issue('observer notification failed', error);
     }
   };
 

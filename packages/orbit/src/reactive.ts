@@ -26,11 +26,15 @@ export interface ReactiveFloatHandle {
   position: Signal<ComputePositionResult | null>;
   /** `true` when position is managed natively by CSS Anchor Positioning. */
   readonly cssAnchor: boolean;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this handle. */
+  readonly disposalSignal: AbortSignal;
   /** Removes all event listeners and observers. Always call on teardown. */
   dispose(): void;
-  [Symbol.dispose](): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Manually trigger a position recalculation. */
   update(): void;
+  [Symbol.dispose](): void;
 }
 
 /**
@@ -81,7 +85,13 @@ export function createFloatState(
 
   return {
     cssAnchor: handle.cssAnchor,
+    get disposalSignal(): AbortSignal {
+      return handle.disposalSignal;
+    },
     dispose: handle.dispose.bind(handle),
+    get disposed(): boolean {
+      return handle.disposed;
+    },
     position,
     [Symbol.dispose](): void {
       handle.dispose();

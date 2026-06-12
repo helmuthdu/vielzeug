@@ -52,7 +52,7 @@ export type ReadableConfig<P extends string = string> = StreamRequestConfig<P> &
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
   /**
    * Called when the connection is permanently lost (reconnect budget exhausted due to error).
-   * Not called on `close()` or `dispose()`.
+   * Not called on `dispose()`.
    */
   onError?: (error: Error) => void;
   /**
@@ -70,11 +70,11 @@ export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
 export type SseSource<TEvents extends Record<string, unknown> = Record<string, string>> = {
   [Symbol.dispose](): void;
   /** Permanently closes the SSE connection. No further events will be dispatched. */
-  close(): void;
+  dispose(): void;
   /**
    * Registers a handler for a named SSE event. Returns an unsubscribe function.
    * The special name `'message'` matches events without an explicit `event:` field.
-   * Calling `on()` after `close()` returns a no-op unsubscribe.
+   * Calling `on()` after `dispose()` returns a no-op unsubscribe.
    */
   on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void;
 };
@@ -166,7 +166,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
    * src.on('message', (data) => console.log(data.text));
    * src.on('ping', () => {});
    * // later:
-   * src.close();
+   * src.dispose();
    * ```
    */
   function sse<TEvents extends Record<string, unknown> = Record<string, string>, P extends string = string>(
@@ -351,14 +351,14 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     });
 
     return {
-      close(): void {
+      dispose(): void {
         closed = true;
         ac.abort();
         listeners.clear();
       },
 
       on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void {
-        // After close(), return a no-op to avoid silent dead-listener bugs
+        // After dispose(), return a no-op to avoid silent dead-listener bugs
         if (closed) return () => {};
 
         const set = getOrCreate(listeners, event, () => new Set<(data: unknown) => void>());
@@ -369,7 +369,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
       },
 
       [Symbol.dispose](): void {
-        this.close();
+        this.dispose();
       },
     };
   }

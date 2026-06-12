@@ -17,6 +17,7 @@ import type {
   Transport,
 } from './types';
 
+import { warn } from './_warn';
 import { isLevelEnabled } from './types';
 
 /* ─── Context merge ─── */
@@ -267,7 +268,7 @@ export function remoteTransport(options: RemoteTransportOptions): Transport {
   const { handler } = options;
   const level = options.level ?? 'debug';
   const env = options.env ?? detectEnv();
-  const onError = options.onError ?? ((err: unknown) => console.warn('[rune] remote transport error:', err));
+  const onError = options.onError ?? ((err: unknown) => warn(`remote transport error: ${String(err)}`));
 
   return (entry: LogEntry): void => {
     if (!isLevelEnabled(level, entry.level)) return;
@@ -458,8 +459,8 @@ export function redactTransport(options: RedactTransportOptions): Transport {
 
   for (const key of keys) {
     if (key.includes('.')) {
-      console.warn(
-        `[rune] redactTransport: key "${key}" contains a dot. Dot-path notation is not supported — use the plain field name (e.g. 'password') to redact at any depth.`,
+      warn(
+        `redactTransport: key "${key}" contains a dot. Dot-path notation is not supported — use the plain field name (e.g. 'password') to redact at any depth.`,
       );
     }
   }
