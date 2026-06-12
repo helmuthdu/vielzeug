@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/prism",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Reactive SVG charting library — line, bar, and area charts with signal-driven updates.",
   "keywords": [
     "chart",

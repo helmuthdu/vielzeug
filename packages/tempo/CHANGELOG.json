@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/tempo",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/tempo_v1.0.0",
+      "date": "Fri, 12 Jun 2026 20:32:49 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "20c75595313b9318f7115d5b631f5f28436d64b1"
+          }
+        ]
+      }
+    }
+  ]
+}
