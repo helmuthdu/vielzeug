@@ -4,7 +4,15 @@ package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
 related: [grip, craft, sigil]
-exports: [createVirtualizer, createDomVirtualList, createVirtualScroller, createGroupedVirtualizer, createGridVirtualizer, createReactiveVirtualizer]
+exports:
+  [
+    createVirtualizer,
+    createDomVirtualList,
+    createVirtualScroller,
+    createGroupedVirtualizer,
+    createGridVirtualizer,
+    createReactiveVirtualizer,
+  ]
 ---
 
 # @vielzeug/scroll
@@ -189,7 +197,6 @@ virt.destroy();
 - [Usage Guide](https://vielzeug.dev/scroll/usage)
 - [API Reference](https://vielzeug.dev/scroll/api)
 - [Examples](https://vielzeug.dev/scroll/examples)
-
 
 ## License
 

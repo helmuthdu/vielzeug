@@ -4,7 +4,28 @@ package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async]
 related: [craft, forge, herald]
-exports: [signal, computed, effect, effectAsync, asyncComputed, watch, batch, store, storeWithHistory, untrack, scope, asyncScope, onCleanup, readonly, isSignal, isComputed, isStore, getSignalName, getDevToolsHook]
+exports:
+  [
+    signal,
+    computed,
+    effect,
+    effectAsync,
+    asyncComputed,
+    watch,
+    batch,
+    store,
+    storeWithHistory,
+    untrack,
+    scope,
+    asyncScope,
+    onCleanup,
+    readonly,
+    isSignal,
+    isComputed,
+    isStore,
+    getSignalName,
+    getDevToolsHook,
+  ]
 ---
 
 # @vielzeug/ripple
@@ -41,11 +62,11 @@ yarn add @vielzeug/ripple
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/ripple` | Core primitives and types |
+| Import                      | Purpose                                                                  |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `@vielzeug/ripple`          | Core primitives and types                                                |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from production |
-| `@vielzeug/ripple/ssr` | No-op stubs for server-side rendering |
+| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                    |
 
 ## Quick Start
 
@@ -54,10 +75,10 @@ import { signal, computed, effect, store, watch, batch } from '@vielzeug/ripple'
 
 // Signals
 const count = signal(0);
-const doubled = count.map((n) => n * 2);    // combinator — returns ComputedSignal
+const doubled = count.map((n) => n * 2); // combinator — returns ComputedSignal
 
 const sub = effect(() => {
-  console.log('doubled:', doubled.value);   // re-runs when count changes
+  console.log('doubled:', doubled.value); // re-runs when count changes
 });
 
 count.value = 5; // → logs "doubled: 10"
@@ -66,7 +87,7 @@ doubled.dispose();
 
 // Stores with typed lenses
 const cart = store({ items: 0, label: 'empty' });
-const items = cart.lens('items');           // Signal<number> — cached, path-scoped
+const items = cart.lens('items'); // Signal<number> — cached, path-scoped
 
 items.value = 3;
 console.log(cart.value); // { items: 3, label: 'empty' }
@@ -75,10 +96,7 @@ cart.replace((s) => ({ ...s, label: 'checkout' })); // replace entire state via 
 cart.reset();
 
 // Effect options — scheduler, name, custom scheduler fn
-const stop = effect(
-  () => console.log('items:', items.value),
-  { scheduler: 'microtask', name: 'cart-logger' },
-);
+const stop = effect(() => console.log('items:', items.value), { scheduler: 'microtask', name: 'cart-logger' });
 stop.dispose();
 
 // Async computed — tracks deps and re-runs on change

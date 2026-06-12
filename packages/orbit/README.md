@@ -74,7 +74,7 @@ const handle = float(reference, floating, {
     if (result.middlewareData.arrow) {
       const { x, y } = result.middlewareData.arrow;
       arrowEl.style.left = x != null ? `${x}px` : '';
-      arrowEl.style.top  = y != null ? `${y}px` : '';
+      arrowEl.style.top = y != null ? `${y}px` : '';
     }
   },
 });
@@ -85,14 +85,14 @@ handle.cleanup();
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/orbit` | Core API, middleware, utilities, types |
-| `@vielzeug/orbit/presets` | Pre-configured middleware stacks |
-| `@vielzeug/orbit/inline` | `inline` middleware for multi-line references |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/devtools` | Visual debug overlay (development only) |
-| `@vielzeug/orbit/ssr` | No-op stubs for server-side rendering |
+| Import                     | Purpose                                       |
+| -------------------------- | --------------------------------------------- |
+| `@vielzeug/orbit`          | Core API, middleware, utilities, types        |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks              |
+| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line references |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)  |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)       |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
 
 ## Documentation
 

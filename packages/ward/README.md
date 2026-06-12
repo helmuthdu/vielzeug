@@ -4,7 +4,20 @@ package: ward
 category: auth
 keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
 related: [rune, wayfinder, conduit]
-exports: [createWard, rule, defineRules, owns, matchesPattern, patternCovers, guardRequest, createExpressGuard, createHonoGuard, WILDCARD, ANONYMOUS]
+exports:
+  [
+    createWard,
+    rule,
+    defineRules,
+    owns,
+    matchesPattern,
+    patternCovers,
+    guardRequest,
+    createExpressGuard,
+    createHonoGuard,
+    WILDCARD,
+    ANONYMOUS,
+  ]
 ---
 
 # @vielzeug/ward
@@ -43,7 +56,7 @@ import { ANONYMOUS, WILDCARD, createWard, owns } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
   // Multi-role rule: viewer and editor can both read
-  { role: ['viewer', 'editor'], resource: 'posts', action: 'read',   effect: 'allow' },
+  { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow' },
   {
     role: 'editor',
     resource: 'posts',
@@ -70,7 +83,7 @@ if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'ex
 
 // Full decision trace with all matching candidates
 const trace = ward.trace(principal, 'posts', 'update', { authorId: 'u2' });
-trace.candidates.forEach(c => console.log(c.rule.effect, c.score, c.won));
+trace.candidates.forEach((c) => console.log(c.rule.effect, c.score, c.won));
 
 // Principal-bound view — principal is snapshotted at bind time
 const bound = ward.forUser(principal);

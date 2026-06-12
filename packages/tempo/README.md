@@ -4,7 +4,40 @@ package: tempo
 category: date-time
 keywords: [temporal, date-time, timezone, formatting, arithmetic, dst, intl, calendar]
 related: [arsenal]
-exports: [now, parseLocal, parseInstant, parseAny, isValid, toInstant, toZoned, shift, difference, within, clamp, isBefore, isAfter, isSame, startOf, endOf, format, formatParts, formatRange, formatRangeParts, formatInstant, formatZoned, formatRelative, parseDuration, formatDuration, expires, classify, timeDiff, humanize, dateRange, recurrence]
+exports:
+  [
+    now,
+    parseLocal,
+    parseInstant,
+    parseAny,
+    isValid,
+    toInstant,
+    toZoned,
+    shift,
+    difference,
+    within,
+    clamp,
+    isBefore,
+    isAfter,
+    isSame,
+    startOf,
+    endOf,
+    format,
+    formatParts,
+    formatRange,
+    formatRangeParts,
+    formatInstant,
+    formatZoned,
+    formatRelative,
+    parseDuration,
+    formatDuration,
+    expires,
+    classify,
+    timeDiff,
+    humanize,
+    dateRange,
+    recurrence,
+  ]
 ---
 
 # @vielzeug/tempo

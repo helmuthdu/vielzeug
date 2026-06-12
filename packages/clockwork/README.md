@@ -35,8 +35,22 @@ const machine = defineMachine<'idle', { count: number }, Event>({
   states: {
     idle: {
       on: {
-        INC:   { actions: [({ context }) => { context.count += 1; }], target: 'idle' },
-        RESET: { actions: [({ context }) => { context.count = 0; }], target: 'idle' },
+        INC: {
+          actions: [
+            ({ context }) => {
+              context.count += 1;
+            },
+          ],
+          target: 'idle',
+        },
+        RESET: {
+          actions: [
+            ({ context }) => {
+              context.count = 0;
+            },
+          ],
+          target: 'idle',
+        },
       },
     },
   },
@@ -44,7 +58,7 @@ const machine = defineMachine<'idle', { count: number }, Event>({
 
 const m = interpret(machine);
 
-console.log(m.state.value);         // 'idle'
+console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 0
 
 m.send({ type: 'INC' });
@@ -62,7 +76,9 @@ m[Symbol.dispose](); // cleanup
 Definitions are immutable, validated configurations. Instances are live machines.
 
 ```ts
-const definition = defineMachine({ /* ... */ });
+const definition = defineMachine({
+  /* ... */
+});
 
 const m1 = interpret(definition);
 const m2 = interpret(definition);
@@ -128,8 +144,8 @@ Save and restore machine state via pluggable adapters:
 ```ts
 const m = interpret(machine, {
   persistence: {
-    load:  () => JSON.parse(localStorage.getItem('state') ?? 'null') ?? undefined,
-    save:  (snapshot) => localStorage.setItem('state', JSON.stringify(snapshot)),
+    load: () => JSON.parse(localStorage.getItem('state') ?? 'null') ?? undefined,
+    save: (snapshot) => localStorage.setItem('state', JSON.stringify(snapshot)),
     clear: () => localStorage.removeItem('state'),
   },
 });
@@ -137,33 +153,33 @@ const m = interpret(machine, {
 
 ## Key Exports
 
-| Export | Purpose |
-| --- | --- |
-| `defineMachine()` | Create immutable, validated FSM definition |
-| `interpret()` | Create live machine instance from definition |
-| `resolveTransition()` | Pure function for unit-testing transitions |
-| `MachineError` | Typed error for validation and runtime failures |
+| Export                | Purpose                                         |
+| --------------------- | ----------------------------------------------- |
+| `defineMachine()`     | Create immutable, validated FSM definition      |
+| `interpret()`         | Create live machine instance from definition    |
+| `resolveTransition()` | Pure function for unit-testing transitions      |
+| `MachineError`        | Typed error for validation and runtime failures |
 
 ## Features
 
-| Feature | Details |
-| --- | --- |
-| Typed events | Discriminated unions with TypeScript inference |
-| Reactive state | Signals from `@vielzeug/ripple` |
-| Async tasks | Native Promises with onDone/onError and AbortSignal |
-| Delayed transitions | Timer-based `after` with guards and actions |
-| Hierarchical states | Compound states with automatic leaf resolution |
-| Middleware | Composable event interception pipeline |
-| Persistence | Pluggable adapter for snapshot save/load/clear |
-| Context validation | Type guards at init and every transition |
-| Entry/exit hooks | Lifecycle functions per state |
-| Guards | Conditional transitions based on context and event |
-| Tracing | Ring buffer of last N transitions |
-| Debug events | Discriminated union debug callback |
-| Event queue | FIFO processing with configurable loop guard |
-| Context isolation | Cloned draft before commit; rolled back on failure |
-| Pure resolver | `resolveTransition()` — test logic without side effects |
-| Subscribe | Change-detection subscription without ripple dependency |
+| Feature             | Details                                                 |
+| ------------------- | ------------------------------------------------------- |
+| Typed events        | Discriminated unions with TypeScript inference          |
+| Reactive state      | Signals from `@vielzeug/ripple`                         |
+| Async tasks         | Native Promises with onDone/onError and AbortSignal     |
+| Delayed transitions | Timer-based `after` with guards and actions             |
+| Hierarchical states | Compound states with automatic leaf resolution          |
+| Middleware          | Composable event interception pipeline                  |
+| Persistence         | Pluggable adapter for snapshot save/load/clear          |
+| Context validation  | Type guards at init and every transition                |
+| Entry/exit hooks    | Lifecycle functions per state                           |
+| Guards              | Conditional transitions based on context and event      |
+| Tracing             | Ring buffer of last N transitions                       |
+| Debug events        | Discriminated union debug callback                      |
+| Event queue         | FIFO processing with configurable loop guard            |
+| Context isolation   | Cloned draft before commit; rolled back on failure      |
+| Pure resolver       | `resolveTransition()` — test logic without side effects |
+| Subscribe           | Change-detection subscription without ripple dependency |
 
 ## Installation
 

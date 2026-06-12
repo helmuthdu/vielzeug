@@ -4,7 +4,20 @@ package: sourcerer
 category: data
 keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
 related: [courier, ripple, wayfinder]
-exports: [createLocalSource, createRemoteSource, createCursorSource, createInfiniteSource, toSignals, SourceError, itemRange, sourceState, prefetchSource, prefetchSourceWithSource, composeFetch]
+exports:
+  [
+    createLocalSource,
+    createRemoteSource,
+    createCursorSource,
+    createInfiniteSource,
+    toSignals,
+    SourceError,
+    itemRange,
+    sourceState,
+    prefetchSource,
+    prefetchSourceWithSource,
+    composeFetch,
+  ]
 ---
 
 # @vielzeug/sourcerer
@@ -39,28 +52,28 @@ yarn add @vielzeug/sourcerer
 ## Quick Start
 
 ```ts
-import { createLocalSource } from "@vielzeug/sourcerer";
+import { createLocalSource } from '@vielzeug/sourcerer';
 
 const source = createLocalSource(
   [
-    { id: 1, name: "Ada" },
-    { id: 2, name: "Grace" },
-    { id: 3, name: "Linus" },
+    { id: 1, name: 'Ada' },
+    { id: 2, name: 'Grace' },
+    { id: 3, name: 'Linus' },
   ],
   { limit: 2 },
 );
 
-await source.searchNow("a");
-console.log(source.current);         // [{ id: 1, name: "Ada" }]
+await source.searchNow('a');
+console.log(source.current); // [{ id: 1, name: "Ada" }]
 console.log(source.meta.pageNumber); // 1
 ```
 
 ```ts
-import { createRemoteSource } from "@vielzeug/sourcerer";
+import { createRemoteSource } from '@vielzeug/sourcerer';
 
 const source = createRemoteSource({
   fetch: async ({ limit, page, search }, signal) => {
-    const res = await fetch(`/api/users?page=${page}&limit=${limit}&q=${search ?? ""}`, { signal });
+    const res = await fetch(`/api/users?page=${page}&limit=${limit}&q=${search ?? ''}`, { signal });
     return res.json(); // { items: User[], total: number }
   },
   limit: 20,
@@ -73,12 +86,12 @@ console.log(source.current, source.meta.totalItems);
 
 ## Sources at a Glance
 
-| Factory | Data model | Navigation |
-|---|---|---|
-| `createLocalSource()` | In-memory array | Page number |
-| `createRemoteSource()` | Async server fetch | Page number |
-| `createCursorSource()` | Async server fetch | Cursor tokens (next/prev) |
-| `createInfiniteSource()` | Async server fetch | Append (load more) |
+| Factory                  | Data model         | Navigation                |
+| ------------------------ | ------------------ | ------------------------- |
+| `createLocalSource()`    | In-memory array    | Page number               |
+| `createRemoteSource()`   | Async server fetch | Page number               |
+| `createCursorSource()`   | Async server fetch | Cursor tokens (next/prev) |
+| `createInfiniteSource()` | Async server fetch | Append (load more)        |
 
 ## Error Handling
 
@@ -86,13 +99,13 @@ All async sources expose `meta.error` as a typed `SourceError | null` — not a 
 `SourceError` extends `Error` and carries structured context:
 
 ```ts
-import { sourceState } from "@vielzeug/sourcerer";
+import { sourceState } from '@vielzeug/sourcerer';
 
 const state = sourceState(source);
-if (state.status === "error") {
-  console.error(state.error.message);  // human-readable message
-  console.error(state.error.cause);    // original thrown value
-  console.error(state.error.query);    // query that triggered the failure
+if (state.status === 'error') {
+  console.error(state.error.message); // human-readable message
+  console.error(state.error.cause); // original thrown value
+  console.error(state.error.query); // query that triggered the failure
 }
 ```
 

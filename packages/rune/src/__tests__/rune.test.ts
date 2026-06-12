@@ -2132,7 +2132,9 @@ describe('Logger.dispose()', () => {
     const batch = batchTransport({
       interval: 60_000,
       maxSize: 100,
-      onFlush: (entries) => { flushed.push(entries); },
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
     });
     const log = createLogger({ transports: [batch] });
 

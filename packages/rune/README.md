@@ -4,7 +4,20 @@ package: rune
 category: logging
 keywords: [logging, console, structured, scoped, transports, remote-logging, levels, namespaces, lazy-bindings]
 related: [courier, herald, familiar]
-exports: [createLogger, Rune, lazy, consoleTransport, remoteTransport, jsonTransport, batchTransport, sampleTransport, redactTransport, pipe, isLevelEnabled]
+exports:
+  [
+    createLogger,
+    Rune,
+    lazy,
+    consoleTransport,
+    remoteTransport,
+    jsonTransport,
+    batchTransport,
+    sampleTransport,
+    redactTransport,
+    pipe,
+    isLevelEnabled,
+  ]
 ---
 
 # @vielzeug/rune

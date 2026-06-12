@@ -4,7 +4,18 @@ package: conduit
 category: di
 keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
 related: [rune, herald, ward]
-exports: [createContainer, token, scope, CircularDependencyError, ProviderNotFoundError, DuplicateRegistrationError, SyncResolutionError, ScopedResolutionError, ContainerDisposedError]
+exports:
+  [
+    createContainer,
+    token,
+    scope,
+    CircularDependencyError,
+    ProviderNotFoundError,
+    DuplicateRegistrationError,
+    SyncResolutionError,
+    ScopedResolutionError,
+    ContainerDisposedError,
+  ]
 ---
 
 # @vielzeug/conduit
@@ -47,11 +58,7 @@ const Service = token<{ run(): Promise<void> }>('Service');
 const container = createContainer();
 
 container.value(Logger, console);
-container.factory(
-  Service,
-  (logger) => ({ run: async () => logger.log('running') }),
-  { deps: [Logger] },
-);
+container.factory(Service, (logger) => ({ run: async () => logger.log('running') }), { deps: [Logger] });
 
 const service = await container.resolve(Service);
 await service.run();
@@ -88,14 +95,14 @@ await container.dispose();
 
 ## Errors
 
-| Error                    | When thrown                                                              |
-| ------------------------ | ------------------------------------------------------------------------ |
-| `ProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name     |
-| `DuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                   |
-| `SyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory                |
-| `ScopedResolutionError`      | `resolve()` or `resolveSync()` called on root for a scoped or named-scope token   |
-| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full path                 |
-| `ContainerDisposedError`     | Any operation called after `dispose()`; message includes container name           |
+| Error                        | When thrown                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------- |
+| `ProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name   |
+| `DuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                 |
+| `SyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory              |
+| `ScopedResolutionError`      | `resolve()` or `resolveSync()` called on root for a scoped or named-scope token |
+| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full path               |
+| `ContainerDisposedError`     | Any operation called after `dispose()`; message includes container name         |
 
 ## Documentation
 

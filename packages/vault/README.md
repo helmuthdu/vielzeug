@@ -4,7 +4,21 @@ package: vault
 category: storage
 keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
 related: [courier, rune, ripple, spell, arsenal]
-exports: [createLocalStorage, createSessionStorage, createIndexedDB, createMemory, table, ttl, scheduleExpiredPrune, VaultError, VaultDisposedError, VaultMigrationError, VaultQuotaError, VaultScopeError]
+exports:
+  [
+    createLocalStorage,
+    createSessionStorage,
+    createIndexedDB,
+    createMemory,
+    table,
+    ttl,
+    scheduleExpiredPrune,
+    VaultError,
+    VaultDisposedError,
+    VaultMigrationError,
+    VaultQuotaError,
+    VaultScopeError,
+  ]
 ---
 
 # @vielzeug/vault
@@ -68,7 +82,7 @@ for await (const users of db.watch('users', { signal: controller.signal })) {
   console.log(users.length);
 }
 
-void first, stop;
+(void first, stop);
 ```
 
 ## Documentation

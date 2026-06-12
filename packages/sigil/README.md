@@ -4,7 +4,19 @@ package: sigil
 category: ui-components
 keywords: [web-components, accessible, themeable, ui, components, design-system]
 related: [craft, orbit, forge]
-exports: [sg-button, sg-input, sg-dialog, sg-select, sg-form, sg-avatar, sg-avatar-group, sg-carousel, sg-datagrid, sg-combobox]
+exports:
+  [
+    sg-button,
+    sg-input,
+    sg-dialog,
+    sg-select,
+    sg-form,
+    sg-avatar,
+    sg-avatar-group,
+    sg-carousel,
+    sg-datagrid,
+    sg-combobox,
+  ]
 ---
 
 # @vielzeug/sigil

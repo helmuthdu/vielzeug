@@ -48,7 +48,10 @@ define('my-counter', {
   },
   styles: [
     css`
-      :host { display: inline-grid; gap: 0.5rem; }
+      :host {
+        display: inline-grid;
+        gap: 0.5rem;
+      }
     `,
   ],
   setup(props, { bind }) {
@@ -58,9 +61,7 @@ define('my-counter', {
     bind({ class: { 'is-positive': () => count.value > 0 } });
 
     return html`
-      <button @click=${() => (count.value += props.step.value)}>
-        ${props.label}: ${count}
-      </button>
+      <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>
       <p>Doubled: ${doubled}</p>
     `;
   },

@@ -6,13 +6,6 @@
     "rootDir": "./src",
     "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "src/**/*.test.ts",
-    "src/**/__tests__/**"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.d.ts"],
+  "exclude": ["node_modules", "src/**/*.test.ts", "src/**/__tests__/**"]
 }
