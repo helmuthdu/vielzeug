@@ -94,6 +94,22 @@ const { isDark, theme } = useData();
 
 const packages = computed(() => theme.value.packages || {});
 
+const packageCount = computed(() => Object.keys(packages.value).length);
+
+const monoVersion = computed(() => {
+  const versions = Object.values(packages.value)
+    .map((p) => (p as { version: string }).version)
+    .filter(Boolean);
+  if (!versions.length) return null;
+  versions.sort((a, b) => {
+    const [aMaj, aMin] = a.split('.').map(Number);
+    const [bMaj, bMin] = b.split('.').map(Number);
+    return bMaj !== aMaj ? bMaj - aMaj : bMin - aMin;
+  });
+  const [maj, min] = versions[0].split('.');
+  return `v${maj}.${min}`;
+});
+
 const categories = [
   {
     name: 'State & Reactivity',
@@ -170,12 +186,12 @@ async function copyInstall() {
 const heroVisible = ref(false);
 const categoriesVisible = ref(false);
 
-const stats = [
-  { icon: 'package', value: '23', label: 'Packages' },
+const stats = computed(() => [
+  { icon: 'package', value: String(packageCount.value || '—'), label: 'Packages' },
   { icon: 'link-2', value: '0', label: 'External deps' },
   { icon: 'cpu', value: 'ES2022', label: 'ES Target' },
   { icon: 'scale', value: 'MIT', label: 'License' },
-];
+]);
 
 onMounted(() => {
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -209,8 +225,8 @@ onUnmounted(() => cancelAnimationFrame(rafId));
       <div class="hero-inner">
         <div class="hero-content">
           <div class="hero-badge">
-            <sg-badge variant="primary">23 packages</sg-badge>
-            <sg-badge variant="secondary">v4.0</sg-badge>
+            <sg-badge variant="primary">{{ packageCount }} packages</sg-badge>
+            <sg-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</sg-badge>
           </div>
           <h1 class="hero-title">
             <span class="hero-title-main">Vielzeug</span>
