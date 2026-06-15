@@ -71,6 +71,7 @@ export function createFormContext(
 
     try {
       await options.onSubmit?.(e);
+      dirty.value = false;
     } catch (err) {
       error.value = err;
     } finally {

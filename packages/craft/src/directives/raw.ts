@@ -1,4 +1,4 @@
-import { effect as rawEffect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import { warn } from '../_warn';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
@@ -52,10 +52,19 @@ const parseRaw = (html: string, parent: ParentNode, insertBefore: Node): Node[] 
  * directly is an XSS risk. Register a sanitizer with setRawSanitizer()
  * to add a runtime safety net.
  *
- * Supports static strings and signals.
+ * Supports static strings, signals, and getter functions `() => string`.
  * When reactive, the DOM is updated in-place whenever the value changes.
  */
-export function raw(value: string | Signal<string> | ReadonlySignal<string>): DirectiveResult {
+export function raw(value: (() => string) | string | Signal<string> | ReadonlySignal<string>): DirectiveResult {
+  if (typeof value === 'function') {
+    const c = computed(value);
+
+    return createDirectiveResult((anchor, registerCleanup) => {
+      registerCleanup(() => c.dispose());
+      raw(c).mount(anchor, registerCleanup);
+    });
+  }
+
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode!;
     const endMarker = document.createComment('raw/end');

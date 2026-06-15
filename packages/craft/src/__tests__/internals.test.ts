@@ -51,6 +51,28 @@ describe('CraftitError', () => {
 
     expect(err.cause).toBe(cause);
   });
+
+  describe('CraftitError.is()', () => {
+    it('returns true for a CraftitError instance', () => {
+      const err = new CraftitError('msg', {
+        cause: new Error('cause'),
+        component: 'x',
+        phase: ComponentPhase.UNINITIALIZED,
+      });
+
+      expect(CraftitError.is(err)).toBe(true);
+    });
+
+    it('returns false for a plain Error', () => {
+      expect(CraftitError.is(new Error('plain'))).toBe(false);
+    });
+
+    it('returns false for null and primitives', () => {
+      expect(CraftitError.is(null)).toBe(false);
+      expect(CraftitError.is(undefined)).toBe(false);
+      expect(CraftitError.is('string')).toBe(false);
+    });
+  });
 });
 
 describe('reportRuntimeError()', () => {

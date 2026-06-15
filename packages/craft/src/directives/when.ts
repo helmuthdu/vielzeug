@@ -53,9 +53,12 @@ export function when(
     });
   }
 
-  const conditionSignal = typeof condition === 'function' ? computed(condition as () => boolean) : condition;
-
   return createDirectiveResult((anchor, registerCleanup) => {
+    const ownedComputed = typeof condition === 'function' ? computed(condition as () => boolean) : null;
+    const conditionSignal = ownedComputed ?? (condition as ReadonlySignal<boolean>);
+
+    if (ownedComputed) registerCleanup(() => ownedComputed.dispose());
+
     const parent = anchor.parentNode!;
     const endMarker = document.createComment('when/end');
 

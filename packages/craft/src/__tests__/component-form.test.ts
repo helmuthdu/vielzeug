@@ -135,6 +135,30 @@ describe('createFormContext()', () => {
     expect(form.error.value).toBeNull();
   });
 
+  it('submit() resets dirty to false after successful submit', async () => {
+    const form = createFormContext({ onSubmit: async () => {} });
+
+    form.markDirty();
+    expect(form.dirty.value).toBe(true);
+
+    await form.submit();
+
+    expect(form.dirty.value).toBe(false);
+  });
+
+  it('submit() keeps dirty true when onSubmit throws', async () => {
+    const form = createFormContext({
+      onSubmit: async () => {
+        throw new Error('failed');
+      },
+    });
+
+    form.markDirty();
+    await form.submit();
+
+    expect(form.dirty.value).toBe(true);
+  });
+
   it('submit is idempotent when already submitting', async () => {
     let callCount = 0;
     let resolveFn!: () => void;

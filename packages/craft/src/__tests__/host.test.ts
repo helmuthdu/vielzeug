@@ -72,6 +72,26 @@ describe('core/host.ts', () => {
       expect(element.classList.contains('active')).toBe(false);
     });
 
+    it('auto-registers cleanup so reactive bindings stop after disconnect', async () => {
+      let clickCount = 0;
+      const { destroy, element, flush } = await mount((_props, { bind }) => {
+        bind({
+          on: { click: () => clickCount++ },
+        });
+
+        return html`<div></div>`;
+      });
+
+      element.dispatchEvent(new MouseEvent('click'));
+      await flush();
+      expect(clickCount).toBe(1);
+
+      destroy();
+
+      element.dispatchEvent(new MouseEvent('click'));
+      expect(clickCount).toBe(1);
+    });
+
     it('supports listener options for host event bindings', async () => {
       let clicks = 0;
 

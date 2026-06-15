@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { define, html, prop, signal } from '../index';
 import { fire, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
@@ -225,10 +227,10 @@ describe('component props', () => {
     expect(query('.count')?.textContent).toBe('7');
   });
 
-  describe('prop.ref', () => {
+  describe('prop.value()', () => {
     it('defaults to undefined when no default is provided', async () => {
       const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
-        componentOptions: { props: { getValue: prop.ref<() => string>() } },
+        componentOptions: { props: { getValue: prop.value<() => string>() } },
       });
 
       expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
@@ -236,9 +238,12 @@ describe('component props', () => {
 
     it('uses provided default value', async () => {
       const defaultFn = (): string => 'hello';
-      const { element } = await mount((props) => html`<div>${() => props.getValue.value?.()}</div>`, {
-        componentOptions: { props: { getValue: prop.ref<() => string>(defaultFn) } },
-      });
+      const { element } = await mount(
+        (props) => html`<div>${() => (props.getValue.value as (() => string) | undefined)?.()}</div>`,
+        {
+          componentOptions: { props: { getValue: prop.value<() => string>(defaultFn) } },
+        },
+      );
 
       expect((element as HTMLElement & { getValue: (() => string) | undefined }).getValue).toBe(defaultFn);
     });
@@ -246,7 +251,7 @@ describe('component props', () => {
     it('ignores HTML attribute — keeps value as-is', async () => {
       const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
         attrs: { getValue: 'should-be-ignored' },
-        componentOptions: { props: { getValue: prop.ref<() => string>() } },
+        componentOptions: { props: { getValue: prop.value<() => string>() } },
       });
 
       expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
@@ -254,9 +259,12 @@ describe('component props', () => {
 
     it('accepts a function set via JS property', async () => {
       const fn = (): string => 'world';
-      const { element } = await mount((props) => html`<div class="out">${() => props.fn.value?.()}</div>`, {
-        componentOptions: { props: { fn: prop.ref<() => string>() } },
-      });
+      const { element } = await mount(
+        (props) => html`<div class="out">${() => (props.fn.value as (() => string) | undefined)?.()}</div>`,
+        {
+          componentOptions: { props: { fn: prop.value<() => string>() } },
+        },
+      );
       const el = element as HTMLElement & { fn?: () => string };
 
       el.fn = fn;
@@ -267,11 +275,45 @@ describe('component props', () => {
 
     it('does not reflect value back to an attribute', async () => {
       const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
-        componentOptions: { props: { getValue: prop.ref<string>('test') } },
+        componentOptions: { props: { getValue: prop.value<string>('test') } },
       });
 
       expect(element.hasAttribute('getValue')).toBe(false);
       expect(element.hasAttribute('get-value')).toBe(false);
+    });
+
+    it('accepts an array default and does not reflect', async () => {
+      const def = [1, 2, 3];
+      const { element } = await mount((props) => html`<div>${() => String(props.items.value)}</div>`, {
+        componentOptions: { props: { items: prop.value<number[]>(def) } },
+      });
+
+      expect(element.hasAttribute('items')).toBe(false);
+    });
+  });
+
+  describe('prop.number() NaN guard', () => {
+    it('returns default when attribute value is not a valid number', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount((props) => html`<div class="v">${props.count}</div>`, {
+        attrs: { count: 'hello' },
+        componentOptions: { props: { count: prop.number(42) } },
+      });
+
+      expect(query('.v')?.textContent).toBe('42');
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not a valid number'));
+      warnSpy.mockRestore();
+    });
+
+    it('returns undefined default when no default and attribute is invalid', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const { query } = await mount((props) => html`<div class="v">${() => String(props.count.value)}</div>`, {
+        attrs: { count: 'nope' },
+        componentOptions: { props: { count: prop.number() } },
+      });
+
+      expect(query('.v')?.textContent).toBe('undefined');
+      warnSpy.mockRestore();
     });
   });
 });

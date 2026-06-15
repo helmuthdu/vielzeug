@@ -106,20 +106,22 @@ export const createSlots = (): ComponentSlots<string> => {
   // Watch for dynamically-inserted <slot> elements (e.g. inside when(), each()).
   let observer: MutationObserver | null = null;
 
-  // setup() runs before the template is rendered, so bind once now (if any slots
-  // already exist) and schedule another pass after first render.
+  // Start MutationObserver immediately in setup so any slots inserted synchronously
+  // before the first render are captured without a timing gap.
+  if (host.shadowRoot) {
+    observer = new MutationObserver(() => {
+      bindAllSlots();
+      recomputeAllSlots();
+    });
+    observer.observe(host.shadowRoot, { childList: true, subtree: true });
+  }
+
+  // Bind slots already present in the shadow root (pre-upgrade scenarios)
+  // and schedule a post-render pass to pick up slots injected by the template.
   bindAllSlots();
   onMounted(() => {
     bindAllSlots();
     recomputeAllSlots();
-
-    if (host.shadowRoot) {
-      observer = new MutationObserver(() => {
-        bindAllSlots();
-        recomputeAllSlots();
-      });
-      observer.observe(host.shadowRoot, { childList: true, subtree: true });
-    }
   });
 
   onCleanup(() => {
@@ -130,6 +132,7 @@ export const createSlots = (): ComponentSlots<string> => {
 
     slotCleanupMap.clear();
     slotNodesByName.clear();
+    slotSignals.clear();
   });
 
   return {

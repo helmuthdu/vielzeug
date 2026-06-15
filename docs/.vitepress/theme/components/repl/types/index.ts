@@ -3,7 +3,6 @@ import { clockworkTypes } from './clockwork';
 import { coinsTypes } from './coins';
 import { conduitTypes } from './conduit';
 import { courierTypes } from './courier';
-import { craftTypes } from './craft';
 import { familiarTypes } from './familiar';
 import { forgeTypes } from './forge';
 import { gripTypes } from './grip';
@@ -25,7 +24,6 @@ export const libraryTypes = {
   coins: coinsTypes,
   conduit: conduitTypes,
   courier: courierTypes,
-  craft: craftTypes,
   familiar: familiarTypes,
   forge: forgeTypes,
   grip: gripTypes,
