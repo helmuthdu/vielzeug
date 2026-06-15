@@ -71,7 +71,9 @@
 
   /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
   @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   :host([loading]) .loader {

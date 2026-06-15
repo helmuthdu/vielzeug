@@ -65,7 +65,6 @@
     --_bg: color-mix(in oklch, var(--_theme-base) 16%, var(--color-contrast-50));
     --_border-color: var(--_theme-focus);
   }
-
 }
 
 @layer sigil.utilities {

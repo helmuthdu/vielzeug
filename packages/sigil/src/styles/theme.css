@@ -281,7 +281,7 @@
     --ease-out: cubic-bezier(0, 0, 0.2, 1);
     --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
     --ease-spring: cubic-bezier(0.22, 1, 0.36, 1); /* Fast start, soft landing — no overshoot */
-    --ease-move: cubic-bezier(0.25, 1, 0.5, 1);    /* Spatial slides — drawers, panels, carousels */
+    --ease-move: cubic-bezier(0.25, 1, 0.5, 1); /* Spatial slides — drawers, panels, carousels */
     --ease-overshoot: cubic-bezier(0.34, 1.1, 0.64, 1); /* Subtle spring overshoot — toasts, popups */
 
     /* Duration (respects prefers-reduced-motion) */
@@ -304,8 +304,8 @@
     --transition-slow: 300ms var(--ease-in-out);
     --transition-slower: 500ms var(--ease-in-out);
     --transition-spring: 300ms var(--ease-spring);
-    --transition-exit: 300ms var(--ease-out);       /* Exit animations — overlay dismiss, alert collapse */
-    --transition-loader: 600ms linear;              /* Spinner — constant rotation */
+    --transition-exit: 300ms var(--ease-out); /* Exit animations — overlay dismiss, alert collapse */
+    --transition-loader: 600ms linear; /* Spinner — constant rotation */
 
     /* Overlay entrance defaults — shared by @starting-style blocks */
     --overlay-enter-translate-y: -4px; /* dropdown slides down from */
