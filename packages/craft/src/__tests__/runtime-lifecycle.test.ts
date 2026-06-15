@@ -2,7 +2,7 @@
  * Runtime lifecycle tests
  */
 
-import { html, onCleanup, onEvent, onMounted, signal } from '../index';
+import { html, onCleanup, onElement, onEvent, onMounted, ref, signal } from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
@@ -172,6 +172,82 @@ describe('onEvent()', () => {
 
     btn.dispatchEvent(new Event('click'));
     expect(clickCount).toBe(1);
+  });
+});
+
+describe('onElement()', () => {
+  it('calls callback with element when ref becomes non-null', async () => {
+    const elRef = ref<HTMLButtonElement>();
+    const seen: (HTMLButtonElement | null)[] = [];
+
+    await mount(() => {
+      onElement(elRef, (el) => {
+        seen.push(el);
+      });
+
+      return html`<button ref=${elRef}>Click</button>`;
+    });
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toBeInstanceOf(HTMLButtonElement);
+  });
+
+  it('runs cleanup returned by callback when ref resets to null', async () => {
+    const elRef = ref<HTMLButtonElement>();
+    const cleanupSpy = vi.fn();
+    const show = signal(true);
+
+    const { act } = await mount(() => {
+      onElement(elRef, () => cleanupSpy);
+
+      return html`<div>${() => (show.value ? html`<button ref=${elRef}>Btn</button>` : html``)}</div>`;
+    });
+
+    expect(cleanupSpy).not.toHaveBeenCalled();
+
+    await act(() => {
+      show.value = false;
+    });
+
+    expect(cleanupSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('async setup: no onError recovery', () => {
+  it('resets phase to UNINITIALIZED so component is not stuck in LOADING', async () => {
+    const errors: Event[] = [];
+
+    const { element } = await mount(
+      async () => {
+        throw new Error('async setup failed');
+      },
+      {
+        componentOptions: {
+          onError: () => {
+            errors.push(new Event('caught'));
+
+            return undefined;
+          },
+        },
+      },
+    );
+
+    expect(element).toBeDefined();
+  });
+
+  it('recovers with onError template when async setup throws', async () => {
+    const { query } = await mount(
+      async () => {
+        throw new Error('async setup failed');
+      },
+      {
+        componentOptions: {
+          onError: () => html`<p class="error">Error</p>`,
+        },
+      },
+    );
+
+    expect(query('.error')?.textContent).toBe('Error');
   });
 });
 

@@ -16,7 +16,7 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 | `createTextField()` | Headless text/textarea field controller | Sync | Requires `signal` from `lifecycleSignal()` |
 | `createChoiceField()` | Headless single/multi-select controller | Sync | Requires `signal`; normalises both `string` and `string[]` values |
 | `createCheckable()` | Headless checkbox/radio controller | Sync | Wire `handleClick` and `handleKeydown` to the host element |
-| `createOverlayControl()` | Headless open/close/toggle for overlays | Sync | `cleanup()` closes silently — does not fire `onClose` |
+| `createOverlayControl()` | Headless open/close/toggle for overlays | Sync | `cleanup()` / `dispose()` close silently — do not fire `onClose` |
 | `createOptionList()` | Headless dropdown list (open state + navigation + positioner) | Sync | Requires `dom.getBoundary`, `dom.getPanel`, `dom.getReference` |
 | `createListControl()` | Keyboard-navigable list (no open state) | Sync | `set(-1)` resets focus; `cleanup()` cancels typeahead timer |
 | `toast` | Programmatic toast notification API | Sync | Requires `sg-toast` to be registered and mounted in the DOM |
@@ -208,11 +208,15 @@ import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
 
 Shared types used across multiple components:
 
-| Type              | Package path           | Description                                                               |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------- |
-| `ColorVariant`    | `@vielzeug/sigil`      | `'primary' \| 'secondary' \| 'error' \| 'warning' \| 'success' \| 'info'` |
-| `SizeVariant`     | `@vielzeug/sigil`      | `'xs' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                    |
-| `IconNode`        | `@vielzeug/sigil/icon` | Lucide-compatible `[string, object, ...children]` tuple                   |
+| Type                | Package path              | Description                                                                          |
+| ------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
+| `ThemeColor`        | `@vielzeug/sigil/types`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`           |
+| `VisualVariant`     | `@vielzeug/sigil/types`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'`       |
+| `SurfaceVariant`    | `@vielzeug/sigil/types`   | `VisualVariant \| 'glass'` — use for container components that support glass effect  |
+| `ComponentSize`     | `@vielzeug/sigil/types`   | `'sm' \| 'md' \| 'lg'`                                                               |
+| `RoundedSize`       | `@vielzeug/sigil/types`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`               |
+| `PaddingSize`       | `@vielzeug/sigil/types`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                            |
+| `AddEventListeners` | `@vielzeug/sigil/types`   | Mixin type that adds typed `addEventListener` / `removeEventListener` overloads      |
 
 ## Notes
 
@@ -280,7 +284,9 @@ Headless open/close/toggle controller for dialogs, drawers, menus, and popovers.
 
 `cleanup()` closes silently — it does not fire `onClose`. Useful for component teardown. Automatically called on signal abort.
 
-**Methods:** `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle(openReason?, closeReason?)`, `cleanup()`.
+**Methods:** `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle(openReason?, closeReason?)`, `cleanup()`, `dispose()`, `[Symbol.dispose]()`.
+
+> `dispose()` and `[Symbol.dispose]()` are aliases for `cleanup()` — use them for `using` declarations or resource-management patterns.
 
 ### `createOptionList(options)`
 
@@ -326,7 +332,7 @@ Compose a custom keymap from a preset plus per-action overrides. Pass the result
 | `createFocusTrap()` | Focus trap for modal dialogs |
 | `createFocusManager()` | Three-step focus lifecycle: capture → move → restore |
 | `createDatePickerControl()` | Full date-picker state (calendar, view switching, ISO parsing) |
-| `createDataGridControl()` | Data grid state (sorting, selection, column management) |
+| `createDataGridControl()` | Data grid state (sorting, selection, column management). Note: `renderExpanded` uses `innerHTML` — sanitize untrusted data before returning |
 | `createTypeahead()` | Standalone typeahead search buffer with debounced reset |
 | `createDropdownPositioner()` | Floating dropdown positioner (wraps `orbit`) |
 | `createDialogFocusControl()` | Dialog-specific focus entry and restoration |

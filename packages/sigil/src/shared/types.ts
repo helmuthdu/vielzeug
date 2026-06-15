@@ -18,6 +18,9 @@ export type ThemeColor = 'primary' | 'secondary' | 'info' | 'success' | 'warning
 /** Visual variant styles */
 export type VisualVariant = 'solid' | 'flat' | 'bordered' | 'outline' | 'ghost' | 'text' | 'frost';
 
+/** Visual variant styles for surface/container components that also support the glass effect */
+export type SurfaceVariant = VisualVariant | 'glass';
+
 /** Border radius variants */
 export type RoundedSize = 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | 'full';
 

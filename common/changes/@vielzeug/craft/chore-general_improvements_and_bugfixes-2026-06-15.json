@@ -1,0 +1,26 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/craft",
+      "comment": "Fix BaseElement error recovery path to reset phase to UNINITIALIZED when no recovery template is available",
+      "type": "patch"
+    },
+    {
+      "packageName": "@vielzeug/craft",
+      "comment": "Fix createFormContext to reset dirty state to false after a successful onSubmit",
+      "type": "patch"
+    },
+    {
+      "packageName": "@vielzeug/craft",
+      "comment": "Fix createBind to register its cleanup with tryRegisterCleanup so bind effects are disposed on component disconnect",
+      "type": "patch"
+    },
+    {
+      "packageName": "@vielzeug/craft",
+      "comment": "Rename prop.ref() to prop.value() for clarity; update all internal call sites",
+      "type": "minor"
+    }
+  ],
+  "packageName": "@vielzeug/craft",
+  "email": "helmuthdu@gmail.com"
+}

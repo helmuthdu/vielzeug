@@ -351,4 +351,34 @@ describe('createFocusTrap()', () => {
       trap.deactivate();
     });
   });
+
+  describe('signal option', () => {
+    it('deactivates when the signal aborts after activation', () => {
+      const container = makeContainer();
+      const controller = new AbortController();
+      const trap = createFocusTrap(() => container, { signal: controller.signal });
+
+      trap.activate();
+      expect(trap.active).toBe(true);
+
+      controller.abort();
+
+      expect(trap.active).toBe(false);
+    });
+
+    it('does not register a listener when signal is already aborted at construction', () => {
+      const container = makeContainer();
+      const controller = new AbortController();
+
+      controller.abort();
+
+      const trap = createFocusTrap(() => container, { signal: controller.signal });
+
+      trap.activate();
+      expect(trap.active).toBe(true);
+
+      trap.deactivate();
+      expect(trap.active).toBe(false);
+    });
+  });
 });

@@ -31,7 +31,6 @@
     top: 0;
     z-index: calc(var(--z-popover, 1000) + 1);
     box-sizing: border-box;
-    visibility: hidden;
     min-width: var(--menu-panel-min-width, 10rem);
     padding: var(--size-1);
     margin: 0;
@@ -43,15 +42,14 @@
     opacity: 0;
     backdrop-filter: blur(var(--_menu-panel-blur));
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
-    transform-origin: top;
+    transform-origin: top left;
     transition:
       opacity var(--transition-fast),
       transform var(--transition-fast),
-      visibility var(--transition-fast);
+      display var(--transition-fast) allow-discrete;
   }
 
   .menu-panel[data-open] {
-    visibility: visible;
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0) scale(1);

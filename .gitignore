@@ -134,3 +134,6 @@ docs/.vitepress/.temp/
 
 # Codex generated bundled data
 packages/codex/data/
+
+# Workflow run artifacts (DOX) — keep the AGENTS.md contract tracked
+.devin/workflows/runs/*/

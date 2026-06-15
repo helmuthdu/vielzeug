@@ -9,9 +9,11 @@ You are a security engineer auditing a **Vielzeug** TypeScript library package.
 ## Context
 
 - These are **client-side and universal TypeScript libraries** — no server-side secrets by default, but they may be used in both browser and Node environments.
-- Zero external runtime dependencies — the attack surface is largely the package's own code and how callers use it.
+- Zero external runtime dependencies in most packages — the attack surface is largely the package's own code and how callers use it. The exception is `sigil` (bundles `lucide`); audit declared deps under "Dependency Risks".
 - TypeScript strict mode — type errors are caught at compile time, but runtime inputs can still be unsafe.
 - Assume **untrusted user input can reach any public API** of this package.
+- **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
+- **Read the DOX chain first** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present) — to learn the real entry points and any declared dependencies.
 
 ## Security mindset & guidelines
 
@@ -22,6 +24,11 @@ Throughout the audit:
 - Validate that any **escape hatches** (raw HTML, direct DOM access, `eval`-like behaviour) are justified, well-documented, and secured.
 - Look for **hardcoded secrets, tokens, or credentials**, even if they are test-only or seemingly innocuous.
 - Treat untrusted data as potentially hostile in all contexts (DOM, URLs, storage, logs, messages, etc.).
+- **Breaking-change escalation:** if a `❌` finding can only be remediated by a breaking API change, do **not** silently apply it. Escalate to the user with the finding, the proposed fix, and the affected call sites — let the user decide whether to accept the break.
+
+## Preparation
+
+**Before auditing**, read `runs/<name>/plan.md` if it exists. Changes made in Phase 2 may have introduced new attack surfaces — pay extra attention to plan items that touched input handling, error messages, user-controlled data, or external API interactions. Do not limit the audit to changed areas only; this is a full audit, but use the plan to prioritise where to look first.
 
 ## Audit checklist
 
@@ -58,6 +65,7 @@ Work through every item. Internally, consider each as ✅ (no issue), ⚠️ (co
 
 - Does the package declare any dependencies beyond `workspace:*`? If so, are they pinned and appropriate?
 - Are any `devDependencies` accidentally imported or used in production code paths?
+- **Dead-dep audit:** are all declared `workspace:*` entries (both `dependencies` and `devDependencies`) actually imported somewhere in `src/`? Dead deps inflate the dependency graph, mislead the package catalogue, and obscure the real attack surface — remove any that are unused. (Quick check: `grep -r "@vielzeug/<dep>" packages/<name>/src/ --include="*.ts"`)
 - If there are non-zero deps, note potential **dependency vulnerabilities** (outdated packages, known CVEs, unsafe transitive deps) at a high level, even if you cannot query a CVE database directly.
 
 ### Browser-specific Risks
@@ -106,6 +114,10 @@ Be concrete about:
 - Vulnerability/scenario (how it could be abused).
 - The exact location (file + approximate line or function name).
 - The fix (prefer safer patterns, not just "be careful").
+
+## Persist findings
+
+Write the audit output (findings + summary) to `.devin/workflows/runs/<name>/security.md` so remediation can be tracked. Follow the DOX chain first (root `AGENTS.md` → `.devin/workflows/runs/AGENTS.md`) and honour its contracts. **Within a single `/pkg-workflow` run**, append each surface's findings under its own heading rather than overwriting prior passes. **At the start of a new cycle** (new `/pkg-workflow` run for the same package), overwrite `security.md` — do not carry forward stale findings from a prior cycle. Present the same content in chat.
 
 ## Audit Summary
 

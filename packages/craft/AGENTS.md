@@ -1,0 +1,42 @@
+# AGENTS.md — craft
+
+## Purpose
+
+Functional web-component authoring primitives built on `ripple`. The foundation `sigil` is built on. Output is real DOM / custom elements.
+
+## Ownership
+
+- Parent contract: `packages/AGENTS.md` and `.devin/rules/conventions.md`.
+- Usage docs: `docs/craft/`.
+
+## Local Contracts
+
+- **Multiple public entry points** — `.`, `./devtools`, `./observers`, `./testing`. Each maps to a `source`/`import`/`require`/`types` block in `package.json` `exports`. When adding or moving an entry point, update `package.json` `exports` to match.
+- `src/_warn.ts` is private — never re-exported from `index.ts` or any sub-path.
+- Prop definitions use the `prop.*` factory in `src/props.ts` (`prop.string|bool|number|oneOf|json|value`). `prop.value` is the JS-only escape hatch; `prop.json` is for attribute-serialisable data.
+- **DOM-output package** — excluded from the REPL (no preview container). Do not add `docs/.vitepress/.../repl/examples/craft/`.
+
+## Accessibility testing
+
+`craft` is a **primitive authoring library**, not a component library. Its a11y contract is narrower than `sigil`'s or `prism`'s:
+
+- **What to assert:** custom elements produced by `craft` primitives must not introduce structural violations — assert correct `role`, `tabindex`, `aria-*` attribute wiring, and slot/content projection plumbing. Use `axeCheck(element)` and assert zero violations on any test that mounts a real element into the DOM.
+- **What is out of scope here:** full ARIA pattern correctness (e.g. combobox state, dialog focus trap, roving tabindex) — those are the responsibility of the consuming component library (`sigil`). Do not duplicate those assertions in `craft` tests.
+- Use the same `axeCheck` pattern from the repo (see `packages/sigil/vitest.setup.ts` as a reference if adding it — `craft` does not currently ship an `axeCheck` helper but may add one if primitives require DOM-level a11y assertions).
+- **Why the distinction matters:** breaking the primitive plumbing (e.g. a prop reflection bug that drops an `aria-*` attribute) would silently break all consuming components. The goal is to catch those regressions here, not to duplicate `sigil`'s full-pattern tests.
+
+## Work Guidance
+
+- Depends on `@vielzeug/arsenal`, `@vielzeug/orbit`, `@vielzeug/ripple` (`workspace:*`).
+- Breaking changes here cascade to `sigil` — verify `sigil` after public-API changes.
+
+## Verification
+
+- Tests: `pnpm vitest run packages/craft/src/__tests__/`
+- Lint: `pnpm --filter @vielzeug/craft lint`
+- Build: `pnpm --filter @vielzeug/craft build`
+- Downstream: `pnpm vitest run packages/sigil/src/__tests__/` after API changes.
+
+## Child DOX Index
+
+- None.

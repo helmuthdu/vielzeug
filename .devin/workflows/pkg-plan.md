@@ -8,12 +8,16 @@ You are a TypeScript library author and DX-focused software architect reviewing 
 
 ## 0. Context
 
-- Monorepo of 23 zero-dependency, tree-shakable TypeScript packages under `packages/`
+- Monorepo of 24 zero-dependency, tree-shakable TypeScript packages under `packages/`
 - Each package: `src/index.ts` (public API), `src/__tests__/` (Vitest), `vite.config.ts` (ESM+CJS), `tsconfig.json` (strict)
 - Zero external deps per package; inter-package `workspace:*` deps are allowed
 - ESLint Perfectionist enforces sorted imports/keys — run `pnpm fix` to auto-sort
 - Prettier: 120-char width, 2-space indent, trailing commas
 - Rush orchestrates the monorepo; `pnpm test` runs all tests via Vitest
+- **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
+- **Read the DOX chain first** — before analysing, read the root `AGENTS.md`, then `packages/AGENTS.md`, then `packages/<name>/AGENTS.md` if it exists. Honour any local contract (e.g. `sigil` bundles `lucide` and co-locates tests; `craft`/`sigil` have multiple sub-path exports).
+- **Prefer the `@vielzeug` MCP for context** to gather API/doc context efficiently before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
+- **Scope large packages.** For big packages (e.g. `sigil`, with 70+ component files), analyse one category/area per pass rather than reading the whole `src/` tree at once.
 
 ## 1. Design priorities and mindset
 
@@ -49,6 +53,8 @@ Run three passes over `packages/<name>/src/` before any implementation:
 
 ### Pass 1 — Greenfield architecture & API review
 
+**Before starting:** if `runs/<name>/plan.md` already exists from a prior cycle, read its `Future improvements` section first. Items that are still valid and actionable may be promoted into this run's improvement plan rather than re-discovered from scratch. Then proceed with the fresh analysis.
+
 Treat the package as if designing it from scratch.
 
 Focus on:
@@ -72,6 +78,7 @@ Based on Pass 1's findings:
 - Consolidate and deduplicate findings from Pass 1 and Pass 2.
 - Rank improvements by impact vs. effort and by the design priorities above.
 - Produce the final structured plan described below.
+- **Before writing `plan.md`**, spot-check that referenced files, export names, and approximate line ranges actually exist on disk. A plan with phantom paths or stale function names will mislead `/pkg-implement` and waste a full implementation round.
 
 ## 3. Analysis dimensions (per pass)
 
@@ -168,23 +175,7 @@ For each:
 
 ## 4. Risks & constraints
 
-Consider the dependency graph when suggesting breaking changes or major refactors:
-
-```
-clockwork → ripple
-coins → arsenal
-courier → arsenal
-craft → arsenal, ripple
-familiar → arsenal
-forge → arsenal, ripple
-herald → arsenal
-orbit → arsenal, ripple
-scroll → ripple
-sigil → arsenal, craft, grip, orbit, ripple, scroll
-sourcerer → arsenal, ripple
-spell → arsenal
-tempo → arsenal
-```
+Consult the canonical dependency graph in `.devin/rules/conventions.md` (section "Package dependency graph") before suggesting breaking changes or major refactors. Do not restate it here — it is maintained in one place to avoid drift.
 
 Document:
 
@@ -192,6 +183,8 @@ Document:
 - Migration considerations and suggested mitigation strategies (e.g. phased deprecation, adapters, or temporary compatibility shims) where you recommend preserving compatibility.
 - Where you explicitly recommend **not** keeping compatibility because the new design is significantly better, note that clearly.
 - Any cross-package architectural implications that should be addressed in follow-up work.
+
+**Escalate, don't assume.** If the analysis surfaces a material breaking change to dependents, genuinely ambiguous requirements, or a decision with significant migration cost, call it out explicitly and ask the user before treating it as settled — present a recommendation rather than silently committing to a large path.
 
 ## 5. Output format
 
@@ -204,6 +197,14 @@ After the three passes and synthesis, output Markdown with these sections:
 5. **Risks & constraints**
 
 Be specific — reference file paths, function names, and type signatures wherever possible. Do **not** start implementing anything yet.
+
+### Persist the plan
+
+Write the final plan to `.devin/workflows/runs/<name>/plan.md` so `/pkg-implement` and later sessions can consume it. Follow the DOX chain first: read the root `AGENTS.md`, then `.devin/workflows/runs/AGENTS.md`, and honour their contracts.
+
+**Overwrite policy:** always overwrite `plan.md` — never append or keep a previous cycle's content inline. If a `plan.md` already exists from a prior cycle, that is stale data; replace it entirely with the new plan. Historical plans are recoverable from git if needed. Present the same content in the chat as well.
+
+**Baseline metrics:** at the top of `plan.md`, record the current state before any changes: passing test count, test file count, exported-symbol count from `src/index.ts`, and lint status. This makes the plan self-contained for standalone `/pkg-plan` + `/pkg-implement` runs that don't go through `/pkg-workflow`.
 
 ## 6. Next step — implementation scope
 

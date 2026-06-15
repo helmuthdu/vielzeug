@@ -9,84 +9,86 @@
       transform: rotate(360deg);
     }
   }
-}
 
-/* animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; */
-@keyframes ping {
-  75%,
-  100% {
-    opacity: 0;
-    transform: scale(2);
+  /* animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite; */
+  @keyframes ping {
+    75%,
+    100% {
+      opacity: 0;
+      transform: scale(2);
+    }
+  }
+
+  /* animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; */
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* animation: bounce 1s infinite; */
+  @keyframes bounce {
+    0% {
+      transform: translateY(0);
+      animation-timing-function: var(--ease-spring);
+    }
+
+    60% {
+      transform: translateY(-8%);
+      animation-timing-function: var(--ease-spring);
+    }
+
+    100% {
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes progress-bar {
+    0% {
+      transform: translateX(-100%);
+    }
+
+    100% {
+      transform: translateX(100%);
+    }
   }
 }
 
-/* animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; */
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
+@layer sigil.utilities {
+  .animate-fade-in-up {
+    animation: fade-in-up var(--transition-normal) forwards;
   }
 
-  50% {
-    opacity: 0.5;
+  .animate-scale-in {
+    animation: scale-in var(--transition-normal) var(--ease-spring) forwards;
   }
-}
-
-/* animation: bounce 1s infinite; */
-@keyframes bounce {
-  0% {
-    transform: translateY(0);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  60% {
-    transform: translateY(-8%);
-    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes fade-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes progress-bar {
-  0% {
-    transform: translateX(-100%);
-  }
-
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up var(--transition-normal) forwards;
-}
-
-.animate-scale-in {
-  animation: scale-in var(--transition-normal) cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

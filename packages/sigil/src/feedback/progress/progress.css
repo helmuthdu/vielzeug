@@ -59,7 +59,7 @@
 
   :host([indeterminate]) .fill {
     width: 40%;
-    animation: var(--_motion-animation, sg-progress-slide 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+    animation: var(--_motion-animation, sg-progress-slide var(--duration-1500) var(--ease-linear) infinite);
   }
 
   /* In RTL the indeterminate bar sweeps right-to-left */
@@ -100,7 +100,7 @@
 
   :host([type='vertical'][indeterminate]) .fill {
     height: 40%;
-    animation: var(--_motion-animation, sg-progress-slide-v 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite);
+    animation: var(--_motion-animation, sg-progress-slide-v var(--duration-1500) var(--ease-linear) infinite);
   }
 
   @keyframes sg-progress-slide-v {
@@ -358,11 +358,11 @@
   }
 
   :host([indeterminate]) .circular-track svg {
-    animation: var(--_motion-animation, sg-progress-spin 1.4s linear infinite);
+    animation: var(--_motion-animation, sg-progress-spin var(--duration-1400) var(--ease-linear) infinite);
   }
 
   :host([indeterminate]) .circle-fill {
-    animation: var(--_motion-animation, sg-progress-dash 1.4s ease-in-out infinite);
+    animation: var(--_motion-animation, sg-progress-dash var(--duration-1400) var(--ease-in-out) infinite);
   }
 }
 

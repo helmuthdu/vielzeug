@@ -21,8 +21,8 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `ref()`               | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                         |
 | `createContext()`     | Create a typed injection key                   | Sync           | Context is scoped to the component tree                       |
 | `syncAria()`          | Reactively sync ARIA attributes to an element  | Sync           | Effects leak if called without a setup context and no cleanup |
-| `each()`              | Keyed list rendering with DOM diffing          | Sync           | Every item must have a unique key at all times                |
-| `when()`              | Conditional branch rendering                   | Sync           | Static boolean fast-path skips reactive subscription          |
+| `each()`              | Keyed list rendering with DOM diffing          | Sync           | Duplicate keys warn in dev — rendered output is undefined     |
+| `when()`              | Conditional branch rendering                   | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription |
 | `createFormContext()` | Coordinate form state across child fields      | Sync           | Submit errors are captured in `error` signal, not thrown      |
 | `defineField()`       | Wire a form-associated element to internals    | Sync           | Requires `formAssociated: true`; call once per component      |
 | `resetIdCounter()`    | Reset `createStableId` counter to 1            | Sync           | Use in `beforeEach` for deterministic test IDs                |
@@ -130,10 +130,14 @@ Runs `callback` when a `ref()` resolves to an element and re-runs when that elem
 | ----------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------------ |
 | `prop.string(defaultValue?)`        | `PropDef<string>`  | Reflects by default                                                                                          |
 | `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false` |
-| `prop.number(defaultValue?)`        | `PropDef<number>`  | Uses `Number(...)` parsing                                                                                   |
+| `prop.number(defaultValue?)`        | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                              |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union                                                                           |
 | `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse; `reflect: false` by default                                                                      |
-| `prop.ref<T>(defaultValue?)`        | `PropDef<T>`       | JS-only property — never reads/writes an attribute; use for functions, arrays, or non-serialisable objects   |
+| `prop.value<T>(defaultValue?)`      | `PropDef<T>`       | JS-only property — never reads/writes an attribute; use for functions, arrays, or non-serialisable objects   |
+
+> **`prop.json` vs `prop.value`** — choose based on whether the prop needs to be settable via an HTML attribute:
+> - Use **`prop.json`** when the value can be declared in HTML (`<my-el data='[1,2,3]'>`). The attribute string is `JSON.parse`d; useful for configuration objects or arrays that are authored declaratively.
+> - Use **`prop.value`** when the prop is always set from JavaScript — functions, live datasets, class instances, or anything that cannot be serialised through an attribute. The attribute is never read.
 
 When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 
@@ -143,14 +147,14 @@ props: {
 }
 ```
 
-Use `prop.ref<T>()` for props that hold JS-only values (functions, rich objects) that cannot be serialised through an HTML attribute:
+Use `prop.value<T>()` for props that hold JS-only values (functions, rich objects) that cannot be serialised through an HTML attribute:
 
 ```ts
 define('data-grid', {
   props: {
-    getRowKey: prop.ref<(row: unknown) => string>(),
-    columns:   prop.ref<DataGridColumn[]>([]),
-    onSort:    prop.ref<(key: string) => void>(),
+    getRowKey: prop.value<(row: unknown) => string>(),
+    columns:   prop.value<DataGridColumn[]>([]),
+    onSort:    prop.value<(key: string) => void>(),
   },
   setup(props) {
     // Set from JS: grid.getRowKey = (row) => row.id
@@ -207,7 +211,7 @@ bind({
 });
 ```
 
-`bind()` returns a cleanup function. For standalone use outside setup, use `createBind(element)`.
+`bind()` auto-registers cleanup with the component scope — no manual `onCleanup` needed. Returns a cleanup function for early teardown. For standalone use outside setup, use `createBind(element)`.
 
 ### `syncAria(target, config)`
 
@@ -285,7 +289,7 @@ type FormContextValue = {
   markDirty(): void; // Call from input/change handlers
   registerField(validity: ReadonlySignal<boolean>): () => void;
   reset(): void; // Resets dirty + error to false/null; calls onReset
-  submit(e?: Event): Promise<void>;
+  submit(e?: Event): Promise<void>; // Resets dirty to false on success; preserves dirty on failure
   readonly submitting: ReadonlySignal<boolean>;
   readonly valid: ReadonlySignal<boolean>; // true when all registered fields are valid
 };
@@ -430,4 +434,6 @@ type LifecycleEventName = 'craft:connect' | 'craft:disconnect';
 
 `reportRuntimeError(error, element)` dispatches `craft:error` on the host element (bubbles, composed) and logs to `console.error`.
 
-If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing.
+If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing. This applies to both synchronous and async `setup()`. If `onError` returns `void` (no recovery), the component phase resets to `UNINITIALIZED` so a subsequent reconnect can retry setup.
+
+`CraftitError.is(err)` — static type-guard, equivalent to `err instanceof CraftitError`.

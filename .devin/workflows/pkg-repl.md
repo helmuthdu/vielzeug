@@ -20,6 +20,10 @@ You are updating the interactive playground examples for a **Vielzeug** package.
 - Monaco type support for the REPL lives under `docs/.vitepress/theme/components/repl/types/`.
 - Examples must use only top-level `@vielzeug/<name>` imports — no external dependencies and no non-browser APIs.
 - Each example should be self-contained, produce visible output, and run quickly in the browser REPL.
+- **DOM-producing packages are not supported in the REPL.** The REPL has no preview container, so packages whose primary output is a rendered DOM element or custom element (`craft`, `sigil`, `prism`) are intentionally excluded — they have no example folder or Monaco types. Do not add REPL examples for them unless a preview container is introduced.
+- **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
+- **Read the DOX chain first** — root `AGENTS.md` → `docs/AGENTS.md` (REPL ownership and the DOM-output exclusion list) → `packages/<name>/AGENTS.md`.
+- **Prefer the `@vielzeug` MCP for current API data** so examples use real, current signatures. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
 
 ## Style & quality
 
@@ -75,9 +79,17 @@ For each existing example module:
 For new examples:
 
 - Create a new `.ts` example module in `docs/.vitepress/theme/components/repl/examples/<name>/`.
-- Export a descriptive example object with at least `category` and `code`.
+- Export a descriptive example object with at least `name` (picker label) and `code` (runnable snippet).
 - Register it in `docs/.vitepress/theme/components/repl/examples/<name>/index.ts`.
 - Use a kebab-case registry key whose prefix produces the desired selector category.
+
+**Net-new package (no `examples/<name>/` folder yet):**
+
+Before creating the folder, read an existing package as a structural reference (e.g. `docs/.vitepress/theme/components/repl/examples/ripple/`). Then:
+
+1. Create `docs/.vitepress/theme/components/repl/examples/<name>/` with at least one example module and an `index.ts` that exports a `Record<string, ExampleModule>`.
+2. Create `docs/.vitepress/theme/components/repl/types/<name>.ts` with the Monaco type declarations for the package's public API.
+3. Register the package in the root `docs/.vitepress/theme/components/repl/examples/index.ts` and `docs/.vitepress/theme/components/repl/types/index.ts` — follow the exact pattern used by the reference package.
 
 ### Step 4 — Verify examples compile
 

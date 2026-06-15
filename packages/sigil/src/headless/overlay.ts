@@ -44,6 +44,7 @@ export type OverlayControlOptions = {
 };
 
 export type OverlayControl = {
+  [Symbol.dispose](): void;
   cleanup(): void;
   /**
    * Closes the overlay.
@@ -51,6 +52,7 @@ export type OverlayControl = {
    * @param restoreFocus — override per-call focus restoration (default: uses `restoreFocus` option)
    */
   close(reason?: DialogCloseReason, restoreFocus?: boolean): void;
+  dispose(): void;
   /**
    * Opens the overlay.
    * @param reason — why it's opening (default `'programmatic'`)
@@ -154,5 +156,5 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
 
   options.signal.addEventListener('abort', cleanup, { once: true });
 
-  return { cleanup, close, open, toggle };
+  return { cleanup, close, dispose: cleanup, open, [Symbol.dispose]: cleanup, toggle };
 };

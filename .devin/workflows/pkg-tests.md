@@ -8,11 +8,18 @@ You are a test engineer improving the Vitest test suite for a **Vielzeug** packa
 
 ## Context
 
-- Tests live in `packages/<name>/src/__tests__/`
+- Tests usually live in `packages/<name>/src/__tests__/`, but some packages **co-locate** tests next to source (e.g. `sigil`: `src/<category>/<component>/<component>.test.ts`). Check the package's `AGENTS.md` for the correct command.
 - Runner: Vitest — use `describe`, `it`, `expect`, `beforeEach`, `afterEach`, `vi.fn()`, `vi.spyOn()`
 - No snapshot tests unless the output is truly stable and human-readable
 - TypeScript strict mode applies to test files too — avoid `any`
-- Run tests with: `pnpm vitest run packages/<name>/src/__tests__/`
+- Run tests with: `pnpm vitest run packages/<name>/src/__tests__/` (or `pnpm --filter @vielzeug/<name> test` to cover co-located tests)
+- **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
+- **Read the DOX chain first** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present) — and honour the local test command.
+- **Scope large packages.** For big packages (e.g. `sigil`), audit one category/area per pass rather than the whole tree at once.
+- **UI / DOM-output packages** (`sigil`, `craft`, `prism`): accessibility coverage is a **hard requirement**. Follow each package's `AGENTS.md` "Accessibility testing" contract — the scope differs by package type:
+  - `sigil` / `prism` — full component/chart ARIA pattern assertions; every test must call `axeCheck` and assert zero violations.
+  - `craft` — primitive-level only: assert correct `role`, `tabindex`, `aria-*` wiring on elements the primitives produce. Full ARIA pattern correctness is `sigil`'s concern, not `craft`'s. See `packages/craft/AGENTS.md` for details.
+  - In all cases, under jsdom use the scoped `axeCheck` helper and treat layout/contrast rules as out of automated scope.
 
 ## Goals
 
@@ -24,6 +31,22 @@ You are a test engineer improving the Vitest test suite for a **Vielzeug** packa
 - Avoid testing implementation details when observable behaviour can be validated instead.
 
 ## Audit process
+
+### Step 0 — Capture the baseline
+
+Before making any change, record the starting state so the final report's deltas are accurate.
+
+**Check the package's `AGENTS.md` for the correct test command first.** Packages that co-locate tests next to source (e.g. `sigil`) require a different command:
+
+```bash
+# Standard packages (tests in src/__tests__/)
+pnpm vitest run packages/<name>/src/__tests__/
+
+# Co-located packages (e.g. sigil — tests alongside source)
+pnpm --filter @vielzeug/<name> test
+```
+
+Note: current passing test count, number of test files, and the count of exported symbols in `src/index.ts`. Confirm the suite is green before you start — if it is already red, surface that first.
 
 ### Step 1 — Test suite review & coverage gap analysis
 
@@ -75,11 +98,16 @@ When adding or updating tests:
 - Ensure each new or updated test covers a distinct behaviour or edge case.
 - Add new `*.test.ts` files if the package has many exports or concepts that justify separation.
 
-After changes:
+After changes, run the test suite (safe to auto-run). Use the command that matches the package layout (see Step 0):
 
 // turbo
+```bash
+pnpm vitest run packages/<name>/src/__tests__/
+```
 
-- Run `pnpm vitest run packages/<name>/src/__tests__/` — all tests must pass.
+For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead.
+
+- All tests must pass.
 - If necessary, adjust tests to reflect intentional behaviour changes from the main codebase, but do not weaken tests to hide real bugs.
 
 ### Step 4 — Report

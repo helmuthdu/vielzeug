@@ -2,122 +2,6 @@
 description: Synchronise the VitePress documentation for a Vielzeug package with its current source code, following the canonical Vielzeug Documentation Template. Updates index.md, api.md, usage.md, examples.md, and examples/*.md so they match the actual API and template rules.
 ---
 
-You are a software engineer creating a new package in a monorepo project.
-
-Your task is to scaffold and implement a new package with a clear, single responsibility, following the monorepo's established conventions and tooling.
-
-Package Context:
-
-- Monorepo contains multiple utility / component / service packages.
-- Each package should have a distinct, non-overlapping purpose.
-- New package name: {package-name}
-- Package scope: {e.g., @scope/pkg-name}
-- Package description: {brief description of what it does}
-
-Goals:
-
-1. Define a clear, focused responsibility for the new package.
-2. Scaffold the package following existing monorepo structure and conventions.
-3. Implement the core functionality with clean, minimal, well-tested code.
-4. Ensure proper TypeScript types, documentation, and build configuration.
-5. Integrate the package into the monorepo (workspace config, dependency management, etc.).
-
-Package Structure (align with monorepo conventions):
-
-Typical structure (adjust as needed):
-
-packages/{package-name}/
-├── src/
-│ ├── **tests**/ # unit tests
-│ ├── index.ts # public API exports
-│ ├── core/ # main implementation
-│ ├── utils/ # internal utilities (if any)
-│ └── types/ # TypeScript type definitions
-├── package.json
-├── tsconfig.json
-└── README.md
-
-Implementation Guidelines:
-
-- Follow existing code style, linting rules, and formatting conventions.
-- Export a minimal, intentional public API. Avoid exposing internal utilities.
-- Use strict TypeScript. No implicit any, no unsafe casts unless justified.
-- Prefer pure functions and immutable data structures where appropriate.
-- Handle errors explicitly; avoid silent failures.
-- Document public APIs with TSDoc comments.
-- It should have no external dependencies, inter-package dependencies are allowed.
-
-Testing Guidelines:
-
-- Write unit tests for all public APIs and critical internal logic.
-- Cover core functionality, edge cases, and error scenarios.
-- Each test should validate one behavior.
-- Use simple, deterministic test patterns.
-- Mock only external dependencies (e.g., network, filesystem) when necessary.
-
-Build Configuration:
-
-- Use the monorepo's shared build tooling (e.g., tsup, rollup, vite, tsc).
-- Configure package.json exports, main, module, types fields appropriately.
-- Ensure build outputs are clean and include type declarations.
-- Update Rush configuration if using Rush (e.g., rush.json).
-- Add package to monorepo workspace (e.g., pnpm-workspace.yaml, lerna.json, or nx.json).
-
-Documentation:
-
-- Create a README.md with:
-  - Package overview and purpose
-  - Installation instructions
-  - Basic usage example
-  - API reference (link to detailed docs if needed)
-  - Any peer dependencies or environment requirements
-- Add inline TSDoc for all public exports.
-
-Integration into Monorepo:
-
-- Update root workspace configuration to include the new package.
-- Add dependency relationships if this package depends on other monorepo packages.
-- Ensure versioning strategy aligns with monorepo (independent or fixed).
-- Update any root-level documentation or navigation (e.g., combined API docs).
-
-Output Format:
-
-Provide the following deliverables:
-
-1. Package Manifest (package.json)
-   - Name, version (0.0.0 or 1.0.0), description, main entry points, scripts, dependencies.
-
-2. TypeScript Configuration (tsconfig.json)
-   - Extend from root tsconfig if applicable; set compiler options for the package.
-
-3. Source Code (src/index.ts and core modules)
-   - Implementation of the package's functionality.
-
-4. Tests (**tests**/\*.test.ts)
-   - Core tests covering public API and critical behavior.
-
-5. README.md
-   - Overview, installation, usage example, API summary.
-
-6. Workspace Integration Notes
-   - Steps to add to monorepo (e.g., update pnpm-workspace.yaml, run install).
-
-Quality Checklist (verify before finalizing):
-
-- Package has a clear, non-overlapping responsibility.
-- Public API is minimal and intentional.
-- TypeScript compiles with no errors.
-- All tests pass.
-- Build outputs are correct (esm, cjs, types).
-- Documentation matches implementation.
-- No unnecessary dependencies or code.
-- Package is discoverable by the monorepo tooling.
-
-Collaboration Note:
-
-- If the new package depends on other packages in the monorepo, use workspace protocols (e.g., "workspace:\*") for local dependencies.
-- Ensure the dependency graph does not create cycles.
-
 # pkg-docs — Documentation Sync
 
 You are a technical writer and software engineer keeping the **Vielzeug** VitePress docs in sync with the source code **and** the canonical documentation template.
@@ -154,16 +38,18 @@ Your job is to:
   | `examples/*.md` | Individual self-contained recipes                         |
 
 - Docs are VitePress markdown; use fenced code blocks with language tags (e.g. ```ts).
-- The MCP server (`packages/codex/`) bundles these docs; after updating, regenerate with:
+- The MCP server (`packages/codex/`) bundles these docs. **Always** rebuild codex at the end of a docs pass — it is fast and idempotent, and stale bundled docs silently corrupt MCP context for future sessions:
 
   ```bash
-  cd packages/codex
-  pnpm build
+  pnpm --filter @vielzeug/codex build
   ```
 
-(only if codex is already built and you need to refresh the bundle)
+  (the `prebuild` hook runs `prepare:data` to refresh the bundled docs before compiling)
 
 - Do **not** add extra top-level files unless the domain is truly complex. In those rare cases, list the extra file under a "Guides" heading in the sidebar, separate from the standard four pages.
+- **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
+- **Read the DOX chain first** — root `AGENTS.md` → `docs/AGENTS.md` (template/REPL ownership) → `packages/<name>/AGENTS.md` (sub-path exports, exceptions).
+- **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file — it reflects the current public API. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
 
 ## 2. Tone and Language (global rules)
 
@@ -264,7 +150,6 @@ environments: [browser, node, ssr, deno]
 ```sh [pnpm]
 pnpm add @vielzeug/<pkg>
 ```
-````
 
 ```sh [npm]
 npm install @vielzeug/<pkg>
@@ -307,13 +192,12 @@ yarn add @vielzeug/<pkg>
 </div>
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->
-
 ````
 
 **Rules:**
 
 - **`<PackageHero package="<pkg>" />`** replaces `<PackageBadges>`, `<img>`, `#` heading, and `<details>` Quick Reference. Metadata is rendered automatically from frontmatter.
-- **`environments` frontmatter** is required. List only supported runtimes: `browser`, `node`, `ssr`, `deno`. Rendered as badges by `<PackageHero>`. Do **not** add a `## Compatibility` table.
+- **`environments` frontmatter** is required. List only supported runtimes: `browser`, `node`, `ssr`, `deno`. Rendered as badges by `<PackageHero>`. Do **not** add a `## Compatibility` table. Derive the correct values from the package's actual constraints — use `browser, node` for universal packages (the majority), `browser` only for packages that depend on DOM/Web APIs (e.g. `vault`, `grip`, `orbit`), and `node` only for server/CLI packages (e.g. `codex`). When in doubt, `browser, node` is the safe default.
 - **`## Why <PackageName>?`** comes first — immediately after `<PackageHero>`, before Installation and Quick Start.
 - **`decision-callout` div** wraps the "Use when / Consider when" block. Both statements are required.
 - **`features-grid` div** wraps the `## Features` bullet list.
@@ -564,6 +448,7 @@ After updating docs:
 2. **Technical accuracy**
    - All documented signatures match `src/index.ts`.
    - Behaviour descriptions and examples reflect actual implementation.
+   - If the package has a `src/_warn.ts`, check that any message functions whose text may include user-supplied data carry a `@security` JSDoc tag (per the dev logging standard in `.devin/rules/conventions.md`). Flag any missing tags as a documentation gap.
 
 3. **Template compliance**
    - `index.md`, `usage.md`, `api.md`, `examples.md`, and `examples/*.md` follow the structures and rules above.
@@ -578,15 +463,22 @@ After updating docs:
    - Removed functionality is not referenced anywhere.
    - If there is shared navigation/sidebar configuration, update it if necessary.
 
-6. **Codex bundle (when needed)**
-   - If required, run:
+6. **Docs build**
+   - Run the VitePress build to catch broken markdown, dead links, and invalid frontmatter:
 
      ```bash
-     cd packages/codex
-     pnpm build
+     pnpm docs:build
      ```
 
-     and ensure the docs bundle builds successfully.
+   - The build must succeed before you finish.
+
+7. **Codex bundle** — **always** run after updating docs; stale bundles corrupt MCP context for future sessions:
+
+   ```bash
+   pnpm --filter @vielzeug/codex build
+   ```
+
+   Ensure the build succeeds before finishing.
 
 ## 5. Report
 

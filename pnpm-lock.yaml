@@ -326,6 +326,9 @@ importers:
         specifier: workspace:*
         version: link:../ripple
     devDependencies:
+      axe-core:
+        specifier: ^4.11.4
+        version: 4.11.4
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

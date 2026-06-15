@@ -371,6 +371,30 @@ describe('Directive: each()', () => {
     expect(query('.empty')).toBeNull();
     expect(queryAll('.item').map((node) => node.textContent)).toEqual(['B']);
   });
+
+  it('warns and does not throw when list contains duplicate keys', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 1, value: 'B' },
+    ]);
+
+    await expect(
+      mount(
+        () =>
+          html`<ul>
+            ${each(
+              items,
+              (item) => item.id,
+              (item) => html`<li>${item.value.value}</li>`,
+            )}
+          </ul>`,
+      ),
+    ).resolves.toBeDefined();
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
+    warnSpy.mockRestore();
+  });
 });
 
 describe('Directive: raw()', () => {
@@ -462,6 +486,35 @@ describe('Directive: raw()', () => {
     await mount(() => html`<div>${raw('<em>text</em>')}</div>`);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('setRawSanitizer'));
     warn.mockRestore();
+  });
+
+  it('accepts a getter function and updates reactively', async () => {
+    setRawSanitizer((s) => s);
+
+    const content = signal('<b>hello</b>');
+    const { flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
+
+    expect(query('b')?.textContent).toBe('hello');
+
+    content.value = '<i>world</i>';
+    await flush();
+    expect(query('i')?.textContent).toBe('world');
+    expect(query('b')).toBeNull();
+  });
+
+  it('getter-fn: DOM stops updating after component destroy (computed disposed)', async () => {
+    setRawSanitizer((s) => s);
+
+    const content = signal('<b>initial</b>');
+    const { destroy, flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
+
+    expect(query('b')?.textContent).toBe('initial');
+
+    destroy();
+
+    content.value = '<i>after-destroy</i>';
+    await flush();
+    expect(query('i')).toBeNull();
   });
 });
 
@@ -641,6 +694,33 @@ describe('Directive: when()', () => {
     const { query } = await mount(() => html`<div>${when(false, () => html`<p class="yes">Yes</p>`)}</div>`);
 
     expect(query('.yes')).toBeNull();
+  });
+
+  it('getter-fn: DOM stops reacting after component destroy (computed disposed)', async () => {
+    const flag = signal(true);
+    const { destroy, element, flush, query } = await mount(
+      () =>
+        html`<div>
+          ${when(
+            () => flag.value,
+            () => html`<p class="on">On</p>`,
+            () => html`<p class="off">Off</p>`,
+          )}
+        </div>`,
+    );
+
+    expect(query('.on')).not.toBeNull();
+
+    destroy();
+
+    const root = element.shadowRoot ?? element;
+    const snapshotAfterDestroy = root.innerHTML;
+
+    flag.value = false;
+    await flush();
+
+    expect(root.innerHTML).toBe(snapshotAfterDestroy);
+    expect(root.querySelector('.off')).toBeNull();
   });
 });
 

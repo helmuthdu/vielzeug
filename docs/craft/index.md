@@ -158,7 +158,7 @@ define('my-counter', {
 
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related ripple APIs
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
-- Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.ref`) or raw `PropDef` objects
+- Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.value`) or raw `PropDef` objects
 - Setup returns an `HTMLResult` directly: `return html\`...\``
 - Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
 - Directives: `each`, `classMap`, `styleMap`, `when`, `live`, `raw`
