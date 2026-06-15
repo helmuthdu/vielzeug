@@ -31,7 +31,7 @@
   :host([dismissing]) {
     overflow: hidden;
     pointer-events: none;
-    animation: var(--_motion-animation, sg-alert-exit var(--transition-slow, 0.3s) ease forwards);
+    animation: var(--_motion-animation, sg-alert-exit var(--transition-slow) var(--ease-in-out) forwards);
   }
 
   @keyframes sg-alert-exit {

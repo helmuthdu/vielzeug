@@ -297,4 +297,46 @@ describe('createOverlayControl', () => {
     host.remove();
     outside.remove();
   });
+
+  it('dispose() is an alias for cleanup() — closes silently without firing onClose', () => {
+    const openState = signal(true);
+    const onClose = vi.fn();
+    const controller = new AbortController();
+
+    const overlay = createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      onClose,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    overlay.dispose();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(openState.value).toBe(false);
+  });
+
+  it('[Symbol.dispose]() is an alias for cleanup() — closes silently without firing onClose', () => {
+    const openState = signal(true);
+    const onClose = vi.fn();
+    const controller = new AbortController();
+
+    const overlay = createOverlayControl({
+      getBoundary: () => document.body,
+      isOpen: () => openState.value,
+      onClose,
+      setOpen: (next) => {
+        openState.value = next;
+      },
+      signal: controller.signal,
+    });
+
+    overlay[Symbol.dispose]();
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(openState.value).toBe(false);
+  });
 });

@@ -23,12 +23,11 @@
     border-radius: var(--_radius);
     transition: var(
       --_motion-transition,
-      backdrop-filter var(--transition-slow),
+      backdrop-filter var(--transition-fast),
       box-shadow var(--transition-normal),
       transform var(--transition-normal),
       background var(--transition-normal),
-      border-color var(--transition-normal),
-      opacity var(--transition-normal)
+      border-color var(--transition-normal)
     );
   }
 
@@ -169,7 +168,7 @@
 
   :host([loading]) .loading-bar {
     display: block;
-    animation: var(--_motion-animation, loading-bar 1.4s ease-in-out infinite);
+    animation: var(--_motion-animation, loading-bar 1.4s linear infinite);
   }
 
   /* In RTL the loading bar sweeps right-to-left */
@@ -192,12 +191,12 @@
 
   :host([interactive]:not([disabled]):hover) .card {
     box-shadow: var(--_hover-shadow);
-    transform: translateY(calc(-1 * var(--size-1))) scale(1.01);
-    will-change: box-shadow, transform;
+    transform: translateY(-2px) scale(1.01);
   }
 
   :host([interactive]) .card {
     cursor: pointer;
+    will-change: transform;
   }
 
   :host([interactive]:not([disabled]):active) .card {

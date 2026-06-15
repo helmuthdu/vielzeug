@@ -34,9 +34,8 @@
     background: var(--_track-bg);
     border-radius: var(--rounded-full);
     transition:
-      background var(--transition-slower),
+      background var(--transition-normal),
       box-shadow var(--transition-normal);
-    will-change: background;
   }
 
   .switch-thumb {

@@ -132,6 +132,5 @@
        travels with the element regardless of border-collapse. */
     box-shadow: inset 0 calc(var(--border) * -1) 0 var(--_border-color);
     backdrop-filter: blur(var(--table-sticky-blur, var(--blur-md))) saturate(140%);
-    will-change: backdrop-filter;
   }
 }

@@ -185,7 +185,7 @@
   .indicator-active::part(fill) {
     animation-name: var(--carousel-animation-name, none);
     animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
-    animation-timing-function: linear;
+    animation-timing-function: var(--ease-linear);
     animation-fill-mode: forwards;
   }
 }

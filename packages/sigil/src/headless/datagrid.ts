@@ -31,6 +31,10 @@ export type DataGridColumn<T = Record<string, unknown>> = {
    * `<sg-datagrid expandable>` shows a toggle button in each row.
    * Receives the full row item and returns an HTML string.
    *
+   * @security The returned string is inserted via `innerHTML`. If the data
+   * originates from untrusted user input, sanitize it before returning
+   * (e.g. with DOMPurify or your CSP-compliant sanitizer).
+   *
    * @example
    * ```js
    * grid.columns = [{

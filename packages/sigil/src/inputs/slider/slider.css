@@ -80,6 +80,7 @@
     box-shadow var(--transition-normal),
     transform var(--transition-fast),
     left var(--transition-normal);
+  will-change: transform;
 }
 
 :host([data-dragging]) .slider-thumb {

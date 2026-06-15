@@ -53,7 +53,7 @@
     transform: var(--_tooltip-closed-transform);
     transition:
       opacity var(--transition-fast),
-      transform var(--transition-normal) var(--ease-out),
+      transform var(--transition-fast) var(--ease-in-out),
       display var(--transition-fast) allow-discrete,
       overlay var(--transition-fast) allow-discrete;
   }
@@ -88,7 +88,7 @@
       transform var(--transition-spring),
       display var(--transition-normal) allow-discrete,
       overlay var(--transition-normal) allow-discrete;
-    will-change: opacity, transform, filter;
+    will-change: opacity, transform;
 
     @starting-style {
       opacity: 0;

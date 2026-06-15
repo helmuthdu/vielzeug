@@ -1,5 +1,6 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
 
+import { warn } from './_warn';
 import { CRAFTIT_ERRORS } from './errors';
 import { effect, getCurrentElement } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
@@ -22,21 +23,21 @@ type PropFactory = {
   number<T extends number = number>(): PropDef<T | undefined>;
   number<T extends number = number>(defaultValue: number): PropDef<T>;
   oneOf<T extends string | undefined, D extends T = T>(allowed: readonly NonNullable<T>[], defaultValue: D): PropDef<T>;
+  string<T extends string = string>(): PropDef<T | undefined>;
+  string<T extends string = string>(defaultValue: string): PropDef<T>;
   /**
    * JS-only property — never reads from or writes to an HTML attribute.
-   * Use for functions, complex objects, arrays containing functions, or any
-   * value that cannot be (de)serialised through an attribute.
+   * Use for functions, complex objects, arrays, or any value that cannot be
+   * (de)serialised through an attribute.
    *
    * @example
    * ```ts
-   * getRowKey: prop.ref<(row: T) => string>(),
-   * columns:   prop.ref<DataGridColumn[]>([]),
+   * getRowKey: prop.value<(row: T) => string>(),
+   * columns:   prop.value<DataGridColumn[]>([]),
    * ```
    */
-  ref<T>(): PropDef<T | undefined>;
-  ref<T>(defaultValue: T): PropDef<T>;
-  string<T extends string = string>(): PropDef<T | undefined>;
-  string<T extends string = string>(defaultValue: string): PropDef<T>;
+  value<T>(): PropDef<T | undefined>;
+  value<T>(defaultValue: T): PropDef<T>;
 };
 
 export const prop: PropFactory = {
@@ -69,7 +70,19 @@ export const prop: PropFactory = {
 
     return {
       default: def,
-      parse: (value) => (value == null ? def : (Number(value) as T)),
+      parse: (value) => {
+        if (value == null) return def;
+
+        const n = Number(value);
+
+        if (Number.isNaN(n)) {
+          warn(`prop.number(): attribute value "${value}" is not a valid number, using default (${String(def)})`);
+
+          return def;
+        }
+
+        return n as T;
+      },
       reflect: true,
     } as PropDef<T> | PropDef<T | undefined>;
   },
@@ -83,7 +96,17 @@ export const prop: PropFactory = {
       reflect: true,
     };
   },
-  ref<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
+  string<T extends string = string>(defaultValue?: string): PropDef<T> | PropDef<T | undefined> {
+    // When no default provided, undefined sentinel → attribute removed when value is absent
+    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
+
+    return {
+      default: def,
+      parse: (value: string | null) => (value == null ? def : (value as T)),
+      reflect: true,
+    } as PropDef<T> | PropDef<T | undefined>;
+  },
+  value<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
     if (defaultValue !== undefined) {
       return {
         default: defaultValue,
@@ -97,16 +120,6 @@ export const prop: PropFactory = {
       parse: () => undefined,
       reflect: false,
     } as PropDef<T | undefined>;
-  },
-  string<T extends string = string>(defaultValue?: string): PropDef<T> | PropDef<T | undefined> {
-    // When no default provided, undefined sentinel → attribute removed when value is absent
-    const def = defaultValue !== undefined ? (defaultValue as T) : undefined;
-
-    return {
-      default: def,
-      parse: (value: string | null) => (value == null ? def : (value as T)),
-      reflect: true,
-    } as PropDef<T> | PropDef<T | undefined>;
   },
 };
 

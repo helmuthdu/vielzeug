@@ -45,6 +45,7 @@
     min-height: 0;
     overflow: visible;
     transition: var(--_motion-transition, max-width var(--_sidebar-transition));
+    will-change: max-width;
   }
 
   :host > nav {
@@ -152,7 +153,6 @@
 
   .bottom-bar {
     display: flex;
-    visibility: hidden;
     gap: var(--size-1);
     align-items: stretch;
     justify-content: space-around;
@@ -169,11 +169,10 @@
     transition:
       opacity var(--_sidebar-transition),
       transform var(--_sidebar-transition),
-      visibility var(--_sidebar-transition);
+      display var(--_sidebar-transition) allow-discrete;
   }
 
   :host([data-bottom-nav]) .bottom-bar {
-    visibility: visible;
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);
@@ -189,7 +188,6 @@
 
   :host([data-bottom-nav][data-mobile-open]) .bottom-bar {
     z-index: calc(var(--z-sticky, 40) + 1);
-    visibility: hidden;
     pointer-events: none;
     opacity: 0;
     transform: translateY(100%);

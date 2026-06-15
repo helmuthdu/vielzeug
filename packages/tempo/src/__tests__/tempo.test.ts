@@ -924,10 +924,13 @@ describe('classify', () => {
     const result = classify(date, T);
 
     // +6h future: diffMs > 0, expired threshold is 0, so not expired;
-    // within 3 days so it's critical
+    // within 3 days so it's critical.
+    // Use range: Temporal.Now.instant() is called again inside classify so the
+    // computed diff is always fractionally less than 6 h — Math.floor gives 5.
     expect(result.key).toBe('critical');
     expect(result.diff.unit).toBe('hour');
-    expect(result.diff.value).toBe(6);
+    expect(result.diff.value).toBeGreaterThanOrEqual(5);
+    expect(result.diff.value).toBeLessThanOrEqual(6);
   });
 
   it('requires tz for plain inputs', () => {

@@ -5,7 +5,7 @@
 
 import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
-import { effect } from './runtime';
+import { effect, tryRegisterCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
 
@@ -77,6 +77,8 @@ export const createBind = (el: HTMLElement): HostBindFn => {
     const cleanup = (): void => {
       for (const dispose of disposers) dispose();
     };
+
+    tryRegisterCleanup(cleanup);
 
     return cleanup;
   };

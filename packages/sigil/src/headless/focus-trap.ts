@@ -47,6 +47,9 @@ const FOCUSABLE_SELECTOR = [
   '[role="menuitemradio"]:not([aria-disabled="true"])',
   '[role="option"]:not([aria-disabled="true"])',
   '[role="tab"]:not([aria-disabled="true"])',
+  // Note: [role="gridcell"] and [role="row"] are intentionally omitted — they
+  // participate in focus order only when an explicit tabindex is set, which is
+  // already caught by the [tabindex]:not([tabindex="-1"]) selector above.
 ].join(',');
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -165,7 +168,9 @@ export const createFocusTrap = (
     document.removeEventListener('keydown', handleKeydown, true);
   };
 
-  options.signal?.addEventListener('abort', deactivate, { once: true });
+  if (options.signal && !options.signal.aborted) {
+    options.signal.addEventListener('abort', deactivate, { once: true });
+  }
 
   return {
     activate,

@@ -353,20 +353,20 @@ describe('sg-navbar', () => {
     }
   });
 
-  it('respects invalid scroll-threshold by falling back to 0', async () => {
+  it('respects invalid scroll-threshold by falling back to the default (80px)', async () => {
     const originalScrollY = window.scrollY;
 
     try {
       Object.defineProperty(window, 'scrollY', {
         configurable: true,
-        value: 1,
+        value: 0,
       });
 
       fixture = await mount('sg-navbar', { attrs: { floating: '', 'scroll-threshold': 'abc', sticky: '' } });
 
       Object.defineProperty(window, 'scrollY', {
         configurable: true,
-        value: 2,
+        value: 100,
       });
 
       window.dispatchEvent(new Event('scroll'));

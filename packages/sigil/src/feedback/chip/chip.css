@@ -137,7 +137,7 @@
     --_color: var(--chip-color, var(--_theme-contrast, var(--color-contrast-50)));
     --_border-color: var(--chip-border-color, transparent);
     --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-800)));
-    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
   }
 
   /* Flat — subtle tint */
@@ -147,7 +147,7 @@
     --_border-color: var(--chip-border-color, transparent);
     --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
     --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
-    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 
@@ -161,7 +161,7 @@
     --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
     --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
     --_hover-border-color: var(--chip-hover-border-color, var(--_theme-focus, var(--color-contrast-700)));
-    --_active-bg: var(--chip-active-bg, var(--_theme-content, var(--color-contrast-900)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
     --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
   }
 

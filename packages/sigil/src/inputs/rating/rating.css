@@ -28,7 +28,7 @@
     pointer-events: none;
     background: var(--_color-filled);
     border-radius: 50%;
-    animation: var(--_motion-animation, sparkle-fly var(--_dur, 500ms) ease-out forwards);
+    animation: var(--_motion-animation, sparkle-fly var(--_dur, 500ms) var(--ease-out) forwards);
   }
 
   @keyframes sparkle-fly {
@@ -57,7 +57,7 @@
     border-radius: var(--rounded-sm);
     transition:
       color var(--transition-fast),
-      transform var(--transition-fast);
+      transform 120ms var(--ease-spring);
   }
 
   .star-btn[data-filled] {
@@ -74,7 +74,7 @@
 
   .star-btn:hover:not([disabled]),
   .star-btn:focus-visible:not([disabled]) {
-    transform: scale(1.15);
+    transform: scale(1.08);
   }
 
   .star-btn:focus-visible {

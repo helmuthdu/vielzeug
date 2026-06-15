@@ -1277,13 +1277,13 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   }
 
   .hero-logo-wrapper {
-    width: 160px;
-    height: 160px;
+    width: 252px;
+    height: 252px;
   }
 
   .hero-logo {
-    width: 120px;
-    height: 120px;
+    width: 252px;
+    height: 252px;
   }
 
   .category-grid {

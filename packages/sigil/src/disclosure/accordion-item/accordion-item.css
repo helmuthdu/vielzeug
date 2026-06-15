@@ -9,13 +9,13 @@
 
     --accordion-details-radius: var(--rounded-lg);
     --accordion-item-transition: var(--transition-normal);
+    --accordion-item-expand-easing: var(--ease-spring);
   }
 
   details {
     width: 100%;
     overflow: hidden;
     border-radius: var(--accordion-item-radius);
-    transition: border-radius var(--accordion-item-transition);
   }
 
   summary {
@@ -82,7 +82,7 @@
     border-inline: 1px solid var(--accordion-item-border-color);
     border-bottom: 1px solid var(--accordion-item-border-color);
     border-radius: var(--accordion-summary-radius);
-    transition: grid-template-rows var(--accordion-item-transition);
+    transition: grid-template-rows var(--transition-normal) var(--accordion-item-expand-easing, var(--ease-spring));
   }
 
   details[open] .content-wrapper {

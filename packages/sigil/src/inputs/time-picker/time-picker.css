@@ -40,7 +40,6 @@
     left: 0;
     z-index: var(--z-dropdown, 200);
     display: flex;
-    visibility: hidden;
     flex-direction: column;
     min-width: 12rem;
     overflow: hidden;
@@ -58,12 +57,11 @@
       --_motion-transition,
       opacity var(--transition-fast),
       transform var(--transition-fast),
-      visibility var(--transition-fast)
+      display var(--transition-fast) allow-discrete
     );
   }
 
   .dropdown[data-open] {
-    visibility: visible;
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);

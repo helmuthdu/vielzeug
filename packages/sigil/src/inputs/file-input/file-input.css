@@ -209,7 +209,7 @@
   :host(:not([disabled])) .dropzone:hover .dropzone-icon,
   :host(:not([disabled])) .dropzone:focus-visible .dropzone-icon {
     color: var(--_theme-focus, var(--color-primary));
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 
   /* ========================================
@@ -224,7 +224,7 @@
 
   :host([drag-over]) .dropzone .dropzone-icon {
     color: var(--_theme-focus, var(--color-primary));
-    transform: translateY(-4px) scale(1.1);
+    transform: translateY(-2px) scale(1.05);
   }
 
   /* ========================================

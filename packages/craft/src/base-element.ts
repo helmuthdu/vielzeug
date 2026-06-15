@@ -196,6 +196,8 @@ export class BaseElement extends HTMLElement {
         this._component.templateResult = recovery;
         this._component.phase = ComponentPhase.SETUP_DONE;
         this._applyResult(recovery);
+      } else {
+        this._component.phase = ComponentPhase.UNINITIALIZED;
       }
     }
   }

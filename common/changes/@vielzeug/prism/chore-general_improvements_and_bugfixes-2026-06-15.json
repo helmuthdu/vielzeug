@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "packageName": "@vielzeug/prism",
+      "comment": "Add axe-core devDependency and axeCheck global helper to vitest.setup.ts for structural/ARIA/role accessibility assertions in jsdom tests",
+      "type": "patch"
+    }
+  ],
+  "packageName": "@vielzeug/prism",
+  "email": "helmuthdu@gmail.com"
+}

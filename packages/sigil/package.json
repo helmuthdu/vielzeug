@@ -418,6 +418,8 @@
     "build:types": "tsc -p tsconfig.declarations.json",
     "check:manifest": "node ./sigil-manifest.mjs check-exports",
     "dev": "vite",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
     "preview": "vite preview",
     "sync:exports": "node ./sigil-manifest.mjs sync-exports",
     "test": "vitest",

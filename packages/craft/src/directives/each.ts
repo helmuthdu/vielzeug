@@ -8,6 +8,7 @@ import {
   untrack,
 } from '@vielzeug/ripple';
 
+import { warn } from '../_warn';
 import { CRAFTIT_ERRORS } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
@@ -204,7 +205,12 @@ export function each<T>(
 
       clearFallback();
 
-      itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
+      try {
+        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
+      } catch (err) {
+        warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
+        itemsOrdered = [];
+      }
     });
 
     registerCleanup(() => sub.dispose());

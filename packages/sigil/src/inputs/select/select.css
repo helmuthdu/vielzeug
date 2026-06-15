@@ -66,17 +66,18 @@
     border: 2px solid currentcolor;
     border-inline-end-color: transparent;
     border-radius: 50%;
-    animation: var(--_motion-animation, sg-select-spin 0.6s linear infinite);
+    animation: var(--_motion-animation, spin var(--transition-loader) infinite);
+  }
+
+  /* Keyframe must live in shadow DOM — @keyframes don't inherit across shadow roots */
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   :host([loading]) .loader {
     display: inline-block;
-  }
-
-  @keyframes sg-select-spin {
-    to {
-      transform: rotate(360deg);
-    }
   }
 
   /* ========================================
@@ -88,7 +89,6 @@
     z-index: var(--z-dropdown, 8000);
     box-sizing: border-box;
     display: flex;
-    visibility: hidden;
     flex-direction: column;
     gap: var(--size-0-5);
     max-height: 260px;
@@ -109,12 +109,11 @@
       --_motion-transition,
       opacity var(--transition-fast),
       transform var(--transition-fast),
-      visibility var(--transition-fast)
+      display var(--transition-fast) allow-discrete
     );
   }
 
   .dropdown[data-open] {
-    visibility: visible;
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0);
