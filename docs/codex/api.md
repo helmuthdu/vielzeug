@@ -9,7 +9,8 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 | Symbol                   | Purpose                                       | Execution mode | Common gotcha                                                   |
 | ------------------------ | --------------------------------------------- | -------------- | --------------------------------------------------------------- |
-| `list-packages`          | All packages or one by slug                   | Sync           | Always returns an array — even with `packageSlug`               |
+| `list-packages`          | All packages (no filter)                      | Sync           | Use `get-package` to fetch a single package by slug             |
+| `get-package`            | Single package metadata by slug               | Sync           | `isError: true` when slug is unknown                            |
 | `get-docs`               | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                |
 | `get-source`             | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source              |
 | `search-packages`        | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches              |
@@ -23,11 +24,11 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 ## Package Entry Points
 
-| Import                      | Purpose                                                                                      |
-| --------------------------- | -------------------------------------------------------------------------------------------- |
-| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, all types including CEM    |
-| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)                            |
-| `@vielzeug/codex/generator` | `generateBundledData`, `GeneratorOptions`, `GeneratorResult` (build-time use only)           |
+| Import                      | Purpose                                                                                   |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, all types including CEM |
+| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)                         |
+| `@vielzeug/codex/generator` | `generateBundledData`, `GeneratorOptions`, `GeneratorResult` (build-time use only)        |
 
 The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
 
@@ -35,13 +36,9 @@ The CLI binary (`codex`) is the primary runtime interface; direct imports are fo
 
 ### `list-packages`
 
-Returns an array of `PackageMeta` objects. Pass `packageSlug` to filter to a single result.
+Returns an array of `PackageMeta` objects for all packages. Takes no input.
 
-**Input:**
-
-| Field         | Type     | Required | Description                                               |
-| ------------- | -------- | -------- | --------------------------------------------------------- |
-| `packageSlug` | `string` | No       | Package folder name, e.g. `"ripple"`. Omit to return all. |
+**Input:** none
 
 **Result shape:**
 
@@ -62,7 +59,21 @@ Returns an array of `PackageMeta` objects. Pass `packageSlug` to filter to a sin
 ]
 ```
 
-**Error cases:** unknown `packageSlug` → `isError: true` with available slugs listed.
+---
+
+### `get-package`
+
+Returns a single `PackageMeta` object by slug.
+
+**Input:**
+
+| Field         | Type     | Required | Description                           |
+| ------------- | -------- | -------- | ------------------------------------- |
+| `packageSlug` | `string` | Yes      | Package folder name, e.g. `"ripple"`. |
+
+**Result shape:** same as a single entry from `list-packages` — a `PackageMeta` object (not an array).
+
+**Error cases:** unknown slug or missing/empty `packageSlug` → `isError: true` with available slugs listed.
 
 ---
 
@@ -112,14 +123,18 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
 
 **Ranking:**
 
-| Score | Category     | Field(s) searched                                             |
-| ----- | ------------ | ------------------------------------------------------------- |
-| 3     | `"metadata"` | `name`, `description`, `category`                             |
-| 2     | `"keywords"` | `keywords` array                                              |
-| 2     | `"exports"`  | `exports` array (exported symbol names)                       |
-| 1     | `"docs"`     | All doc pages and `src/index.ts` (`matchedPages` lists which) |
+| Weight | Category     | Field(s) searched                                        |
+| ------ | ------------ | -------------------------------------------------------- |
+| 3.9    | `"metadata"` | `name` (exact package name)                              |
+| 3.5    | `"metadata"` | `category`                                               |
+| 3.1    | `"metadata"` | `description`                                            |
+| 2.5    | `"keywords"` | `keywords` array                                         |
+| 2.2    | `"exports"`  | `exports` array (exported symbol names)                  |
+| 2.0    | `"related"`  | `related` array (sibling package slugs)                  |
+| 1.0    | `"docs"`     | All doc pages (`matchedPages` lists which pages matched) |
+| 0.9    | `"source"`   | Bundled `src/index.ts` text                              |
 
-Results are sorted by `score` descending, then `slug` ascending. Multiple categories can match simultaneously.
+`score` is a floating-point number — the highest weight across all matched fields. Results sorted by `score` descending, then `slug` ascending as tiebreaker. Multiple categories can match simultaneously.
 
 **Multi-word queries:** all words must appear in the same field for a category to score. `"reactive signal"` matches a description that contains both words; a package where `"reactive"` is in `name` and `"signal"` only appears in docs scores only on `"docs"` (score 1), not `"metadata"` (score 3).
 
@@ -130,15 +145,21 @@ Results are sorted by `score` descending, then `slug` ascending. Multiple catego
   {
     "name": "@vielzeug/spell",
     "slug": "spell",
-    "score": 3,
+    "score": 3.9,
     "matchedIn": ["metadata", "keywords"]
   },
   {
     "name": "@vielzeug/forge",
     "slug": "forge",
-    "score": 1,
+    "score": 1.0,
     "matchedIn": ["docs"],
     "matchedPages": ["usage", "examples"]
+  },
+  {
+    "name": "@vielzeug/craft",
+    "slug": "craft",
+    "score": 2.0,
+    "matchedIn": ["related"]
   }
 ]
 ```
@@ -170,10 +191,10 @@ Returns Sigil component tag names from bundled CEM metadata.
 
 Each entry includes:
 
-| Field         | Type                                              | Description                                        |
-| ------------- | ------------------------------------------------- | -------------------------------------------------- |
-| `tagName`     | `string`                                          | HTML custom element tag name, e.g. `"sg-button"`   |
-| `description` | `string`                                          | Component description from the CEM (may be empty)  |
+| Field         | Type                              | Description                                        |
+| ------------- | --------------------------------- | -------------------------------------------------- |
+| `tagName`     | `string`                          | HTML custom element tag name, e.g. `"sg-button"`   |
+| `description` | `string`                          | Component description from the CEM (may be empty)  |
 | `attrs`       | `Array<{ name, type, default? }>` | Attribute list; `default` omitted when not defined |
 
 **Error cases:** Sigil CEM not present in this snapshot → `isError: true`.
@@ -200,10 +221,12 @@ Resources follow the MCP `resources/list` and `resources/read` protocol.
 
 ### URI format
 
-| Pattern                         | MIME type           | Description                                                     |
-| ------------------------------- | ------------------- | --------------------------------------------------------------- |
-| `vielzeug://docs/<slug>/<page>` | `text/markdown`     | Documentation page — one of `index`, `api`, `usage`, `examples` |
-| `vielzeug://source/<slug>`      | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source   |
+| Pattern                         | Name                 | MIME type           | Description                                                     |
+| ------------------------------- | -------------------- | ------------------- | --------------------------------------------------------------- |
+| `vielzeug://docs/<slug>/<page>` | `docs/<slug>/<page>` | `text/markdown`     | Documentation page — one of `index`, `api`, `usage`, `examples` |
+| `vielzeug://source/<slug>`      | `source/<slug>`      | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source   |
+
+The `name` field mirrors the URI path (without the `vielzeug://` prefix), making it straightforward to derive the URI from the name.
 
 **Error cases:** unknown URI → `McpError` with `InvalidParams` code.
 
@@ -270,7 +293,7 @@ Reads and validates the bundled snapshot from disk. Throws synchronously with an
 
 **Returns:** `BundledData`
 
-**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed.
+**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed. All fields per entry are validated against a schema map: `slug` (non-empty string), `name` (non-empty string), `version` (string), `category` (string), `description` (string), `exports` (array), `keywords` (array), `availableDocPages` (array), `related` (array), `docs` (object), `components` (array), `apiSource` (string or null).
 
 ---
 
@@ -292,13 +315,26 @@ Strips `docs`, `apiSource`, and `components` from a `BundledPackage` and adds `h
 
 ---
 
+### `HttpServerHandle`
+
+```ts
+interface HttpServerHandle {
+  dispose(): void;
+  [Symbol.dispose](): void;
+}
+```
+
+Returned by `startHttpServer()`. Call `dispose()` (or use a `using` declaration) to close the HTTP server. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
+
+---
+
 ### `validateBundledData()`
 
 ```ts
 validateBundledData(raw: unknown): BundledData;
 ```
 
-Validates that `raw` conforms to the top-level `BundledData` shape (checks `version: string`, `packages: array`, and `slug`/`name` per entry). Use when loading data from a custom path instead of `loadData()`.
+Validates that `raw` conforms to the full `BundledData` shape (checks `version: string`, `packages: array`, and all fields per entry via a `satisfies`-constrained schema map). Use when loading data from a custom path instead of `loadData()`.
 
 **Parameters:**
 
@@ -350,18 +386,27 @@ interface BundledPackage {
   name: string;
   related: string[];
   slug: string;
-  version: string | null;
+  version: string; // always a string; defaults to '0.0.0' when not found in package.json
 }
 ```
 
 ### `PackageMeta`
 
-Stripped version returned by tools — no `docs`, `apiSource`, or `components`.
+Lightweight metadata returned by tools — extends `BundledPackage` without the heavy content fields.
 
 ```ts
-type PackageMeta = Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> & {
+interface PackageMeta {
+  availableDocPages: DocPage[];
+  category: string;
+  description: string;
+  exports: string[];
   hasSource: boolean;
-};
+  keywords: string[];
+  name: string;
+  related: string[];
+  slug: string;
+  version: string;
+}
 ```
 
 ### `SearchHit`
@@ -370,7 +415,7 @@ Result shape for `search-packages`.
 
 ```ts
 interface SearchHit {
-  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'source'>;
+  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
   matchedPages?: DocPage[];
   name: string;
   score: number;
@@ -481,14 +526,29 @@ All tool-level failures return a text content item with `isError: true`. The err
 - The bundled data file is missing (`ENOENT`): includes the regen command
 - The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
 - The file is malformed JSON: includes the regen command
-- The parsed data fails schema validation: includes the regen command. Validated fields per package entry: `slug` (non-empty string), `name` (non-empty string), `exports` (array), `keywords` (array), `availableDocPages` (array), `docs` (object), `components` (array)
+- The parsed data fails schema validation: includes the regen command and the specific field that failed. All fields per entry validated — see `loadData()` throws list above
 
 ## Runtime Behavior
 
-- Default transport: stdio
-- HTTP mode: `--port <number>` using Streamable HTTP
-- Health endpoint: `GET /health` → `{ "status": "ok" }`
-- Bundled data validated at startup — missing or malformed data aborts with an actionable error
-- CLI flags: `--help` (stderr), `--version` (stdout)
-- Unknown flags print a usage hint and exit with code 1
-- EADDRINUSE prints `error: port N is already in use.` and exits with code 1
+### CLI Flags
+
+| Flag              | Description                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| *(none)*          | Start in stdio mode — communicates over stdin/stdout                                        |
+| `--port <number>` | Start in HTTP mode on the given port (Streamable HTTP)                                      |
+| `--help`          | Print usage to stderr and exit 0                                                            |
+| `--version`       | Print the bundled data version (not the npm package version) to stdout and exit 0           |
+| *(unknown flag)*  | Print a usage hint to stderr and exit 1                                                     |
+
+### Startup Behaviour
+
+- Bundled data is validated at startup — missing or malformed data aborts immediately with an actionable message.
+- `EADDRINUSE` (HTTP mode, port taken) prints `error: port N is already in use.` and exits with code 1.
+- HTTP mode registers `SIGTERM` and `SIGINT` handlers; both call `handle.dispose()` and `process.exit(0)`.
+
+### HTTP Endpoints
+
+| Endpoint  | Method | Response                    |
+| --------- | ------ | --------------------------- |
+| `/`       | `POST` | MCP Streamable HTTP handler |
+| `/health` | `GET`  | `{ "status": "ok" }`        |

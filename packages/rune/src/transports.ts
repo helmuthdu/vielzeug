@@ -1,18 +1,13 @@
 import type {
-  BatchTransport,
+  BatchHandle,
   BatchTransportOptions,
   Bindings,
-  ConsoleTheme,
-  ConsoleThemeEntry,
-  ConsoleTransportOptions,
   JsonTransportOptions,
   LogEntry,
-  LogType,
   PipeOptions,
   RedactTransportOptions,
   RemoteLogData,
   RemoteTransportOptions,
-  ResolvedTheme,
   SampleTransportOptions,
   Transport,
 } from './types';
@@ -20,35 +15,11 @@ import type {
 import { warn } from './_warn';
 import { isLevelEnabled } from './types';
 
-/* ─── Context merge ─── */
-
-function mergeContext(bindings: Readonly<Bindings>, context: Bindings | undefined): Bindings | undefined {
-  const hasBound = Object.keys(bindings).length > 0;
-
-  if (!hasBound && !context) return undefined;
-
-  return { ...bindings, ...context };
-}
-
-function buildPayload(
-  ctx: Bindings | undefined,
-  message: string | undefined,
-  inspectFn: ((v: unknown) => string) | undefined,
-): unknown[] {
-  const formatted: unknown = inspectFn && ctx ? inspectFn(ctx) : ctx;
-
-  if (formatted !== undefined && message !== undefined) return [message, formatted];
-
-  if (formatted !== undefined) return [formatted];
-
-  if (message !== undefined) return [message];
-
-  return [];
-}
+export type { RemoteLogData };
 
 /* ─── Environment detection ─── */
 
-export function detectEnv(): 'development' | 'production' {
+function detectEnv(): 'development' | 'production' {
   if (typeof window === 'undefined') {
     return (globalThis as Record<string, unknown> & { process?: { env?: { NODE_ENV?: string } } }).process?.env
       ?.NODE_ENV === 'production'
@@ -59,193 +30,7 @@ export function detectEnv(): 'development' | 'production' {
   return (import.meta as ImportMeta & { env?: { PROD?: boolean } }).env?.PROD ? 'production' : 'development';
 }
 
-/* ─── Console transport internals ─── */
-
-export const DEFAULT_THEME: ResolvedTheme = {
-  debug: { badge: '🅳', bg: '#616161', border: '#424242', color: '#e0e0e0' },
-  error: { badge: '🅴', bg: '#d32f2f', border: '#c62828', color: '#fff' },
-  fatal: { badge: '🅵', bg: '#4a148c', border: '#38006b', color: '#fff' },
-  group: { badge: '🅶', bg: '#546e7a', border: '#455a64', color: '#fff' },
-  info: { badge: '🅸', bg: '#1976d2', border: '#1565c0', color: '#fff' },
-  ns: { badge: '', bg: '#424242', border: '#212121', color: '#fff' },
-  warn: { badge: '🆆', bg: '#ffb300', border: '#ffa000', color: '#212121' },
-};
-
-const NS_STYLE = 'border-radius: 8px; font: italic small-caps bold 12px; font-weight: lighter; padding: 0 4px;';
-
-const LOG_METHOD: Record<LogType, 'error' | 'info' | 'log' | 'warn'> = {
-  debug: 'log',
-  error: 'error',
-  fatal: 'error',
-  info: 'info',
-  warn: 'warn',
-};
-
-/** Deep-merges per-level overrides onto the default theme. Only specified fields within each level entry are replaced. */
-export function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme {
-  if (!override) return DEFAULT_THEME;
-
-  const result: ResolvedTheme = { ...DEFAULT_THEME };
-
-  for (const key of Object.keys(override) as Array<LogType | 'group' | 'ns'>) {
-    const entry = override[key];
-
-    if (entry) result[key] = { ...DEFAULT_THEME[key], ...entry };
-  }
-
-  return result;
-}
-
-/* ─── ANSI helpers (Node) ─── */
-
-function hexToRgb(hex: string): [number, number, number] {
-  return [parseInt(hex.slice(1, 3), 16), parseInt(hex.slice(3, 5), 16), parseInt(hex.slice(5, 7), 16)];
-}
-
-function ansiColor(hex: string, text: string): string {
-  const [r, g, b] = hexToRgb(hex);
-
-  return `\x1b[38;2;${r};${g};${b}m${text}\x1b[0m`;
-}
-
-function ansiMuted(text: string): string {
-  return `\x1b[90m${text}\x1b[0m`;
-}
-
-function supportsAnsi(): boolean {
-  if (typeof window !== 'undefined') return false;
-
-  return (
-    (globalThis as Record<string, unknown> & { process?: { stdout?: { isTTY?: boolean } } }).process?.stdout?.isTTY ===
-    true
-  );
-}
-
-function badgeStyle(entry: ConsoleThemeEntry, extra = ''): string {
-  return `background: ${entry.bg}; color: ${entry.color}; border: 1px solid ${entry.border}; border-radius: 4px; padding: 0 1px${extra}`;
-}
-
-function buildNodePrefix(
-  theme: ResolvedTheme,
-  type: LogType,
-  namespace: string,
-  timestamp: string,
-  useAnsi: boolean,
-): string {
-  const t = theme[type];
-  const badgeText = useAnsi ? ansiColor(t.bg, t.badge) : t.badge;
-  const meta = [badgeText];
-
-  if (namespace) meta.push(useAnsi ? ansiMuted(`[${namespace}]`) : `[${namespace}]`);
-
-  if (timestamp) meta.push(useAnsi ? ansiMuted(timestamp) : timestamp);
-
-  return `${meta.join(' | ')} |`;
-}
-
-function escapeConsoleFormat(s: string): string {
-  return s.replace(/%/g, '%%');
-}
-
-function buildBrowserPrefix(
-  theme: ResolvedTheme,
-  type: LogType,
-  namespace: string,
-  timestamp: string,
-): { fmt: string; parts: string[] } {
-  let fmt = `%c${escapeConsoleFormat(theme[type].badge)}%c`;
-  const parts: string[] = [badgeStyle(theme[type]), ''];
-
-  if (namespace) {
-    fmt += ` %c${escapeConsoleFormat(namespace)}%c`;
-    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}`), '');
-  }
-
-  if (timestamp) {
-    fmt += ` %c${timestamp}%c`;
-    parts.push('color: gray', '');
-  }
-
-  return { fmt, parts };
-}
-
-/* ─── consoleTransport ─── */
-
-/**
- * Formats and writes log entries to the browser or Node.js console.
- * Uses CSS-styled badges in browsers and plain text in Node.
- * Accepts an optional partial `theme` to override colors and badges per level.
- * This is the default transport when no transports are configured.
- *
- * @example
- * consoleTransport()
- * consoleTransport({ level: 'warn', timestamp: false })
- * consoleTransport({ theme: { error: { badge: '✖' } } })
- * consoleTransport({ inspectFn: (v) => require('util').inspect(v, { colors: true, depth: 4 }) })
- */
-export function consoleTransport(options: ConsoleTransportOptions = {}): Transport {
-  const level = options.level ?? 'debug';
-  const showTimestamp = options.timestamp ?? true;
-  const format = options.format ?? 'raw';
-  const isNode = typeof window === 'undefined';
-  const useAnsi = options.ansi ?? (isNode ? supportsAnsi() : false);
-  // Resolve theme once at factory time — it never changes per transport instance
-  const resolved = resolveTheme(options.theme);
-  // json format: wrap ctx through JSON.stringify; inspectFn: use the provided function
-  const inspectFn: ((v: unknown) => string) | undefined =
-    format === 'json' ? (v) => JSON.stringify(v) : options.inspectFn;
-
-  return (entry: LogEntry): void => {
-    if (!isLevelEnabled(level, entry.level)) return;
-
-    const timestamp = showTimestamp ? entry.timestamp.toISOString().slice(11, 23) : '';
-    const merged = mergeContext(entry.bindings, entry.context);
-    const payload = buildPayload(merged, entry.message, inspectFn);
-    const method = console[LOG_METHOD[entry.level]] as (...args: unknown[]) => void;
-
-    if (isNode) {
-      method(buildNodePrefix(resolved, entry.level, entry.namespace, timestamp, useAnsi), ...payload);
-    } else {
-      const { fmt, parts } = buildBrowserPrefix(resolved, entry.level, entry.namespace, timestamp);
-
-      method(fmt, ...parts, ...payload);
-    }
-  };
-}
-
-/** Module-level default transport singleton — avoids repeated ANSI detection on every createLogger() call. */
-export const DEFAULT_TRANSPORT: Transport = consoleTransport();
-
-/* ─── Group rendering (exported for logger.ts wrapGroup) ─── */
-
-export function renderGroup(collapsed: boolean, label: string, namespace: string, theme: ResolvedTheme): void {
-  const fn = collapsed ? console.groupCollapsed : console.group;
-  const isNode = typeof window === 'undefined';
-
-  if (isNode) {
-    const meta = [theme.group.badge, label];
-
-    if (namespace) meta.push(`[${namespace}]`);
-
-    fn(meta.join(' | '));
-
-    return;
-  }
-
-  let fmt = `${theme.group.badge} %c${escapeConsoleFormat(label)}%c`;
-  const parts: string[] = [badgeStyle(theme.group, '; margin-right: 6px; padding: 1px 3px 0'), ''];
-
-  if (namespace) {
-    fmt += ` %c${escapeConsoleFormat(namespace)}%c`;
-    parts.push(badgeStyle(theme.ns, `; ${NS_STYLE}; margin-right: 6px`), '');
-  }
-
-  fn(fmt, ...parts);
-}
-
 /* ─── remoteTransport ─── */
-
-export type { RemoteLogData };
 
 /**
  * Forwards log entries asynchronously to a remote handler.
@@ -273,9 +58,9 @@ export function remoteTransport(options: RemoteTransportOptions): Transport {
   return (entry: LogEntry): void => {
     if (!isLevelEnabled(level, entry.level)) return;
 
-    const merged = mergeContext(entry.bindings, entry.context);
-    const data: RemoteLogData = {
-      context: merged,
+    const hasData = Object.keys(entry.data).length > 0;
+    const payload: RemoteLogData = {
+      data: hasData ? entry.data : undefined,
       env,
       level: entry.level,
       message: entry.message,
@@ -284,8 +69,8 @@ export function remoteTransport(options: RemoteTransportOptions): Transport {
     };
 
     Promise.resolve()
-      .then(() => handler(entry.level, data))
-      .catch((err: unknown) => onError(err, data));
+      .then(() => handler(entry.level, payload))
+      .catch((err: unknown) => onError(err, payload));
   };
 }
 
@@ -333,9 +118,8 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
   return (entry: LogEntry): void => {
     if (!isLevelEnabled(level, entry.level)) return;
 
-    const merged = mergeContext(entry.bindings, entry.context);
     const record: Record<string, unknown> = {
-      ...merged,
+      ...entry.data,
       [fLevel]: entry.level,
       [fTime]: entry.timestamp.toISOString(),
       ...(entry.namespace && { [fNs]: entry.namespace }),
@@ -352,7 +136,8 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
  * Buffers log entries and flushes them in batches, reducing I/O overhead.
  * Flushes when the buffer reaches maxSize or after the interval elapses.
  *
- * The returned transport has additional `.flush()` and `.dispose()` methods:
+ * Returns a `BatchHandle` with `.transport`, `.flush()`, and `.dispose()` methods:
+ * - `.transport` — pass to `createLogger({ transports: [handle.transport] })`
  * - `.flush()` — immediately send buffered entries without stopping the timer
  * - `.dispose()` — stop the interval and flush remaining entries (call on shutdown)
  *
@@ -365,9 +150,10 @@ export function jsonTransport(options: JsonTransportOptions = {}): Transport {
  *   interval: 10_000,
  *   maxSize: 100,
  * });
+ * createLogger({ transports: [batch.transport] });
  * batch.dispose(); // call on app shutdown
  */
-export function batchTransport(options: BatchTransportOptions): BatchTransport {
+export function batchTransport(options: BatchTransportOptions): BatchHandle {
   const level = options.level ?? 'debug';
   const maxSize = options.maxSize ?? 50;
   const maxBuffer = options.maxBuffer;
@@ -375,6 +161,7 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
 
   let buffer: LogEntry[] = [];
   let timer: ReturnType<typeof setInterval> | undefined;
+  let batchDisposed = false;
 
   function flush(): void {
     if (buffer.length === 0) return;
@@ -388,34 +175,43 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
       .catch((err: unknown) => options.onFlushError?.(entries, err));
   }
 
-  const transport = Object.assign(
-    (entry: LogEntry): void => {
-      if (!isLevelEnabled(level, entry.level)) return;
+  const transportFn: Transport = (entry: LogEntry): void => {
+    if (batchDisposed) return;
 
-      if (!timer) timer = setInterval(flush, interval);
+    if (!isLevelEnabled(level, entry.level)) return;
 
-      buffer.push(entry);
+    if (!timer) timer = setInterval(flush, interval);
 
-      if (maxBuffer !== undefined && buffer.length > maxBuffer) {
-        buffer = buffer.slice(buffer.length - maxBuffer);
+    buffer.push(entry);
+
+    if (maxBuffer !== undefined && buffer.length > maxBuffer) {
+      buffer = buffer.slice(buffer.length - maxBuffer);
+    }
+
+    if (buffer.length >= maxSize) flush();
+  };
+
+  const handle: BatchHandle = {
+    dispose(): void {
+      if (batchDisposed) return;
+
+      batchDisposed = true;
+
+      if (timer) {
+        clearInterval(timer);
+        timer = undefined;
       }
 
-      if (buffer.length >= maxSize) flush();
+      flush();
     },
-    {
-      dispose(): void {
-        if (timer) {
-          clearInterval(timer);
-          timer = undefined;
-        }
-
-        flush();
-      },
-      flush,
+    flush,
+    [Symbol.dispose](): void {
+      handle.dispose();
     },
-  );
+    transport: transportFn,
+  };
 
-  return transport;
+  return handle;
 }
 
 /* ─── sampleTransport ─── */
@@ -423,9 +219,6 @@ export function batchTransport(options: BatchTransportOptions): BatchTransport {
 /**
  * Probabilistically forwards entries to a downstream transport.
  * Useful for reducing volume of high-frequency debug logs in production.
- *
- * For sampling at the emit level (skipping middleware + all transports),
- * use the `sample` option on `createLogger` instead — it's more efficient.
  *
  * @example
  * sampleTransport({ rate: 0.1, transport: remoteTransport({ handler }) })
@@ -444,7 +237,7 @@ export function sampleTransport(options: SampleTransportOptions): Transport {
 /* ─── redactTransport ─── */
 
 /**
- * Strips sensitive fields from bindings and context before forwarding to a downstream transport.
+ * Strips sensitive fields from `data` before forwarding to a downstream transport.
  * Redaction is applied recursively at any depth, including inside arrays.
  *
  * @example
@@ -455,7 +248,7 @@ export function sampleTransport(options: SampleTransportOptions): Transport {
  * })
  */
 export function redactTransport(options: RedactTransportOptions): Transport {
-  const { keys, replacement = '[REDACTED]', transport } = options;
+  const { keys, maxDepth = 20, replacement = '[REDACTED]', transport } = options;
 
   for (const key of keys) {
     if (key.includes('.')) {
@@ -468,7 +261,13 @@ export function redactTransport(options: RedactTransportOptions): Transport {
   const keySet = new Set(keys);
 
   function redactValue(v: unknown, depth = 0): unknown {
-    if (depth > 20) return v;
+    if (depth > maxDepth) {
+      warn(
+        `redactTransport: object nesting depth exceeded ${maxDepth} — redaction truncated at this level. Sensitive fields below depth ${maxDepth} may not be redacted.`,
+      );
+
+      return v;
+    }
 
     if (Array.isArray(v)) return v.map((item) => redactValue(item, depth + 1));
 
@@ -488,13 +287,7 @@ export function redactTransport(options: RedactTransportOptions): Transport {
   }
 
   return (entry: LogEntry): void => {
-    const redacted: LogEntry = {
-      ...entry,
-      bindings: Object.keys(entry.bindings).length > 0 ? redactObject(entry.bindings as Bindings) : entry.bindings,
-      context: entry.context ? redactObject(entry.context) : undefined,
-    };
-
-    transport(redacted);
+    transport({ ...entry, data: redactObject(entry.data as Bindings) });
   };
 }
 

@@ -15,7 +15,7 @@ Restore source state from the active route's query params on mount, and push the
 
 ```ts
 import { createRouter, navigate, useRoute } from '@vielzeug/wayfinder';
-import { createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
+import { applyRemoteQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 
 type Item = { id: number; name: string };
 type Filter = { category?: string };
@@ -35,9 +35,9 @@ const source = createRemoteSource<Item, Filter, Sort>({
   autoFetch: false, // we'll restore from URL first
 });
 
-// Hydrate from the current URL once on mount
+// Restore from the current URL once on mount
 const route = useRoute();
-await source.hydrate(decodeQuery<Filter, Sort>(route.query, { defaultLimit: 20 }));
+await applyRemoteQuery(source, decodeQuery<Filter, Sort>(route.query, { defaultLimit: 20 }));
 
 // Subscribe and push state back to the URL whenever source changes
 const stopSync = source.subscribe(() => {
@@ -49,13 +49,14 @@ const stopSync = source.subscribe(() => {
 
 ### Reacting to browser back/forward
 
-Route's router emits a navigation event when the URL changes via the browser's back/forward buttons. Listen for that to hydrate source state from the new URL:
+Wayfinder emits a navigation event when the URL changes via the browser's back/forward buttons. Listen for that to restore source state from the new URL:
 
 ```ts
 import { onRouteChange } from '@vielzeug/wayfinder';
+import { applyRemoteQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const stopRouteSync = onRouteChange((route) => {
-  void source.hydrate(decodeQuery(route.query, { defaultLimit: 20 }));
+  void applyRemoteQuery(source, decodeQuery(route.query, { defaultLimit: 20 }));
 });
 
 // Clean up both subscriptions when leaving the page
@@ -67,7 +68,7 @@ function teardown() {
 
 ### Pitfalls
 
-- Set `autoFetch: false` when you intend to hydrate from URL params on mount — otherwise Sourcerer fires an initial fetch before `hydrate()` runs, causing a wasted network request.
+- Set `autoFetch: false` when you intend to restore from URL params on mount — otherwise Sourcerer fires an initial fetch before `applyRemoteQuery()` runs, causing a wasted network request.
 - Use `replace: true` (not `push`) in `navigate()` for list state changes. Pushing every filter change floods the browser history and breaks the expected back-button behaviour.
 - Guard the `subscribe` callback with `if (source.meta.isLoading) return` to avoid URL churn while requests are in-flight.
 - `decodeQuery` is fault-tolerant by default. Pass `{ strict: true }` if you want malformed params to throw instead of being silently dropped.

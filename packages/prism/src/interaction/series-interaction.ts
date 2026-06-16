@@ -1,6 +1,6 @@
 import type { ChartEventHandlers } from '../core/chart-scaffold';
 import type { Point } from '../svg/path';
-import type { ChartDimensions, DataPoint, Series } from '../types';
+import type { ChartDimensions, ChartEvent, Datum, Series } from '../types';
 import type { CrosshairState } from './crosshair';
 import type { TooltipState } from './tooltip';
 
@@ -11,13 +11,13 @@ import { nearestPointX } from './hit-test';
 export interface SeriesInteractionOptions {
   crosshair?: CrosshairState | null;
   dims: () => ChartDimensions;
-  getData: () => DataPoint[][];
+  getData: () => Datum[][];
   getPoints: () => Point[][];
   getSeriesList: () => Series[];
-  onClick?: ((event: { originalEvent: MouseEvent; point: DataPoint; series: Series }) => void) | undefined;
-  onHover?: ((event: { originalEvent: MouseEvent; point: DataPoint; series: Series } | null) => void) | undefined;
+  onClick?: ((event: ChartEvent) => void) | undefined;
+  onHover?: ((event: ChartEvent | null) => void) | undefined;
   svg: SVGSVGElement;
-  tooltip?: TooltipState;
+  tooltip?: TooltipState | null;
 }
 
 function findNearestSeries(allPoints: Point[][], idx: number, posY: number): number {
@@ -73,7 +73,7 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
 
     if (siPt && dataPoint && series) {
       opts.tooltip?.show(siPt.x + dims.margin.left, siPt.y + dims.margin.top, dataPoint, series);
-      opts.onHover?.({ originalEvent: event, point: dataPoint, series });
+      opts.onHover?.({ datum: dataPoint, originalEvent: event, series });
     }
   };
 
@@ -105,7 +105,7 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     const series = opts.getSeriesList()[nearestSi];
 
     if (dataPoint && series) {
-      opts.onClick({ originalEvent: event, point: dataPoint, series });
+      opts.onClick({ datum: dataPoint, originalEvent: event, series });
     }
   };
 

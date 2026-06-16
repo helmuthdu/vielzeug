@@ -119,4 +119,14 @@ describe('sg-box accessibility', () => {
       expect(fixture.element.textContent?.trim()).toBe('Visible');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-box', { html: 'Content' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

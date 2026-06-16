@@ -1,21 +1,23 @@
-import { batch, effect, readonly, signal } from '@vielzeug/ripple';
+import { batch, readonly, signal } from '@vielzeug/ripple';
 
 import type {
-  ContextValidator,
+  DebugEvent,
   EventByType,
   EventType,
   InterpretOptions,
   LifecycleEvent,
   MachineConfig,
+  MachineDefinition,
   MachineEvent,
   MachineInstance,
   MachineSnapshot,
+  SendResult,
   StateNode,
   TransitionDef,
   TransitionTraceEntry,
 } from './types.js';
 
-import { getAncestorPaths, getNodeAtPath, resolveLeaf } from './definition.js';
+import { getAncestorPaths, getNodeAtPath, resolveLeaf, validateDefinition } from './definition.js';
 import { MachineError } from './errors.js';
 
 // ── Internal constants ────────────────────────────────────────────────────────
@@ -23,13 +25,13 @@ import { MachineError } from './errors.js';
 const INIT_EVENT = { type: '$init' } as const;
 const HYDRATE_EVENT = { type: '$hydrate' } as const;
 
-// ── Pure resolver (R2: accepts onGuard callback) ──────────────────────────────
+// ── Pure resolver ─────────────────────────────────────────────────────────────
 
 /**
  * Resolves which transition should be taken for a given state + event.
- * Pure function — useful for testing transition logic independently.
+ * Pure function — no side effects; useful for testing transition logic independently.
  *
- * Optionally calls `onGuard` for each guard evaluation (eliminates debug duplication — R2).
+ * Optionally calls `onGuard` for each guard evaluation.
  */
 export const resolveTransition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   definition: Readonly<MachineConfig<State, Ctx, Ev>>,
@@ -55,8 +57,7 @@ export const resolveTransition = <State extends string, Ctx extends object, Ev e
     const defs = Array.isArray(raw) ? raw : [raw];
 
     for (const def of defs) {
-      const passed =
-        !def.guard || def.guard({ context: context as Ctx, event: event as EventByType<Ev, EventType<Ev>> });
+      const passed = !def.guard || def.guard({ context, event: event as EventByType<Ev, EventType<Ev>> });
 
       onGuard?.({ context, event, from: state, passed, target: def.target as State });
 
@@ -67,30 +68,36 @@ export const resolveTransition = <State extends string, Ctx extends object, Ev e
   return undefined;
 };
 
-// ── Interpreter ───────────────────────────────────────────────────────────────
+// ── SendResult helpers ─────────────────────────────────────────────────────────
 
-export const interpret = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+const RESULT_TRANSITIONED: SendResult = Object.freeze({ ok: true, queued: false, status: 'transitioned' });
+const RESULT_QUEUED: SendResult = Object.freeze({ ok: true, queued: true, status: 'queued' });
+const RESULT_REJECTED: SendResult = Object.freeze({ ok: false, queued: false, status: 'rejected' });
+
+// ── Core interpreter ──────────────────────────────────────────────────────────
+
+const _interpret = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   definition: Readonly<MachineConfig<State, Ctx, Ev>>,
   options: InterpretOptions<State, Ctx, Ev> = {},
 ): MachineInstance<State, Ctx, Ev> => {
-  const debugOpts = options.debug;
-  const traceLimit = debugOpts?.traceLimit ?? 0;
+  // R8: unified onDebug — no more separate onTransition
+  const onDebug = options.onDebug;
+  // Auto-enable trace (default 50) when onDebug is set but traceLimit not explicit
+  const traceLimit = options.traceLimit ?? (onDebug ? 50 : 0);
 
   if (options.maxTransitionsPerFlush !== undefined && options.maxTransitionsPerFlush < 1) {
     throw new MachineError(
       'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH',
-      '[machine] maxTransitionsPerFlush must be greater than 0',
+      'maxTransitionsPerFlush must be greater than 0',
       { maxTransitionsPerFlush: options.maxTransitionsPerFlush },
     );
   }
 
   const maxTransitionsPerFlush = options.maxTransitionsPerFlush ?? 1_000;
   const clone = options.clone ?? structuredClone;
-  const onDebug = debugOpts?.onDebug;
   // Widen State keys to string so getNodeAtPath / getAncestorPaths work with plain string paths.
   const states = definition.states as unknown as Record<string, StateNode<string, Ctx, Ev>>;
-  const onTransition = debugOpts?.onTransition;
-  const middlewares = options.middleware ?? [];
+  const interceptors = options.interceptors ?? [];
   const persistedSnapshot = options.snapshot ?? options.persistence?.load();
 
   if (persistedSnapshot) {
@@ -103,27 +110,29 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     if (!snapshotValid) {
       throw new MachineError(
         'MACHINE_INVALID_SNAPSHOT_STATE',
-        `[machine] snapshot state "${persistedSnapshot.state}" not found in states`,
+        `snapshot state "${persistedSnapshot.state}" not found in states`,
         { state: persistedSnapshot.state },
       );
     }
   }
 
-  const validator: ContextValidator<Ctx> | undefined = definition.validateContext;
-
+  // R9: validateContext returns true | string — string is the failure reason
   const assertContext = (context: Ctx, phase: 'init' | 'transition'): void => {
-    if (validator && !validator(context)) {
+    const validator = definition.validateContext;
+
+    if (!validator) return;
+
+    const result = validator(context);
+
+    if (result !== true) {
       throw new MachineError(
         'MACHINE_INVALID_VALIDATE_CONTEXT',
-        `[machine] context failed validation during ${phase}`,
-        {
-          phase,
-        },
+        `context failed validation during ${phase}${result ? `: ${result}` : ''}`,
+        { phase, reason: result },
       );
     }
   };
 
-  // Resolve initial state to leaf
   const resolvedInitial = persistedSnapshot
     ? persistedSnapshot.state
     : (resolveLeaf(states, definition.initial) as State);
@@ -134,27 +143,16 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
   if (!persistedSnapshot) assertContext(initialContext, 'init');
 
+  // ── Section: State & context signals ──────────────────────────────────────
+
   const state_ = signal(resolvedInitial);
   const context_ = signal(initialContext);
 
-  // Trace ring buffer
+  // ── Section: Trace ring buffer ─────────────────────────────────────────────
+
   const traceBuffer: TransitionTraceEntry<State, Ev>[] | null = traceLimit > 0 ? [] : null;
   let traceHead = 0;
   let traceCount = 0;
-
-  const disposeController = new AbortController();
-  let disposed = false;
-  let draining = false;
-  let invokeCounter = 0;
-
-  const activeInvokes = new Set<{
-    controller: AbortController;
-    event: Ev | LifecycleEvent;
-    id: number;
-    state: State;
-  }>();
-
-  const activeTimers = new Set<ReturnType<typeof setTimeout>>();
 
   const pushTrace = (entry: TransitionTraceEntry<State, Ev>): void => {
     if (!traceBuffer) return;
@@ -168,17 +166,21 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
   };
 
-  type AfterQueueItem = {
-    actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>;
-    afterEvent: { readonly delay: number; readonly type: '$after' };
-    from: State;
-    isAfter: true;
-    target: State;
-  };
+  // ── Section: Lifecycle ─────────────────────────────────────────────────────
 
-  type QueueItem = { event: Ev; invokeId?: number } | AfterQueueItem;
+  const disposeController = new AbortController();
+  let disposed = false;
 
-  const queue: QueueItem[] = [];
+  // ── Section: Invoke scheduler ──────────────────────────────────────────────
+
+  let invokeCounter = 0;
+
+  const activeInvokes = new Set<{
+    controller: AbortController;
+    event: Ev | LifecycleEvent;
+    id: string;
+    state: State;
+  }>();
 
   const stopInvokes = (): void => {
     for (const invoke of activeInvokes) {
@@ -195,24 +197,55 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     activeInvokes.clear();
   };
 
+  // ── Section: After-timer scheduler ────────────────────────────────────────
+
+  const activeTimers = new Set<ReturnType<typeof setTimeout>>();
+
   const clearTimers = (): void => {
     for (const timer of activeTimers) clearTimeout(timer);
     activeTimers.clear();
   };
 
+  // ── Section: Persistence ───────────────────────────────────────────────────
+
   const saveSnapshot = (): void => {
     options.persistence?.save({ context: clone(context_.value), state: state_.value });
   };
 
-  // ── R3: Fast-path for flat states ─────────────────────────────────────────
+  // ── Section: Subscribe (R5 — plain Set, not effect()) ─────────────────────
+
+  const subscribers = new Set<(snapshot: MachineSnapshot<State, Ctx>) => void>();
+
+  const notifySubscribers = (): void => {
+    if (subscribers.size === 0) return;
+
+    const snap: MachineSnapshot<State, Ctx> = { context: context_.value, state: state_.value };
+
+    for (const fn of subscribers) fn(snap);
+  };
+
+  // ── Section: Event queue (hoisted so executeTransition closures can reference) ──
+
+  type AfterQueueItem = {
+    actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>;
+    afterEvent: { readonly delay: number; readonly type: '$after' };
+    from: State;
+    isAfter: true;
+    target: State;
+  };
+
+  type QueueItem = { event: Ev } | AfterQueueItem;
+
+  const queue: QueueItem[] = [];
+  let draining = false;
+
+  // ── Section: Hierarchy / transition execution ──────────────────────────────
 
   const computeTransitionPaths = (from: string, to: string): { entryPaths: string[]; exitPaths: string[] } => {
-    // Fast path: flat states (no dots — no hierarchy)
     if (!from.includes('.') && !to.includes('.')) {
       return { entryPaths: [to], exitPaths: [from] };
     }
 
-    // Self-transition: exit and re-enter the leaf
     if (from === to) {
       return { entryPaths: [to], exitPaths: [from] };
     }
@@ -220,6 +253,8 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     const fromAncestors = getAncestorPaths(from);
     const toAncestors = getAncestorPaths(to);
 
+    // Advance while both paths share a common prefix — lcaIndex lands at
+    // the first segment that diverges (the deepest common ancestor's depth + 1).
     let lcaIndex = 0;
 
     while (
@@ -235,8 +270,6 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
       exitPaths: fromAncestors.slice(lcaIndex).reverse(),
     };
   };
-
-  // ── R10: Extracted transition execution ───────────────────────────────────
 
   const executeTransition = (
     from: State,
@@ -259,6 +292,9 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
     assertContext(draft, 'transition');
 
+    // R6: Freeze draft after assertContext so any post-commit mutation throws TypeError
+    Object.freeze(draft);
+
     batch(() => {
       stopInvokes();
       clearTimers();
@@ -266,14 +302,16 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
       context_.value = draft;
     });
 
-    onTransition?.({ event, from, to: resolvedTarget });
+    // R8: emit unified 'transition' debug event (replaces onTransition callback)
+    onDebug?.({ event, from, to: resolvedTarget, type: 'transition' } as DebugEvent<State, Ctx, Ev>);
     pushTrace({ event, from, timestamp: Date.now(), to: resolvedTarget });
+    notifySubscribers();
     saveSnapshot();
     runInvokes(event);
     scheduleAfterTransitions(resolvedTarget);
   };
 
-  // ── Invoke scheduling ─────────────────────────────────────────────────────
+  // ── Section: Invoke scheduling ─────────────────────────────────────────────
 
   const runInvokes = (triggerEvent: Ev | LifecycleEvent): void => {
     const ancestors = getAncestorPaths(state_.value);
@@ -283,9 +321,9 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
       if (!node?.invoke?.length) continue;
 
-      for (const invoke of node.invoke) {
+      for (const invokeDef of node.invoke) {
         const controller = new AbortController();
-        const invokeId = ++invokeCounter;
+        const invokeId = invokeDef.id ?? String(++invokeCounter);
         const capturedContext = context_.value;
         const invokeInfo = { controller, event: triggerEvent, id: invokeId, state: state_.value };
 
@@ -298,12 +336,12 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
           type: 'invoke-start',
         });
 
-        void invoke
+        void invokeDef
           .src({ context: capturedContext, entryEvent: triggerEvent, signal: controller.signal })
           .then((result) => {
             activeInvokes.delete(invokeInfo);
 
-            if (disposed || controller.signal.aborted || !invoke.onDone) return;
+            if (disposed || controller.signal.aborted || !invokeDef.onDone) return;
 
             onDebug?.({
               context: capturedContext,
@@ -314,17 +352,14 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
               type: 'invoke-done',
             });
 
-            queue.push({
-              event: invoke.onDone(result, { context: capturedContext, entryEvent: triggerEvent }),
-              invokeId,
-            });
+            queue.push({ event: invokeDef.onDone(result, capturedContext) });
 
             if (!draining) drainQueue();
           })
           .catch((error: unknown) => {
             activeInvokes.delete(invokeInfo);
 
-            if (disposed || controller.signal.aborted || !invoke.onError) return;
+            if (disposed || controller.signal.aborted || !invokeDef.onError) return;
 
             onDebug?.({
               context: capturedContext,
@@ -335,10 +370,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
               type: 'invoke-error',
             });
 
-            queue.push({
-              event: invoke.onError(error, { context: capturedContext, entryEvent: triggerEvent }),
-              invokeId,
-            });
+            queue.push({ event: invokeDef.onError(error, capturedContext) });
 
             if (!draining) drainQueue();
           });
@@ -346,7 +378,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
   };
 
-  // ── F4: After (delayed) transitions ───────────────────────────────────────
+  // ── Section: After (delayed) transitions ───────────────────────────────────
 
   const scheduleAfterTransitions = (currentState: State): void => {
     const ancestors = getAncestorPaths(currentState);
@@ -362,10 +394,12 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
           if (disposed || state_.value !== currentState) return;
 
-          if (afterDef.guard && !afterDef.guard({ context: context_.value })) return;
+          // R10: after.guard unified — receives { context, event } like all other guards
+          const afterEvent = { delay: afterDef.delay, type: '$after' } as const;
+
+          if (afterDef.guard && !afterDef.guard({ context: context_.value, event: afterEvent })) return;
 
           const resolvedTarget = resolveLeaf(states, afterDef.target) as State;
-          const afterEvent = { delay: afterDef.delay, type: '$after' } as const;
 
           queue.push({
             actions: (afterDef.actions ?? []) as Array<
@@ -384,7 +418,7 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
   };
 
-  // ── Event processing ──────────────────────────────────────────────────────
+  // ── Section: Event queue processing ─────────────────────────────────────────
 
   const processEvent = (item: QueueItem): boolean => {
     if (disposed) return false;
@@ -397,7 +431,6 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
     const from = state_.value;
 
-    // R2: Pass onGuard to resolver — eliminates debug duplication
     const transition = resolveTransition(
       definition,
       { context: context_.value, event: item.event, state: from },
@@ -411,8 +444,6 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     }
 
     const resolvedTarget = resolveLeaf(states, transition.target) as State;
-    // Widen action signature to include LifecycleEvent: executeTransition accepts a union event,
-    // but transitions only fire on user events so the cast is safe at runtime.
     const actions = (transition.actions ?? []) as Array<
       (args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void
     >;
@@ -427,13 +458,9 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
     while (queue.length > 0) {
       if (++processed > maxTransitionsPerFlush) {
-        throw new MachineError(
-          'MACHINE_TRANSITION_LOOP_GUARD',
-          '[machine] transition queue exceeded maxTransitionsPerFlush',
-          {
-            maxTransitionsPerFlush,
-          },
-        );
+        throw new MachineError('MACHINE_TRANSITION_LOOP_GUARD', 'transition queue exceeded maxTransitionsPerFlush', {
+          maxTransitionsPerFlush,
+        });
       }
 
       processEvent(queue.shift()!);
@@ -447,12 +474,15 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
 
     try {
       drainQueueInner();
+    } catch (err) {
+      queue.length = 0;
+      throw err;
     } finally {
       draining = false;
     }
   };
 
-  // ── Public API ────────────────────────────────────────────────────────────
+  // ── Section: Public API ────────────────────────────────────────────────────
 
   const can = (event: Ev): boolean => {
     if (disposed) return false;
@@ -460,40 +490,37 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     return !!resolveTransition(definition, { context: context_.value, event, state: state_.value });
   };
 
-  /**
-   * Dispatches an event synchronously. Returns `true` if a transition was taken.
-   *
-   * When called re-entrantly (e.g. from inside an action), the event is queued
-   * for processing after the current transition completes. In that case, `false`
-   * is returned immediately — not because the event was ignored, but because the
-   * transition has not yet occurred at the point of return.
-   */
-  // R1: Unified send — single drain implementation for both middleware and fast path
-  const send = (event: Ev): boolean => {
-    if (disposed) return false;
+  const send = (event: Ev): SendResult => {
+    if (disposed) return RESULT_REJECTED;
 
-    const dispatch =
-      middlewares.length > 0
-        ? middlewares.reduceRight<() => boolean>(
-            (next, mw) => () => mw(event, { context: context_.value, state: state_.value }, next),
-            () => processEvent({ event }),
-          )
-        : () => processEvent({ event });
+    // Run interceptors left-to-right — first null wins
+    let intercepted: Ev | null = event;
+
+    for (const fn of interceptors) {
+      intercepted = fn(intercepted, { context: context_.value, state: state_.value });
+
+      if (intercepted === null) return RESULT_REJECTED;
+    }
+
+    const interceptedEvent = intercepted;
 
     if (draining) {
-      queue.push({ event });
+      queue.push({ event: interceptedEvent });
 
-      return false;
+      return RESULT_QUEUED;
     }
 
     draining = true;
 
     try {
-      const result = dispatch();
+      const transitioned = processEvent({ event: interceptedEvent });
 
       drainQueueInner();
 
-      return result;
+      return transitioned ? RESULT_TRANSITIONED : RESULT_REJECTED;
+    } catch (err) {
+      queue.length = 0;
+      throw err;
     } finally {
       draining = false;
     }
@@ -515,34 +542,22 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     return entries.map((e) => ({ ...e }));
   };
 
-  const matches = (...states: string[]): boolean => {
+  const matches = (...stateArgs: string[]): boolean => {
     if (disposed) return false;
 
     const current = state_.value;
 
-    return states.some((s) => current === s || current.startsWith(`${s}.`));
+    return stateArgs.some((s) => current === s || current.startsWith(`${s}.`));
   };
 
-  // R7: Change-detection subscribe — no reliance on effect's immediate-execution semantics
+  // R5: subscribe via plain Set — no ripple effect(), no prevState/prevCtx tracking
   const subscribe = (fn: (snapshot: MachineSnapshot<State, Ctx>) => void): (() => void) => {
-    let prevState = state_.value;
-    let prevCtx = context_.value;
+    subscribers.add(fn);
 
-    const sub = effect(() => {
-      const s = state_.value;
-      const c = context_.value;
-
-      if (s !== prevState || c !== prevCtx) {
-        prevState = s;
-        prevCtx = c;
-        fn({ context: c, state: s });
-      }
-    });
-
-    return () => sub.dispose();
+    return () => subscribers.delete(fn);
   };
 
-  // ── Initialization ────────────────────────────────────────────────────────
+  // ── Section: Initialization ────────────────────────────────────────────────
 
   if (persistedSnapshot) {
     runInvokes(HYDRATE_EVENT);
@@ -596,5 +611,68 @@ export const interpret = <State extends string, Ctx extends object, Ev extends M
     state: readonly(state_),
     subscribe,
     [Symbol.dispose]: dispose,
+  };
+};
+
+// ── Public entry points ───────────────────────────────────────────────────────
+
+/**
+ * Defines, validates, and immediately starts a state machine.
+ *
+ * The most common entry point — validation and interpretation in a single call.
+ * Use {@link define} if you need a reusable definition (e.g. multiple instances with different options).
+ *
+ * @example
+ * const m = machine({
+ *   context: { count: 0 },
+ *   initial: 'idle',
+ *   states: {
+ *     idle: { on: { INC: { actions: [({ context }) => { context.count += 1 }], target: 'idle' } } },
+ *   },
+ * });
+ *
+ * m.send({ type: 'INC' });
+ * console.log(m.context.value.count); // 1
+ */
+export const machine = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+  config: MachineConfig<State, Ctx, Ev>,
+  options?: InterpretOptions<State, Ctx, Ev>,
+): MachineInstance<State, Ctx, Ev> => {
+  validateDefinition(config);
+
+  return _interpret(config, options);
+};
+
+/**
+ * Validates a machine configuration and returns a reusable definition handle.
+ * Call `.start(options?)` to create a running instance.
+ * Call `.resolve(input)` to inspect transitions without starting a machine.
+ *
+ * @example
+ * const counterDef = define({
+ *   context: { count: 0 },
+ *   initial: 'idle',
+ *   states: { idle: { on: { INC: { actions: [({ context }) => { context.count += 1 }], target: 'idle' } } } },
+ * });
+ *
+ * const m1 = counterDef.start();
+ * const m2 = counterDef.start({ snapshot: { context: { count: 10 }, state: 'idle' } });
+ *
+ * // Test transitions without a running machine:
+ * counterDef.resolve({ context: { count: 0 }, event: { type: 'INC' }, state: 'idle' });
+ */
+export const define = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+  config: MachineConfig<State, Ctx, Ev>,
+): MachineDefinition<State, Ctx, Ev> => {
+  validateDefinition(config);
+
+  return {
+    // R3: no .config exposure — .resolve() replaces resolveTransition(def.config, ...)
+    resolve(input) {
+      return resolveTransition(config, input);
+    },
+    start(options?) {
+      return _interpret(config, options);
+    },
   };
 };

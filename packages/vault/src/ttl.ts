@@ -60,6 +60,11 @@ export type StoredRecord<T> = {
   value: T;
 };
 
+/** Returns true when an epoch-ms expiry timestamp has passed. Safe to call with `undefined`. */
+export function isExpired(expiresAt: number | undefined): boolean {
+  return expiresAt !== undefined && Date.now() >= expiresAt;
+}
+
 export function assertTtlMs(ttlMs: number, source: string): TtlMs {
   if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
     throw new VaultError(`${source} expected a finite positive number, received ${String(ttlMs)}`);
@@ -75,7 +80,7 @@ export function wrapStored<T>(value: T, ttlMs?: TtlMs): StoredRecord<T> {
 }
 
 export function unwrapStored<T>(raw: StoredRecord<T>): T | undefined {
-  if (raw.expiresAt !== undefined && Date.now() >= raw.expiresAt) return undefined;
+  if (isExpired(raw.expiresAt)) return undefined;
 
   return raw.value;
 }

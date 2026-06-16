@@ -462,14 +462,14 @@ sg-sidebar {
   --sidebar-width: 18rem; /* expanded width */
   --sidebar-collapsed-width: 4rem; /* collapsed width */
   --sidebar-bg: var(--color-canvas); /* sidebar background */
-  --sidebar-border-color: var(--color-contrast-300);
+  --sidebar-border-color: var(--color-divider);
 }
 
 sg-sidebar-item {
   --sidebar-item-color: var(--color-contrast-700);
   --sidebar-item-hover-bg: var(--color-contrast-100);
   --sidebar-item-hover-color: var(--color-contrast-900);
-  --sidebar-item-active-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --sidebar-item-active-bg: color-mix(in oklch, var(--color-primary) 12%, transparent);
   --sidebar-item-active-color: var(--color-primary);
   --sidebar-item-indicator: var(--color-primary);
 }

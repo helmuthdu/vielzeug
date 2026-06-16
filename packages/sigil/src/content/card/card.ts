@@ -1,4 +1,4 @@
-import { define, effect, html, prop } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
@@ -108,7 +108,7 @@ define<SgCardProps, SgCardEvents>(CARD_TAG, {
     variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
   },
 
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, slots, watch }) {
     bind({
       attr: {
         ariaBusy: () => (props.loading.value ? 'true' : 'false'),
@@ -117,7 +117,7 @@ define<SgCardProps, SgCardEvents>(CARD_TAG, {
       },
     });
 
-    effect(() => {
+    watch(() => {
       if (props.interactive.value) {
         el.setAttribute('tabindex', props.disabled.value ? '-1' : '0');
       } else {

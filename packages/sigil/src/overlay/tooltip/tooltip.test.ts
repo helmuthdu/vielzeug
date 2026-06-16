@@ -138,4 +138,17 @@ describe('sg-tooltip accessibility', () => {
       }
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-tooltip', {
+        attrs: { content: 'More information' },
+        html: '<button>Info</button>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

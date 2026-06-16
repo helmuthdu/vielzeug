@@ -5,7 +5,7 @@ import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
-import { observeResize } from '../../core/responsive';
+import { createChartBase } from '../../core/chart-base';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 
@@ -156,30 +156,23 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
   const strokeWidth = config.strokeWidth ?? 1.5;
   const fillOpacity = config.fillOpacity ?? 0.2;
 
-  const svg = createSvgElement('svg', {
-    ...(config.ariaLabel ? { 'aria-label': config.ariaLabel, role: 'img' } : { 'aria-hidden': 'true' }),
-    class: 'prism-sparkline',
-    style: 'display:block;width:100%;height:100%;overflow:visible',
+  const base = createChartBase(container, {
+    ...(config.ariaLabel ? { ariaLabel: config.ariaLabel } : { ariaHidden: true }),
+    margin: { bottom: 0, left: 0, right: 0, top: 0 },
   });
+
+  const { svg } = base;
+
+  svg.classList.add('prism-sparkline');
 
   const innerGroup = createSvgElement('g', { class: 'prism-spark-inner' });
 
   svg.appendChild(innerGroup);
-  container.appendChild(svg);
 
-  let w = container.getBoundingClientRect().width || 100;
-  let h = container.getBoundingClientRect().height || 32;
-
-  setAttributes(svg, { height: h, viewBox: `0 0 ${w} ${h}`, width: w });
-
-  const stopObserving = observeResize(container, (width, height) => {
-    w = width;
-    h = height;
-    setAttributes(svg, { height, viewBox: `0 0 ${width} ${height}`, width });
-    renderAll();
-  });
+  let cleanupInteraction: (() => void) | undefined;
 
   function renderAll(): void {
+    const { height: h, width: w } = base.dimensions.value;
     const data = isSignal(config.data) ? config.data.value : config.data;
 
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
@@ -191,7 +184,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
       innerGroup.appendChild(stackGroup);
 
-      // Use path elements for rounded corners on outer edges
       const cornerRadius = config.cornerRadius ?? 4;
       const segs = data as StackSegment[];
       const total = segs.reduce((s, d) => s + Math.max(0, d.value), 0);
@@ -238,10 +230,8 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       innerGroup.appendChild(path);
     }
 
-    if (!isStackData(data)) attachInteraction(data);
+    if (!isStackData(data)) attachInteraction(data as number[]);
   }
-
-  let cleanupInteraction: (() => void) | undefined;
 
   function attachInteraction(data: number[]): void {
     cleanupInteraction?.();
@@ -250,6 +240,8 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     if (!config.onHover && !config.onClick) return;
 
     if (data.length <= 1) return;
+
+    const { width: w } = base.dimensions.value;
 
     svg.style.cursor = 'crosshair';
 
@@ -286,28 +278,20 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     };
   }
 
-  let disposed = false;
-
   const s = scope(() => {
     effect(
       () => {
-        if (disposed) return;
-
         renderAll();
       },
-      { scheduler: 'raf' },
+      { scheduler: (run) => requestAnimationFrame(run) },
     );
   });
 
   return {
     dispose() {
-      if (disposed) return;
-
-      disposed = true;
       cleanupInteraction?.();
       s.dispose();
-      stopObserving();
-      svg.remove();
+      base.dispose();
     },
     el: svg,
     [Symbol.dispose]() {

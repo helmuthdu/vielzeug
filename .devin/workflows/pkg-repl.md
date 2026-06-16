@@ -13,7 +13,8 @@ You are updating the interactive playground examples for a **Vielzeug** package.
 - Each supported package has its own folder at `docs/.vitepress/theme/components/repl/examples/<name>/`.
 - Each example is a TypeScript module that exports an object with at least:
   - `name`: the label shown in the example picker
-  - `code`: a runnable code string executed by the browser REPL
+  - `code`: a runnable **plain JavaScript** string executed by the browser REPL
+- **`code` strings must be plain JavaScript — no TypeScript syntax.** The browser REPL does not transpile; TypeScript annotations (type parameters, type assertions, interface declarations, etc.) will cause a syntax error at runtime. Use JSDoc comments if type documentation is needed.
 - Each package folder has an `index.ts` file that imports and registers its example modules.
 - The root registry is `docs/.vitepress/theme/components/repl/examples/index.ts`.
 - Example picker categories are inferred from the example key prefix in the package registry.
@@ -74,6 +75,7 @@ For each existing example module:
 - Prefer real-world-flavoured demos over abstract math or trivial examples.
 - Ensure the snippet logs or returns something useful in the REPL output pane.
 - Keep imports limited to `@vielzeug/<name>`.
+- **Write plain JavaScript only** — strip all TypeScript syntax from the `code` string (no `: Type` annotations, no `<T>` generics, no `as Type` casts, no `interface`/`type` declarations).
 - Remove any duplicated, outdated, deprecated, or examples that are no longer relevant or demonstrative of the current API and usage patterns.
 
 For new examples:
@@ -91,21 +93,23 @@ Before creating the folder, read an existing package as a structural reference (
 2. Create `docs/.vitepress/theme/components/repl/types/<name>.ts` with the Monaco type declarations for the package's public API.
 3. Register the package in the root `docs/.vitepress/theme/components/repl/examples/index.ts` and `docs/.vitepress/theme/components/repl/types/index.ts` — follow the exact pattern used by the reference package.
 
-### Step 4 — Verify examples compile
+### Step 4 — Verify examples compile and run
 
-1. **Registry / docs integration** — ensure all new or renamed example modules are imported and exported correctly. Run the docs build:
+1. **Runtime validation** — run the REPL example validator against the target package. It extracts every `code` string, executes it in a jsdom environment (resolving `@vielzeug/*` from source), and reports failures:
+
+   ```bash
+   pnpm validate:repl -- --package <name>
+   ```
+
+   Fix any failures before proceeding. Common causes: removed or renamed exports, missing top-level `await` handling, unhandled promise rejections at module scope.
+
+2. **Registry / docs integration** — ensure all new or renamed example modules are imported and exported correctly. Run the docs build:
 
    ```bash
    pnpm docs:build
    ```
 
-2. **Snippet correctness** — cross-check each snippet against `packages/<name>/src/index.ts`. For substantial snippet changes, verify with a scratch file:
-
-   ```bash
-   pnpm tsc --noEmit --strict --target ES2022 --module ESNext --moduleResolution bundler /tmp/<name>-repl-check.ts
-   ```
-
-3. **Runtime sanity** — ensure the snippet produces meaningful console output or a final returned value visible to the user.
+3. **Runtime sanity** — confirm each passing snippet produces meaningful console output or a final returned value visible to the user.
 
 ### Step 5 — Report
 

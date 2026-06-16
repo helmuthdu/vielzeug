@@ -231,4 +231,22 @@ describe('sg-alert accessibility', () => {
       expect(handler.called).toBe(true);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks for a status alert', async () => {
+      fixture = await mount('sg-alert', { html: '<p>Info message</p>' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks for a dismissible alert', async () => {
+      fixture = await mount('sg-alert', { attrs: { dismissible: '', heading: 'Warning' }, html: '<p>Take note.</p>' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

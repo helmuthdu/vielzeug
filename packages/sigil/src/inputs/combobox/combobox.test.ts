@@ -1,5 +1,6 @@
-import { html, signal } from '@vielzeug/craft';
+import { html } from '@vielzeug/craft';
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
+import { signal } from '@vielzeug/ripple';
 
 describe('sg-combobox', () => {
   let fixture: Fixture<HTMLElement>;
@@ -845,6 +846,19 @@ describe('sg-combobox', () => {
           el.textContent?.replace(/\s+/g, ' ').trim(),
         ),
       ).toEqual(['alpha']);
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-combobox', {
+        attrs: { label: 'Country' },
+        html: '<option value="us">United States</option><option value="uk">United Kingdom</option>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
     });
   });
 });

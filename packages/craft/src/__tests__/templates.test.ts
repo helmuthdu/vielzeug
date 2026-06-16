@@ -3,7 +3,9 @@
  * Tests for the core HTML template system, attribute binding, event handling, and lifecycle
  */
 
-import { computed, html, signal } from '../index';
+import { computed, signal } from '@vielzeug/ripple';
+
+import { html } from '../index';
 import { fire, mount } from '../testing';
 import { register } from './test-utils';
 

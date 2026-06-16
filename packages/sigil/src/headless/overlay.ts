@@ -1,3 +1,5 @@
+import type { OverlayPositioner } from './positioner';
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -20,13 +22,7 @@ export type OverlayOpenDetail = { reason: OverlayOpenReason };
 /** Detail shape for overlay close events emitted by components. */
 export type OverlayCloseDetail = { reason: DialogCloseReason };
 
-export type OverlayPositioner = {
-  floating: () => HTMLElement | null;
-  reference: () => HTMLElement | null;
-  /** Start continuous position auto-updates. Returns a stop function. */
-  startAutoUpdate?: () => () => void;
-  update: () => void;
-};
+export type { OverlayPositioner };
 
 export type OverlayControlOptions = {
   getBoundary: () => HTMLElement | null;
@@ -39,19 +35,19 @@ export type OverlayControlOptions = {
   positioner?: OverlayPositioner;
   restoreFocus?: boolean | (() => boolean);
   setOpen: (next: boolean, reason: OverlayOpenReason | DialogCloseReason) => void;
-  /** `AbortSignal` from the component lifecycle. `cleanup()` is called automatically on abort. */
+  /** `AbortSignal` from the component lifecycle. `dispose()` is called automatically on abort. */
   signal: AbortSignal;
 };
 
 export type OverlayControl = {
   [Symbol.dispose](): void;
-  cleanup(): void;
   /**
    * Closes the overlay.
    * @param reason — why it's closing (default `'programmatic'`)
    * @param restoreFocus — override per-call focus restoration (default: uses `restoreFocus` option)
    */
   close(reason?: DialogCloseReason, restoreFocus?: boolean): void;
+  /** Tears down the overlay: closes silently and removes all event listeners. */
   dispose(): void;
   /**
    * Opens the overlay.
@@ -142,7 +138,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     }
   };
 
-  const cleanup = (): void => {
+  const dispose = (): void => {
     // Close silently — teardown should not fire onClose callbacks.
     if (options.isOpen()) close('programmatic', false, true);
 
@@ -154,7 +150,7 @@ export const createOverlayControl = (options: OverlayControlOptions): OverlayCon
     }
   };
 
-  options.signal.addEventListener('abort', cleanup, { once: true });
+  options.signal.addEventListener('abort', dispose, { once: true });
 
-  return { cleanup, close, dispose: cleanup, open, [Symbol.dispose]: cleanup, toggle };
+  return { close, dispose, open, [Symbol.dispose]: dispose, toggle };
 };

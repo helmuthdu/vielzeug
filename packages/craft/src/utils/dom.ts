@@ -39,7 +39,7 @@ const URL_ATTRS = new Set([
  * Covers: javascript:, vbscript:, blob:, and data: variants that carry HTML/XML.
  * Plain data: image URIs (e.g. data:image/png) are intentionally allowed.
  */
-const DANGEROUS_SCHEME_RE = /^\s*(?:javascript|vbscript|data:(?:[^,]*\/html|application\/(?:xhtml|xml))|blob):/i;
+const DANGEROUS_SCHEME_RE = /^\s*(?:(?:javascript|vbscript|blob):|data:(?:[^,]*\/html|application\/(?:xhtml|xml)))/i;
 
 export const setAttr = (el: Element, name: string, val: unknown): void => {
   if (/^on[a-z]/i.test(name)) {

@@ -1,4 +1,4 @@
-import type { DataPoint } from '../../types';
+import type { Datum } from '../../types';
 import type { BarScaleContext } from './bar-scale-context';
 
 export function findCatIdx(pos: number, categories: string[], sc: BarScaleContext): number {
@@ -50,14 +50,14 @@ export function findSeriesIdx(
 export function isOutsideBars(
   pos: { x: number; y: number },
   catIdx: number,
-  allData: DataPoint[][],
+  allData: Datum[][],
   sc: BarScaleContext,
   seriesCount: number,
 ): boolean {
   const lastSi = seriesCount - 1;
   const maxVal = sc.stacked
     ? (sc.stackedTops[lastSi]?.[catIdx] ?? 0)
-    : Math.max(...Array.from({ length: seriesCount }, (_, si) => allData[si]?.[catIdx]?.y ?? 0));
+    : Math.max(...Array.from({ length: seriesCount }, (_, si) => allData[si]?.[catIdx]?.value ?? 0));
   const maxPx = sc.valueScale.map(maxVal);
 
   return sc.horizontal ? pos.x > maxPx : pos.y < maxPx;

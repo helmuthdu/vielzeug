@@ -1,4 +1,4 @@
-const isDev = !(globalThis as { __RUNE_PROD__?: boolean }).__RUNE_PROD__;
+export const isDev = !(globalThis as { __RUNE_PROD__?: boolean }).__RUNE_PROD__;
 
 /** @internal @security Messages may include user-supplied data. */
 export function warn(msg: string): void {

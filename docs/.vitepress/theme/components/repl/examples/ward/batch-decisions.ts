@@ -1,10 +1,10 @@
 export const batchDecisionsExample = {
-  code: `import { createWard, rule } from '@vielzeug/ward'
+  code: `import { allow, createWard, deny } from '@vielzeug/ward'
 
 // checkAll returns WardDecisionResult[] — each entry carries resource + action
 const ward = createWard([
-  ...rule().allow('editor').on('posts').to('read', 'update').build(),
-  ...rule().deny('editor').on('posts').to('delete').build(),
+  ...allow('editor', 'posts', ['read', 'update']),
+  ...deny('editor',  'posts', ['delete']),
 ])
 
 const editor = { id: 'u1', roles: ['editor'] }

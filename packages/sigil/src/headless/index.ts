@@ -3,9 +3,7 @@ export { lifecycleSignal } from './craft';
 
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
-  createCounterState,
-  createErrorHelperState,
-  createField,
+  type AriaProps,
   type ControlValidationMode,
   type CounterOptions,
   type CounterState,
@@ -31,21 +29,15 @@ export {
 // ── Checkable ─────────────────────────────────────────────────────────────────
 export { createCheckable, type CheckableChangePayload, type CheckableHandle, type CheckableOptions } from './checkable';
 
-// ── Overlay ───────────────────────────────────────────────────────────────────
+// ── Overlay types (public — consumed by component authors) ───────────────────
 export {
-  createOverlayControl,
   type DialogCloseReason,
   type DropdownCloseReason,
   type OverlayCloseDetail,
   type OverlayControl,
-  type OverlayControlOptions,
   type OverlayOpenDetail,
   type OverlayOpenReason,
-  type OverlayPositioner,
 } from './overlay';
-
-// ── Dropdown positioner ───────────────────────────────────────────────────────
-export { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
 // ── Option list ───────────────────────────────────────────────────────────────
 export {
@@ -59,17 +51,8 @@ export {
 // ── Paginated list ────────────────────────────────────────────────────────────
 export { createPaginatedList, type PaginatedListHandle, type PaginatedListOptions } from './paginated-list';
 
-// ── Navigation ────────────────────────────────────────────────────────────────
-export {
-  createListControl,
-  keymap,
-  keymapPresets,
-  type Keymap,
-  type ListControl,
-  type ListKeyAction,
-  type ListNavigationAction,
-  type ListNavigationOptions,
-} from './nav';
+// ── Navigation types (public — consumed by component authors) ────────────────
+export { type ListKeyAction, type ListNavigationAction } from './nav';
 
 // ── Spinner ───────────────────────────────────────────────────────────────────
 export { createSpinnerControl, type SpinnerControl, type SpinnerControlOptions } from './spinner';
@@ -86,27 +69,8 @@ export {
   type SwipeControlOptions,
 } from './swipe';
 
-// ── Keyboard / interaction ────────────────────────────────────────────────────
-export {
-  createInteraction,
-  dispatchKeyboardAction,
-  type Interaction,
-  type InteractionOptions,
-  type KeyboardDispatchOptions,
-  type PressTrigger,
-} from './keyboard';
-
-// ── Trigger parser ────────────────────────────────────────────────────────────
-export { parseStringTriggers } from './parse';
-
-// ── Focus trap ────────────────────────────────────────────────────────────────
-export { createFocusTrap, type FocusTrap, type FocusTrapOptions } from './focus-trap';
-
 // ── Live-region announcer ─────────────────────────────────────────────────────
 export { announce, type AnnouncePoliteness, type AnnounceOptions } from './announcer';
-
-// ── Focus management ─────────────────────────────────────────────────────────
-export { createFocusManager, type FocusManager, type FocusManagerOptions } from './focus';
 
 // ── Date picker ──────────────────────────────────────────────────────────────
 export {
@@ -142,8 +106,21 @@ export {
   type SortState,
 } from './datagrid';
 
-// ── Typeahead ─────────────────────────────────────────────────────────────────
-export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
+// ── Internal primitives (used by sigil components; not part of the public API contract) ──
 
-// ── Utilities ─────────────────────────────────────────────────────────────────
-export { syncedSignal } from './utils';
+export { createDropdownPositioner, type DropdownPositionerOptions, type OverlayPositioner } from './positioner';
+export {
+  createInteraction,
+  dispatchKeyboardAction,
+  type Interaction,
+  type InteractionOptions,
+  type KeyboardDispatchOptions,
+  type PressTrigger,
+} from './keyboard';
+export { createListControl, type ListControl, type ListNavigationOptions } from './nav';
+export { createOverlayControl, type OverlayControlOptions } from './overlay';
+export { createSelectionControl, type SelectionControl, type SelectionControlOptions } from './selection-control';
+export { createSortControl, type SortControl, type SortControlOptions } from './sort-control';
+export { createTypeahead, type Typeahead, type TypeaheadOptions } from './typeahead';
+export { parseStringTriggers } from './parse';
+export { syncedSignal } from './signals';

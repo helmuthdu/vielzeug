@@ -5,9 +5,12 @@ import type {
   EffectAsyncOptions,
   EffectCallback,
   EffectOptions,
+  EqualityFn,
+  ReadonlySignal,
   Scope,
   Subscriber,
   Subscription,
+  WatchOptions,
 } from './types';
 
 import { issue } from './_warn';
@@ -25,13 +28,10 @@ import { getTracking, withTracking } from './tracking';
  * The scheduler identity is stable for the lifetime of the effect.
  * Never replace `subscriber` with a new function after creation — doing so would break
  * the removeEffectSub calls that rely on reference identity.
- *
- * F4: Supports custom scheduler function in addition to built-in string variants.
  */
 const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): Subscriber => {
   if (scheduler === 'sync' || scheduler === undefined) return run;
 
-  // F4: custom scheduler function — caller is responsible for calling run exactly once.
   if (typeof scheduler === 'function') {
     const customScheduler = scheduler;
     let scheduled = false;
@@ -47,32 +47,38 @@ const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): 
     };
   }
 
+  // 'microtask'
   let scheduled = false;
 
   return (): void => {
     if (scheduled) return;
 
     scheduled = true;
-
-    const execute = (): void => {
+    queueMicrotask(() => {
       scheduled = false;
       run();
-    };
-
-    if (scheduler === 'microtask') {
-      queueMicrotask(execute);
-    } else {
-      // raf — fall back to queueMicrotask in SSR environments without requestAnimationFrame
-      if (typeof requestAnimationFrame !== 'undefined') {
-        requestAnimationFrame(execute);
-      } else {
-        queueMicrotask(execute);
-      }
-    }
+    });
   };
 };
 
-export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => {
+/**
+ * Creates a reactive side-effect.
+ * Runs immediately, re-runs whenever tracked dependencies change.
+ * The callback may return a cleanup function that runs before the next re-run and on dispose.
+ *
+ * @example
+ * ```ts
+ * const stop = effect(() => {
+ *   document.title = count.value.toString();
+ *   return () => { document.title = ''; }; // optional cleanup
+ * });
+ *
+ * stop.dispose(); // or: using stop = effect(...)
+ * ```
+ */
+export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => effectCore(fn, options);
+
+const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription => {
   const scheduler = options?.scheduler ?? 'sync';
   const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
   const effectName = options?.name;
@@ -163,13 +169,23 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): Subscriptio
   // Always run synchronously on creation to establish initial tracking.
   run();
 
-  return new SubscriptionImpl(() => {
+  const sub = new SubscriptionImpl(() => {
     if (isDisposed) return;
 
     isDisposed = true;
     teardown();
     getDevToolsHook()?.dispose?.({ kind: 'effect', name: effectName });
   });
+
+  // Auto-register disposal into the enclosing scope context (withScope / scope.run).
+  // This allows withScope(() => { effect(...) }) to own effect lifetimes automatically.
+  const ctx = getTracking();
+
+  if (ctx !== null && ctx.kind === 'scope') {
+    ctx.cleanups.push(() => sub.dispose());
+  }
+
+  return sub;
 };
 
 /**
@@ -202,33 +218,36 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
       issue('unhandled effectAsync error:', err);
     });
 
-  const syncStop = effect(() => {
-    controller?.abort();
-    asyncCleanup?.();
-    asyncCleanup = null;
-
-    controller = new AbortController();
-
-    const { signal } = controller;
-
-    currentRunPromise = (async () => {
-      try {
-        const returned = await fn(signal);
-
-        if (!signal.aborted && typeof returned === 'function') {
-          asyncCleanup = returned;
-        }
-      } catch (err) {
-        if (!signal.aborted) onError(err);
-      }
-    })();
-
-    return () => {
+  const syncStop = effect(
+    () => {
       controller?.abort();
       asyncCleanup?.();
       asyncCleanup = null;
-    };
-  });
+
+      controller = new AbortController();
+
+      const { signal } = controller;
+
+      currentRunPromise = (async () => {
+        try {
+          const returned = await fn(signal);
+
+          if (!signal.aborted && typeof returned === 'function') {
+            asyncCleanup = returned;
+          }
+        } catch (err) {
+          if (!signal.aborted) onError(err);
+        }
+      })();
+
+      return () => {
+        controller?.abort();
+        asyncCleanup?.();
+        asyncCleanup = null;
+      };
+    },
+    { name: options?.name },
+  );
 
   return new AsyncSubscriptionImpl(syncStop, async () => {
     const runningPromise = currentRunPromise;
@@ -285,7 +304,14 @@ export const scope = (setup?: () => void): Scope => {
     cleanups.length = 0;
   };
 
-  const api: Scope = { dispose, run, [Symbol.dispose]: dispose };
+  const api: Scope = {
+    dispose,
+    get disposed() {
+      return disposed;
+    },
+    run,
+    [Symbol.dispose]: dispose,
+  };
 
   if (setup) run(setup);
 
@@ -319,4 +345,96 @@ export const asyncScope = async (setup: () => Promise<void>): Promise<Scope> => 
   await s.run(setup);
 
   return s;
+};
+
+/**
+ * Creates a reactive scope that automatically captures all `effect()` and `computed()`
+ * calls made inside `setup`. Disposing the scope disposes all captured children.
+ *
+ * This is the preferred pattern over `scope()` + manual `onCleanup()` registration for
+ * the common case where the only cleanup needed is disposing reactive children.
+ *
+ * @example
+ * ```ts
+ * const s = withScope(() => {
+ *   effect(() => { document.title = count.value.toString(); }); // auto-captured
+ *   const doubled = computed(() => count.value * 2);            // auto-captured
+ * });
+ *
+ * s.dispose(); // disposes both the effect and computed automatically
+ * // or: using s = withScope(() => { ... });
+ * ```
+ */
+export const withScope = (setup: () => void): Scope => scope(setup);
+
+// ── watch() ───────────────────────────────────────────────────────────────────
+
+/**
+ * Observes a reactive source and calls `callback` whenever its value changes.
+ * Does NOT invoke `callback` on creation (unless `immediate: true` is passed).
+ * Receives the new value and the previous value on each change.
+ *
+ * @example
+ * ```ts
+ * const stop = watch(count, (next, prev) => {
+ *   console.log(`count changed: ${prev} → ${next}`);
+ * });
+ *
+ * stop.dispose();
+ * ```
+ */
+export const watch = <T>(
+  source: ReadonlySignal<T> | (() => T),
+  callback: (value: T, prev: T | undefined) => CleanupFn | void,
+  options?: WatchOptions<T>,
+): Subscription => {
+  const read: () => T = typeof source === 'function' ? source : () => source.value;
+  const equals: EqualityFn<T> = options?.equals ?? Object.is;
+  const immediate = options?.immediate ?? false;
+  const name = options?.name;
+
+  let prev: T | undefined = undefined;
+  let firstRun = true;
+  let pendingCleanup: CleanupFn | undefined;
+
+  const invokeCallback = (next: T, p: T | undefined): void => {
+    pendingCleanup?.();
+    pendingCleanup = undefined;
+
+    const returned = withTracking(null, () => callback(next, p));
+
+    if (returned !== undefined && typeof returned !== 'function') {
+      throw new StateError(
+        'INVALID_CLEANUP',
+        `watch() callback returned ${typeof returned} — expected a cleanup function or void.`,
+      );
+    }
+
+    if (typeof returned === 'function') pendingCleanup = returned;
+  };
+
+  return effectCore(
+    (): CleanupFn => {
+      const next = read();
+
+      if (firstRun) {
+        firstRun = false;
+
+        if (immediate) invokeCallback(next, undefined);
+
+        prev = next;
+      } else {
+        if (!equals(prev as T, next)) {
+          invokeCallback(next, prev);
+          prev = next;
+        }
+      }
+
+      return () => {
+        pendingCleanup?.();
+        pendingCleanup = undefined;
+      };
+    },
+    { name },
+  );
 };

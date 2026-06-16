@@ -9,15 +9,15 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
   }
 
   constructor() {
-    super((value) =>
+    super((value, ctx) =>
       value instanceof Date && !Number.isNaN(value.getTime())
         ? null
-        : fail(ErrorCode.invalid_date, _messages().date.type()),
+        : fail(ErrorCode.invalid_date, (ctx?.messages ?? _messages()).date.type()),
     );
   }
 
   min(date: Date, message: MessageFn<{ min: Date; value: Date }> = (ctx) => _messages().date.min(ctx)): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Date;
 
       return typed >= date
@@ -27,7 +27,7 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
   }
 
   max(date: Date, message: MessageFn<{ max: Date; value: Date }> = (ctx) => _messages().date.max(ctx)): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Date;
 
       return typed <= date
@@ -36,11 +36,20 @@ export class DateSchema<Input = Date> extends Schema<Date, Input> {
     });
   }
 
+  /**
+   * Returns a new schema that coerces string or number input to a `Date` before validation.
+   *
+   * Equivalent to `s.coerce.date()`.
+   */
+  coerce(): DateSchema<unknown> {
+    return DateSchema.coerce();
+  }
+
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'date' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.date) return visitor.date(this);
 
     return super._walk(visitor);

@@ -1,4 +1,4 @@
-import { createForm } from '../../index';
+import { createForm, ValidationError } from '../../index';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -17,14 +17,17 @@ function deferred<T>(): {
 }
 
 describe('form validation', () => {
-  test('validateField returns and stores the field error', async () => {
+  test('validate(name) returns a ValidateResult scoped to that field', async () => {
     const form = createForm({
       validators: { email: (v: unknown) => (!String(v).includes('@') ? 'Invalid email' : undefined) },
     });
 
     form.set('email', 'not-an-email');
 
-    expect(await form.validateField('email')).toBe('Invalid email');
+    const result = await form.validate('email');
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual({ email: 'Invalid email' });
     expect(form.field('email').error).toBe('Invalid email');
   });
 
@@ -41,7 +44,7 @@ describe('form validation', () => {
     expect(result.errors).toEqual({ confirm: 'Must match', password: 'Required' });
   });
 
-  test('validateFields with touchedFields only validates touched fields', async () => {
+  test('validate(fields[]) with touchedFields only validates touched fields', async () => {
     const form = createForm({
       validators: {
         email: (v: unknown) => (!v ? 'Email required' : undefined),
@@ -51,12 +54,12 @@ describe('form validation', () => {
 
     form.touch('name');
 
-    const result = await form.validateFields([...form.state.touchedFields]);
+    const result = await form.validate([...form.state.touchedFields]);
 
     expect(result.errors).toEqual({ name: 'Name required' });
   });
 
-  test('validateFields validates only explicitly requested fields', async () => {
+  test('validate(fields[]) validates only explicitly requested fields', async () => {
     const form = createForm({
       validators: {
         age: (v: unknown) => (!v ? 'Age required' : undefined),
@@ -65,12 +68,12 @@ describe('form validation', () => {
       },
     });
 
-    const result = await form.validateFields(['email', 'name']);
+    const result = await form.validate(['email', 'name']);
 
     expect(result.errors).toEqual({ email: 'Email required', name: 'Name required' });
   });
 
-  test('validateFields evaluates only requested field validators, not the form validator', async () => {
+  test('validate(fields[]) evaluates only requested field validators, not the form validator', async () => {
     const form = createForm({
       defaultValues: { age: 10, consent: false, name: '' },
       validator: (values) => (!values.consent ? { consent: 'Consent required' } : undefined),
@@ -80,13 +83,13 @@ describe('form validation', () => {
       },
     });
 
-    const result = await form.validateFields(['age']);
+    const result = await form.validate(['age']);
 
     expect(result.errors).toEqual({ age: 'Must be 18+' });
     expect(result.errors.consent).toBeUndefined();
   });
 
-  test('validateFields with touchedFields evaluates only touched field validators, not the form validator', async () => {
+  test('validate(fields[]) with touchedFields evaluates only touched field validators, not the form validator', async () => {
     const form = createForm({
       defaultValues: { confirm: 'x', password: '' },
       validator: (values) => (values.password !== values.confirm ? { confirm: 'Must match' } : undefined),
@@ -95,13 +98,13 @@ describe('form validation', () => {
 
     form.touch('password');
 
-    const result = await form.validateFields([...form.state.touchedFields]);
+    const result = await form.validate([...form.state.touchedFields]);
 
     expect(result.errors).toEqual({ password: 'Required' });
     expect(result.errors.confirm).toBeUndefined();
   });
 
-  test('validateField evaluates only that field validator, not the form validator', async () => {
+  test('validate(name) evaluates only that field validator, not the form validator', async () => {
     let formValidatorCalls = 0;
     const form = createForm({
       defaultValues: { confirm: 'x', password: '' },
@@ -113,7 +116,7 @@ describe('form validation', () => {
       validators: { password: (value: unknown) => (!value ? 'Required' : undefined) },
     });
 
-    await form.validateField('password');
+    await form.validate('password');
 
     expect(form.field('password').error).toBe('Required');
     expect(formValidatorCalls).toBe(0);
@@ -122,23 +125,26 @@ describe('form validation', () => {
   test('setValidator can dynamically add and remove field validators', async () => {
     const form = createForm({ defaultValues: { name: '' } });
 
-    form.setValidator('name', (v: unknown) => (!v ? 'Required' : undefined));
-    await form.validateField('name');
+    form.fields.setValidator('name', (v: unknown) => (!v ? 'Required' : undefined));
+    await form.validate('name');
     expect(form.field('name').error).toBe('Required');
 
-    form.setValidator('name', undefined);
+    form.fields.setValidator('name', undefined);
     expect(form.field('name').error).toBeUndefined();
 
-    await form.validateField('name');
+    await form.validate('name');
     expect(form.field('name').error).toBeUndefined();
   });
 
-  test('validateField clears stale field errors when no validator is registered', async () => {
+  test('validate(name) clears stale field errors when no validator is registered', async () => {
     const form = createForm({ defaultValues: { name: '' } });
 
     form.setError('name', 'Stale');
 
-    expect(await form.validateField('name')).toBeUndefined();
+    const result = await form.validate('name');
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual({});
     expect(form.field('name').error).toBeUndefined();
   });
 
@@ -148,7 +154,7 @@ describe('form validation', () => {
     await expect(form.validate()).resolves.toEqual({ errors: {}, valid: true });
   });
 
-  test('form-level errors from validate persist through subsequent validateField calls', async () => {
+  test('form-level errors from validate persist through subsequent validate(name) calls', async () => {
     const form = createForm({
       defaultValues: { confirm: 'x', password: '' },
       validator: (values) => (values.password !== values.confirm ? { _form: 'Passwords must match' } : undefined),
@@ -159,7 +165,7 @@ describe('form validation', () => {
     expect(form.state.errors._form).toBe('Passwords must match');
 
     form.set('password', 'abc');
-    await form.validateField('password');
+    await form.validate('password');
 
     expect(form.field('password').error).toBeUndefined();
     expect(form.state.errors._form).toBe('Passwords must match');
@@ -200,13 +206,13 @@ describe('form validation', () => {
 
     form.set('name', 'bad');
 
-    const first = form.validateField('name');
+    const first = form.validate('name');
 
     await firstStarted.promise;
 
     form.set('name', 'ok');
 
-    const second = form.validateField('name');
+    const second = form.validate('name');
 
     releaseSecond.resolve(undefined);
 
@@ -233,7 +239,7 @@ describe('form validation', () => {
       }
     });
 
-    await form.validateField('slow');
+    await form.validate('slow');
 
     expect(sawValidating).toBe(true);
     expect(sawValidatingField).toBe(true);
@@ -371,6 +377,81 @@ describe('form submit', () => {
   });
 });
 
+describe('hasError on FieldState', () => {
+  test('hasError is false when there is no error', () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    expect(form.field('name').hasError).toBe(false);
+  });
+
+  test('hasError is true when there is an error', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+
+    form.setError('name', 'Required');
+
+    expect(form.field('name').hasError).toBe(true);
+    expect(form.field('name').error).toBe('Required');
+  });
+
+  test('hasError reverts to false after error is cleared', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+
+    form.setError('name', 'Required');
+    expect(form.field('name').hasError).toBe(true);
+
+    form.clearError('name');
+    expect(form.field('name').hasError).toBe(false);
+  });
+});
+
+describe('submitOrThrow', () => {
+  test('resolves with handler return value on success', async () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    const result = await form.submitOrThrow(() => 'ok');
+
+    expect(result).toBe('ok');
+  });
+
+  test('throws ValidationError when validation fails', async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    await expect(form.submitOrThrow(async () => 'never')).rejects.toThrow(ValidationError);
+  });
+
+  test('thrown ValidationError contains errors map', async () => {
+    const form = createForm({
+      defaultValues: { name: '' },
+      validators: { name: (v: unknown) => (!v ? 'Name required' : undefined) },
+    });
+
+    let caught: unknown;
+
+    try {
+      await form.submitOrThrow(async () => undefined);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ValidationError);
+    expect((caught as ValidationError).errors).toEqual({ name: 'Name required' });
+  });
+
+  test('re-throws handler errors as-is (not wrapped in ValidationError)', async () => {
+    const form = createForm({ defaultValues: { name: 'ok' } });
+    const boom = new Error('handler exploded');
+
+    await expect(
+      form.submitOrThrow(async () => {
+        throw boom;
+      }),
+    ).rejects.toBe(boom);
+  });
+});
+
 describe('validateStream', () => {
   test('yields one result per field without writing to fieldErrors', async () => {
     const form = createForm({
@@ -429,5 +510,61 @@ describe('validateStream', () => {
         // consume
       }
     }).rejects.toThrow('boom');
+  });
+
+  test('error is propagated even when it arrives before the consumer calls next()', async () => {
+    const boom = new Error('queued-boom');
+    const form = createForm({
+      validators: {
+        fast: async () => {
+          throw boom;
+        },
+      },
+    });
+
+    const iter = form.validateStream();
+
+    await new Promise((r) => setTimeout(r, 50));
+
+    await expect(iter.next()).rejects.toThrow('queued-boom');
+  });
+
+  test('stream terminates cleanly when the form is disposed mid-iteration', async () => {
+    let resolveValidator!: (v: string | undefined) => void;
+    const form = createForm({
+      validators: {
+        slow: () => new Promise<string | undefined>((r) => (resolveValidator = r)),
+      },
+    });
+
+    const iter = form.validateStream();
+    const nextPromise = iter.next();
+
+    form.dispose();
+
+    resolveValidator(undefined);
+
+    const result = await nextPromise;
+
+    expect(result.done).toBe(true);
+  });
+
+  test('validateStream yields all form-level validator keys, not only _form', async () => {
+    const form = createForm({
+      defaultValues: { email: 'bad', name: '' },
+      validator: async () => ({ _form: 'Overall error', email: 'Email invalid', name: 'Name required' }),
+    });
+
+    const results: { error: string | undefined; field: string }[] = [];
+
+    for await (const r of form.validateStream()) {
+      results.push(r);
+    }
+
+    const byField = Object.fromEntries(results.map((r) => [r.field, r.error]));
+
+    expect(byField['_form']).toBe('Overall error');
+    expect(byField['email']).toBe('Email invalid');
+    expect(byField['name']).toBe('Name required');
   });
 });

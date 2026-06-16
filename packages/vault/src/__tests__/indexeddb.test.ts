@@ -725,6 +725,51 @@ describe('Secondary indexes (F5)', () => {
   });
 });
 
+/* -------------------- pruneAllExpired count cache (C5) -------------------- */
+
+describe('pruneAllExpired count cache invalidation', () => {
+  test('count() returns correct value after pruneExpired() flushes IDB records', async () => {
+    const db2 = createIndexedDB({ name: 'IDB-prune-cache', schema: userSchema, version: 1 });
+
+    try {
+      await db2.put('users', { id: 1, name: 'Alice' }, ttl.ms(3));
+      await db2.put('users', { id: 2, name: 'Bob' }); // permanent
+
+      expect(await db2.count('users')).toBe(2); // prime the cache
+
+      await delay(10); // Alice expires
+
+      await db2.pruneExpired(); // uses IDB pruneAllExpired path
+
+      // Cache must be invalidated — live count should now be 1
+      expect(await db2.count('users')).toBe(1);
+    } finally {
+      db2.dispose();
+    }
+  });
+});
+
+/* -------------------- buildIdbBatchCore.count ad-hoc TTL (C6) -------------------- */
+
+describe('IDB batch count() with ad-hoc TTL', () => {
+  test('batch count() excludes ad-hoc TTL-expired records on non-defaultTtl table', async () => {
+    const db2 = createIndexedDB({ name: 'IDB-batch-count-ttl', schema: userSchema, version: 1 });
+
+    try {
+      await db2.put('users', { id: 1, name: 'Ephemeral' }, ttl.ms(1));
+      await db2.put('users', { id: 2, name: 'Permanent' });
+
+      await delay(5); // id:1 expires
+
+      const count = await db2.batch(['users'], async (tx) => tx.count('users'));
+
+      expect(count).toBe(1); // expired record must not be counted
+    } finally {
+      db2.dispose();
+    }
+  });
+});
+
 /* -------------------- defineMigration -------------------- */
 
 describe('defineMigration', () => {

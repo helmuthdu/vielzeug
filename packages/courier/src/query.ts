@@ -3,8 +3,8 @@ import { isAbortError, retry } from '@vielzeug/arsenal';
 import type { RetryOptions } from './retry';
 import type { AsyncStatus, QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
-import { NO_RETRY, resolveRetryDelay } from './retry';
-import { stableStringify } from './serialize';
+import { DEFAULT_TIMES, resolveRetryDelay } from './retry';
+import { hash } from './serialize';
 
 const DEFAULT_GC = 5 * 60_000;
 const IDLE_STATE: QueryState<unknown> = Object.freeze({
@@ -22,6 +22,10 @@ export type QueryFnContext = {
   signal: AbortSignal;
 };
 
+/**
+ * Options for `qc.fetch()`. Always throws on error and returns `T`.
+ * Use `observe()` for reactive subscriptions with select/placeholder support.
+ */
 export type QueryOptions<T> = {
   /** When `false` the fetch is skipped and the entry stays in its current state. Defaults to `true`. */
   enabled?: boolean;
@@ -33,8 +37,24 @@ export type QueryOptions<T> = {
   staleTime?: number;
 } & RetryOptions;
 
-export type PrefetchOptions<T> = QueryOptions<T> & {
-  throwOnError?: boolean;
+/**
+ * Options for `qc.observe()`. Extends `QueryOptions` with reactive-only fields.
+ * Pass `fetch: false` for a read-through store that does not trigger a network call.
+ */
+export type ObserveOptions<T, S = T> = QueryOptions<T> & {
+  /**
+   * When `false`, no background fetch is triggered. The store reflects whatever is
+   * already in the cache. Useful when another path is responsible for populating the entry.
+   * Defaults to `true`.
+   */
+  fetch?: boolean;
+  /**
+   * Temporary value shown while a fetch is in-flight and no cached data exists.
+   * Does not affect cache state — only the value returned by `store.peek()`.
+   */
+  placeholderData?: S | (() => S | undefined);
+  /** Transform the cached data before it is delivered to store subscribers. */
+  select?: (data: T | undefined) => S | undefined;
 };
 
 export type QueryClientOptions = {
@@ -43,7 +63,7 @@ export type QueryClientOptions = {
 } & RetryOptions;
 
 type QueryObserver<T, S> = {
-  listener: (state: QueryState<S>) => void;
+  listener: () => void;
   placeholderData?: S | (() => S | undefined);
   previous?: QueryState<S>;
   select?: (data: T | undefined) => S | undefined;
@@ -90,11 +110,12 @@ function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefine
 export function createQuery(opts?: QueryClientOptions) {
   const staleTimeDefault = opts?.staleTime ?? 0;
   const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const timesDefault = opts?.times ?? NO_RETRY;
+  const timesDefault = opts?.times ?? DEFAULT_TIMES;
   const delayDefault = opts?.delay;
   const shouldRetryDefault = opts?.shouldRetry;
 
   let disposed = false;
+  const disposeController = new AbortController();
 
   const entries = new Map<string, CacheEntry>();
   const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -102,12 +123,12 @@ export function createQuery(opts?: QueryClientOptions) {
   function toBaseState<T>(entry: CacheEntry<T>): QueryState<T> {
     if (entry.status === 'pending') {
       return {
-        data: entry.data,
+        data: undefined,
         error: null,
         isFetching: true,
         status: 'pending',
-        updatedAt: entry.updatedAt,
-      };
+        updatedAt: undefined,
+      } as QueryState<T>;
     }
 
     if (entry.status === 'success') {
@@ -135,13 +156,16 @@ export function createQuery(opts?: QueryClientOptions) {
 
   function toObserverState<T, S>(entry: CacheEntry<T>, observer: QueryObserver<T, S>): QueryState<S> {
     const base = toBaseState(entry);
-    const selected = observer.select ? observer.select(base.data as T | undefined) : (base.data as S | undefined);
-    const data =
-      selected !== undefined || base.status !== 'pending'
-        ? selected
-        : resolveValue(observer.placeholderData as S | (() => S | undefined) | undefined);
 
-    return { ...base, data } as QueryState<S>;
+    if (base.status === 'pending') {
+      const placeholder = resolveValue(observer.placeholderData as S | (() => S | undefined) | undefined);
+
+      return { ...base, data: placeholder } as QueryState<S>;
+    }
+
+    const selected = observer.select ? observer.select(base.data as T | undefined) : (base.data as S | undefined);
+
+    return { ...base, data: selected } as QueryState<S>;
   }
 
   function notify<T>(entry: CacheEntry<T>) {
@@ -169,7 +193,7 @@ export function createQuery(opts?: QueryClientOptions) {
       }
 
       typed.previous = next;
-      typed.listener(next);
+      typed.listener();
     }
   }
 
@@ -212,24 +236,24 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function ensureEntry<T>(key: QueryKey): CacheEntry<T> {
-    const hash = stableStringify(key);
-    let entry = entries.get(hash) as CacheEntry<T> | undefined;
+    const entryHash = hash(key);
+    let entry = entries.get(entryHash) as CacheEntry<T> | undefined;
 
     if (!entry) {
       entry = {
         data: undefined,
         error: null,
-        hash,
+        hash: entryHash,
         inflight: null,
         isFetching: false,
         key,
         lastConfig: undefined,
         observers: new Set(),
-        segmentHashes: key.map((k) => stableStringify(k)),
+        segmentHashes: key.map((k) => hash(k)),
         status: 'idle',
         updatedAt: undefined,
       };
-      entries.set(hash, entry as CacheEntry<unknown>);
+      entries.set(entryHash, entry as CacheEntry<unknown>);
     }
 
     return entry;
@@ -348,7 +372,7 @@ export function createQuery(opts?: QueryClientOptions) {
     return promise;
   }
 
-  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T | undefined> {
+  async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
     if (disposed) throw new Error('[courier] QueryClient has been disposed');
 
     const {
@@ -366,7 +390,7 @@ export function createQuery(opts?: QueryClientOptions) {
     const entry = ensureEntry<T>(key);
     const config: FetchConfig<T> = { delay, fn, gcTime, shouldRetry, staleTime, times };
 
-    if (initialData !== undefined && entry.data === undefined) {
+    if (initialData !== undefined && (entry.status === 'idle' || entry.data === undefined)) {
       const initVal = resolveValue(initialData);
 
       if (initVal !== undefined) {
@@ -378,7 +402,7 @@ export function createQuery(opts?: QueryClientOptions) {
     }
 
     if (!enabled) {
-      return entry.data as T | undefined;
+      return entry.data as T;
     }
 
     if (
@@ -390,7 +414,7 @@ export function createQuery(opts?: QueryClientOptions) {
       // Store config for future background revalidation even on a cache hit.
       entry.lastConfig = config;
 
-      return entry.data as T | undefined;
+      return entry.data as T;
     }
 
     // Keep config for background revalidation even when joining an in-flight
@@ -436,7 +460,7 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function invalidate(key: QueryKey) {
-    const prefixHash = key.map((k) => stableStringify(k));
+    const prefixHash = key.map((k) => hash(k));
 
     for (const entry of [...entries.values()]) {
       if (isKeyOrPrefix(entry, prefixHash)) {
@@ -480,51 +504,20 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function get<T>(key: QueryKey): T | undefined {
-    return (entries.get(stableStringify(key))?.data as T | undefined) ?? undefined;
+    const entry = entries.get(hash(key));
+
+    return entry ? (entry.data as T | undefined) : undefined;
   }
 
   function getState<T>(key: QueryKey): QueryState<T> | null {
-    const entry = entries.get(stableStringify(key)) as CacheEntry<T> | undefined;
+    const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
 
     if (!entry) return null;
 
     return toBaseState(entry);
   }
 
-  /**
-   * Registers a listener for state changes on `key`. The listener is **not** called
-   * immediately on subscription — it fires only when the state next changes.
-   * Use `getState(key)` or `watch(key).peek()` to read the current value synchronously
-   * before setting up a subscription.
-   */
-  function subscribe<T = unknown, S = T>(
-    key: QueryKey,
-    listener: (state: QueryState<S>) => void,
-    opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
-  ): Unsubscribe {
-    const entry = ensureEntry<T>(key);
-    const observer: QueryObserver<T, S> = {
-      listener,
-      placeholderData: opts?.placeholderData,
-      select: opts?.select,
-    };
-
-    cancelGc(entry.hash);
-
-    observer.previous = toObserverState(entry, observer);
-
-    entry.observers.add(observer as QueryObserver<T, unknown>);
-
-    return () => {
-      entry.observers.delete(observer as QueryObserver<T, unknown>);
-
-      if (entry.observers.size === 0) {
-        scheduleGc(entry, entry.lastConfig?.gcTime ?? gcTimeDefault);
-      }
-    };
-  }
-
-  function watch<T = unknown, S = T>(
+  function watchInternal<T = unknown, S = T>(
     key: QueryKey,
     opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
   ): SyncStore<QueryState<S>> {
@@ -534,7 +527,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
     return {
       peek(): QueryState<S> {
-        const entry = entries.get(stableStringify(key)) as CacheEntry<T> | undefined;
+        const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
 
         if (!entry) return IDLE_STATE as QueryState<S>;
 
@@ -551,7 +544,7 @@ export function createQuery(opts?: QueryClientOptions) {
         // This satisfies the useSyncExternalStore contract (and equivalents in Vue/Svelte).
         const observer: QueryObserver<T, S> = {
           ...opts,
-          listener: () => onStoreChange(),
+          listener: onStoreChange,
           previous: toObserverState(entry, peekObserver),
         };
 
@@ -569,21 +562,39 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function cancel(key: QueryKey) {
-    const entry = entries.get(stableStringify(key));
+    const entry = entries.get(hash(key));
 
     if (!entry?.inflight) return;
 
     entry.inflight.controller.abort();
   }
 
-  async function prefetchQuery<T>(options: PrefetchOptions<T>): Promise<void> {
-    const { throwOnError = false, ...queryOptions } = options;
+  async function fetchMany<T = unknown>(queries: QueryOptions<T>[]): Promise<T[]> {
+    return Promise.all(queries.map((q) => fetchQuery(q)));
+  }
 
-    try {
-      await fetchQuery(queryOptions);
-    } catch (error) {
-      if (throwOnError) throw error;
+  /**
+   * Returns a `SyncStore` for `key` and optionally triggers a background fetch.
+   * This is the primary single-call pattern for components: subscribe to
+   * `store.subscribe`, snapshot via `store.peek()`, and let the fetch populate
+   * the cache automatically.
+   *
+   * Pass `fetch: false` for a pure read-through store that does not trigger a
+   * network call — useful when another path is responsible for populating the entry.
+   *
+   * Errors surface via `store.peek().status === 'error'`, not via Promise rejection.
+   */
+  function observe<T = unknown, S = T>(options: ObserveOptions<T, S>): SyncStore<QueryState<S>> {
+    const { fetch: shouldFetch = true, placeholderData, select, ...fetchOpts } = options;
+
+    const store = watchInternal<T, S>(options.key, { placeholderData, select });
+
+    if (shouldFetch) {
+      // Trigger a fetch without surfacing errors — the store's status field carries them.
+      fetchQuery({ ...fetchOpts }).catch(() => {});
     }
+
+    return store;
   }
 
   function isStaleAndRevalidatable(entry: CacheEntry): boolean {
@@ -620,8 +631,16 @@ export function createQuery(opts?: QueryClientOptions) {
       }
     },
     clear: clearCache,
+    /** `AbortSignal` aborted when the query client is disposed. Use to tie external lifecycles to this client. */
+    get disposalSignal() {
+      return disposeController.signal;
+    },
+
     dispose(): void {
+      if (disposed) return;
+
       disposed = true;
+      disposeController.abort();
 
       for (const [, entry] of entries) {
         // Clear observers first so in-flight rollbacks triggered by abort cannot
@@ -641,6 +660,7 @@ export function createQuery(opts?: QueryClientOptions) {
       return disposed;
     },
     fetch: fetchQuery,
+    fetchMany,
     get,
     getState,
     invalidate,
@@ -648,25 +668,14 @@ export function createQuery(opts?: QueryClientOptions) {
     keys(): QueryKey[] {
       return [...entries.values()].map((e) => e.key);
     },
-    prefetch: prefetchQuery,
-    refetchStale,
-    set,
-    /** Number of entries currently held in the cache. */
-    get size(): number {
-      return entries.size;
-    },
-    subscribe,
-    [Symbol.dispose](): void {
-      this.dispose();
-    },
-    watch,
+    observe,
     /**
      * Observe multiple keys as a single combined store.
      * Returns a `SyncStore<QueryState[]>` whose value updates whenever any of
-     * the watched keys change. Useful for parallel query status aggregation.
+     * the observed keys change. Useful for parallel query status aggregation.
      */
-    watchMany<T = unknown>(keys: QueryKey[]): SyncStore<QueryState<T>[]> {
-      const stores = keys.map((k) => watch<T>(k));
+    observeMany<T = unknown>(keys: QueryKey[]): SyncStore<QueryState<T>[]> {
+      const stores = keys.map((k) => watchInternal<T>(k));
 
       return {
         peek(): QueryState<T>[] {
@@ -681,6 +690,25 @@ export function createQuery(opts?: QueryClientOptions) {
           };
         },
       };
+    },
+    refetchStale,
+    set,
+    /** Number of entries currently held in the cache. */
+    get size(): number {
+      return entries.size;
+    },
+    [Symbol.dispose](): void {
+      this.dispose();
+    },
+    /**
+     * Returns a read-through `SyncStore` for a key without triggering any fetch.
+     * The store reflects whatever is currently in the cache and updates when other
+     * code (e.g. `fetch()`, `set()`, `invalidate()`) changes the entry.
+     *
+     * Use `observe({ ..., fetch: false })` for the same behaviour with `select` / `placeholderData`.
+     */
+    watchKey<T = unknown>(key: QueryKey): SyncStore<QueryState<T>> {
+      return watchInternal<T>(key);
     },
   };
 }

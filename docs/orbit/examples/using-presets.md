@@ -20,7 +20,7 @@ import { float } from '@vielzeug/orbit';
 import { tooltip } from '@vielzeug/orbit/presets';
 
 const handle = float(trigger, tooltipEl, tooltip());
-handle.cleanup(); // on teardown
+handle.dispose(); // on teardown
 ```
 
 Default: `placement: 'top'`, `offset(8)`, `flip({ padding: 6 })`, `shift({ padding: 6 })`.

@@ -6,7 +6,6 @@ An autocomplete input that combines a text field with a filterable dropdown list
 
 - <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — ArrowDown/Up, Enter, Escape, Home, End, Tab
 - <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a spinner while options are being fetched
-- <sg-icon name="zap" size="16"></sg-icon> **Virtualised Rendering** — powered by `@vielzeug/scroll` for smooth performance with large option lists
 - <sg-icon name="sparkles" size="16"></sg-icon> **Creatable** — allow users to create new options when no match is found
 - <sg-icon name="x" size="16"></sg-icon> **Clearable** — optional clear button to reset the value
 - <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
@@ -489,16 +488,16 @@ cb.addEventListener('close', (e) => {
 
 ### CSS Custom Properties
 
-| Property                  | Description                | Default                |
-| ------------------------- | -------------------------- | ---------------------- |
-| `--combobox-dropdown-bg`              | Dropdown panel background color                    | Theme-dependent       |
-| `--combobox-dropdown-border-color`    | Dropdown panel border color                        | Theme-dependent       |
-| `--combobox-option-hover-bg`          | Option background on hover                         | Theme-dependent       |
-| `--combobox-option-focus-bg`          | Option background when keyboard-focused            | Theme-dependent       |
-| `--combobox-option-selected-bg`       | Option background when selected                    | Theme-dependent       |
-| `--combobox-option-selected-focus-bg` | Option background when selected and focused        | Theme-dependent       |
-| `--input-bg`                          | Field background (passed through to `sg-input`)    | Variant-dependent     |
-| `--input-border-color`                | Field border color (passed through to `sg-input`)  | Variant-dependent     |
+| Property                              | Description                                       | Default           |
+| ------------------------------------- | ------------------------------------------------- | ----------------- |
+| `--combobox-dropdown-bg`              | Dropdown panel background color                   | Theme-dependent   |
+| `--combobox-dropdown-border-color`    | Dropdown panel border color                       | Theme-dependent   |
+| `--combobox-option-hover-bg`          | Option background on hover                        | Theme-dependent   |
+| `--combobox-option-focus-bg`          | Option background when keyboard-focused           | Theme-dependent   |
+| `--combobox-option-selected-bg`       | Option background when selected                   | Theme-dependent   |
+| `--combobox-option-selected-focus-bg` | Option background when selected and focused       | Theme-dependent   |
+| `--input-bg`                          | Field background (passed through to `sg-input`)   | Variant-dependent |
+| `--input-border-color`                | Field border color (passed through to `sg-input`) | Variant-dependent |
 
 ## Accessibility
 

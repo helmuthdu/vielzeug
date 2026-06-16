@@ -39,8 +39,11 @@ describe('pipe', () => {
     expect(pipedFn('hello')).toBe('HELLO!');
   });
 
-  it('should throw an error if no functions are provided', () => {
-    expect(() => pipe()).toThrow('pipe requires at least one function');
+  it('pipe() with no args returns an identity function', () => {
+    const id = pipe();
+
+    expect(id(42)).toBe(42);
+    expect(id('hello')).toBe('hello');
   });
 
   it('should pass the initial value through the pipeline', () => {

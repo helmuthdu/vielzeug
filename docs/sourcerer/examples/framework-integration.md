@@ -146,7 +146,7 @@ onUnmounted(stop);
 
 ### Pitfalls
 
-- For remote sources, `refresh()` must be called explicitly after mount — the source does not auto-fetch on creation.
+- Remote sources auto-fetch on creation by default (`autoFetch: true`). If you subscribe in a lifecycle hook that runs after creation, the first fetch may already be in-flight. Call `ready()` to wait for it, or set `autoFetch: false` and trigger `refresh()` explicitly from the mount hook.
 - Each component instance should create its own source (or share one via context/store); subscribing to a shared source that another component mutates can cause duplicate re-renders.
 - In React, wrap `createLocalSource`/`createRemoteSource` in `useMemo` to avoid recreating the source on every render.
 

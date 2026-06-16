@@ -25,8 +25,8 @@ describe('createBarChart', () => {
       series: [
         {
           data: [
-            { x: 'A', y: 10 },
-            { x: 'B', y: 20 },
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
           ],
           name: 'Test',
         },
@@ -39,7 +39,7 @@ describe('createBarChart', () => {
 
   it('disposes cleanly', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
     chart.dispose();
@@ -49,8 +49,8 @@ describe('createBarChart', () => {
   it('renders multiple series', () => {
     const chart = createBarChart(container, {
       series: [
-        { data: [{ x: 'A', y: 10 }], name: 'Series 1' },
-        { data: [{ x: 'A', y: 15 }], name: 'Series 2' },
+        { data: [{ key: 'A', value: 10 }], name: 'Series 1' },
+        { data: [{ key: 'A', value: 15 }], name: 'Series 2' },
       ],
     });
 
@@ -62,8 +62,8 @@ describe('createBarChart', () => {
     const chart = createBarChart(container, {
       legend: true,
       series: [
-        { data: [{ x: 'A', y: 10 }], name: 'Alpha' },
-        { data: [{ x: 'A', y: 20 }], name: 'Beta' },
+        { data: [{ key: 'A', value: 10 }], name: 'Alpha' },
+        { data: [{ key: 'A', value: 20 }], name: 'Beta' },
       ],
     });
 
@@ -79,7 +79,7 @@ describe('createBarChart', () => {
   it('renders legend in specified position', () => {
     const chart = createBarChart(container, {
       legend: { position: 'top' },
-      series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 'A', value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend-top')).not.toBeNull();
@@ -89,7 +89,7 @@ describe('createBarChart', () => {
   it('removes legend element on dispose', () => {
     const chart = createBarChart(container, {
       legend: true,
-      series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 'A', value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend')).not.toBeNull();
@@ -99,7 +99,7 @@ describe('createBarChart', () => {
 
   it('does not render legend when legend is omitted', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 'A', value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend')).toBeNull();
@@ -108,7 +108,7 @@ describe('createBarChart', () => {
 
   it('double dispose is a no-op', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 'A', value: 5 }], name: 'Series' }],
     });
 
     chart.dispose();
@@ -117,7 +117,7 @@ describe('createBarChart', () => {
 
   it('does not expose update() on ChartHandle', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
     expect('update' in chart).toBe(false);
@@ -126,7 +126,7 @@ describe('createBarChart', () => {
 
   it('renders tooltip inside container (not body)', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
       tooltip: true,
     });
 
@@ -136,12 +136,12 @@ describe('createBarChart', () => {
   });
 
   it('accepts reactive data via signals', () => {
-    const data = signal([{ x: 'A', y: 10 }]);
+    const data = signal([{ key: 'A', value: 10 }]);
     const chart = createBarChart(container, {
       series: [{ data, name: 'Reactive' }],
     });
 
-    data.value = [...data.value, { x: 'B', y: 20 }];
+    data.value = [...data.value, { key: 'B', value: 20 }];
     chart.dispose();
   });
 
@@ -149,7 +149,7 @@ describe('createBarChart', () => {
     const onHover = vi.fn();
     const chart = createBarChart(container, {
       onHover,
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
@@ -164,10 +164,10 @@ describe('createBarChart', () => {
 
     const chart = createBarChart(container, {
       plugins: [plugin],
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
-    expect(install).toHaveBeenCalledWith(chart.el, container);
+    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
     chart.dispose();
     expect(dispose).toHaveBeenCalledOnce();
   });
@@ -177,9 +177,9 @@ describe('createBarChart', () => {
       series: [
         {
           data: [
-            { x: 'A', y: 10 },
-            { x: 'B', y: 20 },
-            { x: 'C', y: 15 },
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
+            { key: 'C', value: 15 },
           ],
           name: 'Test',
         },
@@ -196,16 +196,16 @@ describe('createBarChart', () => {
         {
           color: '#3b82f6',
           data: [
-            { x: 'A', y: 10 },
-            { x: 'B', y: 20 },
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
           ],
           name: 'S1',
         },
         {
           color: '#10b981',
           data: [
-            { x: 'A', y: 15 },
-            { x: 'B', y: 25 },
+            { key: 'A', value: 15 },
+            { key: 'B', value: 25 },
           ],
           name: 'S2',
         },
@@ -222,8 +222,8 @@ describe('createBarChart', () => {
   it('stacked bars use full bandwidth', () => {
     const chart = createBarChart(container, {
       series: [
-        { color: '#3b82f6', data: [{ x: 'A', y: 10 }], name: 'S1' },
-        { color: '#10b981', data: [{ x: 'A', y: 20 }], name: 'S2' },
+        { color: '#3b82f6', data: [{ key: 'A', value: 10 }], name: 'S1' },
+        { color: '#10b981', data: [{ key: 'A', value: 20 }], name: 'S2' },
       ],
       variant: 'stacked',
     });
@@ -241,8 +241,8 @@ describe('createBarChart', () => {
         {
           color: '#3b82f6',
           data: [
-            { x: 'A', y: 10 },
-            { x: 'B', y: 20 },
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
           ],
           name: 'S1',
         },
@@ -263,8 +263,8 @@ describe('createBarChart', () => {
   it('renders stacked-horizontal bars', () => {
     const chart = createBarChart(container, {
       series: [
-        { data: [{ x: 'A', y: 10 }], name: 'S1' },
-        { data: [{ x: 'A', y: 20 }], name: 'S2' },
+        { data: [{ key: 'A', value: 10 }], name: 'S1' },
+        { data: [{ key: 'A', value: 20 }], name: 'S2' },
       ],
       variant: 'stacked-horizontal',
     });
@@ -288,7 +288,7 @@ describe('createBarChart', () => {
 
   it('supports Symbol.dispose', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 5 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 5 }], name: 'Test' }],
     });
 
     chart[Symbol.dispose]();
@@ -296,7 +296,7 @@ describe('createBarChart', () => {
   });
 
   it('reactive signal update re-renders bars', async () => {
-    const data = signal([{ x: 'A', y: 10 }]);
+    const data = signal([{ key: 'A', value: 10 }]);
     const chart = createBarChart(container, {
       series: [{ data, name: 'Reactive' }],
     });
@@ -304,8 +304,8 @@ describe('createBarChart', () => {
     await new Promise((r) => requestAnimationFrame(r));
     expect(chart.el.querySelectorAll('.prism-bar').length).toBe(1);
     data.value = [
-      { x: 'A', y: 10 },
-      { x: 'B', y: 20 },
+      { key: 'A', value: 10 },
+      { key: 'B', value: 20 },
     ];
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => requestAnimationFrame(r));
@@ -313,11 +313,11 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
-  it('calls onClick with point and series on click event', () => {
+  it('calls onClick with datum and series on click event', () => {
     const onClick = vi.fn();
     const chart = createBarChart(container, {
       onClick,
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
 
     chart.el.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 0, clientY: 0 }));
@@ -327,12 +327,43 @@ describe('createBarChart', () => {
 
   it('removes mouse listeners after dispose (no error on synthetic events)', () => {
     const chart = createBarChart(container, {
-      series: [{ data: [{ x: 'A', y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
     });
     const svg = chart.el;
 
     chart.dispose();
     expect(() => svg.dispatchEvent(new MouseEvent('mousemove'))).not.toThrow();
     expect(() => svg.dispatchEvent(new MouseEvent('click'))).not.toThrow();
+  });
+
+  it('calls onHover(null) on mouseleave (second)', () => {
+    const onHover = vi.fn();
+    const chart = createBarChart(container, {
+      onHover,
+      series: [{ data: [{ key: 'A', value: 10 }], name: 'Test' }],
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(onHover).toHaveBeenCalledWith(null);
+    chart.dispose();
+  });
+
+  it('passes axe accessibility audit', async () => {
+    const chart = createBarChart(container, {
+      ariaLabel: 'Bar chart test',
+      series: [
+        {
+          data: [
+            { key: 'A', value: 10 },
+            { key: 'B', value: 20 },
+          ],
+          name: 'Series',
+        },
+      ],
+    });
+    const results = await axeCheck(container);
+
+    expect(results.violations).toHaveLength(0);
+    chart.dispose();
   });
 });

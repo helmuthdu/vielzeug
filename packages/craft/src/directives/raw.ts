@@ -11,6 +11,8 @@ let _warned = false;
 
 export const setRawSanitizer = (fn: RawSanitizer | null): void => {
   _sanitizer = fn;
+
+  if (!fn) _warned = false;
 };
 
 /** @internal */

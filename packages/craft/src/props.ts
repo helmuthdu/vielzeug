@@ -1,8 +1,8 @@
 import { type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
 
 import { warn } from './_warn';
-import { CRAFTIT_ERRORS } from './errors';
-import { effect, getCurrentElement } from './runtime';
+import { CRAFT_ERRORS } from './errors';
+import { effect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
 
 export type PropsDef<T extends Record<string, unknown>> = {
@@ -19,28 +19,51 @@ export type PropInputDefs = Record<string, PropDef<unknown>>;
  */
 type PropFactory = {
   bool(defaultValue?: boolean): PropDef<boolean>;
+  /**
+   * JS-only property — never reads from or writes to an HTML attribute.
+   * Use for complex objects, arrays, callbacks, or any non-serialisable value.
+   *
+   * @example
+   * ```ts
+   * columns:   prop.data<DataGridColumn[]>([]),
+   * config:    prop.data<Options>(),
+   * getRowKey: prop.data<(row: T) => string>(),
+   * onSelect:  prop.data<(item: T) => void>(),
+   * ```
+   */
+  data<T>(): PropDef<T | undefined>;
+  data<T>(defaultValue: T): PropDef<T>;
   json<T>(defaultValue: T): PropDef<T>;
   number<T extends number = number>(): PropDef<T | undefined>;
   number<T extends number = number>(defaultValue: number): PropDef<T>;
   oneOf<T extends string | undefined, D extends T = T>(allowed: readonly NonNullable<T>[], defaultValue: D): PropDef<T>;
   string<T extends string = string>(): PropDef<T | undefined>;
   string<T extends string = string>(defaultValue: string): PropDef<T>;
-  /**
-   * JS-only property — never reads from or writes to an HTML attribute.
-   * Use for functions, complex objects, arrays, or any value that cannot be
-   * (de)serialised through an attribute.
-   *
-   * @example
-   * ```ts
-   * getRowKey: prop.value<(row: T) => string>(),
-   * columns:   prop.value<DataGridColumn[]>([]),
-   * ```
-   */
-  value<T>(): PropDef<T | undefined>;
-  value<T>(defaultValue: T): PropDef<T>;
 };
 
+/** @internal JS-only prop implementation — never reads/writes attributes. */
+function _jsOnlyProp<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
+  if (defaultValue !== undefined) {
+    return {
+      default: defaultValue,
+      parse: () => defaultValue,
+      reflect: false,
+    } as PropDef<T>;
+  }
+
+  return {
+    default: undefined,
+    parse: () => undefined,
+    reflect: false,
+  } as PropDef<T | undefined>;
+}
+
 export const prop: PropFactory = {
+  /**
+   * Boolean prop — reflects its value as a presence-only attribute (toggleAttribute).
+   * Reflection is always enabled. To suppress attribute reflection for a boolean,
+   * use `prop.data<boolean>(false)` instead.
+   */
   bool(defaultValue?: boolean): PropDef<boolean> {
     const def = defaultValue ?? false;
 
@@ -50,6 +73,22 @@ export const prop: PropFactory = {
       reflect: true,
     };
   },
+  data<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
+    return _jsOnlyProp(defaultValue);
+  },
+  /**
+   * JSON-serialisable prop — the value is stored as a JS object and parsed
+   * from the attribute via `JSON.parse`. Reflection is always disabled
+   * because serialising complex objects back to attributes on every change
+   * would be expensive and produce unreadable HTML.
+   *
+   * @example
+   * ```ts
+   * columns: prop.json<Column[]>([]),
+   * // attribute: <my-grid columns='[{"id":"name"}]'>
+   * // change not reflected back → attribute stays static after upgrade
+   * ```
+   */
   json<T>(defaultValue: T): PropDef<T> {
     return {
       default: defaultValue,
@@ -106,21 +145,6 @@ export const prop: PropFactory = {
       reflect: true,
     } as PropDef<T> | PropDef<T | undefined>;
   },
-  value<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
-    if (defaultValue !== undefined) {
-      return {
-        default: defaultValue,
-        parse: () => defaultValue,
-        reflect: false,
-      } as PropDef<T>;
-    }
-
-    return {
-      default: undefined,
-      parse: () => undefined,
-      reflect: false,
-    } as PropDef<T | undefined>;
-  },
 };
 
 /**
@@ -164,7 +188,7 @@ export function normalizePropDefinition<T>(value: unknown, propName: string): Pr
   // Validate: structured defaults with reflect:true are not allowed
   if (reflect && isStructuredValue(descriptor.default)) {
     throw new Error(
-      `Prop "${propName}": ${CRAFTIT_ERRORS.propInvalidReflect} Use prop.json() with reflect:false instead.`,
+      `Prop "${propName}": ${CRAFT_ERRORS.propInvalidReflect} Use prop.json() with reflect:false instead.`,
     );
   }
 
@@ -198,17 +222,22 @@ type PropMeta<T = unknown> = {
   signal: Signal<T>;
 };
 
-export const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
+const propRegistry = new WeakMap<HTMLElement, Map<string, PropMeta<unknown>>>();
+
+/**
+ * Look up the registered prop metadata for a given attribute name on an element.
+ * Used by the template compiler to resolve prop bindings without exposing the registry.
+ */
+export const getPropMeta = (el: HTMLElement, attrName: string): PropMeta<unknown> | undefined =>
+  propRegistry.get(el)?.get(attrName);
 
 /** @internal Runtime prop registration (called by createProps) */
-const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
-  const el = getCurrentElement();
-
+const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, propDef: PropDef<T>): Signal<T> => {
   if (!propRegistry.has(el)) propRegistry.set(el, new Map());
 
   const { default: defaultValue, parse, reflect = false } = propDef;
   const s = signal<T>(defaultValue);
-  const hasPreUpgradeProperty = Object.prototype.hasOwnProperty.call(el, propName);
+  const hasPreUpgradeProperty = Object.hasOwn(el as unknown as Record<string, unknown>, propName);
   const preUpgradeValue = hasPreUpgradeProperty ? (el as unknown as Record<string, unknown>)[propName] : undefined;
 
   const meta: PropMeta<unknown> = {
@@ -254,23 +283,35 @@ const registerProp = <T>(propName: string, attrName: string, propDef: PropDef<T>
 
 export type InferPropValue<T> = T extends PropDef<infer U> ? U : T;
 
-export type InferPropsFromDefs<T extends PropInputDefs> = {
-  [K in keyof T]: InferPropValue<T[K]>;
+/**
+ * Infer the reactive props object type from a `PropInputDefs` map.
+ * Each entry becomes a `ReadonlySignal<T>` keyed by the prop name.
+ *
+ * @example
+ * ```ts
+ * const propDefs = { count: prop.number(0), label: prop.string('hi') };
+ * type Props = InferProps<typeof propDefs>;
+ * // => { readonly count: ReadonlySignal<number>; readonly label: ReadonlySignal<string> }
+ * ```
+ */
+export type InferProps<D extends PropInputDefs> = {
+  readonly [K in keyof D]-?: ReadonlySignal<InferPropValue<D[K]>>;
 };
 
-export type InferPropsSignals<T extends Record<string, unknown>> = {
-  readonly [K in keyof T]-?: ReadonlySignal<T[K]>;
-};
+/** @internal kept for internal craft usage */
+export type InferPropsFromDefs<T extends PropInputDefs> = { [K in keyof T]: InferPropValue<T[K]> };
+/** @internal kept for internal craft usage */
+export type InferPropsSignals<T extends Record<string, unknown>> = { readonly [K in keyof T]-?: ReadonlySignal<T[K]> };
 
-export function createProps<D extends PropInputDefs>(defs: D): InferPropsSignals<InferPropsFromDefs<D>> {
+export function createProps<D extends PropInputDefs>(el: HTMLElement, defs: D): InferProps<D> {
   const props = {} as Record<string, Signal<unknown>>;
 
   for (const [name, def] of Object.entries(defs)) {
     // defs passed here are already normalized by define(); skip re-normalization.
     const attrName = toKebab(name);
 
-    props[name] = registerProp(name, attrName, def as PropDef<unknown>);
+    props[name] = registerProp(el, name, attrName, def as PropDef<unknown>);
   }
 
-  return props as unknown as InferPropsSignals<InferPropsFromDefs<D>>;
+  return props as unknown as InferProps<D>;
 }

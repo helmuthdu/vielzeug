@@ -53,4 +53,19 @@ describe('sg-tab-item', () => {
       expect(tabindex === '0' || tabindex === '-1').toBe(true);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-tab-item', { attrs: { value: 'overview' }, html: 'Overview' });
+
+      const results = await axeCheck(fixture.element, {
+        rules: {
+          'aria-required-parent': { enabled: false },
+          'aria-valid-attr-value': { enabled: false },
+        },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

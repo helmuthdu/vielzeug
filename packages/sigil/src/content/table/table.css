@@ -125,7 +125,7 @@
     position: sticky;
     top: 0;
     z-index: 2;
-    background: var(--table-sticky-header-bg, color-mix(in srgb, var(--_header-bg) 94%, transparent));
+    background: var(--table-sticky-header-bg, color-mix(in oklch, var(--_header-bg) 94%, transparent));
 
     /* border-collapse merges the bottom border into the cell below, which
        scrolls away under the sticky header. Use box-shadow instead — it

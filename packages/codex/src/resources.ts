@@ -33,7 +33,7 @@ export function registerResources(server: Server, data: BundledData): void {
           content,
           description: `${pkg.name} ${page} documentation`,
           mimeType: 'text/markdown',
-          name: `${pkg.slug}/${page}`,
+          name: `docs/${pkg.slug}/${page}`,
           uri: `vielzeug://docs/${pkg.slug}/${page}`,
         });
       }
@@ -44,7 +44,7 @@ export function registerResources(server: Server, data: BundledData): void {
         content: pkg.apiSource,
         description: `${pkg.name} public API source (src/index.ts)`,
         mimeType: 'text/x-typescript',
-        name: `${pkg.slug}/source`,
+        name: `source/${pkg.slug}`,
         uri: `vielzeug://source/${pkg.slug}`,
       });
     }

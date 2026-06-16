@@ -16,9 +16,16 @@
  * ```
  */
 
-import type { Locale, Messages, ValidationWarning } from './i18n';
+import type { Locale, Messages } from './i18n';
 
-const PLURAL_FORMS = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
+import { CLDR_FORMS, UNSAFE_KEYS } from './_constants';
+import { parsePipePlural } from './template';
+
+export type ValidationWarning = {
+  form: string;
+  key: string;
+  locale: Locale;
+};
 
 /**
  * Returns the canonical CLDR plural forms expected for the given locale.
@@ -37,21 +44,27 @@ function getExpectedPluralForms(locale: Locale): Set<string> {
   }
 }
 
-const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
 function findPluralBranches(messages: Messages, prefix = ''): Array<{ key: string; obj: Messages }> {
   const result: Array<{ key: string; obj: Messages }> = [];
 
   for (const [k, v] of Object.entries(messages)) {
     if (UNSAFE_KEYS.has(k)) continue;
 
-    if (typeof v === 'string') continue;
+    const fullKey = prefix ? `${prefix}.${k}` : k;
+
+    if (typeof v === 'string') {
+      // Expand pipe-plural shorthand so it can be validated like a nested plural branch.
+      const expanded = parsePipePlural(v);
+
+      if (expanded) result.push({ key: fullKey, obj: expanded });
+
+      continue;
+    }
 
     const obj = v as Messages;
-    const fullKey = prefix ? `${prefix}.${k}` : k;
     const childKeys = Object.keys(obj);
 
-    if (childKeys.some((ck) => PLURAL_FORMS.has(ck))) {
+    if (childKeys.some((ck) => CLDR_FORMS.has(ck))) {
       result.push({ key: fullKey, obj });
     } else {
       result.push(...findPluralBranches(obj, fullKey));

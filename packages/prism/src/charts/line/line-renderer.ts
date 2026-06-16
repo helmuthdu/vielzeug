@@ -1,5 +1,5 @@
 import type { Point } from '../../svg/path';
-import type { Scale, TransitionConfig, XScale } from '../../types';
+import type { Datum, Scale, TransitionConfig } from '../../types';
 
 import { warn } from '../../_warn';
 import { resolveEasing } from '../../animation/easing';
@@ -139,21 +139,17 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   }
 }
 
-export function computePoints(
-  data: { x: Date | number | string; y: number }[],
-  xScale: XScale,
-  yScale: Scale<number>,
-): Point[] {
-  return data.map((d) => {
-    if (typeof d.x === 'string') {
-      warn(
-        `computePoints: x value "${d.x}" is a string — use bandScale for categorical data or a numeric/Date x value for line/area charts`,
-      );
-    }
+export function computePoints(data: Datum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
+  if (data.some((d) => d.key == null)) {
+    warn(
+      'computePoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+    );
+  } else if (data.some((d) => typeof d.key === 'string')) {
+    warn('computePoints: string keys are not supported for line/area charts — use numeric or Date keys.');
+  }
 
-    return {
-      x: (xScale as Scale<Date | number>).map(d.x as Date | number),
-      y: yScale.map(d.y),
-    };
-  });
+  return data.map((d) => ({
+    x: xScale.map(d.key as Date | number),
+    y: yScale.map(d.value),
+  }));
 }

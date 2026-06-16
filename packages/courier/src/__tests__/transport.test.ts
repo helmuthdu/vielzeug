@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { anySignal as anySignalFromIndex } from '../index';
 import { anySignal, buildTimeoutSignal, createTransportCore, validateTimeout } from '../transport';
 
 describe('validateTimeout', () => {
@@ -219,11 +218,5 @@ describe('createTransportCore', () => {
 
     expect(transport.getHeaders()['x-remove']).toBeUndefined();
     expect(transport.getHeaders()['x-old']).toBe('keep');
-  });
-});
-
-describe('anySignal (public export)', () => {
-  it('is exported from the public index', () => {
-    expect(anySignalFromIndex).toBe(anySignal);
   });
 });

@@ -1,6 +1,6 @@
 import type { AnySchema, KeyOf, RecordOf } from './types';
 
-import { issue } from './_warn';
+import { issue, warn } from './_warn';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 
 type ObserverListener<T> = (records: T[]) => void;
@@ -247,6 +247,10 @@ export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof cr
     const distinctTables = [...new Set(tables)] as K[];
 
     if (distinctTables.length === 0) throw new VaultScopeError('observeMany requires at least one table');
+
+    if (distinctTables.length < tables.length) {
+      warn('observeMany: duplicate table names were ignored');
+    }
 
     if (signal?.aborted) return () => {};
 

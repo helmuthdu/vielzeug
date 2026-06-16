@@ -1,6 +1,7 @@
+import { signal } from '@vielzeug/ripple';
 import { vi } from 'vitest';
 
-import { define, html, prop, signal } from '../index';
+import { define, html, prop } from '../index';
 import { fire, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
@@ -227,21 +228,72 @@ describe('component props', () => {
     expect(query('.count')?.textContent).toBe('7');
   });
 
-  describe('prop.value()', () => {
+  describe('prop.data()', () => {
+    it('defaults to undefined when no default is provided', async () => {
+      const { element } = await mount((props) => html`<div>${() => String(props.config.value)}</div>`, {
+        componentOptions: { props: { config: prop.data<{ x: number }>() } },
+      });
+
+      expect((element as HTMLElement & { config: unknown }).config).toBeUndefined();
+    });
+
+    it('uses provided default object', async () => {
+      const defaultObj = { x: 42 };
+      const { element } = await mount((props) => html`<div>${() => JSON.stringify(props.config.value)}</div>`, {
+        componentOptions: { props: { config: prop.data<{ x: number }>(defaultObj) } },
+      });
+
+      expect((element as HTMLElement & { config: { x: number } }).config).toBe(defaultObj);
+    });
+
+    it('ignores HTML attribute — keeps default value as-is', async () => {
+      const { element } = await mount((props) => html`<div>${() => String(props.config.value)}</div>`, {
+        attrs: { config: 'should-be-ignored' },
+        componentOptions: { props: { config: prop.data<{ x: number }>() } },
+      });
+
+      expect((element as HTMLElement & { config: unknown }).config).toBeUndefined();
+    });
+
+    it('accepts an object set via JS property', async () => {
+      const obj = { x: 7 };
+      const { element } = await mount(
+        (props) => html`<div class="out">${() => JSON.stringify(props.item.value)}</div>`,
+        { componentOptions: { props: { item: prop.data<{ x: number }>() } } },
+      );
+      const el = element as HTMLElement & { item?: { x: number } };
+
+      el.item = obj;
+      await Promise.resolve();
+
+      expect(el.item).toBe(obj);
+    });
+
+    it('does not reflect value back to an attribute', async () => {
+      const defaultObj = { x: 1 };
+      const { element } = await mount((props) => html`<div>${() => JSON.stringify(props.data.value)}</div>`, {
+        componentOptions: { props: { data: prop.data<{ x: number }>(defaultObj) } },
+      });
+
+      expect(element.hasAttribute('data')).toBe(false);
+    });
+  });
+
+  describe('prop.data() with function type', () => {
     it('defaults to undefined when no default is provided', async () => {
       const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
-        componentOptions: { props: { getValue: prop.value<() => string>() } },
+        componentOptions: { props: { getValue: prop.data<() => string>() } },
       });
 
       expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
     });
 
-    it('uses provided default value', async () => {
+    it('uses provided default function', async () => {
       const defaultFn = (): string => 'hello';
       const { element } = await mount(
         (props) => html`<div>${() => (props.getValue.value as (() => string) | undefined)?.()}</div>`,
         {
-          componentOptions: { props: { getValue: prop.value<() => string>(defaultFn) } },
+          componentOptions: { props: { getValue: prop.data<() => string>(defaultFn) } },
         },
       );
 
@@ -251,7 +303,7 @@ describe('component props', () => {
     it('ignores HTML attribute — keeps value as-is', async () => {
       const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
         attrs: { getValue: 'should-be-ignored' },
-        componentOptions: { props: { getValue: prop.value<() => string>() } },
+        componentOptions: { props: { getValue: prop.data<() => string>() } },
       });
 
       expect((element as HTMLElement & { getValue: unknown }).getValue).toBeUndefined();
@@ -260,35 +312,52 @@ describe('component props', () => {
     it('accepts a function set via JS property', async () => {
       const fn = (): string => 'world';
       const { element } = await mount(
-        (props) => html`<div class="out">${() => (props.fn.value as (() => string) | undefined)?.()}</div>`,
+        (props) => html`<div class="out">${() => (props.cb.value as (() => string) | undefined)?.()}</div>`,
         {
-          componentOptions: { props: { fn: prop.value<() => string>() } },
+          componentOptions: { props: { cb: prop.data<() => string>() } },
         },
       );
-      const el = element as HTMLElement & { fn?: () => string };
+      const el = element as HTMLElement & { cb?: () => string };
 
-      el.fn = fn;
+      el.cb = fn;
       await Promise.resolve();
 
-      expect(el.fn).toBe(fn);
+      expect(el.cb).toBe(fn);
     });
 
     it('does not reflect value back to an attribute', async () => {
-      const { element } = await mount((props) => html`<div>${() => String(props.getValue.value)}</div>`, {
-        componentOptions: { props: { getValue: prop.value<string>('test') } },
+      const defaultFn = (): string => 'test';
+      const { element } = await mount((props) => html`<div>${() => String(props.getVal.value)}</div>`, {
+        componentOptions: { props: { getVal: prop.data<() => string>(defaultFn) } },
       });
 
-      expect(element.hasAttribute('getValue')).toBe(false);
-      expect(element.hasAttribute('get-value')).toBe(false);
+      expect(element.hasAttribute('getVal')).toBe(false);
+      expect(element.hasAttribute('get-val')).toBe(false);
+    });
+  });
+
+  describe('prop.json()', () => {
+    it('parses JSON from attribute on upgrade', async () => {
+      const { query } = await mount((props) => html`<div class="v">${() => JSON.stringify(props.data.value)}</div>`, {
+        attrs: { data: '{"x":1}' },
+        componentOptions: { props: { data: prop.json<{ x: number }>({ x: 0 }) } },
+      });
+
+      expect(query('.v')?.textContent).toBe('{"x":1}');
     });
 
-    it('accepts an array default and does not reflect', async () => {
-      const def = [1, 2, 3];
-      const { element } = await mount((props) => html`<div>${() => String(props.items.value)}</div>`, {
-        componentOptions: { props: { items: prop.value<number[]>(def) } },
-      });
+    it('does not reflect prop change back to attribute', async () => {
+      const { element, flush } = await mount(
+        (props) => {
+          (props.data as import('@vielzeug/ripple').Signal<{ x: number }>).value = { x: 99 };
 
-      expect(element.hasAttribute('items')).toBe(false);
+          return html`<div>${() => (props.data.value as { x: number }).x}</div>`;
+        },
+        { componentOptions: { props: { data: prop.json<{ x: number }>({ x: 0 }) } } },
+      );
+
+      await flush();
+      expect(element.getAttribute('data')).toBeNull();
     });
   });
 

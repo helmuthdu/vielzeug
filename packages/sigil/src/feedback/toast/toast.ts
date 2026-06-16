@@ -1,15 +1,53 @@
 import { uuid } from '@vielzeug/arsenal';
-import { computed, define, html, onMounted, prop, ref, signal } from '@vielzeug/craft';
+import { define, html, prop, ref } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { SwipeControl } from '../../headless';
-import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
+import { warn } from '../../_warn';
 import { createSwipeControl } from '../../headless';
-import { awaitExit } from '../../overlay/shared/await-exit';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './toast.css?inline';
 
-/** Toast container properties */
+// ---------------------------------------------------------------------------
+// NOTE: Architecture
+//
+// Each toast has two DOM layers:
+//   .toast-wrapper  — layout / stacking / grid positioning (no animation)
+//   .toast-inner    — animation target (opacity fade in/out)
+//
+// This separation means stacking rules (nth-last-child, hover) and animation
+// rules never fight over the same element. No !important needed anywhere.
+//
+// State: a single signal<ToastEntry[]> owns all per-toast state (data, phase,
+// timer). There are no parallel Sets or Maps tracking lifecycle separately.
+//
+// Exit animation: .toast-inner.exiting fades opacity → 0.
+// The wrapper stays in-flow during the fade so the grid doesn't snap shut.
+// After transitionend (or TOAST_EXIT_MS fallback), finalize() removes the
+// toast from the entries array which removes the wrapper from the DOM.
+//
+// Swipe gesture animates .toast-inner (not .toast-wrapper) to avoid
+// polluting the wrapper's transition state used by the exit animation.
+// Swipe commit calls finalizeRemoval() directly — it owns the animation,
+// so the normal removeToast() path is not involved.
+//
+// Close button: owned by the toast template, not sg-alert. sg-alert renders
+// content only. This keeps sg-alert a pure presentational component with no
+// animation lifecycle coupling.
+//
+// Max eviction: when adding would exceed max, oldest non-exiting toasts are
+// dismissed via removeToast() — animated, with onDismiss callback + event.
+//
+// Dismiss queue: removed. Each toast exits independently in parallel.
+// ---------------------------------------------------------------------------
+
+/** Duration (ms) of the CSS opacity exit transition on .toast-inner.
+ * Must match the value in toast.css: `transition: opacity 300ms`.  */
+const TOAST_EXIT_MS = 300;
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type SgToastEvents = {
   add: { id: string };
@@ -27,7 +65,7 @@ export type ToastItem = {
     color?: ThemeColor;
     label: string;
     onClick?: () => void;
-    variant?: VisualVariant;
+    variant?: 'solid' | 'flat' | 'bordered';
   }>;
   color?: ThemeColor;
   dismissible?: boolean;
@@ -47,22 +85,38 @@ export type ToastItem = {
   size?: ComponentSize;
   /**
    * Urgency level for screen readers.
-   * - `'polite'` (default): uses `aria-live="polite"` — announced after the user finishes their current action.
-   * - `'assertive'`: uses `aria-live="assertive"` — interrupts the user immediately. Use only for critical errors.
+   * - `'polite'` (default): announced after the user finishes their current action.
+   * - `'assertive'`: interrupts the user immediately. Use only for critical errors.
    */
   urgency?: 'polite' | 'assertive';
   variant?: 'solid' | 'flat' | 'bordered';
 };
 
-type NormalizedToast = ToastItem & { id: string };
+type ToastPhase = 'entering' | 'active' | 'exiting';
+
+type ToastTimer = {
+  remaining: number;
+  startedAt: number;
+  timeoutId: ReturnType<typeof setTimeout>;
+};
+
+/** Internal: a ToastItem that has been normalized and given a lifecycle phase. */
+type ToastEntry = Required<Pick<ToastItem, 'dismissible' | 'duration' | 'id'>> &
+  Omit<ToastItem, 'dismissible' | 'duration' | 'id'> & {
+    id: string;
+    phase: ToastPhase;
+    timer: ToastTimer | null;
+  };
 
 /** Public API of the sg-toast element */
 export interface ToastElement extends HTMLElement {
   add: (toast: ToastItem) => string;
-  update: (id: string, updates: Partial<ToastItem>) => void;
-  dismiss: (id: string) => void;
   clear: () => void;
+  dismiss: (id: string) => void;
+  update: (id: string, updates: Partial<ToastItem>) => void;
 }
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 /**
  * An accessible toast stack with polite/assertive live regions and hover expansion.
@@ -86,6 +140,7 @@ export interface ToastElement extends HTMLElement {
  * @cssprop --toast-z-index - Z-index (default: 9999)
  * @cssprop --toast-max-width - Max width (default: 400px)
  * @cssprop --toast-gap - Gap between expanded toasts (default: 0.5rem)
+ * @cssprop --toast-exit-duration - Exit animation duration (default: 300ms)
  *
  * @example
  * ```html
@@ -95,21 +150,22 @@ export interface ToastElement extends HTMLElement {
  * <!-- Programmatic: use the singleton service -->
  * <script type="module">
  *   import { toast } from '@vielzeug/sigil';
- *   toast.add({ message: 'Changes saved!', color: 'success' });
+ *   toast.success('Changes saved!');
  * </script>
  * ```
  */
-/** Renders the action buttons for a toast item. */
-function renderToastActions(toast: NormalizedToast, onDismiss: () => void) {
-  if (!toast.actions?.length) return '';
+
+/** Renders the action buttons for a toast entry. */
+function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
+  if (!entry.actions?.length) return '';
 
   return html`
     <div slot="actions" class="toast-actions">
-      ${toast.actions.map(
+      ${entry.actions.map(
         (action) => html`
           <sg-button
             size="sm"
-            color=${action.color || toast.color || 'primary'}
+            color=${action.color || entry.color || 'primary'}
             variant=${action.variant || 'solid'}
             @click=${() => {
               action.onClick?.();
@@ -132,297 +188,339 @@ define<SgToastProps, SgToastEvents>(TOAST_TAG, {
       'bottom-right',
     ),
   },
-  setup(props, { bind: _bind, el, emit }) {
-    const toasts = signal<NormalizedToast[]>([]);
-    const exitingIds = signal<Set<string>>(new Set());
+  setup(props, { el, emit, onCleanup, onMounted }) {
+    // Single source of truth for all toast state.
+    const entries = signal<ToastEntry[]>([]);
     const containerRef = ref<HTMLDivElement>();
 
-    // Per-toast swipe-to-dismiss controls
+    // Per-toast swipe-to-dismiss controls (keyed by id, cleaned up in finalizeRemoval).
     const swipeControls = new Map<string, SwipeControl>();
+
+    // Pause state is reactive so computed derivations and watches can observe it.
+    const hoverPaused = signal(false);
+    const focusPaused = signal(false);
+    const paused = computed(() => hoverPaused.value || focusPaused.value);
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    const updateEntry = (id: string, patch: Partial<ToastEntry>) => {
+      entries.value = entries.value.map((e) => (e.id === id ? { ...e, ...patch } : e));
+    };
+
+    const getEntry = (id: string) => entries.value.find((e) => e.id === id);
+
+    const getInner = (wrapperOrEvent: HTMLElement | Event): HTMLElement | null => {
+      const wrapper = wrapperOrEvent instanceof Event ? (wrapperOrEvent.currentTarget as HTMLElement) : wrapperOrEvent;
+
+      return wrapper.querySelector<HTMLElement>('.toast-inner');
+    };
+
+    // ── Timer management ───────────────────────────────────────────────────
+
+    const clearEntryTimer = (entry: ToastEntry): ToastEntry => {
+      if (entry.timer) clearTimeout(entry.timer.timeoutId);
+
+      return { ...entry, timer: null };
+    };
+
+    const scheduleTimer = (id: string, remaining: number) => {
+      if (remaining <= 0) return;
+
+      const timeoutId = setTimeout(() => removeToast(id), remaining);
+
+      updateEntry(id, { timer: { remaining, startedAt: Date.now(), timeoutId } });
+    };
+
+    const pauseTimers = () => {
+      entries.value = entries.value.map((e) => {
+        if (!e.timer) return e;
+
+        clearTimeout(e.timer.timeoutId);
+
+        return {
+          ...e,
+          timer: { ...e.timer, remaining: Math.max(0, e.timer.remaining - (Date.now() - e.timer.startedAt)) },
+        };
+      });
+    };
+
+    const resumeTimers = () => {
+      for (const e of entries.value) {
+        if (!e.timer || e.timer.remaining <= 0) continue;
+
+        const timeoutId = setTimeout(() => removeToast(e.id), e.timer.remaining);
+
+        updateEntry(e.id, { timer: { ...e.timer, startedAt: Date.now(), timeoutId } });
+      }
+    };
+
+    // Watch reactive pause state — automatically pauses/resumes all timers.
+    watch(
+      () => paused.value,
+      (isPaused) => {
+        if (isPaused) pauseTimers();
+        else resumeTimers();
+      },
+    );
+
+    // ── Swipe gesture ──────────────────────────────────────────────────────
+    // Animates .toast-inner to avoid polluting the wrapper transition state.
+    // On commit, calls finalizeRemoval() directly (swipe owns the animation).
 
     const createToastSwipe = (id: string): SwipeControl =>
       createSwipeControl({
         axis: () => 'x',
         // Do not capture pointers for toast swipe gestures; capture can steal
-        // close-button clicks inside sg-alert when the gesture does not move.
+        // close-button clicks when the gesture does not move.
         captureTarget: () => null,
-        disabled: () => !(toasts.value.find((t) => t.id === id)?.dismissible ?? true),
+        disabled: () => !(getEntry(id)?.dismissible ?? true),
         onCancel: ({ event }) => {
-          const wrapper = event.currentTarget as HTMLElement;
+          const inner = getInner(event);
 
-          wrapper.style.transition = '';
-          wrapper.style.transform = '';
-          wrapper.style.opacity = '';
+          if (!inner) return;
+
+          inner.style.transition = '';
+          inner.style.transform = '';
+          inner.style.opacity = '';
         },
         onCommit: ({ distance, event }) => {
-          const wrapper = event.currentTarget as HTMLElement;
+          const inner = getInner(event);
+
+          if (!inner) return;
+
           const dir = distance >= 0 ? 1 : -1;
           const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-          const finish = () => {
-            wrapper.style.animation = 'none';
-            removeToast(id);
-          };
+          const finish = () => finalizeRemoval(id);
 
           if (reducedMotion) {
-            wrapper.style.opacity = '0';
+            inner.style.opacity = '0';
             finish();
 
             return;
           }
 
-          wrapper.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
-          void wrapper.offsetWidth;
-          wrapper.style.transform = `translateX(${dir * 120}%)`;
-          wrapper.style.opacity = '0';
+          inner.style.transition = 'transform 0.22s ease-out, opacity 0.22s ease-out';
+          void inner.offsetWidth;
+          inner.style.transform = `translateX(${dir * 120}%)`;
+          inner.style.opacity = '0';
 
           const onTransitionEnd = (e: TransitionEvent) => {
-            if (e.target !== wrapper || e.propertyName !== 'transform') return;
+            if (e.target !== inner || e.propertyName !== 'transform') return;
 
-            wrapper.removeEventListener('transitionend', onTransitionEnd);
+            inner.removeEventListener('transitionend', onTransitionEnd);
             clearTimeout(fallback);
             finish();
           };
 
           const fallback = setTimeout(() => {
-            wrapper.removeEventListener('transitionend', onTransitionEnd);
+            inner.removeEventListener('transitionend', onTransitionEnd);
             finish();
           }, 300);
 
-          wrapper.addEventListener('transitionend', onTransitionEnd);
+          inner.addEventListener('transitionend', onTransitionEnd);
         },
         onMove: ({ distance, event }) => {
-          const wrapper = event.currentTarget as HTMLElement;
+          const inner = getInner(event);
 
-          wrapper.style.transition = 'none';
-          wrapper.style.transform = `translateX(${distance}px)`;
-          wrapper.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
+          if (!inner) return;
+
+          inner.style.transition = 'none';
+          inner.style.transform = `translateX(${distance}px)`;
+          inner.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
         },
       });
 
-    // Timer tracking: maps id → { remaining, startedAt, timeoutId }
-    const timers = new Map<string, { remaining: number; startedAt: number; timeoutId: number }>();
+    // ── Toast lifecycle ────────────────────────────────────────────────────
 
-    // Sequentially dismiss queue — only one toast exits at a time so animations never overlap.
-    const dismissQueue: string[] = [];
-    let isDismissing = false;
+    /** Remove all per-entry resources and fire callbacks. Does not animate. */
+    const finalizeRemoval = (id: string) => {
+      const entry = getEntry(id);
 
-    // Pause state: track focus and hover separately to resume only when both are clear
-    let focusPaused = false;
-    let hoverPaused = false;
+      // Clean up timer and swipe control before removing from signal.
+      if (entry?.timer) clearTimeout(entry.timer.timeoutId);
 
-    // ────────────────────────────────────────────────────────────────────────────────
-    // Core State Mutations
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    const setExiting = (id: string, value: boolean) => {
-      const next = new Set(exitingIds.value);
-
-      if (value) next.add(id);
-      else next.delete(id);
-
-      exitingIds.value = next;
+      swipeControls.delete(id);
+      entries.value = entries.value.filter((e) => e.id !== id);
+      entry?.onDismiss?.();
+      emit('dismiss', { id });
     };
 
-    // ────────────────────────────────────────────────────────────────────────────────
-    // Timer Management (pause/resume for hover/focus)
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    const pauseTimers = () => {
-      for (const [id, t] of timers) {
-        clearTimeout(t.timeoutId);
-        timers.set(id, { ...t, remaining: Math.max(0, t.remaining - (Date.now() - t.startedAt)) });
-      }
-    };
-
-    const resumeTimers = () => {
-      for (const [id, t] of timers) {
-        if (t.remaining <= 0) continue;
-
-        const timeoutId = window.setTimeout(() => removeToast(id), t.remaining);
-
-        timers.set(id, { ...t, remaining: t.remaining, timeoutId });
-      }
-    };
-
-    const maybeUpdatePauseState = () => {
-      if (focusPaused || hoverPaused) pauseTimers();
-      else resumeTimers();
-    };
-
-    // ────────────────────────────────────────────────────────────────────────────────
-    // Toast Lifecycle
-    // ────────────────────────────────────────────────────────────────────────────────
-
-    const scheduleRemoval = (id: string, duration: number) => {
-      if (duration <= 0) return;
-
-      const timeoutId = window.setTimeout(() => removeToast(id), duration);
-
-      timers.set(id, { remaining: duration, startedAt: Date.now(), timeoutId });
-    };
-
-    const addToast = (toast: ToastItem): string => {
-      const id = toast.id || uuid();
-      const item: NormalizedToast = { dismissible: true, duration: 5000, ...toast, id };
+    const addToast = (item: ToastItem): string => {
+      const id = item.id || uuid();
       const maxToasts = props.max?.value ?? 5;
 
-      // Create swipe control before updating signal so renderToastItem can find it.
+      // Evict oldest non-exiting toasts to stay within max — animated, with callbacks.
+      const active = entries.value.filter((e) => e.phase !== 'exiting');
+      const overflow = active.length - (maxToasts - 1);
+
+      if (overflow > 0) {
+        for (const evicted of active.slice(0, overflow)) removeToast(evicted.id);
+      }
+
+      const entry: ToastEntry = {
+        dismissible: true,
+        duration: 5000,
+        ...item,
+        id,
+        phase: 'entering',
+        timer: null,
+      };
+
       swipeControls.set(id, createToastSwipe(id));
-      toasts.value = [...toasts.value, item].slice(-maxToasts);
+      entries.value = [...entries.value, entry];
       emit('add', { id });
 
-      if (item.duration! > 0) scheduleRemoval(id, item.duration!);
+      requestAnimationFrame(() => {
+        // Guard: if the toast was dismissed before this rAF fired (e.g. evicted
+        // by max), do not overwrite its exiting phase back to active.
+        if (getEntry(id)?.phase === 'entering') updateEntry(id, { phase: 'active' });
+      });
+
+      if (entry.duration > 0) scheduleTimer(id, entry.duration);
 
       return id;
     };
 
     const removeToast = (id: string) => {
-      // Already exiting or queued; skip to avoid double-processing
-      if (exitingIds.value.has(id) || dismissQueue.includes(id)) return;
+      const entry = getEntry(id);
 
-      if (isDismissing) {
-        dismissQueue.push(id);
+      // Already animating out or not found — ignore.
+      if (!entry || entry.phase === 'exiting') return;
 
-        return;
-      }
+      // Clear the auto-dismiss timer: the user (or max-eviction) is dismissing now.
+      updateEntry(id, { ...clearEntryTimer(entry), phase: 'exiting' });
 
-      isDismissing = true;
+      // Force a layout flush on the current inner element (if in DOM now) so the
+      // browser snapshots the current opacity as the animation start value.
+      const innerEl = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"] .toast-inner`);
 
-      executeRemoval(id);
-    };
+      void innerEl?.offsetHeight;
 
-    const executeRemoval = (id: string) => {
-      // Guard: could have been removed since queue entry
-      if (exitingIds.value.has(id)) {
-        processNextInQueue();
+      let done = false;
+      const onDone = () => {
+        if (done) return;
 
-        return;
-      }
-
-      const item = toasts.value.find((t) => t.id === id);
-      const wrapper = containerRef.value?.querySelector<HTMLElement>(`[data-toast-id="${id}"]`);
-
-      const finalize = () => {
-        setExiting(id, false);
-        toasts.value = toasts.value.filter((t) => t.id !== id);
-
-        swipeControls.delete(id);
-
-        // Clean up timer
-        const timer = timers.get(id);
-
-        if (timer) clearTimeout(timer.timeoutId);
-
-        timers.delete(id);
-        item?.onDismiss?.();
-        emit('dismiss', { id });
-        processNextInQueue();
+        done = true;
+        finalizeRemoval(id);
       };
 
-      if (wrapper) {
-        setExiting(id, true);
-        awaitExit(wrapper, finalize);
-      } else {
-        finalize();
-      }
+      // TOAST_EXIT_MS matches the CSS opacity transition duration.
+      // Fallback fires if transitionend never arrives (jsdom, reduced-motion, etc.).
+      const fallback = setTimeout(onDone, TOAST_EXIT_MS + 50);
+
+      // Listen on the container with event delegation so we are immune to
+      // craft re-rendering the entries list (e.g. rAF phase transitions that
+      // rebuild DOM after our listener would have been set up).
+      // transitionend bubbles, so it reaches the container regardless of which
+      // generation of .toast-inner element fires it.
+      const onTransitionEnd = (e: TransitionEvent) => {
+        const wrapper = (e.target as HTMLElement | null)?.closest?.(`[data-toast-id="${id}"]`);
+
+        if (!wrapper) return;
+
+        containerRef.value?.removeEventListener('transitionend', onTransitionEnd);
+        clearTimeout(fallback);
+        onDone();
+      };
+
+      containerRef.value?.addEventListener('transitionend', onTransitionEnd);
     };
 
-    const processNextInQueue = () => {
-      if (dismissQueue.length === 0) {
-        isDismissing = false;
-
-        return;
-      }
-
-      const nextId = dismissQueue.shift()!;
-
-      executeRemoval(nextId);
-    };
     const updateToast = (id: string, updates: Partial<ToastItem>) => {
-      toasts.value = toasts.value.map((t) => (t.id === id ? { ...t, ...updates, id } : t));
+      const entry = getEntry(id);
 
-      if (updates.duration === undefined) return;
+      if (!entry) return;
 
-      const timer = timers.get(id);
+      const cleared = updates.duration !== undefined ? clearEntryTimer(entry) : entry;
 
-      if (timer) clearTimeout(timer.timeoutId);
+      updateEntry(id, { ...cleared, ...updates, id });
 
-      timers.delete(id);
-
-      if (updates.duration > 0) scheduleRemoval(id, updates.duration);
+      if (updates.duration !== undefined && updates.duration > 0) scheduleTimer(id, updates.duration);
     };
+
     const clearAll = () => {
-      for (const [, t] of timers) clearTimeout(t.timeoutId);
-      timers.clear();
-      // Drain any pending queue entries and replace with the full current list so
-      // they exit one-by-one in order.
-      dismissQueue.length = 0;
-
-      const ids = toasts.value.map((t) => t.id).filter((id) => !exitingIds.value.has(id));
-
-      if (!ids.length) return;
-
-      dismissQueue.push(...ids);
-
-      if (!isDismissing) processNextInQueue();
+      // Fire all removals concurrently — parallel fades are visually correct.
+      for (const e of entries.value) {
+        if (e.phase !== 'exiting') removeToast(e.id);
+      }
     };
 
-    const urgencyOf = (t: NormalizedToast) => t.urgency ?? (t.color === 'error' ? 'assertive' : 'polite');
-    const politeToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'polite'));
-    const assertiveToasts = computed(() => toasts.value.filter((t) => urgencyOf(t) === 'assertive'));
+    // ── Derived lists for live regions ─────────────────────────────────────
 
-    const setHovered = (hovered: boolean) => {
-      hoverPaused = hovered;
-      el.classList.toggle('hovered', hovered);
-      maybeUpdatePauseState();
+    const urgencyOf = (e: ToastEntry) => e.urgency ?? (e.color === 'error' ? 'assertive' : 'polite');
+    const politeEntries = computed(() => entries.value.filter((e) => urgencyOf(e) === 'polite'));
+    const assertiveEntries = computed(() => entries.value.filter((e) => urgencyOf(e) === 'assertive'));
+
+    // ── Cleanup on disconnect ──────────────────────────────────────────────
+
+    onCleanup(() => {
+      for (const e of entries.value) {
+        if (e.timer) clearTimeout(e.timer.timeoutId);
+      }
+
+      swipeControls.clear();
+    });
+
+    // ── Template ───────────────────────────────────────────────────────────
+
+    const renderEntry = (entry: ToastEntry) => {
+      const dismiss = () => removeToast(entry.id);
+
+      return html`
+        <div
+          class="toast-wrapper"
+          data-toast-id=${entry.id}
+          part="toast-wrapper"
+          @pointerdown=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerDown(e)}
+          @pointermove=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerMove(e)}
+          @pointerup=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerUp(e)}
+          @pointercancel=${(e: PointerEvent) => swipeControls.get(entry.id)?.handlePointerCancel(e)}>
+          <div class="${() => `toast-inner${entry.phase !== 'active' ? ` ${entry.phase}` : ''}`}" part="toast-inner">
+            <sg-alert
+              color=${entry.color || (entry.urgency === 'assertive' ? 'error' : 'primary')}
+              variant=${entry.variant || 'solid'}
+              size=${entry.size || 'md'}
+              rounded=${entry.rounded || 'md'}
+              ?horizontal=${entry.horizontal}
+              heading=${entry.heading || ''}
+              ?dismissible=${entry.dismissible !== false}
+              @dismiss=${dismiss}>
+              ${entry.meta ? html`<span slot="meta">${entry.meta}</span>` : ''} ${entry.message}
+              ${renderToastActions(entry, dismiss)}
+            </sg-alert>
+          </div>
+        </div>
+      `;
     };
-    const renderToastItem = (toast: NormalizedToast) => html`
-      <div
-        class="${() => (exitingIds.value.has(toast.id) ? 'toast-wrapper exiting' : 'toast-wrapper')}"
-        data-toast-id=${toast.id}
-        part="toast-wrapper"
-        @pointerdown=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerDown(e)}
-        @pointermove=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerMove(e)}
-        @pointerup=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerUp(e)}
-        @pointercancel=${(e: PointerEvent) => swipeControls.get(toast.id)?.handlePointerCancel(e)}>
-        <sg-alert
-          color=${toast.color || (toast.urgency === 'assertive' ? 'error' : 'primary')}
-          variant=${toast.variant || 'solid'}
-          size=${toast.size || 'md'}
-          rounded=${toast.rounded || 'md'}
-          ?dismissible=${toast.dismissible}
-          ?horizontal=${toast.horizontal}
-          heading=${toast.heading || ''}
-          @dismiss=${() => removeToast(toast.id)}>
-          ${toast.meta ? html`<span slot="meta">${toast.meta}</span>` : ''} ${toast.message}
-          ${renderToastActions(toast, () => removeToast(toast.id))}
-        </sg-alert>
-      </div>
-    `;
 
+    // Expose imperative API directly on mount — calls made before mount are
+    // safe because craft mounts synchronously on connectedCallback.
     onMounted(() => {
       const toastEl = el as ToastElement;
 
       toastEl.add = addToast;
-      toastEl.update = updateToast;
-      toastEl.dismiss = removeToast;
       toastEl.clear = clearAll;
+      toastEl.dismiss = removeToast;
+      toastEl.update = updateToast;
     });
 
     return html`
       <div
         class="toast-container"
         ref=${containerRef}
-        @pointerenter=${() => setHovered(true)}
-        @pointerleave=${() => setHovered(false)}
+        @pointerenter=${() => {
+          hoverPaused.value = true;
+          el.classList.add('hovered');
+        }}
+        @pointerleave=${() => {
+          hoverPaused.value = false;
+          el.classList.remove('hovered');
+        }}
         @focusin=${() => {
-          focusPaused = true;
-          maybeUpdatePauseState();
+          focusPaused.value = true;
         }}
         @focusout=${() => {
-          focusPaused = false;
-          maybeUpdatePauseState();
+          focusPaused.value = false;
         }}
         part="container">
         <!-- Polite live region: normal informational toasts -->
@@ -433,7 +531,7 @@ define<SgToastProps, SgToastEvents>(TOAST_TAG, {
           aria-atomic="false"
           aria-label="Notifications"
           class="toast-live-region">
-          ${() => politeToasts.value.map(renderToastItem)}
+          ${() => politeEntries.value.map(renderEntry)}
         </div>
         <!-- Assertive live region: critical errors that interrupt immediately -->
         <div
@@ -443,7 +541,7 @@ define<SgToastProps, SgToastEvents>(TOAST_TAG, {
           aria-atomic="false"
           aria-label="Critical notifications"
           class="toast-live-region">
-          ${() => assertiveToasts.value.map(renderToastItem)}
+          ${() => assertiveEntries.value.map(renderEntry)}
         </div>
         <slot></slot>
       </div>
@@ -452,27 +550,175 @@ define<SgToastProps, SgToastEvents>(TOAST_TAG, {
   styles: [reducedMotionMixin, componentStyles],
 });
 
-// ─── Singleton toast service ─────────────────────────────────────────────────
+// ─── Toast service ────────────────────────────────────────────────────────────
 
-const getHost = (): ToastElement => {
-  let el = document.querySelector<ToastElement>('sg-toast');
+export type ToastServiceConfig = SgToastProps;
 
-  if (!el) {
-    el = document.createElement('sg-toast') as ToastElement;
-    document.body.appendChild(el);
-  }
-
-  return el;
-};
+export interface ToastService {
+  /** Add a toast and return its id */
+  add(item: ToastItem): string;
+  /** Dismiss all toasts (animated, in parallel) */
+  clear(): void;
+  /**
+   * Configure the auto-created container.
+   * Has no effect if called after the first `add()` — logs a dev warning in that case.
+   */
+  configure(config: ToastServiceConfig): void;
+  /** Dismiss a toast by id (animated) */
+  dismiss(id: string): void;
+  /** Shortcut: error toast with red color (assertive live region) */
+  error(message: string, opts?: Partial<ToastItem>): string;
+  /** Shortcut: info toast */
+  info(message: string, opts?: Partial<ToastItem>): string;
+  /**
+   * Shows a loading toast tied to a promise.
+   * Updates to success/error when the promise settles.
+   */
+  promise<T>(
+    promise: Promise<T>,
+    messages: {
+      error: string | ((err: unknown) => string);
+      loading: string;
+      success: string | ((data: T) => string);
+    },
+  ): Promise<T>;
+  /** Shortcut: success toast with green color */
+  success(message: string, opts?: Partial<ToastItem>): string;
+  /** Update an existing toast in-place */
+  update(id: string, updates: Partial<ToastItem>): void;
+  /** Shortcut: warning toast */
+  warning(message: string, opts?: Partial<ToastItem>): string;
+}
 
 /**
- * Singleton service for triggering toasts without direct DOM references.
+ * Creates a scoped toast service backed by an `sg-toast` element.
+ *
+ * The service lazily creates an `<sg-toast>` element inside `root` on first
+ * use. Pass a custom root to scope notifications to a sub-tree (e.g. a drawer),
+ * or use the pre-built `toast` singleton which targets `document.body`.
+ *
+ * @example
+ * ```ts
+ * // Scoped instance
+ * const drawerToast = createToastService(drawerEl);
+ * drawerToast.success('Saved inside drawer');
+ *
+ * // The default singleton
+ * import { toast } from '@vielzeug/sigil';
+ * toast.success('Saved!');
+ * ```
+ */
+export function createToastService(root: ParentNode = document.body): ToastService {
+  let host: ToastElement | null = null;
+  let configured = false;
+  let pendingConfig: ToastServiceConfig | null = null;
+
+  const getHost = (): ToastElement => {
+    if (host?.isConnected) return host;
+
+    // Re-use an existing element in the root (supports declarative placement).
+    host = (root instanceof Element ? root : (root as Document | ShadowRoot)).querySelector<ToastElement>('sg-toast');
+
+    if (!host) {
+      host = document.createElement('sg-toast') as ToastElement;
+
+      if (pendingConfig) {
+        if (pendingConfig.position) host.setAttribute('position', pendingConfig.position);
+
+        if (pendingConfig.max != null) host.setAttribute('max', String(pendingConfig.max));
+
+        pendingConfig = null;
+      }
+
+      (root as Element | Document).appendChild(host);
+    }
+
+    configured = true;
+
+    return host;
+  };
+
+  const service: ToastService = {
+    add(item) {
+      return getHost().add(item);
+    },
+
+    clear() {
+      getHost().clear();
+    },
+
+    configure(config) {
+      if (configured) {
+        warn('toast.configure() called after the container was already created; options ignored.');
+
+        return;
+      }
+
+      pendingConfig = { ...pendingConfig, ...config };
+    },
+
+    dismiss(id) {
+      getHost().dismiss(id);
+    },
+
+    error(message, opts) {
+      return service.add({ color: 'error', ...opts, message });
+    },
+
+    info(message, opts) {
+      return service.add({ color: 'info', ...opts, message });
+    },
+
+    async promise(promise, messages) {
+      const id = service.add({ color: 'primary', dismissible: false, duration: 0, message: messages.loading });
+
+      try {
+        const data = await promise;
+
+        service.update(id, {
+          color: 'success',
+          dismissible: true,
+          duration: 5000,
+          message: typeof messages.success === 'function' ? messages.success(data) : messages.success,
+        });
+
+        return data;
+      } catch (err) {
+        service.update(id, {
+          color: 'error',
+          dismissible: true,
+          duration: 5000,
+          message: typeof messages.error === 'function' ? messages.error(err) : messages.error,
+        });
+        throw err;
+      }
+    },
+
+    success(message, opts) {
+      return service.add({ color: 'success', ...opts, message });
+    },
+
+    update(id, updates) {
+      getHost().update(id, updates);
+    },
+
+    warning(message, opts) {
+      return service.add({ color: 'warning', ...opts, message });
+    },
+  };
+
+  return service;
+}
+
+/**
+ * Singleton toast service — finds or creates a single `<sg-toast>` on `document.body`.
  *
  * @example
  * ```ts
  * import { toast } from '@vielzeug/sigil';
  *
- * toast.add({ message: 'Saved!', color: 'success' });
+ * toast.success('Changes saved!');
+ * toast.error('Upload failed', { duration: 0 });
  *
  * const id = toast.add({ message: 'Uploading…', duration: 0, dismissible: false });
  * toast.update(id, { message: 'Done!', color: 'success', duration: 3000, dismissible: true });
@@ -484,68 +730,4 @@ const getHost = (): ToastElement => {
  * });
  * ```
  */
-export const toast = {
-  /** Add a toast and return its id */
-  add(item: ToastItem): string {
-    return getHost().add(item);
-  },
-
-  /** Dismiss all toasts (animated) */
-  clear(): void {
-    getHost().clear();
-  },
-  /** Configure the auto-created container. Call before the first `add()` if the defaults need to change. */
-  configure(config: SgToastProps): void {
-    const el = getHost();
-
-    if (config.position) el.setAttribute('position', config.position);
-
-    if (config.max != null) el.setAttribute('max', String(config.max));
-  },
-
-  /**
-   * Shows a loading toast tied to a promise.
-   * Updates to success/error when the promise settles.
-   */
-  async promise<T>(
-    promise: Promise<T>,
-    messages: {
-      error: string | ((err: unknown) => string);
-      loading: string;
-      success: string | ((data: T) => string);
-    },
-  ): Promise<T> {
-    const id = toast.add({ color: 'primary', dismissible: false, duration: 0, message: messages.loading });
-
-    try {
-      const data = await promise;
-
-      toast.update(id, {
-        color: 'success',
-        dismissible: true,
-        duration: 5000,
-        message: typeof messages.success === 'function' ? messages.success(data) : messages.success,
-      });
-
-      return data;
-    } catch (err) {
-      toast.update(id, {
-        color: 'error',
-        dismissible: true,
-        duration: 5000,
-        message: typeof messages.error === 'function' ? messages.error(err) : messages.error,
-      });
-      throw err;
-    }
-  },
-
-  /** Dismiss a toast by id */
-  remove(id: string): void {
-    getHost().dismiss(id);
-  },
-
-  /** Update an existing toast in-place */
-  update(id: string, updates: Partial<ToastItem>): void {
-    getHost().update(id, updates);
-  },
-};
+export const toast: ToastService = createToastService();

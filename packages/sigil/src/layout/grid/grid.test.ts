@@ -124,4 +124,14 @@ describe('sg-grid accessibility', () => {
       expect(fixture.element.getAttribute('aria-label')).toBe('Product grid');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-grid', { html: '<sg-grid-item>Item</sg-grid-item>' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

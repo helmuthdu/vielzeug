@@ -1,0 +1,4 @@
+export const arraySearchNormalizeExample = {
+  code: "import { fuzzy, fuzzyScore } from '@vielzeug/arsenal'\n\n// normalize: true — NFKD strips combining marks before comparison\nconst names = ['José', 'Élise', 'café', 'naïve', 'resume']\n\n// Without normalize — accented chars don't match base form\nconst noNorm = fuzzy(names, 'jose', { threshold: 0.9 })\nconsole.log('normalize:false (default):', noNorm) // []\n\n// With normalize — 'jose' matches 'José'\nconst withNorm = fuzzy(names, 'jose', { normalize: true, threshold: 0.9 })\nconsole.log('normalize:true:', withNorm) // ['José']\n\nconst cafeMatch = fuzzy(names, 'cafe', { normalize: true, threshold: 0.95 })\nconsole.log('café vs cafe:', cafeMatch) // ['café']\n\n// Scored mode with normalize\nconst scored = fuzzyScore(names, 'elise', { normalize: true, threshold: 0.5 })\nconsole.log('Scored:', scored)",
+  name: 'fuzzy - Unicode normalization (normalize option)',
+};

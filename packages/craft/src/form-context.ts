@@ -1,28 +1,35 @@
 import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
-import { createContext, inject } from './context';
+import { createContext } from './context';
 
 /**
- * A shared form context value, typically provided by a parent form component
- * and injected by child field components.
+ * Context shape injected by child field components.
+ * Contains only what a field needs — not submit/error/status APIs.
  */
-export type FormContextValue = {
+export type FormFieldContext = {
   /** Whether any field has been touched (interacted with). Set via markDirty(). */
   readonly dirty: ReadonlySignal<boolean>;
-  /** The last submit error, or null if the last submit succeeded. */
-  readonly error: ReadonlySignal<unknown>;
-  /**
-   * Mark the form as dirty (e.g. call from a field's input/change handler).
-   * Reset to false via reset().
-   */
   markDirty(): void;
   /**
    * Register a field's validity signal with the form context.
    * Returns a cleanup function.
    */
   registerField(validity: ReadonlySignal<boolean>): () => void;
-  /** Reset all registered field values. */
-  reset(): void;
+};
+
+/**
+ * Full form controller returned by `createFormContext`.
+ * Extends `FormFieldContext` with submission and status APIs.
+ */
+export type FormController = FormFieldContext & {
+  /**
+   * Clear `dirty` and `error` status signals and invoke `onReset` if provided.
+   * Note: this does not reset individual field values — pass an `onReset` callback
+   * to handle value restoration.
+   */
+  clearStatus(): void;
+  /** The last submit error, or null if the last submit succeeded. */
+  readonly error: ReadonlySignal<unknown>;
   /** Submit the form programmatically. */
   submit(e?: Event): Promise<void>;
   /** Whether the form is currently submitting. */
@@ -31,18 +38,18 @@ export type FormContextValue = {
   readonly valid: ReadonlySignal<boolean>;
 };
 
-export const FORM_CONTEXT_KEY = createContext<FormContextValue>('craft:form-context');
+export const FORM_CONTEXT_KEY = createContext<FormFieldContext>('craft:form-context');
 
 /**
- * Create a `FormContextValue` for coordinating form state across child field components.
- * Call `provide()` with the result to make it available to child components via `useFormContext`.
+ * Create a `FormController` for coordinating form state across child field components.
+ * Call `ctx.provide(FORM_CONTEXT_KEY, form)` to make it available to descendants.
  *
  * @example
  * ```ts
  * define('my-form', {
- *   setup() {
+ *   setup(_props, ctx) {
  *     const form = createFormContext({ onSubmit: async (e) => { ... } });
- *     provide(FORM_CONTEXT_KEY, form);
+ *     ctx.provide(FORM_CONTEXT_KEY, form);
  *     return html`<form @submit=${form.submit}><slot></slot></form>`;
  *   }
  * });
@@ -53,12 +60,14 @@ export function createFormContext(
     onReset?: () => void;
     onSubmit?: (e?: Event) => void | Promise<void>;
   } = {},
-): FormContextValue {
+): FormController {
   const fieldValiditySignals = signal<Array<ReadonlySignal<boolean>>>([]);
   const submitting = signal(false);
   const dirty = signal(false);
   const error = signal<unknown>(null);
 
+  // Note: [].every() is vacuously true, so valid is true when no fields are registered.
+  // This is intentional — a form with no fields is considered valid (nothing to invalidate it).
   const valid = computed(() => fieldValiditySignals.value.every((s) => s.value));
 
   const submit = async (e?: Event): Promise<void> => {
@@ -79,7 +88,7 @@ export function createFormContext(
     }
   };
 
-  const reset = (): void => {
+  const clearStatus = (): void => {
     dirty.value = false;
     error.value = null;
     options.onReset?.();
@@ -97,22 +106,5 @@ export function createFormContext(
     };
   };
 
-  return { dirty, error, markDirty, registerField, reset, submit, submitting, valid };
-}
-
-/**
- * Inject the nearest `FormContextValue` from a parent form component.
- *
- * @example
- * ```ts
- * define('my-input', {
- *   setup(props) {
- *     const form = useFormContext();
- *     // form?.registerField(isValid);
- *   }
- * });
- * ```
- */
-export function useFormContext(): FormContextValue | undefined {
-  return inject(FORM_CONTEXT_KEY);
+  return { clearStatus, dirty, error, markDirty, registerField, submit, submitting, valid };
 }

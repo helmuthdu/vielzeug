@@ -27,8 +27,10 @@ function makeHandle(overrides: Partial<OptionListOptions<Item>> = {}) {
     document.body.appendChild(reference);
 
     handle = createOptionList<Item>({
-      dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
-      items: { getItems: () => ITEMS },
+      getBoundary: () => boundary,
+      getItems: () => ITEMS,
+      getPanel: () => panel,
+      getReference: () => reference,
       signal: new AbortController().signal,
       ...overrides,
     });
@@ -139,7 +141,7 @@ describe('createOptionList()', () => {
 
     it('invokes onOpen callback', async () => {
       const onOpen = vi.fn();
-      const { get, setup } = makeHandle({ on: { onOpen } });
+      const { get, setup } = makeHandle({ onOpen });
 
       await mount(() => {
         setup();
@@ -153,7 +155,7 @@ describe('createOptionList()', () => {
 
     it('invokes onClose callback', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ on: { onClose } });
+      const { get, setup } = makeHandle({ onClose });
 
       await mount(() => {
         setup();
@@ -168,7 +170,7 @@ describe('createOptionList()', () => {
   });
 
   describe('keyboard navigation', () => {
-    it('first() sets focusedIndex to 0', async () => {
+    it('Home key moves to first item (focusedIndex 0)', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -178,11 +180,11 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().first();
+      get().handleKeydown(new KeyboardEvent('keydown', { key: 'Home' }));
       expect(get().focusedIndex.value).toBe(0);
     });
 
-    it('last() sets focusedIndex to items.length - 1', async () => {
+    it('End key moves to last item', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -192,11 +194,11 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().last();
+      get().handleKeydown(new KeyboardEvent('keydown', { key: 'End' }));
       expect(get().focusedIndex.value).toBe(ITEMS.length - 1);
     });
 
-    it('next() advances focusedIndex', async () => {
+    it('ArrowDown advances focusedIndex', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -206,12 +208,12 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().first();
-      get().next();
+      get().set(0);
+      get().handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
       expect(get().focusedIndex.value).toBe(1);
     });
 
-    it('prev() decrements focusedIndex', async () => {
+    it('ArrowUp decrements focusedIndex', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -221,12 +223,12 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().last();
-      get().prev();
+      get().set(ITEMS.length - 1);
+      get().handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
       expect(get().focusedIndex.value).toBe(ITEMS.length - 2);
     });
 
-    it('reset() sets focusedIndex back to -1', async () => {
+    it('set(-1) resets focusedIndex to -1', async () => {
       const { get, setup } = makeHandle();
 
       await mount(() => {
@@ -236,8 +238,8 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().first();
-      get().reset();
+      get().set(0);
+      get().set(-1);
       expect(get().focusedIndex.value).toBe(-1);
     });
 
@@ -279,7 +281,7 @@ describe('createOptionList()', () => {
       }, {});
 
       get().open();
-      get().first();
+      get().set(0);
 
       const event = new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' });
       const handled = get().handleKeydown(event);
@@ -293,7 +295,7 @@ describe('createOptionList()', () => {
     it('toggle uses click open and trigger close by default', async () => {
       const onOpen = vi.fn();
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ on: { onClose, onOpen } });
+      const { get, setup } = makeHandle({ onClose, onOpen });
 
       await mount(() => {
         setup();
@@ -311,7 +313,7 @@ describe('createOptionList()', () => {
     it('toggle forwards explicit open and close reasons', async () => {
       const onOpen = vi.fn();
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ on: { onClose, onOpen } });
+      const { get, setup } = makeHandle({ onClose, onOpen });
 
       await mount(() => {
         setup();
@@ -330,7 +332,7 @@ describe('createOptionList()', () => {
   describe('Escape key handling', () => {
     it('handleKeydown intercepts Escape and closes with reason "escape"', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ on: { onClose } });
+      const { get, setup } = makeHandle({ onClose });
 
       await mount(() => {
         setup();
@@ -352,7 +354,7 @@ describe('createOptionList()', () => {
 
     it('handleKeydown ignores Escape when closed', async () => {
       const onClose = vi.fn();
-      const { get, setup } = makeHandle({ on: { onClose } });
+      const { get, setup } = makeHandle({ onClose });
 
       await mount(() => {
         setup();
@@ -428,7 +430,7 @@ describe('createOptionList()', () => {
 
     it('ariaActiveDescendant is null when no item is focused', async () => {
       const { get, setup } = makeHandle({
-        items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
+        getOptionId: (index) => `opt-${index}`,
       });
 
       await mount(() => {
@@ -445,7 +447,7 @@ describe('createOptionList()', () => {
 
     it('ariaActiveDescendant reflects the focused option id when open', async () => {
       const { get, setup } = makeHandle({
-        items: { getItems: () => ITEMS, getOptionId: (index) => `opt-${index}` },
+        getOptionId: (index) => `opt-${index}`,
       });
 
       await mount(() => {
@@ -460,7 +462,7 @@ describe('createOptionList()', () => {
       handle.set(1);
       expect(handle.ariaActiveDescendant.value).toBe('opt-1');
 
-      handle.reset();
+      handle.set(-1);
       expect(handle.ariaActiveDescendant.value).toBeNull();
 
       handle.close();
@@ -499,8 +501,10 @@ describe('createOptionList()', () => {
         document.body.appendChild(reference);
 
         handle = createOptionList<Item>({
-          dom: { getBoundary: () => boundary, getPanel: () => panel, getReference: () => reference },
-          items: { getItems: () => ITEMS },
+          getBoundary: () => boundary,
+          getItems: () => ITEMS,
+          getPanel: () => panel,
+          getReference: () => reference,
           signal: controller.signal,
         });
 

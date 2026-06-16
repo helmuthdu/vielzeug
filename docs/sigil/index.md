@@ -90,12 +90,12 @@ Every project needs UI primitives. Sigil provides accessible web components that
 <sg-button variant="primary" loading>Save</sg-button>
 ```
 
-| Feature            | Sigil                                       | Shoelace | Material Web |
-| ------------------ | ------------------------------------------- | -------- | ------------ |
-| Bundle size        | <PackageInfo package="sigil" type="size" /> | ~145 kB  | ~200 kB      |
-| Built with         | Craft                                       | Lit      | Lit          |
-| Accessible         | WCAG AA                                     | WCAG AA  | WCAG AA      |
-| Framework agnostic | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>           |
+| Feature            | Sigil                                       | Shoelace                                   | Material Web                               |
+| ------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size        | <PackageInfo package="sigil" type="size" /> | ~145 kB                                    | ~200 kB                                    |
+| Built with         | Craft                                       | Lit                                        | Lit                                        |
+| Accessible         | WCAG AA                                     | WCAG AA                                    | WCAG AA                                    |
+| Framework agnostic | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 
 <div class="decision-callout">
 

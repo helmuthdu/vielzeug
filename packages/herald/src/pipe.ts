@@ -25,12 +25,12 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
   source: Bus<S>,
   target: Bus<T>,
   entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
-  signal?: AbortSignal,
+  opts?: { signal?: AbortSignal },
 ): Unsubscribe {
   if (entries.length === 0) throw new RangeError('pipeEvents() requires at least one entry');
 
   // Stop when target disposes or when the caller's signal fires.
-  const pipeSignal = combineSignals(target.disposalSignal, signal);
+  const pipeSignal = opts?.signal ? combineSignals(target.disposalSignal, opts.signal) : target.disposalSignal;
 
   // Cast needed: emit's conditional rest args (void vs payload) cannot be resolved in a generic
   // context. At runtime, passing undefined for void events is safe — the bus ignores it.

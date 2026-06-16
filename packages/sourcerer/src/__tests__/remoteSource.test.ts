@@ -1,3 +1,4 @@
+import { applyRemoteQuery } from '../applyQuery';
 import { decodeQuery, encodeQuery } from '../codecs';
 import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
@@ -98,43 +99,30 @@ describe('createRemoteSource', () => {
   });
 
   describe('query updates and navigation', () => {
-    it('restoreQuery applies multiple fields and performs one fetch', async () => {
+    it('applyRemoteQuery applies multiple fields and performs fetches', async () => {
       const fetch = vi.fn(async ({ limit, page, search }: { limit: number; page: number; search?: string }) => ({
         items: [`${limit}-${page}-${search ?? ''}`],
         total: 50,
       }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.restoreQuery({ limit: 5, page: 3, search: 'x' });
+      await applyRemoteQuery(source, { limit: 5, search: 'x' });
+      await source.goTo(3);
 
-      expect(fetch).toHaveBeenCalledTimes(1);
       expect(source.toQuery().limit).toBe(5);
       expect(source.toQuery().page).toBe(3);
       expect(source.current).toEqual(['5-3-x']);
     });
 
-    it('restoreQuery preserves page when limit changes (no implicit reset)', async () => {
+    it('setLimit recalculates page against new total', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 20 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 5 });
 
-      await source.goTo(3);
-      await source.restoreQuery({ limit: 10 });
-
-      expect(source.toQuery().page).toBe(2);
-    });
-
-    it('restoreQuery is a no-op when nothing changes', async () => {
-      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
-      const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
-
       await source.refresh();
+      await source.goTo(3);
 
-      const callsBefore = fetch.mock.calls.length;
-
-      // Empty search and current page — should be a no-op.
-      await source.restoreQuery({ limit: 10, page: 1, search: '' });
-
-      expect(fetch.mock.calls.length).toBe(callsBefore);
+      expect(source.toQuery().page).toBe(3);
+      expect(source.toQuery().limit).toBe(5);
     });
 
     it('goToLast navigates using current total pages', async () => {
@@ -150,7 +138,7 @@ describe('createRemoteSource', () => {
   });
 
   describe('search timing', () => {
-    it('debounces search and applies on flush', async () => {
+    it('debounces search and resolves promise when applied', async () => {
       const fetch = vi.fn(async ({ search }: { search?: string }) => ({
         items: search ? [search] : ['init'],
         total: 1,
@@ -159,10 +147,12 @@ describe('createRemoteSource', () => {
 
       await source.refresh();
 
-      source.search('alpha');
+      const searchDone = source.search('alpha');
+
       expect(source.meta.isSearchPending).toBe(true);
 
-      await source.flush();
+      await vi.runAllTimersAsync();
+      await searchDone;
 
       expect(source.meta.isSearchPending).toBe(false);
       expect(source.current).toEqual(['alpha']);
@@ -291,7 +281,7 @@ describe('createRemoteSource', () => {
   });
 
   describe('serialization and hydration', () => {
-    it('roundtrips snapshot through encodeQuery + hydrate', async () => {
+    it('roundtrips snapshot through encodeQuery + applyRemoteQuery', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 20 }));
       const source = createRemoteSource({
         autoFetch: false,
@@ -306,25 +296,38 @@ describe('createRemoteSource', () => {
 
       const params = encodeQuery(source.toQuery());
       const restored = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
+      const q = decodeQuery(params, { defaultLimit: 10 });
 
-      await restored.restoreQuery(decodeQuery(params, { defaultLimit: 10 }));
+      await applyRemoteQuery(restored, q);
 
-      expect(restored.toQuery()).toEqual({
-        filter: { active: true },
+      expect(restored.toQuery()).toMatchObject({
         limit: 2,
         page: 2,
-        sort: { by: 'name' },
       });
     });
 
-    it('restoreQuery with no changes does not fetch', async () => {
+    it('applyRemoteQuery with no changes does not fetch', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 2 });
 
-      await source.restoreQuery({ limit: 2, page: 1, search: '' });
+      await applyRemoteQuery(source, {});
       await Promise.resolve();
 
       expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('applyRemoteQuery applies filter and sort fields in a single fetch', async () => {
+      const fetchFn = vi.fn(async (q: { filter?: { active: boolean }; sort?: { by: string } }) => ({
+        items: [`filter=${String(q.filter?.active)}-sort=${q.sort?.by ?? 'none'}`],
+        total: 1,
+      }));
+      const source = createRemoteSource({ autoFetch: false, fetch: fetchFn, limit: 10 });
+
+      await applyRemoteQuery(source, { filter: { active: true }, sort: { by: 'name' } });
+
+      expect(fetchFn).toHaveBeenCalledTimes(1);
+      expect(source.current).toEqual(['filter=true-sort=name']);
+      expect(source.toQuery()).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
     });
 
     it('snapshot initialises source with pre-loaded data', async () => {
@@ -476,7 +479,7 @@ describe('createRemoteSource', () => {
 
       await source.refresh();
       await source.goTo(3);
-      await source.searchNow('hello');
+      await source.search('hello', { immediate: true });
       await source.reset();
 
       expect(source.toQuery()).toMatchObject({ page: 1 });
@@ -507,14 +510,14 @@ describe('createRemoteSource', () => {
     });
   });
 
-  describe('restoreQuery() page clamping', () => {
-    it('clamps restored page to valid range when total is known', async () => {
+  describe('goTo() page clamping', () => {
+    it('clamps goTo to valid range when total is known', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 30 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
       await source.refresh();
 
-      await source.restoreQuery({ page: 999 });
+      await source.goTo(999);
 
       expect(source.toQuery().page).toBe(3);
     });
@@ -528,8 +531,7 @@ describe('createRemoteSource', () => {
       });
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      // Before first fetch total=0; page is stored as-is and forwarded to the server.
-      await source.restoreQuery({ page: 5 });
+      await source.goTo(5);
 
       expect(capturedPage).toBe(5);
     });
@@ -953,6 +955,46 @@ describe('createRemoteSource', () => {
   });
 
   describe('dispose', () => {
+    it('ready() rejects immediately with SourceDisposedError when already disposed', async () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      source.dispose();
+
+      await expect(source.ready()).rejects.toBeInstanceOf(SourceDisposedError);
+    });
+
+    it('double-dispose is idempotent (no throw)', () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      source.dispose();
+
+      expect(() => source.dispose()).not.toThrow();
+    });
+
+    it('disposed getter reflects lifecycle state', async () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      expect(source.disposed).toBe(false);
+
+      source.dispose();
+
+      expect(source.disposed).toBe(true);
+    });
+
+    it('disposalSignal aborts on dispose()', async () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createRemoteSource({ autoFetch: false, fetch });
+
+      expect(source.disposalSignal.aborted).toBe(false);
+
+      source.dispose();
+
+      expect(source.disposalSignal.aborted).toBe(true);
+    });
+
     it('stops notifying listeners and aborts inflight requests', async () => {
       let capturedSignal: AbortSignal | undefined;
       const fetch = vi.fn(async (_q: unknown, signal: AbortSignal) => {
@@ -965,10 +1007,11 @@ describe('createRemoteSource', () => {
       const listener = vi.fn();
 
       source.subscribe(listener);
-      source.refresh();
+      void source.refresh();
 
-      source.dispose();
+      // First onPendingChange call fires before dispose, clear that.
       listener.mockClear();
+      source.dispose();
 
       expect(capturedSignal?.aborted).toBe(true);
 
@@ -1002,6 +1045,7 @@ describe('createRemoteSource', () => {
 
       source.subscribe(listener);
       source[Symbol.dispose]();
+      listener.mockClear();
 
       await source.refresh().catch(() => {});
 
@@ -1009,8 +1053,8 @@ describe('createRemoteSource', () => {
     });
   });
 
-  describe('restoreQuery cancels pending debounce', () => {
-    it('cancels a pending search debounce before applying restore', async () => {
+  describe('debounced search cancellation', () => {
+    it('cancels a pending search debounce when search immediate is called', async () => {
       const fetch = vi.fn(async (q: { search?: string }) => ({
         items: q.search === 'hello' ? ['hello-result'] : ['default'],
         total: 1,
@@ -1022,7 +1066,7 @@ describe('createRemoteSource', () => {
 
       source.search('hello');
 
-      await source.restoreQuery({ search: 'world' });
+      await source.search('world', { immediate: true });
 
       vi.advanceTimersByTime(400);
       await vi.runAllTimersAsync();

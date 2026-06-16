@@ -1,6 +1,6 @@
 import { computed, effect as rawEffect, isSignal, type ReadonlySignal, untrack } from '@vielzeug/ripple';
 
-import type { RegisterCleanup } from '../template-bindings';
+import type { RegisterCleanup } from '../template';
 
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';

@@ -17,7 +17,7 @@ export interface BarRenderOptions {
 
 export function renderBars(
   parent: SVGGElement,
-  data: { x: string; y: number }[],
+  data: { base: number; key: string; y: number }[],
   xScale: BandScale,
   yScale: Scale<number>,
   baselineY: number,
@@ -39,7 +39,7 @@ export function renderBars(
 
   for (let i = 0; i < data.length; i++) {
     const d = data[i];
-    const bandPos = xScale.map(d.x) + offset;
+    const bandPos = xScale.map(d.key) + offset;
     const barBaselineY = options.baselineYs ? options.baselineYs[i] : baselineY;
     const valuePx = yScale.map(d.y);
 
@@ -122,11 +122,11 @@ export function renderBars(
 
   if (options.transition) {
     if (enterTargets.length > 0) {
-      void animate(enterTargets, options.transition);
+      animate(enterTargets, options.transition);
     }
 
     if (updateTargets.length > 0) {
-      void animate(updateTargets, { ...options.transition, stagger: 0 });
+      animate(updateTargets, { ...options.transition, stagger: 0 });
     }
   }
 }

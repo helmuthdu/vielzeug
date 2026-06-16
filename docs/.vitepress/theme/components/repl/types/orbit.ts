@@ -31,6 +31,7 @@ declare module '/orbit' {
     x?: number;
     y?: number;
     centerOffset: number;
+    constrained: boolean;
   }
 
   export interface HideData {
@@ -62,12 +63,11 @@ declare module '/orbit' {
     middlewareData: MiddlewareData;
   }
 
-  export type MiddlewareReset =
-    | true
-    | {
-        placement?: Placement;
-        rects?: true | MiddlewareState['rects'];
-      };
+  export type MiddlewareReset = {
+    placement?: Placement;
+    remeasure?: boolean;
+    rects?: { reference: Rect; floating: Rect };
+  };
 
   export interface MiddlewareResult {
     x?: number;
@@ -137,34 +137,25 @@ declare module '/orbit' {
 
   export interface AutoUpdateOptions {
     observeFloating?: boolean;
+    observeAncestors?: boolean;
     observeVisualViewport?: boolean;
+    pauseWhenHidden?: boolean;
     animationFrame?: boolean;
     throttle?: number;
   }
 
-  export interface FloatOptions extends ComputePositionOptions {
-    apply?: (result: ComputePositionResult, elements: { floating: HTMLElement; reference: ReferenceElement }) => void;
-    autoUpdate?: AutoUpdateOptions | false;
-    preferCssAnchor?: boolean;
+  export interface FloatHandle {
+    disposalSignal: AbortSignal;
+    disposed: boolean;
+    dispose(): void;
+    getPosition(): ComputePositionResult | null;
+    update(): void;
+    [Symbol.dispose](): void;
   }
 
-  export function detectOverflow(state: MiddlewareState, options?: DetectOverflowOptions): SideObject;
-  export function computePosition(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): ComputePositionResult;
-  export function offset(value: OffsetValue): Middleware;
-  export function flip(options?: FlipOptions): Middleware;
-  export function autoPlacement(options?: AutoPlacementOptions): Middleware;
-  export function shift(options?: ShiftOptions): Middleware;
-  export function size(options?: SizeOptions): Middleware;
-  export function arrow(options: ArrowOptions): Middleware;
-  export function hide(options?: HideOptions): Middleware;
-  export function autoUpdate(reference: ReferenceElement, floating: HTMLElement, update: () => void, options?: AutoUpdateOptions): Cleanup;
-  export function float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): Cleanup;
-  export function getSide(placement: Placement): Side;
-  export function getAlignment(placement: Placement): Alignment | null;
-}
-
-declare module '/orbit/inline' {
-  import type { Middleware, Padding } from '/orbit';
+  export interface CssAnchorHandle extends FloatHandle {
+    readonly cssAnchor: true;
+  }
 
   export interface InlineOptions {
     x?: number;
@@ -172,7 +163,31 @@ declare module '/orbit/inline' {
     padding?: Padding;
   }
 
+  export interface FloatOptions extends ComputePositionOptions {
+    apply?: (result: ComputePositionResult) => void;
+    autoUpdate?: AutoUpdateOptions | false;
+  }
+
+  export function detectOverflow(state: MiddlewareState, options?: DetectOverflowOptions): SideObject;
+  export function computePosition(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): ComputePositionResult;
+  export function computePositionAsync(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
+  export function computePositionRaf(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
+  export function compose(...middleware: Array<Middleware | null | undefined | false>): Middleware[];
+  export function getRects(reference: ReferenceElement, floating: HTMLElement): { reference: Rect; floating: Rect };
+  export function offset(value: OffsetValue): Middleware;
+  export function flip(options?: FlipOptions): Middleware;
+  export function autoPlacement(options?: AutoPlacementOptions): Middleware;
+  export function shift(options?: ShiftOptions): Middleware;
+  export function size(options?: SizeOptions): Middleware;
+  export function arrow(options: ArrowOptions): Middleware;
+  export function hide(options?: HideOptions): Middleware;
   export function inline(options?: InlineOptions): Middleware;
+  export function autoUpdate(reference: ReferenceElement, floating: HTMLElement, update: () => void, options?: AutoUpdateOptions): Cleanup;
+  export function float(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): FloatHandle;
+  export function floatWithAnchor(reference: HTMLElement, floating: HTMLElement, options?: { placement?: Placement }): CssAnchorHandle;
+  export function isCssAnchorSupported(): boolean;
+  export function getSide(placement: Placement): Side;
+  export function getAlignment(placement: Placement): Alignment | null;
 }
 
 declare module '/orbit/presets' {
@@ -189,11 +204,27 @@ declare module '/orbit/presets' {
     middleware: Middleware[];
   }
 
-  export const presets: {
-    tooltip(options?: PresetOptions): PositioningPreset;
-    dropdown(options?: PresetOptions): PositioningPreset;
-    popover(options?: PresetOptions): PositioningPreset;
-    contextMenu(options?: PresetOptions): PositioningPreset;
-  };
+  export function tooltip(options?: PresetOptions): PositioningPreset;
+  export function dropdown(options?: PresetOptions): PositioningPreset;
+  export function popover(options?: PresetOptions): PositioningPreset;
+  export function contextMenu(options?: PresetOptions): PositioningPreset;
+}
+
+declare module '/orbit/reactive' {
+  import type { ComputePositionResult, FloatOptions, ReferenceElement } from '/orbit';
+
+  export interface ReadonlySignal<T> {
+    readonly value: T;
+  }
+
+  export interface ReactiveFloatHandle extends FloatHandle {
+    readonly position: ReadonlySignal<ComputePositionResult | null>;
+  }
+
+  export function createFloatState(
+    reference: ReferenceElement,
+    floating: HTMLElement,
+    options?: Omit<FloatOptions, 'apply'>,
+  ): ReactiveFloatHandle;
 }
 `;

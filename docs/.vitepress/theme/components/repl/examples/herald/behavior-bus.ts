@@ -17,9 +17,12 @@ bus.on('theme', (t) => console.log('B sees theme:', t))
 console.log('current theme:', bus.current('theme'))
 console.log('current zoom:', bus.current('zoom'))
 
-// reset() clears the buffer — B will no longer replay
+// snapshot() returns all buffered values at once
+console.log('snapshot:', bus.snapshot()) // { theme: 'dark', zoom: 1 }
+
+// reset() clears the buffer for one or all events
 bus.reset('zoom')
-console.log('after reset, zoom:', bus.current('zoom')) // undefined
+console.log('after reset, snapshot:', bus.snapshot()) // { theme: 'dark' }
 
 bus.dispose()`,
   name: 'Behavior Bus',

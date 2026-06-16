@@ -1,10 +1,11 @@
+import { isSignal } from '@vielzeug/ripple';
+
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
-import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
+import type { ChartHandle, Datum, PieChartConfig, PieSliceConfig } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
-import { createChartScaffold } from '../../core/chart-scaffold';
-import { resolve } from '../../core/resolve';
+import { createRadialScaffold } from '../../core/chart-scaffold';
 import { createSvgElement, setAttributes } from '../../svg/element';
 import { seriesColor } from '../../theme';
 import { type Arc, arcCentroid, arcPath, computeArcs } from './pie-renderer';
@@ -67,11 +68,11 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
     }
   }
 
-  const handle = createChartScaffold(
+  const handle = createRadialScaffold(
     container,
-    { ariaLabel: config.ariaLabel, plugins: config.plugins, tooltip: config.tooltip },
+    { ariaLabel: config.ariaLabel, legend: config.legend, plugins: config.plugins, tooltip: config.tooltip },
     (ctx): ChartEventHandlers => {
-      const { svg, tooltip } = ctx;
+      const { legend, svg, tooltip } = ctx;
 
       // Append pie groups to SVG on first render (idempotent).
       if (!svg.contains(bgCircle)) {
@@ -90,7 +91,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
       const outerR = Math.max(inner + 1, outer);
 
-      const slices = resolve(config.data);
+      const slices = isSignal(config.data) ? config.data.value : config.data;
       const { end, start } = semiAngles(variant);
 
       currentArcs = computeArcs(
@@ -180,7 +181,8 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
         renderLabels(slices);
       }
 
-      tooltip.hide();
+      legend?.update(currentArcs.map((arc) => ({ color: arc.color, name: arc.slice.label ?? '' })));
+      tooltip?.hide();
 
       const onMouseMove = (e: MouseEvent): void => {
         const svgRect = svg.getBoundingClientRect();
@@ -196,21 +198,21 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
           const { x, y } = arcCentroid(arc);
           const contR = container.getBoundingClientRect();
 
-          tooltip.show(
+          tooltip?.show(
             x + (svgRect.left - contR.left),
             y + (svgRect.top - contR.top),
-            { x: arc.slice.label ?? String(hit), y: arc.slice.value },
-            { color: arc.color, data: [], name: arc.slice.label ?? '' },
+            { key: hit, value: arc.slice.value },
+            { color: arc.color, data: [] as Datum[], name: arc.slice.label ?? '' },
           );
         } else {
           config.onHover?.(null, null);
-          tooltip.hide();
+          tooltip?.hide();
         }
       };
 
       const onMouseLeave = (): void => {
         config.onHover?.(null, null);
-        tooltip.hide();
+        tooltip?.hide();
       };
 
       const onClick = (e: MouseEvent): void => {

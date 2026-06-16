@@ -9,19 +9,15 @@ exports:
   [
     s,
     Schema,
-    WrapperSchema,
     PipeSchema,
     ValidationError,
     ErrorCode,
     errorsAt,
     fail,
-    fromDescriptor,
     descriptorToJsonSchema,
-    configure,
-    currentLocale,
-    registerLocale,
-    useLocale,
-    reset,
+    setMessages,
+    setLogger,
+    resetMessages,
     prependIssuePath,
   ]
 environments: [browser, node, ssr, deno]
@@ -69,14 +65,14 @@ const User = s.object({
 const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 ```
 
-| Feature           | Spell                                       | Zod    | Yup     |
-| ----------------- | ------------------------------------------- | ------ | ------- |
-| Bundle size       | <PackageInfo package="spell" type="size" /> | ~62 kB | ~14 kB  |
-| Type inference    | <sg-icon name="check" size="16"></sg-icon> `Infer<T>`                               | <sg-icon name="check" size="16"></sg-icon>     | Partial |
-| Coercion API      | <sg-icon name="check" size="16"></sg-icon> `s.coerce.*`                             | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon>      |
-| Async validation  | <sg-icon name="check" size="16"></sg-icon> `.check()`                               | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon>      |
-| Error flattening  | <sg-icon name="check" size="16"></sg-icon> `flatten()` + `flattenFirst()`           | <sg-icon name="check" size="16"></sg-icon>     | Partial |
-| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>      |
+| Feature           | Spell                                                                     | Zod                                        | Yup                                        |
+| ----------------- | ------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size       | <PackageInfo package="spell" type="size" />                               | ~62 kB                                     | ~14 kB                                     |
+| Type inference    | <sg-icon name="check" size="16"></sg-icon> `Infer<T>`                     | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
+| Coercion API      | <sg-icon name="check" size="16"></sg-icon> `s.coerce.*`                   | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Async validation  | <sg-icon name="check" size="16"></sg-icon> `.validate()`                  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Error flattening  | <sg-icon name="check" size="16"></sg-icon> `flatten()` + `flattenFirst()` | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
+| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -139,9 +135,10 @@ const user = User.parse(payload);
 
 - Namespace and tree-shakeable schema builders.
 - Sync and async parsing with `parse()`, `safeParse()`, `parseAsync()`, and `safeParseAsync()`.
+- Unified `validate()` for both sync and async custom rules; boolean/string shorthand supported.
 - Wrapper modes for `optional`, `nullable`, `nullish`, `default`, `catch`, and `required`.
-- Descriptor round-trips with `toDescriptor()`, `fromDescriptor()`, and `descriptorToJsonSchema()`.
-- Global and per-locale message configuration with composable `configure()` calls.
+- Descriptor serialization with `toDescriptor()` and JSON Schema export via `descriptorToJsonSchema()`.
+- Message overrides via `setMessages()` and logger routing via `setLogger()`.
 - Standalone validators for sizes, numeric ranges, and common string formats.
 - Structured errors with flattened, formatted, and best-match union diagnostics.
 - Object parsing and error formatting hardened against prototype-pollution-style keys.

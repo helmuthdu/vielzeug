@@ -1,29 +1,16 @@
-import type { CurrencyCode, Money, MoneyJSON, RoundingMode } from './types';
+import type { Money, MoneyJSON, RoundingMode } from './types';
 
+import { warn } from './_warn';
+import { CurrencyMismatchError } from './errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
+
+export { CurrencyMismatchError, InvalidCurrencyError } from './errors';
 
 // ─── Factories ───────────────────────────────────────────────────────────────
 
 /**
- * Returns a validated `CurrencyCode` for the given ISO 4217 code string.
- * Throws `RangeError` for unrecognized codes.
- *
- * Use this to obtain a `CurrencyCode` when you have a plain string from user
- * input or an API response, before constructing `Money` or `ExchangeRate`.
- *
- * @example
- * ```ts
- * const usd = toCurrencyCode('USD');    // CurrencyCode — validated
- * toCurrencyCode('NOTREAL');            // throws RangeError
- * ```
- */
-export function toCurrencyCode(code: string): CurrencyCode {
-  return validateCurrencyCode(code);
-}
-
-/**
  * Creates a `Money` value from a decimal string, number, or raw bigint minor units.
- * Validates the currency code — throws `RangeError` for unrecognised ISO 4217 codes.
+ * Validates the currency code — throws `InvalidCurrencyError` for unrecognised ISO 4217 codes.
  *
  * - **string** `'1234.56'` → parsed losslessly; respects the currency's decimal places.
  * - **number** `1234.56` → converted via `String()` first; inherits IEEE-754 limits.
@@ -44,7 +31,24 @@ export function money(amount: bigint | number | string, currency: string): Money
     return { amount, currency: validCurrency };
   }
 
-  // getCurrencyDecimals is cached from the assertValidCurrency call above.
+  if (typeof amount === 'number') {
+    const decimals = getCurrencyDecimals(validCurrency);
+    const str = String(amount);
+    const dotIndex = str.indexOf('.');
+    const fracLen = dotIndex === -1 ? 0 : str.length - dotIndex - 1;
+
+    if (fracLen > decimals) {
+      warn(
+        `money(): number input "${amount}" has more decimal places (${fracLen}) than ${validCurrency} supports (${decimals}). ` +
+          `Use a decimal string to avoid IEEE-754 precision loss.`,
+      );
+    }
+
+    // getCurrencyDecimals is cached from the validateCurrencyCode call above.
+    return { amount: parseToMinorUnits(str, decimals), currency: validCurrency };
+  }
+
+  // getCurrencyDecimals is cached from the validateCurrencyCode call above.
   return { amount: parseToMinorUnits(String(amount), getCurrencyDecimals(validCurrency)), currency: validCurrency };
 }
 
@@ -52,7 +56,7 @@ export function money(amount: bigint | number | string, currency: string): Money
 
 function assertSameCurrency(a: Money, b: Money): void {
   if (a.currency !== b.currency) {
-    throw new TypeError(`Currency mismatch: ${a.currency} and ${b.currency}`);
+    throw new CurrencyMismatchError(a.currency, b.currency);
   }
 }
 
@@ -69,20 +73,6 @@ function parseToMinorUnits(str: string, decimals: number): bigint {
   const result = applyRounding(quotient, raw % denominator, denominator, 'half-away-from-zero');
 
   return negative ? -result : result;
-}
-
-/**
- * Creates a `Money` value with a zero amount for the given currency.
- * Equivalent to `money(0n, currency)` but more expressive.
- *
- * @example
- * ```ts
- * zero('USD')  // { amount: 0n, currency: 'USD' }
- * zero('JPY')  // { amount: 0n, currency: 'JPY' }
- * ```
- */
-export function zero(currency: string): Money {
-  return money(0n, currency);
 }
 
 /**
@@ -105,8 +95,8 @@ export function withAmount(m: Money, amount: bigint): Money {
  * (has a `bigint` `amount` and a `string` `currency`).
  * Useful for narrowing unknown payloads from APIs or deserialized storage.
  *
- * Note: does **not** validate the currency code — use `toCurrencyCode()` if
- * you also need to confirm it is a recognized ISO 4217 code.
+ * Note: does **not** validate the currency code — use `money(0n, currency)` or
+ * `validateCurrencyCode()` if you also need to confirm it is a recognized ISO 4217 code.
  *
  * @example
  * ```ts
@@ -121,9 +111,9 @@ export function isMoney(value: unknown): value is Money {
   const v = value as Record<string, unknown>;
 
   return (
-    Object.prototype.hasOwnProperty.call(v, 'amount') &&
+    Object.hasOwn(v, 'amount') &&
     typeof v.amount === 'bigint' &&
-    Object.prototype.hasOwnProperty.call(v, 'currency') &&
+    Object.hasOwn(v, 'currency') &&
     typeof v.currency === 'string'
   );
 }
@@ -283,7 +273,7 @@ export function sum(moneys: readonly Money[]): Money {
 
   for (let i = 1; i < moneys.length; i++) {
     if (moneys[i]!.currency !== currency) {
-      throw new TypeError(`Currency mismatch: ${currency} and ${moneys[i]!.currency}`);
+      throw new CurrencyMismatchError(currency, moneys[i]!.currency);
     }
   }
 
@@ -291,33 +281,37 @@ export function sum(moneys: readonly Money[]): Money {
 }
 
 /**
- * Returns the smallest `Money` value. Throws if currencies differ.
+ * Returns the smallest `Money` value from a non-empty array. Throws if currencies differ.
  *
  * @example
  * ```ts
- * min(money('3.00', 'USD'), money('1.00', 'USD'), money('2.00', 'USD')) // $1.00
+ * min([money('3.00', 'USD'), money('1.00', 'USD'), money('2.00', 'USD')]) // $1.00
  * ```
  */
-export function min(first: Money, ...rest: Money[]): Money {
-  let result = first;
+export function min(moneys: readonly Money[]): Money {
+  if (moneys.length === 0) throw new RangeError('min requires at least one Money value');
 
-  for (const m of rest) result = compare(result, m) <= 0 ? result : m;
+  let result = moneys[0]!;
+
+  for (let i = 1; i < moneys.length; i++) result = compare(result, moneys[i]!) <= 0 ? result : moneys[i]!;
 
   return result;
 }
 
 /**
- * Returns the largest `Money` value. Throws if currencies differ.
+ * Returns the largest `Money` value from a non-empty array. Throws if currencies differ.
  *
  * @example
  * ```ts
- * max(money('1.00', 'USD'), money('3.00', 'USD'), money('2.00', 'USD')) // $3.00
+ * max([money('1.00', 'USD'), money('3.00', 'USD'), money('2.00', 'USD')]) // $3.00
  * ```
  */
-export function max(first: Money, ...rest: Money[]): Money {
-  let result = first;
+export function max(moneys: readonly Money[]): Money {
+  if (moneys.length === 0) throw new RangeError('max requires at least one Money value');
 
-  for (const m of rest) result = compare(result, m) >= 0 ? result : m;
+  let result = moneys[0]!;
+
+  for (let i = 1; i < moneys.length; i++) result = compare(result, moneys[i]!) >= 0 ? result : moneys[i]!;
 
   return result;
 }
@@ -360,7 +354,7 @@ export function clamp(m: Money, lower: Money, upper: Money): Money {
   // Validate currency consistency upfront so the error always names the mismatch,
   // rather than surfacing mid-computation from min() or max().
   if (m.currency !== lower.currency || m.currency !== upper.currency) {
-    throw new TypeError(`Currency mismatch: ${m.currency}, ${lower.currency}, and ${upper.currency}`);
+    throw new CurrencyMismatchError(m.currency, m.currency !== lower.currency ? lower.currency : upper.currency);
   }
 
   if (compare(lower, upper) > 0) {
@@ -369,7 +363,7 @@ export function clamp(m: Money, lower: Money, upper: Money): Money {
     );
   }
 
-  return max(lower, min(m, upper));
+  return max([lower, min([m, upper])]);
 }
 
 // ─── Unary ───────────────────────────────────────────────────────────────────
@@ -382,31 +376,6 @@ export function abs(m: Money): Money {
 /** Returns `money` with its sign flipped. */
 export function negate(m: Money): Money {
   return { amount: -m.amount, currency: m.currency };
-}
-
-/**
- * Returns `percentage`% of `money`, i.e. `money × (percentage / 100)`.
- * Use a string percentage for lossless precision (e.g. `'8.5'` for 8.5%).
- *
- * @param mode Rounding mode for fractional minor units. Defaults to `'half-away-from-zero'`.
- *
- * @example
- * ```ts
- * percentage(money('100.00', 'USD'), 10)      // $10.00
- * percentage(money('199.99', 'USD'), '8.5')   // $17.00
- * ```
- */
-export function percentage(m: Money, pct: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
-  const { denominator, negative: pctNegative, numerator } = parseRational(String(pct));
-  const scale = 100n;
-  const negative = m.amount < 0n !== pctNegative;
-  const absAmount = m.amount < 0n ? -m.amount : m.amount;
-  const raw = absAmount * numerator;
-  const divisor = denominator * scale;
-  const quotient = raw / divisor;
-  const result = applyRounding(quotient, raw % divisor, divisor, mode, negative);
-
-  return { amount: negative ? -result : result, currency: m.currency };
 }
 
 // ─── Comparison ──────────────────────────────────────────────────────────────
@@ -427,13 +396,10 @@ export function compare(a: Money, b: Money): -1 | 0 | 1 {
 
 /**
  * Returns `true` if both `Money` values have the same currency and amount.
- * Throws on currency mismatch — consistent with all other comparison functions.
- * Use `a.currency === b.currency` directly if you need a silent cross-currency check.
+ * Returns `false` if currencies differ — safe to use in `.filter()` and conditional chains.
  */
 export function isEqual(a: Money, b: Money): boolean {
-  assertSameCurrency(a, b);
-
-  return a.amount === b.amount;
+  return a.currency === b.currency && a.amount === b.amount;
 }
 
 /** Returns `true` if `a` is strictly greater than `b`. Throws on currency mismatch. */
@@ -510,6 +476,13 @@ export function toJSON(m: Money): MoneyJSON {
  */
 export function fromJSON(json: MoneyJSON): Money {
   const validCurrency = validateCurrencyCode(json.currency);
+
+  if (typeof json.amount !== 'string') {
+    throw new TypeError(
+      `Invalid money amount in JSON: ${JSON.stringify(json.amount)} (expected an integer string, e.g. '123456')`,
+    );
+  }
+
   let amount: bigint;
 
   try {
@@ -559,4 +532,49 @@ export function toNumber(m: Money): number {
   const decimals = getCurrencyDecimals(m.currency);
 
   return Number(m.amount) / Number(pow10(decimals));
+}
+
+// ─── Rounding ─────────────────────────────────────────────────────────────────
+
+/**
+ * Rounds a `Money` value to fewer decimal places than the currency's default.
+ * `places` must be a non-negative integer in the range `0..currencyDecimals`.
+ *
+ * Useful for display purposes (e.g. rounding USD to whole dollars).
+ * Throws `RangeError` if `places` is out of the allowed range.
+ *
+ * @param mode Rounding mode. Defaults to `'half-away-from-zero'`.
+ *
+ * @example
+ * ```ts
+ * roundTo(money('1234.56', 'USD'), 0)          // $1235   (whole dollars)
+ * roundTo(money('1234.56', 'USD'), 1)          // $1234.6
+ * roundTo(money('1234.56', 'USD'), 1, 'floor') // $1234.5
+ * roundTo(money('1234', 'JPY'), 0)             // ¥1234   (no-op: JPY is already 0-decimal)
+ * ```
+ */
+export function roundTo(m: Money, places: number, mode: RoundingMode = 'half-away-from-zero'): Money {
+  if (!Number.isInteger(places) || places < 0) {
+    throw new RangeError(`roundTo: places must be a non-negative integer, got ${places}`);
+  }
+
+  const currencyDecimals = getCurrencyDecimals(m.currency);
+
+  if (places > currencyDecimals) {
+    throw new RangeError(
+      `roundTo: places (${places}) exceeds the decimal places for ${m.currency} (${currencyDecimals})`,
+    );
+  }
+
+  if (places === currencyDecimals) return m;
+
+  const drop = currencyDecimals - places;
+  const divisor = pow10(drop);
+  const negative = m.amount < 0n;
+  const absAmount = negative ? -m.amount : m.amount;
+  const quotient = absAmount / divisor;
+  const remainder = absAmount % divisor;
+  const rounded = applyRounding(quotient, remainder, divisor, mode, negative);
+
+  return { amount: negative ? -rounded : rounded, currency: m.currency };
 }

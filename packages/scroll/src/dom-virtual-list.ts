@@ -56,7 +56,7 @@ export type DomVirtualListOptions<T> = {
 };
 
 /**
- * R11: Controller extends Virtualizer so all methods (scrollToIndex, redraw,
+ * R11: Controller extends Virtualizer so all methods (scrollToIndex, refresh,
  * scrollToOffset, etc.) are accessible directly on the controller without
  * needing to unwrap an inner virtualizer handle.
  *
@@ -181,7 +181,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
 
     if (data === undefined) {
       throw new RangeError(
-        `[scroll] toRenderItem: index ${vi.index} is out of range (currentItems.length=${currentItems.length})`,
+        `[@vielzeug/scroll] toRenderItem: index ${vi.index} is out of range (currentItems.length=${currentItems.length})`,
       );
     }
 
@@ -261,6 +261,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       clearAndReset();
     },
 
+    get disposed() {
+      return isDestroyed;
+    },
+
     invalidate() {
       if (isDestroyed) return;
 
@@ -287,12 +291,6 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (isDestroyed) return () => {};
 
       return virtualizer?.measureEl(index, el) ?? (() => {});
-    },
-
-    redraw() {
-      if (isDestroyed) return;
-
-      virtualizer?.redraw();
     },
 
     refresh() {
@@ -358,11 +356,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       // When count changed, update() already triggered rebuild + computeVisible().
       // Only force re-emission when count is unchanged (data changed, count same).
       if (!countChanged) {
-        // R3: redraw() for stable keys (data changed, sizes preserved);
-        //     invalidate() when no stable keys (measurements indexed by position
-        //     are unreliable after items are replaced).
+        // refresh() re-emits with current sizes for stable keys;
+        // invalidate() clears position-based measurements when no stable keys.
         if (options.getItemKey) {
-          virtualizer.redraw();
+          virtualizer.refresh();
         } else {
           virtualizer.invalidate();
         }
@@ -377,8 +374,13 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       return virtualizer?.stickyItems ?? [];
     },
 
-    [Symbol.dispose]() {
-      this.dispose();
+    [Symbol.dispose]: () => {
+      if (isDestroyed) return;
+
+      isDestroyed = true;
+      virtualizer?.dispose();
+      virtualizer = null;
+      clearAndReset();
     },
 
     get totalSize() {
@@ -432,16 +434,62 @@ export function createVirtualScroller<T>(
     throw e;
   }
 
-  function destroyScroller(): void {
-    ctrl.dispose();
-    scrollEl.remove();
-  }
-
-  return new Proxy(ctrl, {
-    get(t, prop, receiver) {
-      if (prop === 'dispose' || prop === Symbol.dispose) return destroyScroller;
-
-      return Reflect.get(t as object, prop, receiver);
+  return {
+    get count() {
+      return ctrl.count;
     },
-  });
+    dispose() {
+      ctrl.dispose();
+      scrollEl.remove();
+    },
+    get disposed() {
+      return ctrl.disposed;
+    },
+    invalidate() {
+      ctrl.invalidate();
+    },
+    get items() {
+      return ctrl.items;
+    },
+    measure(index, size) {
+      ctrl.measure(index, size);
+    },
+    measureBatch(entries) {
+      ctrl.measureBatch(entries);
+    },
+    measureEl(index, el) {
+      return ctrl.measureEl(index, el);
+    },
+    refresh() {
+      ctrl.refresh();
+    },
+    get scrollOffset() {
+      return ctrl.scrollOffset;
+    },
+    scrollToBottom(opts) {
+      ctrl.scrollToBottom(opts);
+    },
+    scrollToIndex(index, opts) {
+      ctrl.scrollToIndex(index, opts);
+    },
+    scrollToOffset(offset, opts) {
+      ctrl.scrollToOffset(offset, opts);
+    },
+    scrollToTop(opts) {
+      ctrl.scrollToTop(opts);
+    },
+    setItems(items) {
+      ctrl.setItems(items);
+    },
+    get stickyItems() {
+      return ctrl.stickyItems;
+    },
+    [Symbol.dispose]() {
+      ctrl.dispose();
+      scrollEl.remove();
+    },
+    get totalSize() {
+      return ctrl.totalSize;
+    },
+  };
 }

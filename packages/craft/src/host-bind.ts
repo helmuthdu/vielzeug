@@ -5,6 +5,7 @@
 
 import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
 
+import { warn } from './_warn';
 import { effect, tryRegisterCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
@@ -78,7 +79,13 @@ export const createBind = (el: HTMLElement): HostBindFn => {
       for (const dispose of disposers) dispose();
     };
 
-    tryRegisterCleanup(cleanup);
+    const registered = tryRegisterCleanup(cleanup);
+
+    if (!registered) {
+      warn(
+        'bind() called outside component setup context — cleanup will not be registered. Effects and event listeners will leak.',
+      );
+    }
 
     return cleanup;
   };
@@ -107,13 +114,18 @@ function applyAttribute(host: HTMLElement, name: string, value: HostBindingValue
   return applyReactiveBinding(value, (next) => setAttr(host, name, next));
 }
 
+const UNSAFE_CSS_CHARS = /[;{}]/g;
+
 function applyStyle(host: HTMLElement, name: string, value: HostBindingValue): (() => void) | void {
-  const cssName = name.startsWith('--') ? name : toKebab(name);
+  const cssName = (name.startsWith('--') ? name : toKebab(name)).replace(UNSAFE_CSS_CHARS, '');
+
+  if (!cssName) return;
+
   let owned = false;
   const setStyle = (v: string | number | boolean | null | undefined): void => {
     if (v != null && v !== '') {
       owned = true;
-      host.style.setProperty(cssName, String(v));
+      host.style.setProperty(cssName, String(v).replace(UNSAFE_CSS_CHARS, ''));
     } else if (owned) host.style.removeProperty(cssName);
   };
 

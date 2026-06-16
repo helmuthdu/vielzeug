@@ -97,4 +97,17 @@ describe('sg-breadcrumb-item accessibility', () => {
       expect(fixture.query('a')?.getAttribute('tabindex')).toBeNull();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-breadcrumb', {
+        html: `<sg-breadcrumb-item href="/">Home</sg-breadcrumb-item>
+               <sg-breadcrumb-item href="/docs">Docs</sg-breadcrumb-item>`,
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

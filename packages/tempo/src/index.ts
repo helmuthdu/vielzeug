@@ -7,7 +7,7 @@ export {
   isValid,
   now,
   nowInstant,
-  parseDate,
+  parse,
   parseInstant,
   parsePlainDate,
   parsePlainDateTime,
@@ -16,7 +16,7 @@ export {
 } from './core';
 
 // ─── Conversion utilities ─────────────────────────────────────────────────────
-export { toInstant, toZoned } from './internal';
+export { inTz, toInstant } from './_convert';
 
 // ─── Boundary ─────────────────────────────────────────────────────────────────
 export { endOf, startOf } from './boundary';
@@ -34,11 +34,12 @@ export {
   formatRangeParts,
   formatRelative,
   formatZoned,
+  humanize,
   parseDuration,
 } from './format';
 
 // ─── Classify ─────────────────────────────────────────────────────────────────
-export { classify, expires, humanize, timeDiff } from './classify';
+export { expires, timeDiff } from './classify';
 
 // ─── Range ────────────────────────────────────────────────────────────────────
 export { dateRange, recurrence } from './range';
@@ -47,19 +48,23 @@ export { dateRange, recurrence } from './range';
 export type {
   BoundaryOptions,
   BoundaryUnit,
+  CalendarUnit,
   CompareOptions,
   DateTimeDisambiguation,
   DifferenceOptions,
+  DisambiguationOptions,
   DurationFormatOptions,
   FormatOptions,
   FormatPattern,
+  ParseAs,
   RecurrenceRule,
   RelativeFormatOptions,
   RelativeTimeInput,
+  ShiftOptions,
+  TempoUnit,
   TimeDiffResult,
   TimeDiffUnit,
   TimeInput,
   TimeOptions,
-  TimeOptionsWithTz,
   WeekStartDay,
 } from './types';

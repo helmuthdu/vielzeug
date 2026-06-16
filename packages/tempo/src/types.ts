@@ -5,18 +5,34 @@ import { Temporal } from '@js-temporal/polyfill';
 export type TimeInput = Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
 export type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
 
+/** Discriminant for the {@link parse} `as` parameter. Controls the expected return type. */
+export type ParseAs = 'instant' | 'plain-date' | 'plain-datetime' | 'zoned';
+
 // ─── Option types ─────────────────────────────────────────────────────────────
 
 export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
 
+/**
+ * Base timezone option. Does NOT include `prefer` (disambiguation) — that only applies
+ * to `PlainDateTime` inputs and is intentionally scoped to APIs where it is meaningful
+ * (see {@link ShiftOptions} and {@link DifferenceOptions}).
+ */
 export interface TimeOptions {
-  prefer?: DateTimeDisambiguation;
   tz?: string;
 }
 
-export type TimeOptionsWithTz = TimeOptions & { tz: string };
+/**
+ * Options for DST-sensitive operations that accept `PlainDateTime` inputs.
+ * `prefer` controls how ambiguous wall-clock times (e.g. during DST fall-back) are resolved.
+ * It is silently ignored for `Instant` and `ZonedDateTime` inputs.
+ */
+export interface DisambiguationOptions {
+  prefer?: DateTimeDisambiguation;
+}
 
-export interface DifferenceOptions extends TimeOptions {
+export interface ShiftOptions extends DisambiguationOptions, TimeOptions {}
+
+export interface DifferenceOptions extends DisambiguationOptions, TimeOptions {
   largestUnit?: Temporal.DateTimeUnit;
   roundingIncrement?: number;
   roundingMode?: Temporal.RoundingMode;
@@ -30,11 +46,11 @@ export type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-on
 /**
  * Options for {@link format} and {@link formatRange}.
  *
- * `intl` and `pattern` are mutually exclusive — enforced at the type level.
+ * `intl` and `pattern` are mutually exclusive — enforced at compile time.
  */
 export type FormatOptions =
-  | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; tz?: string }
-  | { locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
+  | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; tz?: string }
+  | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
 
 export interface RelativeFormatOptions {
   base?: RelativeTimeInput;
@@ -48,9 +64,27 @@ export interface DurationFormatOptions {
   style?: 'digital' | 'long' | 'narrow' | 'short';
 }
 
+// ─── Unit vocabulary ──────────────────────────────────────────────────────────
+
+/** Master set of all temporal units recognised by tempo. */
+export type TempoUnit =
+  | 'day'
+  | 'hour'
+  | 'microsecond'
+  | 'millisecond'
+  | 'minute'
+  | 'month'
+  | 'nanosecond'
+  | 'second'
+  | 'week'
+  | 'year';
+
+/** Calendar-significant units (not sub-day). Used internally by CALENDAR_UNITS set. */
+export type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;
+
 // ─── Boundary / comparison types ──────────────────────────────────────────────
 
-export type BoundaryUnit = 'day' | 'hour' | 'minute' | 'month' | 'week' | 'year';
+export type BoundaryUnit = Exclude<TempoUnit, 'microsecond' | 'millisecond' | 'nanosecond' | 'second'>;
 export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export interface BoundaryOptions extends TimeOptions {
@@ -64,8 +98,8 @@ export interface CompareOptions extends TimeOptions {
 
 // ─── Classify types ───────────────────────────────────────────────────────────
 
-/** Structured output of {@link timeDiff}. */
-export type TimeDiffUnit = 'day' | 'hour' | 'millisecond' | 'minute' | 'month' | 'second' | 'week' | 'year';
+/** Structured output of {@link timeDiff}. Excludes sub-millisecond units. */
+export type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
 export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
 
 // ─── Recurrence types ─────────────────────────────────────────────────────────

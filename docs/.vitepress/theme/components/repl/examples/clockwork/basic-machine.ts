@@ -1,7 +1,7 @@
 export const basicMachineExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { machine } from '@vielzeug/clockwork'
 
-const trafficMachine = defineMachine({
+const m = machine({
   initial: 'red',
   context: { cycles: 0 },
   states: {
@@ -18,11 +18,9 @@ const trafficMachine = defineMachine({
   },
 })
 
-const m = interpret(trafficMachine)
-
-console.log('State:', m.state.value)           // 'red'
-m.send({ type: 'NEXT' })
-console.log('State:', m.state.value)           // 'green'
+console.log('State:', m.state.value)                        // 'red'
+console.log(m.send({ type: 'NEXT' }).status)                // 'transitioned'
+console.log('State:', m.state.value)                        // 'green'
 m.send({ type: 'NEXT' })
 console.log('State:', m.state.value)           // 'yellow'
 m.send({ type: 'NEXT' })

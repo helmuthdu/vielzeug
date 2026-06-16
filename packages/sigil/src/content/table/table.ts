@@ -1,4 +1,4 @@
-import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 
 import { reducedMotionMixin, tableBaseMixin } from '../../styles';
 import componentStyles from './table.css?inline';
@@ -252,7 +252,7 @@ define<SgTableProps>(TABLE_TAG, {
     striped: prop.bool(false),
   },
 
-  setup(props, { bind, el }) {
+  setup(props, { bind, el, onMounted, watch }) {
     bind({
       attr: {
         'aria-busy': props.loading,
@@ -281,7 +281,7 @@ define<SgTableProps>(TABLE_TAG, {
       scrollContainer.appendChild(table);
 
       // Reactively sync caption text and visibility from prop.
-      effect(() => {
+      watch(() => {
         const text = props.caption.value ?? '';
 
         captionEl.textContent = text;

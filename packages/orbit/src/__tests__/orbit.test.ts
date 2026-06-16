@@ -3,20 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Middleware } from '../types';
 
+import { getRects } from '../core';
 import {
   arrow,
   autoPlacement,
   autoUpdate,
   compose,
-  computeOnce,
   computePosition,
+  computePositionAsync,
+  computePositionRaf,
   detectOverflow,
   flip,
   float,
+  floatWithAnchor,
   getAlignment,
-  getRects,
   getSide,
   hide,
+  inline,
+  isCssAnchorSupported,
   limitShift,
   offset,
   shift,
@@ -715,16 +719,6 @@ describe('float', () => {
     handle.dispose();
   });
 
-  it('uses JS path (not CSS anchor) when a custom apply is provided with preferCssAnchor', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const apply = vi.fn();
-    const handle = float(reference, floating, { apply, placement: 'top', preferCssAnchor: true });
-
-    // custom apply must be called because CSS anchor path is bypassed
-    expect(apply).toHaveBeenCalledOnce();
-    handle.dispose();
-  });
-
   it('returns a FloatHandle with getPosition() and update()', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const handle = float(reference, floating, { autoUpdate: false, placement: 'bottom' });
@@ -732,14 +726,6 @@ describe('float', () => {
     expect(handle.getPosition()).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
     expect(typeof handle.update).toBe('function');
     expect(typeof handle.dispose).toBe('function');
-    handle.dispose();
-  });
-
-  it('cssAnchor is false on JS-computed handles', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const handle = float(reference, floating, { autoUpdate: false });
-
-    expect(handle.cssAnchor).toBe(false);
     handle.dispose();
   });
 
@@ -755,31 +741,17 @@ describe('float', () => {
     expect(floating.style.left).toBe('10px');
     handle.dispose();
   });
-
-  it('emits a DEV warn when preferCssAnchor is true but CSS Anchor Positioning is unsupported', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    try {
-      const handle = float(reference, floating, { autoUpdate: false, preferCssAnchor: true });
-
-      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));
-      handle.dispose();
-    } finally {
-      warnSpy.mockRestore();
-    }
-  });
 });
 
-// ─── computeOnce ─────────────────────────────────────────────────────────────
+// ─── computePositionAsync ───────────────────────────────────────────────────
 
-describe('computeOnce', () => {
+describe('computePositionAsync', () => {
   beforeEach(() => setViewport());
 
   it('resolves with the same result as computePosition', async () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const sync = computePosition(reference, floating, { placement: 'bottom' });
-    const async_ = await computeOnce(reference, floating, { placement: 'bottom' });
+    const async_ = await computePositionAsync(reference, floating, { placement: 'bottom' });
 
     expect(async_.x).toBe(sync.x);
     expect(async_.y).toBe(sync.y);
@@ -789,7 +761,7 @@ describe('computeOnce', () => {
   it('resolves after the current microtask', async () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     let resolved = false;
-    const promise = computeOnce(reference, floating).then(() => {
+    const promise = computePositionAsync(reference, floating).then(() => {
       resolved = true;
     });
 
@@ -989,18 +961,11 @@ describe('compose', () => {
     expect(mws.length).toBe(2);
   });
 
-  it('throws when a known-bad ordering is detected', () => {
-    expect(() => compose(arrow({ element: makeArrow() }), flip())).toThrow(/must come after/i);
-  });
+  it('returns all non-falsy middleware in order', () => {
+    const arrowEl = makeArrow();
+    const mws = compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: arrowEl }));
 
-  it('throws when flip and autoPlacement are both included', () => {
-    expect(() => compose(flip(), autoPlacement())).toThrow(/flip.*autoPlacement/i);
-  });
-
-  it('accepts valid ordering without throwing', () => {
-    expect(() =>
-      compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: makeArrow() })),
-    ).not.toThrow();
+    expect(mws.length).toBe(5);
   });
 });
 
@@ -1435,10 +1400,55 @@ describe('SSR shim', () => {
     const { float: ssrFloat } = await import('../ssr');
     const handle = ssrFloat({} as Element, {} as HTMLElement, { placement: 'right' });
 
-    expect(handle.cssAnchor).toBe(false);
     expect(handle.getPosition()).toBeNull();
     expect(() => handle.update()).not.toThrow();
     expect(() => handle.dispose()).not.toThrow();
+  });
+
+  it('float stub disposed is false before dispose and true after', async () => {
+    const { float: ssrFloat } = await import('../ssr');
+    const handle = ssrFloat({} as Element, {} as HTMLElement);
+
+    expect(handle.disposed).toBe(false);
+    handle.dispose();
+    expect(handle.disposed).toBe(true);
+  });
+
+  it('float stub dispose is idempotent', async () => {
+    const { float: ssrFloat } = await import('../ssr');
+    const handle = ssrFloat({} as Element, {} as HTMLElement);
+
+    handle.dispose();
+    expect(() => handle.dispose()).not.toThrow();
+    expect(handle.disposed).toBe(true);
+  });
+
+  it('float stub disposalSignal is aborted after dispose', async () => {
+    const { float: ssrFloat } = await import('../ssr');
+    const handle = ssrFloat({} as Element, {} as HTMLElement);
+
+    expect(handle.disposalSignal.aborted).toBe(false);
+    handle.dispose();
+    expect(handle.disposalSignal.aborted).toBe(true);
+  });
+
+  it('computePositionAsync resolves with zero-coord result and requested placement', async () => {
+    const { computePositionAsync: ssrComputePositionAsync } = await import('../ssr');
+    const reference = { getBoundingClientRect: () => ({ height: 40, width: 100, x: 200, y: 300 }) };
+    const floating = {} as HTMLElement;
+
+    const result = await ssrComputePositionAsync(reference, floating, { placement: 'left' });
+
+    expect(result.placement).toBe('left');
+    expect(result.x).toBe(0);
+    expect(result.y).toBe(0);
+  });
+
+  it('computePositionAsync defaults to bottom placement when none provided', async () => {
+    const { computePositionAsync: ssrComputePositionAsync } = await import('../ssr');
+    const result = await ssrComputePositionAsync({} as Element, {} as HTMLElement);
+
+    expect(result.placement).toBe('bottom');
   });
 });
 
@@ -1465,9 +1475,76 @@ describe('getRects', () => {
   });
 });
 
-// ─── compose typed overloads ──────────────────────────────────────────────────
+// ─── FloatHandle dispose idempotency ─────────────────────────────────────────
 
-describe('compose typed overloads', () => {
+describe('FloatHandle dispose idempotency', () => {
+  beforeEach(() => setViewport());
+
+  it('disposed is false before dispose and true after', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false });
+
+    expect(handle.disposed).toBe(false);
+    handle.dispose();
+    expect(handle.disposed).toBe(true);
+  });
+
+  it('calling dispose twice does not throw', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false });
+
+    handle.dispose();
+    expect(() => handle.dispose()).not.toThrow();
+  });
+
+  it('[Symbol.dispose] is equivalent to dispose', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = float(reference, floating, { autoUpdate: false });
+
+    handle[Symbol.dispose]();
+    expect(handle.disposed).toBe(true);
+  });
+});
+
+// ─── middleware ordering validation ──────────────────────────────────────────
+
+describe('middleware ordering validation (via computePosition)', () => {
+  beforeEach(() => setViewport());
+
+  it('throws when flip precedes inline', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    expect(() => computePosition(reference, floating, { middleware: [flip(), inline()] })).toThrow(
+      /must come after.*middleware pipeline/i,
+    );
+  });
+
+  it('throws when shift precedes inline', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    expect(() => computePosition(reference, floating, { middleware: [shift(), inline()] })).toThrow(
+      /must come after.*middleware pipeline/i,
+    );
+  });
+
+  it('does not throw when inline precedes flip and shift', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    expect(() =>
+      computePosition(reference, floating, { middleware: [inline(), flip(), shift({ padding: 6 })] }),
+    ).not.toThrow();
+  });
+
+  it('throws when flip and autoPlacement are both used', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    expect(() => computePosition(reference, floating, { middleware: [flip(), autoPlacement()] })).toThrow(/not both/i);
+  });
+});
+
+// ─── compose ─────────────────────────────────────────────────────────────────
+
+describe('compose', () => {
   beforeEach(() => setViewport());
 
   it('compose with 2 typed middlewares returns typed tuple', () => {
@@ -1489,5 +1566,346 @@ describe('compose typed overloads', () => {
     const mws = compose(flip(), null, undefined, false, shift());
 
     expect(mws.length).toBe(2);
+  });
+});
+
+// ─── floatWithAnchor style cleanup ───────────────────────────────────────────
+
+describe('floatWithAnchor style cleanup', () => {
+  it('removes CSS properties that were not set before floatWithAnchor', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating, { placement: 'bottom' });
+
+    handle.dispose();
+
+    expect(reference.style.getPropertyValue('anchor-name')).toBe('');
+    expect(floating.style.getPropertyValue('position-anchor')).toBe('');
+    expect(floating.style.getPropertyValue('position-area')).toBe('');
+    reference.remove();
+    floating.remove();
+  });
+
+  it('restores a previously set CSS property value after dispose', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    reference.style.setProperty('anchor-name', '--existing');
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating, { placement: 'bottom' });
+
+    handle.dispose();
+
+    expect(reference.style.getPropertyValue('anchor-name')).toBe('--existing');
+    reference.remove();
+    floating.remove();
+  });
+});
+
+// ─── floatWithAnchor dispose contract ────────────────────────────────────────
+
+describe('floatWithAnchor dispose contract', () => {
+  it('cssAnchor property is true', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating, { placement: 'top' });
+
+    expect(handle.cssAnchor).toBe(true);
+    handle.dispose();
+    reference.remove();
+    floating.remove();
+  });
+
+  it('disposed is false before dispose and true after', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating);
+
+    expect(handle.disposed).toBe(false);
+    handle.dispose();
+    expect(handle.disposed).toBe(true);
+    reference.remove();
+    floating.remove();
+  });
+
+  it('disposalSignal is aborted after dispose', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating);
+
+    expect(handle.disposalSignal.aborted).toBe(false);
+    handle.dispose();
+    expect(handle.disposalSignal.aborted).toBe(true);
+    reference.remove();
+    floating.remove();
+  });
+
+  it('dispose is idempotent', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating);
+
+    handle.dispose();
+    expect(() => handle.dispose()).not.toThrow();
+    expect(handle.disposed).toBe(true);
+    reference.remove();
+    floating.remove();
+  });
+
+  it('accepts custom fallbacks option', () => {
+    const reference = document.createElement('div');
+    const floating = document.createElement('div');
+
+    document.body.appendChild(reference);
+    document.body.appendChild(floating);
+
+    const handle = floatWithAnchor(reference, floating, {
+      fallbacks: 'flip-block',
+      placement: 'bottom',
+    });
+
+    expect(handle.cssAnchor).toBe(true);
+    handle.dispose();
+    reference.remove();
+    floating.remove();
+  });
+});
+
+// ─── autoUpdate throttle ──────────────────────────────────────────────────────
+
+describe('autoUpdate throttle', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setViewport();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('fires the initial update immediately regardless of throttle interval', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const update = vi.fn();
+    const cleanup = autoUpdate(reference, floating, update, { throttle: 100 });
+
+    expect(update).toHaveBeenCalledTimes(1);
+    cleanup();
+  });
+
+  it('throttles subsequent scroll-triggered updates', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const update = vi.fn();
+    const cleanup = autoUpdate(reference, floating, update, { observeAncestors: false, throttle: 100 });
+
+    update.mockClear();
+
+    vi.advanceTimersByTime(200);
+
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('scroll'));
+    window.dispatchEvent(new Event('scroll'));
+
+    expect(update).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(110);
+    expect(update).toHaveBeenCalledTimes(2);
+
+    cleanup();
+  });
+});
+
+// ─── inline cursor hit-test ───────────────────────────────────────────────────
+
+describe('inline cursor hit-test', () => {
+  beforeEach(() => setViewport());
+
+  it('picks the rect containing the cursor when x/y provided', () => {
+    const floating = document.createElement('div');
+    const reference = document.createElement('span');
+
+    vi.spyOn(floating, 'getBoundingClientRect').mockReturnValue(createDomRect({ height: 30, width: 80, x: 0, y: 0 }));
+
+    const rect1 = { bottom: 120, height: 20, left: 100, right: 300, top: 100, width: 200, x: 100, y: 100 } as DOMRect;
+    const rect2 = { bottom: 160, height: 20, left: 100, right: 300, top: 140, width: 200, x: 100, y: 140 } as DOMRect;
+    const domRectList = Object.assign([rect1, rect2], {
+      item: (i: number) => [rect1, rect2][i] ?? null,
+    }) as DOMRectList;
+
+    vi.spyOn(reference, 'getBoundingClientRect').mockReturnValue(rect1);
+    vi.spyOn(reference, 'getClientRects').mockReturnValue(domRectList);
+
+    setViewport(800, 600);
+
+    const result = computePosition(reference as unknown as Element, floating, {
+      middleware: [inline({ x: 150, y: 150 })],
+      placement: 'top',
+    });
+
+    expect(result.x).toBeTypeOf('number');
+    expect(result.y).toBeTypeOf('number');
+  });
+});
+
+// ─── isCssAnchorSupported ────────────────────────────────────────────────────
+
+describe('isCssAnchorSupported', () => {
+  it('returns a boolean', () => {
+    expect(typeof isCssAnchorSupported()).toBe('boolean');
+  });
+
+  it('returns false when CSS.supports is unavailable', () => {
+    const original = globalThis.CSS;
+
+    Object.defineProperty(globalThis, 'CSS', { configurable: true, value: undefined });
+    expect(isCssAnchorSupported()).toBe(false);
+    Object.defineProperty(globalThis, 'CSS', { configurable: true, value: original });
+  });
+});
+
+// ─── MiddlewareReset remeasure / rects paths ──────────────────────────────────
+
+describe('MiddlewareReset paths', () => {
+  beforeEach(() => setViewport());
+
+  it('remeasure: true re-reads rects before the next pipeline pass', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    let pass = 0;
+    const calls: Array<{ x: number; y: number }> = [];
+
+    const mw: Middleware = (state) => {
+      calls.push({ x: state.rects.reference.x, y: state.rects.reference.y });
+      pass += 1;
+
+      if (pass === 1) return { reset: { remeasure: true } };
+    };
+
+    computePosition(reference, floating, { middleware: [mw] });
+
+    expect(calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('reset.rects overrides reference/floating rects for the next pass', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const overrideRef = createDomRect({ height: 40, width: 100, x: 50, y: 50 });
+    let pass = 0;
+    let secondPassX = 0;
+
+    const mw: Middleware = (state) => {
+      pass += 1;
+
+      if (pass === 1) {
+        return {
+          reset: {
+            rects: {
+              floating: state.rects.floating,
+              reference: { height: overrideRef.height, width: overrideRef.width, x: overrideRef.x, y: overrideRef.y },
+            },
+          },
+        };
+      }
+
+      secondPassX = state.rects.reference.x;
+    };
+
+    computePosition(reference, floating, { middleware: [mw] });
+
+    expect(secondPassX).toBe(50);
+  });
+
+  it('reset.placement overrides placement for the next pass', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    let pass = 0;
+    let secondPlacement = '';
+
+    const mw: Middleware = (state) => {
+      pass += 1;
+
+      if (pass === 1) return { reset: { placement: 'top' } };
+
+      secondPlacement = state.placement;
+    };
+
+    computePosition(reference, floating, { middleware: [mw], placement: 'bottom' });
+
+    expect(secondPlacement).toBe('top');
+  });
+});
+
+// ─── mergeState prototype pollution regression ────────────────────────────────
+
+describe('mergeState prototype pollution regression', () => {
+  beforeEach(() => setViewport());
+
+  it('does not pollute Object.prototype when middleware returns __proto__ key in data', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    const maliciousMw: Middleware = () => ({
+      data: { ['__proto__']: { polluted: true } } as Record<string, unknown>,
+    });
+
+    expect(() => computePosition(reference, floating, { middleware: [maliciousMw] })).not.toThrow();
+    expect((Object.prototype as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});
+
+// ─── computePositionRaf ───────────────────────────────────────────────────────
+
+describe('computePositionRaf', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    setViewport();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not resolve before the next animation frame', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    let resolved = false;
+    const promise = computePositionRaf(reference, floating).then(() => {
+      resolved = true;
+    });
+
+    expect(resolved).toBe(false);
+    vi.runAllTimers();
+    await promise;
+    expect(resolved).toBe(true);
+  });
+
+  it('resolves with same result as computePosition', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const sync = computePosition(reference, floating, { placement: 'bottom' });
+    const promise = computePositionRaf(reference, floating, { placement: 'bottom' });
+
+    vi.runAllTimers();
+
+    const rafResult = await promise;
+
+    expect(rafResult.x).toBe(sync.x);
+    expect(rafResult.y).toBe(sync.y);
+    expect(rafResult.placement).toBe(sync.placement);
   });
 });

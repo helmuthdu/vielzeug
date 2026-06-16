@@ -234,6 +234,22 @@ describe('isUrl', () => {
     expect(isUrl('not a url')).toBe(false);
     expect(isUrl('')).toBe(false);
   });
+
+  it('accepts custom protocols', () => {
+    expect(isUrl('ftp://files.example.com', ['ftp'])).toBe(true);
+    expect(isUrl('wss://ws.example.com', ['wss'])).toBe(true);
+  });
+
+  it('rejects http/https when only custom protocol allowed', () => {
+    expect(isUrl('https://example.com', ['ftp'])).toBe(false);
+    expect(isUrl('http://example.com', ['ftp'])).toBe(false);
+  });
+
+  it('accepts multiple custom protocols', () => {
+    expect(isUrl('ftp://a.com', ['ftp', 'sftp'])).toBe(true);
+    expect(isUrl('sftp://a.com', ['ftp', 'sftp'])).toBe(true);
+    expect(isUrl('http://a.com', ['ftp', 'sftp'])).toBe(false);
+  });
 });
 
 describe('isUuid', () => {

@@ -19,6 +19,7 @@ import type {
   ValidateResult,
 } from '../types';
 
+import { ValidationError } from '../types';
 import { flattenValues, unflattenValues } from '../utils';
 
 /**
@@ -83,6 +84,39 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   }
 
   /* ---- Non-trivial scoped implementations ---- */
+
+  /**
+   * Compute a scoped projection of FormState from current raw Maps.
+   * Errors, touchedFields, validatingFields, isValid, isDirty, isTouched reflect only
+   * fields within the prefix. isSubmitting, isLoading, isValidating, submitCount are full-form.
+   */
+  function getScopedState(): FormState {
+    const rootState = ctx.getStateSnapshot();
+    const errors = Object.fromEntries(
+      Object.entries(rootState.errors)
+        .filter(([k]) => isScopedKey(k))
+        .map(([k, v]) => [unscope(k), v]),
+    );
+    const touchedFields = rootState.touchedFields.filter(isScopedKey).map(unscope);
+    const validatingFields = rootState.validatingFields.filter(isScopedKey).map(unscope);
+    const isValid = Object.keys(errors).length === 0;
+    const isDirty = [...ctx.dirty].some(isScopedKey);
+    const isTouched = [...ctx.touched].some(isScopedKey);
+    const isValidating = validatingFields.length > 0;
+
+    return Object.freeze({
+      errors: Object.freeze(errors) as FormState['errors'],
+      isDirty,
+      isLoading: rootState.isLoading,
+      isSubmitting: rootState.isSubmitting,
+      isTouched,
+      isValid,
+      isValidating,
+      submitCount: rootState.submitCount,
+      touchedFields: Object.freeze(touchedFields) as readonly string[],
+      validatingFields: Object.freeze(validatingFields) as readonly string[],
+    }) as unknown as FormState;
+  }
 
   function scopedValues(): ScopedValues<TValues, P> {
     const sub: Record<string, unknown> = {};
@@ -207,27 +241,52 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     ctx.requestNotify();
   }
 
-  async function scopedValidate(signal?: AbortSignal): Promise<ValidateResult> {
-    ctx.ensureNotDisposed();
-
-    const fields = [...ctx.validators.keys()].filter(isScopedKey);
-
-    await ctx.runValidationCore(fields, 'partial', signal);
-
-    const errors: Record<string, string> = {};
-
-    for (const [key, message] of ctx.fieldErrors) {
-      if (isScopedKey(key)) errors[unscope(key)] = message;
-    }
-
-    return { errors, valid: Object.keys(errors).length === 0 };
-  }
-
-  async function scopedValidateFields(
-    fields: FlatKeyOf<ScopedValues<TValues, P>>[],
+  async function scopedValidate(
+    nameOrFieldsOrSignal?: FlatKeyOf<ScopedValues<TValues, P>> | FlatKeyOf<ScopedValues<TValues, P>>[] | AbortSignal,
     signal?: AbortSignal,
   ): Promise<ValidateResult> {
-    await ctx.root.validateFields(fields.map((f) => pre(f as string)) as FlatKeyOf<TValues>[], signal);
+    ctx.ensureNotDisposed();
+
+    if (
+      nameOrFieldsOrSignal !== undefined &&
+      !Array.isArray(nameOrFieldsOrSignal) &&
+      !(nameOrFieldsOrSignal instanceof AbortSignal)
+    ) {
+      // validate(name) — single field
+      const prefixedName = pre(nameOrFieldsOrSignal as string) as FlatKeyOf<TValues>;
+
+      await ctx.runValidationCore([prefixedName as string], 'partial', signal);
+
+      const error = ctx.fieldErrors.get(prefixedName as string);
+
+      return {
+        errors: error !== undefined ? { [nameOrFieldsOrSignal as string]: error } : {},
+        valid: error === undefined,
+      };
+    }
+
+    if (Array.isArray(nameOrFieldsOrSignal)) {
+      // validate(fields[]) — specific subset
+      const prefixedFields = nameOrFieldsOrSignal.map((f) => pre(f as string)) as string[];
+
+      await ctx.runValidationCore(prefixedFields, 'partial', signal);
+
+      const errors: Record<string, string> = {};
+
+      for (const pf of prefixedFields) {
+        const msg = ctx.fieldErrors.get(pf);
+
+        if (msg !== undefined) errors[unscope(pf)] = msg;
+      }
+
+      return { errors, valid: Object.keys(errors).length === 0 };
+    }
+
+    // validate(signal?) — all scoped fields
+    const sig = nameOrFieldsOrSignal as AbortSignal | undefined;
+    const fields = [...ctx.validators.keys()].filter(isScopedKey);
+
+    await ctx.runValidationCore(fields, 'partial', sig);
 
     const errors: Record<string, string> = {};
 
@@ -287,77 +346,41 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
    */
   function subscribeScoped(listener: (state: FormState) => void, options?: SubscribeOptions): Unsubscribe {
     // Track the previous scoped projection for equality comparison.
-    let prevErrors: Record<string, string> | null = null;
-    let prevTouched: readonly string[] | null = null;
-    let prevValidating: readonly string[] | null = null;
-    let prevFlags: Pick<
-      FormState,
-      'isDirty' | 'isLoading' | 'isSubmitting' | 'isTouched' | 'isValid' | 'isValidating' | 'submitCount'
-    > | null = null;
+    let prevState: FormState | null = null;
 
-    return ctx.root.subscribe((state) => {
-      const errors = Object.fromEntries(
-        Object.entries(state.errors)
-          .filter(([k]) => isScopedKey(k))
-          .map(([k, v]) => [unscope(k), v]),
-      );
-      const touchedFields = state.touchedFields.filter(isScopedKey).map(unscope);
-      const validatingFields = state.validatingFields.filter(isScopedKey).map(unscope);
-
-      // Compute scoped-only boolean flags.
-      const isValid = Object.keys(errors).length === 0;
-      const isDirty = [...ctx.dirty].some(isScopedKey);
-      const isTouched = [...ctx.touched].some(isScopedKey);
-      const isValidating = validatingFields.length > 0;
+    return ctx.root.subscribe(() => {
+      const next = getScopedState();
 
       // Skip if no scoped-relevant state has changed.
-      if (prevFlags) {
-        const flagsMatch =
-          isDirty === prevFlags.isDirty &&
-          state.isLoading === prevFlags.isLoading &&
-          state.isSubmitting === prevFlags.isSubmitting &&
-          isTouched === prevFlags.isTouched &&
-          isValid === prevFlags.isValid &&
-          isValidating === prevFlags.isValidating &&
-          state.submitCount === prevFlags.submitCount;
-
-        const errKeys = Object.keys(errors);
-        const prevErrKeys = Object.keys(prevErrors!);
-        const errorsMatch = errKeys.length === prevErrKeys.length && errKeys.every((k) => errors[k] === prevErrors![k]);
+      if (prevState) {
+        const p = prevState;
+        const errKeys = Object.keys(next.errors);
+        const prevErrKeys = Object.keys(p.errors);
+        const errorsMatch =
+          errKeys.length === prevErrKeys.length && errKeys.every((k) => next.errors[k] === p.errors[k]);
 
         const touchedMatch =
-          touchedFields.length === prevTouched!.length && touchedFields.every((v, i) => v === prevTouched![i]);
+          next.touchedFields.length === p.touchedFields.length &&
+          next.touchedFields.every((v, i) => v === p.touchedFields[i]);
 
         const validatingMatch =
-          validatingFields.length === prevValidating!.length &&
-          validatingFields.every((v, i) => v === prevValidating![i]);
+          next.validatingFields.length === p.validatingFields.length &&
+          next.validatingFields.every((v, i) => v === p.validatingFields[i]);
+
+        const flagsMatch =
+          next.isDirty === p.isDirty &&
+          next.isLoading === p.isLoading &&
+          next.isSubmitting === p.isSubmitting &&
+          next.isTouched === p.isTouched &&
+          next.isValid === p.isValid &&
+          next.isValidating === p.isValidating &&
+          next.submitCount === p.submitCount;
 
         if (flagsMatch && errorsMatch && touchedMatch && validatingMatch) return;
       }
 
-      prevErrors = errors;
-      prevTouched = touchedFields;
-      prevValidating = validatingFields;
-      prevFlags = {
-        isDirty,
-        isLoading: state.isLoading,
-        isSubmitting: state.isSubmitting,
-        isTouched,
-        isValid,
-        isValidating,
-        submitCount: state.submitCount,
-      };
-
-      listener({
-        ...state,
-        errors: Object.freeze(errors) as FormState['errors'],
-        isDirty,
-        isTouched,
-        isValid,
-        isValidating,
-        touchedFields: Object.freeze(touchedFields) as readonly string[],
-        validatingFields: Object.freeze(validatingFields) as readonly string[],
-      });
+      prevState = next;
+      listener(next);
     }, options);
   }
 
@@ -376,6 +399,9 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       ctx.root.connect(pre(name as string) as FlatKeyOf<TValues>, config) as ConnectionResult<
         TypeAtPath<S, typeof name>
       >,
+    get disposalSignal() {
+      return ctx.root.disposalSignal;
+    },
     dispose: () => {
       /* Scoped forms share lifecycle with parent — call parentForm.dispose() to tear down */
     },
@@ -384,6 +410,16 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     },
     field: (name) =>
       ctx.root.field(pre(name as string) as FlatKeyOf<TValues>) as FieldState<TypeAtPath<S, typeof name>>,
+    fields: {
+      register: (name, options?) =>
+        ctx.root.fields.register(
+          pre(name as string) as FlatKeyOf<TValues>,
+          options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
+        ),
+      remove: (name) => ctx.root.fields.remove(pre(name as string) as FlatKeyOf<TValues>),
+      setValidator: (name, validator?) =>
+        ctx.root.fields.setValidator(pre(name as string) as FlatKeyOf<TValues>, validator),
+    },
     get: (name) => ctx.root.get(pre(name as string) as FlatKeyOf<TValues>) as TypeAtPath<S, typeof name>,
     get isLoading() {
       return ctx.root.isLoading;
@@ -392,12 +428,6 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       return ctx.root.isSubmitting;
     },
     patch: scopedPatch as Form<S>['patch'],
-    registerField: (name, options?) =>
-      ctx.root.registerField(
-        pre(name as string) as FlatKeyOf<TValues>,
-        options as RegisterFieldOptions<TypeAtPath<TValues, FlatKeyOf<TValues>>>,
-      ),
-    removeField: (name) => ctx.root.removeField(pre(name as string) as FlatKeyOf<TValues>),
     replace: scopedReplace as Form<S>['replace'],
     reset: scopedReset,
     resetErrors: scopedResetErrors as Form<S>['resetErrors'],
@@ -411,12 +441,18 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
         options,
       ),
     setError: (name, message) => ctx.root.setError(pre(name as string) as ErrorKeyOf<TValues>, message),
-    setValidator: (name, validator?) => ctx.root.setValidator(pre(name as string) as FlatKeyOf<TValues>, validator),
     snapshot: () => ctx.root.snapshot() as unknown as FormSnapshot<S>,
     get state() {
-      return ctx.getStateSnapshot();
+      return getScopedState();
     },
     submit: scopedSubmit as Form<S>['submit'],
+    submitOrThrow: async (handler) => {
+      const result = await scopedSubmit(handler);
+
+      if (!result.ok) throw new ValidationError(result.errors as Record<string, string>);
+
+      return result.value;
+    },
     subscribe: (listener, options?) => ctx.root.subscribe(listener, options),
     subscribeField: (name, listener, options?) =>
       ctx.root.subscribeField(
@@ -431,9 +467,30 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     untouch: (name) => ctx.root.untouch(pre(name as string) as FlatKeyOf<TValues>),
     untouchAll: scopedUntouchAll,
     validate: scopedValidate as Form<S>['validate'],
-    validateField: (name, signal?) => ctx.root.validateField(pre(name as string) as FlatKeyOf<TValues>, signal),
-    validateFields: scopedValidateFields as Form<S>['validateFields'],
-    validateStream: (signal?) => ctx.root.validateStream(signal),
+    validateStream(signal?) {
+      const rootIter = ctx.root.validateStream(signal);
+
+      const iter: AsyncIterableIterator<{ error: string | undefined; field: string }> = {
+        async next() {
+          for (;;) {
+            const item = await rootIter.next();
+
+            if (item.done) return item;
+
+            if (isScopedKey(item.value.field))
+              return { done: false, value: { error: item.value.error, field: unscope(item.value.field) } };
+          }
+        },
+        return() {
+          return rootIter.return ? rootIter.return() : Promise.resolve({ done: true as const, value: undefined });
+        },
+        [Symbol.asyncIterator]() {
+          return this;
+        },
+      };
+
+      return iter;
+    },
     values: scopedValues,
   };
 }

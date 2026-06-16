@@ -1,5 +1,6 @@
-import { define, html, inject, onCleanup, prop, provide, ref } from '../index';
+import { define, html, inject, prop, ref } from '../index';
 import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
+import { onCleanup } from '../runtime';
 import { mount } from '../testing';
 
 describe('component helpers and exports', () => {
@@ -45,11 +46,11 @@ describe('component helpers and exports', () => {
   it('exposes core utilities during setup', async () => {
     let elementInstance: HTMLElement | undefined;
 
-    const { element } = await mount((_props, { el }) => {
+    const { element } = await mount((_props, { el, provide: ctxProvide }) => {
       elementInstance = el;
 
       expect(onCleanup).toBeDefined();
-      expect(provide).toBeDefined();
+      expect(ctxProvide).toBeDefined();
       expect(inject).toBeDefined();
       expect(ref).toBeDefined();
       expect(define).toBeDefined();

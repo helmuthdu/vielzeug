@@ -1,4 +1,3 @@
-import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { bandScale } from '../band';
@@ -56,15 +55,10 @@ describe('bandScale', () => {
     expect(ticks[0]).toBe('A');
   });
 
-  it('accepts MaybeSignal domain and range', () => {
-    const dom = signal(['A', 'B', 'C']);
-    const rng = signal<[number, number]>([0, 300]);
-    const scale = bandScale({ domain: dom, range: rng });
+  it('uses plain-value domain and range', () => {
+    const scale = bandScale({ domain: ['A', 'B', 'C'], range: [0, 300] });
 
     expect(scale.domain).toEqual(['A', 'B', 'C']);
     expect(scale.bandwidth()).toBeGreaterThan(0);
-
-    dom.value = ['A', 'B'];
-    expect(scale.domain).toEqual(['A', 'B']);
   });
 });

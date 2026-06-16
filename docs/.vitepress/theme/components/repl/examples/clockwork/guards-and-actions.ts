@@ -1,9 +1,9 @@
 export const guardsAndActionsExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { machine } from '@vielzeug/clockwork'
 
 const SECRET_KEY = 'vielzeug'
 
-const doorMachine = defineMachine({
+const door = machine({
   initial: 'closed',
   context: { accessAttempts: 0 },
   states: {
@@ -38,8 +38,6 @@ const doorMachine = defineMachine({
     },
   },
 })
-
-const door = interpret(doorMachine)
 
 door.send({ type: 'LOCK' })
 console.log('State:', door.state.value)          // 'locked'

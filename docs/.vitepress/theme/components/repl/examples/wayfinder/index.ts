@@ -4,6 +4,7 @@ import { middlewareAuthExample } from './middleware-auth';
 import { middlewareChainExample } from './middleware-chain';
 import { namedRoutesExample } from './named-routes';
 import { nestedRoutesExample } from './nested-routes';
+import { preloadAndDisposeExample } from './preload-and-dispose';
 import { queryParamsExample } from './query-params';
 import { routeContextExample } from './route-context';
 import { urlBuildingExample } from './url-building';
@@ -15,6 +16,7 @@ export const wayfinderExamples = {
   'middleware-chain': middlewareChainExample,
   'named-routes': namedRoutesExample,
   'nested-routes': nestedRoutesExample,
+  'preload-and-dispose': preloadAndDisposeExample,
   'query-params': queryParamsExample,
   'route-context': routeContextExample,
   'url-building': urlBuildingExample,

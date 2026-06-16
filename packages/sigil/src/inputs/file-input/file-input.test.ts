@@ -269,4 +269,14 @@ describe('sg-file-input accessibility', () => {
       expect(input?.getAttribute('tabindex')).toBe('-1');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-file-input', { attrs: { label: 'Upload file' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

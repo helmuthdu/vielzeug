@@ -1,23 +1,54 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { CompareOptions, TimeInput } from './types';
+import type { BoundaryUnit, CompareOptions, TimeInput } from './types';
 
-import { resolveUnitPair, resolveUnitRange } from './boundary';
-import { normalizeRange, toInstant } from './internal';
+import { toInstant } from './_convert';
+import { floorToUnit } from './_floor';
+import { inferSharedTimeZone, normalizeRange } from './_tz';
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+function resolveFlooredPair(
+  a: TimeInput,
+  b: TimeInput,
+  unit: BoundaryUnit,
+  options: CompareOptions,
+): { left: Temporal.Instant; right: Temporal.Instant } {
+  const tz = inferSharedTimeZone([a, b], options);
+  const unitOpts = { tz, weekStartsOn: options.weekStartsOn };
+
+  return {
+    left: floorToUnit(a, unit, unitOpts),
+    right: floorToUnit(b, unit, unitOpts),
+  };
+}
+
+function resolveFlooredTriple(
+  value: TimeInput,
+  start: TimeInput,
+  end: TimeInput,
+  unit: BoundaryUnit,
+  options: CompareOptions,
+): { lower: Temporal.Instant; target: Temporal.Instant; upper: Temporal.Instant } {
+  const tz = inferSharedTimeZone([value, start, end], options);
+  const unitOpts = { tz, weekStartsOn: options.weekStartsOn };
+  const target = floorToUnit(value, unit, unitOpts);
+  const [lower, upper] = normalizeRange(floorToUnit(start, unit, unitOpts), floorToUnit(end, unit, unitOpts));
+
+  return { lower, target, upper };
+}
 
 function compareByUnit(a: TimeInput, b: TimeInput, options: CompareOptions): number {
   if (!options.unit) {
     return Temporal.Instant.compare(toInstant(a, options), toInstant(b, options));
   }
 
-  const { left, right } = resolveUnitPair(
-    a,
-    b,
-    options as CompareOptions & { unit: NonNullable<CompareOptions['unit']> },
-  );
+  const { left, right } = resolveFlooredPair(a, b, options.unit, options);
 
   return Temporal.Instant.compare(left, right);
 }
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Returns `true` when `a` is strictly before `b` on the timeline.
@@ -81,19 +112,19 @@ export function within(value: TimeInput, start: TimeInput, end: TimeInput, optio
     return Temporal.Instant.compare(lower, target) <= 0 && Temporal.Instant.compare(target, upper) <= 0;
   }
 
-  const { lower, target, upper } = resolveUnitRange(
-    value,
-    start,
-    end,
-    options as CompareOptions & { unit: NonNullable<CompareOptions['unit']> },
-  );
+  const { lower, target, upper } = resolveFlooredTriple(value, start, end, options.unit, options);
 
   return Temporal.Instant.compare(lower, target) <= 0 && Temporal.Instant.compare(target, upper) <= 0;
 }
 
 /**
- * Clamps `value` to within `[start, end]` (bounds normalized), returning an `Instant`.
- * Pass `options.unit` to clamp by calendar boundary.
+ * Clamps `value` to within `[start, end]` (bounds normalized).
+ *
+ * When `value` is a `ZonedDateTime`, returns a `ZonedDateTime` in the same timezone.
+ * Otherwise returns an `Instant`.
+ *
+ * When `options.unit` is set, all three inputs are floored to that calendar boundary before
+ * clamping — the result is at the start of the boundary unit, not the original time-of-day.
  *
  * @example
  * ```ts
@@ -102,35 +133,53 @@ export function within(value: TimeInput, start: TimeInput, end: TimeInput, optio
  *   parseInstant('2026-03-21T10:00:00Z'),
  *   parseInstant('2026-03-21T12:00:00Z'),
  * ).toString() // '2026-03-21T12:00:00Z'
+ *
+ * clamp(
+ *   parseZoned('2026-03-21T13:00:00+00:00[UTC]'),
+ *   parseZoned('2026-03-21T10:00:00+00:00[UTC]'),
+ *   parseZoned('2026-03-21T12:00:00+00:00[UTC]'),
+ * ).toString() // '2026-03-21T12:00:00+00:00[UTC]'
  * ```
  */
+export function clamp(
+  value: Temporal.ZonedDateTime,
+  start: TimeInput,
+  end: TimeInput,
+  options?: CompareOptions,
+): Temporal.ZonedDateTime;
+export function clamp(value: TimeInput, start: TimeInput, end: TimeInput, options?: CompareOptions): Temporal.Instant;
 export function clamp(
   value: TimeInput,
   start: TimeInput,
   end: TimeInput,
   options: CompareOptions = {},
-): Temporal.Instant {
+): Temporal.Instant | Temporal.ZonedDateTime {
+  const isZoned = value instanceof Temporal.ZonedDateTime;
+  const tz = isZoned ? value.timeZoneId : undefined;
+
   if (!options.unit) {
     const target = toInstant(value, options);
     const [lower, upper] = normalizeRange(toInstant(start, options), toInstant(end, options));
 
-    if (Temporal.Instant.compare(target, lower) < 0) return lower;
+    let clamped: Temporal.Instant;
 
-    if (Temporal.Instant.compare(target, upper) > 0) return upper;
+    if (Temporal.Instant.compare(target, lower) < 0) clamped = lower;
+    else if (Temporal.Instant.compare(target, upper) > 0) clamped = upper;
+    else clamped = target;
 
-    return target;
+    return isZoned && tz ? clamped.toZonedDateTimeISO(tz) : clamped;
   }
 
-  const { lower, target, upper } = resolveUnitRange(
-    value,
-    start,
-    end,
-    options as CompareOptions & { unit: NonNullable<CompareOptions['unit']> },
-  );
+  const { lower, target, upper } = resolveFlooredTriple(value, start, end, options.unit, options);
 
-  if (Temporal.Instant.compare(target, lower) < 0) return lower;
+  let clamped: Temporal.Instant;
 
-  if (Temporal.Instant.compare(target, upper) > 0) return upper;
+  if (Temporal.Instant.compare(target, lower) < 0) clamped = lower;
+  else if (Temporal.Instant.compare(target, upper) > 0) clamped = upper;
+  else clamped = target;
 
-  return target;
+  // For unit-based clamping, resolve the output tz from options or from value's zone
+  const outTz = options.tz ?? tz ?? inferSharedTimeZone([value, start, end], options);
+
+  return isZoned ? clamped.toZonedDateTimeISO(outTz) : clamped;
 }

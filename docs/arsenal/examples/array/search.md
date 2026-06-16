@@ -1,20 +1,20 @@
 ---
-title: 'Arsenal Examples — search'
-description: 'search example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — fuzzyFilter / fuzzyScore'
+description: 'fuzzyFilter and fuzzyScore examples for @vielzeug/arsenal.'
 ---
 
-## search
+## fuzzyFilter / fuzzyScore
 
 ### Problem
 
-You need fuzzy search over an array of objects — for example a live search box that still matches "alce" when the user types "alice" with a typo.
+You need fuzzy search over an array of objects — for example a live search box that still matches when the user has a typo or uses partial input.
 
 ### Solution
 
-Use `search(array, query, options?)` to filter or rank results by similarity. `mode: 'filter'` (default) returns `T[]`; `mode: 'scored'` returns `ScoredResult<T>[]` sorted by relevance.
+Use `fuzzyFilter` to filter an array by similarity (preserving order), or `fuzzyScore` to get results ranked by score.
 
 ```ts
-import { search } from '@vielzeug/arsenal';
+import { fuzzyFilter } from '@vielzeug/arsenal';
 
 const users = [
   { id: 1, name: 'Alice Smith', role: 'admin' },
@@ -22,45 +22,61 @@ const users = [
   { id: 3, name: 'Bob Brown', role: 'user' },
 ];
 
-// Filter mode: items above similarity threshold
-const filtered = search(users, 'alice');
+// Returns matching items in original array order
+const filtered = fuzzyFilter(users, 'alice');
 // [{ id: 1, name: 'Alice Smith', ... }]
 ```
 
-#### Scored mode
+#### Ranked results with fuzzyScore
 
 ```ts
-import { search } from '@vielzeug/arsenal';
+import { fuzzyScore } from '@vielzeug/arsenal';
 
 const users = [
   { id: 1, name: 'Alice Smith' },
   { id: 2, name: 'Alan Jones' },
 ];
 
-const ranked = search(users, 'ali', { mode: 'scored', threshold: 0.3 });
+const ranked = fuzzyScore(users, 'ali', { threshold: 0.3 });
 // [
-//   { item: { id: 1, ... }, score: 0.91 },
-//   { item: { id: 2, ... }, score: 0.52 },
+//   { item: { id: 1, name: 'Alice Smith' }, score: 0.91 },
+//   { item: { id: 2, name: 'Alan Jones' }, score: 0.52 },
 // ]
+// Results are sorted by score descending
 ```
 
 #### Restrict to specific fields
 
 ```ts
-import { search } from '@vielzeug/arsenal';
+import { fuzzyFilter, fuzzyScore } from '@vielzeug/arsenal';
 
-const users = [
-  { id: 1, name: 'Alice Smith' },
-  { id: 2, name: 'Alan Jones' },
+const products = [
+  { id: 1, name: 'Wireless Keyboard', sku: 'WK-001' },
+  { id: 2, name: 'Wired Mouse', sku: 'WM-002' },
 ];
-const results = search(users, 'ali', { fields: ['name'] });
+
+// Only match against the name field, not sku
+const results = fuzzyFilter(products, 'wireless', { fields: ['name'] });
+```
+
+#### Unicode normalization
+
+```ts
+import { fuzzyFilter } from '@vielzeug/arsenal';
+
+const names = ['café', 'naïve', 'resume'];
+
+// normalize: true makes 'cafe' match 'café'
+const hits = fuzzyFilter(names, 'cafe', { normalize: true });
+// ['café']
 ```
 
 ### Pitfalls
 
-- The default `threshold` is `0.25`. Lower values return more (noisier) results; raise it to `0.5+` for stricter matching.
-- `mode: 'scored'` returns `ScoredResult<T>[]`, not `T[]` — destructure `.item` to access the original object.
-- Without `fields`, all string properties of each object are scanned.
+- The default `threshold` is `0.25`. Lower values return more (noisier) results; raise to `0.5+` for stricter matching.
+- `fuzzyScore` returns `ScoredResult<T>[]` — destructure `.item` to access the original object.
+- An empty query returns all items unchanged (at score `1` for `fuzzyScore`).
+- Without `fields`, all string-valued properties at up to 10 levels deep are scanned.
 
 ### Related
 

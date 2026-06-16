@@ -18,21 +18,9 @@
     --_sidebar-width: var(--sidebar-width, 16rem);
     --_sidebar-collapsed-width: var(--sidebar-collapsed-width, 3.5rem);
     --_sidebar-transition: var(--transition-normal);
-    --_panel-bg: var(
-      --sidebar-bg,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-      )
-    );
+    --_panel-bg: var(--sidebar-bg, var(--color-canvas));
     --_panel-blur: var(--sidebar-panel-blur, var(--blur-md));
-    --_panel-border-color: var(
-      --sidebar-border-color,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
-      )
-    );
+    --_panel-border-color: var(--sidebar-border-color, var(--color-divider));
     --_panel-radius: var(--sidebar-radius, var(--rounded-lg));
     --_panel-shadow: var(--sidebar-shadow, var(--shadow-md));
 
@@ -44,7 +32,9 @@
     height: 100%;
     min-height: 0;
     overflow: visible;
-    transition: var(--_motion-transition, max-width var(--_sidebar-transition));
+    transition:
+      max-width var(--_sidebar-transition),
+      min-width var(--_sidebar-transition);
     will-change: max-width;
   }
 
@@ -69,7 +59,7 @@
     display: none;
     width: 100%;
     height: 100%;
-    background: color-mix(in srgb, var(--color-contrast-950) 36%, transparent);
+    background: color-mix(in oklch, var(--color-contrast-950) 36%, transparent);
     border: 0;
   }
 
@@ -95,7 +85,6 @@
   }
 
   :host([data-collapsed]) {
-    width: var(--_sidebar-collapsed-width);
     min-width: var(--_sidebar-collapsed-width);
     max-width: var(--_sidebar-collapsed-width);
   }
@@ -233,7 +222,7 @@
     color: var(--sidebar-item-active-color, var(--color-primary));
     background: var(
       --sidebar-item-active-bg,
-      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+      var(--color-primary-100, color-mix(in oklch, var(--color-primary) 12%, transparent))
     );
   }
 

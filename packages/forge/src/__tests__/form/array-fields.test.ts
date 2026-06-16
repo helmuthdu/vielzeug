@@ -59,6 +59,14 @@ describe('array field helpers', () => {
     expect(form.get('tags')).toEqual(['a', 'z', 'c']);
   });
 
+  test('append on undefined field creates [value]', () => {
+    const form = createForm({ defaultValues: {} as { tags?: string[] } });
+
+    form.array('tags').append('first');
+
+    expect(form.get('tags')).toEqual(['first']);
+  });
+
   test.each([
     ['insert', (form: Form<Record<string, unknown>>) => form.array('x').insert(0, 'v')],
     ['move', (form: Form<Record<string, unknown>>) => form.array('x').move(0, 1)],

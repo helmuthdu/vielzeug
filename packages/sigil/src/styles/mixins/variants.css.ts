@@ -27,10 +27,10 @@ export const frostVariantMixin = (selector: string) => css`
   }
 
   :host([variant='frost']:not([color])) ${selector} {
-    background: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
     color: var(--color-contrast);
     text-shadow: var(--text-shadow-xs);
-    border: var(--border) solid color-mix(in srgb, var(--color-contrast-400) 45%, transparent);
+    border: var(--border) solid color-mix(in oklch, var(--color-contrast-400) 45%, transparent);
   }
 
   /* Frost neutral without elevation: use halo shadow */
@@ -44,10 +44,10 @@ export const frostVariantMixin = (selector: string) => css`
   }
 
   :host([variant='frost'][color]) ${selector} {
-    background: color-mix(in srgb, var(--_theme-base), transparent);
-    border-color: color-mix(in srgb, var(--_theme-border) 45%, transparent);
+    background: color-mix(in oklch, var(--_theme-base), transparent);
+    border-color: color-mix(in oklch, var(--_theme-border) 45%, transparent);
     color: var(--_theme-content);
-    border: var(--border) solid color-mix(in srgb, var(--_theme-border) 45%, transparent);
+    border: var(--border) solid color-mix(in oklch, var(--_theme-border) 45%, transparent);
     backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
     -webkit-backdrop-filter: blur(var(--blur-2xl)) saturate(220%) brightness(1.15);
     text-shadow: var(--text-shadow-xs);

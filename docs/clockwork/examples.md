@@ -16,7 +16,7 @@ description: Practical examples and recipes for Clockwork.
 - [Form Validation](./examples/form-validation.md)
 - [Hierarchical States](./examples/hierarchical-states.md)
 - [Media Player](./examples/media-player.md)
-- [Middleware Pipeline](./examples/middleware-pipeline.md)
+- [Interceptor Pipeline](./examples/middleware-pipeline.md)
 - [Debugging Transitions](./examples/debugging-transitions.md)
 - [Unit Testing with `resolveTransition()`](./examples/unit-testing.md)
 - [Permission-Based Access Control](./examples/permission-based-access.md)

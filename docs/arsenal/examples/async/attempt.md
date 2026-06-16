@@ -1,9 +1,9 @@
 ---
-title: 'Arsenal Examples — attempt'
-description: 'attempt example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — attempt / isOk / isFail'
+description: 'attempt, isOk, isFail example for @vielzeug/arsenal.'
 ---
 
-## attempt
+## attempt / isOk / isFail
 
 ### Problem
 
@@ -13,16 +13,25 @@ You want to call an async function and handle success and failure in one place w
 
 Use `attempt(fn)` to receive `{ ok: true, value }` on success or `{ ok: false, error }` on failure. It never throws.
 
+Use `isOk(result)` and `isFail(result)` as type-guard helpers to narrow the discriminated union.
+
 ```ts
-import { attempt } from '@vielzeug/arsenal';
+import { attempt, isOk, isFail } from '@vielzeug/arsenal';
 
 const result = await attempt(() => fetch('/api/user').then((r) => r.json()));
 
-if (result.ok) {
+if (isOk(result)) {
   console.log(result.value); // typed as the resolved value
 } else {
   console.error(result.error); // the caught error
 }
+
+// Or narrow with isFail for early-return pattern
+if (isFail(result)) {
+  reportError(result.error);
+  return;
+}
+console.log(result.value);
 ```
 
 #### Combining with retry

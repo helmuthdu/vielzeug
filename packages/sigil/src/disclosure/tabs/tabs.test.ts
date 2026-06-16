@@ -190,4 +190,24 @@ describe('sg-tabs', () => {
       expect(panelAfter?.querySelector('slot')).toBeTruthy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks with tabs rendered', async () => {
+      fixture = await mount('sg-tabs', {
+        attrs: { value: 'overview' },
+        html: `
+          <sg-tab-item slot="tabs" value="overview">Overview</sg-tab-item>
+          <sg-tab-item slot="tabs" value="settings">Settings</sg-tab-item>
+          <sg-tab-panel value="overview">Overview content</sg-tab-panel>
+          <sg-tab-panel value="settings">Settings content</sg-tab-panel>
+        `,
+      });
+
+      const results = await axeCheck(fixture.element, {
+        rules: { 'aria-valid-attr-value': { enabled: false } },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { getChoiceLabel, getLightChildrenByTag } from '../light-dom';
 import { toFiniteNumber, toFiniteNumberOr, toPositiveStep } from '../numbers';
 import { parseStringTriggers } from '../parse';
-import { syncedSignal } from '../utils';
+import { syncedSignal } from '../signals';
 
 // ── syncedSignal ─────────────────────────────────────────────────────────────
 
@@ -59,6 +59,28 @@ describe('syncedSignal()', () => {
     local.value = 'manual';
 
     expect(local.value).toBe('manual');
+  });
+
+  it('works without abortSignal — stays synced until caller disposes', () => {
+    const source = signal(1);
+    const local = syncedSignal(source);
+
+    expect(local.value).toBe(1);
+
+    source.value = 2;
+
+    expect(local.value).toBe(2);
+  });
+
+  it('transform is applied when abortSignal is omitted', () => {
+    const source = signal<number | undefined>(undefined);
+    const local = syncedSignal(source, undefined, (v) => v ?? 0);
+
+    expect(local.value).toBe(0);
+
+    source.value = 7;
+
+    expect(local.value).toBe(7);
   });
 });
 

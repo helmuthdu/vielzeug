@@ -1,8 +1,9 @@
 export const basicWorkerExample = {
-  code: `import { createWorker } from '@vielzeug/familiar'
+  code: `import { createWorker, task } from '@vielzeug/familiar'
 
 // Single-slot worker (concurrency=1 by default)
-const worker = createWorker((text) => text.toUpperCase())
+const upper = task((text) => text.toUpperCase())
+const worker = createWorker(upper)
 
 console.log(await worker.run('hello'))
 console.log(await worker.run('world'))

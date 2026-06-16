@@ -1,20 +1,8 @@
 @layer sigil.base {
   :host {
-    --_panel-bg: var(
-      --popover-bg,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-      )
-    );
+    --_panel-bg: var(--popover-bg, var(--color-canvas));
     --_panel-blur: var(--popover-panel-blur, var(--blur-md));
-    --_panel-border-color: var(
-      --popover-border-color,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
-      )
-    );
+    --_panel-border-color: var(--popover-border-color, var(--color-divider));
     --_panel-shadow: var(--popover-shadow, var(--shadow-xl));
 
     position: relative;
@@ -43,14 +31,12 @@
     /* Hidden by default */
     opacity: 0;
     backdrop-filter: blur(var(--_panel-blur));
-    transform: scale(var(--overlay-enter-scale-dialog)) translateY(var(--size-2));
-    transition: var(
-      --_motion-transition,
+    transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
+    transition:
       opacity var(--transition-fast),
-      transform var(--transition-normal) var(--ease-spring),
+      transform 200ms var(--ease-spring),
       display var(--transition-fast) allow-discrete,
-      overlay var(--transition-fast) allow-discrete
-    );
+      overlay var(--transition-fast) allow-discrete;
   }
 
   .panel:popover-open {
@@ -59,7 +45,7 @@
 
     @starting-style {
       opacity: 0;
-      transform: scale(var(--overlay-enter-scale-dialog)) translateY(var(--size-2));
+      transform: scale(var(--overlay-enter-scale-dialog)) translateY(4px);
     }
   }
 }

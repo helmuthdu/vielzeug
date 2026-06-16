@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
+import type { RecurrenceRule } from '../index';
+
 import {
   clamp,
-  classify,
   dateRange,
   difference,
   endOf,
@@ -16,13 +17,14 @@ import {
   formatRelative,
   formatZoned,
   humanize,
+  inTz,
   isAfter,
   isBefore,
   isSame,
   isValid,
   now,
   nowInstant,
-  parseDate,
+  parse,
   parseDuration,
   parseInstant,
   parsePlainDate,
@@ -34,7 +36,6 @@ import {
   Temporal,
   timeDiff,
   toInstant,
-  toZoned,
   within,
 } from '../index';
 
@@ -164,21 +165,21 @@ describe('toInstant', () => {
   });
 });
 
-describe('toZoned', () => {
+describe('inTz', () => {
   it('projects Instant to the target timezone', () => {
-    const zoned = toZoned(Temporal.Instant.from('2026-03-21T10:00:00Z'), { tz: 'Europe/Berlin' });
+    const zoned = inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Europe/Berlin');
 
     expect(zoned.timeZoneId).toBe('Europe/Berlin');
     expect(zoned.hour).toBe(11);
   });
   it('re-projects ZonedDateTime to a different timezone (same instant)', () => {
     const ny = Temporal.ZonedDateTime.from('2026-03-21T10:00:00-04:00[America/New_York]');
-    const berlin = toZoned(ny, { tz: 'Europe/Berlin' });
+    const berlin = inTz(ny, 'Europe/Berlin');
 
     expect(berlin.toInstant().toString()).toBe(ny.toInstant().toString());
   });
   it('throws a [tempo] error for an invalid timezone', () => {
-    expect(() => toZoned(Temporal.Instant.from('2026-03-21T10:00:00Z'), { tz: 'Bad/Zone' })).toThrow(
+    expect(() => inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Bad/Zone')).toThrow(
       '[tempo] Unknown or invalid timezone: "Bad/Zone"',
     );
   });
@@ -201,7 +202,7 @@ describe('shift', () => {
     expect(result.toString()).toBe('2026-03-21T11:00:00+00:00[UTC]');
   });
   it('throws when tz is missing for plain input', () => {
-    expect(() => shift(parsePlainDateTime('2026-03-21T10:00:00'), { hours: 1 })).toThrow(MISSING_TZ);
+    expect(() => shift(parsePlainDateTime('2026-03-21T10:00:00') as any, { hours: 1 })).toThrow(MISSING_TZ);
   });
   it('throws a [tempo] error for an unknown timezone string', () => {
     expect(() => shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: 1 }, { tz: 'Not/Real' })).toThrow(
@@ -773,8 +774,8 @@ describe('timeDiff', () => {
     // 74h = 3d 2h — calendar-accurate with tz
     expect(timeDiff(base, base.add({ hours: 74 }), { tz: 'UTC' })).toEqual({ unit: 'day', value: 3 });
   });
-  it('requires tz for plain inputs', () => {
-    expect(() => timeDiff(parsePlainDateTime('2026-01-01'), base)).toThrow(MISSING_TZ);
+  it('requires tz for plain inputs (throws without tz)', () => {
+    expect(() => timeDiff(parsePlainDateTime('2026-01-01'), parsePlainDateTime('2026-04-01'))).toThrow(MISSING_TZ);
   });
 
   it('works with PlainDate inputs and explicit tz', () => {
@@ -873,7 +874,7 @@ describe('dateRange', () => {
   });
 });
 
-describe('classify', () => {
+describe('expires + timeDiff composition', () => {
   const T = {
     critical: { days: 3 },
     expired: { days: 0 },
@@ -881,74 +882,50 @@ describe('classify', () => {
     warning: { days: 14 },
   } as const;
 
-  it('returns matching key and diff together (future date within critical window)', () => {
-    const date = Temporal.Now.instant().add({ hours: 48 });
-    const result = classify(date, T, { tz: 'UTC' });
+  it('composes expires+timeDiff to get key and diff (future date within critical window)', () => {
+    const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
+    const date = parseInstant('2026-06-02T12:00:00Z');
+    const key = expires(date, T, {}, pinnedNow);
+    const diff = timeDiff(date, pinnedNow, { tz: 'UTC' });
 
-    expect(result.key).toBe('critical');
-    // 48h = 2 days in the Instant fast path (floor arithmetic)
-    expect(['hour', 'day']).toContain(result.diff.unit);
-    expect(result.diff.value).toBeGreaterThan(0);
+    expect(key).toBe('critical');
+    expect(['day', 'hour']).toContain(diff.unit);
+    expect(diff.value).toBeGreaterThan(0);
   });
 
   it('returns null key when no threshold matches', () => {
     const date = Temporal.Now.instant().add({ hours: 200 * 24 * 365 });
-    const result = classify(date, { critical: { days: 3 } }, { tz: 'UTC' });
 
-    expect(result.key).toBeNull();
-    expect(result.diff.unit).toBe('year');
-    expect(result.diff.value).toBeGreaterThan(0);
+    expect(expires(date, { critical: { days: 3 } })).toBeNull();
   });
 
-  it('returns key and diff for past dates', () => {
-    const date = Temporal.Now.instant().subtract({ hours: 12 });
-    const result = classify(date, T, { tz: 'UTC' });
+  it('key is expired and diff shows hours for past dates', () => {
+    const pinnedNow = parseInstant('2026-06-01T12:00:00Z');
+    const date = parseInstant('2026-06-01T00:00:00Z');
+    const key = expires(date, T, {}, pinnedNow);
+    const diff = timeDiff(date, pinnedNow, { tz: 'UTC' });
 
-    expect(result.key).toBe('expired');
-    expect(result.diff.unit).toBe('hour');
-    expect(result.diff.value).toBe(12);
+    expect(key).toBe('expired');
+    expect(diff.unit).toBe('hour');
+    expect(diff.value).toBe(12);
   });
 
   it('accepts ZonedDateTime without explicit tz', () => {
     const date = Temporal.Now.zonedDateTimeISO('UTC').add({ days: 10 });
-    const result = classify(date, T);
 
-    expect(result.key).toBe('warning');
-    expect(result.diff.unit).toBe('day');
-    expect(result.diff.value).toBeGreaterThanOrEqual(9);
-    expect(result.diff.value).toBeLessThanOrEqual(10);
+    expect(expires(date, T)).toBe('warning');
   });
 
-  it('accepts bare Instant without tz option (uses fast path)', () => {
-    const date = Temporal.Now.instant().add({ hours: 6 });
-    const result = classify(date, T);
-
-    // +6h future: diffMs > 0, expired threshold is 0, so not expired;
-    // within 3 days so it's critical.
-    // Use range: Temporal.Now.instant() is called again inside classify so the
-    // computed diff is always fractionally less than 6 h — Math.floor gives 5.
-    expect(result.key).toBe('critical');
-    expect(result.diff.unit).toBe('hour');
-    expect(result.diff.value).toBeGreaterThanOrEqual(5);
-    expect(result.diff.value).toBeLessThanOrEqual(6);
+  it('requires tz for plain inputs (timeDiff)', () => {
+    expect(() => timeDiff(parsePlainDateTime('2000-01-01'), parsePlainDateTime('2000-04-01'))).toThrow(MISSING_TZ);
   });
 
-  it('requires tz for plain inputs', () => {
-    expect(() => classify(parsePlainDateTime('2000-01-01'), T)).toThrow(MISSING_TZ);
-  });
-
-  it('uses shared now for both expires and timeDiff (deterministic output)', () => {
+  it('pinned now ensures expires and timeDiff are consistent', () => {
     const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
     const threeDaysLater = parseInstant('2026-06-04T00:00:00Z');
-    // classify() internally creates Temporal.Now.instant() once and passes it to both
-    // expires() and timeDiff() — we verify key + diff are consistent with the same base
-    const result = classify(threeDaysLater, T);
 
-    // key comes from expires() using the same 'now' as diff
-    expect(result.key).toBeDefined();
-    expect(result.diff.value).toBeGreaterThan(0);
-    // pinned via expires directly confirms the threshold logic
     expect(expires(threeDaysLater, T, {}, pinnedNow)).toBe('critical');
+    expect(timeDiff(threeDaysLater, pinnedNow, { tz: 'UTC' }).value).toBeGreaterThan(0);
   });
 });
 
@@ -1047,13 +1024,13 @@ describe('recurrence', () => {
     expect(collected).toHaveLength(3);
   });
 
-  it('throws when neither count nor until is provided', () => {
+  it('type union enforces count or until at compile time (no runtime guard needed)', () => {
+    // R10: runtime guard removed; type union RecurrenceRule already prevents neither count nor until.
+    // This test documents the design decision: the guard is at the type level.
     const start = Temporal.ZonedDateTime.from('2026-01-01T00:00:00[UTC]');
+    const rule: RecurrenceRule = { count: 1, frequency: 'daily' };
 
-    // Should throw at call time, not lazily on first iteration
-    expect(() => recurrence(start, { frequency: 'daily' } as never, opts)).toThrow(
-      'recurrence: either count or until must be specified',
-    );
+    expect(() => [...recurrence(start, rule, opts)]).not.toThrow();
   });
 
   it('accepts Instant start with explicit tz', () => {
@@ -1128,34 +1105,47 @@ describe('formatRangeParts', () => {
   });
 });
 
-describe('parseDate', () => {
-  it('parses a ZonedDateTime string', () => {
-    const result = parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+describe('parse', () => {
+  it('parses a ZonedDateTime string (auto-detect)', () => {
+    const result = parse('2026-03-21T11:00:00+01:00[Europe/Berlin]');
 
     expect(result).toBeInstanceOf(Temporal.ZonedDateTime);
     expect((result as Temporal.ZonedDateTime).timeZoneId).toBe('Europe/Berlin');
   });
 
-  it('parses an Instant string', () => {
-    const result = parseDate('2026-03-21T10:00:00Z');
-
-    expect(result).toBeInstanceOf(Temporal.Instant);
+  it('parses an Instant string (auto-detect)', () => {
+    expect(parse('2026-03-21T10:00:00Z')).toBeInstanceOf(Temporal.Instant);
   });
 
-  it('parses a PlainDateTime string', () => {
-    const result = parseDate('2026-03-21T10:00:00');
-
-    expect(result).toBeInstanceOf(Temporal.PlainDateTime);
+  it('parses a PlainDateTime string (auto-detect)', () => {
+    expect(parse('2026-03-21T10:00:00')).toBeInstanceOf(Temporal.PlainDateTime);
   });
 
-  it('parses a PlainDate string', () => {
-    const result = parseDate('2026-03-21');
+  it('parses a PlainDate string (auto-detect)', () => {
+    expect(parse('2026-03-21')).toBeInstanceOf(Temporal.PlainDate);
+  });
 
-    expect(result).toBeInstanceOf(Temporal.PlainDate);
+  it('parses with as="zoned" returning ZonedDateTime', () => {
+    const result = parse('2026-03-21T11:00:00+01:00[Europe/Berlin]', 'zoned');
+
+    expect(result).toBeInstanceOf(Temporal.ZonedDateTime);
+    expect(result.timeZoneId).toBe('Europe/Berlin');
+  });
+
+  it('parses with as="instant" returning Instant', () => {
+    expect(parse('2026-03-21T10:00:00Z', 'instant')).toBeInstanceOf(Temporal.Instant);
+  });
+
+  it('parses with as="plain-datetime" returning PlainDateTime', () => {
+    expect(parse('2026-03-21T10:00:00', 'plain-datetime')).toBeInstanceOf(Temporal.PlainDateTime);
+  });
+
+  it('parses with as="plain-date" returning PlainDate', () => {
+    expect(parse('2026-03-21', 'plain-date')).toBeInstanceOf(Temporal.PlainDate);
   });
 
   it('throws a descriptive error for an invalid string', () => {
-    expect(() => parseDate('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
+    expect(() => parse('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
   });
 });
 
@@ -1236,5 +1226,115 @@ describe('humanize', () => {
 
   it('leaves number as-is when no locale is provided', () => {
     expect(humanize({ unit: 'day', value: 3 })).toBe('3 days');
+  });
+});
+
+describe('difference — rounding options (C1)', () => {
+  it('rounds up to next hour with roundingMode: ceil and smallestUnit: hour', () => {
+    const start = parseInstant('2026-01-01T00:00:00Z');
+    const end = parseInstant('2026-01-01T01:30:00Z');
+    const dur = difference(start, end, { roundingMode: 'ceil', smallestUnit: 'hour' });
+
+    expect(dur.hours).toBe(2);
+  });
+
+  it('rounds to nearest 30 minutes with roundingIncrement and smallestUnit: minute', () => {
+    const start = parseInstant('2026-01-01T00:00:00Z');
+    const end = parseInstant('2026-01-01T00:20:00Z');
+    const dur = difference(start, end, { roundingIncrement: 30, smallestUnit: 'minute' });
+
+    expect(dur.minutes).toBe(0);
+  });
+});
+
+describe('validateTz — UTC offset strings (C2)', () => {
+  it('accepts a UTC numeric offset string like "+05:30"', () => {
+    const plain = parsePlainDateTime('2026-03-21T10:00:00');
+
+    expect(() => toInstant(plain, { tz: '+05:30' })).not.toThrow();
+  });
+
+  it('throws a descriptive [tempo] error for an unrecognised timezone string', () => {
+    const plain = parsePlainDateTime('2026-03-21T10:00:00');
+
+    expect(() => toInstant(plain, { tz: 'Not/ATimezone' })).toThrow('[tempo] Unknown or invalid timezone');
+  });
+});
+
+describe('formatRelative — ZonedDateTime base (C3)', () => {
+  it('accepts a ZonedDateTime as the base option', () => {
+    const base = Temporal.ZonedDateTime.from('2026-03-21T10:00:00+00:00[UTC]');
+    const input = Temporal.ZonedDateTime.from('2026-03-21T12:00:00+00:00[UTC]');
+    const result = formatRelative(input, { base, locale: 'en-US', numeric: 'always' });
+
+    expect(result).toMatch(/2 hour/);
+  });
+});
+
+describe('inTz — cross-timezone re-projection (C4)', () => {
+  it('re-projects a ZonedDateTime into a different timezone preserving the absolute instant', () => {
+    const berlin = parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]');
+    const utc = inTz(berlin, 'UTC');
+
+    expect(utc.timeZoneId).toBe('UTC');
+    expect(utc.hour).toBe(10);
+    expect(utc.toInstant().epochMilliseconds).toBe(berlin.toInstant().epochMilliseconds);
+  });
+});
+
+describe('clamp — unit option returns floor of boundary (C5)', () => {
+  it('returns start-of-day instant for a value inside the range when unit is day', () => {
+    const wednesday = parseZoned('2026-03-18T15:30:00+00:00[UTC]');
+    const monday = parseZoned('2026-03-16T00:00:00+00:00[UTC]');
+    const friday = parseZoned('2026-03-20T00:00:00+00:00[UTC]');
+    const clamped = clamp(wednesday, monday, friday, { tz: 'UTC', unit: 'day' });
+    const expectedFloor = startOf(wednesday, 'day', { tz: 'UTC' });
+
+    expect(clamped.epochMilliseconds).toBe(expectedFloor.toInstant().epochMilliseconds);
+  });
+});
+
+describe('formatDuration — fallback handles microseconds and nanoseconds (B2)', () => {
+  it('includes microseconds in the fallback string when Intl.DurationFormat is unavailable', () => {
+    const IntlAny = Intl as Record<string, unknown>;
+    const saved = IntlAny['DurationFormat'];
+
+    IntlAny['DurationFormat'] = undefined;
+
+    try {
+      const result = formatDuration({ microseconds: 500 });
+
+      expect(result).toContain('500 microseconds');
+    } finally {
+      IntlAny['DurationFormat'] = saved;
+    }
+  });
+
+  it('includes nanoseconds in the fallback string when Intl.DurationFormat is unavailable', () => {
+    const IntlAny = Intl as Record<string, unknown>;
+    const saved = IntlAny['DurationFormat'];
+
+    IntlAny['DurationFormat'] = undefined;
+
+    try {
+      const result = formatDuration({ nanoseconds: 1 });
+
+      expect(result).toContain('1 nanosecond');
+    } finally {
+      IntlAny['DurationFormat'] = saved;
+    }
+  });
+
+  it('returns "0 seconds" for a zero duration when Intl.DurationFormat is unavailable', () => {
+    const IntlAny = Intl as Record<string, unknown>;
+    const saved = IntlAny['DurationFormat'];
+
+    IntlAny['DurationFormat'] = undefined;
+
+    try {
+      expect(formatDuration({ nanoseconds: 0 })).toBe('0 seconds');
+    } finally {
+      IntlAny['DurationFormat'] = saved;
+    }
   });
 });

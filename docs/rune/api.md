@@ -27,17 +27,20 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | ---------------- | -------------------------------------------------------- |
 | `@vielzeug/rune` | All exports — logger, transport factories, `lazy`, types |
 
-## createLogger(initial?, initialBindings?)
+## createLogger(initial?, options?)
 
 Creates an isolated logger instance.
 
 ```ts
-createLogger(initial?: RuneOptions | string, initialBindings?: Bindings): Logger
+createLogger(namespace: string, options?: Omit<RuneOptions, 'namespace'>): Logger
+createLogger(options?: RuneOptions): Logger
 ```
 
-- `string` shorthand sets namespace only: `createLogger('api')`.
+- `string` shorthand sets namespace: `createLogger('api')` or `createLogger('api', { logLevel: 'warn' })`.
 - Each call produces a fully independent instance — no shared mutable state.
 - Default transport is `consoleTransport()` when `transports` is omitted.
+
+> **Note — disposed loggers:** after `dispose()` is called, all log methods (`debug`, `info`, `warn`, `error`, `fatal`), `time()`, and `group()` / `groupCollapsed()` silently no-op. The `fn` callback in `group()` still runs — only the group header is suppressed.
 
 **Returns:** `Logger`
 
@@ -100,27 +103,25 @@ reqLog.debug('trace'); // diagnostics() only called when debug is enabled
 
 ### Logging
 
-All five methods share the same overloaded signature:
+All five methods share the same signature:
 
 ```ts
 log.debug / info / warn / error / fatal(message: string): void
 log.debug / info / warn / error / fatal(context: Bindings, message?: string): void
-log.debug / info / warn / error / fatal(error: Error, message?: string): void
 ```
 
 Argument rules:
 
-- String-first calls accept only one argument.
-- Context object must be the first argument when providing structured data.
-- `Error` instances are auto-serialized into `context.err`; the original message becomes the log message unless overridden.
+- String-only calls accept a single message argument.
+- Context object comes first when providing structured data. Pass `Error` instances as values inside the context object: `log.error({ err: new Error('boom') }, 'failed')` — `Error` values are auto-serialized to `{ message, name, stack }`.
 
 ### Composition
 
-| Method                 | Returns  | What it does                                          |
-| ---------------------- | -------- | ----------------------------------------------------- |
-| `child(overrides?)`    | `Logger` | Clones config, applies overrides, inherits bindings   |
-| `withBindings(fields)` | `Logger` | Pins fields to every subsequent call                  |
-| `use(middleware)`      | `Logger` | Appends a middleware function to the processing chain |
+| Method                 | Returns  | What it does                                                      |
+| ---------------------- | -------- | ----------------------------------------------------------------- |
+| `child(overrides?)`    | `Logger` | Clones config, applies overrides, inherits bindings               |
+| `withBindings(fields)` | `Logger` | Pins fields to every subsequent call, returns a new child logger  |
+| `use(middleware)`      | `Logger` | Appends a middleware function to the pipeline, returns new logger |
 
 `child()` transport inheritance:
 
@@ -131,30 +132,30 @@ Argument rules:
 `child()` namespace joining:
 
 - `parent.child({ namespace: 'auth' })` on a logger with namespace `'api'` produces `'api.auth'`.
-- Prefix with `/` to set an absolute namespace: `child({ namespace: '/root' })` → `'root'`.
 - Omit `namespace` → inherits parent namespace unchanged.
 
 ### Utilities
 
-| Method                              | Returns   | Description                                                                                                                                                                                                                            |
-| ----------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `enabled(level)`                    | `boolean` | True if entries at this level pass the configured threshold                                                                                                                                                                            |
-| `setLevel(level)`                   | `void`    | Mutates the level threshold in-place. Children created **after** the call inherit the new level; children created before retain their own snapshot.                                                                                    |
-| `resetLevel()`                      | `void`    | Restores the log level to the value set at construction time, undoing all `setLevel()` calls.                                                                                                                                          |
-| `time(label, fn, opts?)`            | `T`       | Measures sync/async execution; emits at `opts.level` (default `'debug'`), label as message, `{ duration_ms }` in context. When `fn` throws or rejects, `{ err }` is also included. `opts` accepts a `LogType` string or `TimeOptions`. |
-| `group(label, fn, level?)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Pass `level` to gate the group header on the configured threshold (e.g. `'debug'` suppresses when `logLevel` is `'warn'`).                                             |
-| `groupCollapsed(label, fn, level?)` | `T`       | Same as `group`, using `console.groupCollapsed`.                                                                                                                                                                                       |
-| `dispose()`                         | `void`    | Calls `.dispose()` on any `BatchTransport` in the transport array. Idempotent. Only inspects top-level transports (not those inside `pipe()`). Call on shutdown.                                                                      |
+| Method                              | Returns   | Description                                                                                                                                                                                |
+| ----------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `enabled(level)`                    | `boolean` | True if entries at this level pass the configured threshold                                                                                                                                |
+| `time(label, fn, level?)`           | `T`       | Measures sync/async execution; emits at `level` (default `'debug'`), label as message, `{ duration_ms }` in `data`. When `fn` throws or rejects, `{ err }` is also included.               |
+| `group(label, fn, level?)`          | `T`       | Wraps callback in `console.group`; closes even on throw/reject. Pass `level` to gate the group header on the configured threshold (e.g. `'debug'` suppresses when `logLevel` is `'warn'`). |
+| `groupCollapsed(label, fn, level?)` | `T`       | Same as `group`, using `console.groupCollapsed`.                                                                                                                                           |
+| `dispose()`                         | `void`    | Silences all subsequent log calls on this logger instance. Does **not** auto-dispose batch transports — hold a reference and call `batchTransport.dispose()` on shutdown. Idempotent.      |
 
 ### Properties
 
-| Property          | Type                   | Description                                                              |
-| ----------------- | ---------------------- | ------------------------------------------------------------------------ |
-| `config`          | `Readonly<RuneConfig>` | Snapshot of resolved configuration                                       |
-| `bindings`        | `Readonly<Bindings>`   | Snapshot of currently pinned fields                                      |
-| `disposalSignal`  | `AbortSignal`          | Aborted when `dispose()` is called. Use to tie external lifetimes.       |
-| `disposed`        | `boolean`              | `true` after `dispose()` has been called                                 |
-| `[Symbol.dispose]`| `() => void`           | Delegates to `dispose()`. Enables `using` declarations.                  |
+| Property           | Type                       | Description                                                        |
+| ------------------ | -------------------------- | ------------------------------------------------------------------ |
+| `logLevel`         | `LogLevel`                 | Active log level threshold                                         |
+| `namespace`        | `string`                   | Effective namespace string                                         |
+| `middleware`       | `readonly LogMiddleware[]` | Middleware pipeline snapshot                                       |
+| `transports`       | `readonly Transport[]`     | Transport pipeline snapshot                                        |
+| `bindings`         | `Readonly<Bindings>`       | Snapshot of currently pinned fields                                |
+| `disposalSignal`   | `AbortSignal`              | Aborted when `dispose()` is called. Use to tie external lifetimes. |
+| `disposed`         | `boolean`                  | `true` after `dispose()` has been called                           |
+| `[Symbol.dispose]` | `() => void`               | Delegates to `dispose()`. Enables `using` declarations.            |
 
 ## Transport Factories
 
@@ -232,11 +233,12 @@ Outputs newline-delimited JSON (NDJSON) to `stdout` or a custom function. Useful
 
 Each line is a flat JSON object with `level`, `time` (ISO), and optional `ns`, `msg`, plus all merged context fields.
 
-| Option   | Type                     | Default          | Description                                                         |
-| -------- | ------------------------ | ---------------- | ------------------------------------------------------------------- |
-| `level`  | `LogLevel`               | `'debug'`        | Minimum level                                                       |
-| `output` | `(line: string) => void` | `process.stdout` | Custom output sink                                                  |
-| `safe`   | `boolean`                | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
+| Option   | Type                           | Default          | Description                                                                            |
+| -------- | ------------------------------ | ---------------- | -------------------------------------------------------------------------------------- |
+| `level`  | `LogLevel`                     | `'debug'`        | Minimum level                                                                          |
+| `output` | `(line: string) => void`       | `process.stdout` | Custom output sink                                                                     |
+| `safe`   | `boolean`                      | `false`          | Replace circular references with `'[Circular]'` instead of throwing                    |
+| `fields` | `{ level?, msg?, ns?, time? }` | —                | Custom output field names for aggregator compatibility (e.g. `'severity'` for Datadog) |
 
 **Returns:** `Transport`
 
@@ -257,7 +259,7 @@ log.info({ path: '/users', status: 200 }, 'request');
 ### batchTransport(options)
 
 ```ts
-batchTransport(options: BatchTransportOptions): BatchTransport
+batchTransport(options: BatchTransportOptions): BatchHandle
 ```
 
 Buffers entries and delivers them in batches. Flushes when the buffer reaches `maxSize` or after `interval` elapses.
@@ -271,12 +273,16 @@ Buffers entries and delivers them in batches. Flushes when the buffer reaches `m
 | `maxSize`      | `number`                                         | `50`      | Max buffer size before an early flush                                                   |
 | `maxBuffer`    | `number`                                         | unbounded | Hard cap — oldest entries are dropped silently when exceeded. Does not trigger a flush. |
 
-The returned `BatchTransport` adds:
+Returns a `BatchHandle` with:
 
+- `.transport` — the `Transport` function to pass to `createLogger({ transports: [handle.transport] })`.
 - `.flush()` — immediately send buffered entries without stopping the timer.
-- `.dispose()` — stop the interval and flush remaining entries. **Call on shutdown.**
+- `.dispose()` — stop the interval and flush remaining entries. **Call on shutdown.** Idempotent.
+- `[Symbol.dispose]()` — delegates to `.dispose()`. Enables `using` declarations.
 
-**Returns:** `BatchTransport`
+After `dispose()`, the transport becomes inert: new entries are silently dropped.
+
+**Returns:** `BatchHandle`
 
 **Example:**
 
@@ -289,7 +295,8 @@ const batch = batchTransport({
   maxSize: 100,
 });
 
-const log = createLogger({ transports: [batch] });
+// Pass batch.transport to the logger — batch holds flush/dispose
+const log = createLogger({ transports: [batch.transport] });
 
 process.on('exit', () => batch.dispose());
 ```
@@ -302,10 +309,11 @@ sampleTransport(options: SampleTransportOptions): Transport
 
 Probabilistically forwards entries to a downstream transport.
 
-| Option      | Type        | Description                                     |
-| ----------- | ----------- | ----------------------------------------------- |
-| `rate`      | `number`    | Fraction of entries to forward (0–1)            |
-| `transport` | `Transport` | Downstream transport to receive sampled entries |
+| Option      | Type        | Default   | Description                                    |
+| ----------- | ----------- | --------- | ---------------------------------------------- |
+| `rate`      | `number`    | —         | Required. Fraction of entries to forward (0–1) |
+| `transport` | `Transport` | —         | Required. Downstream transport                 |
+| `level`     | `LogLevel`  | `'debug'` | Minimum level to sample                        |
 
 **Returns:** `Transport`
 
@@ -368,6 +376,8 @@ pipe(options: PipeOptions, ...transports: Transport[]): Transport
 
 Dispatches each `LogEntry` to every transport in the list independently. An error thrown by one transport does not stop the others. Use in place of separate array entries when you want fault isolation or a shared error observer.
 
+`pipe()` with no arguments creates a valid no-op transport — useful for conditional pipeline construction: `pipe(condition ? remoteTransport(opts) : undefined!)` pattern, or simply as a placeholder during development.
+
 | Option    | Type                                        | Description                                               |
 | --------- | ------------------------------------------- | --------------------------------------------------------- |
 | `onError` | `(error: unknown, entry: LogEntry) => void` | Called with the error and entry when any transport throws |
@@ -418,21 +428,9 @@ const PRIORITY: Record<LogLevel, number>;
 
 Exported priority map: `{ debug: 0, info: 1, warn: 2, error: 3, fatal: 4, off: 5 }`. Useful for building custom transports or middleware that perform level comparisons.
 
-### resolveTheme(override?)
-
-```ts
-resolveTheme(override?: ConsoleTheme): ResolvedTheme
-```
-
-Merges a partial `ConsoleTheme` onto `DEFAULT_THEME` and returns a fully resolved `ResolvedTheme`. Called once at `consoleTransport()` factory time — the resolved theme is captured in a closure and reused per entry.
-
 ### DEFAULT_THEME
 
-The built-in badge and namespace colour definitions used by `consoleTransport()`. Override per-transport via `ConsoleTransportOptions.theme` or per-logger via `RuneOptions.theme`.
-
-### DEFAULT_TRANSPORT
-
-The singleton `consoleTransport()` instance reused when no `transports` array is provided to `createLogger()`. Avoids ANSI detection on every call.
+The built-in badge and namespace colour definitions used by `consoleTransport()`. Override per-transport via `ConsoleTransportOptions.theme`.
 
 ## Types
 
@@ -452,14 +450,13 @@ The singleton `consoleTransport()` instance reused when no `transports` array is
 
 The structured record produced by every log call and dispatched to all transports.
 
-| Field       | Type                 | Description                                        |
-| ----------- | -------------------- | -------------------------------------------------- |
-| `level`     | `LogType`            | Log level                                          |
-| `message`   | `string?`            | Log message                                        |
-| `context`   | `Bindings?`          | Per-call context object                            |
-| `bindings`  | `Readonly<Bindings>` | Pinned bindings after lazy resolution              |
-| `namespace` | `string`             | Effective namespace at time of call                |
-| `timestamp` | `Date`               | Exact moment of the call, shared across transports |
+| Field       | Type                 | Description                                                              |
+| ----------- | -------------------- | ------------------------------------------------------------------------ |
+| `data`      | `Readonly<Bindings>` | Merged result of pinned bindings and per-call context — already resolved |
+| `level`     | `LogType`            | Log level                                                                |
+| `message`   | `string?`            | Log message                                                              |
+| `namespace` | `string`             | Effective namespace at time of call                                      |
+| `timestamp` | `Date`               | Exact moment of the call, shared across transports                       |
 
 ### Transport
 
@@ -473,14 +470,14 @@ Receives every `LogEntry` that passes the logger's level threshold. Responsible 
 
 Payload shape delivered to `RemoteHandler`:
 
-| Field       | Type                            | Description                        |
-| ----------- | ------------------------------- | ---------------------------------- |
-| `level`     | `LogType`                       | Log level                          |
-| `message`   | `string?`                       | Log message                        |
-| `context`   | `Bindings?`                     | Merged bindings + per-call context |
-| `env`       | `'production' \| 'development'` | Runtime env marker                 |
-| `namespace` | `string?`                       | Effective namespace                |
-| `timestamp` | `string`                        | Full ISO timestamp                 |
+| Field       | Type                            | Description                               |
+| ----------- | ------------------------------- | ----------------------------------------- |
+| `data`      | `Bindings?`                     | Merged structured data (omitted if empty) |
+| `env`       | `'production' \| 'development'` | Runtime env marker                        |
+| `level`     | `LogType`                       | Log level                                 |
+| `message`   | `string?`                       | Log message                               |
+| `namespace` | `string?`                       | Effective namespace                       |
+| `timestamp` | `string`                        | Full ISO timestamp                        |
 
 ### RemoteHandler
 
@@ -494,38 +491,17 @@ Payload shape delivered to `RemoteHandler`:
 
 ### ResolvedTheme
 
-`Record<LogType | 'group' | 'ns', ConsoleThemeEntry>` — fully resolved theme after merging onto `DEFAULT_THEME`. Returned by `resolveTheme()`.
+`Record<LogType | 'group' | 'ns', ConsoleThemeEntry>` — fully resolved theme with all fields populated.
 
 ### RuneOptions
 
-| Field              | Type                            | Default               | Description                                      |
-| ------------------ | ------------------------------- | --------------------- | ------------------------------------------------ |
-| `logLevel`         | `LogLevel?`                     | `'debug'`             | Logger level threshold                           |
-| `namespace`        | `string?`                       | `''`                  | Namespace prefix                                 |
-| `transports`       | `Transport[]?`                  | `[DEFAULT_TRANSPORT]` | Transport pipeline                               |
-| `bindings`         | `Bindings?`                     | `{}`                  | Initial pinned bindings                          |
-| `middleware`       | `LogMiddleware[]?`              | `[]`                  | Entry transform/filter chain                     |
-| `now`              | `() => Date`                    | `() => new Date()`    | Timestamp factory (useful in tests)              |
-| `onTransportError` | `(error, entry, index) => void` | `console.warn`        | Called when a transport throws synchronously     |
-| `sample`           | `number?`                       | `1`                   | Keep probability 0–1; applied after middleware   |
-| `theme`            | `ConsoleTheme?`                 | —                     | Theme for console output and `group()` rendering |
-
-### RuneConfig
-
-Resolved configuration exposed via `logger.config`:
-
-```ts
-type RuneConfig = {
-  logLevel: LogLevel;
-  middleware: LogMiddleware[];
-  namespace: string;
-  now: () => Date;
-  onTransportError: (error: unknown, entry: LogEntry, transportIndex: number) => void;
-  sample: number;
-  theme: ConsoleTheme | undefined;
-  transports: Transport[];
-};
-```
+| Field        | Type               | Default                | Description                  |
+| ------------ | ------------------ | ---------------------- | ---------------------------- |
+| `logLevel`   | `LogLevel?`        | `'debug'`              | Logger level threshold       |
+| `namespace`  | `string?`          | `''`                   | Namespace prefix             |
+| `transports` | `Transport[]?`     | `[consoleTransport()]` | Transport pipeline           |
+| `bindings`   | `Bindings?`        | `{}`                   | Initial pinned bindings      |
+| `middleware` | `LogMiddleware[]?` | `[]`                   | Entry transform/filter chain |
 
 ### LogMethod
 
@@ -533,11 +509,10 @@ type RuneConfig = {
 type LogMethod = {
   (message: string): void;
   (context: Bindings, message?: string): void;
-  (error: Error, message?: string): void;
 };
 ```
 
-Every log-level method uses this signature. Every call must provide at least one argument.
+Every log-level method uses this signature. Every call must provide at least one argument. Pass `Error` instances as values inside the context object — they are auto-serialized to `{ message, name, stack }`.
 
 ### LogMiddleware
 
@@ -551,14 +526,18 @@ Middleware functions intercept entries before they reach transports. Return the 
 
 Opaque type returned by `lazy()`. Pass as a value inside `withBindings()`. The factory is only called when the entry is actually emitted (after the level check passes).
 
-### BatchTransport
+### BatchHandle
 
 ```ts
-type BatchTransport = Transport & {
-  flush: () => void;
+type BatchHandle = {
+  [Symbol.dispose]: () => void;
   dispose: () => void;
+  flush: () => void;
+  transport: Transport;
 };
 ```
+
+Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`; call `handle.dispose()` on shutdown.
 
 ### Logger
 
@@ -569,7 +548,6 @@ type Logger = {
   [Symbol.dispose]: () => void;
   readonly bindings: Readonly<Bindings>;
   child: (overrides?: RuneOptions) => Logger;
-  readonly config: Readonly<RuneConfig>;
   debug: LogMethod;
   readonly disposalSignal: AbortSignal;
   dispose: () => void;
@@ -580,9 +558,11 @@ type Logger = {
   group: <T>(label: string, fn: () => T, level?: LogType) => T;
   groupCollapsed: <T>(label: string, fn: () => T, level?: LogType) => T;
   info: LogMethod;
-  resetLevel: () => void;
-  setLevel: (level: LogLevel) => void;
-  time: <T>(label: string, fn: () => T, opts?: LogType | TimeOptions) => T;
+  readonly logLevel: LogLevel;
+  readonly middleware: readonly LogMiddleware[];
+  readonly namespace: string;
+  time: <T>(label: string, fn: () => T, level?: LogType) => T;
+  readonly transports: readonly Transport[];
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
   withBindings: (bindings: Bindings) => Logger;
@@ -611,11 +591,12 @@ type Logger = {
 
 ### JsonTransportOptions
 
-| Field    | Type                     | Default          | Description                                                         |
-| -------- | ------------------------ | ---------------- | ------------------------------------------------------------------- |
-| `level`  | `LogLevel`               | `'debug'`        | Minimum level                                                       |
-| `output` | `(line: string) => void` | `process.stdout` | Custom output sink                                                  |
-| `safe`   | `boolean`                | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
+| Field    | Type                           | Default          | Description                                                         |
+| -------- | ------------------------------ | ---------------- | ------------------------------------------------------------------- |
+| `level`  | `LogLevel`                     | `'debug'`        | Minimum level                                                       |
+| `output` | `(line: string) => void`       | `process.stdout` | Custom output sink                                                  |
+| `safe`   | `boolean`                      | `false`          | Replace circular references with `'[Circular]'` instead of throwing |
+| `fields` | `{ level?, msg?, ns?, time? }` | —                | Custom output field names (e.g. `level: 'severity'` for Datadog)    |
 
 ### BatchTransportOptions
 
@@ -630,23 +611,17 @@ type Logger = {
 
 ### SampleTransportOptions
 
-| Field       | Type        | Description                                     |
-| ----------- | ----------- | ----------------------------------------------- |
-| `rate`      | `number`    | Fraction of entries to forward (0–1). Required. |
-| `transport` | `Transport` | Downstream transport. Required.                 |
+| Field       | Type        | Default   | Description                                    |
+| ----------- | ----------- | --------- | ---------------------------------------------- |
+| `rate`      | `number`    | —         | Required. Fraction of entries to forward (0–1) |
+| `transport` | `Transport` | —         | Required. Downstream transport                 |
+| `level`     | `LogLevel`  | `'debug'` | Minimum level to sample                        |
 
 ### RedactTransportOptions
 
-| Field         | Type        | Default        | Description                     |
-| ------------- | ----------- | -------------- | ------------------------------- |
-| `keys`        | `string[]`  | —              | Required. Field names to redact |
-| `replacement` | `string`    | `'[REDACTED]'` | Replacement value               |
-| `transport`   | `Transport` | —              | Required. Downstream transport  |
-
-### TimeOptions
-
-Options accepted by `time()` as the third argument. Can also be passed as a plain `LogType` string for brevity.
-
-| Field   | Type      | Default   | Description                    |
-| ------- | --------- | --------- | ------------------------------ |
-| `level` | `LogType` | `'debug'` | Log level for the timing entry |
+| Field         | Type        | Default        | Description                                                                                                                                                                                                                                   |
+| ------------- | ----------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `keys`        | `string[]`  | —              | Required. Field names to redact at any depth                                                                                                                                                                                                  |
+| `maxDepth`    | `number`    | `20`           | Maximum object nesting depth to traverse. Fields deeper than this are not redacted — a dev-only warning is emitted when hit. **Security:** the warning is suppressed in production; ensure sensitive fields are not nested beyond this limit. |
+| `replacement` | `string`    | `'[REDACTED]'` | Replacement value                                                                                                                                                                                                                             |
+| `transport`   | `Transport` | —              | Required. Downstream transport                                                                                                                                                                                                                |

@@ -25,10 +25,20 @@
  * ```
  */
 
-function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
-  if (!cache.has(key)) cache.set(key, build());
+const FORMAT_CACHE_MAX = 128;
 
-  return cache.get(key) as F;
+function getOrCreate<F>(cache: Map<string, F>, key: string, build: () => F): F {
+  const cached = cache.get(key);
+
+  if (cached !== undefined) return cached;
+
+  const value = build();
+
+  if (cache.size >= FORMAT_CACHE_MAX) cache.delete(cache.keys().next().value as string);
+
+  cache.set(key, value);
+
+  return value;
 }
 
 export type DurationValue = Partial<

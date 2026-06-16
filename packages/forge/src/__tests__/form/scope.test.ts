@@ -1,4 +1,4 @@
-import { createForm } from '../../index';
+import { createForm, ValidationError } from '../../index';
 
 interface Address {
   city: string;
@@ -135,14 +135,34 @@ describe('form.scope()', () => {
     expect(form.get('name')).toBe('Bob');
   });
 
-  test('state is shared with parent form', () => {
-    const form = createForm({ defaultValues: defaults });
+  test('state returns scoped projection — only scoped fields affect flags', () => {
+    const form = createForm({
+      defaultValues: defaults,
+      validators: {
+        'address.city': (v: unknown) => (!v ? 'City required' : undefined),
+        name: (v: unknown) => (!v ? 'Name required' : undefined),
+      },
+    });
     const address = form.scope('address');
 
-    address.set('city', 'Denver');
+    // Before any mutations, scoped state reflects no errors/dirty/touched
+    expect(address.state.isDirty).toBe(false);
+    expect(address.state.isTouched).toBe(false);
+    expect(address.state.isValid).toBe(true);
 
+    // Dirty/touched in a sibling scope should NOT affect address.state
+    form.set('name', 'Bob');
+    form.touch('name');
+    expect(address.state.isDirty).toBe(false);
+    expect(address.state.isTouched).toBe(false);
+
+    // Dirty in the scoped fields should affect address.state
+    address.set('city', 'Denver');
+    expect(address.state.isDirty).toBe(true);
     expect(form.state.isDirty).toBe(true);
-    expect(address.state).toBe(form.state);
+
+    // Full form state is a different (superset) object
+    expect(address.state).not.toBe(form.state);
   });
 
   test('subscribe on scoped form fires when scoped fields change', () => {
@@ -224,7 +244,7 @@ describe('form.scope()', () => {
     });
 
     // Populate the sibling error
-    await form.validateField('billing.city');
+    await form.validate('billing.city');
     expect(form.field('billing.city').error).toBe('Billing city required');
 
     // Scoped submit should not be blocked by the billing error
@@ -238,6 +258,30 @@ describe('form.scope()', () => {
     }
   });
 
+  test('submitOrThrow() on scoped form throws ValidationError with scoped errors on failure', async () => {
+    const form = createForm({
+      defaultValues: defaults,
+      validators: {
+        'address.city': (v: unknown) => (!v ? 'City required' : undefined),
+      },
+    });
+
+    const address = form.scope('address');
+
+    address.set('city', '');
+
+    let caught: unknown;
+
+    try {
+      await address.submitOrThrow(() => undefined);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ValidationError);
+    expect((caught as ValidationError).errors).toEqual({ city: 'City required' });
+  });
+
   test('submit() on scoped form returns only scoped errors on validation failure', async () => {
     const form = createForm({
       defaultValues: { ...defaults, billing: { city: '' } },
@@ -248,7 +292,7 @@ describe('form.scope()', () => {
     });
 
     // Pre-populate billing error
-    await form.validateField('billing.city');
+    await form.validate('billing.city');
 
     // Trigger address.city error too
     const address = form.scope('address');
@@ -277,12 +321,12 @@ describe('form.scope()', () => {
 
     // Pre-populate billing error so a non-scoped error exists
     form.set('billing.city', '');
-    await form.validateField('billing.city');
+    await form.validate('billing.city');
 
     form.set('address.city', '');
 
     const address = form.scope('address');
-    const result = await address.validateFields(['city']);
+    const result = await address.validate(['city']);
 
     // Key should be "city" not "address.city"
     expect(result.errors).toEqual({ city: 'City required' });
@@ -292,7 +336,7 @@ describe('form.scope()', () => {
     // Fix address.city — valid should now be true even though billing.city has an error
     address.set('city', 'New York');
 
-    const result2 = await address.validateFields(['city']);
+    const result2 = await address.validate(['city']);
 
     expect(result2.valid).toBe(true);
     expect(result2.errors).toEqual({});
@@ -311,7 +355,7 @@ describe('form.scope()', () => {
 
     // Trigger a billing error first
     form.set('billing.city', '');
-    await form.validateField('billing.city');
+    await form.validate('billing.city');
     expect(form.field('billing.city').error).toBe('Billing city required');
 
     // Now validate the address scope — billing error must not appear
@@ -336,7 +380,7 @@ describe('form.scope()', () => {
 
     // Put an error on a non-scoped field
     form.set('name', '');
-    await form.validateField('name');
+    await form.validate('name');
     expect(form.field('name').error).toBe('Name required');
 
     // Address fields are all valid — scoped validate() should return valid=true
@@ -382,10 +426,10 @@ describe('form.scope()', () => {
     const form = createForm({ defaultValues: defaults });
     const address = form.scope('address');
 
-    address.setValidator('city', (v: unknown) => (!v ? 'City required' : undefined));
+    address.fields.setValidator('city', (v: unknown) => (!v ? 'City required' : undefined));
 
     form.set('address.city', '');
-    await form.validateField('address.city');
+    await form.validate('address.city');
 
     expect(form.field('address.city').error).toBe('City required');
   });
@@ -397,12 +441,12 @@ describe('form.scope()', () => {
     });
 
     form.set('address.city', '');
-    await form.validateField('address.city');
+    await form.validate('address.city');
     expect(form.field('address.city').error).toBe('City required');
 
     const address = form.scope('address');
 
-    address.setValidator('city', undefined);
+    address.fields.setValidator('city', undefined);
 
     expect(form.field('address.city').error).toBeUndefined();
   });

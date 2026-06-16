@@ -22,6 +22,7 @@ Order.walk({
       child.walk(this)
     }
   },
+  // unknown() catches any kind without a handler; omitting it returns null instead of throwing
   unknown() {},
 })
 

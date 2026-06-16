@@ -13,7 +13,8 @@ auditBus.on('user:logout', () => {
   console.log('[audit] logout recorded')
 })
 
-const unpipe = pipeEvents(appBus, auditBus, ['user:login', 'user:logout'])
+const controller = new AbortController()
+const unpipe = pipeEvents(appBus, auditBus, ['user:login', 'user:logout'], { signal: controller.signal })
 
 appBus.emit('user:login', { email: 'alice@example.com', userId: '1' })
 appBus.emit('cart:updated', { total: 99 })  // not forwarded

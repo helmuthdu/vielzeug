@@ -94,7 +94,9 @@ Compose Sigil components with standard HTML layout. Each snippet below is a self
 
   <div style="width: 1px; background: var(--color-contrast-300); margin: 0 0.25rem;"></div>
 
-  <sg-button variant="ghost" size="sm" icon-only aria-label="Link"> <sg-icon name="link" size="16"></sg-icon> </sg-button>
+  <sg-button variant="ghost" size="sm" icon-only aria-label="Link">
+    <sg-icon name="link" size="16"></sg-icon>
+  </sg-button>
 </div>
 ```
 

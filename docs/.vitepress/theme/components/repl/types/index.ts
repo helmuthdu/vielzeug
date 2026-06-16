@@ -3,12 +3,13 @@ import { clockworkTypes } from './clockwork';
 import { coinsTypes } from './coins';
 import { conduitTypes } from './conduit';
 import { courierTypes } from './courier';
+import { dndTypes } from './dnd';
 import { familiarTypes } from './familiar';
 import { forgeTypes } from './forge';
-import { gripTypes } from './grip';
 import { heraldTypes } from './herald';
 import { linguaTypes } from './lingua';
 import { orbitTypes } from './orbit';
+import { pulseTypes } from './pulse';
 import { rippleTypes } from './ripple';
 import { runeTypes } from './rune';
 import { scrollTypes } from './scroll';
@@ -24,12 +25,13 @@ export const libraryTypes = {
   coins: coinsTypes,
   conduit: conduitTypes,
   courier: courierTypes,
+  dnd: dndTypes,
   familiar: familiarTypes,
   forge: forgeTypes,
-  grip: gripTypes,
   herald: heraldTypes,
   lingua: linguaTypes,
   orbit: orbitTypes,
+  pulse: pulseTypes,
   ripple: rippleTypes,
   rune: runeTypes,
   scroll: scrollTypes,

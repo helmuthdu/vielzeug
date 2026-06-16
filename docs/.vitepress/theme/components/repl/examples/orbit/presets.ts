@@ -1,5 +1,6 @@
 export const presetsExample = {
-  code: `import { float, tooltip, dropdown, popover, contextMenu } from '@vielzeug/orbit'
+  code: `import { float } from '@vielzeug/orbit'
+import { tooltip, dropdown, popover, contextMenu } from '@vielzeug/orbit/presets'
 
 // Presets are pre-configured middleware stacks for common UI patterns.
 // Each factory returns { placement, middleware } — spread directly into float().
@@ -42,16 +43,16 @@ tip.textContent = 'tooltip()'
 tip.style.cssText = 'position: fixed; background: #1e293b; color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 13px; display: none;'
 document.body.appendChild(tip)
 
-let cleanup = null
+let handle = null
 
 trigger.addEventListener('mouseenter', () => {
   tip.style.display = 'block'
-  cleanup = float(trigger, tip, tooltip())
+  handle = float(trigger, tip, tooltip())
 })
 trigger.addEventListener('mouseleave', () => {
   tip.style.display = 'none'
-  cleanup?.cleanup()
-  cleanup = null
+  handle?.dispose()
+  handle = null
 })
 
 console.log('Hover the button to see tooltip() in action')`,

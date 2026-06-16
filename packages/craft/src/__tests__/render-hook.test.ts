@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { effect, onCleanup, onMounted } from '../runtime';
+import { prop } from '../index';
 import { renderHook } from '../testing';
 
 describe('renderHook()', () => {
@@ -15,9 +15,9 @@ describe('renderHook()', () => {
   it('runs onMounted callbacks after setup', async () => {
     const log: string[] = [];
 
-    await renderHook(() => {
+    await renderHook((_props, ctx) => {
       log.push('setup');
-      onMounted(() => {
+      ctx.onMounted(() => {
         log.push('mounted');
       });
     });
@@ -28,10 +28,10 @@ describe('renderHook()', () => {
   it('supports reactive effects tracking signal changes', async () => {
     const log: number[] = [];
 
-    const { flush, result } = await renderHook(() => {
+    const { flush, result } = await renderHook((_props, ctx) => {
       const count = signal(0);
 
-      effect(() => {
+      ctx.watch(() => {
         log.push(count.value);
       });
 
@@ -50,8 +50,8 @@ describe('renderHook()', () => {
   it('runs onCleanup when destroy() is called', async () => {
     const cleanupSpy = vi.fn();
 
-    const { destroy } = await renderHook(() => {
-      onCleanup(cleanupSpy);
+    const { destroy } = await renderHook((_props, ctx) => {
+      ctx.onCleanup(cleanupSpy);
     });
 
     expect(cleanupSpy).not.toHaveBeenCalled();
@@ -72,13 +72,33 @@ describe('renderHook()', () => {
     expect(result.value).toBe(99);
   });
 
+  it('prop-defs overload: exposes typed prop signals to setup', async () => {
+    const { result } = await renderHook({ count: prop.number(10), label: prop.string('hi') }, (props) => ({
+      count: props.count,
+      label: props.label,
+    }));
+
+    expect(result.count.value).toBe(10);
+    expect(result.label.value).toBe('hi');
+  });
+
+  it('prop-defs overload: ctx bag is passed alongside props', async () => {
+    const log: string[] = [];
+
+    await renderHook({ name: prop.string('world') }, (_props, ctx) => {
+      ctx.onMounted(() => log.push('mounted'));
+    });
+
+    expect(log).toEqual(['mounted']);
+  });
+
   it('destroy() disposes the scope, stopping effects', async () => {
     const effectSpy = vi.fn();
 
-    const { destroy, flush, result } = await renderHook(() => {
+    const { destroy, flush, result } = await renderHook((_props, ctx) => {
       const s = signal(0);
 
-      effect(() => {
+      ctx.watch(() => {
         void s.value;
         effectSpy();
       });

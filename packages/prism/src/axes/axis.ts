@@ -11,8 +11,9 @@ const defaultTickFormat = (v: Date | number | string): string =>
 export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisConfig, length: number): void {
   while (parent.firstChild) parent.removeChild(parent.firstChild);
 
-  const isHorizontal = config.position === 'bottom' || config.position === 'top';
-  const isInverted = config.position === 'top' || config.position === 'left';
+  const position = config.position ?? 'bottom';
+  const isHorizontal = position === 'bottom' || position === 'top';
+  const isInverted = position === 'top' || position === 'left';
   const tickSize = 6;
   const tickDirection = isInverted ? -1 : 1;
 
@@ -26,7 +27,8 @@ export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisCon
 
   parent.appendChild(axisLine);
 
-  const ticks = scale.ticks(config.tickCount ?? 10);
+  const defaultTickCount = isHorizontal ? Math.max(2, Math.floor(length / 80)) : Math.max(2, Math.floor(length / 50));
+  const ticks = scale.ticks(config.tickCount ?? defaultTickCount);
   const format = config.tickFormat ?? defaultTickFormat;
 
   for (const tick of ticks) {

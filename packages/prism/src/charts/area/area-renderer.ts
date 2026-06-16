@@ -1,6 +1,7 @@
 import type { Point } from '../../svg/path';
-import type { Scale, TransitionConfig, XScale } from '../../types';
+import type { Datum, Scale, TransitionConfig } from '../../types';
 
+import { warn } from '../../_warn';
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';
@@ -109,13 +110,15 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   activeAreaAnimations.set(parent, requestAnimationFrame(frame));
 }
 
-export function computeAreaPoints(
-  data: { x: Date | number | string; y: number }[],
-  xScale: XScale,
-  yScale: Scale<number>,
-): Point[] {
+export function computeAreaPoints(data: Datum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
+  if (data.some((d) => d.key == null)) {
+    warn(
+      'computeAreaPoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
+    );
+  }
+
   return data.map((d) => ({
-    x: (xScale as Scale<Date | number>).map(d.x as Date | number),
-    y: yScale.map(d.y),
+    x: xScale.map(d.key as Date | number),
+    y: yScale.map(d.value),
   }));
 }

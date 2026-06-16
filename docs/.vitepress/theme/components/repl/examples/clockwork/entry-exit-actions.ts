@@ -1,10 +1,10 @@
 export const entryExitActionsExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { machine } from '@vielzeug/clockwork'
 
 // Track side effects with entry/exit actions
 const log = (msg) => console.log(msg)
 
-const connectionMachine = defineMachine({
+const conn = machine({
   initial: 'disconnected',
   context: { reconnects: 0, lastError: '' },
   states: {
@@ -22,8 +22,8 @@ const connectionMachine = defineMachine({
           await new Promise(res => setTimeout(res, 200))
           return 'ws://localhost:3000'
         },
-        onDone:  (url)   => ({ type: 'CONNECTED',   url }),
-        onError: (error) => ({ type: 'CONNECT_FAIL', error: String(error) }),
+        onDone:  (url,   _ctx) => ({ type: 'CONNECTED',   url }),
+        onError: (error, _ctx) => ({ type: 'CONNECT_FAIL', error: String(error) }),
       }],
       on: {
         CONNECTED:    { target: 'connected',    actions: [({ context }) => { context.lastError = '' }] },
@@ -43,8 +43,6 @@ const connectionMachine = defineMachine({
     },
   },
 })
-
-const conn = interpret(connectionMachine)
 
 console.log('State:', conn.state.value)  // 'disconnected'
 conn.send({ type: 'CONNECT' })

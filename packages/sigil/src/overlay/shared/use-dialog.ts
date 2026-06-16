@@ -1,9 +1,13 @@
-import { onCleanup, onEvent, type ReadonlySignal, watch } from '@vielzeug/craft';
-import { type Signal, signal } from '@vielzeug/ripple';
+import { type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/ripple';
 
-import type { DialogCloseReason, OverlayControl, OverlayOpenReason } from '../../headless';
-
-import { lifecycleSignal, createFocusManager, createOverlayControl } from '../../headless';
+import {
+  lifecycleSignal,
+  createOverlayControl,
+  type DialogCloseReason,
+  type OverlayControl,
+  type OverlayOpenReason,
+} from '../../headless';
+import { createFocusManager } from '../../headless/focus';
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
@@ -19,6 +23,18 @@ export type UseDialogOptions = {
   host: HTMLElement;
   initialFocus: ReadonlySignal<string | undefined>;
   isPersistent: () => boolean;
+  /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
+  onCleanup: (fn: () => void) => void;
+  /**
+   * Scoped event listener registrar from the component setup ctx.
+   * Automatically removed on component disconnect.
+   */
+  onEvent: <K extends keyof HTMLElementEventMap>(
+    target: EventTarget | null | undefined,
+    event: K,
+    listener: (e: HTMLElementEventMap[K]) => void,
+    options?: AddEventListenerOptions,
+  ) => void;
   /**
    * Called after the native `close` event fires — after background unlock,
    * isOpen reset, and focus restore. Use to emit component events.
@@ -46,7 +62,7 @@ export type UseDialogHandle = {
   handleBackdropClick: (e: MouseEvent) => void;
   handleKeydown: (e: KeyboardEvent) => void;
   isOpen: Signal<boolean>;
-  /** The overlay control — open/close/toggle/cleanup. */
+  /** The overlay control — open/close/toggle/dispose. */
   overlay: OverlayControl;
   /**
    * Dispatch `close-request`; if allowed, call `overlay.close()`.
@@ -76,7 +92,7 @@ export type UseDialogHandle = {
  * Components supply only their unique behavior via callbacks and `onNativeClose`.
  */
 export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
-  const abortSignal = lifecycleSignal(onCleanup);
+  const abortSignal = lifecycleSignal(options.onCleanup);
   const isOpen = signal(false);
   // Internal close-reason: set atomically before dialog.close() fires.
   let pendingCloseReason: DialogCloseReason = 'programmatic';
@@ -205,7 +221,7 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
   const watchOpenProp = (): void => {
     const dialog = options.dialogRef.value;
 
-    if (dialog) onEvent(dialog, 'close', handleNativeClose);
+    if (dialog) options.onEvent(dialog, 'close', handleNativeClose);
 
     watch(
       options.openProp,
@@ -226,8 +242,8 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     if (!dialog) return;
 
     watchOpenProp();
-    onEvent(dialog, 'click', handleBackdropClick);
-    onEvent(dialog, 'keydown', handleKeydown);
+    options.onEvent(dialog, 'click', handleBackdropClick);
+    options.onEvent(dialog, 'keydown', handleKeydown);
   };
 
   return {

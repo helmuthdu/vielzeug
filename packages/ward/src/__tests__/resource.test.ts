@@ -46,16 +46,16 @@ describe('ward: hierarchical resource patterns in rules', () => {
   it('a namespace-wildcard rule matches concrete resource IDs', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts:*', role: 'viewer' }]);
 
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read')).toBe(true);
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts:draft:1', 'read')).toBe(true);
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read')).toBe(false);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(true);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:draft:1', 'read').allowed).toBe(true);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read').allowed).toBe(false);
   });
 
   it('exact resource rule does not match namespace-wildcard resource', () => {
     const permit = createWard([{ action: 'read', effect: 'allow', resource: 'posts', role: 'viewer' }]);
 
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read')).toBe(false);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(false);
   });
 
   it('namespace wildcard and global wildcard interact with specificity', () => {
@@ -66,9 +66,9 @@ describe('ward: hierarchical resource patterns in rules', () => {
     ]);
 
     // posts:123 matches both rules; posts:* is more specific, deny wins
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read')).toBe(false);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts:123', 'read').allowed).toBe(false);
     // other resources only match the wildcard rule — allow
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read')).toBe(true);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'comments:1', 'read').allowed).toBe(true);
   });
 
   it('rulesInScope returns namespace-wildcard rules for matching resources', () => {

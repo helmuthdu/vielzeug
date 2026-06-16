@@ -3,7 +3,7 @@
     --_bg: var(--box-bg, var(--color-canvas));
     --_color: var(--box-color, var(--color-contrast-900));
     --_border-width: var(--box-border, var(--border));
-    --_border-color: var(--box-border-color, var(--color-contrast-300));
+    --_border-color: var(--box-border-color, var(--color-divider));
     --_radius: var(--box-radius, var(--rounded-lg));
     --_padding: var(--box-padding, var(--size-4));
     --_shadow: var(--box-shadow, var(--shadow-sm));
@@ -23,6 +23,7 @@
     border: var(--_border-width) solid var(--_border-color);
     border-radius: var(--_radius);
     box-shadow: var(--_shadow);
+    backdrop-filter: blur(var(--blur-md));
     transition:
       backdrop-filter var(--transition-fast),
       box-shadow var(--transition-normal),
@@ -45,13 +46,13 @@
 
   /* Glass */
   :host([variant='glass']:not([color])) {
-    --_bg: color-mix(in srgb, var(--color-secondary) 20%, transparent);
-    --_border-color: color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent);
+    --_bg: color-mix(in oklch, var(--color-secondary) 20%, transparent);
+    --_border-color: color-mix(in oklch, var(--color-secondary-contrast) 15%, transparent);
   }
 
   :host([variant='glass'][color]) {
-    --_bg: color-mix(in srgb, var(--_theme-base) 20%, transparent);
-    --_border-color: color-mix(in srgb, var(--_theme-contrast) 15%, transparent);
+    --_bg: color-mix(in oklch, var(--_theme-base) 20%, transparent);
+    --_border-color: color-mix(in oklch, var(--_theme-contrast) 15%, transparent);
     --_color: var(--_theme-content);
   }
 

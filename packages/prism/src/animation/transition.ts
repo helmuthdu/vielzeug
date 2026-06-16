@@ -8,7 +8,7 @@ export interface AnimationTarget {
   el: SVGElement;
 }
 
-export function animate(targets: AnimationTarget[], config?: TransitionConfig): Promise<void> {
+export function animate(targets: AnimationTarget[], config?: TransitionConfig, onComplete?: () => void): void {
   const duration = config?.duration ?? 300;
   const easing = resolveEasing(config?.easing);
   const stagger = Math.max(0, config?.stagger ?? 0);
@@ -20,37 +20,37 @@ export function animate(targets: AnimationTarget[], config?: TransitionConfig): 
       }
     }
 
-    return Promise.resolve();
+    onComplete?.();
+
+    return;
   }
 
-  return new Promise((done) => {
-    let startTime: number | null = null;
-    const totalDuration = Math.max(duration, duration + stagger * (targets.length - 1));
+  let startTime: number | null = null;
+  const totalDuration = Math.max(duration, duration + stagger * (targets.length - 1));
 
-    function frame(timestamp: number) {
-      if (startTime === null) startTime = timestamp;
+  function frame(timestamp: number) {
+    if (startTime === null) startTime = timestamp;
 
-      const elapsed = timestamp - startTime;
+    const elapsed = timestamp - startTime;
 
-      for (let i = 0; i < targets.length; i++) {
-        const target = targets[i];
-        const delay = stagger * i;
-        const localElapsed = Math.max(0, elapsed - delay);
-        const t = Math.min(1, localElapsed / duration);
-        const eased = easing(t);
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i];
+      const delay = stagger * i;
+      const localElapsed = Math.max(0, elapsed - delay);
+      const t = Math.min(1, localElapsed / duration);
+      const eased = easing(t);
 
-        for (const [attr, { from, to }] of Object.entries(target.attrs)) {
-          target.el.setAttribute(attr, String(tweenNumber(from, to, eased)));
-        }
-      }
-
-      if (elapsed < totalDuration) {
-        requestAnimationFrame(frame);
-      } else {
-        done();
+      for (const [attr, { from, to }] of Object.entries(target.attrs)) {
+        target.el.setAttribute(attr, String(tweenNumber(from, to, eased)));
       }
     }
 
-    requestAnimationFrame(frame);
-  });
+    if (elapsed < totalDuration) {
+      requestAnimationFrame(frame);
+    } else {
+      onComplete?.();
+    }
+  }
+
+  requestAnimationFrame(frame);
 }

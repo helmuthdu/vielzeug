@@ -60,6 +60,7 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
   const paths = [
     resolve(repoRoot, folder, 'package.json'),
     resolve(repoRoot, folder, 'src/index.ts'),
+    resolve(repoRoot, folder, 'README.md'),
     ...DOC_PAGES.flatMap((page) => {
       const f = resolveDocsFile(repoRoot, slug, page);
 
@@ -143,7 +144,7 @@ function processPackage(repoRoot: string, project: RushProject, sigilComponents:
     name: String(project.packageName),
     related: toStringArray(frontmatter['related'], 'related'),
     slug,
-    version: typeof pkgJson['version'] === 'string' ? pkgJson['version'] : null,
+    version: typeof pkgJson['version'] === 'string' ? pkgJson['version'] : '0.0.0',
   };
 }
 

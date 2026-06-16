@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
-import { html } from '../template-compiler';
+import { html } from '../template';
 
 describe('template caching', () => {
   it('produces a valid HTMLResult with a DocumentFragment for getter interpolations', () => {

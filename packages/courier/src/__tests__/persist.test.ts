@@ -61,6 +61,7 @@ describe('persistQueryCache', () => {
     const fetchPromise = qc.fetch({
       fn: () => new Promise((r) => (resolveIt = r)),
       key: ['users', 1],
+      throwOnError: false,
     });
 
     // Entry is now pending — must NOT be written to storage
@@ -87,16 +88,16 @@ describe('persistQueryCache', () => {
     expect(parsed.data).toEqual({ id: 1, name: 'Alice' });
   });
 
-  it('eager persist respects the include predicate', () => {
+  it('eager persist respects a key predicate', () => {
     const qc = createQuery();
     const storage = makeStorage();
 
     qc.set(['users', 1], { id: 1 });
     qc.set(['settings'], { theme: 'dark' });
 
+    // Seed the keys we want to filter first so qc.keys() can see them
     persistQueryCache(qc, {
-      include: (key) => key[0] === 'users',
-      keys: [['users', 1], ['settings']],
+      keys: (key) => key[0] === 'users',
       storage,
     });
 
@@ -236,21 +237,26 @@ describe('hydrateQueryCache', () => {
     expect(qc.getState(['users', 1])).toBeNull();
   });
 
-  it('respects the include predicate', async () => {
+  it('respects a key predicate', async () => {
     const qc = createQuery();
+
+    // Pre-populate cache so qc.keys() returns both keys for the predicate
+    qc.set(['users', 1], null);
+    qc.set(['settings'], null);
+
     const storage = makeStorage({
       'courier:["settings"]': JSON.stringify({ data: { theme: 'dark' }, updatedAt: Date.now() }),
       'courier:["users",1]': JSON.stringify({ data: { id: 1 }, updatedAt: Date.now() }),
     });
 
     await hydrateQueryCache(qc, {
-      include: (key) => key[0] === 'users',
-      keys: [['users', 1], ['settings']],
+      keys: (key) => key[0] === 'users',
       storage,
     });
 
     expect(qc.get(['users', 1])).toEqual({ id: 1 });
-    expect(qc.get(['settings'])).toBeUndefined();
+    // settings was filtered out by predicate — its data stays null (set via qc.set above, not hydrated)
+    expect(qc.getState(['settings'])?.data).toBeNull();
   });
 
   it('uses a custom prefix', async () => {

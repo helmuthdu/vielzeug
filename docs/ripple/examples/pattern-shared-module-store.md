@@ -65,7 +65,7 @@ export function logout() {
 
 ### Related
 
-- [Shared Bus (Relay)](@vielzeug/herald/examples/module-level-bus)
+- [Shared Bus (Herald)](@vielzeug/herald/examples/module-level-bus)
 - [DI Container (Conduit)](/conduit/)
 
 - [Usage Guide](../usage.md#framework-integration)

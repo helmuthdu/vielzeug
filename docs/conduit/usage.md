@@ -18,7 +18,10 @@ const Service = token<{ run(): Promise<void> }>('Service');
 const container = createContainer();
 
 container.value(Logger, console);
-container.factory(Service, (logger) => ({ run: async () => logger.log('running') }), { deps: [Logger] });
+container.factory(Service, async (r) => {
+  const logger = await r.resolve(Logger);
+  return { run: async () => logger.log('running') };
+});
 
 const service = await container.resolve(Service);
 await service.run();
@@ -49,7 +52,11 @@ const Service = token<{ run(): void }>('Service');
 
 const container = createContainer();
 
-container.value(Logger, console).factory(Service, (logger) => ({ run: () => logger.log('ok') }), { deps: [Logger] });
+container.value(Logger, console);
+container.factory(Service, async (r) => {
+  const logger = await r.resolve(Logger);
+  return { run: () => logger.log('ok') };
+});
 ```
 
 ## Container Modules
@@ -73,23 +80,25 @@ const configModule: ContainerModule = (c) => {
   });
 };
 
-const container = await createContainer().load(loggingModule, configModule);
+const container = await loadModules(createContainer(), loggingModule, configModule);
 ```
+
+Import `loadModules` from `'@vielzeug/conduit'`.
 
 ## Resolution
 
-Call `resolve()` for a single provider. Use `resolveOptional()` when a missing token should return `undefined` rather than throw. Use `resolveOrDefault()` when you have a fallback value to supply directly.
+Call `resolve()` for a single provider. Use the free-function helpers when a missing token should not throw.
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, token, resolveOptional, resolveOrDefault } from '@vielzeug/conduit';
 
 const Service = token<{ run(): void }>('Service');
 const Plugin = token<{ name: string }>('Plugin');
 const container = createContainer();
 
 const service = await container.resolve(Service);
-const maybePlugin = await container.resolveOptional(Plugin); // undefined if not registered
-const plugin = await container.resolveOrDefault(Plugin, defaultPlugin); // fallback if not registered
+const maybePlugin = await resolveOptional(container, Plugin); // undefined if not registered
+const plugin = await resolveOrDefault(container, Plugin, defaultPlugin); // fallback if not registered
 ```
 
 ## Checking Registration
@@ -119,22 +128,28 @@ const config = container.resolveSync(Config);
 const logger = container.resolveSync(Logger);
 ```
 
-`resolveSync()` throws `SyncResolutionError` for transient factories (never cached) and for unresolved singletons/scoped instances. It throws `ScopedResolutionError` when called on the root container for a scoped token.
+`resolveSync()` throws `SyncResolutionError` for transient factories (never cached) and for unresolved singleton instances. It throws `ScopedResolutionError` when called outside a matching named-scope container. If a singleton factory previously **failed**, `resolveSync()` rethrows the original cached rejection.
 
-> **Note:** `resolveAll()` only pre-warms `'singleton'` factories. Factories registered with `'scoped'`, `'transient'`, or a `ScopeToken` lifetime are **not** resolved by `resolveAll()`.
+> **Note:** `resolveAll()` only pre-warms `'singleton'` factories by default. Pass `{ includeScoped: true }` on a scope container to also pre-warm named-scope factories tagged to that scope. Transient factories are never pre-warmed.
+
+Use the free-function variants when a token may not be registered:
+
+```ts
+import { resolveSyncOptional, resolveSyncOrDefault } from '@vielzeug/conduit';
+
+await container.resolveAll();
+
+const plugin = resolveSyncOptional(container, OptionalPlugin); // undefined if not registered
+const timeout = resolveSyncOrDefault(container, RequestTimeout, 5000); // 5000 if not registered
+```
+
+Both re-throw `SyncResolutionError`, `ContainerDisposedError`, and all other errors — only `ProviderNotFoundError` is silenced.
 
 ## Lifetimes
 
-- `singleton` — factory runs once; the same instance is returned on every subsequent call (default). Shared across child containers.
-- `transient` — factory runs on every resolution; result is never cached.
-- `scoped` — one instance per child container; throws `ScopedResolutionError` from the root.
+- `'singleton'` — factory runs once; the same instance is returned on every subsequent call (default). Shared across child containers.
+- `'transient'` — factory runs on every resolution; result is never cached.
 - `ScopeToken` — one instance per matching named-scope container; see [Named Scopes](#named-scopes) below.
-
-```ts
-container.factory(RequestState, () => ({ id: crypto.randomUUID() }), {
-  lifetime: 'scoped',
-});
-```
 
 ### Singleton failure behavior
 
@@ -142,11 +157,11 @@ If a singleton factory rejects, the rejection is cached and rethrown on every su
 
 ## Child Containers
 
-Use `createChild()` when you need a request, job, or test scope. Child containers inherit parent registrations and maintain their own `scoped` cache.
+Use `createScope()` (without a scope token) to create a plain child container that inherits parent registrations. Use it for test isolation or per-request overrides.
 
 ```ts
-const child = container.createChild();
-const session = await child.resolve(Session); // scoped per child
+const child = container.createScope();
+const session = await child.resolve(Session);
 await child.dispose();
 ```
 
@@ -189,10 +204,12 @@ container.factory(Config, async () => {
 
 ## Resolving Without Throwing
 
-Use `tryResolve()` to resolve a token as a discriminated union instead of throwing:
+Use `tryResolve()` (free function) to resolve a token as a discriminated union instead of throwing:
 
 ```ts
-const result = await container.tryResolve(OptionalPlugin);
+import { tryResolve } from '@vielzeug/conduit';
+
+const result = await tryResolve(container, OptionalPlugin);
 if (result.ok) {
   result.value.init();
 } else {
@@ -208,17 +225,33 @@ const [db, cache, logger] = await container.resolveMany([Db, Cache, Logger] as c
 
 ## Freezing Containers
 
-Call `freeze()` after all registrations are complete to prevent accidental late registrations:
+Call `freeze()` after all registrations are complete. It validates the graph, then locks the container:
 
 ```ts
 const container = createContainer({ name: 'app' });
 
-await container.load(dbModule, authModule, serviceModule);
-container.freeze(); // seal — no further registrations allowed
+await loadModules(container, dbModule, authModule, serviceModule);
+container.freeze(); // validates + seals
 
 // Later in application code:
 container.value(SomeToken, x); // throws ContainerFrozenError: Container 'app' is frozen ...
 ```
+
+`freeze()` checks that every registered token has a provider. Declare `deps` on a factory to also enable static cycle detection at freeze time:
+
+```ts
+const Logger = token<Logger>('Logger');
+const Service = token<Service>('Service');
+
+container.value(Logger, new ConsoleLogger());
+container.factory(Service, (r) => new Service(r.resolve(Logger)), { deps: [Logger] });
+
+container.freeze();
+// → throws CircularDependencyError if deps form a cycle
+// → throws ProviderNotFoundError if a declared dep is missing
+```
+
+> Lazy dependencies not listed in `deps:` are still caught at resolve time — declaring deps is opt-in.
 
 ## Named Containers
 
@@ -226,28 +259,16 @@ Assign names to containers for clearer error messages:
 
 ```ts
 const root = createContainer({ name: 'root' });
-const request = root.createChild({ name: 'request-42' });
+const child = root.createScope(undefined, { name: 'child-42' });
 const scope = root.createScope(RequestScope, { name: 'scope-42' });
 
 // Error messages will include the container name:
-// ProviderNotFoundError: No provider registered for token: MyToken (in container 'request-42')
+// ProviderNotFoundError: No provider registered for token: MyToken (in container 'child-42')
 ```
 
 ## Cycle Detection
 
-Call `validate()` after registering providers to detect circular dependencies at setup time — before any resolution attempt.
-
-```ts
-const A = token<string>('A');
-const B = token<string>('B');
-
-container
-  .factory(A, (b) => b, { deps: [B] })
-  .factory(B, () => 'leaf')
-  .validate(); // <sg-icon name="check" size="16"></sg-icon> throws CircularDependencyError if a cycle exists
-```
-
-`validate()` returns `this` for chaining and uses DFS to walk the full dependency graph.
+By default, cycle detection runs lazily at resolve time. To catch cycles earlier, declare `deps:` on factories and call `freeze()` — this enables static cycle detection before any resolution occurs.
 
 ## Inspecting the Container
 
@@ -258,8 +279,7 @@ const graph = container.inspect(); // deep traversal (default)
 const local = container.inspect({ deep: false }); // local only
 
 for (const node of graph.nodes) {
-  const deps = node.deps.length > 0 ? ` -> [${node.deps.join(', ')}]` : '';
-  console.log(`${node.description} (${node.kind}${deps})`);
+  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})`);
 }
 ```
 
@@ -286,7 +306,7 @@ container.value(Db, db, { dispose: (db) => db.close() });
 await container.dispose(); // calls both hooks
 ```
 
-If any hook throws, the container still disposes fully and the errors are collected into an `AggregateError`.
+If any hook throws, the container still disposes fully. Failures are **warned** (dev-only) — they do not throw or reject `dispose()`.
 
 Use the `await using` pattern (explicit resource management) to ensure disposal even on early return or thrown error:
 
@@ -294,6 +314,44 @@ Use the `await using` pattern (explicit resource management) to ensure disposal 
 await using container = createContainer();
 // container.dispose() is called automatically at block exit
 ```
+
+## Resolution Interceptors
+
+Use `onResolve()` to register a callback fired after every successful resolution (both async and sync). Useful for telemetry, logging, and debugging.
+
+```ts
+const unsub = container.onResolve((tok, value) => {
+  metrics.increment('di.resolve', { token: tok.description });
+});
+
+// Stop intercepting:
+unsub();
+```
+
+Interceptor errors are swallowed — a misbehaving interceptor cannot break resolution. Interceptors propagate to parent containers.
+
+## Observing Container Events
+
+Subscribe to container lifecycle events with `on()` for logging, metrics, or debugging. Each event carries a `source` field containing the container name.
+
+```ts
+const unsubscribe = container.on((event) => {
+  if (event.type === 'register') {
+    console.log(`[${event.source}] registered ${event.description} (${event.kind})`);
+  }
+  if (event.type === 'resolve') {
+    console.log(`[${event.source}] resolved ${event.description}`);
+  }
+  if (event.type === 'dispose') {
+    console.log(`[${event.source}] container disposed`);
+  }
+});
+
+// Stop listening:
+unsubscribe();
+```
+
+Events propagate up to parent listeners. Listener errors are silently swallowed.
 
 ## Framework Integration
 
@@ -386,43 +444,23 @@ container.factory(EventBus, () => createBus(), { dispose: (bus) => bus.clear() }
 
 const NotificationService = token<{ notify(msg: string): void }>('NotificationService');
 
-container.factory(NotificationService, (bus) => ({ notify: (msg) => bus.emit('notification', msg) }), {
-  deps: [EventBus],
+container.factory(NotificationService, async (r) => {
+  const bus = await r.resolve(EventBus);
+  return { notify: (msg) => bus.emit('notification', msg) };
 });
 ```
-
-## Observing Container Events
-
-Subscribe to container lifecycle events with `on()` for logging, metrics, or debugging.
-
-```ts
-const unsubscribe = container.on((event) => {
-  if (event.type === 'register') {
-    console.log(`[conduit] registered ${event.description} (${event.kind})`);
-  }
-  if (event.type === 'resolve') {
-    console.log(`[conduit] resolved ${event.description}`);
-  }
-  if (event.type === 'dispose') {
-    console.log('[conduit] container disposed');
-  }
-});
-
-// Stop listening:
-unsubscribe();
-```
-
-Listener errors are silently swallowed — a failing listener never disrupts container operation.
 
 ## Best Practices
 
 - Register all providers at startup before any resolution begins.
-- Group registrations into `ContainerModule` functions to keep them organized. Use `load()` for sequential async setup.
-- Call `validate()` after bulk registration to catch cycles early.
-- Call `freeze()` after all registrations are done to prevent accidental late additions.
+- Group registrations into `ContainerModule` functions. Use `loadModules()` for sequential async setup.
+- Call `freeze()` after all modules are loaded — it validates the graph and locks the container in one step.
+- Declare `deps:` on factories to enable static cycle detection at `freeze()` time.
 - Use `resolveAll()` once at startup, then `resolveSync()` in hot paths.
 - Use `tryResolve()` when optional providers are expected to be absent; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
+- In hot paths after `resolveAll()`, prefer `resolveSyncOptional()` or `resolveSyncOrDefault()` over wrapping `resolveSync()` in try/catch.
 - Use `resolveMany()` to resolve multiple well-known providers at startup in parallel.
-- Scope child containers (or named-scope containers) to request or component lifetimes — dispose them with the scope.
+- Use `onResolve()` for observability (telemetry, logging) rather than coupling resolution paths to event parsing.
+- Scope named-scope containers to request or component lifetimes — dispose them with the scope.
 - Attach `dispose` hooks to both factory and value registrations for external resources that need cleanup.
 - Call `container.dispose()` during app teardown to invoke all registered cleanup hooks.

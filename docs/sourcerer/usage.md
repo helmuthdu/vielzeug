@@ -21,7 +21,7 @@ const users: User[] = [
 ];
 
 const source = createLocalSource<User>(users, { limit: 2 });
-await source.searchNow('ada');
+await source.search('ada', { immediate: true });
 console.log(source.current); // [{ id: 1, name: 'Ada Lovelace', role: 'admin' }]
 console.log(source.meta.pageNumber); // 1
 console.log(source.meta.totalItems); // 1
@@ -61,9 +61,9 @@ createLocalSource(data, {
 ```ts
 await source.setFilter((user) => user.role === 'admin');
 await source.setSort((a, b) => a.name.localeCompare(b.name));
-await source.searchNow('ada'); // immediate, cancels any pending debounce
-source.search('ada'); // debounced — fire-and-forget
-await source.flush(); // flush pending debounced search immediately
+await source.search('ada', { immediate: true }); // cancels debounce and awaits the result
+void source.search('ada'); // debounced — resolves after debounceMs + recompute
+await source.patch({ search: 'ada', limit: 5 }); // apply multiple changes in one recompute
 await source.goTo(2);
 await source.setData(newUsers); // replace entire dataset
 await source.reset(); // restore initial filter/sort, reset to page 1
@@ -71,13 +71,13 @@ await source.reset(); // restore initial filter/sort, reset to page 1
 
 ### Restoring from URL state
 
-Use `restoreQuery()` to apply URL-decoded state in one operation — only fields that changed trigger a recompute.
+Use `applyLocalQuery()` to restore URL-decoded state — it applies each field sequentially so limit resets happen before page navigation.
 
 ```ts
-import { decodeQuery } from '@vielzeug/sourcerer';
+import { applyLocalQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
-await source.restoreQuery(query);
+await applyLocalQuery(source, query);
 ```
 
 ## Remote Source
@@ -148,9 +148,9 @@ fetch: async ({ filter, limit, page, search, sort }, signal) => {
 ```ts
 await source.setFilter({ role: 'admin' });
 await source.setSort({ by: 'name', dir: 'asc' });
-await source.searchNow('ada');
-source.search('ada'); // debounced — triggers fetch after debounceMs
-await source.flush(); // flush pending debounced search immediately
+await source.search('ada', { immediate: true });
+void source.search('ada'); // debounced — resolves after debounceMs + fetch
+await source.patch({ search: 'ada', filter: { role: 'admin' }, limit: 25 }); // atomic — one fetch
 await source.goTo(3);
 await source.next();
 await source.prev();
@@ -162,13 +162,13 @@ await source.refresh(); // re-fetch current query
 ### Restoring from URL state
 
 ```ts
-import { decodeQuery } from '@vielzeug/sourcerer';
+import { applyRemoteQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await source.restoreQuery(query);
+await applyRemoteQuery(source, query);
 ```
 
-`restoreQuery()` is a no-op when no field has changed — safe to call on every page load.
+`applyRemoteQuery()` is a no-op when `patch` is empty — safe to call on every page load.
 
 ### Optimistic updates
 
@@ -270,13 +270,13 @@ await source.reset(); // clear all, restart from page 1
 
 ### Restoring from URL state
 
-Use `restoreQuery()` to restore `limit` and `search` from URL params. It clears accumulated items and refetches from page 1 if any value changed — a no-op otherwise.
+Use `applyInfiniteQuery()` to restore `limit` and `search` from URL params. It clears accumulated items and refetches from page 1 if any value changed.
 
 ```ts
-import { decodeQuery } from '@vielzeug/sourcerer';
+import { applyInfiniteQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
-await source.restoreQuery({ limit: query.limit, search: query.search });
+await applyInfiniteQuery(source, { limit: query.limit, search: query.search });
 ```
 
 ## Error Handling
@@ -373,54 +373,27 @@ type InfiniteMeta = Readonly<{
 
 `meta` is replaced with a new object reference on every change. Both `current` and `meta` are stable between changes — safe to compare with `===` to detect updates.
 
-## Subscriptions
+## Subscriptions and Disposal
 
-All sources expose a framework-agnostic `subscribe` method that returns an unsubscribe function.
+All sources expose a framework-agnostic `subscribe` method that returns an unsubscribe function:
 
 ```ts
 const unsubscribe = source.subscribe(() => {
-  // fires after every state change
   render(source.current, source.meta);
 });
 
-// later
+// later:
 unsubscribe();
 ```
 
-## Ripple Signal Adapter
-
-`toSignals()` wraps any source in Ripple computed signals — works for all four source types.
-
-```ts
-import { effect } from '@vielzeug/ripple';
-import { toSignals } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(data, { limit: 10 });
-const { current, meta, dispose } = toSignals(source);
-
-// current and meta are ComputedSignal — they update automatically
-effect(() => {
-  console.log('Page:', meta.value.pageNumber, '— items:', current.value.length);
-});
-
-await source.goTo(2); // effect re-runs automatically
-
-// Release reactive resources when done
-dispose();
-```
-
-> Always call `dispose()` when the source is no longer needed. It unsubscribes from the source and releases the computed signals and their internal tick signal.
-
-All sources and `toSignals()` return objects implement `[Symbol.dispose]()`. Use the TC39 `using` declaration to auto-dispose on scope exit:
+All sources implement `[Symbol.dispose]()`. Use the TC39 `using` declaration to auto-dispose on scope exit:
 
 ```ts
 {
-  using signals = toSignals(source);
-  // signals.current and signals.meta are available here
-} // signals.dispose() is called automatically on block exit
+  using source = createLocalSource(data, { limit: 10 });
+  // source is automatically disposed when the block exits
+}
 ```
-
-`toSignals()` requires a source with a `meta` field — `MergedSource<T>` has no `meta`, so it cannot be passed to `toSignals()`. Use `subscribe()` directly with `MergedSource`.
 
 ## URL Query Param Sync
 
@@ -436,7 +409,7 @@ const params = encodeQuery(source.toQuery());
 
 // Restore from URLSearchParams directly
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await source.restoreQuery(query);
+await applyRemoteQuery(source, query);
 ```
 
 `decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
@@ -463,12 +436,12 @@ const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
 
 `prefetchSource()` throws a `SourceError` if the fetch fails. Handle it server-side before embedding the snapshot.
 
-If you need both the snapshot and a live source without a double-fetch, use `prefetchSourceWithSource()`:
+To get both the snapshot and a live source without a double-fetch, pass `{ keepSource: true }`:
 
 ```ts
-import { prefetchSourceWithSource } from '@vielzeug/sourcerer';
+import { prefetchSource } from '@vielzeug/sourcerer';
 
-const { snapshot, source } = await prefetchSourceWithSource({ fetch: fetchUsers, limit: 20 });
+const { snapshot, source } = await prefetchSource({ fetch: fetchUsers, limit: 20 }, { keepSource: true });
 // Use snapshot for SSR HTML embedding, source for subsequent client-side updates
 // Caller is responsible for calling source.dispose()
 source.dispose();
@@ -599,30 +572,38 @@ const source = createRemoteSource<Issue, Filter, Sort>({
 
 ### With Ripple
 
-Use `toSignals()` to expose source state as computed signals, then drive updates from `effect()`.
+Subscribe to the source and drive Ripple signals from the callback:
 
 ```ts
-import { effect, store } from '@vielzeug/ripple';
-import { createLocalSource, toSignals } from '@vielzeug/sourcerer';
+import { effect, signal, store } from '@vielzeug/ripple';
+import { createLocalSource } from '@vielzeug/sourcerer';
 
 const source = createLocalSource(users, { limit: 10 });
-const { current, meta, dispose } = toSignals(source);
-const controls = store({ query: '' });
+const items = signal<readonly User[]>([]);
+const meta = signal(source.meta);
 
-effect(() => {
-  void source.searchNow(controls.value.query);
+// Drive Ripple signals from the source
+const unsub = source.subscribe(() => {
+  items.value = source.current;
+  meta.value = source.meta;
 });
-// current and meta update automatically when query changes
+
+const controls = store({ query: '' });
+effect(() => {
+  void source.search(controls.value.query); // debounced — re-runs on every query change
+});
+// items.value and meta.value stay in sync automatically
 ```
 
 ## Best Practices
 
-- Use `searchNow()` for form submit actions; use `search()` (debounced) for keypress flows.
+- Use `search(q, { immediate: true })` for form submit actions; use `search(q)` (debounced) for keypress flows. Both return `Promise<void>`.
+- Use `patch({ search, filter, sort })` when you need to apply multiple query changes in a single fetch.
 - Pass the `AbortSignal` from the `fetch` callback to your HTTP client so superseded requests are cancelled.
 - Call `ready()` in server-side rendering or test setup — not in every render cycle.
-- Always call `dispose()` on signal adapters returned by `toSignals()` when the UI is torn down.
-- For URL sync, prefer `decodeQuery()` + `restoreQuery()` over manually reconstructing source state from params.
+- Always call the unsubscribe function returned by `subscribe()` when the component is torn down.
+- For URL sync, use `decodeQuery()` + `apply*Query()` rather than reconstructing source state from params manually.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.
 - When using `decodeQuery()`, validate the parsed `filter` and `sort` with a type guard before passing to the server — they are returned as-is without runtime validation.
-- For infinite sources, use `restoreQuery({ limit, search })` for URL state sync — `page` is not restorable since items accumulate across pages.
+- For infinite sources, use `applyInfiniteQuery({ limit, search })` for URL state sync — `page` is not restorable since items accumulate across pages.

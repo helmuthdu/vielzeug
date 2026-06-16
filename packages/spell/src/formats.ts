@@ -14,10 +14,12 @@ export function isEmail(v: string): boolean {
   return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(v);
 }
 
-export function isUrl(v: string, protocols: readonly string[] = ['http', 'https']): boolean {
+const _DEFAULT_URL_PROTOCOLS = new Set(['http', 'https']);
+
+export function isUrl(v: string, protocols?: readonly string[]): boolean {
   try {
     const parsed = new URL(v);
-    const allowed = new Set(protocols.map((p) => p.toLowerCase()));
+    const allowed = protocols ? new Set(protocols.map((p) => p.toLowerCase())) : _DEFAULT_URL_PROTOCOLS;
 
     return allowed.has(parsed.protocol.replace(':', '').toLowerCase());
   } catch {

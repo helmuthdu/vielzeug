@@ -206,4 +206,14 @@ describe('sg-text accessibility', () => {
       expect(fixture.element.getAttribute('size')).toBe('2xl');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-text', { html: 'Hello world' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

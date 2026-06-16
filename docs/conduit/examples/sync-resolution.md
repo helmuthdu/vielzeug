@@ -73,16 +73,17 @@ if (container.has(Telemetry)) {
 #### Handling errors
 
 ```ts
-import { createContainer, token, ScopedResolutionError, SyncResolutionError } from '@vielzeug/conduit';
+import { createContainer, scope, token, ScopedResolutionError, SyncResolutionError } from '@vielzeug/conduit';
 
 const Heavy = token<object>('Heavy');
 const Id = token<string>('Id');
+const RequestScope = scope('request');
 const Session = token<object>('Session');
 const container = createContainer();
 
 container.factory(Heavy, async () => loadHeavyModule());
 container.factory(Id, () => crypto.randomUUID(), { lifetime: 'transient' });
-container.factory(Session, () => ({}), { lifetime: 'scoped' });
+container.factory(Session, () => ({}), { lifetime: RequestScope });
 
 try {
   container.resolveSync(Heavy); // throws SyncResolutionError — not yet resolved
@@ -102,10 +103,10 @@ try {
 }
 
 try {
-  container.resolveSync(Session); // throws ScopedResolutionError — must use a child
+  container.resolveSync(Session); // throws ScopedResolutionError — must use a scope container
 } catch (err) {
   if (err instanceof ScopedResolutionError) {
-    console.error('use container.createChild() for scoped tokens');
+    console.error('use container.createScope(RequestScope) for named-scope tokens');
   }
 }
 ```
@@ -114,7 +115,7 @@ try {
 
 - `resolveSync()` on a transient factory always throws `SyncResolutionError` — transient results are never cached, so there is nothing to return synchronously.
 - Calling `resolveSync()` before `await container.resolve()` for a singleton that has an async factory throws `SyncResolutionError`. The warm-up call must complete before the sync path is entered.
-- `resolveSync()` on a scoped token called on the root container throws `ScopedResolutionError`. Call `resolveSync()` on a child container after resolving the scoped token there.
+- `resolveSync()` on a named-scope token called outside a matching scope container throws `ScopedResolutionError`. Call `resolveSync()` on the scope container after resolving the scoped token there.
 
 ### Related
 

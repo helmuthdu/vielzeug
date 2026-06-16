@@ -168,14 +168,13 @@ describe('createCheckable', () => {
     });
   });
 
-  describe('bindFormField()', () => {
+  describe('getFormField / triggerValidation()', () => {
     it('calls reportValidity on the field when validateOn matches', () => {
       const validateOn = signal<'change' | undefined>('change');
       const reportValidity = vi.fn();
-      const { options } = makeOptions({ validateOn });
+      const { options } = makeOptions({ getFormField: () => ({ reportValidity }), validateOn });
       const ctrl = createCheckable(options);
 
-      ctrl.bindFormField({ reportValidity });
       ctrl.triggerValidation('change');
       expect(reportValidity).toHaveBeenCalledOnce();
     });
@@ -183,15 +182,14 @@ describe('createCheckable', () => {
     it('does not call reportValidity when validateOn does not match', () => {
       const validateOn = signal<'blur' | undefined>('blur');
       const reportValidity = vi.fn();
-      const { options } = makeOptions({ validateOn });
+      const { options } = makeOptions({ getFormField: () => ({ reportValidity }), validateOn });
       const ctrl = createCheckable(options);
 
-      ctrl.bindFormField({ reportValidity });
       ctrl.triggerValidation('change');
       expect(reportValidity).not.toHaveBeenCalled();
     });
 
-    it('does not call reportValidity before bindFormField is called', () => {
+    it('does not call reportValidity when getFormField is not provided', () => {
       const validateOn = signal<'change' | undefined>('change');
       const reportValidity = vi.fn();
       const { options } = makeOptions({ validateOn });
@@ -311,12 +309,12 @@ describe('createCheckable', () => {
       expect(ctrl.disabled.value).toBe(false);
     });
 
-    it('assistive signal reflects error text', () => {
+    it('errorText signal reflects error text', () => {
       const error = signal('Required');
       const { options } = makeOptions({ error });
       const ctrl = createCheckable(options);
 
-      expect(ctrl.assistive.value.errorText).toBe('Required');
+      expect(ctrl.errorText.value).toBe('Required');
     });
   });
 

@@ -1,11 +1,7 @@
 import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
 
 import { type CounterState, createCounterState, createField, type FieldHandle, type FieldOptions } from './field-base';
-import { syncedSignal } from './utils';
-
-// Re-export types from field-base for consumers that need them directly.
-export type { CounterOptions, CounterState, ErrorHelperOptions, ErrorHelperState } from './field-base';
-export { createCounterState, createErrorHelperState } from './field-base';
+import { syncedSignal } from './signals';
 
 // ── Text field ────────────────────────────────────────────────────────────────
 
@@ -78,14 +74,12 @@ export const createTextField = (options: TextFieldOptions): TextFieldHandle => {
       on('focus', (e) => options.onFocus!(e as FocusEvent));
     }
 
-    if (options.onInput || options.onBeforeInput) {
-      on('input', (e) => {
-        e.stopPropagation();
-        options.onBeforeInput?.(e);
-        value.value = element.value;
-        options.onInput?.(e, element.value);
-      });
-    }
+    on('input', (e) => {
+      e.stopPropagation();
+      options.onBeforeInput?.(e);
+      value.value = element.value;
+      options.onInput?.(e, element.value);
+    });
 
     on('change', (e) => {
       e.stopPropagation();

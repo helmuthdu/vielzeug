@@ -1,5 +1,6 @@
-import { computed, define, html, onMounted, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 import { intersectionObserver } from '@vielzeug/craft/observers';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
@@ -81,7 +82,7 @@ define<SgSkeletonProps>(SKELETON_TAG, {
     variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
     width: prop.string(),
   },
-  setup(props, { bind, el }) {
+  setup(props, { bind, el, onMounted }) {
     const isPaused = signal(false);
     const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));

@@ -290,4 +290,17 @@ describe('sg-checkbox-group', () => {
       expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-checkbox-group', {
+        attrs: { label: 'Preferences' },
+        html: '<sg-checkbox value="a">Option A</sg-checkbox><sg-checkbox value="b">Option B</sg-checkbox>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

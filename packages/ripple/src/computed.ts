@@ -1,12 +1,12 @@
 import type { DepEntry } from './tracking';
-import type { ComputedSignal, ReactiveOptions, ReadonlySignal, Subscription } from './types';
+import type { ComputedOptions, ComputedSignal, Subscription } from './types';
 
 import { getDevToolsHook } from './devtools-hook';
 import { ensureError, StateError } from './error';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';
-import { getRevision, getTracking, trackSource, untrack, withTracking } from './tracking';
+import { getRevision, getTracking, trackSource, withTracking } from './tracking';
 
 export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T> {
   private value_: T | typeof UNINITIALIZED;
@@ -20,12 +20,9 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
   // F1: global revision at last successful compute — enables O(1) "nothing changed" fast-path.
   private maxRevision_: number;
 
-  constructor(
-    compute: () => T,
-    equals?: (a: T, b: T) => boolean,
-    name?: string,
-    fallback?: (error: unknown, lastValue: T | undefined) => T,
-  ) {
+  constructor(compute: () => T, options?: ComputedOptions<T>) {
+    const { equals, fallback, name } = options ?? {};
+
     super(name);
     this.value_ = UNINITIALIZED;
     this.dirty_ = true;
@@ -220,20 +217,6 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     });
   };
 
-  map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return computed(() => fn(this.value), options);
-  }
-
-  filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
-  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
-  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined> {
-    return computed(() => {
-      const v = this.value;
-
-      return predicate(v) ? v : undefined;
-    });
-  }
-
   get disposed(): boolean {
     return this.disposed_;
   }
@@ -258,52 +241,10 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
   }
 }
 
-// ── Utility type for the explicit-dep overload (F5) ──────────────────────────
-
-type SignalValues<D extends readonly ReadonlySignal<unknown>[]> = {
-  [K in keyof D]: D[K] extends ReadonlySignal<infer V> ? V : never;
-};
-
 // ── computed() ───────────────────────────────────────────────────────────────
-//
-// F5: second overload accepts an explicit dependency array so the computation
-// function receives pre-read values with precise TypeScript types, without
-// needing to call `.value` inside the body.
 
-export function computed<T>(compute: () => T, options?: ReactiveOptions<T>): ComputedSignal<T>;
-export function computed<D extends readonly ReadonlySignal<unknown>[], T>(
-  deps: readonly [...D],
-  fn: (...values: SignalValues<D>) => T,
-  options?: ReactiveOptions<T>,
-): ComputedSignal<T>;
-export function computed<T>(
-  computeOrDeps: (() => T) | ReadonlyArray<ReadonlySignal<unknown>>,
-  fnOrOptions?: ((...args: never[]) => T) | ReactiveOptions<T>,
-  options?: ReactiveOptions<T>,
-): ComputedSignal<T> {
-  let comp: ComputedImpl<T>;
-
-  if (typeof computeOrDeps === 'function') {
-    const opts = fnOrOptions as ReactiveOptions<T> | undefined;
-
-    comp = new ComputedImpl(computeOrDeps, opts?.equals, opts?.name, opts?.fallback);
-  } else {
-    const deps = computeOrDeps as ReadonlyArray<ReadonlySignal<unknown>>;
-    const fn = fnOrOptions as (...args: unknown[]) => T;
-    const opts = options;
-
-    comp = new ComputedImpl(
-      () => {
-        const values = deps.map((d) => d.value); // tracked reads for explicit deps
-
-        return untrack(() => fn(...values)); // fn runs untracked — no extra dep registration
-      },
-      opts?.equals,
-      opts?.name,
-      opts?.fallback,
-    );
-  }
-
+export const computed = <T>(compute: () => T, options?: ComputedOptions<T>): ComputedSignal<T> => {
+  const comp = new ComputedImpl(compute, options);
   const ctx = getTracking();
 
   // Auto-dispose when created inside an effect or scope — they own the lifetime.
@@ -312,4 +253,4 @@ export function computed<T>(
   }
 
   return comp;
-}
+};

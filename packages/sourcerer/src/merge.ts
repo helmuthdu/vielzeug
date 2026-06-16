@@ -48,12 +48,22 @@ export function mergeSource<T>(
       return cachedCurrent;
     },
 
+    get disposalSignal() {
+      return core.disposalSignal;
+    },
+
     dispose() {
+      if (core.isDisposed) return;
+
       for (const unsub of unsubscribeFns) {
         unsub();
       }
 
       core.dispose();
+    },
+
+    get disposed() {
+      return core.isDisposed;
     },
 
     subscribe(listener) {

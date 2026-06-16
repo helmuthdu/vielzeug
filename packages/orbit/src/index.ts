@@ -1,10 +1,10 @@
 // Core engine
-export { computeOnce, computePosition, getRects } from './core';
+export { computePosition, computePositionAsync, computePositionRaf } from './core';
 export { detectOverflow } from './overflow';
 
 // High-level API
-export { float } from './float';
-export type { FloatOptions } from './float';
+export { float, floatWithAnchor, isCssAnchorSupported } from './float';
+export type { CssAnchorHandle, FloatOptions } from './float';
 
 // Auto-update
 export { autoUpdate } from './auto-update';
@@ -26,12 +26,14 @@ export type { FlipOptions } from './middleware/flip';
 export { hide } from './middleware/hide';
 export type { HideOptions } from './middleware/hide';
 
+export { inline } from './inline';
+export type { InlineOptions } from './inline';
+
 export { offset } from './middleware/offset';
 export type { OffsetConfig, OffsetValue } from './middleware/offset';
 
-export { shift } from './middleware/shift';
+export { limitShift, shift } from './middleware/shift';
 export type { LimitShiftOptions, ShiftLimiter, ShiftOptions } from './middleware/shift';
-export { limitShift } from './middleware/shift';
 
 export { size } from './middleware/size';
 export type { SizeOptions } from './middleware/size';
@@ -52,7 +54,6 @@ export type {
   FlipData,
   FloatHandle,
   HideData,
-  InferMiddlewareData,
   Middleware,
   MiddlewareData,
   MiddlewareReset,
@@ -66,7 +67,6 @@ export type {
   Side,
   SideObject,
   SizeData,
-  TypedComputePositionResult,
   TypedMiddleware,
   VirtualReference,
 } from './types';

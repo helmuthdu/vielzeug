@@ -1,123 +1,115 @@
-import { flattenPaths, isSafePath, unflattenPaths } from '../flattenPaths';
+import { describe, expect, it } from 'vitest';
 
-describe('isSafePath', () => {
-  it('returns true for safe paths', () => {
-    expect(isSafePath('user.name')).toBe(true);
-    expect(isSafePath('a.b.c')).toBe(true);
-    expect(isSafePath('key')).toBe(true);
-  });
-
-  it('returns false for prototype-polluting segments', () => {
-    expect(isSafePath('__proto__.polluted')).toBe(false);
-    expect(isSafePath('constructor.prototype')).toBe(false);
-    expect(isSafePath('prototype.x')).toBe(false);
-    expect(isSafePath('a.__proto__')).toBe(false);
-  });
-});
+import { flattenPaths, unflattenPaths } from '../flattenPaths';
 
 describe('flattenPaths', () => {
-  it('flattens a nested object to dot-notation paths', () => {
-    expect(flattenPaths({ a: { b: 1 } })).toEqual({ 'a.b': 1 });
+  it('flattens a simple nested object', () => {
+    expect(flattenPaths({ a: { b: 1, c: 2 }, d: 3 })).toEqual({ 'a.b': 1, 'a.c': 2, d: 3 });
   });
 
-  it('handles deeply nested objects', () => {
-    expect(flattenPaths({ a: { b: { c: 'deep' } } })).toEqual({ 'a.b.c': 'deep' });
+  it('returns flat object unchanged', () => {
+    expect(flattenPaths({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
   });
 
-  it('leaves leaf-level primitives as-is', () => {
-    expect(flattenPaths({ x: 1, y: 'two', z: true })).toEqual({ x: 1, y: 'two', z: true });
-  });
-
-  it('flattens an empty object to an empty object', () => {
+  it('handles empty input', () => {
     expect(flattenPaths({})).toEqual({});
   });
 
-  it('handles arrays as leaf values', () => {
-    const result = flattenPaths({ tags: [1, 2, 3] });
-
-    expect(result).toEqual({ tags: [1, 2, 3] });
+  it('handles deeply nested objects', () => {
+    expect(flattenPaths({ a: { b: { c: { d: 1 } } } })).toEqual({ 'a.b.c.d': 1 });
   });
 
-  it('flattens objects nested exactly 10 levels deep', () => {
-    let deepObj: Record<string, unknown> = { leaf: 'value' };
+  it('treats arrays as opaque leaf values', () => {
+    const result = flattenPaths({ a: [1, 2, 3] });
 
-    for (let i = 0; i < 9; i++) deepObj = { nested: deepObj };
-
-    const result = flattenPaths(deepObj);
-
-    expect(Object.values(result).some((v) => v === 'value')).toBe(true);
+    expect(result).toEqual({ a: [1, 2, 3] });
   });
 
-  it('does not throw for objects nested more than 10 levels deep — treats the deep node as a leaf', () => {
-    let deepObj: Record<string, unknown> = { leaf: 'value' };
+  it('silently skips unsafe path segment __proto__', () => {
+    const result = flattenPaths({ __proto__: { x: 1 }, safe: 2 });
 
-    for (let i = 0; i < 11; i++) deepObj = { nested: deepObj };
+    expect(result).not.toHaveProperty('__proto__');
+    expect(result).not.toHaveProperty('__proto__.x');
+    expect(result).toEqual({ safe: 2 });
+  });
 
-    expect(() => flattenPaths(deepObj)).not.toThrow();
+  it('silently skips unsafe path segment constructor', () => {
+    const result = flattenPaths({ constructor: { name: 'evil' }, safe: 1 });
 
-    const result = flattenPaths(deepObj);
+    expect(result).not.toHaveProperty('constructor');
+    expect(result).toEqual({ safe: 1 });
+  });
 
-    // The path at depth 10 is stored as an opaque object leaf — not recursed into further.
-    expect(Object.keys(result).length).toBeGreaterThan(0);
+  it('silently skips unsafe path segment prototype', () => {
+    const result = flattenPaths({ prototype: { x: 1 }, safe: 1 });
+
+    expect(result).not.toHaveProperty('prototype');
+    expect(result).toEqual({ safe: 1 });
+  });
+
+  it('treats object at max depth as opaque leaf', () => {
+    const deep: Record<string, unknown> = {};
+    let cur = deep;
+
+    for (let i = 0; i < 12; i++) {
+      const next: Record<string, unknown> = {};
+
+      cur[`l${i}`] = next;
+      cur = next;
+    }
+    cur['leaf'] = 'value';
+
+    const result = flattenPaths(deep);
+    const keys = Object.keys(result);
+
+    expect(keys.every((k) => !k.includes('leaf'))).toBe(true);
+  });
+
+  it('handles null and undefined leaf values', () => {
+    expect(flattenPaths({ a: { b: null, c: undefined } })).toEqual({ 'a.b': null, 'a.c': undefined });
+  });
+
+  it('handles mixed flat and nested keys', () => {
+    expect(flattenPaths({ a: 1, b: { c: 2, d: { e: 3 } }, f: 4 })).toEqual({
+      a: 1,
+      'b.c': 2,
+      'b.d.e': 3,
+      f: 4,
+    });
   });
 });
 
 describe('unflattenPaths', () => {
-  it('reconstructs a nested object from dot-notation paths', () => {
-    expect(unflattenPaths({ 'a.b': 1 })).toEqual({ a: { b: 1 } });
+  it('reconstructs a nested object from flat dot-notation keys', () => {
+    expect(unflattenPaths({ 'a.b': 1, 'a.c': 2, d: 3 })).toEqual({ a: { b: 1, c: 2 }, d: 3 });
   });
 
-  it('handles multiple nested paths', () => {
-    expect(unflattenPaths({ 'a.x': 1, 'a.y': 2, 'b.z': 3 })).toEqual({ a: { x: 1, y: 2 }, b: { z: 3 } });
-  });
-
-  it('skips prototype-polluting keys', () => {
-    const result = unflattenPaths({ '__proto__.bad': 'evil' });
-
-    expect((Object.prototype as Record<string, unknown>)['bad']).toBeUndefined();
-    expect(result).toEqual({});
-  });
-
-  it('handles an empty object', () => {
+  it('handles empty input', () => {
     expect(unflattenPaths({})).toEqual({});
   });
 
-  it('is a round-trip with flattenPaths for plain objects', () => {
-    const input = { a: { b: 1, c: 2 }, d: { e: { f: 3 } } };
-
-    expect(unflattenPaths(flattenPaths(input))).toEqual(input);
+  it('handles single-level flat keys', () => {
+    expect(unflattenPaths({ a: 1, b: 2 })).toEqual({ a: 1, b: 2 });
   });
 
-  it('overwrites a primitive intermediate with an object when a deeper path follows', () => {
-    const result = unflattenPaths({ a: 1, 'a.b': 2 });
+  it('handles deeply nested keys', () => {
+    expect(unflattenPaths({ 'a.b.c.d': 1 })).toEqual({ a: { b: { c: { d: 1 } } } });
+  });
+
+  it('silently skips keys containing unsafe segments', () => {
+    expect(unflattenPaths({ '__proto__.x': 1, safe: 2 })).toEqual({ safe: 2 });
+    expect(unflattenPaths({ 'a.constructor.b': 1, ok: 2 })).toEqual({ ok: 2 });
+  });
+
+  it('is a roundtrip inverse of flattenPaths for plain objects', () => {
+    const original = { a: { b: 1, c: 2 }, d: 3 };
+
+    expect(unflattenPaths(flattenPaths(original))).toEqual(original);
+  });
+
+  it('later keys overwrite earlier for conflicting paths', () => {
+    const result = unflattenPaths({ 'a.b': 1, 'a.b': 2 });
 
     expect(result).toEqual({ a: { b: 2 } });
-  });
-
-  it('last writer wins when two paths set the same leaf', () => {
-    const result = unflattenPaths({ 'a.b': 1, 'a.b': 2 } as Record<string, unknown>);
-
-    expect(result.a).toEqual({ b: 2 });
-  });
-});
-
-describe('isSafePath — edge cases', () => {
-  it('treats a single safe segment as safe', () => {
-    expect(isSafePath('key')).toBe(true);
-  });
-
-  it('treats an empty string as safe (no unsafe segments)', () => {
-    expect(isSafePath('')).toBe(true);
-  });
-
-  it('returns false when unsafe segment appears in the middle', () => {
-    expect(isSafePath('a.__proto__.b')).toBe(false);
-    expect(isSafePath('a.constructor.b')).toBe(false);
-  });
-
-  it('returns false for standalone unsafe segment', () => {
-    expect(isSafePath('__proto__')).toBe(false);
-    expect(isSafePath('prototype')).toBe(false);
-    expect(isSafePath('constructor')).toBe(false);
   });
 });

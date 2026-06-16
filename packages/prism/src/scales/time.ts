@@ -1,6 +1,5 @@
-import type { Scale, TimeScaleConfig } from '../types';
-
-import { resolve } from '../core/resolve';
+import type { Scale } from '../types';
+import type { TimeScaleConfig } from './types';
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -54,9 +53,7 @@ function niceDomain(domain: [Date, Date], count: number): [Date, Date] {
 export function timeScale(config: TimeScaleConfig): Scale<Date> {
   return {
     get domain(): [Date, Date] {
-      const raw = resolve(config.domain);
-
-      return config.nice === false ? raw : niceDomain(raw, 10);
+      return config.nice === false ? config.domain : niceDomain(config.domain, 10);
     },
 
     invert(pixel: number): Date {
@@ -83,7 +80,7 @@ export function timeScale(config: TimeScaleConfig): Scale<Date> {
     },
 
     get range(): [number, number] {
-      return resolve(config.range);
+      return config.range;
     },
 
     ticks(count = 10): Date[] {

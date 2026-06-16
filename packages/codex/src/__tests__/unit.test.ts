@@ -170,62 +170,67 @@ describe('scorePackage', () => {
     expect(scorePackage(pkg, 'zzz_no_match')).toBeNull();
   });
 
-  it('scores metadata matches at 3', () => {
+  it('scores description matches (metadata tier)', () => {
     const pkg = makePkg({ description: 'Reactive signals and computed values' });
     const hit = scorePackage(pkg, 'signal');
 
     expect(hit).not.toBeNull();
-    expect(hit?.score).toBe(3);
+    expect(hit?.score).toBeGreaterThanOrEqual(3);
     expect(hit?.matchedIn).toContain('metadata');
   });
 
-  it('scores name matches at 3', () => {
-    const pkg = makePkg({ name: '@vielzeug/ripple' });
-    const hit = scorePackage(pkg, 'ripple');
+  it('scores name matches higher than description within metadata tier', () => {
+    const byName = makePkg({ name: '@vielzeug/ripple' });
+    const byDesc = makePkg({ description: 'ripple signals library' });
+    const nameHit = scorePackage(byName, 'ripple');
+    const descHit = scorePackage(byDesc, 'ripple');
 
-    expect(hit?.score).toBe(3);
-    expect(hit?.matchedIn).toContain('metadata');
+    expect(nameHit?.score).toBeGreaterThan(descHit?.score ?? 0);
+    expect(nameHit?.matchedIn).toContain('metadata');
   });
 
-  it('scores keyword matches at 2', () => {
+  it('scores keyword matches (keywords tier, score >= 2)', () => {
     const pkg = makePkg({ keywords: ['schema', 'validation', 'zod-like'] });
     const hit = scorePackage(pkg, 'validation');
 
-    expect(hit?.score).toBe(2);
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
     expect(hit?.matchedIn).toContain('keywords');
   });
 
-  it('scores doc page matches at 1', () => {
+  it('scores doc page matches (docs tier, score < 2)', () => {
     const pkg = makePkg({
       availableDocPages: ['api'],
       docs: { api: '# API\n\nUse `createForm()` to build forms.' },
     });
     const hit = scorePackage(pkg, 'createform');
 
-    expect(hit?.score).toBe(1);
+    expect(hit?.score).toBeGreaterThan(0);
+    expect(hit?.score).toBeLessThan(2);
     expect(hit?.matchedIn).toContain('docs');
     expect(hit?.matchedPages).toContain('api');
   });
 
-  it('scores apiSource matches at 1', () => {
+  it('scores apiSource matches below docs tier', () => {
     const pkg = makePkg({ apiSource: 'export function createQuery() {}' });
     const hit = scorePackage(pkg, 'createquery');
 
-    expect(hit?.score).toBe(1);
+    expect(hit?.score).toBeGreaterThan(0);
+    expect(hit?.score).toBeLessThan(2);
     expect(hit?.matchedIn).toContain('source');
     expect(hit?.matchedIn).not.toContain('docs');
     expect(hit?.matchedPages).toBeUndefined();
   });
 
   it('collects all match categories (multi-match)', () => {
-    // Term matches both metadata AND keywords — both reported, score = max (3)
+    // Term matches both metadata AND keywords — both reported, score = highest weight
     const pkg = makePkg({
       description: 'A reactive signal library',
       keywords: ['reactive', 'signal'],
     });
     const hit = scorePackage(pkg, 'reactive');
 
-    expect(hit?.score).toBe(3);
+    expect(hit?.score).toBeGreaterThanOrEqual(3);
     expect(hit?.matchedIn).toContain('metadata');
     expect(hit?.matchedIn).toContain('keywords');
     expect(hit?.matchedIn.length).toBe(2);
@@ -262,16 +267,18 @@ describe('scorePackage', () => {
     const pkg = makePkg({ exports: ['signal'], keywords: ['signal'] });
     const hit = scorePackage(pkg, 'signal');
 
-    expect(hit?.score).toBe(2);
+    // keywords weight (2.5) > exports weight (2.2)
+    expect(hit?.score).toBeGreaterThanOrEqual(2.5);
     expect(hit?.matchedIn).toContain('keywords');
     expect(hit?.matchedIn).toContain('exports');
   });
 
-  it('scores exports array matches at 2 with matchedIn "exports"', () => {
+  it('scores exports array matches in keywords tier (score >= 2, < 3)', () => {
     const pkg = makePkg({ exports: ['signal', 'computed', 'effect'] });
     const hit = scorePackage(pkg, 'signal');
 
-    expect(hit?.score).toBe(2);
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
     expect(hit?.matchedIn).toContain('exports');
     expect(hit?.matchedIn).not.toContain('keywords');
   });
@@ -302,6 +309,50 @@ describe('scorePackage', () => {
 
     // mixed case
     expect(scorePackage(pkg, 'Reactive')).not.toBeNull();
+  });
+
+  it('scores related array matches in keywords tier (score >= 2, < 3)', () => {
+    const pkg = makePkg({ related: ['ripple', 'craft'] });
+    const hit = scorePackage(pkg, 'ripple');
+
+    expect(hit).not.toBeNull();
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
+    expect(hit?.matchedIn).toContain('related');
+    expect(hit?.matchedIn).not.toContain('keywords');
+    expect(hit?.matchedIn).not.toContain('exports');
+  });
+
+  it('keywords score higher than exports which score higher than related', () => {
+    const kwOnly = makePkg({ keywords: ['forge'] });
+    const exOnly = makePkg({ exports: ['forge'] });
+    const relOnly = makePkg({ related: ['forge'] });
+
+    const kwHit = scorePackage(kwOnly, 'forge');
+    const exHit = scorePackage(exOnly, 'forge');
+    const relHit = scorePackage(relOnly, 'forge');
+
+    expect(kwHit?.score).toBeGreaterThan(exHit?.score ?? 0);
+    expect(exHit?.score).toBeGreaterThan(relHit?.score ?? 0);
+  });
+
+  it('reports "keywords", "exports", and "related" when all match', () => {
+    const pkg = makePkg({ exports: ['forge'], keywords: ['forge'], related: ['forge'] });
+    const hit = scorePackage(pkg, 'forge');
+
+    // keywords weight wins (2.5)
+    expect(hit?.score).toBeGreaterThanOrEqual(2.5);
+    expect(hit?.matchedIn).toContain('keywords');
+    expect(hit?.matchedIn).toContain('exports');
+    expect(hit?.matchedIn).toContain('related');
+  });
+
+  it('returns null for a query consisting only of hyphens', () => {
+    const pkg = makePkg({ description: 'anything' });
+
+    // "-" normalises to " " → splits to [] → terms empty → null
+    expect(scorePackage(pkg, '-')).toBeNull();
+    expect(scorePackage(pkg, '---')).toBeNull();
   });
 });
 
@@ -437,7 +488,20 @@ describe('validate', () => {
   it('passes valid data through without throwing', () => {
     const input = {
       packages: [
-        { availableDocPages: [], components: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' },
+        {
+          apiSource: null,
+          availableDocPages: [],
+          category: '',
+          components: [],
+          description: '',
+          docs: {},
+          exports: [],
+          keywords: [],
+          name: '@vielzeug/x',
+          related: [],
+          slug: 'x',
+          version: '1.0.0',
+        },
       ],
       version: '1.0.0',
     };
@@ -445,10 +509,35 @@ describe('validate', () => {
     expect(() => validateBundledData(input)).not.toThrow();
   });
 
+  it('throws when version field on a package entry is missing', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [
+          {
+            apiSource: null,
+            availableDocPages: [],
+            category: '',
+            components: [],
+            description: '',
+            docs: {},
+            exports: [],
+            keywords: [],
+            name: '@vielzeug/x',
+            related: [],
+            slug: 'x',
+          },
+        ],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
   it('throws when slug is an empty string', () => {
     expect(() =>
       validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: '' }],
+        packages: [
+          { availableDocPages: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', related: [], slug: '' },
+        ],
         version: '1.0.0',
       }),
     ).toThrow(/malformed/);
@@ -457,7 +546,7 @@ describe('validate', () => {
   it('throws when name is an empty string', () => {
     expect(() =>
       validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '', slug: 'x' }],
+        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '', related: [], slug: 'x' }],
         version: '1.0.0',
       }),
     ).toThrow(/malformed/);
@@ -466,7 +555,17 @@ describe('validate', () => {
   it('throws when exports is not an array', () => {
     expect(() =>
       validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: 'bad', keywords: [], name: '@vielzeug/x', slug: 'x' }],
+        packages: [
+          {
+            availableDocPages: [],
+            docs: {},
+            exports: 'bad',
+            keywords: [],
+            name: '@vielzeug/x',
+            related: [],
+            slug: 'x',
+          },
+        ],
         version: '1.0.0',
       }),
     ).toThrow(/malformed/);
@@ -475,7 +574,9 @@ describe('validate', () => {
   it('throws when docs is not an object', () => {
     expect(() =>
       validateBundledData({
-        packages: [{ availableDocPages: [], docs: 42, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' }],
+        packages: [
+          { availableDocPages: [], docs: 42, exports: [], keywords: [], name: '@vielzeug/x', related: [], slug: 'x' },
+        ],
         version: '1.0.0',
       }),
     ).toThrow(/malformed/);
@@ -492,6 +593,26 @@ describe('validate', () => {
             exports: [],
             keywords: [],
             name: '@vielzeug/x',
+            related: [],
+            slug: 'x',
+          },
+        ],
+        version: '1.0.0',
+      }),
+    ).toThrow(/malformed/);
+  });
+
+  it('throws when related is not an array', () => {
+    expect(() =>
+      validateBundledData({
+        packages: [
+          {
+            availableDocPages: [],
+            docs: {},
+            exports: [],
+            keywords: [],
+            name: '@vielzeug/x',
+            related: 'bad',
             slug: 'x',
           },
         ],

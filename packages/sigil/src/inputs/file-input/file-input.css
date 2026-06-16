@@ -186,7 +186,7 @@
 
   .file-remove:hover {
     color: var(--color-error);
-    background: var(--color-error-backdrop, color-mix(in srgb, var(--color-error) 12%, transparent));
+    background: var(--color-error-backdrop, color-mix(in oklch, var(--color-error) 12%, transparent));
   }
 
   /* ========================================
@@ -217,7 +217,7 @@
        ======================================== */
 
   :host([drag-over]) .dropzone {
-    background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 8%, var(--color-canvas));
+    background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 8%, var(--color-canvas));
     border-color: var(--_theme-focus, var(--color-primary));
     box-shadow: var(--_theme-shadow, var(--color-primary-focus-shadow));
   }
@@ -263,24 +263,24 @@
   }
 
   :host([variant='flat']) .dropzone:hover {
-    background: var(--file-input-hover-bg, color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100)));
+    background: var(--file-input-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
     border-color: var(
       --file-input-hover-border-color,
-      color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300))
+      color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
     );
   }
 
   :host([variant='flat']) .dropzone:focus-visible,
   :host([variant='flat'][drag-over]) .dropzone {
-    background: var(--file-input-focus-bg, color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas)));
-    border-color: var(--file-input-focus-border-color, color-mix(in srgb, var(--_theme-focus) 60%, transparent));
+    background: var(--file-input-focus-bg, color-mix(in oklch, var(--_theme-base) 8%, var(--color-canvas)));
+    border-color: var(--file-input-focus-border-color, color-mix(in oklch, var(--_theme-focus) 60%, transparent));
     box-shadow: var(--_theme-shadow);
   }
 
   /* Bordered */
   :host([variant='bordered']) {
     --_bg: var(--file-input-bg, var(--_theme-backdrop));
-    --_border-color: var(--file-input-border-color, color-mix(in srgb, var(--_theme-focus) 70%, transparent));
+    --_border-color: var(--file-input-border-color, color-mix(in oklch, var(--_theme-focus) 70%, transparent));
   }
 
   :host([variant='bordered']) .dropzone:hover {

@@ -3,12 +3,13 @@ import { clockworkExamples } from './clockwork';
 import { coinsExamples } from './coins';
 import { conduitExamples } from './conduit';
 import { courierExamples } from './courier';
+import { dndExamples } from './dnd';
 import { familiarExamples } from './familiar';
 import { forgeExamples } from './forge';
-import { gripExamples } from './grip';
 import { heraldExamples } from './herald';
 import { linguaExamples } from './lingua';
 import { orbitExamples } from './orbit';
+import { pulseExamples } from './pulse';
 import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
 import { scrollExamples } from './scroll';
@@ -25,12 +26,13 @@ export const examples = {
   coins: coinsExamples,
   conduit: conduitExamples,
   courier: courierExamples,
+  dnd: dndExamples,
   familiar: familiarExamples,
   forge: forgeExamples,
-  grip: gripExamples,
   herald: heraldExamples,
   lingua: linguaExamples,
   orbit: orbitExamples,
+  pulse: pulseExamples,
   ripple: rippleExamples,
   rune: runeExamples,
   scroll: scrollExamples,

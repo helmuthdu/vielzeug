@@ -197,8 +197,8 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 ### CSS Custom Properties
 
-| Property     | Description                         | Default               |
-| ------------ | ----------------------------------- | --------------------- |
+| Property     | Description                   | Default         |
+| ------------ | ----------------------------- | --------------- |
 | `--form-gap` | Gap between form control rows | `var(--size-4)` |
 
 ### Context Provided

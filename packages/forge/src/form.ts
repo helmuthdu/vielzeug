@@ -1,7 +1,7 @@
 import { isAbortError } from '@vielzeug/arsenal';
 import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { isDev, warn } from './_warn';
 import { createArrayField } from './internal/array';
 import { createScopedForm, type ScopeContext } from './internal/scope';
 import {
@@ -28,6 +28,7 @@ import {
   type TypeAtPath,
   type Unsubscribe,
   type ValidateResult,
+  ValidationError,
 } from './types';
 import { anySignal, flattenValues, isSafeKey, unflattenValues } from './utils';
 
@@ -148,7 +149,11 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         key,
         signal<FieldState<unknown>>(buildFieldState(key), {
           equals: (a, b) =>
-            a.value === b.value && a.error === b.error && a.touched === b.touched && a.dirty === b.dirty,
+            a.value === b.value &&
+            a.error === b.error &&
+            a.hasError === b.hasError &&
+            a.touched === b.touched &&
+            a.dirty === b.dirty,
         }),
       );
     }
@@ -166,8 +171,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         loadingState = false;
         replace(resolved);
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         loadingState = false;
+        warn(`defaultValues factory rejected. Form will be empty. Error: ${String(err)}`);
+        init.onLoadError?.(err);
         requestNotify();
       });
   }
@@ -208,9 +215,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   }
 
   function buildFieldState(name: string): FieldState<unknown> {
+    const error = fieldErrors.get(name);
+
     return {
       dirty: dirty.has(name),
-      error: fieldErrors.get(name),
+      error,
+      hasError: error !== undefined,
       touched: touched.has(name),
       value: store.get(name),
     };
@@ -351,6 +361,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     fieldErrors.clear();
 
     for (const [key, message] of Object.entries(nextErrors)) {
+      assertSafeKey(key);
+
       if (typeof message === 'string') fieldErrors.set(key, message);
     }
 
@@ -365,7 +377,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     assertSafeKey(key);
 
-    if (import.meta.env.DEV && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
+    if (isDev && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
       const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
 
       warn(
@@ -400,6 +412,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     const key = name as string;
 
     assertSafeKey(key);
+
+    if (isDev && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
+      const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
+
+      warn(
+        `fields.register('${displayKey}'): path looks like an array item key. ` +
+          `Array items are stored as whole arrays — register the field on the parent key instead.`,
+      );
+    }
 
     if (options.validator !== undefined) setValidator(name, options.validator as FieldValidator<unknown>);
 
@@ -603,15 +624,10 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     }
   }
 
-  async function validate(signal?: AbortSignal): Promise<ValidateResult> {
-    ensureNotDisposed();
-
-    const result = await runValidationCore([...validators.keys()], 'full', signal);
-
-    return { errors: result.errors, valid: result.valid };
-  }
-
-  async function validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult> {
+  async function validateFields(
+    fields: FlatKeyOf<TValues>[] | string[],
+    signal?: AbortSignal,
+  ): Promise<ValidateResult> {
     ensureNotDisposed();
 
     const result = await runValidationCore(fields as string[], 'partial', signal);
@@ -619,13 +635,43 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     return { errors: result.errors, valid: result.valid };
   }
 
-  async function validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined> {
-    await validateFields([name], signal);
+  async function validate(
+    nameOrFieldsOrSignal?: FlatKeyOf<TValues> | FlatKeyOf<TValues>[] | AbortSignal,
+    signal?: AbortSignal,
+  ): Promise<ValidateResult> {
+    ensureNotDisposed();
 
-    return fieldErrors.get(name as string);
+    if (nameOrFieldsOrSignal === undefined || nameOrFieldsOrSignal instanceof AbortSignal) {
+      const result = await runValidationCore(
+        [...validators.keys()],
+        'full',
+        nameOrFieldsOrSignal as AbortSignal | undefined,
+      );
+
+      return { errors: result.errors, valid: result.valid };
+    }
+
+    if (Array.isArray(nameOrFieldsOrSignal)) {
+      return validateFields(nameOrFieldsOrSignal, signal);
+    }
+
+    await validateFields([nameOrFieldsOrSignal], signal);
+
+    const name = nameOrFieldsOrSignal as string;
+    const error = fieldErrors.get(name);
+
+    return { errors: error !== undefined ? { [name]: error } : {}, valid: error === undefined };
   }
 
   /* ======== Submit ======== */
+
+  async function submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult> {
+    const result = await submit(handler);
+
+    if (!result.ok) throw new ValidationError(result.errors as Record<string, string>);
+
+    return result.value;
+  }
 
   async function submit<TResult = void>(
     handler: (values: TValues) => MaybePromise<TResult>,
@@ -728,16 +774,18 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
           if (disposed) return;
 
-          void validateField(name).catch((err) => {
+          void validateFields([name]).catch((err) => {
             if (!isAbortError(err)) throw err;
           });
         }, debounceMs);
       } else {
-        void validateField(name).catch((err) => {
+        void validateFields([name]).catch((err) => {
           if (!isAbortError(err)) throw err;
         });
       }
     }
+
+    let bindingDisposed = false;
 
     return {
       get dirty() {
@@ -745,10 +793,15 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       },
       /** Cancels this binding's own debounce timer. Does not affect other bindings for the same field. */
       dispose() {
+        bindingDisposed = true;
+
         if (debounceTimer !== null) {
           clearTimeout(debounceTimer);
           debounceTimer = null;
         }
+      },
+      get disposed() {
+        return bindingDisposed;
       },
       get error() {
         return fieldErrors.get(key);
@@ -977,6 +1030,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     let waitingResolve: Resolver | null = null;
     let waitingReject: Rejecter | null = null;
     let done = false;
+    let pendingError: { err: unknown } | null = null;
 
     function enqueue(item: Item): void {
       if (waitingResolve) {
@@ -1000,6 +1054,8 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         waitingResolve = null;
         waitingReject = null;
         reject(err);
+      } else {
+        pendingError = { err };
       }
     }
 
@@ -1040,9 +1096,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
         if (formValidator && !combined.aborted) {
           try {
             const formErrors = await runFormValidator(combined);
-            const formError = formErrors[FORM_ERROR];
 
-            if (!combined.aborted) enqueue({ error: formError, field: FORM_ERROR });
+            if (!combined.aborted) {
+              const allKeys = new Set([FORM_ERROR, ...Object.keys(formErrors)]);
+
+              for (const key of allKeys) {
+                enqueue({ error: formErrors[key], field: key });
+              }
+            }
           } catch {
             // aborted
           }
@@ -1055,6 +1116,14 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     return {
       next(): Promise<IteratorResult<Item, undefined>> {
+        if (pendingError) {
+          const { err } = pendingError;
+
+          pendingError = null;
+
+          return Promise.reject(err);
+        }
+
         if (queue.length > 0) return Promise.resolve({ done: false, value: queue.shift()! });
 
         if (done) return Promise.resolve({ done: true, value: undefined });
@@ -1159,11 +1228,19 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     batch,
     clearError,
     connect,
+    get disposalSignal() {
+      return disposeController.signal;
+    },
     dispose,
     get disposed() {
       return disposed;
     },
     field,
+    fields: {
+      register: registerField,
+      remove: removeField,
+      setValidator,
+    },
     get,
     get isLoading() {
       return loadingState;
@@ -1172,8 +1249,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
       return isSubmittingState;
     },
     patch: patch as Form<TValues>['patch'],
-    registerField,
-    removeField,
     replace,
     reset,
     resetErrors,
@@ -1217,12 +1292,12 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     },
     set,
     setError,
-    setValidator,
     snapshot,
     get state() {
       return getStateSnapshot();
     },
     submit,
+    submitOrThrow,
     subscribe,
     subscribeField,
     // On a root form, subscribeScoped behaves identically to subscribe — no prefix filtering.
@@ -1233,8 +1308,6 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     untouch,
     untouchAll,
     validate,
-    validateField,
-    validateFields,
     validateStream,
     values,
   };

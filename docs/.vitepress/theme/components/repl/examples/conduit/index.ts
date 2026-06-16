@@ -5,8 +5,10 @@ import { disposeLifecycleExample } from './dispose-lifecycle';
 import { freezeExample } from './freeze';
 import { hasAndSyncExample } from './has-and-sync';
 import { lifetimesExample } from './lifetimes';
+import { onResolveExample } from './on-resolve';
 import { resolveOptionalExample } from './resolve-optional';
 import { scopedExecutionExample } from './scoped-execution';
+import { syncHotPathExample } from './sync-hot-path';
 import { testingExample } from './testing';
 import { validateExample } from './validate';
 
@@ -18,8 +20,10 @@ export const conduitExamples = {
   freeze: freezeExample,
   'has-and-sync': hasAndSyncExample,
   lifetimes: lifetimesExample,
+  'on-resolve': onResolveExample,
   'resolve-optional': resolveOptionalExample,
   'scoped-execution': scopedExecutionExample,
+  'sync-hot-path': syncHotPathExample,
   testing: testingExample,
   validate: validateExample,
 };

@@ -8,20 +8,19 @@ related: [arsenal, tempo]
 exports:
   [
     money,
-    zero,
-    toCurrencyCode,
     add,
     subtract,
     multiply,
     divide,
+    abs,
+    negate,
+    roundTo,
     allocate,
     splitEvenly,
     clamp,
     sum,
     min,
     max,
-    abs,
-    negate,
     compare,
     isEqual,
     greaterThan,
@@ -33,7 +32,6 @@ exports:
     isNegative,
     isNonNegative,
     isNonPositive,
-    percentage,
     format,
     formatParts,
     exchange,
@@ -43,6 +41,9 @@ exports:
     fromJSON,
     withAmount,
     isMoney,
+    validateCurrencyCode,
+    CurrencyMismatchError,
+    InvalidCurrencyError,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -68,15 +69,15 @@ const [a, b, c] = allocate(price, [1, 1, 1]);
 a.amount + b.amount + c.amount === price.amount; // true — always
 ```
 
-| Feature                      | Coins                                       | Dinero.js v2 | currency.js          |
-| ---------------------------- | ------------------------------------------- | ------------ | -------------------- |
-| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB       | ~2.5 kB              |
-| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>                   |
-| `bigint` minor units         | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon> (number)  | <sg-icon name="x" size="16"></sg-icon> (number)          |
-| TypeScript-native            | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
-| Validated currency codes     | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                   |
-| Locale-aware formatting      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
-| Largest Remainder allocation | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                   |
+| Feature                      | Coins                                       | Dinero.js v2                                    | currency.js                                                           |
+| ---------------------------- | ------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
+| Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB                                          | ~2.5 kB                                                               |
+| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                            |
+| `bigint` minor units         | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon> (number) | <sg-icon name="x" size="16"></sg-icon> (number)                       |
+| TypeScript-native            | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
+| Validated currency codes     | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>                                |
+| Locale-aware formatting      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
+| Largest Remainder allocation | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                                |
 
 <div class="decision-callout">
 
@@ -107,12 +108,8 @@ yarn add @vielzeug/coins
 ## Quick Start
 
 ```ts
-import { add, allocate, exchange, format, money, multiply, toCurrencyCode } from '@vielzeug/coins';
-import type { CurrencyCode, ExchangeRate, Money } from '@vielzeug/coins';
-
-// Validate currency codes upfront (cached after first use)
-const usd: CurrencyCode = toCurrencyCode('USD');
-const eur: CurrencyCode = toCurrencyCode('EUR');
+import { add, allocate, exchange, format, money, multiply } from '@vielzeug/coins';
+import type { ExchangeRate, Money } from '@vielzeug/coins';
 
 // Create money from decimal strings (lossless) or bigint minor units
 const price: Money = money('19.99', 'USD'); // { amount: 1999n, currency: 'USD' }
@@ -131,8 +128,8 @@ format(total); // '$35.59'
 format(total, { locale: 'de-DE' }); // '35,59 $'
 format(total, { style: 'code' }); // 'USD 35.59'
 
-// Currency exchange — rate must be a decimal string (not a number)
-const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
+// Currency exchange — ExchangeRate.from/to are plain strings; rate is a decimal string
+const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
 exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 ```
 
@@ -140,21 +137,21 @@ exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 
 <div class="features-grid">
 
-- `money()` — create from decimal string, number, or bigint minor units; currency code validated at creation time
-- `toCurrencyCode()` — brand and cache ISO 4217 codes; result is type-safe in `ExchangeRate`
-- Arithmetic — `add`, `subtract`, `multiply`, `divide`, `percentage`, `abs`, `negate`; all throw `TypeError` on currency mismatch
+- `money()` — create from decimal string, number, or bigint minor units; currency validated at creation time via `Intl`; dev warning when float has more decimals than currency supports
+- Arithmetic — `add`, `subtract`, `multiply`, `divide`, `abs`, `negate`; all throw `CurrencyMismatchError` on currency mismatch
+- `roundTo()` — round to fewer decimal places (e.g. whole dollars); configurable rounding mode
 - Allocation — `allocate` (weighted) and `splitEvenly` (equal); Largest Remainder Method guarantees exact totals
-- Aggregates — `sum`, `min`, `max`, `clamp`
-- Comparison — `compare`, `isEqual`, `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`, `isNonNegative`, `isNonPositive`
+- Aggregates — `sum`, `min`, `max`, `clamp`; `min`/`max` accept a non-empty array
+- Comparison — `compare`, `isEqual` (returns `false` on currency mismatch), `greaterThan`, `greaterThanOrEqual`, `lessThan`, `lessThanOrEqual`, `isZero`, `isPositive`, `isNegative`, `isNonNegative`, `isNonPositive`
 - `format()` — `Intl.NumberFormat`-powered string output with symbol / code / name / narrowSymbol styles
 - `formatParts()` — typed part array for custom UI rendering (superscript cents, coloured symbols, etc.)
-- `exchange()` — currency conversion using string rates; rounding mode configurable
+- `exchange()` — currency conversion using string rates; `ExchangeRate.from`/`to` are plain strings; throws `CurrencyMismatchError` on mismatch
 - Serialization — `toDecimal`, `toNumber`, `toJSON`, `fromJSON`; safe `bigint` round-trip through JSON
 - `withAmount()` — clone a `Money` with a new bigint amount, preserving the currency
 - `isMoney()` — type guard for narrowing unknown payloads; own-property check guards against prototype pollution
+- `CurrencyMismatchError` / `InvalidCurrencyError` — typed error subclasses for structured `catch` blocks
 
 </div>
-
 
 ## Documentation
 

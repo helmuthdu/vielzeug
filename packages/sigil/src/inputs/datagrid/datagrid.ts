@@ -1,4 +1,5 @@
-import { computed, define, html, onCleanup, onMounted, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_warn';
 import '../../content/icon/icon';
@@ -214,25 +215,25 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
     ...disablableBundle,
     ...loadableBundle,
-    columns: prop.value<DataGridColumn[]>(),
+    columns: prop.data<DataGridColumn[]>(),
     'empty-text': prop.string('No data'),
     expandable: prop.bool(false),
-    filters: prop.value<FilterDef[]>(),
+    filters: prop.data<FilterDef[]>(),
     fullwidth: prop.bool(false),
-    getRowKey: prop.value<(row: Record<string, unknown>) => string>(),
+    getRowKey: prop.data<(row: Record<string, unknown>) => string>(),
     label: prop.string(),
     'page-size': prop.number(10),
-    'page-size-options': prop.value<number[]>(),
-    rows: prop.value<Record<string, unknown>[]>(),
+    'page-size-options': prop.data<number[]>(),
+    rows: prop.data<Record<string, unknown>[]>(),
     'search-placeholder': prop.string('Search…'),
     searchable: prop.bool(false),
-    'selected-keys': prop.value<string[]>(),
+    'selected-keys': prop.data<string[]>(),
     'selection-mode': prop.string<SelectionMode>('none'),
     'sort-mode': prop.string<SortMode>('client'),
     striped: prop.bool(false),
   },
 
-  setup(props, { el, emit }) {
+  setup(props, { el, emit, onCleanup, onMounted }) {
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props['selection-mode'].value ?? 'none');
 

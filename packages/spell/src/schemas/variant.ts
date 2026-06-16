@@ -1,4 +1,4 @@
-import type { AnySchema, Issue, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
 import { _messages } from '../messages';
@@ -58,10 +58,11 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
 
   private _resolveVariant(
     value: unknown,
+    ctx: ParseContext,
   ): { matched: ObjectSchema<any>; obj: Record<string, unknown> } | { issues: Issue[] } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().variant.type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.variant.type(), path: [] }],
       };
     }
 
@@ -76,7 +77,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
         issues: [
           {
             code: ErrorCode.invalid_variant,
-            message: _messages().variant.invalidDiscriminator({
+            message: ctx.messages.variant.invalidDiscriminator({
               discriminator: this._discriminator,
               expected,
             }),
@@ -90,28 +91,16 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return { matched, obj };
   }
 
-  protected override _parseValueSync(value: unknown): ParseValue {
-    const resolved = this._resolveVariant(value);
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
+    const resolved = this._resolveVariant(value, ctx);
 
     if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
 
-    const result = resolved.matched._parseFullSync(value);
+    const result = resolved.matched._parseFullSync(value, ctx);
 
     return result.issues.length === 0
       ? { data: result.data, issues: [], typeOk: true }
       : { data: value, issues: result.issues, typeOk: true };
-  }
-
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    const resolved = this._resolveVariant(value);
-
-    if ('issues' in resolved) return { data: value, issues: resolved.issues, typeOk: false };
-
-    const result = await resolved.matched.safeParseAsync(value);
-
-    return result.success
-      ? { data: result.data, issues: [], typeOk: true }
-      : { data: value, issues: result.error.issues, typeOk: true };
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
@@ -124,7 +113,7 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
     return { ...this._describeBase(), branches, discriminator: this._discriminator, kind: 'variant' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const branches = objectFromEntries([...this._map.entries()].map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.variant) return visitor.variant(this, branches);

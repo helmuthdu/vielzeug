@@ -1,27 +1,28 @@
 export const storeBasicsExample = {
-  code: `import { store, computed, watch } from '@vielzeug/ripple'
+  code: `import { store, selector, watch } from '@vielzeug/ripple'
 
 // Create an object-state store
 const user = store({ name: 'Alice', age: 30, email: 'alice@example.com' })
 
-console.log('Initial:', user.value)
+console.log('Initial:', user.peek())
 
 // Shallow-merge partial updates
 user.patch({ age: 31 })
-console.log('After patch:', user.value)
+console.log('After patch:', user.peek())
 
 // Derive next state via function
 user.replace((s) => ({ ...s, name: 'Alice Smith' }))
-console.log('After replace:', user.value)
+console.log('After replace:', user.peek())
 
 // lens() — writable Signal scoped to a path
 const nameLens = user.lens('name')
 console.log('Name via lens:', nameLens.value)
 nameLens.value = 'Alice Jones'
-console.log('After lens write:', user.value.name)
+console.log('After lens write:', user.peek().name)
 
-// .map() combinator — read-only derived slice
-const greeting = user.map((s) => \`\${s.name} (age \${s.age})\`)
+// selector() — read-only derived slice (replaces .map())
+const ageLens = user.lens('age')
+const greeting = selector(nameLens, (name) => \`\${name} (age \${ageLens.value})\`)
 console.log('Greeting:', greeting.value)
 
 // Watch a lens — only fires when that path changes
@@ -37,6 +38,6 @@ greeting.dispose()
 
 // Reset to initial state
 user.reset()
-console.log('After reset:', user.value)`,
-  name: 'Store — patch, lens & map',
+console.log('After reset:', user.peek())`,
+  name: 'Store — patch, lens & selector',
 };

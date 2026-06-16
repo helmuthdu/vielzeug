@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal } from '@vielzeug/craft';
+import { computed, type ReadonlySignal } from '@vielzeug/ripple';
 
 import type { LinkTarget } from '../shared';
 

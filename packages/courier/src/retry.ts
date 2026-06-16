@@ -1,7 +1,7 @@
 import { backoff } from '@vielzeug/arsenal';
 
-/** A single attempt with no retries — use as the default `attempts` value. */
-export const NO_RETRY = 1;
+/** Internal default: one attempt, no retries. */
+export const DEFAULT_TIMES = 1;
 
 export type RetryOptions = {
   /**

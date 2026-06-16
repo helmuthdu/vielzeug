@@ -1,3 +1,4 @@
+export { applyCursorQuery, applyInfiniteQuery, applyLocalQuery, applyQuery, applyRemoteQuery } from './applyQuery';
 export { decodeQuery, encodeQuery } from './codecs';
 export type { DecodeQueryOptions } from './codecs';
 export { createCursorSource } from './cursorSource';
@@ -8,12 +9,11 @@ export { mergeSource } from './merge';
 export { composeFetch } from './middleware';
 export type { FetchMiddleware } from './middleware';
 export { itemRange } from './pagination';
-export { prefetchSource, prefetchSourceWithSource } from './prefetch';
+export { prefetchSource } from './prefetch';
 export { filterContains, filterEquals, filterRange, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
-export { toSignals } from './signals';
-export type { SourceSignals } from './signals';
 export { sourceState } from './state';
+export { SourceDisposedError, SourceError, SourceTimeoutError } from './types';
 export type {
   CursorConfig,
   CursorMeta,
@@ -25,8 +25,8 @@ export type {
   InfiniteMeta,
   InfiniteSource,
   InfiniteSourceQuery,
-  LocalConfig,
   LocalSource,
+  LocalSourceConfig,
   MergedSource,
   PageNavigator,
   Predicate,
@@ -34,15 +34,14 @@ export type {
   QueryParamsInput,
   ReactiveSource,
   RemoteConfig,
-  RemoteFetchQuery,
   RemoteSource,
   RemoteSourceQuery,
   RetryConfig,
+  SearchOptions,
   Sorter,
-  Source,
+  SourceErrorContext,
   SourceMeta,
   SourceQuery,
   SourceSnapshot,
   SourceState,
 } from './types';
-export { SourceDisposedError, SourceError, SourceTimeoutError } from './types';

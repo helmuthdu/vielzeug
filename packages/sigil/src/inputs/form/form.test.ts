@@ -105,4 +105,16 @@ describe('sg-form', () => {
       expect(child?.getAttribute('variant')).toBe('bordered');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-form', {
+        html: '<sg-input label="Email"></sg-input>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

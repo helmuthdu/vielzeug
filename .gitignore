@@ -137,3 +137,6 @@ packages/codex/data/
 
 # Workflow run artifacts (DOX) — keep the AGENTS.md contract tracked
 .devin/workflows/runs/*/
+
+# REPL example validation temp files
+scripts/.repl-tmp/

@@ -114,6 +114,43 @@ describe('validateCatalog()', () => {
     expect(warnings.every((w) => w.key !== '__proto__')).toBe(true);
   });
 
+  test('validates pipe-plural shorthand: reports missing forms', () => {
+    // 'One message|{count} messages' expands to { one: '...', other: '...' } — complete for 'en'.
+    const warnings = validateCatalog({ inbox: 'One message|{count} messages' }, 'en');
+
+    expect(warnings).toEqual([]);
+  });
+
+  test('validates pipe-plural shorthand: reports missing {count} in "other" form', () => {
+    // 'One|Many' expands to { one: 'One', other: 'Many' } — 'other' is missing {count}.
+    const warnings = validateCatalog({ inbox: 'One|Many' }, 'en');
+    const countWarn = warnings.find((w) => w.form === 'other:missing-count');
+
+    expect(countWarn).toEqual({ form: 'other:missing-count', key: 'inbox', locale: 'en' });
+  });
+
+  test('validates pipe-plural shorthand: reports missing CLDR forms for rich locales', () => {
+    // 'One|{count}' expands to { one: '...', other: '...' } — missing forms for Arabic.
+    const warnings = validateCatalog({ inbox: 'One|{count}' }, 'ar');
+
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings.every((w) => w.key === 'inbox')).toBe(true);
+  });
+
+  test('treats plain strings with a pipe but invalid part count as non-plural (no warnings)', () => {
+    // 4-part pipe → PIPE_FORM_MAPS has no entry for 4 → treated as plain string.
+    const warnings = validateCatalog({ msg: 'a|b|c|d' }, 'en');
+
+    expect(warnings).toEqual([]);
+  });
+
+  test('treats pipe strings with an empty part as plain strings (no warnings)', () => {
+    // Empty part → parsePipePlural returns null → treated as plain string.
+    const warnings = validateCatalog({ msg: 'One|' }, 'en');
+
+    expect(warnings).toEqual([]);
+  });
+
   test('falls back to [one, other] when getExpectedPluralForms throws for an unrecognised locale', () => {
     // Force the try/catch in getExpectedPluralForms by passing a locale that throws in Intl.PluralRules.
     // The fallback set is ['one', 'other'], so a catalog with only 'one' produces one warning.

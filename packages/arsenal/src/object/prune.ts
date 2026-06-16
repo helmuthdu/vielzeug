@@ -1,28 +1,33 @@
 import { filterMap } from '../array/filterMap';
-import { isEmpty } from '../typed/isEmpty';
-import { isNil } from '../typed/isNil';
-import { isPlainObject } from '../typed/isPlainObject';
-import { isString } from '../typed/isString';
+import { isEmpty } from '../guards/isEmpty';
+import { isNil } from '../guards/isNil';
+import { isPlainObject } from '../guards/isPlainObject';
+import { isString } from '../guards/isString';
 
 /**
  * Removes all nullable and empty values from strings, arrays, or objects.
  *
- * - For strings: Removes leading/trailing whitespace and returns undefined if empty
- * - For arrays: Recursively removes null, undefined, empty strings, and empty objects/arrays
- * - For objects: Recursively removes properties with null, undefined, empty strings, and empty objects/arrays
+ * - For strings: trims whitespace and returns `undefined` if the result is empty.
+ * - For arrays: recursively removes `null`, `undefined`, empty strings, and empty objects/arrays.
+ * - For objects: recursively removes properties whose pruned value is empty.
+ * - For any other type: returns the value unchanged.
  *
  * @example
  * ```ts
  * prune('  hello  '); // 'hello'
- * prune('   '); // undefined
+ * prune('   ');       // undefined
  * prune([1, null, '', 2, undefined, 3]); // [1, 2, 3]
  * prune({ a: 1, b: null, c: '', d: 2 }); // { a: 1, d: 2 }
  * prune({ a: { b: null, c: '' }, d: 1 }); // { d: 1 }
  * ```
  *
- * @param value - The value to prune (can be string, array, object, or any other type)
- * @returns The pruned value, or undefined if the result would be empty
+ * @param value - The value to prune.
+ * @returns The pruned value, or `undefined` if the result would be empty.
  */
+export function prune(value: string): string | undefined;
+export function prune<T>(value: T[]): Array<NonNullable<T>> | undefined;
+export function prune<T extends Record<string, unknown>>(value: T): Partial<T> | undefined;
+export function prune<T>(value: T): T | undefined;
 export function prune<T>(value: T): T | undefined {
   if (isNil(value)) return undefined;
 

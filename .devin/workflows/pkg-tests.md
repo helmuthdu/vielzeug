@@ -101,6 +101,7 @@ When adding or updating tests:
 After changes, run the test suite (safe to auto-run). Use the command that matches the package layout (see Step 0):
 
 // turbo
+
 ```bash
 pnpm vitest run packages/<name>/src/__tests__/
 ```

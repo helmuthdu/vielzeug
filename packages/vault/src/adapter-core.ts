@@ -10,17 +10,14 @@ import type {
   TtlMs,
 } from './types';
 
-import { VaultError, VaultScopeError } from './errors';
+import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserveMany, createObserverHub, createWatchIterable, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
 import { assertTtlMs } from './ttl';
 
 /* -------------------- Internal backend protocol -------------------- */
 
-/**
- * @internal Full backend protocol implemented by each adapter.
- * A single flat interface — no StorageCore/StorageBackend split.
- */
+/** @internal Full backend protocol implemented by each adapter. A single flat interface — no StorageCore/StorageBackend split. */
 export type StorageBackend<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
   clear<T extends K>(table: T): Promise<void>;
   /** Returns live (non-expired) record count for the table. */
@@ -67,13 +64,13 @@ export type StorageBackend<S extends AnySchema, K extends keyof S & string = key
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
 };
 
-/* -------------------- Exported types for adapter implementors -------------------- */
-
+/** @internal */
 export type BatchDeps<S extends AnySchema> = {
   notifyMutation: (table: keyof S & string) => void;
   validate: <K extends keyof S & string>(table: K, value: RecordOf<S, K>) => RecordOf<S, K>;
 };
 
+/** @internal */
 export type BatchImpl<S extends AnySchema> = <K extends keyof S & string, R>(
   tables: readonly K[],
   fn: (tx: TransactionContext<S, K>) => Promise<R>,
@@ -255,8 +252,15 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
 
       return (await core.count(table)) === 0;
     },
-    async keys(table) {
+    async keys(table, filter) {
       checkScope(table);
+
+      if (filter) {
+        const records = await core.getAll(table);
+        const keyField = schema[table].key;
+
+        return records.filter(filter).map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
+      }
 
       // R1: prefer native getAllKeys when the backend supports it (e.g. IDB store.getAllKeys).
       if (core.getAllKeys) {
@@ -294,9 +298,7 @@ export function buildTxContext<S extends AnySchema, K extends keyof S & string>(
 
       const current = await core.get(table, key);
 
-      if (!current) {
-        throw new VaultError(`update: key "${String(key)}" not found in "${table}"`);
-      }
+      if (!current) return undefined;
 
       const merged = { ...current, ...changes } as RecordOf<S, typeof table>;
 
@@ -430,23 +432,34 @@ export function buildAdapterOps<S extends AnySchema>(
   const disposeController = new AbortController();
   let disposed = false;
 
+  const checkDisposed = (): void => {
+    if (disposed) throw new VaultDisposedError();
+  };
+
   const adapter: Adapter<S> = {
     async batch<K extends keyof S & string, R>(tables: readonly K[], fn: (tx: TransactionContext<S, K>) => Promise<R>) {
+      checkDisposed();
+
       if (tables.length === 0) throw new VaultScopeError('batch requires at least one table');
 
       return timed('*', 'batch', () => (nativeBatch ? nativeBatch(tables, fn) : deferredBatch(fn, new Set(tables))));
     },
 
     async clear(table) {
+      checkDisposed();
       await timed(table, 'clear', () => txCtx.clear(table));
       countCache.set(table, 0); // we know count is 0 after clear
     },
 
     async count(table) {
+      checkDisposed();
+
       return timed(table, 'count', () => getCachedCount(table));
     },
 
     async debug() {
+      checkDisposed();
+
       const tableNames = Object.keys(schema) as Array<keyof S & string>;
       const entries = await Promise.all(
         tableNames.map(async (name) => {
@@ -454,6 +467,10 @@ export function buildAdapterOps<S extends AnySchema>(
           // lazy-eviction side effects (deletes expired entries from the store).
           const raw = rawCountFn ? await rawCountFn(name) : undefined;
           const live = await core.count(name);
+
+          // Warm the count cache so subsequent adapter.count() calls don't re-hit the backend.
+          countCache.set(name, live);
+
           const expiredCount = raw !== undefined ? Math.max(0, raw - live) : 0;
 
           return { expiredCount, name, recordCount: live };
@@ -464,11 +481,15 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async delete(table, key) {
+      checkDisposed();
+
       return timed(table, 'delete', () => txCtx.delete(table, key));
       // count cache invalidated by notifyMutation inside txCtx.delete
     },
 
     async deleteMany(table, keys) {
+      checkDisposed();
+
       return timed(table, 'deleteMany', () => txCtx.deleteMany(table, keys));
       // count cache invalidated by notifyMutation inside txCtx.deleteMany
     },
@@ -492,48 +513,78 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async entries(table) {
+      checkDisposed();
+
       return timed(table, 'entries', () => txCtx.entries(table));
     },
 
     async get(table, key) {
+      checkDisposed();
+
       return timed(table, 'get', () => txCtx.get(table, key));
     },
 
     async getAll(table) {
+      checkDisposed();
+
       return timed(table, 'getAll', () => txCtx.getAll(table));
     },
 
     async getMany(table, keys) {
+      checkDisposed();
+
       return timed(table, 'getMany', () => txCtx.getMany(table, keys));
     },
 
     async getOrDefault(table, key, defaultFn, ttl) {
+      checkDisposed();
+
       return timed(table, 'getOrDefault', () => txCtx.getOrDefault(table, key, defaultFn, ttl));
     },
 
     async has(table, key) {
+      checkDisposed();
+
       return timed(table, 'has', () => txCtx.has(table, key));
     },
 
     async isEmpty(table) {
+      checkDisposed();
+
       return timed(table, 'isEmpty', async () => (await getCachedCount(table)) === 0);
     },
 
-    async keys(table) {
-      return timed(table, 'keys', () => txCtx.keys(table));
+    async keys(table, filter) {
+      checkDisposed();
+
+      return timed(table, 'keys', () => txCtx.keys(table, filter));
     },
 
     observe(table, listener, opts) {
+      checkDisposed();
+
       return observers.observe(table, listener, opts);
     },
 
-    observeMany,
+    observeMany: (tables, listener, opts) => {
+      checkDisposed();
+
+      return observeMany(tables, listener, opts);
+    },
 
     async pruneExpired(tables?: readonly (keyof S & string)[]) {
+      checkDisposed();
+
       const tableNames = tables ?? (Object.keys(schema) as Array<keyof S & string>);
 
       if (!tables && pruneAll) {
-        return pruneAll() as { [K in keyof S & string]: number };
+        const result = await pruneAll();
+
+        for (const [name, count] of Object.entries(result)) {
+          if (count > 0) countCache.delete(name);
+        }
+
+        return result as { [K in keyof S & string]: number };
       }
 
       const pairs = await Promise.all(
@@ -550,16 +601,20 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async put(table, value, ttl) {
+      checkDisposed();
       await timed(table, 'put', () => txCtx.put(table, value, ttl));
       // count cache invalidated via notifyMutation inside txCtx.put
     },
 
     async putAll(table, values, ttl) {
+      checkDisposed();
       await timed(table, 'putAll', () => txCtx.putAll(table, values, ttl));
       // count cache invalidated via notifyMutation inside txCtx.putAll
     },
 
     query(table) {
+      checkDisposed();
+
       const ctx = buildQueryCtx(table, core, schema, notifyMutation);
 
       if (onMetrics) {
@@ -580,142 +635,24 @@ export function buildAdapterOps<S extends AnySchema>(
     },
 
     async update(table, key, changes, ttl) {
+      checkDisposed();
+
       return timed(table, 'update', () => txCtx.update(table, key, changes, ttl));
     },
 
     async upsert(table, key, fn, ttl) {
+      checkDisposed();
+
       return timed(table, 'upsert', () => txCtx.upsert(table, key, fn, ttl));
     },
 
     watch(table, options) {
+      checkDisposed();
+
       return createWatchIterable<RecordOf<S, typeof table>>(
         (listener) => observers.observe(table, listener),
         options?.mode ?? 'latest',
         options?.signal,
-      );
-    },
-
-    watchStream(table, options) {
-      const mode = options?.mode ?? 'latest';
-      const signal = options?.signal;
-      let stopObserver: (() => void) | undefined;
-
-      if (mode === 'all') {
-        // Enqueue every snapshot directly — no dropping.
-        return new ReadableStream<RecordOf<S, typeof table>[]>({
-          cancel() {
-            stopObserver?.();
-            stopObserver = undefined;
-          },
-          start(controller) {
-            stopObserver = observers.observe(table, (records) => {
-              try {
-                controller.enqueue(records as RecordOf<S, typeof table>[]);
-              } catch {
-                /* controller already closed */
-              }
-            });
-
-            signal?.addEventListener(
-              'abort',
-              () => {
-                stopObserver?.();
-                stopObserver = undefined;
-                controller.close();
-              },
-              { once: true },
-            );
-          },
-        });
-      }
-
-      // mode: 'latest' — drop intermediate snapshots when the consumer lags.
-      //
-      // highWaterMark: 0 disables proactive prefetch: pull() is only invoked when the
-      // consumer calls reader.read() against an empty queue. This means mutations that
-      // arrive while the consumer is busy are accumulated in `latestSnapshot` (each
-      // overwriting the previous). When the consumer finally reads, pull() delivers
-      // only the most-recent state — all intermediate snapshots are silently dropped.
-      let latestSnapshot: RecordOf<S, typeof table>[] | null = null;
-      let pendingPull: (() => void) | null = null;
-
-      return new ReadableStream<RecordOf<S, typeof table>[]>(
-        {
-          cancel() {
-            stopObserver?.();
-            stopObserver = undefined;
-            latestSnapshot = null; // prevent pull() from enqueueing after cancel
-
-            if (pendingPull) {
-              const wake = pendingPull;
-
-              pendingPull = null;
-              wake(); // unblock any waiting pull()
-            }
-          },
-
-          async pull(controller) {
-            if (latestSnapshot !== null) {
-              controller.enqueue(latestSnapshot);
-              latestSnapshot = null;
-
-              return;
-            }
-
-            // No data yet — wait for the observer to signal.
-            await new Promise<void>((resolve) => {
-              pendingPull = resolve;
-            });
-
-            // Re-check after wake — stream may have been cancelled or aborted.
-            if (latestSnapshot !== null) {
-              try {
-                controller.enqueue(latestSnapshot);
-              } catch {
-                /* controller closed during wait */
-              }
-
-              latestSnapshot = null;
-            }
-          },
-
-          start(controller) {
-            stopObserver = observers.observe(table, (records) => {
-              // Always overwrite — only the latest state matters.
-              latestSnapshot = records as RecordOf<S, typeof table>[];
-
-              if (pendingPull) {
-                // pull() is waiting for data — wake it so it can deliver latestSnapshot.
-                // pull() reads latestSnapshot after the await, not here, so any further
-                // mutations that fire before the microtask runs will still be captured.
-                const wake = pendingPull;
-
-                pendingPull = null;
-                wake();
-              }
-            });
-
-            signal?.addEventListener(
-              'abort',
-              () => {
-                stopObserver?.();
-                stopObserver = undefined;
-                latestSnapshot = null;
-
-                if (pendingPull) {
-                  const wake = pendingPull;
-
-                  pendingPull = null;
-                  wake(); // unblock pull() so it can exit cleanly
-                }
-
-                controller.close();
-              },
-              { once: true },
-            );
-          },
-        },
-        new CountQueuingStrategy({ highWaterMark: 0 }),
       );
     },
   };

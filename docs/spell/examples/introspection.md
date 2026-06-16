@@ -11,10 +11,10 @@ Tooling layers need a serializable schema format. Runtime schema instances canno
 
 ### Solution
 
-Use `toDescriptor()` as the canonical portable shape, then rebuild or export from that descriptor.
+Use `toDescriptor()` as the canonical portable shape, then export to JSON Schema for external consumers.
 
 ```ts
-import { descriptorToJsonSchema, fromDescriptor, s } from '@vielzeug/spell';
+import { descriptorToJsonSchema, s } from '@vielzeug/spell';
 
 const Invoice = s
   .object({
@@ -25,18 +25,17 @@ const Invoice = s
   .label('Invoice');
 
 const descriptor = Invoice.toDescriptor();
-const rebuilt = fromDescriptor(descriptor);
 const jsonSchema = descriptorToJsonSchema(descriptor);
 
-console.log(rebuilt.equals(Invoice));
-console.log(jsonSchema.title);
+console.log(jsonSchema.title); // 'Invoice'
+console.log(jsonSchema.properties?.id);
 ```
 
 ### Pitfalls
 
-- `fromDescriptor()` only accepts reconstructible descriptor kinds. `variant`, `pipe`, `instanceof`, and `lazy` descriptors stay one-way.
 - Descriptor round-trips preserve `description`, optionality, nullability, object strictness, and common string and number annotations emitted by built-in helpers.
-- Use `toJsonSchema()` or `descriptorToJsonSchema()` for external consumers. Do not hand Spell-specific descriptors to tools that expect JSON Schema.
+- Use `descriptorToJsonSchema()` for external consumers. Do not hand Spell-specific descriptors to tools that expect JSON Schema.
+- `variant`, `pipe`, `instanceof`, and `lazy` descriptors are one-way — they serialize to a descriptor but cannot be reconstructed from it.
 
 ### Related
 

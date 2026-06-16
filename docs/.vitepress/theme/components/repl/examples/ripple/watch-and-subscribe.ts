@@ -1,5 +1,5 @@
 export const watchAndSubscribeExample = {
-  code: `import { signal, store, watch } from '@vielzeug/ripple'
+  code: `import { computed, signal, store, watch } from '@vielzeug/ripple'
 
 const counter = signal(0)
 
@@ -27,13 +27,15 @@ cart.patch({ items: 3 })               // fires
 
 itemsSub.dispose()
 
-// .map() combinator: watch a derived slice with less boilerplate
-const totalLabel = cart.map((s) => \`Total: $\${s.total.toFixed(2)}\`)
+// computed() combinator: derive a reactive value from a lens
+const totalLens = cart.lens('total')
+const totalLabel = computed(() => \`Total: $\${totalLens.value.toFixed(2)}\`)
 const labelSub = watch(totalLabel, (label) => console.log(label))
 
 cart.patch({ total: 89.99 }) // → 'Total: $89.99'
 
 labelSub.dispose()
+totalLens.dispose()
 totalLabel.dispose()`,
   name: 'Watch, Lens & Map',
 };

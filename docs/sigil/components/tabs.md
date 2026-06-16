@@ -319,7 +319,6 @@ Use the `prefix` and `suffix` slots on `sg-tab-item` to add icons or notificatio
   <sg-tab-panel value="sent"><p>Sent content.</p></sg-tab-panel>
   <sg-tab-panel value="drafts"><p>Drafts content.</p></sg-tab-panel>
 </sg-tabs>
-
 ```
 
 </ComponentPreview>
@@ -378,13 +377,13 @@ Disabled tabs are skipped during keyboard navigation.
 
 ### `sg-tabs` Attributes
 
-| Attribute     | Type                                                                      | Default        | Description                                                  |
-| ------------- | ------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------ |
-| `value`       | `string`                                                                  | —              | Value of the currently selected tab                          |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                  |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                      |
-| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                    |
+| Attribute     | Type                                                                      | Default        | Description                                                           |
+| ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
+| `value`       | `string`                                                                  | —              | Value of the currently selected tab                                   |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'ghost' \| 'glass' \| 'frost'`        | `'solid'`      | Visual style of the tab bar                                           |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`         | Size applied to all tab items                                         |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —              | Theme color propagated to all tab items                               |
+| `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
 
 ### `sg-tabs` Events
@@ -429,21 +428,21 @@ Disabled tabs are skipped during keyboard navigation.
 
 ### CSS Custom Properties
 
-| Property                       | Default                    | Description                                                        |
-| ------------------------------ | -------------------------- | ------------------------------------------------------------------ |
-| `--tabs-radius`                | `var(--rounded-lg)`        | Border radius of the tablist container and panels                  |
-| `--tabs-transition`            | `var(--transition-normal)` | Transition duration/easing for the active indicator                |
-| `--tabs-indicator-color`       | Theme color                | Color of the sliding active indicator line                         |
-| `--tabs-bg`                    | Theme-dependent            | Background of the host element (flat variant)                      |
-| `--tabs-tablist-bg`            | Theme-dependent            | Tablist container background (solid/glass/frost variants)          |
-| `--tabs-tablist-border-color`  | Theme-dependent            | Tablist container border color                                     |
-| `--tab-panel-padding`          | `var(--size-4)`            | Padding inside each tab panel                                      |
-| `--tab-item-radius`            | Theme-dependent            | Tab button border radius                                           |
-| `--tab-item-color`             | Theme-dependent            | Default tab text color                                             |
-| `--tab-item-hover-bg`          | Theme-dependent            | Tab background on hover                                            |
-| `--tab-item-active-bg`         | Theme-dependent            | Tab background when active/selected                                |
-| `--tab-item-active-color`      | Theme-dependent            | Tab text color when active/selected                                |
-| `--tab-item-active-shadow`     | Theme-dependent            | Box shadow when active/selected                                    |
+| Property                      | Default                    | Description                                               |
+| ----------------------------- | -------------------------- | --------------------------------------------------------- |
+| `--tabs-radius`               | `var(--rounded-lg)`        | Border radius of the tablist container and panels         |
+| `--tabs-transition`           | `var(--transition-normal)` | Transition duration/easing for the active indicator       |
+| `--tabs-indicator-color`      | Theme color                | Color of the sliding active indicator line                |
+| `--tabs-bg`                   | Theme-dependent            | Background of the host element (flat variant)             |
+| `--tabs-tablist-bg`           | Theme-dependent            | Tablist container background (solid/glass/frost variants) |
+| `--tabs-tablist-border-color` | Theme-dependent            | Tablist container border color                            |
+| `--tab-panel-padding`         | `var(--size-4)`            | Padding inside each tab panel                             |
+| `--tab-item-radius`           | Theme-dependent            | Tab button border radius                                  |
+| `--tab-item-color`            | Theme-dependent            | Default tab text color                                    |
+| `--tab-item-hover-bg`         | Theme-dependent            | Tab background on hover                                   |
+| `--tab-item-active-bg`        | Theme-dependent            | Tab background when active/selected                       |
+| `--tab-item-active-color`     | Theme-dependent            | Tab text color when active/selected                       |
+| `--tab-item-active-shadow`    | Theme-dependent            | Box shadow when active/selected                           |
 
 ## Accessibility
 

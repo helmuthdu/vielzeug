@@ -1,6 +1,6 @@
 import { debugFlush } from '../devtools';
-import { CraftitError, html, reportRuntimeError } from '../index';
-import { ComponentPhase } from '../types';
+import { CraftError, reportRuntimeError } from '../errors';
+import { html } from '../index';
 import {
   createDirectiveResult,
   createHtmlResult,
@@ -10,67 +10,67 @@ import {
   isSpreadObject,
 } from '../types/bindings';
 
-describe('CraftitError', () => {
+describe('CraftError', () => {
   it('is an instance of Error', () => {
     const cause = new Error('root cause');
-    const err = new CraftitError('[craft] <my-el> failed during setup (connectedCallback)', {
+    const err = new CraftError('[craft] <my-el> failed during setup (connectedCallback)', {
       cause,
       component: 'my-el',
-      phase: ComponentPhase.SETUP_RUNNING,
+      phase: 'setup',
     });
 
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(CraftitError);
+    expect(err).toBeInstanceOf(CraftError);
   });
 
   it('exposes component and phase properties', () => {
     const cause = new Error('root');
-    const err = new CraftitError('msg', {
+    const err = new CraftError('msg', {
       cause,
       component: 'my-button',
-      phase: ComponentPhase.SETUP_RUNNING,
+      phase: 'setup',
     });
 
     expect(err.component).toBe('my-button');
-    expect(err.phase).toBe(ComponentPhase.SETUP_RUNNING);
+    expect(err.phase).toBe('setup');
   });
 
-  it('has name "CraftitError"', () => {
-    const err = new CraftitError('msg', {
+  it('has name "CraftError"', () => {
+    const err = new CraftError('msg', {
       cause: new Error('cause'),
       component: 'x',
-      phase: ComponentPhase.UNINITIALIZED,
+      phase: 'setup',
     });
 
-    expect(err.name).toBe('CraftitError');
+    expect(err.name).toBe('CraftError');
   });
 
   it('exposes the original cause', () => {
     const cause = new Error('original');
-    const err = new CraftitError('msg', { cause, component: 'x', phase: ComponentPhase.UNINITIALIZED });
+    const err = new CraftError('msg', { cause, component: 'x', phase: 'setup' });
 
     expect(err.cause).toBe(cause);
   });
 
-  describe('CraftitError.is()', () => {
-    it('returns true for a CraftitError instance', () => {
-      const err = new CraftitError('msg', {
+  describe('CraftError.is()', () => {
+    it('returns true for a CraftError instance', () => {
+      const err = new CraftError('msg', {
         cause: new Error('cause'),
         component: 'x',
-        phase: ComponentPhase.UNINITIALIZED,
+        phase: 'setup',
       });
 
-      expect(CraftitError.is(err)).toBe(true);
+      expect(CraftError.is(err)).toBe(true);
     });
 
     it('returns false for a plain Error', () => {
-      expect(CraftitError.is(new Error('plain'))).toBe(false);
+      expect(CraftError.is(new Error('plain'))).toBe(false);
     });
 
     it('returns false for null and primitives', () => {
-      expect(CraftitError.is(null)).toBe(false);
-      expect(CraftitError.is(undefined)).toBe(false);
-      expect(CraftitError.is('string')).toBe(false);
+      expect(CraftError.is(null)).toBe(false);
+      expect(CraftError.is(undefined)).toBe(false);
+      expect(CraftError.is('string')).toBe(false);
     });
   });
 });
@@ -82,10 +82,10 @@ describe('reportRuntimeError()', () => {
 
     document.body.appendChild(el);
 
-    const err = new CraftitError('msg', {
+    const err = new CraftError('msg', {
       cause: new Error('cause'),
       component: 'my-el',
-      phase: ComponentPhase.SETUP_RUNNING,
+      phase: 'setup',
     });
 
     reportRuntimeError(err, el);
@@ -105,10 +105,10 @@ describe('reportRuntimeError()', () => {
 
     el.addEventListener('craft:error', (e) => events.push(e as CustomEvent));
 
-    const err = new CraftitError('msg', {
+    const err = new CraftError('msg', {
       cause: new Error('cause'),
       component: 'my-el',
-      phase: ComponentPhase.SETUP_RUNNING,
+      phase: 'setup',
     });
 
     reportRuntimeError(err, el);

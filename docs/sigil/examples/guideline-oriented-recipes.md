@@ -25,7 +25,7 @@ Use component variants and semantic color tokens together with layout primitives
     border-radius: 0.75rem;
     background: linear-gradient(
       180deg,
-      color-mix(in srgb, var(--color-primary-backdrop) 35%, var(--color-canvas)) 0%,
+      color-mix(in oklch, var(--color-primary-backdrop) 35%, var(--color-canvas)) 0%,
       var(--color-canvas) 100%
     );
     padding: 1rem;
@@ -63,10 +63,10 @@ Use component variants and semantic color tokens together with layout primitives
     display: grid;
     gap: 0.875rem;
     background:
-      radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--color-warning) 16%, transparent), transparent 45%),
-      radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--color-success) 14%, transparent), transparent 48%),
+      radial-gradient(circle at 15% 20%, color-mix(in oklch, var(--color-warning) 16%, transparent), transparent 45%),
+      radial-gradient(circle at 85% 0%, color-mix(in oklch, var(--color-success) 14%, transparent), transparent 48%),
       var(--color-canvas);
-    border: 1px solid color-mix(in srgb, var(--color-primary) 25%, var(--color-contrast-300));
+    border: 1px solid color-mix(in oklch, var(--color-primary) 25%, var(--color-contrast-300));
   ">
   <div>
     <sg-badge color="warning" variant="solid">Launch Week</sg-badge>

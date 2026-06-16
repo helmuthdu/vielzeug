@@ -4,7 +4,7 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports: [define, html, css, signal, computed, effect, prop, ref, provide, inject, each, when]
+exports: [define, html, css, prop, ref, signal, computed, watch, each, when, classMap, styleMap, model, live, raw, provide, inject, injectStrict, createContext, defineField, createFormContext, useFormContext, withAria, createStableId, createId, resetIdCounter, CraftitError]
 ---
 
 # @vielzeug/craft
@@ -18,7 +18,7 @@ exports: [define, html, css, signal, computed, effect, prop, ref, provide, injec
 
 **Package:** `@vielzeug/craft` &nbsp;·&nbsp; **Category:** UI Primitives
 
-**Key exports:** `define`, `html`, `css`, `signal`, `computed`, `effect`, `prop`, `ref`, `provide`, `inject`, `each`, `when`
+**Key exports:** `define`, `html`, `css`, `prop`, `ref`, `signal`, `computed`, `watch`, `each`, `when`, `model`, `live`, `provide`, `inject`, `defineField`, `withAria`
 
 **When to use:** Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
 
@@ -54,11 +54,13 @@ define('my-counter', {
       }
     `,
   ],
-  setup(props, { bind }) {
+  setup(props, { bind, onMounted }) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
     bind({ class: { 'is-positive': () => count.value > 0 } });
+
+    onMounted(() => console.log('mounted'));
 
     return html`
       <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>

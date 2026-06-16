@@ -1,11 +1,32 @@
 ---
-title: Codex — MCP server for the Vielzeug ecosystem
-description: MCP server exposing Vielzeug package metadata, docs pages, source entrypoints, and Sigil component metadata over stdio or HTTP.
+title: Codex — Vielzeug MCP Server
+description: Give your AI assistant native access to Vielzeug docs, package metadata, and Sigil component declarations — no web scraping, no network dependency.
 package: codex
 category: ai-tooling
-keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
+keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, cursor, stdio, http, docs]
 related: [sigil, spell]
-exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData, CemDeclaration, CemAttribute, CemEvent, CemMember, CemSlot, SearchHit, BundledData, BundledPackage, PackageMeta, DocPage]
+exports:
+  [
+    createServer,
+    createServerFromDisk,
+    loadData,
+    packageMeta,
+    validateBundledData,
+    HttpServerHandle,
+    CemDeclaration,
+    CemAttribute,
+    CemCssPart,
+    CemCssProperty,
+    CemEvent,
+    CemMember,
+    CemSlot,
+    CemTypeRef,
+    SearchHit,
+    BundledData,
+    BundledPackage,
+    PackageMeta,
+    DocPage,
+  ]
 environments: [node]
 ---
 
@@ -13,132 +34,121 @@ environments: [node]
 
 <PackageHero package="codex" />
 
-## Why Codex?
+## What is Codex?
 
-AI agents working with Vielzeug need reliable, structured access to package metadata and documentation. A custom fetch integration or web scraper breaks with every docs update and returns inconsistent data shapes.
+Codex is a **[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server** for the Vielzeug ecosystem. Run it once — your AI assistant (Claude, Copilot, Cursor, or any MCP-compatible client) gains structured, offline access to:
 
-```ts
-// Before — fetch and parse docs manually in each agent
-const res = await fetch('https://vielzeug.dev/spell/api');
-const html = await res.text();
-// parse, clean, truncate — fragile, network-dependent, inconsistent
+- **Package metadata** — descriptions, exports, keywords, and related packages for all 24 Vielzeug packages
+- **Documentation pages** — full Markdown content for every `index`, `api`, `usage`, and `examples` page
+- **Source signatures** — bundled `src/index.ts` for precise type information
+- **Sigil component CEM** — attributes, slots, events, CSS parts, and members for every `sg-*` component
 
-// After — structured MCP tool call, always in sync with the published snapshot
-{ "name": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
+The data is bundled into the package at publish time — no network requests, no scraping, no breakage when the website changes.
+
+## Quick Setup
+
+No installation required. Run with `npx`:
+
+```sh
+npx -y @vielzeug/codex
 ```
 
-| Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
-| ------------------------- | ----------------------------------------- | ------------ | ------------------ |
-| Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
-| Zero external deps        | <sg-icon name="x" size="16"></sg-icon> (MCP SDK)                              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>                 |
-| Structured metadata       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Sigil component CEM       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Offline / snapshot-backed | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Stdio + HTTP transports   | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-
-<div class="decision-callout">
-
-**Use `@vielzeug/codex` when** you are building or configuring an AI agent that needs reliable, offline access to Vielzeug documentation and component metadata.
-
-**Consider a web search when** you need content from the live docs site that post-dates the current published snapshot.
-
-</div>
-
-## Installation
+Then add it to your AI client. Pick your client below, or see the full [Setup Guide](./usage.md).
 
 ::: code-group
 
-```sh [pnpm]
-pnpm add @vielzeug/codex
+```json [Claude Desktop]
+// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "vielzeug": {
+      "command": "npx",
+      "args": ["-y", "@vielzeug/codex"]
+    }
+  }
+}
 ```
 
-```sh [npm]
-npm install @vielzeug/codex
+```json [GitHub Copilot Chat]
+// .vscode/mcp.json
+{
+  "servers": {
+    "vielzeug": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@vielzeug/codex"]
+    }
+  }
+}
 ```
 
-```sh [yarn]
-yarn add @vielzeug/codex
+```json [Cursor]
+// ~/.cursor/mcp.json  (or .cursor/mcp.json in your project)
+{
+  "mcpServers": {
+    "vielzeug": {
+      "command": "npx",
+      "args": ["-y", "@vielzeug/codex"]
+    }
+  }
+}
 ```
 
 :::
 
-## Quick Start
+## Available Tools
 
-```sh
-# Run over stdio (Claude Desktop, Copilot Chat)
-npx -y @vielzeug/codex
+Once connected, your AI assistant can call these tools:
 
-# Run over HTTP (remote agents)
-npx -y @vielzeug/codex --port 3100
+| Tool              | Input                  | Returns                                                           |
+| ----------------- | ---------------------- | ----------------------------------------------------------------- |
+| `list-packages`   | —                      | All packages with metadata                                        |
+| `get-package`     | `packageSlug`          | Single package metadata                                           |
+| `search-packages` | `query`                | Ranked matches across metadata, docs, exports, and source         |
+| `get-docs`        | `packageSlug`, `page?` | Docs page (`index`, `api`, `usage`, `examples`); default `index`  |
+| `get-source`      | `packageSlug`          | Bundled `src/index.ts` — exact exported types and signatures      |
+| `list-components` | —                      | All Sigil component tag names with attribute summary              |
+| `get-component`   | `tagName`              | Full CEM declaration — attributes, slots, events, CSS parts       |
 
-# CLI helpers
-npx -y @vielzeug/codex --help
-npx -y @vielzeug/codex --version
+A typical session looks like:
+
+```
+search-packages { query: "form validation" }     → find the right package
+get-docs { packageSlug: "forge", page: "api" }   → read the API reference
+get-source { packageSlug: "forge" }              → inspect exact types
 ```
 
-Then wire it into your AI client — see the [Usage Guide](./usage.md).
+## HTTP Mode
 
-## What it exposes
+For remote agents or CI pipelines, run with `--port`:
 
-### Tools
+```sh
+npx -y @vielzeug/codex --port 3100
+# MCP endpoint: http://localhost:3100/
+# Health check:  http://localhost:3100/health
+```
 
-| Tool              | Input                  | Description                                                                      |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------------- |
-| `list-packages`   | `packageSlug?`         | All packages with metadata; pass `packageSlug` to filter to a single-item result |
-| `get-docs`        | `packageSlug`, `page?` | Package docs page (`index`, `api`, `usage`, `examples`); defaults to `index`     |
-| `get-source`      | `packageSlug`          | Bundled `src/index.ts` text for a package                                        |
-| `search-packages` | `query`                | Search package metadata and docs with ranked matches                             |
-| `list-components` | —                      | Sigil component tags from bundled CEM metadata                                   |
-| `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                                      |
+::: warning Local only
+HTTP mode binds with `Access-Control-Allow-Origin: *` and has no authentication. Never expose the port on a public interface.
+:::
 
-### Resources
+## Programmatic API
 
-| URI pattern                     | MIME type           | Content               |
-| ------------------------------- | ------------------- | --------------------- |
-| `vielzeug://docs/<slug>/<page>` | `text/markdown`     | Documentation page    |
-| `vielzeug://source/<slug>`      | `text/x-typescript` | `src/index.ts` source |
+Codex also exports a Node.js API for embedding the server in a larger process:
 
-### Transports
+```ts
+import { createServerFromDisk } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-- **Stdio (default)** for local MCP clients
-- **Streamable HTTP** with `--port <number>` for remote agents
+await createServerFromDisk().connect(new StdioServerTransport());
+```
 
-## Features
-
-<div class="features-grid">
-
-- `list-packages` accepts optional `packageSlug` to retrieve a single package as a one-item array
-- `search-packages` returns ranked hits across `name`, `description`, `keywords`, `exports`, docs, and source
-- `matchedIn` reports distinct categories: `"metadata"`, `"keywords"`, `"exports"`, `"docs"`
-- MCP Resources exposed at `vielzeug://docs/<slug>/<page>` and `vielzeug://source/<slug>`
-- Programmatic API: `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData` exported from `@vielzeug/codex`
-- `search-packages` supports multi-word AND queries — all words must match
-- Unknown CLI flags print a usage hint and exit cleanly (no stack trace)
-- Port-in-use (`EADDRINUSE`) prints a clean error and exits with code 1
-- Bundled snapshot data — runs without a local Vielzeug checkout
-- Fail-fast startup: missing or malformed data aborts immediately with an actionable error message
-- Health endpoint at `/health` in HTTP mode
-
-</div>
-
+See the [API Reference](./api.md) for `createServer`, `loadData`, `validateBundledData`, and all exported types.
 
 ## Documentation
 
-<div class="doc-links">
-
-- [Usage Guide](./usage.md)
-- [API Reference](./api.md)
-- [Examples](./examples.md)
-
-</div>
-
-## See Also
-
-<div class="see-also">
-
-- [Sigil](/sigil/) — source of the bundled Sigil component CEM metadata
-- [Spell](/spell/) — example of a well-documented package discoverable via MCP
-
-</div>
+- [Setup Guide](./usage.md) — client configs, HTTP mode, security, monorepo dev
+- [API Reference](./api.md) — tools, resources, programmatic API, all types
+- [Examples](./examples.md) — common tool-call patterns
 
 <!-- markdownlint-enable MD025 MD033 MD060 -->

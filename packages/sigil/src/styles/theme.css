@@ -319,19 +319,40 @@
     color-scheme: light dark;
 
     /* Contrast scale — Neutral OKLCH with a lifted, non-pure-black Dark Mode baseline */
-    --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg));
-    --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg));
-    --color-contrast-150: light-dark(oklch(95.5% 0.001 264deg), oklch(23.5% 0.001 250deg));
-    --color-contrast-200: light-dark(oklch(94% 0.001 264deg), oklch(26% 0.001 250deg));
-    --color-contrast-300: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg));
-    --color-contrast-400: light-dark(oklch(81% 0.002 264deg), oklch(40% 0.001 250deg));
-    --color-contrast-500: light-dark(oklch(49% 0.002 264deg), oklch(58% 0.001 250deg));
-    --color-contrast-600: light-dark(oklch(40% 0.002 264deg), oklch(68% 0.001 250deg));
-    --color-contrast-700: light-dark(oklch(32% 0.002 264deg), oklch(78% 0.001 250deg));
-    --color-contrast-800: light-dark(oklch(22% 0.002 264deg), oklch(88% 0.001 250deg));
-    --color-contrast-900: light-dark(oklch(12% 0.002 264deg), oklch(95% 0.001 250deg));
-    --color-canvas: var(--color-contrast-50);
-    --color-contrast: var(--color-contrast-900);
+    --color-contrast-50: light-dark(oklch(99% 0.001 264deg), oklch(17% 0.001 250deg)); /* Canvas, page background */
+    --color-contrast-100: light-dark(oklch(97% 0.001 264deg), oklch(21% 0.001 250deg)); /* Cards, elevated surfaces */
+    --color-contrast-150: light-dark(
+      oklch(95.5% 0.001 264deg),
+      oklch(23.5% 0.001 250deg)
+    ); /* Midpoint — chip base, subtle fills */
+
+    --color-contrast-200: light-dark(oklch(94% 0.001 264deg), oklch(26% 0.001 250deg)); /* Nested cards, hover states */
+    --color-contrast-300: light-dark(oklch(89% 0.002 264deg), oklch(32% 0.001 250deg)); /* Borders, dividers */
+    --color-contrast-400: light-dark(
+      oklch(81% 0.002 264deg),
+      oklch(40% 0.001 250deg)
+    ); /* Disabled backgrounds, subtle UI */
+
+    --color-contrast-500: light-dark(
+      oklch(49% 0.002 264deg),
+      oklch(58% 0.001 250deg)
+    ); /* Tertiary text - AA compliant */
+
+    --color-contrast-600: light-dark(
+      oklch(40% 0.002 264deg),
+      oklch(68% 0.001 250deg)
+    ); /* Secondary text - AA compliant */
+
+    --color-contrast-700: light-dark(oklch(32% 0.002 264deg), oklch(78% 0.001 250deg)); /* Body text - AAA compliant */
+    --color-contrast-800: light-dark(oklch(22% 0.002 264deg), oklch(88% 0.001 250deg)); /* Headings - AAA compliant */
+    --color-contrast-900: light-dark(
+      oklch(12% 0.002 264deg),
+      oklch(95% 0.001 250deg)
+    ); /* High contrast text - AAA compliant */
+
+    --color-canvas: color-mix(in oklch, var(--color-contrast-50) 85%, transparent);
+    --color-divider: color-mix(in oklch, var(--color-contrast-300) 85%, transparent);
+    --color-contrast: color-mix(in oklch, var(--color-contrast-900) 85%, transparent);
 
     /* Halo Shadows */
     --halo-shadow-neutral:

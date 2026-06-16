@@ -1,18 +1,25 @@
-export type StableValue =
-  | undefined
-  | null
-  | boolean
-  | number
+/**
+ * A single segment in a query key — JSON-safe primitives or a plain object of primitives.
+ * No `Date`, `bigint`, `Map`, `Set`, or nested arrays — these are not reliably serialisable.
+ */
+export type QueryKeyAtom =
   | string
-  | bigint
-  | Date
-  | RegExp
-  | readonly StableValue[]
-  | ReadonlySet<StableValue>
-  | ReadonlyMap<StableValue, StableValue>
-  | { readonly [key: string]: StableValue };
+  | number
+  | boolean
+  | null
+  | { readonly [k: string]: string | number | boolean | null };
 
-export type QueryKey = readonly StableValue[];
+/**
+ * Identifies a cached query. Must be a non-empty flat array of `QueryKeyAtom` values.
+ *
+ * @example
+ * ```ts
+ * ['users', userId]
+ * ['users', userId, 'posts', { page: 1, limit: 10 }]
+ * ```
+ */
+export type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
+
 export type Unsubscribe = () => void;
 
 /**
@@ -29,38 +36,36 @@ export interface SyncStore<T> {
 
 export type AsyncStatus = 'idle' | 'pending' | 'success' | 'error';
 
-export type AsyncState<T = unknown> =
+export type AsyncState<T = unknown> = {
+  /** `true` while a fetch is in-flight (including background revalidation). Orthogonal to `status`. */
+  readonly isFetching: boolean;
+} & (
   | {
       readonly data: undefined;
       readonly error: null;
-      readonly isFetching: false;
       readonly status: 'idle';
       readonly updatedAt: undefined;
     }
   | {
-      readonly data: T | undefined;
+      readonly data: undefined;
       readonly error: null;
-      readonly isFetching: true;
       readonly status: 'pending';
-      readonly updatedAt: number | undefined;
+      readonly updatedAt: undefined;
     }
   | {
       readonly data: T;
       readonly error: null;
-      readonly isFetching: boolean;
       readonly status: 'success';
       readonly updatedAt: number;
     }
   | {
       readonly data: T | undefined;
       readonly error: Error;
-      readonly isFetching: boolean;
       readonly status: 'error';
+      /** Timestamp (ms since epoch) of when the error was committed. May coexist with stale `data` from a prior successful fetch. */
       readonly updatedAt: number;
-    };
-
-export type QueryStatus = AsyncStatus;
-export type MutationStatus = AsyncStatus;
+    }
+);
 
 export type QueryState<T = unknown> = AsyncState<T>;
 export type MutationState<TData = unknown> = AsyncState<TData>;

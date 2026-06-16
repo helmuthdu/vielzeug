@@ -29,7 +29,15 @@ Prism accepts both plain values and `@vielzeug/ripple` signals for any data prop
 import { createLineChart } from '@vielzeug/prism';
 
 const chart = createLineChart(container, {
-  series: [{ name: 'Static', data: [{ x: 1, y: 10 }, { x: 2, y: 20 }] }],
+  series: [
+    {
+      name: 'Static',
+      data: [
+        { key: 1, value: 10 },
+        { key: 2, value: 20 },
+      ],
+    },
+  ],
 });
 ```
 
@@ -39,14 +47,17 @@ const chart = createLineChart(container, {
 import { createLineChart } from '@vielzeug/prism';
 import { signal } from '@vielzeug/ripple';
 
-const data = signal([{ x: 1, y: 10 }, { x: 2, y: 20 }]);
+const data = signal([
+  { key: 1, value: 10 },
+  { key: 2, value: 20 },
+]);
 
 const chart = createLineChart(container, {
   series: [{ name: 'Live', data }],
 });
 
 // Later — chart updates automatically
-data.value = [...data.value, { x: 3, y: 30 }];
+data.value = [...data.value, { key: 3, value: 30 }];
 ```
 
 ### The `MaybeSignal<T>` Pattern
@@ -68,9 +79,13 @@ const chart = createLineChart(container, {
   series: [
     {
       name: 'Revenue',
-      data: [{ x: 1, y: 100 }, { x: 2, y: 150 }, { x: 3, y: 130 }],
+      data: [
+        { key: 1, value: 100 },
+        { key: 2, value: 150 },
+        { key: 3, value: 130 },
+      ],
       color: '#3b82f6',
-      curve: 'monotone',  // 'linear' | 'monotone' | 'step'
+      curve: 'monotone', // 'linear' | 'monotone' | 'step'
       strokeWidth: 2,
       showPoints: true,
       pointRadius: 4,
@@ -98,18 +113,20 @@ const chart = createLineChart(container, {
 
 ### Time-based X Axis
 
-When data points use `Date` objects for `x`, Prism automatically applies a time scale:
+When data points use `Date` objects for `key`, Prism automatically applies a time scale:
 
 ```ts
 const chart = createLineChart(container, {
-  series: [{
-    name: 'Signups',
-    data: [
-      { x: new Date('2024-01-01'), y: 50 },
-      { x: new Date('2024-02-01'), y: 80 },
-      { x: new Date('2024-03-01'), y: 120 },
-    ],
-  }],
+  series: [
+    {
+      name: 'Signups',
+      data: [
+        { key: new Date('2024-01-01'), value: 50 },
+        { key: new Date('2024-02-01'), value: 80 },
+        { key: new Date('2024-03-01'), value: 120 },
+      ],
+    },
+  ],
   xAxis: { position: 'bottom', tickFormat: (d) => (d as Date).toLocaleDateString() },
   yAxis: { position: 'left' },
 });
@@ -121,16 +138,18 @@ const chart = createLineChart(container, {
 import { createBarChart } from '@vielzeug/prism';
 
 const chart = createBarChart(container, {
-  series: [{
-    name: 'Sales',
-    data: [
-      { x: 'Q1', y: 200 },
-      { x: 'Q2', y: 350 },
-      { x: 'Q3', y: 280 },
-      { x: 'Q4', y: 400 },
-    ],
-    borderRadius: 4,
-  }],
+  series: [
+    {
+      name: 'Sales',
+      data: [
+        { key: 'Q1', value: 200 },
+        { key: 'Q2', value: 350 },
+        { key: 'Q3', value: 280 },
+        { key: 'Q4', value: 400 },
+      ],
+      borderRadius: 4,
+    },
+  ],
   xAxis: { position: 'bottom' },
   yAxis: { position: 'left', grid: true },
   tooltip: true,
@@ -141,12 +160,12 @@ const chart = createBarChart(container, {
 
 Select the bar layout with `variant`:
 
-| Value | Layout |
-|---|---|
-| `'grouped'` | Vertical grouped (default) |
-| `'stacked'` | Vertical stacked |
-| `'grouped-horizontal'` | Horizontal grouped |
-| `'stacked-horizontal'` | Horizontal stacked |
+| Value                  | Layout                     |
+| ---------------------- | -------------------------- |
+| `'grouped'`            | Vertical grouped (default) |
+| `'stacked'`            | Vertical stacked           |
+| `'grouped-horizontal'` | Horizontal grouped         |
+| `'stacked-horizontal'` | Horizontal stacked         |
 
 > **Note:** `tooltip` and `legend` are always available on the scaffold — omitting them uses a no-op null-object internally, so no conditional checks are needed in plugins or custom render logic.
 
@@ -194,13 +213,15 @@ const chart = createBarChart(container, {
 import { createAreaChart } from '@vielzeug/prism';
 
 const chart = createAreaChart(container, {
-  series: [{
-    name: 'Users',
-    data: userData,
-    curve: 'monotone',
-    fillOpacity: 0.2,
-    showLine: true,
-  }],
+  series: [
+    {
+      name: 'Users',
+      data: userData,
+      curve: 'monotone',
+      fillOpacity: 0.2,
+      showLine: true,
+    },
+  ],
   xAxis: { position: 'bottom' },
   yAxis: { position: 'left', grid: true },
   crosshair: true,
@@ -221,7 +242,7 @@ const chart = createPieChart(container, {
     { label: 'Referral', value: 18, color: '#f59e0b' },
     { label: 'Social', value: 12, color: '#8b5cf6' },
   ],
-  variant: 'donut',  // 'pie' | 'donut' | 'semi'
+  variant: 'donut', // 'pie' | 'donut' | 'semi'
   tooltip: true,
   transition: { duration: 400, easing: 'ease-out' },
 });
@@ -229,11 +250,11 @@ const chart = createPieChart(container, {
 
 ### Variants
 
-| Value | Shape |
-|---|---|
-| `'pie'` | Full circle, no hole |
-| `'donut'` | Full circle with inner hole (~55% of outer by default) |
-| `'semi'` | Top-half semicircle with inner hole — useful for gauges |
+| Value     | Shape                                                   |
+| --------- | ------------------------------------------------------- |
+| `'pie'`   | Full circle, no hole                                    |
+| `'donut'` | Full circle with inner hole (~55% of outer by default)  |
+| `'semi'`  | Top-half semicircle with inner hole — useful for gauges |
 
 ### Inner Radius
 
@@ -243,7 +264,7 @@ const chart = createPieChart(container, {
 createPieChart(container, {
   data,
   variant: 'donut',
-  innerRadius: 60,  // explicit pixels
+  innerRadius: 60, // explicit pixels
 });
 ```
 
@@ -276,7 +297,10 @@ const data = signal([
 
 const chart = createPieChart(container, { data, variant: 'donut' });
 
-data.value = [{ label: 'A', value: 55 }, { label: 'B', value: 45 }];
+data.value = [
+  { label: 'A', value: 55 },
+  { label: 'B', value: 45 },
+];
 ```
 
 ### Event Hooks
@@ -303,7 +327,7 @@ import { createSparkline } from '@vielzeug/prism';
 
 const spark = createSparkline(container, {
   data: [12, 18, 14, 22, 19, 28],
-  variant: 'line',      // 'line' | 'area' | 'bar' (default: 'line')
+  variant: 'line', // 'line' | 'area' | 'bar' (default: 'line')
   color: '#3b82f6',
   curve: 'monotone',
   strokeWidth: 1.5,
@@ -377,9 +401,9 @@ Enable with `tooltip: true` for default rendering, or provide a custom `render` 
 {
   tooltip: {
     offset: 12,
-    render: (point, series) => `
+    render: (datum, series) => `
       <strong>${series.name}</strong><br/>
-      Value: ${point.y.toLocaleString()}
+      Value: ${datum.value.toLocaleString()}
     `,
   },
 }
@@ -392,7 +416,7 @@ import DOMPurify from 'dompurify';
 
 {
   tooltip: {
-    render: (point, series) => `<b>${series.name}</b>: ${point.y}`,
+    render: (datum, series) => `<b>${series.name}</b>: ${datum.value}`,
     sanitize: (html) => DOMPurify.sanitize(html),
   },
 }
@@ -443,16 +467,17 @@ const chart = createLineChart(container, {
   series: [{ name: 'Revenue', data }],
   onHover: (event) => {
     // event is ChartEvent | null (null on mouseleave)
-    if (event) console.log(event.point, event.series);
+    if (event) console.log(event.datum, event.series);
   },
   onClick: (event) => {
-    console.log('clicked', event.point);
+    console.log('clicked', event.datum);
   },
 });
 ```
 
 `ChartEvent` provides:
-- `point` — the nearest `DataPoint`
+
+- `datum` — the nearest `Datum`
 - `series` — the corresponding `Series` config
 - `originalEvent` — the raw `MouseEvent`
 
@@ -466,13 +491,13 @@ Extend any chart with custom behavior using the `ChartPlugin` interface. All cha
 import type { ChartPlugin } from '@vielzeug/prism';
 
 const myPlugin: ChartPlugin = {
-  install(svg, container) {
+  install(ctx) {
     // called once after the chart mounts
-    svg.addEventListener('click', handler);
+    ctx.svg.addEventListener('click', handler);
   },
-  destroy() {
+  dispose() {
     // called when chart.dispose() runs
-    svg.removeEventListener('click', handler);
+    ctx.svg.removeEventListener('click', handler);
   },
 };
 
@@ -520,10 +545,10 @@ Call `setTheme` once at app startup to apply custom tokens programmatically:
 import { setTheme } from '@vielzeug/prism';
 
 setTheme({
-  colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'],  // replaces --prism-color-1 through -4
-  fontFamily: 'Inter, system-ui, sans-serif',              // sets --prism-font-family
-  gridColor: '#e2e8f0',                                    // sets --prism-grid-color
-  gridOpacity: 0.6,                                        // sets --prism-grid-opacity
+  colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'], // replaces --prism-color-1 through -4
+  fontFamily: 'Inter, system-ui, sans-serif', // sets --prism-font-family
+  gridColor: '#e2e8f0', // sets --prism-grid-color
+  gridOpacity: 0.6, // sets --prism-grid-opacity
 });
 ```
 
@@ -557,20 +582,20 @@ Apply tokens to a specific container:
 
 ### Available Tokens
 
-| Token | Default | Description |
-|---|---|---|
-| `--prism-color-{1-8}` | Tailwind palette | Series color palette |
-| `--prism-bg` | `transparent` | Chart background |
-| `--prism-axis-color` | `#94a3b8` | Axis lines and ticks |
-| `--prism-grid-color` | `#e2e8f0` | Grid lines |
-| `--prism-text-color` | `#334155` | Axis labels and text |
-| `--prism-font-family` | `system-ui` | Chart font |
-| `--prism-font-size` | `12px` | Label font size |
-| `--prism-tooltip-bg` | `#1e293b` | Tooltip background |
-| `--prism-tooltip-color` | `#f8fafc` | Tooltip text |
-| `--prism-tooltip-radius` | `6px` | Tooltip border radius |
-| `--prism-crosshair-color` | `#64748b` | Crosshair line |
-| `--prism-crosshair-dash` | `4 2` | Crosshair dash pattern |
+| Token                     | Default          | Description            |
+| ------------------------- | ---------------- | ---------------------- |
+| `--prism-color-{1-8}`     | Tailwind palette | Series color palette   |
+| `--prism-bg`              | `transparent`    | Chart background       |
+| `--prism-axis-color`      | `#94a3b8`        | Axis lines and ticks   |
+| `--prism-grid-color`      | `#e2e8f0`        | Grid lines             |
+| `--prism-text-color`      | `#334155`        | Axis labels and text   |
+| `--prism-font-family`     | `system-ui`      | Chart font             |
+| `--prism-font-size`       | `12px`           | Label font size        |
+| `--prism-tooltip-bg`      | `#1e293b`        | Tooltip background     |
+| `--prism-tooltip-color`   | `#f8fafc`        | Tooltip text           |
+| `--prism-tooltip-radius`  | `6px`            | Tooltip border radius  |
+| `--prism-crosshair-color` | `#64748b`        | Crosshair line         |
+| `--prism-crosshair-dash`  | `4 2`            | Crosshair dash pattern |
 
 ## Scales (Standalone)
 
@@ -580,13 +605,13 @@ Scales can be used independently for custom visualizations:
 import { linearScale, timeScale, bandScale } from '@vielzeug/prism';
 
 const y = linearScale({ domain: [0, 100], range: [300, 0] });
-y.map(50);       // → 150
-y.invert(150);   // → 50
-y.ticks(5);      // → [0, 20, 40, 60, 80, 100]
+y.map(50); // → 150
+y.invert(150); // → 50
+y.ticks(5); // → [0, 20, 40, 60, 80, 100]
 
 const x = bandScale({ domain: ['A', 'B', 'C'], range: [0, 300] });
-x.map('B');      // → pixel left edge of band B
-x.bandwidth();   // → width of each band
+x.map('B'); // → pixel left edge of band B
+x.bandwidth(); // → width of each band
 ```
 
 ## Lifecycle and Cleanup
@@ -607,10 +632,11 @@ chart.dispose();
 ```
 
 Calling `dispose()`:
+
 - Cancels all reactive signal effects
 - Disconnects the `ResizeObserver`
 - Removes the SVG element, tooltip, and legend from the DOM
-- Calls `destroy()` on all plugins
+- Calls `dispose()` on all plugins
 - Is idempotent — safe to call multiple times
 
 > **Reactivity is automatic** — charts re-render whenever signal data changes. There is no manual `update()` call needed.
@@ -633,3 +659,115 @@ if (!container.isConnected) {
 ```
 
 > The `/devtools` subpath is separate from the main bundle — only import it in code paths that run in development.
+
+## Framework Integration
+
+Prism renders into a plain DOM element. Attach charts inside mount/unmount lifecycle hooks for any framework.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { createLineChart } from '@vielzeug/prism';
+
+function LineChart({ data }: { data: { x: number; y: number }[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const chart = createLineChart(containerRef.current!, {
+      series: [{ data }],
+    });
+    return () => chart.dispose();
+  }, [data]);
+
+  return <div ref={containerRef} style={{ width: '100%', height: 300 }} />;
+}
+```
+
+```ts [Vue 3]
+import { onMounted, onUnmounted, ref } from 'vue';
+import { createLineChart, type ChartHandle } from '@vielzeug/prism';
+
+function useLineChart(data: { x: number; y: number }[]) {
+  const containerRef = ref<HTMLElement | null>(null);
+  let chart: ChartHandle | null = null;
+
+  onMounted(() => {
+    chart = createLineChart(containerRef.value!, { series: [{ data }] });
+  });
+
+  onUnmounted(() => chart?.dispose());
+  return { containerRef };
+}
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createLineChart } from '@vielzeug/prism';
+
+  export let data: { x: number; y: number }[] = [];
+  let container: HTMLDivElement;
+
+  onMount(() => {
+    const chart = createLineChart(container, { series: [{ data }] });
+    return () => chart.dispose();
+  });
+</script>
+
+<div bind:this={container} style="width:100%;height:300px"></div>
+```
+
+:::
+
+## Working with Other Vielzeug Libraries
+
+### With Ripple
+
+Pass Ripple signals as chart data properties. Prism re-renders automatically when a signal changes.
+
+```ts
+import { signal } from '@vielzeug/ripple';
+import { createLineChart } from '@vielzeug/prism';
+
+const series = signal([
+  { x: 1, y: 10 },
+  { x: 2, y: 20 },
+]);
+
+const chart = createLineChart(container, {
+  series: [{ data: series }], // signal passed directly
+});
+
+// Updating the signal triggers an automatic re-render:
+series.value = [
+  { x: 1, y: 15 },
+  { x: 2, y: 25 },
+];
+```
+
+### With Sourcerer
+
+Bind chart data to a Sourcerer remote source so charts update whenever the list refreshes.
+
+```ts
+import { createRemoteSource } from '@vielzeug/sourcerer';
+import { computed } from '@vielzeug/ripple';
+import { createBarChart } from '@vielzeug/prism';
+
+const source = createRemoteSource({ fetch: ({ page }) => api.stats.list({ page }) });
+
+const chartData = computed(() => source.items.value.map((item) => ({ x: item.label, y: item.count })));
+
+const chart = createBarChart(container, {
+  series: [{ data: chartData }],
+});
+```
+
+## Best Practices
+
+- Ensure the container element has explicit dimensions before calling a chart factory — `ResizeObserver` needs a non-zero layout size to trigger the first render.
+- Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel signal effects and remove DOM nodes.
+- Prefer `signal()` from Ripple for mutable data properties — charts re-render automatically when signals change, with no manual `update()` call.
+- Use the `/devtools` subpath only in development code paths; it is tree-shaken in production.
+- For SSR, skip chart creation server-side — Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

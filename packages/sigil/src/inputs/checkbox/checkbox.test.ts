@@ -482,4 +482,15 @@ describe('sg-checkbox accessibility', () => {
       fixture.destroy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      const fix = await mount('sg-checkbox', { html: 'Accept terms' });
+
+      const results = await axeCheck(fix.element);
+
+      fix.destroy();
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

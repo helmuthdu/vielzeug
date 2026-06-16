@@ -9,14 +9,16 @@ export class NeverSchema extends Schema<never> {
   }
 
   constructor() {
-    super((_value) => [{ code: ErrorCode.invalid_type, message: _messages().never.invalid(), path: [] }]);
+    super((_value, ctx) => [
+      { code: ErrorCode.invalid_type, message: (ctx?.messages ?? _messages()).never.invalid(), path: [] },
+    ]);
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'never' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.never) return visitor.never(this);
 
     return super._walk(visitor);

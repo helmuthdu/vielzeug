@@ -13,18 +13,20 @@ exports:
     createInfiniteSource,
     deriveSource,
     mergeSource,
-    MergedSource,
-    toSignals,
+    applyQuery,
+    applyLocalQuery,
+    applyRemoteQuery,
+    applyCursorQuery,
+    applyInfiniteQuery,
     SourceDisposedError,
     SourceError,
-    SourceSignals,
     SourceTimeoutError,
     sourceState,
     itemRange,
     prefetchSource,
-    prefetchSourceWithSource,
     composeFetch,
     FetchEvent,
+    SearchOptions,
     filterContains,
     filterEquals,
     filterRange,
@@ -57,21 +59,21 @@ const totalPages = Math.ceil(filtered.length / pageSize);
 
 // With Sourcerer — same API for both
 const source = createLocalSource(allUsers, { limit: 10 }); // or createRemoteSource(...)
-await source.searchNow(search);
+await source.search(search, { immediate: true });
 // source.current, source.meta.pageCount — both cases handled
 ```
 
-| Feature                             | Sourcerer                                       | TanStack Query | SWR            |
-| ----------------------------------- | ----------------------------------------------- | -------------- | -------------- |
-| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB         | ~6 kB          |
-| In-memory source primitive          | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>             |
-| Remote source primitive             | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
-| Cursor-based pagination             | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Infinite scroll source              | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
-| Typed page/filter/sort/search model | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Optimistic updates                  | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>             |
-| URL query encode/decode helpers     | <sg-icon name="check" size="16"></sg-icon>                                              | Partial        | Partial        |
-| Framework agnostic                  | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
+| Feature                             | Sourcerer                                       | TanStack Query                             | SWR                                                             |
+| ----------------------------------- | ----------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
+| Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB                                     | ~6 kB                                                           |
+| In-memory source primitive          | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                          |
+| Remote source primitive             | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
+| Cursor-based pagination             | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
+| Infinite scroll source              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
+| Typed page/filter/sort/search model | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
+| Optimistic updates                  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
+| URL query encode/decode helpers     | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
+| Framework agnostic                  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
 
 <div class="decision-callout">
 
@@ -113,7 +115,7 @@ const source = createLocalSource(
   { limit: 2 },
 );
 
-await source.searchNow('a');
+await source.search('ada', { immediate: true });
 console.log(source.current); // [{ id: 1, name: 'Ada' }]
 console.log(source.meta.pageNumber); // 1
 ```
@@ -138,15 +140,14 @@ console.log(source.current, source.meta.totalItems);
 
 <div class="features-grid">
 
-| Factory                  | Data model      | Navigation          | Key extras                                                             |
-| ------------------------ | --------------- | ------------------- | ---------------------------------------------------------------------- |
-| `createLocalSource()`    | In-memory array | Page number         | `filterAsync`, `sortAsync`, `ready()`, custom `searchFn`               |
-| `createRemoteSource()`   | Server fetch    | Page number         | `staleTime`, `optimisticUpdate`, `restoreQuery`, `ready()`, `queryKey` |
-| `createCursorSource()`   | Server fetch    | Cursor tokens       | `restoreQuery()`, `ready()`, `queryKey`                                |
-| `createInfiniteSource()` | Server fetch    | Append (`loadMore`) | `loadedPages`, `ready()`, `queryKey`                                   |
+| Factory                  | Data model      | Navigation          | Key extras                                                          |
+| ------------------------ | --------------- | ------------------- | ------------------------------------------------------------------- |
+| `createLocalSource()`    | In-memory array | Page number         | `filterAsync`, `sortAsync`, `patch()`, custom `searchFn`, `ready()` |
+| `createRemoteSource()`   | Server fetch    | Page number         | `staleTime`, `optimisticUpdate`, `patch()`, `ready()`, `queryKey`   |
+| `createCursorSource()`   | Server fetch    | Cursor tokens       | `patch()`, `ready()`, `queryKey`                                    |
+| `createInfiniteSource()` | Server fetch    | Append (`loadMore`) | `patch()`, `loadedPages`, `ready()`, `queryKey`                     |
 
 </div>
-
 
 ## Documentation
 

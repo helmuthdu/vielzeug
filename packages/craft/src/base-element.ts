@@ -1,30 +1,30 @@
-import { onCleanup as _onCleanup, scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
+import { scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 
-import type { ComponentDefinition, SetupContextBag } from './component-types';
+import type { ComponentDefinition } from './component-types';
 
-import { CraftitError, reportRuntimeError } from './errors';
-import { createBind } from './host-bind';
-import { createProps, type InferPropsSignals, propRegistry, type PropsDef } from './props';
-import { type OnMountedCallback, type RuntimeContext, withRuntimeContext } from './runtime';
-import { type ComponentSlots, createSlots } from './slots';
+import { warn } from './_warn';
+import { createContextBag } from './context-bag';
+import { type CraftErrorPhase, CraftError, reportRuntimeError } from './errors';
+import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
+import { type OnMountedCallback, onCleanup, type RuntimeContext, runWithContext } from './runtime';
 import { ComponentPhase, LIFECYCLE_EVENTS } from './types';
 import { type HTMLResult } from './types/bindings';
 import { loadStylesheet } from './utils/css';
-import { createEmitFn } from './utils/emit';
 
 // ─── Internal component state ─────────────────────────────────────────────────
 
 type ComponentState = {
+  /** Incremented on every disconnect — guards both mount callbacks and async setup results. */
+  generation: number;
   mountCallbacks: OnMountedCallback[];
-  mountToken: number;
   phase: ComponentPhase;
   scope: Scope;
   templateResult: HTMLResult | null;
 };
 
 const createComponentState = (): ComponentState => ({
+  generation: 0,
   mountCallbacks: [],
-  mountToken: 0,
   phase: ComponentPhase.UNINITIALIZED,
   scope: _scope(),
   templateResult: null,
@@ -64,7 +64,7 @@ export class BaseElement extends HTMLElement {
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
     if (oldValue === newValue) return;
 
-    const propMeta = propRegistry.get(this)?.get(name);
+    const propMeta = getPropMeta(this, name);
 
     if (!propMeta) return;
 
@@ -80,20 +80,24 @@ export class BaseElement extends HTMLElement {
   }
 
   disconnectedCallback(): void {
-    this._component.mountToken++;
+    this._component.generation++;
     this._component.phase = ComponentPhase.UNMOUNTED;
-    this._component.scope.dispose();
     this.dispatchEvent(new CustomEvent(LIFECYCLE_EVENTS.DISCONNECT, { bubbles: false, composed: false }));
-    // Reset state (scope, callbacks, template) for next connect
-    this._component = createComponentState();
+    this._component.scope.dispose();
+    // Reset mutable fields for next connect, keeping the same object for stable references
+    this._component.mountCallbacks = [];
+    this._component.phase = ComponentPhase.UNINITIALIZED;
+    this._component.scope = _scope();
+    this._component.templateResult = null;
   }
 
-  private _handleSetupError(error: unknown, operation = 'connectedCallback'): HTMLResult | void {
+  private _handleSetupError(error: unknown, phase: CraftErrorPhase = 'setup'): HTMLResult | void {
     const err = error instanceof Error ? error : new Error(String(error));
-    const craftError = new CraftitError(
-      `[craft] <${this.localName}> failed during ${this._component.phase} (${operation})`,
-      { cause: err, component: this.localName, phase: this._component.phase },
-    );
+    const craftError = new CraftError(`<${this.localName}> failed during ${this._component.phase} (${phase})`, {
+      cause: err,
+      component: this.localName,
+      phase,
+    });
     const def = (this.constructor as typeof BaseElement)._definition;
 
     if (def?.onError) {
@@ -115,31 +119,21 @@ export class BaseElement extends HTMLElement {
     const ctx: RuntimeContext = { element: this, mountCallbacks: [] };
 
     try {
-      let setupResult: HTMLResult | Promise<HTMLResult> | undefined;
+      let setupResult: HTMLResult | null | Promise<HTMLResult | null> | undefined;
 
       this._component.scope.run(() => {
-        setupResult = withRuntimeContext(ctx, () => {
-          // createProps must run inside withRuntimeContext since registerProp calls getCurrentElement()
+        setupResult = runWithContext(ctx, () => {
           const setupProps = normalizedPropDefs
-            ? createProps(normalizedPropDefs)
-            : ({} as InferPropsSignals<Record<never, never>>);
-          const bind = createBind(this);
-          const emit = createEmitFn(this);
-          const slots = createSlots() as ComponentSlots<string>;
+            ? createProps(this, normalizedPropDefs)
+            : ({} as InferProps<PropInputDefs>);
+          const contextBag = createContextBag(this);
 
-          const contextBag: SetupContextBag<Record<string, never>, string> = {
-            bind,
-            el: this,
-            emit,
-            slots,
-          };
-
-          return def.setup(setupProps as InferPropsSignals<Record<never, never>>, contextBag);
+          return def.setup(setupProps as InferProps<PropInputDefs>, contextBag);
         });
       });
       this._component.mountCallbacks.push(...ctx.mountCallbacks);
 
-      if (setupResult instanceof Promise) {
+      if (setupResult != null && typeof (setupResult as Promise<HTMLResult | null>).then === 'function') {
         // Async setup: show loading template immediately, swap when resolved.
         // Store captured mount callbacks; they will be scheduled after the real template mounts.
         const pendingCallbacks = this._component.mountCallbacks.splice(0);
@@ -150,12 +144,16 @@ export class BaseElement extends HTMLElement {
           this._component.templateResult = def.loading();
         }
 
-        // Capture the current component state so the async handler can detect staleness:
-        // if the element disconnects+reconnects before the promise resolves, _component is
-        // replaced with a fresh state and the old promise result must be discarded.
-        void this._runSetupAsync(setupResult, pendingCallbacks, this._component);
+        // Capture the current generation so the async handler can detect staleness:
+        // if the element disconnects+reconnects before the promise resolves, generation is
+        // incremented and the old promise result must be discarded.
+        void this._runSetupAsync(
+          setupResult as Promise<HTMLResult | null>,
+          pendingCallbacks,
+          this._component.generation,
+        );
       } else {
-        this._component.templateResult = setupResult as HTMLResult;
+        this._component.templateResult = (setupResult as HTMLResult | null) ?? null;
         this._component.phase = ComponentPhase.SETUP_DONE;
       }
     } catch (error) {
@@ -172,25 +170,35 @@ export class BaseElement extends HTMLElement {
   }
 
   private async _runSetupAsync(
-    promise: Promise<HTMLResult>,
+    promise: Promise<HTMLResult | null>,
     pendingCallbacks: OnMountedCallback[],
-    capturedState: ComponentState,
+    capturedGeneration: number,
   ): Promise<void> {
     try {
       const result = await promise;
 
       // Discard stale results: element disconnected+reconnected since this setup started.
-      if (this._component !== capturedState || !this.isConnected) return;
+      if (this._component.generation !== capturedGeneration || !this.isConnected) {
+        warn(`<${this.localName}> async setup result discarded — element disconnected before setup resolved.`);
 
-      this._component.templateResult = result;
+        return;
+      }
+
+      this._component.templateResult = result ?? null;
       this._component.phase = ComponentPhase.SETUP_DONE;
       this._component.mountCallbacks.push(...pendingCallbacks);
-      this._applyResult(result);
+
+      if (result) this._applyResult(result);
+
       this._scheduleMountCallbacks();
     } catch (error) {
-      if (this._component !== capturedState || !this.isConnected) return;
+      if (this._component.generation !== capturedGeneration || !this.isConnected) {
+        warn(`<${this.localName}> async setup error discarded — element disconnected before setup resolved.`);
 
-      const recovery = this._handleSetupError(error, 'asyncSetup');
+        return;
+      }
+
+      const recovery = this._handleSetupError(error, 'async-setup');
 
       if (recovery) {
         this._component.templateResult = recovery;
@@ -202,12 +210,14 @@ export class BaseElement extends HTMLElement {
     }
   }
 
-  private _applyResult(result: HTMLResult): void {
+  private _applyResult(result: HTMLResult | null): void {
+    if (!result) return;
+
     const host: Element | ShadowRoot = this.shadowRoot ?? this;
 
     host.replaceChildren(result.fragment);
     this._component.scope.run(() => {
-      result.apply(_onCleanup);
+      result.apply(onCleanup);
     });
   }
 
@@ -238,10 +248,10 @@ export class BaseElement extends HTMLElement {
   private _scheduleMountCallbacks(): void {
     if (this._component.mountCallbacks.length === 0) return;
 
-    const token = ++this._component.mountToken;
+    const capturedGeneration = this._component.generation;
 
     queueMicrotask(() => {
-      if (!this.isConnected || token !== this._component.mountToken) return;
+      if (!this.isConnected || capturedGeneration !== this._component.generation) return;
 
       // Snapshot callbacks so in-loop registrations don't extend this iteration.
       const batch = this._component.mountCallbacks.splice(0);
@@ -251,10 +261,10 @@ export class BaseElement extends HTMLElement {
           const nestedCtx = { element: this, mountCallbacks: [] as typeof this._component.mountCallbacks };
 
           this._component.scope.run(() => {
-            withRuntimeContext(nestedCtx, () => {
+            runWithContext(nestedCtx, () => {
               const cleanup = callback();
 
-              if (typeof cleanup === 'function') _onCleanup(cleanup);
+              if (typeof cleanup === 'function') onCleanup(cleanup);
             });
           });
 
@@ -262,7 +272,7 @@ export class BaseElement extends HTMLElement {
             this._component.mountCallbacks.push(...nestedCtx.mountCallbacks);
           }
         } catch (error) {
-          this._handleSetupError(error, 'mountedCallback');
+          this._handleSetupError(error, 'mounted');
         }
       }
 

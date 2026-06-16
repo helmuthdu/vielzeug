@@ -230,3 +230,34 @@ describe('string pattern validators — params', () => {
     if (!result.success) expect(result.error.issues[0].params).toEqual({ pattern: '^\\d+$' });
   });
 });
+
+describe('StringSchema.nonempty() alias', () => {
+  it('accepts non-empty strings', () => {
+    expect(s.string().nonempty().parse('hello')).toBe('hello');
+  });
+
+  it('rejects empty strings', () => {
+    expect(() => s.string().nonempty().parse('')).toThrow();
+  });
+
+  it('accepts custom message', () => {
+    const result = s
+      .string()
+      .nonempty(() => 'Required field')
+      .safeParse('');
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe('Required field');
+    }
+  });
+
+  it('behaves identically to nonEmpty()', () => {
+    const a = s.string().nonempty();
+    const b = s.string().nonEmpty();
+
+    expect(a.safeParse('').success).toBe(b.safeParse('').success);
+    expect(a.safeParse('x').success).toBe(b.safeParse('x').success);
+  });
+});

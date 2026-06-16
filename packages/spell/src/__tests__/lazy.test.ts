@@ -52,4 +52,26 @@ describe('s.lazy()', () => {
     expect(ok.success).toBe(true);
     expect(fail.success).toBe(false);
   });
+
+  it('parseAsync() propagates async inner schema checkAsync()', async () => {
+    const inner = s.string().validate(async (val, ctx) => {
+      if (val === 'banned') ctx.addIssue({ code: 'custom', message: 'Banned', path: [] });
+    });
+    const schema = s.lazy(() => inner);
+
+    await expect(schema.parseAsync('ok')).resolves.toBe('ok');
+    await expect(schema.parseAsync('banned')).rejects.toThrow('Banned');
+  });
+
+  it('parseAsync() on optional lazy returns undefined without resolving inner schema', async () => {
+    const schema = s.lazy(() => s.string()).optional();
+
+    await expect(schema.parseAsync(undefined)).resolves.toBeUndefined();
+  });
+
+  it('parseAsync() on lazy with catch() returns fallback on failure', async () => {
+    const schema = s.lazy(() => s.number()).catch(0);
+
+    await expect(schema.parseAsync('not-a-number')).resolves.toBe(0);
+  });
 });

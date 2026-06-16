@@ -6,7 +6,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { createCheckable } from '../checkable';
 import { createChoiceField } from '../choice-field';
 import { createCounterState, createErrorHelperState } from '../field-base';
-import { lifecycleSignal } from '../index';
 import { createTextField } from '../text-field';
 
 describe('field controls', () => {
@@ -129,6 +128,40 @@ describe('field controls', () => {
     });
   });
 
+  describe('createTextField() wire() value sync (B3/C3)', () => {
+    it('syncs value on input events even when only onChange is configured', () => {
+      const ac = new AbortController();
+      const prop = signal('');
+      const handle = createTextField({ signal: ac.signal, value: prop });
+      const input = document.createElement('input');
+
+      input.value = 'typed';
+      handle.wire(input, ac.signal);
+
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(handle.value.value).toBe('typed');
+
+      ac.abort();
+    });
+
+    it('syncs value on input events even when no callbacks are configured', () => {
+      const ac = new AbortController();
+      const prop = signal('');
+      const handle = createTextField({ signal: ac.signal, value: prop });
+      const input = document.createElement('input');
+
+      input.value = 'hello';
+      handle.wire(input, ac.signal);
+
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+
+      expect(handle.value.value).toBe('hello');
+
+      ac.abort();
+    });
+  });
+
   describe('createChoiceField()', () => {
     it('normalizes controlled csv values and projects a form value', async () => {
       let handle!: ReturnType<typeof createChoiceField>;
@@ -189,7 +222,7 @@ describe('field controls', () => {
 
       localDisabled.value = true;
       expect(handle.disabled.value).toBe(true);
-      expect(handle.assistive.value.helperText).toBe('Hint');
+      expect(handle.helperText.value).toBe('Hint');
     });
 
     it('removeValue removes a specific value without affecting others', async () => {
@@ -417,7 +450,7 @@ describe('field controls', () => {
       indeterminate.value = false;
       expect(handle.checked.value).toBe(false);
       expect(handle.indeterminate.value).toBe(false);
-      expect(handle.assistive.value.helperText).toBe('Check helper');
+      expect(handle.helperText.value).toBe('Check helper');
     });
 
     it('toggles checked state for standalone controls', async () => {
@@ -771,44 +804,5 @@ describe('field controls', () => {
       // Listener was removed — no call
       expect(changeSpy).not.toHaveBeenCalled();
     });
-  });
-});
-
-describe('lifecycleSignal()', () => {
-  it('returns an AbortSignal that is not yet aborted', () => {
-    const sig = lifecycleSignal(() => {});
-
-    expect(sig.aborted).toBe(false);
-  });
-
-  it('aborts the signal when the onCleanup callback is invoked', () => {
-    let cleanup!: () => void;
-    const sig = lifecycleSignal((fn) => {
-      cleanup = fn;
-    });
-
-    expect(sig.aborted).toBe(false);
-    cleanup();
-    expect(sig.aborted).toBe(true);
-  });
-
-  it('each call returns an independent signal', () => {
-    let cleanup1!: () => void;
-    let cleanup2!: () => void;
-
-    const sig1 = lifecycleSignal((fn) => {
-      cleanup1 = fn;
-    });
-    const sig2 = lifecycleSignal((fn) => {
-      cleanup2 = fn;
-    });
-
-    cleanup1();
-
-    expect(sig1.aborted).toBe(true);
-    expect(sig2.aborted).toBe(false);
-
-    cleanup2();
-    expect(sig2.aborted).toBe(true);
   });
 });

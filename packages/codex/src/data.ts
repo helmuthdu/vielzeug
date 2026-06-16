@@ -8,6 +8,33 @@ const DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../data/viel
 
 const REGEN_CMD = 'pnpm --dir packages/codex run prepare:data';
 
+// ---------------------------------------------------------------------------
+// Schema-map validation (satisfies keeps it in sync with BundledPackage type)
+// ---------------------------------------------------------------------------
+
+type FieldCheck = (v: unknown) => boolean;
+
+const nonEmptyStr = (v: unknown): boolean => typeof v === 'string' && (v as string).length > 0;
+const isStr = (v: unknown): boolean => typeof v === 'string';
+const isArr = (v: unknown): boolean => Array.isArray(v);
+const isObj = (v: unknown): boolean => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** Field-level validators for BundledPackage. satisfies catches drift when the type changes. */
+const PKG_SCHEMA = {
+  apiSource: (v: unknown) => v === null || isStr(v),
+  availableDocPages: isArr,
+  category: isStr,
+  components: isArr,
+  description: isStr,
+  docs: isObj,
+  exports: isArr,
+  keywords: isArr,
+  name: nonEmptyStr,
+  related: isArr,
+  slug: nonEmptyStr,
+  version: isStr,
+} satisfies Record<keyof BundledPackage, FieldCheck>;
+
 export function validateBundledData(raw: unknown): BundledData {
   if (
     typeof raw !== 'object' ||
@@ -24,40 +51,18 @@ export function validateBundledData(raw: unknown): BundledData {
 
   for (const pkg of packages) {
     if (typeof pkg !== 'object' || pkg === null) {
-      throw new Error(
-        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
-      );
+      throw new Error(`Bundled MCP data is malformed: package entry is not an object. Regenerate with ${REGEN_CMD}.`);
     }
 
     const p = pkg as Record<string, unknown>;
+    const slug = String(p['slug'] ?? '');
 
-    if (
-      typeof p['slug'] !== 'string' ||
-      p['slug'].length === 0 ||
-      typeof p['name'] !== 'string' ||
-      p['name'].length === 0
-    ) {
-      throw new Error(
-        `Bundled MCP data is malformed: package entry missing or empty "slug" or "name". Regenerate with ${REGEN_CMD}.`,
-      );
-    }
-
-    if (!Array.isArray(p['exports']) || !Array.isArray(p['keywords']) || !Array.isArray(p['availableDocPages'])) {
-      throw new Error(
-        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "exports", "keywords", or "availableDocPages". Regenerate with ${REGEN_CMD}.`,
-      );
-    }
-
-    if (typeof p['docs'] !== 'object' || p['docs'] === null || Array.isArray(p['docs'])) {
-      throw new Error(
-        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "docs". Regenerate with ${REGEN_CMD}.`,
-      );
-    }
-
-    if (!Array.isArray(p['components'])) {
-      throw new Error(
-        `Bundled MCP data is malformed: package "${String(p['slug'])}" has invalid "components". Regenerate with ${REGEN_CMD}.`,
-      );
+    for (const [field, check] of Object.entries(PKG_SCHEMA) as [keyof BundledPackage, FieldCheck][]) {
+      if (!check(p[field])) {
+        throw new Error(
+          `Bundled MCP data is malformed: package "${slug}" has invalid field "${field}". Regenerate with ${REGEN_CMD}.`,
+        );
+      }
     }
   }
 
@@ -97,11 +102,18 @@ export function loadData(): BundledData {
   return validateBundledData(parsed);
 }
 
+/** Projects a BundledPackage to its lightweight PackageMeta shape (strips heavy content fields). */
 export function packageMeta(pkg: BundledPackage): PackageMeta {
-  const { apiSource, components: _components, docs: _docs, ...rest } = pkg;
-
   return {
-    ...rest,
-    hasSource: apiSource !== null,
+    availableDocPages: pkg.availableDocPages,
+    category: pkg.category,
+    description: pkg.description,
+    exports: pkg.exports,
+    hasSource: pkg.apiSource !== null,
+    keywords: pkg.keywords,
+    name: pkg.name,
+    related: pkg.related,
+    slug: pkg.slug,
+    version: pkg.version,
   };
 }

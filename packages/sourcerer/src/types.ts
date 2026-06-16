@@ -14,19 +14,21 @@ export type RetryConfig = Readonly<{
 export type SourceQuery = Readonly<{
   limit: number;
   page: number;
-  /** Absent when no search is active. */
+  /**
+   * The active search string. Absent (or empty string) when no search is active.
+   * Both representations are equivalent — treat `''` and `undefined` identically.
+   * `encodeQuery` omits this field when falsy; `decodeQuery` returns it only when present in the URL.
+   */
   search?: string;
 }>;
 
-export type RemoteFetchQuery<TFilter = unknown, TSort = unknown> = Readonly<{
+export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = Readonly<{
   filter?: TFilter;
   limit: number;
   page: number;
   search?: string;
   sort?: TSort;
 }>;
-
-export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = RemoteFetchQuery<TFilter, TSort>;
 
 export type CursorSourceQuery<TCursor = string> = Readonly<{
   after?: TCursor;
@@ -42,15 +44,22 @@ export type InfiniteSourceQuery = Readonly<{
 }>;
 
 /**
+ * Opaque context bag carried by `SourceError`.
+ * Contains safe-to-log fields identifying the query that failed.
+ * Use `error.context` for logging/telemetry — do not rely on specific field names.
+ */
+export type SourceErrorContext = Readonly<Record<string, unknown>>;
+
+/**
  * Base class for all sourcerer errors. Catch with `instanceof SourceError` to handle any
  * sourcerer-originated error regardless of specific subtype.
  *
- * Carries the original cause, the query that triggered the error, and the attempt number.
+ * Carries the original cause, structured context, and the attempt number.
  *
  * @example
  * ```ts
  * if (source.meta.error) {
- *   console.error(source.meta.error.message, source.meta.error.query);
+ *   console.error(source.meta.error.message, source.meta.error.context);
  * }
  * ```
  */
@@ -58,7 +67,7 @@ export class SourceError extends Error {
   readonly #opts: {
     readonly attempt?: number;
     readonly cause?: unknown;
-    readonly query?: unknown;
+    readonly context?: SourceErrorContext;
   };
 
   constructor(
@@ -66,7 +75,7 @@ export class SourceError extends Error {
     opts: {
       readonly attempt?: number;
       readonly cause?: unknown;
-      readonly query?: unknown;
+      readonly context?: SourceErrorContext;
     } = {},
   ) {
     super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
@@ -75,17 +84,13 @@ export class SourceError extends Error {
     this.#opts = opts;
   }
 
-  static is(err: unknown): err is SourceError {
-    return err instanceof SourceError;
-  }
-
   get attempt(): number {
     return this.#opts.attempt ?? 0;
   }
 
-  /** The query that triggered the error. May contain user-supplied values (search terms, filters) — sanitise before logging in production. */
-  get query(): unknown {
-    return this.#opts.query;
+  /** Context bag for the error — safe to log. */
+  get context(): SourceErrorContext | undefined {
+    return this.#opts.context;
   }
 }
 
@@ -98,20 +103,12 @@ export class SourceTimeoutError extends SourceError {
     super(`Source.ready() timed out after ${timeoutMs}ms`);
     this.timeoutMs = timeoutMs;
   }
-
-  static is(err: unknown): err is SourceTimeoutError {
-    return err instanceof SourceTimeoutError;
-  }
 }
 
 /** Thrown by `ready()` when the source is disposed while waiting. */
 export class SourceDisposedError extends SourceError {
   constructor() {
     super('Source disposed while waiting for ready()');
-  }
-
-  static is(err: unknown): err is SourceDisposedError {
-    return err instanceof SourceDisposedError;
   }
 }
 
@@ -181,7 +178,9 @@ export type SourceState<T> =
 export type ReactiveSource<T, TMeta = SourceMeta> = {
   [Symbol.dispose](): void;
   readonly current: readonly T[];
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   readonly meta: TMeta;
   subscribe(listener: () => void): () => void;
 };
@@ -194,23 +193,41 @@ export type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
 
 /**
  * Read-only reactive view combining multiple sources.
- * Returned by `mergeSource()`. Has no `meta` because the parent sources may have different meta shapes.
+ * Returned by `mergeSource()` when sources have incompatible meta shapes.
  */
 export type MergedSource<T> = {
   [Symbol.dispose](): void;
   readonly current: readonly T[];
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   subscribe(listener: () => void): () => void;
 };
+
+/** Options for the `search()` method on all source types. */
+export type SearchOptions = Readonly<{
+  /** When `true`, cancels any pending debounce and fetches immediately. Default: `false`. */
+  immediate?: boolean;
+}>;
 
 // ── Page-based source types ───────────────────────────────────────────────────
 
 /** Shared navigation interface for all page-based source types (local and remote). */
 export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
-  flush(): Promise<void>;
   goTo(page: number): Promise<void>;
   goToLast(): Promise<void>;
   next(): Promise<void>;
+  /**
+   * Applies one or more query changes atomically — a single fetch for any combination
+   * of limit, page, and search updates.
+   *
+   * @example
+   * ```ts
+   * // Change limit and search in one fetch
+   * await source.patch({ limit: 20, search: 'hello' });
+   * ```
+   */
+  patch(changes: Partial<SourceQuery>): Promise<void>;
   prev(): Promise<void>;
   /**
    * Resolves when the source is idle (no pending async computation).
@@ -218,24 +235,25 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
    */
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
-  search(query: string): void;
-  searchNow(query: string): Promise<void>;
+  /**
+   * Updates the search query. Debounced by default.
+   * Always returns a `Promise<void>` that resolves when the triggered fetch completes.
+   * Pass `{ immediate: true }` to skip the debounce window.
+   */
+  search(query: string, opts?: SearchOptions): Promise<void>;
   setLimit(limit: number): Promise<void>;
 };
 
 /**
- * Full interface for local (in-memory) page-based sources.
- * `restoreQuery(patch)` applies URL-decoded state without resetting page.
+ * Full interface for in-memory page-based sources.
+ * Synchronous when no async ops are configured; supports async filter/sort
+ * pipelines (e.g. Web Worker offloading) when `filterAsync`/`sortAsync` are set.
  */
-export type Source<T> = PageNavigator<T> & {
-  restoreQuery(patch: Partial<SourceQuery & { filter?: Predicate<T>; sort?: Sorter<T> }>): Promise<void>;
+export type LocalSource<T> = PageNavigator<T> & {
+  setData(data: readonly T[]): Promise<void>;
   setFilter(filter?: Predicate<T>): Promise<void>;
   setSort(sort?: Sorter<T>): Promise<void>;
   toQuery(): SourceQuery;
-};
-
-export type LocalSource<T> = Source<T> & {
-  setData(data: readonly T[]): Promise<void>;
 };
 
 /**
@@ -251,9 +269,13 @@ export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<
    * @throws {Error} If an optimistic update is already active.
    */
   optimisticUpdate(mutator: (current: readonly T[]) => readonly T[], options?: { total?: number }): () => void;
+  /**
+   * Applies one or more query changes atomically — a single fetch for any combination
+   * of limit, page, search, filter, and sort updates.
+   */
+  patch(changes: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
-  restoreQuery(patch: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
   setFilter(filter?: TFilter): Promise<void>;
   setSort(sort?: TSort): Promise<void>;
   toQuery(): RemoteSourceQuery<TFilter, TSort>;
@@ -261,7 +283,7 @@ export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<
 
 // ── Config types ──────────────────────────────────────────────────────────────
 
-export type LocalConfig<T> = Readonly<{
+export type LocalSourceConfig<T> = Readonly<{
   debounceMs?: number;
   filter?: Predicate<T>;
   /**
@@ -270,7 +292,7 @@ export type LocalConfig<T> = Readonly<{
    * The signal is aborted when a new computation supersedes this one.
    */
   filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
-  /** Initial data to populate the source. When provided, pass `[]` as the first arg of `createLocalSource`. */
+  /** Initial data to populate the source. When provided, pass `[]` as the first arg. */
   initialData?: readonly T[];
   limit?: number;
   /**
@@ -292,7 +314,7 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
   /** Debounce delay in ms for `search()` calls. Default: `300`. */
   debounceMs?: number;
   fetch: (
-    q: RemoteFetchQuery<TFilter, TSort>,
+    q: RemoteSourceQuery<TFilter, TSort>,
     signal: AbortSignal,
   ) => Promise<Readonly<{ items: readonly T[]; total: number }>>;
   filter?: TFilter;
@@ -301,8 +323,8 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
    * Called after each fetch attempt settles (success or failure).
    * Useful for logging, telemetry, and debugging.
    */
-  onFetch?: (event: FetchEvent<RemoteFetchQuery<TFilter, TSort>>) => void;
-  queryKey?: (q: RemoteFetchQuery<TFilter, TSort>) => string;
+  onFetch?: (event: FetchEvent<RemoteSourceQuery<TFilter, TSort>>) => void;
+  queryKey?: (q: RemoteSourceQuery<TFilter, TSort>) => string;
   /**
    * Automatically re-fetch at this interval in ms. The timer is cancelled on `dispose()`.
    * Useful for live dashboards and real-time data displays.
@@ -338,15 +360,17 @@ export type CursorMeta = Readonly<{
 }>;
 
 export type CursorSource<T, TCursor = string> = ReactiveSource<T, CursorMeta> & {
-  flush(): Promise<void>;
   next(): Promise<void>;
+  /**
+   * Applies one or more query changes atomically — a single fetch for any combination
+   * of limit and search updates.
+   */
+  patch(changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>): Promise<void>;
   prev(): Promise<void>;
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
   reset(): Promise<void>;
-  restoreQuery(patch: Partial<CursorSourceQuery<TCursor>>): Promise<void>;
-  search(query: string): void;
-  searchNow(query: string): Promise<void>;
+  search(query: string, opts?: SearchOptions): Promise<void>;
   setLimit(limit: number): Promise<void>;
   toQuery(): CursorSourceQuery<TCursor>;
 };
@@ -376,30 +400,27 @@ export type InfiniteMeta = Readonly<{
   /** `true` only during `loadMore()` fetches — distinct from the initial load. */
   isLoadingMore: boolean;
   isSearchPending: boolean;
-  /** Number of pages appended so far. Resets to 0 on `reset()` or `search*()`. */
+  /** Number of pages appended so far. Resets to 0 on `reset()` or `search()`. */
   loadedPages: number;
   pageSize: number;
   totalItems: number;
 }>;
 
 export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
-  flush(): Promise<void>;
   /** Appends the next page of results to `current`. No-op when `meta.hasMore` is false. */
   loadMore(): Promise<void>;
+  /**
+   * Applies one or more query changes atomically — a single fetch for any combination
+   * of limit and search updates. Resets accumulated pages.
+   */
+  patch(changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void>;
   /**
    * Resolves when no fetch is in progress (including `loadMore` fetches).
    * Rejects after `timeout` ms if still loading.
    */
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
-  /**
-   * Applies a partial `InfiniteSourceQuery` snapshot without resetting accumulated items.
-   * Only `limit` and `search` are restorable — page position is implicit in cursor-style infinite sources.
-   * Triggers a reset fetch if any value changed.
-   */
-  restoreQuery(patch: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void>;
-  search(query: string): void;
-  searchNow(query: string): Promise<void>;
+  search(query: string, opts?: SearchOptions): Promise<void>;
   setLimit(limit: number): Promise<void>;
   toQuery(): InfiniteSourceQuery;
 };
@@ -411,7 +432,7 @@ export type InfiniteConfig<T> = Readonly<{
   limit?: number;
   /** Called after each fetch attempt settles. Useful for logging and telemetry. */
   onFetch?: (event: FetchEvent<InfiniteSourceQuery>) => void;
-  /** Custom cache key function. Used to deduplicate in-flight requests. Default: stable JSON stringify. */
+  /** Custom cache key function. Used to deduplicate in-flight requests. Default: stable hash. */
   queryKey?: (q: InfiniteSourceQuery) => string;
   /** Automatically re-fetch (reset to page 1) at this interval in ms. Cancelled on `dispose()`. */
   refreshInterval?: number;

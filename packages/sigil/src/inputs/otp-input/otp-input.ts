@@ -1,4 +1,5 @@
-import { computed, define, html, inject, onMounted, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, inject, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -97,13 +98,12 @@ define<SgOtpInputProps, SgOtpInputEvents>(OTP_INPUT_TAG, {
     value: prop.string(),
     variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onMounted }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);
     const isDisabled = fCtxProps.disabled;
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
-    const focusedIndex = signal(0);
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
 
@@ -120,13 +120,10 @@ define<SgOtpInputProps, SgOtpInputEvents>(OTP_INPUT_TAG, {
     }
 
     const listControl = createListControl({
-      getIndex: () => focusedIndex.value,
       getItems: () => getInputs(),
       keys: { next: ['ArrowRight'], prev: ['ArrowLeft'] },
       loop: false,
-      setIndex: (index) => {
-        focusedIndex.value = index;
-
+      onNavigate: (_action, index) => {
         const inputs = getInputs();
 
         inputs[index]?.focus();
@@ -195,13 +192,13 @@ define<SgOtpInputProps, SgOtpInputEvents>(OTP_INPUT_TAG, {
       const input = e.target as HTMLInputElement;
       const allInputs = getInputs();
 
-      focusedIndex.value = index;
+      listControl.set(index);
 
       if (e.key === 'Backspace') {
         if (input.value) {
           input.value = '';
         } else if (index > 0) {
-          const prevIndex = listControl.prev();
+          const prevIndex = listControl.navigate('prev');
           const prevInput = allInputs[prevIndex];
 
           if (prevInput) {

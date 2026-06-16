@@ -50,7 +50,7 @@
   summary:focus-visible {
     outline: var(--border-2) solid currentcolor;
     outline-offset: var(--border-2);
-    box-shadow: 0 0 0 3px color-mix(in srgb, currentcolor 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, currentcolor 20%, transparent);
   }
 
   .header-content {
@@ -82,7 +82,7 @@
     border-inline: 1px solid var(--accordion-item-border-color);
     border-bottom: 1px solid var(--accordion-item-border-color);
     border-radius: var(--accordion-summary-radius);
-    transition: grid-template-rows var(--transition-normal) var(--accordion-item-expand-easing, var(--ease-spring));
+    transition: grid-template-rows 200ms var(--accordion-item-expand-easing, var(--ease-spring));
   }
 
   details[open] .content-wrapper {
@@ -92,6 +92,33 @@
   .content-inner {
     padding: var(--accordion-item-summary-padding, var(--size-2) var(--size-4));
     overflow: hidden;
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 200ms 60ms var(--ease-spring),
+      transform 200ms 60ms var(--ease-spring);
+  }
+
+  /* Opening: set from-state with no transition — transition fires on base rule when class is removed */
+  details.opening .content-inner {
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: none;
+  }
+
+  /* Closing: content fades out immediately, row collapses after */
+  details.closing .content-inner {
+    opacity: 0;
+    transform: translateY(-4px);
+    transition:
+      opacity 150ms var(--ease-spring),
+      transform 150ms var(--ease-spring);
+  }
+
+  /* Keep row expanded while closing animation plays */
+  details.closing .content-wrapper {
+    grid-template-rows: 1fr;
+    transition: grid-template-rows 200ms 120ms var(--accordion-item-expand-easing, var(--ease-spring));
   }
 }
 
@@ -114,7 +141,7 @@
 
   :host([variant='bordered']) {
     --accordion-item-bg: var(--color-contrast-100);
-    --accordion-item-border-color: var(--color-contrast-300);
+    --accordion-item-border-color: var(--color-divider);
     --accordion-item-hover-bg: var(--color-contrast-200);
 
     box-shadow: var(--inset-shadow-xs), var(--shadow-2xs);
@@ -122,7 +149,7 @@
 
   :host([variant='outline']) {
     --accordion-item-bg: transparent;
-    --accordion-item-border-color: var(--color-contrast-300);
+    --accordion-item-border-color: var(--color-divider);
     --accordion-item-hover-bg: var(--color-contrast-300);
   }
 
@@ -163,12 +190,12 @@
 
   /* Glass */
   :host([variant='glass']) {
-    --accordion-item-bg: color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%);
+    --accordion-item-bg: color-mix(in oklch, var(--color-secondary) 30%, var(--color-contrast) 10%);
     --accordion-item-border-color: transparent;
-    --accordion-item-hover-bg: color-mix(in srgb, var(--color-secondary) 20%, transparent);
-    --accordion-item-title-color: color-mix(in srgb, var(--color-secondary-contrast) 100%, transparent);
-    --accordion-item-subtitle-color: color-mix(in srgb, var(--color-secondary-contrast) 60%, transparent);
-    --accordion-item-body-color: color-mix(in srgb, var(--color-secondary-contrast) 80%, transparent);
+    --accordion-item-hover-bg: color-mix(in oklch, var(--color-secondary) 20%, transparent);
+    --accordion-item-title-color: color-mix(in oklch, var(--color-secondary-contrast) 100%, transparent);
+    --accordion-item-subtitle-color: color-mix(in oklch, var(--color-secondary-contrast) 60%, transparent);
+    --accordion-item-body-color: color-mix(in oklch, var(--color-secondary-contrast) 80%, transparent);
   }
 
   :host([variant='glass']) summary {
@@ -181,9 +208,9 @@
 
   /* Frost */
   :host([variant='frost']) {
-    --accordion-item-bg: color-mix(in srgb, var(--color-canvas) 55%, transparent);
+    --accordion-item-bg: color-mix(in oklch, var(--color-canvas) 55%, transparent);
     --accordion-item-border-color: transparent;
-    --accordion-item-hover-bg: color-mix(in srgb, var(--color-canvas) 20%, transparent);
+    --accordion-item-hover-bg: color-mix(in oklch, var(--color-canvas) 20%, transparent);
   }
 
   :host([variant='frost']) summary {
@@ -237,7 +264,7 @@
     height: var(--size-5);
     margin-inline-start: auto;
     transform: rotate(-90deg);
-    transition: transform var(--accordion-item-transition);
+    transition: transform 200ms var(--ease-spring);
   }
 
   details[open] .chevron {

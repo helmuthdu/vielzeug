@@ -4,7 +4,7 @@ package: courier
 category: http
 keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors]
 related: [spell, ripple, vault]
-exports: [createApi, createCourier, createMutation, createQuery, createStream, createTransportCore, HttpError]
+exports: [createApi, createCourier, createMutation, createQuery, createStream, CourierError, HttpError, NetworkError, TimeoutError, AbortError, SchemaValidationError, bindRefetch, withBearerAuth, withRequestId, withLogging, persistQueryCache, hydrateQueryCache]
 ---
 
 # @vielzeug/courier
@@ -18,7 +18,7 @@ exports: [createApi, createCourier, createMutation, createQuery, createStream, c
 
 **Package:** `@vielzeug/courier` &nbsp;·&nbsp; **Category:** Http
 
-**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `createTransportCore`, `HttpError`
+**Key exports:** `createApi`, `createCourier`, `createQuery`, `createMutation`, `createStream`, `CourierError`, `HttpError`, `NetworkError`, `TimeoutError`, `AbortError`
 
 **When to use:** Typed HTTP, caching, mutations, SSE, and readable streaming with a shared interceptor pipeline.
 
@@ -49,9 +49,11 @@ const client = createCourier({
   query: { staleTime: 5_000 },
 });
 
-const user = await client.query.fetch({
+// observe() returns a SyncStore and triggers a background fetch if stale
+const store = client.query.observe({
   key: ['users', 1],
   fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+  staleTime: 5_000,
 });
 
 const createUser = client.mutation((input: NewUser, signal) =>

@@ -14,7 +14,7 @@ You need an authentication flow that limits brute-force attempts, performs an as
 Use guards to block the `LOGIN` transition after three failed attempts, and `invoke` in `loading` to perform the async login call. The attempt counter accumulates in context so the guard has access on every retry.
 
 ```ts
-import { defineMachine, interpret, resolveTransition } from '@vielzeug/clockwork';
+import { machine, resolveTransition } from '@vielzeug/clockwork';
 
 type State = 'authenticated' | 'error' | 'loading' | 'unauthenticated';
 type Context = { attempts: number; token: string };
@@ -24,7 +24,7 @@ type Event =
   | { token: string; type: 'AUTH_SUCCESS' }
   | { type: 'AUTH_FAILED' };
 
-const auth = defineMachine<State, Context, Event>({
+const authConfig = {
   context: { attempts: 0, token: '' },
   initial: 'unauthenticated',
   states: {
@@ -56,8 +56,8 @@ const auth = defineMachine<State, Context, Event>({
     loading: {
       invoke: [
         {
-          onDone: (res) => ({ token: (res as { token: string }).token, type: 'AUTH_SUCCESS' }),
-          onError: () => ({ type: 'AUTH_FAILED' }),
+          onDone: (res, _ctx) => ({ token: (res as { token: string }).token, type: 'AUTH_SUCCESS' }),
+          onError: (_err, _ctx) => ({ type: 'AUTH_FAILED' }),
           src: async ({ entryEvent, signal }) => {
             if (entryEvent.type !== 'LOGIN') throw new Error('unexpected');
             return fetch('/auth/login', {
@@ -103,7 +103,9 @@ const auth = defineMachine<State, Context, Event>({
       },
     },
   },
-});
+};
+
+const m = machine(authConfig);
 ```
 
 ### Testing guards with `resolveTransition`
@@ -112,7 +114,7 @@ const auth = defineMachine<State, Context, Event>({
 import { expect, test } from 'vitest';
 
 test('allows login with fewer than 3 attempts', () => {
-  const result = resolveTransition(auth, {
+  const result = resolveTransition(authConfig, {
     context: { attempts: 2, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -121,7 +123,7 @@ test('allows login with fewer than 3 attempts', () => {
 });
 
 test('blocks login after 3 attempts', () => {
-  const result = resolveTransition(auth, {
+  const result = resolveTransition(authConfig, {
     context: { attempts: 3, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -133,7 +135,7 @@ test('blocks login after 3 attempts', () => {
 ### Pitfalls
 
 - **Guard runs before actions.** The guard sees the context _before_ actions mutate it — `attempts` is checked pre-increment.
-- **`entryEvent` in invoke `src`** gives access to the event that triggered entry. Cast or check its type since it may also be a lifecycle event.
+- **`entryEvent` in invoke `src`** gives access to the event that triggered entry. Check its type — it may also be a lifecycle event (`$init`, `$hydrate`, `$after`).
 - **Always handle both `onDone` and `onError`.** If `onError` is omitted and the invoke rejects, the machine remains in the current state silently.
 
 ### Related

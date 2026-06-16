@@ -13,7 +13,7 @@ import { buildAdapterOps, buildTxContext, type StorageBackend } from '../adapter
 import { VaultDisposedError, VaultError, VaultMigrationError } from '../errors';
 import { getRecordKey } from '../internal';
 import { type NativeRange } from '../query';
-import { defaultCodec, type VaultCodec } from '../ttl';
+import { defaultCodec, isExpired, type VaultCodec } from '../ttl';
 
 function idbReq<R>(request: IDBRequest<R>): Promise<R> {
   return new Promise<R>((resolve, reject) => {
@@ -211,7 +211,7 @@ function pruneExpiredInStore(store: IDBObjectStore, codec: VaultCodec): Promise<
 
       const stored = codec.decode(cursor.value as unknown);
 
-      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
+      if (!stored || isExpired(stored.expiresAt)) {
         cursor.delete();
         deleted += 1;
       }
@@ -355,12 +355,10 @@ function buildIdbBatchCore<S extends AnySchema, K extends keyof S & string>(
       await idbReq(storeOf(table).clear());
     },
     count: async (table) => {
-      // For tables with no TTL, every stored record is live — use native O(1) IDB count.
-      // For TTL tables we must inspect each record to exclude expired entries.
-      if (!schema[table]?.defaultTtl) {
-        return idbReq(storeOf(table).count());
-      }
-
+      // Must inspect each stored record to exclude TTL-expired entries.
+      // Individual put() calls can attach a TTL even when the schema has no defaultTtl,
+      // so schema[table].defaultTtl being absent does not guarantee a clean count.
+      // This matches the top-level core.count() behaviour in the IDB adapter.
       const all = await idbReq<unknown[]>(storeOf(table).getAll());
 
       return all.filter((r) => decode(r) !== undefined).length;
@@ -421,7 +419,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     if (!stored) return undefined;
 
-    if (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt) return undefined;
+    if (isExpired(stored.expiresAt)) return undefined;
 
     return stored.value;
   };
@@ -696,7 +694,7 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
       channel.onmessage = (event: MessageEvent<{ table?: string }>) => {
         const tableName = event.data?.table;
 
-        if (!tableName || !(tableName in schema)) return;
+        if (!tableName || !Object.hasOwn(schema, tableName)) return;
 
         notify(tableName as keyof S & string);
       };

@@ -207,4 +207,20 @@ describe('createSparkline', () => {
     expect(segs[1]?.getAttribute('fill')).toBe('#00ff00');
     chart.dispose();
   });
+
+  it('passes axe accessibility audit (decorative with aria-hidden)', async () => {
+    const chart = createSparkline(container, { data: [1, 2, 3, 4, 5] });
+    const results = await axeCheck(container);
+
+    expect(results.violations).toHaveLength(0);
+    chart.dispose();
+  });
+
+  it('passes axe accessibility audit (labelled with ariaLabel)', async () => {
+    const chart = createSparkline(container, { ariaLabel: 'Revenue trend', data: [1, 2, 3] });
+    const results = await axeCheck(container);
+
+    expect(results.violations).toHaveLength(0);
+    chart.dispose();
+  });
 });

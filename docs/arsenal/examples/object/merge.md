@@ -1,9 +1,9 @@
 ---
-title: 'Arsenal Examples — deepMerge / deepMergeWith / shallowMerge'
-description: 'deepMerge, deepMergeWith, and shallowMerge examples for @vielzeug/arsenal.'
+title: 'Arsenal Examples — deepMerge / shallowMerge'
+description: 'deepMerge and shallowMerge examples for @vielzeug/arsenal.'
 ---
 
-## deepMerge / deepMergeWith / shallowMerge
+## deepMerge / shallowMerge
 
 ### Problem
 
@@ -11,7 +11,7 @@ You need to combine configuration objects, handling nested keys correctly — wi
 
 ### Solution
 
-Use `deepMerge(...items)` for recursive merging. Use `deepMergeWith({ arrayStrategy: 'concat' })` when arrays should be concatenated. Use `shallowMerge(...items)` for a single-level `Object.assign`-style merge.
+Use `deepMerge(...items)` for recursive merging. Pass `{ arrayStrategy: 'concat' }` as the last argument to concatenate arrays. Use `shallowMerge(...items)` for a single-level `Object.assign`-style merge.
 
 ```ts
 import { deepMerge } from '@vielzeug/arsenal';
@@ -26,28 +26,32 @@ deepMerge(base, overrides);
 #### Concatenate arrays instead of replacing them
 
 ```ts
-import { deepMergeWith } from '@vielzeug/arsenal';
+import { deepMerge } from '@vielzeug/arsenal';
 
 const a = { tags: ['ts', 'node'] };
 const b = { tags: ['vue'] };
 
-deepMergeWith({ arrayStrategy: 'concat' })(a, b);
+deepMerge(a, b, { arrayStrategy: 'concat' });
 // { tags: ['ts', 'node', 'vue'] }
 ```
 
-#### Shallow merge (Object.assign-style)
+#### Merge three or more objects
 
 ```ts
-import { shallowMerge } from '@vielzeug/arsenal';
+import { deepMerge, shallowMerge } from '@vielzeug/arsenal';
 
-shallowMerge({ a: 1, b: 2 }, { b: 3, c: 4 });
-// { a: 1, b: 3, c: 4 }
+deepMerge({ a: { x: 1 } }, { a: { y: 2 } }, { b: 3 });
+// { a: { x: 1, y: 2 }, b: 3 }
+
+shallowMerge({ a: 1, b: 2 }, { b: 3, c: 4 }, { d: 5 });
+// { a: 1, b: 3, c: 4, d: 5 }
 ```
 
 ### Pitfalls
 
-- `deepMerge` replaces arrays by default — use `deepMergeWith` to concatenate.
+- `deepMerge` replaces arrays by default — pass `{ arrayStrategy: 'concat' }` as the last argument to concatenate.
 - Later arguments win on key conflicts for both functions.
+- The options object `{ arrayStrategy: 'concat' | 'replace' }` must be the **last** positional argument and must contain only that key.
 
 ### Related
 

@@ -36,15 +36,20 @@ export interface ChartHandle {
 
 // ─── Data Types ──────────────────────────────────────────────────────────────
 
-export interface DataPoint {
+/**
+ * A single data point in a cartesian chart series.
+ * `key` is the x-axis identity (number, Date, or string category).
+ * `value` is the measured quantity on the y-axis.
+ */
+export interface Datum {
+  key: Date | number | string;
   meta?: Record<string, unknown>;
-  x: Date | number | string;
-  y: number;
+  value: number;
 }
 
-export interface Series<T extends DataPoint = DataPoint> {
+export interface Series {
   color?: string;
-  data: MaybeSignal<T[]>;
+  data: MaybeSignal<Datum[]>;
   name: string;
 }
 
@@ -58,8 +63,6 @@ export interface Scale<T> {
   ticks(count?: number): T[];
 }
 
-export type XScale = Scale<Date> | Scale<number>;
-
 export interface BandScale {
   bandwidth(): number;
   readonly domain: readonly string[];
@@ -67,26 +70,6 @@ export interface BandScale {
   map(value: string): number;
   readonly range: readonly [number, number];
   ticks(count?: number): string[];
-}
-
-export interface LinearScaleConfig {
-  clamp?: boolean;
-  domain: MaybeSignal<[number, number]>;
-  nice?: boolean;
-  range: MaybeSignal<[number, number]>;
-}
-
-export interface TimeScaleConfig {
-  domain: MaybeSignal<[Date, Date]>;
-  nice?: boolean;
-  range: MaybeSignal<[number, number]>;
-}
-
-export interface BandScaleConfig {
-  domain: MaybeSignal<string[]>;
-  padding?: number;
-  paddingOuter?: number;
-  range: MaybeSignal<[number, number]>;
 }
 
 // ─── Axis Types ──────────────────────────────────────────────────────────────
@@ -101,7 +84,11 @@ export interface GridConfig {
 export interface AxisConfig {
   grid?: GridConfig | boolean;
   label?: string;
-  position: AxisPosition;
+  /**
+   * Axis position. Defaults to `'bottom'` for `xAxis` and `'left'` for `yAxis`
+   * when not specified.
+   */
+  position?: AxisPosition;
   tickCount?: number;
   tickFormat?: (value: Date | number | string) => string;
 }
@@ -115,7 +102,7 @@ export interface TooltipConfig {
    * ensure any user-supplied data (series names, data point values) is sanitized before
    * interpolation to prevent XSS.
    */
-  render?: (point: DataPoint, series: Series) => string;
+  render?: (datum: Datum, series: Series) => string;
   /**
    * Optional sanitizer applied to the `render` output before DOM injection.
    * Use this to plug in DOMPurify or a similar HTML sanitizer.
@@ -131,8 +118,8 @@ export interface CrosshairConfig {
 }
 
 export interface ChartEvent {
+  datum: Datum;
   originalEvent: MouseEvent;
-  point: DataPoint;
   series: Series;
 }
 
@@ -154,9 +141,15 @@ export interface TransitionConfig {
 
 // ─── Plugin Types ────────────────────────────────────────────────────────────
 
+export interface ChartPluginContext {
+  container: HTMLElement;
+  dimensions: ReadonlySignal<ChartDimensions>;
+  svg: SVGSVGElement;
+}
+
 export interface ChartPlugin {
   dispose(): void;
-  install(svg: SVGSVGElement, container: HTMLElement): void;
+  install(ctx: ChartPluginContext): void;
 }
 
 // ─── Chart Config Types ──────────────────────────────────────────────────────
@@ -244,8 +237,7 @@ export interface StackSegment {
   value: number;
 }
 
-export interface SparklineConfig {
-  ariaLabel?: string;
+export interface SparklineConfig extends Pick<BaseChartConfig, 'ariaLabel' | 'transition'> {
   color?: string;
   cornerRadius?: number;
   curve?: 'linear' | 'monotone' | 'step';
@@ -255,6 +247,5 @@ export interface SparklineConfig {
   onHover?: (index: number | null, value: number | null) => void;
   padPixels?: number;
   strokeWidth?: number;
-  transition?: TransitionConfig;
   variant?: SparklineVariant;
 }

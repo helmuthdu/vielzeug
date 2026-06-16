@@ -551,7 +551,9 @@ These are fallback values — attributes take precedence when set.
       <sg-text>This is the main featured area.</sg-text>
     </sg-card>
   </sg-grid-item>
-  <sg-card padding="md" color="secondary"> <sg-text variant="heading" size="md"><sg-icon name="sparkles" size="16"></sg-icon> Side</sg-text></sg-card>
+  <sg-card padding="md" color="secondary">
+    <sg-text variant="heading" size="md"><sg-icon name="sparkles" size="16"></sg-icon> Side</sg-text></sg-card
+  >
   <sg-card padding="md"><sg-text>Item 2</sg-text></sg-card>
   <sg-card padding="md"><sg-text>Item 3</sg-text></sg-card>
   <sg-grid-item col-span="2">

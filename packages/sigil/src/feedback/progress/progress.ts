@@ -1,4 +1,5 @@
-import { computed, define, effect, html, prop, styleMap } from '@vielzeug/craft';
+import { define, html, prop, styleMap } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -87,7 +88,7 @@ define<SgProgressProps>(PROGRESS_TAG, {
     'value-text': prop.string(),
   },
 
-  setup(props, { bind: _bind, el }) {
+  setup(props, { el, watch }) {
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7
@@ -117,7 +118,7 @@ define<SgProgressProps>(PROGRESS_TAG, {
       width: () => (!props.indeterminate.value && !isVertical.value ? percent.value : null),
     });
 
-    effect(() => {
+    watch(() => {
       el.style.setProperty('--_percent', props.indeterminate.value ? '0%' : percent.value);
     });
 

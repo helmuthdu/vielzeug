@@ -220,7 +220,9 @@
     border: none;
     border-radius: var(--rounded-sm);
     opacity: 0.7;
-    transition: var(--_motion-transition, opacity var(--transition-fast), background var(--transition-fast));
+    transition:
+      opacity var(--transition-fast),
+      background var(--transition-fast);
   }
 
   .close[hidden] {
@@ -228,7 +230,7 @@
   }
 
   .close:hover {
-    background: color-mix(in srgb, currentcolor 12%, transparent);
+    background: color-mix(in oklch, currentcolor 12%, transparent);
     opacity: 1;
   }
 
@@ -265,9 +267,9 @@
 
   /* Bordered — tinted background with a subtle themed border */
   :host([variant='bordered']) {
-    --_bg: var(--alert-bg, color-mix(in srgb, var(--_theme-backdrop), var(--color-canvas)));
+    --_bg: var(--alert-bg, color-mix(in oklch, var(--_theme-backdrop), var(--color-canvas)));
     --_color: var(--alert-color, var(--_theme-base));
-    --_border-color: var(--alert-border-color, color-mix(in srgb, var(--_theme-focus) 30%, transparent));
+    --_border-color: var(--alert-border-color, color-mix(in oklch, var(--_theme-focus) 30%, transparent));
     --_shadow: var(--alert-shadow, var(--inset-shadow-2xs));
   }
 }

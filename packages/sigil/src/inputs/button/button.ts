@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, prop } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
 
@@ -136,7 +137,7 @@ define<SgButtonProps>(BUTTON_TAG, {
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
     // getForm() returns null for link mode at runtime, so no form actions fire.
-    const formField = defineField({
+    const formField = useField({
       disabled: isDisabled,
       toFormValue: () => null,
       value: computed(() => ''),

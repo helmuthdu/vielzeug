@@ -115,39 +115,39 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 ### Attributes
 
-| Attribute  | Type                                                                      | Default | Description                                  |
-| ---------- | ------------------------------------------------------------------------- | ------- | -------------------------------------------- |
-| `value`    | `number`                                                                  | `0`     | Current selected rating                      |
-| `max`      | `number`                                                                  | `5`     | Total number of stars                        |
-| `readonly` | `boolean`                                                                 | `false` | Prevents user interaction; shows value only  |
-| `solid`    | `boolean`                                                                 | `false` | Fills selected stars instead of outline-only |
-| `disabled` | `boolean`                                                                 | `false` | Disables the rating input                    |
-| `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group     |
-| `name`     | `string`                                                                  | —       | Form field name                              |
-| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —       | Star highlight color                         |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`  | Star size                                    |
+| Attribute  | Type                                                                      | Default    | Description                                  |
+| ---------- | ------------------------------------------------------------------------- | ---------- | -------------------------------------------- |
+| `value`    | `number`                                                                  | `0`        | Current selected rating                      |
+| `max`      | `number`                                                                  | `5`        | Total number of stars                        |
+| `readonly` | `boolean`                                                                 | `false`    | Prevents user interaction; shows value only  |
+| `solid`    | `boolean`                                                                 | `false`    | Fills selected stars instead of outline-only |
+| `disabled` | `boolean`                                                                 | `false`    | Disables the rating input                    |
+| `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group        |
+| `name`     | `string`                                                                  | —          | Form field name                              |
+| `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Star highlight color                         |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                    |
 
 ### Events
 
-| Event    | Detail                                        | Description                          |
-| -------- | --------------------------------------------- | ------------------------------------ |
+| Event    | Detail                                     | Description                          |
+| -------- | ------------------------------------------ | ------------------------------------ |
 | `change` | `{ value: number; originalEvent?: Event }` | Fired when the user selects a rating |
 
 ### Parts
 
-| Part    | Description               |
-| ------- | ------------------------- |
-| `stars` | Stars container element   |
-| `star`  | Individual star button    |
+| Part    | Description             |
+| ------- | ----------------------- |
+| `stars` | Stars container element |
+| `star`  | Individual star button  |
 
 ### CSS Custom Properties
 
-| Property                | Default                          | Description                       |
-| ----------------------- | -------------------------------- | --------------------------------- |
-| `--rating-star-size`    | `var(--size-7)`                  | Size of each star icon            |
-| `--rating-color-empty`  | `var(--color-contrast-200)`      | Color of unselected stars         |
-| `--rating-color-filled` | `var(--color-warning)` (themed)  | Color of selected / hovered stars |
-| `--rating-gap`          | `var(--size-0_5)`                | Gap between stars                 |
+| Property                | Default                         | Description                       |
+| ----------------------- | ------------------------------- | --------------------------------- |
+| `--rating-star-size`    | `var(--size-7)`                 | Size of each star icon            |
+| `--rating-color-empty`  | `var(--color-contrast-200)`     | Color of unselected stars         |
+| `--rating-color-filled` | `var(--color-warning)` (themed) | Color of selected / hovered stars |
+| `--rating-gap`          | `var(--size-0_5)`               | Gap between stars                 |
 
 ## Accessibility
 

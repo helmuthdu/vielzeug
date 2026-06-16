@@ -11,6 +11,7 @@ exports:
     createSessionStorage,
     createIndexedDB,
     createMemory,
+    createVersionedCodec,
     table,
     ttl,
     defaultCodec,
@@ -22,7 +23,7 @@ exports:
     VaultQuotaError,
     VaultScopeError,
   ]
-environments: [browser, node, ssr, deno]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
@@ -50,15 +51,15 @@ await db.put('users', { id: 2, name: 'Bob', age: 25 }, ttl.hours(1)); // TTL bui
 const adults = await db.query('users').between('age', 18, 99).orderBy('name').toArray();
 ```
 
-| Feature                 | Vault                                       | Dexie.js | idb-keyval | Raw Web Storage   |
-| ----------------------- | ------------------------------------------- | -------- | ---------- | ----------------- |
-| Bundle size             | <PackageInfo package="vault" type="size" /> | ~26 kB   | ~1.3 kB    | Native            |
-| TypeScript schema types | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>                |
-| Query builder           | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>                |
-| TTL                     | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>        | <sg-icon name="x" size="16"></sg-icon>         | Manual            |
-| Multiple backends       | <sg-icon name="check" size="16"></sg-icon>                                          | IDB only | IDB only   | localStorage only |
-| Reactivity              | <sg-icon name="check" size="16"></sg-icon>                                          | `liveQuery` | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>                |
-| Zero dependencies       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="check" size="16"></sg-icon>         | Native            |
+| Feature                 | Vault                                       | Dexie.js                                   | idb-keyval                                 | Raw Web Storage                        |
+| ----------------------- | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ | -------------------------------------- |
+| Bundle size             | <PackageInfo package="vault" type="size" /> | ~26 kB                                     | ~1.3 kB                                    | Native                                 |
+| TypeScript schema types | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
+| Query builder           | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
+| TTL                     | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     | Manual                                 |
+| Multiple backends       | <sg-icon name="check" size="16"></sg-icon>  | IDB only                                   | IDB only                                   | localStorage only                      |
+| Reactivity              | <sg-icon name="check" size="16"></sg-icon>  | `liveQuery`                                | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
+| Zero dependencies       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | Native                                 |
 
 <div class="decision-callout">
 
@@ -123,8 +124,10 @@ void adults;
 - **`watch(table)`** — `AsyncIterable` of fresh snapshots; `mode: 'latest'` drops intermediates; `signal` stops from outside
 - **`batch(tables, tx => ...)`** — deferred observer notifications on all adapters; atomic IDB transaction on IndexedDB
 - **`ttl.ms / .seconds / .minutes / .hours / .days`** — branded duration helpers; raw numbers are rejected by the type system
-- **`pruneExpired`** / **`scheduleExpiredPrune`** — sweep expired records manually or on an interval
-- **`iterate(table)`** — cursor-based `AsyncIterable` over all live records without loading the full table into memory
+- **`pruneExpired`** / **`scheduleExpiredPrune`** — sweep expired records manually or on an interval; pass `signal` to auto-stop on abort
+- **`keys(table, filter?)`** — return primary keys; pass a predicate to filter without loading records into userland first
+- **`createVersionedCodec`** — versioned codec for safe upgrades; old records decode with their original codec as long as it is still registered
+- **`iterate(table)`** — cursor-based `AsyncIterable` over live records (memory adapter only); avoids loading the full table into memory
 - Ripple signals plugin, Rune logger plugin, and Spell validators plugin — pass any compatible object; structural, not coupled
 
 </div>

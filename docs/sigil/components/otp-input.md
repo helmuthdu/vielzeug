@@ -167,19 +167,19 @@ Use `separator` to add a visual divider between cells.
 
 ### CSS Custom Properties
 
-| Property                  | Description                    |
-| ------------------------- | ------------------------------ |
-| `--otp-cell-size`               | Width and height of each cell                         |
-| `--otp-cell-gap`                | Gap between cells                                     |
-| `--otp-cell-font-size`          | Font size inside each cell                            |
-| `--otp-cell-radius`             | Cell border radius                                    |
-| `--otp-cell-bg`                 | Cell background color                                 |
-| `--otp-cell-border-color`       | Default cell border color                             |
-| `--otp-cell-focus-border`       | Focused border/caret color                            |
-| `--otp-cell-hover-bg`           | Cell background on hover (flat/ghost variants)        |
-| `--otp-cell-hover-border-color` | Cell border on hover (flat/bordered variants)         |
-| `--otp-cell-focus-bg`           | Cell background when focused (flat variant)           |
-| `--otp-cell-focus-border-color` | Cell border when focused (flat variant)               |
+| Property                        | Description                                    |
+| ------------------------------- | ---------------------------------------------- |
+| `--otp-cell-size`               | Width and height of each cell                  |
+| `--otp-cell-gap`                | Gap between cells                              |
+| `--otp-cell-font-size`          | Font size inside each cell                     |
+| `--otp-cell-radius`             | Cell border radius                             |
+| `--otp-cell-bg`                 | Cell background color                          |
+| `--otp-cell-border-color`       | Default cell border color                      |
+| `--otp-cell-focus-border`       | Focused border/caret color                     |
+| `--otp-cell-hover-bg`           | Cell background on hover (flat/ghost variants) |
+| `--otp-cell-hover-border-color` | Cell border on hover (flat/bordered variants)  |
+| `--otp-cell-focus-bg`           | Cell background when focused (flat variant)    |
+| `--otp-cell-focus-border-color` | Cell border when focused (flat variant)        |
 
 ## Accessibility
 

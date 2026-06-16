@@ -11,41 +11,7 @@ Some dependencies should be isolated to a request, job, or test scope — a fres
 
 ### Solution
 
-Use `container.createChild()` to create a child container that inherits root registrations but maintains its own scope cache. Register scoped providers on the root with `lifetime: 'scoped'` and resolve from the child. Dispose the child when the scope ends.
-
-```ts
-import { createContainer, token } from '@vielzeug/conduit';
-
-interface RequestService {
-  id: string;
-  handle(path: string): string;
-}
-
-const RequestId = token<string>('RequestId');
-const RequestService = token<RequestService>('RequestService');
-
-const container = createContainer();
-
-container.factory(RequestId, () => crypto.randomUUID(), { lifetime: 'scoped' });
-container.factory(RequestService, (id) => ({ id, handle: (path) => `${id}: ${path}` }), {
-  deps: [RequestId],
-  lifetime: 'scoped',
-});
-
-// Two concurrent request scopes — each gets isolated instances
-const requestA = container.createChild();
-const requestB = container.createChild();
-
-const [serviceA, serviceB] = await Promise.all([requestA.resolve(RequestService), requestB.resolve(RequestService)]);
-
-// serviceA.id !== serviceB.id — separate scope caches
-console.log(serviceA.id === serviceB.id); // false
-
-await requestA.dispose(); // cleans up requestA's scoped instances
-await requestB.dispose(); // cleans up requestB's scoped instances
-```
-
-#### Overriding a parent registration in a child
+Use `container.createScope()` (without a scope token) to create a plain child container that inherits root registrations. Resolve singleton overrides locally on the child. Dispose the child when the scope ends.
 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
@@ -59,23 +25,46 @@ const container = createContainer();
 
 container.value(Logger, console);
 
-const testChild = container.createChild();
+// Test isolation: override Logger on a child, root is unaffected
+const testChild = container.createScope(undefined, { name: 'test' });
 const captured: string[] = [];
 testChild.value(Logger, { log: (msg) => captured.push(msg) });
 
-// testChild resolves the overridden logger; root still uses console
 const logger = await testChild.resolve(Logger);
-logger.log('test'); // captured, not printed
+logger.log('captured'); // goes into captured[], not console
+
+await testChild.dispose();
+```
+
+#### Per-request children with value overrides
+
+```ts
+import { createContainer, token } from '@vielzeug/conduit';
+
+const RequestId = token<string>('RequestId');
+const container = createContainer();
+
+async function handleRequest(id: string) {
+  const child = container.createScope(undefined, { name: `req-${id}` });
+  child.value(RequestId, id);
+
+  const reqId = await child.resolve(RequestId);
+  console.log(`handling ${reqId}`);
+
+  await child.dispose();
+}
+
+await Promise.all([handleRequest('a'), handleRequest('b')]);
 ```
 
 ### Pitfalls
 
-- Calling `container.resolve()` on the root for a scoped token throws `ScopedResolutionError`. Always resolve scoped tokens from a child container.
-- A child container's `dispose()` only runs hooks for instances resolved within that child. The parent container is unaffected.
-- Child containers do not share singleton instances with each other — only with the root. Two children resolving the same singleton both get the root's cached instance.
+- A child container's `dispose()` only runs hooks for instances resolved (or registered) within that child. The parent container is unaffected.
+- Child containers share singleton instances from the parent — they do not create new copies of parent singletons.
+- For lifecycle-scoped factories (one instance per scope), use named scopes with `ScopeToken` instead.
 
 ### Related
 
 - [Lifetimes](./lifetimes.md)
+- [Named Scopes](./named-scopes.md)
 - [Dispose Lifecycle](./dispose-lifecycle.md)
-- [Sync Resolution](./sync-resolution.md)

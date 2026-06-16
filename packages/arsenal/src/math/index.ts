@@ -1,7 +1,6 @@
 export * from './abs';
 export * from './allocate';
 export * from './average';
-export * from './backoff';
 export * from './clamp';
 export * from './gcd';
 export * from './lcm';

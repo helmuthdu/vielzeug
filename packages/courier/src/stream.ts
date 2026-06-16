@@ -1,14 +1,13 @@
-import { backoff, getOrCreate, sleep } from '@vielzeug/arsenal';
+import { backoff, sleep } from '@vielzeug/arsenal';
 
 import type { Params } from './url';
 
-import { HttpError } from './errors';
+import { classifyRequestError, HttpError } from './errors';
 import { buildRequestInit } from './serialize';
 import {
   anySignal,
   buildTimeoutSignal,
   createTransportCore,
-  type Interceptor,
   type TransportCore,
   type TransportOptions,
   validateTimeout,
@@ -42,11 +41,21 @@ export type ReconnectOptions = {
 
 export type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
   /**
+   * Called when the reconnect budget is exhausted or a non-retriable error
+   * occurs. Not called when the generator is aborted via signal or dispose.
+   */
+  onError?: (error: Error) => void;
+  /**
    * Response body parsing mode.
    * - `'text'` (default) — yields raw decoded string chunks as they arrive.
    * - `'ndjson'` — splits by newline and JSON-parses each complete line; use `T` to type the values.
    */
   parse?: 'ndjson' | 'text';
+  /**
+   * Auto-reconnect on connection loss. Uses the same backoff semantics as
+   * `sse()` reconnect. `true` uses defaults (5 attempts). Defaults to `false`.
+   */
+  reconnect?: boolean | ReconnectOptions;
 };
 
 export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
@@ -62,6 +71,9 @@ export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
   reconnect?: boolean | ReconnectOptions;
 };
 
+/** Connection lifecycle status for an SSE source. */
+export type SseStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+
 /**
  * Typed SSE event source. `TEvents` maps event name → data type.
  * Non-string data values are automatically JSON-parsed from the raw `data:` field.
@@ -69,6 +81,8 @@ export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
  */
 export type SseSource<TEvents extends Record<string, unknown> = Record<string, string>> = {
   [Symbol.dispose](): void;
+  /** `true` after `dispose()` is called or the reconnect budget is exhausted. */
+  readonly closed: boolean;
   /** Permanently closes the SSE connection. No further events will be dispatched. */
   dispose(): void;
   /**
@@ -77,6 +91,8 @@ export type SseSource<TEvents extends Record<string, unknown> = Record<string, s
    * Calling `on()` after `dispose()` returns a no-op unsubscribe.
    */
   on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void;
+  /** Current connection lifecycle status. Useful for displaying a live-connection indicator. */
+  readonly status: SseStatus;
 };
 
 function defaultReconnectDelay(attempt: number): number {
@@ -121,16 +137,20 @@ async function openStreamWith(
   // REST default (30s) does not cut off streams prematurely.
   const signal = buildTimeoutSignal(config.timeout ?? Number.POSITIVE_INFINITY, combined);
   const requestHeaders = transport.mergeHeaders(config.headers, extraHeaders);
-  const init = buildRequestInit(method, requestHeaders, config.body, signal, config.fetchInit ?? {});
+  const { headers: initHeaders, ...restInit } = buildRequestInit(
+    method,
+    requestHeaders,
+    config.body,
+    signal,
+    config.fetchInit ?? {},
+  );
 
   let res: Response;
 
   try {
-    res = await transport.dispatch({ init, url: full });
+    res = await transport.dispatch({ headers: initHeaders as Record<string, string>, init: restInit, url: full });
   } catch (err) {
-    // Use the fully-combined signal (with timeout + external abort reason) so
-    // HttpError.fromCause can correctly classify TimeoutError via signal.reason.
-    throw HttpError.fromCause(err, method, full, signal ?? combined);
+    throw classifyRequestError(err, method, full, signal ?? combined);
   }
 
   if (!res.ok) {
@@ -144,9 +164,10 @@ async function openStreamWith(
   return res;
 }
 
-export function createStream(opts?: TransportOptions, sharedTransport?: TransportCore) {
+export function createStream(opts?: TransportOptions & { transport?: TransportCore }) {
+  const { transport: sharedTransport, ...transportOpts } = opts ?? {};
   const ownTransport = !sharedTransport;
-  const transport = sharedTransport ?? createTransportCore(opts);
+  const transport = sharedTransport ?? createTransportCore(transportOpts);
 
   /**
    * Opens a Server-Sent Events connection and returns a typed source.
@@ -196,6 +217,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     // reconnect sleep windows, so cancelAll()/dispose() always reach it.
     const untrack = transport.track(ac);
     let closed = false;
+    let sseStatus: SseStatus = 'connecting';
     let lastEventId = '';
 
     const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
@@ -301,7 +323,10 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
         while (!closed && !transport.disposed && !ac.signal.aborted) {
           let connectError: Error | undefined;
 
+          sseStatus = 'connecting';
+
           try {
+            sseStatus = 'open';
             await connect();
             // Clean server-side close — falls through to reconnect logic below.
             // The attempt counter is intentionally NOT reset here: `times`
@@ -332,6 +357,8 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
           }
 
           // Budget available → sleep and retry
+          sseStatus = 'reconnecting';
+
           const delay =
             typeof activeReconnectDelay === 'function' ? activeReconnectDelay(attempt) : activeReconnectDelay;
 
@@ -339,6 +366,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
           await sleep(delay, ac.signal).catch(() => {});
         }
       } finally {
+        sseStatus = 'closed';
         untrack();
       }
     }
@@ -351,6 +379,10 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     });
 
     return {
+      get closed(): boolean {
+        return closed;
+      },
+
       dispose(): void {
         closed = true;
         ac.abort();
@@ -361,11 +393,20 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
         // After dispose(), return a no-op to avoid silent dead-listener bugs
         if (closed) return () => {};
 
-        const set = getOrCreate(listeners, event, () => new Set<(data: unknown) => void>());
+        let set = listeners.get(event);
+
+        if (!set) {
+          set = new Set<(data: unknown) => void>();
+          listeners.set(event, set);
+        }
 
         set.add(handler as (data: unknown) => void);
 
         return () => set.delete(handler as (data: unknown) => void);
+      },
+
+      get status(): SseStatus {
+        return sseStatus;
       },
 
       [Symbol.dispose](): void {
@@ -409,91 +450,151 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
       fetchInit,
       headers: perRequestHeaders,
       method = body !== undefined ? 'POST' : 'GET',
+      onError,
       params,
       parse = 'text',
       query,
+      reconnect = false,
       signal: extSignal,
       timeout: cfgTimeout,
     } = config as ReadableConfig;
 
     if (cfgTimeout !== undefined) validateTimeout(cfgTimeout);
 
+    const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
+    const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
+    const reconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? defaultReconnectDelay;
+
     const ac = new AbortController();
     const untrack = transport.track(ac);
-    let naturalEnd = false;
+    let attempt = 0;
+    let overallNaturalEnd = false;
 
     try {
-      const res = await openStreamWith(transport, url, ac, {
-        body,
-        extSignal,
-        fetchInit,
-        headers: perRequestHeaders as Record<string, string> | undefined,
-        method,
-        params: params as Params | undefined,
-        query,
-        timeout: cfgTimeout,
-      });
+      while (!transport.disposed && !ac.signal.aborted) {
+        let connectError: Error | undefined;
+        let connectionNaturalEnd = false;
 
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
+        try {
+          const res = await openStreamWith(transport, url, ac, {
+            body,
+            extSignal,
+            fetchInit,
+            headers: perRequestHeaders as Record<string, string> | undefined,
+            method,
+            params: params as Params | undefined,
+            query,
+            timeout: cfgTimeout,
+          });
 
-      try {
-        if (parse === 'ndjson') {
-          let buffer = '';
+          const reader = res.body!.getReader();
+          const decoder = new TextDecoder();
 
-          while (true) {
-            const { done, value } = await reader.read();
+          try {
+            if (parse === 'ndjson') {
+              let buffer = '';
 
-            if (done) {
-              const remaining = buffer.trim();
+              while (true) {
+                const { done, value } = await reader.read();
 
-              if (remaining) {
-                try {
-                  yield JSON.parse(remaining) as T;
-                } catch {
-                  throw new Error(`[courier] NDJSON: failed to parse line: ${remaining.slice(0, 200)}`);
+                if (done) {
+                  const remaining = buffer.trim();
+
+                  if (remaining) {
+                    try {
+                      yield JSON.parse(remaining) as T;
+                    } catch {
+                      throw new Error(`[courier] NDJSON: failed to parse line: ${remaining.slice(0, 200)}`);
+                    }
+                  }
+
+                  connectionNaturalEnd = true;
+                  break;
+                }
+
+                buffer += decoder.decode(value, { stream: true });
+
+                let nlIdx: number;
+
+                while ((nlIdx = buffer.indexOf('\n')) !== -1) {
+                  const line = buffer.slice(0, nlIdx).trim();
+
+                  buffer = buffer.slice(nlIdx + 1);
+
+                  if (line) {
+                    try {
+                      yield JSON.parse(line) as T;
+                    } catch {
+                      throw new Error(`[courier] NDJSON: failed to parse line: ${line.slice(0, 200)}`);
+                    }
+                  }
                 }
               }
+            } else {
+              while (true) {
+                const { done, value } = await reader.read();
 
-              naturalEnd = true;
-              break;
-            }
-
-            buffer += decoder.decode(value, { stream: true });
-
-            let nlIdx: number;
-
-            while ((nlIdx = buffer.indexOf('\n')) !== -1) {
-              const line = buffer.slice(0, nlIdx).trim();
-
-              buffer = buffer.slice(nlIdx + 1);
-
-              if (line) {
-                try {
-                  yield JSON.parse(line) as T;
-                } catch {
-                  throw new Error(`[courier] NDJSON: failed to parse line: ${line.slice(0, 200)}`);
+                if (done) {
+                  connectionNaturalEnd = true;
+                  break;
                 }
+
+                yield decoder.decode(value, { stream: true }) as unknown as T;
               }
             }
+          } finally {
+            reader.releaseLock();
           }
-        } else {
-          while (true) {
-            const { done, value } = await reader.read();
+        } catch (err) {
+          if (transport.disposed || ac.signal.aborted) break;
 
-            if (done) {
-              naturalEnd = true;
-              break;
-            }
-
-            yield decoder.decode(value, { stream: true }) as unknown as T;
-          }
+          connectError = err instanceof Error ? err : new Error(String(err));
         }
-      } finally {
-        reader.releaseLock();
+
+        if (transport.disposed || ac.signal.aborted) break;
+
+        // No reconnect budget — throw or call onError on errors, stop either way
+        if (maxReconnects === 0) {
+          if (connectError) {
+            if (onError) {
+              onError(connectError);
+            } else {
+              throw connectError;
+            }
+          } else {
+            overallNaturalEnd = connectionNaturalEnd;
+          }
+
+          break;
+        }
+
+        // Budget exhausted
+        if (attempt >= maxReconnects) {
+          const budgetError = connectError ?? new Error('[courier] readable() reconnect budget exhausted');
+
+          if (onError) {
+            onError(budgetError);
+          } else if (connectError) {
+            throw connectError;
+          }
+
+          break;
+        }
+
+        // Clean server close with no reconnect error — done
+        if (connectionNaturalEnd && !connectError) {
+          overallNaturalEnd = true;
+          break;
+        }
+
+        // Sleep before reconnecting
+        const delay = typeof reconnectDelay === 'function' ? reconnectDelay(attempt) : reconnectDelay;
+
+        attempt++;
+        await sleep(delay, ac.signal).catch(() => {});
       }
     } finally {
-      if (!naturalEnd) ac.abort();
+      if (!overallNaturalEnd) ac.abort();
 
       untrack();
     }
@@ -502,6 +603,9 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
   return {
     cancelAll(): void {
       transport.cancelAll();
+    },
+    get disposalSignal() {
+      return transport.disposalSignal;
     },
     dispose(): void {
       if (ownTransport) transport.dispose();
@@ -516,7 +620,7 @@ export function createStream(opts?: TransportOptions, sharedTransport?: Transpor
     [Symbol.dispose](): void {
       this.dispose();
     },
-    use: transport.use as (interceptor: Interceptor) => () => void,
+    use: transport.use,
   };
 }
 

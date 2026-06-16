@@ -170,4 +170,24 @@ describe('createPieChart', () => {
 
     expect(() => chart.dispose()).not.toThrow();
   });
+
+  it('renders legend items when legend is enabled', () => {
+    const chart = createPieChart(container, {
+      data: DATA,
+      legend: true,
+      transition: { duration: 0 },
+    });
+
+    expect(container.querySelector('.prism-legend')).not.toBeNull();
+    expect(container.querySelectorAll('.prism-legend-item').length).toBe(3);
+    chart.dispose();
+  });
+
+  it('passes axe accessibility audit', async () => {
+    const chart = createPieChart(container, { ariaLabel: 'Pie chart test', data: DATA, transition: { duration: 0 } });
+    const results = await axeCheck(container);
+
+    expect(results.violations).toHaveLength(0);
+    chart.dispose();
+  });
 });

@@ -1,3 +1,4 @@
+import { InvalidCurrencyError } from '../errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from '../utils';
 
 describe('pow10', () => {
@@ -79,6 +80,21 @@ describe('parseRational', () => {
     it('throws RangeError for empty string', () => {
       expect(() => parseRational('')).toThrow(RangeError);
       expect(() => parseRational('')).toThrow('Invalid decimal string');
+    });
+
+    it('throws RangeError for exponent > 1000 (S1 security guard)', () => {
+      expect(() => parseRational('1e1001')).toThrow(RangeError);
+      expect(() => parseRational('1e1001')).toThrow('exponent too large');
+    });
+
+    it('throws RangeError for negative exponent < -1000 (S1 security guard)', () => {
+      expect(() => parseRational('1e-1001')).toThrow(RangeError);
+      expect(() => parseRational('1e-1001')).toThrow('exponent too large');
+    });
+
+    it('does not throw for exponent exactly at the limit (±1000)', () => {
+      expect(() => parseRational('1e1000')).not.toThrow();
+      expect(() => parseRational('1e-1000')).not.toThrow();
     });
 
     it('throws RangeError for non-numeric string', () => {
@@ -208,19 +224,19 @@ describe('getCurrencyDecimals', () => {
     expect(getCurrencyDecimals('EUR')).toBe(2);
   });
 
-  it('throws RangeError for invalid currency code', () => {
-    expect(() => getCurrencyDecimals('NOTREAL')).toThrow(RangeError);
+  it('throws InvalidCurrencyError for invalid currency code', () => {
+    expect(() => getCurrencyDecimals('NOTREAL')).toThrow(InvalidCurrencyError);
     expect(() => getCurrencyDecimals('NOTREAL')).toThrow('Invalid ISO 4217 currency code');
   });
 });
 
 describe('validateCurrencyCode', () => {
-  it('returns code as CurrencyCode for valid code', () => {
+  it('returns code string for valid code', () => {
     expect(validateCurrencyCode('USD')).toBe('USD');
     expect(validateCurrencyCode('EUR')).toBe('EUR');
   });
 
-  it('throws RangeError for invalid code', () => {
-    expect(() => validateCurrencyCode('FAKE')).toThrow(RangeError);
+  it('throws InvalidCurrencyError for invalid code', () => {
+    expect(() => validateCurrencyCode('FAKE')).toThrow(InvalidCurrencyError);
   });
 });

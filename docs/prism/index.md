@@ -3,8 +3,7 @@ title: Prism — Reactive SVG data visualization
 description: Reactive SVG charting library — line, bar, and area charts. Signal-driven updates, CSS-themeable, accessible.
 package: prism
 category: ui
-keywords:
-  [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
+keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
 related: [ripple, sigil, orbit]
 exports:
   [
@@ -25,6 +24,7 @@ exports:
     EasingFn,
     LegendState,
     TooltipState,
+    ChartPluginContext,
     Point,
     ScaffoldContext,
     ScaffoldGroups,
@@ -56,24 +56,28 @@ new Chart(ctx, {
 import { createLineChart } from '@vielzeug/prism';
 import { signal } from '@vielzeug/ripple';
 
-const data = signal([{ x: 1, y: 12 }, { x: 2, y: 40 }, { x: 3, y: 28 }]);
+const data = signal([
+  { key: 1, value: 12 },
+  { key: 2, value: 40 },
+  { key: 3, value: 28 },
+]);
 const chart = createLineChart(document.getElementById('chart')!, {
   series: [{ name: 'Users', data }],
   tooltip: true,
 });
 // chart auto-updates when data.value changes — no manual re-render
-data.value = [...data.value, { x: 4, y: 65 }];
+data.value = [...data.value, { key: 4, value: 65 }];
 ```
 
-| Feature | Prism | Chart.js | Lightweight Charts | D3 |
-|---|---|---|---|---|
-| Bundle size | ~8 kB | ~60 kB | ~45 kB | ~30 kB (core) |
-| Renderer | SVG | Canvas | Canvas | SVG/Canvas |
+| Feature            | Prism                                      | Chart.js                               | Lightweight Charts                         | D3                                         |
+| ------------------ | ------------------------------------------ | -------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size        | ~8 kB                                      | ~60 kB                                 | ~45 kB                                     | ~30 kB (core)                              |
+| Renderer           | SVG                                        | Canvas                                 | Canvas                                     | SVG/Canvas                                 |
 | Zero external deps | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| CSS themeable | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Limited | <sg-icon name="check" size="16"></sg-icon> |
-| Reactive (signals) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
-| Accessible SVG | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Manual |
-| TypeScript-first | <sg-icon name="check" size="16"></sg-icon> | Partial | <sg-icon name="check" size="16"></sg-icon> | Types available |
+| CSS themeable      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Limited                                    | <sg-icon name="check" size="16"></sg-icon> |
+| Reactive (signals) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Accessible SVG     | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | Manual                                     |
+| TypeScript-first   | <sg-icon name="check" size="16"></sg-icon> | Partial                                | <sg-icon name="check" size="16"></sg-icon> | Types available                            |
 
 <div class="decision-callout">
 
@@ -109,10 +113,10 @@ import { signal } from '@vielzeug/ripple';
 import '@vielzeug/prism/theme';
 
 const data = signal([
-  { x: 1, y: 10 },
-  { x: 2, y: 25 },
-  { x: 3, y: 18 },
-  { x: 4, y: 32 },
+  { key: 1, value: 10 },
+  { key: 2, value: 25 },
+  { key: 3, value: 18 },
+  { key: 4, value: 32 },
 ]);
 
 const chart = createLineChart(document.getElementById('chart')!, {
@@ -121,11 +125,11 @@ const chart = createLineChart(document.getElementById('chart')!, {
   yAxis: { position: 'left', grid: true },
   tooltip: true,
   crosshair: true,
-  onHover: (event) => console.log(event?.point),
+  onHover: (event) => console.log(event?.datum),
 });
 
 // Update data → chart re-renders automatically
-data.value = [...data.value, { x: 5, y: 28 }];
+data.value = [...data.value, { key: 5, value: 28 }];
 
 // Cleanup when done
 chart.dispose();
@@ -159,10 +163,10 @@ chart.dispose();
 
 ## Sub-paths
 
-| Import | Purpose |
-|---|---|
-| `@vielzeug/prism` | All chart factories, scales, and types |
-| `@vielzeug/prism/theme` | Default CSS (custom properties + dark mode) |
+| Import                     | Purpose                                                        |
+| -------------------------- | -------------------------------------------------------------- |
+| `@vielzeug/prism`          | All chart factories, scales, and types                         |
+| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                    |
 | `@vielzeug/prism/devtools` | `warn` / `issue` — dev-only helpers, tree-shaken in production |
 
 ## Documentation

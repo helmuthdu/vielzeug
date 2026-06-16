@@ -1,5 +1,5 @@
 export const expiresAndDateRangeExample = {
-  code: `import { classify, dateRange, expires, humanize, now, nowInstant, parseInstant, parseZoned, recurrence, shift, timeDiff } from '@vielzeug/tempo'
+  code: `import { dateRange, expires, humanize, now, parseInstant, parseZoned, recurrence, shift, timeDiff } from '@vielzeug/tempo'
 
 // --- expires() ---
 const THRESHOLDS = {
@@ -19,8 +19,9 @@ console.log('past:',  expires(past, THRESHOLDS))   // 'expired'
 console.log('soon:',  expires(soon, THRESHOLDS))   // 'critical'
 console.log('later:', expires(later, THRESHOLDS))  // 'warning'
 
-// --- classify() = expires() + timeDiff() in one call ---
-const { key, diff } = classify(soon, THRESHOLDS)
+// --- expires() + timeDiff() composition ---
+const key  = expires(soon, THRESHOLDS)
+const diff = timeDiff(now('UTC').toInstant(), soon)
 console.log('key:', key, '|', humanize(diff))                    // 'critical | 2 days'
 console.log('localized:', humanize(diff, { locale: 'ar-EG' }))  // Arabic numerals
 

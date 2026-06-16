@@ -3,7 +3,10 @@
  * Tests for core craft directives: each, raw
  */
 
-import { classMap, computed, each, html, live, model, raw, setRawSanitizer, signal, styleMap, when } from '../index';
+import { computed, signal } from '@vielzeug/ripple';
+
+import { live } from '../directives/live';
+import { classMap, each, html, model, raw, setRawSanitizer, styleMap, when } from '../index';
 import { fire, mount } from '../testing';
 import { register } from './test-utils';
 
@@ -163,7 +166,7 @@ describe('Directive: each()', () => {
         <ul>
           ${each(
             visibleItems,
-            (_, i) => i,
+            (n) => n,
             (item) => html`<li>${item}</li>`,
           )}
         </ul>
@@ -395,14 +398,74 @@ describe('Directive: each()', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key'));
     warnSpy.mockRestore();
   });
+
+  it('leaves no orphaned DOM nodes after duplicate-key error recovery', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const items = signal([
+      { id: 1, value: 'A' },
+      { id: 1, value: 'B' },
+    ]);
+
+    const { flush, query, queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            items,
+            (item) => item.id,
+            (item) => html`<li class="item">${() => item.value.value}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(query('ul')).not.toBeNull();
+    expect(queryAll('.item')).toHaveLength(0);
+
+    items.value = [{ id: 2, value: 'C' }];
+    await flush();
+    expect(queryAll('.item')).toHaveLength(1);
+    expect(queryAll('.item')[0]?.textContent).toBe('C');
+
+    warnSpy.mockRestore();
+  });
+
+  it('warns when key function returns only the index', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await mount(
+      () =>
+        html`<ul>
+          ${each(
+            [1, 2, 3],
+            (_item, i) => i,
+            (n) => html`<li>${n}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('index'));
+    warnSpy.mockRestore();
+  });
+
+  it('renders a plain static array as a one-time snapshot', async () => {
+    const staticItems = [1, 2, 3];
+    const { queryAll } = await mount(
+      () =>
+        html`<ul>
+          ${each(
+            staticItems,
+            (n) => n,
+            (n) => html`<li class="item">${n}</li>`,
+          )}
+        </ul>`,
+    );
+
+    expect(queryAll('.item')).toHaveLength(3);
+    expect(queryAll('.item')[0]?.textContent).toBe('1');
+    expect(queryAll('.item')[2]?.textContent).toBe('3');
+  });
 });
 
 describe('Directive: raw()', () => {
-  afterEach(() => {
-    // Reset sanitizer after each test so tests are isolated
-    setRawSanitizer(null);
-  });
-
   it('should render HTML without escaping', async () => {
     setRawSanitizer((s) => s);
 
@@ -500,6 +563,23 @@ describe('Directive: raw()', () => {
     await flush();
     expect(query('i')?.textContent).toBe('world');
     expect(query('b')).toBeNull();
+  });
+
+  it('re-warns after setRawSanitizer(null) clears the sanitizer', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await mount(() => html`<div>${raw('<b>first</b>')}</div>`);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    setRawSanitizer((s) => s);
+    await mount(() => html`<div>${raw('<b>second</b>')}</div>`);
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    setRawSanitizer(null);
+    await mount(() => html`<div>${raw('<b>third</b>')}</div>`);
+    expect(warnSpy).toHaveBeenCalledTimes(2);
+
+    warnSpy.mockRestore();
   });
 
   it('getter-fn: DOM stops updating after component destroy (computed disposed)', async () => {
@@ -829,7 +909,7 @@ describe('Directive: model()', () => {
     expect(query<HTMLSelectElement>('.f')?.value).toBe('b');
   });
 
-  it('syncs select DOM value back to signal on input event', async () => {
+  it('syncs select DOM value back to signal on change event', async () => {
     const choice = signal('a');
     const { act, query } = await mount(
       () => html`
@@ -843,10 +923,90 @@ describe('Directive: model()', () => {
 
     await act(() => {
       select.value = 'b';
-      fire.input(select);
+      fire.change(select);
     });
 
     expect(choice.value).toBe('b');
+  });
+
+  it('syncs multi-select value from signal array to DOM', async () => {
+    const selected = signal<string[]>(['a', 'c']);
+    const { query } = await mount(
+      () => html`
+        <select class="f" multiple ${model(selected)}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+          <option value="c">C</option>
+        </select>
+      `,
+    );
+    const sel = query<HTMLSelectElement>('.f')!;
+
+    expect(sel.options[0]!.selected).toBe(true);
+    expect(sel.options[1]!.selected).toBe(false);
+    expect(sel.options[2]!.selected).toBe(true);
+  });
+
+  it('syncs multi-select DOM selection back to signal array on change', async () => {
+    const selected = signal<string[]>([]);
+    const { act, query } = await mount(
+      () => html`
+        <select class="f" multiple ${model(selected)}>
+          <option value="a">A</option>
+          <option value="b">B</option>
+          <option value="c">C</option>
+        </select>
+      `,
+    );
+    const sel = query<HTMLSelectElement>('.f')!;
+
+    await act(() => {
+      sel.options[0]!.selected = true;
+      sel.options[2]!.selected = true;
+      fire.change(sel);
+    });
+
+    expect(selected.value).toEqual(['a', 'c']);
+  });
+
+  it('updates multi-select DOM when signal array changes reactively', async () => {
+    const selected = signal<string[]>([]);
+    const { act, query } = await mount(
+      () => html`
+        <select class="f" multiple ${model(selected)}>
+          <option value="x">X</option>
+          <option value="y">Y</option>
+        </select>
+      `,
+    );
+    const sel = query<HTMLSelectElement>('.f')!;
+
+    await act(() => {
+      selected.value = ['x'];
+    });
+
+    expect(sel.options[0]!.selected).toBe(true);
+    expect(sel.options[1]!.selected).toBe(false);
+  });
+
+  it('syncs textarea value from signal to DOM', async () => {
+    const text = signal('hello');
+    const { query } = await mount(() => html`<textarea class="f" ${model(text)}></textarea>`);
+
+    expect(query<HTMLTextAreaElement>('.f')?.value).toBe('hello');
+  });
+
+  it('syncs textarea DOM value back to signal on input event', async () => {
+    const text = signal('');
+    const { act, query } = await mount(() => html`<textarea class="f" ${model(text)}></textarea>`);
+    const ta = query<HTMLTextAreaElement>('.f')!;
+
+    await act(() => {
+      ta.value = 'typed';
+      fire.input(ta);
+    });
+
+    expect(text.value).toBe('typed');
   });
 });
 

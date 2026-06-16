@@ -17,12 +17,8 @@ exports:
     redactTransport,
     pipe,
     lazy,
-    isLazyBinding,
     isLevelEnabled,
-    PRIORITY,
-    resolveTheme,
     DEFAULT_THEME,
-    DEFAULT_TRANSPORT,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -55,16 +51,16 @@ const api = createLogger({
 api.info({ data }, 'GET /users');
 ```
 
-| Feature              | Rune                                       | Winston       | Pino       | console |
-| -------------------- | ------------------------------------------ | ------------- | ---------- | ------- |
-| Bundle size          | <PackageInfo package="rune" type="size" /> | ~44 kB        | ~4 kB      | 0 kB    |
-| Browser support      | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon>            | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>      |
-| Scoped loggers       | <sg-icon name="check" size="16"></sg-icon>                                         | Manual        | Child      | <sg-icon name="x" size="16"></sg-icon>      |
-| Pluggable transports | <sg-icon name="check" size="16"></sg-icon> Built-in factories                      | <sg-icon name="check" size="16"></sg-icon> Transports | <sg-icon name="check" size="16"></sg-icon> Streams | <sg-icon name="x" size="16"></sg-icon>      |
-| Structured log entry | <sg-icon name="check" size="16"></sg-icon> `LogEntry` type                         | Partial       | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>      |
-| Lazy bindings        | <sg-icon name="check" size="16"></sg-icon> `lazy(fn)`                              | <sg-icon name="x" size="16"></sg-icon>            | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>      |
-| Styled output        | <sg-icon name="check" size="16"></sg-icon> CSS badges                              | Text only     | Text only  | Manual  |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon> (15+)      | <sg-icon name="x" size="16"></sg-icon> (5+)    | N/A     |
+| Feature              | Rune                                                          | Winston                                               | Pino                                               | console                                    |
+| -------------------- | ------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------- | ------------------------------------------ |
+| Bundle size          | <PackageInfo package="rune" type="size" />                    | ~44 kB                                                | ~4 kB                                              | 0 kB                                       |
+| Browser support      | <sg-icon name="check" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> |
+| Scoped loggers       | <sg-icon name="check" size="16"></sg-icon>                    | Manual                                                | Child                                              | <sg-icon name="x" size="16"></sg-icon>     |
+| Pluggable transports | <sg-icon name="check" size="16"></sg-icon> Built-in factories | <sg-icon name="check" size="16"></sg-icon> Transports | <sg-icon name="check" size="16"></sg-icon> Streams | <sg-icon name="x" size="16"></sg-icon>     |
+| Structured log entry | <sg-icon name="check" size="16"></sg-icon> `LogEntry` type    | Partial                                               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>     |
+| Lazy bindings        | <sg-icon name="check" size="16"></sg-icon> `lazy(fn)`         | <sg-icon name="x" size="16"></sg-icon>                | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
+| Styled output        | <sg-icon name="check" size="16"></sg-icon> CSS badges         | Text only                                             | Text only                                          | Manual                                     |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon> (15+)          | <sg-icon name="x" size="16"></sg-icon> (5+)        | N/A                                        |
 
 <div class="decision-callout">
 
@@ -101,7 +97,7 @@ import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeu
 // Default logger — uses consoleTransport() automatically
 Rune.info('Boot complete');
 Rune.warn('Cache stale');
-Rune.fatal(new Error('unrecoverable')); // Error auto-serialized
+Rune.fatal({ err: new Error('unrecoverable') }, 'startup failed');
 
 // Namespaced child loggers
 const api = createLogger('api');
@@ -143,23 +139,21 @@ const nodeLog = createLogger({
 <div class="features-grid">
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
-- Runtime level mutation via `setLevel(level)` — toggle debug mode without recreating loggers
-- Structured call signature: `log.info('msg')`, `log.info({ key }, 'msg')`, `log.error(new Error())`
-- Auto-serializes `Error` objects into `{ message, name, stack }` — survives JSON.stringify
+- Immutable config after construction — use `child()` or `withBindings()` to scope
+- Two call forms: `log.info('msg')` or `log.info({ key: 'val' }, 'msg')` — context object always first
+- `Error` values in context fields are auto-serialized to `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line
 - Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
 - Namespaced child loggers via `createLogger('name')` or `logger.child({ namespace })`
 - Middleware pipeline via `use(fn)` — transform or filter entries before transport dispatch
-- Logger-level sampling via `sample: 0.1` — drop entries before any transport runs
 - Pluggable transport pipeline: `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`
 - Fan-out via `pipe()` — dispatch to multiple transports independently, fault-tolerant
 - Structured `time()` wrapper: emits the label as message with `{ duration_ms }` in context
 - `group()` and `groupCollapsed()` wrappers that auto-close on throw/reject
-- `LogEntry` type — the shared contract between logger and transports
+- `LogEntry.data` — single merged flat object for transports; no manual merging needed
 - Zero dependencies — <PackageInfo package="rune" type="size" /> gzipped
 
 </div>
-
 
 ## Documentation
 

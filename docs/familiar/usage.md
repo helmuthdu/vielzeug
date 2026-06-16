@@ -11,29 +11,33 @@ New to Worker? Start with the [Overview](./index.md) for a quick introduction.
 
 ## Basic Usage
 
-A task function receives a single typed input and returns a value (synchronously or as a Promise). Because the function is serialized via `.toString()` and executed in a separate global scope, it **must be entirely self-contained** — it cannot close over variables from the surrounding module.
+Wrap your task function with `task()` before passing it to `createWorker`. This marks the function as self-contained and safe to serialize into a Web Worker.
+
+Because the function is serialized via `.toString()` and executed in a separate global scope, it **must be entirely self-contained** — it cannot close over variables from the surrounding module.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 import type { TaskFn } from '@vielzeug/familiar';
 
-// Inline function — keeps everything self-contained
-const worker = createWorker<number, number>((n) => n * 2);
+// Inline function wrapped with task()
+const worker = createWorker(task<number, number>((n) => n * 2));
 
 // Named function reference — also fine
 function double(n: number): number {
   return n * 2;
 }
-const worker2 = createWorker<number, number>(double);
+const worker2 = createWorker(task<number, number>(double));
 
-// Type alias for reuse
+// Define once, reuse across pools
 type Fn = TaskFn<{ a: number; b: number }, number>;
-const add: Fn = ({ a, b }) => a + b;
+const add = task<{ a: number; b: number }, number>(({ a, b }) => a + b);
 const addWorker = createWorker(add);
 ```
 
 ::: warning Self-contained closures
 The task function runs inside a Web Worker with a separate global scope. Any outer-scope variable you reference will be `undefined` at runtime. Put helpers inside the task function or encode them into the input payload.
+
+`task()` throws `WorkerInvalidOptionsError` if you pass a bound or native function (e.g. `Math.sqrt.bind(null)`).
 :::
 
 ## Single Worker
@@ -41,9 +45,10 @@ The task function runs inside a Web Worker with a separate global scope. Any out
 Calling `createWorker` without a `concurrency` option creates a single worker that processes one task at a time. Additional calls to `run()` are queued and dispatched in order.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const worker = createWorker<string, string>((text) => text.toUpperCase());
+const upper = task<string, string>((text) => text.toUpperCase());
+const worker = createWorker(upper);
 
 console.log(await worker.run('hello')); // 'HELLO'
 console.log(await worker.run('world')); // 'WORLD'
@@ -56,18 +61,16 @@ worker.dispose();
 Pass `concurrency` to spin up multiple worker slots. Tasks are dispatched to the first idle slot; if all slots are busy the task is queued.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
 // Fixed pool of 4
-const pool = createWorker<number, number>(
-  (n) => {
-    function fib(x: number): number {
-      return x <= 1 ? x : fib(x - 1) + fib(x - 2);
-    }
-    return fib(n);
-  },
-  { concurrency: 4 },
-);
+const fib = task<number, number>((n) => {
+  function fib(x: number): number {
+    return x <= 1 ? x : fib(x - 1) + fib(x - 2);
+  }
+  return fib(n);
+});
+const pool = createWorker(fib, { concurrency: 4 });
 
 // Automatically uses all 4 slots in parallel
 const results = await Promise.all([30, 31, 32, 33].map((n) => pool.run(n)));
@@ -75,7 +78,8 @@ const results = await Promise.all([30, 31, 32, 33].map((n) => pool.run(n)));
 pool.dispose();
 
 // 'auto' — uses navigator.hardwareConcurrency when available
-const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'auto' });
+const square = task<number, number>((n) => n ** 2);
+const autoPool = createWorker(square, { concurrency: 'auto' });
 ```
 
 ## Queue Back-Pressure (`maxQueue`)
@@ -83,9 +87,10 @@ const autoPool = createWorker<number, number>((n) => n ** 2, { concurrency: 'aut
 Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full and `onFull` is `'reject'` (the default), `run()` rejects immediately with `WorkerQueueFullError`:
 
 ```ts
-import { createWorker, WorkerQueueFullError } from '@vielzeug/familiar';
+import { createWorker, task, WorkerQueueFullError } from '@vielzeug/familiar';
 
-const worker = createWorker<number, number>((n) => n * 2, {
+const double = task<number, number>((n) => n * 2);
+const worker = createWorker(double, {
   concurrency: 1,
   maxQueue: 100,
 });
@@ -106,9 +111,10 @@ For producer→consumer pipelines, use `onFull: 'wait'` to suspend the caller in
 Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `WorkerError` with code `'timeout'` is thrown.
 
 ```ts
-import { createWorker, WorkerError } from '@vielzeug/familiar';
+import { createWorker, task, WorkerError } from '@vielzeug/familiar';
 
-const worker = createWorker<number, number>((ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)), {
+const delay = task<number, number>((ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)));
+const worker = createWorker(delay, {
   timeout: 1000,
 });
 
@@ -128,9 +134,10 @@ worker.dispose();
 Pass an `AbortSignal` via `RunOptions` to cancel a **queued** task before it starts. Tasks already in flight cannot be interrupted.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const worker = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 1 });
+const upper = task<string, string>((text) => text.toUpperCase());
+const worker = createWorker(upper, { concurrency: 1 });
 
 const ac = new AbortController();
 
@@ -150,13 +157,15 @@ worker.dispose();
 
 Large `ArrayBuffer`, `MessagePort`, or `OffscreenCanvas` values can be moved to the Worker thread instead of copied. This avoids the structured-clone overhead on large payloads.
 
+Use `transfer(value)` to mark a value for transfer — no separate `transferables` array needed:
+
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task, transfer } from '@vielzeug/familiar';
 
 type ImageTask = { pixels: Uint8ClampedArray; width: number; height: number };
 type ImageResult = { pixels: Uint8ClampedArray };
 
-const worker = createWorker<ImageTask, ImageResult>(({ pixels }) => {
+const grayscale = task<ImageTask, ImageResult>(({ pixels }) => {
   const out = new Uint8ClampedArray(pixels.length);
   for (let i = 0; i < pixels.length; i += 4) {
     const g = 0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2];
@@ -165,16 +174,25 @@ const worker = createWorker<ImageTask, ImageResult>(({ pixels }) => {
   }
   return { pixels: out };
 });
+const worker = createWorker(grayscale);
 
 const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
 // Transfer the buffer — zero-copy move to the worker
 const { pixels } = await worker.run(
-  { pixels: imageData.data, width: imageData.width, height: imageData.height },
-  { transferables: [imageData.data.buffer] },
+  transfer({ pixels: imageData.data, width: imageData.width, height: imageData.height }),
 );
 
 worker.dispose();
+```
+
+Alternatively, pass the transferable list explicitly via `RunOptions.transferables`:
+
+```ts
+const { pixels } = await worker.run(
+  { pixels: imageData.data, width: imageData.width, height: imageData.height },
+  { transferables: [imageData.data.buffer] },
+);
 ```
 
 ::: warning
@@ -192,10 +210,10 @@ The `status` property reflects the current state of the worker handle:
 | `'terminated'` | `dispose()` was called — `run()` will reject |
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 import type { WorkerStatus } from '@vielzeug/familiar';
 
-const worker = createWorker<number, number>((n) => n * 2);
+const worker = createWorker(task<number, number>((n) => n * 2));
 
 console.log(worker.status); // 'idle'
 
@@ -220,9 +238,12 @@ Use lightweight counters for visibility and load monitoring:
 - `utilization`: active slot ratio from `0` to `1`
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => n + 1, { concurrency: 4 });
+const pool = createWorker(
+  task<number, number>((n) => n + 1),
+  { concurrency: 4 },
+);
 
 console.log(pool.completed); // 0
 console.log(pool.failed); // 0
@@ -241,17 +262,15 @@ console.log(pool.failed); // 1
 Use `batch()` to run a list of inputs through the pool and consume results as they arrive, in submission order:
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>(
-  (n) => {
-    function fib(x: number): number {
-      return x <= 1 ? x : fib(x - 1) + fib(x - 2);
-    }
-    return fib(n);
-  },
-  { concurrency: 4 },
-);
+const fib = task<number, number>((n) => {
+  function fib(x: number): number {
+    return x <= 1 ? x : fib(x - 1) + fib(x - 2);
+  }
+  return fib(n);
+});
+const pool = createWorker(fib, { concurrency: 4 });
 
 for await (const result of pool.batch([30, 31, 32, 33])) {
   console.log(result); // printed in submission order as each task finishes
@@ -288,10 +307,10 @@ When a task yields multiple partial results, use `runStream()`. The task functio
 :::
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
 // Task returns an async iterable
-const worker = createWorker<{ start: number; end: number }, number[]>(
+const rangeStream = task<{ start: number; end: number }, number[]>(
   ({ start, end }) =>
     (async function* () {
       for (let i = start; i <= end; i++) {
@@ -300,6 +319,7 @@ const worker = createWorker<{ start: number; end: number }, number[]>(
       }
     })() as unknown as number[],
 );
+const worker = createWorker(rangeStream);
 
 for await (const chunk of worker.runStream({ start: 1, end: 5 })) {
   console.log('chunk:', chunk); // 1, 2, 3, 4, 5
@@ -312,25 +332,41 @@ Breaking out of the loop early (or throwing from the body) releases the slot cle
 
 ## Task Groups (`group`)
 
-Use `group()` when you want to cancel and drain a set of related tasks together.
+Use `group()` when you want to cancel and drain a set of related tasks together. Pass an optional name for logging and debugging.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
-const g = pool.group();
+const double = task<number, number>((n) => n * 2);
+const pool = createWorker(double, { concurrency: 4 });
+const g = pool.group('my-batch');
 
 // Submit tasks into the group
 const p1 = g.run(1);
 const p2 = g.run(2);
 const p3 = g.run(3);
 
-// Wait for all group tasks to settle (success or failure)
-await g.drain();
-
+// Wait for all group tasks to settle — returns PromiseSettledResult[]
+const results = await g.drain();
+console.log(results[0]); // { status: 'fulfilled', value: 2 }
+console.log(g.name); // 'my-batch'
 console.log(g.size); // 3
 
 pool.dispose();
+```
+
+`drain()` resolves with a `PromiseSettledResult[]` array — every task outcome in submission order. Individual promises still reject normally; `drain()` just collects all outcomes without throwing:
+
+```ts
+const g = pool.group();
+
+g.run(1).catch(() => {});
+g.run(-1).catch(() => {}); // will fail inside the worker
+g.run(3).catch(() => {});
+
+const settled = await g.drain();
+const failures = settled.filter((r) => r.status === 'rejected');
+console.log(failures.length); // 1
 ```
 
 Cancel all pending tasks in the group with `g.abort()`:
@@ -346,26 +382,15 @@ g.abort(); // p2, p3 (queued) reject; p1 (in-flight) completes normally
 await p1;
 ```
 
-`drain()` throws the first error after all tasks have settled, preventing unhandled rejections from subsequent failures:
-
-```ts
-const g = pool.group();
-
-g.run(failingTask1).catch(() => {}); // handle individually
-g.run(failingTask2).catch(() => {}); // handle individually
-
-const err = await g.drain().catch((e) => e);
-// err is the first failure — both tasks settled before throw
-```
-
 ## Priority Queue
 
 Pass `priority` per `run()` call. Higher values run before lower values when tasks queue up. Equal priorities are FIFO.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<string, string>((s) => s.toUpperCase(), { concurrency: 1 });
+const upper = task<string, string>((s) => s.toUpperCase());
+const pool = createWorker(upper, { concurrency: 1 });
 
 // Queue multiple tasks — the slot is busy with a blocker
 const blocker = pool.run('low-priority-blocker');
@@ -384,9 +409,10 @@ Default priority is `0`.
 The `timeout` option can also be passed per `run()` call, overriding the pool-level timeout for that specific task:
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<string, string>((s) => s.toUpperCase(), {
+const upper = task<string, string>((s) => s.toUpperCase());
+const pool = createWorker(upper, {
   timeout: 5000, // default: 5 s
 });
 
@@ -399,9 +425,10 @@ await pool.run('hello', { timeout: 100 });
 Use `close()` to finish queued/in-flight work before terminating workers:
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const worker = createWorker<number, number>((n) => n * 2, { concurrency: 1 });
+const double = task<number, number>((n) => n * 2);
+const worker = createWorker(double, { concurrency: 1 });
 
 const p1 = worker.run(1);
 const p2 = worker.run(2);
@@ -427,36 +454,42 @@ Use `dispose()` for immediate forceful termination.
 
 ## Heartbeat Monitoring
 
-Use `heartbeatTimeout` to kill tasks that stop responding (e.g., blocked CPU work in a module worker). If the worker does not send a heartbeat within `heartbeatTimeout` ms, the task is rejected with `WorkerTimeoutError`.
+Set `heartbeatTimeout` on `WorkerOptions` to kill tasks that stop responding (e.g., blocked CPU work). If the worker does not send a heartbeat within `heartbeatTimeout` ms, every task in the pool is rejected with `WorkerTimeoutError`.
 
-**Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatTimeout / 2` intervals, so long-running tasks stay alive as long as they progress:
+**Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatTimeout / 2` intervals — no worker-side code needed:
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const worker = createWorker<void, void>(() => new Promise((r) => setTimeout(r, 5000)));
+const heavy = task<void, void>(() => new Promise((r) => setTimeout(r, 5000)));
 
 // 60s watchdog — auto-heartbeats keep it alive throughout
-await worker.run(undefined, { heartbeatTimeout: 60_000 });
+const worker = createWorker(heavy, { heartbeatTimeout: 60_000 });
+await worker.run(undefined);
 worker.dispose();
 ```
 
-**Module workers** (`createModuleWorker`) must send heartbeats manually at the interval specified in `event.data.heartbeatInterval`:
+**Module workers** (`createModuleWorker`) must send heartbeats manually at `heartbeatTimeout / 2` intervals:
 
 ```ts
 // my-worker.ts
 self.onmessage = async (event) => {
-  const { id, input, heartbeatInterval } = event.data;
+  const { id, input } = event.data;
 
-  // Send heartbeats at the requested interval
-  const hb = heartbeatInterval ? setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval) : null;
+  // Heartbeat interval is heartbeatTimeout / 2 — set this in your pool config
+  const hb = setInterval(() => self.postMessage({ id, heartbeat: true }), 30_000);
 
   try {
     self.postMessage({ id, result: await heavyWork(input) });
   } finally {
-    if (hb) clearInterval(hb);
+    clearInterval(hb);
   }
 };
+
+// main.ts
+const pool = createModuleWorker(new URL('./my-worker.ts', import.meta.url), {
+  heartbeatTimeout: 60_000, // kill if no heartbeat for 60s
+});
 ```
 
 ## Slot Error Handling (`onSlotError`)
@@ -464,9 +497,10 @@ self.onmessage = async (event) => {
 Use `onSlotError` to be notified when a Worker slot crashes with an unhandled runtime error. The slot is stopped automatically; call `restart()` to pre-warm a replacement Worker.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => n * 2, {
+const double = task<number, number>((n) => n * 2);
+const pool = createWorker(double, {
   concurrency: 4,
   onSlotError: (error, restart) => {
     console.error('Worker slot crashed:', error.message);
@@ -483,9 +517,10 @@ If `onSlotError` is omitted, errors are handled silently and the slot restarts l
 By default, `run()` rejects with `WorkerQueueFullError` when `maxQueue` is reached (`onFull: 'reject'`). Set `onFull: 'wait'` to suspend the caller instead — natural backpressure for producer→consumer pipelines:
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => n * 2, {
+const double = task<number, number>((n) => n * 2);
+const pool = createWorker(double, {
   concurrency: 2,
   maxQueue: 10,
   onFull: 'wait', // callers suspend until a queue slot opens
@@ -511,9 +546,9 @@ self.onmessage = async (event) => {
   const { id, input } = event.data;
   try {
     self.postMessage({ id, result: await heavyLib.process(input) });
-  } catch (e) {
-    const err = e instanceof Error ? e : new Error(String(e));
-    self.postMessage({ id, error: { name: err.name, message: err.message, stack: err.stack } });
+  } catch (error) {
+    // Error objects are structured-cloned natively — no manual serialization needed
+    self.postMessage({ id, error });
   }
 };
 
@@ -535,19 +570,18 @@ Each failure reason has its own class with extra fields for context. Use `instan
 ```ts
 import {
   createWorker,
+  task,
   WorkerQueueFullError,
   WorkerTaskError,
   WorkerTerminatedError,
   WorkerTimeoutError,
 } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>(
-  (n) => {
-    if (n < 0) throw new RangeError('negative input');
-    return n * 2;
-  },
-  { concurrency: 1, maxQueue: 5, timeout: 1000 },
-);
+const validate = task<number, number>((n) => {
+  if (n < 0) throw new RangeError('negative input');
+  return n * 2;
+});
+const pool = createWorker(validate, { concurrency: 1, maxQueue: 5, timeout: 1000 });
 
 try {
   await pool.run(input);
@@ -587,9 +621,9 @@ try {
 `createWorker()` is safe to call in any runtime. Actual execution happens only when you call `run()`, and that requires a real Worker implementation.
 
 ```ts
-import { createWorker, WorkerError } from '@vielzeug/familiar';
+import { createWorker, task, WorkerError } from '@vielzeug/familiar';
 
-const worker = createWorker<number, number>((n) => n * 2);
+const worker = createWorker(task<number, number>((n) => n * 2));
 
 try {
   console.log(await worker.run(21));
@@ -607,10 +641,12 @@ This keeps construction cheap and predictable in shared modules, while still fai
 `WorkerHandle` implements `[Symbol.dispose]` as an alias for `dispose()`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) `using` keyword (TypeScript ≥ 5.2 with `"lib": ["es2025"]`):
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
+
+const double = task<number, number>((n) => n * 2);
 
 {
-  using worker = createWorker<number, number>((n) => n * 2);
+  using worker = createWorker(double);
   const result = await worker.run(21); // 42
 } // worker.dispose() is called automatically here
 ```
@@ -618,8 +654,10 @@ import { createWorker } from '@vielzeug/familiar';
 This also works with worker pools:
 
 ```ts
+const upper = task<string, string>((text) => text.toUpperCase());
+
 {
-  using pool = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 4 });
+  using pool = createWorker(upper, { concurrency: 4 });
   const results = await Promise.all(['hello', 'world'].map((s) => pool.run(s)));
   // ['HELLO', 'WORLD']
 } // all 4 slots terminated automatically
@@ -701,9 +739,10 @@ console.log(Date.now() - start); // ~20ms — ran in parallel
 Call `prime()` after creating a pool to pre-spawn all Worker threads and eliminate cold-start latency on the first task.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
-const pool = createWorker<number, number>((n) => n * 2, { concurrency: 4 });
+const double = task<number, number>((n) => n * 2);
+const pool = createWorker(double, { concurrency: 4 });
 
 // Pre-spawn during app init and await readiness
 await pool.prime();
@@ -724,10 +763,10 @@ Worker handles are plain objects — wrap them in a hook or composable to integr
 
 ```tsx [React]
 import { useEffect, useRef } from 'react';
-import { createWorker, type WorkerHandle } from '@vielzeug/familiar';
-import type { TaskFn } from '@vielzeug/familiar';
+import { createWorker, task, type WorkerHandle } from '@vielzeug/familiar';
+import type { SelfContained } from '@vielzeug/familiar';
 
-function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2) {
+function useWorker<TInput, TOutput>(fn: SelfContained<TInput, TOutput>, concurrency = 2) {
   const ref = useRef<WorkerHandle<TInput, TOutput> | null>(null);
 
   useEffect(() => {
@@ -742,8 +781,10 @@ function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2
   return ref;
 }
 
+const getByteLength = task<ArrayBuffer, number>((buf) => buf.byteLength);
+
 function ImageProcessor() {
-  const workerRef = useWorker((buf: ArrayBuffer) => buf.byteLength, 4);
+  const workerRef = useWorker(getByteLength, 4);
 
   async function handleUpload(file: File) {
     const buf = await file.arrayBuffer();
@@ -757,10 +798,13 @@ function ImageProcessor() {
 
 ```vue [Vue 3]
 <script setup lang="ts">
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 import { onScopeDispose, ref } from 'vue';
 
-const pool = createWorker((n: number) => n * n, { concurrency: 2 });
+const pool = createWorker(
+  task((n: number) => n * n),
+  { concurrency: 2 },
+);
 void pool.prime();
 onScopeDispose(() => pool.close());
 
@@ -779,10 +823,10 @@ async function runTask(n: number) {
 
 ```svelte [Svelte]
 <script lang="ts">
-  import { createWorker } from '@vielzeug/familiar';
+  import { createWorker, task } from '@vielzeug/familiar';
   import { onDestroy } from 'svelte';
 
-  const pool = createWorker((n: number) => n * n, { concurrency: 2 });
+  const pool = createWorker(task((n: number) => n * n), { concurrency: 2 });
   void pool.prime();
   onDestroy(() => pool.close());
 
@@ -812,19 +856,20 @@ async function runTask(n: number) {
 Emit progress events from a worker task and consume them on the main thread.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 import { createBus } from '@vielzeug/herald';
 
 const bus = createBus<{ progress: number }>();
 bus.on('progress', (pct) => console.log(`${pct}%`));
 
-const worker = createWorker(async (items: string[]) => {
+const processItems = task<string[], number>(async (items) => {
   for (let i = 0; i < items.length; i++) {
     await processItem(items[i]!);
     bus.emit('progress', Math.round((i / items.length) * 100));
   }
   return items.length;
 });
+const worker = createWorker(processItems);
 ```
 
 ### With Ripple
@@ -832,10 +877,11 @@ const worker = createWorker(async (items: string[]) => {
 Track worker pool status in a reactive signal to drive UI state.
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 import { computed, signal } from '@vielzeug/ripple';
 
-const pool = createWorker((n: number) => n * 2, { concurrency: 4 });
+const double = task<number, number>((n) => n * 2);
+const pool = createWorker(double, { concurrency: 4 });
 const active = signal(pool.active);
 const queued = signal(pool.queued);
 
@@ -852,9 +898,10 @@ async function runTask(input: number) {
 
 ## Best Practices
 
+- Always wrap task functions with `task()` — this is the compile-time signal that a function is safe to serialize.
 - Use `concurrency` > 1 for CPU-bound tasks — multiple slots prevent head-of-line blocking.
 - Set `maxQueue` to bound memory usage when consumers are slower than producers.
-- Pass large binary data (images, audio, WASM buffers) as `Transferable` to avoid copying.
+- Pass large binary data (images, audio, WASM buffers) via `transfer()` or `RunOptions.transferables` to avoid copying.
 - Use `AbortSignal` to cancel queued tasks when the user navigates away.
 - Call `await pool.prime()` at startup when you know tasks will arrive soon, to eliminate first-task cold-start latency.
 - Always call `close()` in framework cleanup callbacks to terminate worker threads and free resources.

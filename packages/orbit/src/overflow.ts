@@ -23,8 +23,8 @@ function getViewportRect(): Rect {
 export function getBoundaryRect(boundary?: Element | Rect): Rect {
   if (!boundary) return getViewportRect();
 
-  if ('getBoundingClientRect' in boundary) {
-    const r = (boundary as Element).getBoundingClientRect();
+  if (boundary instanceof Element) {
+    const r = boundary.getBoundingClientRect();
 
     return { height: r.height, width: r.width, x: r.x, y: r.y };
   }

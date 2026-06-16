@@ -332,7 +332,7 @@ console.log(auth.state.value); // 'active'
 | **[Lingua](/lingua/)**       | I18n with nested keys, variable interpolation, async locale loading, and reactive subscriptions |
 | **[Herald](/herald/)**       | Typed event bus for decoupled, reactive inter-module communication                              |
 | **[Familiar](/familiar/)**   | Typed Web Worker abstraction with pooling, queuing, and graceful fallback                       |
-| **[Grip](/grip/)**           | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
+| **[Dnd](/dnd/)**             | Framework-agnostic drag-and-drop with drop zones, MIME filtering, and sortable lists            |
 | **[Orbit](/orbit/)**         | Floating element positioning for tooltips, dropdowns, menus, and popovers                       |
 | **[Sourcerer](/sourcerer/)** | Typed local and remote data sources for pagination, filtering, sorting, and search              |
 | **[Tempo](/tempo/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
@@ -350,7 +350,7 @@ console.log(auth.state.value); // 'active'
 | **Conduit + Rune**        | Register a scoped logger per service in your DI container                                              |
 | **Sourcerer + Courier**   | Use Courier as the HTTP transport inside a `createRemoteSource` for pagination and search with caching |
 | **Scroll + Orbit**        | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
-| **Grip + Scroll**         | Combine sortable drag handles with a virtual list for large reorderable datasets                       |
+| **Dnd + Scroll**          | Combine sortable drag handles with a virtual list for large reorderable datasets                       |
 | **Sourcerer + Wayfinder** | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                 |
 | **Clockwork + Ripple**    | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates        |
 | **Clockwork + Ward**      | Call ward predicates inside clockwork guards to block unauthorized transitions                         |

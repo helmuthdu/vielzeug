@@ -1,18 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
+import type { BatchHandle, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 
+import { DEFAULT_THEME, consoleTransport } from '../console';
 import { lazy } from '../lazy';
 import { createLogger, Rune } from '../logger';
-import {
-  batchTransport,
-  consoleTransport,
-  jsonTransport,
-  pipe,
-  redactTransport,
-  remoteTransport,
-  sampleTransport,
-} from '../transports';
+import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
 import { isLevelEnabled, PRIORITY } from '../types';
 
 /* ─── Test helpers ─── */
@@ -40,27 +33,26 @@ afterEach(() => vi.restoreAllMocks());
 
 describe('construction and config', () => {
   it('supports namespace string shorthand', () => {
-    expect(createLogger('MyApp').config.namespace).toBe('MyApp');
-    expect(createLogger().config.namespace).toBe('');
+    expect(createLogger('MyApp').namespace).toBe('MyApp');
+    expect(createLogger().namespace).toBe('');
   });
 
   it('creates isolated instances with independent configs', () => {
     const a = createLogger({ logLevel: 'debug' });
     const b = createLogger({ logLevel: 'error' });
 
-    expect(a.config.logLevel).toBe('debug');
-    expect(b.config.logLevel).toBe('error');
+    expect(a.logLevel).toBe('debug');
+    expect(b.logLevel).toBe('error');
   });
 
   it('applies defaults when options are omitted', () => {
     const { transport } = createTestTransport();
     const log = createLogger({ transports: [transport] });
-    const cfg = log.config;
 
-    expect(cfg.logLevel).toBe('debug');
-    expect(cfg.namespace).toBe('');
-    expect(cfg.transports).toHaveLength(1);
-    expect(cfg.middleware).toEqual([]);
+    expect(log.logLevel).toBe('debug');
+    expect(log.namespace).toBe('');
+    expect(log.transports).toHaveLength(1);
+    expect(log.middleware).toEqual([]);
   });
 
   it('default Rune singleton exposes stable public API', () => {
@@ -77,21 +69,21 @@ describe('construction and config', () => {
     expect(typeof Rune.use).toBe('function');
   });
 
-  it('config snapshot cannot mutate logger state', () => {
+  it('individual getters return correct values', () => {
     const { log } = setup({ logLevel: 'warn' });
-    const cfg = log.config as Record<string, unknown>;
 
-    cfg['logLevel'] = 'debug';
-    cfg['transports'] = [];
-
-    expect(log.config.logLevel).toBe('warn');
-    expect(log.config.transports).toHaveLength(1);
+    expect(log.logLevel).toBe('warn');
+    expect(log.transports).toHaveLength(1);
+    expect(log.middleware).toEqual([]);
   });
 
-  it('config does not include env field', () => {
-    const { log } = setup();
+  it('transports getter returns a defensive snapshot — mutation does not affect logger', () => {
+    const { log } = setup({ logLevel: 'warn' });
+    const snap = log.transports as Transport[];
 
-    expect('env' in log.config).toBe(false);
+    snap.splice(0);
+
+    expect(log.transports).toHaveLength(1);
   });
 });
 
@@ -105,71 +97,56 @@ describe('emit and payload semantics', () => {
 
     expect(entries).toHaveLength(1);
     expect(entries[0].message).toBe('hello');
-    expect(entries[0].context).toBeUndefined();
+    expect(entries[0].data).toEqual({});
     expect(entries[0].level).toBe('info');
   });
 
-  it('context + message call sets both fields', () => {
+  it('context + message call sets both fields in data', () => {
     const { entries, log } = setup();
 
     log.info({ requestId: 'abc' }, 'hello');
 
-    expect(entries[0].context).toEqual({ requestId: 'abc' });
+    expect(entries[0].data).toEqual({ requestId: 'abc' });
     expect(entries[0].message).toBe('hello');
   });
 
-  it('context-only call sets context, message undefined', () => {
+  it('context-only call sets data, message undefined', () => {
     const { entries, log } = setup();
 
     log.info({ status: 200 });
 
-    expect(entries[0].context).toEqual({ status: 200 });
+    expect(entries[0].data).toEqual({ status: 200 });
     expect(entries[0].message).toBeUndefined();
   });
 
-  it('Error is serialized into context.err with message fallback', () => {
+  it('Error in context field is serialized to plain object', () => {
     const { entries, log } = setup();
 
-    log.error(new Error('boom'));
+    log.error({ err: new Error('boom') }, 'request failed');
 
-    const ctx = entries[0].context as Record<string, unknown>;
-
-    expect(ctx['err']).toMatchObject({ message: 'boom', name: 'Error' });
-    expect(typeof (ctx['err'] as Record<string, unknown>)['stack']).toBe('string');
-    expect(entries[0].message).toBe('boom');
+    expect(entries[0].data['err']).toMatchObject({ message: 'boom', name: 'Error' });
+    expect(typeof (entries[0].data['err'] as Record<string, unknown>)['stack']).toBe('string');
+    expect(entries[0].message).toBe('request failed');
   });
 
-  it('Error with override message uses the override', () => {
+  it('Error field alongside other context keys all survive serialization', () => {
     const { entries, log } = setup();
 
-    log.error(new Error('original'), 'override');
+    log.error({ err: new Error('fail'), requestId: 'abc' }, 'request failed');
 
-    expect(entries[0].message).toBe('override');
-  });
-
-  it('Error with context object merges serialized error and context', () => {
-    const { entries, log } = setup();
-
-    log.error(new Error('fail'), { requestId: 'abc' }, 'request failed');
-
-    const ctx = entries[0].context as Record<string, unknown>;
-
-    expect(ctx['err']).toMatchObject({ message: 'fail', name: 'Error' });
-    expect(ctx['requestId']).toBe('abc');
+    expect(entries[0].data['err']).toMatchObject({ message: 'fail', name: 'Error' });
+    expect(entries[0].data['requestId']).toBe('abc');
     expect(entries[0].message).toBe('request failed');
   });
 
   it('invalid second arg is coerced to string — does not throw', () => {
     const { entries, log } = setup();
 
-    expect(() => log.info('msg' as any, { id: 1 } as never)).not.toThrow();
+    expect(() => log.info('msg')).not.toThrow();
     expect(() => log.info({ id: 1 }, { bad: true } as never)).not.toThrow();
-    expect(() => log.error(new Error('e'), 123 as never)).not.toThrow();
 
-    // coerced values are used as messages
     expect(entries[0].message).toBe('msg');
     expect(entries[1].message).toBe('[object Object]');
-    expect(entries[2].message).toBe('123');
   });
 
   it('entry timestamp is a Date instance shared across transports', () => {
@@ -242,13 +219,13 @@ describe('level gating', () => {
 /* ─── Child and bindings composition ─── */
 
 describe('child and bindings composition', () => {
-  it('child with explicit namespace creates isolated sub-logger', () => {
+  it('child with explicit namespace dot-joins to parent', () => {
     const { entries, log } = setup({ namespace: 'app' });
 
-    log.child({ namespace: '/app.api.auth' }).info('call');
+    log.child({ namespace: 'api.auth' }).info('call');
 
     expect(entries[0].namespace).toBe('app.api.auth');
-    expect(log.config.namespace).toBe('app');
+    expect(log.namespace).toBe('app');
   });
 
   it('child with namespace from empty parent uses the given value', () => {
@@ -263,9 +240,9 @@ describe('child and bindings composition', () => {
     const parent = createLogger({ logLevel: 'warn', namespace: 'app' });
     const child = parent.child({ logLevel: 'debug' });
 
-    expect(child.config.logLevel).toBe('debug');
-    expect(child.config.namespace).toBe('app');
-    expect(parent.config.logLevel).toBe('warn');
+    expect(child.logLevel).toBe('debug');
+    expect(child.namespace).toBe('app');
+    expect(parent.logLevel).toBe('warn');
   });
 
   it('child inherits transports by default', () => {
@@ -276,7 +253,7 @@ describe('child and bindings composition', () => {
     child.info('x');
 
     expect(entries).toHaveLength(1);
-    expect(child.config.transports).toHaveLength(1);
+    expect(child.transports).toHaveLength(1);
   });
 
   it('child can replace transports by passing transports: []', () => {
@@ -301,24 +278,23 @@ describe('child and bindings composition', () => {
     expect(b.entries).toHaveLength(1);
   });
 
-  it('withBindings pins context on every call', () => {
+  it('withBindings pins bindings on every call — merged into data', () => {
     const { entries, log } = setup();
     const reqLog = log.withBindings({ requestId: 'abc' });
 
     reqLog.info('hello');
 
-    expect(entries[0].bindings).toEqual({ requestId: 'abc' });
+    expect(entries[0].data).toEqual({ requestId: 'abc' });
     expect(entries[0].message).toBe('hello');
   });
 
-  it('per-call context overrides colliding binding keys', () => {
+  it('per-call context overrides colliding binding keys in data', () => {
     const { entries, log } = setup();
     const reqLog = log.withBindings({ requestId: 'base', source: 'api' });
 
     reqLog.info({ requestId: 'override' }, 'msg');
 
-    expect(entries[0].bindings).toMatchObject({ requestId: 'base', source: 'api' });
-    expect(entries[0].context).toEqual({ requestId: 'override' });
+    expect(entries[0].data).toMatchObject({ requestId: 'override', source: 'api' });
   });
 
   it('bindings getter returns a defensive snapshot', () => {
@@ -338,39 +314,7 @@ describe('child and bindings composition', () => {
 
     req.info('x');
 
-    expect(entries[0].bindings).toMatchObject({ requestId: 'xyz', service: 'api' });
-  });
-});
-
-/* ─── onTransportError ─── */
-
-describe('onTransportError', () => {
-  it('calls onTransportError with error, entry, and transport index instead of crashing', () => {
-    const errors: Array<{ error: unknown; index: number }> = [];
-    const boom: Transport = () => {
-      throw new Error('transport fail');
-    };
-    const log = createLogger({
-      onTransportError: (error, _entry, index) => errors.push({ error, index }),
-      transports: [boom],
-    });
-
-    expect(() => log.info('x')).not.toThrow();
-    expect(errors).toHaveLength(1);
-    expect(errors[0].index).toBe(0);
-    expect(errors[0].error).toBeInstanceOf(Error);
-  });
-
-  it('defaults to console.warn when onTransportError is not provided', () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const boom: Transport = () => {
-      throw new Error('fail');
-    };
-    const log = createLogger({ transports: [boom] });
-
-    log.info('x');
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('transport'), expect.any(Error));
+    expect(entries[0].data).toMatchObject({ requestId: 'xyz', service: 'api' });
   });
 });
 
@@ -431,13 +375,13 @@ describe('middleware via use()', () => {
     const { entries, log } = setup();
     const mw: LogMiddleware = (entry) => ({
       ...entry,
-      bindings: { ...entry.bindings, traceId: 'trace-123' },
+      data: { ...entry.data, traceId: 'trace-123' },
     });
     const traced = log.use(mw);
 
     traced.info('request');
 
-    expect(entries[0].bindings['traceId']).toBe('trace-123');
+    expect(entries[0].data['traceId']).toBe('trace-123');
   });
 });
 
@@ -498,20 +442,18 @@ describe('consoleTransport', () => {
     expect(prefix).toContain('⚡');
   });
 
-  it('group() reads resolved theme from RuneOptions.theme (R1)', () => {
+  it('group() uses DEFAULT_THEME badge for group label (R1)', () => {
     const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
 
     vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
-    const log = createLogger({
-      theme: { group: { badge: '📦' } },
-    });
+    const log = createLogger();
 
     log.group('deploy', () => {});
 
     const prefix = groupSpy.mock.calls[0][0] as string;
 
-    expect(prefix).toContain('📦');
+    expect(prefix).toContain(DEFAULT_THEME.group.badge);
   });
 });
 
@@ -543,7 +485,7 @@ describe('remoteTransport', () => {
     );
   });
 
-  it('includes merged bindings in remote context', async () => {
+  it('includes merged bindings+context in remote data', async () => {
     const handler = vi.fn();
     const log = createLogger({ bindings: { requestId: 'abc' }, transports: [remoteTransport({ handler })] });
 
@@ -552,7 +494,7 @@ describe('remoteTransport', () => {
     await vi.waitFor(() =>
       expect(handler).toHaveBeenCalledWith(
         'info',
-        expect.objectContaining({ context: { requestId: 'abc', route: '/users' } }),
+        expect.objectContaining({ data: { requestId: 'abc', route: '/users' } }),
       ),
     );
   });
@@ -646,7 +588,7 @@ describe('jsonTransport', () => {
     expect(record['ns']).toBe('api');
   });
 
-  it('merges bindings and context into the flat record', () => {
+  it('merges bindings and context (via data) into the flat record', () => {
     const lines: string[] = [];
     const log = createLogger({
       bindings: { reqId: 'x' },
@@ -711,7 +653,7 @@ describe('batchTransport', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('a');
     expect(flushed).toHaveLength(0);
@@ -731,7 +673,7 @@ describe('batchTransport', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('x');
     expect(flushed).toHaveLength(0);
@@ -751,7 +693,7 @@ describe('batchTransport', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('final');
     batch.dispose();
@@ -775,7 +717,7 @@ describe('batchTransport', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('a');
     log.info('b');
@@ -801,7 +743,7 @@ describe('batchTransport', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('no');
     log.error('yes');
@@ -862,24 +804,24 @@ describe('sampleTransport', () => {
 /* ─── redactTransport ─── */
 
 describe('redactTransport', () => {
-  it('replaces specified keys with [REDACTED] in context', () => {
+  it('replaces specified keys with [REDACTED] in data', () => {
     const { entries, transport } = createTestTransport();
     const redacted = redactTransport({ keys: ['password', 'token'], transport });
     const log = createLogger({ transports: [redacted] });
 
     log.info({ password: 'secret', user: 'alice' }, 'login');
 
-    expect(entries[0].context).toEqual({ password: '[REDACTED]', user: 'alice' });
+    expect(entries[0].data).toMatchObject({ password: '[REDACTED]', user: 'alice' });
   });
 
-  it('replaces specified keys in bindings', () => {
+  it('replaces specified keys in data (from bindings)', () => {
     const { entries, transport } = createTestTransport();
     const redacted = redactTransport({ keys: ['ssn'], transport });
     const log = createLogger({ bindings: { ssn: '123-45-6789', userId: 1 }, transports: [redacted] });
 
     log.info('profile');
 
-    expect(entries[0].bindings).toEqual({ ssn: '[REDACTED]', userId: 1 });
+    expect(entries[0].data).toMatchObject({ ssn: '[REDACTED]', userId: 1 });
   });
 
   it('recursively redacts nested object fields', () => {
@@ -889,10 +831,10 @@ describe('redactTransport', () => {
 
     log.info({ auth: { token: 'secret', type: 'bearer' }, path: '/api' }, 'req');
 
-    const ctx = entries[0].context as Record<string, Record<string, unknown>>;
+    const data = entries[0].data as Record<string, Record<string, unknown>>;
 
-    expect(ctx['auth']['token']).toBe('[REDACTED]');
-    expect(ctx['auth']['type']).toBe('bearer');
+    expect(data['auth']['token']).toBe('[REDACTED]');
+    expect(data['auth']['type']).toBe('bearer');
   });
 
   it('recursively redacts fields inside arrays', () => {
@@ -910,11 +852,11 @@ describe('redactTransport', () => {
       'users',
     );
 
-    const ctx = entries[0].context as Record<string, Array<Record<string, unknown>>>;
+    const data = entries[0].data as Record<string, Array<Record<string, unknown>>>;
 
-    expect(ctx['users'][0]['token']).toBe('[REDACTED]');
-    expect(ctx['users'][1]['token']).toBe('[REDACTED]');
-    expect(ctx['users'][0]['id']).toBe(1);
+    expect(data['users'][0]['token']).toBe('[REDACTED]');
+    expect(data['users'][1]['token']).toBe('[REDACTED]');
+    expect(data['users'][0]['id']).toBe(1);
   });
 
   it('accepts a custom replacement value', () => {
@@ -924,7 +866,7 @@ describe('redactTransport', () => {
 
     log.info({ secret: 'abc' }, 'x');
 
-    expect(entries[0].context).toEqual({ secret: '***' });
+    expect(entries[0].data).toMatchObject({ secret: '***' });
   });
 
   it('does not mutate the original entry', () => {
@@ -937,8 +879,8 @@ describe('redactTransport', () => {
 
     log.info({ token: 'secret' }, 'x');
 
-    expect((originals[0].context as Record<string, unknown>)['token']).toBe('secret');
-    expect((redactedEntries[0].context as Record<string, unknown>)['token']).toBe('[REDACTED]');
+    expect(originals[0].data['token']).toBe('secret');
+    expect(redactedEntries[0].data['token']).toBe('[REDACTED]');
   });
 });
 
@@ -956,7 +898,7 @@ describe('lazy bindings', () => {
     boundLog.info('x');
 
     expect(factory).toHaveBeenCalledTimes(1);
-    expect(entries[0].bindings['computed']).toBe('expensive');
+    expect(entries[0].data['computed']).toBe('expensive');
   });
 
   it('does not invoke factory when level is suppressed', () => {
@@ -978,8 +920,8 @@ describe('lazy bindings', () => {
     boundLog.info('a');
     boundLog.info('b');
 
-    expect(entries[0].bindings['tick']).toBe(1);
-    expect(entries[1].bindings['tick']).toBe(2);
+    expect(entries[0].data['tick']).toBe(1);
+    expect(entries[1].data['tick']).toBe(2);
   });
 
   it('non-lazy bindings are passed through unchanged', () => {
@@ -988,14 +930,14 @@ describe('lazy bindings', () => {
 
     boundLog.info('x');
 
-    expect(entries[0].bindings).toEqual({ a: 1, b: 'two' });
+    expect(entries[0].data).toEqual({ a: 1, b: 'two' });
   });
 });
 
 /* ─── time() ─── */
 
 describe('time()', () => {
-  it('emits a debug entry with duration_ms in context and label as message (R7)', () => {
+  it('emits a debug entry with duration_ms in data and label as message', () => {
     const { entries, log } = setup();
 
     const value = log.time('work', () => 42);
@@ -1004,9 +946,8 @@ describe('time()', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].level).toBe('debug');
     expect(entries[0].message).toBe('work');
-    expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
-    // label is now the message — not in context
-    expect('label' in (entries[0].context ?? {})).toBe(false);
+    expect(typeof entries[0].data['duration_ms']).toBe('number');
+    expect('label' in entries[0].data).toBe(false);
   });
 
   it('emits on async completion', async () => {
@@ -1016,7 +957,7 @@ describe('time()', () => {
 
     expect(value).toBe('done');
     expect(entries[0].message).toBe('async-work');
-    expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
+    expect(typeof entries[0].data['duration_ms']).toBe('number');
   });
 
   it('still emits when sync fn throws', () => {
@@ -1038,7 +979,7 @@ describe('time()', () => {
     await expect(log.time('async-fail', () => Promise.reject(new Error('bad')))).rejects.toThrow('bad');
 
     expect(entries[0].message).toBe('async-fail');
-    expect(typeof (entries[0].context as Record<string, unknown>)['duration_ms']).toBe('number');
+    expect(typeof entries[0].data['duration_ms']).toBe('number');
   });
 
   it('skips emit but still runs fn when logLevel is off', () => {
@@ -1078,7 +1019,7 @@ describe('time()', () => {
       expect(handler).toHaveBeenCalledWith(
         'debug',
         expect.objectContaining({
-          context: expect.objectContaining({ duration_ms: expect.any(Number) }),
+          data: expect.objectContaining({ duration_ms: expect.any(Number) }),
           message: 'measured',
         }),
       ),
@@ -1166,61 +1107,24 @@ describe('group and groupCollapsed', () => {
 
 /* ─── New features: R5 / F1 / F2 / F5 ─── */
 
-describe('createLogger bindings option (R5)', () => {
-  it('accepts bindings in options object', () => {
+describe('createLogger bindings option', () => {
+  it('accepts bindings in options object — appear in entry.data', () => {
     const { entries, transport } = createTestTransport();
     const log = createLogger({ bindings: { service: 'api' }, transports: [transport] });
 
     log.info('started');
 
-    expect(entries[0].bindings).toEqual({ service: 'api' });
+    expect(entries[0].data).toEqual({ service: 'api' });
   });
 
-  it('child merges bindings from parent and override', () => {
+  it('child merges bindings from parent and override into data', () => {
     const { entries, transport } = createTestTransport();
     const parent = createLogger({ bindings: { service: 'api' }, transports: [transport] });
     const child = parent.child({ bindings: { requestId: 'abc' } });
 
     child.info('x');
 
-    expect(entries[0].bindings).toMatchObject({ requestId: 'abc', service: 'api' });
-  });
-});
-
-describe('now option for deterministic timestamps (F1)', () => {
-  it('uses the provided now() factory instead of new Date()', () => {
-    const fixed = new Date('2025-01-01T00:00:00.000Z');
-    const { entries, transport } = createTestTransport();
-    const log = createLogger({ now: () => fixed, transports: [transport] });
-
-    log.info('event');
-
-    expect(entries[0].timestamp).toBe(fixed);
-  });
-
-  it('child inherits now from parent', () => {
-    const fixed = new Date('2025-06-01T12:00:00.000Z');
-    const { entries, transport } = createTestTransport();
-    const parent = createLogger({ now: () => fixed, transports: [transport] });
-    const child = parent.child({ namespace: 'child' });
-
-    child.info('x');
-
-    expect(entries[0].timestamp).toBe(fixed);
-  });
-
-  it('child can override now independently', () => {
-    const parentNow = new Date('2025-01-01T00:00:00.000Z');
-    const childNow = new Date('2025-12-31T23:59:59.999Z');
-    const { entries, transport } = createTestTransport();
-    const parent = createLogger({ now: () => parentNow, transports: [transport] });
-    const child = parent.child({ now: () => childNow });
-
-    parent.info('from parent');
-    child.info('from child');
-
-    expect(entries[0].timestamp).toBe(parentNow);
-    expect(entries[1].timestamp).toBe(childNow);
+    expect(entries[0].data).toMatchObject({ requestId: 'abc', service: 'api' });
   });
 });
 
@@ -1241,14 +1145,14 @@ describe('pipe() fan-out transport (F2)', () => {
 });
 
 describe('lazy bindings in per-call context (F5)', () => {
-  it('resolves lazy in per-call context', () => {
+  it('resolves lazy in per-call context — appears in data', () => {
     const factory = vi.fn(() => 'ctx-value');
     const { entries, log } = setup();
 
     log.info({ dynamic: lazy(factory) }, 'event');
 
     expect(factory).toHaveBeenCalledTimes(1);
-    expect((entries[0].context as Record<string, unknown>)['dynamic']).toBe('ctx-value');
+    expect(entries[0].data['dynamic']).toBe('ctx-value');
   });
 
   it('does not invoke context lazy when level is suppressed', () => {
@@ -1258,60 +1162,6 @@ describe('lazy bindings in per-call context (F5)', () => {
     log.debug({ cost: lazy(factory) }, 'x');
 
     expect(factory).not.toHaveBeenCalled();
-  });
-});
-
-/* ─── sample option (F3) ─── */
-
-describe('sample option on RuneOptions (F3)', () => {
-  it('sample:1 emits all entries', () => {
-    const { entries, transport } = createTestTransport();
-    const log = createLogger({ sample: 1, transports: [transport] });
-
-    for (let i = 0; i < 100; i++) log.info('x');
-
-    expect(entries).toHaveLength(100);
-  });
-
-  it('sample:0 suppresses all entries', () => {
-    const { entries, transport } = createTestTransport();
-    const log = createLogger({ sample: 0, transports: [transport] });
-
-    for (let i = 0; i < 20; i++) log.info('x');
-
-    expect(entries).toHaveLength(0);
-  });
-
-  it('child inherits sample from parent', () => {
-    const { entries, transport } = createTestTransport();
-    const parent = createLogger({ sample: 0, transports: [transport] });
-    const child = parent.child({ namespace: 'child' });
-
-    for (let i = 0; i < 20; i++) child.info('x');
-
-    expect(entries).toHaveLength(0);
-  });
-
-  it('sample is applied after middleware', () => {
-    const { entries, transport } = createTestTransport();
-    const dropped: string[] = [];
-    const mw = (e: LogEntry | null): LogEntry | null => {
-      if (e?.message === 'drop') {
-        dropped.push('dropped');
-
-        return null;
-      }
-
-      return e;
-    };
-    const log = createLogger({ middleware: [mw], sample: 1, transports: [transport] });
-
-    log.info('drop');
-    log.info('keep');
-
-    expect(dropped).toHaveLength(1);
-    expect(entries).toHaveLength(1);
-    expect(entries[0].message).toBe('keep');
   });
 });
 
@@ -1326,7 +1176,7 @@ describe('batchTransport onFlushError (F5)', () => {
     });
 
     const batch = batchTransport({ maxSize: 1, onFlush, onFlushError });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('trigger flush');
 
@@ -1346,7 +1196,7 @@ describe('batchTransport onFlushError (F5)', () => {
     const onFlush = vi.fn().mockRejectedValue(flushError);
 
     const batch = batchTransport({ maxSize: 1, onFlush, onFlushError });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('async trigger');
 
@@ -1408,15 +1258,14 @@ describe('pipe() fault tolerance (R3)', () => {
 /* ─── consoleTransport format option (F6) ─── */
 
 describe('consoleTransport inspectFn / format options (F6)', () => {
-  it('format:json serializes context as a JSON string — message appears before JSON', () => {
+  it('format:json serializes data as a JSON string — message appears before JSON', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ format: 'json', timestamp: false });
 
-    t({ bindings: {}, context: { a: 1 }, level: 'info', message: 'test', namespace: '', timestamp: new Date() });
+    t({ data: { a: 1 }, level: 'info', message: 'test', namespace: '', timestamp: new Date() });
 
     expect(infoSpy).toHaveBeenCalled();
 
-    // message comes before the JSON string
     const args = infoSpy.mock.calls[0] as unknown[];
     const msgIdx = args.indexOf('test');
     const jsonIdx = args.findIndex((a) => typeof a === 'string' && a.includes('"a":1'));
@@ -1428,38 +1277,37 @@ describe('consoleTransport inspectFn / format options (F6)', () => {
     infoSpy.mockRestore();
   });
 
-  it('format:raw passes the object after the message', () => {
+  it('format:raw passes the data object after the message', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-    const ctx = { x: 2 };
+    const data = { x: 2 };
     const t = consoleTransport({ format: 'raw', timestamp: false });
 
-    t({ bindings: {}, context: ctx, level: 'info', message: 'raw', namespace: '', timestamp: new Date() });
+    t({ data, level: 'info', message: 'raw', namespace: '', timestamp: new Date() });
 
     expect(infoSpy).toHaveBeenCalled();
 
-    // message comes before context object
     const args = infoSpy.mock.calls[0] as unknown[];
     const msgIdx = args.indexOf('raw');
-    const ctxIdx = args.findIndex(
+    const dataIdx = args.findIndex(
       (a) => typeof a === 'object' && a !== null && (a as Record<string, unknown>)['x'] === 2,
     );
 
     expect(msgIdx).toBeGreaterThanOrEqual(0);
-    expect(ctxIdx).toBeGreaterThanOrEqual(0);
-    expect(msgIdx).toBeLessThan(ctxIdx);
+    expect(dataIdx).toBeGreaterThanOrEqual(0);
+    expect(msgIdx).toBeLessThan(dataIdx);
 
     infoSpy.mockRestore();
   });
 
-  it('inspectFn is called with the merged context/bindings object', () => {
+  it('inspectFn is called with the merged data object', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const inspectFn = vi.fn((v) => `INSPECTED:${JSON.stringify(v)}`);
-    const ctx = { key: 'val' };
+    const data = { key: 'val' };
     const t = consoleTransport({ inspectFn, timestamp: false });
 
-    t({ bindings: {}, context: ctx, level: 'info', message: 'msg', namespace: '', timestamp: new Date() });
+    t({ data, level: 'info', message: 'msg', namespace: '', timestamp: new Date() });
 
-    expect(inspectFn).toHaveBeenCalledWith(ctx);
+    expect(inspectFn).toHaveBeenCalledWith(data);
 
     const args = infoSpy.mock.calls[0] as unknown[];
 
@@ -1468,12 +1316,11 @@ describe('consoleTransport inspectFn / format options (F6)', () => {
     infoSpy.mockRestore();
   });
 
-  it('resolveTheme is called once at factory time, not per emit (R4)', () => {
+  it('resolveTheme is called once at factory time, not per emit', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ timestamp: false });
-    const entry = { bindings: {}, level: 'info' as const, message: 'x', namespace: '', timestamp: new Date() };
+    const entry = { data: {}, level: 'info' as const, message: 'x', namespace: '', timestamp: new Date() };
 
-    // Emit 50 times — resolveTheme should be once at factory, not 50 times
     for (let i = 0; i < 50; i++) t(entry);
 
     expect(infoSpy).toHaveBeenCalledTimes(50);
@@ -1512,66 +1359,42 @@ describe('isLevelEnabled (R8/R6)', () => {
   });
 });
 
-/* ─── child() theme deep-merge ─── */
+/* ─── child() namespace joining ─── */
 
-describe('child() theme deep-merge', () => {
-  it('child theme override only replaces specified fields', () => {
-    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+describe('child() namespace joining', () => {
+  it('joins parent and child namespaces with dot separator', () => {
+    const { entries, log } = setup({ namespace: 'api' });
 
-    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+    log.child({ namespace: 'auth' }).info('x');
 
-    const parent = createLogger({ theme: { warn: { bg: '#111111' } } });
-    // Child only changes the badge, not bg — bg from parent should still apply
-    const child = parent.child({ theme: { warn: { badge: '!!' } } });
-
-    child.group('test', () => {});
-
-    // Theme resolution should not throw; group renders
-    expect(groupSpy).toHaveBeenCalledTimes(1);
+    expect(entries[0].namespace).toBe('api.auth');
   });
 
-  it('child without theme override inherits parent theme', () => {
-    const { transport } = createTestTransport();
-    const parent = createLogger({ theme: { warn: { badge: 'P' } }, transports: [transport] });
-    const child = parent.child({ namespace: 'child' });
+  it('child with no namespace keeps parent namespace', () => {
+    const { entries, log } = setup({ namespace: 'svc' });
 
-    expect(child.config.theme).toEqual(parent.config.theme);
+    log.child({}).info('x');
+
+    expect(entries[0].namespace).toBe('svc');
   });
 
-  it('child with undefined theme inherits parent theme unchanged', () => {
-    const parentTheme = { error: { badge: 'E!' } };
-    const parent = createLogger({ theme: parentTheme });
-    const child = parent.child({});
+  it('empty parent + child namespace = child value only', () => {
+    const { entries, log } = setup();
 
-    expect(child.config.theme).toEqual(parentTheme);
+    log.child({ namespace: 'root' }).info('x');
+
+    expect(entries[0].namespace).toBe('root');
   });
 });
 
-/* ─── sample: 0.5 proportional logger-level ─── */
+/* ─── consoleTransport empty data ─── */
 
-describe('sample option proportional rate (F3)', () => {
-  it('sample:0.5 forwards approximately half of entries', () => {
-    const { entries, transport } = createTestTransport();
-    const log = createLogger({ sample: 0.5, transports: [transport] });
-
-    for (let i = 0; i < 2000; i++) log.info('x');
-
-    expect(entries.length).toBeGreaterThan(700);
-    expect(entries.length).toBeLessThan(1300);
-  });
-});
-
-/* ─── consoleTransport empty context ─── */
-
-describe('consoleTransport with no context or bindings', () => {
+describe('consoleTransport with no data', () => {
   it('emits message-only entries without error', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ timestamp: false });
 
-    // Both bindings and context empty
-    expect(() =>
-      t({ bindings: {}, level: 'info', message: 'hello', namespace: '', timestamp: new Date() }),
-    ).not.toThrow();
+    expect(() => t({ data: {}, level: 'info', message: 'hello', namespace: '', timestamp: new Date() })).not.toThrow();
 
     expect(infoSpy).toHaveBeenCalledTimes(1);
 
@@ -1582,11 +1405,11 @@ describe('consoleTransport with no context or bindings', () => {
     infoSpy.mockRestore();
   });
 
-  it('emits entries with no message and no context without error', () => {
+  it('emits entries with no message and no data without error', () => {
     const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
     const t = consoleTransport({ timestamp: false });
 
-    expect(() => t({ bindings: {}, level: 'info', namespace: '', timestamp: new Date() })).not.toThrow();
+    expect(() => t({ data: {}, level: 'info', namespace: '', timestamp: new Date() })).not.toThrow();
 
     expect(infoSpy).toHaveBeenCalledTimes(1);
 
@@ -1594,63 +1417,10 @@ describe('consoleTransport with no context or bindings', () => {
   });
 });
 
-/* ─── setLevel() ─── */
+/* ─── time() level param ─── */
 
-describe('setLevel()', () => {
-  it('mutates the level threshold in-place', () => {
-    const { entries, log } = setup({ logLevel: 'error' });
-
-    log.debug('before');
-    expect(entries).toHaveLength(0);
-
-    log.setLevel('debug');
-    log.debug('after');
-
-    expect(entries).toHaveLength(1);
-    expect(entries[0].message).toBe('after');
-  });
-
-  it('config.logLevel reflects the new level', () => {
-    const { log } = setup({ logLevel: 'info' });
-
-    log.setLevel('warn');
-
-    expect(log.config.logLevel).toBe('warn');
-  });
-
-  it('enabled() reflects the updated level', () => {
-    const { log } = setup({ logLevel: 'info' });
-
-    expect(log.enabled('debug')).toBe(false);
-
-    log.setLevel('debug');
-
-    expect(log.enabled('debug')).toBe(true);
-  });
-
-  it('setting off silences all output', () => {
-    const { entries, log } = setup({ logLevel: 'debug' });
-
-    log.setLevel('off');
-    log.fatal('silenced');
-
-    expect(entries).toHaveLength(0);
-  });
-});
-
-/* ─── time() options-object form ─── */
-
-describe('time() opts object form', () => {
-  it('accepts { level } object as third arg', () => {
-    const { entries, log } = setup({ logLevel: 'info' });
-
-    log.time('task', () => {}, { level: 'info' });
-
-    expect(entries).toHaveLength(1);
-    expect(entries[0].level).toBe('info');
-  });
-
-  it('positional string level still works (backwards compat)', () => {
+describe('time() level param', () => {
+  it('positional string level changes emit level', () => {
     const { entries, log } = setup({ logLevel: 'info' });
 
     log.time('task', () => {}, 'info');
@@ -1659,18 +1429,10 @@ describe('time() opts object form', () => {
     expect(entries[0].level).toBe('info');
   });
 
-  it('defaults to debug when opts is undefined', () => {
+  it('defaults to debug when level is omitted', () => {
     const { entries, log } = setup();
 
     log.time('task', () => {});
-
-    expect(entries[0].level).toBe('debug');
-  });
-
-  it('defaults to debug when opts object has no level field', () => {
-    const { entries, log } = setup();
-
-    log.time('task', () => {}, {});
 
     expect(entries[0].level).toBe('debug');
   });
@@ -1739,34 +1501,6 @@ describe('jsonTransport field collision', () => {
   });
 });
 
-/* ─── setLevel() child inheritance ─── */
-
-describe('setLevel() child inheritance', () => {
-  it('child created after setLevel inherits the new level', () => {
-    const { log } = setup({ logLevel: 'info' });
-
-    log.setLevel('debug');
-
-    const child = log.child();
-    const childEntries: LogEntry[] = [];
-
-    child.child({ transports: [(e) => childEntries.push(e)] }).debug('via-child');
-
-    expect(childEntries).toHaveLength(1);
-  });
-
-  it('child created before setLevel is unaffected', () => {
-    const childEntries: LogEntry[] = [];
-    const { log } = setup({ logLevel: 'debug' });
-    const child = log.child({ transports: [(e) => childEntries.push(e)] });
-
-    log.setLevel('off');
-    child.debug('child-still-works');
-
-    expect(childEntries).toHaveLength(1);
-  });
-});
-
 /* ─── pipe() edge cases ─── */
 
 describe('pipe() edge cases', () => {
@@ -1788,27 +1522,21 @@ describe('redactTransport edge cases', () => {
 
     log.info({ token: 'abc' }, 'msg');
 
-    expect(entries[0].context?.['token']).toBe('');
+    expect(entries[0].data['token']).toBe('');
   });
 });
 
 /* ─── jsonTransport circular reference safety ─── */
 
 describe('jsonTransport circular reference safety', () => {
-  it('calls onTransportError instead of crashing on circular bindings', () => {
-    const errors: unknown[] = [];
+  it('throws on circular data when safe:false (default)', () => {
     const circular: Record<string, unknown> = {};
 
     circular['self'] = circular;
 
-    const log = createLogger({
-      onTransportError: (e) => errors.push(e),
-      transports: [jsonTransport()],
-    });
+    const log = createLogger({ transports: [jsonTransport()] });
 
-    log.info(circular, 'circular');
-
-    expect(errors).toHaveLength(1);
+    expect(() => log.info(circular, 'circular')).toThrow();
   });
 });
 
@@ -1829,6 +1557,45 @@ describe('redactTransport depth limit', () => {
     expect(() => log.info(nested, 'deep')).not.toThrow();
     expect(entries).toHaveLength(1);
   });
+
+  it('maxDepth option truncates redaction at the specified depth', () => {
+    const { entries, transport } = createTestTransport();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    let nested: Record<string, unknown> = { password: 'secret' };
+
+    for (let i = 0; i < 5; i++) nested = { child: nested };
+
+    const log = createLogger({
+      transports: [redactTransport({ keys: ['password'], maxDepth: 3, transport })],
+    });
+
+    log.info(nested, 'capped');
+
+    expect(entries).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('depth exceeded 3'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('warns when a non-key object is nested deeper than maxDepth', () => {
+    const { entries, transport } = createTestTransport();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    // depth 0=root, 1=a, 2=b, 3=c (object, no key match) — triggers warn at maxDepth:2
+    const nested = { a: { b: { c: { d: 'value' } } } };
+
+    const log = createLogger({
+      transports: [redactTransport({ keys: ['password'], maxDepth: 2, transport })],
+    });
+
+    log.info(nested, 'test');
+
+    expect(entries).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('depth exceeded 2'));
+
+    warnSpy.mockRestore();
+  });
 });
 
 /* ─── Namespace dot-joining ─── */
@@ -1838,14 +1605,14 @@ describe('child() namespace dot-joining', () => {
     const parent = createLogger({ namespace: 'api' });
     const child = parent.child({ namespace: 'auth' });
 
-    expect(child.config.namespace).toBe('api.auth');
+    expect(child.namespace).toBe('api.auth');
   });
 
   it('root parent with no namespace just uses child name', () => {
     const parent = createLogger();
     const child = parent.child({ namespace: 'api' });
 
-    expect(child.config.namespace).toBe('api');
+    expect(child.namespace).toBe('api');
   });
 
   it('chains multiple levels of namespaces', () => {
@@ -1853,52 +1620,21 @@ describe('child() namespace dot-joining', () => {
     const api = root.child({ namespace: 'api' });
     const auth = api.child({ namespace: 'auth' });
 
-    expect(auth.config.namespace).toBe('app.api.auth');
+    expect(auth.namespace).toBe('app.api.auth');
   });
 
-  it('absolute namespace (starting with /) replaces instead of joining', () => {
+  it('dot-joining only — no slash prefix convention', () => {
     const parent = createLogger({ namespace: 'api' });
-    const child = parent.child({ namespace: '/root' });
+    const child = parent.child({ namespace: 'v2' });
 
-    expect(child.config.namespace).toBe('root');
+    expect(child.namespace).toBe('api.v2');
   });
 
   it('omitting namespace in child() preserves parent namespace', () => {
     const parent = createLogger({ namespace: 'api' });
     const child = parent.child();
 
-    expect(child.config.namespace).toBe('api');
-  });
-});
-
-/* ─── resetLevel() ─── */
-
-describe('resetLevel()', () => {
-  it('restores the initial log level after setLevel()', () => {
-    const { log } = setup({ logLevel: 'info' });
-
-    log.setLevel('error');
-    expect(log.config.logLevel).toBe('error');
-
-    log.resetLevel();
-    expect(log.config.logLevel).toBe('info');
-  });
-
-  it('enabled() reflects the restored level', () => {
-    const { log } = setup({ logLevel: 'debug' });
-
-    log.setLevel('off');
-    expect(log.enabled('debug')).toBe(false);
-
-    log.resetLevel();
-    expect(log.enabled('debug')).toBe(true);
-  });
-
-  it('resetLevel() on an unmodified logger is a no-op', () => {
-    const { log } = setup({ logLevel: 'warn' });
-
-    log.resetLevel();
-    expect(log.config.logLevel).toBe('warn');
+    expect(child.namespace).toBe('api');
   });
 });
 
@@ -1921,21 +1657,6 @@ describe('jsonTransport safe mode', () => {
     const selfValue = record['self'] as Record<string, unknown>;
 
     expect(selfValue['self']).toBe('[Circular]');
-  });
-
-  it('without safe:true circular refs still hit onTransportError', () => {
-    const errors: unknown[] = [];
-    const circular: Record<string, unknown> = {};
-
-    circular['self'] = circular;
-
-    const log = createLogger({
-      onTransportError: (e) => errors.push(e),
-      transports: [jsonTransport()],
-    });
-
-    log.info(circular, 'unsafe');
-    expect(errors).toHaveLength(1);
   });
 });
 
@@ -1976,7 +1697,7 @@ describe('batchTransport maxBuffer', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('a');
     log.info('b');
@@ -2000,7 +1721,7 @@ describe('batchTransport maxBuffer', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('a');
     log.info('b');
@@ -2016,7 +1737,7 @@ describe('batchTransport maxBuffer', () => {
 /* ─── time() error context ─── */
 
 describe('time() error context', () => {
-  it('includes err in context when sync fn throws', () => {
+  it('includes err in data when sync fn throws', () => {
     const { entries, log } = setup();
 
     expect(() =>
@@ -2026,32 +1747,32 @@ describe('time() error context', () => {
     ).toThrow('boom');
 
     expect(entries).toHaveLength(1);
-    expect(entries[0].context).toMatchObject({
+    expect(entries[0].data).toMatchObject({
       duration_ms: expect.any(Number),
       err: expect.objectContaining({ message: 'boom', name: 'Error' }),
     });
     expect(entries[0].message).toBe('op');
   });
 
-  it('includes err in context when async fn rejects', async () => {
+  it('includes err in data when async fn rejects', async () => {
     const { entries, log } = setup();
 
     await expect(log.time('async-op', () => Promise.reject(new Error('async-boom')))).rejects.toThrow('async-boom');
 
     expect(entries).toHaveLength(1);
-    expect(entries[0].context).toMatchObject({
+    expect(entries[0].data).toMatchObject({
       duration_ms: expect.any(Number),
       err: expect.objectContaining({ message: 'async-boom' }),
     });
   });
 
-  it('does not include err in context on success', () => {
+  it('does not include err in data on success', () => {
     const { entries, log } = setup();
 
     log.time('ok-op', () => 42);
 
-    expect(entries[0].context).toEqual({ duration_ms: expect.any(Number) });
-    expect(entries[0].context).not.toHaveProperty('err');
+    expect(entries[0].data).toMatchObject({ duration_ms: expect.any(Number) });
+    expect(entries[0].data).not.toHaveProperty('err');
   });
 
   it('serialises non-Error thrown values', () => {
@@ -2063,7 +1784,7 @@ describe('time() error context', () => {
       }),
     ).toThrow('oops');
 
-    expect(entries[0].context).toMatchObject({
+    expect(entries[0].data).toMatchObject({
       err: expect.objectContaining({ message: 'oops' }),
     });
   });
@@ -2127,7 +1848,16 @@ describe('group() level gating', () => {
 /* ─── Logger.dispose() ─── */
 
 describe('Logger.dispose()', () => {
-  it('calls dispose() on every BatchTransport in the transport array', async () => {
+  it('silences subsequent logs after dispose()', () => {
+    const { entries, log } = setup();
+
+    expect(() => log.dispose()).not.toThrow();
+
+    log.info('after dispose — should be silenced');
+    expect(entries).toHaveLength(0);
+  });
+
+  it('caller owns batch lifecycle — batch.dispose() must be called separately', async () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({
       interval: 60_000,
@@ -2136,24 +1866,19 @@ describe('Logger.dispose()', () => {
         flushed.push(entries);
       },
     });
-    const log = createLogger({ transports: [batch] });
+    const log = createLogger({ transports: [batch.transport] });
 
     log.info('before-dispose');
     log.dispose();
 
+    // logger.dispose() no longer auto-flushes batch — caller must call batch.dispose()
     await new Promise((r) => setTimeout(r, 20));
+    expect(flushed).toHaveLength(0);
 
+    batch.dispose();
+    await new Promise((r) => setTimeout(r, 20));
     expect(flushed).toHaveLength(1);
     expect(flushed[0][0].message).toBe('before-dispose');
-  });
-
-  it('is a no-op when there are no batch transports', () => {
-    const { entries, log } = setup();
-
-    expect(() => log.dispose()).not.toThrow();
-
-    log.info('still works');
-    expect(entries).toHaveLength(1);
   });
 });
 
@@ -2194,20 +1919,384 @@ describe('middleware undefined/null drop', () => {
 /* ─── lazy factory throw safety ─── */
 
 describe('lazy factory throw safety', () => {
-  it('resolves to undefined when lazy factory throws — does not crash the log call', () => {
+  it('lazy factory errors propagate from the log call', () => {
     const { entries, log } = setup();
 
-    expect(() => {
-      const bound = log.withBindings({
-        val: lazy(() => {
-          throw new Error('lazy-fail');
-        }),
-      });
+    const bound = log.withBindings({
+      val: lazy(() => {
+        throw new Error('lazy-fail');
+      }),
+    });
 
-      bound.info('safe');
-    }).not.toThrow();
+    expect(() => bound.info('safe')).toThrow('lazy-fail');
+    expect(entries).toHaveLength(0);
+  });
+});
+
+/* ─── C1: batchTransport post-dispose no-ops ─── */
+
+describe('batchTransport post-dispose no-ops', () => {
+  it('silently ignores direct transport calls after dispose()', async () => {
+    const flushed: LogEntry[][] = [];
+    const batch = batchTransport({
+      interval: 10_000,
+      onFlush: (entries) => flushed.push(entries),
+    });
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('before');
+    batch.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    const fakeEntry: LogEntry = {
+      data: {},
+      level: 'info',
+      message: 'after-dispose',
+      namespace: '',
+      timestamp: new Date(),
+    };
+
+    batch.transport(fakeEntry);
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushed).toHaveLength(1);
+    expect(flushed[0]).toHaveLength(1);
+    expect(flushed[0][0].message).toBe('before');
+  });
+});
+
+/* ─── C2: shallow lazy resolution edge case ─── */
+
+describe('lazy binding shallow resolution', () => {
+  it('does NOT resolve nested lazy bindings inside a lazy factory return value', () => {
+    const innerLazy = lazy(() => 'inner-resolved');
+    const { entries, log } = setup();
+
+    const bound = log.withBindings({
+      nested: lazy(() => ({ secret: innerLazy })),
+    });
+
+    bound.info('test');
 
     expect(entries).toHaveLength(1);
-    expect(entries[0].bindings['val']).toBeUndefined();
+
+    const nestedVal = entries[0].data['nested'] as Record<string, unknown>;
+
+    expect(typeof nestedVal).toBe('object');
+    expect(typeof nestedVal['secret']).toBe('object');
+  });
+});
+
+/* ─── C3: consoleTransport instances ─── */
+
+describe('consoleTransport instances', () => {
+  it('each consoleTransport() call creates a distinct instance', () => {
+    const a = consoleTransport({ theme: { info: { badge: '>>>' } } });
+    const b = consoleTransport();
+
+    expect(a).not.toBe(b);
+  });
+
+  it('consoleTransport without options emits normally', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ transports: [transport] });
+
+    log.info('hi');
+
+    expect(entries).toHaveLength(1);
+  });
+});
+
+/* ─── C4: BatchHandle dispose() idempotency ─── */
+
+describe('BatchHandle dispose() idempotency', () => {
+  it('calling dispose() twice does not double-flush', async () => {
+    let flushCount = 0;
+    const batch = batchTransport({
+      interval: 10_000,
+      onFlush: () => {
+        flushCount++;
+      },
+    });
+
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('entry');
+
+    batch.dispose();
+    batch.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushCount).toBe(1);
+  });
+
+  it('[Symbol.dispose] delegates to dispose()', async () => {
+    let flushCount = 0;
+    const batch = batchTransport({
+      interval: 10_000,
+      onFlush: () => {
+        flushCount++;
+      },
+    });
+
+    const log = createLogger({ transports: [batch.transport] });
+
+    log.info('entry');
+
+    batch[Symbol.dispose]();
+    batch.dispose();
+
+    await new Promise((r) => setTimeout(r, 20));
+
+    expect(flushCount).toBe(1);
+  });
+
+  it('BatchHandle exposes transport, flush, dispose, and [Symbol.dispose]', () => {
+    const batch = batchTransport({ onFlush: () => {} });
+
+    expect(typeof batch.transport).toBe('function');
+    expect(typeof batch.flush).toBe('function');
+    expect(typeof batch.dispose).toBe('function');
+    expect(typeof batch[Symbol.dispose]).toBe('function');
+  });
+});
+
+/* ─── F1: disposed logger drops all log calls ─── */
+
+describe('disposed logger silences all log calls', () => {
+  it('drops debug/info/warn/error/fatal after dispose()', () => {
+    const { entries, log } = setup();
+
+    log.dispose();
+
+    log.debug('d');
+    log.info('i');
+    log.warn('w');
+    log.error('e');
+    log.fatal('f');
+
+    expect(entries).toHaveLength(0);
+  });
+
+  it('group() runs fn but renders no group header after dispose()', () => {
+    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
+
+    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
+
+    const log = createLogger();
+
+    log.dispose();
+
+    let called = false;
+
+    log.group('label', () => {
+      called = true;
+    });
+
+    expect(called).toBe(true);
+    expect(groupSpy).not.toHaveBeenCalled();
+  });
+});
+
+/* ─── F2: createLogger two-arg overload ─── */
+
+describe('createLogger(namespace, options) two-arg overload', () => {
+  it('accepts (namespace) shorthand', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger('api', { transports: [transport] });
+
+    log.info('hello');
+
+    expect(entries[0].namespace).toBe('api');
+  });
+
+  it('merges namespace with extra options', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger('svc', { logLevel: 'warn', transports: [transport] });
+
+    log.debug('ignored');
+    log.warn('seen');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBe('seen');
+    expect(entries[0].namespace).toBe('svc');
+  });
+
+  it('positional namespace is used as namespace getter value', () => {
+    const log = createLogger('primary', { transports: [] });
+
+    expect(log.namespace).toBe('primary');
+  });
+});
+
+/* ─── C1: Logger.disposed getter ─── */
+
+describe('Logger.disposed getter', () => {
+  it('is false before dispose()', () => {
+    const { log } = setup();
+
+    expect(log.disposed).toBe(false);
+  });
+
+  it('is true after dispose()', () => {
+    const { log } = setup();
+
+    log.dispose();
+
+    expect(log.disposed).toBe(true);
+  });
+});
+
+/* ─── C2: Logger.disposalSignal ─── */
+
+describe('Logger.disposalSignal', () => {
+  it('is not aborted before dispose()', () => {
+    const { log } = setup();
+
+    expect(log.disposalSignal.aborted).toBe(false);
+  });
+
+  it('is aborted after dispose()', () => {
+    const { log } = setup();
+
+    log.dispose();
+
+    expect(log.disposalSignal.aborted).toBe(true);
+  });
+
+  it('abort listener fires when dispose() is called', () => {
+    const { log } = setup();
+    const listener = vi.fn();
+
+    log.disposalSignal.addEventListener('abort', listener);
+    log.dispose();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+/* ─── C3: Logger[Symbol.dispose] ─── */
+
+describe('Logger[Symbol.dispose]', () => {
+  it('delegates to dispose() and silences subsequent calls', () => {
+    const { entries, log } = setup();
+
+    log[Symbol.dispose]();
+    log.info('should be silenced');
+
+    expect(entries).toHaveLength(0);
+    expect(log.disposed).toBe(true);
+  });
+});
+
+/* ─── C4: Logger individual getters ─── */
+
+describe('Logger individual getters', () => {
+  it('namespace getter returns configured value', () => {
+    const log = createLogger({ namespace: 'my-service' });
+
+    expect(log.namespace).toBe('my-service');
+  });
+
+  it('logLevel getter returns configured value', () => {
+    const log = createLogger({ logLevel: 'warn' });
+
+    expect(log.logLevel).toBe('warn');
+  });
+
+  it('middleware getter returns readonly snapshot', () => {
+    const mw: LogMiddleware = (e) => e;
+    const log = createLogger({ middleware: [mw] });
+
+    expect(log.middleware).toHaveLength(1);
+    expect(log.middleware[0]).toBe(mw);
+  });
+});
+
+/* ─── C5: per-call context lazy throw ─── */
+
+describe('per-call context lazy factory throw', () => {
+  it('propagates when a lazy in per-call context throws', () => {
+    const { entries, log } = setup();
+
+    expect(() =>
+      log.info(
+        {
+          cost: lazy(() => {
+            throw new Error('ctx-lazy-fail');
+          }),
+        },
+        'event',
+      ),
+    ).toThrow('ctx-lazy-fail');
+
+    expect(entries).toHaveLength(0);
+  });
+});
+
+/* ─── C6: Error auto-serialization in context ─── */
+
+describe('Error auto-serialization in context', () => {
+  it('Error value in context field is serialized to plain object', () => {
+    const { entries, log } = setup();
+
+    log.error({ err: new Error('timeout') }, 'request failed');
+
+    const err = entries[0].data['err'] as Record<string, unknown>;
+
+    expect(err['message']).toBe('timeout');
+    expect(err['name']).toBe('Error');
+    expect(typeof err['stack']).toBe('string');
+  });
+
+  it('non-Error values pass through unchanged', () => {
+    const { entries, log } = setup();
+
+    log.info({ count: 42, label: 'ok' });
+
+    expect(entries[0].data['count']).toBe(42);
+    expect(entries[0].data['label']).toBe('ok');
+  });
+});
+
+/* ─── DEFAULT_THEME ─── */
+
+describe('DEFAULT_THEME', () => {
+  it('covers all log types plus group and ns', () => {
+    const required: Array<string> = ['debug', 'info', 'warn', 'error', 'fatal', 'group', 'ns'];
+
+    for (const key of required) {
+      expect(DEFAULT_THEME).toHaveProperty(key);
+    }
+  });
+
+  it('each entry has badge, bg, border, color', () => {
+    for (const entry of Object.values(DEFAULT_THEME)) {
+      expect(entry).toHaveProperty('badge');
+      expect(entry).toHaveProperty('bg');
+      expect(entry).toHaveProperty('border');
+      expect(entry).toHaveProperty('color');
+    }
+  });
+});
+
+/* ─── withBindings + lazy in child ─── */
+
+describe('withBindings() with lazy bindings', () => {
+  it('lazy binding in withBindings() is resolved per-emit, not at child creation', () => {
+    let callCount = 0;
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({ logLevel: 'debug', transports: [transport] });
+    const child = log.withBindings({ req: lazy(() => ({ count: ++callCount })) });
+
+    child.info('a');
+    child.info('b');
+
+    expect(entries).toHaveLength(2);
+    expect((entries[0].data['req'] as { count: number }).count).toBe(1);
+    expect((entries[1].data['req'] as { count: number }).count).toBe(2);
   });
 });

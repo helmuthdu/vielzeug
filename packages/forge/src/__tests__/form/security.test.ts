@@ -36,7 +36,7 @@ describe('prototype chain safety', () => {
   test('setValidator() throws for an unsafe key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.setValidator('__proto__' as never, () => undefined)).toThrow('[forge] Unsafe key');
+    expect(() => form.fields.setValidator('__proto__' as never, () => undefined)).toThrow('[forge] Unsafe key');
   });
 
   test('createForm throws when an initial validator uses an unsafe key', () => {

@@ -14,7 +14,7 @@ You want to test guard conditions and transition targets in isolation, without s
 Use `resolveTransition()` directly in unit tests. It returns the matching `TransitionDef` when a transition would be taken, or `undefined` when no transition matches (guard blocked or event not defined in the current state).
 
 ```ts
-import { defineMachine, resolveTransition } from '@vielzeug/clockwork';
+import { define, resolveTransition } from '@vielzeug/clockwork';
 import { expect, test } from 'vitest';
 
 type State = 'authenticated' | 'error' | 'loading' | 'unauthenticated';
@@ -25,7 +25,7 @@ type Event =
   | { token: string; type: 'AUTH_SUCCESS' }
   | { type: 'AUTH_FAILED' };
 
-const auth = defineMachine<State, Context, Event>({
+const authDef = define({
   context: { attempts: 0, token: '' },
   initial: 'unauthenticated',
   states: {
@@ -50,7 +50,7 @@ const auth = defineMachine<State, Context, Event>({
 });
 
 test('allows login with fewer than 3 attempts', () => {
-  const result = resolveTransition(auth, {
+  const result = resolveTransition(authDef.config, {
     context: { attempts: 2, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -59,7 +59,7 @@ test('allows login with fewer than 3 attempts', () => {
 });
 
 test('blocks login after 3 attempts', () => {
-  const result = resolveTransition(auth, {
+  const result = resolveTransition(authDef.config, {
     context: { attempts: 3, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -68,7 +68,7 @@ test('blocks login after 3 attempts', () => {
 });
 
 test('returns undefined for undefined event in state', () => {
-  const result = resolveTransition(auth, {
+  const result = resolveTransition(authDef.config, {
     context: { attempts: 0, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'loading', // LOGIN is not defined in loading
@@ -86,7 +86,7 @@ test('reports guard evaluation', () => {
   const evaluations: Array<{ passed: boolean; target: string }> = [];
 
   resolveTransition(
-    auth,
+    authDef.config,
     {
       context: { attempts: 5, token: '' },
       event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
@@ -105,7 +105,7 @@ test('reports guard evaluation', () => {
 
 - **`resolveTransition()` does not fire `onDebug` events.** Debug events only fire during `send()`. Guards are still evaluated, but silently.
 - **Guards must be pure.** `resolveTransition()` evaluates the guard synchronously. Guards that read from signals or perform async work will not behave correctly.
-- **Test the definition, not the instance.** Pass the definition returned by `defineMachine()`, not a live `MachineInstance`.
+- **Pass the config object, not the instance.** `resolveTransition()` takes a config object (the value returned by `define().config` or the object literal you pass to `machine()`), not a live instance.
 
 ### Related
 

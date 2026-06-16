@@ -1,6 +1,6 @@
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 
-import type { DataPoint, Series, TooltipConfig } from '../types';
+import type { Datum, Series, TooltipConfig } from '../types';
 
 import { warn } from '../_warn';
 
@@ -9,7 +9,7 @@ export interface TooltipState {
   [Symbol.dispose](): void;
   el: HTMLDivElement | null;
   hide(): void;
-  show(x: number, y: number, point: DataPoint, series: Series): void;
+  show(x: number, y: number, datum: Datum, series: Series): void;
 }
 
 export function createTooltip(container: HTMLElement, config?: TooltipConfig | true): TooltipState {
@@ -46,15 +46,15 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     hide() {
       el.style.opacity = '0';
     },
-    show(x: number, y: number, point: DataPoint, series: Series) {
+    show(x: number, y: number, datum: Datum, series: Series) {
       if (!container.isConnected) return;
 
       if (render) {
-        const html = render(point, series);
+        const html = render(datum, series);
 
         el.innerHTML = sanitize ? sanitize(html) : html;
       } else {
-        el.textContent = `${series.name}: ${point.y}`;
+        el.textContent = `${series.name}: ${datum.value}`;
       }
 
       const virtualRef = {

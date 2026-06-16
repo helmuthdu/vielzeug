@@ -9,7 +9,7 @@ import {
   encodeStorageTablePrefix,
   getRecordKey,
 } from '../internal';
-import { defaultCodec } from '../ttl';
+import { defaultCodec, isExpired } from '../ttl';
 
 // Firefox historically threw 'NS_ERROR_DOM_QUOTA_REACHED'; modern browsers use the standard name.
 const QUOTA_ERROR_NAMES = new Set(['QuotaExceededError', 'NS_ERROR_DOM_QUOTA_REACHED']);
@@ -116,7 +116,7 @@ function createWebStorageAdapter<S extends AnySchema>(
     try {
       const stored = codec.decode<T>(JSON.parse(raw) as unknown);
 
-      if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) return undefined;
+      if (!stored || isExpired(stored.expiresAt)) return undefined;
 
       return stored.value;
     } catch {
@@ -180,6 +180,8 @@ function createWebStorageAdapter<S extends AnySchema>(
         return true;
       }
 
+      if (ownedKeys.has(storageKey)) evict(storageKey);
+
       return false;
     },
 
@@ -193,6 +195,8 @@ function createWebStorageAdapter<S extends AnySchema>(
         if (value !== undefined) {
           evict(storageKey);
           deleted += 1;
+        } else if (ownedKeys.has(storageKey)) {
+          evict(storageKey);
         }
       }
 
@@ -296,7 +300,7 @@ function createWebStorageAdapter<S extends AnySchema>(
         try {
           const stored = codec.decode(JSON.parse(raw) as unknown);
 
-          if (!stored || (stored.expiresAt !== undefined && Date.now() >= stored.expiresAt)) {
+          if (!stored || isExpired(stored.expiresAt)) {
             expiredKeys.push(storageKey);
           }
         } catch {
@@ -354,7 +358,7 @@ function createWebStorageAdapter<S extends AnySchema>(
 
         const tableName = decodeStorageTableFromKey(name, event.key);
 
-        if (tableName && tableName in schema) {
+        if (tableName && Object.hasOwn(schema, tableName)) {
           if (event.newValue === null) {
             ownedKeys.delete(event.key);
           } else {

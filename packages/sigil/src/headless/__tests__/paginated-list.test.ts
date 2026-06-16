@@ -36,10 +36,11 @@ describe('createPaginatedList()', () => {
       expect(paged.hasPrev.value).toBe(false);
     });
 
-    it('handles an empty items array with pageCount of 1', () => {
+    it('handles an empty items array with pageCount of 0', () => {
       const paged = createPaginatedList({ getItems: () => [] });
 
-      expect(paged.pageCount.value).toBe(1);
+      expect(paged.pageCount.value).toBe(0);
+      expect(paged.pageIndex.value).toBe(-1);
       expect(paged.pageItems.value).toEqual([]);
       expect(paged.hasNext.value).toBe(false);
       expect(paged.hasPrev.value).toBe(false);
@@ -172,6 +173,27 @@ describe('createPaginatedList()', () => {
       expect(paged.pageIndex.value).toBe(0);
       expect(paged.hasPrev.value).toBe(false);
       expect(paged.hasNext.value).toBe(false);
+    });
+  });
+
+  describe('goTo() non-finite guard', () => {
+    it('ignores NaN and preserves current page', () => {
+      const paged = createPaginatedList({ getItems: () => [1, 2, 3, 4], pageSize: 2 });
+
+      paged.goTo(1);
+      expect(paged.pageIndex.value).toBe(1);
+
+      paged.goTo(NaN);
+      expect(paged.pageIndex.value).toBe(1);
+    });
+
+    it('ignores Infinity and preserves current page', () => {
+      const paged = createPaginatedList({ getItems: () => [1, 2, 3, 4], pageSize: 2 });
+
+      paged.goTo(Infinity);
+
+      expect(Number.isFinite(paged.pageIndex.value)).toBe(true);
+      expect(paged.pageIndex.value).toBe(0);
     });
   });
 

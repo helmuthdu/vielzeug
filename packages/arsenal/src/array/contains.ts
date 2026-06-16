@@ -1,4 +1,4 @@
-import { isEqual } from '../typed/isEqual';
+import { isEqual } from '../guards/isEqual';
 
 /**
  * Checks if a value is present in an array.

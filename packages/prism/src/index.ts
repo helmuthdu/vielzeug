@@ -6,7 +6,6 @@ export type {
   AxisConfig,
   AxisPosition,
   BandScale,
-  BandScaleConfig,
   BarChartConfig,
   BarSeriesConfig,
   BarVariant,
@@ -16,14 +15,14 @@ export type {
   ChartHandle,
   ChartMargin,
   ChartPlugin,
+  ChartPluginContext,
   CrosshairConfig,
-  DataPoint,
+  Datum,
   GridConfig,
   LegendConfig,
   LegendPosition,
   LineChartConfig,
   LineSeriesConfig,
-  LinearScaleConfig,
   MaybeSignal,
   PieChartConfig,
   PieSliceConfig,
@@ -34,10 +33,8 @@ export type {
   SparklineConfig,
   SparklineVariant,
   StackSegment,
-  TimeScaleConfig,
   TooltipConfig,
   TransitionConfig,
-  XScale,
 } from './types';
 
 // Chart factories
@@ -52,9 +49,6 @@ export { bandScale } from './scales/band';
 export { linearScale } from './scales/linear';
 export { timeScale } from './scales/time';
 
-// Scale utilities
-export { buildXScale, buildYScale } from './core/cartesian-scales';
-
 // Animation utilities (for plugin authors)
 export { animate } from './animation/transition';
 export type { AnimationTarget } from './animation/transition';
@@ -68,7 +62,7 @@ export type { TooltipState } from './interaction/tooltip';
 export type { Point } from './svg/path';
 
 // Scaffold types (for typed plugins)
-export type { ChartEventHandlers, ScaffoldContext, ScaffoldGroups } from './core/chart-scaffold';
+export type { ChartEventHandlers, RadialScaffoldContext, ScaffoldContext, ScaffoldGroups } from './core/chart-scaffold';
 
 // Theme utilities
 export { seriesColor, setTheme } from './theme';

@@ -1,6 +1,6 @@
 import type { Adapter, AnySchema } from './types';
 
-import { VaultDisposedError } from './errors';
+import { VaultDisposedError, VaultError } from './errors';
 
 /**
  * Schedules periodic calls to `adapter.pruneExpired()` using `setInterval`.
@@ -17,9 +17,37 @@ import { VaultDisposedError } from './errors';
  */
 export function scheduleExpiredPrune<S extends AnySchema>(
   adapter: Pick<Adapter<S>, 'pruneExpired'>,
-  options: { interval: number },
+  options: {
+    interval: number;
+    /**
+     * Called when `pruneExpired()` throws an error that is NOT a `VaultDisposedError`.
+     * `VaultDisposedError` always stops the schedule automatically.
+     * Without this callback, non-disposal errors are silently swallowed.
+     */
+    onError?: (err: unknown) => void;
+    /**
+     * When aborted, stops the schedule. Useful for tying the schedule lifetime
+     * to an adapter's `disposalSignal`:
+     * ```ts
+     * scheduleExpiredPrune(db, { interval: ttl.hours(1), signal: db.disposalSignal });
+     * ```
+     */
+    signal?: AbortSignal;
+  },
 ): () => void {
+  if (!Number.isFinite(options.interval) || options.interval <= 0) {
+    throw new VaultError('scheduleExpiredPrune: interval must be a finite positive number');
+  }
+
   let active = true;
+
+  const stop = (): void => {
+    active = false;
+    clearInterval(id);
+  };
+
+  options.signal?.addEventListener('abort', stop, { once: true });
+
   const id = setInterval(() => {
     if (!active) return;
 
@@ -27,12 +55,11 @@ export function scheduleExpiredPrune<S extends AnySchema>(
       if (err instanceof VaultDisposedError) {
         active = false;
         clearInterval(id);
+      } else {
+        options.onError?.(err);
       }
     });
   }, options.interval);
 
-  return () => {
-    active = false;
-    clearInterval(id);
-  };
+  return stop;
 }

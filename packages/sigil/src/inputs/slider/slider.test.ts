@@ -312,4 +312,21 @@ describe('sg-slider accessibility', () => {
       expect(fixture.element.hasAttribute('disabled')).toBe(true);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      const fix = await mount('sg-slider', { attrs: { max: '100', min: '0', value: '50' }, html: 'Volume' });
+
+      const results = await axeCheck(fix.element, {
+        rules: {
+          'aria-input-field-name': { enabled: false },
+          'aria-required-attr': { enabled: false },
+          'nested-interactive': { enabled: false },
+        },
+      });
+
+      fix.destroy();
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

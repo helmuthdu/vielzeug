@@ -1,4 +1,5 @@
-import { computed, define, effect, html, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -215,7 +216,7 @@ define<SgAvatarGroupProps>(AVATAR_GROUP_TAG, {
     max: prop.number(5),
     total: prop.json(undefined as number | undefined),
   },
-  setup(props, { bind: _bind, el, slots }) {
+  setup(props, { el, slots, watch }) {
     const overflowCount = signal(0);
 
     const updateVisibility = () => {
@@ -230,7 +231,7 @@ define<SgAvatarGroupProps>(AVATAR_GROUP_TAG, {
       });
     };
 
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
       updateVisibility();
     });

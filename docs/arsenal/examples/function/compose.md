@@ -1,34 +1,38 @@
 ---
-title: 'Arsenal Examples — compose'
-description: 'compose example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — pipe'
+description: 'pipe example for @vielzeug/arsenal.'
 ---
 
-## compose
+## pipe
 
 ### Problem
 
-You need to chain functions right-to-left — applying the last function first and passing the result to each preceding function.
+You need to chain functions left-to-right, passing the output of each step as the input to the next.
 
 ### Solution
 
-Use `compose(...fns)` to create a pipeline that evaluates right-to-left.
+Use `pipe(...fns)` to create a left-to-right pipeline. Pass zero arguments to get the identity function.
 
 ```ts
-import { compose } from '@vielzeug/arsenal';
+import { pipe } from '@vielzeug/arsenal';
 
-const process = compose(
-  (s: string) => s.toUpperCase(),
+const process = pipe(
   (s: string) => s.trim(),
+  (s) => s.toUpperCase(),
 );
 
 process('  hello world  '); // 'HELLO WORLD'
+
+// Zero args → identity
+const id = pipe(); // <T>(x: T) => T
 ```
 
 ### Pitfalls
 
-- Execution is right-to-left: the last function runs first. Use `pipe` for left-to-right composition.
+- TypeScript can only infer up to a fixed number of intermediate types; annotate when the chain is very long.
+- Each step must accept the return type of the previous step.
 
 ### Related
 
-- [pipe](./pipe.md)
-- [partial](./partial.md)
+- [tap](./tap.md)
+- [once](./once.md)

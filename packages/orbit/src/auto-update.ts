@@ -50,7 +50,13 @@ function getScrollAncestors(el: Element): Element[] {
       ancestors.push(current);
     }
 
-    current = current.parentElement;
+    if (current.parentElement) {
+      current = current.parentElement;
+    } else {
+      const root = current.getRootNode();
+
+      current = root instanceof ShadowRoot ? root.host : null;
+    }
   }
 
   return ancestors;
@@ -94,7 +100,7 @@ export function autoUpdate(
   const throttled = throttleMs > 0 ? throttle(update, throttleMs, { leading: true, trailing: true }) : null;
   const notify = throttled ?? update;
 
-  // ── Visibility-aware wrapper (F2) ───────────────────────────────────────────
+  // ── Visibility guard ─────────────────────────────────────────────────────────
   let referenceVisible = true;
   const conditionalNotify = (): void => {
     if (referenceVisible) notify();

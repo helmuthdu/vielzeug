@@ -1,6 +1,14 @@
 import { autoUpdate, computePosition, flip, offset, type Placement, shift, size } from '@vielzeug/orbit';
 
-import type { OverlayPositioner } from './overlay';
+// ── Overlay positioner contract ──────────────────────────────────────────────
+
+export type OverlayPositioner = {
+  floating: () => HTMLElement | null;
+  reference: () => HTMLElement | null;
+  /** Start continuous position auto-updates. Returns a stop function. */
+  startAutoUpdate?: () => () => void;
+  update: () => void;
+};
 
 // ── Dropdown positioner ───────────────────────────────────────────────────────
 
@@ -91,5 +99,3 @@ export function createDropdownPositioner({
 
   return { floating: getFloating, reference: getReference, startAutoUpdate, update: updatePosition };
 }
-
-export type { OverlayPositioner };

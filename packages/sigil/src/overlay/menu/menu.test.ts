@@ -286,4 +286,18 @@ describe('sg-menu', () => {
       expect((onSelect.mock.calls[0][0] as CustomEvent).detail.value).toBe('delete');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-menu', {
+        html: `<button slot="trigger">Open</button>
+               <sg-menu-item value="edit">Edit</sg-menu-item>
+               <sg-menu-item value="delete">Delete</sg-menu-item>`,
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

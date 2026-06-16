@@ -33,9 +33,9 @@ const addTag = createMutation(
     onError: (err, variables) => {
       console.error(`Failed to create tag "${variables.name}":`, err.message);
     },
-    onSettled: (_data, _error, variables) => {
+    onSettled: (result) => {
       // Always fires — use to hide a spinner or re-enable the form for this input
-      hideSpinner(variables.name);
+      hideSpinner(result.variables.name);
     },
   },
 );
@@ -65,7 +65,7 @@ await addTag.mutate({ name: 'typescript' });
 
 ### Pitfalls
 
-- `onError` is **not** called when a mutation is aborted. Use `onSettled` if you need abort awareness — its `error` argument is `null` for both success and abort outcomes.
+- `onError` is **not** called when a mutation is aborted. Use `onSettled` if you need abort awareness — switch on `result.status`: `'success'`, `'error'`, or `'aborted'`.
 - `variables` is the value you passed to `mutate()`. It is captured at call time and does not change if the call is retried.
 - Throwing inside a lifecycle callback does not reject `mutate()`. Use `onCallbackError` to observe callback errors without affecting the mutation result.
 

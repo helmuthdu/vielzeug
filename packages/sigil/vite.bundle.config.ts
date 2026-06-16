@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const sigilExternals = [
   '@vielzeug/arsenal',
   '@vielzeug/craft',
-  '@vielzeug/grip',
+  '@vielzeug/dnd',
   '@vielzeug/orbit',
   '@vielzeug/ripple',
   '@vielzeug/scroll',

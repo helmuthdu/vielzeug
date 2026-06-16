@@ -1,52 +1,57 @@
-import { DELETED, diff } from '../diff';
+import { diff } from '../diff';
 
 describe('diff', () => {
-  it('should return an empty object if both inputs are undefined', () => {
-    expect(diff()).toEqual({});
+  it('returns empty result when both inputs are omitted', () => {
+    expect(diff()).toEqual({ added: [], changed: {}, removed: [] });
   });
 
-  it('should return an empty object if both inputs are null', () => {
-    expect(diff(null as any, null as any)).toEqual({});
-  });
-
-  it('should return the current object if the previous object is undefined', () => {
-    const curr = { a: 1, b: 2 };
-
-    expect(diff(undefined, curr)).toEqual(curr);
-  });
-
-  it('should return an empty object if both objects are equal', () => {
+  it('returns empty result when both objects are equal', () => {
     const obj = { a: 1, b: 2 };
 
-    expect(diff(obj, obj)).toEqual({});
+    expect(diff(obj, obj)).toEqual({ added: [], changed: {}, removed: [] });
   });
 
-  it('should return the difference between two objects', () => {
-    const prev: any = { a: 1, b: 2, c: 3 };
-    const curr: any = { b: 2, c: 3, d: 4 };
+  it('reports added keys', () => {
+    const result = diff({ a: 1 }, { a: 1, b: 2 });
 
-    expect(diff(prev, curr)).toEqual({ a: DELETED, d: 4 });
+    expect(result.added).toEqual(['b']);
+    expect(result.removed).toEqual([]);
+    expect(result.changed).toEqual({});
   });
 
-  it('should handle nested objects', () => {
-    const prev: any = { a: { x: 1, y: 2 }, b: 2 };
-    const curr: any = { a: { x: 1, y: 3 }, b: 2 };
+  it('reports removed keys', () => {
+    const result = diff({ a: 1, b: 2 }, { a: 1 });
 
-    expect(diff(prev, curr)).toEqual({ a: { y: 3 } });
+    expect(result.added).toEqual([]);
+    expect(result.removed).toEqual(['b']);
+    expect(result.changed).toEqual({});
   });
 
-  it('should use a custom comparator if provided', () => {
-    const prev: any = { a: 1, b: 2 };
-    const curr: any = { a: 1, b: '2' };
-    const comparator = (a: unknown, b: unknown) => a == b; // Loose equality
+  it('reports changed values', () => {
+    const result = diff({ a: 1, b: 2 }, { a: 1, b: 99 });
 
-    expect(diff(prev, curr, comparator)).toEqual({});
+    expect(result.added).toEqual([]);
+    expect(result.removed).toEqual([]);
+    expect(result.changed).toEqual({ b: { after: 99, before: 2 } });
   });
 
-  it('should handle cases where keys are added or removed', () => {
-    const prev: any = { a: 1, b: 2 };
-    const curr: any = { b: 2, c: 3 };
+  it('handles combined add/remove/change in one call', () => {
+    const result = diff({ a: 1, b: 2, c: 3 }, { b: 2, c: 99, d: 4 });
 
-    expect(diff(prev, curr)).toEqual({ a: DELETED, c: 3 });
+    expect(result.removed).toEqual(['a']);
+    expect(result.added).toEqual(['d']);
+    expect(result.changed).toEqual({ c: { after: 99, before: 3 } });
+  });
+
+  it('treats object values as atomic (no deep nesting)', () => {
+    const result = diff({ x: { n: 1 } }, { x: { n: 2 } });
+
+    expect(result.changed).toEqual({ x: { after: { n: 2 }, before: { n: 1 } } });
+  });
+
+  it('uses a custom comparator when provided', () => {
+    const result = diff({ a: 1, b: 2 }, { a: 1, b: '2' }, (x, y) => x == y);
+
+    expect(result.changed).toEqual({});
   });
 });

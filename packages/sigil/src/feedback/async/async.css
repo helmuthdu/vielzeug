@@ -135,7 +135,7 @@
   }
 
   .error-state .retry-btn:hover {
-    background: color-mix(in srgb, var(--color-error-500) 10%, transparent);
+    background: color-mix(in oklch, var(--color-error-500) 10%, transparent);
   }
 
   .error-state .retry-btn:focus-visible {

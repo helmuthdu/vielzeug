@@ -62,7 +62,7 @@
     margin-inline: var(--size-0-5) calc(var(--size-2) * -1);
     color: inherit;
     cursor: pointer;
-    background: color-mix(in srgb, currentcolor 12%, transparent);
+    background: color-mix(in oklch, currentcolor 12%, transparent);
     border: none;
     border-radius: var(--_radius);
     opacity: 0.7;
@@ -72,7 +72,7 @@
   }
 
   .remove-btn:hover {
-    background: color-mix(in srgb, currentcolor 28%, transparent);
+    background: color-mix(in oklch, currentcolor 28%, transparent);
     opacity: 1;
   }
 
@@ -142,7 +142,7 @@
 
   /* Flat — subtle tint */
   :host([variant='flat']) {
-    --_bg: var(--chip-bg, color-mix(in srgb, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent));
+    --_bg: var(--chip-bg, color-mix(in oklch, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent));
     --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-800)));
     --_border-color: var(--chip-border-color, transparent);
     --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
@@ -208,7 +208,7 @@
   }
 
   :host([variant='ghost']) .remove-btn:hover {
-    background: var(--chip-remove-hover-bg, color-mix(in srgb, currentcolor 15%, transparent));
+    background: var(--chip-remove-hover-bg, color-mix(in oklch, currentcolor 15%, transparent));
   }
 
   /* ========================================

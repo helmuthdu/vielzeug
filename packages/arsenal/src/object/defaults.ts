@@ -1,6 +1,6 @@
 import type { Obj } from '../types';
 
-import { isPlainObject } from '../typed/isPlainObject';
+import { isPlainObject } from '../guards/isPlainObject';
 
 /**
  * Fills in `undefined` properties in `target` with values from `sources`. First source wins

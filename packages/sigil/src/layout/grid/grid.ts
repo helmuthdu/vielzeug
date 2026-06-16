@@ -1,4 +1,4 @@
-import { define, effect, html, onMounted, prop } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
 
 import styles from './grid.css?inline';
@@ -163,7 +163,7 @@ define<SgGridProps>(GRID_TAG, {
     rows: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto'>(),
   },
 
-  setup(props, { bind: _bind, el }) {
+  setup(props, { el, onMounted, watch }) {
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
         return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;
@@ -195,7 +195,7 @@ define<SgGridProps>(GRID_TAG, {
     };
 
     // Re-run cols whenever any responsive prop changes
-    effect(() => {
+    watch(() => {
       void [
         props.cols.value,
         props.colsSm.value,
@@ -229,7 +229,7 @@ define<SgGridProps>(GRID_TAG, {
     };
 
     // Rows
-    effect(() => {
+    watch(() => {
       const rows = props.rows.value;
 
       if (rows && rows !== 'auto') {
@@ -239,7 +239,7 @@ define<SgGridProps>(GRID_TAG, {
       }
     });
     // Grid template areas (responsive)
-    effect(() => {
+    watch(() => {
       void [
         props.areas.value,
         props.areasSm.value,
@@ -255,7 +255,7 @@ define<SgGridProps>(GRID_TAG, {
     onMounted(() => {
       const size = resizeObserver(el);
 
-      effect(() => {
+      watch(() => {
         void size.value;
         updateCols();
         updateAreas();

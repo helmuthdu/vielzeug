@@ -341,4 +341,15 @@ describe('sg-number-input accessibility', () => {
       expect(getInput(fixture)?.getAttribute('aria-hidden')).toBeNull();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-number-input', { attrs: { label: 'Quantity' } });
+      await fixture.flush();
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

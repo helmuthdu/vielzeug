@@ -405,4 +405,14 @@ describe('sg-rating accessibility', () => {
       }
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-rating', { attrs: { label: 'Product rating' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

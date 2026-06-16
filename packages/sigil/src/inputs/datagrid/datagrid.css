@@ -1,8 +1,8 @@
 @layer sigil.base {
   :host {
     /* ── Datagrid-specific token overrides on top of tableBaseMixin ─────── */
-    --_row-hover-bg: var(--datagrid-row-hover-bg, color-mix(in srgb, var(--color-contrast-500) 5%, transparent));
-    --_row-selected-bg: var(--datagrid-row-selected-bg, color-mix(in srgb, var(--_accent) 10%, transparent));
+    --_row-hover-bg: var(--datagrid-row-hover-bg, color-mix(in oklch, var(--color-contrast-500) 5%, transparent));
+    --_row-selected-bg: var(--datagrid-row-selected-bg, color-mix(in oklch, var(--_accent) 10%, transparent));
     --_row-selected-border: var(--datagrid-row-selected-border, var(--_accent));
   }
 
@@ -99,7 +99,7 @@
   }
 
   .dg-th[aria-sort]:has(.dg-sort-btn:hover):not(:has(.dg-sort-btn:disabled)) {
-    background: color-mix(in srgb, var(--color-contrast-900) 5%, transparent);
+    background: color-mix(in oklch, var(--color-contrast-900) 5%, transparent);
   }
 
   .dg-sort-btn:focus-visible {
@@ -336,7 +336,7 @@
 
   .dg-page-btn:hover:not(:disabled) {
     color: var(--color-contrast-900);
-    background: color-mix(in srgb, var(--color-contrast-900) 8%, transparent);
+    background: var(--color-contrast-300);
   }
 
   .dg-page-btn:focus-visible {
@@ -389,12 +389,12 @@
     /* Paint background + bottom separator via box-shadow so it is
        direction-agnostic and covers the host outer border on both sides. */
     box-shadow:
-      inset 0 0 0 9999px color-mix(in srgb, var(--color-contrast-600) 4%, var(--_bg, transparent)),
+      inset 0 0 0 9999px color-mix(in oklch, var(--color-contrast-600) 4%, var(--_bg, transparent)),
       inset 0 calc(var(--border) * -1) 0 var(--_border-color);
   }
 
   .dg-tr-expanded:last-child .dg-td-expanded {
-    box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--color-contrast-900) 4%, var(--_bg, transparent));
+    box-shadow: inset 0 0 0 9999px color-mix(in oklch, var(--color-contrast-900) 4%, var(--_bg, transparent));
   }
 
   .dg-tr:has(+ .dg-tr-expanded) {

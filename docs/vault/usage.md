@@ -94,7 +94,7 @@ const all = await db.getAll('users'); // User[]
 const total = await db.count('users'); // number (live records only)
 const exists = await db.has('users', 1); // boolean
 
-// update — merges fields, throws VaultError if key does not exist
+// update — merges fields, returns undefined if key does not exist
 const updated = await db.update('users', 1, { age: 31 });
 
 // delete
@@ -104,7 +104,7 @@ await db.clear('users');
 (void alice, all, total, exists, updated);
 ```
 
-`update` returns the merged record or throws `VaultError` when the key is not found. Use `upsert` for insert-or-update semantics.
+`update` returns the merged record, or `undefined` when the key is not found. Use `upsert` for insert-or-update semantics.
 
 ## Key and Entry Reads
 
@@ -179,6 +179,15 @@ const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
 
 // on teardown (before dispose)
 stop();
+```
+
+Pass `signal` to tie the schedule lifetime to an `AbortController` or `db.disposalSignal` — no manual `stop()` call needed:
+
+```ts
+scheduleExpiredPrune(db, {
+  interval: ttl.hours(1),
+  signal: db.disposalSignal, // auto-stops when the adapter is disposed
+});
 ```
 
 The schedule also stops automatically if the adapter is disposed before the timer fires — `VaultDisposedError` thrown by `pruneExpired()` is caught and the interval is cleared.
@@ -329,18 +338,22 @@ controller.abort(); // terminates the loop
 
 By default (`mode: 'latest'`) intermediate snapshots are dropped if the consumer lags. Pass `mode: 'all'` to queue every snapshot instead.
 
-### `watchStream` — ReadableStream
+### `toReadableStream` — ReadableStream
 
-`watchStream(table)` returns a Web Standard `ReadableStream` of snapshots. Use it with WHATWG stream pipelines or in environments that consume `ReadableStream` directly.
+To get a `ReadableStream` of snapshots, wrap `db.watch()` with `toReadableStream()`. Use it with WHATWG stream pipelines or in environments that consume `ReadableStream` directly.
 
 ```ts
-db.watchStream('users').pipeTo(new WritableStream({ write: (users) => render(users) }));
+import { toReadableStream } from '@vielzeug/vault';
+
+toReadableStream(db.watch('users')).pipeTo(new WritableStream({ write: (users) => render(users) }));
 ```
 
-Always cancel the stream (or pass a `signal`) to stop the underlying observer:
+Always cancel the stream (or pass a `signal` to `watch()`) to stop the underlying observer:
 
 ```ts
-const reader = db.watchStream('users').getReader();
+const controller = new AbortController();
+const stream = toReadableStream(db.watch('users', { signal: controller.signal }));
+const reader = stream.getReader();
 
 for (;;) {
   const { value: users, done } = await reader.read();

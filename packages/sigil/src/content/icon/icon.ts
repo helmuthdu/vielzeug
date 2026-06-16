@@ -1,4 +1,5 @@
-import { computed, define, html, prop, raw } from '@vielzeug/craft';
+import { define, html, prop, raw } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
 
 import { warn } from '../../_warn';

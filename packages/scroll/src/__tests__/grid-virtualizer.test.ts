@@ -475,3 +475,31 @@ describe('createGridVirtualizer – lifecycle', () => {
     expect(onChange.mock.calls.length).toBe(callsBefore);
   });
 });
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createGridVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    expect(v.disposed).toBe(false);
+    v.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    v.dispose();
+    expect(v.disposed).toBe(true);
+  });
+
+  it('disposed is true after [Symbol.dispose]()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    v[Symbol.dispose]();
+    expect(v.disposed).toBe(true);
+  });
+});

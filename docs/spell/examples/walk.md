@@ -86,7 +86,7 @@ console.log(requiredFields(Signup)); // ['email', 'name']
 
 ### Pitfalls
 
-- The `unknown` fallback is required if your visitor does not list every possible schema kind. Omitting it throws at runtime for unhandled kinds.
+- If no handler matches and no `unknown` fallback is provided, `walk()` returns `null`. Add an `unknown` handler when the calling code must receive a non-null value for every schema.
 - `walk()` does not recurse automatically — you must call `child.walk(visitor)` inside your `object` handler to descend into nested schemas.
 - Wrapper schemas (`optional`, `nullable`, `nullish`) reflect as their inner `kind`, so `s.string().optional().kind` is `'string'`, not `'optional'`.
 
