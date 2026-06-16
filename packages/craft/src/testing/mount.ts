@@ -70,6 +70,10 @@ export type MountSetup = {
 export const _mountedElements: HTMLElement[] = [];
 export let _componentTagCounter = 0;
 
+// Never resets — prevents tag name collisions in the shared jsdom customElements
+// registry when multiple test files run in the same environment.
+const _globalTagCounter = 0;
+
 /**
  * Resets global test counters used for deterministic IDs/markers.
  * @internal
@@ -155,7 +159,8 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
   } else {
-    tagName = `trial-${++_componentTagCounter}`;
+    tagName = `trial-${++_globalTagCounter}`;
+    _componentTagCounter = _globalTagCounter;
     inlineDefinition = {
       ...(componentOptions ?? {}),
       setup: tagOrSetup as ComponentDefinition<any, any>['setup'],
