@@ -1,20 +1,6 @@
-import {
-  computed,
-  define,
-  defineField,
-  html,
-  inject,
-  onCleanup,
-  onElement,
-  onEvent,
-  onMounted,
-  prop,
-  ref,
-  signal,
-  createStableId,
-} from '@vielzeug/craft';
-import { createDropZone, matchesAccept } from '@vielzeug/grip';
-import { watch } from '@vielzeug/ripple';
+import { createStableId, define, useField, html, inject, prop, ref } from '@vielzeug/craft';
+import { createDropZone, matchesAccept } from '@vielzeug/dnd';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { createInteraction } from '../../headless';
 import { FILE_INPUT_SIZE_PRESET } from '../../shared';
@@ -133,7 +119,7 @@ define<SgFileInputProps, SgFileInputEvents>(FILE_INPUT_TAG, {
     required: prop.bool(false),
     size: prop.string(),
   },
-  setup(props, { bind, el: _el, emit }) {
+  setup(props, { bind, emit, onCleanup, onElement, onEvent, onMounted }) {
     // ============================================
     // State
     // ============================================
@@ -150,7 +136,7 @@ define<SgFileInputProps, SgFileInputEvents>(FILE_INPUT_TAG, {
     // Form Integration
     // ============================================
 
-    defineField({
+    useField({
       disabled: isDisabled,
       toFormValue: (fi: File[]) => {
         if (fi.length === 0) return null;
@@ -305,9 +291,9 @@ define<SgFileInputProps, SgFileInputEvents>(FILE_INPUT_TAG, {
       });
 
       const dropZone = createDropZone({
-        disabled: () => isDisabled.value,
+        disabled: isDisabled.value,
         element: dz,
-        onDrop: (droppedFiles, e) => addFiles(droppedFiles, e),
+        onDrop: (droppedFiles) => addFiles(droppedFiles),
         onHoverChange: (hovered) => {
           isDragging.value = hovered;
         },

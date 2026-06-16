@@ -1,4 +1,5 @@
-import { computed, createContext, define, html, prop, provide, type ReadonlySignal, signal } from '@vielzeug/craft';
+import { createContext, define, html, prop } from '@vielzeug/craft';
+import { computed, type ReadonlySignal } from '@vielzeug/ripple';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -75,9 +76,7 @@ define<SgAccordionProps, SgAccordionEvents>(ACCORDION_TAG, {
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { bind, el, emit }) {
-    const focusedIndex = signal(0);
-
+  setup(props, { bind, el, emit, provide }) {
     const handleSelectionMode = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value !== 'single') return;
 
@@ -101,13 +100,10 @@ define<SgAccordionProps, SgAccordionEvents>(ACCORDION_TAG, {
     };
 
     const listControl = createListControl({
-      getIndex: () => focusedIndex.value,
       getItems: () => getAccordionItems(),
       isItemDisabled: (item: HTMLElement) => item.hasAttribute('disabled'),
       loop: true,
-      setIndex: (index) => {
-        focusedIndex.value = index;
-
+      onNavigate: (_action, index) => {
         const summaries = getSummaryElements();
 
         summaries[index]?.focus();
@@ -145,7 +141,7 @@ define<SgAccordionProps, SgAccordionEvents>(ACCORDION_TAG, {
 
           if (focused === -1) return; // focus is not on a summary — let native handling proceed
 
-          focusedIndex.value = focused;
+          listControl.set(focused);
           listControl.handleKeydown(evt);
         },
       },

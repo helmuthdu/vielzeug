@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 
-import { configure, errorsAt, prependIssuePath, reset, s, ValidationError } from '../index';
+import { errorsAt, prependIssuePath, resetMessages, s, setLogger, setMessages, ValidationError } from '../index';
 
 describe('ValidationError message and shaping', () => {
   it('formats a root-level issue with fallback path label', () => {
@@ -18,7 +18,7 @@ describe('ValidationError message and shaping', () => {
   it('flatten() returns structured path entries for field errors', () => {
     const result = s
       .object({ email: s.string().email(), name: s.string().min(2) })
-      .check((value) => !value.name || value.name !== 'admin' || 'Reserved name')
+      .validate((value) => !value.name || value.name !== 'admin' || 'Reserved name')
       .safeParse({ email: 'bad', name: 'admin' });
 
     expect(result.success).toBe(false);
@@ -213,21 +213,22 @@ describe('prependIssuePath()', () => {
   });
 });
 
-describe('configure({ logger: null }) — warning silencing', () => {
+describe('setLogger(null) — warning silencing', () => {
   afterEach(() => {
-    reset();
+    resetMessages();
+    setLogger(null);
   });
 
   it('silences internal warnings when logger is null', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    configure({ logger: null });
-    configure({
-      messages: Object.assign(
+    setLogger(null);
+    setMessages(
+      Object.assign(
         {},
         { string: Object.create(null, { constructor: { enumerable: true, value: () => 'x' } }) },
       ) as any,
-    });
+    );
 
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -237,8 +238,8 @@ describe('configure({ logger: null }) — warning silencing', () => {
     const logs: string[] = [];
     const unsafeMessages = { string: Object.create(null, { constructor: { enumerable: true, value: () => 'x' } }) };
 
-    configure({ logger: (msg) => logs.push(msg) });
-    configure({ messages: unsafeMessages as any });
+    setLogger((msg) => logs.push(msg));
+    setMessages(unsafeMessages as any);
 
     expect(logs.length).toBeGreaterThan(0);
     expect(logs[0]).toContain('constructor');

@@ -1,112 +1,132 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
 import { throttle } from '../throttle';
 
-describe('throttle', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
+beforeEach(() => {
+  vi.useFakeTimers();
+});
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+afterEach(() => {
+  vi.useRealTimers();
+});
 
-  it('should have cancel, flush, and pending methods', () => {
+describe('throttle — leading only (default)', () => {
+  it('invokes immediately on the first call', () => {
     const fn = vi.fn();
-    const throttledFn = throttle(fn);
+    const t = throttle(fn, 100);
 
-    expect(typeof throttledFn.cancel).toBe('function');
-    expect(typeof throttledFn.flush).toBe('function');
-    expect(typeof throttledFn.pending).toBe('function');
-  });
-
-  it('should execute immediately on first call (leading)', () => {
-    const fn = vi.fn();
-    const throttled = throttle(fn, 1000);
-
-    throttled('a');
+    t();
     expect(fn).toHaveBeenCalledTimes(1);
-    expect(fn).toHaveBeenCalledWith('a');
   });
 
-  it('should execute on trailing edge with latest args', () => {
+  it('ignores calls within the throttle window', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 1000, { trailing: true });
+    const t = throttle(fn, 100);
 
-    throttled('a'); // leading
-    throttled('b');
-    throttled('c'); // latest
-
+    t();
+    t();
+    t();
     expect(fn).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(1000);
+  });
+
+  it('fires again after the window elapses', () => {
+    const fn = vi.fn();
+    const t = throttle(fn, 100);
+
+    t();
+    vi.advanceTimersByTime(100);
+    t();
     expect(fn).toHaveBeenCalledTimes(2);
-    expect(fn).toHaveBeenLastCalledWith('c');
   });
 
-  it('should respect custom delay', () => {
+  it('cancel() resets state so next call fires immediately', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 500);
+    const t = throttle(fn, 100);
 
-    throttled();
-    vi.advanceTimersByTime(499);
-    expect(fn).toHaveBeenCalledTimes(1);
-
-    vi.advanceTimersByTime(1);
-    expect(fn).toHaveBeenCalledTimes(1); // no trailing call because no queued args
-
-    throttled();
-    expect(fn).toHaveBeenCalledTimes(2); // enough time passed
+    t();
+    vi.advanceTimersByTime(50);
+    t.cancel();
+    t();
+    expect(fn).toHaveBeenCalledTimes(2);
   });
 
-  it('should support leading: false option', () => {
+  it('pending() returns false — leading-only has no queued trailing call', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 1000, { leading: false, trailing: true });
+    const t = throttle(fn, 100);
 
-    throttled('test');
+    t();
+    expect(t.pending()).toBe(false);
+  });
+
+  it('flush() returns undefined when nothing is pending', () => {
+    const fn = vi.fn(() => 99);
+    const t = throttle(fn, 100);
+
+    t();
+    expect(t.flush()).toBeUndefined();
+  });
+});
+
+describe('throttle — leading: false', () => {
+  it('does not invoke immediately', () => {
+    const fn = vi.fn();
+    const t = throttle(fn, 100, { leading: false, trailing: false });
+
+    t();
     expect(fn).not.toHaveBeenCalled();
-
-    vi.advanceTimersByTime(1000);
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(fn).toHaveBeenCalledWith('test');
   });
 
-  it('should support trailing: false option', () => {
+  it('does not fire at all without trailing', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 1000, { leading: true, trailing: false });
+    const t = throttle(fn, 100, { leading: false, trailing: false });
 
-    throttled('a'); // leading call
-    throttled('b'); // ignored
-
-    vi.advanceTimersByTime(1000);
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(fn).toHaveBeenCalledWith('a');
+    t();
+    vi.advanceTimersByTime(200);
+    expect(fn).not.toHaveBeenCalled();
   });
+});
 
-  it('should cancel pending calls', () => {
+describe('throttle — trailing edge', () => {
+  it('schedules a trailing call with the last args', () => {
     const fn = vi.fn();
-    const throttled = throttle(fn, 1000);
+    const t = throttle(fn, 100, { leading: true, trailing: true });
 
-    throttled('a');
-    throttled('b'); // queued
-    expect(throttled.pending()).toBe(true);
+    t(1);
+    expect(fn).toHaveBeenCalledWith(1);
 
-    throttled.cancel();
-    expect(throttled.pending()).toBe(false);
-
-    vi.advanceTimersByTime(1000);
-    expect(fn).toHaveBeenCalledTimes(1); // only 'a' was called
+    t(2);
+    t(3);
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledWith(3);
   });
 
-  it('should flush pending calls immediately', () => {
-    const fn = vi.fn().mockReturnValue('result');
-    const throttled = throttle(fn, 1000);
+  it('pending() returns true when a trailing call is scheduled', () => {
+    const fn = vi.fn();
+    const t = throttle(fn, 100, { leading: true, trailing: true });
 
-    throttled('a');
-    throttled('b'); // queued
+    t();
+    t();
+    expect(t.pending()).toBe(true);
+  });
 
-    const result = throttled.flush();
+  it('flush() fires the trailing call immediately', () => {
+    const fn = vi.fn();
+    const t = throttle(fn, 100, { leading: true, trailing: true });
 
-    expect(fn).toHaveBeenCalledTimes(2);
+    t('a');
+    t('b');
+    t.flush();
     expect(fn).toHaveBeenLastCalledWith('b');
-    expect(result).toBe('result');
-    expect(throttled.pending()).toBe(false);
+  });
+
+  it('cancel() drops the trailing call', () => {
+    const fn = vi.fn();
+    const t = throttle(fn, 100, { leading: true, trailing: true });
+
+    t(1);
+    t(2);
+    t.cancel();
+    vi.advanceTimersByTime(200);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 });

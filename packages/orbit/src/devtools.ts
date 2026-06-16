@@ -10,7 +10,7 @@
 import type { FloatOptions } from './float';
 import type { ComputePositionResult, FloatHandle, ReferenceElement } from './types';
 
-import { float } from './float';
+import { float, makeHandle } from './float';
 
 // ── Overlay helpers ───────────────────────────────────────────────────────────
 
@@ -139,22 +139,12 @@ export function debugFloat(
 
   const handle = float(reference, floating, { ...options, apply: wrappedApply });
 
-  const disposeHandle = (): void => {
-    handle.dispose();
-    overlay.remove();
-  };
-
-  return {
-    cssAnchor: handle.cssAnchor,
-    get disposalSignal() {
-      return handle.disposalSignal;
+  return makeHandle(
+    () => {
+      handle.dispose();
+      overlay.remove();
     },
-    dispose: disposeHandle,
-    get disposed() {
-      return handle.disposed;
-    },
-    getPosition: () => handle.getPosition(),
-    [Symbol.dispose]: disposeHandle,
-    update: () => handle.update(),
-  };
+    () => handle.getPosition(),
+    () => handle.update(),
+  );
 }

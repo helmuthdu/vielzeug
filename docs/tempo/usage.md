@@ -284,11 +284,7 @@ const days = [...dateRange(start, end, { days: 1 })];
 
 // Every Monday in a date range
 const mondays = [
-  ...dateRange(
-    parseZoned('2026-03-02T00:00:00[UTC]'),
-    parseZoned('2026-03-30T00:00:00[UTC]'),
-    { weeks: 1 },
-  ),
+  ...dateRange(parseZoned('2026-03-02T00:00:00[UTC]'), parseZoned('2026-03-30T00:00:00[UTC]'), { weeks: 1 }),
 ];
 
 // recurrence — repeating dates with count or until

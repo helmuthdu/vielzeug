@@ -1,7 +1,6 @@
-import type { BandScale, BandScaleConfig } from '../types';
+import type { BandScale, BandScaleConfig } from './types';
 
 import { warn } from '../_warn';
-import { resolve } from '../core/resolve';
 
 export function bandScale(config: BandScaleConfig): BandScale {
   return {
@@ -18,7 +17,7 @@ export function bandScale(config: BandScaleConfig): BandScale {
     },
 
     get domain(): string[] {
-      return resolve(config.domain);
+      return config.domain;
     },
 
     gap(): number {
@@ -46,7 +45,7 @@ export function bandScale(config: BandScaleConfig): BandScale {
     },
 
     get range(): [number, number] {
-      return resolve(config.range);
+      return config.range;
     },
 
     ticks(count?: number): string[] {

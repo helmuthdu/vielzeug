@@ -150,4 +150,14 @@ describe('sg-password-strength', () => {
       expect(fixture.element.getAttribute('data-level')).toBe('strong');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-password-strength', { attrs: { score: '3' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

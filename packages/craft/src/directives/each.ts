@@ -9,7 +9,7 @@ import {
 } from '@vielzeug/ripple';
 
 import { warn } from '../_warn';
-import { CRAFTIT_ERRORS } from '../errors';
+import { CRAFT_ERRORS } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
@@ -80,7 +80,7 @@ const reconcileItems = <T>(
   for (let i = 0; i < nextKeys.length; i++) {
     const key = nextKeys[i];
 
-    if (seen.has(key)) throw new Error(CRAFTIT_ERRORS.eachDuplicateKey(key, i));
+    if (seen.has(key)) throw new Error(CRAFT_ERRORS.eachDuplicateKey(key, i));
 
     seen.add(key);
   }
@@ -142,9 +142,26 @@ const reconcileItems = <T>(
  * Each item is rendered by the provided render function.
  * Items are reused by key when the list changes; only stale items are destroyed.
  *
- * @example
+ * **Reactive (default):** render receives `ReadonlySignal<T>` and `ReadonlySignal<number>`.
+ * In-place updates (reorder, value change) avoid DOM teardown.
+ *
+ * **Snapshot:** render receives plain `T` and `number`. Items are destroyed and
+ * recreated on every list change that affects them — simpler but less optimal.
+ * Use when the render function is cheap and granular reactivity is not needed.
+ *
+ * **Plain array note:** when a plain `T[]` is passed (not a signal or getter),
+ * it is treated as a static snapshot — mutations to the original array after
+ * the directive is created are not tracked. Pass a `Signal<T[]>` or `() => T[]`
+ * for reactive lists.
+ *
+ * @example Reactive (default)
  * ```ts
  * html`${each(items, (item) => item.id, (item) => html`<li>${() => item.value.name}</li>`)}`
+ * ```
+ *
+ * @example Snapshot
+ * ```ts
+ * html`${each(items, (item) => item.id, (item, index) => html`<li>${item.name} #${index}</li>`, { snapshot: true })}`
  * ```
  */
 export function each<T>(
@@ -152,12 +169,50 @@ export function each<T>(
   keyFn: (item: T, index: number) => string | number,
   render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
   fallback?: () => HTMLResult,
+): DirectiveResult;
+export function each<T>(
+  list: MaybeReactiveArray<T>,
+  keyFn: (item: T, index: number) => string | number,
+  render: (item: T, index: number) => HTMLResult,
+  options: { fallback?: () => HTMLResult; snapshot: true },
+): DirectiveResult;
+export function each<T>(
+  list: MaybeReactiveArray<T>,
+  keyFn: (item: T, index: number) => string | number,
+  render:
+    | ((item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult)
+    | ((item: T, index: number) => HTMLResult),
+  fallbackOrOptions?: (() => HTMLResult) | { fallback?: () => HTMLResult; snapshot: true },
 ): DirectiveResult {
+  const isSnapshot =
+    typeof fallbackOrOptions === 'object' && fallbackOrOptions !== null && fallbackOrOptions.snapshot === true;
+  const fallback = isSnapshot
+    ? (fallbackOrOptions as { fallback?: () => HTMLResult }).fallback
+    : (fallbackOrOptions as (() => HTMLResult) | undefined);
+
+  // Wrap snapshot render as a signal-based render
+  const signalRender = isSnapshot
+    ? (item: ReadonlySignal<T>, index: ReadonlySignal<number>): HTMLResult =>
+        (render as (item: T, index: number) => HTMLResult)(item.value, index.value)
+    : (render as (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult);
   const listSignal = Array.isArray(list)
     ? signal(list as T[])
     : typeof list === 'function'
       ? computed(list as () => T[])
       : list;
+
+  try {
+    const SENTINEL_IDX = 99999;
+    const testKey = keyFn({} as T, SENTINEL_IDX);
+
+    if (testKey === SENTINEL_IDX) {
+      warn(
+        'each(): key function returns only the index. Index keys cause full list re-renders on insert/remove — pass a stable item identifier (e.g. item.id) instead.',
+      );
+    }
+  } catch {
+    /* ignore — keyFn may throw on a non-item sentinel; that is fine */
+  }
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const parent = anchor.parentNode!;
@@ -206,9 +261,11 @@ export function each<T>(
       clearFallback();
 
       try {
-        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
+        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, signalRender, parent, endMarker));
       } catch (err) {
         warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
+        for (const entry of itemsMap.values()) removeItem(entry);
+        itemsMap = new Map();
         itemsOrdered = [];
       }
     });

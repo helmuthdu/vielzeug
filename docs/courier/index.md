@@ -26,20 +26,18 @@ exports:
     createMutation,
     createQuery,
     createStream,
-    createTransportCore,
     CourierError,
     HttpError,
+    NetworkError,
+    TimeoutError,
+    AbortError,
     SchemaValidationError,
-    NO_RETRY,
     bindRefetch,
-    createBatcher,
     withBearerAuth,
     withRequestId,
     withLogging,
     persistQueryCache,
     hydrateQueryCache,
-    resolveRetryDelay,
-    anySignal,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -63,15 +61,15 @@ const client = createCourier({ baseUrl: 'https://api.example.com' });
 const user = await client.api.get<User>('/users/{id}', { params: { id: userId } });
 ```
 
-| Feature               | Courier                                       | axios          | ky     |
-| --------------------- | --------------------------------------------- | -------------- | ------ |
-| Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB         | ~5 kB  |
-| Built on              | fetch                                         | XMLHttpRequest | fetch  |
-| Type-safe path params | <sg-icon name="check" size="16"></sg-icon>                                            | Manual         | Manual |
-| Query cache           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
-| SSE + streaming       | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
-| Standalone mutations  | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
-| Zero dependencies     | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     |
+| Feature               | Courier                                       | axios                                  | ky                                     |
+| --------------------- | --------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB                                 | ~5 kB                                  |
+| Built on              | fetch                                         | XMLHttpRequest                         | fetch                                  |
+| Type-safe path params | <sg-icon name="check" size="16"></sg-icon>    | Manual                                 | Manual                                 |
+| Query cache           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| SSE + streaming       | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Standalone mutations  | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Zero dependencies     | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
 
 <div class="decision-callout">
 
@@ -135,19 +133,17 @@ client.query.invalidate(['users']);
 - **SSE** — `createStream().sse()` with typed events, `Last-Event-ID` reconnects, and shared interceptors
 - **Readable HTTP streams** — `stream.readable()` for raw text or NDJSON chunk parsing
 - **Query cache** — `createQuery()` with `fetch()`, prefix invalidation, background revalidation, and stable query keys
-- **SyncStore integration** — `query.watch()` and `mutation.toStore()` work with React, Vue, and Svelte adapters
+- **SyncStore integration** — `query.observe()` (watch + fetch in one call), `query.watchKey()`, `query.observeMany()`, and `mutation.store` work with React, Vue, and Svelte adapters; `observe()` accepts `placeholderData`, `select`, and `fetch: false` via `ObserveOptions`
 - **Standalone mutations** — `createMutation()` with retry, lifecycle callbacks, cancellation, and observable state
-- **Shared transport core** — `createTransportCore()` powers both `createApi()` and `createStream()` for advanced use cases
 - **Request deduplication** — idempotent requests dedupe by method + URL + response type, with `dedupe: false` to opt out
-- **DataLoader-style batcher** — `createBatcher()` coalesces N individual `load()` calls into one batch request
+- **DataLoader-style batcher** — coalesce N individual `load()` calls into one batch via the internal batcher API
 - **Interceptor presets** — `withBearerAuth()`, `withRequestId()`, and `withLogging()` ready to plug in via `use()`
 - **Focus/reconnect binding** — `bindRefetch(qc)` wires up tab visibility and network events; fully opt-in
 - **Cache persistence** — `persistQueryCache()` and `hydrateQueryCache()` for cross-reload cache survival
-- **Structured errors** — `HttpError` captures HTTP, network, abort, and timeout failures
+- **Structured errors** — distinct `HttpError`, `NetworkError`, `TimeoutError`, and `AbortError` classes for precise handling
 - **Disposable** — clients implement `[Symbol.dispose]` for deterministic cleanup
 
 </div>
-
 
 ## Documentation
 

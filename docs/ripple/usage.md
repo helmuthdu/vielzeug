@@ -484,7 +484,7 @@ s.dispose();
 ```
 
 ::: tip historyAt() after eviction
-Once the buffer reaches `maxHistory`, the oldest snapshot is evicted on each new write. `historyAt(0)` always returns the oldest *remaining* snapshot — it is not guaranteed to be the initial state once eviction has occurred.
+Once the buffer reaches `maxHistory`, the oldest snapshot is evicted on each new write. `historyAt(0)` always returns the oldest _remaining_ snapshot — it is not guaranteed to be the initial state once eviction has occurred.
 :::
 
 ## Stores
@@ -781,6 +781,84 @@ enabling the TC39 [explicit resource management](https://github.com/tc39/proposa
 }
 ```
 
+## Testing
+
+Ripple stores are plain objects — no special test utilities needed. Create a
+fresh store in `beforeEach` and dispose any active effects in `afterEach`.
+
+```ts
+import { store, watch } from '@vielzeug/ripple';
+import type { Store } from '@vielzeug/ripple';
+
+describe('counter', () => {
+  let s: Store<{ count: number }>;
+
+  beforeEach(() => {
+    s = store({ count: 0 });
+  });
+
+  it('patches count', () => {
+    s.patch({ count: 1 });
+    expect(s.value.count).toBe(1);
+  });
+
+  it('notifies watcher on change', () => {
+    const listener = vi.fn();
+    const sub = watch(s, listener);
+    s.patch({ count: 5 });
+    // notifications are synchronous — no await needed
+    expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
+    sub.dispose();
+  });
+});
+```
+
+For isolated signal tests, create signals in the test scope — they are
+garbage-collected unless an active `effect()` holds a reference:
+
+```ts
+it('computed updates reactively', () => {
+  const n = signal(2);
+  const sq = computed(() => n.value ** 2);
+  expect(sq.value).toBe(4);
+  n.value = 3;
+  expect(sq.value).toBe(9);
+  sq.dispose();
+});
+```
+
+## DevTools
+
+Import `installDevTools` from the dedicated sub-path. This keeps DevTools code out of production bundles when unused.
+
+```ts
+import { installDevTools } from '@vielzeug/ripple/devtools';
+
+installDevTools({
+  write({ name, oldValue, newValue }) {
+    console.log(`[write] ${name ?? '(unnamed)'}: ${String(oldValue)} → ${String(newValue)}`);
+  },
+  run({ name }) {
+    performance.mark(`effect:${name ?? 'anon'}`);
+  },
+  dispose({ kind, name }) {
+    console.log(`[dispose] ${kind} "${name ?? '(unnamed)'}"`);
+  },
+  compute({ name }) {
+    console.log(`[compute] ${name ?? '(unnamed)'}`);
+  },
+  mutate({ kind, name, path }) {
+    const target = path ? `${name ?? '(unnamed)'}[${path}]` : (name ?? '(unnamed)');
+    console.log(`[mutate] store ${target} — ${kind}`);
+  },
+});
+
+// Uninstall when no longer needed:
+installDevTools(null);
+```
+
+All hook methods are optional. The hook is stored in a module-level variable (not `globalThis`); `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension tools.
+
 ## Framework Integration
 
 ::: code-group
@@ -897,84 +975,6 @@ search.subscribe(() => {
   void source.refresh();
 });
 ```
-
-## Testing
-
-Ripple stores are plain objects — no special test utilities needed. Create a
-fresh store in `beforeEach` and dispose any active effects in `afterEach`.
-
-```ts
-import { store, watch } from '@vielzeug/ripple';
-import type { Store } from '@vielzeug/ripple';
-
-describe('counter', () => {
-  let s: Store<{ count: number }>;
-
-  beforeEach(() => {
-    s = store({ count: 0 });
-  });
-
-  it('patches count', () => {
-    s.patch({ count: 1 });
-    expect(s.value.count).toBe(1);
-  });
-
-  it('notifies watcher on change', () => {
-    const listener = vi.fn();
-    const sub = watch(s, listener);
-    s.patch({ count: 5 });
-    // notifications are synchronous — no await needed
-    expect(listener).toHaveBeenCalledWith({ count: 5 }, { count: 0 });
-    sub.dispose();
-  });
-});
-```
-
-For isolated signal tests, create signals in the test scope — they are
-garbage-collected unless an active `effect()` holds a reference:
-
-```ts
-it('computed updates reactively', () => {
-  const n = signal(2);
-  const sq = computed(() => n.value ** 2);
-  expect(sq.value).toBe(4);
-  n.value = 3;
-  expect(sq.value).toBe(9);
-  sq.dispose();
-});
-```
-
-## DevTools
-
-Import `installDevTools` from the dedicated sub-path. This keeps DevTools code out of production bundles when unused.
-
-```ts
-import { installDevTools } from '@vielzeug/ripple/devtools';
-
-installDevTools({
-  write({ name, oldValue, newValue }) {
-    console.log(`[write] ${name ?? '(unnamed)'}: ${String(oldValue)} → ${String(newValue)}`);
-  },
-  run({ name }) {
-    performance.mark(`effect:${name ?? 'anon'}`);
-  },
-  dispose({ kind, name }) {
-    console.log(`[dispose] ${kind} "${name ?? '(unnamed)'}"`);
-  },
-  compute({ name }) {
-    console.log(`[compute] ${name ?? '(unnamed)'}`);
-  },
-  mutate({ kind, name, path }) {
-    const target = path ? `${name ?? '(unnamed)'}[${path}]` : (name ?? '(unnamed)');
-    console.log(`[mutate] store ${target} — ${kind}`);
-  },
-});
-
-// Uninstall when no longer needed:
-installDevTools(null);
-```
-
-All hook methods are optional. The hook is stored in a module-level variable (not `globalThis`); `globalThis.__RIPPLE_DEVTOOLS__` is kept in sync as a mirror for browser-extension tools.
 
 ## Best Practices
 

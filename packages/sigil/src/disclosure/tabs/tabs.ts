@@ -1,16 +1,5 @@
-import {
-  computed,
-  createContext,
-  define,
-  html,
-  onMounted,
-  prop,
-  provide,
-  type ReadonlySignal,
-  ref,
-  signal,
-  watch,
-} from '@vielzeug/craft';
+import { createContext, define, html, prop, ref } from '@vielzeug/craft';
+import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -102,12 +91,11 @@ define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
     value: prop.string(),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onMounted, provide }) {
     const shadowRoot = el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();
     const selectedValue = signal<string | undefined>(props.value.value);
-    const focusedIndex = signal(0);
     const isManualActivation = () => props.activation.value === 'manual';
     const isVertical = () => props.orientation.value === 'vertical';
 
@@ -164,14 +152,10 @@ define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
     // ────────────────────────────────────────────────────────────────
 
     const listControl = createListControl({
-      getIndex: () => focusedIndex.value,
       getItems: () => getEnabledTabs(),
       isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
       loop: true,
-      orientation: () => (isVertical() ? 'vertical' : 'both'),
-      setIndex: (index) => {
-        focusedIndex.value = index;
-
+      onNavigate: (_action, index) => {
         const tabs = getEnabledTabs();
         const nextTab = tabs[index];
 
@@ -183,6 +167,7 @@ define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
           if (value) setSelection(value, true);
         }
       },
+      orientation: () => (isVertical() ? 'vertical' : 'both'),
     });
 
     // ────────────────────────────────────────────────────────────────
@@ -207,15 +192,27 @@ define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
       const listRect = tablist.getBoundingClientRect();
 
       if (isVertical()) {
-        indicator.style.top = `${tabRect.top - listRect.top + tablist.scrollTop}px`;
+        const y = tabRect.top - listRect.top + tablist.scrollTop;
+
+        indicator.style.transition = 'none';
         indicator.style.height = `${tabRect.height}px`;
-        indicator.style.left = '0';
         indicator.style.width = '';
+        indicator.style.left = '0';
+        indicator.style.top = '0';
+        void indicator.offsetWidth;
+        indicator.style.transition = '';
+        indicator.style.transform = `translateY(${y}px)`;
       } else {
-        indicator.style.left = `${tabRect.left - listRect.left + tablist.scrollLeft}px`;
+        const x = tabRect.left - listRect.left + tablist.scrollLeft;
+
+        indicator.style.transition = 'none';
         indicator.style.width = `${tabRect.width}px`;
-        indicator.style.top = '';
         indicator.style.height = '';
+        indicator.style.top = '';
+        indicator.style.left = '0';
+        void indicator.offsetWidth;
+        indicator.style.transition = '';
+        indicator.style.transform = `translateX(${x}px)`;
       }
     };
 
@@ -279,9 +276,10 @@ define<SgTabsProps, SgTabsEvents>(TABS_TAG, {
         (node): node is HTMLElement => node instanceof HTMLElement && node.localName === 'sg-tab-item',
       );
 
-      const focused = activeTabFromEvent ? tabs.indexOf(activeTabFromEvent) : -1;
+      const tabFromEvent = activeTabFromEvent ?? tabs.find((t) => t.getAttribute('value') === selectedValue.value);
+      const focused = tabFromEvent ? tabs.indexOf(tabFromEvent) : -1;
 
-      if (focused >= 0) focusedIndex.value = focused;
+      if (focused >= 0) listControl.set(focused);
 
       if (listControl.handleKeydown(e)) return;
 

@@ -3,21 +3,9 @@
     --_navbar-height: var(--navbar-height, var(--size-14));
     --_navbar-width: var(--navbar-width, min(100%, 80rem));
     --_navbar-offset: var(--navbar-offset, var(--size-3));
-    --_navbar-bg: var(
-      --navbar-bg,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-      )
-    );
+    --_navbar-bg: var(--navbar-bg, var(--color-canvas));
     --_navbar-color: var(--navbar-color, var(--color-contrast-900));
-    --_navbar-border-color: var(
-      --navbar-border-color,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
-      )
-    );
+    --_navbar-border-color: var(--navbar-border-color, var(--color-divider));
     --_navbar-shadow: var(--navbar-shadow, var(--shadow-md));
     --_navbar-radius: var(--navbar-radius, var(--rounded-lg));
 
@@ -312,7 +300,7 @@
 
   :host([active]) .item {
     color: var(--navbar-item-active-color, var(--color-primary));
-    background: var(--navbar-item-active-bg, color-mix(in srgb, var(--color-primary) 12%, transparent));
+    background: var(--navbar-item-active-bg, color-mix(in oklch, var(--color-primary) 12%, transparent));
   }
 
   :host([disabled]) .item,
@@ -350,28 +338,28 @@
 
 @layer sigil.variants {
   :host([variant='flat']) {
-    --_navbar-bg: color-mix(in srgb, var(--color-canvas) 88%, transparent);
+    --_navbar-bg: color-mix(in oklch, var(--color-canvas) 88%, transparent);
     --_navbar-shadow: none;
   }
 
   :host([variant='bordered']) {
     --_navbar-bg: var(--color-canvas);
-    --_navbar-border-color: color-mix(in srgb, var(--color-contrast-500) 32%, transparent);
+    --_navbar-border-color: color-mix(in oklch, var(--color-contrast-500) 32%, transparent);
   }
 
   :host([variant='outline']) {
     --_navbar-bg: transparent;
     --_navbar-shadow: none;
-    --_navbar-border-color: color-mix(in srgb, var(--color-contrast-500) 40%, transparent);
+    --_navbar-border-color: color-mix(in oklch, var(--color-contrast-500) 40%, transparent);
   }
 
   :host([variant='glass']) {
-    --_navbar-bg: color-mix(in srgb, var(--color-canvas) 70%, transparent);
+    --_navbar-bg: color-mix(in oklch, var(--color-canvas) 70%, transparent);
     --navbar-backdrop-filter: blur(var(--blur-lg)) saturate(180%);
   }
 
   :host([color]) {
-    --_navbar-border-color: color-mix(in srgb, var(--_theme-border) 30%, transparent);
+    --_navbar-border-color: color-mix(in oklch, var(--_theme-border) 30%, transparent);
   }
 }
 

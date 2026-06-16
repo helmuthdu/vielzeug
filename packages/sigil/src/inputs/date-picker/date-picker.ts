@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, onMounted, prop, signal } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../shared';
@@ -147,7 +148,7 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
     'weekend-days': prop.json([] as number[]),
   },
 
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onMounted }) {
     // ── Signals ─────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
@@ -208,7 +209,7 @@ define<SgDatePickerProps, SgDatePickerEvents>(DATE_PICKER_TAG, {
 
     // ── Form value (host is formAssociated) ──────────────────────────────────
 
-    defineField<string>({
+    useField<string>({
       disabled: isDisabled,
       toFormValue: (v) => v || null,
       value: computed(() => toIsoString(selectedDate.value) ?? ''),

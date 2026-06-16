@@ -18,8 +18,8 @@
   --vp-c-text-3: var(--text-color-tertiary);
 
   /* ── Borders & dividers ── */
-  --vp-c-border: var(--color-contrast-300);
-  --vp-c-divider: var(--color-contrast-200);
+  --vp-c-border: var(--color-divider);
+  --vp-c-divider: var(--color-divider);
 
   /* ── Gray scale (used by default/neutral containers) ── */
   --vp-c-gray-1: var(--color-contrast-300);
@@ -181,9 +181,9 @@ body:has(#repl-container) {
 /* Protect pkg-hero sg-text[as=h1] from .vp-doc h1 global overrides */
 .vp-doc .pkg-hero h1,
 .vp-doc .pkg-hero sg-text h1 {
+  padding: 0;
   margin: 0;
   border: none;
-  padding: 0;
 }
 
 /* Features list → 2-col grid on wider screens */
@@ -222,8 +222,8 @@ body:has(#repl-container) {
 
 .doc-links li a {
   display: inline-flex;
-  align-items: center;
   gap: var(--size-2);
+  align-items: center;
   padding: var(--size-2) var(--size-3-5);
   font-size: var(--text-sm);
   font-weight: var(--font-medium);
@@ -232,7 +232,10 @@ body:has(#repl-container) {
   background: var(--color-contrast-100);
   border: var(--border) solid var(--color-contrast-300);
   border-radius: var(--rounded-lg);
-  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+  transition:
+    border-color var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
 .doc-links li a:hover {
@@ -278,7 +281,7 @@ body:has(#repl-container) {
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
   background: var(--color-primary-backdrop);
-  border: var(--border) solid color-mix(in srgb, var(--color-primary) 25%, transparent);
+  border: var(--border) solid color-mix(in oklch, var(--color-primary) 25%, transparent);
   border-radius: var(--rounded-lg);
 }
 

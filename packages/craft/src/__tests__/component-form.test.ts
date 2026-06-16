@@ -1,4 +1,8 @@
-import { createFormContext, defineField, FORM_CONTEXT_KEY, html, provide, signal, useFormContext } from '../index';
+import { signal } from '@vielzeug/ripple';
+
+import { type FormController, createFormContext, FORM_CONTEXT_KEY } from '../form-context';
+import { useField } from '../form-field';
+import { html } from '../index';
 import { mount } from '../testing';
 
 describe('createFormContext()', () => {
@@ -38,7 +42,7 @@ describe('createFormContext()', () => {
     expect(form.valid.value).toBe(true);
   });
 
-  it('dirty is false at creation and after reset', () => {
+  it('dirty is false at creation and after clearStatus', () => {
     const form = createFormContext();
 
     expect(form.dirty.value).toBe(false);
@@ -56,12 +60,12 @@ describe('createFormContext()', () => {
     expect(form.dirty.value).toBe(true);
   });
 
-  it('reset sets dirty to false', () => {
+  it('clearStatus sets dirty to false', () => {
     const form = createFormContext();
 
     form.markDirty();
     expect(form.dirty.value).toBe(true);
-    form.reset();
+    form.clearStatus();
     expect(form.dirty.value).toBe(false);
   });
 
@@ -112,16 +116,16 @@ describe('createFormContext()', () => {
     expect(form.error.value).toBeNull();
   });
 
-  it('onReset callback is invoked by reset()', () => {
+  it('onReset callback is invoked by clearStatus()', () => {
     const resetSpy = vi.fn();
     const form = createFormContext({ onReset: resetSpy });
 
-    form.reset();
+    form.clearStatus();
 
     expect(resetSpy).toHaveBeenCalledOnce();
   });
 
-  it('reset() clears the error signal', async () => {
+  it('clearStatus() clears the error signal', async () => {
     const form = createFormContext({
       onSubmit: async () => {
         throw new Error('fail');
@@ -131,7 +135,7 @@ describe('createFormContext()', () => {
     await form.submit();
     expect(form.error.value).not.toBeNull();
 
-    form.reset();
+    form.clearStatus();
     expect(form.error.value).toBeNull();
   });
 
@@ -182,15 +186,15 @@ describe('createFormContext()', () => {
   });
 });
 
-describe('useFormContext()', () => {
+describe('ctx.inject(FORM_CONTEXT_KEY)', () => {
   it('returns the form context when provided by an ancestor', async () => {
-    let captured: ReturnType<typeof useFormContext>;
+    let captured: FormController | undefined;
 
-    await mount(() => {
+    await mount((_props, ctx) => {
       const form = createFormContext();
 
-      provide(FORM_CONTEXT_KEY, form);
-      captured = useFormContext();
+      ctx.provide(FORM_CONTEXT_KEY, form);
+      captured = ctx.inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
       return html`<div></div>`;
     });
@@ -200,10 +204,10 @@ describe('useFormContext()', () => {
   });
 
   it('returns undefined when no form context is provided', async () => {
-    let captured: ReturnType<typeof useFormContext> = undefined as never;
+    let captured: FormController | undefined;
 
-    await mount(() => {
-      captured = useFormContext();
+    await mount((_props, ctx) => {
+      captured = ctx.inject(FORM_CONTEXT_KEY) as FormController | undefined;
 
       return html`<div></div>`;
     });
@@ -213,13 +217,13 @@ describe('useFormContext()', () => {
 });
 
 describe('component form integration', () => {
-  describe('defineField()', () => {
+  describe('useField()', () => {
     it('returns a handle with validity APIs', async () => {
-      let handle!: ReturnType<typeof defineField>;
+      let handle!: ReturnType<typeof useField>;
 
       await mount(
         () => {
-          handle = defineField({ value: signal('initial') });
+          handle = useField({ value: signal('initial') });
 
           return html`<div></div>`;
         },
@@ -232,11 +236,11 @@ describe('component form integration', () => {
     });
 
     it('supports custom validity state updates', async () => {
-      let handle!: ReturnType<typeof defineField>;
+      let handle!: ReturnType<typeof useField>;
 
       await mount(
         () => {
-          handle = defineField({ value: signal('') });
+          handle = useField({ value: signal('') });
 
           return html`<div></div>`;
         },
@@ -252,7 +256,7 @@ describe('component form integration', () => {
 
       await mount(
         () => {
-          defineField({
+          useField({
             toFormValue: (value) => {
               transformCalled = true;
 
@@ -269,10 +273,64 @@ describe('component form integration', () => {
       expect(transformCalled).toBe(true);
     });
 
+    it('emptyStringForNull: does not throw and is accepted as an option', async () => {
+      await expect(
+        mount(
+          () => {
+            const val = signal<string | null>(null);
+
+            useField({ emptyStringForNull: true, value: val });
+
+            return html`<div></div>`;
+          },
+          { componentOptions: { formAssociated: true } },
+        ),
+      ).resolves.toBeDefined();
+    });
+
+    it('emptyStringForNull: custom toFormValue still receives null when emptyStringForNull is true', async () => {
+      const captured: Array<unknown> = [];
+
+      await mount(
+        () => {
+          const val = signal<string | null>(null);
+
+          useField({
+            emptyStringForNull: true,
+            toFormValue: (v) => {
+              captured.push(v);
+
+              return v == null ? '' : String(v);
+            },
+            value: val,
+          });
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+
+      expect(captured.at(-1)).toBeNull();
+    });
+
+    it('emptyStringForNull defaults to false — internals handle is accessible', async () => {
+      await mount(
+        () => {
+          const val = signal<string | null>(null);
+          const handle = useField({ value: val });
+
+          expect(typeof handle.internals.setFormValue).toBe('function');
+
+          return html`<div></div>`;
+        },
+        { componentOptions: { formAssociated: true } },
+      );
+    });
+
     it('throws when used without formAssociated component option', async () => {
       await expect(
         mount(() => {
-          defineField({ value: signal('test') });
+          useField({ value: signal('test') });
 
           return html`<div></div>`;
         }),
@@ -283,14 +341,14 @@ describe('component form integration', () => {
       await expect(
         mount(
           () => {
-            defineField({ value: signal('first') });
-            defineField({ value: signal('second') });
+            useField({ value: signal('first') });
+            useField({ value: signal('second') });
 
             return html`<div></div>`;
           },
           { componentOptions: { formAssociated: true } },
         ),
-      ).rejects.toThrow(/defineField\(\) was already called/);
+      ).rejects.toThrow(/useField\(\) was already called/);
     });
   });
 });

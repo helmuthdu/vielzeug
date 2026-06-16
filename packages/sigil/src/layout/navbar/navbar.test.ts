@@ -423,4 +423,17 @@ describe('sg-navbar-item', () => {
 
     expect(fixture.element.textContent?.trim()).toBe('Dashboard');
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-navbar', {
+        attrs: { 'aria-label': 'Main navigation' },
+        html: '<sg-navbar-item href="/">Home</sg-navbar-item>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -179,7 +179,7 @@
   }
 
   .indicator-active {
-    --progress-track-bg: color-mix(in srgb, var(--_dot-bg) 60%, transparent);
+    --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
   }
 
   .indicator-active::part(fill) {

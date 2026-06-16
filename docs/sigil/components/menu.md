@@ -43,19 +43,25 @@ Control which side of the trigger the panel opens on. The menu automatically fli
 
 ```html
 <sg-menu placement="bottom-start">
-  <sg-button slot="trigger" variant="outline" size="sm">Bottom Start <sg-icon name="arrow-down-left" size="16"></sg-icon></sg-button>
+  <sg-button slot="trigger" variant="outline" size="sm"
+    >Bottom Start <sg-icon name="arrow-down-left" size="16"></sg-icon
+  ></sg-button>
   <sg-menu-item value="a">Option A</sg-menu-item>
   <sg-menu-item value="b">Option B</sg-menu-item>
 </sg-menu>
 
 <sg-menu placement="bottom-end">
-  <sg-button slot="trigger" variant="outline" size="sm">Bottom End <sg-icon name="arrow-down-right" size="16"></sg-icon></sg-button>
+  <sg-button slot="trigger" variant="outline" size="sm"
+    >Bottom End <sg-icon name="arrow-down-right" size="16"></sg-icon
+  ></sg-button>
   <sg-menu-item value="a">Option A</sg-menu-item>
   <sg-menu-item value="b">Option B</sg-menu-item>
 </sg-menu>
 
 <sg-menu placement="top-start">
-  <sg-button slot="trigger" variant="outline" size="sm">Top Start <sg-icon name="arrow-up-left" size="16"></sg-icon></sg-button>
+  <sg-button slot="trigger" variant="outline" size="sm"
+    >Top Start <sg-icon name="arrow-up-left" size="16"></sg-icon
+  ></sg-button>
   <sg-menu-item value="a">Option A</sg-menu-item>
   <sg-menu-item value="b">Option B</sg-menu-item>
 </sg-menu>
@@ -300,20 +306,20 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 ### CSS Custom Properties (`sg-menu`)
 
-| Property                    | Description                | Default                |
-| --------------------------- | -------------------------- | ---------------------- |
-| `--menu-panel-min-width`          | Minimum width of the panel                       | `10rem`                |
-| `--menu-panel-radius`             | Border radius of the panel                       | `var(--rounded-lg)`    |
-| `--menu-panel-shadow`             | Box shadow of the panel                          | `var(--shadow-xl)`     |
-| `--menu-panel-bg`                 | Panel background surface                         | Theme-dependent        |
-| `--menu-panel-border-color`       | Panel border color                               | Theme-dependent        |
-| `--menu-panel-blur`               | Panel backdrop blur amount                       | `var(--blur-md)`       |
-| `--menu-item-hover-bg`            | Item background on hover                         | Theme-dependent        |
-| `--menu-item-focus-color`         | Item text color when keyboard-focused            | Theme-dependent        |
-| `--menu-item-focus-bg`            | Item background when keyboard-focused            | Theme-dependent        |
-| `--menu-item-selection-bg`        | Background for checkbox/radio items (unselected) | Theme-dependent        |
-| `--menu-item-checked-color`       | Item text color when checked                     | Theme-dependent        |
-| `--menu-item-checked-bg`          | Item background when checked                     | Theme-dependent        |
+| Property                    | Description                                      | Default             |
+| --------------------------- | ------------------------------------------------ | ------------------- |
+| `--menu-panel-min-width`    | Minimum width of the panel                       | `10rem`             |
+| `--menu-panel-radius`       | Border radius of the panel                       | `var(--rounded-lg)` |
+| `--menu-panel-shadow`       | Box shadow of the panel                          | `var(--shadow-xl)`  |
+| `--menu-panel-bg`           | Panel background surface                         | Theme-dependent     |
+| `--menu-panel-border-color` | Panel border color                               | Theme-dependent     |
+| `--menu-panel-blur`         | Panel backdrop blur amount                       | `var(--blur-md)`    |
+| `--menu-item-hover-bg`      | Item background on hover                         | Theme-dependent     |
+| `--menu-item-focus-color`   | Item text color when keyboard-focused            | Theme-dependent     |
+| `--menu-item-focus-bg`      | Item background when keyboard-focused            | Theme-dependent     |
+| `--menu-item-selection-bg`  | Background for checkbox/radio items (unselected) | Theme-dependent     |
+| `--menu-item-checked-color` | Item text color when checked                     | Theme-dependent     |
+| `--menu-item-checked-bg`    | Item background when checked                     | Theme-dependent     |
 
 ## Accessibility
 

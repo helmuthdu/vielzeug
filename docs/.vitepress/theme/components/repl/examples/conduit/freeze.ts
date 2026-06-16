@@ -23,8 +23,8 @@ try {
   console.log('message:', err.message)
 }
 
-// freeze() is local — child containers are not frozen
-const child = container.createChild()
+// freeze() is local — scope containers are not frozen
+const child = container.createScope()
 const Extra = token('Extra')
 child.value(Extra, 'allowed')
 console.log('child registration allowed:', child.has(Extra))`,

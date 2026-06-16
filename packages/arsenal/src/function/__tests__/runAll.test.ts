@@ -19,16 +19,19 @@ describe('runAll', () => {
     expect(() => runAll([])).not.toThrow();
   });
 
-  it('rethrows a single error directly', () => {
+  it('always throws AggregateError even for a single failure', () => {
     const err = new Error('oops');
 
-    expect(() =>
+    try {
       runAll([
         () => {
           throw err;
         },
-      ]),
-    ).toThrow(err);
+      ]);
+    } catch (e) {
+      expect(e).toBeInstanceOf(AggregateError);
+      expect((e as AggregateError).errors[0]).toBe(err);
+    }
   });
 
   it('throws AggregateError when multiple functions fail', () => {
@@ -42,15 +45,15 @@ describe('runAll', () => {
     expect(() => runAll([fn1, fn2])).toThrowError(AggregateError);
   });
 
-  it('AggregateError includes context prefix when context is provided', () => {
+  it('AggregateError message is always the standard message', () => {
     const fn = () => {
       throw new Error('fail');
     };
 
     try {
-      runAll([fn, fn], { context: 'my-component' });
+      runAll([fn, fn]);
     } catch (err) {
-      expect((err as AggregateError).message).toContain('my-component');
+      expect((err as AggregateError).message).toBe('One or more callbacks failed');
     }
   });
 

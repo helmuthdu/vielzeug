@@ -15,11 +15,10 @@ const disablePluginTimings = processEnv?.CI === 'true' || processEnv?.RUSHSTACK_
 
 const sigilExternals = [
   '@vielzeug/craft',
-  '@vielzeug/grip',
+  '@vielzeug/dnd',
   '@vielzeug/orbit',
   '@vielzeug/ripple',
   '@vielzeug/arsenal',
-  '@vielzeug/scroll',
   '@vielzeug/tempo',
   'lucide',
 ];

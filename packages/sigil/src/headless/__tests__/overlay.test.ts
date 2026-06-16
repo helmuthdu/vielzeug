@@ -1,6 +1,6 @@
 import { signal } from '@vielzeug/ripple';
 
-import { createOverlayControl } from '../index';
+import { createOverlayControl } from '../overlay';
 
 describe('createOverlayControl', () => {
   let controller: AbortController;
@@ -226,27 +226,6 @@ describe('createOverlayControl', () => {
     outside.remove();
   });
 
-  it('cleanup() does not fire onClose when the overlay is open', () => {
-    const openState = signal(true);
-    const onClose = vi.fn();
-    const controller = new AbortController();
-
-    const overlay = createOverlayControl({
-      getBoundary: () => document.body,
-      isOpen: () => openState.value,
-      onClose,
-      setOpen: (next) => {
-        openState.value = next;
-      },
-      signal: controller.signal,
-    });
-
-    overlay.cleanup();
-
-    expect(onClose).not.toHaveBeenCalled();
-    expect(openState.value).toBe(false);
-  });
-
   it('aborting the signal calls cleanup silently', () => {
     const openState = signal(true);
     const onClose = vi.fn();
@@ -298,7 +277,7 @@ describe('createOverlayControl', () => {
     outside.remove();
   });
 
-  it('dispose() is an alias for cleanup() — closes silently without firing onClose', () => {
+  it('dispose() closes silently without firing onClose', () => {
     const openState = signal(true);
     const onClose = vi.fn();
     const controller = new AbortController();
@@ -319,7 +298,7 @@ describe('createOverlayControl', () => {
     expect(openState.value).toBe(false);
   });
 
-  it('[Symbol.dispose]() is an alias for cleanup() — closes silently without firing onClose', () => {
+  it('[Symbol.dispose]() closes silently without firing onClose', () => {
     const openState = signal(true);
     const onClose = vi.fn();
     const controller = new AbortController();

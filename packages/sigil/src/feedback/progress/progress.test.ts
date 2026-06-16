@@ -199,4 +199,14 @@ describe('sg-progress', () => {
       expect(fixture.query('[role="progressbar"]')?.getAttribute('aria-label')).toBe('Progress');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-progress', { attrs: { label: 'Loading', value: '50' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

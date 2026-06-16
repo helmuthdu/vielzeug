@@ -127,7 +127,6 @@ Use the `icon` slot to add a leading icon. The icon wrapper is hidden entirely w
   <sg-icon slot="icon" name="x-circle" size="18"></sg-icon>
   You do not have permission to perform this action.
 </sg-alert>
-
 ```
 
 </ComponentPreview>

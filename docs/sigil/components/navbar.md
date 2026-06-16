@@ -351,16 +351,16 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 ### `sg-navbar` Parts
 
-| Part            | Description                                      |
-| --------------- | ------------------------------------------------ |
-| `nav`           | Outer `<nav>` landmark element                   |
-| `bar`           | Main navbar row container                        |
-| `logo`          | Logo slot container                              |
-| `start`         | Leading (start) content region                   |
-| `center`        | Center content region                            |
-| `end`           | Trailing (end) content region                    |
-| `mobile-toggle` | Mobile menu toggle button                        |
-| `mobile-menu`   | Mobile overflow panel                            |
+| Part            | Description                    |
+| --------------- | ------------------------------ |
+| `nav`           | Outer `<nav>` landmark element |
+| `bar`           | Main navbar row container      |
+| `logo`          | Logo slot container            |
+| `start`         | Leading (start) content region |
+| `center`        | Center content region          |
+| `end`           | Trailing (end) content region  |
+| `mobile-toggle` | Mobile menu toggle button      |
+| `mobile-menu`   | Mobile overflow panel          |
 
 ### `sg-navbar` Slots
 
@@ -380,22 +380,22 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 ### `sg-navbar` CSS Custom Properties
 
-| Property                        | Description                                      | Default         |
-| ------------------------------- | ------------------------------------------------ | --------------- |
-| `--navbar-height`               | Navbar bar height                                | Theme-dependent |
-| `--navbar-width`                | Max width of the navbar content                  | Theme-dependent |
-| `--navbar-offset`               | Horizontal offset for floating/sticky positioning | Theme-dependent |
-| `--navbar-bg`                   | Navbar background color                          | Theme-dependent |
-| `--navbar-color`                | Navbar text color                                | Theme-dependent |
-| `--navbar-border-color`         | Navbar border color                              | Theme-dependent |
-| `--navbar-shadow`               | Navbar box shadow                                | Theme-dependent |
-| `--navbar-radius`               | Border radius (floating/sticky modes)            | Theme-dependent |
-| `--navbar-backdrop-filter`      | Backdrop filter for blur effect                  | Theme-dependent |
-| `--navbar-item-color`           | Nav item text color                              | Theme-dependent |
-| `--navbar-item-hover-color`     | Nav item hover text color                        | Theme-dependent |
-| `--navbar-item-hover-bg`        | Nav item hover background                        | Theme-dependent |
-| `--navbar-item-active-color`    | Nav item active/current text color               | Theme-dependent |
-| `--navbar-item-active-bg`       | Nav item active/current background               | Theme-dependent |
+| Property                     | Description                                       | Default         |
+| ---------------------------- | ------------------------------------------------- | --------------- |
+| `--navbar-height`            | Navbar bar height                                 | Theme-dependent |
+| `--navbar-width`             | Max width of the navbar content                   | Theme-dependent |
+| `--navbar-offset`            | Horizontal offset for floating/sticky positioning | Theme-dependent |
+| `--navbar-bg`                | Navbar background color                           | Theme-dependent |
+| `--navbar-color`             | Navbar text color                                 | Theme-dependent |
+| `--navbar-border-color`      | Navbar border color                               | Theme-dependent |
+| `--navbar-shadow`            | Navbar box shadow                                 | Theme-dependent |
+| `--navbar-radius`            | Border radius (floating/sticky modes)             | Theme-dependent |
+| `--navbar-backdrop-filter`   | Backdrop filter for blur effect                   | Theme-dependent |
+| `--navbar-item-color`        | Nav item text color                               | Theme-dependent |
+| `--navbar-item-hover-color`  | Nav item hover text color                         | Theme-dependent |
+| `--navbar-item-hover-bg`     | Nav item hover background                         | Theme-dependent |
+| `--navbar-item-active-color` | Nav item active/current text color                | Theme-dependent |
+| `--navbar-item-active-bg`    | Nav item active/current background                | Theme-dependent |
 
 ### `sg-navbar-item` Attributes
 
@@ -409,20 +409,20 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 ### `sg-navbar-item` Slots
 
-| Slot      | Description                            |
-| --------- | -------------------------------------- |
-| (default) | Item label text                        |
-| `icon`    | Optional leading icon                  |
-| `end`     | Optional trailing content              |
+| Slot      | Description               |
+| --------- | ------------------------- |
+| (default) | Item label text           |
+| `icon`    | Optional leading icon     |
+| `end`     | Optional trailing content |
 
 ### `sg-navbar-item` Parts
 
-| Part         | Description                        |
-| ------------ | ---------------------------------- |
+| Part         | Description                               |
+| ------------ | ----------------------------------------- |
 | `item`       | Root clickable element (anchor or button) |
-| `item-icon`  | Leading icon container             |
-| `item-label` | Label text container               |
-| `item-end`   | Trailing content container         |
+| `item-icon`  | Leading icon container                    |
+| `item-label` | Label text container                      |
+| `item-end`   | Trailing content container                |
 
 ## Related Components
 

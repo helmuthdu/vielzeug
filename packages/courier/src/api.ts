@@ -1,8 +1,8 @@
 import type { HttpRequestConfig, Params } from './url';
 
-import { HttpError, SchemaValidationError } from './errors';
+import { classifyRequestError, HttpError, SchemaValidationError } from './errors';
 import { parseResponse } from './response';
-import { buildRequestInit, stableStringify } from './serialize';
+import { buildRequestInit, stringify } from './serialize';
 import {
   anySignal,
   buildTimeoutSignal,
@@ -39,16 +39,18 @@ function getDedupeKey(
     return undefined;
   }
 
-  return `${method}:${url}:${stableStringify(dedupeKey)}`;
+  return `${method}:${url}:${stringify(dedupeKey)}`;
 }
 
-export function createApi(opts?: TransportOptions, sharedTransport?: TransportCore) {
+export function createApi(opts?: TransportOptions & { transport?: TransportCore }) {
+  const { transport: sharedTransport, ...transportOpts } = opts ?? {};
+  const transport = sharedTransport ?? createTransportCore(transportOpts);
   const ownTransport = !sharedTransport;
-  const transport = sharedTransport ?? createTransportCore(opts);
   const inFlight = new Map<string, Promise<unknown>>();
 
   async function execute<T>(
-    init: RequestInit,
+    headers: Record<string, string>,
+    init: Omit<RequestInit, 'headers'>,
     full: string,
     m: string,
     responseType: HttpRequestConfig['responseType'],
@@ -58,9 +60,9 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     let res: Response;
 
     try {
-      res = await transport.dispatch({ init, url: full });
+      res = await transport.dispatch({ headers, init, url: full });
     } catch (err) {
-      throw HttpError.fromCause(err, m, full, signal);
+      throw classifyRequestError(err, m, full, signal);
     }
 
     if (!res.ok) {
@@ -82,7 +84,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     try {
       raw = await parseResponse(res, responseType ?? 'auto');
     } catch (err) {
-      throw HttpError.fromCause(err, m, full, signal);
+      throw classifyRequestError(err, m, full, signal);
     }
 
     if (schema) {
@@ -110,7 +112,7 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     try {
       full = buildUrl(transport.baseUrl, url, config.params as Params | undefined, config.query);
     } catch (err) {
-      throw HttpError.fromCause(err, m, url);
+      throw classifyRequestError(err, m, url);
     }
 
     const {
@@ -141,8 +143,15 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
     const combinedExt = anySignal(extSignal, requestAc.signal) ?? requestAc.signal;
     const signal = buildTimeoutSignal(cfgTimeout ?? transport.getTimeout(), combinedExt);
 
-    const init = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
-    const p = execute<T>(init, full, m, responseType, schema as { parse(data: unknown): T } | undefined);
+    const { headers: initHeaders, ...restInit } = buildRequestInit(m, mergedHeaders, body, signal, fetchInit ?? {});
+    const p = execute<T>(
+      initHeaders as Record<string, string>,
+      restInit,
+      full,
+      m,
+      responseType,
+      schema as { parse(data: unknown): T } | undefined,
+    );
 
     if (requestDedupeKey) inFlight.set(requestDedupeKey, p);
 
@@ -164,6 +173,9 @@ export function createApi(opts?: TransportOptions, sharedTransport?: TransportCo
       inFlight.clear();
     },
     delete: <T, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>) => request<T, P>('DELETE', url, cfg),
+    get disposalSignal() {
+      return transport.disposalSignal;
+    },
     dispose(): void {
       inFlight.clear();
 

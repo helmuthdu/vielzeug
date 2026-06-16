@@ -1,15 +1,14 @@
 export const persistenceExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { define } from '@vielzeug/clockwork'
 
-// In-memory persistence adapter (swap load/save/clear for localStorage in production)
+// In-memory persistence adapter (swap load/save for localStorage in production)
 let storedSnapshot = null
 const adapter = {
-  load:  () => storedSnapshot ?? undefined,
-  save:  (snap) => { storedSnapshot = snap },
-  clear: () => { storedSnapshot = null },
+  load: () => storedSnapshot ?? undefined,
+  save: (snap) => { storedSnapshot = snap },
 }
 
-const cartMachine = defineMachine({
+const cartDef = define({
   initial: 'shopping',
   context: { items: [], total: 0 },
   states: {
@@ -38,7 +37,7 @@ const cartMachine = defineMachine({
   },
 })
 
-const cart = interpret(cartMachine, { persistence: adapter })
+const cart = cartDef.start({ persistence: adapter })
 
 cart.send({ type: 'ADD_ITEM', id: 'shirt', price: 29 })
 cart.send({ type: 'ADD_ITEM', id: 'hat',   price: 15 })
@@ -51,7 +50,7 @@ console.log('Saved snapshot state:', storedSnapshot?.state)           // 'shoppi
 console.log('Saved snapshot total:', storedSnapshot?.context.total)   // 44
 
 // Restore: create a new instance that loads the snapshot
-const restored = interpret(cartMachine, { persistence: adapter })
+const restored = cartDef.start({ persistence: adapter })
 console.log('Restored state:', restored.state.value)                   // 'shopping'
 console.log('Restored total:', restored.context.value.total)           // 44`,
   name: 'Persistence & Snapshots',

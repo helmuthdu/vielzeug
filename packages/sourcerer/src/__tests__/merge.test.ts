@@ -106,4 +106,51 @@ describe('mergeSource', () => {
 
     expect(merged.current).toEqual([7]);
   });
+
+  it('combine() throw during parent update propagates the error', () => {
+    const a = makeSource([1, 2]);
+    let shouldThrow = false;
+    const merged = mergeSource([a], (all) => {
+      if (shouldThrow) throw new Error('combine-boom');
+
+      return all.flat();
+    });
+
+    merged.subscribe(() => {});
+
+    shouldThrow = true;
+
+    expect(() => a.set([99])).toThrow('combine-boom');
+  });
+
+  it('double-dispose is idempotent (no throw)', () => {
+    const a = makeSource([1]);
+    const merged = mergeSource([a], (all) => all.flat());
+
+    merged.dispose();
+
+    expect(() => merged.dispose()).not.toThrow();
+  });
+
+  it('disposed getter reflects lifecycle state', () => {
+    const a = makeSource([1]);
+    const merged = mergeSource([a], (all) => all.flat());
+
+    expect(merged.disposed).toBe(false);
+
+    merged.dispose();
+
+    expect(merged.disposed).toBe(true);
+  });
+
+  it('disposalSignal aborts on dispose()', () => {
+    const a = makeSource([1]);
+    const merged = mergeSource([a], (all) => all.flat());
+
+    expect(merged.disposalSignal.aborted).toBe(false);
+
+    merged.dispose();
+
+    expect(merged.disposalSignal.aborted).toBe(true);
+  });
 });

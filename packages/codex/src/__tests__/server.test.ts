@@ -59,7 +59,7 @@ function readText(result: ToolCallResult): string {
 }
 
 describe('vielzeug MCP server', () => {
-  it('registers six tools', async () => {
+  it('registers seven tools', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
@@ -67,6 +67,7 @@ describe('vielzeug MCP server', () => {
     expect(names).toEqual([
       'get-component',
       'get-docs',
+      'get-package',
       'get-source',
       'list-components',
       'list-packages',
@@ -105,25 +106,25 @@ describe('vielzeug MCP server', () => {
     expect(parsed[0]).not.toHaveProperty('apiSource');
   });
 
-  it('list-packages with packageSlug returns a single-item array', async () => {
+  it('get-package returns a single PackageMeta object', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { packageSlug: 'spell' },
-      name: 'list-packages',
+      name: 'get-package',
     })) as ToolCallResult;
-    const parsed = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
+    const parsed = JSON.parse(readText(result)) as Record<string, unknown>;
 
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0]?.['slug']).toBe('spell');
-    expect(parsed[0]).not.toHaveProperty('docs');
+    expect(result.isError).not.toBe(true);
+    expect(parsed['slug']).toBe('spell');
+    expect(parsed).toHaveProperty('hasSource');
+    expect(parsed).not.toHaveProperty('docs');
   });
 
-  it('list-packages with unknown slug returns an error', async () => {
+  it('get-package with unknown slug returns an error', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { packageSlug: 'does-not-exist' },
-      name: 'list-packages',
+      name: 'get-package',
     })) as ToolCallResult;
 
     expect(result.isError).toBe(true);
@@ -227,7 +228,7 @@ describe('vielzeug MCP server', () => {
     expect(JSON.parse(readText(result))).toEqual([]);
   });
 
-  it('search-packages results have matchedIn as an array and a score', async () => {
+  it('search-packages results have matchedIn as an array and a numeric score', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { query: 'signal' },
@@ -241,6 +242,26 @@ describe('vielzeug MCP server', () => {
     expect(hits.length).toBeGreaterThan(0);
     expect(Array.isArray(hits[0]?.['matchedIn'])).toBe(true);
     expect(typeof hits[0]?.['score']).toBe('number');
+    expect(hits[0]?.['score'] as number).toBeGreaterThan(0);
+  });
+
+  it('search-packages scores name matches higher than description matches', async () => {
+    // ripple matches by name — should score higher than a package that only matches in description
+    const { client } = await createTestPair();
+    const result = (await client.callTool({
+      arguments: { query: 'ripple' },
+      name: 'search-packages',
+    })) as ToolCallResult;
+
+    expect(result.isError).not.toBe(true);
+
+    const hits = JSON.parse(readText(result)) as Array<{ matchedIn: string[]; score: number; slug: string }>;
+    const rippleHit = hits.find((h) => h.slug === 'ripple');
+
+    if (rippleHit) {
+      // name match weight (3.9) is highest in metadata tier
+      expect(rippleHit.score).toBeGreaterThanOrEqual(3.9);
+    }
   });
 
   it('list-components and get-component work when sigil metadata is available', async () => {
@@ -421,5 +442,45 @@ describe('vielzeug MCP server', () => {
 
     expect(contents.length).toBeGreaterThan(0);
     expect(typeof (contents[0] as { text?: string }).text).toBe('string');
+  });
+
+  it('resource name for doc pages is "docs/<slug>/<page>"', async () => {
+    const { client } = await createTestPair();
+    const { resources } = await client.listResources();
+
+    const docResource = resources.find((r) => r.uri.startsWith('vielzeug://docs/'));
+
+    expect(docResource).toBeDefined();
+    expect(docResource?.name).toMatch(/^docs\/.+\/.+$/);
+  });
+
+  it('resource name for source is "source/<slug>"', async () => {
+    const { client } = await createTestPair();
+    const { resources } = await client.listResources();
+
+    const sourceResource = resources.find((r) => r.uri.startsWith('vielzeug://source/'));
+
+    expect(sourceResource).toBeDefined();
+    expect(sourceResource?.name).toMatch(/^source\/.+$/);
+  });
+
+  it('search-packages returns error when query exceeds 500 chars', async () => {
+    const { client } = await createTestPair();
+    const longQuery = 'a'.repeat(501);
+
+    const result = (await client.callTool({
+      arguments: { query: longQuery },
+      name: 'search-packages',
+    })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toContain('500');
+  });
+
+  it('get-package requires packageSlug', async () => {
+    const { client } = await createTestPair();
+    const result = (await client.callTool({ arguments: {}, name: 'get-package' })) as ToolCallResult;
+
+    expect(result.isError).toBe(true);
   });
 });

@@ -11,15 +11,15 @@ You have parent and child custom elements that need to share data without thread
 
 ### Solution
 
-Use `createContext()`, `provide()`, and `inject()` to share reactive state through the component tree.
+Use `createContext()`, `ctx.provide()`, and `inject()` to share reactive state through the component tree.
 
 ```ts
-import { createContext, define, html, inject, provide, signal } from '@vielzeug/craft';
+import { createContext, define, html, inject, signal } from '@vielzeug/craft';
 
 const THEME_CTX = createContext<ReturnType<typeof signal<'light' | 'dark'>>>('theme');
 
 define('theme-provider', {
-  setup() {
+  setup(_props, { provide }) {
     const theme = signal<'light' | 'dark'>('light');
 
     provide(THEME_CTX, theme);

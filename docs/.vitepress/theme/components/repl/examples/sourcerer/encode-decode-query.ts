@@ -1,6 +1,6 @@
 export const encodeDecodeQueryExample = {
   code: `// encodeQuery / decodeQuery: serialise source state to URL params and restore it
-import { createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer'
+import { applyRemoteQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer'
 
 const source = createRemoteSource({
   fetch: async ({ filter, limit, page, search }) => {
@@ -26,9 +26,9 @@ console.log('URL string:', url)
 const restored = decodeQuery(new URLSearchParams(url), { defaultLimit: 25 })
 console.log('Decoded page:', restored.page, '— limit:', restored.limit)
 
-// Restore state from decoded query (no-op if nothing changed)
-await source.restoreQuery(restored)
-console.log('State after restoreQuery — page:', source.meta.pageNumber)
+// Restore state from decoded query (no-op if patch is empty)
+await applyRemoteQuery(source, restored)
+console.log('State after applyRemoteQuery — page:', source.meta.pageNumber)
 
 source.dispose()`,
   name: 'encodeQuery & decodeQuery',

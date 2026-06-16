@@ -54,7 +54,12 @@ async function handleRequest(
   }
 }
 
-export async function startHttpServer(mcpServer: Server, port: number): Promise<void> {
+export interface HttpServerHandle {
+  dispose(): void;
+  [Symbol.dispose](): void;
+}
+
+export async function startHttpServer(mcpServer: Server, port: number): Promise<HttpServerHandle> {
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
   const httpServer = createHttpServer();
 
@@ -74,4 +79,15 @@ export async function startHttpServer(mcpServer: Server, port: number): Promise<
       resolve();
     });
   });
+
+  const handle: HttpServerHandle = {
+    dispose() {
+      httpServer.close();
+    },
+    [Symbol.dispose]() {
+      this.dispose();
+    },
+  };
+
+  return handle;
 }

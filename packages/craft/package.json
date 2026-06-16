@@ -49,15 +49,13 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@vielzeug/arsenal": "workspace:*",
-    "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "jsdom": "^29.1.1",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

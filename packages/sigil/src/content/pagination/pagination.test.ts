@@ -336,4 +336,14 @@ describe('sg-pagination accessibility', () => {
       }
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-pagination', { attrs: { page: '2', 'total-pages': '5' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

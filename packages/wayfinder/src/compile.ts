@@ -11,7 +11,6 @@ export type CompiledRoutes<TMeta = unknown, TComponent = unknown> = {
 export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
   options: RouterOptions<TRoutes, TMeta, TComponent>,
 ): CompiledRoutes<TMeta, TComponent> {
-  const globalMiddleware: Middleware[] = [...(options.middleware ?? [])] as unknown as Middleware[];
   const records: RouteRecord<TMeta, TComponent>[] = [];
 
   const compile = (
@@ -19,7 +18,7 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
     route: RouteDefinition,
     ancestorPath: string,
     ancestorBranchDefs: RouteBranchDef<TMeta, TComponent>[],
-    ancestorMiddleware: RouteRecord<TMeta, TComponent>['middleware'],
+    ancestorMiddleware: RouteRecord<TMeta, TComponent>['ownMiddleware'],
   ): void => {
     if (route.index && route.path !== undefined) {
       throw new Error(`[wayfinder] Route "${name}" cannot define both index and path`);
@@ -66,7 +65,7 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
         coerceSearch: route.coerceSearch,
         leaf,
         matcher: compilePathMatcher(ownPath),
-        middleware: [...globalMiddleware, ...ownMiddleware],
+        ownMiddleware,
         path: ownPath,
         redirect: route.redirect,
       });

@@ -53,29 +53,6 @@ const id2 = await container.resolve(RequestId);
 console.log(id1 === id2); // false — two distinct UUIDs
 ```
 
-#### Scoped
-
-One instance per child container. The factory must be resolved from a child — calling `resolve()` or `resolveSync()` on the root for a scoped token throws `ScopedResolutionError`.
-
-```ts
-import { createContainer, token } from '@vielzeug/conduit';
-
-const Session = token<{ userId: string }>('Session');
-const container = createContainer();
-
-container.factory(Session, () => ({ userId: crypto.randomUUID() }), { lifetime: 'scoped' });
-
-const childA = container.createChild();
-const childB = container.createChild();
-
-const s1 = await childA.resolve(Session);
-const s2 = await childA.resolve(Session);
-const s3 = await childB.resolve(Session);
-
-console.log(s1 === s2); // true  — same child scope
-console.log(s1 === s3); // false — different child scopes
-```
-
 #### Named Scope
 
 One instance per scope container created with a specific `ScopeToken`. Use `scope()` to create the token and `createScope(scopeToken)` to create the matching container.
@@ -104,8 +81,8 @@ console.log((await scopeA.resolve(RequestId)) === idA); // true — same scope, 
 ### Pitfalls
 
 - A transient factory can never be resolved synchronously with `resolveSync()` — transients are never cached. Use `resolve()` for transient providers.
-- A scoped factory resolved from the root throws `ScopedResolutionError`. Call `container.createChild()` first.
-- Mixing lifetimes can produce stale references: a singleton that holds a reference to a transient gets one specific instance forever. Use scoped or transient lifetimes at the singleton level when freshness matters.
+- A named-scope factory resolved outside a matching scope container throws `ScopedResolutionError`.
+- Mixing lifetimes can produce stale references: a singleton that holds a reference to a transient gets one specific instance forever. Use named-scope or transient lifetimes at the singleton level when freshness matters.
 
 ### Related
 

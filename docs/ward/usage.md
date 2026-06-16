@@ -552,6 +552,40 @@ if (!result.granted) {
 }
 ```
 
+## Debug Mode
+
+Import `debugWard` from the dedicated sub-path to create a ward with decision logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
+
+```ts
+import { debugWard } from '@vielzeug/ward/devtools';
+
+const permit = debugWard([
+  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
+  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
+]);
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+// [ward:decision] allow             (allow)   viewer  posts  read
+
+permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update');
+// [ward:decision] no-matching-rule            viewer  posts  update
+
+permit.can(null, 'posts', 'read');
+// [ward:decision] no-matching-rule            anonymous  posts  read
+```
+
+The ward returned is identical to `createWard()` — all methods (`can`, `canAll`, `explain`, `forUser`, etc.) work the same way.
+
+Alternatively, pass a custom `logger` directly to `createWard()` to route decisions to a structured logger:
+
+```ts
+const permit = createWard(rules, {
+  logger: (ctx) => myLogger.debug('access decision', ctx),
+});
+```
+
+Debug logging fires on `can`, `canAll`, `canAny`, `checkAll`, and `trace`. It does **not** fire on side-effect-free helpers (`allowedActions`, `rulesInScope`, `detectConflicts`).
+
 ## Working with Other Vielzeug Libraries
 
 ### With Wayfinder
@@ -604,40 +638,6 @@ const ward = createWard(
   },
 );
 ```
-
-## Debug Mode
-
-Import `debugWard` from the dedicated sub-path to create a ward with decision logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
-
-```ts
-import { debugWard } from '@vielzeug/ward/devtools';
-
-const permit = debugWard([
-  { role: 'viewer', resource: 'posts', action: 'read', effect: 'allow' },
-  { role: 'editor', resource: 'posts', action: 'update', effect: 'allow' },
-]);
-
-permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
-// [ward:decision] allow             (allow)   viewer  posts  read
-
-permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update');
-// [ward:decision] no-matching-rule            viewer  posts  update
-
-permit.can(null, 'posts', 'read');
-// [ward:decision] no-matching-rule            anonymous  posts  read
-```
-
-The ward returned is identical to `createWard()` — all methods (`can`, `canAll`, `explain`, `forUser`, etc.) work the same way.
-
-Alternatively, pass a custom `logger` directly to `createWard()` to route decisions to a structured logger:
-
-```ts
-const permit = createWard(rules, {
-  logger: (ctx) => myLogger.debug('access decision', ctx),
-});
-```
-
-Debug logging fires on `can`, `canAll`, `canAny`, `checkAll`, and `trace`. It does **not** fire on side-effect-free helpers (`allowedActions`, `rulesInScope`, `detectConflicts`).
 
 ## Best Practices
 

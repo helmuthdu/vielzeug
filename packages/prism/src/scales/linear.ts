@@ -1,6 +1,5 @@
-import type { LinearScaleConfig, Scale } from '../types';
-
-import { resolve } from '../core/resolve';
+import type { Scale } from '../types';
+import type { LinearScaleConfig } from './types';
 
 function niceNumber(value: number, round: boolean): number {
   const exp = Math.floor(Math.log10(value));
@@ -50,7 +49,7 @@ export function linearScale(config: LinearScaleConfig): Scale<number> {
 
   return {
     get domain(): [number, number] {
-      return getNiceDomain(resolve(config.domain));
+      return getNiceDomain(config.domain);
     },
 
     invert(pixel: number): number {
@@ -80,7 +79,7 @@ export function linearScale(config: LinearScaleConfig): Scale<number> {
     },
 
     get range(): [number, number] {
-      return resolve(config.range);
+      return config.range;
     },
 
     ticks(count = 10): number[] {

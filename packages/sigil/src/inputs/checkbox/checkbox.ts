@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -89,16 +90,18 @@ define<SgCheckboxProps, SgCheckboxEvents>(CHECKBOX_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, emit }) {
+  setup(props, { bind, emit, onCleanup }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
+    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: true,
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
+      getFormField: () => _formField,
       group: groupCtx,
       helper: props.helper,
       indeterminate: props.indeterminate,
@@ -116,20 +119,29 @@ define<SgCheckboxProps, SgCheckboxEvents>(CHECKBOX_TAG, {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = checkable;
 
-    checkable.bindFormField(
-      defineField<string | null>({
-        disabled: checkable.disabled,
-        toFormValue: (v) => v,
-        value: checkable.checkableFormValue,
-      }),
-    );
+    _formField = useField<string | null>({
+      disabled: checkable.disabled,
+      toFormValue: (v) => v,
+      value: checkable.checkableFormValue,
+    });
+
+    const {
+      assistiveId,
+      checked,
+      disabled,
+      errorText,
+      handleClick,
+      handleKeydown,
+      helperText,
+      indeterminate,
+      labelId,
+    } = checkable;
 
     applyCheckableBinding(
       bind,
       fCtxProps.size,
-      { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId },
+      { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, indeterminate, labelId },
       'checkbox',
     );
 
@@ -141,7 +153,7 @@ define<SgCheckboxProps, SgCheckboxEvents>(CHECKBOX_TAG, {
         </div>
       </div>
       <span class="label" part="label" id="${labelId}"><slot></slot></span>
-      ${renderHelperRegion(assistiveId, assistive)}
+      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [

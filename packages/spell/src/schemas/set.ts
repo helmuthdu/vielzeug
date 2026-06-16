@@ -1,4 +1,4 @@
-import type { Issue, MessageFn, ParseValue, SchemaDescriptor } from '../core';
+import type { Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
 import { _messages } from '../messages';
@@ -15,17 +15,13 @@ export class SetSchema<T> extends Schema<Set<T>> {
     this.itemSchema = itemSchema;
   }
 
-  private _invalidSet(value: unknown): ParseValue {
-    return {
-      data: value,
-      issues: [{ code: ErrorCode.invalid_type, message: _messages().set.type(), path: [] }],
-      typeOk: false,
-    };
-  }
-
-  protected override _parseValueSync(value: unknown): ParseValue {
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
     if (!(value instanceof Set)) {
-      return this._invalidSet(value);
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.set.type(), path: [] }],
+        typeOk: false,
+      };
     }
 
     const issues: Issue[] = [];
@@ -33,31 +29,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     let i = 0;
 
     for (const item of value) {
-      const result = this.itemSchema._parseFullSync(item);
-
-      if (result.issues.length === 0) {
-        parsed.add(result.data as T);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-      }
-
-      i += 1;
-    }
-
-    return { data: parsed, issues, typeOk: true };
-  }
-
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    if (!(value instanceof Set)) {
-      return this._invalidSet(value);
-    }
-
-    const parsed = new Set<T>();
-    const issues: Issue[] = [];
-    let i = 0;
-
-    for (const item of value) {
-      const result = await this.itemSchema._parseFullAsync(item);
+      const result = this.itemSchema._parseFullSync(item, ctx);
 
       if (result.issues.length === 0) {
         parsed.add(result.data as T);
@@ -75,7 +47,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     size: number,
     message: MessageFn<{ min: number; value: Set<unknown> }> = (ctx) => _messages().set.min(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Set<unknown>;
 
       if (typed.size >= size) return null;
@@ -88,7 +60,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     size: number,
     message: MessageFn<{ max: number; value: Set<unknown> }> = (ctx) => _messages().set.max(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Set<unknown>;
 
       if (typed.size <= size) return null;
@@ -101,7 +73,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     exact: number,
     message: MessageFn<{ exact: number; value: Set<unknown> }> = (ctx) => _messages().set.size(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Set<unknown>;
 
       if (typed.size === exact) return null;
@@ -111,7 +83,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
   }
 
   nonEmpty(message: MessageFn<{ min: number }> = () => _messages().set.nonEmpty()): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as Set<unknown>;
 
       if (typed.size > 0) return null;
@@ -124,7 +96,7 @@ export class SetSchema<T> extends Schema<Set<T>> {
     return { ...this._describeBase(), items: this.itemSchema.toDescriptor(), kind: 'set' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const item = this.itemSchema.walk(visitor);
 
     if (visitor.set) return visitor.set(this, item);

@@ -1,17 +1,5 @@
-import {
-  createContext,
-  createStableId,
-  define,
-  defineField,
-  effect,
-  html,
-  inject,
-  onCleanup,
-  prop,
-  provide,
-  type ReadonlySignal,
-  when,
-} from '@vielzeug/craft';
+import { createContext, createStableId, define, useField, html, inject, prop, when } from '@vielzeug/craft';
+import { type ReadonlySignal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -116,13 +104,15 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
     required: prop.bool(false),
     value: prop.string(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onCleanup, provide, slots, watch }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 
+    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       prefix: 'radio-group',
@@ -131,9 +121,7 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
       value: props.value,
     });
 
-    choice.bindFormField(
-      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
-    );
+    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
 
     const selectedValue = choice.selectedValue;
     const isDisabled = fCtxProps.disabled;
@@ -172,7 +160,7 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
     });
 
     // Sync name/color/size/disabled/checked onto slotted sg-radio children.
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
       void selectedValue.value;
 
@@ -197,7 +185,7 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
     });
 
     // Roving tabindex: only the selected (or first) radio is tabbable.
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
 
       const radios = getSlottedRadios();
@@ -219,23 +207,19 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
     });
 
     const listControl = createListControl<HTMLElement>({
-      getIndex: () => getEnabledRadios().indexOf(document.activeElement as HTMLElement),
       getItems: getEnabledRadios,
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
       loop: true,
-      onNavigate: (_action, _index, event) => {
-        const activeRadio = document.activeElement as HTMLElement | null;
-
-        if (activeRadio?.tagName === 'SG-RADIO') {
-          selectRadio(activeRadio.getAttribute('value') ?? '', event);
-        }
-      },
-      setIndex: (index) => {
+      onNavigate: (_action, index, event) => {
         const radio = getEnabledRadios()[index];
 
         if (!radio) return;
 
         radio.focus();
+
+        if (radio.tagName === 'SG-RADIO') {
+          selectRadio(radio.getAttribute('value') ?? '', event);
+        }
       },
     });
 
@@ -256,6 +240,7 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
 
           if (focused === -1) return;
 
+          listControl.set(focused);
           listControl.handleKeydown(e);
         },
       },
@@ -283,10 +268,10 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
           class="helper-text"
           part="helper"
           id="${choice.assistiveId}"
-          :role="${() => (choice.assistive.value.errorText ? 'alert' : null)}"
+          :role="${() => (choice.errorText.value ? 'alert' : null)}"
           aria-live="polite"
-          ?hidden="${() => !choice.assistive.value.errorText && !choice.assistive.value.helperText}">
-          ${() => choice.assistive.value.errorText || choice.assistive.value.helperText}
+          ?hidden="${() => !choice.errorText.value && !choice.helperText.value}">
+          ${() => choice.errorText.value || choice.helperText.value}
         </div>
       </fieldset>
     `;

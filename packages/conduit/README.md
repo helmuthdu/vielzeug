@@ -2,19 +2,27 @@
 description: Typed dependency injection for TypeScript.
 package: conduit
 category: di
-keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
+keywords: [dependency-injection, ioc, container, singleton, transient, factory, named-scope]
 related: [rune, herald, ward]
 exports:
   [
     createContainer,
     token,
     scope,
+    loadModules,
+    resolveOptional,
+    resolveOrDefault,
+    tryResolve,
+    resolveSyncOptional,
+    resolveSyncOrDefault,
+    ContainerError,
     CircularDependencyError,
     ProviderNotFoundError,
     DuplicateRegistrationError,
     SyncResolutionError,
     ScopedResolutionError,
     ContainerDisposedError,
+    ContainerFrozenError,
   ]
 ---
 
@@ -29,9 +37,9 @@ exports:
 
 **Package:** `@vielzeug/conduit` &nbsp;·&nbsp; **Category:** Di
 
-**Key exports:** `createContainer`, `token`, `scope`
+**Key exports:** `createContainer`, `token`, `scope`, `loadModules`
 
-**When to use:** Type-safe DI container with async-first resolution, singleton/transient/scoped lifetimes, child scopes, disposal hooks, and circular dependency detection.
+**When to use:** Type-safe DI container with async-first resolution, singleton/transient/named-scope lifetimes, scope containers, disposal hooks, and cycle detection.
 
 **Related:** [@vielzeug/rune](https://vielzeug.dev/rune/) · [@vielzeug/herald](https://vielzeug.dev/herald/) · [@vielzeug/ward](https://vielzeug.dev/ward/)
 
@@ -50,23 +58,24 @@ yarn add @vielzeug/conduit
 ## Quick Start
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, token, loadModules, type ContainerModule } from '@vielzeug/conduit';
 
 const Logger = token<{ log(message: string): void }>('Logger');
 const Service = token<{ run(): Promise<void> }>('Service');
 
-const container = createContainer();
+const appModule: ContainerModule = (c) => {
+  c.value(Logger, console);
+  c.factory(Service, async (r) => {
+    const logger = await r.resolve(Logger);
+    return { run: async () => logger.log('running') };
+  });
+};
 
-container.value(Logger, console);
-container.factory(Service, (logger) => ({ run: async () => logger.log('running') }), { deps: [Logger] });
+const container = createContainer();
+await loadModules(container, appModule);
 
 const service = await container.resolve(Service);
 await service.run();
-
-// Check registration without triggering the factory
-if (container.has(Logger)) {
-  const logger = container.resolveSync(Logger); // sync after warm-up
-}
 
 await container.dispose();
 ```
@@ -76,33 +85,31 @@ await container.dispose();
 - Typed symbol tokens via `token()` with phantom type inference
 - Named scope tokens via `scope()` and `createScope()` for explicit lifecycle control
 - `value()` and `factory()` registration with optional dispose hooks
-- `singleton`, `transient`, `scoped`, and named-scope lifetimes
+- `singleton`, `transient`, and named-scope lifetimes
 - Async-first `resolve()` with concurrent-caller deduplication
 - Sync `resolveSync()` for cached values and post-warm-up hot paths
 - `resolveMany()` to resolve multiple tokens in parallel with typed tuples
-- `tryResolve()` for result-object resolution without throwing
-- `resolveOrDefault()` to resolve with a caller-supplied fallback when a token is absent
 - `resolveAll()` to eagerly warm all singletons at startup
 - `has()` to check registration without executing the factory
-- `ContainerModule` for grouping and async provider setup
-- `validate()` for registration-time cycle detection
-- `freeze()` to lock the container after startup
+- `ContainerModule` for grouping and async provider setup via `loadModules()`
+- `freeze()` to lock the container after startup (runs cycle detection)
 - `inspect()` to get a serializable dependency graph
-- `on()` to subscribe to container lifecycle events
-- Child containers for request, job, or test scopes
+- `on()` to subscribe to container lifecycle events with `source` metadata
+- Named scope containers for request, job, or test scopes
 - `Symbol.asyncDispose` support for `await using`
-- Circular dependency detection with full path in the error message
+- Free-function helpers: `resolveOptional`, `resolveOrDefault`, `tryResolve`, `resolveSyncOptional`, `resolveSyncOrDefault`
 
 ## Errors
 
-| Error                        | When thrown                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------- |
-| `ProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name   |
-| `DuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                 |
-| `SyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory              |
-| `ScopedResolutionError`      | `resolve()` or `resolveSync()` called on root for a scoped or named-scope token |
-| `CircularDependencyError`    | Dependency graph contains a cycle; message includes the full path               |
-| `ContainerDisposedError`     | Any operation called after `dispose()`; message includes container name         |
+| Error                        | When thrown                                                                       |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| `ProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name     |
+| `DuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                   |
+| `SyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory                |
+| `ScopedResolutionError`      | `resolve()` called outside a matching named-scope container                       |
+| `CircularDependencyError`    | `freeze()` detected a cycle; message includes the full path                       |
+| `ContainerDisposedError`     | Any operation called after `dispose()`; message includes container name           |
+| `ContainerFrozenError`       | `value()` or `factory()` called after `freeze()`; message includes container name |
 
 ## Documentation
 

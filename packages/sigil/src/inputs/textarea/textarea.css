@@ -211,23 +211,23 @@
   }
 
   :host([variant='flat']) .field:hover {
-    background: var(--textarea-hover-bg, color-mix(in srgb, var(--_theme-base) 6%, var(--color-contrast-100)));
+    background: var(--textarea-hover-bg, color-mix(in oklch, var(--_theme-base) 6%, var(--color-contrast-100)));
     border-color: var(
       --textarea-hover-border-color,
-      color-mix(in srgb, var(--_theme-base) 35%, var(--color-contrast-300))
+      color-mix(in oklch, var(--_theme-base) 35%, var(--color-contrast-300))
     );
   }
 
   :host([variant='flat']) .field:focus-within {
-    background: var(--textarea-focus-bg, color-mix(in srgb, var(--_theme-base) 8%, var(--color-canvas)));
-    border-color: var(--textarea-focus-border-color, color-mix(in srgb, var(--_theme-focus) 60%, transparent));
+    background: var(--textarea-focus-bg, color-mix(in oklch, var(--_theme-base) 8%, var(--color-canvas)));
+    border-color: var(--textarea-focus-border-color, color-mix(in oklch, var(--_theme-focus) 60%, transparent));
     box-shadow: var(--_theme-shadow);
   }
 
   /* Bordered */
   :host([variant='bordered']) {
     --_bg: var(--textarea-bg, var(--_theme-backdrop));
-    --_border-color: var(--textarea-border-color, color-mix(in srgb, var(--_theme-focus) 70%, transparent));
+    --_border-color: var(--textarea-border-color, color-mix(in oklch, var(--_theme-focus) 70%, transparent));
   }
 
   :host([variant='bordered']) textarea {
@@ -239,11 +239,11 @@
   }
 
   :host([variant='bordered']) textarea::placeholder {
-    color: var(--textarea-placeholder-color, color-mix(in srgb, var(--_theme-content) 45%, transparent));
+    color: var(--textarea-placeholder-color, color-mix(in oklch, var(--_theme-content) 45%, transparent));
   }
 
   :host([variant='bordered'][color='secondary']) textarea::placeholder {
-    color: var(--textarea-placeholder-color, color-mix(in srgb, var(--_theme-base) 45%, transparent));
+    color: var(--textarea-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
   }
 
   :host([variant='bordered']) .field:hover {

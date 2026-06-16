@@ -13,38 +13,41 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 
 ## API At a Glance
 
-| Symbol                                | Purpose                                                        | Execution mode   | Common gotcha                                                                          |
-| ------------------------------------- | -------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------- |
-| `table<T>(key)`                       | Create a typed schema entry                                    | Sync             | `key` must be a `string` field of `T`                                                  |
-| `ttl`                                 | Duration helpers for TTL values                                | Sync             | Raw numbers are rejected at the type level — always use `ttl.*`                        |
-| `createLocalStorage(opts)`            | LocalStorage adapter                                           | Sync             | Quota errors surface as `VaultQuotaError`; configure `onQuotaExceeded`                 |
-| `createSessionStorage(opts)`          | SessionStorage adapter                                         | Sync             | Data is lost when the tab closes                                                       |
-| `createIndexedDB(opts)`               | IndexedDB adapter with iterate and atomic batch                | Sync (lazy open) | First operation opens the DB; call `dispose()` to close it                             |
-| `createMemory(opts)`                  | In-memory adapter for tests and SSR                            | Sync             | Data is not persisted across reloads                                                   |
-| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning                                  | Sync             | Auto-stops on `VaultDisposedError`; returns a `stop` function for earlier cancellation |
-| `db.put / putAll`                     | Write one or many records                                      | Async            | Validators run on every write — a failed `parse()` throws before touching storage      |
-| `db.get / getAll / getMany`           | Read records                                                   | Async            | Expired records are never returned — check `db.debug()` for expired count              |
-| `db.keys(table)`                      | Return all primary keys (no record fetch)                      | Async            | Skips expired records                                                                  |
-| `db.entries(table)`                   | Return all `[key, record]` pairs                               | Async            | Skips expired records                                                                  |
-| `db.getOrDefault(table, key, fn)`     | Read-or-insert at the adapter level                            | Async            | Not atomic on memory/WebStorage; wrap in `batch()` on IDB for atomicity                |
-| `db.query(table)`                     | Start a lazy query pipeline                                    | Sync (lazy)      | `count()` respects `limit`/`offset`; use `totalCount()` for the full set size          |
-| `db.batch(tables, fn)`                | Multi-table write with deferred notifications                  | Async            | On IDB, the callback throwing aborts the whole transaction                             |
-| `db.isEmpty(table)`                   | Returns `true` when the table has no live records              | Async            | Treats TTL-expired records as absent — consistent with `count()`                       |
-| `db.observe(table, fn)`               | Subscribe to table changes — fires immediately on registration | Sync             | Returns `Unsubscribe` — forgetting to call it leaks listeners                          |
-| `db.watch(table, opts?)`              | Async iterable of table snapshots                              | Async            | Always yields an initial snapshot; use `signal` to stop externally                     |
-| `db.watchStream(table, opts?)`        | `ReadableStream` of table snapshots                            | Sync             | `cancel()` stops the observer — always cancel the stream when done                     |
-| `db.iterate(table)`                   | Cursor-based async iteration — IDB only                        | Async            | Not available on memory or web storage adapters                                        |
-| `db.upsert(table, key, fn)`           | Read-modify-write                                              | Async            | `fn` always receives the current record; never the stale previous value                |
-| `db.disposalSignal`                   | `AbortSignal` aborted on disposal                              | Sync getter      | Tie external lifetimes (timers, streams) to this adapter                               |
-| `db.dispose()`                        | Release all resources                                          | Async            | Idempotent; all subsequent operations throw `VaultDisposedError`                       |
-| `db.disposed`                         | `true` after `dispose()` is called                             | Sync getter      | —                                                                                      |
-| `db[Symbol.asyncDispose]()`           | Delegates to `dispose()`                                       | Async            | Enables `await using` declarations                                                     |
+| Symbol                                | Purpose                                                        | Execution mode   | Common gotcha                                                                       |
+| ------------------------------------- | -------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------- |
+| `table<T>(key)`                       | Create a typed schema entry                                    | Sync             | `key` must be a `string` field of `T`                                               |
+| `ttl`                                 | Duration helpers for TTL values                                | Sync             | Raw numbers are rejected at the type level — always use `ttl.*`                     |
+| `createLocalStorage(opts)`            | LocalStorage adapter                                           | Sync             | Quota errors surface as `VaultQuotaError`; configure `onQuotaExceeded`              |
+| `createSessionStorage(opts)`          | SessionStorage adapter                                         | Sync             | Data is lost when the tab closes                                                    |
+| `createIndexedDB(opts)`               | IndexedDB adapter with iterate and atomic batch                | Sync (lazy open) | First operation opens the DB; call `dispose()` to close it                          |
+| `createMemory(opts)`                  | In-memory adapter for tests and SSR                            | Sync             | Data is not persisted across reloads                                                |
+| `scheduleExpiredPrune(adapter, opts)` | Schedule periodic TTL pruning                                  | Sync             | Auto-stops on `VaultDisposedError`; pass `onError` to surface non-disposal errors   |
+| `db.put / putAll`                     | Write one or many records                                      | Async            | Validators run on every write — a failed `parse()` throws before touching storage   |
+| `db.get / getAll / getMany`           | Read records                                                   | Async            | Expired records are never returned — check `db.debug()` for expired count           |
+| `db.keys(table, filter?)`             | Return primary keys; optional filter predicate                 | Async            | With `filter`, fetches all records internally — no native key-only path             |
+| `createVersionedCodec(versions, v)`   | Codec that dispatches by version number                        | Sync             | Records from other codecs (no `__v` field) decode as `undefined` — migrate first    |
+| `db.entries(table)`                   | Return all `[key, record]` pairs                               | Async            | Skips expired records                                                               |
+| `db.getOrDefault(table, key, fn)`     | Read-or-insert at the adapter level                            | Async            | Not atomic on memory/WebStorage; wrap in `batch()` on IDB for atomicity             |
+| `db.query(table)`                     | Start a lazy query pipeline                                    | Sync (lazy)      | `count()` respects `limit`/`offset`; use `totalCount()` for the full set size       |
+| `db.batch(tables, fn)`                | Multi-table write with deferred notifications                  | Async            | On IDB, the callback throwing aborts the whole transaction                          |
+| `db.isEmpty(table)`                   | Returns `true` when the table has no live records              | Async            | Treats TTL-expired records as absent — consistent with `count()`                    |
+| `db.observe(table, fn)`               | Subscribe to table changes — fires immediately on registration | Sync             | Returns `Unsubscribe` — forgetting to call it leaks listeners                       |
+| `db.watch(table, opts?)`              | Async iterable of table snapshots                              | Async            | Always yields an initial snapshot; use `signal` to stop externally                  |
+| `db.iterate(table)`                   | Cursor-based async iteration — IDB only                        | Async            | Not available on memory or web storage adapters                                     |
+| `toReadableStream(iterable)`          | Convert `db.watch()` to a `ReadableStream`                     | Sync             | Always cancel the stream when done to stop the underlying observer                  |
+| `isExpired(expiresAt)`                | Check if an epoch-ms timestamp has passed                      | Sync             | Safe to call with `undefined` — returns `false`                                     |
+| `db.update(table, key, changes)`      | Merge fields into an existing record                           | Async            | Returns `undefined` when the key does not exist — use `upsert` for insert-or-update |
+| `db.upsert(table, key, fn)`           | Read-modify-write                                              | Async            | `fn` always receives the current record; never the stale previous value             |
+| `db.disposalSignal`                   | `AbortSignal` aborted on disposal                              | Sync getter      | Tie external lifetimes (timers, streams) to this adapter                            |
+| `db.dispose()`                        | Release all resources                                          | Async            | Idempotent; all subsequent operations throw `VaultDisposedError`                    |
+| `db.disposed`                         | `true` after `dispose()` is called                             | Sync getter      | —                                                                                   |
+| `db[Symbol.asyncDispose]()`           | Delegates to `dispose()`                                       | Async            | Enables `await using` declarations                                                  |
 
 ## Exports
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `table`, `ttl`, `defaultCodec`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
+**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `createVersionedCodec`, `table`, `ttl`, `defaultCodec`, `isExpired`, `toReadableStream`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
 
-**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `BatchDeps`, `BatchImpl`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `StorageBackend`, `TableBuilder`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
+**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `CodecVersion`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MemoryAdapter`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableBuilder`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
 
 ## Schema Helper
 
@@ -109,21 +112,40 @@ All helpers throw synchronously if `n` is not a finite positive number (zero is 
 ```ts
 function scheduleExpiredPrune<S extends AnySchema>(
   adapter: Pick<Adapter<S>, 'pruneExpired'>,
-  options: { interval: number },
+  options: {
+    interval: number;
+    onError?: (err: unknown) => void;
+    signal?: AbortSignal;
+  },
 ): () => void;
 ```
 
 Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` function.
 
-The schedule also stops automatically if `pruneExpired()` throws `VaultDisposedError` — no cleanup needed after `dispose()` if the adapter is disposed before the timer fires.
+The schedule stops automatically if `pruneExpired()` throws `VaultDisposedError` — no cleanup needed after `dispose()` if the adapter is disposed before the timer fires.
+
+Without `onError`, other errors from `pruneExpired()` (e.g. IDB failures) are silently swallowed and the interval continues running. Pass `onError` to surface them:
 
 ```ts
 import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
 
-const stop = scheduleExpiredPrune(db, { interval: ttl.hours(1) });
+const stop = scheduleExpiredPrune(db, {
+  interval: ttl.hours(1),
+  onError: (err) => console.error('prune failed:', err),
+});
 
 // cancel on teardown (before dispose)
 stop();
+```
+
+Pass `signal` to tie the schedule lifetime to an `AbortController` or `db.disposalSignal`:
+
+```ts
+// auto-stop when the adapter is disposed
+scheduleExpiredPrune(db, {
+  interval: ttl.hours(1),
+  signal: db.disposalSignal,
+});
 ```
 
 ## Factories
@@ -247,7 +269,8 @@ interface Adapter<S extends AnySchema> {
   /** Count of live (non-expired) records. */
   count<K extends keyof S>(table: K): Promise<number>;
 
-  /** Live vs expired record counts per table. For development use. */
+  /** Live vs expired record counts per table. For development use.
+   * Also warms the internal `count()` cache for every table. */
   debug(): Promise<DebugInfo<S>>;
 
   delete<K extends keyof S>(table: K, key: KeyOf<S, K>): Promise<boolean>;
@@ -301,8 +324,12 @@ interface Adapter<S extends AnySchema> {
   /** Returns `true` when the table has no live (non-expired) records. Equivalent to `(await count(table)) === 0`. */
   isEmpty<K extends keyof S>(table: K): Promise<boolean>;
 
-  /** Return all primary key values in the table without fetching records. Expired records are excluded. */
-  keys<K extends keyof S>(table: K): Promise<KeyOf<S, K>[]>;
+  /**
+   * Return all primary key values in the table. Without `filter`, uses a key-only backend path (no full records fetched).
+   * With `filter`, fetches all records internally and applies the predicate before key extraction.
+   * Expired records are excluded.
+   */
+  keys<K extends keyof S>(table: K, filter?: (record: RecordOf<S, K>) => boolean): Promise<KeyOf<S, K>[]>;
 
   /**
    * Subscribe to table changes. **Always fires immediately** with the current table state on
@@ -343,15 +370,15 @@ interface Adapter<S extends AnySchema> {
   query<K extends keyof S>(table: K): QueryBuilder<RecordOf<S, K>>;
 
   /**
-   * Merge `changes` into the existing record. Returns the merged record.
-   * Throws `VaultError` if the key does not exist — use `upsert` for insert-or-update semantics.
+   * Merge `changes` into the existing record. Returns the merged record, or `undefined` when
+   * the key does not exist — use `upsert` for insert-or-update semantics.
    */
   update<K extends keyof S>(
     table: K,
     key: KeyOf<S, K>,
     changes: Partial<RecordOf<S, K>>,
     ttl?: TtlMs,
-  ): Promise<RecordOf<S, K>>;
+  ): Promise<RecordOf<S, K> | undefined>;
 
   /** Read-modify-write. `fn` receives the current record (or `undefined`) and returns the new record. */
   upsert<K extends keyof S>(
@@ -373,20 +400,6 @@ interface Adapter<S extends AnySchema> {
     table: K,
     options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
   ): AsyncIterable<RecordOf<S, K>[]>;
-
-  /**
-   * Web Standard `ReadableStream` that emits a fresh snapshot on every table change,
-   * starting immediately. Always cancel the stream (or pass a `signal`) to stop the
-   * underlying observer.
-   *
-   * @param options.mode - `'latest'` (default) drops intermediate snapshots when the consumer
-   *   lags. `'all'` queues every snapshot in order.
-   * @param options.signal - An `AbortSignal` that closes the stream.
-   */
-  watchStream<K extends keyof S>(
-    table: K,
-    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
-  ): ReadableStream<RecordOf<S, K>[]>;
 }
 ```
 
@@ -394,8 +407,8 @@ interface Adapter<S extends AnySchema> {
 
 `observe` **always fires immediately** with the current table state on registration — there is no deferred-first-call mode. Subsequent calls fire whenever the table is mutated.
 
-| Option   | Type          | Description                                                                    |
-| -------- | ------------- | ------------------------------------------------------------------------------ |
+| Option   | Type          | Description                                                                                                                |
+| -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener. Already-aborted signals are a no-op — no initial snapshot is fired. |
 
 Returns an `Unsubscribe` function. Calling it and aborting the signal both cancel the observer — either approach works.
@@ -406,37 +419,65 @@ Returns an `Unsubscribe` function. Calling it and aborting the signal both cance
 
 Duplicate entries in the `tables` array are silently deduplicated. The combined snapshot will still include a key for each entry in the original array, but duplicate keys reference the same data.
 
-| Option   | Type          | Description                                                                                           |
-| -------- | ------------- | ----------------------------------------------------------------------------------------------------- |
+| Option   | Type          | Description                                                                                              |
+| -------- | ------------- | -------------------------------------------------------------------------------------------------------- |
 | `signal` | `AbortSignal` | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately. |
 
 ### `watch` options
 
-| Option   | Type                | Default    | Description                                                                                    |
-| -------- | ------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
-| `mode`   | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags |
+| Option   | Type                | Default    | Description                                                                                                                  |
+| -------- | ------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `mode`   | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags                               |
 | `signal` | `AbortSignal`       | —          | When aborted, terminates the iteration. If already aborted before the first `next()` call, the iterator is done immediately. |
 
-### `watchStream` options
+## `toReadableStream`
 
-| Option   | Type                | Default    | Description                                                                                    |
-| -------- | ------------------- | ---------- | ---------------------------------------------------------------------------------------------- |
-| `mode`   | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags |
-| `signal` | `AbortSignal`       | —          | When aborted, closes the stream                                                                |
+```ts
+function toReadableStream<T>(iterable: AsyncIterable<T>): ReadableStream<T>;
+```
+
+Converts an `AsyncIterable<T>` (such as `db.watch()`) into a Web Standard `ReadableStream<T>`. Use it when you need to pipe vault snapshots into a `WritableStream` or `TransformStream`.
+
+```ts
+import { toReadableStream } from '@vielzeug/vault';
+
+const stream = toReadableStream(db.watch('users'));
+await stream.pipeTo(new WritableStream({ write: (users) => render(users) }));
+```
+
+The stream closes when the iterable is exhausted or the stream is cancelled. Pass an `AbortSignal` to `db.watch()` to cancel from outside:
+
+```ts
+const controller = new AbortController();
+const stream = toReadableStream(db.watch('users', { signal: controller.signal }));
+controller.abort(); // closes the stream
+```
+
+## `isExpired`
+
+```ts
+function isExpired(expiresAt: number | undefined): boolean;
+```
+
+Returns `true` when an epoch-ms expiry timestamp has passed. Safe to call with `undefined` — returns `false`. Useful for custom codec implementations or TTL-aware utilities.
+
+```ts
+import { isExpired } from '@vielzeug/vault';
+
+isExpired(undefined); // false
+isExpired(Date.now() - 1000); // true
+isExpired(Date.now() + 1000); // false
+```
 
 ## TransactionContext
 
-Available inside `batch()` callbacks. `TransactionContext<S, K>` is a stable public alias for the same `SharedMethods` set that appears on `Adapter` — use it to type the `tx` parameter of a batch callback.
+`TransactionContext<S, K>` is the type of the `tx` parameter inside `batch()` callbacks. It exposes the same CRUD methods as `Adapter` but restricts access to the tables declared in `batch(tables, fn)` — accessing any other table at runtime throws `VaultScopeError`.
 
 ```ts
-type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = SharedMethods<S, K>; // same CRUD surface as Adapter, scoped to K
-```
-
-The full method set (for reference):
-
-```ts
-// clear, count, delete, deleteMany, entries, get, getAll, getMany,
-// getOrDefault, has, isEmpty, keys, put, putAll, query, update, upsert
+type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
+  // clear, count, delete, deleteMany, entries, get, getAll, getMany,
+  // getOrDefault, has, isEmpty, keys, put, putAll, query, update, upsert
+};
 ```
 
 `batch()` scopes all operations to the tables declared in its first argument. Accessing any other table at runtime throws `VaultScopeError`. The first argument must not be empty.
@@ -637,6 +678,57 @@ Pass `codec` to any factory:
 ```ts
 const db = createLocalStorage({ name: 'app', schema, codec: loggingCodec });
 ```
+
+### `createVersionedCodec`
+
+```ts
+function createVersionedCodec(versions: CodecVersion[], currentVersion: number): VaultCodec;
+```
+
+Creates a `VaultCodec` that prepends a `__v` version field to every encoded envelope. When decoding, the `__v` value selects the matching codec from `versions`. This allows safe codec upgrades: old records encoded with a previous codec continue to decode correctly as long as the old codec remains in `versions`.
+
+```ts
+import { createVersionedCodec, createMemory, table } from '@vielzeug/vault';
+
+const v1Codec = {
+  encode: (v) => ({ a: v }),
+  decode: (r) => (r && typeof r === 'object' && 'a' in r ? { value: (r as { a: unknown }).a } : undefined),
+};
+const v2Codec = {
+  encode: (v, e) => ({ b: v, e }),
+  decode: (r) => (r && typeof r === 'object' && 'b' in r ? { value: (r as { b: unknown }).b } : undefined),
+};
+
+const codec = createVersionedCodec(
+  [
+    { version: 1, codec: v1Codec },
+    { version: 2, codec: v2Codec },
+  ],
+  2, // write new records with version 2; read old version-1 records with v1Codec
+);
+
+const db = createMemory({ schema: { users: table<User>('id') }, codec });
+```
+
+Throws `VaultError` if:
+
+- `versions` is empty
+- any version number is not a non-negative integer
+- version numbers are not unique
+- `currentVersion` is not listed in `versions`
+
+> **Migration note:** Records written by any other codec (including `defaultCodec`) lack the `__v` field and decode as `undefined`. Clear or migrate existing data before switching to a versioned codec.
+
+### `CodecVersion`
+
+```ts
+type CodecVersion = {
+  codec: VaultCodec;
+  version: number; // non-negative integer, unique across the versions array
+};
+```
+
+A single entry in the `versions` array passed to `createVersionedCodec`. `version` must be a non-negative integer.
 
 ### `TableBuilder`
 

@@ -70,8 +70,36 @@ describe('s.variant() — async', () => {
   it('refine() runs in parseAsync', async () => {
     const schema = s
       .variant('type', { ok: s.object({ msg: s.string() }) })
-      .check((data) => data.msg !== 'forbidden' || 'Forbidden');
+      .validate((data) => data.msg !== 'forbidden' || 'Forbidden');
     const result = await schema.safeParseAsync({ msg: 'forbidden', type: 'ok' });
+
+    expect(result.success).toBe(false);
+  });
+
+  it('parseAsync() routes to correct branch by discriminator', async () => {
+    const schema = s.variant('kind', {
+      a: s.object({ value: s.number() }),
+      b: s.object({ label: s.string() }),
+    });
+
+    await expect(schema.parseAsync({ kind: 'a', value: 42 })).resolves.toEqual({ kind: 'a', value: 42 });
+    await expect(schema.parseAsync({ kind: 'b', label: 'hi' })).resolves.toEqual({ kind: 'b', label: 'hi' });
+  });
+
+  it('safeParseAsync() returns failure for unknown discriminator value', async () => {
+    const schema = s.variant('kind', { a: s.object({ value: s.number() }) });
+    const result = await schema.safeParseAsync({ kind: 'z', value: 1 });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].code).toBe('invalid_variant');
+    }
+  });
+
+  it('safeParseAsync() returns failure when discriminator field missing', async () => {
+    const schema = s.variant('type', { ok: s.object({ msg: s.string() }) });
+    const result = await schema.safeParseAsync({ msg: 'hello' });
 
     expect(result.success).toBe(false);
   });

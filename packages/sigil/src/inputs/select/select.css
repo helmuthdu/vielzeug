@@ -104,6 +104,7 @@
 
     /* Hidden by default */
     opacity: 0;
+    backdrop-filter: blur(var(--blur-md));
     transform: translateY(var(--overlay-enter-translate-y));
     transition: var(
       --_motion-transition,
@@ -163,17 +164,17 @@
 
   .option[data-focused]:not([data-disabled]) {
     color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100));
+    background: color-mix(in oklch, var(--_theme-base) 12%, var(--color-contrast-100));
   }
 
   .option[data-selected] {
     font-weight: var(--font-medium);
     color: var(--_theme-base);
-    background: color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50));
+    background: color-mix(in oklch, var(--_theme-base) 10%, var(--color-contrast-50));
   }
 
   .option[data-selected][data-focused] {
-    background: color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100));
+    background: color-mix(in oklch, var(--_theme-base) 20%, var(--color-contrast-100));
   }
 
   .option[data-disabled] {

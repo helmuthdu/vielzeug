@@ -13,6 +13,8 @@ import type {
   RouteTable,
 } from './types';
 
+import { issue } from './_warn';
+
 // ─── Route state ──────────────────────────────────────────────────────────────
 
 /** R5: No defensive deep-copy — RouteState is typed readonly; callers always pass fresh objects. */
@@ -113,7 +115,5 @@ export function reportError(
     return;
   }
 
-  queueMicrotask(() => {
-    throw error;
-  });
+  issue('Unhandled router error. Provide an onError callback to handle errors explicitly:', error);
 }

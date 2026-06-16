@@ -1,9 +1,9 @@
 export { ANONYMOUS, WILDCARD } from './constants';
+export { allow, deny, owns, predicate, ruleFor } from './builder';
+export { WardPredicateError } from './errors';
 export { createWard } from './factory';
-export { defineRules, owns, rule } from './builder';
-export type { ActionStep, FinalStep, ResourceStep, RoleStep } from './builder';
+export { guardRequest, guardRequestWith } from './middleware';
 export { matchesPattern, patternCovers } from './resource';
-export { createExpressGuard, createHonoGuard, guardRequest, guardRequestWith } from './middleware';
 export type {
   BoundWard,
   ConflictKind,
@@ -14,15 +14,12 @@ export type {
   WardCheck,
   WardConflict,
   WardDecision,
-  WardDecisionAllowed,
-  WardDecisionDenied,
   WardDecisionResult,
   WardLoggerContext,
   WardOptions,
   WardPredicate,
   WardRule,
-  WardRuleInput,
   WardTrace,
   WardTraceCandidate,
 } from './types';
-export type { ExpressGuardOptions, GuardResult, HonoGuardOptions, PrincipalExtractor, WardRequest } from './middleware';
+export type { GuardResult, PrincipalExtractor, WardRequest } from './middleware';

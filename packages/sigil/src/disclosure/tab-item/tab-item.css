@@ -79,9 +79,9 @@
 
   /* ─── glass ─── */
   :host([variant='glass']) {
-    --_color: var(--tab-item-color, color-mix(in srgb, var(--color-secondary-contrast) 70%, transparent));
-    --_hover-bg: var(--tab-item-hover-bg, color-mix(in srgb, var(--color-secondary-contrast) 10%, transparent));
-    --_active-bg: var(--tab-item-active-bg, color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent));
+    --_color: var(--tab-item-color, color-mix(in oklch, var(--color-secondary-contrast) 70%, transparent));
+    --_hover-bg: var(--tab-item-hover-bg, color-mix(in oklch, var(--color-secondary-contrast) 10%, transparent));
+    --_active-bg: var(--tab-item-active-bg, color-mix(in oklch, var(--color-secondary-contrast) 15%, transparent));
     --_active-color: var(--tab-item-active-color, var(--color-secondary-contrast));
     --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }
@@ -97,8 +97,8 @@
 
   /* ─── frost ─── */
   :host([variant='frost']) {
-    --_hover-bg: var(--tab-item-hover-bg, color-mix(in srgb, var(--color-contrast) 10%, transparent));
-    --_active-bg: var(--tab-item-active-bg, color-mix(in srgb, var(--color-canvas) 60%, transparent));
+    --_hover-bg: var(--tab-item-hover-bg, color-mix(in oklch, var(--color-contrast) 10%, transparent));
+    --_active-bg: var(--tab-item-active-bg, color-mix(in oklch, var(--color-canvas) 60%, transparent));
     --_active-color: var(--tab-item-active-color, var(--text-color-heading));
     --_active-shadow: var(--tab-item-active-shadow, var(--shadow-xs), var(--inset-shadow-xs));
   }

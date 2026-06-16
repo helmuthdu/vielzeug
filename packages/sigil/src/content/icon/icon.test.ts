@@ -83,4 +83,14 @@ describe('sg-icon', () => {
     expect(style).toContain('width:24px');
     expect(style).toContain('height:24px');
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks (decorative icon)', async () => {
+      fixture = await mount('sg-icon', { attrs: { 'aria-hidden': 'true', name: 'search' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

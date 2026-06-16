@@ -226,14 +226,14 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ### `sg-radio` CSS Custom Properties
 
-| Property                  | Description                           | Default         |
-| ------------------------- | ------------------------------------- | --------------- |
-| `--radio-size`            | Control size (width and height)       | Size-dependent  |
-| `--radio-bg`              | Unchecked background color            | Theme-dependent |
-| `--radio-border-color`    | Unchecked border color                | Theme-dependent |
-| `--radio-checked-bg`      | Selected indicator background color   | Color-dependent |
-| `--radio-color`           | Selected indicator dot color          | Theme-dependent |
-| `--radio-font-size`       | Label font size                       | Size-dependent  |
+| Property               | Description                         | Default         |
+| ---------------------- | ----------------------------------- | --------------- |
+| `--radio-size`         | Control size (width and height)     | Size-dependent  |
+| `--radio-bg`           | Unchecked background color          | Theme-dependent |
+| `--radio-border-color` | Unchecked border color              | Theme-dependent |
+| `--radio-checked-bg`   | Selected indicator background color | Color-dependent |
+| `--radio-color`        | Selected indicator dot color        | Theme-dependent |
+| `--radio-font-size`    | Label font size                     | Size-dependent  |
 
 ### `sg-radio-group` Attributes
 

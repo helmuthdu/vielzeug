@@ -21,7 +21,6 @@ export const linguaExamples = {
   'async-loading': asyncLoadingExample,
   'basic-setup': basicSetupExample,
   'basic-translation': basicTranslationExample,
-  'bind-plural': bindPluralExample,
   'dispose-lifecycle': disposeLifecycleExample,
   'fmt-formatter': fmtFormatterExample,
   'fork-ssr': forkSsrExample,
@@ -33,5 +32,6 @@ export const linguaExamples = {
   pluralization: pluralizationExample,
   'preload-pattern': preloadPatternExample,
   'scope-bind': scopeBindExample,
+  'ssr-hydration': bindPluralExample,
   'variable-interpolation': variableInterpolationExample,
 };

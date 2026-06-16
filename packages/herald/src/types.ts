@@ -122,47 +122,17 @@ export type PipeEntry<S extends EventMap, T extends EventMap> =
   | { from: EventKey<S>; to: EventKey<T> };
 
 /**
- * An `AsyncGenerator` extended with `AsyncDisposable` and chainable `filter` / `map` operators.
- * Returned by `bus.events()`.
+ * An `AsyncGenerator` extended with `AsyncDisposable`. Returned by `bus.events()`.
  *
- * @remarks `filter` and `map` create a derived stream that reads from the same underlying
- * subscription. Cleanup (unsubscribing from the bus) happens when:
- * - The original `gen.return()` is called (e.g. `break` from `for await`), or
- * - `stream[Symbol.asyncDispose]()` is called (e.g. `await using`).
+ * Use `await using` for guaranteed cleanup, or call `[Symbol.asyncDispose]()` explicitly.
+ * Compose with standard async-generator utilities (e.g. `for await` + `break`) or
+ * user-space operators as needed.
  *
  * @example
- * for await (const n of bus.events('count').filter(n => n > 0).map(n => n * 2)) { ... }
- *
- * @example
- * await using evens = bus.events('count').filter(n => n % 2 === 0);
- * for await (const n of evens) { ... } // subscription cleaned up automatically
- *
- * @remarks **Sibling streams:** Calling `.filter()` or `.map()` on the same base stream twice creates
- * sibling streams that share the same underlying subscription and disposal handle. Disposing one sibling
- * terminates the shared subscription and closes the other. For independent lifecycles, call
- * `bus.events()` separately for each stream.
+ * await using stream = bus.events('count');
+ * for await (const n of stream) { ... } // subscription cleaned up automatically
  */
-export type EventStream<T> = AsyncGenerator<T> &
-  AsyncDisposable & {
-    filter<U extends T>(pred: (value: T) => value is U): EventStream<U>;
-    filter(pred: (value: T) => boolean): EventStream<T>;
-    map<U>(fn: (value: T) => U): EventStream<U>;
-    /**
-     * Yield at most `n` values then close the stream automatically.
-     * Equivalent to `break`-ing a `for await` loop after `n` iterations, but declarative.
-     *
-     * @throws {RangeError} if `n` is not a positive integer.
-     *
-     * @remarks **Sibling streams:** Like `filter()` and `map()`, `take()` shares the underlying
-     * subscription with its siblings. When `take()` exhausts, it closes the shared base generator
-     * via the `for await` protocol, which also terminates any other sibling streams.
-     * For an independent lifecycle, call `bus.events()` separately.
-     *
-     * @example
-     * for await (const val of bus.events('tick').take(5)) { ... } // stops after 5
-     */
-    take(n: number): EventStream<T>;
-  };
+export type EventStream<T> = AsyncGenerator<T> & AsyncDisposable;
 
 export type Bus<T extends EventMap> = {
   /** Alias for dispose() — enables the `using` keyword for automatic cleanup. */
@@ -203,19 +173,12 @@ export type Bus<T extends EventMap> = {
    * await using stream = bus.events('event');
    * for await (const val of stream) { ... }
    * ```
-   *
-   * @remarks **Operators:** Chain `.filter()` and `.map()` to transform the stream without a
-   * separate iteration loop.
-   *
-   * @remarks **Sibling streams:** `.filter()` and `.map()` on the same stream instance share the
-   * underlying subscription — disposing one terminates both. For independent lifecycles, call
-   * `bus.events()` once per stream.
    */
   events<K extends EventKey<T>>(event: K, options?: { maxBuffer?: number; signal?: AbortSignal }): EventStream<T[K]>;
   /**
-   * Number of active listeners for a given event — including wildcard (`onAny`) listeners that
-   * will fire for every emission of that event. When called without an argument, returns the total
-   * across all events (each wildcard counted once).
+   * Number of active specific-event listeners for a given event key.
+   * Does not include wildcard (`onAny`) listeners — use `wildcardCount()` for those.
+   * When called without an argument, returns the total across all specific-event listeners.
    */
   listenerCount(event?: EventKey<T>): number;
   /**
@@ -247,11 +210,6 @@ export type Bus<T extends EventMap> = {
    */
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
   /**
-   * Remove all listeners for a specific event, or for all events (including `onAny` wildcards)
-   * if called without an argument.
-   */
-  removeAllListeners(event?: EventKey<T>): void;
-  /**
    * Resolve on the next emit of the given event.
    * Rejects with `BusDisposedError` if the bus is disposed before the event fires,
    * or with the signal's reason if the signal aborts.
@@ -266,6 +224,11 @@ export type Bus<T extends EventMap> = {
     events: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;
+  /**
+   * Number of active wildcard (`onAny`) listeners.
+   * These fire on every emission regardless of event key.
+   */
+  wildcardCount(): number;
 };
 
 /** Map of event names to their initial values for `createBehaviorBus`. */
@@ -273,21 +236,12 @@ export type BehaviorInitial<T extends EventMap> = {
   [K in EventKey<T>]?: T[K];
 };
 
-/** Options for `createBehaviorBus` — extends standard `BusOptions` with replay configuration. */
-export type BehaviorBusOptions<T extends EventMap = EventMap> = BusOptions<T> & {
-  /**
-   * Number of most-recent emitted values to replay to new subscribers via `on()` or `once()`.
-   * Defaults to `1` (last value only). Set to a higher number to replay a window of history.
-   * `events()`, `wait()`, and `waitAny()` are not affected.
-   *
-   * @throws {RangeError} if set to a non-positive or non-integer value.
-   */
-  replay?: number;
-};
+/** Options for `createBehaviorBus` — extends standard `BusOptions`. */
+export type BehaviorBusOptions<T extends EventMap = EventMap> = BusOptions<T>;
 
 /**
- * A bus that remembers the last emitted value(s) for each event.
- * New subscribers immediately receive current value(s) via `on()` and `once()`.
+ * A bus that remembers the last emitted value for each event.
+ * New subscribers immediately receive the current value via `on()` and `once()`.
  */
 export type BehaviorBus<T extends EventMap> = Bus<T> & {
   /**
@@ -296,7 +250,7 @@ export type BehaviorBus<T extends EventMap> = Bus<T> & {
    */
   current<K extends EventKey<T>>(event: K): T[K] | undefined;
   /**
-   * Clear the replay buffer for a specific event, or for all events when called without arguments.
+   * Clear the current value for a specific event, or for all events when called without arguments.
    * After reset, new subscribers will not receive a replayed value until the next emit.
    * Does not affect active subscriptions or the disposed state of the bus.
    *
@@ -305,4 +259,17 @@ export type BehaviorBus<T extends EventMap> = Bus<T> & {
    * bus.reset();          // clear all buffers
    */
   reset(event?: EventKey<T>): void;
+  /**
+   * Returns a plain object snapshot of the most recently emitted value for every currently
+   * buffered event. Events with no value in the buffer are omitted from the result.
+   *
+   * Useful for serialization, hydration, and debugging multiple channels at once.
+   *
+   * @example
+   * const bus = createBehaviorBus<{ theme: string; zoom: number }>({ theme: 'light', zoom: 1 });
+   * bus.snapshot(); // { theme: 'light', zoom: 1 }
+   * bus.emit('theme', 'dark');
+   * bus.snapshot(); // { theme: 'dark', zoom: 1 }
+   */
+  snapshot(): Partial<T>;
 };

@@ -1,121 +1,159 @@
+import { isNil } from '../guards/isNil';
+import { isNumber } from '../guards/isNumber';
+import { isString } from '../guards/isString';
 import { similarity } from '../string/similarity';
-import { isNil } from '../typed/isNil';
-import { isNumber } from '../typed/isNumber';
-import { isString } from '../typed/isString';
 
 export type ScoredResult<T> = { item: T; score: number };
 
-export type SearchOptions<T> = {
+export type FuzzyOptions<T> = {
   fields?: ReadonlyArray<keyof T & string>;
-  mode?: 'filter' | 'scored';
+  /** When `true`, applies Unicode NFKD normalization before comparison so accented characters match their base form (é ≈ e). Default: `false`. */
+  normalize?: boolean;
   threshold?: number;
 };
 
+/** Maximum recursive depth for full-tree scanning when `fields` is omitted. */
 const MAX_SEEK_DEPTH = 10;
 
-function seekValue(item: unknown, query: string, threshold: number, depth = 0): boolean {
-  if (depth > MAX_SEEK_DEPTH) return false;
+const normalizeStr = (s: string): string => s.normalize('NFKD').replace(/\p{M}/gu, '');
 
-  if (isNil(item)) return false;
-
-  if (isString(item) || isNumber(item)) return similarity(String(item), query) >= threshold;
-
-  if (Array.isArray(item)) return (item as unknown[]).some((v) => seekValue(v, query, threshold, depth + 1));
-
-  if (typeof item === 'object')
-    return Object.values(item as Record<string, unknown>).some((v) =>
-      isNil(v) ? false : seekValue(v, query, threshold, depth + 1),
-    );
-
-  return false;
-}
-
-function seekScore(item: unknown, query: string, depth = 0): number {
+function seekScore(item: unknown, query: string, normalize: boolean, depth = 0): number {
   if (depth > MAX_SEEK_DEPTH) return 0;
 
   if (isNil(item)) return 0;
 
-  if (isString(item) || isNumber(item)) return similarity(String(item), query);
+  if (isString(item) || isNumber(item)) {
+    const a = normalize ? normalizeStr(String(item)) : String(item);
+
+    return similarity(a, query);
+  }
 
   if (Array.isArray(item))
-    return (item as unknown[]).reduce<number>((max, v) => Math.max(max, seekScore(v, query, depth + 1)), 0);
+    return (item as unknown[]).reduce<number>((max, v) => Math.max(max, seekScore(v, query, normalize, depth + 1)), 0);
 
   if (typeof item === 'object')
     return Object.values(item as Record<string, unknown>).reduce<number>(
-      (max, v) => Math.max(max, seekScore(v, query, depth + 1)),
+      (max, v) => Math.max(max, seekScore(v, query, normalize, depth + 1)),
       0,
     );
 
   return 0;
 }
 
+function seekValue(item: unknown, query: string, threshold: number, normalize: boolean, depth = 0): boolean {
+  return seekScore(item, query, normalize, depth) >= threshold;
+}
+
 /**
- * Performs a fuzzy search on an array of items using string similarity.
+ * Performs a fuzzy filter on an array of items using string similarity.
+ * Returns items whose similarity to `query` meets `threshold`.
  * When `fields` is provided, only those keys are searched; otherwise all values are scanned.
  *
- * Use `mode: 'scored'` to return results with a similarity score sorted by relevance.
+ * For results sorted by relevance score, use `fuzzyScore`.
  *
  * @example
  * ```ts
  * const data = [{ name: 'John Doe', age: 25 }, { name: 'Jane Doe', age: 30 }];
  *
- * // Search all values
- * search(data, 'doe'); // [{ name: 'John Doe' }, { name: 'Jane Doe' }]
- *
- * // Search only specific fields
- * search(data, 'john', { fields: ['name'] });
- *
- * // Scored mode — results are sorted by relevance
- * search(data, 'john', { mode: 'scored' });
- * // [{ item: { name: 'John Doe', age: 25 }, score: 0.8 }, ...]
+ * fuzzyFilter(data, 'doe'); // [{ name: 'John Doe' }, { name: 'Jane Doe' }]
+ * fuzzyFilter(data, 'john', { fields: ['name'] });
  * ```
  *
- * @param array - The array of items to search.
+ * @param array - The array of items to filter.
  * @param query - The string to search for.
- * @param [options.threshold=0.25] - Similarity threshold between 0 and 1. Higher = stricter match.
+ * @param [options.threshold=0.25] - Similarity threshold between 0 and 1. Higher = stricter.
  * @param [options.fields] - Limit search to these object keys. Searches all values when omitted.
- * @param [options.mode='filter'] - 'filter' returns T[], 'scored' returns ScoredResult<T>[] sorted by score.
- *
- * @returns The filtered/scored array of items that match the search string.
+ * @param [options.normalize=false] - NFKD normalization so accented chars match base form (é ≈ e).
  */
-export function search<T>(array: T[], query: string, options: SearchOptions<T> & { mode: 'scored' }): ScoredResult<T>[];
-export function search<T>(array: T[], query: string, options?: SearchOptions<T>): T[];
-export function search<T>(array: T[], query: string, options: SearchOptions<T> = {}): T[] | ScoredResult<T>[] {
-  const { fields, mode = 'filter', threshold = 0.25 } = options;
-
-  if (mode === 'scored') {
-    if (!query || !query.trim()) {
-      return array.map((item) => ({ item, score: 1 }));
-    }
-
-    const searchTerm = query.trim().toLowerCase();
-
-    const scored = array.map((item) => {
-      const score =
-        fields && fields.length > 0 && typeof item === 'object' && item !== null
-          ? fields.reduce<number>(
-              (max, field) => Math.max(max, seekScore((item as Record<string, unknown>)[field], searchTerm)),
-              0,
-            )
-          : seekScore(item, searchTerm);
-
-      return { item, score };
-    });
-
-    return scored.filter(({ score }) => score >= threshold).sort((a, b) => b.score - a.score);
-  }
+export function fuzzyFilter<T>(array: T[], query: string, options: FuzzyOptions<T> = {}): T[] {
+  const { fields, normalize = false, threshold = 0.25 } = options;
 
   if (!query) return [...array];
 
-  const searchTerm = query.trim().toLowerCase();
+  const raw = query.trim().toLowerCase();
 
-  if (!searchTerm) return [...array];
+  if (!raw) return [...array];
+
+  const searchTerm = normalize ? normalizeStr(raw) : raw;
 
   return array.filter((item) => {
     if (fields && fields.length > 0 && typeof item === 'object' && item !== null) {
-      return fields.some((field) => seekValue((item as Record<string, unknown>)[field], searchTerm, threshold));
+      return fields.some((field) =>
+        seekValue((item as Record<string, unknown>)[field], searchTerm, threshold, normalize),
+      );
     }
 
-    return seekValue(item, searchTerm, threshold);
+    return seekValue(item, searchTerm, threshold, normalize);
   });
+}
+
+/**
+ * Performs a fuzzy score on an array of items using string similarity.
+ * Returns all items with their similarity score, filtered by `threshold`, sorted by score descending.
+ * When `query` is empty, all items are returned with score `1`.
+ *
+ * For a simple filtered list without scores, use `fuzzyFilter`.
+ *
+ * @example
+ * ```ts
+ * const data = [{ name: 'John Doe', age: 25 }, { name: 'Jane Doe', age: 30 }];
+ *
+ * fuzzyScore(data, 'john', { fields: ['name'] });
+ * // [{ item: { name: 'John Doe', age: 25 }, score: 0.8 }, ...]
+ * ```
+ *
+ * @param array - The array of items to score.
+ * @param query - The string to search for.
+ * @param [options.threshold=0.25] - Minimum score to include in results.
+ * @param [options.fields] - Limit scoring to these object keys. Scores all values when omitted.
+ * @param [options.normalize=false] - NFKD normalization so accented chars match base form (é ≈ e).
+ */
+export function fuzzyScore<T>(array: T[], query: string, options: FuzzyOptions<T> = {}): ScoredResult<T>[] {
+  const { fields, normalize = false, threshold = 0.25 } = options;
+
+  if (!query || !query.trim()) {
+    return array.map((item) => ({ item, score: 1 }));
+  }
+
+  const raw = query.trim().toLowerCase();
+  const searchTerm = normalize ? normalizeStr(raw) : raw;
+
+  const scored = array.map((item) => {
+    const score =
+      fields && fields.length > 0 && typeof item === 'object' && item !== null
+        ? fields.reduce<number>(
+            (max, field) => Math.max(max, seekScore((item as Record<string, unknown>)[field], searchTerm, normalize)),
+            0,
+          )
+        : seekScore(item, searchTerm, normalize);
+
+    return { item, score };
+  });
+
+  return scored.filter(({ score }) => score >= threshold).sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Fuzzy-searches an array. In filter mode (default) returns `T[]`.
+ * Pass `{ scored: true }` to return `ScoredResult<T>[]` sorted by relevance descending.
+ *
+ * @example
+ * ```ts
+ * const users = [{ name: 'Alice' }, { name: 'Bob' }];
+ *
+ * fuzzy(users, 'ali');                        // [{ name: 'Alice' }]
+ * fuzzy(users, 'ali', { scored: true });       // [{ item: { name: 'Alice' }, score: 0.9 }]
+ * fuzzy(users, 'ali', { fields: ['name'] });   // field-restricted
+ * ```
+ */
+export function fuzzy<T>(array: T[], query: string, options: FuzzyOptions<T> & { scored: true }): ScoredResult<T>[];
+export function fuzzy<T>(array: T[], query: string, options?: FuzzyOptions<T> & { scored?: false }): T[];
+export function fuzzy<T>(
+  array: T[],
+  query: string,
+  options: FuzzyOptions<T> & { scored?: boolean } = {},
+): T[] | ScoredResult<T>[] {
+  const { scored, ...rest } = options;
+
+  return scored ? fuzzyScore(array, query, rest) : fuzzyFilter(array, query, rest);
 }

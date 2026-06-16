@@ -76,7 +76,7 @@ describe('s.object()', () => {
     });
 
     it('partial() preserves refinements', () => {
-      const base = User.check((d) => d.name !== 'admin' || 'Reserved name');
+      const base = User.validate((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.partial().parse({ name: 'admin' })).toThrow('Reserved name');
     });
@@ -91,7 +91,7 @@ describe('s.object()', () => {
     });
 
     it('required() preserves refinements', () => {
-      const base = User.partial().check((d) => d.name !== 'admin' || 'Reserved name');
+      const base = User.partial().validate((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => base.required().parse({ id: 1, name: 'admin' })).toThrow('Reserved name');
     });
@@ -116,7 +116,7 @@ describe('s.object()', () => {
     });
 
     it('preserves refinements', () => {
-      const refined = User.check((d) => d.name !== 'admin' || 'Reserved name');
+      const refined = User.validate((d) => d.name !== 'admin' || 'Reserved name');
 
       expect(() => refined.extend({ role: s.string() }).parse({ id: 1, name: 'admin', role: 'x' })).toThrow(
         'Reserved name',
@@ -146,7 +146,7 @@ describe('s.object()', () => {
     });
 
     it('pick() and omit() preserve refinements', () => {
-      const refined = Full.check((d) => d.email.includes('@') || 'Invalid email format');
+      const refined = Full.validate((d) => d.email.includes('@') || 'Invalid email format');
 
       expect(() => refined.pick('email').parse({ email: 'bad' })).toThrow('Invalid email format');
       expect(() => refined.omit('id').parse({ email: 'bad', name: 'Alice' })).toThrow('Invalid email format');
@@ -370,9 +370,76 @@ describe('ObjectSchema.defaults()', () => {
   });
 });
 
+describe('ObjectSchema.partialDefaults()', () => {
+  it('returns only fields that have defaults', () => {
+    const schema = s.object({
+      name: s.string(),
+      role: s.string().default('viewer'),
+    });
+
+    expect(schema.partialDefaults()).toEqual({ role: 'viewer' });
+  });
+
+  it('returns empty object when no fields have defaults', () => {
+    const schema = s.object({ id: s.number(), name: s.string() });
+
+    expect(schema.partialDefaults()).toEqual({});
+  });
+
+  it('returns all fields when all have defaults', () => {
+    const schema = s.object({
+      host: s.string().default('localhost'),
+      port: s.number().default(3000),
+    });
+
+    expect(schema.partialDefaults()).toEqual({ host: 'localhost', port: 3000 });
+  });
+
+  it('includes optional fields (they default to undefined)', () => {
+    const schema = s.object({ name: s.string().optional() });
+
+    expect(schema.partialDefaults()).toEqual({ name: undefined });
+  });
+});
+
+describe('ObjectSchema.requiredFields() / optionalFields()', () => {
+  const schema = s.object({
+    id: s.number(),
+    name: s.string(),
+    note: s.string().nullish(),
+    role: s.string().optional(),
+  });
+
+  it('requiredFields() returns only non-optional field keys', () => {
+    expect(schema.requiredFields()).toEqual(expect.arrayContaining(['id', 'name']));
+    expect(schema.requiredFields()).not.toContain('role');
+    expect(schema.requiredFields()).not.toContain('note');
+  });
+
+  it('optionalFields() returns only optional field keys', () => {
+    expect(schema.optionalFields()).toEqual(expect.arrayContaining(['role', 'note']));
+    expect(schema.optionalFields()).not.toContain('id');
+    expect(schema.optionalFields()).not.toContain('name');
+  });
+
+  it('requiredFields() returns all keys for a fully required schema', () => {
+    const all = s.object({ a: s.string(), b: s.number() });
+
+    expect(all.requiredFields()).toEqual(expect.arrayContaining(['a', 'b']));
+    expect(all.requiredFields()).toHaveLength(2);
+  });
+
+  it('optionalFields() returns all keys for a full partial schema', () => {
+    const all = s.object({ a: s.string(), b: s.number() }).partial();
+
+    expect(all.optionalFields()).toEqual(expect.arrayContaining(['a', 'b']));
+    expect(all.optionalFields()).toHaveLength(2);
+  });
+});
+
 describe('ObjectSchema shape-transform methods preserve metadata', () => {
   it('pick() preserves check() validators', () => {
-    const schema = s.object({ a: s.string(), b: s.number() }).check(() => 'always fails');
+    const schema = s.object({ a: s.string(), b: s.number() }).validate(() => 'always fails');
 
     expect(schema.pick('a').safeParse({ a: 'hello' }).success).toBe(false);
   });
@@ -393,5 +460,56 @@ describe('ObjectSchema shape-transform methods preserve metadata', () => {
     const schema = s.object({ a: s.string(), b: s.number() }).omit('a').nullable();
 
     expect(schema.parse(null)).toBeNull();
+  });
+});
+
+describe('ObjectSchema.parseAsync() concurrent field parsing', () => {
+  it('parses all fields concurrently', async () => {
+    const schema = s.object({
+      email: s.string().validate(async (v) => v.includes('@') || 'Invalid email'),
+      name: s.string().validate(async (v) => v.length > 0 || 'Required'),
+    });
+
+    await expect(schema.parseAsync({ email: 'a@b.com', name: 'Alice' })).resolves.toEqual({
+      email: 'a@b.com',
+      name: 'Alice',
+    });
+  });
+
+  it('collects errors from all failing fields concurrently', async () => {
+    const schema = s.object({
+      a: s.string().validate(async (v) => v !== 'bad' || 'Bad A'),
+      b: s.number().validate(async (v) => v > 0 || 'Bad B'),
+    });
+    const result = await schema.safeParseAsync({ a: 'bad', b: -1 });
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      const paths = result.error.issues.map((i) => i.path[0]);
+
+      expect(paths).toContain('a');
+      expect(paths).toContain('b');
+    }
+  });
+
+  it('rejects non-object input', async () => {
+    await expect(s.object({ x: s.string() }).parseAsync('not-an-object')).rejects.toThrow();
+  });
+
+  it('respects catch() on the object schema', async () => {
+    const fallback = { x: 'default' };
+    const schema = s.object({ x: s.string() }).catch(fallback);
+
+    await expect(schema.parseAsync(null)).resolves.toEqual(fallback);
+  });
+
+  it('runs object-level validators after fields pass', async () => {
+    const schema = s
+      .object({ confirm: s.string(), pass: s.string() })
+      .validate(async (obj) => obj.pass === obj.confirm || 'Passwords must match');
+
+    await expect(schema.parseAsync({ confirm: 'a', pass: 'b' })).rejects.toThrow('Passwords must match');
+    await expect(schema.parseAsync({ confirm: 'x', pass: 'x' })).resolves.toEqual({ confirm: 'x', pass: 'x' });
   });
 });

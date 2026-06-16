@@ -7,7 +7,7 @@ description: Placement, middleware composition, overflow handling, and lifecycle
 
 ## Basic Usage
 
-Use `float()` for the common case — it positions the floating element and keeps it in sync. It returns a `FloatHandle`; call `handle.cleanup()` on teardown.
+Use `float()` for the common case — it positions the floating element and keeps it in sync. It returns a `FloatHandle`; call `handle.dispose()` on teardown.
 
 ```ts
 import { float, flip, offset, shift } from '@vielzeug/orbit';
@@ -21,7 +21,7 @@ const handle = float(trigger, tooltip, {
 });
 
 // Call on teardown
-handle.cleanup();
+handle.dispose();
 ```
 
 ### `computePosition`
@@ -57,7 +57,7 @@ const handle = float(reference, floating, {
 });
 
 // on teardown:
-handle.cleanup();
+handle.dispose();
 ```
 
 ### Presets
@@ -210,10 +210,10 @@ hide({ strategy: 'both' }); // default — both
 
 ### `inline`
 
-Improves positioning for inline references spanning multiple lines. Import from the dedicated sub-path to avoid bundling it when unused. Place before `flip()`.
+Improves positioning for inline references spanning multiple lines. Place before `flip()`.
 
 ```ts
-import { inline } from '@vielzeug/orbit/inline';
+import { inline } from '@vielzeug/orbit';
 
 middleware: [inline({ x: event.clientX, y: event.clientY }), flip(), shift({ padding: 6 })];
 ```
@@ -223,8 +223,6 @@ middleware: [inline({ x: event.clientX, y: event.clientY }), flip(), shift({ pad
 Recommended order for the most common full stack:
 
 ```ts
-import { inline } from '@vielzeug/orbit/inline';
-
 middleware: [
   offset(8),
   inline({ x: pointerX, y: pointerY }), // only for multi-line inline refs
@@ -367,22 +365,94 @@ Without `containingBlock`, coordinates are viewport-relative (correct for `posit
 
 ## CSS Anchor Positioning
 
-Pass `preferCssAnchor: true` to `float()` to use native CSS Anchor Positioning in supporting browsers. The browser handles repositioning with no JS overhead and no event listeners.
+Use `floatWithAnchor()` to let the browser handle repositioning natively — no JS loop, no event listeners.
 
 ```ts
-const handle = float(trigger, tooltip, {
-  placement: 'top',
-  preferCssAnchor: true,
-});
+import { floatWithAnchor, isCssAnchorSupported } from '@vielzeug/orbit';
+
+if (isCssAnchorSupported()) {
+  const handle = floatWithAnchor(trigger, tooltip, { placement: 'top' });
+  // handle.dispose() on teardown
+} else {
+  // fall back to float()
+}
 ```
 
 Requirements and fallback behaviour:
 
 - Falls back to JS positioning when the browser does not support CSS Anchor Positioning
-- Falls back when `middleware` is non-empty (middleware requires JS coordinates)
-- Falls back when a custom `apply` callback is provided
+- Use `float()` instead when you need middleware or a custom `apply` callback
 - `position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline` is applied automatically
-- `handle.cssAnchor` is `true` when the CSS anchor path is active; `handle.getPosition()` returns `null` in this mode
+- Check `isCssAnchorSupported()` before calling `floatWithAnchor()` in production
+
+## Reactive Adapter
+
+Import from `@vielzeug/orbit/reactive` to get a `@vielzeug/ripple` signal that updates on every position change. DOM styles are **not** automatically applied — use a ripple `effect` to consume `position` and write to the DOM.
+
+```ts
+import { effect } from '@vielzeug/ripple';
+import { createFloatState } from '@vielzeug/orbit/reactive';
+import { flip, offset, shift } from '@vielzeug/orbit';
+
+const handle = createFloatState(trigger, tooltip, {
+  placement: 'top',
+  middleware: [offset(8), flip(), shift({ padding: 6 })],
+});
+
+effect(() => {
+  const pos = handle.position.value;
+  if (!pos) return;
+  tooltip.style.left = `${pos.x}px`;
+  tooltip.style.top = `${pos.y}px`;
+});
+
+// on teardown:
+handle.dispose();
+```
+
+`createFloatState` accepts all `FloatOptions` except `apply` (which is used internally to update the signal).
+
+## One-shot Async Positioning
+
+Use `computePositionAsync()` when you need a single position result inside an async function, such as after `await nextTick()` in Vue or after React's `useLayoutEffect` has flushed.
+
+```ts
+import { computePositionAsync } from '@vielzeug/orbit';
+
+// Inside an async lifecycle (e.g. Vue onMounted with async)
+const result = await computePositionAsync(reference, floating, {
+  placement: 'top',
+});
+
+floating.style.left = `${result.x}px`;
+floating.style.top = `${result.y}px`;
+```
+
+`computePositionAsync` defers to the microtask queue. If you need coordinates after the next paint (e.g. after CSS transitions), use `requestAnimationFrame` around `computePosition` directly.
+
+## SSR
+
+For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All three exports are no-ops that return zero-coordinate results and safe cleanup functions.
+
+```ts
+// vite.config.ts
+resolve: {
+  alias: {
+    '@vielzeug/orbit': process.env.SSR
+      ? '@vielzeug/orbit/ssr'
+      : '@vielzeug/orbit',
+  },
+}
+```
+
+Or import directly when you know you are in an SSR context:
+
+```ts
+import { computePosition } from '@vielzeug/orbit/ssr';
+
+// Returns { x: 0, y: 0, placement: 'bottom', middlewareData: {} }
+const result = computePosition(reference, floating, { placement: 'bottom' });
+```
 
 ## Framework Integration
 
@@ -401,7 +471,7 @@ function Tooltip({ anchor, children }: { anchor: HTMLElement | null; children: R
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
-    return () => handle.cleanup();
+    return () => handle.dispose();
   }, [anchor]);
 
   return (
@@ -426,7 +496,7 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
-    onCleanup(() => handle.cleanup());
+    onCleanup(() => handle.dispose());
   });
 }
 ```
@@ -444,7 +514,7 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
       placement: 'bottom',
       middleware: [offset(6), flip(), shift({ padding: 8 })],
     });
-    return () => handle.cleanup();
+    return () => handle.dispose();
   });
 </script>
 
@@ -484,85 +554,16 @@ define('x-tooltip', {
       });
 
       // Returned from onMounted — Craft calls this on disconnect
-      return () => handle?.cleanup();
+      return () => handle?.dispose();
     });
   },
 });
 ```
 
-## Reactive Adapter
-
-Import from `@vielzeug/orbit/reactive` to get a `@vielzeug/ripple` signal that updates on every position change. DOM styles are **not** automatically applied — use a ripple `effect` to consume `position` and write to the DOM.
-
-```ts
-import { effect } from '@vielzeug/ripple';
-import { createFloatState } from '@vielzeug/orbit/reactive';
-import { flip, offset, shift } from '@vielzeug/orbit';
-
-const { position, cleanup } = createFloatState(trigger, tooltip, {
-  placement: 'top',
-  middleware: [offset(8), flip(), shift({ padding: 6 })],
-});
-
-effect(() => {
-  const pos = position.value;
-  if (!pos) return;
-  tooltip.style.left = `${pos.x}px`;
-  tooltip.style.top = `${pos.y}px`;
-});
-
-// on teardown:
-cleanup();
-```
-
-`createFloatState` accepts all `FloatOptions` except `apply` (which is used internally to update the signal).
-
-## One-shot Async Positioning
-
-Use `computeOnce()` when you need a single position result inside an async function, such as after `await nextTick()` in Vue or after React's `useLayoutEffect` has flushed.
-
-```ts
-import { computeOnce } from '@vielzeug/orbit';
-
-// Inside an async lifecycle (e.g. Vue onMounted with async)
-const result = await computeOnce(reference, floating, {
-  placement: 'top',
-});
-
-floating.style.left = `${result.x}px`;
-floating.style.top = `${result.y}px`;
-```
-
-`computeOnce` defers to the microtask queue. If you need coordinates after the next paint (e.g. after CSS transitions), use `requestAnimationFrame` around `computePosition` directly.
-
-## SSR
-
-For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All three exports are no-ops that return zero-coordinate results and safe cleanup functions.
-
-```ts
-// vite.config.ts
-resolve: {
-  alias: {
-    '@vielzeug/orbit': process.env.SSR
-      ? '@vielzeug/orbit/ssr'
-      : '@vielzeug/orbit',
-  },
-}
-```
-
-Or import directly when you know you are in an SSR context:
-
-```ts
-import { computePosition } from '@vielzeug/orbit/ssr';
-
-// Returns { x: 0, y: 0, placement: 'bottom', middlewareData: {} }
-const result = computePosition(reference, floating, { placement: 'bottom' });
-```
-
 ## Best Practices
 
 - Use `float()` for the common tooltip/popover case; use `computePosition()` when you need raw coordinates or custom rendering.
-- Always call `handle.cleanup()` when the floating element is removed from the DOM.
+- Always call `handle.dispose()` when the floating element is removed from the DOM.
 - Use either `flip()` or `autoPlacement()` — not both.
 - Apply `offset()` before `flip()` or `autoPlacement()` so overflow detection accounts for the gap.
 - Use `shift({ padding })` to keep the floating element away from viewport edges.

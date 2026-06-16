@@ -2,15 +2,17 @@
  * Runtime lifecycle tests
  */
 
-import { html, onCleanup, onElement, onEvent, onMounted, ref, signal } from '../index';
+import { signal } from '@vielzeug/ripple';
+
+import { createContext, html, ref } from '../index';
 import { mount } from '../testing';
 
 describe('runtime lifecycle: onMounted', () => {
   it('runs mount callback after component renders', async () => {
     const spy = vi.fn();
 
-    await mount(() => {
-      onMounted(spy);
+    await mount((_props, ctx) => {
+      ctx.onMounted(spy);
 
       return html`<div>Test</div>`;
     });
@@ -20,8 +22,8 @@ describe('runtime lifecycle: onMounted', () => {
   it('provides DOM access when mount callback runs', async () => {
     let hasElement = false;
 
-    await mount(() => {
-      onMounted(() => {
+    await mount((_props, ctx) => {
+      ctx.onMounted(() => {
         hasElement = true;
       });
 
@@ -33,8 +35,8 @@ describe('runtime lifecycle: onMounted', () => {
   it('runs mount cleanup on unmount', async () => {
     const spy = vi.fn();
 
-    const { destroy } = await mount(() => {
-      onMounted(() => spy);
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onMounted(() => spy);
 
       return html`<div>Test</div>`;
     });
@@ -48,10 +50,10 @@ describe('runtime lifecycle: onMounted', () => {
 describe('runtime lifecycle: execution order', () => {
   it('executes setup -> mount -> unmount in order', async () => {
     const order: string[] = [];
-    const { destroy } = await mount(() => {
+    const { destroy } = await mount((_props, ctx) => {
       order.push('setup');
 
-      onMounted(() => {
+      ctx.onMounted(() => {
         order.push('mount');
 
         return () => order.push('unmount');
@@ -68,8 +70,8 @@ describe('runtime lifecycle: execution order', () => {
 describe('runtime lifecycle: onCleanup', () => {
   it('runs callbacks when component unmounts', async () => {
     const spy = vi.fn();
-    const { destroy } = await mount(() => {
-      onCleanup(spy);
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onCleanup(spy);
 
       return html`<div>Test</div>`;
     });
@@ -81,8 +83,8 @@ describe('runtime lifecycle: onCleanup', () => {
 
   it('supports resource cleanup side effects', async () => {
     let cleaned = false;
-    const { destroy } = await mount(() => {
-      onCleanup(() => {
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onCleanup(() => {
         cleaned = true;
       });
 
@@ -95,9 +97,9 @@ describe('runtime lifecycle: onCleanup', () => {
 
   it('runs multiple cleanup callbacks in LIFO order', async () => {
     const calls: number[] = [];
-    const { destroy } = await mount(() => {
-      onCleanup(() => calls.push(1));
-      onCleanup(() => calls.push(2));
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onCleanup(() => calls.push(1));
+      ctx.onCleanup(() => calls.push(2));
 
       return html`<div>Test</div>`;
     });
@@ -110,10 +112,10 @@ describe('runtime lifecycle: onCleanup', () => {
 describe('runtime lifecycle: mount + cleanup integration', () => {
   it('stops mount-owned async work on unmount', async () => {
     let effectRuns = 0;
-    const { destroy } = await mount(() => {
+    const { destroy } = await mount((_props, ctx) => {
       const count = signal(0);
 
-      onMounted(() => {
+      ctx.onMounted(() => {
         const interval = setInterval(() => {
           count.value++;
           effectRuns++;
@@ -135,12 +137,12 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
   });
 });
 
-describe('onEvent()', () => {
+describe('ctx.onEvent()', () => {
   it('does not throw when target is null or undefined', async () => {
     await expect(
-      mount(() => {
-        onEvent(null, 'click', () => {});
-        onEvent(undefined, 'click', () => {});
+      mount((_props, ctx) => {
+        ctx.onEvent(null, 'click', () => {});
+        ctx.onEvent(undefined, 'click', () => {});
 
         return html`<div></div>`;
       }),
@@ -151,11 +153,11 @@ describe('onEvent()', () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
 
-    const { destroy } = await mount(() => {
-      onMounted(() => {
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
-        onEvent(btn, 'click', () => {
+        ctx.onEvent(btn, 'click', () => {
           clickCount++;
         });
 
@@ -175,13 +177,13 @@ describe('onEvent()', () => {
   });
 });
 
-describe('onElement()', () => {
+describe('ctx.onElement()', () => {
   it('calls callback with element when ref becomes non-null', async () => {
     const elRef = ref<HTMLButtonElement>();
     const seen: (HTMLButtonElement | null)[] = [];
 
-    await mount(() => {
-      onElement(elRef, (el) => {
+    await mount((_props, ctx) => {
+      ctx.onElement(elRef, (el) => {
         seen.push(el);
       });
 
@@ -197,8 +199,8 @@ describe('onElement()', () => {
     const cleanupSpy = vi.fn();
     const show = signal(true);
 
-    const { act } = await mount(() => {
-      onElement(elRef, () => cleanupSpy);
+    const { act } = await mount((_props, ctx) => {
+      ctx.onElement(elRef, () => cleanupSpy);
 
       return html`<div>${() => (show.value ? html`<button ref=${elRef}>Btn</button>` : html``)}</div>`;
     });
@@ -251,12 +253,49 @@ describe('async setup: no onError recovery', () => {
   });
 });
 
+describe('async setup: stale result discard on disconnect', () => {
+  it('discards async setup result if element disconnects before promise resolves', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    let resolve!: () => void;
+    const blocker = new Promise<void>((r) => {
+      resolve = r;
+    });
+
+    const { element, flush } = await mount(
+      async () => {
+        await blocker;
+
+        return html`<p class="content">Loaded</p>`;
+      },
+      { componentOptions: { loading: () => html`<p class="loading">Loading...</p>` } },
+    );
+
+    // Component is in LOADING state — loading template visible
+    expect(element.shadowRoot?.querySelector('.loading')).not.toBeNull();
+
+    // Disconnect before the async setup resolves
+    element.remove();
+    await flush();
+
+    // Now resolve the promise
+    resolve();
+    await flush();
+
+    // Element is disconnected — warn should have fired and content should NOT be mounted
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('disconnected'));
+    expect(document.body.contains(element)).toBe(false);
+
+    warnSpy.mockRestore();
+  });
+});
+
 describe('imperative cleanup pattern', () => {
   it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
     let disposed = 0;
 
-    const { destroy } = await mount(() => {
-      onMounted(() => {
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onMounted(() => {
         let cleanup: (() => void) | null = null;
 
         const setCleanup = (next: (() => void) | null) => {
@@ -272,7 +311,7 @@ describe('imperative cleanup pattern', () => {
           disposed += 10;
         });
 
-        onCleanup(() => {
+        ctx.onCleanup(() => {
           cleanup?.();
           cleanup = null;
         });
@@ -288,5 +327,97 @@ describe('imperative cleanup pattern', () => {
 
     // Unmount disposes the latest cleanup.
     expect(disposed).toBe(11);
+  });
+});
+
+describe('inject() inside onMounted (C3)', () => {
+  it('resolves a provided context value when called inside onMounted', async () => {
+    const KEY = createContext<string>('test-key');
+    let resolved: string | undefined;
+
+    await mount(
+      (_props, ctx) => {
+        ctx.provide(KEY, 'hello-from-provider');
+        ctx.onMounted(() => {
+          resolved = ctx.inject(KEY);
+        });
+
+        return html`<div></div>`;
+      },
+      { componentOptions: {} },
+    );
+
+    expect(resolved).toBe('hello-from-provider');
+  });
+});
+
+describe('SetupContextBag lifecycle aliases (R9)', () => {
+  it('ctx.onMounted fires after mount', async () => {
+    const spy = vi.fn();
+
+    await mount((_props, ctx) => {
+      ctx.onMounted(spy);
+
+      return html`<div></div>`;
+    });
+
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ctx.onCleanup fires on destroy', async () => {
+    const spy = vi.fn();
+
+    const { destroy } = await mount((_props, ctx) => {
+      ctx.onCleanup(spy);
+
+      return html`<div></div>`;
+    });
+
+    expect(spy).not.toHaveBeenCalled();
+    destroy();
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ctx.inject resolves a provided context value', async () => {
+    const KEY = createContext<number>('ctx-inject-test');
+    let resolved: number | undefined;
+
+    await mount(
+      (_props, ctx) => {
+        ctx.provide(KEY, 42);
+        resolved = ctx.inject(KEY);
+
+        return html`<div></div>`;
+      },
+      { componentOptions: {} },
+    );
+
+    expect(resolved).toBe(42);
+  });
+});
+
+describe('bind() outside setup context warning (R4)', () => {
+  it('warns when bind() is called outside setup', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { createBind } = await import('../host-bind');
+
+    const el = document.createElement('div');
+    const bind = createBind(el);
+
+    bind({ attr: { id: 'test' } });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('outside component setup'));
+    warnSpy.mockRestore();
+  });
+});
+
+describe('html template: dynamic tag-name guard (R5)', () => {
+  it('warns and skips replacement for an invalid dynamic tag name', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await mount(() => html`<${'invalid tag name'}></${'invalid tag name'}>`);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not a valid HTML element name'));
+    warnSpy.mockRestore();
   });
 });

@@ -8,25 +8,37 @@ related: [rune, wayfinder, conduit]
 exports:
   [
     createWard,
-    rule,
-    defineRules,
+    allow,
+    deny,
+    ruleFor,
+    predicate,
     owns,
     matchesPattern,
     patternCovers,
     guardRequest,
     guardRequestWith,
-    createExpressGuard,
-    createHonoGuard,
+    WardPredicateError,
     WILDCARD,
     ANONYMOUS,
-    RoleStep,
-    ResourceStep,
-    ActionStep,
-    FinalStep,
-    WardRequest,
-    WardDecisionAllowed,
-    WardDecisionDenied,
+    BoundWard,
+    ConflictKind,
+    Principal,
+    RuleContext,
+    UserPrincipal,
+    Ward,
+    WardCheck,
+    WardConflict,
+    WardDecision,
     WardDecisionResult,
+    WardLoggerContext,
+    WardOptions,
+    WardPredicate,
+    WardRule,
+    WardTrace,
+    WardTraceCandidate,
+    GuardResult,
+    PrincipalExtractor,
+    WardRequest,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -49,29 +61,28 @@ function deletePost(user: User, post: Post) {
 }
 
 // After — Ward declarative rules with typed enforcement
-import { createWard, owns } from '@vielzeug/ward';
+import { allow, createWard, predicate } from '@vielzeug/ward';
 
 const ward = createWard<'delete' | 'edit', { authorId: string }>([
-  { role: 'admin', action: '*', resource: '*', effect: 'allow' },
-  { role: 'author', action: 'delete', resource: 'post', effect: 'allow', when: owns('authorId') },
-  { role: 'author', action: 'edit', resource: 'post', effect: 'allow', when: owns('authorId') },
+  ...allow('admin', '*', ['*']),
+  ...allow('author', 'post', ['delete', 'edit'], { when: predicate.owns('authorId') }),
 ]);
 
 const guard = ward.forUser(currentUser);
-guard.can('post', 'delete', post);           // boolean — typed, predictable
-guard.explain('post', 'delete', post);       // WardDecision — auditable
+guard.explain('post', 'delete', post); // WardDecision — auditable
+guard.allowedActions('post', ['delete', 'edit'], post); // ['delete', 'edit'] or []
 ```
 
-| Feature                           | Ward                                       | CASL    | AccessControl        |
-| --------------------------------- | ------------------------------------------ | ------- | -------------------- |
-| Bundle size                       | <PackageInfo package="ward" type="size" /> | ~11 kB  | ~7 kB                |
-| Typed rule contracts              | <sg-icon name="check" size="16"></sg-icon>                                         | Partial | Partial              |
-| Deterministic deny precedence     | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                   |
-| Rule predicates with request data | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
-| Wildcard action support           | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                   |
-| Principal-bound API               | <sg-icon name="check" size="16"></sg-icon> (`forUser`)                             | Partial | <sg-icon name="x" size="16"></sg-icon>                   |
-| Explainable decisions             | <sg-icon name="check" size="16"></sg-icon>                                         | Partial | <sg-icon name="x" size="16"></sg-icon>                   |
-| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                   |
+| Feature                           | Ward                                                   | CASL                                       | AccessControl                                                         |
+| --------------------------------- | ------------------------------------------------------ | ------------------------------------------ | --------------------------------------------------------------------- |
+| Bundle size                       | <PackageInfo package="ward" type="size" />             | ~11 kB                                     | ~7 kB                                                                 |
+| Typed rule contracts              | <sg-icon name="check" size="16"></sg-icon>             | Partial                                    | Partial                                                               |
+| Deterministic deny precedence     | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                            |
+| Rule predicates with request data | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
+| Wildcard action support           | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                            |
+| Principal-bound API               | <sg-icon name="check" size="16"></sg-icon> (`forUser`) | Partial                                    | <sg-icon name="x" size="16"></sg-icon>                                |
+| Explainable decisions             | <sg-icon name="check" size="16"></sg-icon>             | Partial                                    | <sg-icon name="x" size="16"></sg-icon>                                |
+| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                                |
 
 <div class="decision-callout">
 
@@ -102,40 +113,35 @@ yarn add @vielzeug/ward
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, createWard, owns } from '@vielzeug/ward';
+import { ANONYMOUS, WILDCARD, allow, createWard, deny, predicate } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
   // Multi-role rule: viewer and editor can both read
-  { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow' },
-  {
-    role: 'editor',
-    resource: 'posts',
-    action: 'update',
-    effect: 'allow',
-    when: owns('authorId'),
-  },
-  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
-  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
+  ...allow(['viewer', 'editor'], 'posts', ['read']),
+  // Editor can update their own posts
+  ...allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
+  // High-priority deny overrides any allow rule for blocked principals
+  ...deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
+  // Anonymous visitors can read posts
+  ...allow(ANONYMOUS, 'posts', ['read']),
 ]);
 
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' });
+const editor = { id: 'u1', roles: ['editor'] };
 
-// Full decision with deny reason
-const decision = ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' });
+// Full decision — narrow on .allowed for type-safe access to .reason / .rule
+const decision = ward.explain(editor, 'posts', 'update', { authorId: 'u2' });
 if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
 
-// Full decision trace — shows every matching candidate and why the winner was picked
-const trace = ward.trace({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
-trace.candidates.forEach((c) => console.log(c.rule.effect, c.score, c.won));
+// Decision trace — all candidates with index, score, priority, won (no logger fired)
+const trace = ward.trace(editor, 'posts', 'read');
+trace.candidates.forEach((c) => console.log(`Rule[${c.index}]`, c.rule.effect, c.score, c.won));
 
 // Detect policy conflicts at startup
 const conflicts = ward.detectConflicts();
 if (conflicts.length > 0) console.warn('Policy conflicts:', conflicts);
 
-const bound = ward.forUser({ id: 'u1', roles: ['editor'] });
+const bound = ward.forUser(editor);
 
-bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
 bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.explain('posts', 'update', { authorId: 'u2' });
 bound.checkAll([
@@ -149,25 +155,24 @@ bound.rulesInScope('posts');
 
 <div class="features-grid">
 
-- One rule primitive: `WardRule` passed to `createWard(rules)`
+- One rule primitive: `WardRule` passed directly to `createWard(rules)`
+- **Rule factories**: `allow(role, resource, actions, opts?)` and `deny(...)` — readable, spreadable arrays
+- **Grouped predicate namespace**: `predicate.owns()`, `predicate.and()`, `predicate.or()`, `predicate.not()`
 - **Multi-role rules**: `role` accepts a string or an array of strings (OR semantics)
-- Decision methods: `ward.can`, `ward.canAll`, `ward.canAny`, `ward.explain`
-- Full decision trace: `ward.trace(principal, resource, action, data?)` — see every matching candidate
+- Decision methods: `ward.explain(principal, resource, action, data?)` — full `WardDecision` object
 - Batch decisions: `ward.checkAll(principal, checks)`
+- Full decision trace: `ward.trace(principal, resource, action, data?)` — all candidates with `index`, `score`, `priority`, `won`; **does not fire the logger**
 - Rule introspection: `ward.rulesInScope(principal, resource, data?)`
 - Action enumeration: `ward.allowedActions(principal, resource, knownActions, data?)`
-- Policy conflict detection: `ward.detectConflicts()`
+- Policy conflict detection: `ward.detectConflicts()` — lazy, cached, O(n²)
 - Explicit wildcard support with `WILDCARD`
 - Anonymous checks via `null` principal plus `ANONYMOUS` role rules
-- Ownership helper via `owns(attributeKey)`
-- Typed rule slice factory via `defineRules()`
-- Principal-bound API via `ward.forUser(principal)`
-- Fluent rule builder via `rule()` with `.priority()` support; builder step types (`RoleStep`, `ResourceStep`, `ActionStep`, `FinalStep`) exported for type annotations
-- Built-in Express and Hono middleware guards via `createExpressGuard`, `createHonoGuard`, `guardRequest`, and `guardRequestWith`
-- **Debug logging** via `debugWard()` (`@vielzeug/ward/devtools`) — logs every authorization decision (`can`, `explain`, `trace`, etc.) with `[ward:decision]` prefixes including rule effect; tree-shaken from production bundles
+- Ownership helper via `owns(attributeKey)` or `predicate.owns(attributeKey)`
+- Principal-bound API via `ward.forUser(principal)` — principal snapshotted at bind time
+- Framework-agnostic guards: `guardRequest`, `guardRequestWith`
+- **Debug logging** via `debugWard()` (`@vielzeug/ward/devtools`) — logs `explain` and `checkAll` decisions with `[ward:decision]` prefixes; tree-shaken from production bundles
 
 </div>
-
 
 ## Documentation
 

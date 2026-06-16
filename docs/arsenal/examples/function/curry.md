@@ -1,36 +1,40 @@
 ---
-title: 'Arsenal Examples — curry'
-description: 'curry example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — once'
+description: 'once example for @vielzeug/arsenal.'
 ---
 
-## curry
+## once
 
 ### Problem
 
-You need auto-curried functions — calling with fewer arguments than the arity returns a new function waiting for the rest.
+You need a function that runs exactly once, caching the result and returning the same value on subsequent calls.
 
 ### Solution
 
-Use `curry(fn, arity?)` to wrap a function so it auto-curries. Call it one argument at a time or all at once.
+Use `once(fn)` to wrap a function. Subsequent calls skip execution and return the cached result. Call `.reset()` to allow re-invocation.
 
 ```ts
-import { curry } from '@vielzeug/arsenal';
+import { once } from '@vielzeug/arsenal';
 
-const add = curry((a: number, b: number) => a + b);
+const init = once(() => {
+  console.log('initialised');
+  return { db: true };
+});
 
-add(2)(3); // 5
-add(2, 3); // 5
+init(); // logs 'initialised', returns { db: true }
+init(); // returns { db: true } — no log
+init(); // returns { db: true } — no log
 
-const addTwo = add(2);
-addTwo(10); // 12
+init.reset(); // re-arms
+init(); // logs 'initialised' again
 ```
 
 ### Pitfalls
 
-- Provide `arity` explicitly when the function uses rest parameters, since `fn.length` would return 0.
-- Curried functions are not variadic — each call collects exactly the arguments up to `arity`.
+- The wrapped function's arguments are ignored on the second and subsequent calls.
+- `reset()` clears the cached return value as well as the invocation guard.
 
 ### Related
 
-- [partial](./partial.md)
-- [compose](./compose.md)
+- [memo](./memo.md)
+- [pipe](./pipe.md)

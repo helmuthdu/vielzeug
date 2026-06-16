@@ -427,22 +427,21 @@
   },
   "dependencies": {
     "@vielzeug/craft": "workspace:*",
-    "@vielzeug/grip": "workspace:*",
+    "@vielzeug/dnd": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/arsenal": "workspace:*",
-    "@vielzeug/scroll": "workspace:*",
     "@vielzeug/tempo": "workspace:*",
-    "lucide": "^1.17.0"
+    "lucide": "^1.18.0"
   },
   "devDependencies": {
     "@custom-elements-manifest/analyzer": "^0.11.0",
-    "axe-core": "^4.11.4",
+    "axe-core": "^4.12.1",
     "browserslist": "^4.28.2",
     "lightningcss": "^1.32.0",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   },
   "sideEffects": [
     "./dist/*.js",

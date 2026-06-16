@@ -4,7 +4,7 @@ import { basicSchemaExample } from './basic-schema';
 import { coercionExample } from './coercion';
 import { descriptorRoundtripExample } from './descriptor-roundtrip';
 import { formatValidatorsExample } from './format-validators';
-import { localeConfigureResetExample } from './locale-configure-reset';
+import { messagesOverrideExample } from './locale-configure-reset';
 import { nestedObjectsExample } from './nested-objects';
 import { numberValidationExample } from './number-validation';
 import { objectDefaultsExample } from './object-defaults';
@@ -22,7 +22,7 @@ export const spellExamples = {
   coercion: coercionExample,
   'descriptor-roundtrip': descriptorRoundtripExample,
   'format-validators': formatValidatorsExample,
-  'locale-configure-reset': localeConfigureResetExample,
+  'messages-override': messagesOverrideExample,
   'nested-objects': nestedObjectsExample,
   'number-validation': numberValidationExample,
   'object-defaults': objectDefaultsExample,

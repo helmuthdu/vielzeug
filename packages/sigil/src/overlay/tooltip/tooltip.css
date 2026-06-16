@@ -20,18 +20,12 @@
   }
 
   .tooltip {
-    --_tooltip-fg: light-dark(var(--color-contrast-100), var(--color-contrast-900));
-    --_tooltip-bg: light-dark(
-      color-mix(in oklch, var(--color-contrast-900) 80%, transparent),
-      color-mix(in oklch, var(--color-contrast-100) 80%, transparent)
-    );
+    --_tooltip-fg: var(--color-contrast-100);
+    --_tooltip-bg: color-mix(in oklch, var(--color-contrast-900) 80%, transparent);
     --_tooltip-border-width: var(--border);
-    --_tooltip-border-color: light-dark(
-      color-mix(in oklch, var(--color-contrast-100) 12%, transparent),
-      color-mix(in oklch, var(--color-contrast-900) 12%, transparent)
-    );
+    --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-100) 12%, transparent);
     --_tooltip-shadow: var(--shadow-md);
-    --_tooltip-closed-transform: translateY(var(--size-1)) scale(0.98);
+    --_tooltip-closed-transform: translateY(4px) scale(0.98);
 
     /* Positioning — JS sets top/left inline */
     position: fixed;
@@ -53,9 +47,17 @@
     transform: var(--_tooltip-closed-transform);
     transition:
       opacity var(--transition-fast),
-      transform var(--transition-fast) var(--ease-in-out),
+      transform var(--transition-fast),
       display var(--transition-fast) allow-discrete,
       overlay var(--transition-fast) allow-discrete;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .tooltip {
+      --_tooltip-fg: var(--color-contrast-900);
+      --_tooltip-bg: color-mix(in oklch, var(--color-contrast-100) 80%, transparent);
+      --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-900) 12%, transparent);
+    }
   }
 
   .tooltip-text {
@@ -64,19 +66,19 @@
   }
 
   .tooltip[data-placement='top'] {
-    --_tooltip-closed-transform: translateY(var(--size-2)) scale(var(--overlay-enter-scale-dialog));
+    --_tooltip-closed-transform: translateY(4px) scale(var(--overlay-enter-scale-dialog));
   }
 
   .tooltip[data-placement='bottom'] {
-    --_tooltip-closed-transform: translateY(calc(var(--size-2) * -1)) scale(var(--overlay-enter-scale-dialog));
+    --_tooltip-closed-transform: translateY(-4px) scale(var(--overlay-enter-scale-dialog));
   }
 
   .tooltip[data-placement='left'] {
-    --_tooltip-closed-transform: translateX(var(--size-2)) scale(var(--overlay-enter-scale-dialog));
+    --_tooltip-closed-transform: translateX(4px) scale(var(--overlay-enter-scale-dialog));
   }
 
   .tooltip[data-placement='right'] {
-    --_tooltip-closed-transform: translateX(calc(var(--size-2) * -1)) scale(var(--overlay-enter-scale-dialog));
+    --_tooltip-closed-transform: translateX(-4px) scale(var(--overlay-enter-scale-dialog));
   }
 
   /* Entry animation via @starting-style */
@@ -100,16 +102,18 @@
 @layer sigil.variants {
   /* Light tooltip */
   :host([variant='light']) .tooltip {
-    --_tooltip-fg: light-dark(var(--color-contrast-900), var(--color-contrast-100));
-    --_tooltip-bg: light-dark(
-      color-mix(in oklch, var(--color-contrast-100) 80%, transparent),
-      color-mix(in oklch, var(--color-contrast-900) 80%, transparent)
-    );
-    --_tooltip-border-color: light-dark(
-      color-mix(in oklch, var(--color-contrast-900) 12%, transparent),
-      color-mix(in oklch, var(--color-contrast-100) 12%, transparent)
-    );
+    --_tooltip-fg: var(--color-contrast-900);
+    --_tooltip-bg: color-mix(in oklch, var(--color-contrast-100) 80%, transparent);
+    --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-900) 12%, transparent);
     --_tooltip-shadow: var(--shadow-md);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :host([variant='light']) .tooltip {
+      --_tooltip-fg: var(--color-contrast-100);
+      --_tooltip-bg: color-mix(in oklch, var(--color-contrast-900) 80%, transparent);
+      --_tooltip-border-color: color-mix(in oklch, var(--color-contrast-100) 12%, transparent);
+    }
   }
 }
 

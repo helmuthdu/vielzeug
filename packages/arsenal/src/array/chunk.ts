@@ -1,5 +1,5 @@
 import { assert } from '../function/assert';
-import { isString } from '../typed/isString';
+import { isString } from '../guards/isString';
 
 /**
  * Splits an array or string into chunks of a specified size.

@@ -1,175 +1,160 @@
-import { debounce, type DebounceOptions } from '../debounce';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('debounce', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-  });
+import { debounce } from '../debounce';
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+beforeEach(() => {
+  vi.useFakeTimers();
+});
 
-  it('should have cancel, flush, and pending methods', () => {
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('debounce — trailing (default)', () => {
+  it('does not invoke immediately', () => {
     const fn = vi.fn();
-    const debouncedFn = debounce(fn);
+    const d = debounce(fn, 100);
 
-    expect(typeof debouncedFn.cancel).toBe('function');
-    expect(typeof debouncedFn.flush).toBe('function');
-    expect(typeof debouncedFn.pending).toBe('function');
+    d();
+    expect(fn).not.toHaveBeenCalled();
   });
 
-  it('should delay execution by specified time', () => {
+  it('invokes after the delay', () => {
     const fn = vi.fn();
-    const debounced = debounce(fn, 500);
+    const d = debounce(fn, 100);
 
-    debounced('test');
-    expect(fn).not.toBeCalled();
-    expect(debounced.pending()).toBe(true);
-
-    vi.advanceTimersByTime(499);
-    expect(fn).not.toBeCalled();
-
-    vi.advanceTimersByTime(1);
-    expect(fn).toBeCalledTimes(1);
-    expect(fn).toBeCalledWith('test');
-    expect(debounced.pending()).toBe(false);
-  });
-
-  it('should use latest arguments from multiple calls', () => {
-    const fn = vi.fn();
-    const debounced = debounce(fn, 100);
-
-    debounced('first');
-    debounced('second');
-    debounced('third');
-
+    d();
     vi.advanceTimersByTime(100);
-    expect(fn).toBeCalledTimes(1);
-    expect(fn).toBeCalledWith('third');
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it('should reset delay on subsequent calls', () => {
+  it('resets the timer on repeated calls within the window', () => {
     const fn = vi.fn();
-    const debounced = debounce(fn, 100);
+    const d = debounce(fn, 100);
 
-    debounced();
+    d();
     vi.advanceTimersByTime(50);
-    debounced();
+    d();
     vi.advanceTimersByTime(50);
-    expect(fn).not.toBeCalled();
-
+    expect(fn).not.toHaveBeenCalled();
     vi.advanceTimersByTime(50);
-    expect(fn).toBeCalledTimes(1);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it('should cancel pending execution', () => {
+  it('calls with the most recent arguments', () => {
     const fn = vi.fn();
-    const debounced = debounce(fn, 100);
+    const d = debounce(fn, 100);
 
-    debounced('test');
-    expect(debounced.pending()).toBe(true);
-
-    debounced.cancel();
-    expect(debounced.pending()).toBe(false);
-
+    d(1);
+    d(2);
+    d(3);
     vi.advanceTimersByTime(100);
-    expect(fn).not.toBeCalled();
+    expect(fn).toHaveBeenCalledWith(3);
   });
 
-  it('should flush pending execution immediately', () => {
-    const fn = vi.fn().mockReturnValue('result');
-    const debounced = debounce(fn, 100);
+  it('cancel() prevents the pending call', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100);
 
-    debounced('test');
-    expect(fn).not.toBeCalled();
-
-    const result = debounced.flush();
-
-    expect(fn).toBeCalledTimes(1);
-    expect(fn).toBeCalledWith('test');
-    expect(result).toBe('result');
-    expect(debounced.pending()).toBe(false);
-
+    d();
+    d.cancel();
     vi.advanceTimersByTime(100);
-    expect(fn).toBeCalledTimes(1); // still only 1
+    expect(fn).not.toHaveBeenCalled();
   });
 
-  it('should return undefined when flushing with no pending call', () => {
-    const fn = vi.fn().mockReturnValue('result');
-    const debounced = debounce(fn, 100);
+  it('pending() returns true within window, false after', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100);
 
-    const result = debounced.flush();
-
-    expect(fn).not.toBeCalled();
-    expect(result).toBe(undefined);
+    d();
+    expect(d.pending()).toBe(true);
+    vi.advanceTimersByTime(100);
+    expect(d.pending()).toBe(false);
   });
 
-  describe('leading edge', () => {
-    it('fires immediately on the first call with { leading: true, trailing: false }', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: false });
+  it('flush() invokes immediately and clears the timer', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100);
 
-      debounced('a');
-      expect(fn).toBeCalledTimes(1);
-      expect(fn).toBeCalledWith('a');
-    });
-
-    it('does not fire trailing call when trailing is false', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: false });
-
-      debounced('a');
-      vi.advanceTimersByTime(200);
-      expect(fn).toBeCalledTimes(1);
-    });
-
-    it('silences subsequent calls within the delay window', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: false });
-
-      debounced('a');
-      debounced('b');
-      debounced('c');
-      vi.advanceTimersByTime(200);
-      expect(fn).toBeCalledTimes(1);
-    });
-
-    it('fires again after the window elapses', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: false });
-
-      debounced('a');
-      vi.advanceTimersByTime(150);
-      debounced('b');
-      expect(fn).toBeCalledTimes(2);
-    });
-
-    it('fires on both edges with { leading: true, trailing: true }', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: true });
-
-      debounced('a');
-      expect(fn).toBeCalledTimes(1);
-
-      debounced('b');
-      vi.advanceTimersByTime(100);
-      expect(fn).toBeCalledTimes(2);
-    });
-
-    it('cancel resets leadingFired so next call fires immediately again', () => {
-      const fn = vi.fn();
-      const debounced = debounce(fn, 100, { leading: true, trailing: false });
-
-      debounced('a');
-      debounced.cancel();
-      debounced('b');
-      expect(fn).toBeCalledTimes(2);
-    });
+    d('x');
+    d.flush();
+    expect(fn).toHaveBeenCalledWith('x');
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledTimes(1);
   });
 
-  it('DebounceOptions type is exported', () => {
-    const _opts: DebounceOptions = { leading: true, trailing: false };
+  it('flush() returns undefined when no call is pending', () => {
+    const fn = vi.fn(() => 42);
+    const d = debounce(fn, 100);
 
-    expect(_opts).toBeDefined();
+    expect(d.flush()).toBeUndefined();
+  });
+});
+
+describe('debounce — leading only', () => {
+  it('invokes immediately on the first call', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: false });
+
+    d();
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores calls within the cooldown window', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: false });
+
+    d();
+    d();
+    d();
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
+  it('fires again after the cooldown window elapses', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: false });
+
+    d();
+    vi.advanceTimersByTime(100);
+    d();
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('cancel() resets the cooldown so leading fires again', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: false });
+
+    d();
+    d.cancel();
+    d();
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('debounce — leading + trailing', () => {
+  it('fires on both the leading and trailing edges', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: true });
+
+    d('first');
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenLastCalledWith('first');
+
+    d('second');
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn).toHaveBeenLastCalledWith('second');
+  });
+
+  it('trailing call uses the most recent args', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: true });
+
+    d('a');
+    d('b');
+    d('c');
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(fn).toHaveBeenLastCalledWith('c');
   });
 });

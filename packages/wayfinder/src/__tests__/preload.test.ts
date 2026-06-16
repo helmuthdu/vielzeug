@@ -118,6 +118,29 @@ describe('preload', () => {
     router.dispose();
   });
 
+  it('rejects the caller without a duplicate unhandled throw when no onError is set', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          data: async () => {
+            throw new Error('preload boom');
+          },
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    // Without B1 fix, #reportError queued a microtask throw AND the promise rejected —
+    // two error surfaces. Verify the promise rejects with the expected error.
+    await expect(router.preload('page')).rejects.toThrow('preload boom');
+    router.dispose();
+  });
+
   it('navigation with a different query than the preloaded key re-runs the data loader', async () => {
     let callCount = 0;
     const history = createMemoryHistory('/');

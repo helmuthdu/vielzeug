@@ -1,37 +1,28 @@
-declare const __currencyBrand: unique symbol;
-
 /**
- * A validated ISO 4217 currency code (e.g. `'USD'`, `'EUR'`, `'JPY'`).
- *
- * Obtain one via the `toCurrencyCode()` factory, which validates the code against
- * `Intl.NumberFormat`. Using a branded type ensures only validated codes can
- * appear as currency identifiers in `Money` and `ExchangeRate` objects — unvalidated
- * plain strings are rejected by the type system at call sites.
- *
- * @example
- * ```ts
- * const usd = toCurrencyCode('USD');  // CurrencyCode
- * money('100.00', usd);               // Money with validated currency
- * ```
+ * A validated ISO 4217 currency code string (e.g. `'USD'`, `'EUR'`, `'JPY'`).
+ * Plain string alias — runtime validation is performed by every function that
+ * accepts a currency, and violations throw `InvalidCurrencyError`.
  */
-export type CurrencyCode = string & { readonly [__currencyBrand]: true };
+export type CurrencyCode = string;
 
 /** A monetary value. `amount` is stored as bigint minor units (e.g. cents for USD). */
 export type Money = {
   readonly amount: bigint;
-  readonly currency: CurrencyCode;
+  readonly currency: string;
 };
 
 /**
  * An exchange rate between two currencies.
- * Both `from` and `to` must be validated `CurrencyCode` values — use `toCurrencyCode()`
- * to produce them from plain strings.
- * `rate` is a decimal string (e.g. `'0.847532'`) for lossless bigint precision.
+ * - `from` must match the `currency` of the `Money` passed to `exchange()`.
+ *   Since every `Money.currency` is already a validated ISO 4217 code, a matching
+ *   `from` is implicitly valid.
+ * - `to` is validated as a recognised ISO 4217 code by `exchange()` before returning.
+ * - `rate` is a decimal string (e.g. `'0.847532'`) for lossless bigint precision.
  */
 export type ExchangeRate = {
-  readonly from: CurrencyCode;
+  readonly from: string;
   readonly rate: string;
-  readonly to: CurrencyCode;
+  readonly to: string;
 };
 
 /** Options for `format()`. */

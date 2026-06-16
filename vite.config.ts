@@ -1,4 +1,4 @@
-import type { LibraryFormats, UserConfig } from 'vite';
+import type { LibraryFormats } from 'vite';
 
 import { resolve } from 'node:path';
 
@@ -26,7 +26,7 @@ export const getConfig = (
     name?: string;
     preserveModules?: boolean;
   },
-): UserConfig => {
+) => {
   const entry = options?.entry || resolve(__dirname, 'src/index.ts');
   const name = options?.name || 'Vielzeug';
   const preserveModules = options?.preserveModules ?? true;
@@ -69,7 +69,7 @@ const toGlobalName = (id: string): string =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 
-export const getBundleConfig = (__dirname: string, options: BundleOptions): UserConfig => {
+export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
   const { external, fileName, globals: globalsOverride, name } = options;
 
   const globals = {

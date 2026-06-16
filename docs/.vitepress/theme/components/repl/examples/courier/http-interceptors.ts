@@ -17,11 +17,10 @@ http.use(withLogging({ logger: (msg) => console.log(msg) }))
 const data = await http.get('/posts/1')
 console.log('Post:', data.title)
 
-// Custom interceptor — mutate or short-circuit the request/response
+// Custom interceptor — use ctx.withHeaders() to add headers immutably;
 // use() returns a dispose function to remove the interceptor later
 const removeCustom = http.use(async (ctx, next) => {
-  ctx.init.headers = { ...ctx.init.headers, 'x-custom': 'value' }
-  return next(ctx)
+  return next(ctx.withHeaders({ 'x-custom': 'value' }))
 })
 
 const data2 = await http.get('/posts/2')

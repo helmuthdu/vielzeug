@@ -358,7 +358,7 @@ describe('createVirtualizer – measureEl', () => {
   });
 });
 
-// ─── refresh / invalidate / redraw ─────────────────────────────────────────────
+// ─── refresh / invalidate ──────────────────────────────────────────────────────
 
 describe('createVirtualizer – refresh / invalidate', () => {
   it('refresh keeps measured sizes', async () => {
@@ -407,19 +407,18 @@ describe('createVirtualizer – refresh / invalidate', () => {
   });
 });
 
-// ─── redraw ───────────────────────────────────────────────────────────────────
+// ─── refresh ──────────────────────────────────────────────────────────────────
 
-describe('createVirtualizer – redraw', () => {
-  it('re-emits without changing sizes or offsets (O(1) path)', () => {
+describe('createVirtualizer – refresh', () => {
+  it('re-emits with current sizes', () => {
     const el = makeContainer({ clientHeight: 200 });
     const onChange = vi.fn();
     const v = createVirtualizer(el, { count: 5, estimateSize: 20, onChange });
     const callsBefore = onChange.mock.calls.length;
 
-    v.redraw();
+    v.refresh();
 
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
-    // Sizes unchanged
     expect(v.totalSize).toBe(5 * 20);
     v.dispose();
   });
@@ -431,7 +430,7 @@ describe('createVirtualizer – redraw', () => {
     v.measure(0, 50);
     await flushMicrotasks();
 
-    v.redraw();
+    v.refresh();
 
     expect(v.items.find((i) => i.index === 0)?.size).toBe(50);
     v.dispose();
@@ -443,7 +442,7 @@ describe('createVirtualizer – redraw', () => {
 
     v.dispose();
 
-    expect(() => v.redraw()).not.toThrow();
+    expect(() => v.refresh()).not.toThrow();
   });
 });
 
@@ -496,79 +495,6 @@ describe('createVirtualizer – update', () => {
 
     expect(() => v.update({ count: 10 })).not.toThrow();
     expect(v.count).toBe(5);
-  });
-});
-
-// ─── onRangeChange ────────────────────────────────────────────────────────────
-
-describe('createVirtualizer – onRangeChange', () => {
-  it('fires on initial render', () => {
-    const el = makeContainer({ clientHeight: 100 });
-    const onRangeChange = vi.fn();
-
-    createVirtualizer(el, { count: 50, estimateSize: 20, onRangeChange, overscan: { end: 0, start: 0 } });
-
-    expect(onRangeChange).toHaveBeenCalledWith(0, 4);
-  });
-
-  it('fires with -1,-1 when count is 0', () => {
-    const el = makeContainer({ clientHeight: 100 });
-    const onRangeChange = vi.fn();
-
-    createVirtualizer(el, { count: 0, estimateSize: 20, onRangeChange });
-
-    expect(onRangeChange).toHaveBeenCalledWith(-1, -1);
-  });
-
-  it('works without onChange', () => {
-    const el = makeContainer({ clientHeight: 100 });
-    const onRangeChange = vi.fn();
-
-    const v = createVirtualizer(el, { count: 50, estimateSize: 20, onRangeChange, overscan: { end: 0, start: 0 } });
-
-    expect(onRangeChange).toHaveBeenCalledWith(0, 4);
-
-    scrollEl(el, 100);
-
-    expect(onRangeChange).toHaveBeenLastCalledWith(5, 9);
-    v.dispose();
-  });
-
-  it('fires before onChange', () => {
-    const el = makeContainer({ clientHeight: 100 });
-    const order: string[] = [];
-    const v = createVirtualizer(el, {
-      count: 50,
-      estimateSize: 20,
-      onChange: () => order.push('onChange'),
-      onRangeChange: () => order.push('onRangeChange'),
-      overscan: { end: 0, start: 0 },
-    });
-
-    order.length = 0;
-    scrollEl(el, 100);
-
-    expect(order).toEqual(['onRangeChange', 'onChange']);
-    v.dispose();
-  });
-
-  it('v.items stays [] when only onRangeChange is provided (zero-alloc path)', () => {
-    const el = makeContainer({ clientHeight: 100 });
-    const ranges: [number, number][] = [];
-    const v = createVirtualizer(el, {
-      count: 50,
-      estimateSize: 20,
-      onRangeChange: (first, last) => ranges.push([first, last]),
-      overscan: { end: 0, start: 0 },
-    });
-
-    expect(v.items).toHaveLength(0);
-
-    scrollEl(el, 100);
-
-    expect(v.items).toHaveLength(0);
-    expect(ranges.length).toBeGreaterThan(0);
-    v.dispose();
   });
 });
 
@@ -942,7 +868,6 @@ describe('createVirtualizer – lifecycle', () => {
       v.measureEl(0, document.createElement('div'));
       v.invalidate();
       v.refresh();
-      v.redraw();
       v.prepend(3);
       v.scrollToIndex(0);
       v.scrollToOffset(0);
@@ -1182,5 +1107,33 @@ describe('createVirtualizer – empty-state dedup', () => {
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(onChange.mock.calls.at(-1)?.[0].items.length).toBeGreaterThan(0);
     v.dispose();
+  });
+});
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect(v.disposed).toBe(false);
+    v.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    v.dispose();
+    expect(v.disposed).toBe(true);
+  });
+
+  it('disposed is true after [Symbol.dispose]()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    v[Symbol.dispose]();
+    expect(v.disposed).toBe(true);
   });
 });

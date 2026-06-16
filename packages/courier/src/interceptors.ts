@@ -2,16 +2,6 @@ import { uuid } from '@vielzeug/arsenal';
 
 import type { Interceptor } from './transport';
 
-function flattenHeaders(h: HeadersInit | undefined | null): Record<string, string> {
-  if (!h) return {};
-
-  if (h instanceof Headers) return Object.fromEntries(h.entries());
-
-  if (Array.isArray(h)) return Object.fromEntries(h as [string, string][]);
-
-  return h as Record<string, string>;
-}
-
 /**
  * Attaches a Bearer token `Authorization` header to every request.
  * The token can be a static string or an async function (useful for refresh flows).
@@ -25,9 +15,7 @@ export function withBearerAuth(token: string | (() => string | Promise<string>))
   return async (ctx, next) => {
     const t = typeof token === 'function' ? await token() : token;
 
-    ctx.init.headers = { ...flattenHeaders(ctx.init.headers), authorization: `Bearer ${t}` };
-
-    return next(ctx);
+    return next(ctx.withHeaders({ authorization: `Bearer ${t}` }));
   };
 }
 
@@ -46,11 +34,7 @@ export function withRequestId(opts?: { generate?: () => string; header?: string 
   const header = opts?.header ?? 'x-request-id';
   const generate = opts?.generate ?? uuid;
 
-  return async (ctx, next) => {
-    ctx.init.headers = { ...flattenHeaders(ctx.init.headers), [header]: generate() };
-
-    return next(ctx);
-  };
+  return (ctx, next) => next(ctx.withHeaders({ [header]: generate() }));
 }
 
 /**
@@ -79,7 +63,7 @@ export function withLogging(opts?: {
 
   return async (ctx, next) => {
     const start = performance.now();
-    const method = (ctx.init.method ?? 'GET').toUpperCase();
+    const method = ((ctx.init as RequestInit).method ?? 'GET').toUpperCase();
 
     try {
       const res = await next(ctx);

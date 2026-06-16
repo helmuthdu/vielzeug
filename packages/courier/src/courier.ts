@@ -1,3 +1,5 @@
+import type { QueryKey } from './types';
+
 import { createApi } from './api';
 import { createMutation, type Mutation, type MutationFn, type MutationOptions } from './mutation';
 import { createQuery, type QueryClientOptions } from './query';
@@ -32,8 +34,7 @@ export type CourierOptions = TransportOptions & {
  *
  * // Interceptors apply to both api and stream
  * client.use(async (ctx, next) => {
- *   ctx.init.headers = { ...ctx.init.headers as Record<string,string>, 'x-request-id': crypto.randomUUID() };
- *   return next(ctx);
+ *   return next(ctx.withHeaders({ 'x-request-id': crypto.randomUUID() }));
  * });
  *
  * const user = await client.api.get<User>('/users/{id}', { params: { id: '1' } });
@@ -49,8 +50,8 @@ export function createCourier(opts?: CourierOptions) {
   // Infinity individually inside createStream, so the two concerns stay separate.
   const transport = createTransportCore(transportOpts);
 
-  const api = createApi(undefined, transport);
-  const stream = createStream(undefined, transport);
+  const api = createApi({ transport });
+  const stream = createStream({ transport });
   const queryClient = createQuery(queryOpts);
 
   return {
@@ -81,12 +82,55 @@ export function createCourier(opts?: CourierOptions) {
     /** Update or delete global headers. Applies to both API requests and SSE streams. */
     headers: transport.headers,
 
-    /** Create a mutation instance with optional lifecycle callbacks. */
+    /**
+     * Create a mutation instance with optional lifecycle callbacks.
+     *
+     * The `invalidates` and `sets` shorthands automatically update the shared query
+     * cache on success, eliminating boilerplate in the `onSuccess` callback.
+     *
+     * @example
+     * ```ts
+     * const createUser = client.mutation(
+     *   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
+     *   {
+     *     invalidates: [['users']],
+     *     sets: (user) => [['users', user.id], user],
+     *   },
+     * );
+     * ```
+     */
     mutation<TData, TVariables = void>(
       fn: MutationFn<TData, TVariables>,
-      mutOpts?: MutationOptions<TData, TVariables>,
+      mutOpts?: MutationOptions<TData, TVariables> & {
+        /** Query keys to invalidate on success. Runs before `onSuccess`. */
+        invalidates?: QueryKey[];
+        /**
+         * Imperatively seed the cache on success. Return `[key, data]` pairs.
+         * Runs before `onSuccess`.
+         */
+        sets?: (data: TData, variables: TVariables) => [QueryKey, unknown] | Array<[QueryKey, unknown]>;
+      },
     ): Mutation<TData, TVariables> {
-      return createMutation(fn, { ...mutationDefaults, ...mutOpts });
+      const { invalidates, sets, ...rest } = mutOpts ?? {};
+
+      const wrappedOnSuccess = async (data: TData, variables: TVariables): Promise<void> => {
+        if (sets) {
+          const result = sets(data, variables);
+          const pairs: Array<[QueryKey, unknown]> = Array.isArray(result[0])
+            ? (result as Array<[QueryKey, unknown]>)
+            : [result as [QueryKey, unknown]];
+
+          for (const [key, val] of pairs) queryClient.set(key, val);
+        }
+
+        if (invalidates) {
+          for (const key of invalidates) queryClient.invalidate(key);
+        }
+
+        await rest.onSuccess?.(data, variables);
+      };
+
+      return createMutation(fn, { ...mutationDefaults, ...rest, onSuccess: wrappedOnSuccess });
     },
 
     /** Query / cache client. */

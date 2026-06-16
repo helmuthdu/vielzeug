@@ -1,17 +1,6 @@
-import {
-  computed,
-  createContext,
-  define,
-  html,
-  inject,
-  onMounted,
-  prop,
-  provide,
-  type ReadonlySignal,
-  signal,
-  watch,
-} from '@vielzeug/craft';
+import { createContext, define, html, inject, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
+import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -245,7 +234,7 @@ define<SgNavbarProps, SgNavbarEvents>(NAVBAR_TAG, {
     sticky: prop.bool(false),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost'>(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onMounted, provide, slots }) {
     const hasLogo = () => slots.has('logo').value;
     const hasMobileMenu = () => slots.elements('mobile-menu').value.some(hasElementContent);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -715,7 +704,7 @@ define<SgNavbarItemProps>(NAVBAR_ITEM_TAG, {
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { bind, el: _el, slots }) {
+  setup(props, { bind, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const navbarCtx = inject(NAVBAR_CTX);

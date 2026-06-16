@@ -10,7 +10,7 @@ const i18n = createI18n({
 })
 
 const stop = i18n.subscribe((snapshot) => {
-  console.log('Snapshot:', snapshot.locale, snapshot.version)
+  console.log('Snapshot:', snapshot.locale)
 }, { immediate: true })
 
 await i18n.setLocale('fr')

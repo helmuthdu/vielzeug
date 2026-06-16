@@ -7,28 +7,28 @@ description: Complete API reference for @vielzeug/herald.
 
 ## API At a Glance
 
-| Symbol                | Purpose                                              | Execution mode | Common gotcha                                           |
-| --------------------- | ---------------------------------------------------- | -------------- | ------------------------------------------------------- |
-| `createBus()`         | Create a typed event bus instance                    | Sync           | Use a strict event map to avoid payload drift           |
-| `createBehaviorBus()` | Create a bus that replays the last value to new subs | Sync           | `events()` and `wait()` do not replay                   |
-| `pipeEvents()`        | Forward events from one bus to another               | Sync           | Supports cross-type buses and event renaming            |
-| `bus.on()`            | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe                   |
-| `bus.emit()`          | Emit an event; returns listener invocation count     | Sync           | Returns `0` if disposed, middleware blocked, or invalid |
-| `bus.events()`        | Stream future emits as an async generator            | Async          | Chain `.filter()` / `.map()` / `.take()` for transforms |
-| `combineSignals()`    | Merge two AbortSignals into one                      | Sync           | Returns the first signal to abort                       |
-| `bus.wait()`          | Await a one-time event occurrence                    | Async          | Pass `{ signal }` for timeout / cancellation            |
-| `bus.waitAny()`       | Await the first event from many                      | Async          | Result is a discriminated union by event key            |
-| `bus.onAny()`         | Subscribe to all events                              | Sync           | Fires after event-specific listeners                    |
-| `bus.eventNames()`    | Inspect events with active listeners                 | Sync           | Snapshot reflects current subscriptions                 |
-| `createTestBus()`     | Create deterministic test bus utilities              | Sync           | Reset emitted events between test cases                 |
+| Symbol                | Purpose                                              | Execution mode | Common gotcha                                                                      |
+| --------------------- | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------- |
+| `createBus()`         | Create a typed event bus instance                    | Sync           | Use a strict event map to avoid payload drift                                      |
+| `createBehaviorBus()` | Create a bus that replays the last value to new subs | Sync           | `events()` and `wait()` do not replay; `once()` fires immediately if buffer exists |
+| `pipeEvents()`        | Forward events from one bus to another               | Sync           | Supports cross-type buses and event renaming                                       |
+| `bus.on()`            | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe                                              |
+| `bus.emit()`          | Emit an event; returns listener invocation count     | Sync           | Returns `0` if disposed, middleware blocked, or invalid                            |
+| `bus.events()`        | Stream future emits as an async generator            | Async          | Subscribes eagerly; use `maxBuffer` to cap the buffer                              |
+| `combineSignals()`    | Merge N AbortSignals into one                        | Sync           | Returns the first already-aborted signal early                                     |
+| `bus.wait()`          | Await a one-time event occurrence                    | Async          | Pass `{ signal }` for timeout / cancellation                                       |
+| `bus.waitAny()`       | Await the first event from many                      | Async          | Result is a discriminated union by event key                                       |
+| `bus.onAny()`         | Subscribe to all events                              | Sync           | Fires after event-specific listeners                                               |
+| `bus.eventNames()`    | Inspect events with active listeners                 | Sync           | Snapshot reflects current subscriptions                                            |
+| `createTestBus()`     | Create deterministic test bus utilities              | Sync           | Reset emitted events between test cases                                            |
 
 ## Package Entry Points
 
-| Import                      | Purpose                               |
-| --------------------------- | ------------------------------------- |
-| `@vielzeug/herald`          | Main runtime API and types            |
-| `@vielzeug/herald/devtools` | `debugBus` — debug wrapper (dev only) |
-| `@vielzeug/herald/test`     | Test helpers (`createTestBus`, `TestBus<T>` type) |
+| Import                      | Purpose                                                    |
+| --------------------------- | ---------------------------------------------------------- |
+| `@vielzeug/herald`          | Main runtime API and types                                 |
+| `@vielzeug/herald/devtools` | `debugBus`, `debugBehaviorBus` — debug wrappers (dev only) |
+| `@vielzeug/herald/test`     | Test helpers (`createTestBus`, `TestBus<T>` type)          |
 
 ## Types
 
@@ -91,16 +91,10 @@ type PipeableKey<S extends EventMap, T extends EventMap> = {
 type PipeEntry<S extends EventMap, T extends EventMap> = PipeableKey<S, T> | { from: EventKey<S>; to: EventKey<T> };
 ```
 
-`EventStream<T>` — returned by `bus.events()`. Extends `AsyncGenerator<T>` with `AsyncDisposable` and chainable `filter` / `map` / `take` operators:
+`EventStream<T>` — returned by `bus.events()`. Extends `AsyncGenerator<T>` with `AsyncDisposable`:
 
 ```ts
-type EventStream<T> = AsyncGenerator<T> &
-  AsyncDisposable & {
-    filter<U extends T>(pred: (value: T) => value is U): EventStream<U>;
-    filter(pred: (value: T) => boolean): EventStream<T>;
-    map<U>(fn: (value: T) => U): EventStream<U>;
-    take(n: number): EventStream<T>; // yield at most n values, then close
-  };
+type EventStream<T> = AsyncGenerator<T> & AsyncDisposable;
 ```
 
 `WaitAnyResult<T, K>` — discriminated-union result returned by `waitAny()`:
@@ -126,12 +120,12 @@ type Bus<T extends EventMap> = {
   on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe;
   onAny(listener: (event: EventKey<T>, payload: unknown) => void, opts?: SubscribeOptions): Unsubscribe;
   once<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: { signal?: AbortSignal }): Unsubscribe;
-  removeAllListeners(event?: EventKey<T>): void;
   wait<K extends EventKey<T>>(event: K, opts?: { signal?: AbortSignal }): Promise<T[K]>;
   waitAny<const K extends readonly [EventKey<T>, EventKey<T>, ...EventKey<T>[]]>(
     events: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>>;
+  wildcardCount(): number;
 };
 ```
 
@@ -150,6 +144,7 @@ type BehaviorBus<T extends EventMap> = Bus<T> & {
 
 ```ts
 type TestBus<T extends EventMap> = Bus<T> & {
+  allEmitted(): { [K in EventKey<T>]?: T[K][] };
   emitted<K extends EventKey<T>>(event: K): T[K][];
   emittedCount<K extends EventKey<T>>(event: K): number;
   reset(): void;
@@ -308,7 +303,7 @@ Subscribe to **all** events. The listener is called after event-specific listene
 
 **Returns:** `Unsubscribe`
 
-`onAny` listeners are cleared by `removeAllListeners()` (no argument) but not by `removeAllListeners('event')`.
+`onAny` listeners count is tracked separately via `wildcardCount()` and are not included in per-event `listenerCount()` results.
 
 ```ts
 const unsub = bus.onAny((event, payload) => {
@@ -428,25 +423,12 @@ for await (const { userId } of stream) {
   if (userId === targetId) break; // subscription torn down automatically
 }
 
-// .filter() — yields only values that pass the predicate
-for await (const n of bus.events('count').filter((n) => n > 0)) { ... }
-
-// .map() — transforms each yielded value
-for await (const label of bus.events('count').map((n) => `count: ${n}`)) { ... }
-
-// .filter().map() — operators chain freely
-for await (const s of bus.events('count').filter((n) => n % 2 === 0).map((n) => n * 2)) { ... }
-
-// .take(n) — yield at most n values, then close automatically
-for await (const n of bus.events('count').take(5)) { ... }
-
-// .filter().take() — chain freely
-for await (const n of bus.events('count').filter((n) => n > 0).take(3)) { ... }
+// Stop early with a break — subscription torn down automatically via AsyncDisposable
+await using stream2 = bus.events('count');
+for await (const n of stream2) {
+  if (n > 100) break;
+}
 ```
-
-::: warning Sibling streams
-Calling `.filter()` or `.map()` on the **same base stream** twice creates two sibling streams that share one subscription. Disposing one sibling closes the shared subscription and terminates the other. For independent lifecycles, call `bus.events()` separately.
-:::
 
 ---
 
@@ -547,19 +529,18 @@ bus.eventNames(); // ['user:login', 'user:logout']
 
 ---
 
-### `bus.removeAllListeners()`
+### `bus.wildcardCount()`
 
-Signature: `removeAllListeners(event?) => void`
+Signature: `wildcardCount() => number`
 
-Removes all listeners for one event, or all listeners for all events when called without arguments.
-
-| Parameter | Type                     | Description                                     |
-| --------- | ------------------------ | ----------------------------------------------- |
-| `event`   | `EventKey<T>` (optional) | Specific event key; omit to clear all listeners |
+Returns the number of active `onAny` wildcard listeners. Wildcards are counted separately from event-specific listeners — this is the count that `listenerCount(event)` adds on top of the specific count for each event.
 
 ```ts
-bus.removeAllListeners('user:login');
-bus.removeAllListeners(); // remove everything
+bus.onAny(logAll);
+bus.onAny(trackAll);
+
+bus.wildcardCount(); // 2
+bus.listenerCount('user:login'); // 0 specific + 2 wildcard = 2
 ```
 
 ## `BusOptions` — middleware
@@ -631,8 +612,9 @@ Creates a bus that replays the last known value to new subscribers. Useful for s
 
 - `on()` and `once()` — replay the current value synchronously to new subscribers.
 - `events()`, `wait()`, `waitAny()` — no replay; behave like a regular bus.
-- The returned `BehaviorBus<T>` adds a `current(event)` method.
+- The returned `BehaviorBus<T>` adds `current(event)`, `reset()`, and `snapshot()` methods.
 - The replay buffer is only updated when dispatch actually runs — payloads rejected by `validatePayload` or blocked by middleware that omits `next()` are never buffered.
+- **`once()` with a buffered value:** if a current value exists, the listener fires immediately (synchronously) and is never registered for future emits. Use `on()` if you need to receive the _next_ emit rather than the current state.
 
 ```ts
 import { createBehaviorBus } from '@vielzeug/herald';
@@ -683,18 +665,45 @@ bus.current('theme'); // undefined
 bus.reset(); // clear all buffers
 ```
 
+---
+
+### `behaviorBus.snapshot()`
+
+Signature: `snapshot() => Partial<T>`
+
+Returns a plain object containing the most recently emitted value for every currently buffered event. Events with no value in the buffer are omitted from the result.
+
+Useful for serializing the current state of all channels at once, for debugging, or for hydrating a new bus from a snapshot.
+
+```ts
+type UIEvents = { theme: 'light' | 'dark'; zoom: number; sidebar: boolean };
+
+const bus = createBehaviorBus<UIEvents>({ theme: 'light', zoom: 1 });
+
+bus.snapshot();
+// → { theme: 'light', zoom: 1 }  (sidebar not buffered — omitted)
+
+bus.emit('theme', 'dark');
+bus.snapshot();
+// → { theme: 'dark', zoom: 1 }
+
+bus.reset('theme');
+bus.snapshot();
+// → { zoom: 1 }
+```
+
 ## `pipeEvents()`
 
-Signature: `pipeEvents<S, T>(source, target, entries, signal?) => Unsubscribe`
+Signature: `pipeEvents<S, T>(source, target, entries, opts?) => Unsubscribe`
 
 Forwards a selected subset of events from a source bus to a target bus. Source and target may have different event map types — only the listed keys must be compatible.
 
-| Parameter | Type                                               | Description                                       |
-| --------- | -------------------------------------------------- | ------------------------------------------------- |
-| `source`  | `Bus<S>`                                           | The bus to listen on                              |
-| `target`  | `Bus<T>`                                           | The bus to forward events to                      |
+| Parameter | Type                                               | Description                                                                      |
+| --------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `source`  | `Bus<S>`                                           | The bus to listen on                                                             |
+| `target`  | `Bus<T>`                                           | The bus to forward events to                                                     |
 | `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames — throws `RangeError` if empty |
-| `signal`  | `AbortSignal` (optional)                           | Optional signal to stop forwarding early          |
+| `opts`    | `{ signal?: AbortSignal }` (optional)              | Optional signal to stop forwarding early                                         |
 
 **Returns:** `Unsubscribe` — call to stop forwarding manually.
 
@@ -714,7 +723,7 @@ unpipe();
 
 // Scope to a signal
 const controller = new AbortController();
-pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
+pipeEvents(appBus, auditBus, ['user:login'], { signal: controller.signal });
 controller.abort(); // forwarding stops
 
 // Rename events during forwarding
@@ -814,6 +823,24 @@ bus.emitted('user:login'); // => []
 
 ---
 
+### `testBus.allEmitted()`
+
+Signature: `allEmitted() => { [K in EventKey<T>]?: T[K][] }`
+
+Returns a snapshot object containing all recorded payloads for every event that has been emitted at least once. Keys absent from the result have never been emitted. Each call returns a new object — mutations do not affect internal records.
+
+Useful for asserting that **no other events** were emitted beyond the ones being tested.
+
+```ts
+bus.emit('user:login', { userId: '1' });
+bus.emit('theme:change', 'dark');
+
+bus.allEmitted();
+// => { 'user:login': [{ userId: '1' }], 'theme:change': ['dark'] }
+```
+
+---
+
 ### `testBus.dispose()`
 
 Signature: `dispose() => void`
@@ -822,16 +849,16 @@ Clears recorded payloads and then calls the underlying `bus.dispose()`, removing
 
 ## `combineSignals()`
 
-Signature: `combineSignals(a: AbortSignal, b?: AbortSignal) => AbortSignal`
+Signature: `combineSignals(first: AbortSignal, ...rest: AbortSignal[]) => AbortSignal`
 
-Returns a signal that aborts as soon as either `a` or `b` aborts. If only `a` is provided, returns `a` directly. Registers and cleans up its own event listeners — no leaks when neither signal fires.
+Returns a signal that aborts as soon as any of the provided signals abort. With a single argument, returns it directly (no allocation). Registers and cleans up its own event listeners — no leaks when no signal fires.
 
-| Parameter | Type                     | Description                             |
-| --------- | ------------------------ | --------------------------------------- |
-| `a`       | `AbortSignal`            | First signal                            |
-| `b`       | `AbortSignal` (optional) | Second signal; omit to pass `a` through |
+| Parameter | Type            | Description                                           |
+| --------- | --------------- | ----------------------------------------------------- |
+| `first`   | `AbortSignal`   | First signal; returned directly if no others provided |
+| `...rest` | `AbortSignal[]` | Additional signals to race                            |
 
-**Returns:** `AbortSignal` — aborts when either input aborts.
+**Returns:** `AbortSignal` — aborts when any input aborts.
 
 ```ts
 import { combineSignals, createBus } from '@vielzeug/herald';
@@ -842,7 +869,16 @@ const timeoutSignal = AbortSignal.timeout(5_000);
 // Unsubscribe when the bus disposes OR after 5 seconds
 const signal = combineSignals(bus.disposalSignal, timeoutSignal);
 bus.on('user:login', handler, { signal });
+
+// Three signals — no nesting required
+const signal3 = combineSignals(userSignal, timeoutSignal, bus.disposalSignal);
 ```
+
+::: tip Why `combineSignals` over `AbortSignal.any()`?
+`AbortSignal.any([a, b])` is a platform equivalent, but it retains a strong reference to both signals until one fires. If neither signal ever fires, the internal `'abort'` listeners are never removed — a potential memory leak in long-lived buses.
+
+`combineSignals(a, b)` uses `once: true` listeners that clean up immediately as soon as either signal fires, making it the safer choice for `disposalSignal`-scoped subscriptions.
+:::
 
 ## Errors
 

@@ -135,4 +135,17 @@ describe('sg-button-group accessibility', () => {
       expect(btn?.getAttribute('color') ?? fixture.element.getAttribute('color')).toBe('primary');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-button-group', {
+        attrs: { label: 'Actions' },
+        html: '<sg-button>Save</sg-button><sg-button>Cancel</sg-button>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

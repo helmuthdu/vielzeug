@@ -176,7 +176,7 @@ Control the resize handle with the `resize` attribute.
 | `auto-resize`     | `boolean`                                                                 | `false`      | Grow vertically with content                       |
 | `no-resize`       | `boolean`                                                                 | `false`      | Disable the manual resize handle                   |
 | `resize`          | `'none' \| 'vertical' \| 'horizontal' \| 'both'`                          | `'vertical'` | Resize direction                                   |
-| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                  | `'solid'`    | Visual style variant                               |
+| `variant`         | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost'`                 | `'solid'`    | Visual style variant                               |
 | `color`           | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -            | Color theme                                        |
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`       | Component size                                     |
 | `rounded`         | `'none' \| 'sm' \| 'md' \| 'lg' \| 'full'`                                | -            | Border radius override                             |
@@ -196,22 +196,22 @@ Control the resize handle with the `resize` attribute.
 
 ### CSS Custom Properties
 
-| Property                       | Description       | Default                       |
-| ------------------------------ | ----------------- | ----------------------------- |
-| `--textarea-bg`                   | Background color                                            | Variant-dependent             |
-| `--textarea-border-color`         | Border color                                                | Variant-dependent             |
-| `--textarea-radius`               | Border radius                                               | `var(--rounded-lg)`           |
-| `--textarea-padding`              | Inner padding (block inline)                                | `var(--size-2) var(--size-3)` |
-| `--textarea-gap`                  | Gap between label and field                                 | Size-dependent                |
-| `--textarea-font-size`            | Font size                                                   | `var(--text-sm)`              |
-| `--textarea-placeholder-color`    | Placeholder text color                                      | Theme-dependent               |
-| `--textarea-min-height`           | Minimum field height                                        | `var(--size-24)`              |
-| `--textarea-max-height`           | Maximum field height (`none` = unlimited)                   | `none`                        |
-| `--textarea-resize`               | CSS resize direction (`vertical`/`horizontal`/`both`/`none`) | `vertical`                   |
-| `--textarea-hover-bg`             | Field background on hover (flat/ghost variants)             | Variant-dependent             |
-| `--textarea-hover-border-color`   | Field border on hover (flat/bordered variants)              | Variant-dependent             |
-| `--textarea-focus-bg`             | Field background when focused (flat variant)                | Variant-dependent             |
-| `--textarea-focus-border-color`   | Field border when focused (flat variant)                    | Variant-dependent             |
+| Property                        | Description                                                  | Default                       |
+| ------------------------------- | ------------------------------------------------------------ | ----------------------------- |
+| `--textarea-bg`                 | Background color                                             | Variant-dependent             |
+| `--textarea-border-color`       | Border color                                                 | Variant-dependent             |
+| `--textarea-radius`             | Border radius                                                | `var(--rounded-lg)`           |
+| `--textarea-padding`            | Inner padding (block inline)                                 | `var(--size-2) var(--size-3)` |
+| `--textarea-gap`                | Gap between label and field                                  | Size-dependent                |
+| `--textarea-font-size`          | Font size                                                    | `var(--text-sm)`              |
+| `--textarea-placeholder-color`  | Placeholder text color                                       | Theme-dependent               |
+| `--textarea-min-height`         | Minimum field height                                         | `var(--size-24)`              |
+| `--textarea-max-height`         | Maximum field height (`none` = unlimited)                    | `none`                        |
+| `--textarea-resize`             | CSS resize direction (`vertical`/`horizontal`/`both`/`none`) | `vertical`                    |
+| `--textarea-hover-bg`           | Field background on hover (flat/ghost variants)              | Variant-dependent             |
+| `--textarea-hover-border-color` | Field border on hover (flat/bordered variants)               | Variant-dependent             |
+| `--textarea-focus-bg`           | Field background when focused (flat variant)                 | Variant-dependent             |
+| `--textarea-focus-border-color` | Field border when focused (flat variant)                     | Variant-dependent             |
 
 ## Accessibility
 

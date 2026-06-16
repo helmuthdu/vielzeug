@@ -5,7 +5,17 @@ package: herald
 category: events
 keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
 related: [ripple, wayfinder, familiar]
-exports: [createBus, createBehaviorBus, pipeEvents, combineSignals, BusDisposedError, debugBus, createTestBus]
+exports:
+  [
+    createBus,
+    createBehaviorBus,
+    pipeEvents,
+    combineSignals,
+    BusDisposedError,
+    debugBus,
+    debugBehaviorBus,
+    createTestBus,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -39,18 +49,18 @@ for await (const event of bus.events('cart:updated')) {
 } // async stream
 ```
 
-| Feature              | Herald                                       | mitt     | EventEmitter3 |
-| -------------------- | -------------------------------------------- | -------- | ------------- |
-| Bundle size          | <PackageInfo package="herald" type="size" /> | ~200 B   | ~1.5 kB       |
-| TypeScript inference | <sg-icon name="check" size="16"></sg-icon> Full                                      | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic      |
-| Async/await (`wait`) | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Async streaming      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| AbortSignal          | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Event piping         | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Wildcard (`onAny`)   | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Disposal signal      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Error isolation      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>            |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>            |
+| Feature              | Herald                                          | mitt                                                      | EventEmitter3                                             |
+| -------------------- | ----------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
+| Bundle size          | <PackageInfo package="herald" type="size" />    | ~200 B                                                    | ~1.5 kB                                                   |
+| TypeScript inference | <sg-icon name="check" size="16"></sg-icon> Full | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic |
+| Async/await (`wait`) | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| Async streaming      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| AbortSignal          | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| Event piping         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| Wildcard (`onAny`)   | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                | <sg-icon name="x" size="16"></sg-icon>                    |
+| Disposal signal      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| Error isolation      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                | <sg-icon name="check" size="16"></sg-icon>                |
 
 <div class="decision-callout">
 
@@ -131,19 +141,19 @@ try {
 - **Typed event maps** for strict event/payload correctness
 - **Persistent + one-shot listeners** with `on` and `once` — each registration is independent, including duplicate handlers
 - **Wildcard listeners** with `onAny` — subscribe to all events for cross-cutting concerns like logging and analytics
-- **Listener management APIs** with unsubscribe handles, `removeAllListeners`, and `eventNames`
+- **Listener management APIs** with unsubscribe handles, `wildcardCount()`, and `eventNames()`
 - **Async event coordination** with `wait`
 - **First-event racing** with `waitAny`
-- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called, with chainable `.filter()`, `.map()`, and `.take(n)` operators
+- **Async streaming** with `events` — eager subscription buffers events from the moment `events()` is called; `await using` ensures cleanup on early `break`
 - **Event piping** with `pipeEvents` — forward events across buses with optional renaming and automatic teardown
 - **Middleware pipeline** via `createBus({ middleware: [...] })` — intercept or block dispatches before listeners run
 - **Payload validation** via `createBus({ validatePayload: ... })` — schema-level guards applied before middleware
 - **Disposal signal** via `bus.disposalSignal` — use as an `AbortSignal` to tie external lifecycles to the bus
 - **Leak detection** via `maxListeners` — warn when a single event accumulates too many listeners
 - **Named buses** via `createBus({ name: 'myBus' })` — name appears in debug log prefixes and `BusDisposedError` messages for easier debugging across multiple bus instances
-- **Debug logging** via `logger.debug` or `debugBus()` (`@vielzeug/herald/devtools`) — logs subscribe/emit/dispose activity with `[herald:*]` prefixes; `debugBus()` wires `console.debug` automatically and is tree-shaken from production bundles
+- **Debug logging** via `logger.debug` or `debugBus()` / `debugBehaviorBus()` (`@vielzeug/herald/devtools`) — logs subscribe/emit/dispose activity with `[herald:*]` prefixes; tree-shaken from production bundles
 - **Abort-aware APIs** for lifecycle-safe teardown
-- **`onAny()` wildcard listener** for bus-wide observability (logging, analytics, tracing)
+- **`onAny()` wildcard listener** for bus-wide observability; `wildcardCount()` to inspect active wildcards
 - **Custom logger** via `createBus({ logger: { debug, warn } })` — route or suppress debug and warn output
 - **`onError` hook** for listener-error isolation and resilience
 - **`dispose` and `[Symbol.dispose]`** for deterministic cleanup
@@ -151,7 +161,6 @@ try {
 - **Zero dependencies** — <PackageInfo package="herald" type="size" /> gzipped, <PackageInfo package="herald" type="dependencies" /> dependencies
 
 </div>
-
 
 ## Documentation
 

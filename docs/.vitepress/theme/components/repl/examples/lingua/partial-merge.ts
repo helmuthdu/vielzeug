@@ -11,23 +11,23 @@ const i18n = createI18n({
   },
 })
 
-console.log('Before merge:', i18n.t('nav.home'))
-console.log('Missing key before merge:', i18n.t('settings.heading'))
+console.log('Before load:', i18n.t('nav.home'))
+console.log('Missing key before load:', i18n.t('settings.heading'))
 
-// merge() overlays keys without discarding the base catalog
-await i18n.merge('en', async () => ({
+// extend() registers the factory and immediately loads it — merges keys into the catalog
+await i18n.extend('settings', (_locale) => Promise.resolve({
   settings: {
     heading: 'Account Settings',
     saved: 'Changes saved',
   },
 }))
 
-console.log('After merge:', i18n.t('settings.heading'))
+console.log('After load:', i18n.t('settings.heading'))
 console.log('Base keys still present:', i18n.t('nav.home'))
 
-// scope() pairs naturally with merged namespaces
+// scope() pairs naturally with namespace keys
 const s = i18n.scope('settings')
 console.log(s.t('heading'))
 console.log(s.t('saved'))`,
-  name: 'Partial Merge with scope()',
+  name: 'Namespace Lazy Loading with extend()',
 };

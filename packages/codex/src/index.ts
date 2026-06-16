@@ -7,6 +7,7 @@ import { registerResources } from './resources.js';
 import { registerTools } from './tools.js';
 
 export { loadData, packageMeta, validateBundledData } from './data.js';
+export type { HttpServerHandle } from './http.js';
 export type { SearchHit } from './search.js';
 export type {
   BundledData,

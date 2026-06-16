@@ -1,63 +1,87 @@
-import { search } from '../search';
+import { fuzzyFilter, fuzzyScore } from '../search';
 
-describe('fuzzy', () => {
+describe('fuzzyFilter', () => {
   const data = [
     { age: 25, name: 'John Doe' },
     { age: 30, name: 'Jane Doe' },
   ];
 
   it('should return both objects for a matching search string', () => {
-    const result = search(data, 'doe', { threshold: 0.25 });
+    const result = fuzzyFilter(data, 'doe', { threshold: 0.25 });
 
     expect(result).toEqual(data);
   });
 
   it('should return all items for an empty search string', () => {
-    const emptyResult = search(data, '', { threshold: 0.25 });
+    const emptyResult = fuzzyFilter(data, '', { threshold: 0.25 });
 
     expect(emptyResult).toEqual(data);
   });
 
   it('should return one object for a partial match', () => {
-    const partialMatch = search(data, 'jon', { threshold: 0.375 });
+    const partialMatch = fuzzyFilter(data, 'jon', { threshold: 0.375 });
 
     expect(partialMatch).toEqual([{ age: 25, name: 'John Doe' }]);
   });
 
   it('should return an empty array for no match', () => {
-    const noMatch = search(data, 'xyz', { threshold: 0.25 });
+    const noMatch = fuzzyFilter(data, 'xyz', { threshold: 0.25 });
 
     expect(noMatch).toEqual([]);
   });
 
   it('should be case-insensitive', () => {
-    const caseInsensitive = search(data, 'JOHN', { threshold: 0.25 });
+    const caseInsensitive = fuzzyFilter(data, 'JOHN', { threshold: 0.25 });
 
     expect(caseInsensitive).toEqual([{ age: 25, name: 'John Doe' }]);
   });
 
   it('should be able to search for numbers', () => {
-    const numberSearch = search(data, '25', { threshold: 0.25 });
+    const numberSearch = fuzzyFilter(data, '25', { threshold: 0.25 });
 
     expect(numberSearch).toEqual([{ age: 25, name: 'John Doe' }]);
   });
 
   it('restricts search to specified fields', () => {
-    const result = search(data, '25', { fields: ['name'] });
+    const result = fuzzyFilter(data, '25', { fields: ['name'] });
 
     expect(result).toEqual([]);
   });
+
+  it('does not stack overflow on deeply nested objects beyond MAX_SEEK_DEPTH', () => {
+    let nested: Record<string, unknown> = { value: 'target' };
+
+    for (let i = 0; i < 20; i++) nested = { child: nested };
+
+    expect(() => fuzzyFilter([nested], 'target')).not.toThrow();
+  });
+
+  describe('normalize option', () => {
+    it('normalize:true matches accented chars against base form', () => {
+      const data = ['café', 'resume', 'naïve'];
+      const result = fuzzyFilter(data, 'cafe', { normalize: true, threshold: 0.8 });
+
+      expect(result).toContain('café');
+    });
+
+    it('normalize:false (default) does not match accented to base form', () => {
+      const data = ['café'];
+      const result = fuzzyFilter(data, 'cafe', { normalize: false, threshold: 1 });
+
+      expect(result).toHaveLength(0);
+    });
+  });
 });
 
-describe('search scored mode', () => {
+describe('fuzzyScore', () => {
   const data = [
     { age: 25, name: 'John Doe' },
     { age: 30, name: 'Jane Doe' },
     { age: 22, name: 'Alice Smith' },
   ];
 
-  it('returns ScoredResult array when mode is scored', () => {
-    const results = search(data, 'doe', { mode: 'scored' });
+  it('returns ScoredResult array', () => {
+    const results = fuzzyScore(data, 'doe');
 
     expect(results).toHaveLength(2);
     expect(results[0]).toHaveProperty('item');
@@ -66,7 +90,7 @@ describe('search scored mode', () => {
   });
 
   it('returns results sorted by score descending', () => {
-    const results = search(data, 'john', { mode: 'scored' });
+    const results = fuzzyScore(data, 'john');
 
     expect(results.length).toBeGreaterThanOrEqual(1);
 
@@ -76,20 +100,20 @@ describe('search scored mode', () => {
   });
 
   it('returns all items with score 1 when query is empty', () => {
-    const results = search(data, '', { mode: 'scored' });
+    const results = fuzzyScore(data, '');
 
     expect(results).toHaveLength(3);
     expect(results.every((r) => r.score === 1)).toBe(true);
   });
 
-  it('filters by threshold in scored mode', () => {
-    const results = search(data, 'alice', { mode: 'scored', threshold: 0.9 });
+  it('filters by threshold', () => {
+    const results = fuzzyScore(data, 'alice', { threshold: 0.9 });
 
     expect(results.every((r) => r.score >= 0.9)).toBe(true);
   });
 
-  it('restricts to fields in scored mode', () => {
-    const results = search(data, '25', { fields: ['name'], mode: 'scored' });
+  it('restricts to specified fields', () => {
+    const results = fuzzyScore(data, '25', { fields: ['name'] });
 
     expect(results).toEqual([]);
   });
@@ -97,13 +121,13 @@ describe('search scored mode', () => {
   it('handles large arrays without stack overflow', () => {
     const large = Array.from({ length: 200_000 }, (_, i) => ({ id: i, name: `item-${i}` }));
 
-    expect(() => search(large, 'item-42', { mode: 'scored' })).not.toThrow();
+    expect(() => fuzzyScore(large, 'item-42')).not.toThrow();
   });
 
   it('handles items with large array fields without stack overflow', () => {
     const record = { tags: Array.from({ length: 200_000 }, (_, i) => `tag-${i}`) };
 
-    expect(() => search([record], 'tag-42', { mode: 'scored' })).not.toThrow();
+    expect(() => fuzzyScore([record], 'tag-42')).not.toThrow();
   });
 
   it('does not stack overflow on deeply nested objects beyond MAX_SEEK_DEPTH', () => {
@@ -111,14 +135,15 @@ describe('search scored mode', () => {
 
     for (let i = 0; i < 20; i++) nested = { child: nested };
 
-    expect(() => search([nested], 'target')).not.toThrow();
+    expect(() => fuzzyScore([nested], 'target')).not.toThrow();
   });
 
-  it('does not stack overflow on deeply nested objects in scored mode', () => {
-    let nested: Record<string, unknown> = { value: 'target' };
+  describe('normalize option', () => {
+    it('normalize:true matches accented chars against base form', () => {
+      const data = [{ name: 'José' }, { name: 'John' }];
+      const result = fuzzyScore(data, 'jose', { fields: ['name'], normalize: true, threshold: 0.5 });
 
-    for (let i = 0; i < 20; i++) nested = { child: nested };
-
-    expect(() => search([nested], 'target', { mode: 'scored' })).not.toThrow();
+      expect(result[0]?.item.name).toBe('José');
+    });
   });
 });

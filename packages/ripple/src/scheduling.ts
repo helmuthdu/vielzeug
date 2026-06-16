@@ -1,5 +1,5 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
-import type { BatchOptions, Subscriber } from './types';
+import type { Subscriber } from './types';
 
 import { ensureError, runAll, StateError } from './error';
 import { _NONE } from './symbols';
@@ -127,8 +127,8 @@ export const notifyNodeChange = (node: ReactiveBase<unknown>): void => {
   if (batchDepth === 0) flushEffects(DEFAULT_MAX_ITERATIONS);
 };
 
-export const batch = <T>(fn: () => T, options?: BatchOptions): T => {
-  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+export const batch = <T>(fn: () => T): T => {
+  const maxIterations = DEFAULT_MAX_ITERATIONS;
 
   batchDepth++;
 

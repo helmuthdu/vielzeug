@@ -1,6 +1,4 @@
-import { type ReadonlySignal, signal } from '@vielzeug/ripple';
-
-import { onCleanup } from '../runtime';
+import { type ReadonlySignal, signal, onCleanup } from '@vielzeug/ripple';
 
 export type MutationObserverValue = {
   entries: MutationRecord[];

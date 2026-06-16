@@ -1,19 +1,5 @@
-import {
-  computed,
-  createContext,
-  createStableId,
-  define,
-  defineField,
-  effect,
-  html,
-  inject,
-  onCleanup,
-  prop,
-  provide,
-  type ReadonlySignal,
-  signal,
-  when,
-} from '@vielzeug/craft';
+import { createContext, createStableId, define, useField, html, inject, prop, when } from '@vielzeug/craft';
+import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -122,13 +108,15 @@ define<SgCheckboxGroupProps, SgCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
     required: prop.bool(false),
     values: prop.string(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onCleanup, provide, slots, watch }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 
+    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       multiple: signal(true),
       prefix: 'checkbox-group',
@@ -136,11 +124,10 @@ define<SgCheckboxGroupProps, SgCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       validateOn: formCtx?.validateOn,
       value: props.values,
     });
-    const checkedValues = choice.selectedValues;
 
-    choice.bindFormField(
-      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
-    );
+    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+
+    const checkedValues = choice.selectedValues;
 
     const getCheckboxes = (): HTMLElement[] => getLightChildrenByTag(el, 'sg-checkbox');
     const getLabelForValue = (value: string): string => getChoiceLabel(getCheckboxes(), value);
@@ -190,12 +177,12 @@ define<SgCheckboxGroupProps, SgCheckboxGroupEvents>(CHECKBOX_GROUP_TAG, {
       }
     };
 
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
       syncChildren();
     });
 
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
 
       const listeners = getCheckboxes().map((checkbox) => {

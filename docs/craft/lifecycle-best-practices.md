@@ -12,10 +12,10 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 Most component logic should live directly in `setup()` using signals and `effect()`.
 
 ```ts
-import { define, effect, html, signal } from '@vielzeug/craft';
+import { define, html, signal } from '@vielzeug/craft';
 
 define('counter-title', {
-  setup() {
+  setup(_props, { effect }) {
     const count = signal(0);
 
     effect(() => {
@@ -32,10 +32,10 @@ define('counter-title', {
 Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order. Each callback is error-isolated.
 
 ```ts
-import { define, html, onMounted, ref, signal } from '@vielzeug/craft';
+import { define, html, ref, signal } from '@vielzeug/craft';
 
 define('my-tabs', {
-  setup(_props, { slots }) {
+  setup(_props, { onMounted, slots }) {
     const activeTab = signal(0);
     const containerRef = ref<HTMLElement>();
 
@@ -61,10 +61,10 @@ define('my-tabs', {
 `onElement(ref, callback)` is ideal for imperative DOM logic tied to a specific referenced element.
 
 ```ts
-import { define, html, onElement, ref } from '@vielzeug/craft';
+import { define, html, ref } from '@vielzeug/craft';
 
 define('focus-input', {
-  setup() {
+  setup(_props, { onElement }) {
     const inputRef = ref<HTMLInputElement>();
 
     onElement(inputRef, (input) => {
@@ -89,10 +89,10 @@ define('focus-input', {
 Use `bind()` from the setup context for host bindings.
 
 ```ts
-import { computed, define, html, onEvent, signal } from '@vielzeug/craft';
+import { define, html, signal } from '@vielzeug/craft';
 
 define('toggle-host', {
-  setup(_props, { bind }) {
+  setup(_props, { bind, onEvent }) {
     const open = signal(false);
 
     bind({
@@ -112,7 +112,7 @@ define('toggle-host', {
 
 ## Pick the Right Cleanup Primitive
 
-- Use `onCleanup(fn)` for component-owned teardown (intervals, WebSockets, subscriptions).
-- Use `onElement()` for per-element teardown tied to a specific ref.
-- Return a cleanup function from `onMounted()` when cleanup belongs to mount-time initialization.
-- Use `onEvent()` for event listeners that should auto-cleanup on disconnect.
+- Use `ctx.onCleanup(fn)` for component-owned teardown (intervals, WebSockets, subscriptions).
+- Use `ctx.onElement()` for per-element teardown tied to a specific ref.
+- Return a cleanup function from `ctx.onMounted()` when cleanup belongs to mount-time initialization.
+- Use `ctx.onEvent()` for event listeners that should auto-cleanup on disconnect.

@@ -2,35 +2,35 @@ export const storeHistoryExample = {
   code: `import { storeWithHistory, effect } from '@vielzeug/ripple'
 
 // storeWithHistory wraps a store with snapshot-based undo/redo.
-// Every patch(), replace(), reset(), and lens() write pushes a snapshot.
+// Access the underlying store via .store for mutations and reads.
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 20 })
 
-// canUndo / canRedo are reactive — this effect re-runs whenever the cursor moves
+// canUndo / canRedo live on the adapter — reactive (re-run effect when they change)
 const stopButtons = effect(() => {
   console.log('canUndo:', editor.canUndo, '| canRedo:', editor.canRedo)
 })
 
-editor.patch({ text: 'Hello', cursor: 5 })
-editor.patch({ text: 'Hello World', cursor: 11 })
+editor.store.patch({ text: 'Hello', cursor: 5 })
+editor.store.patch({ text: 'Hello World', cursor: 11 })
 
 console.log('historyLength:', editor.historyLength) // 3
 
 editor.undo()
-console.log('after undo:', editor.value.text) // 'Hello'
+console.log('after undo:', editor.store.peek().text) // 'Hello'
 
 editor.undo()
-console.log('after undo:', editor.value.text) // ''
+console.log('after undo:', editor.store.peek().text) // ''
 
 editor.redo()
-console.log('after redo:', editor.value.text) // 'Hello'
+console.log('after redo:', editor.store.peek().text) // 'Hello'
 
 // Writing after undo discards the redo stack
-editor.patch({ text: 'Goodbye', cursor: 7 })
+editor.store.patch({ text: 'Goodbye', cursor: 7 })
 console.log('historyLength after new write:', editor.historyLength) // 3
 
 stopButtons.dispose()
 
-// Call dispose() to release the internal cursor signal when done
+// dispose() releases the cursor signal and the underlying store
 editor.dispose()`,
   name: 'Store History — Undo/Redo',
 };

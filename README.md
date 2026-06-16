@@ -302,12 +302,12 @@ pnpm add @vielzeug/familiar
 
 ---
 
-### [@vielzeug/grip](packages/grip) – Drag and Drop
+### [@vielzeug/dnd](packages/dnd) – Drag and Drop
 
 Framework-agnostic drag-and-drop helpers for file drop zones and sortable lists.
 
 ```bash
-pnpm add @vielzeug/grip
+pnpm add @vielzeug/dnd
 ```
 
 **Key Features:**
@@ -317,7 +317,7 @@ pnpm add @vielzeug/grip
 - Drag handles, dynamic list refresh, and `destroy()` / `using` cleanup
 - Zero dependencies
 
-[📖 Documentation](https://vielzeug.dev/grip/) • [Examples](https://vielzeug.dev/grip/examples)
+[📖 Documentation](https://vielzeug.dev/dnd/) • [Examples](https://vielzeug.dev/dnd/examples)
 
 ---
 
@@ -560,7 +560,7 @@ vielzeug/
 │   ├── lingua/        # Internationalization
 │   ├── herald/        # Typed event bus
 │   ├── familiar/      # Web Worker pool
-│   ├── grip/          # Drag-and-drop utilities
+│   ├── dnd/           # Drag-and-drop utilities
 │   ├── orbit/         # Floating element positioning
 │   ├── prism/         # Reactive SVG charts
 │   ├── sourcerer/     # Reactive data sources
@@ -607,7 +607,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/lingua`       | **7.4 KB**                 | **1.6 KB**     | 0            |
 | `@vielzeug/herald`       | —                          | —              | 0            |
 | `@vielzeug/familiar`     | —                          | —              | 0            |
-| `@vielzeug/grip`         | —                          | —              | 0            |
+| `@vielzeug/dnd`          | —                          | —              | 0            |
 | `@vielzeug/orbit`        | —                          | —              | 0            |
 | `@vielzeug/prism`        | **32 KB**                  | **10.3 KB**    | 2\*          |
 | `@vielzeug/sourcerer`    | —                          | —              | 1\*          |

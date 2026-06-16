@@ -4,7 +4,7 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
-related: [grip, craft, sigil]
+related: [dnd, craft, sigil]
 exports:
   [
     createVirtualizer,
@@ -55,14 +55,14 @@ const virt = createVirtualizer(scrollEl, {
 });
 ```
 
-| Feature            | Scroll                                       | TanStack Virtual | react-window |
-| ------------------ | -------------------------------------------- | ---------------- | ------------ |
-| Bundle size        | <PackageInfo package="scroll" type="size" /> | ~5 kB            | ~8 kB        |
-| Framework agnostic | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | React only   |
-| Variable heights   | <sg-icon name="check" size="16"></sg-icon> Measured                                  | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="triangle-alert" size="16"></sg-icon> Static    |
-| O(log n) lookup    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           |
-| `using` support    | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           |
-| Zero dependencies  | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           |
+| Feature            | Scroll                                              | TanStack Virtual                           | react-window                                               |
+| ------------------ | --------------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| Bundle size        | <PackageInfo package="scroll" type="size" />        | ~5 kB                                      | ~8 kB                                                      |
+| Framework agnostic | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon> | React only                                                 |
+| Variable heights   | <sg-icon name="check" size="16"></sg-icon> Measured | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="triangle-alert" size="16"></sg-icon> Static |
+| O(log n) lookup    | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                 |
+| `using` support    | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                     |
+| Zero dependencies  | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                 |
 
 <div class="decision-callout">
 
@@ -117,7 +117,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 
 // Clean up
-virt.destroy();
+virt.dispose();
 ```
 
 ### Entry Points
@@ -131,7 +131,7 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Framework-agnostic** — callback-based `onChange` connects to any rendering layer (React, Vue, Svelte, Lit, vanilla DOM)
 - **Fixed and variable heights** — pass a fixed number, a per-index estimator function, or call `measure()` after rendering for exact heights
 - **Batched measurements** — calling `measure()` many times in a single tick coalesces into one prefix-sum rebuild via `queueMicrotask`
-- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes; `redraw()` for O(1) re-emission when sizes are unchanged
+- **Stable-key reflow** — call `refresh()` after reorder/filter changes to rebuild offsets without discarding measured sizes
 - **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
@@ -148,7 +148,6 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Zero runtime dependencies** (ripple is a peer dependency used only by `createReactiveVirtualizer`)
 
 </div>
-
 
 ## How It Works
 
@@ -180,7 +179,7 @@ The offset array is rebuilt (O(n)) only when layout inputs change: on `measure()
 
 - [Sigil](/sigil/) — accessible web components that use Scroll internally for virtualized listboxes and comboboxes
 - [Craft](/craft/) — web-component authoring layer; use with Scroll to build virtualizing custom elements
-- [Grip](/grip/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
+- [Dnd](/dnd/) — drag-and-drop engine; combine with Scroll to make sortable virtual lists
 
 </div>
 

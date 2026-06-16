@@ -314,4 +314,19 @@ describe('sg-date-picker', () => {
       expect(disabled.length).toBeGreaterThan(0);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-date-picker', { attrs: { label: 'Pick a date', value: '2024-03-15' } });
+
+      const results = await axeCheck(fixture.element, {
+        rules: {
+          'aria-required-children': { enabled: false },
+          'aria-required-parent': { enabled: false },
+        },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

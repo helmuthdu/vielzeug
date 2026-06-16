@@ -230,4 +230,53 @@ describe('createBatcher', () => {
     await expect(p1).rejects.toThrow('[courier] Batcher disposed');
     await expect(batcher.load(2)).rejects.toThrow('[courier] Batcher disposed');
   });
+
+  it('disposed getter is false before dispose and true after', () => {
+    const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
+
+    expect(batcher.disposed).toBe(false);
+    batcher.dispose();
+    expect(batcher.disposed).toBe(true);
+  });
+
+  describe('resolveSettled', () => {
+    it('fulfills individual promises based on their settled result', async () => {
+      const batcher = createBatcher<number, number>({
+        resolveSettled: async (keys) =>
+          keys.map((k) =>
+            k % 2 === 0
+              ? { status: 'fulfilled' as const, value: k * 10 }
+              : { reason: new Error(`odd:${k}`), status: 'rejected' as const },
+          ),
+      });
+
+      const p1 = batcher.load(1);
+      const p2 = batcher.load(2);
+      const p3 = batcher.load(3);
+      const p4 = batcher.load(4);
+
+      await expect(p1).rejects.toThrow('odd:1');
+      await expect(p2).resolves.toBe(20);
+      await expect(p3).rejects.toThrow('odd:3');
+      await expect(p4).resolves.toBe(40);
+    });
+
+    it('rejects all when resolveSettled() throws', async () => {
+      const batcher = createBatcher<number, number>({
+        resolveSettled: async () => {
+          throw new Error('batch crash');
+        },
+      });
+
+      await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow('batch crash');
+    });
+
+    it('rejects all when resolveSettled() returns wrong length', async () => {
+      const batcher = createBatcher<number, number>({
+        resolveSettled: async (keys) => keys.slice(0, 1).map((k) => ({ status: 'fulfilled' as const, value: k })),
+      });
+
+      await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow(/Batcher.*resolveSettled/);
+    });
+  });
 });

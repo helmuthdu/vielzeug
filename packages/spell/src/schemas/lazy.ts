@@ -1,6 +1,6 @@
-import type { ParseValue, SchemaDescriptor, SchemaState } from '../core';
+import type { ParseContext, ParseValue, SchemaDescriptor, SchemaState } from '../core';
 
-import { Schema } from '../core';
+import { Schema, ValidationError, _makeCtx } from '../core';
 
 export class LazySchema<T> extends Schema<T> {
   private readonly _getter: () => Schema<T, any>;
@@ -19,27 +19,39 @@ export class LazySchema<T> extends Schema<T> {
     return (this._resolved ??= this._getter());
   }
 
-  protected override _parseValueSync(value: unknown): ParseValue {
-    const result = this._resolve()._parseFullSync(value);
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
+    const result = this._resolve()._parseFullSync(value, ctx);
 
     if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
 
     return { data: value, issues: result.issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    const result = await this._resolve().safeParseAsync(value);
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<T> {
+    const c = ctx ?? _makeCtx();
 
-    if (result.success) return { data: result.data, issues: [], typeOk: true };
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
 
-    return { data: value, issues: result.error.issues, typeOk: true };
+      if (prepared.skip) return prepared.value as T;
+
+      const result = await this._resolve()._parseFullAsync(prepared.value, c);
+
+      if (result.issues.length > 0) throw new ValidationError(result.issues);
+
+      const validationIssues = await this._runValidatorsAsync(result.data, c);
+
+      if (validationIssues.length > 0) throw new ValidationError(validationIssues);
+
+      return this._runPostprocessors(result.data) as T;
+    });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), kind: 'lazy' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.lazy) return visitor.lazy(this);
 
     return super._walk(visitor);

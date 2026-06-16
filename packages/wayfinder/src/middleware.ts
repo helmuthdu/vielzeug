@@ -15,7 +15,7 @@ import type { Middleware, NamedNavigationTarget, NavigateOptions, RawNavigationT
  * }
  */
 export function redirectTo<TRoutes extends RouteTable = RouteTable>(
-  target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+  target: NamedNavigationTarget<TRoutes> | RawNavigationTarget | string,
   options?: NavigateOptions,
 ): Middleware<TRoutes> {
   return async (context) => {

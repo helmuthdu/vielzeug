@@ -7,14 +7,16 @@ related: [rune, wayfinder, conduit]
 exports:
   [
     createWard,
-    rule,
-    defineRules,
+    allow,
+    deny,
+    ruleFor,
+    predicate,
     owns,
     matchesPattern,
     patternCovers,
     guardRequest,
-    createExpressGuard,
-    createHonoGuard,
+    guardRequestWith,
+    WardPredicateError,
     WILDCARD,
     ANONYMOUS,
   ]
@@ -31,7 +33,7 @@ exports:
 
 **Package:** `@vielzeug/ward` &nbsp;·&nbsp; **Category:** Auth
 
-**Key exports:** `createWard`, `rule`, `defineRules`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `createExpressGuard`, `createHonoGuard`, `WILDCARD`, `ANONYMOUS`
+**Key exports:** `createWard`, `allow`, `deny`, `predicate`, `owns`, `matchesPattern`, `patternCovers`, `guardRequest`, `guardRequestWith`, `WardPredicateError`, `WILDCARD`, `ANONYMOUS`
 
 **When to use:** Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
 
@@ -52,48 +54,41 @@ yarn add @vielzeug/ward
 ## Quick Start
 
 ```ts
-import { ANONYMOUS, WILDCARD, createWard, owns } from '@vielzeug/ward';
+import { ANONYMOUS, WILDCARD, allow, createWard, deny, predicate } from '@vielzeug/ward';
 
 const ward = createWard<'read' | 'update', { authorId: string }>([
   // Multi-role rule: viewer and editor can both read
-  { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow' },
-  {
-    role: 'editor',
-    resource: 'posts',
-    action: 'update',
-    effect: 'allow',
-    when: owns('authorId'),
-  },
+  ...allow(['viewer', 'editor'], 'posts', ['read']),
+  // Editor can update their own posts (ownership predicate)
+  ...allow('editor', 'posts', ['update'], { when: predicate.owns('authorId') }),
   // High-priority deny overrides any allow rule for blocked principals
-  { role: 'blocked', resource: 'posts', action: WILDCARD, effect: 'deny', priority: 100 },
+  ...deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
   // Anonymous visitors can read posts
-  { role: ANONYMOUS, resource: 'posts', action: 'read', effect: 'allow' },
+  ...allow(ANONYMOUS, 'posts', ['read']),
 ]);
 
 const principal = { id: 'u1', roles: ['editor'] };
 
-// Direct checks
-ward.can(principal, 'posts', 'read');
-ward.can(principal, 'posts', 'update', { authorId: 'u1' });
-ward.can(null, 'posts', 'read'); // anonymous
-
-// Full decision object — three distinct variants
+// Full decision object — narrow on .allowed for type-safe access
 const decision = ward.explain(principal, 'posts', 'update', { authorId: 'u2' });
 if (!decision.allowed) console.log(decision.reason); // 'no-matching-rule' | 'explicit-deny'
 
-// Full decision trace with all matching candidates
+// Batch decisions across multiple resources/actions in one call
+const results = ward.checkAll(principal, [
+  { resource: 'posts', action: 'read' },
+  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
+]);
+
+// Decision trace — candidates with index, score, priority, won (no logger fired)
 const trace = ward.trace(principal, 'posts', 'update', { authorId: 'u2' });
-trace.candidates.forEach((c) => console.log(c.rule.effect, c.score, c.won));
+trace.candidates.forEach((c) => console.log(`Rule[${c.index}]`, c.rule.effect, c.score, c.won));
 
 // Principal-bound view — principal is snapshotted at bind time
 const bound = ward.forUser(principal);
-
-bound.can('posts', 'read');
-bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
 bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.explain('posts', 'update', { authorId: 'u2' });
 
-// Conflict detection
+// Conflict detection — O(n²), lazy + cached
 const conflicts = ward.detectConflicts();
 if (conflicts.length > 0) console.warn('Policy conflicts:', conflicts);
 ```

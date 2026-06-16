@@ -2,7 +2,8 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { RecurrenceRule, TimeInput, TimeOptions } from './types';
 
-import { inferTimeZone, toInstant, toZoned } from './internal';
+import { toInstant, toZoned } from './_convert';
+import { inferTimeZone } from './_tz';
 
 /**
  * Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive),
@@ -12,6 +13,8 @@ import { inferTimeZone, toInstant, toZoned } from './internal';
  * into an array: `[...dateRange(...)]`.
  *
  * @throws {RangeError} when `step` does not advance the date forward. Thrown eagerly at call time.
+ *
+ * Yields nothing when `start > end` (the generator terminates immediately).
  *
  * When `start` is a `ZonedDateTime`, the timezone is inferred from it. If `end` is in a
  * different timezone, it is silently re-projected into `start`'s timezone. Pass `options.tz`
@@ -68,7 +71,8 @@ function* dateRangeGenerator(
  * Supports `daily`, `weekly`, `monthly`, and `yearly` frequencies with an optional
  * `interval` (defaults to `1`), `count` limit, and `until` boundary (inclusive).
  * The generator is infinite when neither `count` nor `until` is provided — use
- * `for...of` with a `break` or a `count` limit.
+ * `for...of` with a `break` or a `count` limit. Passing `count: 0` yields an empty
+ * sequence without error.
  *
  * @example
  * ```ts
@@ -92,13 +96,6 @@ export function recurrence(
   options: TimeOptions = {},
 ): Generator<Temporal.ZonedDateTime> {
   const { count, frequency, interval = 1, until } = rule;
-
-  // Eager validation — fires at call time, not on first iteration.
-  if (count === undefined && until === undefined) {
-    throw new RangeError(
-      'recurrence: either count or until must be specified. Pass { count: n } for a fixed number of occurrences, { until: date } for a date boundary, or both.',
-    );
-  }
 
   const tz = inferTimeZone(start, options);
 

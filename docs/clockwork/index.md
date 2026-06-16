@@ -3,9 +3,22 @@ title: Clockwork — Typed finite state machine for TypeScript
 description: Zero-dependency typed FSM with async invokes, delayed transitions, hierarchical states, middleware, reactive state, persistence, tracing, and full TypeScript support.
 package: clockwork
 category: state
-keywords: [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, middleware]
+keywords:
+  [state-machine, finite-state, reactive, typed, async-tasks, persistence, debugging, hierarchical, interceptors]
 related: [ripple, herald, ward]
-exports: [defineMachine, interpret, resolveTransition, MachineError, AfterEvent, AfterActionFn]
+exports:
+  [
+    machine,
+    define,
+    resolveTransition,
+    MachineError,
+    SendResult,
+    InterceptorFn,
+    InvokeArgs,
+    AfterEvent,
+    AfterActionFn,
+    TransitionInput,
+  ]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -28,10 +41,11 @@ type LoaderState = {
 // Multiple invalid state combinations are possible.
 
 // After — FSM enforces valid state combinations
+import { machine } from '@vielzeug/clockwork';
 type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
 
-const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: string; error?: Error }, Event>({
-  context: { data: '', error: undefined },
+const loader = machine({
+  context: { data: '' as string, error: undefined as Error | undefined },
   initial: 'idle',
   states: {
     error: { on: { FETCH: { target: 'loading' } } },
@@ -43,16 +57,16 @@ const loader = defineMachine<'error' | 'idle' | 'loading' | 'success', { data: s
 // Now success && error is impossible. State is always valid.
 ```
 
-| Feature                    | Clockwork                                       | xstate              | zustand   |
-| -------------------------- | ----------------------------------------------- | ------------------- | --------- |
-| Bundle size                | <PackageInfo package="clockwork" type="size" /> | ~15 KB              | ~2 KB     |
-| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon> 5+ deps          | <sg-icon name="check" size="16"></sg-icon>        |
-| Typed discriminated events | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial          | <sg-icon name="x" size="16"></sg-icon>        |
-| Reactive signals           | <sg-icon name="check" size="16"></sg-icon> Native                                       | <sg-icon name="x" size="16"></sg-icon> Observer pattern | <sg-icon name="check" size="16"></sg-icon> Native |
-| Persistence adapter        | <sg-icon name="check" size="16"></sg-icon> Pluggable                                    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
-| Hierarchical states        | <sg-icon name="check" size="16"></sg-icon> Compound + leaf resolution                   | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>        |
-| Middleware pipeline        | <sg-icon name="check" size="16"></sg-icon> Composable                                   | <sg-icon name="x" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
-| Context isolation          | <sg-icon name="check" size="16"></sg-icon> Cloned on every transition                   | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>        |
+| Feature                    | Clockwork                                                             | xstate                                                      | zustand                                           |
+| -------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------- |
+| Bundle size                | <PackageInfo package="clockwork" type="size" />                       | ~15 KB                                                      | ~2 KB                                             |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon> 5+ deps              | <sg-icon name="check" size="16"></sg-icon>        |
+| Typed discriminated events | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial | <sg-icon name="x" size="16"></sg-icon>            |
+| Reactive signals           | <sg-icon name="check" size="16"></sg-icon> Native                     | <sg-icon name="x" size="16"></sg-icon> Observer pattern     | <sg-icon name="check" size="16"></sg-icon> Native |
+| Persistence adapter        | <sg-icon name="check" size="16"></sg-icon> Pluggable                  | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
+| Hierarchical states        | <sg-icon name="check" size="16"></sg-icon> Compound + leaf resolution | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>            |
+| Interceptor pipeline       | <sg-icon name="check" size="16"></sg-icon> Pure functions             | <sg-icon name="x" size="16"></sg-icon>                      | <sg-icon name="check" size="16"></sg-icon>        |
+| Context isolation          | <sg-icon name="check" size="16"></sg-icon> Cloned on every transition | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>            |
 
 <div class="decision-callout">
 
@@ -83,12 +97,11 @@ yarn add @vielzeug/clockwork
 ## Quick Start
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type Event = { type: 'START' } | { type: 'COMPLETE'; result: string };
-type Context = { count: number };
 
-const machine = defineMachine<'active' | 'idle', Context, Event>({
+const m = machine({
   context: { count: 0 },
   initial: 'idle',
   states: {
@@ -110,13 +123,11 @@ const machine = defineMachine<'active' | 'idle', Context, Event>({
   },
 });
 
-const m = interpret(machine);
-
 console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 0
 
-m.send({ type: 'START' });
-m.send({ type: 'COMPLETE', result: 'hello' });
+console.log(m.send({ type: 'START' }).status); // 'transitioned'
+console.log(m.send({ type: 'COMPLETE', result: 'hello' }).status); // 'transitioned'
 
 console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 5
@@ -126,17 +137,18 @@ console.log(m.context.value.count); // 5
 
 <div class="features-grid">
 
-- `defineMachine()` — Create immutable, validated FSM definitions
-- `interpret()` — Spawn reactive machine instances from definitions
+- `machine()` — Validate config and start an instance in one call
+- `define()` — Validate once, call `.start()` to spawn independent instances
 - **Shorthand transitions** — Single transition or array, your choice
 - **Typed events** — Discriminated unions with TypeScript inference
+- **`SendResult`** — `send()` returns `{ ok, queued, status }` where `status` is `'transitioned'` | `'queued'` | `'rejected'`
 - **Reactive state** — State and context are `@vielzeug/ripple` signals
-- **Async invokes** — Native Promise support with onDone/onError handlers
+- **Async invokes** — Native Promise support; `onDone`/`onError` receive `(result, context)`
 - **Delayed transitions** — Timer-based `after` with guards and actions
 - **Hierarchical states** — Compound states with automatic leaf resolution
-- **Middleware** — Composable event interception pipeline
+- **Interceptors** — Pure event interceptors — return event or `null` to block
 - **Persistence** — Snapshot save/load adapter
-- **Tracing** — Ring buffer of transitions for debugging
+- **Tracing** — Ring buffer; auto-enabled (50 entries) when `onDebug` is set
 - **Debug events** — Discriminated union callback with zero overhead when omitted; use `debugInterpret()` from `@vielzeug/clockwork/devtools` for pre-wired console logging
 - **Event queue** — FIFO processing with configurable infinite-loop guard
 - **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure

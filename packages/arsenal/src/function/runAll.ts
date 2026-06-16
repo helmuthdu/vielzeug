@@ -1,19 +1,15 @@
 /**
  * Runs all functions in `fns`, collecting any thrown errors.
  * - With `reverse: true`, iterates in LIFO order (useful for cleanup/teardown stacks).
- * - Throws the single error directly if only one function failed.
- * - Throws an `AggregateError` if multiple functions failed.
+ * - Throws an `AggregateError` containing all failures if any function throws.
  *
  * @example
  * ```ts
  * const cleanups = [() => a.dispose(), () => b.dispose()];
  * runAll(cleanups, { reverse: true });
- *
- * // With context for clearer AggregateError messages:
- * runAll(cleanups, { context: 'my-component', reverse: true });
  * ```
  */
-export function runAll(fns: readonly (() => void)[], opts?: { context?: string; reverse?: boolean }): void {
+export function runAll(fns: readonly (() => void)[], opts?: { reverse?: boolean }): void {
   const errors: unknown[] = [];
   const len = fns.length;
 
@@ -35,11 +31,7 @@ export function runAll(fns: readonly (() => void)[], opts?: { context?: string; 
     }
   }
 
-  if (errors.length === 1) throw errors[0];
-
-  if (errors.length > 1) {
-    const msg = opts?.context ? `[${opts.context}] One or more callbacks failed` : 'One or more callbacks failed';
-
-    throw new AggregateError(errors, msg);
+  if (errors.length > 0) {
+    throw new AggregateError(errors, 'One or more callbacks failed');
   }
 }

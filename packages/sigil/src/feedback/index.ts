@@ -12,5 +12,5 @@ export { PASSWORD_STRENGTH_TAG } from './password-strength/password-strength';
 export type { SgPasswordStrengthProps, PasswordStrengthLevel } from './password-strength/password-strength';
 export { SKELETON_TAG } from './skeleton/skeleton';
 export type { SgSkeletonProps } from './skeleton/skeleton';
-export { toast, TOAST_TAG } from './toast/toast';
-export type { SgToastEvents, SgToastProps, ToastItem } from './toast/toast';
+export { createToastService, toast, TOAST_TAG } from './toast/toast';
+export type { SgToastEvents, SgToastProps, ToastItem, ToastService, ToastServiceConfig } from './toast/toast';

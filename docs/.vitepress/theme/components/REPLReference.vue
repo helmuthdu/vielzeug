@@ -1,10 +1,13 @@
 <template>
   <div class="reference-section">
     <div class="reference-header">
-      <span class="reference-title">{{ selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports' }}</span>
+      <span class="reference-title">{{
+        selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports'
+      }}</span>
       <span class="reference-hint">Click any to insert at cursor</span>
       <div class="search-container">
-        <sg-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput"> </sg-input>
+        <sg-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput">
+        </sg-input>
       </div>
     </div>
     <div class="function-categories">
@@ -210,7 +213,7 @@ const isMatch = (fn: string) => {
 }
 
 .function-list :deep(sg-chip:hover) {
-  --sg-chip-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  --sg-chip-bg: color-mix(in oklch, var(--color-primary) 12%, transparent);
   --sg-chip-border: var(--color-primary);
   --sg-chip-color: var(--color-primary);
 }

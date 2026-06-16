@@ -1,24 +1,5 @@
-import { isPlainObject } from '../typed/isPlainObject';
-
-/**
- * Key segments that are unsafe to use in dot-notation path operations.
- * These target prototype-chain properties and must be rejected to prevent prototype pollution.
- * @internal
- */
-const UNSAFE_PATH_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
-
-/**
- * Returns `true` if every dot-notation segment in `key` is safe to use as a plain-object property.
- *
- * @example
- * ```ts
- * isSafePath('user.name')           // true
- * isSafePath('__proto__.polluted')   // false
- * ```
- */
-export function isSafePath(key: string): boolean {
-  return key.split('.').every((s) => !UNSAFE_PATH_SEGMENTS.has(s));
-}
+import { UNSAFE_PATH_SEGMENTS } from '../_internal/unsafePaths';
+import { isPlainObject } from '../guards/isPlainObject';
 
 /**
  * Flattens a nested plain object into a map of dot-notation path keys to leaf values.
@@ -33,7 +14,7 @@ export function isSafePath(key: string): boolean {
  */
 const MAX_FLATTEN_DEPTH = 10;
 
-export function flattenPaths(obj: Record<string, unknown>, prefix = '', depth = 0): Record<string, unknown> {
+function _flattenPaths(obj: Record<string, unknown>, prefix: string, depth: number): Record<string, unknown> {
   const result: Record<string, unknown> = {};
 
   for (const [key, val] of Object.entries(obj)) {
@@ -42,13 +23,17 @@ export function flattenPaths(obj: Record<string, unknown>, prefix = '', depth = 
     const fullKey = prefix ? `${prefix}.${key}` : key;
 
     if (isPlainObject(val) && depth < MAX_FLATTEN_DEPTH) {
-      Object.assign(result, flattenPaths(val as Record<string, unknown>, fullKey, depth + 1));
+      Object.assign(result, _flattenPaths(val as Record<string, unknown>, fullKey, depth + 1));
     } else {
       result[fullKey] = val;
     }
   }
 
   return result;
+}
+
+export function flattenPaths(obj: Record<string, unknown>): Record<string, unknown> {
+  return _flattenPaths(obj, '', 0);
 }
 
 /**

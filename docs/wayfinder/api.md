@@ -7,23 +7,23 @@ description: Complete API reference for Wayfinder.
 
 ## API At a Glance
 
-| Symbol                                  | Purpose                                              | Execution mode       | Common gotcha                                                                                            |
-| --------------------------------------- | ---------------------------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------- |
-| `createRouter(options)`                 | Create a router from a route table                   | Sync                 | Initial navigation starts asynchronously in the constructor                                              |
-| `createBrowserHistory()`                | Create the default browser history driver            | Sync                 | —                                                                                                        |
-| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                   | Sync                 | —                                                                                                        |
-| `redirectTo(target, options?)`          | Build redirect middleware                            | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                 |
-| `router.navigate(target, options?)`     | Navigate to a named route or raw path                | Async                | No-op when destination equals current URL unless `force: true`                                           |
-| `router.getSnapshot()`                  | Return the current immutable route state             | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                              |
-| `router.subscribe(listener)`            | Register a listener for state changes                | Sync (returns unsub) | Listener is **not** called immediately with current state                                                |
-| `router.url(name, params?, query?)`     | Build a URL for a named route                        | Sync                 | Throws if the route name is unknown                                                                      |
-| `router.isActive(name, options?)`       | Check if a named route matches the current URL       | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                          |
-| `router.resolve(pathname)`              | Resolve a pathname to a branch without side effects  | Sync                 | Returns `null` for redirect routes                                                                       |
-| `router.match(url, options?)`           | Resolve a URL to a full state including data loaders | Async                | Lazy modules are resolved as a side effect                                                               |
-| `router.preload(name, params?)`         | Eagerly run data loaders without navigating          | Async                | Results are consumed on the first matching navigation; different query params use a separate cache entry |
-| `router.waitFor(name)`                  | Wait for the router to settle on a named route       | Async                | Rejects immediately if `status === 'error'`                                                              |
-| `router.beforeLeave(blocker, options?)` | Register a global leave guard                        | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                           |
-| `router.dispose()`                      | Remove listeners and shut down the router            | Sync                 | Idempotent — safe to call multiple times                                                                 |
+| Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                             |
+| --------------------------------------- | ---------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `createRouter(options)`                 | Create a router from a route table                         | Sync                 | Initial navigation starts asynchronously in the constructor                                               |
+| `createBrowserHistory()`                | Create the default browser history driver                  | Sync                 | —                                                                                                         |
+| `createMemoryHistory(initialPath?)`     | Create an in-memory history driver                         | Sync                 | —                                                                                                         |
+| `redirectTo(target, options?)`          | Build redirect middleware                                  | Sync (returns fn)    | Does not call `next()` — always short-circuits the chain                                                  |
+| `router.navigate(target, options?)`     | Navigate to a named route, raw path object, or string path | Async                | No-op when destination equals current URL unless `force: true`                                            |
+| `router.getSnapshot()`                  | Return the current immutable route state                   | Sync                 | Does not subscribe — call `subscribe()` to react to changes                                               |
+| `router.subscribe(listener)`            | Register a listener for state changes                      | Sync (returns unsub) | Listener is **not** called immediately with current state                                                 |
+| `router.url(name, params?, query?)`     | Build a URL for a named route                              | Sync                 | Throws if the route name is unknown                                                                       |
+| `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
+| `router.resolve(pathname)`              | Resolve a pathname to a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                        |
+| `router.match(url, options?)`           | Resolve a URL to a full state including data loaders       | Async                | Lazy modules are resolved as a side effect                                                                |
+| `router.preload(name, params?)`         | Eagerly run data loaders without navigating                | Async                | Results are consumed on the first matching navigation; different query params use a separate cache entry  |
+| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `RouterDisposedError` if disposed while pending |
+| `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                            |
+| `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                  |
 
 ## Package Entry Points
 
@@ -200,11 +200,15 @@ await router.navigate({ name: 'search', query: { q: 'wayfinder' }, hash: 'result
 
 **Returns:** `Promise<void>`
 
-Named routes stay the primary API, but `navigate()` also accepts raw path targets.
+Named routes stay the primary API, but `navigate()` also accepts raw path objects or a plain string:
 
 ```ts
 await router.navigate({ path: '/marketing?utm_source=campaign' });
 await router.navigate({ path: '/checkout#payment' }, { replace: true });
+
+// Plain string — most concise for direct paths
+await router.navigate('/about');
+await router.navigate('/search?q=hello');
 ```
 
 ---
@@ -682,7 +686,7 @@ interface HistoryDriver {
    * Only `back()` (and browser popstate events) trigger notifications.
    * Returns an unsubscribe function.
    */
-  subscribe(listener: () => void): () => void;
+  onPopstate(listener: () => void): () => void;
 }
 ```
 
@@ -704,7 +708,7 @@ import { RouterDisposedError } from '@vielzeug/wayfinder';
 try {
   await router.navigate({ name: 'home' });
 } catch (e) {
-  if (RouterDisposedError.is(e)) {
+  if (e instanceof RouterDisposedError) {
     // router was disposed
   }
 }
@@ -714,15 +718,15 @@ try {
 
 The following plain errors are thrown for programmer mistakes at route-config time:
 
-| Message                                                               | When                                                                      |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `[@vielzeug/wayfinder] Router is disposed`                            | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` |
-| `[@vielzeug/wayfinder] Unknown route name: X. Available routes: Y`   | Navigating to or resolving an unregistered route name                     |
-| `[@vielzeug/wayfinder] Duplicate route name: X`                       | Two routes resolve to the same compound name during `createRouter()`      |
-| `[@vielzeug/wayfinder] Redirect loop detected`                        | A declarative `redirect` chain exceeds 5 hops                             |
-| `[@vielzeug/wayfinder] Invalid param name ":X" in path "Y"`           | A param name contains non-word characters (e.g., `:user-id`)              |
-| `[@vielzeug/wayfinder] Wildcard "*" must be the final segment in X`   | A `*` segment appears before the last segment                             |
-| `[@vielzeug/wayfinder] Wildcard param must be final segment in X`     | A `:param*` greedy param appears before the last segment                  |
+| Message                                                             | When                                                                                                        |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `Router is disposed`                                                | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` (thrown as `RouterDisposedError`) |
+| `[@vielzeug/wayfinder] Unknown route name: X. Available routes: Y`  | Navigating to or resolving an unregistered route name                                                       |
+| `[@vielzeug/wayfinder] Duplicate route name: X`                     | Two routes resolve to the same compound name during `createRouter()`                                        |
+| `[@vielzeug/wayfinder] Redirect loop detected`                      | A declarative `redirect` chain exceeds 5 hops                                                               |
+| `[@vielzeug/wayfinder] Invalid param name ":X" in path "Y"`         | A param name contains non-word characters (e.g., `:user-id`)                                                |
+| `[@vielzeug/wayfinder] Wildcard "*" must be the final segment in X` | A `*` segment appears before the last segment                                                               |
+| `[@vielzeug/wayfinder] Wildcard param must be final segment in X`   | A `:param*` greedy param appears before the last segment                                                    |
 
 ## Pattern Rules
 
@@ -741,14 +745,30 @@ The following plain errors are thrown for programmer mistakes at route-config ti
 import { debugRouter } from '@vielzeug/wayfinder/devtools';
 
 const router = debugRouter({ routes });
-// [wayfinder:nav] idle      /         [home]
+// [wayfinder:nav] idle      /         [home]    ← logged when initial navigation settles
 // [wayfinder:nav] loading   /dashboard
 // [wayfinder:nav] idle      /dashboard [dashboard.index]
 ```
 
-Wraps `createRouter()` and attaches a `subscribe` listener that logs every navigation state change to `console.debug`. Returns the same `Router` instance — all methods are identical to `createRouter()`.
+Wraps `createRouter()` and attaches a `subscribe` listener that logs every navigation state change to `console.debug`. Returns the same `Router` instance — all methods are identical to `createRouter()`. The first logged entry appears when the initial navigation completes (not synchronously at construction).
 
 Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
+
+### `DebugRouterOptions`
+
+Extends `RouterOptions` with one additional field:
+
+| Option  | Type     | Default | Description                                                                                                      |
+| ------- | -------- | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `label` | `string` | `'nav'` | Label used in log prefixes. Produces `[wayfinder:<label>]`. Useful when running multiple routers simultaneously. |
+
+```ts
+// Multi-router setup — distinguish logs by label:
+const main = debugRouter({ routes, label: 'main' });
+const modal = debugRouter({ routes: modalRoutes, label: 'modal' });
+// [wayfinder:main]  idle  /dashboard
+// [wayfinder:modal] loading  /confirm
+```
 
 | Log format                                              | When                                   |
 | ------------------------------------------------------- | -------------------------------------- |

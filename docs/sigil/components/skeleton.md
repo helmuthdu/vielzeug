@@ -22,8 +22,7 @@ A loading placeholder component for representing content that has not loaded yet
 ## Basic Usage
 
 ```html
-<sg-skeleton></sg-skeleton>
-<sg-skeleton width="12rem" height="1rem"></sg-skeleton>
+<sg-skeleton></sg-skeleton> <sg-skeleton width="12rem" height="1rem"></sg-skeleton>
 ```
 
 ## Variants
@@ -161,23 +160,23 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 
 ### Attributes
 
-| Attribute  | Type                           | Default  | Description                                       |
-| ---------- | ------------------------------ | -------- | ------------------------------------------------- |
-| `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                               |
+| Attribute  | Type                           | Default  | Description                                            |
+| ---------- | ------------------------------ | -------- | ------------------------------------------------------ |
+| `variant`  | `'rect' \| 'circle' \| 'text'` | `'rect'` | Visual shape preset                                    |
 | `size`     | `'sm' \| 'md' \| 'lg'`         | —        | Height preset for `rect`/`text`; diameter for `circle` |
-| `width`    | `string`                       | —        | Width override (e.g. `12rem`, `70%`)              |
-| `height`   | `string`                       | —        | Height override                                   |
-| `radius`   | `string`                       | —        | Border-radius override                            |
-| `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer         |
-| `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)           |
-| `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer        |
+| `width`    | `string`                       | —        | Width override (e.g. `12rem`, `70%`)                   |
+| `height`   | `string`                       | —        | Height override                                        |
+| `radius`   | `string`                       | —        | Border-radius override                                 |
+| `animated` | `boolean`                      | `true`   | Set `animated="false"` to disable shimmer              |
+| `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)                |
+| `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer             |
 
 ### Parts
 
-| Part    | Description                            |
-| ------- | -------------------------------------- |
-| `stack` | Outer container wrapping all bones     |
-| `bone`  | Individual skeleton bone element       |
+| Part    | Description                        |
+| ------- | ---------------------------------- |
+| `stack` | Outer container wrapping all bones |
+| `bone`  | Individual skeleton bone element   |
 
 ### Events
 
@@ -185,19 +184,19 @@ This component does not emit custom events.
 
 ### CSS Custom Properties
 
-| Property                     | Description                                               | Default                     |
-| ---------------------------- | --------------------------------------------------------- | --------------------------- |
-| `--skeleton-bg`              | Base color                                                | `var(--color-contrast-200)` |
-| `--skeleton-highlight`       | Shimmer highlight color                                   | `var(--color-contrast-100)` |
-| `--skeleton-radius`          | Border radius                                             | `var(--rounded-lg)`         |
-| `--skeleton-size`            | Circle fallback size                                      | `var(--size-10)`            |
-| `--skeleton-width`           | Component width                                           | `100%`                      |
-| `--skeleton-height`          | Component height                                          | `var(--size-4)`             |
-| `--skeleton-line-gap`        | Gap between text lines                                    | `var(--size-2)`             |
-| `--skeleton-last-line-width` | Width of the final text line                              | `60%`                       |
-| `--skeleton-duration`        | Shimmer animation duration                                | `1.6s`                      |
-| `--skeleton-stripe-size`     | SVG tile size controlling diagonal stripe density (`striped`) | `8px`                   |
-| `--skeleton-stripe-color`    | Color of the diagonal lines and dashed border (`striped`) | `var(--color-contrast-400)` |
+| Property                     | Description                                                   | Default                     |
+| ---------------------------- | ------------------------------------------------------------- | --------------------------- |
+| `--skeleton-bg`              | Base color                                                    | `var(--color-contrast-200)` |
+| `--skeleton-highlight`       | Shimmer highlight color                                       | `var(--color-contrast-100)` |
+| `--skeleton-radius`          | Border radius                                                 | `var(--rounded-lg)`         |
+| `--skeleton-size`            | Circle fallback size                                          | `var(--size-10)`            |
+| `--skeleton-width`           | Component width                                               | `100%`                      |
+| `--skeleton-height`          | Component height                                              | `var(--size-4)`             |
+| `--skeleton-line-gap`        | Gap between text lines                                        | `var(--size-2)`             |
+| `--skeleton-last-line-width` | Width of the final text line                                  | `60%`                       |
+| `--skeleton-duration`        | Shimmer animation duration                                    | `1.6s`                      |
+| `--skeleton-stripe-size`     | SVG tile size controlling diagonal stripe density (`striped`) | `8px`                       |
+| `--skeleton-stripe-color`    | Color of the diagonal lines and dashed border (`striped`)     | `var(--color-contrast-400)` |
 
 ## Performance
 

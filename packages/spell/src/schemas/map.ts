@@ -1,4 +1,4 @@
-import type { Issue, ParseResult, ParseValue, SchemaDescriptor } from '../core';
+import type { Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -17,31 +17,13 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     this.valueSchema = valueSchema;
   }
 
-  private _invalidMap(value: unknown): ParseValue {
-    return {
-      data: value,
-      issues: [{ code: ErrorCode.invalid_type, message: _messages().map.type(), path: [] }],
-      typeOk: false,
-    };
-  }
-
-  private _applyEntryResult(
-    out: Map<K, V>,
-    issues: Issue[],
-    index: number,
-    keyResult: ParseResult<K>,
-    valueResult: ParseResult<V>,
-  ): void {
-    if (!keyResult.success) issues.push(...prependIssuePath(keyResult.error.issues, index));
-
-    if (!valueResult.success) issues.push(...prependIssuePath(valueResult.error.issues, index));
-
-    if (keyResult.success && valueResult.success) out.set(keyResult.data, valueResult.data);
-  }
-
-  protected override _parseValueSync(value: unknown): ParseValue {
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
     if (!(value instanceof Map)) {
-      return this._invalidMap(value);
+      return {
+        data: value,
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.map.type(), path: [] }],
+        typeOk: false,
+      };
     }
 
     const out = new Map<K, V>();
@@ -49,8 +31,8 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     let i = 0;
 
     for (const [key, val] of value) {
-      const keyResult = this.keySchema._parseFullSync(key);
-      const valResult = this.valueSchema._parseFullSync(val);
+      const keyResult = this.keySchema._parseFullSync(key, ctx);
+      const valResult = this.valueSchema._parseFullSync(val, ctx);
 
       if (keyResult.issues.length > 0) issues.push(...prependIssuePath(keyResult.issues, i));
 
@@ -65,26 +47,6 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     return { data: out, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    if (!(value instanceof Map)) {
-      return this._invalidMap(value);
-    }
-
-    const entries = [...value.entries()];
-    const out = new Map<K, V>();
-    const issues: Issue[] = [];
-
-    for (let i = 0; i < entries.length; i++) {
-      const [key, val] = entries[i];
-      const keyResult = await this.keySchema.safeParseAsync(key);
-      const valResult = await this.valueSchema.safeParseAsync(val);
-
-      this._applyEntryResult(out, issues, i, keyResult, valResult);
-    }
-
-    return { data: out, issues, typeOk: true };
-  }
-
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return {
       ...this._describeBase(),
@@ -94,7 +56,7 @@ export class MapSchema<K, V> extends Schema<Map<K, V>> {
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const key = this.keySchema.walk(visitor);
     const value = this.valueSchema.walk(visitor);
 

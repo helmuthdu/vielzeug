@@ -1,30 +1,50 @@
-import { buildRequestInit, isBodyInit, stableStringify } from '../serialize';
+import { buildRequestInit, isBodyInit, stringify } from '../serialize';
 
-describe('stableStringify', () => {
+describe('stringify', () => {
   it('serializes common structured query-key values deterministically', () => {
-    expect(stableStringify(42n)).toBe('42n');
-    expect(stableStringify(new Date('2026-05-12T12:34:56.000Z'))).toBe('[Date:2026-05-12T12:34:56.000Z]');
-    expect(stableStringify(/foo/gi)).toBe('[RegExp:foo/gi]');
+    expect(stringify(42n)).toBe('42n');
+    expect(stringify(new Date('2026-05-12T12:34:56.000Z'))).toBe('[Date:2026-05-12T12:34:56.000Z]');
+    expect(stringify(/foo/gi)).toBe('[RegExp:foo/gi]');
   });
 
   it('keeps Map and Set order-independent', () => {
-    const first = stableStringify(
+    const first = stringify(
       new Map([
         ['b', 2],
         ['a', 1],
       ]),
     );
-    const second = stableStringify(
+    const second = stringify(
       new Map([
         ['a', 1],
         ['b', 2],
       ]),
     );
-    const setFirst = stableStringify(new Set([3, 1, 2]));
-    const setSecond = stableStringify(new Set([2, 3, 1]));
+    const setFirst = stringify(new Set([3, 1, 2]));
+    const setSecond = stringify(new Set([2, 3, 1]));
 
     expect(first).toBe(second);
     expect(setFirst).toBe(setSecond);
+  });
+});
+
+describe('stringify with plain object QueryKey segments', () => {
+  it('produces the same output regardless of object key insertion order', () => {
+    const a = stringify({ a: 1, b: 2 });
+    const b = stringify({ a: 1, b: 2 });
+
+    expect(a).toBe(b);
+  });
+
+  it('differentiates objects with different values', () => {
+    expect(stringify({ a: 1 })).not.toBe(stringify({ a: 2 }));
+  });
+
+  it('handles nested QueryKey arrays with object segments stably', () => {
+    const key1 = [['users', { limit: 10, page: 1 }]];
+    const key2 = [['users', { limit: 10, page: 1 }]];
+
+    expect(stringify(key1)).toBe(stringify(key2));
   });
 });
 

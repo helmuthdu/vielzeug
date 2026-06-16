@@ -11,23 +11,23 @@ HTTP errors (4xx, 5xx), network failures, and timeouts need different recovery s
 
 ### Solution
 
-Use `HttpError.is()` to narrow by kind and status code at each call site, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior per error class.
+Use the specific error classes (`AbortError`, `TimeoutError`, `NetworkError`, `HttpError`) to narrow by failure mode, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior.
 
 #### Status-code branching
 
 ```ts
-import { HttpError } from '@vielzeug/courier';
+import { AbortError, HttpError, TimeoutError } from '@vielzeug/courier';
 
 try {
   await api.get('/users/1');
 } catch (err) {
+  if (err instanceof AbortError) return; // user canceled
+  if (err instanceof TimeoutError) return toast.error('Request timed out');
   if (HttpError.is(err, 404)) return null;
   if (HttpError.is(err, 401)) return redirectToLogin();
   if (HttpError.is(err, 403)) return showForbidden();
-  if (HttpError.is(err) && err.kind === 'timeout') return toast.error('Request timed out');
-  if (HttpError.is(err) && err.kind === 'abort') return; // user canceled
   if (HttpError.is(err)) throw new Error(`Unexpected ${err.status}: ${err.url}`);
-  throw err; // re-throw non-HTTP errors
+  throw err; // re-throw non-Courier errors
 }
 ```
 
@@ -66,9 +66,9 @@ mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
 
 ### Pitfalls
 
-- Courier distinguishes HTTP errors (4xx/5xx with a response) from network errors (no response). Treating them identically hides the root cause — check `response.ok` before accessing the body.
-- A `500` response with a JSON error body arrives in the success path unless you throw in the `onResponse` interceptor. Do not assume an HTTP error is a thrown exception.
-- Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to network errors and 5xx status codes.
+- Courier throws distinct classes for each failure mode — `HttpError` (has a response), `NetworkError` (no response), `TimeoutError`, and `AbortError`. Catching only `HttpError` misses connection failures.
+- A `500` response with a JSON error body throws `HttpError`, not a generic `Error`. Do not use `instanceof Error` alone to detect HTTP failures.
+- Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to `NetworkError` and `HttpError` with status ≥ 500.
 
 ### Related
 

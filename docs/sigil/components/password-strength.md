@@ -64,9 +64,7 @@ Override the default level strings (`Weak`, `Fair`, `Good`, `Strong`) by providi
 <ComponentPreview vertical>
 
 ```html
-<sg-password-strength
-  value="Hello1!"
-  :labels='["", "Too weak", "Almost", "Good enough", "Excellent"]'>
+<sg-password-strength value="Hello1!" :labels='["", "Too weak", "Almost", "Good enough", "Excellent"]'>
 </sg-password-strength>
 ```
 
@@ -88,12 +86,12 @@ Set `show-label="false"` to render only the visual segments while preserving the
 
 The component uses a conservative heuristic based on length and character variety. The rules, from weakest to strongest:
 
-| Score | Level  | Condition |
-| ----- | ------ | --------- |
-| `0`   | empty  | No value |
-| `1`   | weak   | Length < 6 |
-| `2`   | fair   | Length ≥ 8 with mixed case |
-| `3`   | good   | Length ≥ 8 with mixed case + digit or symbol |
+| Score | Level  | Condition                                      |
+| ----- | ------ | ---------------------------------------------- |
+| `0`   | empty  | No value                                       |
+| `1`   | weak   | Length < 6                                     |
+| `2`   | fair   | Length ≥ 8 with mixed case                     |
+| `3`   | good   | Length ≥ 8 with mixed case + digit or symbol   |
 | `4`   | strong | Length ≥ 12 with mixed case, digit, and symbol |
 
 For production use, prefer an external scorer like zxcvbn and pass the result via `score`.
@@ -112,25 +110,25 @@ For production use, prefer an external scorer like zxcvbn and pass the result vi
 
 ### Parts
 
-| Part    | Description                      |
-| ------- | -------------------------------- |
-| (none)  | No shadow parts are exposed      |
+| Part   | Description                 |
+| ------ | --------------------------- |
+| (none) | No shadow parts are exposed |
 
 ### CSS Custom Properties
 
-| Property                              | Default                     | Description                         |
-| ------------------------------------- | --------------------------- | ----------------------------------- |
-| `--password-strength-height`          | `0.375rem`                  | Segment bar height                  |
-| `--password-strength-gap`             | `var(--space-1)`            | Gap between segments                |
-| `--password-strength-radius`          | `var(--rounded-full)`       | Segment corner radius               |
-| `--password-strength-track-bg`        | `var(--color-contrast-300)` | Inactive segment background color   |
-| `--password-strength-track-border`    | `var(--color-contrast-400)` | Inactive segment border color       |
-| `--password-strength-label-size`      | `var(--text-sm)`            | Visible label font size             |
-| `--password-strength-label-color`     | `currentColor`              | Visible label color                 |
-| `--password-strength-weak-color`      | `var(--color-warning-500)`  | Active color for weak score         |
-| `--password-strength-fair-color`      | `var(--color-warning-600)`  | Active color for fair score         |
-| `--password-strength-good-color`      | `var(--color-success-500)`  | Active color for good score         |
-| `--password-strength-strong-color`    | `var(--color-success-600)`  | Active color for strong score       |
+| Property                           | Default                     | Description                       |
+| ---------------------------------- | --------------------------- | --------------------------------- |
+| `--password-strength-height`       | `0.375rem`                  | Segment bar height                |
+| `--password-strength-gap`          | `var(--space-1)`            | Gap between segments              |
+| `--password-strength-radius`       | `var(--rounded-full)`       | Segment corner radius             |
+| `--password-strength-track-bg`     | `var(--color-contrast-300)` | Inactive segment background color |
+| `--password-strength-track-border` | `var(--color-contrast-400)` | Inactive segment border color     |
+| `--password-strength-label-size`   | `var(--text-sm)`            | Visible label font size           |
+| `--password-strength-label-color`  | `currentColor`              | Visible label color               |
+| `--password-strength-weak-color`   | `var(--color-warning-500)`  | Active color for weak score       |
+| `--password-strength-fair-color`   | `var(--color-warning-600)`  | Active color for fair score       |
+| `--password-strength-good-color`   | `var(--color-success-500)`  | Active color for good score       |
+| `--password-strength-strong-color` | `var(--color-success-600)`  | Active color for strong score     |
 
 ## Accessibility
 

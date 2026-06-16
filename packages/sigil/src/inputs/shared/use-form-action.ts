@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/craft';
+import type { ReadonlySignal } from '@vielzeug/ripple';
 
 import type { ButtonType } from '../../shared';
 
@@ -9,7 +9,7 @@ import type { ButtonType } from '../../shared';
  * drives native form actions directly. This composable intercepts clicks and
  * forwards submit/reset to the associated form via `ElementInternals`.
  *
- * @param form      - The associated HTMLFormElement (from `defineField().internals.form`).
+ * @param form      - The associated HTMLFormElement (from `useField().internals.form`).
  * @param type      - Reactive signal for the button `type` prop.
  * @param isDisabled - Reactive signal indicating whether the button is disabled/loading.
  * @param host       - The host custom element.

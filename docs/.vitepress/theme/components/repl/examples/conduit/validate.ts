@@ -5,32 +5,32 @@ const A = token('A')
 const B = token('B')
 const C = token('C')
 
-// --- Valid graph ---
+// --- Valid graph: freeze() validates then seals ---
 const valid = createContainer()
 valid.value(C, 'leaf')
-valid.factory(B, (c) => 'B(' + c + ')', { deps: [C] })
-valid.factory(A, (b) => 'A(' + b + ')', { deps: [B] })
-valid.validate() // ✓ no issues
-console.log('Valid graph passed validate()')
+valid.factory(B, async (r) => 'B(' + (await r.resolve(C)) + ')')
+valid.factory(A, async (r) => 'A(' + (await r.resolve(B)) + ')')
+valid.freeze() // ✓ validates graph, then locks
+console.log('Valid graph passed freeze()')
 
-// --- Circular dependency ---
+// --- Circular dependency detected by freeze() ---
 const cyclic = createContainer()
-cyclic.factory(A, (b) => b, { deps: [B] })
-cyclic.factory(B, (a) => a, { deps: [A] })
+cyclic.factory(A, async (r) => r.resolve(B))
+cyclic.factory(B, async (r) => r.resolve(A))
 try {
-  cyclic.validate()
+  cyclic.freeze()
 } catch (err) {
   console.log('Caught circular dep:', err instanceof CircularDependencyError, err.message)
 }
 
-// --- Missing dependency ---
+// --- Missing dependency detected by freeze() ---
 const missing = createContainer()
 const Unknown = token('UnknownService')
-missing.factory(A, (u) => u, { deps: [Unknown] })
+missing.factory(A, async (r) => r.resolve(Unknown))
 try {
-  missing.validate()
+  missing.freeze()
 } catch (err) {
   console.log('Caught missing dep:', err instanceof ProviderNotFoundError, err.message)
 }`,
-  name: 'validate()',
+  name: 'Cycle Detection (freeze())',
 };

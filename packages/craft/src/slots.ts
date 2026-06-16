@@ -7,7 +7,7 @@
 
 import { type ReadonlySignal, signal, type Signal } from '@vielzeug/ripple';
 
-import { getCurrentElement, onCleanup, onMounted } from './runtime';
+import { onCleanup, onMounted } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
   elements: (name?: SlotNames) => ReadonlySignal<Element[]>;
@@ -17,9 +17,7 @@ export type ComponentSlots<SlotNames extends string = string> = {
 const SLOT_DEFAULT = 'default';
 const normalizeSlotName = (slotName: string | null | undefined): string => slotName || SLOT_DEFAULT;
 
-export const createSlots = (): ComponentSlots<string> => {
-  const host = getCurrentElement();
-
+export const createSlots = (host: HTMLElement): ComponentSlots<string> => {
   type SlotEntry = {
     elements: Signal<Element[]>;
     presence: Signal<boolean>;
@@ -93,6 +91,26 @@ export const createSlots = (): ComponentSlots<string> => {
     recomputeSlot(name);
   };
 
+  const unbindSlot = (slotEl: HTMLSlotElement): void => {
+    const cleanup = slotCleanupMap.get(slotEl);
+
+    if (!cleanup) return;
+
+    cleanup();
+    slotCleanupMap.delete(slotEl);
+
+    const name = normalizeSlotName(slotEl.getAttribute('name'));
+    const setForName = slotNodesByName.get(name);
+
+    if (setForName) {
+      setForName.delete(slotEl);
+
+      if (setForName.size === 0) slotNodesByName.delete(name);
+    }
+
+    recomputeSlot(name);
+  };
+
   const bindAllSlots = (): void => {
     host.shadowRoot?.querySelectorAll('slot').forEach((slotEl) => bindSlot(slotEl));
   };
@@ -109,7 +127,13 @@ export const createSlots = (): ComponentSlots<string> => {
   // Start MutationObserver immediately in setup so any slots inserted synchronously
   // before the first render are captured without a timing gap.
   if (host.shadowRoot) {
-    observer = new MutationObserver(() => {
+    observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.removedNodes) {
+          if (node instanceof HTMLSlotElement) unbindSlot(node);
+        }
+      }
+
       bindAllSlots();
       recomputeAllSlots();
     });

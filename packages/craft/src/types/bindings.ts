@@ -79,13 +79,13 @@ export type HtmlBindingValue = HTMLResult | string | number | boolean | null | u
 
 export type HtmlBinding = {
   anchor: Comment;
-  signal: ReadonlySignal<HtmlBindingValue | HtmlBindingValue[]>;
+  signal: ReadonlySignal<HtmlBindingValue[]>;
   type: 'html';
 };
 
 export type DirectiveBinding = {
   anchor: Comment;
-  directive: RuntimeDirective;
+  directive: DirectiveResult;
   type: 'directive';
 };
 
@@ -105,30 +105,33 @@ export type Binding =
   | DirectiveBinding
   | SpreadBinding;
 
-// ─── RUNTIME DIRECTIVE ───────────────────────────────────────────────────────
+// ─── BRAND UTILITY ───────────────────────────────────────────────────────────
+// Cross-realm–safe brand for branded types. Avoids repeating the symbol+guard boilerplate.
 
-export type RuntimeDirective = {
+const makeBrand = <T extends object>(key: string) => {
+  const BRAND = Symbol.for(key);
+  const stamp = (obj: T): T => Object.assign(obj, { [BRAND]: true });
+  const is = (value: unknown): value is T => typeof value === 'object' && value !== null && BRAND in (value as object);
+
+  return { is, stamp };
+};
+
+// ─── DIRECTIVE RESULT ────────────────────────────────────────────────────────
+
+export type DirectiveResult = {
   mount: (anchor: Comment, registerCleanup: (fn: () => void) => void) => void;
 };
 
-export type DirectiveResult = RuntimeDirective;
-
-const DIRECTIVE_BRAND: unique symbol = Symbol.for('craft:directive');
-
-type BrandedDirective = RuntimeDirective & { readonly [DIRECTIVE_BRAND]: true };
+const directiveBrand = makeBrand<DirectiveResult>('craft:directive');
 
 /**
  * Creates a registered DirectiveResult. All directive factories must use this
  * function — only objects created here pass `isDirectiveResult()`.
  */
-export const createDirectiveResult = (mount: RuntimeDirective['mount']): DirectiveResult => {
-  const result: BrandedDirective = { [DIRECTIVE_BRAND]: true, mount };
+export const createDirectiveResult = (mount: DirectiveResult['mount']): DirectiveResult =>
+  directiveBrand.stamp({ mount });
 
-  return result;
-};
-
-export const isDirectiveResult = (value: unknown): value is DirectiveResult =>
-  typeof value === 'object' && value !== null && DIRECTIVE_BRAND in (value as object);
+export const isDirectiveResult = directiveBrand.is;
 
 // ─── SPREAD OBJECT ───────────────────────────────────────────────────────────
 // Returned by model() and similar helpers that apply multiple bindings to one element.
@@ -137,26 +140,17 @@ export type SpreadObject = {
   apply(el: HTMLElement, registerCleanup: (fn: () => void) => void): void;
 };
 
-const SPREAD_BRAND: unique symbol = Symbol.for('craft:spread');
-
-type BrandedSpread = SpreadObject & { readonly [SPREAD_BRAND]: true };
+const spreadBrand = makeBrand<SpreadObject>('craft:spread');
 
 /**
  * Creates a registered SpreadObject. Used by model() to attach multiple bindings
  * (value sync + input event) to an element via a single template expression.
  */
-export const createSpreadObject = (apply: SpreadObject['apply']): SpreadObject => {
-  const result: BrandedSpread = { apply, [SPREAD_BRAND]: true };
+export const createSpreadObject = (apply: SpreadObject['apply']): SpreadObject => spreadBrand.stamp({ apply });
 
-  return result;
-};
-
-export const isSpreadObject = (value: unknown): value is SpreadObject =>
-  typeof value === 'object' && value !== null && SPREAD_BRAND in (value as object);
+export const isSpreadObject = spreadBrand.is;
 
 // ─── HTML RESULT ─────────────────────────────────────────────────────────────
-
-const HTML_RESULT_BRAND: unique symbol = Symbol.for('craft:html-result');
 
 /**
  * The output of an `html` tagged template call.
@@ -175,16 +169,13 @@ export interface HTMLResult {
   apply(registerCleanup: (fn: () => void) => void): void;
 }
 
-type BrandedHtmlResult = HTMLResult & { readonly [HTML_RESULT_BRAND]: true };
+const htmlResultBrand = makeBrand<HTMLResult>('craft:html-result');
 
-export const isHtmlResult = (value: unknown): value is HTMLResult =>
-  typeof value === 'object' && value !== null && HTML_RESULT_BRAND in (value as object);
+export const isHtmlResult = htmlResultBrand.is;
 
 export function createHtmlResult(
   fragment: DocumentFragment,
   applyFn: (registerCleanup: (fn: () => void) => void) => void,
 ): HTMLResult {
-  const result: BrandedHtmlResult = { apply: applyFn, fragment, [HTML_RESULT_BRAND]: true };
-
-  return result;
+  return htmlResultBrand.stamp({ apply: applyFn, fragment });
 }

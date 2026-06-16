@@ -35,11 +35,7 @@ export function deriveSource<T, U, TMeta>(
   let cachedCurrent: readonly U[] = [];
 
   const applyTransform = () => {
-    try {
-      cachedCurrent = transform(parent.current);
-    } catch {
-      // Swallow transform errors to avoid breaking the parent's notify chain.
-    }
+    cachedCurrent = transform(parent.current);
   };
 
   applyTransform();
@@ -54,9 +50,19 @@ export function deriveSource<T, U, TMeta>(
       return cachedCurrent;
     },
 
+    get disposalSignal() {
+      return core.disposalSignal;
+    },
+
     dispose() {
+      if (core.isDisposed) return;
+
       unsubscribeParent();
       core.dispose();
+    },
+
+    get disposed() {
+      return core.isDisposed;
     },
 
     get meta() {

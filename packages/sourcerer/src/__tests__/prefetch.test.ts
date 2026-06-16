@@ -1,4 +1,4 @@
-import { prefetchSource, prefetchSourceWithSource } from '../prefetch';
+import { prefetchSource } from '../prefetch';
 import { createRemoteSource } from '../remoteSource';
 
 describe('prefetchSource', () => {
@@ -68,7 +68,7 @@ describe('prefetchSource', () => {
   });
 });
 
-describe('prefetchSourceWithSource', () => {
+describe('prefetchSource with keepSource: true', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -79,7 +79,7 @@ describe('prefetchSourceWithSource', () => {
 
   it('returns both snapshot and live source', async () => {
     const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
-    const { snapshot, source } = await prefetchSourceWithSource({ fetch, limit: 10 });
+    const { snapshot, source } = await prefetchSource({ fetch, limit: 10 }, { keepSource: true });
 
     expect(snapshot.items).toEqual(['a', 'b']);
     expect(snapshot.total).toBe(2);
@@ -90,7 +90,7 @@ describe('prefetchSourceWithSource', () => {
 
   it('returned source is live and not disposed', async () => {
     const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
-    const { source } = await prefetchSourceWithSource({ fetch });
+    const { source } = await prefetchSource({ fetch }, { keepSource: true });
 
     fetch.mockResolvedValueOnce({ items: ['y'], total: 1 });
     await source.refresh();
@@ -101,7 +101,7 @@ describe('prefetchSourceWithSource', () => {
 
   it('caller must dispose the source manually', async () => {
     const fetch = vi.fn(async () => ({ items: [], total: 0 }));
-    const { source } = await prefetchSourceWithSource({ fetch });
+    const { source } = await prefetchSource({ fetch }, { keepSource: true });
 
     expect(() => source.dispose()).not.toThrow();
   });
@@ -111,6 +111,6 @@ describe('prefetchSourceWithSource', () => {
       throw new Error('upstream error');
     });
 
-    await expect(prefetchSourceWithSource({ fetch })).rejects.toThrow('upstream error');
+    await expect(prefetchSource({ fetch }, { keepSource: true })).rejects.toThrow('upstream error');
   });
 });

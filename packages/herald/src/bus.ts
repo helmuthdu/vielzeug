@@ -11,35 +11,16 @@ import type {
   WaitAnyResult,
 } from './types';
 
-export class BusDisposedError extends Error {
-  constructor(busName?: string) {
-    super(busName ? `[@vielzeug/herald] Bus "${busName}" is disposed` : '[@vielzeug/herald] Bus is disposed');
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  static is(err: unknown): err is BusDisposedError {
-    return err instanceof BusDisposedError;
-  }
-}
+export { BusDisposedError } from './errors';
+import { BusDisposedError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
 // @internal — exported only for sibling internal modules; stripped from public declarations via stripInternal.
 /** @internal */
 export const noop = () => {};
 
-/**
- * Returns a signal that aborts as soon as either `a` or `b` aborts.
- * If only `a` is provided, returns `a` directly.
- * Registers and cleans up its own event listeners — no leaks when neither signal fires.
- *
- * @example
- * const signal = combineSignals(timeoutSignal, bus.disposalSignal);
- * bus.on('event', handler, { signal });
- */
-export function combineSignals(a: AbortSignal, b?: AbortSignal): AbortSignal {
-  if (!b) return a;
-
+/** @internal */
+function mergeTwo(a: AbortSignal, b: AbortSignal): AbortSignal {
   if (a.aborted) return a;
 
   if (b.aborted) return b;
@@ -62,6 +43,25 @@ export function combineSignals(a: AbortSignal, b?: AbortSignal): AbortSignal {
   return ctrl.signal;
 }
 
+/**
+ * Returns a signal that aborts as soon as any of the provided signals abort.
+ * With a single argument, returns it directly (no allocation).
+ * Registers and cleans up its own event listeners — no leaks when no signal fires.
+ *
+ * @example
+ * const signal = combineSignals(timeoutSignal, bus.disposalSignal);
+ * bus.on('event', handler, { signal });
+ *
+ * @example
+ * // Three signals — no nesting required
+ * const signal = combineSignals(userSignal, timeoutSignal, bus.disposalSignal);
+ */
+export function combineSignals(first: AbortSignal, ...rest: AbortSignal[]): AbortSignal {
+  if (rest.length === 0) return first;
+
+  return rest.reduce(mergeTwo, first);
+}
+
 // Each registration gets a unique Entry object, allowing the same listener function
 // to be registered multiple times independently (aligns with Node EventEmitter / mitt).
 type Entry = { fn: Listener<unknown>; unsub: () => void };
@@ -69,57 +69,19 @@ type WildcardEntry = { fn: (event: string, payload: unknown) => void; unsub: () 
 
 type RegisterEntryOpts = { offLog: string; onLog: string; onRemove?: () => void };
 
-// makeEventStream wraps a generator with AsyncDisposable + filter/map operators.
-// Module-scoped (not inside createBus) — no per-emit allocation.
+// makeEventStream wraps an AsyncGenerator with AsyncDisposable.
 function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<void>): EventStream<V> {
-  // filter, map, and take create derived generators that iterate `gen`. Disposing the parent (via
-  // onDispose) cascades to close derived generators through the for-await protocol: when gen
-  // receives a done result, the for-await loop inside the derived generator exits normally.
-  const filterFn = (pred: (v: V) => boolean): EventStream<V> => {
-    async function* fg(): AsyncGenerator<V> {
-      for await (const value of gen) {
-        if (pred(value)) yield value;
-      }
-    }
-
-    return makeEventStream(fg(), onDispose);
-  };
-
-  const mapFn = <U>(fn: (v: V) => U): EventStream<U> => {
-    async function* mg(): AsyncGenerator<U> {
-      for await (const value of gen) {
-        yield fn(value);
-      }
-    }
-
-    return makeEventStream<U>(mg(), onDispose);
-  };
-
-  const takeFn = (n: number): EventStream<V> => {
-    if (!Number.isInteger(n) || n < 1) throw new RangeError('take() requires a positive integer');
-
-    async function* tg(): AsyncGenerator<V> {
-      let remaining = n;
-
-      for await (const value of gen) {
-        yield value;
-
-        if (--remaining === 0) break;
-      }
-    }
-
-    return makeEventStream(tg(), onDispose);
-  };
-
   return Object.assign(gen, {
-    filter: filterFn as EventStream<V>['filter'],
-    map: mapFn,
     [Symbol.asyncDispose]: onDispose,
-    take: takeFn,
   }) as unknown as EventStream<V>;
 }
 
-export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
+type InternalBusOptions<T extends EventMap> = BusOptions<T> & {
+  /** @internal Called after middleware passes, before listeners run. Used by BehaviorBus. */
+  _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
+};
+
+export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): Bus<T> {
   // Per-event set of Entry objects. Set identity prevents accidental dedup of entries;
   // the same fn can appear in multiple entries with independent lifetimes.
   const listeners = new Map<string, Set<Entry>>();
@@ -134,7 +96,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   const warnPrefix = busName ? `[herald:warn:${busName}]` : '[herald:warn]';
 
   function mergeSignal(signal?: AbortSignal): AbortSignal {
-    return combineSignals(disposeController.signal, signal);
+    return signal ? combineSignals(disposeController.signal, signal) : disposeController.signal;
   }
 
   // callSafe is defined once per bus (not per emit) — avoids re-allocating on every emission.
@@ -365,7 +327,7 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     // (called = false in registerEntry) makes this idempotent.
     return makeEventStream(gen, async (): Promise<void> => {
       unsub();
-      await gen.return(undefined as T[K]);
+      await gen.return(undefined as unknown as T[K]);
     });
   }
 
@@ -373,6 +335,8 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
   // callSafe. Receives event/payload/timestamp as arguments so it can be invoked from both the
   // direct path and the middleware chain without capturing per-emit locals in a closure.
   function dispatch(event: EventKey<T>, payload: unknown, timestamp: number): number {
+    options?._onDispatch?.(event, payload);
+
     let count = 0;
     const set = listeners.get(event);
 
@@ -450,32 +414,20 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     return dispatch(event, payload, timestamp);
   }
 
-  // listenerCount(event) includes wildcard listeners — they fire on every emission of that event.
-  // listenerCount() (no arg) = sum(specific per event) + wildcards (wildcards counted once).
+  // listenerCount counts specific-event listeners only.
+  // wildcardCount() is the separate accessor for onAny listeners.
   function listenerCount(event?: EventKey<T>): number {
-    if (event !== undefined) return (listeners.get(event)?.size ?? 0) + wildcards.size;
+    if (event !== undefined) return listeners.get(event)?.size ?? 0;
 
-    let total = wildcards.size;
+    let total = 0;
 
     for (const set of listeners.values()) total += set.size;
 
     return total;
   }
 
-  function removeAllListeners(event?: EventKey<T>): void {
-    if (event !== undefined) {
-      const set = listeners.get(event);
-
-      if (set) {
-        for (const entry of [...set]) entry.unsub();
-      }
-    } else {
-      for (const set of [...listeners.values()]) {
-        for (const entry of [...set]) entry.unsub();
-      }
-
-      for (const entry of [...wildcards]) entry.unsub();
-    }
+  function wildcardCount(): number {
+    return wildcards.size;
   }
 
   function eventNames(): EventKey<T>[] {
@@ -486,8 +438,6 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     eventList: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
-    if (eventList.length < 2) throw new RangeError('waitAny() requires at least 2 events');
-
     const activeSignal = mergeSignal(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);
@@ -546,9 +496,9 @@ export function createBus<T extends EventMap>(options?: BusOptions<T>): Bus<T> {
     on,
     onAny,
     once,
-    removeAllListeners,
     [Symbol.dispose]: dispose,
     wait,
     waitAny,
+    wildcardCount,
   };
 }

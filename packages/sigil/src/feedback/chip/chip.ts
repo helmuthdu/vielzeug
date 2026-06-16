@@ -1,4 +1,5 @@
-import { computed, define, html, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 

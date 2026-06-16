@@ -1,8 +1,12 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { DifferenceOptions, TimeInput, TimeOptions, TimeOptionsWithTz } from './types';
+import type { CalendarUnit, DifferenceOptions, ParseAs, ShiftOptions, TimeInput } from './types';
 
-import { CALENDAR_UNITS, fail, inferSharedTimeZone, inferTimeZone, toInstant, toZoned } from './internal';
+import { toInstant, toZoned } from './_convert';
+import { fail } from './_error';
+import { CALENDAR_UNITS, inferSharedTimeZone, inferTimeZone } from './_tz';
+
+type TimeOptionsWithTz = { tz: string };
 
 /**
  * Returns the current date and time in the given timezone.
@@ -123,17 +127,17 @@ export function parseInstant(input: string): Temporal.Instant {
 export function shift(
   input: Temporal.ZonedDateTime,
   duration: Temporal.DurationLike,
-  options?: TimeOptions,
+  options?: ShiftOptions,
 ): Temporal.ZonedDateTime;
 export function shift(
   input: Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime,
   duration: Temporal.DurationLike,
-  options: TimeOptionsWithTz,
+  options: ShiftOptions & TimeOptionsWithTz,
 ): Temporal.ZonedDateTime;
 export function shift(
   input: TimeInput,
   duration: Temporal.DurationLike,
-  options: TimeOptions = {},
+  options: ShiftOptions = {},
 ): Temporal.ZonedDateTime {
   const tz = inferTimeZone(input, options);
 
@@ -146,6 +150,7 @@ export function shift(
  * When both inputs are `Instant` and no calendar unit is requested, the fast
  * path skips timezone conversion. Calendar units (`day`, `week`, `month`, `year`)
  * always require a timezone — pass `options.tz` or use `ZonedDateTime` inputs.
+ * `options.prefer` (DST disambiguation) is only meaningful for `PlainDateTime` inputs.
  *
  * @example
  * ```ts
@@ -157,12 +162,12 @@ export function shift(
  * ```
  */
 export function difference(start: TimeInput, end: TimeInput, options: DifferenceOptions = {}): Temporal.Duration {
-  const { largestUnit, roundingIncrement, roundingMode, smallestUnit } = options;
+  const { largestUnit, prefer, roundingIncrement, roundingMode, smallestUnit } = options;
   const roundingOptions = { largestUnit, roundingIncrement, roundingMode, smallestUnit };
 
   const needsCalendar =
-    (largestUnit !== undefined && CALENDAR_UNITS.has(largestUnit)) ||
-    (smallestUnit !== undefined && CALENDAR_UNITS.has(smallestUnit));
+    (largestUnit !== undefined && CALENDAR_UNITS.has(largestUnit as CalendarUnit)) ||
+    (smallestUnit !== undefined && CALENDAR_UNITS.has(smallestUnit as CalendarUnit));
 
   if (!needsCalendar && start instanceof Temporal.Instant && end instanceof Temporal.Instant) {
     return end.since(start, roundingOptions as Temporal.DifferenceOptions<Temporal.TimeUnit>);
@@ -170,26 +175,57 @@ export function difference(start: TimeInput, end: TimeInput, options: Difference
 
   const tz = inferSharedTimeZone([start, end], options);
 
-  return toZoned(end, { prefer: options.prefer, tz }).since(
-    toZoned(start, { prefer: options.prefer, tz }),
-    roundingOptions,
+  return toZoned(end, { prefer, tz }).since(toZoned(start, { prefer, tz }), roundingOptions);
+}
+
+/**
+ * Type guard that checks whether `value` is a valid `TimeInput`.
+ *
+ * @example
+ * ```ts
+ * isValid(parseInstant('2026-03-21T10:00:00Z')) // true
+ * isValid('2026-03-21')                         // false
+ * ```
+ */
+export function isValid(value: unknown): value is TimeInput {
+  return (
+    value instanceof Temporal.Instant ||
+    value instanceof Temporal.ZonedDateTime ||
+    value instanceof Temporal.PlainDateTime ||
+    value instanceof Temporal.PlainDate
   );
 }
 
 /**
- * Parses any ISO 8601 date/time string into the most specific `TimeInput` type possible.
+ * Parses any ISO 8601 string into the most specific `TimeInput` type possible.
  * Tries ZonedDateTime → Instant → PlainDateTime → PlainDate in order.
  * Throws a descriptive `TypeError` if none match.
  *
+ * Pass `as` to request a specific return type (throws if the string cannot be parsed as that type):
+ *
  * @example
  * ```ts
- * parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]') // ZonedDateTime
- * parseDate('2026-03-21T10:00:00Z')                     // Instant
- * parseDate('2026-03-21T10:00:00')                      // PlainDateTime
- * parseDate('2026-03-21')                               // PlainDate
+ * parse('2026-03-21T11:00:00+01:00[Europe/Berlin]')           // TimeInput (auto-detect)
+ * parse('2026-03-21T11:00:00+01:00[Europe/Berlin]', 'zoned')  // Temporal.ZonedDateTime
+ * parse('2026-03-21T10:00:00Z', 'instant')                    // Temporal.Instant
+ * parse('2026-03-21T10:00:00', 'plain-datetime')              // Temporal.PlainDateTime
+ * parse('2026-03-21', 'plain-date')                           // Temporal.PlainDate
  * ```
  */
-export function parseDate(input: string): TimeInput {
+export function parse(input: string, as: 'zoned'): Temporal.ZonedDateTime;
+export function parse(input: string, as: 'instant'): Temporal.Instant;
+export function parse(input: string, as: 'plain-datetime'): Temporal.PlainDateTime;
+export function parse(input: string, as: 'plain-date'): Temporal.PlainDate;
+export function parse(input: string, as?: ParseAs): TimeInput;
+export function parse(input: string, as?: ParseAs): TimeInput {
+  if (as === 'zoned') return parseZoned(input);
+
+  if (as === 'instant') return parseInstant(input);
+
+  if (as === 'plain-datetime') return parsePlainDateTime(input);
+
+  if (as === 'plain-date') return parsePlainDate(input);
+
   try {
     return Temporal.ZonedDateTime.from(input);
   } catch {
@@ -221,23 +257,5 @@ export function parseDate(input: string): TimeInput {
 
   fail(
     `Unable to parse date/time string: "${input}". Expected ISO 8601 ZonedDateTime, Instant, PlainDateTime, or PlainDate.`,
-  );
-}
-
-/**
- * Type guard that checks whether `value` is a valid `TimeInput`.
- *
- * @example
- * ```ts
- * isValid(parseInstant('2026-03-21T10:00:00Z')) // true
- * isValid('2026-03-21')                         // false
- * ```
- */
-export function isValid(value: unknown): value is TimeInput {
-  return (
-    value instanceof Temporal.Instant ||
-    value instanceof Temporal.ZonedDateTime ||
-    value instanceof Temporal.PlainDateTime ||
-    value instanceof Temporal.PlainDate
   );
 }

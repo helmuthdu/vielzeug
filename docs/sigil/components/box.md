@@ -180,15 +180,15 @@ Animated rainbow border effect — works on any variant.
 
 ### Attributes
 
-| Attribute   | Type                                                                      | Default | Description                    |
-| ----------- | ------------------------------------------------------------------------- | ------- | ------------------------------ |
-| `variant`   | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | -       | Style variant                  |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme                    |
-| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding               |
-| `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)             |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius                  |
-| `effect`    | `'rainbow'`                                                               | —       | Animated border effect         |
-| `fullwidth` | `boolean`                                                                 | `false` | Expand to full width           |
+| Attribute   | Type                                                                      | Default | Description            |
+| ----------- | ------------------------------------------------------------------------- | ------- | ---------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'glass' \| 'frost'`                                 | -       | Style variant          |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | -       | Color theme            |
+| `padding`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                  | `'md'`  | Internal padding       |
+| `elevation` | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                                  | -       | Shadow depth (0–5)     |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`      | `'md'`  | Border radius          |
+| `effect`    | `'rainbow'`                                                               | —       | Animated border effect |
+| `fullwidth` | `boolean`                                                                 | `false` | Expand to full width   |
 
 ### Slots
 

@@ -9,15 +9,15 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@vielzeug\/craft\/testing$/,
-        replacement: path.resolve(__dirname, '../craft/src/testing/index.ts'),
-      },
-      {
         find: /^@vielzeug\/craft\/observers$/,
         replacement: path.resolve(__dirname, '../craft/src/observers/index.ts'),
       },
+      {
+        find: /^@vielzeug\/craft\/testing$/,
+        replacement: path.resolve(__dirname, '../craft/src/testing/index.ts'),
+      },
       { find: /^@vielzeug\/craft$/, replacement: path.resolve(__dirname, '../craft/src/index.ts') },
-      { find: /^@vielzeug\/grip$/, replacement: path.resolve(__dirname, '../grip/src/index.ts') },
+      { find: /^@vielzeug\/dnd$/, replacement: path.resolve(__dirname, '../dnd/src/index.ts') },
       { find: /^@vielzeug\/orbit$/, replacement: path.resolve(__dirname, '../orbit/src/index.ts') },
       { find: /^@vielzeug\/ripple$/, replacement: path.resolve(__dirname, '../ripple/src/index.ts') },
       { find: /^@vielzeug\/arsenal$/, replacement: path.resolve(__dirname, '../arsenal/src/index.ts') },

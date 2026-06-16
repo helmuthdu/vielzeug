@@ -1,6 +1,5 @@
-import type { ComputedSignal, ReactiveOptions, Signal, SignalOptions, Subscription } from './types';
+import type { Signal, SignalOptions, Subscription } from './types';
 
-import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
 import { StateError } from './error';
 import { ReactiveBase } from './reactive-base';
@@ -59,10 +58,6 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
     return this.value_;
   }
 
-  update(fn: (current: T) => T): void {
-    this.value = fn(this.value_);
-  }
-
   readonly subscribe = (listener: () => void): Subscription => {
     if (this.disposed_) {
       const label = this.name ? ` "${this.name}"` : '';
@@ -76,20 +71,6 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
       this.removeEffectSub(listener);
     });
   };
-
-  map<U>(fn: (value: T) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return computed(() => fn(this.value), options);
-  }
-
-  filter<U extends T>(predicate: (value: T) => value is U): ComputedSignal<U | undefined>;
-  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined>;
-  filter(predicate: (value: T) => boolean): ComputedSignal<T | undefined> {
-    return computed(() => {
-      const v = this.value;
-
-      return predicate(v) ? v : undefined;
-    });
-  }
 
   /**
    * Marks the signal as permanently inert. After disposal:

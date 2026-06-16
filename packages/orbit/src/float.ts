@@ -1,18 +1,15 @@
-import type {
-  ComputePositionOptions,
-  ComputePositionResult,
-  FloatHandle,
-  Middleware,
-  Placement,
-  ReferenceElement,
-} from './types';
+import type { ComputePositionOptions, ComputePositionResult, FloatHandle, Placement, ReferenceElement } from './types';
 
-import { warn } from './_warn';
 import { autoUpdate, type AutoUpdateOptions } from './auto-update';
 import { computePosition } from './core';
 
-function makeHandle(
-  cssAnchor: boolean,
+// ── makeHandle ────────────────────────────────────────────────────────────────
+
+/**
+ * Constructs a {@link FloatHandle} with idempotent dispose, disposalSignal, and disposed getter.
+ * @internal — exported for use by ssr.ts and devtools.ts only.
+ */
+export function makeHandle(
   rawDispose: () => void,
   getPosition: () => ComputePositionResult | null,
   update: () => void,
@@ -21,7 +18,6 @@ function makeHandle(
   let disposed = false;
 
   return {
-    cssAnchor,
     get disposalSignal() {
       return controller.signal;
     },
@@ -43,7 +39,7 @@ function makeHandle(
   };
 }
 
-// ── CSS Anchor Positioning (progressive enhancement) ─────────────────────────────────────────
+// ── CSS Anchor Positioning ────────────────────────────────────────────────────
 
 function isCssAnchorPositioningSupported(): boolean {
   return typeof CSS !== 'undefined' && CSS.supports('anchor-name', '--orbit');
@@ -72,17 +68,21 @@ const POSITION_AREA: Record<Placement, string> = {
 
 /** Applies a set of CSS properties to an element and returns a cleanup that restores them. */
 function withStyles(el: HTMLElement, props: Record<string, string>): () => void {
-  const saved: Record<string, string> = {};
+  const saved: Record<string, string | undefined> = {};
 
   for (const prop of Object.keys(props)) {
-    saved[prop] = el.style.getPropertyValue(prop);
+    const prev = el.style.getPropertyValue(prop);
+
+    saved[prop] = prev !== '' ? prev : undefined;
     el.style.setProperty(prop, props[prop]);
   }
 
   return () => {
     for (const prop of Object.keys(props)) {
-      if (saved[prop]) {
-        el.style.setProperty(prop, saved[prop]);
+      const prev = saved[prop];
+
+      if (prev !== undefined) {
+        el.style.setProperty(prop, prev);
       } else {
         el.style.removeProperty(prop);
       }
@@ -90,11 +90,12 @@ function withStyles(el: HTMLElement, props: Record<string, string>): () => void 
   };
 }
 
-/**
- * Sets up CSS Anchor Positioning on the two elements and returns a cleanup function.
- * The browser handles repositioning natively — no scroll or resize listeners needed.
- */
-function setupCssAnchorPositioning(reference: HTMLElement, floating: HTMLElement, placement: Placement): () => void {
+function setupCssAnchorPositioning(
+  reference: HTMLElement,
+  floating: HTMLElement,
+  placement: Placement,
+  fallbacks: string,
+): () => void {
   const name = `--orbit-${++anchorCounter}`;
 
   const cleanupRef = withStyles(reference, { 'anchor-name': name });
@@ -102,7 +103,7 @@ function setupCssAnchorPositioning(reference: HTMLElement, floating: HTMLElement
     position: 'fixed',
     'position-anchor': name,
     'position-area': POSITION_AREA[placement],
-    'position-try-fallbacks': 'flip-block, flip-inline, flip-block flip-inline',
+    'position-try-fallbacks': fallbacks,
   });
 
   return () => {
@@ -111,11 +112,62 @@ function setupCssAnchorPositioning(reference: HTMLElement, floating: HTMLElement
   };
 }
 
-// ── float() ──────────────────────────────────────────────────────────────────────────────────────────────────────────────
+export interface CssAnchorHandle extends FloatHandle {
+  /** Always `true` — position is managed natively by CSS Anchor Positioning. */
+  readonly cssAnchor: true;
+}
 
-export interface FloatOptions {
-  placement?: Placement;
-  middleware?: Array<Middleware | null | undefined | false>;
+/**
+ * Uses CSS Anchor Positioning to let the browser handle repositioning natively.
+ * No JavaScript positioning loop — the browser manages placement via `position-try-fallbacks`.
+ *
+ * Requires both elements to be `HTMLElement`. Falls back to `float()` for complex cases
+ * (e.g. middleware pipelines, custom apply callbacks).
+ *
+ * @experimental CSS Anchor Positioning support varies by browser. Check `isCssAnchorSupported()`
+ * before using in production.
+ *
+ * @example
+ * ```ts
+ * import { floatWithAnchor } from '@vielzeug/orbit';
+ *
+ * const handle = floatWithAnchor(trigger, tooltip, { placement: 'top' });
+ * // on hide:
+ * handle.dispose();
+ * ```
+ */
+export function floatWithAnchor(
+  reference: HTMLElement,
+  floating: HTMLElement,
+  {
+    fallbacks = 'flip-block, flip-inline, flip-block flip-inline',
+    placement = 'bottom',
+  }: { fallbacks?: string; placement?: Placement } = {},
+): CssAnchorHandle {
+  const cleanupFn = setupCssAnchorPositioning(reference, floating, placement, fallbacks);
+  const base = makeHandle(
+    () => cleanupFn(),
+    () => null,
+    () => {},
+  );
+
+  return Object.assign(base, { cssAnchor: true as const });
+}
+
+/**
+ * Returns `true` when the browser supports CSS Anchor Positioning.
+ * Use to guard `floatWithAnchor()` calls in production.
+ */
+export { isCssAnchorPositioningSupported as isCssAnchorSupported };
+
+// ── float() ───────────────────────────────────────────────────────────────────
+
+/**
+ * Options for `float()`. Extends `ComputePositionOptions` so all positioning
+ * options (`placement`, `middleware`, `boundary`, `padding`, `containingBlock`)
+ * are inherited directly.
+ */
+export interface FloatOptions extends ComputePositionOptions {
   /**
    * Custom callback to apply the computed position to the DOM.
    * Called once per position update with the full `ComputePositionResult`.
@@ -127,32 +179,6 @@ export interface FloatOptions {
    * Pass `false` to disable auto-updating (position is computed once on call).
    */
   autoUpdate?: AutoUpdateOptions | false;
-  /**
-   * When `true`, use CSS Anchor Positioning in browsers that support it.
-   * Falls back to JS positioning when unsupported or when `middleware` is non-empty.
-   *
-   * CSS anchor positioning lets the browser handle repositioning natively with no JS overhead.
-   * Supports basic `flip-block / flip-inline` fallbacks via `position-try-fallbacks`.
-   *
-   * @experimental CSS Anchor Positioning support varies by browser.
-   */
-  preferCssAnchor?: boolean;
-  /**
-   * The containing block element for `position: absolute` floating elements.
-   * Provide the floating element's `offsetParent` to convert viewport-relative
-   * coordinates to containing-block-relative coordinates.
-   */
-  containingBlock?: Element | null;
-  /**
-   * Default boundary for all overflow-aware middleware. Per-middleware `boundary` takes precedence.
-   * Defaults to the visual viewport.
-   */
-  boundary?: ComputePositionOptions['boundary'];
-  /**
-   * Default padding for all overflow-aware middleware. Per-middleware `padding` takes precedence.
-   * Defaults to `0`.
-   */
-  padding?: ComputePositionOptions['padding'];
 }
 
 function applyDefault(result: ComputePositionResult, floating: HTMLElement): void {
@@ -162,6 +188,8 @@ function applyDefault(result: ComputePositionResult, floating: HTMLElement): voi
 
 /**
  * High-level API: positions the floating element and continuously keeps it updated.
+ *
+ * For CSS Anchor Positioning (browser-native, no JS loop), use {@link floatWithAnchor} instead.
  *
  * Returns a {@link FloatHandle} with `dispose()`, `update()`, and `getPosition()`.
  * Always call `dispose()` on teardown to remove listeners.
@@ -187,38 +215,8 @@ export function float(
     middleware,
     padding,
     placement = 'bottom',
-    preferCssAnchor = false,
   }: FloatOptions = {},
 ): FloatHandle {
-  const hasMiddleware = middleware && middleware.some(Boolean);
-  const cssAnchorSupported = preferCssAnchor && isCssAnchorPositioningSupported();
-  const useCssAnchor = cssAnchorSupported && apply == null && !hasMiddleware && reference instanceof HTMLElement;
-
-  if (import.meta.env.DEV && preferCssAnchor && !useCssAnchor) {
-    if (hasMiddleware) {
-      warn('float: preferCssAnchor is ignored when middleware is provided. Falling back to JS positioning.');
-    } else if (apply != null) {
-      warn(
-        'float: preferCssAnchor is ignored when a custom apply callback is provided. Falling back to JS positioning.',
-      );
-    } else if (!cssAnchorSupported) {
-      warn(
-        'float: preferCssAnchor: CSS Anchor Positioning is not supported in this browser. Falling back to JS positioning.',
-      );
-    }
-  }
-
-  if (useCssAnchor) {
-    const cleanupFn = setupCssAnchorPositioning(reference, floating, placement);
-
-    return makeHandle(
-      true,
-      () => cleanupFn(),
-      () => null,
-      () => {},
-    );
-  }
-
   let lastPosition: ComputePositionResult | null = null;
   const applyFn = apply ?? ((result) => applyDefault(result, floating));
 
@@ -233,7 +231,6 @@ export function float(
     update();
 
     return makeHandle(
-      false,
       () => {},
       () => lastPosition,
       update,
@@ -243,7 +240,6 @@ export function float(
   const cleanupFn = autoUpdate(reference, floating, update, autoUpdateOptions);
 
   return makeHandle(
-    false,
     () => cleanupFn(),
     () => lastPosition,
     update,

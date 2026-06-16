@@ -818,4 +818,83 @@ describe('createStream — readable()', () => {
     expect(aborted).toBe(true);
     expect(stream.disposed).toBe(false);
   });
+
+  it('disposalSignal is not aborted before dispose and aborted after', () => {
+    const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+    expect(stream.disposalSignal.aborted).toBe(false);
+    stream.dispose();
+    expect(stream.disposalSignal.aborted).toBe(true);
+  });
+
+  describe('readable() reconnect', () => {
+    it('reconnects after a connection error and yields chunks from all connections', async () => {
+      const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+      fetchMock
+        .mockRejectedValueOnce(new TypeError('network error'))
+        .mockResolvedValueOnce(textStreamResponse(['reconnected']));
+
+      const chunks: string[] = [];
+
+      for await (const chunk of stream.readable('/stream', {
+        reconnect: { delay: 0, times: 1 },
+      })) {
+        chunks.push(chunk as string);
+      }
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(chunks.join('')).toBe('reconnected');
+    });
+
+    it('throws when reconnect budget is exhausted with no onError', async () => {
+      const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockRejectedValue(new TypeError('always fails'));
+
+      await expect(async () => {
+        for await (const _chunk of stream.readable('/stream', {
+          reconnect: { delay: 0, times: 1 },
+        })) {
+          /* noop */
+        }
+      }).rejects.toThrow('always fails');
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it('calls onError when budget exhausted instead of throwing', async () => {
+      const stream = createStream({ baseUrl: 'https://api.example.com' });
+      const errors: Error[] = [];
+
+      fetchMock.mockRejectedValue(new TypeError('net fail'));
+
+      for await (const _chunk of stream.readable('/stream', {
+        onError: (e) => errors.push(e),
+        reconnect: { delay: 0, times: 1 },
+      })) {
+        /* noop */
+      }
+
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('net fail');
+    });
+
+    it('does not reconnect after a clean server close', async () => {
+      const stream = createStream({ baseUrl: 'https://api.example.com' });
+
+      fetchMock.mockResolvedValue(textStreamResponse(['done']));
+
+      const chunks: string[] = [];
+
+      for await (const chunk of stream.readable('/stream', {
+        reconnect: { delay: 0, times: 5 },
+      })) {
+        chunks.push(chunk as string);
+      }
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(chunks.join('')).toBe('done');
+    });
+  });
 });

@@ -1,4 +1,5 @@
-import { computed, define, html, prop, provide } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
 import type { ComponentSize, VisualVariant } from '../../types';
@@ -68,7 +69,7 @@ define<SgFormProps, SgFormEvents>(FORM_TAG, {
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, provide }) {
     const shadowRoot = el.shadowRoot;
 
     // Reflect orientation to host so CSS and tests can read it

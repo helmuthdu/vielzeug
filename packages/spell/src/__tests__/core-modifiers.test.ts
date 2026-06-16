@@ -47,7 +47,7 @@ describe('optional nullable nullish required', () => {
       .string()
       .optional()
       .default('fallback')
-      .check((value) => value !== 'bad' || 'Bad')
+      .validate((value) => value !== 'bad' || 'Bad')
       .label('Field')
       .nullable();
 
@@ -67,7 +67,7 @@ describe('optional nullable nullish required', () => {
       .number()
       .optional()
       .default(42)
-      .check((value) => value !== 0 || 'Zero')
+      .validate((value) => value !== 0 || 'Zero')
       .label('Answer')
       .required()
       .nullable();
@@ -309,8 +309,8 @@ describe('equals()', () => {
 });
 
 describe('walk() fallback', () => {
-  it('throws when no handler matches and no unknown fallback is provided', () => {
-    expect(() => s.string().walk({})).toThrow('[@vielzeug/spell]');
+  it('returns null when no handler matches and no unknown fallback is provided', () => {
+    expect(s.string().walk({})).toBeNull();
   });
 
   it('calls the unknown fallback when no specific handler matches', () => {

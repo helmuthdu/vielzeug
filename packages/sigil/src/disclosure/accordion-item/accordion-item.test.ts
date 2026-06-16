@@ -164,4 +164,16 @@ describe('sg-accordion-item accessibility', () => {
       expect(summary).toBeTruthy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-accordion-item', {
+        html: '<span slot="header">Section title</span><p>Section body</p>',
+      });
+
+      const results = await axeCheck(fixture.element, { rules: { 'summary-name': { enabled: false } } });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

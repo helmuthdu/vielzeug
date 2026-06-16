@@ -1,5 +1,5 @@
-import { createContext, type HostBindFn, type ReadonlySignal } from '@vielzeug/craft';
-import { computed } from '@vielzeug/ripple';
+import { createContext, type HostBindFn } from '@vielzeug/craft';
+import { computed, type ReadonlySignal } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
 import type { ComponentSize, VisualVariant } from '../../types';

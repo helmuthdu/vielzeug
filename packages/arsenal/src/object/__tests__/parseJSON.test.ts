@@ -1,85 +1,117 @@
+import { describe, expect, it } from 'vitest';
+
 import { parseJSON } from '../parseJSON';
 
 describe('parseJSON', () => {
-  it('should parse a valid JSON string', () => {
-    const json = '{"a":1,"b":2}';
-    const result = parseJSON(json);
-
-    expect(result).toEqual({ a: 1, b: 2 });
-  });
-
-  it('should return the default value for an invalid JSON string', () => {
-    const json = 'invalid';
-    const defaultValue = { a: 0, b: 0 };
-    const result = parseJSON(json, { defaultValue });
-
-    expect(result).toEqual(defaultValue);
-  });
-
-  it('should return undefined if no default value is provided and parsing fails', () => {
-    const json = 'invalid';
-    const result = parseJSON(json);
-
-    expect(result).toBeUndefined();
-  });
-
-  it('should return the default value for null input', () => {
-    const defaultValue = { a: 0 };
-    const result = parseJSON(null, { defaultValue });
-
-    expect(result).toEqual(defaultValue);
-  });
-
-  it('should return the default value for undefined input', () => {
-    const defaultValue = { a: 0 };
-    const result = parseJSON(undefined, { defaultValue });
-
-    expect(result).toEqual(defaultValue);
-  });
-
-  it('returns null when input is the JSON string "null" — regression B2', () => {
-    expect(parseJSON('null')).toBeNull();
-    expect(parseJSON('null', { defaultValue: 'fallback' })).toBeNull();
-  });
-
-  it('returns the default value when JSON.parse returns undefined (impossible in practice, guarded)', () => {
-    // JSON.parse never returns undefined for valid input, but the path exists for completeness
-    expect(parseJSON('"hello"')).toBe('hello');
-    expect(parseJSON('0')).toBe(0);
-    expect(parseJSON('false')).toBe(false);
-  });
-
-  it('should call the reviver function if provided', () => {
-    const json = '{"a":1,"b":2}';
-    const reviver = (key: string, value: unknown) => (key === 'a' ? (value as number) * 2 : value);
-    const result = parseJSON(json, { reviver });
-
-    expect(result).toEqual({ a: 2, b: 2 });
-  });
-
-  it('returns value when validator passes', () => {
-    const result = parseJSON('{"id":1}', {
-      defaultValue: { id: 0 },
-      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+  describe('basic parsing', () => {
+    it('parses a valid JSON object string', () => {
+      expect(parseJSON<{ a: number }>('{"a":1}')).toEqual({ a: 1 });
     });
 
-    expect(result).toEqual({ id: 1 });
-  });
-
-  it('returns defaultValue when validator fails', () => {
-    const result = parseJSON('{"id":"bad"}', {
-      defaultValue: { id: 0 },
-      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+    it('parses a valid JSON array string', () => {
+      expect(parseJSON<number[]>('[1,2,3]')).toEqual([1, 2, 3]);
     });
 
-    expect(result).toEqual({ id: 0 });
-  });
-
-  it('returns undefined when validator fails and no defaultValue', () => {
-    const result = parseJSON('{"id":"bad"}', {
-      validator: (v) => typeof (v as Record<string, unknown>).id === 'number',
+    it('parses a valid JSON number string', () => {
+      expect(parseJSON<number>('42')).toBe(42);
     });
 
-    expect(result).toBeUndefined();
+    it('parses the JSON string "null" to null (valid JSON)', () => {
+      expect(parseJSON('null')).toBeNull();
+    });
+
+    it('returns undefined for invalid JSON without fallback', () => {
+      expect(parseJSON('not json')).toBeUndefined();
+    });
+
+    it('returns undefined for empty string', () => {
+      expect(parseJSON('')).toBeUndefined();
+    });
+  });
+
+  describe('null / undefined input', () => {
+    it('returns undefined when input is null and no fallback', () => {
+      expect(parseJSON(null)).toBeUndefined();
+    });
+
+    it('returns undefined when input is undefined and no fallback', () => {
+      expect(parseJSON(undefined)).toBeUndefined();
+    });
+
+    it('returns fallback when input is null', () => {
+      expect(parseJSON(null, { fallback: 0 })).toBe(0);
+    });
+
+    it('returns fallback when input is undefined', () => {
+      expect(parseJSON(undefined, { fallback: [] })).toEqual([]);
+    });
+
+    it('does NOT return fallback for JSON "null" string (valid parse result)', () => {
+      expect(parseJSON('null', { fallback: 99 })).toBeNull();
+    });
+  });
+
+  describe('fallback option', () => {
+    it('returns fallback for invalid JSON', () => {
+      expect(parseJSON('bad json', { fallback: {} })).toEqual({});
+    });
+
+    it('returns typed fallback', () => {
+      type Cfg = { host: string };
+
+      const result = parseJSON<Cfg>('bad', { fallback: { host: 'localhost' } });
+
+      expect(result).toEqual({ host: 'localhost' });
+    });
+  });
+
+  describe('validator option', () => {
+    it('returns parsed value when validator passes', () => {
+      const result = parseJSON<{ id: number }>('{"id":1}', {
+        validator: (v) => typeof (v as { id: unknown }).id === 'number',
+      });
+
+      expect(result).toEqual({ id: 1 });
+    });
+
+    it('returns fallback when validator returns false', () => {
+      const result = parseJSON<{ id: number }>('{"id":"bad"}', {
+        fallback: { id: 0 },
+        validator: (v) => typeof (v as { id: unknown }).id === 'number',
+      });
+
+      expect(result).toEqual({ id: 0 });
+    });
+
+    it('returns undefined when validator fails and no fallback', () => {
+      const result = parseJSON('{"x":1}', {
+        validator: (v) => typeof (v as { y: unknown }).y === 'number',
+      });
+
+      expect(result).toBeUndefined();
+    });
+
+    it('validator receives the fully parsed value', () => {
+      const received: unknown[] = [];
+
+      parseJSON('{"a":1}', {
+        validator: (v) => {
+          received.push(v);
+
+          return true;
+        },
+      });
+      expect(received).toEqual([{ a: 1 }]);
+    });
+  });
+
+  describe('reviver option', () => {
+    it('applies the reviver function during JSON.parse', () => {
+      const result = parseJSON<{ date: Date }>('{"date":"2024-01-01"}', {
+        reviver: (key, value) => (key === 'date' ? new Date(value as string) : value),
+      });
+
+      expect(result?.date).toBeInstanceOf(Date);
+    });
   });
 });

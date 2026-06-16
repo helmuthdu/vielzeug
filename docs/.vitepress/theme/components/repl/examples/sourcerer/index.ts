@@ -3,6 +3,7 @@ import { deriveMergeExample } from './derive-merge';
 import { encodeDecodeQueryExample } from './encode-decode-query';
 import { errorHandlingExample } from './error-handling';
 import { infiniteSourceExample } from './infinite-source';
+import { lifecycleExample } from './lifecycle';
 import { localSourceExample } from './local-source';
 import { presetsExample } from './presets';
 import { remoteSourceExample } from './remote-source';
@@ -14,6 +15,7 @@ export const sourcererExamples = {
   'encode-decode-query': encodeDecodeQueryExample,
   'error-handling': errorHandlingExample,
   'infinite-source': infiniteSourceExample,
+  lifecycle: lifecycleExample,
   'local-source': localSourceExample,
   presets: presetsExample,
   'remote-source': remoteSourceExample,

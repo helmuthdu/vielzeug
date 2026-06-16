@@ -46,9 +46,9 @@ export function parsePipePlural(value: string): Messages | null {
 }
 
 // ─── Template compilation ─────────────────────────────────────────────────────
-// When `compile: true` is passed in I18nOptions, message strings are parsed once
-// into a pre-compiled form: an array of static strings and variable names.
-// Rendering a compiled template skips the regex entirely.
+// Message strings are parsed once at registration time into a pre-compiled form:
+// an array of static strings and variable names. Rendering a compiled template
+// skips the regex entirely.
 
 type TemplatePart = string | { var: string };
 export type CompiledTemplate = TemplatePart[];

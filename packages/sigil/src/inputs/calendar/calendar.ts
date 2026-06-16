@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, prop, signal } from '@vielzeug/craft';
+import { define, useField, html, prop } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../shared';
@@ -221,7 +222,7 @@ define<SgCalendarProps, SgCalendarEvents>(CALENDAR_TAG, {
 
     // ── Form value ───────────────────────────────────────────────────────────
 
-    defineField<string>({
+    useField<string>({
       disabled: isDisabled,
       toFormValue: (v) => v || null,
       value: computed(() => toIsoString(selectedDate.value) ?? ''),

@@ -24,6 +24,15 @@ function createPendingState<TData>(): MutationState<TData> {
   };
 }
 
+/**
+ * Discriminated union result passed to `onSettled`.
+ * Switch on `result.status` to handle each outcome exhaustively.
+ */
+export type SettledResult<TData, TVariables> =
+  | { readonly data: TData; readonly status: 'success'; readonly variables: TVariables }
+  | { readonly error: Error; readonly status: 'error'; readonly variables: TVariables }
+  | { readonly status: 'aborted'; readonly variables: TVariables };
+
 export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   /**
    * Called when a lifecycle callback (`onSuccess`, `onError`, or `onSettled`) throws.
@@ -37,15 +46,9 @@ export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions &
   onError?: (error: Error, variables: TVariables) => void | Promise<void>;
   /**
    * Called after every run regardless of outcome, including aborts.
-   * `error` is `null` for both success and abort; `data` is `undefined` for error and abort.
-   * Use `isAborted` to distinguish an abort from a successful run that returned no data.
+   * Switch on `result.status` to handle `'success'`, `'error'`, or `'aborted'` exhaustively.
    */
-  onSettled?: (
-    data: TData | undefined,
-    error: Error | null,
-    variables: TVariables,
-    isAborted: boolean,
-  ) => void | Promise<void>;
+  onSettled?: (result: SettledResult<TData, TVariables>) => void | Promise<void>;
   /** Called after a successful run, before `mutate()` resolves. */
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
@@ -60,7 +63,6 @@ export function createMutation<TData, TVariables = void>(
   let currentRun = 0;
   let activeRun: { controller: AbortController; promise: Promise<unknown> } | null = null;
   const observers = new Set<() => void>();
-  let cachedStore: SyncStore<MutationState<TData>> | null = null;
   let disposed = false;
 
   function notify() {
@@ -81,13 +83,8 @@ export function createMutation<TData, TVariables = void>(
     }
   }
 
-  async function fireSettled(
-    data: TData | undefined,
-    error: Error | null,
-    variables: TVariables,
-    isAborted: boolean,
-  ): Promise<void> {
-    await safeCall(() => mutOpts?.onSettled?.(data, error, variables, isAborted));
+  async function fireSettled(result: SettledResult<TData, TVariables>): Promise<void> {
+    await safeCall(() => mutOpts?.onSettled?.(result));
   }
 
   return {
@@ -107,7 +104,6 @@ export function createMutation<TData, TVariables = void>(
       activeRun?.controller.abort();
       activeRun = null;
       observers.clear();
-      cachedStore = null;
     },
 
     get disposed(): boolean {
@@ -150,7 +146,7 @@ export function createMutation<TData, TVariables = void>(
             delay: (attempt) => resolveRetryDelay(attempt, mutOpts?.delay),
             shouldRetry: mutOpts?.shouldRetry,
             signal,
-            times: mutOpts?.times ?? 1, // 1 = single attempt, no retries — same as NO_RETRY
+            times: mutOpts?.times ?? 1, // 1 = single attempt, no retries by default
           });
 
           if (run === currentRun) {
@@ -160,7 +156,7 @@ export function createMutation<TData, TVariables = void>(
 
           await safeCall(() => mutOpts?.onSuccess?.(data, variables));
 
-          await fireSettled(data, null, variables, false);
+          await fireSettled({ data, status: 'success', variables });
 
           return data;
         } catch (err) {
@@ -178,7 +174,7 @@ export function createMutation<TData, TVariables = void>(
             await safeCall(() => mutOpts?.onError?.(error, variables));
           }
 
-          await fireSettled(undefined, isAborted ? null : error, variables, isAborted);
+          await fireSettled(isAborted ? { status: 'aborted', variables } : { error, status: 'error', variables });
 
           throw error;
         } finally {
@@ -198,43 +194,26 @@ export function createMutation<TData, TVariables = void>(
       notify();
     },
 
-    subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe {
-      const wrapped = () => listener(snap);
+    /**
+     * A `SyncStore` view of the mutation state for framework integrations.
+     *
+     * - React: `useSyncExternalStore(mutation.store.subscribe, mutation.store.peek)`
+     * - Svelte: `readable(mutation.store.peek(), mutation.store.subscribe)`
+     */
+    store: {
+      peek(): MutationState<TData> {
+        return snap;
+      },
 
-      observers.add(wrapped);
+      subscribe(onStoreChange: () => void): Unsubscribe {
+        observers.add(onStoreChange);
 
-      return () => observers.delete(wrapped);
-    },
+        return () => observers.delete(onStoreChange);
+      },
+    } satisfies SyncStore<MutationState<TData>>,
 
     [Symbol.dispose](): void {
       this.dispose();
-    },
-
-    toStore(): SyncStore<MutationState<TData>> {
-      if (cachedStore) return cachedStore;
-
-      cachedStore = {
-        // peek() always returns the live snap — no caching needed since snap is
-        // updated synchronously before any observer is notified.
-        peek() {
-          return snap;
-        },
-
-        subscribe(onStoreChange) {
-          // Add directly to observers (bypasses the immediate-call in mutation.subscribe).
-          // React's useSyncExternalStore calls peek() for the initial snapshot, so
-          // onStoreChange must only fire on subsequent state changes.
-          const listener = () => {
-            onStoreChange();
-          };
-
-          observers.add(listener);
-
-          return () => observers.delete(listener);
-        },
-      };
-
-      return cachedStore;
     },
   };
 }
@@ -247,6 +226,6 @@ export interface Mutation<TData, TVariables = void> {
   getState(): MutationState<TData>;
   mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
   reset(): void;
-  subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
-  toStore(): SyncStore<MutationState<TData>>;
+  /** `SyncStore` adapter for framework integrations (`useSyncExternalStore`, Svelte `readable`, etc.). */
+  store: SyncStore<MutationState<TData>>;
 }

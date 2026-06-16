@@ -65,8 +65,8 @@ describe('s.intersect()', () => {
 
 describe('s.intersect() — async', () => {
   it('runs async refinements on all branches', async () => {
-    const a = s.string().checkAsync(async (s) => s.length >= 3 || 'Too short');
-    const b = s.string().checkAsync(async (s) => s.length <= 10 || 'Too long');
+    const a = s.string().validate(async (s) => s.length >= 3 || 'Too short');
+    const b = s.string().validate(async (s) => s.length <= 10 || 'Too long');
     const schema = s.intersect(a, b);
 
     expect(await schema.parseAsync('hello')).toBe('hello');
@@ -74,8 +74,38 @@ describe('s.intersect() — async', () => {
   });
 
   it('refine() runs in parseAsync', async () => {
-    const schema = s.intersect(s.string(), s.string().min(1)).check((v) => v !== 'forbidden' || 'Forbidden value');
+    const schema = s.intersect(s.string(), s.string().min(1)).validate((v) => v !== 'forbidden' || 'Forbidden value');
     const result = await schema.safeParseAsync('forbidden');
+
+    expect(result.success).toBe(false);
+  });
+
+  it('async: safeParseAsync() collects issues from all failing branches', async () => {
+    const a = s.string().validate(async (v) => v.length >= 5 || 'Too short');
+    const b = s.string().validate(async (v) => v.length <= 3 || 'Too long');
+    const schema = s.intersect(a, b);
+    const result = await schema.safeParseAsync('abcd');
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('async: partial branch failure — output from succeeding branches only (B1 regression)', async () => {
+    const A = s.object({ a: s.string() }).relaxed();
+    const B = s.object({ b: s.number() }).relaxed();
+    const schema = s.intersect(A, B);
+
+    const result = await schema.safeParseAsync({ a: 'ok', b: 99 });
+
+    expect(result.success).toBe(true);
+  });
+
+  it('async: all branches failing yields no successful output data', async () => {
+    const schema = s.intersect(s.string(), s.number());
+    const result = await schema.safeParseAsync(true);
 
     expect(result.success).toBe(false);
   });

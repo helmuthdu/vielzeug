@@ -1,5 +1,4 @@
 import type { ResponseType } from './response';
-import type { StableValue } from './types';
 
 type QueryScalar = string | number | boolean | null;
 
@@ -26,7 +25,7 @@ export type CourierRequestConfig<P extends string = string, T = unknown> = PathC
    */
   dedupe?: boolean;
   /** Explicit deduplication key for non-idempotent requests. */
-  dedupeKey?: StableValue;
+  dedupeKey?: unknown;
   /** Query string parameters. */
   query?: Params;
   /** Response parsing strategy. */

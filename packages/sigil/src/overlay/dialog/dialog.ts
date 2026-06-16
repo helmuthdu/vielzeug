@@ -1,4 +1,4 @@
-import { define, html, onMounted, prop, ref } from '@vielzeug/craft';
+import { define, html, prop, ref } from '@vielzeug/craft';
 
 import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -130,7 +130,7 @@ define<SgDialogProps, SgDialogEvents>(DIALOG_TAG, {
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
-  setup(props, { bind: _bind, el, emit, slots }) {
+  setup(props, { el, emit, onCleanup, onEvent, onMounted, slots }) {
     const dialogRef = ref<HTMLDialogElement>();
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;
@@ -141,6 +141,8 @@ define<SgDialogProps, SgDialogEvents>(DIALOG_TAG, {
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
+      onCleanup,
+      onEvent,
       onNativeClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       openProp: props.open,
@@ -162,7 +164,7 @@ define<SgDialogProps, SgDialogEvents>(DIALOG_TAG, {
       setupNativeListeners();
 
       return () => {
-        overlay.cleanup();
+        overlay.dispose();
       };
     });
 

@@ -31,7 +31,7 @@ function show() {
 
 function hide() {
   tooltip.hidePopover();
-  handle?.cleanup();
+  handle?.dispose();
   handle = null;
 }
 

@@ -1,4 +1,4 @@
-import { draw } from '../draw';
+import { draw } from '../../array/draw';
 
 describe('draw', () => {
   it('returns undefined for an empty array', () => {

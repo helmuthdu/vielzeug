@@ -92,7 +92,7 @@ describe('s.union() — sync returns branch output', () => {
 
 describe('s.union() — async', () => {
   it('runs async refinements inside branches', async () => {
-    const a = s.string().checkAsync(async (s) => s.startsWith('a') || 'Must start with a');
+    const a = s.string().validate(async (s) => s.startsWith('a') || 'Must start with a');
     const b = s.number();
     const schema = s.union(a, b);
 
@@ -105,7 +105,7 @@ describe('s.union() — async', () => {
   });
 
   it('check() runs in parseAsync', async () => {
-    const schema = s.union(s.string(), s.number()).check((v) => v !== 0 || 'Must not be zero');
+    const schema = s.union(s.string(), s.number()).validate((v) => v !== 0 || 'Must not be zero');
     const result = await schema.safeParseAsync(0);
 
     expect(result.success).toBe(false);
@@ -121,12 +121,12 @@ describe('s.union() — async', () => {
   it('runs all branches in parallel and returns the first success', async () => {
     const calls: string[] = [];
     const schema = s.union(
-      s.string().checkAsync(async (value) => {
+      s.string().validate(async (value) => {
         calls.push('first');
 
         return value === 'ok' || 'first failed';
       }),
-      s.string().checkAsync(async () => {
+      s.string().validate(async () => {
         calls.push('second');
 
         return true;
@@ -163,7 +163,7 @@ describe('s.or() alias', () => {
 
 describe('s.union() — async non-ValidationError branch throw', () => {
   it('does not include non-ValidationError branch throws in branchErrors', async () => {
-    const badSchema = s.string().checkAsync(async () => {
+    const badSchema = s.string().validate(async () => {
       throw new Error('unexpected internal error');
     });
     const goodSchema = s.number();

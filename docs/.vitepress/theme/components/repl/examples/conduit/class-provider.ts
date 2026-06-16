@@ -10,7 +10,10 @@ class Database {
 
 const container = createContainer()
 container.factory(DbToken, () => new Database())
-container.factory(SvcToken, (db) => ({ listUsers: () => db.users }), { deps: [DbToken] })
+container.factory(SvcToken, async (r) => {
+  const db = await r.resolve(DbToken)
+  return { listUsers: () => db.users }
+})
 
 const service = await container.resolve(SvcToken)
 console.log('Users:', service.listUsers())`,

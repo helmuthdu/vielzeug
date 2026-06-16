@@ -1,3 +1,5 @@
+import { isSignal } from '@vielzeug/ripple';
+
 import type { Point } from '../../svg/path';
 import type { AreaChartConfig, ChartHandle } from '../../types';
 
@@ -7,7 +9,6 @@ import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
 import { createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
-import { resolve } from '../../core/resolve';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
 import { createSvgElement } from '../../svg/element';
@@ -21,10 +22,10 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
     const { groups, legend, tooltip } = ctx;
     const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
-    const seriesList = resolve(config.series);
-    const allData = seriesList.map((s) => resolve(s.data));
-    const allX = allData.flat().map((d) => d.x);
-    const allY = allData.flat().map((d) => d.y);
+    const seriesList = isSignal(config.series) ? config.series.value : config.series;
+    const allData = seriesList.map((s) => (isSignal(s.data) ? s.data.value : s.data));
+    const allX = allData.flat().map((d) => d.key as Date | number);
+    const allY = allData.flat().map((d) => d.value);
 
     if (allX.length === 0) {
       warn('createAreaChart: no data');
@@ -79,15 +80,15 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
       });
     }
 
-    legend.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
-    tooltip.hide();
+    legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
+    tooltip?.hide();
 
     return createSeriesInteraction({
       crosshair,
       dims: () => ctx.dimensions.value,
       getData: () => allData,
       getPoints: () => allPoints,
-      getSeriesList: () => resolve(config.series),
+      getSeriesList: () => (isSignal(config.series) ? config.series.value : config.series),
       onClick: config.onClick,
       onHover: config.onHover,
       svg: ctx.svg,

@@ -1,4 +1,4 @@
-import { define, effect, html, prop } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
 
 import itemStyles from './breadcrumb-item.css?inline';
 import componentStyles from './breadcrumb.css?inline';
@@ -95,7 +95,7 @@ define<SgBreadcrumbProps>(BREADCRUMB_TAG, {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),
   },
-  setup(props, { bind: _bind, el, slots }) {
+  setup(props, { el, slots, watch }) {
     // ────────────────────────────────────────────────────────────────
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────
@@ -120,7 +120,7 @@ define<SgBreadcrumbProps>(BREADCRUMB_TAG, {
     // Lifecycle
     // ────────────────────────────────────────────────────────────────
 
-    effect(() => {
+    watch(() => {
       void slots.elements().value;
       syncItems();
     });

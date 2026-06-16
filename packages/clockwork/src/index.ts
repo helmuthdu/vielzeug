@@ -1,6 +1,5 @@
-export { defineMachine } from './definition.js';
 export { MachineError } from './errors.js';
-export { interpret, resolveTransition } from './interpret.js';
+export { define, machine, resolveTransition } from './interpret.js';
 export type { MachineErrorCode } from './errors.js';
 export type {
   ActionArgs,
@@ -10,23 +9,24 @@ export type {
   AfterEvent,
   ContextValidator,
   DebugEvent,
-  DebugOptions,
   EventByType,
   EventType,
   GuardFn,
+  InterceptorFn,
   InterpretOptions,
-  InvokeDispatchArgs,
+  InvokeArgs,
   InvokeDef,
-  InvokeSourceArgs,
   LifecycleEvent,
   LifecycleFn,
   MachineConfig,
+  MachineDefinition,
   MachineEvent,
   MachineInstance,
   MachineSnapshot,
-  MiddlewareFn,
   PersistenceAdapter,
+  SendResult,
   StateNode,
   TransitionDef,
+  TransitionInput,
   TransitionTraceEntry,
 } from './types.js';

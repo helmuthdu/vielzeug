@@ -286,4 +286,17 @@ describe('sg-sidebar-item', () => {
 
     expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('page');
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-sidebar', {
+        attrs: { 'aria-label': 'Sidebar navigation' },
+        html: '<sg-sidebar-item href="/">Home</sg-sidebar-item>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

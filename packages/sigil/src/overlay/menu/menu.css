@@ -1,19 +1,7 @@
 @layer sigil.base {
   :host {
-    --_menu-panel-bg: var(
-      --menu-panel-bg,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-      )
-    );
-    --_menu-panel-border-color: var(
-      --menu-panel-border-color,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
-      )
-    );
+    --_menu-panel-bg: var(--menu-panel-bg, var(--color-canvas));
+    --_menu-panel-border-color: var(--menu-panel-border-color, var(--color-divider));
     --_menu-panel-blur: var(--menu-panel-blur, var(--blur-md));
     --_menu-panel-shadow: var(--menu-panel-shadow, var(--shadow-xl));
 
@@ -44,15 +32,33 @@
     transform: translateY(var(--overlay-enter-translate-y)) scale(var(--overlay-enter-scale));
     transform-origin: top left;
     transition:
-      opacity var(--transition-fast),
-      transform var(--transition-fast),
-      display var(--transition-fast) allow-discrete;
+      opacity 100ms var(--ease-spring),
+      transform 100ms var(--ease-spring),
+      display 100ms allow-discrete,
+      overlay 100ms allow-discrete;
+  }
+
+  .menu-panel[data-placement='top-start'],
+  .menu-panel[data-placement='top'],
+  .menu-panel[data-placement='top-end'] {
+    transform-origin: bottom left;
+  }
+
+  .menu-panel[data-placement='bottom-end'],
+  .menu-panel[data-placement='right-start'],
+  .menu-panel[data-placement='right'] {
+    transform-origin: top right;
   }
 
   .menu-panel[data-open] {
     pointer-events: auto;
     opacity: 1;
     transform: translateY(0) scale(1);
+    transition:
+      opacity 150ms var(--ease-spring),
+      transform 150ms var(--ease-spring),
+      display 150ms allow-discrete,
+      overlay 150ms allow-discrete;
 
     @starting-style {
       opacity: 0;

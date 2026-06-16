@@ -80,7 +80,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
   if (node.states && !node.initial) {
     throw new MachineError(
       'MACHINE_MISSING_COMPOUND_INITIAL',
-      `[machine] compound state "${path}" must have an "initial" property`,
+      `compound state "${path}" must have an "initial" property`,
       { path },
     );
   }
@@ -88,7 +88,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
   if (node.initial && node.states && !(node.initial in node.states)) {
     throw new MachineError(
       'MACHINE_INVALID_INITIAL_STATE',
-      `[machine] compound state "${path}" initial "${node.initial}" not found in substates`,
+      `compound state "${path}" initial "${node.initial}" not found in substates`,
       { initial: node.initial, path },
     );
   }
@@ -99,7 +99,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     if (defs.length === 0) {
       throw new MachineError(
         'MACHINE_INVALID_TRANSITION_ARRAY',
-        `[machine] state "${path}" event "${eventType}" must be a non-empty transition or transition array`,
+        `state "${path}" event "${eventType}" must be a non-empty transition or transition array`,
         { eventType, path },
       );
     }
@@ -110,7 +110,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
       if (!(targetRoot in allTopLevel)) {
         throw new MachineError(
           'MACHINE_UNKNOWN_TARGET',
-          `[machine] state "${path}" event "${eventType}" targets unknown state "${tr.target}"`,
+          `state "${path}" event "${eventType}" targets unknown state "${tr.target}"`,
           { eventType, path, target: tr.target },
         );
       }
@@ -118,19 +118,26 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
       if (tr.target.includes('.') && !getNodeAtPath(allTopLevel, tr.target)) {
         throw new MachineError(
           'MACHINE_UNKNOWN_TARGET',
-          `[machine] state "${path}" event "${eventType}" targets unknown nested state "${tr.target}"`,
+          `state "${path}" event "${eventType}" targets unknown nested state "${tr.target}"`,
           { eventType, path, target: tr.target },
         );
       }
     }
   }
 
+  // Validate empty invoke array (D1)
+  if (node.invoke !== undefined && node.invoke.length === 0) {
+    throw new MachineError('MACHINE_INVALID_TRANSITION_ARRAY', `state "${path}" invoke must be a non-empty array`, {
+      path,
+    });
+  }
+
   // Validate after targets and delays
   for (const afterDef of node.after ?? []) {
-    if (afterDef.delay < 0) {
+    if (!Number.isFinite(afterDef.delay) || afterDef.delay < 0) {
       throw new MachineError(
         'MACHINE_INVALID_AFTER_DELAY',
-        `[machine] state "${path}" after delay must be >= 0, got ${afterDef.delay}`,
+        `state "${path}" after delay must be a finite number >= 0, got ${afterDef.delay}`,
         { delay: afterDef.delay, path },
       );
     }
@@ -140,7 +147,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     if (!(targetRoot in allTopLevel)) {
       throw new MachineError(
         'MACHINE_UNKNOWN_TARGET',
-        `[machine] state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
+        `state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
         { delay: afterDef.delay, path, target: afterDef.target },
       );
     }
@@ -148,7 +155,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     if (afterDef.target.includes('.') && !getNodeAtPath(allTopLevel, afterDef.target)) {
       throw new MachineError(
         'MACHINE_UNKNOWN_TARGET',
-        `[machine] state "${path}" after[${afterDef.delay}ms] targets unknown nested state "${afterDef.target}"`,
+        `state "${path}" after[${afterDef.delay}ms] targets unknown nested state "${afterDef.target}"`,
         { delay: afterDef.delay, path, target: afterDef.target },
       );
     }
@@ -161,7 +168,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
   }
 };
 
-const validateDefinition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+export const validateDefinition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   definition: MachineConfig<State, Ctx, Ev>,
 ): void => {
   const { states } = definition;
@@ -169,7 +176,7 @@ const validateDefinition = <State extends string, Ctx extends object, Ev extends
   if (!(definition.initial in states)) {
     throw new MachineError(
       'MACHINE_INVALID_INITIAL_STATE',
-      `[machine] initial state "${definition.initial}" not found in states`,
+      `initial state "${definition.initial}" not found in states`,
       { initial: definition.initial },
     );
   }
@@ -177,32 +184,4 @@ const validateDefinition = <State extends string, Ctx extends object, Ev extends
   for (const [stateName, node] of Object.entries(states) as Array<[string, StateNode<State, Ctx, Ev>]>) {
     validateNode(node, stateName, states);
   }
-};
-
-// ── API ──────────────────────────────────────────────────────────────────────
-
-/**
- * Defines and validates a state machine configuration.
- *
- * State and context types are inferred from the config object.
- * For typed events, pass the event union as a generic parameter.
- *
- * @example
- * // Inference (no generics needed for simple cases):
- * const machine = defineMachine({
- *   initial: 'idle',
- *   context: { count: 0 },
- *   states: { idle: { on: { GO: { target: 'active' } } }, active: {} },
- * });
- *
- * // With typed events:
- * type Ev = { type: 'GO' } | { type: 'STOP' };
- * const machine = defineMachine<'idle' | 'active', { count: number }, Ev>({ ... });
- */
-export const defineMachine = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  config: MachineConfig<State, Ctx, Ev>,
-): Readonly<MachineConfig<State, Ctx, Ev>> => {
-  validateDefinition(config);
-
-  return config;
 };

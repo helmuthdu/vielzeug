@@ -246,31 +246,31 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 ### Props
 
-| Prop           | Type              | Default        | Description                                                                                              |
-| -------------- | ----------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
-| `value`        | `string`          | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                          |
-| `min`          | `string`          | —              | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                       |
-| `max`          | `string`          | —              | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                         |
-| `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"`   |
-| `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                                 |
-| `color`        | `string`          | —              | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                    |
-| `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                     |
-| `rounded`      | `string`          | —              | Border radius override                                                                                   |
-| `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                                  |
-| `required`     | `boolean`         | `false`        | Required field (form association)                                                                        |
-| `name`         | `string`          | —              | Form field name                                                                                          |
-| `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property             |
-| `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                          |
-| `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                                  |
+| Prop           | Type              | Default        | Description                                                                                           |
+| -------------- | ----------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
+| `value`        | `string`          | —              | Selected date in ISO 8601 format (`yyyy-MM-dd`)                                                       |
+| `min`          | `string`          | —              | Earliest selectable date (`yyyy-MM-dd`, inclusive)                                                    |
+| `max`          | `string`          | —              | Latest selectable date (`yyyy-MM-dd`, inclusive)                                                      |
+| `weekend-days` | `number[]`        | `[]`           | JSON array of day-of-week indices to disable (0 = Sunday … 6 = Saturday). e.g. `weekend-days="[0,6]"` |
+| `locale`       | `string`          | browser locale | BCP 47 locale string for day/month names                                                              |
+| `color`        | `string`          | —              | Theme color: `primary` \| `secondary` \| `info` \| `success` \| `warning` \| `error`                  |
+| `size`         | `string`          | `md`           | Component size: `sm` \| `md` \| `lg`                                                                  |
+| `rounded`      | `string`          | —              | Border radius override                                                                                |
+| `disabled`     | `boolean`         | `false`        | Disable all interaction                                                                               |
+| `required`     | `boolean`         | `false`        | Required field (form association)                                                                     |
+| `name`         | `string`          | —              | Form field name                                                                                       |
+| `events`       | `CalendarEvent[]` | `[]`           | Calendar events to display. Dots in normal mode, pills in expanded mode. Set via JS property          |
+| `expanded`     | `boolean`         | `false`        | Expanded calendar-app layout with tall cells and top-aligned day number circles                       |
+| `fullwidth`    | `boolean`         | `false`        | Expand calendar to full container width                                                               |
 
 ### CalendarEvent
 
-| Field   | Type     | Required | Description                                                    |
-| ------- | -------- | -------- | -------------------------------------------------------------- |
-| `id`    | `string` | <sg-icon name="check" size="16"></sg-icon>        | Unique identifier                                              |
-| `date`  | `string` | <sg-icon name="check" size="16"></sg-icon>        | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
-| `label` | `string` | <sg-icon name="check" size="16"></sg-icon>        | Short label shown in the cell (pill text in expanded mode)     |
-| `color` | `string` | —        | Any CSS color value. Falls back to the component's theme color |
+| Field   | Type     | Required                                   | Description                                                    |
+| ------- | -------- | ------------------------------------------ | -------------------------------------------------------------- |
+| `id`    | `string` | <sg-icon name="check" size="16"></sg-icon> | Unique identifier                                              |
+| `date`  | `string` | <sg-icon name="check" size="16"></sg-icon> | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
+| `label` | `string` | <sg-icon name="check" size="16"></sg-icon> | Short label shown in the cell (pill text in expanded mode)     |
+| `color` | `string` | —                                          | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
 
@@ -280,16 +280,16 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 ### CSS Custom Properties
 
-| Property                          | Default           | Description                                              |
-| --------------------------------- | ----------------- | -------------------------------------------------------- |
-| `--calendar-bg`                   | `--color-canvas`  | Calendar background colour                               |
-| `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                              |
-| `--calendar-radius`               | `--rounded-xl`    | Calendar border radius                                   |
-| `--calendar-shadow`               | `--shadow-md`     | Calendar drop shadow                                     |
-| `--calendar-day-selected-bg`      | theme focus color | Background of the selected day cell                      |
-| `--calendar-day-today-color`      | theme focus color | Color of today's date number                             |
-| `--calendar-day-outside-opacity`  | `0.35`            | Opacity of days outside the visible month                |
-| `--calendar-expanded-cell-height` | `var(--size-28)`  | Minimum height of each day cell in the expanded layout   |
+| Property                          | Default                | Description                                            |
+| --------------------------------- | ---------------------- | ------------------------------------------------------ |
+| `--calendar-bg`                   | `--color-canvas`       | Calendar background colour                             |
+| `--calendar-border-color`         | `--color-contrast-200` | Calendar border colour                                 |
+| `--calendar-radius`               | `--rounded-xl`         | Calendar border radius                                 |
+| `--calendar-shadow`               | `--shadow-md`          | Calendar drop shadow                                   |
+| `--calendar-day-selected-bg`      | theme focus color      | Background of the selected day cell                    |
+| `--calendar-day-today-color`      | theme focus color      | Color of today's date number                           |
+| `--calendar-day-outside-opacity`  | `0.35`                 | Opacity of days outside the visible month              |
+| `--calendar-expanded-cell-height` | `var(--size-28)`       | Minimum height of each day cell in the expanded layout |
 
 ### Parts
 
@@ -314,15 +314,15 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 **Day grid**
 
-| Key                     | Action                                              |
-| ----------------------- | --------------------------------------------------- |
-| `ArrowRight`            | Move focus to the next day                          |
-| `ArrowLeft`             | Move focus to the previous day                      |
-| `ArrowDown`             | Move focus one week forward (same weekday)          |
-| `ArrowUp`               | Move focus one week back (same weekday)             |
-| `Home`                  | Move focus to the first day of the current row      |
-| `End`                   | Move focus to the last day of the current row       |
-| `Enter` / `Space`       | Select the focused day                              |
+| Key               | Action                                         |
+| ----------------- | ---------------------------------------------- |
+| `ArrowRight`      | Move focus to the next day                     |
+| `ArrowLeft`       | Move focus to the previous day                 |
+| `ArrowDown`       | Move focus one week forward (same weekday)     |
+| `ArrowUp`         | Move focus one week back (same weekday)        |
+| `Home`            | Move focus to the first day of the current row |
+| `End`             | Move focus to the last day of the current row  |
+| `Enter` / `Space` | Select the focused day                         |
 
 **Month and year grids**
 
@@ -332,10 +332,10 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 **Header controls**
 
-| Key               | Action                                               |
-| ----------------- | ---------------------------------------------------- |
-| Click / `Enter`   | Previous / Next button — navigate by month or year   |
-| Click / `Enter`   | Label button — cycle view: Day → Month → Year → Day  |
+| Key             | Action                                              |
+| --------------- | --------------------------------------------------- |
+| Click / `Enter` | Previous / Next button — navigate by month or year  |
+| Click / `Enter` | Label button — cycle view: Day → Month → Year → Day |
 
 ## View Cycling
 

@@ -21,7 +21,7 @@ Without coordination, the machine state and route can get out of sync, causing c
 Use Machine to manage wizard steps with Wayfinder to sync the current step to the URL. The machine guards validate transitions and the router handles URL changes.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 import { createRouter, navigate } from '@vielzeug/wayfinder';
 
 type WizardEvent =
@@ -30,7 +30,7 @@ type WizardEvent =
   | { type: 'SUBMIT'; formData: Record<string, unknown> }
   | { type: 'ROUTE_CHANGE'; step: string };
 
-const wizardMachine = defineMachine({
+const wizardMachine = machine({
   initial: 'step1',
   context: {
     formData: {},
@@ -105,11 +105,11 @@ const validateStep2 = (ctx: any) => {
 };
 
 // Setup coordination
-const machine = interpret(wizardMachine);
+const m = wizardMachine;
 const router = createRouter();
 
 // When machine changes state, update route
-machine.state.listen((state) => {
+m.state.listen((state) => {
   navigate(`/wizard/${state}`);
 });
 
@@ -117,21 +117,21 @@ machine.state.listen((state) => {
 router.on('navigate', ({ path }) => {
   const step = path.split('/')[2];
   if (step && ['step1', 'step2', 'step3'].includes(step)) {
-    machine.send({ type: 'ROUTE_CHANGE', step });
+    m.send({ type: 'ROUTE_CHANGE', step });
   }
 });
 
 // Handle next/previous button clicks
 export function handleNext() {
-  machine.send({ type: 'NEXT' });
+  m.send({ type: 'NEXT' });
 }
 
 export function handlePrev() {
-  machine.send({ type: 'PREV' });
+  m.send({ type: 'PREV' });
 }
 
 export function handleSubmit(formData: Record<string, unknown>) {
-  machine.send({ type: 'SUBMIT', formData });
+  m.send({ type: 'SUBMIT', formData });
 }
 ```
 

@@ -1,8 +1,6 @@
 import { abortError } from './abortError';
 import { sleep } from './sleep';
 
-export type AttemptResult<T> = { ok: true; value: T } | { error: unknown; ok: false };
-
 export type RetryOptions = {
   delay?: number | ((attempt: number) => number);
   onError?: (error: unknown) => void;
@@ -25,28 +23,6 @@ function buildSignal(timeout: number | undefined, signal: AbortSignal | undefine
 }
 
 /**
- * Executes an async function and returns an `AttemptResult` — never throws.
- * On success, returns `{ ok: true, value }`. On failure, returns `{ ok: false, error }`.
- *
- * @example
- * ```ts
- * const result = await attempt(() => fetch('/api').then(r => r.json()));
- * if (result.ok) console.log(result.value);
- * else console.error(result.error);
- * ```
- *
- * @param fn - Async function to execute.
- * @returns An `AttemptResult` that is either `{ ok: true, value }` or `{ ok: false, error }`.
- */
-export async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>> {
-  try {
-    return { ok: true, value: await fn() };
-  } catch (error) {
-    return { error, ok: false };
-  }
-}
-
-/**
  * Retries an async function with optional per-attempt timeout, delay strategy, and abort support.
  * The function receives a merged AbortSignal from the per-attempt timeout and any external signal.
  * On total failure, throws the last error (use `attempt()` to get an `AttemptResult` without throwing).
@@ -62,7 +38,7 @@ export async function attempt<T>(fn: () => Promise<T>): Promise<AttemptResult<T>
  *   { times: 3, timeout: 5000 },
  * );
  *
- * // As AttemptResult (never throws) — use attempt() + retry() together
+ * // As AttemptResult (never throws) — combine with attempt()
  * const result = await attempt(() => retry(fn, { times: 3 }));
  * ```
  *

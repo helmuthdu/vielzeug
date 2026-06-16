@@ -1,9 +1,9 @@
 ---
-title: 'Arsenal Examples — stableStringify'
-description: 'stableStringify example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — stringify'
+description: 'stringify example for @vielzeug/arsenal.'
 ---
 
-## stableStringify
+## stringify
 
 ### Problem
 
@@ -11,33 +11,47 @@ You need a deterministic string from an object to use as a cache key, but `JSON.
 
 ### Solution
 
-Use `stableStringify(value, options?)` to always produce the same string regardless of key order. Object keys are sorted; `Date`, `Set`, `Map`, and `bigint` all have deterministic representations.
+Use `stringify(value, options?)` to always produce the same string regardless of key order. Object keys are sorted alphabetically; `Date`, `RegExp`, `Set`, `Map`, and `bigint` all have deterministic representations.
 
 ```ts
-import { stableStringify } from '@vielzeug/arsenal';
+import { stringify } from '@vielzeug/arsenal/json';
+// or: import { stringify } from '@vielzeug/arsenal';
 
-const key1 = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
-const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
-key1 === key2; // true
+const key1 = stringify({ sort: 'asc', filter: { role: 'admin' } });
+const key2 = stringify({ filter: { role: 'admin' }, sort: 'asc' });
+key1 === key2; // true  — key insertion order doesn't matter
 
-stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
-stableStringify(new Date('2024-01-01T00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
-stableStringify(42n); // '[BigInt:42]'
+stringify(new Set([3, 1, 2]));                   // '[Set:1,2,3]'
+stringify(new Date('2024-01-01T00:00:00Z'));      // '[Date:2024-01-01T00:00:00.000Z]'
+stringify(new Map([['b', 2], ['a', 1]]));         // '[Map:"a"=>1,"b"=>2]'
+stringify(42n);                                   // '42n'
 ```
 
-#### Strict mode — throw on class instances
+#### Circular references
 
 ```ts
-import { stableStringify } from '@vielzeug/arsenal';
+import { stringify } from '@vielzeug/arsenal';
 
-stableStringify(new MyClass()); // falls back to String(instance)
-stableStringify(new MyClass(), { strict: true }); // throws TypeError
+const o: Record<string, unknown> = { x: 1 };
+o.self = o;
+stringify(o); // '{"self":[Circular],"x":1}'
+```
+
+#### Throw on class instances
+
+```ts
+import { stringify } from '@vielzeug/arsenal';
+
+class MyClass {}
+stringify(new MyClass());                              // String(instance) — coerced by default
+stringify(new MyClass(), { onClassInstance: 'throw' }); // throws TypeError
 ```
 
 ### Pitfalls
 
-- Class instances fall back to `String(instance)` by default — use `{ strict: true }` to detect them instead.
-- Map keys are sorted; the output is deterministic regardless of insertion order.
+- Class instances coerce to `String(instance)` by default — pass `{ onClassInstance: 'throw' }` to detect them explicitly.
+- Map keys are sorted; output is deterministic regardless of insertion order.
+- `undefined` object properties are omitted from the output (same as `JSON.stringify`).
 
 ### Related
 

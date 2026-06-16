@@ -22,7 +22,7 @@ Managing all these states together leads to spaghetti code with race conditions 
 Use Clockwork for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 import { createSource } from '@vielzeug/sourcerer';
 import { signal, readonly } from '@vielzeug/ripple';
 
@@ -35,7 +35,7 @@ type DataEvent =
   | { type: 'DONE'; items: unknown[]; total: number }
   | { type: 'FAILED'; error: Error };
 
-const dataMachine = defineMachine({
+const dataMachine = machine({
   initial: 'idle',
   context: {
     page: 1,
@@ -148,8 +148,10 @@ const userSource = createSource({
   },
 });
 
-// Initialize machine
-const machine = interpret(dataMachine, {
+// The machine is already running — context can be set via initial config
+const m = dataMachine;
+/*
+const m = machine(dataMachineConfig, {
   context: {
     page: 1,
     pageSize: 20,

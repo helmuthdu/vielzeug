@@ -1,8 +1,8 @@
 import { computed, type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
 
-import { createField, type ErrorHelperState, type FieldOptions, type ValidationTrigger } from './field-base';
+import { createField, type ControlValidationMode, type FieldHandle } from './field-base';
 import { createInteraction } from './keyboard';
-import { syncedSignal } from './utils';
+import { syncedSignal } from './signals';
 
 // ── Checkable control ─────────────────────────────────────────────────────────
 
@@ -12,34 +12,35 @@ export type CheckableChangePayload = {
   value: string;
 };
 
-export type CheckableOptions = Pick<FieldOptions, 'disabled' | 'error' | 'helper' | 'prefix' | 'validateOn'> & {
+export type CheckableOptions = {
   checked: ReadonlySignal<boolean | undefined>;
   clearIndeterminateFirst?: boolean;
+  disabled?: ReadonlySignal<boolean | undefined>;
+  error?: ReadonlySignal<string | undefined>;
+  /**
+   * Returns the underlying form field object used for validation triggering.
+   * Called lazily — safe to return `null` before the first render.
+   */
+  getFormField?: () => { reportValidity(): void } | null;
   group?: { toggle: (value: string, originalEvent?: Event) => void };
+  helper?: ReadonlySignal<string | undefined>;
   indeterminate?: ReadonlySignal<boolean | undefined>;
   onToggle?: (payload: CheckableChangePayload) => void;
+  prefix?: string;
   /** `AbortSignal` from the component lifecycle. All reactive subscriptions are torn down on abort. */
   signal: AbortSignal;
+  validateOn?: ReadonlySignal<ControlValidationMode>;
   value: ReadonlySignal<string | undefined>;
 };
 
-export type CheckableHandle = {
-  assistive: ReadonlySignal<ErrorHelperState>;
-  /** The stable `id` for the assistive-text region (used for `aria-describedby`). */
-  assistiveId: string;
-  bindFormField: (field: { reportValidity(): void }) => void;
+export type CheckableHandle = FieldHandle & {
   /** The form submission value: null when unchecked/indeterminate, the value string when checked. */
   checkableFormValue: ReadonlySignal<string | null>;
   checked: Signal<boolean>;
-  disabled: ReadonlySignal<boolean>;
-  fieldId: string;
   handleClick: (event: MouseEvent) => boolean;
   handleKeydown: (event: KeyboardEvent) => boolean;
   indeterminate: Signal<boolean>;
-  /** Stable `id` for the label element. Stamp this on your `<label>` element's `id`. */
-  labelId: string;
   toggle: (event: Event) => void;
-  triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
 };
 
 export const createCheckable = (options: CheckableOptions): CheckableHandle => {
@@ -52,7 +53,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
     indeterminate.value ? null : checked.value ? (options.value.value ?? '') : null,
   );
 
-  const { assistive, assistiveId, bindFormField, disabled, fieldId, labelId, triggerValidation } = createField(options);
+  const field = createField(options);
 
   const createPayload = (event: Event): CheckableChangePayload => ({
     checked: checked.value,
@@ -61,7 +62,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   });
 
   const toggle = (event: Event): void => {
-    if (disabled.value) return;
+    if (field.disabled.value) return;
 
     if (options.group) {
       indeterminate.value = false;
@@ -82,23 +83,17 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   };
 
   const interaction = createInteraction({
-    disabled: () => disabled.value,
+    disabled: () => field.disabled.value,
     onPress: (event) => toggle(event),
   });
 
   return {
-    assistive,
-    assistiveId,
-    bindFormField,
+    ...field,
     checkableFormValue,
     checked,
-    disabled,
-    fieldId,
     handleClick: interaction.handleClick,
     handleKeydown: interaction.handleKeydown,
     indeterminate,
-    labelId,
     toggle,
-    triggerValidation,
   };
 };

@@ -1,7 +1,7 @@
 export const asyncInvokesExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { machine } from '@vielzeug/clockwork'
 
-const fetchMachine = defineMachine({
+const m = machine({
   initial: 'idle',
   context: {
     userId: 0,
@@ -29,8 +29,8 @@ const fetchMachine = defineMachine({
           if (context.userId === 42) throw new Error('User not found')
           return { name: 'Alice', email: 'alice@example.com' }
         },
-        onDone:  (result) => ({ type: 'DONE',   user: result }),
-        onError: (error)  => ({ type: 'FAILED', error: String(error) }),
+        onDone:  (result, _ctx) => ({ type: 'DONE',   user: result }),
+        onError: (error,  _ctx) => ({ type: 'FAILED', error: String(error) }),
       }],
       on: {
         DONE:   { target: 'success', actions: [({ context, event }) => { context.user = event.user; context.error = '' }] },
@@ -49,8 +49,6 @@ const fetchMachine = defineMachine({
     },
   },
 })
-
-const m = interpret(fetchMachine)
 
 console.log('Initial:', m.state.value)   // 'idle'
 m.send({ type: 'FETCH', id: 1 })

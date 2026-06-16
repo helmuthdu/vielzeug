@@ -126,6 +126,7 @@ const categories = [
     icon: 'database',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
+      { id: 'pulse', tagline: 'WebSocket client & presence' },
       { id: 'vault', tagline: 'Browser storage' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },
       { id: 'spell', tagline: 'Schema validation' },
@@ -138,7 +139,7 @@ const categories = [
       { id: 'sigil', tagline: 'Accessible components' },
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'orbit', tagline: 'Floating positioning' },
-      { id: 'grip', tagline: 'Drag & drop' },
+      { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'scroll', tagline: 'Virtual lists' },
     ],
   },
@@ -269,9 +270,7 @@ onUnmounted(() => cancelAnimationFrame(rafId));
               </sg-button>
             </a>
             <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer" tabindex="-1">
-              <sg-button variant="outline" color="primary" size="md">
-                GitHub
-              </sg-button>
+              <sg-button variant="outline" color="primary" size="md"> GitHub </sg-button>
             </a>
           </div>
         </div>
@@ -289,9 +288,7 @@ onUnmounted(() => cancelAnimationFrame(rafId));
               <g transform="matrix(4.0000082,0,0,4.0000082,-249.00051,-70.402338)">
                 <!-- Nucleus: original bolt path + glow circle -->
                 <g transform="rotate(12.883023,70.356812,25.230466)">
-                  <path
-                    style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763"
-                    :d="nucleusTailD" />
+                  <path style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763" :d="nucleusTailD" />
                   <circle style="fill: #f3f3f3; fill-opacity: 0.702703" cx="70.25032" cy="24.120285" r="1.1067405" />
                 </g>
                 <ellipse
@@ -434,7 +431,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     <section class="explorer" :class="{ visible: categoriesVisible }">
       <div class="explorer-inner">
         <h2 class="section-title">The complete toolkit</h2>
-        <p class="section-subtitle">23 packages, each focused on one domain. Pick what you need.</p>
+        <p class="section-subtitle">24 packages, each focused on one domain. Pick what you need.</p>
         <div class="category-grid">
           <div v-for="cat in categories" :key="cat.name" class="category-section">
             <h3 class="category-name">
@@ -730,7 +727,6 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 .hero-actions a {
   text-decoration: none;
 }
-
 
 /* ── Hero Visual ───────────────────────────────────────────── */
 

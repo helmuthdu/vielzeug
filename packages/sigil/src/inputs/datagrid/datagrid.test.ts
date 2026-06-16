@@ -1641,4 +1641,22 @@ describe('sg-datagrid', () => {
       spy.mockRestore();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-datagrid', {
+        attrs: { 'aria-label': 'Users table' },
+        html: `
+          <sg-datagrid-col key="name" label="Name"></sg-datagrid-col>
+          <sg-datagrid-col key="age" label="Age"></sg-datagrid-col>
+        `,
+      });
+
+      const results = await axeCheck(fixture.element, {
+        rules: { 'aria-required-children': { enabled: false } },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -1,6 +1,6 @@
+import { allOf, anyOf, noneOf } from '../../guards/combinators';
 import { constant } from '../constant';
 import { identity } from '../identity';
-import { allOf, anyOf, noneOf } from '../predicate';
 import { tap } from '../tap';
 
 describe('function extras', () => {

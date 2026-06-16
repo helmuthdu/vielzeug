@@ -620,4 +620,14 @@ describe('sg-input accessibility', () => {
       }
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-input', { attrs: { label: 'Email', placeholder: 'you@example.com' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

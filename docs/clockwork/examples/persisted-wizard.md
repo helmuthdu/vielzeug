@@ -11,10 +11,10 @@ You need a multi-step form wizard that survives page refreshes — the user shou
 
 ### Solution
 
-Use `PersistenceAdapter` with `sessionStorage` (or `localStorage` for longer-lived persistence). The machine auto-hydrates from the stored snapshot on `interpret()`, then saves after each transition.
+Use `PersistenceAdapter` with `sessionStorage` (or `localStorage` for longer-lived persistence). The machine auto-hydrates from the stored snapshot on startup, then saves after each transition.
 
 ```ts
-import { defineMachine, interpret, type MachineSnapshot } from '@vielzeug/clockwork';
+import { define, type MachineSnapshot } from '@vielzeug/clockwork';
 
 type State = 'confirm' | 'details' | 'info' | 'success';
 type Context = { details: string; email: string; name: string };
@@ -24,7 +24,7 @@ type Event =
   | { email: string; name: string; type: 'SUBMIT_INFO' }
   | { type: 'CONFIRM' };
 
-const wizard = defineMachine<State, Context, Event>({
+const wizardDef = define({
   context: { details: '', email: '', name: '' },
   initial: 'info',
   states: {
@@ -61,9 +61,8 @@ const wizard = defineMachine<State, Context, Event>({
 
 const STORAGE_KEY = 'wizard-snapshot';
 
-const m = interpret(wizard, {
+const m = wizardDef.start({
   persistence: {
-    clear: () => sessionStorage.removeItem(STORAGE_KEY),
     load: () => {
       const raw = sessionStorage.getItem(STORAGE_KEY);
       return raw ? (JSON.parse(raw) as MachineSnapshot<State, Context>) : undefined;
@@ -72,7 +71,7 @@ const m = interpret(wizard, {
   },
 });
 
-// On wizard completion, clear persistence manually via the adapter
+// On wizard completion, clear storage manually
 if (m.state.value === 'success') {
   sessionStorage.removeItem(STORAGE_KEY);
 }
@@ -80,7 +79,8 @@ if (m.state.value === 'success') {
 
 ### Pitfalls
 
-- **Disposal does NOT clear persistence.** The machine persists its last snapshot so it can resume after page refresh or HMR. Clear the storage explicitly when done.
+- **`PersistenceAdapter` has no `clear()` method.** Clear storage directly via the storage API when you want to reset (e.g. `sessionStorage.removeItem(key)`).
+- **Disposal does NOT clear persistence.** The machine persists its last snapshot so it can resume after page refresh or HMR.
 - **Stale snapshots may reference outdated states.** If you rename states between releases, hydration throws `MACHINE_INVALID_SNAPSHOT_STATE`. Wrap `interpret()` in a try/catch and fall back to a fresh machine.
 - **`snapshot` option takes priority over persistence.** If you pass `options.snapshot`, `persistence.load()` is not called.
 

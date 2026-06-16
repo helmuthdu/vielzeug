@@ -263,13 +263,14 @@ export type DebugInfo<S extends AnySchema> = {
   tables: Array<{ name: keyof S & string } & DebugStats>;
 };
 
-/* -------------------- Shared CRUD methods -------------------- */
+/* -------------------- Transaction context -------------------- */
 
 /**
- * @internal Shared CRUD methods present on both `TransactionContext` and `Adapter`.
- * Not exported — use `TransactionContext` or `Adapter` directly.
+ * Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction.
+ * The batch scope restricts accessed tables to those declared in `batch(tables, fn)` — accessing
+ * others throws `VaultScopeError`.
  */
-type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
+export type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = {
   clear<T extends K>(table: T): Promise<void>;
   count<T extends K>(table: T): Promise<number>;
   delete<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
@@ -303,23 +304,27 @@ type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & s
   /** Returns `true` if the table contains no live records. Equivalent to `(await count(table)) === 0`. */
   isEmpty<T extends K>(table: T): Promise<boolean>;
   /**
-   * Returns the primary key of every live record in the table without fetching the full records.
+   * Returns the primary key of every live record in the table.
+   * Without a `filter`, uses a key-only backend path (no full records fetched).
    * Useful for existence checks, diffing, and cache-invalidation.
+   *
+   * Pass an optional `filter` predicate to restrict results — when provided, all records are
+   * fetched internally and the predicate is applied before key extraction.
    */
-  keys<T extends K>(table: T): Promise<KeyOf<S, T>[]>;
+  keys<T extends K>(table: T, filter?: (record: RecordOf<S, T>) => boolean): Promise<KeyOf<S, T>[]>;
   put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
   putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
   query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
   /**
    * Merge `changes` into the existing record identified by `key` and persist the result.
-   * Throws `VaultError` if the key does not exist — use `upsert` for insert-or-update semantics.
+   * Returns `undefined` when the key does not exist — use `upsert` for insert-or-update semantics.
    */
   update<T extends K>(
     table: T,
     key: KeyOf<S, T>,
     changes: Partial<RecordOf<S, T>>,
     ttl?: TtlMs,
-  ): Promise<RecordOf<S, T>>;
+  ): Promise<RecordOf<S, T> | undefined>;
   upsert<T extends K>(
     table: T,
     key: KeyOf<S, T>,
@@ -328,28 +333,70 @@ type SharedMethods<S extends AnySchema, K extends keyof S & string = keyof S & s
   ): Promise<RecordOf<S, T>>;
 };
 
-/* -------------------- Transaction context -------------------- */
-
-/**
- * Available inside `batch()` callbacks. For IndexedDB, operations run in a real atomic IDB transaction.
- * Extends `SharedMethods` (which already includes `getOrDefault`). The batch scope restricts
- * accessed tables to those declared in `batch(tables, fn)` — accessing others throws `VaultScopeError`.
- *
- * This is a stable public alias for `SharedMethods` retained so batch callback parameters can be
- * typed as `TransactionContext<S, K>` without depending on an internal type name.
- */
-export type TransactionContext<S extends AnySchema, K extends keyof S & string = keyof S & string> = SharedMethods<
-  S,
-  K
->;
-
 /* -------------------- Adapter interface -------------------- */
 
-/**
- * Full client API. Shares all CRUD methods with `TransactionContext` and adds
- * batch, observe/watch, disposal, debug tooling, and explicit TTL pruning.
- */
-export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
+/** Full client API for vault adapters. */
+export interface Adapter<S extends AnySchema> {
+  clear<K extends keyof S & string>(table: K): Promise<void>;
+  count<K extends keyof S & string>(table: K): Promise<number>;
+  delete<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+  /** Delete multiple records by key in a single operation. Returns the number of records removed. */
+  deleteMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<number>;
+  /**
+   * Returns all `[key, record]` pairs in the table.
+   * Useful for cache-warming, migration scripts, and debugging.
+   */
+  entries<K extends keyof S & string>(table: K): Promise<Array<[KeyOf<S, K>, RecordOf<S, K>]>>;
+  get<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<RecordOf<S, K> | undefined>;
+  /** Fetch all records in the table. */
+  getAll<K extends keyof S & string>(table: K): Promise<RecordOf<S, K>[]>;
+  /** Fetch multiple records by key in a single operation. Preserves key order; missing keys yield `undefined`. */
+  getMany<K extends keyof S & string>(table: K, keys: KeyOf<S, K>[]): Promise<Array<RecordOf<S, K> | undefined>>;
+  /**
+   * Read-or-insert: returns the existing record if present, otherwise calls `defaultFn()`,
+   * writes the result, and returns it. Equivalent to an `upsert` that never overwrites.
+   *
+   * **Not atomic for memory and WebStorage adapters.** Two concurrent calls may both observe
+   * a missing record and both invoke `defaultFn()`, writing twice. For guaranteed atomicity,
+   * wrap in `batch(['table'], tx => tx.getOrDefault(...))` with the IndexedDB adapter.
+   */
+  getOrDefault<K extends keyof S & string>(
+    table: K,
+    key: KeyOf<S, K>,
+    defaultFn: () => RecordOf<S, K>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K>>;
+  has<K extends keyof S & string>(table: K, key: KeyOf<S, K>): Promise<boolean>;
+  /** Returns `true` if the table contains no live records. Equivalent to `(await count(table)) === 0`. */
+  isEmpty<K extends keyof S & string>(table: K): Promise<boolean>;
+  /**
+   * Returns the primary key of every live record in the table.
+   * Without a `filter`, uses a key-only backend path (no full records fetched).
+   * Useful for existence checks, diffing, and cache-invalidation.
+   *
+   * Pass an optional `filter` predicate to restrict results — when provided, all records are
+   * fetched internally and the predicate is applied before key extraction.
+   */
+  keys<K extends keyof S & string>(table: K, filter?: (record: RecordOf<S, K>) => boolean): Promise<KeyOf<S, K>[]>;
+  put<K extends keyof S & string>(table: K, value: RecordOf<S, K>, ttl?: TtlMs): Promise<void>;
+  putAll<K extends keyof S & string>(table: K, values: RecordOf<S, K>[], ttl?: TtlMs): Promise<void>;
+  query<K extends keyof S & string>(table: K): QueryBuilder<RecordOf<S, K>>;
+  /**
+   * Merge `changes` into the existing record identified by `key` and persist the result.
+   * Returns `undefined` when the key does not exist — use `upsert` for insert-or-update semantics.
+   */
+  update<K extends keyof S & string>(
+    table: K,
+    key: KeyOf<S, K>,
+    changes: Partial<RecordOf<S, K>>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K> | undefined>;
+  upsert<K extends keyof S & string>(
+    table: K,
+    key: KeyOf<S, K>,
+    fn: (existing: RecordOf<S, K> | undefined) => RecordOf<S, K>,
+    ttl?: TtlMs,
+  ): Promise<RecordOf<S, K>>;
   /**
    * Execute multiple operations against a set of tables with deferred observer notifications.
    *
@@ -457,21 +504,4 @@ export interface Adapter<S extends AnySchema> extends SharedMethods<S> {
     table: K,
     options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
   ): AsyncIterable<RecordOf<S, K>[]>;
-  /**
-   * Returns a Web Standard `ReadableStream` that emits a fresh snapshot of the table on every change.
-   * The first chunk is emitted immediately (current table state).
-   *
-   * ```ts
-   * db.watchStream('users').pipeTo(new WritableStream({ write: (users) => render(users) }));
-   * ```
-   *
-   * @param options.mode
-   *   - `'latest'` (default): if the consumer lags, intermediate snapshots are dropped.
-   *   - `'all'`: every snapshot is enqueued in order.
-   * @param options.signal - An `AbortSignal` that cancels the stream.
-   */
-  watchStream<K extends keyof S & string>(
-    table: K,
-    options?: { mode?: 'all' | 'latest'; signal?: AbortSignal },
-  ): ReadableStream<RecordOf<S, K>[]>;
 }

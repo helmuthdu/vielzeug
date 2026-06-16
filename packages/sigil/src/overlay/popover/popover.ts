@@ -1,5 +1,6 @@
-import { computed, createStableId, define, html, onMounted, prop, syncAria } from '@vielzeug/craft';
+import { createStableId, define, html, prop, syncAria } from '@vielzeug/craft';
 import { type Placement } from '@vielzeug/orbit';
+import { computed } from '@vielzeug/ripple';
 
 import { type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
 import { disablableBundle } from '../../shared';
@@ -91,7 +92,7 @@ define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { el, emit, slots }) {
+  setup(props, { el, emit, onCleanup, onMounted, slots }) {
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const panelId = createStableId('popover');
@@ -113,6 +114,7 @@ define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
       disabled: isDisabled,
       getPanel: () => panelEl,
       offset: props.offset,
+      onCleanup,
       onClose: (reason) => emit('close', { reason }),
       onOpen: (reason) => emit('open', { reason }),
       openProp: props.open as typeof props.open & { value: boolean | undefined },

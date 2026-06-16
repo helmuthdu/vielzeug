@@ -1,4 +1,4 @@
-import { createId, createStableId, resetIdCounter } from '../index';
+import { createId, createStableId, resetIdCounter } from '../utils/id';
 
 describe('core/id-helpers', () => {
   describe('createId()', () => {

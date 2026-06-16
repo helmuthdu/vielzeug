@@ -1,5 +1,5 @@
 /** @internal */
-const isDev = !(globalThis as { __ORBIT_PROD__?: boolean }).__ORBIT_PROD__;
+export const isDev = !(globalThis as { __ORBIT_PROD__?: boolean }).__ORBIT_PROD__;
 
 /**
  * Emits a `console.warn` in development builds only.

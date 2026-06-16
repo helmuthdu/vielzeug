@@ -3,12 +3,10 @@ export {
   PipeSchema,
   Schema,
   ValidationError,
-  WrapperSchema,
   errorsAt,
   fail,
   type AnySchema,
   type CheckContext,
-  type CheckFnResult,
   type FlatError,
   type FlatErrorFirst,
   type FormattedErrors,
@@ -18,32 +16,19 @@ export {
   type Issue,
   type JsonSchema,
   type MessageFn,
-  type NullableSchema,
-  type NullishSchema,
-  type OptionalSchema,
+  type Messages,
+  type ParseContext,
   type ParseResult,
-  type ReconstructibleSchemaDescriptor,
   type SchemaDescriptor,
   type SchemaWalker,
   type ValidateFn,
-  type WrapperMode,
+  type ValidateResult,
   prependIssuePath,
 } from './core';
 
-export {
-  configure,
-  currentLocale,
-  registerLocale,
-  reset,
-  useLocale,
-  type DeepPartial,
-  type Logger,
-  type Messages,
-} from './messages';
+export { resetMessages, setLogger, setMessages, type DeepPartial, type Logger } from './messages';
 
-export { fromDescriptor } from './from-descriptor';
-
-export { descriptorToJsonSchema } from './json-schema';
+export { descriptorToJsonSchema, schemaToJsonSchema } from './json-schema';
 
 export {
   hasMaxLength,

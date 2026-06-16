@@ -1,5 +1,5 @@
 export const resolveOptionalExample = {
-  code: `import { createContainer, token, ContainerDisposedError } from '@vielzeug/conduit'
+  code: `import { createContainer, token, resolveOptional, resolveOrDefault, tryResolve, ContainerDisposedError } from '@vielzeug/conduit'
 
 const Config = token('Config')
 const Plugin = token('Plugin')
@@ -9,15 +9,15 @@ container.value(Config, { apiUrl: 'https://api.example.com' })
 // Plugin intentionally not registered
 
 // resolveOptional — returns undefined when token is not registered
-const maybePlugin = await container.resolveOptional(Plugin)
+const maybePlugin = await resolveOptional(container, Plugin)
 console.log('plugin:', maybePlugin) // undefined
 
 // resolveOrDefault — returns the fallback value when not registered
-const plugin = await container.resolveOrDefault(Plugin, { name: 'noop' })
+const plugin = await resolveOrDefault(container, Plugin, { name: 'noop' })
 console.log('plugin (default):', plugin.name) // noop
 
 // tryResolve — discriminated union result, never throws
-const result = await container.tryResolve(Plugin)
+const result = await tryResolve(container, Plugin)
 if (result.ok) {
   console.log('resolved:', result.value)
 } else {
@@ -27,7 +27,7 @@ if (result.ok) {
 // resolveOptional still throws ContainerDisposedError
 await container.dispose()
 try {
-  await container.resolveOptional(Config)
+  await resolveOptional(container, Config)
 } catch (err) {
   console.log('disposed error:', err instanceof ContainerDisposedError)
 }`,

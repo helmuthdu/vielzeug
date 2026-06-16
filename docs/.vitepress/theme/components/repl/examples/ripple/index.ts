@@ -1,6 +1,7 @@
 import { basicSignalExample } from './basic-signal';
 import { batchUntrackExample } from './batch-untrack';
 import { derivedSignalsExample } from './derived-signals';
+import { disposalExample } from './disposal';
 import { effectOptionsExample } from './effect-options';
 import { nextValueExample } from './next-value';
 import { scopeExample } from './scope-cleanup';
@@ -15,6 +16,7 @@ export const rippleExamples = {
   'basic-signal': basicSignalExample,
   'batch-untrack': batchUntrackExample,
   'derived-signals': derivedSignalsExample,
+  disposal: disposalExample,
   'effect-options': effectOptionsExample,
   'next-value': nextValueExample,
   'scope-cleanup': scopeExample,

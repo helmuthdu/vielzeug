@@ -78,6 +78,7 @@ export interface GridVirtualizerUpdateOptions {
 
 export interface GridVirtualizer {
   readonly cols: VirtualItem[];
+  readonly disposed: boolean;
   readonly rows: VirtualItem[];
   readonly scrollLeft: number;
   readonly scrollTop: number;
@@ -591,6 +592,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       return cols;
     },
     dispose: destroy,
+    get disposed() {
+      return destroyed;
+    },
     invalidate,
     measureBatch,
     measureColEl,

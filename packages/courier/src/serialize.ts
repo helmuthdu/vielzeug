@@ -1,6 +1,6 @@
-import { stableStringify } from '@vielzeug/arsenal';
+import { stringify } from '@vielzeug/arsenal';
 
-export { stableStringify };
+export { stringify };
 
 /**
  * Build a `RequestInit` object from the request components, handling body serialisation.

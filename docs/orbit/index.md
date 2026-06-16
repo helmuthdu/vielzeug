@@ -4,12 +4,13 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 package: orbit
 category: ui
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
-related: [craft, sigil, grip]
+related: [craft, sigil, dnd]
 exports:
   [
     float,
     computePosition,
-    computeOnce,
+    computePositionAsync,
+    computePositionRaf,
     autoUpdate,
     detectOverflow,
     offset,
@@ -35,16 +36,16 @@ environments: [browser, ssr]
 
 Positioning floating UI by hand quickly turns into repeated math for viewport boundaries, arrow offsets, and scroll/resize tracking.
 
-| Feature                  | Orbit                                       | Floating UI | Popper  |
-| ------------------------ | ------------------------------------------- | ----------- | ------- |
-| Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB      | ~6 kB   |
-| Middleware pipeline      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
-| Direct compute API       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
-| High-level follow API    | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | Partial |
-| Inline anchor middleware | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>      |
-| Auto-update helpers      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
-| Framework agnostic       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
-| Zero dependencies        | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>      |
+| Feature                  | Orbit                                       | Floating UI                                | Popper                                     |
+| ------------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB                                     | ~6 kB                                      |
+| Middleware pipeline      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Direct compute API       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| High-level follow API    | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
+| Inline anchor middleware | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
+| Auto-update helpers      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Framework agnostic       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Zero dependencies        | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 
 <div class="decision-callout">
 
@@ -74,7 +75,7 @@ yarn add @vielzeug/orbit
 
 ## Quick Start
 
-Use `float()` for the common case — it writes `left`/`top` and keeps the position in sync. It returns a `FloatHandle`; always call `handle.cleanup()` on teardown.
+Use `float()` for the common case — it writes `left`/`top` and keeps the position in sync. It returns a `FloatHandle`; always call `handle.dispose()` on teardown.
 
 ```ts
 import { flip, float, offset, shift } from '@vielzeug/orbit';
@@ -87,8 +88,8 @@ const handle = float(trigger, tooltip, {
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
 
-// Call cleanup when the tooltip is removed
-handle.cleanup();
+// Call dispose when the tooltip is removed
+handle.dispose();
 ```
 
 Or use `presets` for ready-made middleware stacks:
@@ -98,44 +99,42 @@ import { float } from '@vielzeug/orbit';
 import { tooltip as tooltipPreset } from '@vielzeug/orbit/presets';
 
 const handle = float(trigger, tooltip, tooltipPreset());
-handle.cleanup();
+handle.dispose();
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- `float()` covers the common position-and-follow case; returns a `FloatHandle` with `cleanup()`, `update()`, and `getPosition()`
+- `float()` covers the common position-and-follow case; returns a `FloatHandle` with `dispose()`, `update()`, and `getPosition()`
 - Custom `apply(result)` callback on `float()` for transforms or custom rendering
 - `computePosition()` returns `x`, `y`, `placement`, and `middlewareData` without touching the DOM
 - `detectOverflow()` returns per-side overflow offsets; used by built-in middleware and available for custom middleware
 - Global `boundary` and `padding` on `computePosition()` and `float()` — set once, all overflow-aware middleware inherit them
 - `containingBlock` option for `position: absolute` floating elements
 - Built-in middleware: `offset`, `flip`, `autoPlacement`, `shift`, `size`, `arrow`, `hide`
-- `compose()` — validates middleware ordering at call time and returns a typed array
+- `compose()` — falsy-filter helper for building middleware arrays
 - `limitShift()` — constrains `shift()` drift to keep the float visually connected to its reference
-- `inline` middleware (sub-path `@vielzeug/orbit/inline`) for multi-line inline references
+- `inline` middleware for multi-line inline references (now part of main entry)
 - Pre-configured presets (sub-path `@vielzeug/orbit/presets`): `tooltip`, `dropdown`, `popover`, `contextMenu`
 - `autoUpdate()` supports scroll, resize, ResizeObserver, visualViewport, animation frames, throttle, ancestor scroll containers, and `pauseWhenHidden` via IntersectionObserver
 - `getSide()` and `getAlignment()` utilities for reading placement components
-- CSS Anchor Positioning progressive enhancement via `preferCssAnchor` on `float()`
+- `floatWithAnchor()` — CSS Anchor Positioning progressive enhancement (browser-native, no JS loop)
 - Reactive signal adapter (sub-path `@vielzeug/orbit/reactive`) — wraps `float()` with a `@vielzeug/ripple` signal
 - SSR-safe no-op stubs (sub-path `@vielzeug/orbit/ssr`)
 - Zero dependencies (optional peer: `@vielzeug/ripple` for the reactive sub-path)
 
 </div>
 
-
 ## Sub-paths
 
-| Import                     | Purpose                                       |
-| -------------------------- | --------------------------------------------- |
-| `@vielzeug/orbit`          | Core API, middleware, utilities, types        |
-| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks              |
-| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line references |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)  |
-| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)       |
-| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
+| Import                     | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `@vielzeug/orbit`          | Core API, middleware (`inline` included), utilities, types |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks                           |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)               |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)                    |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering                      |
 
 ## Documentation
 
@@ -152,7 +151,7 @@ handle.cleanup();
 <div class="see-also">
 
 - [Sigil](/sigil/) — accessible web components that use Orbit internally for dropdown, tooltip, and popover positioning
-- [Grip](/grip/) — drag-and-drop engine; use Orbit to reposition drop targets and drag previews relative to containers
+- [Dnd](/dnd/) — drag-and-drop engine; use Orbit to reposition drop targets and drag previews relative to containers
 - [Craft](/craft/) — web-component authoring framework; Orbit integrates as a positioning primitive for overlay elements
 
 </div>

@@ -251,25 +251,25 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 ### CSS Custom Properties
 
-| Property              | Description                                | Default           |
-| --------------------- | ------------------------------------------ | ----------------- |
-| `--chip-bg`                    | Background color                              | Variant-dependent |
-| `--chip-color`                 | Text color                                    | Variant-dependent |
-| `--chip-border-color`          | Border color                                  | Variant-dependent |
-| `--chip-radius`                | Border radius                                 | `var(--rounded-full)` |
-| `--chip-font-size`             | Font size                                     | `var(--text-sm)`  |
-| `--chip-font-weight`           | Font weight                                   | `var(--font-medium)` |
-| `--chip-padding-x`             | Horizontal padding                            | `var(--size-2-5)` |
-| `--chip-padding-y`             | Vertical padding                              | `var(--size-0-5)` |
-| `--chip-gap`                   | Gap between icon, label, and remove button    | `var(--size-1)`   |
-| `--chip-hover-bg`              | Background on hover (interactive modes)       | Variant-dependent |
-| `--chip-hover-color`           | Text color on hover (interactive modes)       | Variant-dependent |
-| `--chip-hover-border-color`    | Border color on hover (interactive modes)     | Variant-dependent |
-| `--chip-active-bg`             | Background when pressed (interactive modes)   | Variant-dependent |
-| `--chip-active-color`          | Text color when pressed (interactive modes)   | Variant-dependent |
-| `--chip-remove-bg`             | Remove button background (bordered/outline)   | Variant-dependent |
-| `--chip-remove-color`          | Remove button icon color (bordered/outline)   | Variant-dependent |
-| `--chip-remove-hover-bg`       | Remove button background on hover             | Variant-dependent |
+| Property                    | Description                                 | Default               |
+| --------------------------- | ------------------------------------------- | --------------------- |
+| `--chip-bg`                 | Background color                            | Variant-dependent     |
+| `--chip-color`              | Text color                                  | Variant-dependent     |
+| `--chip-border-color`       | Border color                                | Variant-dependent     |
+| `--chip-radius`             | Border radius                               | `var(--rounded-full)` |
+| `--chip-font-size`          | Font size                                   | `var(--text-sm)`      |
+| `--chip-font-weight`        | Font weight                                 | `var(--font-medium)`  |
+| `--chip-padding-x`          | Horizontal padding                          | `var(--size-2-5)`     |
+| `--chip-padding-y`          | Vertical padding                            | `var(--size-0-5)`     |
+| `--chip-gap`                | Gap between icon, label, and remove button  | `var(--size-1)`       |
+| `--chip-hover-bg`           | Background on hover (interactive modes)     | Variant-dependent     |
+| `--chip-hover-color`        | Text color on hover (interactive modes)     | Variant-dependent     |
+| `--chip-hover-border-color` | Border color on hover (interactive modes)   | Variant-dependent     |
+| `--chip-active-bg`          | Background when pressed (interactive modes) | Variant-dependent     |
+| `--chip-active-color`       | Text color when pressed (interactive modes) | Variant-dependent     |
+| `--chip-remove-bg`          | Remove button background (bordered/outline) | Variant-dependent     |
+| `--chip-remove-color`       | Remove button icon color (bordered/outline) | Variant-dependent     |
+| `--chip-remove-hover-bg`    | Remove button background on hover           | Variant-dependent     |
 
 ## Accessibility
 

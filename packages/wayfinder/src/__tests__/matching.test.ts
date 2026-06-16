@@ -278,4 +278,33 @@ describe('route table', () => {
       }),
     ).toThrow('Duplicate route name: "a.b"');
   });
+
+  it('warns when a specific route is shadowed by a preceding wildcard', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    createRouter({
+      routes: {
+        catchAll: { path: '/*' },
+        // This route can never be reached — the wildcard above always matches first.
+        unreachable: { path: '/about' },
+      },
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('unreachable'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when specific routes precede a wildcard', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    createRouter({
+      routes: {
+        about: { path: '/about' },
+        catchAll: { path: '/*' },
+      },
+    });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
 });

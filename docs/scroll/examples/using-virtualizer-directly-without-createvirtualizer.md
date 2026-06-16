@@ -29,7 +29,7 @@ function onMount(scrollEl: HTMLElement) {
 
 // Recreate for a new container
 function onReopen(newScrollEl: HTMLElement) {
-  virt?.destroy();
+  virt?.dispose();
   virt = createVirtualizer(newScrollEl, {
     count: rows.length,
     estimateSize: 36,
@@ -38,7 +38,7 @@ function onReopen(newScrollEl: HTMLElement) {
 }
 
 function onDestroy() {
-  virt?.destroy();
+  virt?.dispose();
 }
 ```
 

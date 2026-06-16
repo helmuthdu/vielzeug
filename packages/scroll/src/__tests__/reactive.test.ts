@@ -122,12 +122,12 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     rv.dispose();
   });
 
-  it('redraw() re-emits state', () => {
+  it('refresh() re-emits state', () => {
     const el = makeContainer({ clientHeight: 200 });
     const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
     const before = rv.state.value;
 
-    rv.redraw();
+    rv.refresh();
 
     // state.value should be a new object reference (re-emitted)
     expect(rv.state.value).not.toBe(before);
@@ -149,5 +149,37 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
 
     expect(() => rv[Symbol.dispose]()).not.toThrow();
+  });
+});
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createReactiveVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect(rv.disposed).toBe(false);
+    rv.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    rv.dispose();
+    expect(rv.disposed).toBe(true);
+  });
+
+  it('methods are no-ops after dispose', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    rv.dispose();
+    expect(() => {
+      rv.update({ count: 10 });
+      rv.refresh();
+      rv.invalidate();
+    }).not.toThrow();
   });
 });

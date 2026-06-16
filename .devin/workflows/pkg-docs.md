@@ -197,7 +197,7 @@ yarn add @vielzeug/<pkg>
 **Rules:**
 
 - **`<PackageHero package="<pkg>" />`** replaces `<PackageBadges>`, `<img>`, `#` heading, and `<details>` Quick Reference. Metadata is rendered automatically from frontmatter.
-- **`environments` frontmatter** is required. List only supported runtimes: `browser`, `node`, `ssr`, `deno`. Rendered as badges by `<PackageHero>`. Do **not** add a `## Compatibility` table. Derive the correct values from the package's actual constraints — use `browser, node` for universal packages (the majority), `browser` only for packages that depend on DOM/Web APIs (e.g. `vault`, `grip`, `orbit`), and `node` only for server/CLI packages (e.g. `codex`). When in doubt, `browser, node` is the safe default.
+- **`environments` frontmatter** is required. List only supported runtimes: `browser`, `node`, `ssr`, `deno`. Rendered as badges by `<PackageHero>`. Do **not** add a `## Compatibility` table. Derive the correct values from the package's actual constraints — use `browser, node` for universal packages (the majority), `browser` only for packages that depend on DOM/Web APIs (e.g. `vault`, `dnd`, `orbit`), and `node` only for server/CLI packages (e.g. `codex`). When in doubt, `browser, node` is the safe default.
 - **`## Why <PackageName>?`** comes first — immediately after `<PackageHero>`, before Installation and Quick Start.
 - **`decision-callout` div** wraps the "Use when / Consider when" block. Both statements are required.
 - **`features-grid` div** wraps the `## Features` bullet list.
@@ -239,6 +239,10 @@ description: <One sentence covering what this guide teaches.>
 
 ...
 
+## Testing
+
+<Optional — include if the library provides test utilities or a recommended testing pattern.>
+
 ## Framework Integration
 
 <Required when the library has its own subscription or lifecycle model. Show React, Vue 3, Svelte in a code-group.>
@@ -250,16 +254,18 @@ description: <One sentence covering what this guide teaches.>
 ## Best Practices
 
 <Bullet list of actionable guidelines. Verb-first, max 8 bullets.>
-````
+```
 
 **Rules:**
 
 - No `#` heading — the frontmatter `title` is the page title.
 - `[[toc]]` must appear immediately after the frontmatter.
 - Sections ordered from simple to complex; the first code block must be copy-paste runnable.
-- `## Framework Integration` goes after concept sections, before Best Practices.
+- **Canonical section order (tail):** `… → Testing (if any) → Framework Integration → Working with Other Vielzeug Libraries → Best Practices`.
+- Testing, Debug Mode, or any other package-specific utility sections go **before** `## Framework Integration`, never after.
+- `## Framework Integration` goes after all concept and utility sections, before `## Working with Other Vielzeug Libraries`.
 - `## Working with Other Vielzeug Libraries` goes after Framework Integration, before Best Practices.
-- Omit `## Framework Integration` only if there's truly no natural framework interop; otherwise include it.
+- Omit `## Framework Integration` only if there is truly no natural framework interop (e.g., pure-utility packages like `arsenal`); otherwise include it.
 - Best Practices must be the last section.
 
 #### 3.3 `api.md` — API Reference

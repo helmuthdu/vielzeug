@@ -1,5 +1,5 @@
-import { define, defineField, effect, html, inject, live, onCleanup, onElement, prop, ref } from '@vielzeug/craft';
-import { watch } from '@vielzeug/ripple';
+import { define, useField, html, inject, live, prop, ref } from '@vielzeug/craft';
+import { watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { VisualVariant } from '../../types';
@@ -118,7 +118,7 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el: _el, emit }) {
+  setup(props, { bind, emit, onCleanup, onElement, watch }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 
@@ -134,9 +134,11 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
     };
 
     const abortSignal = lifecycleSignal(onCleanup);
+    let _formField: { reportValidity(): void } | null = null;
     const tf = createTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
@@ -154,17 +156,18 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
       value: props.value,
     });
 
-    tf.bindFormField(defineField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value }));
+    _formField = useField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value });
 
     const {
       ariaDescribedBy,
       ariaErrorMessage,
       ariaInvalid,
       ariaLabelledBy,
-      assistive,
       assistiveId,
       counter,
+      errorText,
       fieldId: textareaId,
+      helperText,
       labelId,
       labelVisible,
     } = tf;
@@ -174,11 +177,11 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
 
       props.ref.value?.(textareaEl);
 
-      const sub = watch(props.ref, (cb) => {
+      const sub = rippleWatch(props.ref, (cb) => {
         cb?.(textareaEl);
       });
 
-      const stopLayoutEffect = effect(() => {
+      const stopLayoutEffect = watch(() => {
         textareaEl.style.resize =
           props['auto-resize'].value || props['no-resize'].value ? 'none' : props.resize.value || 'vertical';
 
@@ -197,7 +200,7 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
 
     bind({
       attr: {
-        error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
+        error: () => errorText.value || undefined,
         size: fCtxProps.size,
         variant: fCtxProps.variant,
       },
@@ -211,8 +214,8 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
           : 'counter';
     const counterHidden = () => !counter;
     const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
-    const helperHidden = () => !assistive.value.errorText && !assistive.value.helperText;
-    const helperText = () => assistive.value.errorText || assistive.value.helperText;
+    const helperHidden = () => !errorText.value && !helperText.value;
+    const helperTextContent = () => errorText.value || helperText.value;
 
     return html`
       <div class="textarea-wrapper" part="wrapper">
@@ -238,7 +241,9 @@ define<SgTextareaProps, SgTextareaEvents>(TEXTAREA_TAG, {
             :aria-labelledby="${ariaLabelledBy}"></textarea>
         </div>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${assistiveId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">${helperText}</div>
+        <div id="${assistiveId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">
+          ${helperTextContent}
+        </div>
       </div>
     `;
   },

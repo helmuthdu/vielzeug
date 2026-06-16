@@ -16,7 +16,7 @@ on:
           - '@vielzeug/craft'
           - '@vielzeug/familiar'
           - '@vielzeug/forge'
-          - '@vielzeug/grip'
+          - '@vielzeug/dnd'
           - '@vielzeug/herald'
           - '@vielzeug/lingua'
           - '@vielzeug/orbit'

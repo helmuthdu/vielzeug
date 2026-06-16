@@ -1,4 +1,3 @@
-import { partial } from '../../function/partial';
 import { contains } from '../contains';
 
 describe('contains', () => {
@@ -30,10 +29,10 @@ describe('contains', () => {
     expect(contains(array, value)).toBe(false);
   });
 
-  it('should work with configured contains predicate', () => {
+  it('should work with a bound contains predicate', () => {
     const array = [1, 2, 3, { a: 1 }, 'hello'];
     const value = { a: 1 };
-    const containsInArray = partial(contains, array);
+    const containsInArray = (v: unknown) => contains(array, v);
 
     expect(containsInArray(value)).toBe(true);
   });

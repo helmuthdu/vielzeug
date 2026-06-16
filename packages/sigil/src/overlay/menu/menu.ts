@@ -1,17 +1,7 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import {
-  computed,
-  createStableId,
-  define,
-  effect,
-  html,
-  onCleanup,
-  onMounted,
-  prop,
-  syncAria,
-  watch,
-} from '@vielzeug/craft';
+import { createStableId, define, html, prop, syncAria } from '@vielzeug/craft';
+import { computed, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
@@ -219,7 +209,7 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       'bottom-start',
     ),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onCleanup, onMounted, slots, watch }) {
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const abortSignal = lifecycleSignal(onCleanup);
@@ -249,26 +239,20 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
     }
 
     const optionList = createOptionList<HTMLElement>({
-      dom: {
-        getBoundary: () => el,
-        getPanel: () => panelEl,
-        getReference: () => triggerEl,
-        getTrigger: () => triggerEl,
-      },
+      getBoundary: () => el,
+      getItems: getItems,
+      getPanel: () => panelEl,
+      getReference: () => triggerEl,
+      getTrigger: () => triggerEl,
       isDisabled: () => isDisabled.value,
-      items: {
-        getItems: getItems,
-        isItemDisabled: (item) => item.hasAttribute('disabled'),
-      },
-      on: {
-        onClose: (reason) => emit('close', { reason }),
-        onNavigate: (_action, index) => {
-          const nextItem = getItems()[index];
+      isItemDisabled: (item) => item.hasAttribute('disabled'),
+      onClose: (reason) => emit('close', { reason }),
+      onNavigate: (_action, index) => {
+        const nextItem = getItems()[index];
 
-          getItemFocusable(nextItem)?.focus();
-        },
-        onOpen: (reason) => emit('open', { reason }),
+        getItemFocusable(nextItem)?.focus();
       },
+      onOpen: (reason) => emit('open', { reason }),
       positioning: {
         getPlacement: () => (props.placement.value ?? 'bottom-start') as Placement,
         matchWidth: false,
@@ -305,7 +289,7 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       keys: ['Enter', ' ', 'ArrowDown'],
       onPress: () => {
         optionList.open('keyboard');
-        requestAnimationFrame(() => optionList.first());
+        requestAnimationFrame(() => optionList.set(0));
       },
     });
 
@@ -368,7 +352,7 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       },
     });
 
-    effect(() => {
+    watch(() => {
       const open = isOpenSignal.value;
 
       if (!panelEl) return;
@@ -421,7 +405,7 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       };
     }
 
-    watch(slots.elements('trigger'), resolveTrigger, { immediate: true });
+    rippleWatch(slots.elements('trigger'), resolveTrigger, { immediate: true });
 
     onMounted(() => {
       return () => {

@@ -38,17 +38,36 @@ const routeI18n = i18n.fork({ locale: 'en' })
 let notified = 0
 routeI18n.subscribe(() => notified++)
 
-console.log('before dispose — isRegistered("en"):', routeI18n.isRegistered('en'))  // true
+// disposalSignal — AbortSignal aborted on disposal; tie external lifetimes here.
+console.log('disposed before:', routeI18n.disposed)                  // false
+console.log('signal aborted before:', routeI18n.disposalSignal.aborted)  // false
 
 routeI18n.dispose()
+
+console.log('disposed after:', routeI18n.disposed)                   // true
+console.log('signal aborted after:', routeI18n.disposalSignal.aborted)   // true
 
 // All state is cleared after disposal
 console.log('after dispose — isRegistered("en"):', routeI18n.isRegistered('en'))  // false
 console.log('after dispose — isLoaded("en"):', routeI18n.isLoaded('en'))           // false
 
-// Subscribers are cleared — no more notifications
-routeI18n.register('en', { greeting: 'Hi' })  // register still runs (no error)
+// Post-dispose: register() throws [lingua/E007] — consistent with all other mutation methods
+try {
+  routeI18n.register('en', { greeting: 'Hi' })
+} catch (err) {
+  console.log('register after dispose:', (err as Error).message)  // [lingua/E007] …
+}
 console.log('subscribers notified after dispose:', notified)  // 0
+
+// Post-dispose: setLocale() rejects with [lingua/E007]
+try {
+  await routeI18n.setLocale('en')
+} catch (err) {
+  console.log('setLocale after dispose:', (err as Error).message)  // [lingua/E007] …
+}
+
+// Post-dispose: t() falls back to onMissingKey for every key
+console.log('t() after dispose:', routeI18n.t('greeting'))  // 'greeting' (key returned)
 
 // dispose() is idempotent — calling twice is safe
 routeI18n.dispose()

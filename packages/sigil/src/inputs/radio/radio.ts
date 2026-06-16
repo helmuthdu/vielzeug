@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -84,7 +85,7 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
     name: prop.string(),
     value: prop.string(),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onCleanup }) {
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
@@ -118,21 +119,17 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
       radio.click();
     };
 
-    let activeIndex = -1;
-
     const listControl = createListControl({
-      getIndex: () => activeIndex,
       getItems: () => getRadioGroup(),
       keys: { next: ['ArrowDown', 'ArrowRight'], prev: ['ArrowUp', 'ArrowLeft'] },
       loop: true,
-      onNavigate: (_action, _index, event) => {
-        const nextRadio = getRadioGroup()[activeIndex];
+      onNavigate: (_action, index, event) => {
+        const nextRadio = getRadioGroup()[index];
 
-        if (nextRadio) selectRadio(nextRadio, event);
-      },
-      setIndex: (index) => {
-        activeIndex = index;
-        getRadioGroup()[index]?.focus();
+        if (!nextRadio) return;
+
+        nextRadio.focus();
+        selectRadio(nextRadio, event);
       },
     });
 
@@ -148,10 +145,12 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
       checkable.toggle(originalEvent ?? new Event('change'));
     };
 
+    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: checkedFromState,
       disabled: computed(() => fCtxProps.disabled.value || Boolean(groupCtx?.disabled.value)),
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       onToggle: (payload) => {
         emit('change', payload);
@@ -161,22 +160,21 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistive, assistiveId, checked, disabled, labelId, toggle } = checkable;
 
-    checkable.bindFormField(
-      defineField<string | null>({
-        disabled: checkable.disabled,
-        toFormValue: (v) => v,
-        value: checkable.checkableFormValue,
-      }),
-    );
+    _formField = useField<string | null>({
+      disabled: checkable.disabled,
+      toFormValue: (v) => v,
+      value: checkable.checkableFormValue,
+    });
+
+    const { assistiveId, checked, disabled, errorText, helperText, labelId, toggle } = checkable;
 
     bind({
       attr: {
         ariaChecked: () => (checked.value ? 'true' : 'false'),
-        ariaDescribedby: () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : null),
+        ariaDescribedby: () => (errorText.value || helperText.value ? assistiveId : null),
         ariaDisabled: () => (disabled.value ? 'true' : null),
-        ariaInvalid: () => (assistive.value.errorText ? 'true' : null),
+        ariaInvalid: () => (errorText.value ? 'true' : null),
         ariaLabelledby: labelId,
         checked,
         color: effectiveColor,
@@ -227,10 +225,11 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
 
           if (radios.length === 0) return;
 
-          activeIndex = radios.indexOf(el);
+          const selfIndex = radios.indexOf(el);
 
-          if (activeIndex === -1) return;
+          if (selfIndex === -1) return;
 
+          listControl.set(selfIndex);
           listControl.handleKeydown(e);
         },
       },
@@ -243,7 +242,7 @@ define<SgRadioProps, SgRadioEvents>(RADIO_TAG, {
         </div>
       </div>
       <span class="label" part="label" id="${labelId}"><slot></slot></span>
-      ${renderHelperRegion(assistiveId, assistive)}
+      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [

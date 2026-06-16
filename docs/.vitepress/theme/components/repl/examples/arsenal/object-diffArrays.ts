@@ -1,0 +1,4 @@
+export const objectDiffArraysExample = {
+  code: "import { diffArrays } from '@vielzeug/arsenal'\n\n// Default 'set' strategy — order independent\nconst v1 = [1, 2, 3]\nconst v2 = [2, 3, 4]\nconst setDiff = diffArrays(v1, v2)\nconsole.log('set diff:', setDiff) // { added: [4], removed: [1] }\n\n// 'lcs' strategy — ordered minimal diff\nconst before = [1, 2, 3, 4, 5]\nconst after  = [1, 3, 4, 5, 6]\nconst lcsDiff = diffArrays(before, after, { strategy: 'lcs' })\nconsole.log('lcs diff:', lcsDiff) // { added: [6], removed: [2] }\n\n// With custom compareFn for objects\nconst oldUsers = [{ id: 1, name: 'Alice' }, { id: 2, name: 'Bob' }]\nconst newUsers = [{ id: 2, name: 'Bob' }, { id: 3, name: 'Charlie' }]\nconst userDiff = diffArrays(oldUsers, newUsers, { compareFn: (a, b) => a.id === b.id })\nconsole.log('users:', userDiff) // { added: [{id:3,...}], removed: [{id:1,...}] }",
+  name: 'diffArrays - Set and LCS strategies',
+};

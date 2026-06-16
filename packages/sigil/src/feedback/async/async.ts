@@ -1,4 +1,5 @@
-import { define, html, prop, type ReadonlySignal, signal, when } from '@vielzeug/craft';
+import { define, html, prop, when } from '@vielzeug/craft';
+import { type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './async.css?inline';

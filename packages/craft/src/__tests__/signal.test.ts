@@ -2,7 +2,7 @@
  * Core - Signal System Tests
  * Comprehensive tests for signals, computed, effects, watchers, and batching
  */
-import { batch, computed, effect, signal, untrack, watch } from '../index';
+import { batch, computed, effect, signal, untrack, watch } from '@vielzeug/ripple';
 
 describe('Core: Signal System', () => {
   describe('signal()', () => {
@@ -118,13 +118,13 @@ describe('Core: Signal System', () => {
 
     it('should support cleanup', () => {
       let cleanupRan = false;
-      const dispose = effect(() => {
+      const sub = effect(() => {
         return () => {
           cleanupRan = true;
         };
       });
 
-      dispose();
+      sub.dispose();
       expect(cleanupRan).toBe(true);
     });
   });

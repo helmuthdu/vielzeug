@@ -301,17 +301,17 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 ### CSS Custom Properties
 
-| Property                    | Description               | Default                     |
-| --------------------------- | ------------------------- | --------------------------- |
-| `--file-input-bg`                   | Dropzone background color                              | Variant-dependent   |
-| `--file-input-border-color`         | Dropzone border color                                  | Variant-dependent   |
-| `--file-input-radius`               | Border radius                                          | `var(--rounded-lg)` |
-| `--file-input-min-height`           | Minimum dropzone height                                | `var(--size-40)`    |
-| `--file-input-font-size`            | Font size                                              | `var(--text-sm)`    |
-| `--file-input-hover-bg`             | Dropzone background on hover (flat/ghost variants)     | Variant-dependent   |
-| `--file-input-hover-border-color`   | Dropzone border on hover (flat/bordered variants)      | Variant-dependent   |
-| `--file-input-focus-bg`             | Dropzone background when focused/drag-over (flat)      | Variant-dependent   |
-| `--file-input-focus-border-color`   | Dropzone border when focused/drag-over (flat)          | Variant-dependent   |
+| Property                          | Description                                        | Default             |
+| --------------------------------- | -------------------------------------------------- | ------------------- |
+| `--file-input-bg`                 | Dropzone background color                          | Variant-dependent   |
+| `--file-input-border-color`       | Dropzone border color                              | Variant-dependent   |
+| `--file-input-radius`             | Border radius                                      | `var(--rounded-lg)` |
+| `--file-input-min-height`         | Minimum dropzone height                            | `var(--size-40)`    |
+| `--file-input-font-size`          | Font size                                          | `var(--text-sm)`    |
+| `--file-input-hover-bg`           | Dropzone background on hover (flat/ghost variants) | Variant-dependent   |
+| `--file-input-hover-border-color` | Dropzone border on hover (flat/bordered variants)  | Variant-dependent   |
+| `--file-input-focus-bg`           | Dropzone background when focused/drag-over (flat)  | Variant-dependent   |
+| `--file-input-focus-border-color` | Dropzone border when focused/drag-over (flat)      | Variant-dependent   |
 
 ## Accessibility
 

@@ -1,4 +1,4 @@
-import { define, effect, html, inject, onMounted, prop, ref } from '@vielzeug/craft';
+import { define, html, inject, prop, ref } from '@vielzeug/craft';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -80,12 +80,12 @@ define<SgAccordionItemProps, SgAccordionItemEvents>(ACCORDION_ITEM_TAG, {
     variant: prop.string<VisualVariant>(),
   },
 
-  setup(props, { bind: _bind, el, emit }) {
+  setup(props, { el, emit, onMounted, watch }) {
     // Inherit size/variant from a parent sg-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 
     if (accordionCtx) {
-      effect(() => {
+      watch(() => {
         const size = accordionCtx.size.value;
         const variant = accordionCtx.variant.value;
 
@@ -98,11 +98,93 @@ define<SgAccordionItemProps, SgAccordionItemEvents>(ACCORDION_ITEM_TAG, {
     const titleId = 'accordion-item-title';
     const detailsRef = ref<HTMLDetailsElement>();
     const summaryRef = ref<HTMLElement>();
+    let isAnimating = false;
+
+    const openItem = () => {
+      const details = detailsRef.value;
+
+      if (!details || details.open) return;
+
+      details.classList.add('opening');
+      details.open = true;
+
+      el.toggleAttribute('expanded', true);
+      emit('expand', { expanded: true, item: el });
+
+      requestAnimationFrame(() => {
+        const inner = details.querySelector<HTMLElement>('.content-inner');
+
+        if (!inner) {
+          details.classList.remove('opening');
+          isAnimating = false;
+
+          return;
+        }
+
+        const onDone = () => {
+          details.classList.remove('opening');
+          isAnimating = false;
+        };
+        const transitions = inner.getAnimations?.().filter((a) => a instanceof CSSTransition) ?? [];
+
+        if (transitions.length > 0) {
+          Promise.allSettled(transitions.map((a) => a.finished)).then(onDone);
+        } else {
+          onDone();
+        }
+      });
+    };
+
+    const closeItem = () => {
+      const details = detailsRef.value;
+
+      if (!details || !details.open || isAnimating) return;
+
+      isAnimating = true;
+
+      details.classList.add('closing');
+
+      const inner = details.querySelector<HTMLElement>('.content-inner');
+      const onDone = () => {
+        details.classList.remove('closing');
+        details.open = false;
+        el.toggleAttribute('expanded', false);
+        emit('collapse', { expanded: false, item: el });
+        isAnimating = false;
+      };
+
+      if (inner) {
+        const transitions = inner.getAnimations?.().filter((a) => a instanceof CSSTransition) ?? [];
+
+        if (transitions.length > 0) {
+          Promise.allSettled(transitions.map((a) => a.finished)).then(onDone);
+        } else {
+          onDone();
+        }
+      } else {
+        onDone();
+      }
+    };
+
+    const handleSummaryClick = (e: Event) => {
+      e.preventDefault();
+
+      const details = detailsRef.value;
+
+      if (!details) return;
+
+      if (details.open) {
+        closeItem();
+      } else {
+        openItem();
+      }
+    };
+
     const handleToggle = () => {
+      // Only fires for programmatic open/close (e.g. from accordion parent)
       const isOpen = detailsRef.value?.open ?? false;
       const wasExpanded = Boolean(props.expanded.value);
 
-      // Notify accordion parent for single-selection management
       if (isOpen && !wasExpanded) {
         el.toggleAttribute('expanded', true);
         emit('expand', { expanded: true, item: el });
@@ -169,10 +251,12 @@ define<SgAccordionItemProps, SgAccordionItemEvents>(ACCORDION_ITEM_TAG, {
       });
 
       details.addEventListener('toggle', handleToggle);
+      summary.addEventListener('click', handleSummaryClick);
 
       return () => {
         observer.disconnect();
         details.removeEventListener('toggle', handleToggle);
+        summary.removeEventListener('click', handleSummaryClick);
       };
     });
 

@@ -1,6 +1,11 @@
-export { isPlainObject, flattenPaths as flattenValues, unflattenPaths as unflattenValues } from '@vielzeug/arsenal';
+export { flattenPaths as flattenValues, isPlainObject, unflattenPaths as unflattenValues } from '@vielzeug/arsenal';
 
-export { isSafePath as isSafeKey } from '@vielzeug/arsenal';
+const UNSAFE = new Set(['__proto__', 'constructor', 'prototype']);
+
+/** Returns `true` when a dot-notation path contains no prototype-polluting segments. */
+export function isSafeKey(path: string): boolean {
+  return path.split('.').every((segment) => !UNSAFE.has(segment));
+}
 
 /**
  * Merges multiple AbortSignals into one that aborts when any of them aborts.

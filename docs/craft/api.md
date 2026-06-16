@@ -7,25 +7,23 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 
 ## API At a Glance
 
-| Symbol                | Purpose                                        | Execution mode | Common gotcha                                                 |
-| --------------------- | ---------------------------------------------- | -------------- | ------------------------------------------------------------- |
-| `define()`            | Register a custom element with reactive setup  | Sync           | Tag must contain a hyphen; call before first use              |
-| `html`                | Tagged template literal returning HTMLResult   | Sync           | Expressions must be signals, functions, or primitives         |
-| `effect()`            | Component-scoped reactive side effect          | Sync           | Auto-cleaned up on disconnect                                 |
-| `onMounted()`         | DOM-ready callback after template mounts       | Sync           | DOM queries inside setup() run before mount                   |
-| `onCleanup()`         | Register teardown for component disconnect     | Sync           | Must be called synchronously during setup                     |
-| `onElement()`         | Run callback when a ref resolves to an element | Sync           | Re-runs when the element reference changes                    |
-| `onEvent()`           | Scoped event listener with auto-cleanup        | Sync           | No-ops silently when target is `null`/`undefined`             |
-| `prop.*`              | Typed prop helpers (string, bool, number, …)   | Sync           | Prop values are signals — read `.value`                       |
-| `provide/inject`      | Context API for parent-to-descendant sharing   | Sync           | `inject()` throws if called outside setup                     |
-| `ref()`               | Reactive reference to a DOM element            | Sync           | Value is null until after first mount                         |
-| `createContext()`     | Create a typed injection key                   | Sync           | Context is scoped to the component tree                       |
-| `syncAria()`          | Reactively sync ARIA attributes to an element  | Sync           | Effects leak if called without a setup context and no cleanup |
-| `each()`              | Keyed list rendering with DOM diffing          | Sync           | Duplicate keys warn in dev — rendered output is undefined     |
-| `when()`              | Conditional branch rendering                   | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription |
-| `createFormContext()` | Coordinate form state across child fields      | Sync           | Submit errors are captured in `error` signal, not thrown      |
-| `defineField()`       | Wire a form-associated element to internals    | Sync           | Requires `formAssociated: true`; call once per component      |
-| `resetIdCounter()`    | Reset `createStableId` counter to 1            | Sync           | Use in `beforeEach` for deterministic test IDs                |
+| Symbol                     | Purpose                                              | Execution mode | Common gotcha                                                          |
+| -------------------------- | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
+| `define()`                 | Register a custom element with reactive setup        | Sync           | Tag must contain a hyphen; call before first use                       |
+| `html`                     | Tagged template literal returning HTMLResult         | Sync           | Expressions must be signals, functions, or primitives                  |
+| `prop.*`                   | Typed prop helpers (string, bool, number, …)         | Sync           | Prop values are signals — read `.value`                                |
+| `ctx.provide/inject`       | Context API for parent-to-descendant sharing         | Setup only     | Must be called synchronously during `setup()`                          |
+| `ref()`                    | Reactive reference to a DOM element                  | Sync           | Value is null until after first mount                                  |
+| `createContext()`          | Create a typed injection key                         | Sync           | Context is scoped to the component tree                                |
+| `each()`                   | Keyed list rendering with DOM diffing                | Sync           | Duplicate keys warn in dev; use `{ snapshot: true }` for plain render  |
+| `when()`                   | Conditional branch rendering                         | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription |
+| `model(signal)`            | Two-way binding for input/select/textarea            | Sync           | `<select multiple>` uses `Signal<string[]>`; `select` uses `change`    |
+| `live(signal)`             | One-way binding that skips stale writes during input | Sync           | Use for controlled inputs alongside a manual `@input` handler          |
+| `ctx.onMounted(fn)`        | DOM-ready callback                                   | Setup only     | Must be called synchronously during `setup()`                          |
+| `ctx.onCleanup(fn)`        | Register teardown                                    | Setup only     | Called on component disconnect                                         |
+| `ctx.onEvent(target, …)`   | Scoped event listener with auto-cleanup              | Setup only     | No-ops on null target; removed on disconnect                           |
+| `useField(options)`        | Wire signal to form `ElementInternals`               | Setup only     | Requires `formAssociated: true` on the component definition            |
+| `syncAria(target, config)` | Reactively sync ARIA attributes to an element        | Setup only     | Static values applied once; getter functions tracked as effects        |
 
 ## Package Entry Points
 
@@ -41,19 +39,27 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 ### `define(tag, definition)`
 
 ```ts
-define<Props, Emits, SlotNames>(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): string;
+define<Props, Emits, SlotNames>(tag: string, definition: ComponentDefinition<Props, Emits, SlotNames>): void;
 ```
 
 The `setup()` function receives typed prop signals and a context bag:
 
 ```ts
 type SetupContextBag<Emits, SlotNames> = {
-  bind: HostBindFn;
-  el: HTMLElement;
-  emit: EmitFn<Emits>;
-  slots: ComponentSlots<SlotNames>;
+  bind: HostBindFn; // Apply reactive bindings to the host element
+  effect: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
+  el: HTMLElement; // The host element
+  emit: EmitFn<Emits>; // Dispatch typed custom events
+  inject: typeof inject; // Resolve context from nearest ancestor
+  onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
+  onElement: <T extends HTMLElement>(ref, cb) => void; // Run callback when a ref resolves to an element
+  onEvent: (target, event, listener, options?) => void; // Scoped event listener; auto-removed on disconnect
+  onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback
+  slots: ComponentSlots<SlotNames>; // Reactive slot signals
 };
 ```
+
+Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `effect`) are accessed exclusively through the setup context bag. They must be called synchronously during `setup()`.
 
 `setup()` returns an `HTMLResult` directly (not a function):
 
@@ -69,13 +75,26 @@ setup(props, ctx) {
 type ComponentDefinition<Props, Emits, SlotNames> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Template shown while async setup is pending
-  onError?: (error: CraftitError, element: HTMLElement) => HTMLResult | void;
+  onError?: (error: CraftError, element: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult | Promise<HTMLResult>;
+  setup: (
+    props: InferProps<PropsDef<Props>>,
+    ctx: SetupContextBag<Emits, SlotNames>,
+  ) => HTMLResult | Promise<HTMLResult>;
   shadow?: Partial<ShadowRootInit> | false; // false = light DOM (no shadow root)
-  slots?: readonly SlotNames[];
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
+```
+
+Pass `SlotNames` as a type parameter to `define()` to get typed `ctx.slots` access:
+
+```ts
+define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('my-card', {
+  setup(_props, { slots }) {
+    const hasHeader = slots.has('header'); // typed ✓
+    return html`...`;
+  },
+});
 ```
 
 #### Async setup
@@ -96,33 +115,40 @@ define('user-profile', {
 
 ## Runtime Helpers
 
-### `effect(fn)`
-
-Component-aware wrapper around ripple's `effect()`. Auto-registers cleanup on the current scope.
-
-### `onMounted(fn)`
+`onMounted`, `onCleanup`, `onEvent`, `onElement`, and `effect` are available on the setup context bag. Destructure them from the second argument to `setup()`.
 
 ```ts
-onMounted(fn: () => void | CleanupFn): void;
+setup(props, { onMounted, onCleanup, onEvent, onElement, effect }) {
+  onMounted(() => {
+    // DOM is ready; return a function for mount-scoped cleanup
+    return () => { /* cleanup on unmount */ };
+  });
+
+  onCleanup(() => { /* called on disconnect */ });
+
+  onEvent(window, 'keydown', (e) => { /* auto-removed on disconnect */ });
+
+  return html`...`;
+}
 ```
 
-Registers work that runs after the component template is mounted. Multiple calls are supported and run in registration order. Each callback is error-isolated — one failure does not prevent others from running.
-
-### `onEvent(target, event, listener, options?)`
-
-Adds an event listener and automatically removes it on cleanup. Must be called during setup or `scope.run()`. Silently no-ops when `target` is `null` or `undefined`, making it safe to use with reactive refs that may not yet be resolved.
-
-### `onCleanup(fn)`
+When writing composable helpers called from inside `setup()`, thread the hooks explicitly via function parameters rather than relying on a shared context:
 
 ```ts
-onCleanup(fn: CleanupFn): void;
+type MyHelperOptions = {
+  onCleanup: (fn: () => void) => void;
+};
+
+function useMyHelper(options: MyHelperOptions) {
+  options.onCleanup(() => { /* teardown */ });
+}
+
+// In setup:
+setup(_props, { onCleanup }) {
+  useMyHelper({ onCleanup });
+  return html`...`;
+}
 ```
-
-Registers a cleanup function to be called when the component disconnects. Must be called synchronously during `setup()` or inside `scope.run()`.
-
-### `onElement(ref, callback)`
-
-Runs `callback` when a `ref()` resolves to an element and re-runs when that element changes. Returns a subscription.
 
 ## Props API
 
@@ -132,29 +158,30 @@ Runs `callback` when a `ref()` resolves to an element and re-runs when that elem
 | `prop.bool(defaultValue?)`          | `PropDef<boolean>` | Any non-null attribute value other than `"false"` parses as `true`; `"false"` or absent attribute is `false` |
 | `prop.number(defaultValue?)`        | `PropDef<number>`  | Returns default (not NaN) and warns in dev when attribute is not a valid number                              |
 | `prop.oneOf(allowed, defaultValue)` | `PropDef<T>`       | Restricts to provided string union                                                                           |
-| `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse; `reflect: false` by default                                                                      |
-| `prop.value<T>(defaultValue?)`      | `PropDef<T>`       | JS-only property — never reads/writes an attribute; use for functions, arrays, or non-serialisable objects   |
+| `prop.json(defaultValue)`           | `PropDef<T>`       | JSON.parse from attribute; `reflect: false`                                                                  |
+| `prop.data<T>(defaultValue?)`       | `PropDef<T>`       | JS-only — never reads/writes an attribute; use for objects, arrays, callbacks, or any non-serialisable value |
 
-> **`prop.json` vs `prop.value`** — choose based on whether the prop needs to be settable via an HTML attribute:
-> - Use **`prop.json`** when the value can be declared in HTML (`<my-el data='[1,2,3]'>`). The attribute string is `JSON.parse`d; useful for configuration objects or arrays that are authored declaratively.
-> - Use **`prop.value`** when the prop is always set from JavaScript — functions, live datasets, class instances, or anything that cannot be serialised through an attribute. The attribute is never read.
+> **Choosing the right prop helper:**
+>
+> - **`prop.json`** — value can be declared in HTML (`<my-el config='{"x":1}'>`); attribute string is `JSON.parse`d.
+> - **`prop.data`** — value is always set from JavaScript (objects, arrays, callbacks, class instances); the attribute is never read. Use this for both data and function props.
 
 When you need custom parsing or `reflect: false`, use a raw `PropDef` object:
 
 ```ts
 props: {
-  data: { default: '', parse: (v) => v ?? '', reflect: false },
+  items: { default: [], parse: () => [], reflect: false },
 }
 ```
 
-Use `prop.value<T>()` for props that hold JS-only values (functions, rich objects) that cannot be serialised through an HTML attribute:
+Use `prop.data` for props that hold JS-only values (including callbacks) that cannot be serialised through an HTML attribute:
 
 ```ts
 define('data-grid', {
   props: {
-    getRowKey: prop.value<(row: unknown) => string>(),
-    columns:   prop.value<DataGridColumn[]>([]),
-    onSort:    prop.value<(key: string) => void>(),
+    getRowKey: prop.data<(row: unknown) => string>(),
+    columns: prop.data<DataGridColumn[]>([]),
+    onSort: prop.data<(key: string) => void>(),
   },
   setup(props) {
     // Set from JS: grid.getRowKey = (row) => row.id
@@ -175,15 +202,15 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 
 ### Directives
 
-| Directive                              | Purpose                                                                                   |
-| -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `each(source, key, render, fallback?)` | Keyed list rendering with DOM diffing                                                     |
-| `when(condition, truthy, falsy?)`      | Conditional rendering                                                                     |
-| `classMap(record)`                     | Reactive class string from object map                                                     |
-| `styleMap(record)`                     | Reactive inline style string from object map                                              |
-| `live(signal)`                         | Live form binding — skips stale writes to in-focus inputs                                 |
-| `model(signal)`                        | Two-way value binding for `input`, `select` (single), `textarea`; writes on `input` event |
-| `raw(value)`                           | Trusted HTML rendering (XSS risk without sanitizer)                                       |
+| Directive                                       | Purpose                                                                                              |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `each(source, key, render, fallback?)`          | Keyed reactive list; render receives `ReadonlySignal<T>` and `ReadonlySignal<number>`                |
+| `each(source, key, render, { snapshot: true })` | Snapshot list; render receives plain `T` and `number`; simpler, recreates items on change            |
+| `when(condition, truthy, falsy?)`               | Conditional rendering                                                                                |
+| `classMap(record)`                              | Reactive class string from object map                                                                |
+| `styleMap(record)`                              | Reactive inline style string from object map                                                         |
+| `model(signal)`                                 | Two-way value binding for `input`, `select`, `textarea`; `<select multiple>` uses `Signal<string[]>` |
+| `raw(value)`                                    | Trusted HTML rendering (XSS risk without sanitizer)                                                  |
 
 ### Event Modifiers
 
@@ -211,55 +238,80 @@ bind({
 });
 ```
 
-`bind()` auto-registers cleanup with the component scope — no manual `onCleanup` needed. Returns a cleanup function for early teardown. For standalone use outside setup, use `createBind(element)`.
+`bind()` auto-registers cleanup with the component scope — no manual `onCleanup` needed. Returns a cleanup function for early teardown.
 
-### `syncAria(target, config)`
-
-Reactively syncs ARIA attributes to a target element. Static values are set once; getter functions are tracked as effects.
+To sync ARIA attributes reactively, use `bind()` with `attr` keys directly:
 
 ```ts
-syncAria(element, {
-  role: 'button',
-  expanded: () => isOpen.value,
-  disabled: () => isDisabled.value,
+bind({
+  attr: {
+    role: 'button',
+    'aria-expanded': () => String(isOpen.value),
+    'aria-disabled': () => (isDisabled.value ? 'true' : null),
+  },
 });
 ```
-
-When `autoCleanup: true` is passed and `syncAria` is called outside a component setup context (e.g., in a standalone module), a `console.warn` is logged because no cleanup can be registered automatically.
 
 ## Slots
 
 - `slots.has(name?)` — `ReadonlySignal<boolean>` — whether the named (or default) slot has assigned content
 - `slots.elements(name?)` — `ReadonlySignal<Element[]>` — the assigned elements for the slot
 
-Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount. When `slots` is declared as a `const` array on the definition, TypeScript narrows the accepted slot name arguments.
+Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount.
 
 ## Context API
 
 - `createContext<T>(description?)` — Create a typed injection key
-- `provide(key, value)` — Provide a value to descendants (must be called during `setup()`)
+- `ctx.provide(key, value)` — Provide a value to descendants; called via the setup context bag
 - `inject(key)` — Resolve from nearest ancestor; returns `undefined` if not found
 - `inject(key, fallback)` — Resolve with a fallback value
 - `injectStrict(key)` — Resolve or throw if absent
 
-Both `provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws `'Lifecycle hooks must be called synchronously during component setup'`. Context resolution walks the ancestor chain including shadow DOM boundaries.
+`ctx.provide()` and `inject()` must be called synchronously during `setup()`. Calling them outside a setup context throws `'Lifecycle hooks must be called synchronously during component setup'`. Context resolution walks the ancestor chain including shadow DOM boundaries.
 
 ## Utilities
 
 - `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
-- `createId(prefix?)` — Generate an auto-incrementing unique ID string (e.g. `cft-1`).
-- `createStableId(prefix?)` — Generate a stable unique ID with a short random tag (e.g. `field-a3k21`). The tag is fixed per page load, so IDs are stable across renders.
-- `resetIdCounter()` — Reset the `createStableId` counter to 1. Useful in test `beforeEach` blocks to ensure deterministic IDs.
+- `createId()` — Generate a unique incremental string ID (e.g. `'craft-1'`).
+- `createStableId(key)` — Return the same ID for the same string key within a component's lifetime; useful for stable ARIA label associations.
+- `resetIdCounter()` — Reset the ID counter to 0. Call in test `beforeEach` for deterministic IDs.
+
+### `syncAria(target, config, options?)`
+
+Import from `@vielzeug/craft`. Reactively syncs ARIA attributes to any element — most useful for shadow DOM children, slotted triggers, or any non-host element:
+
+```ts
+import { syncAria } from '@vielzeug/craft';
+
+// Inside onMounted — autoCleanup:true (default) registers cleanup with the active setup context
+const cleanup = syncAria(triggerEl, {
+  expanded: () => isOpen.value,
+  controls: panelId,
+});
+```
+
+Static values are applied once; getter functions and signal values are tracked as reactive effects.
+
+When called synchronously inside `setup()` or within a lifecycle hook bound to a setup context, `autoCleanup: true` (the default) registers the cleanup automatically. Pass `{ autoCleanup: false }` when managing the element lifetime manually (e.g. slotted trigger elements that can be swapped out).
+
+> **Note:** `syncAria` uses `aria-` shorthand keys — `{ expanded: () => isOpen.value }` sets `aria-expanded`. The `role` key is set verbatim (no prefix).
 
 ## Form-Associated API
 
-### `defineField(options)`
+### `useField(options)`
 
-Wire a form-associated element to `ElementInternals`. Requires `formAssociated: true` on the component definition.
+Wire a form-associated element to `ElementInternals`. Requires `formAssociated: true` on the component definition. The `disabled` state tracking via `internals.states` (CustomStateSet) is skipped with a dev warning if the API is unavailable in the current environment.
 
 ```ts
 type FormFieldOptions<T> = {
   disabled?: ReadonlySignal<boolean>;
+  /**
+   * When true, a null/undefined value is submitted as '' instead of null,
+   * keeping the field's key present in FormData even when the value is absent.
+   * Only applies to the default toFormValue; ignored if toFormValue is provided.
+   * @default false
+   */
+  emptyStringForNull?: boolean;
   toFormValue?: (value: T) => File | FormData | string | null;
   value: Signal<T> | ReadonlySignal<T>;
 };
@@ -277,18 +329,16 @@ type FormFieldHandle = {
 
 Coordinate form state across child field components:
 
-- `createFormContext(options?)` — Create a `FormContextValue`
-- `useFormContext()` — Inject from nearest ancestor; returns `undefined` if no context is provided
-
-To provide a form context to descendants, call `provide(FORM_CONTEXT_KEY, ctx)` during setup.
+- `createFormContext(options?)` — Create a `FormController`; call `ctx.provide(FORM_CONTEXT_KEY, ctrl)` to make it available to descendants
+- `FORM_CONTEXT_KEY` — the `InjectionKey` used to provide/inject the form context
 
 ```ts
-type FormContextValue = {
+type FormController = {
+  clearStatus(): void; // Clears dirty + error signals; calls onReset callback
   readonly dirty: ReadonlySignal<boolean>;
   readonly error: ReadonlySignal<unknown>; // Last submit error; null if last submit succeeded
   markDirty(): void; // Call from input/change handlers
   registerField(validity: ReadonlySignal<boolean>): () => void;
-  reset(): void; // Resets dirty + error to false/null; calls onReset
   submit(e?: Event): Promise<void>; // Resets dirty to false on success; preserves dirty on failure
   readonly submitting: ReadonlySignal<boolean>;
   readonly valid: ReadonlySignal<boolean>; // true when all registered fields are valid
@@ -308,22 +358,22 @@ Import from `@vielzeug/craft/observers`.
 
 Import from `@vielzeug/craft/testing`.
 
-| API                      | Purpose                                                   |
-| ------------------------ | --------------------------------------------------------- |
-| `mount(setup, options?)` | Mount a component and return a test fixture               |
-| `cleanup()`              | Remove all mounted elements and reset test state          |
-| `install(afterEach)`     | _(removed)_ Use `cleanup()` manually in `afterEach`       |
-| `flush(options?)`        | Drain reactive updates and animation frames               |
-| `FLUSH_DEEP`             | Pre-built options for deep async chains (`maxTurns: 12`)  |
-| `mock(tag, template?)`   | Register a no-op stub custom element                      |
-| `renderHook(setup)`      | Run lifecycle hooks in isolation without a full component |
-| `fire.*`                 | Synchronous DOM event dispatchers                         |
-| `user.*`                 | Async user interactions (type, fill, click, press, …)     |
-| `waitFor(fn, options?)`  | Poll until an assertion passes or a condition is truthy   |
-| `waitForEvent(el, name)` | Resolve when the target element emits the named event     |
-| `within(element)`        | Scoped query helpers (`query`, `queryAll`, …)             |
+| API                      | Purpose                                                                                    |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `mount(setup, options?)` | Mount a component and return a test fixture                                                |
+| `cleanup()`              | Remove all mounted elements and reset test state                                           |
+| `install(afterEach)`     | _(removed)_ Use `cleanup()` manually in `afterEach`                                        |
+| `flush(options?)`        | Drain reactive updates and animation frames                                                |
+| `FLUSH_DEEP`             | Pre-built options for deep async chains (`maxTurns: 12`)                                   |
+| `mock(tag, template?)`   | Register a no-op stub custom element                                                       |
+| `renderHook(setup)`      | Run lifecycle hooks in isolation; overload accepts `propDefs` as first arg for typed props |
+| `fire.*`                 | Synchronous DOM event dispatchers                                                          |
+| `user.*`                 | Async user interactions (type, fill, click, press, …)                                      |
+| `waitFor(fn, options?)`  | Poll until an assertion passes or a condition is truthy                                    |
+| `waitForEvent(el, name)` | Resolve when the target element emits the named event                                      |
+| `within(element)`        | Scoped query helpers (`query`, `queryAll`, …)                                              |
 
-> **Test isolation:** `cleanup()` also resets internal `live()` signal tracking and the raw HTML sanitizer. Call it in `afterEach` to prevent state leaking between tests.
+> **Test isolation:** `cleanup()` resets mounted elements, `live()` signal tracking, and the raw HTML sanitizer. Call it in `afterEach` to prevent state leaking between tests.
 
 #### `Fixture` interface
 
@@ -348,7 +398,8 @@ interface Fixture<T extends HTMLElement = HTMLElement> {
 Useful for testing composable lifecycle hooks (`onMounted`, `effect`, `inject`, etc.) without a template:
 
 ```ts
-const { result, flush, destroy } = await renderHook(() => {
+// Without props
+const { result, flush, destroy } = await renderHook((_props, { onMounted }) => {
   const count = signal(0);
   onMounted(() => {
     count.value = 1;
@@ -356,6 +407,10 @@ const { result, flush, destroy } = await renderHook(() => {
   return count;
 });
 expect(result.value).toBe(1);
+
+// With typed props (prop-defs overload)
+const { result } = await renderHook({ label: prop.string('hello'), count: prop.number(0) }, (props) => props.label);
+expect(result.value).toBe('hello');
 ```
 
 ## Ripple Re-exports
@@ -371,7 +426,7 @@ Craft re-exports these from `@vielzeug/ripple`:
 | ------------------ | --------------------------------------------------------------- |
 | `craft:connect`    | After every `connectedCallback` (including reconnects)          |
 | `craft:disconnect` | After `disconnectedCallback`, before component state is reset   |
-| `craft:error`      | When setup throws — bubbles, composed; detail is `CraftitError` |
+| `craft:error`      | When setup throws — bubbles, composed; detail is `CraftError`   |
 
 ## Types
 
@@ -382,24 +437,54 @@ type PropDef<T> = {
   reflect?: boolean;
 };
 
+/**
+ * Infer reactive props type from a PropInputDefs map.
+ * Each entry becomes ReadonlySignal<T> keyed by prop name.
+ */
+type InferProps<D extends PropInputDefs> = {
+  readonly [K in keyof D]-?: ReadonlySignal<InferPropValue<D[K]>>;
+};
+
 type SetupContextBag<
-  Emits extends Record<string, unknown> = Record<string, unknown>,
+  Emits extends Record<string, unknown> = Record<string, never>,
   SlotNames extends string = string,
 > = {
   bind: HostBindFn; // Apply reactive bindings to the host element
+  effect: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
   el: HTMLElement; // The host element
   emit: EmitFn<Emits>; // Dispatch typed custom events
+  inject: <T>(key: InjectionKey<T>, fallback?: T) => T | undefined; // Resolve context from nearest ancestor
+  onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
+  onElement: <T extends HTMLElement>(ref: ReadonlySignal<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
+  onEvent: {
+    <K extends keyof HTMLElementEventMap>(
+      target: EventTarget | null | undefined,
+      event: K,
+      listener: (e: HTMLElementEventMap[K]) => void,
+      options?: AddEventListenerOptions,
+    ): void;
+    (
+      target: EventTarget | null | undefined,
+      event: string,
+      listener: EventListener,
+      options?: AddEventListenerOptions,
+    ): void;
+  };
+  onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback; runs after first render
+  provide: <T>(key: InjectionKey<T>, value: T) => void; // Register a context value on the host element
   slots: ComponentSlots<SlotNames>; // Reactive slot signals
 };
 
 type ComponentDefinition<Props, Emits, SlotNames extends string> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Shown while async setup is pending
-  onError?: (error: CraftitError, el: HTMLElement) => HTMLResult | void;
+  onError?: (error: CraftError, el: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
-  setup: (props: InferPropsSignals<Props>, ctx: SetupContextBag<Emits, SlotNames>) => HTMLResult | Promise<HTMLResult>;
+  setup: (
+    props: InferProps<PropsDef<Props>>,
+    ctx: SetupContextBag<Emits, SlotNames>,
+  ) => HTMLResult | Promise<HTMLResult>;
   shadow?: Partial<ShadowRootInit> | false; // false = light DOM
-  slots?: readonly SlotNames[];
   styles?: (string | CSSStyleSheet | CSSResult)[];
 };
 
@@ -421,19 +506,18 @@ type RefCallback<T extends Element> = (el: T | null) => void;
 
 type InjectionKey<T> = symbol & { readonly __craftit_injection_key?: T };
 
-type LifecycleEventName = 'craft:connect' | 'craft:disconnect';
+/** Phase in which a CraftError occurred. */
+type CraftErrorPhase = 'async-setup' | 'mounted' | 'setup';
 ```
 
 ## Errors
 
-`CraftitError` is thrown when component setup fails. It extends `Error` with:
+`CraftError` is thrown when component setup fails. It extends `Error` with:
 
 - `component: string` — the element's local name
-- `phase: ComponentPhase` — the lifecycle phase when the error occurred
+- `phase: CraftErrorPhase` — `'setup'` | `'async-setup'` | `'mounted'`
 - `cause: Error` — the original error
 
-`reportRuntimeError(error, element)` dispatches `craft:error` on the host element (bubbles, composed) and logs to `console.error`.
+`CraftError.is(err)` — static type-guard, equivalent to `err instanceof CraftError`.
 
-If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing. This applies to both synchronous and async `setup()`. If `onError` returns `void` (no recovery), the component phase resets to `UNINITIALIZED` so a subsequent reconnect can retry setup.
-
-`CraftitError.is(err)` — static type-guard, equivalent to `err instanceof CraftitError`.
+If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing. This applies to both synchronous and async `setup()`. If `onError` returns `void` (no recovery), a subsequent reconnect can retry setup.

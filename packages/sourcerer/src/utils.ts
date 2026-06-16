@@ -1,9 +1,9 @@
-import { backoff, retry, stableStringify } from '@vielzeug/arsenal';
+import { backoff, retry, stringify } from '@vielzeug/arsenal';
 
 export { retry };
 
 // Internal stable-key helper — used by source factories, not exposed as public API.
-export const defaultKeyOf = stableStringify;
+export const defaultKeyOf = stringify;
 
 /** Extracts a user-facing error message from a caught exception. */
 export const extractError = (reason: unknown): string => {

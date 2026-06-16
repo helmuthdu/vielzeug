@@ -109,4 +109,63 @@ describe('queue', () => {
 
     expect(q.size).toBe(0);
   });
+
+  it('onSettled fires for resolved tasks', async () => {
+    const q = queue({ concurrency: 2 });
+    const results: unknown[] = [];
+
+    q.onSettled((r) => results.push(r));
+    q.add(async () => 1);
+    q.add(async () => 2);
+
+    await q.onIdle();
+    expect(results).toHaveLength(2);
+    expect(results.every((r) => (r as { ok: boolean }).ok === true)).toBe(true);
+    expect((results as Array<{ ok: true; value: number }>).map((r) => r.value).sort()).toEqual([1, 2]);
+  });
+
+  it('onSettled fires for failed tasks as { ok: false }', async () => {
+    const q = queue({ concurrency: 1 });
+    const results: unknown[] = [];
+
+    q.onSettled((r) => results.push(r));
+    q.add(async () => {
+      throw new Error('boom');
+    }).catch(() => null);
+    q.add(async () => 'ok').catch(() => null);
+
+    await q.onIdle();
+    expect(results).toHaveLength(2);
+    expect((results[0] as { ok: boolean }).ok).toBe(false);
+    expect((results[1] as { ok: boolean }).ok).toBe(true);
+  });
+
+  it('onSettled returns an unsubscribe function', async () => {
+    const q = queue();
+    const results: unknown[] = [];
+
+    const unsub = q.onSettled((r) => results.push(r));
+
+    q.add(async () => 1);
+    await q.onIdle();
+    unsub();
+    q.add(async () => 2);
+    await q.onIdle();
+
+    expect(results).toHaveLength(1);
+  });
+
+  it('onSettled supports multiple subscribers', async () => {
+    const q = queue();
+    let count1 = 0;
+    let count2 = 0;
+
+    q.onSettled(() => count1++);
+    q.onSettled(() => count2++);
+    q.add(async () => 'x');
+
+    await q.onIdle();
+    expect(count1).toBe(1);
+    expect(count2).toBe(1);
+  });
 });

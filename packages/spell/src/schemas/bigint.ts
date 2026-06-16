@@ -9,14 +9,16 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   constructor() {
-    super((value) => (typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, _messages().bigint.type())));
+    super((value, ctx) =>
+      typeof value === 'bigint' ? null : fail(ErrorCode.invalid_type, (ctx?.messages ?? _messages()).bigint.type()),
+    );
   }
 
   min(
     minimum: bigint,
     message: MessageFn<{ min: bigint; value: bigint }> = (ctx) => _messages().bigint.min(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed >= minimum) return null;
@@ -29,7 +31,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     maximum: bigint,
     message: MessageFn<{ max: bigint; value: bigint }> = (ctx) => _messages().bigint.max(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed <= maximum) return null;
@@ -39,7 +41,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   positive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.positive()): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed > 0n) return null;
@@ -49,7 +51,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   negative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.negative()): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed < 0n) return null;
@@ -59,7 +61,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   nonNegative(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonNegative()): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed >= 0n) return null;
@@ -69,7 +71,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
   }
 
   nonPositive(message: MessageFn<{ value: bigint }> = () => _messages().bigint.nonPositive()): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed <= 0n) return null;
@@ -82,7 +84,7 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     step: bigint,
     message: MessageFn<{ step: bigint; value: bigint }> = (ctx) => _messages().bigint.multipleOf(ctx),
   ): this {
-    return this._addConstraint((value) => {
+    return this._addConstraint((value, _ctx) => {
       const typed = value as bigint;
 
       if (typed % step === 0n) return null;
@@ -91,17 +93,27 @@ export class BigIntSchema<Input = bigint> extends Schema<bigint, Input> {
     });
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.bigint) return visitor.bigint(this);
 
     return super._walk(visitor);
+  }
+
+  /**
+   * Returns a new schema that coerces the input to a bigint before validation.
+   * Handles number, string (up to 1000 digits), and bigint inputs.
+   *
+   * Equivalent to `s.coerce.bigint()`.
+   */
+  coerce(): BigIntSchema<unknown> {
+    return BigIntSchema.coerce();
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     if (this.state.validators.length > 0) {
       _warn(
         'toDescriptor(): this bigint schema has constraints (e.g. min(), max(), positive()). ' +
-          'BigInt constraints are not serializable and will not be restored by fromDescriptor().',
+          'BigInt constraints are not serializable and will not appear in toDescriptor() output.',
       );
     }
 

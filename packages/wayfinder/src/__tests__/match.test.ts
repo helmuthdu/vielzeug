@@ -144,6 +144,35 @@ describe('match()', () => {
     router.dispose();
   });
 
+  it('drains an AsyncGenerator data loader and returns the final value', async () => {
+    async function* streamingLoader(): AsyncGenerator<string, string> {
+      yield 'partial-1';
+      yield 'partial-2';
+
+      return 'final';
+    }
+
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: { data: streamingLoader, path: '/page' },
+      },
+    });
+
+    await settle();
+
+    const state = await router.match('/page');
+
+    expect(state?.status).toBe('idle');
+    // match() drains the generator and exposes the return value as data.
+    expect(state?.matches.at(-1)?.data).toBe('final');
+    // Router navigation state must remain unaffected.
+    expect(router.getSnapshot().location.pathname).toBe('/');
+    router.dispose();
+  });
+
   it('forwards the provided signal to the data loader', async () => {
     let capturedSignal: AbortSignal | undefined;
     const controller = new AbortController();

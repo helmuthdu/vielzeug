@@ -1,20 +1,16 @@
-import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery } from './types';
+import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery, SearchOptions } from './types';
 
-import { createSourceCore } from './core';
-import { createFetchManager } from './fetchManager';
+import { createAsyncSource } from './asyncSource';
 import { SourceError } from './types';
-import { defaultKeyOf, defaultRetryDelay, extractError, retry } from './utils';
+import { defaultKeyOf, extractError, retry } from './utils';
+
+type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates a cursor-based (keyset-pagination) source that fetches data from a network endpoint. */
 export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCursor>): CursorSource<T, TCursor> {
-  const core = createSourceCore();
-
-  // ── Config defaults ─────────────────────────────────────────────────────────
-  const debounceMs = cfg.debounceMs ?? 300;
-  const retryAttempts = cfg.retry?.attempts ?? 0;
-  const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const autoFetch = cfg.autoFetch !== false;
   const keyOf = cfg.queryKey ?? defaultKeyOf;
+  const base = createAsyncSource<CursorSourceQuery<TCursor>>(cfg, keyOf);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
   let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
@@ -26,9 +22,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   let items: readonly T[] = [];
   let total = 0;
   let error: SourceError | null = null;
-
-  // ── In-flight deduplication ─────────────────────────────────────────────────
-  const fm = createFetchManager<CursorSourceQuery<TCursor>>(keyOf);
+  let pendingSearch: PendingSearch | null = null;
 
   // ── Cached accessors ────────────────────────────────────────────────────────
   let cachedCurrent: readonly T[] = [];
@@ -42,14 +36,16 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     totalItems: 0,
   };
 
+  const listeners = new Set<() => void>();
+
   const refreshMeta = () => {
     cachedCurrent = items;
     cachedMeta = {
       error,
       hasNextPage: nextCursor !== undefined,
       hasPrevPage: prevCursor !== undefined,
-      isLoading: fm.pendingCount > 0,
-      isSearchPending: core.isScheduled,
+      isLoading: base.pendingCount() > 0,
+      isSearchPending: base.isScheduled(),
       pageSize: limit,
       totalItems: total,
     };
@@ -57,9 +53,20 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
 
   refreshMeta();
 
-  const commit = () => {
+  const notifyListeners = () => {
+    if (base.disposed) return;
+
     refreshMeta();
-    core.notify();
+    base.notify();
+
+    for (const l of listeners) l();
+  };
+
+  const resolvePendingSearch = () => {
+    if (pendingSearch) {
+      pendingSearch.resolve();
+      pendingSearch = null;
+    }
   };
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
@@ -73,7 +80,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   const fetchQuery = (q: CursorSourceQuery<TCursor>): Promise<void> => {
     error = null;
 
-    return fm.run(
+    return base.fetch(
       q,
       async (q, signal, isLatest) => {
         const startTime = Date.now();
@@ -101,12 +108,19 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
             total = 0;
             nextCursor = undefined;
             prevCursor = undefined;
-            error = new SourceError(extractError(reason), { cause: reason, query: q });
+            error = new SourceError(extractError(reason), {
+              cause: reason,
+              context: { kind: 'cursor', limit: q.limit, ...(q.search && { search: q.search }) },
+            });
             cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
           }
         }
       },
-      commit,
+      () => {
+        notifyListeners();
+
+        if (base.pendingCount() === 0) resolvePendingSearch();
+      },
     );
   };
 
@@ -115,13 +129,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   // ── Auto-fetch + refresh interval ───────────────────────────────────────────
   if (autoFetch) void doUpdate();
 
-  let refreshTimer: ReturnType<typeof setInterval> | undefined;
-
-  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
-    refreshTimer = setInterval(() => {
-      if (!core.isDisposed) void doUpdate();
-    }, cfg.refreshInterval);
-  }
+  base.startRefreshInterval(() => void doUpdate());
 
   // ── Public API ──────────────────────────────────────────────────────────────
   return {
@@ -129,18 +137,17 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return cachedCurrent;
     },
 
-    dispose() {
-      if (refreshTimer !== undefined) {
-        clearInterval(refreshTimer);
-        refreshTimer = undefined;
-      }
-
-      fm.dispose();
-      core.dispose();
+    get disposalSignal() {
+      return base.disposalSignal;
     },
 
-    flush() {
-      return core.flush(() => doUpdate());
+    dispose: () => {
+      resolvePendingSearch();
+      base.dispose();
+    },
+
+    get disposed() {
+      return base.disposed;
     },
 
     get meta() {
@@ -156,6 +163,32 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return doUpdate();
     },
 
+    patch(changes) {
+      let changed = false;
+
+      if (changes.limit !== undefined) {
+        const next = Math.max(1, Math.trunc(changes.limit));
+
+        if (next !== limit) {
+          limit = next;
+          afterCursor = undefined;
+          beforeCursor = undefined;
+          changed = true;
+        }
+      }
+
+      if ('search' in changes && changes.search !== search) {
+        search = changes.search ?? '';
+        afterCursor = undefined;
+        beforeCursor = undefined;
+        changed = true;
+      }
+
+      if (!changed) return Promise.resolve();
+
+      return doUpdate();
+    },
+
     prev() {
       if (!prevCursor) return Promise.resolve();
 
@@ -166,7 +199,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     ready(timeout) {
-      return core.ready(() => fm.pendingCount === 0 && !core.isScheduled, timeout);
+      return base.ready(timeout);
     },
 
     refresh() {
@@ -174,7 +207,8 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     reset() {
-      core.cancelTimer();
+      base.cancelTimer();
+      resolvePendingSearch();
       search = '';
       afterCursor = undefined;
       beforeCursor = undefined;
@@ -182,57 +216,38 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return doUpdate();
     },
 
-    restoreQuery(patch) {
-      let changed = false;
+    search(q, opts?: SearchOptions): Promise<void> {
+      if (opts?.immediate) {
+        if (q === search) return Promise.resolve();
 
-      if (patch.limit !== undefined) {
-        const n = Math.max(1, Math.trunc(patch.limit));
+        base.cancelTimer();
+        resolvePendingSearch();
+        search = q;
+        afterCursor = undefined;
+        beforeCursor = undefined;
 
-        if (n !== limit) {
-          limit = n;
-          afterCursor = undefined;
-          beforeCursor = undefined;
-          changed = true;
-        }
+        return doUpdate();
       }
 
-      if ('search' in patch) {
-        const s = patch.search ?? '';
-
-        if (s !== search) {
-          search = s;
-          afterCursor = undefined;
-          beforeCursor = undefined;
-          changed = true;
-        }
-      }
-
-      if (!changed) return Promise.resolve();
-
-      return doUpdate();
-    },
-
-    search(q) {
-      if (q === search) return;
-
-      search = q;
-      afterCursor = undefined;
-      beforeCursor = undefined;
-      core.schedule(() => {
-        void doUpdate();
-      }, debounceMs);
-      commit();
-    },
-
-    searchNow(q) {
       if (q === search) return Promise.resolve();
 
-      core.cancelTimer();
+      resolvePendingSearch();
+
       search = q;
       afterCursor = undefined;
       beforeCursor = undefined;
 
-      return doUpdate();
+      let resolveSearch!: () => void;
+      const promise = new Promise<void>((res) => {
+        resolveSearch = res;
+      });
+
+      pendingSearch = { promise, resolve: resolveSearch };
+
+      base.schedule(() => void doUpdate(), debounceMs);
+      notifyListeners();
+
+      return promise;
     },
 
     setLimit(n) {
@@ -247,12 +262,17 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return doUpdate();
     },
 
-    subscribe(listener) {
-      return core.subscribe(listener);
+    subscribe: (listener) => {
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
-    [Symbol.dispose]() {
-      this.dispose();
+    [Symbol.dispose]: () => {
+      resolvePendingSearch();
+      base.dispose();
     },
 
     toQuery() {

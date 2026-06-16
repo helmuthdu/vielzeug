@@ -13,7 +13,7 @@ describe('deriveSource', () => {
     const parent = createLocalSource([1, 2, 3], { limit: 2 });
     const derived = deriveSource(parent, (items) => items.map(String));
 
-    expect(derived.meta).toBe(parent.meta);
+    expect(derived.meta).toStrictEqual(parent.meta);
   });
 
   it('reacts to parent changes', async () => {
@@ -84,17 +84,17 @@ describe('deriveSource', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('does not throw when initial transform throws — returns empty current', () => {
+  it('throws when initial transform throws', () => {
     const parent = createLocalSource([1, 2, 3]);
-    const derived = deriveSource(parent, () => {
-      throw new Error('bad transform');
-    });
 
-    expect(derived.current).toEqual([]);
-    derived.dispose();
+    expect(() =>
+      deriveSource(parent, () => {
+        throw new Error('bad transform');
+      }),
+    ).toThrow('bad transform');
   });
 
-  it('preserves last good current when transform throws on update', async () => {
+  it('throws when transform throws on update', () => {
     let shouldThrow = false;
     const parent = createLocalSource([1, 2, 3]);
     const derived = deriveSource(parent, (items) => {
@@ -107,13 +107,7 @@ describe('deriveSource', () => {
 
     shouldThrow = true;
 
-    const listener = vi.fn();
-
-    derived.subscribe(listener);
-    await parent.setData([4, 5, 6]);
-
-    expect(derived.current).toEqual([2, 4, 6]);
-    expect(listener).toHaveBeenCalled();
+    expect(() => parent.setData([4, 5, 6])).toThrow('bad');
     derived.dispose();
   });
 

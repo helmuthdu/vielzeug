@@ -15,16 +15,16 @@ export function createBrowserHistory(): HistoryDriver {
         state: window.history.state,
       };
     },
+    onPopstate(listener) {
+      window.addEventListener('popstate', listener);
+
+      return () => window.removeEventListener('popstate', listener);
+    },
     push(url, state) {
       window.history.pushState(state, '', url);
     },
     replace(url, state) {
       window.history.replaceState(state, '', url);
-    },
-    subscribe(listener) {
-      window.addEventListener('popstate', listener);
-
-      return () => window.removeEventListener('popstate', listener);
     },
   };
 }
@@ -57,6 +57,11 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
     get location(): MemoryLocation {
       return stack[cursor]!;
     },
+    onPopstate(listener) {
+      listeners.add(listener);
+
+      return () => listeners.delete(listener);
+    },
     push(url, state = null) {
       const p = new URL(url, 'http://localhost');
 
@@ -70,11 +75,6 @@ export function createMemoryHistory(initialPath = '/'): HistoryDriver {
 
       stack[cursor] = { hash: p.hash, pathname: p.pathname, search: p.search, state };
       // Silent — mirrors browser replaceState semantics.
-    },
-    subscribe(listener) {
-      listeners.add(listener);
-
-      return () => listeners.delete(listener);
     },
   };
 }

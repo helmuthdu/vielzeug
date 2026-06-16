@@ -50,10 +50,12 @@ For each item in the improvement plan (in order of priority):
    - Run the test suite and ensure all tests pass (safe to auto-run):
 
 // turbo
+
 ```bash
 pnpm vitest run packages/<name>/src/__tests__/
 ```
-   - If tests fail, fix the underlying issue rather than weakening the tests, unless the plan indicates that the old behavior is being intentionally changed.
+
+- If tests fail, fix the underlying issue rather than weakening the tests, unless the plan indicates that the old behavior is being intentionally changed.
 
 5. **Stability across the monorepo**
    - If your change affects other packages (e.g. a public API used by dependants), run the relevant tests (for example, by package or the whole suite if needed).

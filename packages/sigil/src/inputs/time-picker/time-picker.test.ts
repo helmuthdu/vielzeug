@@ -572,4 +572,14 @@ describe('sg-time-picker', () => {
       expect(getColumnOptions(fixture, 'Hours').length).toBe(24);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-time-picker', { attrs: { label: 'Pick a time' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

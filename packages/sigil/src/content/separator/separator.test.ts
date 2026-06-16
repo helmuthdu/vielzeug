@@ -128,4 +128,14 @@ describe('sg-separator accessibility', () => {
       expect(fixture.query('.separator-label')?.textContent?.trim()).toBe('Continue with');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-separator', { attrs: { decorative: '', label: 'Or' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

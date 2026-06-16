@@ -5,7 +5,6 @@ description: Async utility examples for Arsenal.
 
 ## Quick Reference
 
-- [abortable](./async/abortable.md)
 - [abortError](./async/abortError.md)
 - [attempt](./async/attempt.md)
 - [parallel](./async/parallel.md)
@@ -17,7 +16,7 @@ description: Async utility examples for Arsenal.
 ## Common Patterns
 
 ```ts
-import { abortable, backoff, isAbortError, memo, parallel, queue, retry, sleep, waitFor } from '@vielzeug/arsenal';
+import { backoff, isAbortError, parallel, queue, retry, sleep, stash, waitFor } from '@vielzeug/arsenal';
 
 // Bounded concurrent fan-out
 const jobs = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });
@@ -27,6 +26,13 @@ const q = queue({ concurrency: 2 });
 const a = q.add(() => fetch('/api/a').then((r) => r.text()));
 const b = q.add(() => fetch('/api/b').then((r) => r.text()));
 await q.onIdle();
+
+// Listen to every settled result
+const unsub = q.onSettled((result) => {
+  if (result.ok) console.log('done', result.value);
+  else console.error('failed', result.error);
+});
+unsub(); // unsubscribe
 
 // Retry with per-attempt timeout and exponential backoff
 const resilient = await retry(
@@ -53,23 +59,20 @@ await sleep(250, controller.signal);
 // Poll until condition is true or timeout fires
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
 
-// Memoize async functions — in-flight deduplication included
-const fetchProfile = memo((id: number) => fetch(`/api/users/${id}`).then((r) => r.json()), {
-  maxSize: 100,
-  ttl: 60_000,
-});
-const [profileA, profileB] = await Promise.all([fetchProfile(1), fetchProfile(1)]);
-// fetchProfile(1) is called exactly once — second call shares the in-flight Promise
+// Async caching with in-flight deduplication — use stash.getOrSet
+const profileCache = stash<unknown>({ ttlMs: 60_000, maxSize: 100 });
+const [profileA, profileB] = await Promise.all([
+  profileCache.getOrSet('user:1', () => fetch('/api/users/1').then((r) => r.json())),
+  profileCache.getOrSet('user:1', () => fetch('/api/users/1').then((r) => r.json())),
+]);
+// fetch is called exactly once — second getOrSet shares the in-flight Promise
 
-// Abort a running promise
+// Abort a fetch directly via AbortSignal
 const abortController = new AbortController();
-const cancellable = abortable(
-  fetch('/api/cancel').then((r) => r.json()),
-  abortController.signal,
-);
+const task = fetch('/api/slow', { signal: abortController.signal }).then((r) => r.json());
 abortController.abort();
 try {
-  await cancellable;
+  await task;
 } catch (err) {
   if (isAbortError(err)) console.log('cancelled');
 }

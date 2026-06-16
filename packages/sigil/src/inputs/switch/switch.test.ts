@@ -380,4 +380,15 @@ describe('sg-switch accessibility', () => {
       fixture.destroy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      const fix = await mount('sg-switch', { html: 'Dark mode' });
+
+      const results = await axeCheck(fix.element);
+
+      fix.destroy();
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

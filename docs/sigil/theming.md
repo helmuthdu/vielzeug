@@ -68,21 +68,21 @@ Sigil uses an 11-step contrast scale driven entirely by `light-dark()`. The valu
 
 Optimized for surfaces, borders, and UI structure:
 
-| Token                  | Light                    | Dark                    | Usage                           |
-| ---------------------- | ------------------------ | ----------------------- | ------------------------------- |
-| `--color-contrast-50`  | oklch(99% 0.004 264deg)  | oklch(13% 0.005 250deg) | Canvas, page background         |
-| `--color-contrast-100` | oklch(97% 0.004 264deg)  | oklch(17% 0.005 250deg) | Cards, elevated surfaces        |
+| Token                  | Light                      | Dark                      | Usage                              |
+| ---------------------- | -------------------------- | ------------------------- | ---------------------------------- |
+| `--color-contrast-50`  | oklch(99% 0.004 264deg)    | oklch(13% 0.005 250deg)   | Canvas, page background            |
+| `--color-contrast-100` | oklch(97% 0.004 264deg)    | oklch(17% 0.005 250deg)   | Cards, elevated surfaces           |
 | `--color-contrast-150` | oklch(95.5% 0.0045 264deg) | oklch(19.5% 0.005 250deg) | Midpoint — chip base, subtle fills |
-| `--color-contrast-200` | oklch(94% 0.005 264deg)  | oklch(22% 0.005 250deg) | Nested cards, hover states      |
-| `--color-contrast-300` | oklch(89% 0.006 264deg)  | oklch(29% 0.006 250deg) | Borders, dividers               |
-| `--color-contrast-400` | oklch(81% 0.007 264deg)  | oklch(38% 0.006 250deg) | Disabled backgrounds, subtle UI |
+| `--color-contrast-200` | oklch(94% 0.005 264deg)    | oklch(22% 0.005 250deg)   | Nested cards, hover states         |
+| `--color-contrast-300` | oklch(89% 0.006 264deg)    | oklch(29% 0.006 250deg)   | Borders, dividers                  |
+| `--color-contrast-400` | oklch(81% 0.007 264deg)    | oklch(38% 0.006 250deg)   | Disabled backgrounds, subtle UI    |
 
 ### Text Range (500–900)
 
 Optimized for readability and WCAG compliance. OKLCH provides perceptually-uniform lightness steps so contrast ratios are consistent across the ramp.
 
-| Token                  | Light                  | Dark                   | WCAG            | Usage                       |
-| ---------------------- | ---------------------- | ---------------------- | --------------- | --------------------------- |
+| Token                  | Light                   | Dark                    | WCAG            | Usage                       |
+| ---------------------- | ----------------------- | ----------------------- | --------------- | --------------------------- |
 | `--color-contrast-500` | oklch(49% 0.008 264deg) | oklch(58% 0.006 250deg) | AA (large text) | Tertiary text, placeholders |
 | `--color-contrast-600` | oklch(40% 0.008 264deg) | oklch(68% 0.005 250deg) | AA              | Secondary / muted text      |
 | `--color-contrast-700` | oklch(32% 0.008 264deg) | oklch(78% 0.004 250deg) | AAA             | Supplemental body text      |
@@ -172,16 +172,16 @@ Sigil uses two parallel font-size scales to cleanly separate body text sizing fr
 
 Used by default for all non-heading text:
 
-| Token          | Value            | Usage                               |
-| -------------- | ---------------- | ----------------------------------- |
-| `--text-2xs`   | 0.625rem (10px)  | Micro labels, dot-only badges       |
-| `--text-xs`    | 0.75rem (12px)   | Small labels, captions              |
-| `--text-sm`    | 0.875rem (14px)  | Secondary text, labels              |
-| `--text-base`  | 1rem (16px)      | Body text (minimum accessible size) |
-| `--text-lg`    | 1.125rem (18px)  | Large UI text                       |
-| `--text-xl`    | 1.25rem (20px)   | Subheadings                         |
-| `--text-2xl`   | 1.5rem (24px)    | Major display text                  |
-| `--text-3xl`   | 1.875rem (30px)  | Display / circular progress label   |
+| Token         | Value           | Usage                               |
+| ------------- | --------------- | ----------------------------------- |
+| `--text-2xs`  | 0.625rem (10px) | Micro labels, dot-only badges       |
+| `--text-xs`   | 0.75rem (12px)  | Small labels, captions              |
+| `--text-sm`   | 0.875rem (14px) | Secondary text, labels              |
+| `--text-base` | 1rem (16px)     | Body text (minimum accessible size) |
+| `--text-lg`   | 1.125rem (18px) | Large UI text                       |
+| `--text-xl`   | 1.25rem (20px)  | Subheadings                         |
+| `--text-2xl`  | 1.5rem (24px)   | Major display text                  |
+| `--text-3xl`  | 1.875rem (30px) | Display / circular progress label   |
 
 ### Heading Scale (`--heading-*`)
 
@@ -234,10 +234,10 @@ Used exclusively by `variant="heading"` on `<sg-text>`:
 ### Letter Spacing
 
 ```css
---tracking-tight:  -0.025em; /* -2.5% — headers, display text */
+--tracking-tight: -0.025em; /* -2.5% — headers, display text */
 --tracking-header: -0.025em; /* alias for --tracking-tight */
---tracking-normal:  0em;     /* default body tracking */
---tracking-wide:    0.05em;  /* labels, badges, uppercase caps */
+--tracking-normal: 0em; /* default body tracking */
+--tracking-wide: 0.05em; /* labels, badges, uppercase caps */
 ```
 
 ## Cascade Layer
@@ -411,11 +411,11 @@ All uncolored Sigil components (buttons, inputs, chips, etc. without a `color` a
 
 ```css
 :root {
-  --sigil-color-neutral:          light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
-  --sigil-color-neutral-focus:    light-dark(oklch(56% 0.01 240deg), oklch(74% 0.01 240deg));
+  --sigil-color-neutral: light-dark(oklch(50% 0.01 240deg), oklch(68% 0.01 240deg));
+  --sigil-color-neutral-focus: light-dark(oklch(56% 0.01 240deg), oklch(74% 0.01 240deg));
   --sigil-color-neutral-backdrop: light-dark(oklch(95% 0.005 240deg / 83%), oklch(25% 0.005 240deg / 60%));
-  --sigil-color-neutral-border:   light-dark(oklch(84% 0.006 240deg / 75%), oklch(28% 0.006 240deg / 75%));
-  --sigil-color-neutral-content:  light-dark(oklch(40% 0.01 240deg), oklch(80% 0.01 240deg));
+  --sigil-color-neutral-border: light-dark(oklch(84% 0.006 240deg / 75%), oklch(28% 0.006 240deg / 75%));
+  --sigil-color-neutral-content: light-dark(oklch(40% 0.01 240deg), oklch(80% 0.01 240deg));
   --sigil-color-neutral-contrast: light-dark(oklch(99% 0 240deg), oklch(13% 0 240deg));
 }
 ```
@@ -444,12 +444,12 @@ Create custom theme variants by defining new color palettes on a scoped selector
 
 /* Sunset theme */
 .theme-sunset {
-  --color-primary: light-dark(oklch(60% 0.20 35deg), oklch(66% 0.20 35deg));
+  --color-primary: light-dark(oklch(60% 0.2 35deg), oklch(66% 0.2 35deg));
   --color-primary-backdrop: light-dark(oklch(93% 0.06 35deg), oklch(28% 0.09 35deg / 40%));
   --color-primary-content: light-dark(oklch(22% 0.09 35deg), oklch(95% 0.02 35deg));
   --color-primary-contrast: light-dark(oklch(98% 0.01 35deg), oklch(14% 0.06 35deg));
-  --color-primary-focus: light-dark(oklch(66% 0.20 35deg), oklch(72% 0.20 35deg));
-  --color-primary-border: light-dark(oklch(66% 0.20 35deg / 60%), oklch(72% 0.20 35deg / 60%));
+  --color-primary-focus: light-dark(oklch(66% 0.2 35deg), oklch(72% 0.2 35deg));
+  --color-primary-border: light-dark(oklch(66% 0.2 35deg / 60%), oklch(72% 0.2 35deg / 60%));
   --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
 }
 ```
@@ -558,8 +558,8 @@ When introducing a brand color, define all 7 sub-tokens so every component rende
   --color-primary-backdrop: light-dark(oklch(93% C H), oklch(28% C H / 40%));
   --color-primary-content: light-dark(oklch(22% C H), oklch(95% C H));
   --color-primary-contrast: light-dark(oklch(98% C H), oklch(14% C H));
-  --color-primary-focus: light-dark(oklch((L+6)% C H), oklch((L+6)% C H));
-  --color-primary-border: light-dark(oklch((L+6)% C H / 60%), oklch((L+6)% C H / 60%));
+  --color-primary-focus: light-dark(oklch((L + 6) % C H), oklch((L + 6) % C H));
+  --color-primary-border: light-dark(oklch((L + 6) % C H / 60%), oklch((L + 6) % C H / 60%));
   --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
 }
 ```

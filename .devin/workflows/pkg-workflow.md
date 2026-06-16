@@ -71,6 +71,7 @@ If the user chooses to start from a later phase (e.g. Docs), do not retroactivel
 Before Phase 1, record the starting state so progress is measurable at closeout (safe to auto-run):
 
 // turbo
+
 ```bash
 pnpm vitest run packages/<name>/src/__tests__/
 pnpm --filter @vielzeug/<name> lint
@@ -113,6 +114,7 @@ pnpm --filter @vielzeug/<name> lint
 If tests or lint are red at the start of any round, fix them **before** implementing new items — never carry forward a broken baseline. After each round, run the test suite (safe to auto-run):
 
 // turbo
+
 ```bash
 pnpm vitest run packages/<name>/src/__tests__/
 ```
@@ -173,6 +175,7 @@ Execute the instructions from `/pkg-tests` once.
 After restructuring and adding tests, verify (safe to auto-run):
 
 // turbo
+
 ```bash
 pnpm vitest run packages/<name>/src/__tests__/
 ```

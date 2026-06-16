@@ -4,7 +4,7 @@ package: arsenal
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
 related: []
-exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stableStringify, search, getPath]
+exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stringify, fuzzy, getPath, deepMerge, diff, stash, memo]
 ---
 
 # @vielzeug/arsenal
@@ -18,7 +18,7 @@ exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stable
 
 **Package:** `@vielzeug/arsenal` &nbsp;·&nbsp; **Category:** Utilities
 
-**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `retry`, `sleep`, `stableStringify`, `search`, `getPath`
+**Key exports:** `chunk`, `debounce`, `throttle`, `allOf`, `clamp`, `isEqual`, `retry`, `sleep`, `stringify`, `fuzzy`, `getPath`, `deepMerge`, `diff`, `stash`, `memo`
 
 **When to use:** Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, random, and typed checks.
 
@@ -42,15 +42,17 @@ yarn add @vielzeug/arsenal
 import {
   allOf,
   chunk,
+  deepMerge,
+  diff,
   filterMap,
+  fuzzy,
   groupBy,
   noneOf,
   partial,
   pick,
   queue,
   retry,
-  search,
-  stableStringify,
+  stringify,
 } from '@vielzeug/arsenal';
 
 const users = [
@@ -79,12 +81,21 @@ const isWorkingAge = allOf<number>(
 );
 const evens = [1, 2, 3, 4].filter(noneOf((n: number) => n % 2 !== 0));
 
-// Fuzzy search with scored results
-const results = search(users, 'alice', { mode: 'scored' });
-// [{ item: { name: 'Alice' }, score: 0.91 }, ...]
+// Fuzzy search — filter mode or scored mode
+const filtered = fuzzy(users, 'alice');                      // User[]
+const ranked = fuzzy(users, 'alice', { scored: true });      // ScoredResult<User>[]
+// [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
 
-// Stable cache keys
-const key = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
+// Deep merge with optional array strategy
+deepMerge({ a: { x: 1 } }, { a: { y: 2 } });                // { a: { x: 1, y: 2 } }
+deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a', 'b'] }
+
+// Structured object diff
+diff({ port: 3000, host: 'localhost' }, { port: 4000 });
+// { added: [], removed: ['host'], changed: { port: { before: 3000, after: 4000 } } }
+
+// Deterministic cache keys
+const key = stringify({ sort: 'asc', filter: { role: 'admin' } });
 ```
 
 > **Money utilities** (`currency`, `exchange`) have moved to [`@vielzeug/coins`](https://www.npmjs.com/package/@vielzeug/coins).

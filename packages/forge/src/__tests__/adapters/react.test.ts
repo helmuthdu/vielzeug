@@ -1,6 +1,6 @@
 import type { FormState } from '../../types';
 
-import { createForgeHooks, type UseSyncExternalStoreFn } from '../../adapters/react';
+import { createForgeHooks, type UseEffectFn, type UseRefFn, type UseSyncExternalStoreFn } from '../../adapters/react';
 import { createForm } from '../../index';
 
 // Minimal synchronous mock: subscribes and immediately returns the snapshot.
@@ -13,7 +13,7 @@ const mockStore: UseSyncExternalStoreFn = <T>(
   return getSnapshot();
 };
 
-const { useField, useFormState, useFormValues } = createForgeHooks(mockStore);
+const { useField, useFormState, useFormValues } = createForgeHooks({ useSyncExternalStore: mockStore });
 
 describe('/forge react adapter', () => {
   describe('useFormState', () => {
@@ -123,6 +123,62 @@ describe('/forge react adapter', () => {
       const vals = useFormValues(form);
 
       expect(vals).toEqual({ age: 30, name: 'Alice' });
+    });
+  });
+
+  describe('useConnect', () => {
+    function makeEffectRef() {
+      let cleanup: (() => void) | void;
+
+      const useEffect: UseEffectFn = (fn) => {
+        cleanup = fn();
+      };
+
+      const useRef: UseRefFn = <T>(initialValue: T) => {
+        const ref = { current: initialValue };
+
+        return ref;
+      };
+
+      return {
+        runCleanup: () => {
+          if (typeof cleanup === 'function') cleanup();
+        },
+        useEffect,
+        useRef,
+      };
+    }
+
+    test('returns a ConnectionResult binding', () => {
+      const form = createForm({ defaultValues: { name: '' } });
+      const { useEffect, useRef } = makeEffectRef();
+      const { useConnect } = createForgeHooks({ useEffect, useRef, useSyncExternalStore: mockStore });
+
+      const binding = useConnect(form, 'name');
+
+      expect(binding).toBeDefined();
+      expect(binding.disposed).toBe(false);
+    });
+
+    test('disposes the binding when cleanup runs (unmount)', () => {
+      const form = createForm({ defaultValues: { name: '' } });
+      const { runCleanup, useEffect, useRef } = makeEffectRef();
+      const { useConnect } = createForgeHooks({ useEffect, useRef, useSyncExternalStore: mockStore });
+
+      const binding = useConnect(form, 'name');
+
+      expect(binding.disposed).toBe(false);
+
+      runCleanup();
+
+      expect(binding.disposed).toBe(true);
+    });
+
+    test('throws when useEffect and useRef are not provided', () => {
+      const { useConnect } = createForgeHooks({ useSyncExternalStore: mockStore });
+      const form = createForm({ defaultValues: { name: '' } });
+
+      expect(() => useConnect(form, 'name')).toThrow('useConnect requires useEffect and useRef');
     });
   });
 });

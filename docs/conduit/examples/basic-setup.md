@@ -27,15 +27,14 @@ container.value(Logger, {
   },
 });
 
-container.factory(
-  Service,
-  (logger) => ({
+container.factory(Service, async (r) => {
+  const logger = await r.resolve(Logger);
+  return {
     async run() {
       logger.log('running');
     },
-  }),
-  { deps: [Logger] },
-);
+  };
+});
 
 const service = await container.resolve(Service);
 await service.run(); // logs "running"

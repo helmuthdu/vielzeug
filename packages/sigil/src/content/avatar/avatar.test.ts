@@ -288,4 +288,14 @@ describe('sg-avatar-group', () => {
       expect(fixture.query('.overflow-badge')?.getAttribute('aria-label')).toBe('+1 more');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-avatar', { attrs: { name: 'Jane Doe' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

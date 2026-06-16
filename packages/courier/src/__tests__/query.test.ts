@@ -65,13 +65,13 @@ describe('Query Client', () => {
       expect(ctx?.signal).toBeInstanceOf(AbortSignal);
     });
 
-    it('prefetch() warms cache and subsequent query uses fresh cached data', async () => {
+    it('fetch({ throwOnError: false }) warms cache and subsequent query uses fresh cached data', async () => {
       const qc = createQuery();
       let calls = 0;
 
       const fn = async () => ({ id: ++calls });
 
-      await qc.prefetch({ fn, key: ['users', 1], staleTime: 10_000 });
+      await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       expect(qc.get(['users', 1])).toEqual({ id: 1 });
 
@@ -81,34 +81,20 @@ describe('Query Client', () => {
       expect(calls).toBe(1);
     });
 
-    it('prefetch() swallows errors by default but stores error state', async () => {
+    it('fetch() throws errors by default and stores error state', async () => {
       const qc = createQuery();
 
       await expect(
-        qc.prefetch({
+        qc.fetch({
           fn: async () => {
             throw new Error('boom');
           },
           key: ['prefetch-fail'],
         }),
-      ).resolves.toBeUndefined();
+      ).rejects.toThrow('boom');
 
       expect(qc.getState(['prefetch-fail'])?.status).toBe('error');
       expect(qc.getState(['prefetch-fail'])?.error?.message).toBe('boom');
-    });
-
-    it('prefetch({ throwOnError: true }) rethrows failures', async () => {
-      const qc = createQuery();
-
-      await expect(
-        qc.prefetch({
-          fn: async () => {
-            throw new Error('boom');
-          },
-          key: ['prefetch-fail-throw'],
-          throwOnError: true,
-        }),
-      ).rejects.toThrow('boom');
     });
   });
 
@@ -189,6 +175,23 @@ describe('Query Client', () => {
       expect(qc.get(['a'])).toBeUndefined();
       expect(qc.get(['b'])).toBeUndefined();
     });
+
+    it('get() preserves null data — does not coerce to undefined', () => {
+      const qc = createQuery();
+
+      qc.set<null>(['nullable'], null);
+
+      expect(qc.get(['nullable'])).toBeNull();
+    });
+
+    it('get() with object-atom QueryKey round-trips correctly', () => {
+      const qc = createQuery();
+
+      qc.set([{ limit: 10, page: 1 }], [1, 2, 3]);
+
+      expect(qc.get([{ limit: 10, page: 1 }])).toEqual([1, 2, 3]);
+      expect(qc.get([{ limit: 10, page: 2 }])).toBeUndefined();
+    });
   });
 
   describe('Observers & State', () => {
@@ -207,26 +210,27 @@ describe('Query Client', () => {
       expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
     });
 
-    it('subscribe() tracks isFetching through fetching → success', async () => {
+    it('watchKey() tracks isFetching through fetching → success', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
+      const store = qc.watchKey<{ id: number }>(['users', 1]);
 
-      const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+      const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
       unsub();
 
-      // subscribe() no longer fires immediately — first notification is the fetching state
       expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
     });
 
-    it('subscribe() tracks isFetching through fetching → error', async () => {
+    it('watchKey() tracks isFetching through fetching → error', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
+      const store = qc.watchKey(['fail']);
 
-      qc.subscribe(['fail'], (s) => states.push({ ...s }));
+      store.subscribe(() => states.push({ ...store.peek() }));
       await qc
         .fetch({
           fn: async () => {
@@ -241,13 +245,13 @@ describe('Query Client', () => {
       expect(states[1].error?.message).toBe('boom');
     });
 
-    it('subscribe() cancels a pending GC timer to keep entry alive', async () => {
+    it('watchKey().subscribe() cancels a pending GC timer to keep entry alive', async () => {
       vi.useFakeTimers();
 
       const qc = createQuery({ gcTime: 1_000 });
 
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['x'] });
-      qc.subscribe(['x'], () => {});
+      qc.watchKey(['x']).subscribe(() => {});
       vi.advanceTimersByTime(2_000);
 
       expect(qc.get(['x'])).toEqual({ id: 1 });
@@ -258,7 +262,7 @@ describe('Query Client', () => {
       vi.useFakeTimers();
 
       const qc = createQuery({ gcTime: 1_000 });
-      const unsub = qc.subscribe(['x'], () => {});
+      const unsub = qc.watchKey(['x']).subscribe(() => {});
 
       unsub();
 
@@ -300,15 +304,19 @@ describe('Query Client', () => {
       }
     });
 
-    it('subscribe() select() transforms the observed data shape', async () => {
+    it('observe(fetch:false) with select transforms the observed data shape', async () => {
       const qc = createQuery();
       const shapes: unknown[] = [];
-
-      qc.subscribe(['users', 1], (s) => shapes.push(s.data), {
-        select: (data: { id: number; name: string } | undefined) => (data ? { id: data.id } : undefined),
+      const fn = async () => ({ id: 1, name: 'Alice' });
+      const store = qc.observe<{ id: number; name: string }, { id: number }>({
+        fn,
+        key: ['users', 1],
+        select: (data) => (data ? { id: data.id } : undefined),
       });
 
-      await qc.fetch({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
+      store.subscribe(() => shapes.push(store.peek().data));
+
+      await qc.fetch({ fn, key: ['users', 1] });
 
       expect(shapes[shapes.length - 1]).toEqual({ id: 1 });
     });
@@ -319,7 +327,8 @@ describe('Query Client', () => {
 
       qc.set(['manual', 1], { id: 1 });
 
-      const unsub = qc.subscribe(['manual', 1], (s) => states.push({ ...s }));
+      const store = qc.watchKey(['manual', 1]);
+      const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       qc.invalidate(['manual', 1]);
 
@@ -339,7 +348,8 @@ describe('Query Client', () => {
       await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       const states: QueryState[] = [];
-      const unsub = qc.subscribe(['users', 1], (s) => states.push({ ...s }));
+      const store = qc.watchKey<{ id: number }>(['users', 1]);
+      const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       qc.invalidate(['users', 1]);
 
@@ -364,7 +374,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate triggers background revalidation, not eviction.
-      const unsub2 = qc.subscribe(['users', 1], () => {});
+      const unsub2 = qc.watchKey(['users', 1]).subscribe(() => {});
 
       qc.invalidate(['users', 1]);
 
@@ -402,7 +412,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn: blockingFn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate does background revalidation.
-      const unsub3 = qc.subscribe(['users', 1], () => {});
+      const unsub3 = qc.watchKey(['users', 1]).subscribe(() => {});
 
       qc.invalidate(['users', 1]); // Kicks off blockingFn via startFetch.
       qc.cancel(['users', 1]); // Abort before it resolves.
@@ -424,7 +434,7 @@ describe('Query Client', () => {
 
       const qc = createQuery();
       let calls = 0;
-      const unsub = qc.subscribe(['err-recovery'], () => {});
+      const unsub = qc.watchKey(['err-recovery']).subscribe(() => {});
 
       // Seed with successful data then fail a refetch to arrive at error + stale data
       await qc.fetch({
@@ -474,7 +484,7 @@ describe('Query Client', () => {
       vi.useFakeTimers();
 
       const qc = createQuery();
-      const unsub = qc.subscribe(['key'], () => {});
+      const unsub = qc.watchKey(['key']).subscribe(() => {});
       let attempt = 0;
 
       const fn = vi.fn(async () => {
@@ -659,36 +669,45 @@ describe('Query Client', () => {
         resolveQuery = res;
       });
 
+      const fn = () => pending;
       const states: Array<{ data: unknown; isFetching: boolean; status: string }> = [];
 
-      qc.subscribe(['user', 4], (s) => states.push({ data: s.data, isFetching: s.isFetching, status: s.status }), {
+      // observe(fetch:false) returns a store without triggering a fetch.
+      // Subscribe first, then start the fetch manually so we capture the pending transition.
+      const store = qc.observe<{ id: number }, { id: number }>({
+        fetch: false,
+        fn,
+        key: ['user', 4],
         placeholderData: { id: 0 },
       });
 
-      const queryPromise = qc.fetch({
-        fn: () => pending,
-        key: ['user', 4],
-      });
+      const unsub = store.subscribe(() =>
+        states.push({ data: store.peek().data, isFetching: store.peek().isFetching, status: store.peek().status }),
+      );
+
+      // Start the fetch after subscribing
+      void qc.fetch({ fn, key: ['user', 4] });
 
       // Fetching state should expose placeholder with isFetching:true
+      await vi.waitFor(() => expect(states.length).toBeGreaterThan(0));
       expect(states.at(-1)).toMatchObject({ data: { id: 0 }, status: 'pending' });
       expect(states.at(-1)?.isFetching).toBe(true);
 
       resolveQuery({ id: 7 });
-      await queryPromise;
+      await vi.waitFor(() => expect(store.peek().status).toBe('success'));
 
       // After resolution placeholder is replaced by real data
       expect(states.at(-1)).toMatchObject({ data: { id: 7 }, status: 'success' });
+      unsub();
     });
 
-    it('prefetch() with enabled:false makes no network request and leaves entry idle', async () => {
+    it('fetch() with enabled:false makes no network request and leaves entry idle', async () => {
       const qc = createQuery();
       let calls = 0;
 
-      await qc.prefetch({ enabled: false, fn: async () => ({ id: ++calls }), key: ['prefetch-disabled'] });
+      await qc.fetch({ enabled: false, fn: async () => ({ id: ++calls }), key: ['prefetch-disabled'] });
 
       expect(calls).toBe(0);
-      // The entry is created (ensureEntry) but never fetched.
       expect(qc.getState(['prefetch-disabled'])?.status).toBe('idle');
       expect(qc.get(['prefetch-disabled'])).toBeUndefined();
     });
@@ -698,26 +717,33 @@ describe('Query Client', () => {
     it('select transforms the data seen by the listener', async () => {
       const qc = createQuery();
       const names: (string | undefined)[] = [];
+      const fn = async () => ({ id: 1, name: 'Alice' });
 
-      // subscribe first — listener won't fire until next state change (R6)
-      const unsub = qc.subscribe<{ id: number; name: string }, string>(['user', 1], (s) => names.push(s.data), {
+      const store = qc.observe<{ id: number; name: string }, string>({
+        fn,
+        key: ['user', 1],
         select: (d) => d?.name,
       });
+      const unsub = store.subscribe(() => names.push(store.peek().data));
 
       qc.set(['user', 1], { id: 1, name: 'Alice' });
 
-      expect(names).toEqual(['Alice']);
+      expect(names).toContain('Alice');
       unsub();
     });
 
     it('select deduplicates notifications when selected value is unchanged', async () => {
       const qc = createQuery();
       let calls = 0;
+      const fn = async () => ({ id: 1, name: 'Alice', role: 'admin' });
 
-      // subscribe before any set — listener won't fire on subscribe (R6)
-      const unsub = qc.subscribe<{ id: number; name: string; role: string }, string>(['user', 1], () => calls++, {
+      const store = qc.observe<{ id: number; name: string; role: string }, string>({
+        fetch: false,
+        fn,
+        key: ['user', 1],
         select: (d) => d?.name,
       });
+      const unsub = store.subscribe(() => calls++);
 
       qc.set(['user', 1], { id: 1, name: 'Alice', role: 'admin' });
 
@@ -736,24 +762,30 @@ describe('Query Client', () => {
     it('select still notifies on status changes even when data is unchanged', async () => {
       const qc = createQuery();
       const statuses: string[] = [];
+      const fn = async () => ({ id: 1 });
 
-      qc.subscribe<{ id: number }, { id: number }>(['user', 1], (s) => statuses.push(s.status), { select: (d) => d });
+      const store = qc.observe<{ id: number }, { id: number }>({
+        fn,
+        key: ['user', 1],
+        select: (d) => d,
+      });
 
-      await qc.fetch({ fn: async () => ({ id: 1 }), key: ['user', 1] }).catch(() => {});
+      store.subscribe(() => statuses.push(store.peek().status));
 
-      // subscribe() no longer fires immediately — 'idle' is not captured
+      await qc.fetch({ fn, key: ['user', 1] }).catch(() => {});
+
       expect(statuses).toContain('success');
 
       const fetchingState = qc.getState<{ id: number }>(['user', 1]);
 
-      expect(fetchingState?.status).toBe('success'); // settled by now
+      expect(fetchingState?.status).toBe('success');
     });
   });
 
-  describe('External Store (watch)', () => {
+  describe('External Store (watchKey)', () => {
     it('peek() returns idle state for unknown keys before subscribe()', () => {
       const qc = createQuery();
-      const store = qc.watch(['unknown']);
+      const store = qc.watchKey(['unknown']);
 
       expect(store.peek()).toEqual({
         data: undefined,
@@ -766,7 +798,7 @@ describe('Query Client', () => {
 
     it('subscribe() + peek() reflect query state updates', async () => {
       const qc = createQuery();
-      const store = qc.watch<{ id: number }>(['users', 1]);
+      const store = qc.watchKey<{ id: number }>(['users', 1]);
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -793,15 +825,18 @@ describe('Query Client', () => {
       unsub();
     });
 
-    it('watch() with select transforms the snapshot data', async () => {
+    it('observe() with select transforms the snapshot data', async () => {
       const qc = createQuery();
-      const store = qc.watch<{ id: number; name: string }, { id: number }>(['users', 1], {
+      const fn = async () => ({ id: 1, name: 'Alice' });
+      const store = qc.observe<{ id: number; name: string }, { id: number }>({
+        fn,
+        key: ['users', 1],
         select: (d) => (d ? { id: d.id } : undefined),
       });
 
       const unsub = store.subscribe(() => {});
 
-      await qc.fetch({ fn: async () => ({ id: 1, name: 'Alice' }), key: ['users', 1] });
+      await qc.fetch({ fn, key: ['users', 1] });
 
       expect(store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
       unsub();
@@ -812,7 +847,11 @@ describe('Query Client', () => {
 
       qc.set(['users', 1], { id: 1, name: 'Alice' });
 
-      const store = qc.watch<{ id: number; name: string }, string>(['users', 1], {
+      const fn = async () => ({ id: 1, name: 'Alice' });
+      const store = qc.observe<{ id: number; name: string }, string>({
+        fetch: false,
+        fn,
+        key: ['users', 1],
         select: (d) => d?.name,
       });
 
@@ -821,7 +860,7 @@ describe('Query Client', () => {
 
     it('subscribe() does not notify immediately on setup', () => {
       const qc = createQuery();
-      const store = qc.watch(['users', 1]);
+      const store = qc.watchKey(['users', 1]);
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -834,7 +873,7 @@ describe('Query Client', () => {
 
     it('unsubscribe() stops further notifications', async () => {
       const qc = createQuery();
-      const store = qc.watch(['users', 1]);
+      const store = qc.watchKey(['users', 1]);
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -928,17 +967,17 @@ describe('Query Client', () => {
     });
   });
 
-  describe('watch() with select + placeholderData', () => {
+  describe('observe() with select + placeholderData', () => {
     it('peek() returns placeholderData while pending when select returns undefined', async () => {
       const qc = createQuery();
-      const store = qc.watch<{ id: number; name: string }, string>(['users', 1], {
+      const store = qc.observe<{ id: number; name: string }, string>({
+        fn: () => new Promise(() => {}),
+        key: ['users', 1],
         placeholderData: 'Loading…',
         select: (d) => d?.name,
       });
 
       const unsub = store.subscribe(() => {});
-
-      void qc.fetch({ fn: () => new Promise(() => {}), key: ['users', 1] });
 
       const snap = store.peek();
 
@@ -953,7 +992,10 @@ describe('Query Client', () => {
 
       qc.set(['users', 1], { id: 1, name: 'Alice' });
 
-      const store = qc.watch<{ id: number; name: string }, string>(['users', 1], {
+      const store = qc.observe<{ id: number; name: string }, string>({
+        fetch: false,
+        fn: async () => ({ id: 1, name: 'Alice' }),
+        key: ['users', 1],
         placeholderData: 'Loading…',
         select: (d) => d?.name,
       });
@@ -974,7 +1016,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn: fnObserved, key: ['observed'], staleTime: 60_000 });
       await qc.fetch({ fn: fnUnobserved, key: ['unobserved'], staleTime: 60_000 });
 
-      const unsub = qc.subscribe(['observed'], () => {});
+      const unsub = qc.watchKey(['observed']).subscribe(() => {});
 
       qc.invalidate(['observed']);
       qc.invalidate(['unobserved']);
@@ -1037,9 +1079,10 @@ describe('Query Client', () => {
     it('set() with gcTime:0 — active observer — notified then entry retained while subscribed', () => {
       const qc = createQuery();
       const notifiedData: unknown[] = [];
+      const store = qc.watchKey(['key']);
 
-      const unsub = qc.subscribe(['key'], (s) => {
-        notifiedData.push(s.data);
+      const unsub = store.subscribe(() => {
+        notifiedData.push(store.peek().data);
       });
 
       qc.set(['key'], 42, { gcTime: 0 });
@@ -1073,6 +1116,271 @@ describe('Query Client', () => {
       }
     });
 
+    describe('observe()', () => {
+      function waitForStatus(
+        qc: ReturnType<typeof createQuery>,
+        key: import('../types').QueryKey,
+        target: string,
+      ): Promise<void> {
+        return new Promise((resolve) => {
+          const store = qc.watchKey(key);
+          const unsub = store.subscribe(() => {
+            if (store.peek().status === target) {
+              unsub();
+              resolve();
+            }
+          });
+        });
+      }
+
+      it('returns a store and triggers a background fetch', async () => {
+        const qc = createQuery();
+        const fn = vi.fn(async () => 42);
+        const store = qc.observe({ fn, key: ['obs', 1] });
+
+        // observe() triggers the fetch immediately — status is pending or already populated
+        expect(['idle', 'pending']).toContain(store.peek().status);
+
+        await waitForStatus(qc, ['obs', 1], 'success');
+
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(store.peek().status).toBe('success');
+        expect(store.peek().data).toBe(42);
+      });
+
+      it('error from fn is committed to store state, not thrown by observe()', async () => {
+        const qc = createQuery();
+        const boom = new Error('boom');
+
+        expect(() =>
+          qc.observe({
+            fn: async () => {
+              throw boom;
+            },
+            key: ['obs-err'],
+          }),
+        ).not.toThrow();
+
+        await waitForStatus(qc, ['obs-err'], 'error');
+
+        const snap = qc.getState(['obs-err']);
+
+        expect(snap?.status).toBe('error');
+        expect(snap?.error).toBe(boom);
+      });
+
+      it('placeholderData is returned while fetch is in-flight', async () => {
+        const qc = createQuery();
+        let resolve!: (v: string) => void;
+        const fn = () =>
+          new Promise<string>((res) => {
+            resolve = res;
+          });
+        const store = qc.observe({ fn, key: ['obs-ph'], placeholderData: 'loading…' });
+
+        expect(store.peek().data).toBe('loading…');
+        resolve('done');
+
+        await waitForStatus(qc, ['obs-ph'], 'success');
+
+        expect(store.peek().data).toBe('done');
+      });
+
+      it('select transforms the data delivered to the store', async () => {
+        const qc = createQuery<string, number>();
+        const store = qc.observe<string, number>({
+          fn: async () => 'hello world',
+          key: ['obs-sel'],
+          select: (s) => s?.length,
+        });
+
+        await waitForStatus(qc, ['obs-sel'], 'success');
+
+        expect(store.peek().data).toBe(11);
+      });
+    });
+
+    describe('disposalSignal', () => {
+      it('is not aborted before dispose()', () => {
+        const qc = createQuery();
+
+        expect(qc.disposalSignal.aborted).toBe(false);
+      });
+
+      it('is aborted after dispose()', () => {
+        const qc = createQuery();
+
+        qc.dispose();
+
+        expect(qc.disposalSignal.aborted).toBe(true);
+      });
+
+      it('dispose() is idempotent — disposalSignal stays aborted', () => {
+        const qc = createQuery();
+
+        qc.dispose();
+        qc.dispose();
+
+        expect(qc.disposalSignal.aborted).toBe(true);
+      });
+    });
+
+    describe('observeMany()', () => {
+      it('returns a SyncStore whose peek() reflects current state of all observed keys', async () => {
+        const qc = createQuery();
+
+        await qc.fetch({ fn: async () => 'a', key: ['k1'] });
+        await qc.fetch({ fn: async () => 'b', key: ['k2'] });
+
+        const store = qc.observeMany<string>([['k1'], ['k2']]);
+        const snapshot = store.peek();
+
+        expect(snapshot).toHaveLength(2);
+        expect(snapshot[0].data).toBe('a');
+        expect(snapshot[1].data).toBe('b');
+      });
+
+      it('notifies subscriber when any observed key changes', async () => {
+        const qc = createQuery();
+
+        await qc.fetch({ fn: async () => 1, key: ['n1'] });
+        await qc.fetch({ fn: async () => 2, key: ['n2'] });
+
+        const store = qc.observeMany<number>([['n1'], ['n2']]);
+        const notifications: number[] = [];
+        const unsub = store.subscribe(() => notifications.push(store.peek().length));
+
+        qc.set(['n1'], 99);
+
+        unsub();
+        expect(notifications.length).toBeGreaterThan(0);
+      });
+
+      it('returns idle states for keys that have never been fetched', () => {
+        const qc = createQuery();
+
+        const store = qc.observeMany([['missing1'], ['missing2']]);
+        const snap = store.peek();
+
+        expect(snap).toHaveLength(2);
+        expect(snap[0].status).toBe('idle');
+        expect(snap[1].status).toBe('idle');
+      });
+    });
+
+    describe('fetchMany()', () => {
+      it('fetches multiple queries in parallel and returns results in order', async () => {
+        const qc = createQuery();
+
+        const results = await qc.fetchMany<number>([
+          { fn: async () => 10, key: ['fm1'] },
+          { fn: async () => 20, key: ['fm2'] },
+          { fn: async () => 30, key: ['fm3'] },
+        ]);
+
+        expect(results).toEqual([10, 20, 30]);
+      });
+
+      it('rejects if any query fails', async () => {
+        const qc = createQuery();
+
+        await expect(
+          qc.fetchMany([
+            { fn: async () => 'ok', key: ['fmok'] },
+            {
+              fn: async () => {
+                throw new Error('fetch failed');
+              },
+              key: ['fmfail'],
+            },
+          ]),
+        ).rejects.toThrow('fetch failed');
+      });
+
+      it('returns cached data on subsequent call with staleTime', async () => {
+        const qc = createQuery();
+        let calls = 0;
+
+        const opts = { fn: async () => ++calls, key: ['fmcache'], staleTime: 60_000 };
+
+        await qc.fetchMany([opts]);
+        await qc.fetchMany([opts]);
+
+        expect(calls).toBe(1);
+      });
+
+      it('return type is T[] — never contains undefined on success', async () => {
+        const qc = createQuery();
+
+        const results = await qc.fetchMany<string>([
+          { fn: async () => 'a', key: ['t1'] },
+          { fn: async () => 'b', key: ['t2'] },
+        ]);
+
+        results.forEach((r) => expect(typeof r).toBe('string'));
+      });
+    });
+
+    describe('observe() error handling', () => {
+      it('observe() never rejects the caller even when the fetch throws', async () => {
+        const qc = createQuery();
+        const threw = false;
+
+        const store = qc.observe({
+          fn: async () => {
+            throw new Error('oops');
+          },
+          key: ['obs-err-2'],
+          times: 1,
+        });
+
+        await new Promise<void>((resolve) => {
+          const unsub = store.subscribe(() => {
+            const s = store.peek();
+
+            if (s.status === 'error') {
+              unsub();
+              resolve();
+            }
+          });
+        });
+
+        expect(store.peek().status).toBe('error');
+        expect(threw).toBe(false);
+      });
+    });
+
+    describe('initialData + staleTime', () => {
+      it('initialData with staleTime > 0 skips the network fetch', async () => {
+        const qc = createQuery();
+        let calls = 0;
+
+        const result = await qc.fetch({
+          fn: async () => ({ id: ++calls }),
+          initialData: { id: 42 },
+          key: ['init-stale'],
+          staleTime: 60_000,
+        });
+
+        expect(calls).toBe(0);
+        expect(result).toEqual({ id: 42 });
+      });
+
+      it('initialData with staleTime:0 triggers a network fetch', async () => {
+        const qc = createQuery();
+        let calls = 0;
+
+        await qc.fetch({
+          fn: async () => ({ id: ++calls }),
+          initialData: { id: 42 },
+          key: ['init-nostale'],
+          staleTime: 0,
+        });
+
+        expect(calls).toBe(1);
+      });
+    });
+
     it('bindRefetch() is safe in SSR environments where document/window are undefined', () => {
       const origDocument = globalThis.document;
       const origWindow = globalThis.window;
@@ -1083,7 +1391,16 @@ describe('Query Client', () => {
         Object.defineProperty(globalThis, 'window', { configurable: true, value: undefined });
 
         const qc = createQuery();
-        const spyRefetch = vi.spyOn(qc, 'refetchStale');
+        let called = false;
+        const origRefetch = qc.refetchStale.bind(qc);
+
+        Object.defineProperty(qc, 'refetchStale', {
+          configurable: true,
+          value: () => {
+            called = true;
+            origRefetch();
+          },
+        });
 
         let unbind!: () => void;
 
@@ -1092,7 +1409,7 @@ describe('Query Client', () => {
         }).not.toThrow();
 
         expect(() => unbind()).not.toThrow();
-        expect(spyRefetch).not.toHaveBeenCalled();
+        expect(called).toBe(false);
       } finally {
         Object.defineProperty(globalThis, 'document', { configurable: true, value: origDocument });
         Object.defineProperty(globalThis, 'window', { configurable: true, value: origWindow });

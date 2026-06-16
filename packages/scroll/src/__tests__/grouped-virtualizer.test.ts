@@ -364,7 +364,6 @@ describe('createGroupedVirtualizer – Virtualizer passthrough', () => {
       gv.measure(0, 60);
       gv.refresh();
       gv.invalidate();
-      gv.redraw();
     }).not.toThrow();
 
     gv.dispose();
@@ -443,6 +442,204 @@ describe('createGroupedVirtualizer – gv.items typed getter', () => {
     });
 
     expect(gv.items).toHaveLength(0);
+    gv.dispose();
+  });
+});
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(gv.disposed).toBe(false);
+    gv.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    gv.dispose();
+    expect(gv.disposed).toBe(true);
+  });
+
+  it('dispose() is idempotent — double-dispose does not throw', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(() => {
+      gv.dispose();
+      gv.dispose();
+    }).not.toThrow();
+  });
+
+  it('[Symbol.dispose] is idempotent', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(() => {
+      gv[Symbol.dispose]();
+      gv[Symbol.dispose]();
+    }).not.toThrow();
+  });
+});
+
+// ─── Post-dispose no-ops ──────────────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – post-dispose no-ops', () => {
+  it('onChange is not called after dispose()', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 5)],
+    });
+
+    gv.dispose();
+
+    const callsBefore = onChange.mock.calls.length;
+
+    el.dispatchEvent(new Event('scroll'));
+
+    expect(onChange.mock.calls.length).toBe(callsBefore);
+  });
+
+  it('all mutating methods are no-ops after dispose()', async () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    gv.dispose();
+
+    expect(() => {
+      gv.measure(0, 50);
+      gv.measureBatch([{ index: 0, size: 50 }]);
+      gv.measureEl(0, document.createElement('div'));
+      gv.invalidate();
+      gv.refresh();
+      gv.scrollToTop();
+      gv.scrollToBottom();
+      gv.scrollToIndex(0);
+      gv.scrollToOffset(0);
+      gv.scrollToSection(0);
+      gv.scrollToItem(0, 0);
+      gv.update([makeSection('B', 3)]);
+    }).not.toThrow();
+
+    await flushMicrotasks();
+  });
+
+  it('measureEl returns no-op cleanup fn after dispose()', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    gv.dispose();
+
+    const cleanup = gv.measureEl(0, document.createElement('div'));
+
+    expect(typeof cleanup).toBe('function');
+    expect(() => cleanup()).not.toThrow();
+  });
+});
+
+// ─── update() same-count path ─────────────────────────────────────────────────
+
+describe('createGroupedVirtualizer – update same-count path', () => {
+  it('update with same count still re-emits onChange', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 3)],
+    });
+
+    const callsBefore = onChange.mock.calls.length;
+
+    // Same total count (1 header + 3 items = 4), just different label
+    gv.update([makeSection('B', 3)]);
+
+    expect(onChange.mock.calls.length).toBeGreaterThan(callsBefore);
+
+    const state = onChange.mock.calls.at(-1)?.[0];
+
+    expect(state.headers[0]?.label).toBe('B');
+    gv.dispose();
+  });
+
+  it('update with count change emits correct totalSize', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 2)],
+    });
+
+    gv.update([makeSection('A', 2), makeSection('B', 3)]);
+
+    const state = onChange.mock.calls.at(-1)?.[0];
+
+    // 2 headers × 40 + 5 items × 30 = 230
+    expect(state.totalSize).toBe(2 * 40 + 5 * 30);
+    gv.dispose();
+  });
+});
+
+// ─── scrollToSection / scrollToItem out-of-range ──────────────────────────────
+
+describe('createGroupedVirtualizer – out-of-range navigation', () => {
+  it('scrollToSection with negative index is a no-op', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(() => gv.scrollToSection(-1)).not.toThrow();
+    gv.dispose();
+  });
+
+  it('scrollToSection with out-of-range index is a no-op', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(() => gv.scrollToSection(99)).not.toThrow();
+    gv.dispose();
+  });
+
+  it('scrollToItem with out-of-range sectionIndex is a no-op', () => {
+    const el = makeContainer({ clientHeight: 500 });
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      sections: [makeSection('A', 5)],
+    });
+
+    expect(() => gv.scrollToItem(99, 0)).not.toThrow();
     gv.dispose();
   });
 });

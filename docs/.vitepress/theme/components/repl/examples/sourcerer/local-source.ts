@@ -22,7 +22,7 @@ await source.setFilter(undefined)
 await source.setSort((a, b) => a.name.localeCompare(b.name))
 console.log('Sorted page 1:', source.current.map(u => u.name))
 
-await source.searchNow('a')
+await source.search('a', { immediate: true })
 console.log('Search "a" results:', source.current.map(u => u.name))
 
 // ready() resolves once all pending async work settles

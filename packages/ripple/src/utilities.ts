@@ -1,5 +1,6 @@
-import type { ComputedSignal, ReactiveOptions, ReadonlySignal } from './types';
+import type { ComputedOptions, ComputedSignal, ReadonlySignal } from './types';
 
+import { computed } from './computed';
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
 import { untrack } from './tracking';
 
@@ -14,8 +15,8 @@ export { untrack };
 
 /**
  * Wraps a signal or computed to produce a structurally read-only view.
- * The `value` setter and `update` are hidden. Delegates reads directly
- * to the source — no extra graph node, no allocation beyond the wrapper object.
+ * The `value` setter is hidden. Delegates reads directly to the source —
+ * no extra graph node, no allocation beyond the wrapper object.
  *
  * **Dispose semantics:** calling `dispose()` on the wrapper is a no-op — it does
  * not affect the underlying source signal. The caller retains ownership of the
@@ -39,10 +40,14 @@ export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
 
   return {
     dispose: noop,
-    filter: (pred: (value: T) => boolean) => source.filter(pred as (value: T) => boolean),
+    get disposed() {
+      return (source as unknown as { disposed?: boolean }).disposed ?? false;
+    },
     [IS_COMPUTED]: true as const,
     [IS_SIGNAL]: true as const,
-    map: <U>(fn: (v: T) => U, opts?: ReactiveOptions<U>) => source.map(fn, opts),
+    get name() {
+      return source.name;
+    },
     peek: () => source.peek(),
     subscribe: (l: () => void) => source.subscribe(l),
     [Symbol.dispose]: noop,
@@ -51,6 +56,84 @@ export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
     },
   } as unknown as ComputedSignal<T>;
 };
+
+// ── selector() ────────────────────────────────────────────────────────────────
+//
+// Replaces per-instance .map() / .filter() methods, which polluted the reactive
+// interfaces and caused name clashes with Array.prototype methods in mixed code.
+// A standalone function keeps the public interface minimal and explicit.
+
+/**
+ * Creates a computed signal derived from a reactive source using a projection
+ * and/or a filter predicate. Combines the old `map()` and `filter()` methods
+ * into a single, general-purpose standalone utility.
+ *
+ * - `selector(source, project)` — like `source.map(project)`
+ * - `selector(source, project, predicate)` — project then filter; returns `U | undefined`
+ * - `selector(source, undefined, predicate)` — filter only; returns `T | undefined`
+ *
+ * @example
+ * ```ts
+ * const count = signal(5);
+ * const doubled = selector(count, (n) => n * 2);
+ * const evenDoubled = selector(count, (n) => n * 2, (n) => n % 2 === 0);
+ * const onlyEven = selector(count, undefined, (n) => n % 2 === 0);
+ * ```
+ */
+export function selector<T, U>(
+  source: ReadonlySignal<T>,
+  project: (value: T) => U,
+  options?: ComputedOptions<U>,
+): ComputedSignal<U>;
+export function selector<T, U>(
+  source: ReadonlySignal<T>,
+  project: (value: T) => U,
+  predicate: (value: U) => boolean,
+  options?: ComputedOptions<U | undefined>,
+): ComputedSignal<U | undefined>;
+export function selector<T>(
+  source: ReadonlySignal<T>,
+  project: undefined,
+  predicate: (value: T) => boolean,
+  options?: ComputedOptions<T | undefined>,
+): ComputedSignal<T | undefined>;
+export function selector<T, U = T>(
+  source: ReadonlySignal<T>,
+  project?: (value: T) => U,
+  predicateOrOptions?: ((value: U) => boolean) | ComputedOptions<U>,
+  options?: ComputedOptions<U | undefined>,
+): ComputedSignal<U | U | undefined> {
+  if (typeof predicateOrOptions === 'function') {
+    const predicate = predicateOrOptions;
+    const opts = options;
+
+    if (project) {
+      return computed(
+        () => {
+          const projected = project(source.value);
+
+          return predicate(projected) ? projected : undefined;
+        },
+        opts as ComputedOptions<U | undefined>,
+      );
+    }
+
+    return computed(
+      () => {
+        const v = source.value as unknown as U;
+
+        return predicate(v) ? v : undefined;
+      },
+      opts as ComputedOptions<U | undefined>,
+    );
+  }
+
+  if (project) {
+    return computed(() => project(source.value), predicateOrOptions as ComputedOptions<U> | undefined);
+  }
+
+  return computed(() => source.value as unknown as U, predicateOrOptions as ComputedOptions<U> | undefined);
+}
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 

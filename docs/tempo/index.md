@@ -61,14 +61,14 @@ const reminder = new Date(meeting.getTime() - 15 * 60_000);
 const reminder = shift(meeting, { minutes: -15 });
 ```
 
-| Feature        | Tempo                                       | date-fns | Day.js  | Native Date |
-| -------------- | ------------------------------------------- | -------- | ------- | ----------- |
-| Bundle size    | <PackageInfo package="tempo" type="size" /> | ~10 kB   | ~3 kB   | 0 kB        |
-| DST-safe math  | <sg-icon name="check" size="16"></sg-icon> (Temporal)                               | Manual   | Manual  | <sg-icon name="x" size="16"></sg-icon>          |
-| Timezone aware | <sg-icon name="check" size="16"></sg-icon> Full support                             | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>      | Partial     |
-| Immutable      | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>          |
-| Format presets | <sg-icon name="check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.)  | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>          |
-| Type inference | <sg-icon name="check" size="16"></sg-icon> Full TypeScript                          | Partial  | Partial | <sg-icon name="x" size="16"></sg-icon>          |
+| Feature        | Tempo                                                                              | date-fns                                   | Day.js                                     | Native Date                            |
+| -------------- | ---------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ | -------------------------------------- |
+| Bundle size    | <PackageInfo package="tempo" type="size" />                                        | ~10 kB                                     | ~3 kB                                      | 0 kB                                   |
+| DST-safe math  | <sg-icon name="check" size="16"></sg-icon> (Temporal)                              | Manual                                     | Manual                                     | <sg-icon name="x" size="16"></sg-icon> |
+| Timezone aware | <sg-icon name="check" size="16"></sg-icon> Full support                            | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | Partial                                |
+| Immutable      | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Format presets | <sg-icon name="check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.) | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
+| Type inference | <sg-icon name="check" size="16"></sg-icon> Full TypeScript                         | Partial                                    | Partial                                    | <sg-icon name="x" size="16"></sg-icon> |
 
 <div class="decision-callout">
 
@@ -139,7 +139,6 @@ const stable = formatInstant(reminder);
 - <PackageInfo package="tempo" type="size" /> gzipped
 
 </div>
-
 
 ## Documentation
 

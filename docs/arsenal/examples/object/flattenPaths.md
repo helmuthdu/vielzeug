@@ -27,5 +27,5 @@ flattenPaths({ a: { b: { c: 1 }, d: 2 }, e: 3 });
 
 ### Related
 
-- [getPath](./path.md)
+- [getPath](./getPath.md)
 - [deepMerge](./merge.md)

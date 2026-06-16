@@ -55,15 +55,6 @@ bus.once('user:logout', () => {
 });
 ```
 
-### `removeAllListeners()` — Bulk unsubscribe
-
-Remove listeners for one event, or all listeners across the bus.
-
-```ts
-bus.removeAllListeners('user:login');
-bus.removeAllListeners(); // all events
-```
-
 ### `eventNames()` — Introspect active subscriptions
 
 Get a snapshot of event keys that currently have listeners.
@@ -220,42 +211,6 @@ for await (const { userId } of stream) {
 }
 ```
 
-### `events()` operators: `.filter()`, `.map()`, `.take()`
-
-`events()` returns an `EventStream<T>` with chainable operators for in-place transforms:
-
-```ts
-// Only yield positive counts
-for await (const n of bus.events('count').filter((n) => n > 0)) {
-  console.log(n);
-}
-
-// Transform each value
-for await (const label of bus.events('count').map((n) => `count: ${n}`)) {
-  console.log(label);
-}
-
-// Yield at most n values, then stop automatically
-for await (const n of bus.events('count').take(5)) {
-  console.log(n);
-}
-
-// Chain freely
-for await (const s of bus
-  .events('count')
-  .filter((n) => n % 2 === 0)
-  .map((n) => n * 2)
-  .take(3)) {
-  console.log(s);
-}
-```
-
-`.take(n)` throws a `RangeError` synchronously if `n` is not a positive integer.
-
-::: warning Sibling streams
-Calling `.filter()`, `.map()`, or `.take()` on the **same base stream** object twice creates two sibling streams sharing one subscription. Disposing one sibling closes both. For independent lifecycles, call `bus.events()` separately for each consumer.
-:::
-
 ## Error Handling
 
 By default, a listener that throws propagates the error to the `emit()` caller, and subsequent listeners for that emit do not run.
@@ -349,7 +304,7 @@ controller.abort(); // removes the wildcard listener
 bus.onAny(logFirstEvent, { once: true });
 ```
 
-`onAny` listeners are removed by `removeAllListeners()` (no argument), but not by `removeAllListeners('event')`.
+Use `wildcardCount()` to inspect the current number of active wildcard listeners.
 
 ::: tip `onAny` for bus-wide observability
 `onAny` is a runtime listener — it can be added and removed dynamically, and accepts `{ signal, once }` options just like `on()`. Prefer it over global tracing hooks for cross-cutting concerns.
@@ -387,7 +342,7 @@ You can scope piping to a signal:
 
 ```ts
 const controller = new AbortController();
-pipeEvents(appBus, auditBus, ['user:login'], controller.signal);
+pipeEvents(appBus, auditBus, ['user:login'], { signal: controller.signal });
 
 // Stop forwarding after 30 seconds
 setTimeout(() => controller.abort(), 30_000);
@@ -448,15 +403,30 @@ bus.current('theme'); // 'dark'
 bus.current('zoom'); // 1
 ```
 
+### `snapshot()`
+
+Read all currently buffered values at once as a plain object:
+
+```ts
+bus.snapshot();
+// → { theme: 'dark', zoom: 1 }  (only buffered events are included)
+```
+
+This is useful for serializing state, hydrating a new bus, or debugging all channels simultaneously.
+
 ### Replay rules
 
-| Method         | Replays current value? |
-| -------------- | ---------------------- |
-| `on()`         | <sg-icon name="check" size="16"></sg-icon> Yes                 |
-| `once()`       | <sg-icon name="check" size="16"></sg-icon> Yes (then done)     |
-| `on({ once })` | <sg-icon name="check" size="16"></sg-icon> Yes (then done)     |
+| Method         | Replays current value?                                     |
+| -------------- | ---------------------------------------------------------- |
+| `on()`         | <sg-icon name="check" size="16"></sg-icon> Yes             |
+| `once()`       | <sg-icon name="check" size="16"></sg-icon> Yes (then done) |
+| `on({ once })` | <sg-icon name="check" size="16"></sg-icon> Yes (then done) |
 | `events()`     | <sg-icon name="x" size="16"></sg-icon> No                  |
 | `wait()`       | <sg-icon name="x" size="16"></sg-icon> No                  |
+
+::: warning `once()` on a BehaviorBus fires immediately
+If the bus has a buffered value for the event, `once()` (and `on(event, fn, { once: true })`) fires the listener **synchronously** with the current value and is immediately done — the listener is never registered for future emits. If you need to react to the _next_ new emit rather than the current state, use `on()` and unsubscribe manually after the first call.
+:::
 
 ## Debug Mode
 

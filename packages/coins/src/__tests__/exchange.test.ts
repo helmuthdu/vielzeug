@@ -1,41 +1,37 @@
 import type { ExchangeRate } from '../types';
 
+import { CurrencyMismatchError, InvalidCurrencyError } from '../errors';
 import { exchange } from '../exchange';
-import { money, toCurrencyCode } from '../money';
-
-const usd = toCurrencyCode('USD');
-const eur = toCurrencyCode('EUR');
-const jpy = toCurrencyCode('JPY');
-const gbp = toCurrencyCode('GBP');
+import { money } from '../money';
 
 describe('exchange', () => {
   describe('basic conversion', () => {
     it('converts USD to EUR', () => {
-      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '0.85', to: eur });
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: '0.85', to: 'EUR' });
 
       expect(result).toEqual({ amount: 85000n, currency: 'EUR' });
     });
 
     it('converts EUR to USD', () => {
-      const result = exchange(money('850.00', 'EUR'), { from: eur, rate: '1.18', to: usd });
+      const result = exchange(money('850.00', 'EUR'), { from: 'EUR', rate: '1.18', to: 'USD' });
 
       expect(result).toEqual({ amount: 100300n, currency: 'USD' });
     });
 
     it('handles zero amount', () => {
-      const result = exchange(money('0.00', 'USD'), { from: usd, rate: '0.85', to: eur });
+      const result = exchange(money('0.00', 'USD'), { from: 'USD', rate: '0.85', to: 'EUR' });
 
       expect(result).toEqual({ amount: 0n, currency: 'EUR' });
     });
 
     it('rate of 1.0 produces identical amount', () => {
-      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '1.0', to: usd });
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: '1.0', to: 'USD' });
 
       expect(result).toEqual({ amount: 100000n, currency: 'USD' });
     });
 
     it('rate of 0 produces zero amount', () => {
-      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '0', to: eur });
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: '0', to: 'EUR' });
 
       expect(result).toEqual({ amount: 0n, currency: 'EUR' });
     });
@@ -43,14 +39,14 @@ describe('exchange', () => {
 
   describe('precision', () => {
     it('handles high exchange rates (USD → JPY)', () => {
-      const result = exchange(money('100.00', 'USD'), { from: usd, rate: '110.0', to: jpy });
+      const result = exchange(money('100.00', 'USD'), { from: 'USD', rate: '110.0', to: 'JPY' });
 
       // 10000 minor units × 1100 / 10 = 1100000
       expect(result).toEqual({ amount: 1100000n, currency: 'JPY' });
     });
 
     it('handles low exchange rates (JPY → USD)', () => {
-      const result = exchange(money(1000000n, 'JPY'), { from: jpy, rate: '0.0091', to: usd });
+      const result = exchange(money(1000000n, 'JPY'), { from: 'JPY', rate: '0.0091', to: 'USD' });
 
       // 1000000 × 91 / 10000 = 9100
       expect(result).toEqual({ amount: 9100n, currency: 'USD' });
@@ -58,7 +54,7 @@ describe('exchange', () => {
 
     it('converts with many significant digits without float error', () => {
       // 0.847532 as float64 is not representable exactly; string parsing avoids this
-      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '0.847532', to: eur });
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: '0.847532', to: 'EUR' });
 
       // 100000 × 847532 / 1000000 = 84753.2 → rounds to 84753
       expect(result).toEqual({ amount: 84753n, currency: 'EUR' });
@@ -66,7 +62,7 @@ describe('exchange', () => {
 
     it('accepts a rate string in scientific notation', () => {
       // ExchangeRate.rate is a string — scientific notation should be handled
-      const result = exchange(money('1000.00', 'USD'), { from: usd, rate: '1e-2', to: eur });
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: '1e-2', to: 'EUR' });
 
       // 100000 × 1 / 100 = 1000 EUR cents = €10.00
       expect(result).toEqual({ amount: 1000n, currency: 'EUR' });
@@ -75,7 +71,7 @@ describe('exchange', () => {
 
   describe('rounding modes', () => {
     // 3 cents × 0.5 = 1.5 cents — a fractional minor unit
-    const threeUsd: ExchangeRate = { from: usd, rate: '0.5', to: eur };
+    const threeUsd: ExchangeRate = { from: 'USD', rate: '0.5', to: 'EUR' };
 
     it("'half-away-from-zero' rounds 1.5 up to 2 (default)", () => {
       expect(exchange(money(3n, 'USD'), threeUsd)).toEqual({ amount: 2n, currency: 'EUR' });
@@ -118,7 +114,7 @@ describe('exchange', () => {
   describe('zero rate', () => {
     it('converts any amount to zero when rate is "0"', () => {
       // rate='0' is a valid non-negative decimal; result is always 0 minor units
-      const rate: ExchangeRate = { from: usd, rate: '0', to: eur };
+      const rate: ExchangeRate = { from: 'USD', rate: '0', to: 'EUR' };
 
       expect(exchange(money('100.00', 'USD'), rate)).toEqual({ amount: 0n, currency: 'EUR' });
       expect(exchange(money('-100.00', 'USD'), rate)).toEqual({ amount: 0n, currency: 'EUR' });
@@ -127,36 +123,45 @@ describe('exchange', () => {
 
   describe('negative amounts', () => {
     it('handles negative money', () => {
-      const result = exchange(money('-1000.00', 'USD'), { from: usd, rate: '0.85', to: eur });
+      const result = exchange(money('-1000.00', 'USD'), { from: 'USD', rate: '0.85', to: 'EUR' });
 
       expect(result).toEqual({ amount: -85000n, currency: 'EUR' });
     });
   });
 
   describe('error handling', () => {
-    it('throws TypeError on currency mismatch', () => {
-      const rate: ExchangeRate = { from: eur, rate: '0.85', to: gbp };
+    it('throws CurrencyMismatchError on currency mismatch', () => {
+      const rate: ExchangeRate = { from: 'EUR', rate: '0.85', to: 'GBP' };
 
-      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow(TypeError);
-      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow(
-        'exchange: money.currency (USD) does not match rate.from (EUR)',
+      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow(CurrencyMismatchError);
+      expect(() => exchange(money('100.00', 'USD'), rate)).toThrow('Currency mismatch');
+    });
+
+    it('throws InvalidCurrencyError when rate.to is not a valid ISO 4217 code', () => {
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '1.0', to: 'FAKE' })).toThrow(
+        InvalidCurrencyError,
+      );
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '1.0', to: 'FAKE' })).toThrow(
+        'Invalid ISO 4217 currency code',
       );
     });
 
     it('throws RangeError for invalid rate string', () => {
-      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: 'not-a-number', to: eur })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: 'not-a-number', to: 'EUR' })).toThrow(
+        RangeError,
+      );
     });
 
     it('throws RangeError for empty string rate', () => {
-      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur })).toThrow(RangeError);
-      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur })).toThrow(
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(
         'non-empty decimal string',
       );
     });
 
     it('throws RangeError for negative exchange rate', () => {
-      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(RangeError);
-      expect(() => exchange(money('100.00', 'USD'), { from: usd, rate: '-0.85', to: eur })).toThrow(
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(
         'Exchange rate must be non-negative',
       );
     });
@@ -164,7 +169,7 @@ describe('exchange', () => {
 
   describe('negative near-zero rounding (1 minor unit exchanged at 0.5 rate)', () => {
     // -1 cent × 0.5 rate = -0.5 EUR cents — quotient is 0n but true result is negative
-    const oneNegUsd: ExchangeRate = { from: usd, rate: '0.5', to: eur };
+    const oneNegUsd: ExchangeRate = { from: 'USD', rate: '0.5', to: 'EUR' };
 
     it("'half-away-from-zero' rounds -0.5 to -1", () => {
       expect(exchange(money(-1n, 'USD'), oneNegUsd)).toEqual({ amount: -1n, currency: 'EUR' });

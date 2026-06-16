@@ -40,7 +40,7 @@ function open() {
 
 function close() {
   dropdown.removeAttribute('data-open');
-  handle?.cleanup();
+  handle?.dispose();
   handle = null;
 }
 ```

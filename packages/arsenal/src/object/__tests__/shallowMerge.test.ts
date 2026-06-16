@@ -19,8 +19,8 @@ describe('shallowMerge', () => {
     expect(shallowMerge({ a: 1 }, { b: 2 }, { c: 3 })).toEqual({ a: 1, b: 2, c: 3 });
   });
 
-  it('returns an empty object when no sources given', () => {
-    expect(shallowMerge({})).toEqual({});
+  it('returns an empty object when given no arguments', () => {
+    expect(shallowMerge()).toEqual({});
   });
 
   it('does not mutate the first argument', () => {

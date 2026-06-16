@@ -1,4 +1,4 @@
-import { allOf, anyOf, noneOf } from '../predicate';
+import { allOf, anyOf, noneOf } from '../../guards/combinators';
 
 describe('allOf', () => {
   it('returns true when every predicate matches', () => {
@@ -12,17 +12,11 @@ describe('allOf', () => {
     const isPositive = (n: number) => n > 0;
     const isEven = (n: number) => n % 2 === 0;
 
-    expect(allOf(isPositive, isEven)(3, 0, [3])).toBe(false);
+    expect(allOf(isPositive, isEven)(3)).toBe(false);
   });
 
   it('returns true for all values when called with zero predicates', () => {
     expect([1, 2, 3].filter(allOf())).toEqual([1, 2, 3]);
-  });
-
-  it('passes index and array to each predicate', () => {
-    const atIndex1 = (_: number, i: number) => i === 1;
-
-    expect([10, 20, 30].filter(allOf(atIndex1))).toEqual([20]);
   });
 
   it('short-circuits on first failing predicate', () => {
@@ -38,7 +32,7 @@ describe('allOf', () => {
       return n > 100;
     };
 
-    allOf(p1, p2)(-1, 0, [-1]);
+    allOf(p1, p2)(-1);
     expect(calls).toEqual(['p1']); // p2 not called because p1 failed
   });
 });
@@ -54,7 +48,7 @@ describe('anyOf', () => {
   it('returns false when no predicate matches', () => {
     const isNegative = (n: number) => n < 0;
 
-    expect(anyOf(isNegative)(5, 0, [5])).toBe(false);
+    expect(anyOf(isNegative)(5)).toBe(false);
   });
 
   it('returns false for all values when called with zero predicates', () => {
@@ -74,7 +68,7 @@ describe('anyOf', () => {
       return n > 100;
     };
 
-    anyOf(p1, p2)(5, 0, [5]);
+    anyOf(p1, p2)(5);
     expect(calls).toEqual(['p1']); // p2 not called because p1 matched
   });
 });
@@ -98,10 +92,9 @@ describe('noneOf', () => {
     expect([1, 2, 3].filter(noneOf())).toEqual([1, 2, 3]);
   });
 
-  it('passes index and array to each predicate', () => {
-    const atIndex0 = (_: number, i: number) => i === 0;
+  it('works as a negation filter when passed to Array.filter', () => {
+    const isEven = (n: number) => n % 2 === 0;
 
-    // noneOf(atIndex0) → true for all except index 0
-    expect([10, 20, 30].filter(noneOf(atIndex0))).toEqual([20, 30]);
+    expect([1, 2, 3, 4].filter(noneOf(isEven))).toEqual([1, 3]);
   });
 });

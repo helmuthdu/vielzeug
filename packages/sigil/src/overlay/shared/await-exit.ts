@@ -11,6 +11,13 @@
  * @param type - `'animation'` (default) or `'transition'`.
  */
 export function awaitExit(el: Element, onDone: () => void, type: 'animation' | 'transition' = 'animation'): void {
+  // Force a synchronous style recalc so that any CSS class changes applied
+  // immediately before this call (e.g. adding 'closing') are committed and
+  // CSSTransition / CSSAnimation instances appear in getAnimations().
+  // Reading getComputedStyle() is the lightest layout-flush trigger available;
+  // in jsdom it is a no-op stub so test timing is unaffected.
+  if (typeof getComputedStyle === 'function') void getComputedStyle(el).opacity;
+
   queueMicrotask(() => {
     const getAnimations = typeof el.getAnimations === 'function' ? () => el.getAnimations() : () => [];
     const relevant = getAnimations().filter((a) => {

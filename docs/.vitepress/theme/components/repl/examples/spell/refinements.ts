@@ -1,17 +1,22 @@
 export const refinementsExample = {
-  code: `// check() and refine() — sync domain rules beyond built-in constraints
+  code: `// validate() and refine() — custom domain rules beyond built-in constraints
 import { s } from '@vielzeug/spell'
 
 const reserved = new Set(['admin', 'root'])
 
-// check() with ctx gives you full control over the issue code and message
-const Username = s.string().min(3).check((value, ctx) => {
-  if (reserved.has(value)) {
-    ctx.addIssue({ code: 'custom', message: value + ' is reserved' })
-  }
-})
+// validate() accepts sync or async; return a string to fail with that message
+const Username = s.string().min(3).validate((value) =>
+  !reserved.has(value) || value + ' is reserved'
+)
 
-// refine() is the predicate-only shorthand — same semantics, less ceremony
+// validate() with ctx for multiple issues or custom error codes
+const Signup = s.object({ password: s.string().min(8), confirm: s.string() })
+  .validate((v, ctx) => {
+    if (v.password !== v.confirm)
+      ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] })
+  })
+
+// refine() is the predicate-only shorthand for boolean checks
 const EvenPort = s.number().int().min(1).max(65535)
   .refine((n) => n % 2 === 0, () => 'Port must be even')
 
@@ -20,9 +25,12 @@ for (const name of ['ad', 'admin', 'grace']) {
   console.log(name, '->', r.success ? 'ok' : r.error.issues[0].message)
 }
 
+const signupResult = Signup.safeParse({ password: 'secure123', confirm: 'different' })
+console.log('signup:', signupResult.success ? 'ok' : signupResult.error.issues[0].message)
+
 for (const port of [8080, 3001, 443]) {
   const r = EvenPort.safeParse(port)
   console.log('port', port, '->', r.success ? 'ok' : r.error.issues[0].message)
 }`,
-  name: 'Custom Checks',
+  name: 'Custom Validation',
 };

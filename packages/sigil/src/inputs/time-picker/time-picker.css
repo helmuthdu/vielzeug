@@ -1,7 +1,7 @@
 @layer sigil.base {
   :host {
     --_selected-bg: var(--time-picker-selected-bg, var(--_theme-focus));
-    --_hover-bg: var(--time-picker-option-hover-bg, color-mix(in srgb, var(--_selected-bg) 12%, transparent));
+    --_hover-bg: var(--time-picker-option-hover-bg, color-mix(in oklch, var(--_selected-bg) 12%, transparent));
 
     position: relative;
     display: inline-block;

@@ -1,9 +1,9 @@
 ---
-title: Middleware Pipeline
-description: Intercept and transform events with composable middleware.
+title: Interceptor Pipeline
+description: Intercept and transform events with pure interceptor functions.
 ---
 
-## Middleware Pipeline
+## Interceptor Pipeline
 
 ### Problem
 
@@ -11,34 +11,32 @@ You need to intercept machine events for cross-cutting concerns — logging, ana
 
 ### Solution
 
-Pass a `middleware` array to `interpret()`. Each middleware receives the event, a snapshot, and a `next()` function. Call `next()` to continue the chain; return `false` to swallow the event:
+Pass an `interceptors` array to `machine()`. Each interceptor is a pure function `(event, snapshot) => Ev | null`. Return the event (or a transformed event) to allow it; return `null` to block the chain:
 
 ```ts
-import { defineMachine, interpret, type MiddlewareFn } from '@vielzeug/clockwork';
+import { machine, type InterceptorFn } from '@vielzeug/clockwork';
 
 type Event = { type: 'ADMIN_ACTION' } | { type: 'GO' } | { type: 'STOP' };
-type Context = { isAdmin: boolean; log: string[] };
+type Context = { isAdmin: boolean };
 type State = 'active' | 'idle';
 
-// Logging middleware — observes all events
-const logger: MiddlewareFn<State, Context, Event> = (event, snapshot, next) => {
+// Logging interceptor — observes all events, passes them through
+const logger: InterceptorFn<State, Context, Event> = (event, snapshot) => {
   console.log(`[${snapshot.state}] ${event.type}`);
-  const result = next();
-  console.log(`  → transition: ${result}`);
-  return result;
+  return event; // must return the event to allow it
 };
 
-// Authorization middleware — blocks certain events
-const authGuard: MiddlewareFn<State, Context, Event> = (event, snapshot, next) => {
+// Authorization interceptor — blocks events based on context
+const authGuard: InterceptorFn<State, Context, Event> = (event, snapshot) => {
   if (event.type === 'ADMIN_ACTION' && !snapshot.context.isAdmin) {
     console.warn('Blocked: insufficient permissions');
-    return false; // swallow event
+    return null; // null blocks the event
   }
-  return next();
+  return event;
 };
 
-const machine = defineMachine<State, Context, Event>({
-  context: { isAdmin: false, log: [] },
+const config = {
+  context: { isAdmin: false },
   initial: 'idle',
   states: {
     active: { on: { STOP: { target: 'idle' } } },
@@ -49,22 +47,23 @@ const machine = defineMachine<State, Context, Event>({
       },
     },
   },
-});
+};
 
-// Middleware is composed right-to-left: logger wraps authGuard
-const m = interpret(machine, { middleware: [logger, authGuard] });
+// Interceptors run left-to-right: logger runs first, then authGuard
+const m = machine(config, { interceptors: [logger, authGuard] });
 
-m.send({ type: 'ADMIN_ACTION' }); // Blocked by authGuard
-m.send({ type: 'GO' }); // Allowed — transitions to 'active'
+console.log(m.send({ type: 'ADMIN_ACTION' })); // 'rejected' — blocked by authGuard
+console.log(m.send({ type: 'GO' })); // 'transitioned'
 
 m[Symbol.dispose]();
 ```
 
 ### Pitfalls
 
-- **Middleware order matters** — Clockwork composes left-to-right: the first middleware in the array is the outermost wrapper.
-- **Returning `false` swallows the event silently** — the machine stays in its current state. Emit a side-channel signal or log if you need UI feedback.
-- **Middleware runs synchronously** — do not `await` inside middleware; use entry/exit actions for async side effects.
+- **Interceptors run left-to-right.** The first `null` in the chain stops all subsequent interceptors.
+- **Returning `null` swallows the event silently.** `send()` returns `'rejected'`. Log or emit a signal if you need UI feedback.
+- **Interceptors are synchronous.** Do not `await` inside interceptors; use entry/exit actions for async side effects.
+- **Interceptors can transform events.** Return a new event object to change its type or payload before it reaches the machine.
 
 ### Related
 

@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, onMounted, prop, signal } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 
 import type { VisualVariant } from '../../shared';
 
@@ -186,7 +187,7 @@ define<SgTimePickerProps, SgTimePickerEvents>(TIME_PICKER_TAG, {
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
 
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onMounted }) {
     // ── Signals ──────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
@@ -200,7 +201,7 @@ define<SgTimePickerProps, SgTimePickerEvents>(TIME_PICKER_TAG, {
 
     // ── Form value ────────────────────────────────────────────────────────────
 
-    defineField<string>({
+    useField<string>({
       disabled: isDisabled,
       toFormValue: (v) => v || null,
       value: computed(() => {

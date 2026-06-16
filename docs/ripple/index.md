@@ -20,12 +20,13 @@ exports:
     untrack,
     scope,
     asyncScope,
+    withScope,
     onCleanup,
     readonly,
+    selector,
     isSignal,
     isComputed,
     isStore,
-    getSignalName,
     getDevToolsHook,
     StateError,
     StateErrorCode,
@@ -58,22 +59,22 @@ effect(() => console.log(count.value)); // auto-tracks dependencies
 count.value = 1; // notifies automatically
 ```
 
-| Feature                      | Ripple                                       | Zustand          | Jotai        | Nanostores |
-| ---------------------------- | -------------------------------------------- | ---------------- | ------------ | ---------- |
-| Bundle size                  | <PackageInfo package="ripple" type="size" /> | ~3.5 kB          | ~7 kB        | ~2 kB      |
-| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
-| Framework-agnostic           | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | React-first  | <sg-icon name="check" size="16"></sg-icon>         |
-| Fine-grained reactivity      | <sg-icon name="check" size="16"></sg-icon> (per-property)                            | <sg-icon name="x" size="16"></sg-icon> (whole store) | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon> (atom)  |
-| Structured object stores     | <sg-icon name="check" size="16"></sg-icon> (`store`, `lens`)                         | <sg-icon name="check" size="16"></sg-icon>               | Manual atoms | <sg-icon name="x" size="16"></sg-icon>         |
-| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`asyncComputed`)                         | Manual           | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
-| Undo / redo history          | <sg-icon name="check" size="16"></sg-icon> (`storeWithHistory`)                      | Manual           | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
-| Computed signals             | <sg-icon name="check" size="16"></sg-icon> (lazy, glitch-free)                       | Selectors        | <sg-icon name="check" size="16"></sg-icon> (atoms)   | <sg-icon name="check" size="16"></sg-icon>         |
-| Batched writes               | <sg-icon name="check" size="16"></sg-icon> (`batch`)                                 | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
-| Explicit cleanup / scopes    | <sg-icon name="check" size="16"></sg-icon> (`scope`, `onCleanup`)                    | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
-| SSR support                  | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         |
-| TypeScript — strict generics | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | Partial    |
-| React Suspense               | <sg-icon name="x" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
-| Redux DevTools               | <sg-icon name="x" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>         |
+| Feature                      | Ripple                                                            | Zustand                                              | Jotai                                              | Nanostores                                        |
+| ---------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
+| Bundle size                  | <PackageInfo package="ripple" type="size" />                      | ~3.5 kB                                              | ~7 kB                                              | ~2 kB                                             |
+| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>        |
+| Framework-agnostic           | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | React-first                                        | <sg-icon name="check" size="16"></sg-icon>        |
+| Fine-grained reactivity      | <sg-icon name="check" size="16"></sg-icon> (per-property)         | <sg-icon name="x" size="16"></sg-icon> (whole store) | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon> (atom) |
+| Structured object stores     | <sg-icon name="check" size="16"></sg-icon> (`store`, `lens`)      | <sg-icon name="check" size="16"></sg-icon>           | Manual atoms                                       | <sg-icon name="x" size="16"></sg-icon>            |
+| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`asyncComputed`)      | Manual                                               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
+| Undo / redo history          | <sg-icon name="check" size="16"></sg-icon> (`storeWithHistory`)   | Manual                                               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
+| Computed signals             | <sg-icon name="check" size="16"></sg-icon> (lazy, glitch-free)    | Selectors                                            | <sg-icon name="check" size="16"></sg-icon> (atoms) | <sg-icon name="check" size="16"></sg-icon>        |
+| Batched writes               | <sg-icon name="check" size="16"></sg-icon> (`batch`)              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>        |
+| Explicit cleanup / scopes    | <sg-icon name="check" size="16"></sg-icon> (`scope`, `onCleanup`) | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
+| SSR support                  | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>        |
+| TypeScript — strict generics | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | Partial                                           |
+| React Suspense               | <sg-icon name="x" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
+| Redux DevTools               | <sg-icon name="x" size="16"></sg-icon>                            | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
 
 <div class="decision-callout">
 

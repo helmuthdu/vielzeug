@@ -1,77 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { HttpError } from '../errors';
+import { AbortError, CourierError, HttpError, NetworkError, SchemaValidationError, TimeoutError } from '../errors';
 
 describe('HttpError', () => {
-  describe('classifyKind()', () => {
-    it("classifies as 'http' when status is present", () => {
-      const err = new HttpError({ message: 'Not Found', method: 'GET', status: 404, url: '/test' });
-
-      expect(err.kind).toBe('http');
-    });
-
-    it("classifies as 'network' when no status, cause, or signal reason", () => {
-      const err = new HttpError({ message: 'Network error', method: 'GET', url: '/test' });
-
-      expect(err.kind).toBe('network');
-    });
-
-    it("classifies as 'abort' when cause is a DOMException AbortError", () => {
-      const cause = new DOMException('User aborted', 'AbortError');
-      const err = new HttpError({ cause, message: 'Aborted', method: 'GET', url: '/test' });
-
-      expect(err.kind).toBe('abort');
-    });
-
-    it("classifies as 'timeout' when cause is a DOMException TimeoutError", () => {
-      const cause = new DOMException('Timed out', 'TimeoutError');
-      const err = new HttpError({ cause, message: 'Timeout', method: 'GET', url: '/test' });
-
-      expect(err.kind).toBe('timeout');
-    });
-
-    it("classifies as 'timeout' when signalReason has name 'TimeoutError'", () => {
-      // Use a plain Error with name='TimeoutError' — in jsdom DOMException does not extend
-      // Error, so the `instanceof Error && .name === 'TimeoutError'` check uses this form.
-      const timeoutErr = Object.assign(new Error('Timeout'), { name: 'TimeoutError' });
-      const err = new HttpError({
-        message: 'Timeout',
-        method: 'GET',
-        signalReason: timeoutErr,
-        url: '/test',
-      });
-
-      expect(err.kind).toBe('timeout');
-    });
-
-    it("classifies as 'abort' when cause is an Error with name 'AbortError'", () => {
-      const cause = Object.assign(new Error('Aborted'), { name: 'AbortError' });
-      const err = new HttpError({ cause, message: 'Aborted', method: 'GET', url: '/test' });
-
-      expect(err.kind).toBe('abort');
-    });
-
-    it("classifies as 'abort' when aborted:true with no cause", () => {
-      const err = new HttpError({ aborted: true, message: 'Aborted', method: 'GET', url: '/test' });
-
-      expect(err.kind).toBe('abort');
-    });
-
-    it('signalReason takes priority over cause for TimeoutError', () => {
-      const timeoutErr = Object.assign(new Error('Timeout'), { name: 'TimeoutError' });
-      const cause = new DOMException('Abort', 'AbortError');
-      const err = new HttpError({
-        cause,
-        message: 'Timeout',
-        method: 'GET',
-        signalReason: timeoutErr,
-        url: '/test',
-      });
-
-      expect(err.kind).toBe('timeout');
-    });
-  });
-
   describe('properties', () => {
     it('stores url, method, status, data, headers', () => {
       const headers = new Headers({ 'x-id': '42' });
@@ -92,19 +23,17 @@ describe('HttpError', () => {
       expect(err.name).toBe('HttpError');
     });
 
-    it('isTimeout returns true when kind is timeout', () => {
-      const cause = new DOMException('Timeout', 'TimeoutError');
-      const err = new HttpError({ cause, message: 'Timeout', method: 'GET', url: '/test' });
+    it('is a CourierError', () => {
+      const err = new HttpError({
+        data: null,
+        headers: new Headers(),
+        message: 'err',
+        method: 'GET',
+        status: 400,
+        url: '/',
+      });
 
-      expect(err.isTimeout).toBe(true);
-      expect(err.isAborted).toBe(false);
-    });
-
-    it('isAborted returns true when kind is abort', () => {
-      const err = new HttpError({ aborted: true, message: 'Aborted', method: 'GET', url: '/test' });
-
-      expect(err.isAborted).toBe(true);
-      expect(err.isTimeout).toBe(false);
+      expect(err).toBeInstanceOf(CourierError);
     });
   });
 
@@ -117,7 +46,7 @@ describe('HttpError', () => {
       });
       const err = HttpError.fromResponse(res, { errors: ['invalid'] }, 'POST', '/users');
 
-      expect(err.kind).toBe('http');
+      expect(err).toBeInstanceOf(HttpError);
       expect(err.status).toBe(422);
       expect(err.message).toBe('[@vielzeug/courier] Unprocessable Entity');
       expect(err.method).toBe('POST');
@@ -131,34 +60,15 @@ describe('HttpError', () => {
       expect(err.message).toBe('[@vielzeug/courier] HTTP 500');
     });
 
-    it('fromCause() creates a network error from a plain Error', () => {
-      const cause = new Error('fetch failed');
-      const err = HttpError.fromCause(cause, 'GET', '/test');
-
-      expect(err.kind).toBe('network');
-      expect(err.message).toBe('[@vielzeug/courier] fetch failed');
-      expect(err.cause).toBe(cause);
-    });
-
-    it('fromCause() reads signal.reason for timeout classification', () => {
-      const ac = new AbortController();
-      const timeoutReason = Object.assign(new Error('Timeout'), { name: 'TimeoutError' });
-
-      ac.abort(timeoutReason);
-
-      const err = HttpError.fromCause(new Error('aborted'), 'GET', '/test', ac.signal);
-
-      expect(err.kind).toBe('timeout');
-    });
-
-    it('fromCause() uses String(cause) when cause is not an Error', () => {
-      const err = HttpError.fromCause('string cause', 'GET', '/test');
-
-      expect(err.message).toBe('[@vielzeug/courier] string cause');
-    });
-
     it('is() returns true for HttpError instances', () => {
-      const err = new HttpError({ message: 'err', method: 'GET', status: 400, url: '/' });
+      const err = new HttpError({
+        data: null,
+        headers: new Headers(),
+        message: 'err',
+        method: 'GET',
+        status: 400,
+        url: '/',
+      });
 
       expect(HttpError.is(err)).toBe(true);
       expect(HttpError.is(err, 400)).toBe(true);
@@ -170,5 +80,60 @@ describe('HttpError', () => {
       expect(HttpError.is(null)).toBe(false);
       expect(HttpError.is('string')).toBe(false);
     });
+  });
+});
+
+describe('NetworkError', () => {
+  it('stores url and method', () => {
+    const err = new NetworkError({ message: 'fail', method: 'POST', url: '/api' });
+
+    expect(err.url).toBe('/api');
+    expect(err.method).toBe('POST');
+    expect(err.name).toBe('NetworkError');
+  });
+
+  it('is a CourierError', () => {
+    expect(new NetworkError({ message: 'x', method: 'GET', url: '/' })).toBeInstanceOf(CourierError);
+  });
+});
+
+describe('TimeoutError', () => {
+  it('stores url and method', () => {
+    const err = new TimeoutError({ message: 'timed out', method: 'GET', url: '/slow' });
+
+    expect(err.url).toBe('/slow');
+    expect(err.name).toBe('TimeoutError');
+  });
+
+  it('is a CourierError', () => {
+    expect(new TimeoutError({ message: 'x', method: 'GET', url: '/' })).toBeInstanceOf(CourierError);
+  });
+});
+
+describe('AbortError', () => {
+  it('stores url and method', () => {
+    const err = new AbortError({ message: 'aborted', method: 'DELETE', url: '/resource' });
+
+    expect(err.url).toBe('/resource');
+    expect(err.name).toBe('AbortError');
+  });
+
+  it('is a CourierError', () => {
+    expect(new AbortError({ message: 'x', method: 'GET', url: '/' })).toBeInstanceOf(CourierError);
+  });
+});
+
+describe('SchemaValidationError', () => {
+  it('stores data and cause', () => {
+    const cause = new Error('bad schema');
+    const err = new SchemaValidationError(cause, { raw: true });
+
+    expect(err.data).toEqual({ raw: true });
+    expect(err.cause).toBe(cause);
+    expect(err.name).toBe('SchemaValidationError');
+  });
+
+  it('is a CourierError', () => {
+    expect(new SchemaValidationError(new Error(), null)).toBeInstanceOf(CourierError);
   });
 });

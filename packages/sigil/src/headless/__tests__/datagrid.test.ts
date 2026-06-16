@@ -353,6 +353,20 @@ describe('createDataGridControl()', () => {
 
       expect(ctrl.selectedKeys.value.size).toBe(0);
     });
+
+    it('isAllSelected() returns false when the current page is empty', () => {
+      const items = signal<Row[]>([]);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        pageSize: () => 10,
+        selectionMode: () => 'multi',
+        signal: new AbortController().signal,
+      });
+
+      expect(ctrl.isAllSelected()).toBe(false);
+    });
   });
 
   describe('totalItems', () => {
@@ -363,6 +377,130 @@ describe('createDataGridControl()', () => {
 
       items.value = [];
       expect(ctrl.totalItems.value).toBe(0);
+    });
+  });
+
+  describe('selectedKeys immutability (B1)', () => {
+    it('onSelectionChange only fires through API methods, not by accessing selectedKeys', () => {
+      const onChange = vi.fn();
+      const items = signal<Row[]>(ROWS);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        onSelectionChange: onChange,
+        pageSize: () => 10,
+        selectionMode: () => 'multi',
+        signal: new AbortController().signal,
+      });
+
+      // Reading the signal never fires onSelectionChange
+      void ctrl.selectedKeys.value;
+
+      expect(onChange).not.toHaveBeenCalled();
+
+      // toggleRow fires it
+      ctrl.toggleRow('1');
+      expect(onChange).toHaveBeenCalledTimes(1);
+    });
+
+    it('returns a ReadonlySet — each reactive update creates a fresh snapshot', () => {
+      const { ctrl } = makeCtrl();
+
+      ctrl.toggleRow('1');
+
+      const a = ctrl.selectedKeys.value;
+
+      ctrl.toggleRow('2');
+
+      const b = ctrl.selectedKeys.value;
+
+      // After a reactive state change, a new Set instance is returned
+      expect(a).not.toBe(b);
+      expect(b.has('1')).toBe(true);
+      expect(b.has('2')).toBe(true);
+    });
+  });
+
+  describe('goToPage() clamping (D3)', () => {
+    it('clamps to the last valid page when given an out-of-range index', () => {
+      const items = signal<Row[]>(ROWS);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        pageSize: () => 2,
+        selectionMode: () => 'none',
+        signal: new AbortController().signal,
+      });
+
+      ctrl.goToPage(9999);
+
+      expect(ctrl.pageIndex.value).toBe(1);
+    });
+
+    it('stays at page 0 when there are no items', () => {
+      const items = signal<Row[]>([]);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        pageSize: () => 10,
+        selectionMode: () => 'none',
+        signal: new AbortController().signal,
+      });
+
+      ctrl.goToPage(5);
+
+      expect(ctrl.pageIndex.value).toBe(-1);
+    });
+  });
+
+  describe('goToPage() NaN guard (S3)', () => {
+    it('ignores NaN and does not corrupt pageIndex', () => {
+      const items = signal<Row[]>(ROWS);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        pageSize: () => 1,
+        selectionMode: () => 'none',
+        signal: new AbortController().signal,
+      });
+
+      ctrl.goToPage(1);
+      expect(ctrl.pageIndex.value).toBe(1);
+
+      ctrl.goToPage(NaN);
+      expect(ctrl.pageIndex.value).toBe(1);
+    });
+
+    it('ignores Infinity', () => {
+      const items = signal<Row[]>(ROWS);
+      const ctrl = createDataGridControl<Row>({
+        columns: () => [],
+        getRowKey: (r) => r.id,
+        items,
+        pageSize: () => 1,
+        selectionMode: () => 'none',
+        signal: new AbortController().signal,
+      });
+
+      ctrl.goToPage(Infinity);
+      expect(Number.isFinite(ctrl.pageIndex.value)).toBe(true);
+    });
+  });
+
+  describe('selectAll() deselect path (C2)', () => {
+    it('deselects all current-page rows when all are already selected', () => {
+      const { ctrl } = makeCtrl();
+
+      ctrl.selectAll();
+      expect(ctrl.isAllSelected()).toBe(true);
+
+      ctrl.selectAll();
+      expect(ctrl.isAllSelected()).toBe(false);
+      expect(ctrl.selectedKeys.value.size).toBe(0);
     });
   });
 });
