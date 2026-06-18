@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/coins",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Currency formatting and exchange utilities for precise monetary arithmetic",
   "type": "module",
   "files": [

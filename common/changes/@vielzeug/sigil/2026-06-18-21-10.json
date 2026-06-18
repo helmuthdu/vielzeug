@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Initial public release",
+      "type": "major",
+      "packageName": "@vielzeug/sigil"
+    }
+  ],
+  "packageName": "@vielzeug/sigil",
+  "email": "helmuthdu@gmail.com"
+}

@@ -12,8 +12,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      env_var: ${{ inputs.environment || 'production' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,6 +65,7 @@ jobs:
   # ── Unit tests + accessibility audit ────────────────────────────────────────
   test:
     name: Unit Tests & A11y
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -96,7 +95,24 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
+      - name: Setup Rush cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            common/temp/install-run
+            common/temp/pnpm-store
+            ~/.rush
+          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
+          restore-keys: |
+            ${{ runner.os }}-rush-
+
+      - name: Rush Install
+        run: node common/scripts/install-run-rush.js install
+
+      - name: Rush build
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Generate codex bundled data
@@ -119,6 +135,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:

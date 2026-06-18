@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Initial public release",
+      "type": "major",
+      "packageName": "@vielzeug/wayfinder"
+    }
+  ],
+  "packageName": "@vielzeug/wayfinder",
+  "email": "helmuthdu@gmail.com"
+}

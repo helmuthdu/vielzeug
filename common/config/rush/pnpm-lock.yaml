@@ -350,9 +350,6 @@ importers:
       '@vielzeug/ripple':
         specifier: workspace:*
         version: link:../ripple
-      '@vielzeug/scroll':
-        specifier: workspace:*
-        version: link:../scroll
       '@vielzeug/tempo':
         specifier: workspace:*
         version: link:../tempo
