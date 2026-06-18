@@ -25,6 +25,9 @@ jobs:
       - name: Install root workspace tools (vitest, eslint — not managed by Rush)
         run: pnpm install --frozen-lockfile
 
+      - name: Generate codex bundled data
+        run: pnpm --dir packages/codex run prepare:data
+
       - name: Run unit tests with coverage
         run: pnpm test --run --coverage
 
