@@ -319,25 +319,19 @@ export const scope = (setup?: () => void): Scope => {
 };
 
 /**
- * Creates a {@link Scope} that captures cleanups registered synchronously
- * during the setup function's preamble (before the first `await`), then
- * awaits the rest of setup and returns the ready scope.
+ * @deprecated Use `scope()` + `s.run()` directly instead:
+ * ```ts
+ * const s = scope();
+ * await s.run(async () => {
+ *   onCleanup(() => resourceA.close()); // ✓ before any await — captured
+ *   const db = await openDB();
+ * });
+ * ```
  *
  * **Important:** `onCleanup()` can only be called synchronously — before the
  * first `await` in the setup function. Reactive tracking does not survive
  * `await` boundaries; any `onCleanup()` calls after an `await` will throw
  * `INVALID_CLEANUP`.
- *
- * @example
- * ```ts
- * const s = await asyncScope(async () => {
- *   onCleanup(() => resourceA.close()); // ✓ before any await — captured
- *   const db = await openDB();          // context is gone after this point
- *   // do NOT call onCleanup() here — it will throw
- * });
- * // later:
- * s.dispose();
- * ```
  */
 export const asyncScope = async (setup: () => Promise<void>): Promise<Scope> => {
   const s = scope();
@@ -348,21 +342,19 @@ export const asyncScope = async (setup: () => Promise<void>): Promise<Scope> => 
 };
 
 /**
- * Creates a reactive scope that automatically captures all `effect()` and `computed()`
- * calls made inside `setup`. Disposing the scope disposes all captured children.
- *
- * This is the preferred pattern over `scope()` + manual `onCleanup()` registration for
- * the common case where the only cleanup needed is disposing reactive children.
+ * @deprecated Use `scope(setup)` directly — `withScope(fn)` is identical to `scope(fn)`.
  *
  * @example
  * ```ts
+ * // Before
  * const s = withScope(() => {
- *   effect(() => { document.title = count.value.toString(); }); // auto-captured
- *   const doubled = computed(() => count.value * 2);            // auto-captured
+ *   effect(() => { document.title = count.value.toString(); });
  * });
  *
- * s.dispose(); // disposes both the effect and computed automatically
- * // or: using s = withScope(() => { ... });
+ * // After
+ * const s = scope(() => {
+ *   effect(() => { document.title = count.value.toString(); });
+ * });
  * ```
  */
 export const withScope = (setup: () => void): Scope => scope(setup);

@@ -42,6 +42,15 @@ declare module '/ripple' {
     name?: string;
   };
 
+  /** Alias for ReadonlySignal<T>. Prefer Accessor<T> — communicates read-only access, not immutability. */
+  export type Accessor<T> = ReadonlySignal<T>;
+
+  /** Alias for AsyncComputedOptions<T>. Use with resource(). */
+  export type ResourceOptions<T> = AsyncComputedOptions<T>;
+
+  /** Alias for AsyncComputedSignal<T>. Returned by resource(). */
+  export type ResourceSignal<T> = AsyncComputedSignal<T>;
+
   export type StateErrorCode =
     | 'COMPUTED_CYCLE'
     | 'DISPOSED_READ'
@@ -68,7 +77,9 @@ declare module '/ripple' {
   }
 
   export interface AsyncSubscription extends Subscription {
+    /** @deprecated Use [Symbol.asyncDispose] and \`await using\` instead. */
     disposeAsync(): Promise<void>;
+    [Symbol.asyncDispose](): Promise<void>;
   }
 
   export interface ReadonlySignal<T> {
@@ -148,16 +159,25 @@ declare module '/ripple' {
   export function effect(fn: EffectCallback, options?: EffectOptions): Subscription;
   export function effectAsync(fn: AsyncEffectCallback, options?: EffectAsyncOptions): AsyncSubscription;
   export function asyncComputed<T>(factory: (abortSignal: AbortSignal) => Promise<T>, options?: AsyncComputedOptions<T>): AsyncComputedSignal<T>;
+  /** Preferred alias for asyncComputed(). Communicates intent: reactive async data resource. */
+  export function resource<T>(factory: (abortSignal: AbortSignal) => Promise<T>, options?: ResourceOptions<T>): ResourceSignal<T>;
   export function watch<T>(source: ReadonlySignal<T> | (() => T), cb: (value: T, prev: T | undefined) => CleanupFn | void, options?: WatchOptions<T>): Subscription;
   export function batch<T>(fn: () => T): T;
   export function untrack<T>(fn: () => T): T;
   export function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
+  /** Project a reactive source into a computed signal. Cleaner alternative to selector(). */
+  export function derive<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, options?: ComputedOptions<U>): ComputedSignal<U>;
+  /** Filter a reactive source — returns value when predicate is true, undefined otherwise. */
+  export function filter<T>(source: ReadonlySignal<T>, predicate: (value: T) => boolean, options?: ComputedOptions<T | undefined>): ComputedSignal<T | undefined>;
   export function selector<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, options?: ComputedOptions<U>): ComputedSignal<U>;
   export function selector<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, predicate: (value: U) => boolean, options?: ComputedOptions<U | undefined>): ComputedSignal<U | undefined>;
+  /** @deprecated Use filter(source, predicate, options) instead. */
   export function selector<T>(source: ReadonlySignal<T>, project: undefined, predicate: (value: T) => boolean, options?: ComputedOptions<T | undefined>): ComputedSignal<T | undefined>;
   export function onCleanup(fn: CleanupFn): void;
-  export function scope(): Scope;
-  export function withScope<T>(fn: () => T): Scope;
+  export function scope(setup?: () => void): Scope;
+  /** @deprecated Use scope(setup) directly — withScope(fn) is identical to scope(fn). */
+  export function withScope(fn: () => void): Scope;
+  /** @deprecated Use const s = scope(); await s.run(async () => { ... }); instead. */
   export function asyncScope(setup: () => Promise<void>): Promise<Scope>;
   export function store<T extends object>(initial: T, options?: { name?: string }): Store<T>;
   export function storeWithHistory<T extends object>(initial: T, options?: { maxHistory?: number; name?: string }): StoreWithHistory<T>;

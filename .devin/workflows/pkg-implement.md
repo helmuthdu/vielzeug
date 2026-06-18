@@ -6,7 +6,66 @@ description: Implement the structured improvement plan produced by pkg-plan for 
 
 You are a TypeScript library author implementing improvements to a **Vielzeug** package.
 
-## Context
+## 0. Agent Execution Model
+
+**This workflow is designed for autonomous agent execution, working through a plan item by item.** Follow these principles:
+
+### Execution Checkpoints
+
+After completing each plan item (step 7), **output a checkpoint summary** before moving to the next:
+
+```
+✅ ITEM: <ID> — <Title>
+- Files changed: [list]
+- Tests: PASS (N passing, F files) / FAIL (describe)
+- Lint: clean / N errors
+- Propagated to: [packages or "none"]
+- Proceeding to <next item ID or "Final verification">
+```
+
+After all plan items are complete, output a final checkpoint before writing `progress.md`:
+
+```
+✅ CHECKPOINT: Implementation complete
+- Items: N/N completed
+- Tests: N passing, F files
+- Lint: clean
+- rush change: generated / pending user approval
+- Propagations: [list or "none"]
+- Ready for /pkg-review
+```
+
+### Decision Framework
+
+When facing ambiguity, apply this priority order:
+
+1. **`plan.md` is the source of truth** — if plan and current code disagree, implement what the plan says.
+2. **Fix tests, never weaken them** — a failing test after a change means the implementation is incomplete, not the test.
+3. **Cohesive edits** — each plan item touches all affected files (impl, exports, tests, types). Never implement half an item.
+4. **Propagate same-pattern fixes** — step 6 is mandatory, not optional. If a bug exists in multiple packages, fix all.
+5. **When uncertain, read more** — re-read the plan item's "Why" and inspect the referenced file before guessing.
+
+### Anti-Patterns to Avoid
+
+- ❌ **Do not** implement an item partially — exports, tests, and types must all be updated together.
+- ❌ **Do not** skip `pnpm fix` after editing — unsorted imports/keys will fail lint in CI.
+- ❌ **Do not** weaken or delete tests to make them pass — fix the code instead.
+- ❌ **Do not** skip the cross-package propagation check (step 6) — bugs that exist in one package often exist in siblings.
+- ❌ **Do not** implement plan items out of order unless you have an explicit dependency reason.
+- ❌ **Do not** add new runtime dependencies without explicit instruction from the plan.
+
+### Structured Output Markers
+
+Use consistent markers throughout your implementation output:
+
+- `[IMPLEMENTING]` — currently working on this item
+- `[DONE]` — item fully implemented, tests pass, lint clean
+- `[PROPAGATED]` — fix also applied to sibling package(s)
+- `[BLOCKED]` — cannot proceed without user input; present recommendation
+- `[SKIPPED]` — item intentionally deferred (state reason)
+- `[VERIFY]` — requires runtime or manual confirmation
+
+## 1. Context
 
 - Zero external deps per package (inter-package `workspace:*` deps allowed)
 - TypeScript strict mode — avoid `any` and `unknown`; no `!` non-null assertions without a short comment explaining why
@@ -17,7 +76,7 @@ You are a TypeScript library author implementing improvements to a **Vielzeug** 
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
 - **Read the DOX chain before editing** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present). Local contracts override defaults: e.g. for `sigil` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
 
-## Philosophy
+## 2. Philosophy
 
 Follow the **pkg-plan** as the source of truth for what should change.
 
@@ -27,7 +86,11 @@ Follow the **pkg-plan** as the source of truth for what should change.
 - Aim for a **cohesive implementation** of each plan item: when an item implies changes across several files, treat those changes as a single coherent unit, not scattered micro-edits.
 - Only keep backward compatibility where the plan explicitly calls for it (e.g. "add deprecated wrapper for old API"). Otherwise, favour the cleaner final design.
 
-## Workflow for each improvement item
+## 3. Workflow for each improvement item
+
+**Goal:** Implement each plan item as a complete, cohesive unit — code, tests, types, and exports all in sync.
+
+For each item, emit `[IMPLEMENTING] <ID> — <Title>` before starting, then follow these steps.
 
 For each item in the improvement plan (in order of priority):
 
@@ -87,9 +150,9 @@ pnpm vitest run packages/<name>/src/__tests__/
    **Scope discipline:** only propagate when the pattern is the same problem. Do not refactor unrelated code just because you are in a file. If a package has the same structural issue but the fix would be large and risky, note it as a follow-up item in the plan rather than applying it immediately.
 
 7. **Confirm completion**
-   - Once code, tests, and lint are passing for this item (including any propagated fixes), mark it as done and move to the next item.
+   - Once code, tests, and lint are passing for this item (including any propagated fixes), emit `[DONE] <ID>` and output the item checkpoint (see §0).
 
-## Rules
+## 4. Rules
 
 - Treat the **improvement plan** as authoritative. If an item calls for a big refactor or API redesign, implement it fully, not just superficially.
 - Within each item, keep changes **cohesive but not gratuitously broad**:
@@ -108,12 +171,34 @@ pnpm vitest run packages/<name>/src/__tests__/
   - If pkg-plan identified cross-package impacts, run the relevant dependent package tests as well.
   - Generate a `rush change` file for every touched package (do **not** commit it without user approval): `rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`. Use `patch` for fixes, `minor` for new features, `major` for breaking changes.
 
-## Starting point
+## 5. Starting point
 
-Ask the user for the package name (`<name>`), then load the plan:
+Load the plan before writing a single line of code:
 
 1. Follow the DOX chain — read the root `AGENTS.md`, then `.devin/workflows/runs/AGENTS.md`.
 2. Read the persisted plan at `.devin/workflows/runs/<name>/plan.md` (the output of `/pkg-plan`). This is the source of truth.
 3. If no persisted plan exists, ask the user to paste it or provide a path — and offer to run `/pkg-plan` first.
+4. Output the plan items you intend to implement (in order) before starting, so the user can intercept if scope is wrong.
 
-Then execute the plan item by item, following the workflow above and confirming each item's completion before moving to the next. Keep `.devin/workflows/runs/<name>/progress.md` updated as items complete (including any cross-package propagations from step 6).
+Then execute the plan item by item, emitting markers and checkpoints as described in §0. Keep `.devin/workflows/runs/<name>/progress.md` updated as items complete (including any cross-package propagations from step 6).
+
+## 6. Quick Reference — Execution Flow
+
+```
+Read plan.md           → list items in order
+    ↓
+For each item:
+  [IMPLEMENTING] <ID>
+  ├─ Understand (re-read What/Why, inspect files)
+  ├─ Design (identify all affected files)
+  ├─ Edit (impl → exports → tests → types)
+  ├─ pnpm fix (lint/sort/format)
+  ├─ Run tests (fix failures — never weaken)
+  ├─ Propagate (grep siblings, fix if same pattern)
+  └─ [DONE] <ID> → Checkpoint
+    ↓
+Final verification:
+  pnpm fix → pnpm lint → tests → rush change
+    ↓
+Update progress.md     → ✅ CHECKPOINT: complete
+```

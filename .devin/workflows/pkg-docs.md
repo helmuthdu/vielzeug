@@ -13,6 +13,52 @@ Your job is to:
 - Remove or update any obsolete, redundant, or inaccurate content.
 - Keep docs concise, practical, and easy to navigate.
 
+## 0. Agent Execution Model
+
+**This workflow is designed for autonomous agent execution.** Follow these principles:
+
+### Execution Checkpoints
+
+After each numbered step, **pause and output a checkpoint summary** before proceeding:
+
+```
+✅ CHECKPOINT: Step N complete
+- Key findings: <bullet list>
+- Decisions made: <bullet list>
+- Files to modify: <list>
+- Proceeding to Step N+1
+```
+
+This creates a traceable audit trail and allows course correction.
+
+### Decision Framework
+
+When facing ambiguity, apply this priority order:
+
+1. **Source code is truth** — if docs and source disagree, source wins.
+2. **Template rules are mandatory** — structure/formatting rules in §4 are not suggestions.
+3. **Diátaxis quadrant determines content** — never mix reference into how-to or vice versa.
+4. **Minimal diff principle** — prefer surgical edits over rewrites when content is correct but misformatted.
+5. **When uncertain, read more** — use MCP tools or read source before guessing.
+
+### Anti-Patterns to Avoid
+
+- ❌ **Do not** invent API behaviour not present in source.
+- ❌ **Do not** copy-paste from other packages without verifying applicability.
+- ❌ **Do not** leave placeholder text like `<description>` or `...` in final output.
+- ❌ **Do not** skip the verification build (§5.6–5.7) — it catches silent errors.
+- ❌ **Do not** proceed past a checkpoint if you found critical issues — fix them first.
+
+### Structured Output Format
+
+Use consistent markers for agent-parseable output:
+
+- `[FINDING]` — discovered discrepancy or issue
+- `[ACTION]` — edit you are about to make
+- `[SKIP]` — item reviewed, no change needed (with reason)
+- `[BLOCKED]` — cannot proceed without user input
+- `[VERIFY]` — requires manual verification (e.g., runtime behaviour)
+
 ## 1. Context
 
 - Vielzeug docs follow the **[Diátaxis](https://diataxis.fr/)** framework — documentation is organised by the reader's need, not the author's convenience. Each standard page maps to a primary quadrant:
@@ -68,32 +114,150 @@ Prioritize **clarity and developer usability** over exhaustive verbosity.
 
 ### Step 1 — Inventory the public API
 
-1. Read `packages/<name>/src/index.ts`.
-2. List every exported symbol:
-   - Functions, classes, types, interfaces, enums, constants, factories, hooks, etc.
-3. Note their TypeScript signatures and any JSDoc comments that clarify behaviour or edge cases.
+**Goal:** Build a complete, authoritative list of what the package exports.
+
+**Actions:**
+
+1. **Prefer MCP first** — call `mcp0_get-source` with `packageSlug: "<name>"` to get the current `index.ts`. This is faster and guaranteed current.
+2. **Fallback:** If MCP unavailable, read `packages/<name>/src/index.ts` directly.
+3. **Extract every exported symbol** into a structured list:
+
+   ```
+   EXPORT INVENTORY for @vielzeug/<name>:
+   - Functions: functionA(), functionB(options)
+   - Types: TypeA, TypeB, OptionsC
+   - Classes: ClassX, ErrorY
+   - Constants: CONST_Z
+   - Re-exports: { thing } from './submodule'
+   ```
+
+4. **Note signatures and JSDoc** — especially defaults, edge cases, and deprecation markers.
+5. **Check for sub-path exports** — read `package.json` exports field; some packages have `/testing` or similar.
+
+**Checkpoint output:**
+
+```
+✅ CHECKPOINT: Step 1 complete
+- Total exports: N (X functions, Y types, Z classes)
+- Sub-path exports: [list or "none"]
+- Deprecated symbols: [list or "none"]
+- Proceeding to Step 2
+```
 
 ### Step 2 — Audit existing docs against the API
 
-For each exported symbol:
+**Goal:** Identify every discrepancy between source and docs.
 
-- Is it documented in `docs/<name>/api.md`?
-- Is the documented **signature** correct (parameter names, types, optional/required, defaults, return type)?
-- Does the described **behaviour** match the implementation (including edge cases and errors)?
-- Is the symbol present where appropriate in:
-  - `usage.md` (recipes, how-to)
-  - `examples.md` / `examples/*.md` (if it lends itself to examples)?
-- Are deprecated symbols clearly marked as deprecated, with guidance?
-- Identify obsolete or misleading content:
-  - APIs that no longer exist.
-  - Old options/configs.
-  - Examples using removed or changed APIs.
+**Actions:**
 
-### Step 3 — Update each doc page to match **both** the API and template
+1. **Read all doc files** — `docs/<name>/index.md`, `usage.md`, `api.md`, `examples.md`, and every `examples/*.md`.
+2. **For each export from Step 1**, check:
+
+   | Check | Pass | Fail action |
+   |-------|------|-------------|
+   | Documented in `api.md`? | ✅ | `[FINDING] Missing: <symbol>` |
+   | Signature correct? | ✅ | `[FINDING] Stale signature: <symbol>` |
+   | Behaviour accurate? | ✅ | `[FINDING] Wrong behaviour: <symbol>` |
+   | In `usage.md` if applicable? | ✅ | `[FINDING] Missing usage: <symbol>` |
+   | Has example if warranted? | ✅ | `[FINDING] Missing example: <symbol>` |
+   | Deprecated marked? | ✅ | `[FINDING] Unmarked deprecation: <symbol>` |
+
+3. **Scan docs for obsolete content** — any symbol referenced in docs but NOT in Step 1 inventory:
+   - `[FINDING] Obsolete: <symbol> (removed from API)`
+   - `[FINDING] Obsolete option: <option> on <function>`
+
+4. **Check frontmatter** — especially `index.md` `exports` array must match Step 1.
+
+**Checkpoint output:**
+
+```
+✅ CHECKPOINT: Step 2 complete
+- Findings: N issues
+  - Missing docs: [list]
+  - Stale signatures: [list]
+  - Obsolete content: [list]
+- Coverage: X/Y exports documented
+- Proceeding to Step 3
+```
+
+### Step 3 — Sync `examples/` with the current API
+
+**Goal:** Ensure every example file is current, and no stale/missing recipes exist.
+
+**Actions:**
+
+1. **List all example files** — `find docs/<name>/examples -name '*.md'`
+2. **For each example file**, apply this decision tree:
+
+   ```
+   Does the recipe use any removed/renamed API?
+   ├─ YES → [ACTION] Delete file + remove from examples.md
+   └─ NO → Does the recipe use stale signatures/options?
+            ├─ YES → [ACTION] Rewrite to current API
+            └─ NO → Does it follow §4.5 template?
+                     ├─ YES → [SKIP] Recipe OK
+                     └─ NO → [ACTION] Reformat to template
+   ```
+
+3. **Check for missing examples** — for each new API from Step 1 findings:
+
+   ```
+   Is this a primary factory/function?
+   ├─ YES → [ACTION] Create recipe: examples/<slug>.md
+   └─ NO → Is it a significant new option/mode?
+            ├─ YES → [ACTION] Add variation to existing recipe OR create new
+            └─ NO → [SKIP] No dedicated example needed
+   ```
+
+4. **Sync `examples.md`** — must exactly match files on disk:
+   - Remove links to deleted files
+   - Add links for new files
+   - Order: basic → advanced
+
+5. **Template compliance check** for each kept recipe:
+   - [ ] Has `## <Recipe Name>` → `### Problem` → `### Solution` → `### Pitfalls` → `### Related`
+   - [ ] All imports present, no `...` placeholders
+   - [ ] Pitfalls are recipe-specific
+   - [ ] `### Related` has 2–4 links
+
+**Checkpoint output:**
+
+```
+✅ CHECKPOINT: Step 3 complete
+- Examples deleted: [list or "none"]
+- Examples updated: [list or "none"]
+- Examples created: [list or "none"]
+- examples.md synced: yes/no
+- Proceeding to Step 4
+```
+
+### Step 4 — Update each doc page to match **both** the API and template
+
+**Goal:** Apply all findings from Steps 2–3 and ensure template compliance.
+
+**Execution order:** Process pages in this sequence (dependencies flow downward):
+
+1. `api.md` — source of truth for signatures; other pages reference it
+2. `usage.md` — may link to api.md sections
+3. `index.md` — exports frontmatter must match api.md
+4. `examples.md` — must match examples/*.md files
+5. `examples/*.md` — already handled in Step 3, but verify links
+
+**For each page**, output:
+
+```
+[ACTION] <filename>: <summary of changes>
+```
+
+or
+
+```
+[SKIP] <filename>: No changes needed
+```
 
 When updating files, enforce the specific template rules below.
 
-#### 3.1 `index.md` — Overview
+#### 4.1 `index.md` — Overview
 
 **Diátaxis type: Explanation** — understanding-oriented.
 
@@ -211,7 +375,7 @@ yarn add @vielzeug/<pkg>
 - "Use when / Consider when" must both be present.
 - The **tone rules** (Section 2) apply here as well.
 
-#### 3.2 `usage.md` — Usage Guide
+#### 4.2 `usage.md` — Usage Guide
 
 **Diátaxis type: How-to Guide** — task-oriented.
 
@@ -268,7 +432,7 @@ description: <One sentence covering what this guide teaches.>
 - Omit `## Framework Integration` only if there is truly no natural framework interop (e.g., pure-utility packages like `arsenal`); otherwise include it.
 - Best Practices must be the last section.
 
-#### 3.3 `api.md` — API Reference
+#### 4.3 `api.md` — API Reference
 
 **Diátaxis type: Reference** — information-oriented.
 
@@ -348,7 +512,7 @@ const result = functionName('value', { optionA: 'x' });
 - Every exported error class is under `## Errors` with description.
 - Use `---` to separate top-level API entries within a group.
 
-#### 3.4 `examples.md` — Examples Index
+#### 4.4 `examples.md` — Examples Index
 
 **Diátaxis role: Navigation** — orients readers to available How-to Guides.
 
@@ -374,7 +538,7 @@ description: Practical examples and recipes for <pkg>.
 - No prose descriptions next to links — titles must be self-explanatory.
 - No `#` heading.
 
-#### 3.5 `examples/<slug>.md` — Individual Recipes
+#### 4.5 `examples/<slug>.md` — Individual Recipes
 
 **Diátaxis type: How-to Guide** — problem-oriented.
 
@@ -438,63 +602,134 @@ import { relevantExport } from '@vielzeug/<pkg>';
 - No `## Expected Output` section.
 - Frontmatter `title` uses an em dash and is wrapped in single quotes.
 
-## 4. Verification and Cleanup
+## 5. Verification and Cleanup
 
-After updating docs:
+**Goal:** Catch errors before declaring done. This step is **mandatory**, not optional.
 
-1. **Diátaxis alignment**
-   - `index.md` is Explanation-oriented: it helps readers understand and decide, not learn or look things up.
-   - `index.md` Quick Start is a motivating example, not a step-by-step tutorial walkthrough.
-   - `usage.md` is How-to-oriented: every section answers "how do I accomplish X?" with working code.
-   - `usage.md` contains no exhaustive option tables (those belong in `api.md`).
-   - `api.md` is Reference-oriented: consulted, not read; no opinionated guidance or tutorial prose.
-   - `examples/*.md` are How-to Guides: each solves one concrete problem with no conceptual detours.
-   - Content that explains _why_ (background, design decisions) lives in `index.md`, not scattered across other pages.
+### 5.1 Diátaxis Self-Check
 
-2. **Technical accuracy**
-   - All documented signatures match `src/index.ts`.
-   - Behaviour descriptions and examples reflect actual implementation.
-   - If the package has a `src/_warn.ts`, check that any message functions whose text may include user-supplied data carry a `@security` JSDoc tag (per the dev logging standard in `.devin/rules/conventions.md`). Flag any missing tags as a documentation gap.
+Run through this checklist mentally for each page:
 
-3. **Template compliance**
-   - `index.md`, `usage.md`, `api.md`, `examples.md`, and `examples/*.md` follow the structures and rules above.
-   - Frontmatter fields are correct (especially `index.md` metadata and titles).
+| Page | Correct quadrant? | Anti-pattern to reject |
+|------|-------------------|------------------------|
+| `index.md` | Explanation | Tutorial steps, option tables |
+| `usage.md` | How-to | Exhaustive option tables, conceptual essays |
+| `api.md` | Reference | Opinionated guidance, "you should" prose |
+| `examples/*.md` | How-to | Conceptual detours, incomplete code |
 
-4. **Examples**
-   - All code blocks are syntactically valid TypeScript.
-   - Key examples are realistic, minimal, and runnable.
+### 5.2 Technical Accuracy Verification
 
-5. **Navigation and references**
-   - All links between pages are valid (no dead `href`s).
-   - Removed functionality is not referenced anywhere.
-   - If there is shared navigation/sidebar configuration, update it if necessary.
+- [ ] All signatures in `api.md` match `src/index.ts` exactly
+- [ ] All code blocks use current API (no deprecated patterns without marking)
+- [ ] If `src/_warn.ts` exists, check `@security` JSDoc tags on user-data messages
 
-6. **Docs build**
-   - Run the VitePress build to catch broken markdown, dead links, and invalid frontmatter:
+### 5.3 Template Compliance
 
-     ```bash
-     pnpm docs:build
-     ```
+- [ ] `index.md` has all required frontmatter fields
+- [ ] `index.md` has `<PackageHero>`, `## Why`, comparison table, decision-callout
+- [ ] `usage.md` has `[[toc]]`, ends with Best Practices
+- [ ] `api.md` has `## API At a Glance` with 4 columns, `## Package Entry Point`
+- [ ] `examples.md` links match files on disk
+- [ ] Each `examples/*.md` has Problem/Solution/Pitfalls/Related structure
 
-   - The build must succeed before you finish.
+### 5.4 Link Validation
 
-7. **Codex bundle** — **always** run after updating docs; stale bundles corrupt MCP context for future sessions:
+- [ ] No dead internal links (grep for `](./` and verify targets exist)
+- [ ] No references to removed APIs
+- [ ] Sidebar config updated if examples added/removed
 
-   ```bash
-   pnpm --filter @vielzeug/codex build
-   ```
+### 5.5 Sidebar Sync
 
-   Ensure the build succeeds before finishing.
+If you added or removed `examples/*.md` files, update `docs/.vitepress/config.ts`:
 
-## 5. Report
+1. Find the `'/<name>/'` sidebar entry
+2. Update the Examples items array to match current files
+3. Ensure anchors follow VitePress slugification (lowercase, hyphens, no special chars)
 
-When you're done, output a brief summary:
+### 5.6 Docs Build (REQUIRED)
 
+```bash
+// turbo
+pnpm docs:build
+```
+
+**If build fails:** Fix the error before proceeding. Common issues:
+- Invalid frontmatter YAML
+- Dead links (404s logged)
+- Markdown syntax errors
+
+### 5.7 Codex Bundle (REQUIRED)
+
+```bash
+// turbo
+pnpm --filter @vielzeug/codex build
+```
+
+**Why mandatory:** Stale codex bundles corrupt MCP context for future sessions. This is fast and idempotent.
+
+**Checkpoint output:**
+
+```
+✅ CHECKPOINT: Step 5 complete
+- Diátaxis check: PASS
+- Technical accuracy: PASS
+- Template compliance: PASS
+- Link validation: PASS
+- Sidebar synced: yes/no/N/A
+- docs:build: PASS
+- codex build: PASS
+- Ready for final report
+```
+
+## 6. Report
+
+**Output this exact structure** (agent-parseable):
+
+```
+## pkg-docs Report: <name>
+
+### Summary
 - **Package:** `<name>`
-- **API exports documented:** X / Y
-- **Pages updated:** [e.g. `index.md`, `api.md`, `usage.md`, `examples.md`, `examples/foo.md`]
-- **New or updated examples:** short list of key recipes or sections added/changed.
-- **Removed/archived docs:** list of files or sections removed with a one-line reason each.
-- **Notable changes:** 2–5 bullets (e.g. "Documented new `createFoo` API", "Aligned index.md frontmatter with template", "Added framework integration examples for React/Vue/Svelte").
+- **API coverage:** X/Y exports documented (100% / partial)
+- **Pages updated:** `index.md`, `api.md`, `usage.md`, `examples.md`, `examples/foo.md`
+- **Pages unchanged:** [list or "none"]
+
+### Examples Delta
+- **Created:** [list with one-line descriptions]
+- **Updated:** [list with change summaries]
+- **Deleted:** [list with reasons]
+
+### Notable Changes
+1. <change 1>
+2. <change 2>
+3. <change 3>
+
+### Verification
+- docs:build: ✅ PASS
+- codex build: ✅ PASS
+- Sidebar synced: ✅ YES / ⚠️ N/A
+
+### Follow-up (if any)
+- [BLOCKED] <item needing user input>
+- [VERIFY] <item needing manual check>
+```
+
+---
+
+## Quick Reference: Execution Flow
+
+```
+Step 1: Inventory API    → Checkpoint
+    ↓
+Step 2: Audit docs       → Checkpoint (findings list)
+    ↓
+Step 3: Sync examples    → Checkpoint (delta list)
+    ↓
+Step 4: Update pages     → [ACTION]/[SKIP] per file
+    ↓
+Step 5: Verify & build   → Checkpoint (all checks pass)
+    ↓
+Step 6: Report           → Structured summary
+```
 
 The user will tell you which package to document. Use this single specification — no separate guide is needed.

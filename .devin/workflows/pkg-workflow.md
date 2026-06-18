@@ -6,6 +6,50 @@ description: Master orchestrator for the full Vielzeug package improvement workf
 
 You are orchestrating the complete improvement cycle for a **Vielzeug** package.
 
+## 0. Agent Execution Model
+
+**This workflow is designed for autonomous agent execution across 7 sequential phases.** Follow these principles:
+
+### Execution Checkpoints
+
+After each phase, **output a checkpoint summary** before proceeding:
+
+```
+✅ PHASE N: <Name> complete
+- <phase-specific fields (see each phase below)>
+- Proceeding to Phase N+1 / Final checklist
+```
+
+### Decision Framework
+
+When facing ambiguity, apply this priority order:
+
+1. **Stay green** — if tests or lint are red at the start of any phase, fix them before proceeding. Never carry a broken baseline into a new phase.
+2. **Escalate before breaking** — breaking API changes, large propagations, or dependency additions must be escalated to the user (see Guardrails). Do not choose silently.
+3. **Build on prior phase outputs** — load context from `runs/<name>/plan.md`, `review.md`, `security.md`, and `progress.md` rather than re-deriving from scratch each phase.
+4. **Propagate patterns** — fixes identified in Phase 2 that apply to sibling packages must be applied and tested before the Propagation Checkpoint.
+5. **Persist, don't repeat** — prefer the `@vielzeug` MCP for stable API context; avoid re-reading the full package on every pass.
+
+### Anti-Patterns to Avoid
+
+- ❌ **Do not** skip a phase or combine multiple phases into a single pass — each has a distinct focus that compounds with the others.
+- ❌ **Do not** commit, push, or publish without explicit user approval.
+- ❌ **Do not** weaken, skip, or delete tests to make a phase pass — surface real failures.
+- ❌ **Do not** start a phase with a red baseline — fix it first.
+- ❌ **Do not** silently apply a breaking API change — always use `[ESCALATE]` and wait.
+- ❌ **Do not** leave a phase marked 🔄 (in progress) in `progress.md` without a resume note in the Notes column.
+
+### Structured Output Markers
+
+Use consistent markers throughout your output:
+
+- `[PHASE N]` — starting phase N
+- `[PASS N/3]` — starting pass N within a multi-pass phase
+- `[BLOCKED]` — cannot proceed without user input; present recommendation
+- `[ESCALATE]` — breaking change or large propagation requiring user decision
+- `[PROPAGATED]` — fix applied to sibling package(s)
+- `[SKIP]` — phase not applicable (e.g. REPL for DOM-output packages)
+
 The workflow has **7 phases** with specific repetition counts:
 
 ```
@@ -18,7 +62,7 @@ Phase 6: Docs          × 1   (/pkg-docs)
 Phase 7: REPL          × 1   (/pkg-repl)
 ```
 
-## Guardrails
+## 1. Guardrails
 
 These apply to every phase:
 
@@ -40,7 +84,7 @@ Pause and ask before continuing if:
 
 Surface the decision concisely with a recommendation; do not silently choose a large or irreversible path.
 
-## Resuming an interrupted run
+## 2. Resuming an interrupted run
 
 If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous session was interrupted. Resume as follows:
 
@@ -56,7 +100,7 @@ If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous
 
 > If `progress.md` or `plan.md` are missing (e.g. the run was from a much earlier session), treat it as a fresh start: capture a new baseline and re-run from Phase 1.
 
-## Before you begin
+## 3. Before you begin
 
 Ask the user for:
 
@@ -81,29 +125,39 @@ For co-located packages (e.g. `sigil`), replace the first command with `pnpm --f
 
 Record in the run's `progress.md` (see "Persistence" below): passing test count, test file count, lint status (clean/errors), and exported-symbol count from `src/index.ts`. For `sigil`, also record the component count from `list-components` — that is the more meaningful API surface metric for a web-component library.
 
-## Phase execution guide
+## 4. Phase execution guide
 
 **Carry context across passes.** This workflow runs ~12 multi-pass phases. Do not re-read the whole package on every pass — load it once, then on each subsequent pass re-read only what changed or what the previous pass flagged. Persist findings to `runs/<name>/` (plan/review/security/progress) and build on them rather than re-deriving. Prefer the `@vielzeug` MCP for stable API context: use `get-docs` and `get-source` for most packages; for `sigil` prefer `list-components` / `get-component` since its primary API surface is web components, not plain exports.
 
 ### Phase 1 — Plan × 3
 
-Execute the instructions from `/pkg-plan` three times. Each pass deepens the analysis (follow the pass structure defined in `/pkg-plan`):
+Emit `[PHASE 1]` before starting. Execute the instructions from `/pkg-plan` three times. Each pass deepens the analysis (follow the pass structure defined in `/pkg-plan`):
 
-- **Pass 1**: Greenfield architecture & API review — treat the package as if designing from scratch; promote any still-valid future improvements from a prior `plan.md` if one exists.
-- **Pass 2**: DX, simplification, and maintainability deep-dive — reduce complexity, improve ergonomics, refine coupling.
-- **Pass 3**: Synthesize both passes into a single ranked improvement plan; spot-check that all referenced files and function names actually exist on disk before writing `plan.md`.
+- **Pass 1** `[PASS 1/3]`: Greenfield architecture & API review — treat the package as if designing from scratch; promote any still-valid future improvements from a prior `plan.md` if one exists.
+- **Pass 2** `[PASS 2/3]`: DX, simplification, and maintainability deep-dive — reduce complexity, improve ergonomics, refine coupling.
+- **Pass 3** `[PASS 3/3]`: Synthesize both passes into a single ranked improvement plan; spot-check that all referenced files and function names actually exist on disk before writing `plan.md`.
 
 Consolidate the output into a single ranked list before moving to Phase 2.
+
+**Phase checkpoint:**
+
+```
+✅ PHASE 1: Plan complete (3/3 passes)
+- Items: N (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement)
+- Future improvements: N
+- plan.md: written
+- Proceeding to Phase 2
+```
 
 ---
 
 ### Phase 2 — Implement × 3
 
-Execute the instructions from `/pkg-implement` in three iterative rounds:
+Emit `[PHASE 2]` before starting. Execute the instructions from `/pkg-implement` in three iterative rounds:
 
-- **Round 1**: Implement high-priority (🔴 Bug + 🟠 Design) items from the plan.
-- **Round 2**: Implement medium-priority (🟡 Coverage + 🟢 Enhancement) items; re-verify all tests pass.
-- **Round 3**: Final polish — check all new code for TypeScript quality, run `pnpm --filter @vielzeug/<name> fix`, confirm zero lint errors.
+- **Round 1** `[PASS 1/3]`: Implement high-priority (🔴 Bug + 🟠 Design) items from the plan.
+- **Round 2** `[PASS 2/3]`: Implement medium-priority (🟡 Coverage + 🟢 Enhancement) items; re-verify all tests pass.
+- **Round 3** `[PASS 3/3]`: Final polish — check all new code for TypeScript quality, run `pnpm --filter @vielzeug/<name> fix`, confirm zero lint errors.
 
 **Before starting each round**, re-read `runs/<name>/plan.md` (reload only items remaining) and verify the baseline is still green (use the correct test command — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `sigil`: `pnpm --filter @vielzeug/<name> test`):
 
@@ -122,6 +176,17 @@ pnpm vitest run packages/<name>/src/__tests__/
 For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead.
 
 Fix any failures before proceeding.
+
+**Phase checkpoint:**
+
+```
+✅ PHASE 2: Implement complete (3/3 rounds)
+- Items completed: N/N
+- Tests: N passing, F files
+- Lint: clean
+- Propagations: [list or "none"]
+- Proceeding to Propagation Checkpoint
+```
 
 ---
 
@@ -145,32 +210,53 @@ If any high-value propagations were deferred (too large to apply inline), captur
 
 ### Phase 3 — Review × 3
 
-Execute the instructions from `/pkg-review` three times, rotating lenses:
+Emit `[PHASE 3]` before starting. Execute the instructions from `/pkg-review` three times, rotating lenses:
 
-- **Pass 1**: Lens A — Correctness, Edge Cases, and Tests.
-- **Pass 2**: Lens B — Architecture, Design, and DX.
-- **Pass 3**: Lens C — TypeScript Quality and Type Safety.
+- **Pass 1** `[PASS 1/3]`: Lens A — Correctness, Edge Cases, and Tests.
+- **Pass 2** `[PASS 2/3]`: Lens B — Architecture, Design, and DX.
+- **Pass 3** `[PASS 3/3]`: Lens C — TypeScript Quality and Type Safety.
 
 For each CRITICAL or MAJOR finding, fix it before proceeding to the next pass.
 Collect MINOR and NIT issues into a fix list and apply them after Pass 3 (using `/pkg-implement` where appropriate) before moving on to Phase 4. **Before applying the fixes**, write the consolidated MINOR/NIT list as a dedicated section in `runs/<name>/review.md` — this ensures the list survives a session interruption and is traceable alongside the findings that generated it.
+
+**Phase checkpoint:**
+
+```
+✅ PHASE 3: Review complete (3/3 lenses)
+- Findings: C CRITICAL, M MAJOR, Mi MINOR, N NIT
+- All CRITICAL/MAJOR fixed: YES / NO (list any open)
+- review.md: written
+- Proceeding to Phase 4
+```
 
 ---
 
 ### Phase 4 — Security × 3
 
-Execute the instructions from `/pkg-security` three times, each focusing on a different surface:
+Emit `[PHASE 4]` before starting. Execute the instructions from `/pkg-security` three times, each focusing on a different surface:
 
-- **Pass 1**: Input validation, injection vectors, and dependency risks.
-- **Pass 2**: Prototype pollution and type safety at runtime.
-- **Pass 3**: Browser-specific risks and information leakage (plus any server/API/auth concerns if present).
+- **Pass 1** `[PASS 1/3]`: Input validation, injection vectors, and dependency risks.
+- **Pass 2** `[PASS 2/3]`: Prototype pollution and type safety at runtime.
+- **Pass 3** `[PASS 3/3]`: Browser-specific risks and information leakage (plus any server/API/auth concerns if present).
 
-Fix all ❌ vulnerability findings immediately — **except** where the fix requires a breaking API change, in which case escalate to the user rather than applying it silently (per the security mindset guidelines in `/pkg-security`). Document ⚠️ concerns with a code comment and/or issue if they cannot be fixed immediately.
+Fix all ❌ vulnerability findings immediately — **except** where the fix requires a breaking API change, in which case use `[ESCALATE]` and wait for the user rather than applying it silently (per the security mindset guidelines in `/pkg-security`). Document ⚠️ concerns with a code comment and/or issue if they cannot be fixed immediately.
+
+**Phase checkpoint:**
+
+```
+✅ PHASE 4: Security complete (3/3 surfaces)
+- Findings: X ❌, Y ⚠️
+- All ❌ fixed: YES / [ESCALATE] (list breaking items)
+- Risk rating: 🟢 Low / 🟡 Medium / 🔴 High / 🔵 N/A
+- security.md: written
+- Proceeding to Phase 5
+```
 
 ---
 
 ### Phase 5 — Tests × 1
 
-Execute the instructions from `/pkg-tests` once.
+Emit `[PHASE 5]` before starting. Execute the instructions from `/pkg-tests` once.
 
 After restructuring and adding tests, verify (safe to auto-run):
 
@@ -182,11 +268,21 @@ pnpm vitest run packages/<name>/src/__tests__/
 
 For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead. All tests must pass before proceeding.
 
+**Phase checkpoint:**
+
+```
+✅ PHASE 5: Tests complete
+- Tests before: N, after: M (delta: +X)
+- Test files: F
+- All tests pass: YES
+- Proceeding to Phase 6
+```
+
 ---
 
 ### Phase 6 — Docs × 1
 
-Execute the instructions from `/pkg-docs` once.
+Emit `[PHASE 6]` before starting. Execute the instructions from `/pkg-docs` once.
 
 Verify that:
 
@@ -199,11 +295,21 @@ Then rebuild codex so the MCP bundle reflects the updated docs:
 pnpm --filter @vielzeug/codex build
 ```
 
+**Phase checkpoint:**
+
+```
+✅ PHASE 6: Docs complete
+- Files updated: [list]
+- docs:build: PASS
+- codex rebuilt: YES
+- Proceeding to Phase 7
+```
+
 ---
 
 ### Phase 7 — REPL × 1
 
-Execute the instructions from `/pkg-repl` once.
+Emit `[PHASE 7]` before starting (or `[SKIP]` with reason for DOM-output packages). Execute the instructions from `/pkg-repl` once.
 
 > **Skip this phase for DOM-producing packages** (e.g. `craft`, `sigil`, `prism`). The REPL has no preview container, so these packages have no examples or Monaco types. Mark Phase 7 as N/A in the progress table.
 
@@ -212,7 +318,17 @@ Verify that:
 - No stale API usage remains in any REPL example file.
 - Examples align with the patterns documented in `usage.md` and `examples/*.md`.
 
-## Final checklist
+**Phase checkpoint:**
+
+```
+✅ PHASE 7: REPL complete / [SKIP] (DOM-output package)
+- Examples: N modules, K categories
+- validate:repl: PASS
+- docs:build: PASS
+- Proceeding to Final checklist
+```
+
+## 5. Final checklist
 
 Before declaring the workflow complete:
 
@@ -226,7 +342,40 @@ Before declaring the workflow complete:
 - [ ] Rush change file generated for every touched package (`rush change`; non-interactive: `rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`). Use `patch` for fixes, `minor` for new features, `major` for breaking changes.
 - [ ] Commit message follows conventional format: `feat(<name>): <summary>`
 
-## Persistence
+Output the final report using **exactly this format**:
+
+```
+## Workflow Complete — <name>
+
+### Baseline → Final
+
+| Metric | Before | After | Delta |
+|--------|--------|-------|-------|
+| Tests | N | M | +X |
+| Test files | N | M | +X |
+| Exports | N | M | +X |
+| Lint errors | N | 0 | -N |
+
+### Phase Summary
+
+| Phase | Status | Key Outcome |
+|-------|--------|-------------|
+| 1. Plan | ✅ | N items |
+| 2. Implement | ✅ | N items done |
+| 3. Review | ✅ | 0 CRITICAL/MAJOR |
+| 4. Security | ✅ | 🟢 Low |
+| 5. Tests | ✅ | +N tests |
+| 6. Docs | ✅ | N files updated |
+| 7. REPL | ✅ / N/A | N examples |
+
+### Propagations
+<list of sibling packages touched, or "None">
+
+### Rush Change
+<generated / pending user approval>
+```
+
+## 6. Persistence
 
 Run artifacts persist under `.devin/workflows/runs/<name>/`, governed by the DOX framework. Before reading or writing them, follow the DOX chain: read the root `AGENTS.md`, then `.devin/workflows/runs/AGENTS.md`, and honour their contracts.
 
@@ -236,7 +385,7 @@ Run artifacts persist under `.devin/workflows/runs/<name>/`, governed by the DOX
 
 Treat these as live working artifacts for the current run — overwrite stale content rather than appending.
 
-## Progress tracking
+## 7. Progress tracking
 
 Maintain the status table in `.devin/workflows/runs/<name>/progress.md` (and mirror it in chat):
 
@@ -253,3 +402,25 @@ Maintain the status table in `.devin/workflows/runs/<name>/progress.md` (and mir
 Status legend: ⏳ not started · 🔄 in progress (session interrupted) · ✅ complete · N/A not applicable (any phase).
 
 Update this table after each phase completes. (Phase 7 is `N/A` for DOM-output packages — see Phase 7.) **Use the Notes column to record which pass you are on within multi-pass phases** (e.g. `"Lens B"`, `"Round 2"`, `"Pass 3 — security surface: browser"`) — this makes resumption unambiguous if a session is interrupted mid-phase.
+
+## 8. Quick Reference — Execution Flow
+
+```
+Baseline capture        → progress.md
+    ↓
+[PHASE 1] Plan × 3      → plan.md → Checkpoint
+    ↓
+[PHASE 2] Implement × 3 → Checkpoint → Propagation Checkpoint
+    ↓
+[PHASE 3] Review × 3    → review.md → Checkpoint
+    ↓
+[PHASE 4] Security × 3  → security.md → Checkpoint
+    ↓
+[PHASE 5] Tests × 1     → Checkpoint
+    ↓
+[PHASE 6] Docs × 1      → codex rebuild → Checkpoint
+    ↓
+[PHASE 7] REPL × 1      → Checkpoint (or [SKIP])
+    ↓
+Final checklist         → Structured report
+```

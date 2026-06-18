@@ -7,6 +7,7 @@ description: Practical examples and recipes for ripple.
 
 - [Signals](./examples/signals.md)
 - [Stores](./examples/stores.md)
+- [Derive and Filter](./examples/derive-and-filter.md)
 - [Async Computed](./examples/async-computed.md)
 - [Store History (Undo/Redo)](./examples/store-history.md)
 - [Pattern Batch For Complex Mutations](./examples/pattern-batch-for-complex-mutations.md)

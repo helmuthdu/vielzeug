@@ -9,7 +9,14 @@ import { fileURLToPath } from 'node:url';
 // to locate the source files at runtime. tsc rewrites these to .js in dist/ via
 // rewriteRelativeImportExtensions in tsconfig.json.
 import { parseFrontmatter } from './frontmatter.ts';
-import { type BundledData, type BundledPackage, type CemDeclaration, DOC_PAGES, type DocPage } from './types.ts';
+import {
+  type BundledData,
+  type BundledPackage,
+  type CemDeclaration,
+  DOC_PAGES,
+  type DocPage,
+  SCHEMA_VERSION,
+} from './types.ts';
 
 // Resolves to dist/ in the compiled build, src/ when loaded directly under --experimental-strip-types.
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -193,9 +200,18 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
       try {
         hashCache = JSON.parse(readFileSync(cacheFile, 'utf8')) as Record<string, string>;
 
-        const existing = JSON.parse(readFileSync(existingDataFile, 'utf8')) as BundledData;
+        const existingRaw = JSON.parse(readFileSync(existingDataFile, 'utf8')) as Record<string, unknown>;
 
-        existingPackages = new Map(existing.packages.map((p) => [p.slug, p]));
+        if (existingRaw['schemaVersion'] !== SCHEMA_VERSION) {
+          process.stderr.write(
+            `codex: schema version mismatch (found ${String(existingRaw['schemaVersion'])}, expected ${SCHEMA_VERSION}) — discarding cache.\n`,
+          );
+          hashCache = {};
+        } else {
+          const existing = existingRaw as unknown as BundledData;
+
+          existingPackages = new Map(existing.packages.map((p) => [p.slug, p]));
+        }
       } catch (err) {
         process.stderr.write(
           `codex: incremental cache read failed, falling back to full regeneration: ${err instanceof Error ? err.message : String(err)}\n`,
@@ -243,6 +259,7 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
   return {
     data: {
       packages,
+      schemaVersion: SCHEMA_VERSION,
       version: typeof mcpPackageJson['version'] === 'string' ? mcpPackageJson['version'] : '0.0.0',
     },
     ...(incremental && { hashes: newHashes }),

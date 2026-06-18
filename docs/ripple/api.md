@@ -13,19 +13,22 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `computed()`         | Derive memoized values from dependencies       | Sync           | Avoid side effects inside computed callbacks                                      |
 | `effect()`           | Run and re-run sync side effects               | Sync           | Dispose when no longer needed to prevent memory leaks                             |
 | `effectAsync()`      | Run async side effects with AbortSignal        | Async          | Read reactive deps synchronously before the first `await`                         |
-| `asyncComputed()`    | Async computed with lifecycle state            | Async          | `isLoading` starts `true`; read `.data.value`, `.error.value`, `.isLoading.value` |
+| `resource()`         | Preferred alias for `asyncComputed()`          | Async          | `isLoading` starts `true`; read `.data.value`, `.error.value`, `.isLoading.value` |
+| `asyncComputed()`    | Async computed with lifecycle state (legacy name) | Async       | Use `resource()` instead; kept for compatibility                                   |
 | `watch()`            | Subscribe to value changes                     | Sync           | Does not fire immediately unlike `effect()`                                       |
 | `batch()`            | Coalesce multiple writes                       | Sync           | Nested batches merge into the outermost                                           |
 | `untrack()`          | Read without subscribing                       | Sync           | Only suppresses dependency registration, value is still read                      |
 | `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | Returns `ComputedSignal<T>`; dispose it when done                                 |
 | `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
-| `asyncScope()`       | Async variant of `scope()` for async setup     | Async          | `onCleanup()` only works before the first `await`                                 |
+| ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)` | Async   | `onCleanup()` only works before the first `await`                                 |
 | `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
 | `store()`            | Create object-like state container             | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
 | `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer                     |
 | `installDevTools()`  | Install DevTools observation hook              | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
 | `getDevToolsHook()`  | Return current DevTools hook                   | Sync           | Returns `null` if none installed                                                  |
-| `selector()`         | Project / filter any reactive source           | Sync           | Replaces the removed `.map()` / `.filter()` instance methods                      |
+| `derive()`           | Project a reactive source into a computed      | Sync           | Cleaner alternative to `selector(source, project)` — no overload ambiguity        |
+| `filter()`           | Filter a reactive source                       | Sync           | Cleaner alternative to `selector(source, undefined, predicate)`                   |
+| `selector()`         | Project / filter any reactive source           | Sync           | Use `derive()` / `filter()` for new code                                          |
 | `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                                   |
 | `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                                      |
 | `isStore()`          | Type guard for stores                          | Sync           | Returns `false` for plain signals and computed signals                            |
@@ -437,6 +440,23 @@ See also: [`Scope`](#scope-1), [`asyncScope`](#asyncscope)
 
 ---
 
+### `resource`
+
+```ts
+function resource<T>(
+  factory: (abortSignal: AbortSignal) => Promise<T>,
+  options?: ResourceOptions<T>,
+): ResourceSignal<T>;
+```
+
+Preferred alias for `asyncComputed()`. Use `resource()` for new code — the name more clearly communicates intent. The two functions are identical at runtime.
+
+See [`asyncComputed`](#asynccomputed) for full documentation.
+
+See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions)
+
+---
+
 ### `asyncComputed`
 
 ```ts
@@ -513,7 +533,20 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 
 ---
 
-### `asyncScope`
+### `asyncScope` _(deprecated)_
+
+::: warning Deprecated
+`asyncScope()` is deprecated. Use `scope()` with an explicit `run()` call instead:
+
+```ts
+// Before
+const s = await asyncScope(async () => { ... });
+
+// After
+const s = scope();
+await s.run(async () => { ... });
+```
+:::
 
 ```ts
 function asyncScope(setup: () => Promise<void>): Promise<Scope>;
@@ -647,7 +680,73 @@ See also: [`PathValue<T, P>`](#pathvaluet-p)
 
 ## Signal Combinators
 
-Use the standalone `selector()` utility to project or filter any reactive source. It replaces the removed per-instance `.map()` / `.filter()` methods.
+Three utilities are available to derive computed values from a reactive source. `derive()` and `filter()` are the preferred API. `selector()` remains available for the combined project+filter case.
+
+### `derive`
+
+```ts
+function derive<T, U>(
+  source: ReadonlySignal<T>,
+  project: (value: T) => U,
+  options?: ComputedOptions<U>,
+): ComputedSignal<U>;
+```
+
+Creates a `ComputedSignal` by projecting `source` through `project`. Equivalent to `computed(() => project(source.value), options)` but more ergonomic and self-documenting.
+
+Prefer this over `selector(source, project)` for new code.
+
+```ts
+const count = signal(5);
+const doubled = derive(count, (n) => n * 2);
+doubled.value; // 10
+```
+
+**Parameters**
+
+| Parameter | Type                     | Description                          |
+| --------- | ------------------------ | ------------------------------------ |
+| `source`  | `ReadonlySignal<T>`      | Any signal, computed, or store       |
+| `project` | `(value: T) => U`        | Projection function                  |
+| `options` | `ComputedOptions<U>`     | Optional `equals`, `name`, `fallback`|
+
+**Returns** — `ComputedSignal<U>`
+
+---
+
+### `filter`
+
+```ts
+function filter<T>(
+  source: ReadonlySignal<T>,
+  predicate: (value: T) => boolean,
+  options?: ComputedOptions<T | undefined>,
+): ComputedSignal<T | undefined>;
+```
+
+Creates a `ComputedSignal` that returns the source value when `predicate` returns `true`, or `undefined` otherwise.
+
+Prefer this over `selector(source, undefined, predicate)` — no `undefined` placeholder needed.
+
+```ts
+const count = signal(5);
+const evens = filter(count, (n) => n % 2 === 0);
+evens.value; // undefined (5 is odd)
+count.value = 8;
+evens.value; // 8
+```
+
+**Parameters**
+
+| Parameter   | Type                             | Description                                          |
+| ----------- | -------------------------------- | ---------------------------------------------------- |
+| `source`    | `ReadonlySignal<T>`              | Any signal, computed, or store                       |
+| `predicate` | `(value: T) => boolean`          | Returns `true` to pass through, `false` for undefined|
+| `options`   | `ComputedOptions<T \| undefined>`| Optional `equals`, `name`, `fallback`                |
+
+**Returns** — `ComputedSignal<T | undefined>`
+
+---
 
 ### `selector`
 
@@ -743,7 +842,7 @@ try {
 | Code              | Thrown when                                                                                                                                                                                                                                                                                                              |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `COMPUTED_CYCLE`  | A computed function reads another computed that depends on it                                                                                                                                                                                                                                                            |
-| `DISPOSED_READ`   | `.value`, `.peek()`, or `.subscribe()` is called on a disposed computed                                                                                                                                                                                                                                                  |
+| `DISPOSED_READ`   | `.subscribe()` is called on a disposed computed. Note: `.value` and `.peek()` on a disposed computed return the last known value silently (inert node behaviour, consistent with `signal`)                                                                                                                               |
 | `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                                                                                                                                                                                                          |
 | `INFINITE_LOOP`   | Flush or effect loop exceeds `maxIterations` (default 100)                                                                                                                                                                                                                                                               |
 | `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
@@ -874,15 +973,21 @@ sub.dispose(); // dispose
 
 ```ts
 interface AsyncSubscription extends Subscription {
+  /** @deprecated Use [Symbol.asyncDispose] with `await using` instead. */
   disposeAsync(): Promise<void>; // awaits the in-flight async run before resolving
+  [Symbol.asyncDispose](): Promise<void>; // ES2024 await using compatible
 }
 ```
 
-Returned by `effectAsync()`. `disposeAsync()` cancels the current run via `AbortSignal` and awaits the in-flight promise before resolving.
+Returned by `effectAsync()`. Supports both `disposeAsync()` (legacy) and `[Symbol.asyncDispose]` (ES2024 `await using` declarations).
 
 ```ts
 const stop = effectAsync(async (signal) => { ... });
-await stop.disposeAsync(); // waits for the current run to settle
+await stop.disposeAsync(); // legacy — works
+
+// ES2024: await using declaration
+await using stop2 = effectAsync(async (signal) => { ... });
+// stop2 is automatically disposed with [Symbol.asyncDispose] when the block exits
 ```
 
 ---
@@ -1019,6 +1124,36 @@ type AsyncComputedOptions<T> = {
   name?: string;
 };
 ```
+
+---
+
+### `Accessor<T>`
+
+```ts
+type Accessor<T> = ReadonlySignal<T>;
+```
+
+Alias for `ReadonlySignal<T>`. Prefer `Accessor<T>` in new code — the name communicates "you can read this" rather than implying the underlying value never changes.
+
+---
+
+### `ResourceSignal<T>`
+
+```ts
+type ResourceSignal<T> = AsyncComputedSignal<T>;
+```
+
+Alias for `AsyncComputedSignal<T>`. Returned by `resource()`.
+
+---
+
+### `ResourceOptions<T>`
+
+```ts
+type ResourceOptions<T> = AsyncComputedOptions<T>;
+```
+
+Alias for `AsyncComputedOptions<T>`. Use with `resource()`.
 
 ---
 

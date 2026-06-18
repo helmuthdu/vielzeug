@@ -68,4 +68,8 @@ export class AsyncSubscriptionImpl implements AsyncSubscription {
   [Symbol.dispose](): void {
     this.dispose();
   }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    return this.disposeAsync();
+  }
 }

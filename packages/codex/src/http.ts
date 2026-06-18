@@ -55,8 +55,8 @@ async function handleRequest(
 }
 
 export interface HttpServerHandle {
-  dispose(): void;
-  [Symbol.dispose](): void;
+  dispose(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 export async function startHttpServer(mcpServer: Server, port: number): Promise<HttpServerHandle> {
@@ -81,11 +81,16 @@ export async function startHttpServer(mcpServer: Server, port: number): Promise<
   });
 
   const handle: HttpServerHandle = {
-    dispose() {
-      httpServer.close();
+    dispose(): Promise<void> {
+      return new Promise<void>((resolve) => {
+        httpServer.closeAllConnections?.();
+        httpServer.close(() => {
+          resolve();
+        });
+      });
     },
-    [Symbol.dispose]() {
-      this.dispose();
+    [Symbol.asyncDispose](): Promise<void> {
+      return this.dispose();
     },
   };
 

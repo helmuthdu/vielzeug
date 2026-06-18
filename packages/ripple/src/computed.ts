@@ -175,10 +175,10 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
   }
 
   get value(): T {
+    // After disposal: return last known value without tracking (inert node, like signal).
+    // If the computed was never evaluated (still UNINITIALIZED), return undefined.
     if (this.disposed_) {
-      const label = this.name ? ` "${this.name}"` : '';
-
-      throw new StateError('DISPOSED_READ', `Cannot read disposed computed${label}`);
+      return this.value_ !== UNINITIALIZED ? (this.value_ as T) : (undefined as unknown as T);
     }
 
     this.refreshIfDirty();
@@ -187,14 +187,11 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     return this.value_ as T;
   }
 
-  // Note: peek() throws on a disposed computed, unlike SignalImpl.peek() which returns
-  // the last value silently. Computeds have no stable "last value" guarantee after
-  // their deps are torn down — throwing prevents stale-data bugs.
+  // peek() after dispose: return last known value silently, consistent with signal.peek().
+  // If the computed was never evaluated, return undefined (same as signal with undefined initial).
   peek(): T {
     if (this.disposed_) {
-      const label = this.name ? ` "${this.name}"` : '';
-
-      throw new StateError('DISPOSED_READ', `Cannot read disposed computed${label}`);
+      return this.value_ !== UNINITIALIZED ? (this.value_ as T) : (undefined as unknown as T);
     }
 
     this.refreshIfDirty();

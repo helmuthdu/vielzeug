@@ -1,6 +1,9 @@
 export const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
 export type DocPage = (typeof DOC_PAGES)[number];
 
+/** Increment whenever the shape of BundledPackage changes to auto-invalidate stale caches. */
+export const SCHEMA_VERSION = 1 as const;
+
 // ---------------------------------------------------------------------------
 // Custom Elements Manifest (CEM) types
 // ---------------------------------------------------------------------------
@@ -93,5 +96,6 @@ export interface BundledPackage extends Omit<PackageMeta, 'hasSource'> {
 
 export interface BundledData {
   packages: BundledPackage[];
+  schemaVersion: typeof SCHEMA_VERSION;
   version: string;
 }

@@ -2,68 +2,25 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import type { BundledData, BundledPackage, PackageMeta } from './types.js';
+import { type BundledData, type BundledPackage, type PackageMeta, SCHEMA_VERSION } from './types.js';
 
 const DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../data/vielzeug-data.json');
 
 const REGEN_CMD = 'pnpm --dir packages/codex run prepare:data';
 
-// ---------------------------------------------------------------------------
-// Schema-map validation (satisfies keeps it in sync with BundledPackage type)
-// ---------------------------------------------------------------------------
-
-type FieldCheck = (v: unknown) => boolean;
-
-const nonEmptyStr = (v: unknown): boolean => typeof v === 'string' && (v as string).length > 0;
-const isStr = (v: unknown): boolean => typeof v === 'string';
-const isArr = (v: unknown): boolean => Array.isArray(v);
-const isObj = (v: unknown): boolean => typeof v === 'object' && v !== null && !Array.isArray(v);
-
-/** Field-level validators for BundledPackage. satisfies catches drift when the type changes. */
-const PKG_SCHEMA = {
-  apiSource: (v: unknown) => v === null || isStr(v),
-  availableDocPages: isArr,
-  category: isStr,
-  components: isArr,
-  description: isStr,
-  docs: isObj,
-  exports: isArr,
-  keywords: isArr,
-  name: nonEmptyStr,
-  related: isArr,
-  slug: nonEmptyStr,
-  version: isStr,
-} satisfies Record<keyof BundledPackage, FieldCheck>;
-
 export function validateBundledData(raw: unknown): BundledData {
+  const r = raw as Record<string, unknown>;
+
   if (
     typeof raw !== 'object' ||
     raw === null ||
-    typeof (raw as Record<string, unknown>)['version'] !== 'string' ||
-    !Array.isArray((raw as Record<string, unknown>)['packages'])
+    r['schemaVersion'] !== SCHEMA_VERSION ||
+    typeof r['version'] !== 'string' ||
+    !Array.isArray(r['packages'])
   ) {
     throw new Error(
-      `Bundled MCP data is malformed: missing or invalid "version" or "packages". Regenerate with ${REGEN_CMD}.`,
+      `Bundled data is malformed or uses an outdated schema (expected v${SCHEMA_VERSION}). Regenerate with ${REGEN_CMD}.`,
     );
-  }
-
-  const { packages } = raw as { packages: unknown[]; version: string };
-
-  for (const pkg of packages) {
-    if (typeof pkg !== 'object' || pkg === null) {
-      throw new Error(`Bundled MCP data is malformed: package entry is not an object. Regenerate with ${REGEN_CMD}.`);
-    }
-
-    const p = pkg as Record<string, unknown>;
-    const slug = String(p['slug'] ?? '');
-
-    for (const [field, check] of Object.entries(PKG_SCHEMA) as [keyof BundledPackage, FieldCheck][]) {
-      if (!check(p[field])) {
-        throw new Error(
-          `Bundled MCP data is malformed: package "${slug}" has invalid field "${field}". Regenerate with ${REGEN_CMD}.`,
-        );
-      }
-    }
   }
 
   return raw as BundledData;

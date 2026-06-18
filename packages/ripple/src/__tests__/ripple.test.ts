@@ -3,14 +3,17 @@ import {
   asyncScope,
   batch,
   computed,
+  derive,
   effect,
   effectAsync,
+  filter,
   getDevToolsHook,
   isComputed,
   isSignal,
   isStore,
   onCleanup,
   readonly,
+  resource,
   scope,
   selector,
   signal,
@@ -129,22 +132,24 @@ describe('ripple', () => {
       doubled.dispose();
     });
 
-    it('throws StateError when read after dispose', () => {
+    it('returns last value silently when read after dispose (inert node)', () => {
       const n = signal(1);
       const c = computed(() => n.value + 1);
 
+      expect(c.value).toBe(2); // evaluate at least once
       c.dispose();
 
-      let caught: unknown;
+      expect(c.value).toBe(2); // last value, no throw
+      expect(c.peek()).toBe(2); // consistent
+    });
 
-      try {
-        void c.value;
-      } catch (e) {
-        caught = e;
-      }
+    it('returns undefined when disposed before first evaluation', () => {
+      const n = signal(1);
+      const c = computed(() => n.value + 1);
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('DISPOSED_READ');
+      c.dispose(); // never evaluated
+
+      expect(c.peek()).toBeUndefined();
     });
 
     it('throws StateError when subscribing after dispose', () => {
@@ -1300,14 +1305,15 @@ describe('ripple', () => {
       a.dispose();
       b.dispose();
 
-      // DISPOSED_READ
+      // DISPOSED_READ — subscribe() on a disposed computed still throws
       const c = computed(() => 1);
 
+      void c.value; // evaluate first so peek/value return last value
       c.dispose();
       caught = undefined;
 
       try {
-        void c.value;
+        c.subscribe(() => {});
       } catch (e) {
         caught = e;
       }
@@ -1707,7 +1713,7 @@ describe('ripple', () => {
       b.dispose();
     });
 
-    it('disposed computed read error includes name when provided', () => {
+    it('disposed computed subscribe error includes name when provided', () => {
       const c = computed(() => 1, { name: 'myDisposed' });
 
       c.dispose();
@@ -1715,7 +1721,7 @@ describe('ripple', () => {
       let caught: unknown;
 
       try {
-        void c.value;
+        c.subscribe(() => {});
       } catch (e) {
         caught = e;
       }
@@ -2184,10 +2190,9 @@ describe('ripple', () => {
       expect(r.value).toBe(2);
       r.dispose();
 
-      // doubled should be disposed too (readonly returns computed directly)
-      expect(() => {
-        void doubled.value;
-      }).toThrow(StateError);
+      // doubled should be disposed — it returns last value silently (inert node)
+      expect(doubled.disposed).toBe(true);
+      expect(doubled.peek()).toBe(2); // last value, no throw
     });
 
     it('readonly(signal).dispose() is a no-op — source signal remains alive', () => {
@@ -4042,6 +4047,84 @@ describe('ripple', () => {
       expect(ac.isLoading.name).toBeUndefined();
 
       ac.dispose();
+    });
+  });
+
+  describe('derive() and filter()', () => {
+    it('derive() projects source reactively', () => {
+      const n = signal(3);
+      const doubled = derive(n, (x) => x * 2);
+
+      expect(doubled.value).toBe(6);
+      n.value = 5;
+      expect(doubled.value).toBe(10);
+      doubled.dispose();
+    });
+
+    it('derive() passes options through', () => {
+      const n = signal(0);
+      const named = derive(n, (x) => x + 1, { name: 'inc' });
+
+      expect(named.name).toBe('inc');
+      named.dispose();
+    });
+
+    it('filter() returns value when predicate is true', () => {
+      const n = signal(8);
+      const evens = filter(n, (x) => x % 2 === 0);
+
+      expect(evens.value).toBe(8);
+      evens.dispose();
+    });
+
+    it('filter() returns undefined when predicate is false', () => {
+      const n = signal(5);
+      const evens = filter(n, (x) => x % 2 === 0);
+
+      expect(evens.value).toBeUndefined();
+      n.value = 4;
+      expect(evens.value).toBe(4);
+      evens.dispose();
+    });
+
+    it('filter() passes options through', () => {
+      const n = signal(0);
+      const named = filter(n, () => true, { name: 'pass' });
+
+      expect(named.name).toBe('pass');
+      named.dispose();
+    });
+  });
+
+  describe('resource() — alias for asyncComputed', () => {
+    it('resource is the same function as asyncComputed', () => {
+      expect(resource).toBe(asyncComputed);
+    });
+
+    it('resource() returns data/error/isLoading signals', async () => {
+      const r = resource(() => Promise.resolve(42));
+
+      expect(r.isLoading.value).toBe(true);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(r.data.value).toBe(42);
+      expect(r.isLoading.value).toBe(false);
+      r.dispose();
+    });
+  });
+
+  describe('AsyncSubscription Symbol.asyncDispose', () => {
+    it('Symbol.asyncDispose disposes and resolves', async () => {
+      const userId = signal('u1');
+      const stop = effectAsync(async (sig) => {
+        void userId.value;
+        await new Promise<void>((r) => {
+          if (!sig.aborted) r();
+        });
+      });
+
+      expect(stop.disposed).toBe(false);
+      await stop[Symbol.asyncDispose]();
+      expect(stop.disposed).toBe(true);
     });
   });
 

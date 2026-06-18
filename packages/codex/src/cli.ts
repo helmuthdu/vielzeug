@@ -40,7 +40,7 @@ async function main(): Promise<void> {
   let values: { port?: string };
 
   try {
-    ({ values } = parseArgs({ options: { port: { type: 'string' } }, strict: true }));
+    ({ values } = parseArgs({ args: argv, options: { port: { type: 'string' } }, strict: true }));
   } catch (err) {
     process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
     printUsage();
@@ -64,8 +64,10 @@ async function main(): Promise<void> {
     }
 
     const shutdown = (): void => {
-      handle.dispose();
-      process.exit(0);
+      handle.dispose().then(
+        () => process.exit(0),
+        () => process.exit(1),
+      );
     };
 
     process.once('SIGTERM', shutdown);

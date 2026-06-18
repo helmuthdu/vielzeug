@@ -9,6 +9,7 @@ import type { BundledData } from '../types.js';
 
 import { loadData } from '../data.js';
 import { createServer } from '../index.js';
+import { SCHEMA_VERSION } from '../types.js';
 
 type TextContent = { text: string; type: 'text' };
 type ToolCallResult = { content: TextContent[]; isError?: boolean };
@@ -19,7 +20,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataFile = resolve(__dirname, '../../data/vielzeug-data.json');
 
 beforeAll(async () => {
-  if (!existsSync(dataFile)) {
+  // Regenerate if missing or if loadData throws (e.g. schema version mismatch from stale file)
+  const needsRegen =
+    !existsSync(dataFile) ||
+    (() => {
+      try {
+        loadData();
+
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+
+  if (needsRegen) {
     // Import the generator function directly — faster than spawning a subprocess
     const { generateBundledData } = await import('../generator.js');
     const { data: generated } = generateBundledData({ incremental: false });
@@ -326,23 +340,6 @@ describe('vielzeug MCP server', () => {
     await expect(client.callTool({ arguments: {}, name: 'no-such-tool' })).rejects.toThrow();
   });
 
-  it('exposes MCP resources for doc pages and source', async () => {
-    const { client } = await createTestPair();
-    const { resources } = await client.listResources();
-
-    expect(resources.length).toBeGreaterThan(0);
-
-    const docResource = resources.find((r) => r.uri.startsWith('vielzeug://docs/'));
-
-    expect(docResource).toBeDefined();
-    expect(docResource?.mimeType).toBe('text/markdown');
-
-    const sourceResource = resources.find((r) => r.uri.startsWith('vielzeug://source/'));
-
-    expect(sourceResource).toBeDefined();
-    expect(sourceResource?.mimeType).toBe('text/x-typescript');
-  });
-
   it('get-docs returns error when page enum is valid but package lacks that page', async () => {
     // Use a synthetic data fixture with only index page — guarantees the missing-page path always runs
     const syntheticData: BundledData = {
@@ -362,6 +359,7 @@ describe('vielzeug MCP server', () => {
           version: '1.0.0',
         },
       ],
+      schemaVersion: SCHEMA_VERSION,
       version: '0.0.0',
     };
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -427,41 +425,6 @@ describe('vielzeug MCP server', () => {
 
     expect(result.isError).toBe(true);
     expect(readText(result)).toContain('unavailable');
-  });
-
-  it('reads a resource by URI', async () => {
-    const { client } = await createTestPair();
-    const { resources } = await client.listResources();
-
-    // spell/index is guaranteed to exist — every package has an index doc
-    const spellIndex = resources.find((r) => r.uri === 'vielzeug://docs/spell/index');
-
-    expect(spellIndex).toBeDefined();
-
-    const { contents } = await client.readResource({ uri: spellIndex!.uri });
-
-    expect(contents.length).toBeGreaterThan(0);
-    expect(typeof (contents[0] as { text?: string }).text).toBe('string');
-  });
-
-  it('resource name for doc pages is "docs/<slug>/<page>"', async () => {
-    const { client } = await createTestPair();
-    const { resources } = await client.listResources();
-
-    const docResource = resources.find((r) => r.uri.startsWith('vielzeug://docs/'));
-
-    expect(docResource).toBeDefined();
-    expect(docResource?.name).toMatch(/^docs\/.+\/.+$/);
-  });
-
-  it('resource name for source is "source/<slug>"', async () => {
-    const { client } = await createTestPair();
-    const { resources } = await client.listResources();
-
-    const sourceResource = resources.find((r) => r.uri.startsWith('vielzeug://source/'));
-
-    expect(sourceResource).toBeDefined();
-    expect(sourceResource?.name).toMatch(/^source\/.+$/);
   });
 
   it('search-packages returns error when query exceeds 500 chars', async () => {

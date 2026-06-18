@@ -3,6 +3,7 @@
 // are intentionally NOT exported to keep the surface stable.
 
 export type {
+  Accessor,
   AsyncComputedOptions,
   AsyncComputedSignal,
   AsyncEffectCallback,
@@ -18,6 +19,8 @@ export type {
   EqualityFn,
   PathValue,
   ReadonlySignal,
+  ResourceOptions,
+  ResourceSignal,
   Scope,
   Signal,
   SignalOptions,
@@ -39,10 +42,11 @@ export { batch } from './scheduling';
 export { asyncScope, effect, effectAsync, onCleanup, scope, watch, withScope } from './effect';
 
 // Utilities
-export { isComputed, isSignal, isStore, readonly, selector, untrack } from './utilities';
+export { derive, filter, isComputed, isSignal, isStore, readonly, selector, untrack } from './utilities';
 
-// Async computed
+// Async computed — `resource` is the preferred name; `asyncComputed` is kept for compatibility
 export { asyncComputed } from './async-computed';
+export { asyncComputed as resource } from './async-computed';
 
 // Store with history / time-travel
 export { storeWithHistory } from './store-history';

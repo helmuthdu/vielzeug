@@ -68,7 +68,12 @@ export interface Subscription {
 }
 
 export interface AsyncSubscription extends Subscription {
+  /**
+   * @deprecated Use `await using stop = effectAsync(...)` with `[Symbol.asyncDispose]` instead.
+   */
   disposeAsync(): Promise<void>;
+  /** ES2024 `await using` compatible async disposal. Equivalent to `disposeAsync()`. */
+  [Symbol.asyncDispose](): Promise<void>;
 }
 
 // ── Watch ─────────────────────────────────────────────────────────────────────
@@ -179,6 +184,24 @@ export type PathValue<T, P extends string> = P extends keyof T
       ? PathValue<T[K], Rest>
       : never
     : never;
+
+// ── Greenfield aliases ────────────────────────────────────────────────────────
+
+/**
+ * Alias for {@link ReadonlySignal}. Prefer `Accessor<T>` for clarity —
+ * the name communicates "you can read this" rather than implying the value never changes.
+ */
+export type Accessor<T> = ReadonlySignal<T>;
+
+/**
+ * Alias for {@link AsyncComputedOptions}. Use with {@link resource}.
+ */
+export type ResourceOptions<T> = AsyncComputedOptions<T>;
+
+/**
+ * Alias for {@link AsyncComputedSignal}. Returned by {@link resource}.
+ */
+export type ResourceSignal<T> = AsyncComputedSignal<T>;
 
 /**
  * A fine-grained reactive store for objects.

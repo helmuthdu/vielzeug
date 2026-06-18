@@ -137,9 +137,6 @@ const sub = effect(() => console.log('count:', count.value), { name: 'count-logg
 // Microtask scheduler — re-runs are deferred and coalesce within the same task
 effect(() => (document.title = count.value.toString()), { scheduler: 'microtask' });
 
-// RAF scheduler — re-runs are capped at display refresh rate (ideal for animations)
-effect(() => canvas.draw(data.value), { scheduler: 'raf' });
-
 // Custom scheduler function — any scheduling strategy is supported
 effect(() => renderHighFrequency(pos.value), { scheduler: (run) => requestIdleCallback(run) });
 
@@ -149,7 +146,7 @@ effect(() => processGraph(root.value), { maxIterations: 500 });
 
 | Option          | Type                                           | Default  | Description                                                |
 | --------------- | ---------------------------------------------- | -------- | ---------------------------------------------------------- |
-| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'` \| `'raf'`, or a custom function |
+| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'`, or a custom function            |
 | `name`          | `string`                                       | —        | Shown in error messages                                    |
 | `maxIterations` | `number`                                       | `100`    | Loop guard threshold for this effect                       |
 
@@ -357,31 +354,23 @@ define('my-component', {
 });
 ```
 
-## `asyncScope`
+## `asyncScope` _(deprecated)_
 
-`asyncScope(setup)` is the async variant of `scope()`. It is useful when setup involves async initialization but you still need to register cleanups from the synchronous preamble.
-
-`onCleanup()` must be called **synchronously** — before the first `await`. Calls after an `await` throw `StateError('INVALID_CLEANUP')`.
+::: warning Deprecated
+`asyncScope()` is deprecated. Use `scope()` with an explicit `run()` call instead:
 
 ```ts
-import { asyncScope, onCleanup } from '@vielzeug/ripple';
-
-const s = await asyncScope(async () => {
-  const stream = openStream(); // synchronous resource
-  onCleanup(() => stream.close()); // <sg-icon name="check" size="16"></sg-icon> — before any await
-
-  const db = await openDatabase(); // async — tracking stops here
-  // onCleanup() here would throw INVALID_CLEANUP
+const s = scope();
+await s.run(async () => {
+  onCleanup(() => stream.close()); // captured synchronously
+  const db = await openDatabase();
 });
-
-// register post-init cleanup via the returned scope:
-s.run(() => {
-  onCleanup(() => db.close());
-});
-
-// release all resources:
-s.dispose();
 ```
+:::
+
+`asyncScope(setup)` accepts an async setup function and captures `onCleanup()` registrations from the synchronous preamble before the first `await`.
+
+`onCleanup()` must be called **synchronously** — before the first `await`. Calls after an `await` throw `StateError('INVALID_CLEANUP')`.
 
 ## `debugEffect`
 
@@ -399,47 +388,38 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 
 ## Async Computed
 
-`asyncComputed(factory, options?)` tracks reactive dependencies inside an async factory and automatically re-runs when they change. The factory receives an `AbortSignal` that is aborted when the factory is superseded or disposed.
+`resource(factory, options?)` (preferred) or `asyncComputed()` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
 
-The signal's `.value` is an `AsyncComputedState<T>` discriminated union — always one of `'idle'`, `'pending'`, `'fulfilled'`, or `'error'`.
+The returned handle exposes three flat reactive signals:
+
+- `.data` — latest fulfilled value (`T | undefined`)
+- `.error` — last thrown value (`unknown | undefined`)
+- `.isLoading` — `true` while a factory run is in-flight (starts `true`)
 
 ```ts
-import { signal, effect, asyncComputed } from '@vielzeug/ripple';
+import { signal, effect, resource } from '@vielzeug/ripple';
 
 const userId = signal('u1');
 
-const user = asyncComputed(
-  async (signal) => {
-    const id = userId.value; // ← tracked dep (synchronous read)
-    const res = await fetch(`/users/${id}`, { signal });
-    if (!res.ok) throw new Error('Not found');
-    return res.json() as Promise<User>;
-  },
-  { initialValue: undefined },
-);
+const user = resource(async (abortSignal) => {
+  const id = userId.value; // tracked dep — must be read synchronously
+  const res = await fetch(`/users/${id}`, { signal: abortSignal });
+  if (!res.ok) throw new Error('Not found');
+  return res.json() as Promise<User>;
+});
 
 effect(() => {
-  const state = user.value;
-  switch (state.status) {
-    case 'idle':
-    case 'pending':
-      showSpinner();
-      break;
-    case 'fulfilled':
-      renderUser(state.value);
-      break;
-    case 'error':
-      showError(state.error);
-      break;
-  }
+  if (user.isLoading.value) return showSpinner();
+  if (user.error.value) return showError(user.error.value);
+  renderUser(user.data.value);
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
-user.dispose(); // cancel and detach
+user.dispose();
 ```
 
 ::: tip deps must be read synchronously
-`asyncComputed` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
+`resource` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
 :::
 
 ## Store History / Time-Travel
@@ -473,7 +453,7 @@ effect(() => {
 });
 ```
 
-All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`, `map`, `filter`, `watch`) work as usual on a `StoreWithHistory<T>`.
+All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`) work as usual on a `StoreWithHistory<T>`.
 
 Call `dispose()` when the store is no longer needed to release the internal reactive cursor signal:
 
@@ -591,7 +571,7 @@ console.log(settings.value.user.address.city); // 'Hamburg'
 watch(theme, (next, prev) => console.log(prev, '→', next));
 
 // Write directly
-theme.update((t) => (t === 'light' ? 'dark' : 'light'));
+theme.value = theme.value === 'light' ? 'dark' : 'light';
 ```
 
 Lenses are cached: `settings.lens('theme')` called twice returns the same `Signal`. Disposing a lens removes it from the cache — the next call to `settings.lens('theme')` creates a fresh instance.
@@ -601,16 +581,6 @@ Every intermediate segment of the path must resolve to a non-null object. Writin
 
 Paths are also capped at **32 segments**. Paths exceeding this limit throw `StateError('INVALID_STORE')` with a descriptive message.
 :::
-
-### Via `.map()`
-
-For read-only derived slices, the `.map()` combinator is the most concise option:
-
-```ts
-const count = s.map((st) => st.count); // ComputedSignal<number>
-watch(count, (n, prev) => console.log('count:', prev, '→', n));
-count.dispose();
-```
 
 ### Watching State
 
@@ -718,15 +688,17 @@ counter.state.value.count; // readable
 
 ## Signal Combinators
 
-All signal types — `Signal`, `ComputedSignal`, and `Store` — expose `.map()` and `.filter()` as built-in combinators that return a `ComputedSignal`. They are shorthand for `computed()` on top of a source.
+Three standalone utilities create computed signals from a reactive source. They replace the removed per-instance `.map()` / `.filter()` methods.
 
-### `.map(fn, options?)`
+### `derive(source, project, options?)`
 
-Projects a signal value into a new derived signal:
+Projects a signal into a new derived signal. Equivalent to `computed(() => project(source.value))` but more ergonomic:
 
 ```ts
+import { signal, derive } from '@vielzeug/ripple';
+
 const count = signal(3);
-const doubled = count.map((n) => n * 2); // ComputedSignal<number>
+const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
@@ -735,21 +707,15 @@ console.log(doubled.value); // 10
 doubled.dispose();
 ```
 
-Works on stores too:
+### `filter(source, predicate, options?)`
+
+Passes the value through when the predicate returns `true`, otherwise yields `undefined`:
 
 ```ts
-const cart = store({ items: 0, label: 'empty' });
-const label = cart.map((s) => s.label.toUpperCase()); // ComputedSignal<string>
-console.log(label.value); // 'EMPTY'
-```
+import { signal, filter } from '@vielzeug/ripple';
 
-### `.filter(predicate)`
-
-Passes values through when the predicate returns `true`, otherwise yields `undefined`:
-
-```ts
 const count = signal(3);
-const even = count.filter((n) => n % 2 === 0);
+const even = filter(count, (n) => n % 2 === 0);
 console.log(even.value); // undefined (3 is odd)
 
 count.value = 4;
@@ -762,22 +728,56 @@ Supports type-guard predicates for narrowing:
 
 ```ts
 const val = signal<string | null>(null);
-const str = val.filter((v): v is string => v !== null); // ComputedSignal<string | undefined>
+const str = filter(val, (v): v is string => v !== null);
 
 val.value = 'hello';
 console.log(str.value); // 'hello'
 ```
 
+### `selector(source, project, predicate?, options?)`
+
+Combines projection and filtering in a single call. Use `derive()` + `filter()` for single-concern cases; `selector()` is available when you need both:
+
+```ts
+import { signal, selector } from '@vielzeug/ripple';
+
+const count = signal(3);
+
+// Project only — prefer derive() for this
+const doubled = selector(count, (n) => n * 2);
+
+// Project + filter
+const bigDoubles = selector(
+  count,
+  (n) => n * 2,
+  (n) => n > 5,
+);
+bigDoubles.value; // 6 (3*2=6, predicate 6>5 is true — value passes through)
+
+doubled.dispose();
+bigDoubles.dispose();
+```
+
 ## `Symbol.dispose` / `using` Declarations
 
-All `Subscription`, `ComputedSignal`, and `Scope` handles implement `[Symbol.dispose]`,
-enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
+All `Subscription`, `ComputedSignal`, and `Scope` handles implement `[Symbol.dispose]`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
 
 ```ts
 {
   using sub = effect(() => console.log(count.value));
   using doubled = computed(() => count.value * 2);
   // both are automatically disposed when the block exits
+}
+```
+
+`AsyncSubscription` (returned by `effectAsync()`) also implements `[Symbol.asyncDispose]`, enabling `await using`:
+
+```ts
+{
+  await using stop = effectAsync(async (signal) => {
+    await fetchData(signal);
+  });
+  // stop[Symbol.asyncDispose]() is called automatically — awaits the in-flight run
 }
 ```
 
@@ -1031,11 +1031,11 @@ batch(() => {
 });
 ```
 
-### 5. Use `.update()` / `.replace()` to Avoid Stale Reads
+### 5. Use Direct Assignment on Signals; `.replace()` on Stores
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> signals: atomic read-modify-write
-count.update((n) => n + 1);
+// <sg-icon name="check" size="16"></sg-icon> signals: read-modify-write in one line
+count.value = count.value + 1;
 
 // <sg-icon name="check" size="16"></sg-icon> stores: replace via function
 cart.replace((s) => ({ ...s, items: [...s.items, newItem] }));

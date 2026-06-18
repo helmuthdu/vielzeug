@@ -11,7 +11,7 @@ export function stripDocMarkup(md: string): string {
     .replace(/<[^>]+>/g, '') // HTML tags
     .replace(/^\[\[toc]]\s*$/gm, '') // VitePress TOC directive
     .replace(/^:::[\s\S]*?:::\s*$/gm, (m) => m.replace(/^:::[^\n]*\n?|^:::\s*$/gm, '')) // containers
-    .replace(/^\s*\n{2,}/gm, '\n\n') // normalise blank lines
+    .replace(/\n{3,}/g, '\n\n') // normalise consecutive blank lines
     .trim();
 }
 

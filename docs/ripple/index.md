@@ -12,6 +12,7 @@ exports:
     computed,
     effect,
     effectAsync,
+    resource,
     asyncComputed,
     watch,
     batch,
@@ -19,10 +20,10 @@ exports:
     storeWithHistory,
     untrack,
     scope,
-    asyncScope,
-    withScope,
     onCleanup,
     readonly,
+    derive,
+    filter,
     selector,
     isSignal,
     isComputed,
@@ -30,6 +31,9 @@ exports:
     getDevToolsHook,
     StateError,
     StateErrorCode,
+    Accessor,
+    ResourceSignal,
+    ResourceOptions,
     PathValue,
   ]
 environments: [browser, node, ssr, deno]
@@ -105,10 +109,10 @@ yarn add @vielzeug/ripple
 ## Quick Start
 
 ```ts
-import { signal, computed, effect, watch, batch } from '@vielzeug/ripple';
+import { signal, derive, effect, watch, batch } from '@vielzeug/ripple';
 
 const count = signal(0);
-const doubled = count.map((n) => n * 2); // returns ComputedSignal<number>
+const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
 
 // Side-effect: runs immediately and re-runs on change
 const sub = effect(() => {
@@ -133,7 +137,7 @@ doubled.dispose();
 ```
 
 ```ts
-import { store, watch, batch } from '@vielzeug/ripple';
+import { store, watch, batch, computed } from '@vielzeug/ripple';
 
 const counter = store({ count: 0, label: 'counter' });
 
@@ -146,8 +150,8 @@ const stopWatch = watch(countLens, (next, prev) => {
   console.log('count:', prev, '→', next);
 });
 
-// Derived slice via combinator
-const label = counter.map((s) => s.label); // ComputedSignal<string>
+// Derived slice
+const label = computed(() => counter.value.label); // ComputedSignal<string>
 
 // Mutations
 counter.patch({ count: 1 }); // shallow merge
@@ -169,28 +173,28 @@ label.dispose();
 <div class="features-grid">
 
 - **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; `batched: true` coalesces rapid writes into one microtask notification
-- **`computed(fn, options?)`** — lazy derived signal; glitch-free; `computed([a, b], fn)` overload for explicit dep arrays with no auto-tracking
-- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; options: `scheduler`, `maxIterations`, `name`
-- **`effectAsync(fn, options?)`** — async side-effect with an `AbortSignal` that fires on re-run or dispose
-- **`asyncComputed(factory, options?)`** — reactive async computed; exposes `{ status, value, error }` lifecycle state; factory receives an `AbortSignal`
+- **`computed(fn, options?)`** — lazy derived signal; glitch-free; auto-tracks dependencies read inside `fn`
+- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; options: `scheduler` (`'sync'` | `'microtask'` | custom fn), `maxIterations`, `name`
+- **`effectAsync(fn, options?)`** — async side-effect with an `AbortSignal` that fires on re-run or dispose; returns `AsyncSubscription` with `[Symbol.asyncDispose]`
+- **`resource(factory, options?)`** — preferred name for async computed; exposes `.data`, `.error`, `.isLoading` signals; factory receives an `AbortSignal`
+- **`asyncComputed(factory, options?)`** — same as `resource()`; kept for compatibility
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
-- **`batch(fn, options?)`** — flush all notifications once after bulk updates; `maxIterations` option for loop guard
+- **`batch(fn)`** — flush all notifications once after bulk updates
 - **`untrack(fn)`** — read signals inside an effect without creating subscriptions
 - **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
 - **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
-- **`asyncScope(setup)`** — async variant of `scope()`; captures cleanups from the synchronous preamble before the first `await`
+- **`derive(source, project, options?)`** — project a reactive source into a `ComputedSignal`; cleaner alternative to `selector(source, project)`
+- **`filter(source, predicate, options?)`** — filter a reactive source; returns value when predicate is `true`, `undefined` otherwise
+- **`selector(source, project?, predicate?, options?)`** — combined project + filter utility; prefer `derive()` / `filter()` for single-concern cases
 - **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level
 - **`debugEffect(fn, options?)`** — like `effect()`, but logs reactive deps on every run; import from `@vielzeug/ripple/devtools` — tree-shaken from production bundles
 - **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
-- **`.map<U>(fn, options?)`** — combinator on all signal types; creates a derived `ComputedSignal<U>`
-- **`.filter(predicate)`** — combinator on all signal types; creates a `ComputedSignal<T | undefined>` via a predicate
 - **`store(init, options?)`** — structured reactive object container
 - **`.patch(partial)`** — shallow-merge a `Partial<T>` into state
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
-- **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties; call `dispose()` to release the internal cursor signal
-- **`getSignalName(signal)`** — look up the registered name for a named signal; returns `undefined` for unnamed signals
+- **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
@@ -204,7 +208,7 @@ label.dispose();
 | --------------------------- | ---------------------------------------------------------------------------------------------------- |
 | `@vielzeug/ripple`          | All exports and types                                                                                |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
-| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                                                |
+| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`withProvider`, `runWithProvider`, `createAsyncProvider`). Node.js only. |
 
 ## Documentation
 

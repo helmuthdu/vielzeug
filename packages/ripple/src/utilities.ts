@@ -6,6 +6,61 @@ import { untrack } from './tracking';
 
 export { untrack };
 
+// ── derive() ─────────────────────────────────────────────────────────────────
+//
+// Cleaner replacement for selector(source, project). Projects a reactive source
+// into a new computed signal. No filter — use filter() for that.
+
+/**
+ * Creates a computed signal by projecting a reactive source through `project`.
+ * Equivalent to `computed(() => project(source.value))` with options support.
+ *
+ * Prefer this over `selector(source, project)` for clarity.
+ *
+ * @example
+ * ```ts
+ * const count = signal(5);
+ * const doubled = derive(count, (n) => n * 2);
+ * console.log(doubled.value); // 10
+ * ```
+ */
+export const derive = <T, U>(
+  source: ReadonlySignal<T>,
+  project: (value: T) => U,
+  options?: ComputedOptions<U>,
+): ComputedSignal<U> => computed(() => project(source.value), options);
+
+// ── filter() ─────────────────────────────────────────────────────────────────
+//
+// Cleaner replacement for selector(source, undefined, predicate). Returns the
+// source value when the predicate holds, or undefined otherwise.
+
+/**
+ * Creates a computed signal that returns the source value when `predicate` is `true`,
+ * or `undefined` when it is `false`.
+ *
+ * Prefer this over `selector(source, undefined, predicate)` — no undefined placeholder needed.
+ *
+ * @example
+ * ```ts
+ * const count = signal(5);
+ * const evens = filter(count, (n) => n % 2 === 0);
+ * console.log(evens.value); // undefined (5 is odd)
+ * count.value = 8;
+ * console.log(evens.value); // 8
+ * ```
+ */
+export const filter = <T>(
+  source: ReadonlySignal<T>,
+  predicate: (value: T) => boolean,
+  options?: ComputedOptions<T | undefined>,
+): ComputedSignal<T | undefined> =>
+  computed(() => {
+    const v = source.value;
+
+    return predicate(v) ? v : undefined;
+  }, options);
+
 // ── Readonly wrapper ──────────────────────────────────────────────────────────
 //
 // Returns a thin delegation object instead of a full ComputedImpl — zero graph
@@ -91,6 +146,9 @@ export function selector<T, U>(
   predicate: (value: U) => boolean,
   options?: ComputedOptions<U | undefined>,
 ): ComputedSignal<U | undefined>;
+/**
+ * @deprecated Use `filter(source, predicate, options)` instead — no `undefined` placeholder needed.
+ */
 export function selector<T>(
   source: ReadonlySignal<T>,
   project: undefined,
