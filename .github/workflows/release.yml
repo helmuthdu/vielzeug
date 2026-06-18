@@ -26,9 +26,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup
-        with:
-          node-registry-url: 'https://registry.npmjs.org'
-          node-scope: '@vielzeug'
 
       - name: Configure Git
         run: |

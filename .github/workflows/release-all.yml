@@ -33,9 +33,6 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup
-        with:
-          node-registry-url: 'https://registry.npmjs.org'
-          node-scope: '@vielzeug'
 
       - name: Configure Git
         run: |
@@ -102,6 +99,13 @@ jobs:
             [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
             echo "🔄 Retry ${attempt}/3..."
           done
+
+      - name: Configure npm auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@vielzeug'
 
       - name: Publish each package
         env:

@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # ── Build ─────────────────────────────────────────────────────────────────────
+  # ── Verify change logs + build ────────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -27,45 +27,10 @@ jobs:
       - name: Rush rebuild
         run: node common/scripts/install-run-rush.js rebuild --verbose
 
-  # ── Tests ─────────────────────────────────────────────────────────────────────
-  test:
-    name: Unit Tests
+  # ── Test + Lint (parallel, both independent of build) ────────────────────────
+  test-lint:
+    name: Test & Lint
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup
-
-      - name: Rush build
-        run: node common/scripts/install-run-rush.js build --verbose
-
-      - name: Install root dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate codex bundled data
-        run: pnpm --dir packages/codex run prepare:data
-
-      - name: Run unit tests
-        run: pnpm test --run
-
-  # ── Lint ──────────────────────────────────────────────────────────────────────
-  lint:
-    name: Lint
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: ./.github/actions/setup
-        with:
-          rush-install: 'false'
-
-      - name: Install root dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Lint JS/TS
-        run: pnpm lint:js
-
-      - name: Lint CSS
-        run: pnpm lint:css
+    uses: ./.github/workflows/_test-lint.yml
+    with:
+      coverage: false

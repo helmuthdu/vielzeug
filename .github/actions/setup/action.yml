@@ -5,12 +5,6 @@ inputs:
   rush-install:
     description: Run rush install after cache restore
     default: 'true'
-  node-registry-url:
-    description: npm registry URL (set when publishing)
-    default: ''
-  node-scope:
-    description: npm scope for auth (set when publishing)
-    default: ''
 
 runs:
   using: composite
@@ -19,9 +13,6 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: '22'
-        registry-url: ${{ inputs.node-registry-url }}
-        scope: ${{ inputs.node-scope }}
-        always-auth: ${{ inputs.node-registry-url != '' }}
 
     - name: Setup pnpm
       uses: pnpm/action-setup@v4
