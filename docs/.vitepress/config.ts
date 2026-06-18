@@ -216,47 +216,58 @@ export default defineConfig({
         items: [
           {
             items: [
-              { link: '/arsenal/', text: 'Arsenal' },
-              { link: '/coins/', text: 'Coins' },
-              { link: '/rune/', text: 'Rune' },
-              { link: '/tempo/', text: 'Tempo' },
+              { link: '/clockwork/', text: 'Clockwork' },
+              { link: '/ripple/', text: 'Ripple' },
             ],
-            text: 'Core & Utilities',
+            text: 'Core Primitives',
           },
           {
             items: [
-              { link: '/clockwork/', text: 'Clockwork' },
               { link: '/courier/', text: 'Courier' },
-              { link: '/herald/', text: 'Herald' },
               { link: '/pulse/', text: 'Pulse' },
-              { link: '/ripple/', text: 'Ripple' },
               { link: '/sourcerer/', text: 'Sourcerer' },
-              { link: '/spell/', text: 'Spell' },
               { link: '/vault/', text: 'Vault' },
             ],
-            text: 'Data & State',
+            text: 'Data Layer',
           },
           {
             items: [
               { link: '/craft/', text: 'Craft' },
               { link: '/dnd/', text: 'Dnd' },
-              { link: '/forge/', text: 'Forge' },
-              { link: '/lingua/', text: 'Lingua' },
               { link: '/orbit/', text: 'Orbit' },
               { link: '/prism/', text: 'Prism' },
               { link: '/scroll/', text: 'Scroll' },
+              { link: '/sigil/', text: 'Sigil' },
             ],
-            text: 'Frontend & Logic',
+            text: 'UI Components',
           },
           {
             items: [
-              { link: '/codex/', text: 'Codex' },
+              { link: '/forge/', text: 'Forge' },
+              { link: '/spell/', text: 'Spell' },
+            ],
+            text: 'Forms & Validation',
+          },
+          {
+            items: [
               { link: '/conduit/', text: 'Conduit' },
               { link: '/familiar/', text: 'Familiar' },
+              { link: '/herald/', text: 'Herald' },
               { link: '/ward/', text: 'Ward' },
               { link: '/wayfinder/', text: 'Wayfinder' },
             ],
-            text: 'Architecture & Security',
+            text: 'App Infrastructure',
+          },
+          {
+            items: [
+              { link: '/arsenal/', text: 'Arsenal' },
+              { link: '/codex/', text: 'Codex' },
+              { link: '/coins/', text: 'Coins' },
+              { link: '/lingua/', text: 'Lingua' },
+              { link: '/rune/', text: 'Rune' },
+              { link: '/tempo/', text: 'Tempo' },
+            ],
+            text: 'Utilities & Tools',
           },
         ],
         text: 'Packages',

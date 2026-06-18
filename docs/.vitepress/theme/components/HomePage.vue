@@ -112,58 +112,64 @@ const monoVersion = computed(() => {
 
 const categories = [
   {
-    name: 'State & Reactivity',
-    icon: 'zap',
+    name: 'Core Primitives',
+    icon: 'atom',
     packages: [
-      { id: 'ripple', tagline: 'Signals, computed, effects' },
-      { id: 'craft', tagline: 'Web component primitives' },
       { id: 'clockwork', tagline: 'Finite state machines' },
-      { id: 'forge', tagline: 'Form state & validation' },
+      { id: 'ripple', tagline: 'Signals, computed, effects' },
     ],
   },
   {
-    name: 'Data & Network',
+    name: 'Data Layer',
     icon: 'database',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
       { id: 'pulse', tagline: 'WebSocket client & presence' },
-      { id: 'vault', tagline: 'Browser storage' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },
+      { id: 'vault', tagline: 'Browser storage' },
+    ],
+  },
+  {
+    name: 'UI Components',
+    icon: 'layout',
+    packages: [
+      { id: 'craft', tagline: 'Web component primitives' },
+      { id: 'dnd', tagline: 'Drag & drop' },
+      { id: 'orbit', tagline: 'Floating positioning' },
+      { id: 'prism', tagline: 'SVG charts' },
+      { id: 'scroll', tagline: 'Virtual lists' },
+      { id: 'sigil', tagline: 'Accessible components' },
+    ],
+  },
+  {
+    name: 'Forms & Validation',
+    icon: 'check-square',
+    packages: [
+      { id: 'forge', tagline: 'Form state & validation' },
       { id: 'spell', tagline: 'Schema validation' },
     ],
   },
   {
-    name: 'UI & Interaction',
-    icon: 'layers',
-    packages: [
-      { id: 'sigil', tagline: 'Accessible components' },
-      { id: 'prism', tagline: 'SVG charts' },
-      { id: 'orbit', tagline: 'Floating positioning' },
-      { id: 'dnd', tagline: 'Drag & drop' },
-      { id: 'scroll', tagline: 'Virtual lists' },
-    ],
-  },
-  {
-    name: 'Architecture',
-    icon: 'box',
+    name: 'App Infrastructure',
+    icon: 'building-2',
     packages: [
       { id: 'conduit', tagline: 'Dependency injection' },
+      { id: 'familiar', tagline: 'Web Worker pool' },
       { id: 'herald', tagline: 'Typed event bus' },
       { id: 'ward', tagline: 'RBAC & permissions' },
       { id: 'wayfinder', tagline: 'Client-side routing' },
-      { id: 'familiar', tagline: 'Web Worker pool' },
     ],
   },
   {
-    name: 'Utilities',
+    name: 'Utilities & Tools',
     icon: 'wrench',
     packages: [
       { id: 'arsenal', tagline: '75+ utility functions' },
-      { id: 'tempo', tagline: 'Date & time' },
+      { id: 'codex', tagline: 'AI / MCP server' },
+      { id: 'coins', tagline: 'Monetary arithmetic' },
       { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },
-      { id: 'coins', tagline: 'Monetary arithmetic' },
-      { id: 'codex', tagline: 'AI / MCP server' },
+      { id: 'tempo', tagline: 'Date & time' },
     ],
   },
 ];
