@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RecurrenceRule } from '../index';
 
+import { TempoError, TempoErrorCode } from '../index';
 import {
   clamp,
   dateRange,
@@ -344,6 +345,16 @@ describe('clamp', () => {
     const berlin = Temporal.ZonedDateTime.from('2026-03-21T16:00:00+01:00[Europe/Berlin]');
 
     expect(() => clamp(ny, ny, berlin, { unit: 'day' })).toThrow(MISMATCH_ZONES);
+  });
+
+  it('returns ZonedDateTime for ZonedDateTime value with options.unit (C1)', () => {
+    const wednesday = Temporal.ZonedDateTime.from('2026-03-18T15:30:00+00:00[UTC]');
+    const monday = Temporal.ZonedDateTime.from('2026-03-16T00:00:00+00:00[UTC]');
+    const friday = Temporal.ZonedDateTime.from('2026-03-20T00:00:00+00:00[UTC]');
+    const result = clamp(wednesday, monday, friday, { tz: 'UTC', unit: 'day' });
+
+    expect(result).toBeInstanceOf(Temporal.ZonedDateTime);
+    expect((result as Temporal.ZonedDateTime).timeZoneId).toBe('UTC');
   });
 });
 
@@ -1146,6 +1157,71 @@ describe('parse', () => {
 
   it('throws a descriptive error for an invalid string', () => {
     expect(() => parse('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
+  });
+
+  it('throws when as="zoned" but string is not a zoned datetime (C2)', () => {
+    expect(() => parse('2026-03-21', 'zoned')).toThrow('[tempo] Invalid zoned date-time string');
+  });
+
+  it('throws when as="instant" but string is not an instant (C2)', () => {
+    expect(() => parse('not-an-instant', 'instant')).toThrow('[tempo] Invalid instant string');
+  });
+
+  it('throws when as="plain-datetime" but string is invalid (C2)', () => {
+    expect(() => parse('not-a-date', 'plain-datetime')).toThrow('[tempo] Invalid date/time string');
+  });
+
+  it('throws when as="plain-date" but string is invalid (C2)', () => {
+    expect(() => parse('not-a-date', 'plain-date')).toThrow('[tempo] Invalid plain date string');
+  });
+});
+
+describe('TempoError (E1)', () => {
+  it('errors thrown by tempo are instanceof TempoError', () => {
+    expect(() => parse('not-a-date')).toThrow(TempoError);
+  });
+
+  it('errors thrown by tempo are instanceof TypeError (backward compat)', () => {
+    expect(() => parse('not-a-date')).toThrow(TypeError);
+  });
+
+  it('.name is "TempoError"', () => {
+    try {
+      parse('not-a-date');
+    } catch (e) {
+      expect((e as TempoError).name).toBe('TempoError');
+    }
+  });
+
+  it('.code is INVALID_INPUT for parse errors', () => {
+    try {
+      parse('not-a-date');
+    } catch (e) {
+      expect((e as TempoError).code).toBe(TempoErrorCode.INVALID_INPUT);
+    }
+  });
+
+  it('.code is MISSING_TZ for missing timezone errors', () => {
+    try {
+      toInstant(parsePlainDateTime('2026-03-21T10:00:00'));
+    } catch (e) {
+      expect((e as TempoError).code).toBe(TempoErrorCode.MISSING_TZ);
+    }
+  });
+
+  it('.code is INVALID_TZ for bad timezone errors', () => {
+    try {
+      inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Bad/Zone');
+    } catch (e) {
+      expect((e as TempoError).code).toBe(TempoErrorCode.INVALID_TZ);
+    }
+  });
+
+  it('TempoErrorCode constants match expected strings', () => {
+    expect(TempoErrorCode.INVALID_INPUT).toBe('INVALID_INPUT');
+    expect(TempoErrorCode.INVALID_TZ).toBe('INVALID_TZ');
+    expect(TempoErrorCode.MISSING_TZ).toBe('MISSING_TZ');
+    expect(TempoErrorCode.UNSUPPORTED_INPUT).toBe('UNSUPPORTED_INPUT');
   });
 });
 

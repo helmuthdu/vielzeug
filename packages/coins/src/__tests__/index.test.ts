@@ -12,6 +12,7 @@ describe('index.ts public API surface', () => {
     'format',
     'formatParts',
     'fromJSON',
+    'getCurrencyDecimals',
     'greaterThan',
     'greaterThanOrEqual',
     'isEqual',

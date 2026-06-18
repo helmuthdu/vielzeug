@@ -4,7 +4,25 @@ description: Tree-shakeable, zero-dependency utility library for arrays, async c
 package: arsenal
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
-exports: [chunk, debounce, throttle, allOf, clamp, isEqual, attempt, retry, sleep, hash, fuzzy, getPath, deepMerge, diff, stash, memo]
+exports:
+  [
+    chunk,
+    debounce,
+    throttle,
+    allOf,
+    clamp,
+    isEqual,
+    attempt,
+    retry,
+    sleep,
+    hash,
+    fuzzy,
+    getPath,
+    deepMerge,
+    diff,
+    stash,
+    memo,
+  ]
 related: [tempo, sourcerer, spell, coins]
 environments: [browser, node, ssr, deno]
 ---
@@ -79,12 +97,12 @@ const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
 ];
-const hits = fuzzy(users, 'alice');                       // User[]
-const ranked = fuzzy(users, 'alice', { scored: true });   // ScoredResult<User>[]
+const hits = fuzzy(users, 'alice'); // User[]
+const ranked = fuzzy(users, 'alice', { scored: true }); // ScoredResult<User>[]
 // [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
 
 // Deep merge with optional array concatenation
-deepMerge({ a: { x: 1 } }, { a: { y: 2 } });             // { a: { x: 1, y: 2 } }
+deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
 deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a','b'] }
 
 // Structured diff

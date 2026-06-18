@@ -5,37 +5,37 @@ description: Complete API surface for @vielzeug/sourcerer.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol                                 | Purpose                                                                                     | Execution mode | Common gotcha                                                                     |
-| -------------------------------------- | ------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-| `createLocalSource()`                  | In-memory reactive collection with filter, sort, and search                                 | Sync           | Default `searchFn` is fuzzy, not substring                                        |
-| `createRemoteSource()`                 | Async server-backed collection with page navigation                                         | Async          | Fetches on creation; set `autoFetch: false` to delay                              |
-| `createCursorSource()`                 | Async collection navigated by cursor tokens                                                 | Async          | `next()`/`prev()` are no-ops when the cursor is absent                            |
-| `createInfiniteSource()`               | Async append-mode (infinite scroll) collection                                              | Async          | `loadMore()` is a no-op once `meta.hasMore` is `false`                            |
-| `deriveSource()`                       | Create a reactive projection of another source                                              | Sync           | Derived source disposes automatically when parent disposes                        |
-| `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                         | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
-| `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                  | Async          | Delegates directly to `source.patch(changes)`                                     |
-| `applyLocalQuery()`                    | Typed wrapper: apply `LocalSourceQuery<T>` (including `filter` and `sort`) to a `LocalSource` | Async        | Delegates to `source.patch()`                                                     |
-| `applyRemoteQuery()`                   | Typed wrapper: apply `Partial<RemoteSourceQuery>` to a `RemoteSource`                       | Async          | Delegates to `source.patch()`                                                     |
-| `applyCursorQuery()`                   | Typed wrapper: apply limit/search patch to a `CursorSource`                                 | Async          | Delegates to `source.patch()`                                                     |
-| `applyInfiniteQuery()`                 | Typed wrapper: apply limit/search patch to an `InfiniteSource`                              | Async          | Delegates to `source.patch()`                                                     |
-| `SourceError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt` | Class          | Extends `Error`; access context via getters, not object spread                    |
-| `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                             | Class          | Extends `SourceError`; also caught by `instanceof SourceError`                    |
-| `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                       | Class          | Extends `SourceError`; catch separately from `SourceTimeoutError` if needed       |
-| `sourceState()`                        | Derive a discriminated union (`loading`/`error`/`success`) from any source                  | Sync           | Returns `'loading'` when `isSearchPending` is true too                            |
-| `itemRange()`                          | Compute 1-based display range from `SourceMeta`                                             | Sync           | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                            |
-| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot                                         | Async          | **Throws `SourceError`** if fetch fails                                           |
-| `prefetchSource({ keepSource: true })` | SSR: fetch first page, return both snapshot and live source                                 | Async          | Caller must call `source.dispose()` on the returned source                        |
-| `composeFetch()`                       | Layer middleware around a `fetch`-shaped function                                           | Sync           | Middlewares execute left-to-right (first = outermost)                             |
-| `filterContains()`                     | Preset predicate: case-insensitive substring match                                          | Sync           | Matches against a getter's string value                                           |
-| `filterEquals()`                       | Preset predicate: strict equality match                                                     | Sync           | Uses `Object.is` semantics                                                        |
-| `filterRange()`                        | Preset predicate: inclusive min/max range                                                   | Sync           | Works with numbers and Dates                                                      |
-| `sortBy()`                             | Preset comparator: sort by a getter value                                                   | Sync           | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates                      |
-| `encodeQuery()`                        | Serialize source query to URL params                                                        | Sync           | Filter and sort are JSON-stringified                                              |
-| `decodeQuery()`                        | Deserialize URL params (or `URLSearchParams`) to a source query                             | Sync           | Malformed JSON is silently dropped by default                                     |
-| `FetchEvent<TQuery>`                   | Type for `onFetch` telemetry callbacks                                                      | Type           | —                                                                                 |
-| `SearchOptions`                        | Options bag for `search()` — only field is `immediate?: boolean`                            | Type           | `search()` always returns `Promise<void>`; debounced unless `{ immediate: true }` |
+| Symbol                                 | Purpose                                                                                       | Execution mode | Common gotcha                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `createLocalSource()`                  | In-memory reactive collection with filter, sort, and search                                   | Sync           | Default `searchFn` is fuzzy, not substring                                        |
+| `createRemoteSource()`                 | Async server-backed collection with page navigation                                           | Async          | Fetches on creation; set `autoFetch: false` to delay                              |
+| `createCursorSource()`                 | Async collection navigated by cursor tokens                                                   | Async          | `next()`/`prev()` are no-ops when the cursor is absent                            |
+| `createInfiniteSource()`               | Async append-mode (infinite scroll) collection                                                | Async          | `loadMore()` is a no-op once `meta.hasMore` is `false`                            |
+| `deriveSource()`                       | Create a reactive projection of another source                                                | Sync           | Derived source disposes automatically when parent disposes                        |
+| `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                           | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
+| `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                    | Async          | Delegates directly to `source.patch(changes)`                                     |
+| `applyLocalQuery()`                    | Typed wrapper: apply `LocalSourceQuery<T>` (including `filter` and `sort`) to a `LocalSource` | Async          | Delegates to `source.patch()`                                                     |
+| `applyRemoteQuery()`                   | Typed wrapper: apply `Partial<RemoteSourceQuery>` to a `RemoteSource`                         | Async          | Delegates to `source.patch()`                                                     |
+| `applyCursorQuery()`                   | Typed wrapper: apply limit/search patch to a `CursorSource`                                   | Async          | Delegates to `source.patch()`                                                     |
+| `applyInfiniteQuery()`                 | Typed wrapper: apply limit/search patch to an `InfiniteSource`                                | Async          | Delegates to `source.patch()`                                                     |
+| `SourceError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt`   | Class          | Extends `Error`; access context via getters, not object spread                    |
+| `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourceError`; also caught by `instanceof SourceError`                    |
+| `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourceError`; catch separately from `SourceTimeoutError` if needed       |
+| `sourceState()`                        | Derive a discriminated union (`loading`/`error`/`success`) from any source                    | Sync           | Returns `'loading'` when `isSearchPending` is true too                            |
+| `itemRange()`                          | Compute 1-based display range from `SourceMeta`                                               | Sync           | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                            |
+| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot                                           | Async          | **Throws `SourceError`** if fetch fails                                           |
+| `prefetchSource({ keepSource: true })` | SSR: fetch first page, return both snapshot and live source                                   | Async          | Caller must call `source.dispose()` on the returned source                        |
+| `composeFetch()`                       | Layer middleware around a `fetch`-shaped function                                             | Sync           | Middlewares execute left-to-right (first = outermost)                             |
+| `filterContains()`                     | Preset predicate: case-insensitive substring match                                            | Sync           | Matches against a getter's string value                                           |
+| `filterEquals()`                       | Preset predicate: strict equality match                                                       | Sync           | Uses `Object.is` semantics                                                        |
+| `filterRange()`                        | Preset predicate: inclusive min/max range                                                     | Sync           | Works with numbers and Dates                                                      |
+| `sortBy()`                             | Preset comparator: sort by a getter value                                                     | Sync           | Supports `'asc'` / `'desc'`; handles strings, numbers, Dates                      |
+| `encodeQuery()`                        | Serialize source query to URL params                                                          | Sync           | Filter and sort are JSON-stringified                                              |
+| `decodeQuery()`                        | Deserialize URL params (or `URLSearchParams`) to a source query                               | Sync           | Malformed JSON is silently dropped by default                                     |
+| `FetchEvent<TQuery>`                   | Type for `onFetch` telemetry callbacks                                                        | Type           | —                                                                                 |
+| `SearchOptions`                        | Options bag for `search()` — only field is `immediate?: boolean`                              | Type           | `search()` always returns `Promise<void>`; debounced unless `{ immediate: true }` |
 
 ## Package Entry Point
 
@@ -228,25 +228,25 @@ console.log(source.current.length, source.meta.hasMore);
 
 All methods return `Promise<void>` unless noted.
 
-| Method / Property      | Description                                                                                                                                              |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `dispose()`            | Release internal resources; idempotent — safe to call multiple times                                                                                     |
-| `disposed`             | `true` after `dispose()` has been called                                                                                                                 |
-| `disposalSignal`       | `AbortSignal` that is aborted when `dispose()` is called; useful for framework lifecycle hooks                                                           |
-| `goTo(page)`           | Navigate to the given page number                                                                                                                        |
-| `goToLast()`           | Navigate to the last page                                                                                                                                |
-| `next()`               | Navigate to the next page (no-op at last page)                                                                                                           |
-| `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                       |
-| `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                      |
+| Method / Property      | Description                                                                                                                                                                           |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dispose()`            | Release internal resources; idempotent — safe to call multiple times                                                                                                                  |
+| `disposed`             | `true` after `dispose()` has been called                                                                                                                                              |
+| `disposalSignal`       | `AbortSignal` that is aborted when `dispose()` is called; useful for framework lifecycle hooks                                                                                        |
+| `goTo(page)`           | Navigate to the given page number                                                                                                                                                     |
+| `goToLast()`           | Navigate to the last page                                                                                                                                                             |
+| `next()`               | Navigate to the next page (no-op at last page)                                                                                                                                        |
+| `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                                                    |
+| `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                                                   |
 | `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
-| `reset()`              | Restore initial config and return to page 1                                                                                                              |
-| `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                |
-| `setData(data)`        | Replace the dataset and reset to page 1                                                                                                                  |
-| `setFilter(filter?)`   | Set or clear the filter predicate and reset to page 1                                                                                                    |
-| `setLimit(limit)`      | Set items per page and reset to page 1                                                                                                                   |
-| `setSort(sort?)`       | Set or clear the sorter and reset to page 1                                                                                                              |
-| `subscribe(listener)`  | Subscribe to state changes; returns unsubscribe function                                                                                                 |
-| `toQuery()`            | Return the current state as a `SourceQuery`                                                                                                              |
+| `reset()`              | Restore initial config and return to page 1                                                                                                                                           |
+| `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                                             |
+| `setData(data)`        | Replace the dataset and reset to page 1                                                                                                                                               |
+| `setFilter(filter?)`   | Set or clear the filter predicate and reset to page 1                                                                                                                                 |
+| `setLimit(limit)`      | Set items per page and reset to page 1                                                                                                                                                |
+| `setSort(sort?)`       | Set or clear the sorter and reset to page 1                                                                                                                                           |
+| `subscribe(listener)`  | Subscribe to state changes; returns unsubscribe function                                                                                                                              |
+| `toQuery()`            | Return the current state as a `SourceQuery`                                                                                                                                           |
 
 ## `RemoteSource<T, TFilter, TSort>` Methods
 

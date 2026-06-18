@@ -22,9 +22,23 @@ function serializeErrors(ctx: Bindings): Bindings {
 
 type ParsedArgs = { context: Bindings | undefined; message: string | undefined };
 
-function parseArgs(msgOrCtx: unknown, second: unknown): ParsedArgs {
+function parseArgs(msgOrCtx: unknown, second: unknown, third?: unknown): ParsedArgs {
   if (typeof msgOrCtx === 'string') {
     return { context: undefined, message: msgOrCtx };
+  }
+
+  if (msgOrCtx instanceof Error) {
+    const ctx: Bindings = second !== null && typeof second === 'object' ? (second as Bindings) : {};
+
+    return {
+      context: { err: serializeError(msgOrCtx), ...ctx },
+      message:
+        third !== undefined
+          ? String(third)
+          : second !== undefined && typeof second !== 'object'
+            ? String(second)
+            : undefined,
+    };
   }
 
   if (typeof msgOrCtx === 'object' && msgOrCtx !== null) {
@@ -104,12 +118,12 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
     }
   };
 
-  const emit = (type: LogType, msgOrCtx: unknown, second?: unknown): void => {
+  const emit = (type: LogType, msgOrCtx: unknown, second?: unknown, third?: unknown): void => {
     if (isDisposed) return;
 
     if (!passes(type)) return;
 
-    const { context, message } = parseArgs(msgOrCtx, second);
+    const { context, message } = parseArgs(msgOrCtx, second, third);
     const resolvedBindings = resolveBindings(ownBindings);
 
     const data: Bindings = context
@@ -206,7 +220,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
 
     child: childLogger,
 
-    debug: (m: unknown, s?: unknown) => emit('debug', m, s),
+    debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
 
     get disposalSignal(): AbortSignal {
       return disposeController.signal;
@@ -225,15 +239,15 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
 
     enabled: (type: LogLevel): boolean => isLevelEnabled(logLevel, type),
 
-    error: (m: unknown, s?: unknown) => emit('error', m, s),
+    error: (m: unknown, s?: unknown, t?: unknown) => emit('error', m, s, t),
 
-    fatal: (m: unknown, s?: unknown) => emit('fatal', m, s),
+    fatal: (m: unknown, s?: unknown, t?: unknown) => emit('fatal', m, s, t),
 
     group: (label, fn, level) => wrapGroup(false, label, fn, level),
 
     groupCollapsed: (label, fn, level) => wrapGroup(true, label, fn, level),
 
-    info: (m: unknown, s?: unknown) => emit('info', m, s),
+    info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
 
     get logLevel(): LogLevel {
       return logLevel;
@@ -259,7 +273,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
 
     use: (mw: LogMiddleware): Logger => childLogger({ middleware: [...middleware, mw] }),
 
-    warn: (m: unknown, s?: unknown) => emit('warn', m, s),
+    warn: (m: unknown, s?: unknown, t?: unknown) => emit('warn', m, s, t),
 
     withBindings: (bindings: Bindings): Logger => childLogger({ bindings }),
   };

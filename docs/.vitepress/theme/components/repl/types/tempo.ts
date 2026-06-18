@@ -2,6 +2,22 @@ export const tempoTypes = `
 declare module '/tempo' {
   export { Temporal };
 
+  // ─── Errors ──────────────────────────────────────────────────────────────────
+
+  export type TempoErrorCode = 'INVALID_INPUT' | 'INVALID_TZ' | 'MISSING_TZ' | 'UNSUPPORTED_INPUT';
+
+  export const TempoErrorCode: Readonly<{
+    INVALID_INPUT: 'INVALID_INPUT';
+    INVALID_TZ: 'INVALID_TZ';
+    MISSING_TZ: 'MISSING_TZ';
+    UNSUPPORTED_INPUT: 'UNSUPPORTED_INPUT';
+  }>;
+
+  export class TempoError extends TypeError {
+    readonly code: TempoErrorCode;
+    constructor(code: TempoErrorCode, message: string);
+  }
+
   // ─── Input types ─────────────────────────────────────────────────────────────
 
   export type TimeInput =

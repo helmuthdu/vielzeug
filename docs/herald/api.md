@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/herald.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                | Purpose                                              | Execution mode | Common gotcha                                                                      |
 | --------------------- | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------- |

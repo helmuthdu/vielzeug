@@ -73,7 +73,7 @@ export function parsePlainDate(input: string): Temporal.PlainDate {
 
 /**
  * Parses an ISO 8601 string into a timezone-free `PlainDateTime` (wall-clock time).
- * Use {@link toInstant} or {@link toZoned} to attach a timezone when needed.
+ * Use {@link toInstant} or {@link inTz} to attach a timezone when needed.
  *
  * @example
  * ```ts

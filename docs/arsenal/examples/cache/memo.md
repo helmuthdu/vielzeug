@@ -16,16 +16,13 @@ Use `memo(fn, options?)` to memoize with an optional `maxSize` (LRU cap) and a c
 ```ts
 import { memo } from '@vielzeug/arsenal/cache';
 
-const expensiveCalc = memo(
-  (n: number) => n * n,
-  { maxSize: 100 },
-);
+const expensiveCalc = memo((n: number) => n * n, { maxSize: 100 });
 
 expensiveCalc(4); // computed: 16
 expensiveCalc(4); // cached: 16
-expensiveCalc.size;          // 1
+expensiveCalc.size; // 1
 expensiveCalc.invalidate(4); // removes entry for 4
-expensiveCalc.clear();       // clears all entries
+expensiveCalc.clear(); // clears all entries
 ```
 
 #### Custom key for object arguments
@@ -33,10 +30,9 @@ expensiveCalc.clear();       // clears all entries
 ```ts
 import { memo } from '@vielzeug/arsenal/cache';
 
-const formatLabel = memo(
-  (params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`,
-  { key: ({ page, size }) => `${page}:${size}` },
-);
+const formatLabel = memo((params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`, {
+  key: ({ page, size }) => `${page}:${size}`,
+});
 
 formatLabel({ page: 1, size: 20 }); // computed
 formatLabel({ page: 1, size: 20 }); // cached

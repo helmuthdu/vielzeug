@@ -594,7 +594,7 @@ define<SgCarouselProps, SgCarouselEvents>(CAROUSEL_TAG, {
 
       return () => {
         stopAutoplay();
-        swipe.cleanup();
+        swipe.dispose();
         slot.removeEventListener('slotchange', onSlotChange);
         marqueeInstance?.cleanup();
       };

@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/coins.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                                       | Purpose                                                       | Execution | Common gotcha                                                                                                                           |
 | -------------------------------------------- | ------------------------------------------------------------- | --------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,6 +36,7 @@ description: Complete API reference for @vielzeug/coins.
 | `withAmount()`                               | Clone a `Money` with a different amount (same currency)       | Sync      |                                                                                                                                         |
 | `isMoney()`                                  | Type guard — checks own `bigint` amount and `string` currency | Sync      | Does not validate the currency code — shape check only                                                                                  |
 | `validateCurrencyCode()`                     | Pre-validate an ISO 4217 code; throws `InvalidCurrencyError`  | Sync      | Returns the code string on success; same validation as `money()`                                                                        |
+| `getCurrencyDecimals()`                      | Return the minor-unit decimal count for a currency code       | Sync      | Throws `InvalidCurrencyError` for unknown codes; results are cached                                                                     |
 
 ## Package Entry Point
 
@@ -420,6 +421,23 @@ validateCurrencyCode('FAKE'); // throws InvalidCurrencyError: Invalid ISO 4217 c
 // Pre-validate before constructing
 const code = validateCurrencyCode(userInput);
 const m = money(0n, code); // no re-validation cost — cached
+```
+
+### `getCurrencyDecimals(currencyCode)`
+
+```ts
+function getCurrencyDecimals(currencyCode: string): number;
+```
+
+Returns the number of minor-unit decimal places for a given ISO 4217 currency code (e.g. `USD→2`, `JPY→0`, `KWD→3`). Uses `Intl.NumberFormat` internally; results are cached for performance. Throws `InvalidCurrencyError` for unrecognised codes.
+
+Useful when building custom formatters or when you need to know the precision for a currency before constructing a `Money` value.
+
+```ts
+getCurrencyDecimals('USD'); // 2
+getCurrencyDecimals('JPY'); // 0
+getCurrencyDecimals('KWD'); // 3
+getCurrencyDecimals('FAKE'); // throws InvalidCurrencyError
 ```
 
 ## Rounding

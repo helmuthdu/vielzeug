@@ -5,7 +5,7 @@ description: Complete API reference for Clockwork.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                | Purpose                                      | Execution mode | Common gotcha                                               |
 | --------------------- | -------------------------------------------- | -------------- | ----------------------------------------------------------- |
@@ -726,7 +726,9 @@ The identifier is both the const object (value) and the string union type:
 ```ts
 import type { MachineErrorCode } from '@vielzeug/clockwork';
 
-function handleCode(code: MachineErrorCode) { /* ... */ }
+function handleCode(code: MachineErrorCode) {
+  /* ... */
+}
 ```
 
 **Error codes:**

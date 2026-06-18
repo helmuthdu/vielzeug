@@ -12,6 +12,10 @@ import { applyRounding, parseRational, validateCurrencyCode } from './utils';
  *             Defaults to `'half-away-from-zero'`.
  *
  * @throws {CurrencyMismatchError} If `money.currency` does not match `rate.from`.
+ *   Note: `rate.from` is validated implicitly — because `money.currency` is always a valid ISO 4217
+ *   code (enforced by `money()`), the mismatch check ensures `rate.from` must equal a valid code.
+ *   If you supply an invalid code in `rate.from`, you will receive `CurrencyMismatchError`, not
+ *   `InvalidCurrencyError`. Pre-validate `rate.from` with `validateCurrencyCode()` if needed.
  * @throws {InvalidCurrencyError}  If `rate.to` is not a recognised ISO 4217 currency code.
  * @throws {RangeError}            If `rate.rate` is an empty string or a negative value.
  *

@@ -18,9 +18,9 @@ import { draw, drawMany } from '@vielzeug/arsenal';
 
 const items = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-draw(items);          // e.g. 7 — one random element; undefined for empty array
-drawMany(items, 3);   // e.g. [7, 2, 9] — 3 unique picks
-drawMany(items, 1);   // e.g. [4]
+draw(items); // e.g. 7 — one random element; undefined for empty array
+drawMany(items, 3); // e.g. [7, 2, 9] — 3 unique picks
+drawMany(items, 1); // e.g. [4]
 ```
 
 ### Pitfalls

@@ -1236,6 +1236,24 @@ describe('applyReorder', () => {
 
     expect(result.map((i) => i.id)).toEqual(['b', 'a', 'c']);
   });
+
+  it('does not drop numeric items with value 0', () => {
+    const items = [0, 1, 2];
+    const result = applyReorder(items, ['b', 'a', 'c'], (n) => ['a', 'b', 'c'][n]!);
+
+    expect(result).toEqual([1, 0, 2]);
+  });
+
+  it('does not drop falsy-value items (empty string)', () => {
+    const items = [
+      { id: 'first', val: '' },
+      { id: 'second', val: 'x' },
+      { id: 'third', val: 'y' },
+    ];
+    const result = applyReorder(items, ['second', 'first', 'third'], (item) => item.id);
+
+    expect(result.map((item) => item.val)).toEqual(['x', '', 'y']);
+  });
 });
 
 // ─── scope validation ─────────────────────────────────────────────────────────

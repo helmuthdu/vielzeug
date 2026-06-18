@@ -42,6 +42,7 @@ exports:
     withAmount,
     isMoney,
     validateCurrencyCode,
+    getCurrencyDecimals,
     CurrencyMismatchError,
     InvalidCurrencyError,
   ]

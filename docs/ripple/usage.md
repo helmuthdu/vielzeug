@@ -144,11 +144,11 @@ effect(() => renderHighFrequency(pos.value), { scheduler: (run) => requestIdleCa
 effect(() => processGraph(root.value), { maxIterations: 500 });
 ```
 
-| Option          | Type                                           | Default  | Description                                                |
-| --------------- | ---------------------------------------------- | -------- | ---------------------------------------------------------- |
-| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'`, or a custom function            |
-| `name`          | `string`                                       | —        | Shown in error messages                                    |
-| `maxIterations` | `number`                                       | `100`    | Loop guard threshold for this effect                       |
+| Option          | Type                                           | Default  | Description                                     |
+| --------------- | ---------------------------------------------- | -------- | ----------------------------------------------- |
+| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'`, or a custom function |
+| `name`          | `string`                                       | —        | Shown in error messages                         |
+| `maxIterations` | `number`                                       | `100`    | Loop guard threshold for this effect            |
 
 For debugging which deps trigger re-runs, use `debugEffect()` instead of `effect()` — see [debugEffect](#debugeffect) below.
 
@@ -366,6 +366,7 @@ await s.run(async () => {
   const db = await openDatabase();
 });
 ```
+
 :::
 
 `asyncScope(setup)` accepts an async setup function and captures `onCleanup()` registrations from the synchronous preamble before the first `await`.

@@ -36,6 +36,15 @@ export class CatalogEntry {
   setAll(flat: Iterable<[string, string]>): void {
     for (const [k, v] of flat) this.set(k, v);
   }
+
+  clone(): CatalogEntry {
+    const copy = new CatalogEntry();
+
+    for (const [k, v] of this.entries) copy.entries.set(k, v);
+    for (const p of this.prefixes) copy.prefixes.add(p);
+
+    return copy;
+  }
 }
 
 export function flattenStrings(

@@ -26,8 +26,8 @@ const pulse = createPulse<ServerEvents>('wss://api.example.com/ws', {
     delay: (attempt) => Math.min(500 * Math.pow(2, attempt), 30_000),
   },
   heartbeat: {
-    interval: 20_000,  // send a ping every 20 s
-    timeout: 8_000,    // treat connection as dead if no pong within 8 s
+    interval: 20_000, // send a ping every 20 s
+    timeout: 8_000, // treat connection as dead if no pong within 8 s
   },
   onOpen: () => console.log('connected / reconnected'),
   onClose: (code, reason) => console.log('closed', code, reason),
@@ -40,9 +40,11 @@ effect(() => {
 
   banner.hidden = status === 'open';
   banner.textContent =
-    status === 'connecting' ? 'Connecting…' :
-    status === 'reconnecting' ? 'Connection lost. Reconnecting…' :
-    'Disconnected';
+    status === 'connecting'
+      ? 'Connecting…'
+      : status === 'reconnecting'
+        ? 'Connection lost. Reconnecting…'
+        : 'Disconnected';
 });
 
 pulse.on('chat:message', ({ user, text }) => appendMessage(user, text));

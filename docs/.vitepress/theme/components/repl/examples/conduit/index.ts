@@ -10,6 +10,7 @@ import { resolveOptionalExample } from './resolve-optional';
 import { scopedExecutionExample } from './scoped-execution';
 import { syncHotPathExample } from './sync-hot-path';
 import { testingExample } from './testing';
+import { trySyncResolveExample } from './try-sync-resolve';
 import { validateExample } from './validate';
 
 export const conduitExamples = {
@@ -25,5 +26,6 @@ export const conduitExamples = {
   'scoped-execution': scopedExecutionExample,
   'sync-hot-path': syncHotPathExample,
   testing: testingExample,
+  'try-sync-resolve': trySyncResolveExample,
   validate: validateExample,
 };

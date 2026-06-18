@@ -332,6 +332,8 @@ export function createDatePickerControl(options: DatePickerControlOptions): Date
     displayYear: () => _displayYear,
 
     goTo(year: number, month: number): void {
+      if (!Number.isFinite(year)) return;
+
       _displayYear = year;
       _displayMonth = Math.max(1, Math.min(12, month));
     },

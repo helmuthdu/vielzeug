@@ -1,6 +1,6 @@
 import type { AxisConfig, BandScale, Scale } from '../types';
 
-import { createSvgElement, setAttributes } from '../svg/element';
+import { createSvgElement, removeChildren, setAttributes } from '../svg/element';
 import { createTextElement } from '../svg/text';
 
 type AnyScale = BandScale | Scale<Date> | Scale<number>;
@@ -9,7 +9,7 @@ const defaultTickFormat = (v: Date | number | string): string =>
   v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
 
 export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisConfig, length: number): void {
-  while (parent.firstChild) parent.removeChild(parent.firstChild);
+  removeChildren(parent);
 
   const position = config.position ?? 'bottom';
   const isHorizontal = position === 'bottom' || position === 'top';

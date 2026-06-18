@@ -402,20 +402,26 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * Eagerly execute the data loaders for a named route without navigating.
    * Results are cached and reused during the next navigation to the same route.
    * Concurrent calls for the same route are deduplicated.
+   *
+   * Pass the same `query` you intend to navigate with to ensure the cached result
+   * matches the navigation's cache key. Without `query`, the preload key is the
+   * bare path — any navigation with a query string will produce a cache miss.
    */
   async preload<Name extends RouteName<TRoutes>>(
     name: Name,
     params?: PathParams<RoutePathByName<TRoutes, Name>>,
+    query?: QueryParams,
   ): Promise<void> {
     const route = getRouteByName(name, this.#routesByName);
-    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams, undefined);
+    const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams, query);
 
     const inflight = this.#preload.getInflight(cacheKey);
 
     if (inflight) return inflight;
 
     const controller = new AbortController();
-    const work = this.#doPreload(cacheKey, controller.signal).finally(() => {
+    const signal = AbortSignal.any([controller.signal, this.#disposeController.signal]);
+    const work = this.#doPreload(cacheKey, signal, query).finally(() => {
       this.#preload.untrack(cacheKey);
     });
 
@@ -708,7 +714,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   // ─── Private: preload ─────────────────────────────────────────────────────
 
-  async #doPreload(startUrl: string, signal?: AbortSignal): Promise<void> {
+  async #doPreload(startUrl: string, signal?: AbortSignal, query?: QueryParams): Promise<void> {
     const prepared = await this.#resolveUrl(startUrl);
 
     if (prepared.type !== 'matched') return;
@@ -729,7 +735,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
     const results = await this.#loadDataDrain(defs, context, effectiveSignal);
 
-    this.#preload.set(buildPreloadKey(this.#base, record.path, params, location.query), results);
+    this.#preload.set(buildPreloadKey(this.#base, record.path, params, query ?? location.query), results);
   }
 
   // ─── Private: route preparation ───────────────────────────────────────────
@@ -938,12 +944,24 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
         const nfBranch = buildMatchBranch(nfDefs, {}, currentLocation.pathname, [undefined]);
         let committed = false;
 
+        // Apply global coerceSearch to the unmatched location so notFound handlers
+        // receive typed query params, consistent with matched-route behaviour.
+        let nfResolvedQuery: ResolvedQueryParams = currentLocation.query;
+
+        if (this.#globalCoerceSearch) {
+          try {
+            nfResolvedQuery = this.#globalCoerceSearch(currentLocation.query);
+          } catch (err) {
+            this.#reportError(err, { source: 'coerce-search' });
+          }
+        }
+
         const run = async (): Promise<void> => {
           if (!isCurrent()) return;
 
           const context = createRouteContext<TRoutes>(
             currentLocation,
-            currentLocation.query as ResolvedQueryParams,
+            nfResolvedQuery,
             {},
             nfBranch,
             (target, options) => this.navigate(target, options),

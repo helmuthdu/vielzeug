@@ -11,7 +11,7 @@ You want drag-and-drop reordering to feel instant: the UI updates immediately wi
 
 ### Solution
 
-Use `onBeforeReorder` to snapshot element positions for a FLIP animation and return a revert function from `onReorder` so `sortable.revert()` can roll back on failure:
+Use `onBeforeReorder` to snapshot element positions for a FLIP animation and call `event.setRevert(fn)` inside `onReorder` so `sortable.revert()` can roll back on failure:
 
 ```html
 <ul id="task-list">
@@ -82,15 +82,16 @@ const sortable = createSortable({
     });
   },
 
-  onReorder: (orderedIds) => {
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids, setRevert }) => {
     const previous = tasks;
-    tasks = applyReorder(tasks, orderedIds, (t) => t.id);
+    tasks = applyReorder(tasks, ids, (t) => t.id);
 
-    // Return a revert function — sortable.revert() will call this on failure.
-    return () => {
+    // Register a revert function — sortable.revert() will call this on failure.
+    setRevert(() => {
       tasks = previous;
       renderList(tasks);
-    };
+    });
   },
 });
 
@@ -108,7 +109,7 @@ async function handleReorder(orderedIds: string[]) {
 
 1. `onBeforeReorder(from, to)` fires before the DOM reorders. Record element positions here.
 2. The DOM commits (items move to their new positions).
-3. `onReorder(orderedIds)` fires. Update your data array optimistically and return a revert function.
+3. `onReorder({ ids, setRevert })` fires. Update your data array optimistically and call `setRevert()` with a rollback function.
 4. If the server call fails, call `sortable.revert()`. It invokes the stored revert function and clears it so subsequent failures are no-ops.
 
 Only the **most recent** reorder can be reverted — a new reorder overwrites the stored revert function.

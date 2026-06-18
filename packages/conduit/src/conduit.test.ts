@@ -25,6 +25,7 @@ import {
   SyncResolutionError,
   token,
   tryResolve,
+  trySyncResolve,
 } from './conduit';
 
 // ---------------------------------------------------------------------------
@@ -360,7 +361,7 @@ describe('tryResolve()', () => {
     if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
   });
 
-  it('returns { ok: false, error } when factory throws', async () => {
+  it('re-throws when factory throws a non-ProviderNotFoundError', async () => {
     const T = token<string>('T');
     const c = createContainer();
 
@@ -368,24 +369,16 @@ describe('tryResolve()', () => {
       throw new Error('boom');
     });
 
-    const result = await tryResolve(c, T);
-
-    expect(result.ok).toBe(false);
-
-    if (!result.ok) expect((result.error as Error).message).toBe('boom');
+    await expect(tryResolve(c, T)).rejects.toThrow('boom');
   });
 
-  it('returns { ok: false, error } when container is disposed', async () => {
+  it('re-throws ContainerDisposedError when container is disposed', async () => {
     const T = token<string>('T');
     const c = createContainer();
 
     await c.dispose();
 
-    const result = await tryResolve(c, T);
-
-    expect(result.ok).toBe(false);
-
-    if (!result.ok) expect(result.error).toBeInstanceOf(ContainerDisposedError);
+    await expect(tryResolve(c, T)).rejects.toBeInstanceOf(ContainerDisposedError);
   });
 });
 
@@ -1683,7 +1676,7 @@ describe('Container — resolveSync', () => {
 // ---------------------------------------------------------------------------
 
 describe('tryResolve() edge cases', () => {
-  it('returns { ok: false, error: CircularDependencyError } for a circular dep', async () => {
+  it('re-throws CircularDependencyError for a circular dep', async () => {
     const A = token('A');
     const B = token('B');
     const c = createContainer();
@@ -1691,11 +1684,7 @@ describe('tryResolve() edge cases', () => {
     c.factory(A, (r) => r.resolve(B));
     c.factory(B, (r) => r.resolve(A));
 
-    const result = await tryResolve(c, A);
-
-    expect(result.ok).toBe(false);
-
-    if (!result.ok) expect(result.error).toBeInstanceOf(CircularDependencyError);
+    await expect(tryResolve(c, A)).rejects.toBeInstanceOf(CircularDependencyError);
   });
 });
 
@@ -2374,5 +2363,271 @@ describe('InferTokenTypes utility type', () => {
     const interceptor: ResolveInterceptor = (_tok, _value) => {};
 
     expect(typeof interceptor).toBe('function');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// freeze() idempotency (D3)
+// ---------------------------------------------------------------------------
+
+describe('Container — freeze() idempotency', () => {
+  it('calling freeze() twice is a no-op (does not re-run validation)', () => {
+    const c = createContainer();
+    const A = token<string>('A');
+
+    c.value(A, 'a');
+
+    expect(() => {
+      c.freeze();
+      c.freeze();
+    }).not.toThrow();
+  });
+
+  it('freeze() on a disposed container still throws ContainerDisposedError', async () => {
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => c.freeze()).toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tryResolve() — refined contract (D2)
+// ---------------------------------------------------------------------------
+
+describe('tryResolve() — refined contract', () => {
+  it('returns { ok: false } only for ProviderNotFoundError', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+    const result = await tryResolve(c, T);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+  });
+
+  it('returns { ok: true, value } when factory succeeds', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, async () => 'resolved');
+
+    const resultOk = await tryResolve(c, T);
+
+    expect(resultOk.ok).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// trySyncResolve() (F2)
+// ---------------------------------------------------------------------------
+
+describe('trySyncResolve()', () => {
+  it('returns { ok: true, value } for a registered value', async () => {
+    const T = token<number>('T');
+    const c = createContainer();
+
+    c.value(T, 99);
+
+    const result = trySyncResolve(c, T);
+
+    expect(result).toEqual({ ok: true, value: 99 });
+  });
+
+  it('returns { ok: false, error: ProviderNotFoundError } when not registered', async () => {
+    const T = token<number>('T');
+    const c = createContainer();
+    const result = trySyncResolve(c, T);
+
+    expect(result.ok).toBe(false);
+
+    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+  });
+
+  it('re-throws SyncResolutionError for an unresolved singleton', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, async () => 'hello');
+
+    expect(() => trySyncResolve(c, T)).toThrow(SyncResolutionError);
+  });
+
+  it('re-throws ContainerDisposedError when container is disposed', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => trySyncResolve(c, T)).toThrow(ContainerDisposedError);
+  });
+
+  it('returns { ok: true, value } after resolveAll() warms the singleton', async () => {
+    const T = token<string>('T');
+    const c = createContainer();
+
+    c.factory(T, async () => 'warm');
+    await c.resolveAll();
+
+    const result = trySyncResolve(c, T);
+
+    expect(result).toEqual({ ok: true, value: 'warm' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// resolveAll() — fires events and interceptors (D1)
+// ---------------------------------------------------------------------------
+
+describe('Container — resolveAll() events and interceptors', () => {
+  it('fires resolve events for each pre-warmed singleton', async () => {
+    const A = token<string>('A');
+    const B = token<number>('B');
+    const c = createContainer();
+
+    c.factory(A, async () => 'hello');
+    c.factory(B, async () => 42);
+
+    const events: string[] = [];
+
+    c.on((e) => {
+      if (e.type === 'resolve') events.push(e.description);
+    });
+
+    await c.resolveAll();
+
+    expect(events).toContain('A');
+    expect(events).toContain('B');
+  });
+
+  it('fires onResolve interceptors for each pre-warmed singleton', async () => {
+    const A = token<string>('A');
+    const c = createContainer();
+
+    c.factory(A, async () => 'hello');
+
+    const intercepted: string[] = [];
+
+    c.onResolve((_tok, value) => {
+      intercepted.push(value as string);
+    });
+
+    await c.resolveAll();
+
+    expect(intercepted).toContain('hello');
+  });
+
+  it('does not fire events for already-cached singletons on second resolveAll()', async () => {
+    const A = token<string>('A');
+    const c = createContainer();
+
+    c.factory(A, async () => 'a');
+    await c.resolveAll();
+
+    const events: string[] = [];
+
+    c.on((e) => {
+      if (e.type === 'resolve') events.push(e.description);
+    });
+
+    await c.resolveAll();
+
+    expect(events).toContain('A');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// inspect() — deps field (C1)
+// ---------------------------------------------------------------------------
+
+describe('Container — inspect() deps field', () => {
+  it('surfaces declared deps in ContainerNode.deps', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.factory(B, (r) => r.resolve(A), { deps: [A] });
+
+    const graph = c.inspect();
+    const nodeB = graph.nodes.find((n) => n.description === 'B');
+
+    expect(nodeB?.deps).toEqual(['A']);
+  });
+
+  it('omits deps field when no deps declared', () => {
+    const A = token<string>('A');
+    const c = createContainer();
+
+    c.value(A, 'a');
+
+    const graph = c.inspect();
+    const nodeA = graph.nodes.find((n) => n.description === 'A');
+
+    expect(nodeA?.deps).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createScope() auto-naming (C2)
+// ---------------------------------------------------------------------------
+
+describe('Container — createScope() auto-naming', () => {
+  it('includes scope token name in child container name when no explicit name given', () => {
+    const RequestScope = scope('request');
+    const root = createContainer({ name: 'root' });
+    const child = root.createScope(RequestScope);
+
+    expect(child.name).toBe('root:request');
+  });
+
+  it('uses explicit name when provided, ignoring scope token', () => {
+    const RequestScope = scope('request');
+    const root = createContainer({ name: 'root' });
+    const child = root.createScope(RequestScope, { name: 'my-scope' });
+
+    expect(child.name).toBe('my-scope');
+  });
+
+  it('falls back to :child when createScope called with no scope token', () => {
+    const root = createContainer({ name: 'root' });
+    const child = root.createScope();
+
+    expect(child.name).toBe('root:child');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// FactoryResolver.resolveSync (F1)
+// ---------------------------------------------------------------------------
+
+describe('FactoryResolver.resolveSync()', () => {
+  it('allows a factory to synchronously access a pre-resolved singleton', async () => {
+    const Config = token<{ env: string }>('Config');
+    const Service = token<string>('Service');
+    const c = createContainer();
+
+    c.value(Config, { env: 'test' });
+    c.factory(Service, (r) => r.resolveSync(Config).env);
+
+    const result = await c.resolve(Service);
+
+    expect(result).toBe('test');
+  });
+
+  it('throws SyncResolutionError if dep not yet resolved', async () => {
+    const Dep = token<string>('Dep');
+    const Service = token<string>('Service');
+    const c = createContainer();
+
+    c.factory(Dep, async () => 'dep-value');
+    c.factory(Service, (r) => {
+      r.resolveSync(Dep);
+
+      return 'service';
+    });
+
+    await expect(c.resolve(Service)).rejects.toThrow(SyncResolutionError);
   });
 });

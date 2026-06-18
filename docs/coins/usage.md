@@ -547,3 +547,4 @@ const value = money(parsed.amount, parsed.currency);
 - Pass `ExchangeRate.rate` as a string, not a number. The string is parsed into an exact rational fraction; a `number` would introduce float error before the bigint conversion.
 - Use `sum()` instead of a manual reduce over `add()` — it validates currency consistency across the entire array upfront, so any mismatch is caught immediately with a clear error rather than failing at a mid-array `add()` call.
 - Use `instanceof CurrencyMismatchError` / `instanceof InvalidCurrencyError` in `catch` blocks rather than string-matching error messages — they are stable, typed, and extend built-in error types.
+- Use `getCurrencyDecimals(code)` when building custom formatters or lookup tables that need to know the minor-unit precision for a currency — it is the same call `money()` makes internally and results are cached, so it is cheap to call repeatedly.

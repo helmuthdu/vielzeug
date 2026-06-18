@@ -1,6 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { BoundaryUnit, TimeInput } from './types';
+import type { BoundaryUnit, DateTimeDisambiguation, TimeInput } from './types';
 
 import { toZoned } from './_convert';
 
@@ -30,7 +30,7 @@ const BOUNDARY_CLEAR: Record<Exclude<BoundaryUnit, 'week'>, Temporal.ZonedDateTi
 export function floorToUnit(
   input: TimeInput,
   unit: BoundaryUnit,
-  options: { prefer?: string; tz: string; weekStartsOn?: number },
+  options: { prefer?: DateTimeDisambiguation; tz: string; weekStartsOn?: number },
 ): Temporal.Instant {
   const zoned = toZoned(input, { prefer: options.prefer, tz: options.tz });
 

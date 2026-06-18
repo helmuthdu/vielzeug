@@ -26,8 +26,8 @@ console.log('has nav.contact:', nav.has('contact')) // true
 await i18n.setLocale('de')
 console.log('nav.home (de):', nav.t('home'))    // 'Startseite'
 
-// scope() returns a new object on every call — do not compare references
-console.log('same ref?', i18n.scope('nav') === i18n.scope('nav')) // false
+// scope() is memoized per prefix — same object reference for the same prefix
+console.log('same ref?', i18n.scope('nav') === i18n.scope('nav')) // true
 
 // ── has() ────────────────────────────────────────────────────────────────────
 // has() returns true for leaf keys, branch keys, and pipe-plural base keys.

@@ -1,11 +1,11 @@
 import { Temporal } from '@js-temporal/polyfill';
 
-import type { TimeInput } from './types';
+import type { DateTimeDisambiguation, TimeInput } from './types';
 
-import { fail } from './_error';
+import { fail, TempoErrorCode } from './_error';
 import { validateTz } from './_tz';
 
-type WithPrefer = { prefer?: string };
+type WithPrefer = { prefer?: DateTimeDisambiguation };
 type TimeOptionsWithTz = { tz: string };
 
 // ─── Direct resolution ────────────────────────────────────────────────────────
@@ -20,7 +20,11 @@ export function toInstant(input: TimeInput, options: WithPrefer & { tz?: string 
   if (input instanceof Temporal.ZonedDateTime) return input.toInstant();
 
   if (input instanceof Temporal.PlainDateTime) {
-    if (!options.tz) fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.');
+    if (!options.tz)
+      fail(
+        'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
+        TempoErrorCode.MISSING_TZ,
+      );
 
     return input
       .toZonedDateTime(validateTz(options.tz), {
@@ -30,12 +34,16 @@ export function toInstant(input: TimeInput, options: WithPrefer & { tz?: string 
   }
 
   if (input instanceof Temporal.PlainDate) {
-    if (!options.tz) fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.');
+    if (!options.tz)
+      fail(
+        'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
+        TempoErrorCode.MISSING_TZ,
+      );
 
     return input.toZonedDateTime({ timeZone: validateTz(options.tz) }).toInstant();
   }
 
-  fail(`Unsupported time input type: ${String(input)}`);
+  fail(`Unsupported time input type: ${String(input)}`, TempoErrorCode.UNSUPPORTED_INPUT);
 }
 
 /**
@@ -72,7 +80,7 @@ export function toZoned(
 
   if (input instanceof Temporal.Instant) return input.toZonedDateTimeISO(tz);
 
-  fail(`Unsupported time input type: ${String(input)}`);
+  fail(`Unsupported time input type: ${String(input)}`, TempoErrorCode.UNSUPPORTED_INPUT);
 }
 
 /**

@@ -204,18 +204,25 @@ container.factory(Config, async () => {
 
 ## Resolving Without Throwing
 
-Use `tryResolve()` (free function) to resolve a token as a discriminated union instead of throwing:
+Use `tryResolve()` (free function) to resolve a token as a discriminated union instead of throwing. It returns `{ ok: false, error }` **only** when the token is not registered — all other errors (factory failures, `ContainerDisposedError`, circular deps) are re-thrown:
 
 ```ts
-import { tryResolve } from '@vielzeug/conduit';
+import { tryResolve, trySyncResolve } from '@vielzeug/conduit';
 
 const result = await tryResolve(container, OptionalPlugin);
 if (result.ok) {
   result.value.init();
-} else {
-  console.warn('OptionalPlugin not available:', result.error);
+}
+
+// After resolveAll(), use the synchronous variant:
+await container.resolveAll();
+const syncResult = trySyncResolve(container, OptionalPlugin);
+if (syncResult.ok) {
+  syncResult.value.init();
 }
 ```
+
+> **Note:** `trySyncResolve()` re-throws `SyncResolutionError` and `ContainerDisposedError` — it only swallows `ProviderNotFoundError`.
 
 Use `resolveMany()` to resolve multiple tokens in parallel with a typed tuple result:
 
@@ -231,13 +238,13 @@ Call `freeze()` after all registrations are complete. It validates the graph, th
 const container = createContainer({ name: 'app' });
 
 await loadModules(container, dbModule, authModule, serviceModule);
-container.freeze(); // validates + seals
+container.freeze(); // validates declared deps + seals
 
 // Later in application code:
 container.value(SomeToken, x); // throws ContainerFrozenError: Container 'app' is frozen ...
 ```
 
-`freeze()` checks that every registered token has a provider. Declare `deps` on a factory to also enable static cycle detection at freeze time:
+`freeze()` is **idempotent** — calling it multiple times is safe and a no-op after the first call. Declare `deps` on a factory to enable static validation at freeze time:
 
 ```ts
 const Logger = token<Logger>('Logger');
@@ -272,14 +279,15 @@ By default, cycle detection runs lazily at resolve time. To catch cycles earlier
 
 ## Inspecting the Container
 
-`container.inspect()` returns a serializable graph of registered tokens. By default it traverses the full parent chain. Pass `{ deep: false }` to limit to the local registry.
+`container.inspect()` returns a serializable graph of registered tokens. By default it traverses the full parent chain. Pass `{ deep: false }` to limit to the local registry. Declared `deps` are included in each `ContainerNode.deps` (as token description strings) when present.
 
 ```ts
 const graph = container.inspect(); // deep traversal (default)
 const local = container.inspect({ deep: false }); // local only
 
 for (const node of graph.nodes) {
-  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})`);
+  const depList = node.deps ? ` → [${node.deps.join(', ')}]` : '';
+  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})${depList}`);
 }
 ```
 
@@ -457,7 +465,7 @@ container.factory(NotificationService, async (r) => {
 - Call `freeze()` after all modules are loaded — it validates the graph and locks the container in one step.
 - Declare `deps:` on factories to enable static cycle detection at `freeze()` time.
 - Use `resolveAll()` once at startup, then `resolveSync()` in hot paths.
-- Use `tryResolve()` when optional providers are expected to be absent; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
+- Use `tryResolve()` or `trySyncResolve()` when optional providers are expected to be absent — both only swallow `ProviderNotFoundError`; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
 - In hot paths after `resolveAll()`, prefer `resolveSyncOptional()` or `resolveSyncOrDefault()` over wrapping `resolveSync()` in try/catch.
 - Use `resolveMany()` to resolve multiple well-known providers at startup in parallel.
 - Use `onResolve()` for observability (telemetry, logging) rather than coupling resolution paths to event parsing.

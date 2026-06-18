@@ -22,6 +22,11 @@ export type TypeaheadOptions<T> = {
   isItemDisabled?: (item: T, index: number) => boolean;
   /** Called when typeahead navigation lands on an item. */
   onNavigate: (index: number, event: KeyboardEvent) => void;
+  /**
+   * When provided, the pending reset timer is cancelled automatically when the
+   * signal aborts (e.g. when the owning component disconnects).
+   */
+  signal?: AbortSignal;
 };
 
 export type Typeahead = {
@@ -69,6 +74,8 @@ export const createTypeahead = <T>(options: TypeaheadOptions<T>): Typeahead => {
       _timer = null;
     }
   };
+
+  options.signal?.addEventListener('abort', reset, { once: true });
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
     // Single printable character only; exclude modifier combos.

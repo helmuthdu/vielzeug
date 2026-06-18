@@ -13,6 +13,7 @@ exports:
     createGroupedVirtualizer,
     createGridVirtualizer,
     createReactiveVirtualizer,
+    createReactiveGroupedVirtualizer,
     createMeasurementCache,
     DEFAULT_ESTIMATE_SIZE,
     DEFAULT_OVERSCAN,
@@ -135,14 +136,16 @@ All APIs export from a single entry: `@vielzeug/scroll`.
 - **Sticky headers** — mark items with `sticky` to pin them at the viewport top; `createGroupedVirtualizer` handles section headers automatically
 - **Grouped sections** — `createGroupedVirtualizer` virtualizes sectioned data with per-section headers, `onChange` state, and `scrollToSection`/`scrollToItem`
 - **Grid virtualization** — `createGridVirtualizer` virtualizes two-dimensional data with independent row/column measurement and `scrollToCell`
-- **Reactive integration** — `createReactiveVirtualizer` exposes state as a `Signal<VirtualizerState>` compatible with `@vielzeug/ripple`
+- **Reactive integration** — `createReactiveVirtualizer` and `createReactiveGroupedVirtualizer` expose state as a `Signal` compatible with `@vielzeug/ripple`
 - **DOM adapter** — `createDomVirtualList` and `createVirtualScroller` manage virtualizer lifecycle, list-height styles, and DOM node pooling
 - **Skipped re-renders** — `onChange` is not called when a scroll event doesn't move the visible window across an item boundary
-- **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; both support `behavior: 'smooth'`
+- **Programmatic scrolling** — `scrollToIndex()` with `start`, `end`, `center`, and `auto` alignment; `scrollToOffset()` for pixel control; `scrollToRow()`/`scrollToColumn()` for grids; all support `behavior: 'smooth'`
 - **Horizontal + window targets** — supports both element and `window` scrolling, in vertical or horizontal mode
 - **Asymmetric overscan + gap** — tune start/end overscan independently and add inter-item spacing
 - **Atomic updates** — `virt.update(...)` lets you change count, estimator, overscan, and more in one call
 - **Clamp-safe** — `scrollToIndex` silently clamps out-of-range indices
+- **Scroll state events** — `onScrollingChange` fires when scrolling starts/stops; `onScrollEnd` fires once scrolling settles (native `scrollend` or debounce fallback); `isScrolling` getter available at any time
+- **Scroll anchor** — viewport position is preserved visually when `estimateSize` changes via `update()`
 - **Prepend support** — `prepend()` adds items at the top while keeping the viewport visually stable
 - **Disposable** — implements `[Symbol.dispose]` for `using` declarations
 - **Zero runtime dependencies** (ripple is a peer dependency used only by `createReactiveVirtualizer`)

@@ -11,7 +11,7 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | ----------------- | ---------------------- |
 | `@vielzeug/vault` | Main exports and types |
 
-## API At a Glance
+## API Overview
 
 | Symbol                                | Purpose                                                        | Execution mode   | Common gotcha                                                                       |
 | ------------------------------------- | -------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------------------- |
@@ -432,10 +432,10 @@ Returns an `Unsubscribe` function. Calling it and aborting the signal both cance
 
 Duplicate entries in the `tables` array are silently deduplicated. The combined snapshot will still include a key for each entry in the original array, but duplicate keys reference the same data.
 
-| Option   | Type          | Default | Description                                                                                                                          |
-| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `eager`  | `boolean`     | `false` | When `true`, fires after the first table delivers its snapshot, using empty arrays for tables not yet resolved.                      |
-| `signal` | `AbortSignal` | —       | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately.                             |
+| Option   | Type          | Default | Description                                                                                                     |
+| -------- | ------------- | ------- | --------------------------------------------------------------------------------------------------------------- |
+| `eager`  | `boolean`     | `false` | When `true`, fires after the first table delivers its snapshot, using empty arrays for tables not yet resolved. |
+| `signal` | `AbortSignal` | —       | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately.        |
 
 ### `watch` options
 

@@ -24,10 +24,10 @@ const obj = {
   },
 };
 
-getPath(obj, 'user.address.city');          // 'Berlin'
-getPath(obj, 'user.scores.1');              // 20
-getPath(obj, 'user.scores[1]');             // 20 — bracket auto-converted
-getPath(obj, 'user.address.country');       // undefined
+getPath(obj, 'user.address.city'); // 'Berlin'
+getPath(obj, 'user.scores.1'); // 20
+getPath(obj, 'user.scores[1]'); // 20 — bracket auto-converted
+getPath(obj, 'user.address.country'); // undefined
 ```
 
 #### Default values
@@ -36,7 +36,7 @@ getPath(obj, 'user.address.country');       // undefined
 import { getPath } from '@vielzeug/arsenal';
 
 getPath(obj, 'user.address.country', { fallback: 'DE' }); // 'DE'
-getPath(obj, 'user.missing.deep', { fallback: null });     // null
+getPath(obj, 'user.missing.deep', { fallback: null }); // null
 ```
 
 #### Strict mode — throw on missing segments

@@ -2090,6 +2090,33 @@ describe('createI18n', () => {
     });
   });
 
+  // ─── fork() — catalog clone ───────────────────────────────────────────────
+
+  describe('fork() — catalog clone', () => {
+    test('forked instance translates keys from parent catalog without re-compile', () => {
+      const parent = createI18n({
+        catalogs: { en: { count: '{count} items', greeting: 'Hello, {name}!' } },
+        locale: 'en',
+      });
+      const child = parent.fork({ locale: 'en' });
+
+      expect(child.t('greeting', { name: 'World' })).toBe('Hello, World!');
+      expect(child.t('count', { count: 3 })).toBe('3 items');
+    });
+
+    test('catalog mutation on fork does not affect parent', () => {
+      const parent = createI18n({
+        catalogs: { en: { hello: 'Hello' } },
+        locale: 'en',
+      });
+      const child = parent.fork();
+
+      child.register('en', { hello: 'Hi' });
+      expect(parent.t('hello')).toBe('Hello');
+      expect(child.t('hello')).toBe('Hi');
+    });
+  });
+
   // ─── fork() — fallback array propagation ──────────────────────────────────
 
   describe('fork() — fallback propagation', () => {
@@ -2300,6 +2327,95 @@ describe('createI18n', () => {
       expect(i18n.has('hello')).toBe(true);
       i18n.dispose();
       expect(i18n.has('hello')).toBe(false);
+    });
+  });
+
+  // ─── scope() — memoization ───────────────────────────────────────────────
+
+  describe('scope() — memoization', () => {
+    test('returns same object reference for same prefix', () => {
+      const i18n = createI18n({ catalogs: { en: { nav: { home: 'Home' } } } });
+
+      expect(i18n.scope('nav')).toBe(i18n.scope('nav'));
+    });
+
+    test('returns different object references for different prefixes', () => {
+      const i18n = createI18n({ catalogs: { en: { footer: { info: 'Info' }, nav: { home: 'Home' } } } });
+
+      expect(i18n.scope('nav')).not.toBe(i18n.scope('footer'));
+    });
+  });
+
+  // ─── dispose() — scope() contract ────────────────────────────────────────
+
+  describe('dispose() — scope() contract', () => {
+    test('scope().t() after dispose returns onMissingKey result', () => {
+      const i18n = createI18n({
+        catalogs: { en: { nav: { home: 'Home' } } },
+        onMissingKey: (k) => `[${k}]`,
+      });
+      const nav = i18n.scope('nav');
+
+      expect(nav.t('home')).toBe('Home');
+      i18n.dispose();
+      expect(nav.t('home')).toBe('[nav.home]');
+    });
+
+    test('scope().has() after dispose returns false', () => {
+      const i18n = createI18n({ catalogs: { en: { nav: { home: 'Home' } } } });
+      const nav = i18n.scope('nav');
+
+      expect(nav.has('home')).toBe(true);
+      i18n.dispose();
+      expect(nav.has('home')).toBe(false);
+    });
+  });
+
+  // ─── preload() — dispose race ─────────────────────────────────────────────
+
+  describe('preload() — dispose race', () => {
+    test('result is not applied when disposed mid-flight', async () => {
+      let resolveLoader!: (v: { hello: string }) => void;
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          fr: () =>
+            new Promise<{ hello: string }>((resolve) => {
+              resolveLoader = resolve;
+            }),
+        },
+        locale: 'en',
+      });
+
+      const loadTask = i18n.preload('fr');
+
+      i18n.dispose();
+
+      resolveLoader({ hello: 'Bonjour' });
+      await expect(loadTask).resolves.toBeUndefined();
+
+      expect(i18n.isLoaded('fr')).toBe(false);
+    });
+
+    test('no exception is thrown when disposed mid-flight and loader resolves', async () => {
+      let resolveLoader!: (v: { hello: string }) => void;
+      const i18n = createI18n({
+        catalogs: {
+          en: {},
+          fr: () =>
+            new Promise<{ hello: string }>((resolve) => {
+              resolveLoader = resolve;
+            }),
+        },
+        locale: 'en',
+      });
+
+      const loadTask = i18n.preload('fr');
+
+      i18n.dispose();
+      resolveLoader({ hello: 'Bonjour' });
+
+      await expect(loadTask).resolves.toBeUndefined();
     });
   });
 

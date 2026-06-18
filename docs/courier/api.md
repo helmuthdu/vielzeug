@@ -5,7 +5,7 @@ description: Complete API reference for the Courier HTTP client, query client, u
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                  | Purpose                                                | Execution mode | Common gotcha                                                        |
 | ----------------------- | ------------------------------------------------------ | -------------- | -------------------------------------------------------------------- |
@@ -570,10 +570,10 @@ type CourierMutationOptions<TData, TVariables> = MutationOptions<TData, TVariabl
 
 Extra options accepted by `client.mutation()` (not `createMutation()`). Applied automatically on success before `onSuccess` fires.
 
-| Option        | Type                                           | Description                                                                          |
-| ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `invalidates` | `QueryKey[]`                                   | Keys to invalidate in the embedded query cache after a successful run                |
-| `sets`        | `(data, variables) => Array<[QueryKey, unknown]>` | Seed one or more cache entries; always return an array of `[key, data]` pairs     |
+| Option        | Type                                              | Description                                                                   |
+| ------------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `invalidates` | `QueryKey[]`                                      | Keys to invalidate in the embedded query cache after a successful run         |
+| `sets`        | `(data, variables) => Array<[QueryKey, unknown]>` | Seed one or more cache entries; always return an array of `[key, data]` pairs |
 
 **Example:**
 

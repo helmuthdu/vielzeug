@@ -848,9 +848,9 @@ export function applyReorder<T>(items: T[], ids: string[], getKey: (item: T) => 
   const ordered: T[] = [];
 
   for (const id of ids) {
-    const item = byId.get(id);
+    if (!byId.has(id)) continue;
 
-    if (!item) continue;
+    const item = byId.get(id) as T;
 
     ordered.push(item);
     byId.delete(id);

@@ -5,7 +5,20 @@ package: pulse
 category: websockets
 keywords: [websocket, realtime, channels, presence, reconnect, heartbeat, typed-messaging, ripple]
 related: [herald, ripple, courier, clockwork]
-exports: [createPulse, Pulse, PulseChannel, PresenceChannel, PulseOptions, PulseError, ConnectionError, TimeoutError, AbortError, DisposedError, ProtocolError]
+exports:
+  [
+    createPulse,
+    Pulse,
+    PulseChannel,
+    PresenceChannel,
+    PulseOptions,
+    PulseError,
+    ConnectionError,
+    TimeoutError,
+    AbortError,
+    DisposedError,
+    ProtocolError,
+  ]
 environments: [browser, node]
 ---
 
@@ -37,17 +50,17 @@ pulse.send('chat:send', { text: 'Hello!' });
 effect(() => console.log('status:', pulse.status.value)); // reactive via ripple
 ```
 
-| Feature              | Pulse                                          | Native WebSocket                                          | socket.io-client                                          |
-| -------------------- | ---------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
-| Bundle size          | <PackageInfo package="pulse" type="size" />    | 0 B (native)                                              | ~44 kB gzip                                               |
-| TypeScript inference | <sg-icon name="check" size="16"></sg-icon> Full | <sg-icon name="x" size="16"></sg-icon> None              | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic |
-| Auto-reconnect       | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="check" size="16"></sg-icon>                |
-| Heartbeat (ping/pong)| <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="check" size="16"></sg-icon>                |
-| Channel multiplexing | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="check" size="16"></sg-icon>                |
-| Reactive presence    | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="triangle-alert" size="16"></sg-icon> Manual|
-| Reactive status      | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Server lock-in       | <sg-icon name="check" size="16"></sg-icon> None| <sg-icon name="check" size="16"></sg-icon> None           | <sg-icon name="x" size="16"></sg-icon> Required           |
-| Zero dependencies    | <sg-icon name="triangle-alert" size="16"></sg-icon> ripple | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>                    |
+| Feature               | Pulse                                                      | Native WebSocket                                | socket.io-client                                           |
+| --------------------- | ---------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
+| Bundle size           | <PackageInfo package="pulse" type="size" />                | 0 B (native)                                    | ~44 kB gzip                                                |
+| TypeScript inference  | <sg-icon name="check" size="16"></sg-icon> Full            | <sg-icon name="x" size="16"></sg-icon> None     | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic  |
+| Auto-reconnect        | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
+| Heartbeat (ping/pong) | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
+| Channel multiplexing  | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
+| Reactive presence     | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="triangle-alert" size="16"></sg-icon> Manual |
+| Reactive status       | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>                     |
+| Server lock-in        | <sg-icon name="check" size="16"></sg-icon> None            | <sg-icon name="check" size="16"></sg-icon> None | <sg-icon name="x" size="16"></sg-icon> Required            |
+| Zero dependencies     | <sg-icon name="triangle-alert" size="16"></sg-icon> ripple | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                     |
 
 <div class="decision-callout">
 

@@ -76,6 +76,7 @@ declare module '/coins' {
   export function fromJSON(json: MoneyJSON): Money;
   export function withAmount(m: Money, amount: bigint): Money;
   export function validateCurrencyCode(code: string): string;
+  export function getCurrencyDecimals(currencyCode: string): number;
 
   export type { CurrencyCode, ExchangeRate, FormatOptions, Money, MoneyFormatPart, MoneyJSON, RoundingMode };
 }

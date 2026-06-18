@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                                   | Purpose                                              | Common gotcha                                                                             |
 | ---------------------------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
@@ -35,19 +35,23 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 | `formatRange(start, end, options?)`      | Localized time-span string                           | Throws when zoned inputs are in different zones without `tz`                              |
 | `formatRangeParts(start, end, options?)` | Raw `Intl.DateTimeRangeFormatPart[]` array           | Same zone-mismatch rules as `formatRange()`                                               |
 | `formatRelative(input, options?)`        | UX relative text ("in 2 hours", "3 days ago")        | Input restricted to `Instant` or `ZonedDateTime`                                          |
-| `parseDuration(input)`                   | Parse ISO 8601 duration or `DurationLike` object     | Throws `TypeError` for invalid strings                                                    |
+| `parseDuration(input)`                   | Parse ISO 8601 duration or `DurationLike` object     | Throws `TempoError` for invalid strings                                                   |
 | `formatDuration(input, options?)`        | Format a duration for display                        | Falls back to plain English if `Intl.DurationFormat` absent                               |
 | `expires(date, thresholds, options?)`    | Classify a date against named threshold buckets      | Returns `null` when no threshold matches; define thresholds at module scope for best perf |
 | `timeDiff(a, b?, options?)`              | Largest-unit difference as `{ unit, value }`         | No `tz` needed when both inputs are `Instant`                                             |
 | `humanize(diff, options?)`               | `TimeDiffResult` → human-readable string             | English-only; use `formatRelative()` for localized output                                 |
 | `dateRange(start, end, step, options?)`  | Lazy generator of `ZonedDateTime` values             | `step` must advance time forward; `tz` inferred from `ZonedDateTime`, required otherwise  |
 | `recurrence(start, rule, options?)`      | Lazy generator for repeating dates                   | `count` or `until` required; `tz` inferred from `ZonedDateTime` start                     |
+| `TempoError`                             | Error class thrown by all tempo functions            | `instanceof TempoError`; has `.code: TempoErrorCode` for programmatic handling            |
+| `TempoErrorCode`                         | Frozen constant object of all error code strings     | `'INVALID_INPUT' \| 'INVALID_TZ' \| 'MISSING_TZ' \| 'UNSUPPORTED_INPUT'`                  |
 
 ## Package Entry Point
 
 ```ts
 import {
   Temporal,
+  TempoError,
+  TempoErrorCode,
   clamp,
   dateRange,
   difference,
@@ -195,7 +199,7 @@ parsePlainDateTime('2026-03-21T10:15:30'); // 2026-03-21T10:15:30
 parseInstant(input: string): Temporal.Instant;
 ```
 
-Parses a UTC ISO 8601 string into a `Temporal.Instant`. The input must include an offset or end in `Z`. Throws a descriptive `TypeError` on invalid input.
+Parses a UTC ISO 8601 string into a `Temporal.Instant`. The input must include an offset or end in `Z`. Throws a `TempoError` with code `INVALID_INPUT` on invalid input.
 
 **Example:**
 
@@ -415,7 +419,7 @@ within(parseInstant('2026-03-22T05:00:00Z'), lo, hi, { unit: 'day', tz: 'UTC' })
 clamp(value: TimeInput, start: TimeInput, end: TimeInput, options?: CompareOptions): Temporal.Instant;
 ```
 
-Returns `value` clamped to `[start, end]`. Always returns a `Temporal.Instant` — project to a timezone with `.toZonedDateTimeISO()`.
+Returns `value` clamped to `[start, end]`. Returns a `Temporal.Instant` for non-zoned inputs. When `value` is a `ZonedDateTime` and `options.unit` is set, returns a `Temporal.ZonedDateTime` floored to the start of the clamped unit.
 
 With `options.unit`, the clamp operates on unit-aligned boundaries and the returned instant is the start of the clamped unit.
 
@@ -746,7 +750,7 @@ formatRelative(parseInstant('2026-03-19T10:00:00Z'), { base, locale: 'en-US' });
 parseDuration(input: string | Temporal.DurationLike): Temporal.Duration;
 ```
 
-Parses an ISO 8601 duration string or a `Temporal.DurationLike` object into a `Temporal.Duration`. Throws `TypeError` for invalid input.
+Parses an ISO 8601 duration string or a `Temporal.DurationLike` object into a `Temporal.Duration`. Throws `TempoError` with code `INVALID_INPUT` for invalid input.
 
 **Example:**
 
@@ -993,10 +997,47 @@ const quarters = [
 ];
 ```
 
+## Errors
+
+All errors thrown by tempo are instances of `TempoError`, which extends `TypeError` for backward compatibility.
+
+```ts
+import { parse, TempoError, TempoErrorCode } from '@vielzeug/tempo';
+
+try {
+  parse('not-a-date');
+} catch (e) {
+  if (e instanceof TempoError) {
+    console.log(e.code); // 'INVALID_INPUT'
+    console.log(e.message); // '[tempo] Unable to parse date/time string: "not-a-date"'
+  }
+}
+```
+
+| Code                | Thrown when                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `INVALID_INPUT`     | Parse failures, invalid duration strings, unrecognised date values |
+| `INVALID_TZ`        | Timezone string is not a valid IANA name or UTC offset             |
+| `MISSING_TZ`        | Operation requires a timezone but none could be inferred           |
+| `UNSUPPORTED_INPUT` | Input type is not a recognised `TimeInput`                         |
+
+Existing `catch (e)` blocks that check `e instanceof TypeError` continue to work — `TempoError` is a `TypeError` subclass.
+
+---
+
 ## Types
 
 ```ts
 type TimeInput = Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
+
+type TempoErrorCode = 'INVALID_INPUT' | 'INVALID_TZ' | 'MISSING_TZ' | 'UNSUPPORTED_INPUT';
+
+const TempoErrorCode: Readonly<Record<TempoErrorCode, TempoErrorCode>>; // frozen constant object
+
+class TempoError extends TypeError {
+  readonly code: TempoErrorCode;
+  constructor(code: TempoErrorCode, message: string);
+}
 
 type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
 

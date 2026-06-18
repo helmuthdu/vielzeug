@@ -46,8 +46,9 @@ import { createSortable } from '@vielzeug/dnd';
 
 using sortable = createSortable({
   element: document.getElementById('list')!,
+  getKey: (el) => el.dataset.sortId!,
   handle: '.handle',
-  onReorder: (ids) => {
+  onReorder: ({ ids }) => {
     console.log('New order:', ids); // ['b', 'a', 'c']
     saveOrder(ids);
   },

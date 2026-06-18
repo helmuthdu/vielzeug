@@ -39,8 +39,9 @@ function render() {
 
 const sortable = createSortable({
   element: listEl,
+  getKey: (el) => el.dataset.sortId!,
   handle: '.handle',
-  onReorder: (ids) => {
+  onReorder: ({ ids }) => {
     items = ids.map((id) => items.find((i) => i.id === id)!);
     saveItems(items);
   },

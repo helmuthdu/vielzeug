@@ -204,10 +204,10 @@ label.dispose();
 
 ## Sub-paths
 
-| Import                      | Purpose                                                                                              |
-| --------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `@vielzeug/ripple`          | All exports and types                                                                                |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken) |
+| Import                      | Purpose                                                                                                  |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `@vielzeug/ripple`          | All exports and types                                                                                    |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — DevTools hook and reactive source tracing (dev-only, tree-shaken)     |
 | `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`withProvider`, `runWithProvider`, `createAsyncProvider`). Node.js only. |
 
 ## Documentation

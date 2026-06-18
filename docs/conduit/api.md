@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/conduit.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                     | Purpose                                                       | Mode        | Common gotcha                                                              |
 | -------------------------- | ------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------- |
@@ -15,7 +15,7 @@ description: Complete API reference for @vielzeug/conduit.
 | `loadModules()`            | Apply `ContainerModule` functions to a container              | **Async**   | Free function; modules run sequentially; returns `Promise<Container>`      |
 | `resolveOptional()`        | Resolve, returning `undefined` if not registered              | **Async**   | Free function; re-throws all other errors                                  |
 | `resolveOrDefault()`       | Resolve, returning a fallback if not registered               | **Async**   | Free function; same re-throw semantics as `resolveOptional`                |
-| `tryResolve()`             | Resolve, returning `{ ok, value/error }` instead of throwing  | **Async**   | Free function                                                              |
+| `tryResolve()`             | Resolve, returning `{ ok, value/error }` instead of throwing  | **Async**   | Free function; only swallows `ProviderNotFoundError`; re-throws all others |
 | `resolveSyncOptional()`    | Resolve synchronously, returning `undefined` if not found     | Sync        | Free function; re-throws `SyncResolutionError`, `ContainerDisposedError`   |
 | `resolveSyncOrDefault()`   | Resolve synchronously, returning a fallback if not found      | Sync        | Free function; `null` from factory is preserved, not replaced by default   |
 | `container.value()`        | Register a static value                                       | Sync        | Throws `DuplicateRegistrationError` if token already used                  |
@@ -411,7 +411,7 @@ await sc.resolveAll({ includeScoped: true }); // also warms RequestScope factori
 function tryResolve<T>(container: Container, tok: Token<T>): Promise<ResolveResult<T>>;
 ```
 
-Resolves a token, returning a discriminated union result object instead of throwing. Useful when provider absence is expected.
+Resolves a token, returning a discriminated union result object. Returns `{ ok: false, error }` **only** when the token is not registered (`ProviderNotFoundError`). All other errors — including `ContainerDisposedError`, `CircularDependencyError`, and factory errors — are **re-thrown**.
 
 ```ts
 type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
@@ -425,6 +425,31 @@ type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 import { tryResolve } from '@vielzeug/conduit';
 
 const result = await tryResolve(container, OptionalPlugin);
+if (result.ok) {
+  result.value.init();
+}
+```
+
+---
+
+### `trySyncResolve()` (free function)
+
+```ts
+function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveResult<T>;
+```
+
+Synchronous equivalent of `tryResolve()`. Returns `{ ok: false, error }` **only** when the token is not registered. Re-throws `SyncResolutionError`, `ContainerDisposedError`, `ScopedResolutionError`, and all other errors.
+
+**Returns:** `ResolveResult<T>`
+
+**Example:**
+
+```ts
+import { trySyncResolve } from '@vielzeug/conduit';
+
+await container.resolveAll();
+
+const result = trySyncResolve(container, OptionalPlugin);
 if (result.ok) {
   result.value.init();
 }
@@ -472,6 +497,8 @@ Returns a serializable description of every registered token. By default travers
 
 ```ts
 type ContainerNode = {
+  /** Statically-declared dependency descriptions (from `deps:` option). */
+  deps?: string[];
   description: string;
   kind: 'value' | 'factory';
   /** 'singleton', 'transient', or 'scope:<name>' for named-scope factories. */
@@ -489,7 +516,8 @@ type ContainerGraph = {
 const graph = container.inspect();
 
 for (const node of graph.nodes) {
-  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})`);
+  const depList = node.deps ? ` deps: [${node.deps.join(', ')}]` : '';
+  console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})${depList}`);
 }
 ```
 
@@ -501,21 +529,21 @@ for (const node of graph.nodes) {
 freeze(): this;
 ```
 
-Locks the container against further `value()` or `factory()` calls. Before locking, runs a validation pass:
+Locks the container against further `value()` or `factory()` calls. Before locking, runs a validation pass over statically-declared `deps`:
 
-1. **Registration completeness** — every registered token has a provider. Throws `ProviderNotFoundError` if any token is missing.
-2. **Static dep cycle detection** — if factories were registered with `deps:` declared, checks those deps for cycles. Throws `CircularDependencyError` if a static cycle is found.
+1. **Missing dep check** — every token listed in any `deps:` array must be registered. Throws `ProviderNotFoundError` if a declared dep is missing.
+2. **Static cycle detection** — checks `deps` graphs for cycles. Throws `CircularDependencyError` if a cycle is found.
 
 > **Note:** Lazy dependencies (accessed inside the factory via `resolver.resolve()`) that are _not_ listed in `deps:` are **not** checked by `freeze()`. Those cycles are caught at resolve time. Use `deps:` to opt in to early static validation.
 
-`freeze()` is **local** — scope containers created after `freeze()` are not frozen.
+`freeze()` is **idempotent** — calling it more than once is a no-op after the first freeze. It is also **local** — scope containers created after `freeze()` are not frozen.
 
 **Returns:** `this` (chainable)
 
 **Throws:**
 
 - `ContainerDisposedError` — if the container has been disposed
-- `ProviderNotFoundError` — if any registered token is missing a provider (or a declared `deps` dep is missing)
+- `ProviderNotFoundError` — if a declared `deps` dep is missing
 - `CircularDependencyError` — if declared `deps` form a cycle
 - `ContainerFrozenError` — on any subsequent `value()` or `factory()` call
 
@@ -542,6 +570,8 @@ createScope(scopeToken?: ScopeToken, opts?: { name?: string }): Container;
 ```
 
 Creates a child container. When `scopeToken` is provided, the child is tagged with that scope — factories registered with this `ScopeToken` lifetime will resolve and cache within this container. Omitting `scopeToken` creates a plain child that inherits parent registrations.
+
+The auto-generated container name includes the scope token's description when no explicit `name` is given (e.g. `'root:request'` for a scope named `'request'`). Provide `opts.name` to override.
 
 **Returns:** `Container`
 
@@ -721,6 +751,8 @@ type ResolveInterceptor = <T>(tok: Token<T>, value: T) => void;
 /** Passed to each factory function — resolves other tokens lazily. */
 interface FactoryResolver {
   resolve<T>(tok: Token<T>): Promise<T>;
+  /** Resolve synchronously. Works for value providers and already-resolved instances. */
+  resolveSync<T>(tok: Token<T>): T;
 }
 
 /** A function that registers providers on a container. May be async. */
@@ -740,6 +772,8 @@ type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
 /** Serializable node in the dependency graph returned by inspect(). */
 type ContainerNode = {
+  /** Statically-declared dependency descriptions (from `deps:` option), if declared. */
+  deps?: string[];
   description: string;
   kind: 'value' | 'factory';
   /** 'singleton', 'transient', or 'scope:<name>' for named-scope factories. */

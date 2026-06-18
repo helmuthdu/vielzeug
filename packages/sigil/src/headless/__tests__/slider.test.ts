@@ -78,6 +78,41 @@ describe('createSliderControl', () => {
     expect(control.fromClientX(50, { left: 0, width: 0 })).toBe(0);
   });
 
+  it('handleKeydown commits the next value and returns true', () => {
+    const onCommit = vi.fn();
+    const control = createSliderControl({
+      max: signal(100),
+      min: signal(0),
+      step: signal(10),
+    });
+
+    const result = control.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowRight' }), 50, onCommit);
+
+    expect(result).toBe(true);
+    expect(onCommit).toHaveBeenCalledWith(60);
+  });
+
+  it('handleKeydown returns false and does not commit for unrecognised key', () => {
+    const onCommit = vi.fn();
+    const control = createSliderControl({ max: signal(100), min: signal(0) });
+
+    const result = control.handleKeydown(new KeyboardEvent('keydown', { key: 'Enter' }), 50, onCommit);
+
+    expect(result).toBe(false);
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('handleKeydown commits min on Home and max on End', () => {
+    const onCommit = vi.fn();
+    const control = createSliderControl({ max: signal(100), min: signal(0), step: signal(10) });
+
+    control.handleKeydown(new KeyboardEvent('keydown', { key: 'Home' }), 50, onCommit);
+    expect(onCommit).toHaveBeenLastCalledWith(0);
+
+    control.handleKeydown(new KeyboardEvent('keydown', { key: 'End' }), 50, onCommit);
+    expect(onCommit).toHaveBeenLastCalledWith(100);
+  });
+
   it('falls back safely for non-finite values', () => {
     const control = createSliderControl({
       max: signal(20),

@@ -45,14 +45,34 @@ export interface GroupVirtualizerOptions<T> {
   getItemKey?: (item: T, itemIndex: number, sectionIndex: number) => VirtualKey;
   horizontal?: boolean;
   measurementCache?: MeasurementCache;
+  /**
+   * Called after every render cycle with the new state.
+   * **Fixed at construction** \u2014 cannot be changed after creation.
+   */
   onChange?: (state: GroupVirtualizerState<T>) => void;
+  /**
+   * Called when scrolling has settled. Fixed at construction.
+   * See `VirtualizerOptions.onScrollEnd` for details.
+   */
+  onScrollEnd?: (offset: number) => void;
+  /**
+   * Called when the scrolling state changes. Fixed at construction.
+   */
+  onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
+  /**
+   * Debounce delay (ms) for scroll-end detection. Defaults to 150.
+   * See `VirtualizerOptions.scrollEndDelay` for details.
+   */
+  scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
 }
 
 export interface GroupVirtualizer<T> {
   readonly count: number;
   readonly disposed: boolean;
+  /** `true` while the user is actively scrolling; `false` once scroll has settled. */
+  readonly isScrolling: boolean;
   readonly items: ReadonlyArray<GroupVirtualItem<T>>;
   readonly scrollOffset: number;
   readonly stickyItems: VirtualItem[];
@@ -197,7 +217,10 @@ export function createGroupedVirtualizer<T>(
 
       options.onChange?.(mapped);
     },
+    onScrollEnd: options.onScrollEnd,
+    onScrollingChange: options.onScrollingChange,
     overscan: options.overscan ?? DEFAULT_OVERSCAN,
+    scrollEndDelay: options.scrollEndDelay,
     sticky: (i) => flat[i]?.isHeader ?? false,
   });
 
@@ -238,6 +261,9 @@ export function createGroupedVirtualizer<T>(
       if (destroyed) return;
 
       virtualizer.invalidate();
+    },
+    get isScrolling() {
+      return virtualizer.isScrolling;
     },
     get items() {
       return lastItems;

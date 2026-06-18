@@ -29,13 +29,13 @@ sessionCache.get('user:1'); // { id: 1, name: 'Alice' }
 import { stash } from '@vielzeug/arsenal';
 
 const apiCache = stash<Response>({
-  ttlMs: 60_000,  // all entries expire after 60s unless overridden per set()
-  maxSize: 500,   // FIFO eviction when exceeded
+  ttlMs: 60_000, // all entries expire after 60s unless overridden per set()
+  maxSize: 500, // FIFO eviction when exceeded
   onEvict: (key, value) => console.log('evicted', key),
 });
 
-apiCache.set('data', response);                       // expires in 60s
-apiCache.set('data', response, { ttlMs: 5_000 });    // override: 5s
+apiCache.set('data', response); // expires in 60s
+apiCache.set('data', response, { ttlMs: 5_000 }); // override: 5s
 ```
 
 #### Non-string keys

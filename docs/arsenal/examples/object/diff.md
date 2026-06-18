@@ -41,11 +41,7 @@ removed.includes('b'); // true
 ```ts
 import { diff } from '@vielzeug/arsenal';
 
-diff(
-  { ids: [1, 2] },
-  { ids: [1, 2] },
-  (a, b) => JSON.stringify(a) === JSON.stringify(b),
-);
+diff({ ids: [1, 2] }, { ids: [1, 2] }, (a, b) => JSON.stringify(a) === JSON.stringify(b));
 // { added: [], removed: [], changed: {} }
 ```
 
@@ -57,11 +53,7 @@ import { diffArrays } from '@vielzeug/arsenal';
 diffArrays([1, 2, 3], [2, 3, 4]);
 // { added: [4], removed: [1] }
 
-diffArrays(
-  [{ id: 1 }, { id: 2 }],
-  [{ id: 2 }, { id: 3 }],
-  { compareFn: (a, b) => a.id === b.id },
-);
+diffArrays([{ id: 1 }, { id: 2 }], [{ id: 2 }, { id: 3 }], { compareFn: (a, b) => a.id === b.id });
 // { added: [{ id: 3 }], removed: [{ id: 1 }] }
 ```
 

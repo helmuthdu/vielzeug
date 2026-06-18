@@ -352,6 +352,38 @@ describe('createFocusTrap()', () => {
     });
   });
 
+  describe('dispose()', () => {
+    it('dispose() deactivates an active trap', () => {
+      const container = makeContainer();
+      const trap = createFocusTrap(() => container);
+
+      trap.activate();
+      expect(trap.active).toBe(true);
+
+      trap.dispose();
+
+      expect(trap.active).toBe(false);
+    });
+
+    it('dispose() is a no-op when already inactive', () => {
+      const container = makeContainer();
+      const trap = createFocusTrap(() => container);
+
+      expect(() => trap.dispose()).not.toThrow();
+      expect(trap.active).toBe(false);
+    });
+
+    it('[Symbol.dispose] deactivates an active trap', () => {
+      const container = makeContainer();
+      const trap = createFocusTrap(() => container);
+
+      trap.activate();
+      trap[Symbol.dispose]();
+
+      expect(trap.active).toBe(false);
+    });
+  });
+
   describe('signal option', () => {
     it('deactivates when the signal aborts after activation', () => {
       const container = makeContainer();

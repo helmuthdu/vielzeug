@@ -257,4 +257,37 @@ describe('buildYScale — includeZero option', () => {
 
     expect(scale.domain[0]).toBe(-50);
   });
+
+  it('includeZero:false with all-same values produces a non-zero range', () => {
+    const scale = buildYScale([5, 5, 5], 300, false);
+    const [d0, d1] = scale.domain;
+
+    expect(d1).toBeGreaterThan(d0);
+  });
+});
+
+// ─── buildXScale / buildYScale — null-guard warning paths ─────────────────────
+
+describe('buildXScale — null-guard warning', () => {
+  it('emits warn and returns fallback scale when any x value is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildXScale([null as unknown as number, 1, 2], 300);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    expect(scale.domain).toBeDefined();
+    warnSpy.mockRestore();
+  });
+});
+
+describe('buildYScale — null-guard warning', () => {
+  it('emits warn and returns fallback scale when any y value is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildYScale([null as unknown as number, 10, 20], 300);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    expect(scale.domain).toBeDefined();
+    warnSpy.mockRestore();
+  });
 });

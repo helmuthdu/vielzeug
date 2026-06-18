@@ -16,11 +16,7 @@ Use `runAll(fns, options?)` to call every function in the array. If any throw, t
 ```ts
 import { runAll } from '@vielzeug/arsenal';
 
-const cleanups = [
-  () => socket.close(),
-  () => db.disconnect(),
-  () => timer.cancel(),
-];
+const cleanups = [() => socket.close(), () => db.disconnect(), () => timer.cancel()];
 
 try {
   runAll(cleanups, { reverse: true }); // reverse: true for teardown-safe LIFO order

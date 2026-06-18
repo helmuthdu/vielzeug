@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                     | Purpose                                              | Execution mode | Common gotcha                                                          |
 | -------------------------- | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------- |
@@ -422,11 +422,11 @@ Craft re-exports these from `@vielzeug/ripple`:
 
 ## Lifecycle Events
 
-| Event              | When                                                            |
-| ------------------ | --------------------------------------------------------------- |
-| `craft:connect`    | After every `connectedCallback` (including reconnects)          |
-| `craft:disconnect` | After `disconnectedCallback`, before component state is reset   |
-| `craft:error`      | When setup throws — bubbles, composed; detail is `CraftError`   |
+| Event              | When                                                          |
+| ------------------ | ------------------------------------------------------------- |
+| `craft:connect`    | After every `connectedCallback` (including reconnects)        |
+| `craft:disconnect` | After `disconnectedCallback`, before component state is reset |
+| `craft:error`      | When setup throws — bubbles, composed; detail is `CraftError` |
 
 ## Types
 

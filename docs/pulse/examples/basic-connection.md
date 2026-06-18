@@ -61,7 +61,7 @@ document.querySelector('#send-btn')!.addEventListener('click', () => {
 
 // Explicit cleanup when the page/component unmounts
 function teardown() {
-  unsubChat();    // optional — pulse.dispose() also removes all listeners
+  unsubChat(); // optional — pulse.dispose() also removes all listeners
   pulse.dispose();
 }
 ```

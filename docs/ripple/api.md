@@ -5,33 +5,33 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol               | Purpose                                        | Execution mode | Common gotcha                                                                     |
-| -------------------- | ---------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
-| `signal()`           | Create reactive primitive values               | Sync           | Write signals inside batch/effect-safe flows                                      |
-| `computed()`         | Derive memoized values from dependencies       | Sync           | Avoid side effects inside computed callbacks                                      |
-| `effect()`           | Run and re-run sync side effects               | Sync           | Dispose when no longer needed to prevent memory leaks                             |
-| `effectAsync()`      | Run async side effects with AbortSignal        | Async          | Read reactive deps synchronously before the first `await`                         |
-| `resource()`         | Preferred alias for `asyncComputed()`          | Async          | `isLoading` starts `true`; read `.data.value`, `.error.value`, `.isLoading.value` |
-| `asyncComputed()`    | Async computed with lifecycle state (legacy name) | Async       | Use `resource()` instead; kept for compatibility                                   |
-| `watch()`            | Subscribe to value changes                     | Sync           | Does not fire immediately unlike `effect()`                                       |
-| `batch()`            | Coalesce multiple writes                       | Sync           | Nested batches merge into the outermost                                           |
-| `untrack()`          | Read without subscribing                       | Sync           | Only suppresses dependency registration, value is still read                      |
-| `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | `dispose()` is always a no-op — the caller retains ownership of the source        |
-| `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
-| ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)` | Async   | `onCleanup()` only works before the first `await`                                 |
-| `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
-| `store()`            | Create object-like state container             | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
-| `storeWithHistory()` | Store with snapshot-based undo/redo history    | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer                     |
-| `installDevTools()`  | Install DevTools observation hook              | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
-| `getDevToolsHook()`  | Return current DevTools hook                   | Sync           | Returns `null` if none installed                                                  |
-| `derive()`           | Project a reactive source into a computed      | Sync           | Cleaner alternative to `selector(source, project)` — no overload ambiguity        |
-| `filter()`           | Filter a reactive source; type-predicate narrows `T → U \| undefined` | Sync  | Returns `undefined` when predicate is `false`; use type-guard for narrowing        |
-| `selector()`         | Project / filter any reactive source           | Sync           | Use `derive()` / `filter()` for new code                                          |
-| `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                                   |
-| `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                                      |
-| `isStore()`          | Type guard for stores                          | Sync           | Returns `false` for plain signals and computed signals                            |
+| Symbol               | Purpose                                                               | Execution mode | Common gotcha                                                                     |
+| -------------------- | --------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------- |
+| `signal()`           | Create reactive primitive values                                      | Sync           | Write signals inside batch/effect-safe flows                                      |
+| `computed()`         | Derive memoized values from dependencies                              | Sync           | Avoid side effects inside computed callbacks                                      |
+| `effect()`           | Run and re-run sync side effects                                      | Sync           | Dispose when no longer needed to prevent memory leaks                             |
+| `effectAsync()`      | Run async side effects with AbortSignal                               | Async          | Read reactive deps synchronously before the first `await`                         |
+| `resource()`         | Preferred alias for `asyncComputed()`                                 | Async          | `isLoading` starts `true`; read `.data.value`, `.error.value`, `.isLoading.value` |
+| `asyncComputed()`    | Async computed with lifecycle state (legacy name)                     | Async          | Use `resource()` instead; kept for compatibility                                  |
+| `watch()`            | Subscribe to value changes                                            | Sync           | Does not fire immediately unlike `effect()`                                       |
+| `batch()`            | Coalesce multiple writes                                              | Sync           | Nested batches merge into the outermost                                           |
+| `untrack()`          | Read without subscribing                                              | Sync           | Only suppresses dependency registration, value is still read                      |
+| `readonly()`         | Wrap any signal as a read-only ComputedSignal                         | Sync           | `dispose()` is always a no-op — the caller retains ownership of the source        |
+| `scope()`            | Isolated cleanup context                                              | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
+| ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)`            | Async          | `onCleanup()` only works before the first `await`                                 |
+| `debugEffect()`      | Effect that logs changed sources before re-run                        | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
+| `store()`            | Create object-like state container                                    | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
+| `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer                     |
+| `installDevTools()`  | Install DevTools observation hook                                     | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
+| `getDevToolsHook()`  | Return current DevTools hook                                          | Sync           | Returns `null` if none installed                                                  |
+| `derive()`           | Project a reactive source into a computed                             | Sync           | Cleaner alternative to `selector(source, project)` — no overload ambiguity        |
+| `filter()`           | Filter a reactive source; type-predicate narrows `T → U \| undefined` | Sync           | Returns `undefined` when predicate is `false`; use type-guard for narrowing       |
+| `selector()`         | Project / filter any reactive source                                  | Sync           | Use `derive()` / `filter()` for new code                                          |
+| `isSignal()`         | Type guard for any signal/computed/store                              | Sync           | Uses an internal symbol marker, not duck-typing                                   |
+| `isComputed()`       | Type guard for computed signals                                       | Sync           | Returns `false` for plain signals and stores                                      |
+| `isStore()`          | Type guard for stores                                                 | Sync           | Returns `false` for plain signals and computed signals                            |
 
 ## Package Entry Point
 
@@ -546,6 +546,7 @@ const s = await asyncScope(async () => { ... });
 const s = scope();
 await s.run(async () => { ... });
 ```
+
 :::
 
 ```ts
@@ -711,11 +712,11 @@ doubled.value; // 10
 
 **Parameters**
 
-| Parameter | Type                     | Description                          |
-| --------- | ------------------------ | ------------------------------------ |
-| `source`  | `ReadonlySignal<T>`      | Any signal, computed, or store       |
-| `project` | `(value: T) => U`        | Projection function                  |
-| `options` | `ComputedOptions<U>`     | Optional `equals`, `name`, `fallback`|
+| Parameter | Type                 | Description                           |
+| --------- | -------------------- | ------------------------------------- |
+| `source`  | `ReadonlySignal<T>`  | Any signal, computed, or store        |
+| `project` | `(value: T) => U`    | Projection function                   |
+| `options` | `ComputedOptions<U>` | Optional `equals`, `name`, `fallback` |
 
 **Returns** — `ComputedSignal<U>`
 
@@ -754,11 +755,11 @@ const nums = filter(mixed, (v): v is number => typeof v === 'number');
 
 **Parameters**
 
-| Parameter   | Type                                | Description                                                      |
-| ----------- | ----------------------------------- | ---------------------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`                 | Any signal, computed, or store                                   |
-| `predicate` | `(value: T) => boolean \| value is U` | Returns `true` to pass through, `false` for `undefined`        |
-| `options`   | `ComputedOptions<T \| undefined>`   | Optional `equals`, `name`, `fallback`                            |
+| Parameter   | Type                                  | Description                                             |
+| ----------- | ------------------------------------- | ------------------------------------------------------- |
+| `source`    | `ReadonlySignal<T>`                   | Any signal, computed, or store                          |
+| `predicate` | `(value: T) => boolean \| value is U` | Returns `true` to pass through, `false` for `undefined` |
+| `options`   | `ComputedOptions<T \| undefined>`     | Optional `equals`, `name`, `fallback`                   |
 
 **Returns** — `ComputedSignal<T | undefined>` (or `ComputedSignal<U | undefined>` for type-predicate form)
 
@@ -805,12 +806,12 @@ doubled.dispose();
 
 **Parameters**
 
-| Parameter   | Type                    | Description                                                      |
-| ----------- | ----------------------- | ---------------------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`     | Any signal, computed, store, or lens                             |
-| `project`   | `(value: T) => U`       | Projection function (required)                                   |
-| `predicate` | `(value: U) => boolean` | Optional filter; when `false`, result is `undefined`             |
-| `options`   | `ComputedOptions<U>`    | Optional `equals`, `name`, `fallback`                            |
+| Parameter   | Type                    | Description                                          |
+| ----------- | ----------------------- | ---------------------------------------------------- |
+| `source`    | `ReadonlySignal<T>`     | Any signal, computed, store, or lens                 |
+| `project`   | `(value: T) => U`       | Projection function (required)                       |
+| `predicate` | `(value: U) => boolean` | Optional filter; when `false`, result is `undefined` |
+| `options`   | `ComputedOptions<U>`    | Optional `equals`, `name`, `fallback`                |
 
 **Returns** — `ComputedSignal<U>` or `ComputedSignal<U | undefined>` (when predicate is provided)
 
@@ -920,15 +921,15 @@ interface Store<T extends object> {
 }
 ```
 
-| Member            | Description                                                                                                         |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `.value` (get)    | Read current state; tracked inside `effect`/`computed`; returns a read-only proxy                                   |
-| `.peek()`         | Read current state without tracking                                                                                 |
-| `.dispose()`      | Permanently disposes the store — releases all internal prop signals and cached lenses. Idempotent.                  |
-| `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy                    |
-| `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                |
+| Member            | Description                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `.value` (get)    | Read current state; tracked inside `effect`/`computed`; returns a read-only proxy                                                     |
+| `.peek()`         | Read current state without tracking                                                                                                   |
+| `.dispose()`      | Permanently disposes the store — releases all internal prop signals and cached lenses. Idempotent.                                    |
+| `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy                                      |
+| `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                                  |
 | `.replace(fn)`    | Receive a deep clone (`structuredClone`) of current state; return the new state; returning the same clone reference is a silent no-op |
-| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                              |
+| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                                                |
 
 ::: tip store.value is a read-only proxy
 `store.value` returns a proxy that throws `StateError('INVALID_STORE')` on any direct top-level set or delete. Use `.patch()`, `.replace()`, or `.lens()` to mutate state.
@@ -1188,17 +1189,17 @@ interface StoreWithHistory<T extends object> {
 
 Returned by `storeWithHistory()`. Wraps a `Store<T>` with snapshot navigation. Access the underlying store via `.store` for reads and mutations.
 
-| Member               | Description                                                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store`              | The underlying `Store<T>` — use for `.patch()`, `.lens()`, `.replace()`, `.reset()`                                                         |
-| `canUndo`            | `true` when there is at least one snapshot to undo to. **Reactive** — participates in the reactive graph                                    |
-| `canRedo`            | `true` when there is at least one snapshot ahead to redo. **Reactive** — participates in the reactive graph                                 |
-| `historyAt(i)`       | Snapshot at index `i` (0 = oldest); returns `undefined` if out of range. After `maxHistory` eviction, index 0 is the oldest remaining entry |
-| `historyLength`      | Number of snapshots currently in the buffer (≤ `maxHistory`)                                                                                |
-| `undo()`             | Move cursor back one step; no-op at the oldest state                                                                                        |
-| `redo()`             | Move cursor forward one step; no-op at the newest state                                                                                     |
+| Member               | Description                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `store`              | The underlying `Store<T>` — use for `.patch()`, `.lens()`, `.replace()`, `.reset()`                                                          |
+| `canUndo`            | `true` when there is at least one snapshot to undo to. **Reactive** — participates in the reactive graph                                     |
+| `canRedo`            | `true` when there is at least one snapshot ahead to redo. **Reactive** — participates in the reactive graph                                  |
+| `historyAt(i)`       | Snapshot at index `i` (0 = oldest); returns `undefined` if out of range. After `maxHistory` eviction, index 0 is the oldest remaining entry  |
+| `historyLength`      | Number of snapshots currently in the buffer (≤ `maxHistory`)                                                                                 |
+| `undo()`             | Move cursor back one step; no-op at the oldest state                                                                                         |
+| `redo()`             | Move cursor forward one step; no-op at the newest state                                                                                      |
 | `dispose()`          | Disposes the history adapter and cursor signal. Also disposes the underlying store only when the adapter created it (ownership). Idempotent. |
-| `[Symbol.dispose]()` | Same as `dispose()` — enables `using h = storeWithHistory(...)` declarations                                                                |
+| `[Symbol.dispose]()` | Same as `dispose()` — enables `using h = storeWithHistory(...)` declarations                                                                 |
 
 ---
 

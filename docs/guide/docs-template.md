@@ -306,7 +306,7 @@ description: Complete API reference for <PackageName>.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol           | Purpose              | Execution mode | Common gotcha    |
 | ---------------- | -------------------- | -------------- | ---------------- |
@@ -366,7 +366,7 @@ const result = functionName('value', { optionA: 'x' });
 
 ### Rules
 
-- `## API At a Glance` is always the first content section and must include all primary exported symbols. The four columns — Symbol, Purpose, Execution mode, Common gotcha — are required.
+- `## API Overview` is always the first content section and must include all primary exported symbols. The four columns — Symbol, Purpose, Execution mode, Common gotcha — are required.
 - Every exported function must have: signature block, parameters table (if it accepts an options object), return value, and an inline example.
 - Every exported class/error must be listed under `## Errors` with what triggers it.
 - Every exported type must appear under `## Types` with its full definition.
@@ -588,7 +588,7 @@ Use this list when auditing or updating a library. The first check applies to al
 ### `api.md`
 
 - [ ] `[[toc]]` immediately after frontmatter
-- [ ] `## API At a Glance` table present with all four columns
+- [ ] `## API Overview` table present with all four columns
 - [ ] `## Package Entry Point` table present
 - [ ] Every exported function has: signature, parameters table, return, example
 - [ ] Every exported error class listed under `## Errors`

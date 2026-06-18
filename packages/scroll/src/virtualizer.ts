@@ -1,7 +1,7 @@
+import { createScrollAdapter } from './_adapter';
 import { createAxis1D, type VirtualItem } from './axis1d';
 import {
   createMeasurementCache,
-  createScrollAdapter,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   type MeasurementCache,
@@ -42,14 +42,39 @@ export interface VirtualizerOptions {
   initialOffset?: number;
   /** External measurement cache for scroll restoration or SSR pre-measurement. */
   measurementCache?: MeasurementCache;
+  /**
+   * Called after every render cycle with the new state.
+   * **Fixed at construction** — passing `onChange` to `update()` has no effect.
+   * To replace the callback, dispose and re-create the virtualizer.
+   */
   onChange?: (state: VirtualizerState) => void;
+  /**
+   * Called when scrolling has settled (no scroll events for `scrollEndDelay` ms,
+   * or immediately on the native `scrollend` event when available).
+   * Fixed at construction.
+   */
+  onScrollEnd?: (offset: number) => void;
+  /**
+   * Called when the scrolling state changes.
+   * Fixed at construction.
+   */
+  onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
+  /**
+   * Debounce delay (ms) used to detect scroll end when the native `scrollend`
+   * event is unavailable. Defaults to 150.
+   */
+  scrollEndDelay?: number;
   sticky?: (index: number) => boolean;
 }
 
 /**
  * Options accepted by `update()`. Explicit interface instead of Omit<...>
  * for better IDE hover and autocomplete (R7).
+ *
+ * Intentionally excludes: `horizontal` (axis cannot change at runtime),
+ * `initialOffset` (one-time bootstrap value), and `onChange` (fixed at
+ * construction — see `VirtualizerOptions.onChange`).
  */
 export interface VirtualizerUpdateOptions {
   count?: number;
@@ -74,6 +99,8 @@ export interface Virtualizer {
   readonly disposed: boolean;
   /** Currently rendered items. Always populated. */
   readonly items: VirtualItem[];
+  /** `true` while the user is actively scrolling; `false` once scroll has settled. */
+  readonly isScrolling: boolean;
   readonly scrollOffset: number;
   readonly stickyItems: VirtualItem[];
   readonly totalSize: number;
@@ -108,8 +135,39 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   let overscan = normalizeOverscan(options.overscan, DEFAULT_OVERSCAN);
   let stickyFn: ((index: number) => boolean) | null = options.sticky ?? null;
 
-  // Callback fixed at construction — not swappable via update().
+  // Callbacks fixed at construction — not swappable via update().
   const onChange = options.onChange;
+  const onScrollEnd = options.onScrollEnd;
+  const onScrollingChange = options.onScrollingChange;
+  const scrollEndDelay =
+    typeof options.scrollEndDelay === 'number' && options.scrollEndDelay >= 0 ? options.scrollEndDelay : 150;
+
+  let isScrolling = false;
+  let scrollEndTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Detect native scrollend support (Chrome 114+, Firefox 109+)
+  const hasNativeScrollEnd = 'onscrollend' in (target as EventTarget);
+
+  function notifyScrollEnd(): void {
+    if (!isScrolling) return;
+
+    isScrolling = false;
+    onScrollingChange?.(false);
+    onScrollEnd?.(scrollOffset);
+  }
+
+  function handleScrollStart(): void {
+    if (!isScrolling) {
+      isScrolling = true;
+      onScrollingChange?.(true);
+    }
+
+    if (!hasNativeScrollEnd) {
+      if (scrollEndTimer !== null) clearTimeout(scrollEndTimer);
+
+      scrollEndTimer = setTimeout(notifyScrollEnd, scrollEndDelay);
+    }
+  }
 
   // External or internal measurement cache.
   let measuredByKey: MeasurementCache = options.measurementCache ?? new Map();
@@ -398,7 +456,11 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       needsCompute = true;
     }
 
-    if (needsRebuild) ax.rebuild(true);
+    if (needsRebuild) {
+      recordScrollAnchor();
+      ax.rebuild(true);
+      restoreScrollAnchor();
+    }
 
     if (needsCompute || needsRebuild) computeVisible();
   }
@@ -505,10 +567,20 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     scrollToOffset(Math.max(0, ax.totalSize - viewportSize), opts);
   }
 
-  function destroy(): void {
+  function _dispose(): void {
     if (destroyed) return;
 
     destroyed = true;
+
+    if (scrollEndTimer !== null) {
+      clearTimeout(scrollEndTimer);
+      scrollEndTimer = null;
+    }
+
+    if (hasNativeScrollEnd) {
+      (target as EventTarget).removeEventListener('scrollend', notifyScrollEnd);
+    }
+
     adapter.detach();
   }
 
@@ -516,6 +588,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   function handleScroll(): void {
     scrollOffset = clampScrollOffset(domAxis.readOffset());
+    handleScrollStart();
     computeVisible();
   }
 
@@ -526,6 +599,10 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
 
   const adapter = createScrollAdapter(target, handleScroll, handleResize);
   const domAxis = horizontal ? adapter.x : adapter.y;
+
+  if (hasNativeScrollEnd) {
+    (target as EventTarget).addEventListener('scrollend', notifyScrollEnd, { passive: true });
+  }
 
   ax.rebuild(true);
 
@@ -542,11 +619,14 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get count() {
       return count;
     },
-    dispose: destroy,
+    dispose: _dispose,
     get disposed() {
       return destroyed;
     },
     invalidate,
+    get isScrolling() {
+      return isScrolling;
+    },
     get items() {
       return items;
     },
@@ -565,7 +645,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     get stickyItems() {
       return stickyItems;
     },
-    [Symbol.dispose]: destroy,
+    [Symbol.dispose]: _dispose,
     get totalSize() {
       return ax.totalSize;
     },

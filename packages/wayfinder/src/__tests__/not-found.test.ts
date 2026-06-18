@@ -64,6 +64,22 @@ describe('notFound option', () => {
     router.dispose();
   });
 
+  it('applies global coerceSearch to the query in the notFound handler', async () => {
+    const dataFn = vi.fn(async ({ query }: { query: Record<string, unknown> }) => query);
+    const history = createMemoryHistory('/missing?page=3');
+    const router = createRouter({
+      coerceSearch: (raw) => ({ page: Number(raw.page ?? 1) }),
+      history,
+      notFound: { data: dataFn },
+      routes: { home: { path: '/' } },
+    });
+
+    await settle();
+
+    expect(dataFn).toHaveBeenCalledWith(expect.objectContaining({ query: { page: 3 } }));
+    router.dispose();
+  });
+
   it('leaves state idle with empty matches when no notFound option and no route matches', async () => {
     const history = createMemoryHistory('/missing');
     const router = createRouter({

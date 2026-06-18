@@ -70,9 +70,9 @@ function* dateRangeGenerator(
  *
  * Supports `daily`, `weekly`, `monthly`, and `yearly` frequencies with an optional
  * `interval` (defaults to `1`), `count` limit, and `until` boundary (inclusive).
- * The generator is infinite when neither `count` nor `until` is provided — use
- * `for...of` with a `break` or a `count` limit. Passing `count: 0` yields an empty
- * sequence without error.
+ * The `RecurrenceRule` type enforces that at least one of `count` or `until` must be
+ * provided — this is a compile-time guarantee for TypeScript callers.
+ * Passing `count: 0` yields an empty sequence without error.
  *
  * @example
  * ```ts

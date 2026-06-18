@@ -1,5 +1,61 @@
+import { boundedCache } from '../_cache';
 import { InvalidCurrencyError } from '../errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from '../utils';
+
+describe('boundedCache', () => {
+  it('returns undefined for a missing key', () => {
+    const cache = boundedCache<string, number>(4);
+
+    expect(cache.get('x')).toBeUndefined();
+  });
+
+  it('stores and retrieves a value', () => {
+    const cache = boundedCache<string, number>(4);
+
+    cache.set('a', 1);
+    expect(cache.get('a')).toBe(1);
+  });
+
+  it('overwrites an existing key', () => {
+    const cache = boundedCache<string, number>(4);
+
+    cache.set('a', 1);
+    cache.set('a', 2);
+    expect(cache.get('a')).toBe(2);
+  });
+
+  it('evicts the oldest entry when full (FIFO)', () => {
+    const cache = boundedCache<string, number>(3);
+
+    cache.set('a', 1);
+    cache.set('b', 2);
+    cache.set('c', 3);
+    cache.set('d', 4); // evicts 'a'
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe(2);
+    expect(cache.get('c')).toBe(3);
+    expect(cache.get('d')).toBe(4);
+  });
+
+  it('does not evict when size is below maxSize', () => {
+    const cache = boundedCache<string, number>(10);
+
+    for (let i = 0; i < 9; i++) cache.set(String(i), i);
+
+    expect(cache.get('0')).toBe(0);
+    expect(cache.get('8')).toBe(8);
+  });
+
+  it('works with maxSize of 1 (single-slot cache)', () => {
+    const cache = boundedCache<string, number>(1);
+
+    cache.set('a', 10);
+    expect(cache.get('a')).toBe(10);
+    cache.set('b', 20); // evicts 'a'
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe(20);
+  });
+});
 
 describe('pow10', () => {
   it('returns 1n for exponent 0', () => {

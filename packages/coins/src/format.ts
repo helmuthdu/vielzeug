@@ -1,19 +1,7 @@
 import type { FormatOptions, Money, MoneyFormatPart } from './types';
 
+import { boundedCache } from './_cache';
 import { applyRounding, getCurrencyDecimals, pow10 } from './utils';
-
-function boundedCache<K, V>(maxSize: number): { get(k: K): V | undefined; set(k: K, v: V): void } {
-  const map = new Map<K, V>();
-
-  return {
-    get: (k) => map.get(k),
-    set(k, v) {
-      if (map.size >= maxSize) map.delete(map.keys().next().value as K);
-
-      map.set(k, v);
-    },
-  };
-}
 
 // Template cache key: locale × currency × style × sign — 512 prevents thrashing in multi-locale apps.
 const currencyTemplateCache = boundedCache<string, Intl.NumberFormatPart[]>(512);

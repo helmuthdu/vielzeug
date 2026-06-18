@@ -234,8 +234,8 @@ Enable reconnect with `true` (uses defaults) or a `ReconnectOptions` object.
 ```ts
 const pulse = createPulse('wss://api.example.com/ws', {
   reconnect: {
-    maxAttempts: 10,     // default: 5
-    delay: 1_000,        // fixed 1 s delay — or a function:
+    maxAttempts: 10, // default: 5
+    delay: 1_000, // fixed 1 s delay — or a function:
     // delay: (n) => Math.min(500 * 2 ** n, 30_000)
   },
 });
@@ -252,8 +252,8 @@ Enable heartbeat with `true` (uses defaults) or a `HeartbeatOptions` object.
 ```ts
 const pulse = createPulse('wss://api.example.com/ws', {
   heartbeat: {
-    interval: 30_000,  // ms between pings — default: 30_000
-    timeout: 5_000,    // ms to wait for pong before treating connection as dead — default: 5_000
+    interval: 30_000, // ms between pings — default: 30_000
+    timeout: 5_000, // ms to wait for pong before treating connection as dead — default: 5_000
   },
 });
 ```

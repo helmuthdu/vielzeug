@@ -94,8 +94,8 @@ import { signal, selector } from '@vielzeug/ripple';
 const count = signal(3);
 const bigDoubles = selector(
   count,
-  (n) => n * 2,       // project
-  (n) => n > 5,       // filter the projected value
+  (n) => n * 2, // project
+  (n) => n > 5, // filter the projected value
 );
 
 bigDoubles.value; // 6 (3*2=6, 6>5 is true)

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { renderAxis } from '../axes/axis';
+import { computeAreaPoints } from '../charts/area/area-renderer';
 import { computePoints } from '../charts/line/line-renderer';
 import { arcCentroid, computeArcs } from '../charts/pie/pie-renderer';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
@@ -344,6 +345,44 @@ describe('SVG path generators', () => {
 
     expect(d).toContain('H');
     expect(d).toContain('V');
+  });
+});
+
+// ─── computePoints / computeAreaPoints — null-key warning ───────────────────────────────
+
+describe('computePoints — null-key warning', () => {
+  it('emits warn when datum.key is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computePoints(
+      [{ key: null as unknown as number, value: 10 }],
+      xScale as Parameters<typeof computePoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    warnSpy.mockRestore();
+  });
+});
+
+describe('computeAreaPoints — null-key warning', () => {
+  it('emits warn when datum.key is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computeAreaPoints(
+      [{ key: null as unknown as number, value: 10 }],
+      xScale as Parameters<typeof computeAreaPoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    warnSpy.mockRestore();
   });
 });
 

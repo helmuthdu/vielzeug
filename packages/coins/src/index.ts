@@ -1,7 +1,7 @@
 export { CurrencyMismatchError, InvalidCurrencyError } from './errors';
 export { exchange } from './exchange';
 export { format, formatParts } from './format';
-export { validateCurrencyCode } from './utils';
+export { getCurrencyDecimals, validateCurrencyCode } from './utils';
 export {
   abs,
   add,

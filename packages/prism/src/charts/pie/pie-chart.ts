@@ -1,7 +1,7 @@
 import { isSignal } from '@vielzeug/ripple';
 
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
-import type { ChartHandle, Datum, PieChartConfig, PieSliceConfig } from '../../types';
+import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
 
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
@@ -202,7 +202,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
             x + (svgRect.left - contR.left),
             y + (svgRect.top - contR.top),
             { key: hit, value: arc.slice.value },
-            { color: arc.color, data: [] as Datum[], name: arc.slice.label ?? '' },
+            { color: arc.color, data: [], name: arc.slice.label ?? '' },
           );
         } else {
           config.onHover?.(null, null);

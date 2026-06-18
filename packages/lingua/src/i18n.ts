@@ -132,6 +132,12 @@ export type I18n<M extends Messages = Messages> = {
    * Registers a namespace factory and immediately starts loading it for the given locale
    * (defaults to the active locale). Deduplicates concurrent and repeated calls.
    *
+   * @remarks
+   * Passing a new factory after the namespace is already loaded updates the registry for
+   * future reloads (e.g. after `register()` replaces the catalog) but does **not** reload
+   * the namespace immediately. The new factory takes effect the next time the namespace
+   * marker is cleared (by a `register()` or `hydrateI18n()` call).
+   *
    * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
    *
    * @example
@@ -146,6 +152,9 @@ export type I18n<M extends Messages = Messages> = {
    * Creates a derived instance that inherits the current catalog snapshot, loaders,
    * namespace registry, and loaded-namespace markers, but has its own locale, fallback chain,
    * and subscribers. Catalog mutations on the fork do not affect the parent.
+   *
+   * Resolved catalog entries are shared by reference (no template re-compilation), making
+   * `fork()` cheap for SSR fork-per-request patterns with large catalogs.
    *
    * @example
    * // SSR: per-request locale without touching the shared instance
@@ -277,6 +286,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 // ─── Internal seed shape ──────────────────────────────────────────────────────
 
 type I18nSeed<M extends Messages> = {
+  catalogSeed?: Map<Locale, CatalogEntry>;
   loadedNamespaces?: Map<string, Set<string>>;
   namespaceRegistry?: Map<string, NamespaceFactory<M>>;
 };
@@ -328,6 +338,10 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
   // Lazy formatter — avoids Intl overhead for SSR forks that only need t().
   let _fmt: Formatter | undefined;
+
+  // Scope cache — stable object references per prefix for reactive framework renders.
+  const scopeCache = new Map<string, ScopedI18n>();
+
   const getFormatter = (): Formatter => {
     if (!_fmt) _fmt = createFormatter(() => state.locale);
 
@@ -403,6 +417,13 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     if (state.chainSet.has(normalized)) bump();
   };
+
+  if (_seed?.catalogSeed) {
+    for (const [loc, entry] of _seed.catalogSeed) {
+      catalogs.set(loc, entry.clone());
+      knownLocales.add(loc);
+    }
+  }
 
   if (cfg.catalogs) {
     for (const [loc, source] of Object.entries(cfg.catalogs)) {
@@ -618,6 +639,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       namespaceRegistry.clear();
       loadedNamespaces.clear();
       namespaceTasks.clear();
+      scopeCache.clear();
     },
 
     get disposed(): boolean {
@@ -670,21 +692,15 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     },
 
     fork(overrides?: Omit<I18nOptions<M>, 'catalogs'>): I18n<M> {
-      const forkedCatalogs: Record<Locale, LocaleSource<M>> = {};
-
-      for (const [loc, entry] of catalogs) {
-        forkedCatalogs[loc] = Object.fromEntries(
-          [...entry.entries.entries()].map(([k, { message }]) => [k, message]),
-        ) as unknown as M;
-      }
+      const loaderCatalogs: Record<Locale, LocaleSource<M>> = {};
 
       for (const [loc, loader] of loaders) {
-        forkedCatalogs[loc] = loader;
+        loaderCatalogs[loc] = loader;
       }
 
       return _createI18nImpl(
         {
-          catalogs: forkedCatalogs,
+          catalogs: loaderCatalogs,
           fallback: overrides?.fallback ?? (fallback.length > 0 ? fallback : undefined),
           locale: overrides?.locale ?? state.locale,
           onMissingKey: overrides?.onMissingKey ?? cfg.onMissingKey,
@@ -692,6 +708,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
           onSubscriberError: overrides?.onSubscriberError ?? cfg.onSubscriberError,
         },
         {
+          catalogSeed: new Map(catalogs),
           loadedNamespaces: new Map([...loadedNamespaces.entries()].map(([ns, set]) => [ns, new Set(set)])),
           namespaceRegistry: new Map(namespaceRegistry),
         },
@@ -750,8 +767,11 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     scope(prefix: MessageBranchKeys<M> | (string & {})): ScopedI18n {
       const pre = String(prefix);
+      const cached = scopeCache.get(pre);
 
-      return {
+      if (cached) return cached;
+
+      const scoped: ScopedI18n = {
         get fmt() {
           return getFormatter();
         },
@@ -773,6 +793,10 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
         tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
       };
+
+      scopeCache.set(pre, scoped);
+
+      return scoped;
     },
 
     async setLocale(next: Locale): Promise<void> {

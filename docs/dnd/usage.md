@@ -35,14 +35,7 @@ const zone = createDropZone({
 });
 ```
 
-For reactive apps, `accept` can be a getter:
-
-```ts
-const zone = createDropZone({
-  element: dropEl,
-  accept: () => (isMediaMode.value ? ['image/*', 'video/*'] : ['application/pdf']),
-});
-```
+The `accept` list is read at drop-time, so mutating the array dynamically adjusts what is accepted for the next drop.
 
 ### Hover state
 
@@ -59,8 +52,7 @@ Read zone state imperatively:
 
 ```ts
 console.log(zone.hovered);
-console.log(zone.files);
-console.log(zone.rejected);
+console.log(zone.validating);
 ```
 
 ### Drop effect
@@ -78,11 +70,11 @@ createDropZone({
 ### Disabled state
 
 ```ts
-createDropZone({
-  element: dropEl,
-  disabled: () => isReadOnly.value,
-  onDrop: handleFiles,
-});
+const options = { disabled: false, element: dropEl, onDrop: handleFiles };
+const zone = createDropZone(options);
+
+// options.disabled is read live on each event — mutate to toggle:
+options.disabled = isReadOnly;
 ```
 
 ### File limit
@@ -101,7 +93,7 @@ const zone = createDropZone({
 });
 ```
 
-### Sortable cleanup
+### Cleanup
 
 ```ts
 zone.dispose();
@@ -148,17 +140,16 @@ const zone = createDropZone({
   element: dropEl,
   paste: true,
   accept: ['image/*'],
-  onPaste: (files, event) => {
+  onPaste: (files) => {
     uploadFiles(files);
   },
-  onDropRejected: (files, event) => {
-    // event is ClipboardEvent when rejected via paste
+  onDropRejected: (files) => {
     showError(`${files.length} file(s) not accepted`);
   },
 });
 ```
 
-When `onPaste` is omitted, accepted pasted files fall through to `onDrop`. In that case the event argument will be a `ClipboardEvent`, not a `DragEvent` — check `event instanceof ClipboardEvent` if you need to distinguish.
+When `onPaste` is omitted, accepted pasted files fall through to `onDrop`.
 
 ## Sortable
 
@@ -177,8 +168,9 @@ When `onPaste` is omitted, accepted pasted files fall through to `onDrop`. In th
 ```ts
 const sortable = createSortable({
   element: document.getElementById('task-list')!,
+  getKey: (el) => el.dataset.sortId!,
   axis: 'vertical',
-  onReorder: (ids) => {
+  onReorder: ({ ids }) => {
     saveTaskOrder(ids);
   },
 });
@@ -196,8 +188,9 @@ Dnd automatically sets:
 ```ts
 createSortable({
   element: listEl,
+  getKey: (el) => el.dataset.sortId!,
   handle: '.drag-handle',
-  onReorder: saveOrder,
+  onReorder: ({ ids }) => saveOrder(ids),
 });
 ```
 
@@ -214,8 +207,18 @@ Create a shared scope when items should move between containers:
 ```ts
 const boardScope = createSortableScope();
 
-createSortable({ element: todoEl, onReorder: saveTodoOrder, scope: boardScope });
-createSortable({ element: doneEl, onReorder: saveDoneOrder, scope: boardScope });
+createSortable({
+  element: todoEl,
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => saveTodoOrder(ids),
+  scope: boardScope,
+});
+createSortable({
+  element: doneEl,
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => saveDoneOrder(ids),
+  scope: boardScope,
+});
 ```
 
 ### Auto-scroll and drag preview
@@ -223,6 +226,7 @@ createSortable({ element: doneEl, onReorder: saveDoneOrder, scope: boardScope })
 ```ts
 createSortable({
   element: listEl,
+  getKey: (el) => el.dataset.sortId!,
   autoScroll: { edgeThreshold: 40, speed: 24, viewport: true },
   dragImage: (id, item) => item,
   dragImageOffset: [8, 8],
@@ -236,23 +240,24 @@ Viewport scrolling is opt-in. Container scrolling stays enabled by default.
 ```ts
 createSortable({
   element: listEl,
+  getKey: (el) => el.dataset.sortId!,
   onDragStart: (id) => {
     listEl.classList.add('sorting');
   },
   onDragEnd: (id) => {
     listEl.classList.remove('sorting');
   },
-  onReorder: saveOrder,
+  onReorder: ({ ids }) => saveOrder(ids),
 });
 ```
 
-### Custom identity attribute
+### Custom identity function
 
 ```ts
 createSortable({
   element: listEl,
-  itemAttribute: 'data-id',
-  onReorder: saveOrder,
+  getKey: (el) => el.getAttribute('data-id')!,
+  onReorder: ({ ids }) => saveOrder(ids),
 });
 ```
 
@@ -271,11 +276,18 @@ sortable.sync();
 ### Disabled state
 
 ```ts
-createSortable({
+import { createSortable, type SortableOptions } from '@vielzeug/dnd';
+
+const options: SortableOptions = {
+  disabled: false,
   element: listEl,
-  disabled: () => isLocked,
-  onReorder: saveOrder,
-});
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => saveOrder(ids),
+};
+const sortable = createSortable(options);
+
+// options.disabled is read live on each event — mutate to toggle:
+options.disabled = isLocked;
 ```
 
 ### Placeholder styling
@@ -307,8 +319,9 @@ let items = [
 
 createSortable({
   element: listEl,
-  onReorder: (orderedIds) => {
-    items = applyReorder(items, orderedIds, (item) => item.id);
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => {
+    items = applyReorder(items, ids, (item) => item.id);
   },
 });
 ```
@@ -318,7 +331,11 @@ createSortable({
 ```ts
 sortable.dispose();
 // or:
-using sortable = createSortable({ element: listEl, onReorder: saveOrder });
+using sortable = createSortable({
+  element: listEl,
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => saveOrder(ids),
+});
 ```
 
 ### FLIP animation hook
@@ -348,21 +365,23 @@ const sortable = createSortable({
       }
     });
   },
-  onReorder: saveOrder,
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids }) => saveOrder(ids),
 });
 ```
 
 ### Optimistic updates and revert
 
-`onReorder` may return a revert function. Calling `sortable.revert()` invokes it and clears it. Use this to roll back optimistic UI updates on server failure. Only the most recent reorder can be reverted.
+Call `sortable.revert()` to roll back the most recent reorder. Register a revert function via `setRevert` inside `onReorder`.
 
 ```ts
 const sortable = createSortable({
   element: listEl,
-  onReorder: (ids) => {
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids, setRevert }) => {
     const prev = currentOrder;
     setOrder(ids); // optimistic update
-    return () => setOrder(prev); // rolled back by sortable.revert()
+    setRevert(() => setOrder(prev)); // registered for sortable.revert()
   },
 });
 
@@ -389,8 +408,9 @@ function SortableList({ initialItems }: { initialItems: { id: string; text: stri
   useEffect(() => {
     const sortable = createSortable({
       element: listRef.current!,
-      onReorder: (orderedIds) => {
-        items.current = applyReorder(items.current, orderedIds, (i) => i.id);
+      getKey: (el) => el.dataset.sortId!,
+      onReorder: ({ ids }) => {
+        items.current = applyReorder(items.current, ids, (i) => i.id);
       },
     });
     return () => sortable.dispose();
@@ -420,7 +440,8 @@ function useSortable(items: { id: string; text: string }[]) {
   onMounted(() => {
     sortable = createSortable({
       element: listRef.value!,
-      onReorder: (ids) => {
+      getKey: (el) => el.dataset.sortId!,
+      onReorder: ({ ids }) => {
         orderedItems.value = applyReorder(orderedItems.value, ids, (i) => i.id);
       },
     });
@@ -443,7 +464,8 @@ function useSortable(items: { id: string; text: string }[]) {
   onMount(() => {
     const sortable = createSortable({
       element: listEl,
-      onReorder: (ids) => { items = applyReorder(items, ids, (i) => i.id); },
+      getKey: (el) => el.dataset.sortId!,
+      onReorder: ({ ids }) => { items = applyReorder(items, ids, (i) => i.id); },
     });
     return () => sortable.dispose();
   });
@@ -471,7 +493,11 @@ import { define, onMounted, html } from '@vielzeug/craft';
 define('task-list', {
   setup(_props, { host }) {
     onMounted(() => {
-      const sortable = createSortable({ element: host.el, onReorder: (ids) => save(ids) });
+      const sortable = createSortable({
+        element: host.el,
+        getKey: (el) => el.dataset.sortId!,
+        onReorder: ({ ids }) => save(ids),
+      });
       return () => sortable.dispose();
     });
     return () => html`<slot></slot>`;

@@ -246,20 +246,22 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     listEl.style.contain = 'layout';
   }
 
+  function _dispose(): void {
+    if (isDestroyed) return;
+
+    isDestroyed = true;
+    virtualizer?.dispose();
+    virtualizer = null;
+    clearAndReset();
+  }
+
   return {
     // ── Virtualizer passthrough (R11) ──────────────────────────────────────
     get count() {
       return virtualizer?.count ?? 0;
     },
 
-    dispose() {
-      if (isDestroyed) return;
-
-      isDestroyed = true;
-      virtualizer?.dispose();
-      virtualizer = null;
-      clearAndReset();
-    },
+    dispose: _dispose,
 
     get disposed() {
       return isDestroyed;
@@ -269,6 +271,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (isDestroyed) return;
 
       virtualizer?.invalidate();
+    },
+
+    get isScrolling() {
+      return virtualizer?.isScrolling ?? false;
     },
 
     get items() {
@@ -374,14 +380,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       return virtualizer?.stickyItems ?? [];
     },
 
-    [Symbol.dispose]: () => {
-      if (isDestroyed) return;
-
-      isDestroyed = true;
-      virtualizer?.dispose();
-      virtualizer = null;
-      clearAndReset();
-    },
+    [Symbol.dispose]: _dispose,
 
     get totalSize() {
       return virtualizer?.totalSize ?? 0;
@@ -434,62 +433,18 @@ export function createVirtualScroller<T>(
     throw e;
   }
 
-  return {
-    get count() {
-      return ctrl.count;
-    },
+  // Override dispose and [Symbol.dispose] to also remove the scroll container.
+  // Capture the original dispose before overwriting so there's no self-reference.
+  const innerDispose = ctrl.dispose.bind(ctrl);
+
+  return Object.assign(ctrl, {
     dispose() {
-      ctrl.dispose();
+      innerDispose();
       scrollEl.remove();
-    },
-    get disposed() {
-      return ctrl.disposed;
-    },
-    invalidate() {
-      ctrl.invalidate();
-    },
-    get items() {
-      return ctrl.items;
-    },
-    measure(index, size) {
-      ctrl.measure(index, size);
-    },
-    measureBatch(entries) {
-      ctrl.measureBatch(entries);
-    },
-    measureEl(index, el) {
-      return ctrl.measureEl(index, el);
-    },
-    refresh() {
-      ctrl.refresh();
-    },
-    get scrollOffset() {
-      return ctrl.scrollOffset;
-    },
-    scrollToBottom(opts) {
-      ctrl.scrollToBottom(opts);
-    },
-    scrollToIndex(index, opts) {
-      ctrl.scrollToIndex(index, opts);
-    },
-    scrollToOffset(offset, opts) {
-      ctrl.scrollToOffset(offset, opts);
-    },
-    scrollToTop(opts) {
-      ctrl.scrollToTop(opts);
-    },
-    setItems(items) {
-      ctrl.setItems(items);
-    },
-    get stickyItems() {
-      return ctrl.stickyItems;
     },
     [Symbol.dispose]() {
-      ctrl.dispose();
+      innerDispose();
       scrollEl.remove();
     },
-    get totalSize() {
-      return ctrl.totalSize;
-    },
-  };
+  });
 }

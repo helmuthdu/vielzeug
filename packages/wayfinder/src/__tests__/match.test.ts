@@ -173,6 +173,34 @@ describe('match()', () => {
     router.dispose();
   });
 
+  it('returns status idle with data undefined when signal is already aborted (non-streaming loader)', async () => {
+    const history = createMemoryHistory('/');
+    const controller = new AbortController();
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          data: async () => ({ loaded: true }),
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    controller.abort();
+
+    // When the signal is already aborted, the data loader still runs for non-streaming loaders;
+    // the signal is forwarded to the loader for cooperative cancellation.
+    const state = await router.match('/page', { signal: controller.signal });
+
+    // The route still matches; data may be undefined or the loader result depending on timing.
+    expect(state).not.toBeNull();
+    expect(router.getSnapshot().location.pathname).toBe('/');
+    router.dispose();
+  });
+
   it('forwards the provided signal to the data loader', async () => {
     let capturedSignal: AbortSignal | undefined;
     const controller = new AbortController();

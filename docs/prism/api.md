@@ -5,7 +5,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol               | Purpose                                               | Returns                        |
 | -------------------- | ----------------------------------------------------- | ------------------------------ |

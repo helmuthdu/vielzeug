@@ -320,7 +320,7 @@ export function max(moneys: readonly Money[]): Money {
  * Splits `money` into `parts` equal shares without losing or gaining a single minor unit.
  * Equivalent to `allocate(money, Array.from({ length: parts }, () => 1))`.
  *
- * @throws {RangeError} If `parts` is not a positive integer.
+ * @throws {RangeError} If `parts` is not a positive integer (≥ 1).
  *
  * @example
  * ```ts
@@ -341,7 +341,9 @@ export function splitEvenly(m: Money, parts: number): [Money, ...Money[]] {
 
 /**
  * Clamps `m` to the inclusive range `[lower, upper]`.
- * Throws `TypeError` on currency mismatch. Throws `RangeError` if `lower > upper`.
+ *
+ * @throws {CurrencyMismatchError} If `m`, `lower`, or `upper` have different currencies.
+ * @throws {RangeError}            If `lower > upper`.
  *
  * @example
  * ```ts

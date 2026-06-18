@@ -62,6 +62,7 @@ export const createDialogFocusControl = (options: DialogFocusControlOptions): Di
     },
 
     deactivate() {
+      manager.cancelInitialFocus();
       trap.deactivate();
       manager.restoreFocus();
     },

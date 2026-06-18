@@ -109,6 +109,7 @@ declare module '/rune' {
 
   export type LogMethod = {
     (message: string): void;
+    (error: Error, context?: Bindings, message?: string): void;
     (context: Bindings, message?: string): void;
   };
 
@@ -144,6 +145,7 @@ declare module '/rune' {
   export function createLogger(options?: RuneOptions): Logger;
   export const Rune: Logger;
   export const DEFAULT_THEME: ResolvedTheme;
+  export function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme;
   export function consoleTransport(options?: ConsoleTransportOptions): Transport;
   export function remoteTransport(options: RemoteTransportOptions): Transport;
   export function jsonTransport(options?: JsonTransportOptions): Transport;

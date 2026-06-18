@@ -43,11 +43,9 @@ const restored = unflattenPaths(flat);
 import { flattenPaths } from '@vielzeug/arsenal/path';
 
 const before = flattenPaths({ api: { host: 'localhost', port: 3000 } });
-const after  = flattenPaths({ api: { host: 'production.example.com', port: 443 } });
+const after = flattenPaths({ api: { host: 'production.example.com', port: 443 } });
 
-const changed = Object.entries(after).filter(
-  ([key, value]) => before[key] !== value,
-);
+const changed = Object.entries(after).filter(([key, value]) => before[key] !== value);
 // [['api.host', 'production.example.com'], ['api.port', 443]]
 ```
 

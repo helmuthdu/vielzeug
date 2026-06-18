@@ -292,12 +292,19 @@ export function formatInstant(input: TimeInput, options: TimeOptions = {}): stri
 
 /**
  * Serializes `input` to a zoned ISO 8601 string (`2026-03-21T11:15:30+01:00[Europe/Berlin]`).
- * Requires `options.tz` when input is a `PlainDate` or `PlainDateTime`.
+ *
+ * @param options.tz - Required when `input` is a `PlainDate` or `PlainDateTime`.
+ *   Inferred automatically from a `ZonedDateTime` or `Instant` input.
+ *
+ * @throws {TempoError} When `input` is a `PlainDate` or `PlainDateTime` and `options.tz` is omitted.
  *
  * @example
  * ```ts
  * formatZoned(parseInstant('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' })
  * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'
+ *
+ * formatZoned(parseZoned('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
+ * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'  (tz inferred)
  * ```
  */
 export function formatZoned(input: TimeInput, options: TimeOptions = {}): string {

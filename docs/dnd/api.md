@@ -5,7 +5,7 @@ description: Complete API reference for Dnd.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                     | Purpose                                      | Execution mode | Common gotcha                                                     |
 | -------------------------- | -------------------------------------------- | -------------- | ----------------------------------------------------------------- |
@@ -283,17 +283,18 @@ Use one scope per connected set of containers. Sortables without an explicit sco
 
 `revert(): void`
 
-Calls the revert function returned by the last `onReorder` invocation (if any) and clears it. A no-op when no revert function was provided or it has already been consumed. Works for both drag-based and keyboard-based reorders.
+Calls the revert function registered via `setRevert` in the last `onReorder` invocation (if any) and clears it. A no-op when no revert function was registered or it has already been consumed. Works for both drag-based and keyboard-based reorders.
 
 Only the most recent reorder can be reverted — a new reorder overwrites the stored function.
 
 ```ts
 const sortable = createSortable({
   element: listEl,
-  onReorder: (ids) => {
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids, setRevert }) => {
     const prev = currentOrder;
     setOrder(ids);
-    return () => setOrder(prev); // ← enable revert
+    setRevert(() => setOrder(prev)); // ← enable revert
   },
 });
 
@@ -376,7 +377,7 @@ matchesAccept(file, ['image/*', '.pdf']); // true or false
 ## `applyReorder()`
 
 ```ts
-declare function applyReorder<T>(items: T[], ids: string[], getId: (item: T) => string): T[];
+declare function applyReorder<T>(items: T[], ids: string[], getKey: (item: T) => string): T[];
 ```
 
 Applies a DOM reorder result (`orderedIds`) to your backing array.

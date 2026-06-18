@@ -1,19 +1,7 @@
 import type { RoundingMode } from './types';
 
+import { boundedCache } from './_cache';
 import { InvalidCurrencyError } from './errors';
-
-function boundedCache<K, V>(maxSize: number): { get(k: K): V | undefined; set(k: K, v: V): void } {
-  const map = new Map<K, V>();
-
-  return {
-    get: (k) => map.get(k),
-    set(k, v) {
-      if (map.size >= maxSize) map.delete(map.keys().next().value as K);
-
-      map.set(k, v);
-    },
-  };
-}
 
 const currencyDecimalsCache = boundedCache<string, number>(512);
 

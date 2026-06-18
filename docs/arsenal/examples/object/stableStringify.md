@@ -21,10 +21,15 @@ const key1 = stringify({ sort: 'asc', filter: { role: 'admin' } });
 const key2 = stringify({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true  — key insertion order doesn't matter
 
-stringify(new Set([3, 1, 2]));                   // '[Set:1,2,3]'
-stringify(new Date('2024-01-01T00:00:00Z'));      // '[Date:2024-01-01T00:00:00.000Z]'
-stringify(new Map([['b', 2], ['a', 1]]));         // '[Map:"a"=>1,"b"=>2]'
-stringify(42n);                                   // '42n'
+stringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
+stringify(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
+stringify(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:"a"=>1,"b"=>2]'
+stringify(42n); // '42n'
 ```
 
 #### Circular references
@@ -43,7 +48,7 @@ stringify(o); // '{"self":[Circular],"x":1}'
 import { stringify } from '@vielzeug/arsenal';
 
 class MyClass {}
-stringify(new MyClass());                              // String(instance) — coerced by default
+stringify(new MyClass()); // String(instance) — coerced by default
 stringify(new MyClass(), { onClassInstance: 'throw' }); // throws TypeError
 ```
 

@@ -5,7 +5,7 @@ description: Complete API reference for spell schema builders, helpers, validato
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                                              | Purpose                                                                       | Execution mode      | Common gotcha                                                       |
 | --------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
@@ -105,33 +105,33 @@ const Filter = s.union(
 
 Builder reference:
 
-| Builder                 | Returns                    | Notes                                                                                                                                |
-| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `s.any()`               | `Schema<any>`              | Accepts any value.                                                                                                                   |
-| `s.unknown()`           | `Schema<unknown>`          | Accepts any value and keeps `unknown`.                                                                                               |
-| `s.never()`             | `NeverSchema`              | Always fails.                                                                                                                        |
-| `s.null()`              | `LiteralSchema<null>`      | Useful inside unions.                                                                                                                |
-| `s.undefined()`         | `LiteralSchema<undefined>` | Useful inside unions.                                                                                                                |
-| `s.string()`            | `StringSchema`             | String constraints and string format helpers.                                                                                        |
-| `s.number()`            | `NumberSchema`             | Numeric range, integer, sign, and multiplicity helpers.                                                                              |
-| `s.boolean()`           | `BooleanSchema`            | Boolean parsing and coercion helpers.                                                                                                |
-| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`. Constraints are runtime-only — `toDescriptor()` warns and does not serialize `min()`, `max()`, etc. |
-| `s.date()`              | `DateSchema`               | Date instance validation and range helpers.                                                                                          |
-| `s.literal(value)`      | `LiteralSchema<T>`         | Exact primitive matching.                                                                                                            |
-| `s.enum(values)`        | `EnumSchema<T>`            | Fixed string union from a readonly tuple.                                                                                            |
-| `s.array(schema)`       | `ArraySchema<T>`           | Element validation plus min/max/length/nonEmpty.                                                                                     |
-| `s.tuple(items)`        | `TupleSchema<T>`           | Fixed positions with typed output.                                                                                                   |
-| `s.object(shape)`       | `ObjectSchema<T>`          | Strict object parsing by default.                                                                                                    |
-| `s.record(key, val)`    | `RecordSchema<K, V>`       | String-keyed record validation.                                                                                                      |
-| `s.set(schema)`         | `SetSchema<T>`             | Set size and element validation.                                                                                                     |
-| `s.map(key, val)`       | `MapSchema<K, V>`          | Map entry validation.                                                                                                                |
-| `s.union(...items)`     | `UnionSchema`              | First successful branch wins.                                                                                                        |
-| `s.or(a, b)`            | `UnionSchema`              | Alias for `s.union()` with exactly two schemas.                                                                                      |
-| `s.and(a, b)`           | `IntersectSchema`          | Alias for `s.intersect()` with two schemas.                                                                                          |
-| `s.intersect(...items)` | `IntersectSchema`          | Merges compatible outputs deeply and safely.                                                                                         |
+| Builder                 | Returns                    | Notes                                                                                                                                                                           |
+| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `s.any()`               | `Schema<any>`              | Accepts any value.                                                                                                                                                              |
+| `s.unknown()`           | `Schema<unknown>`          | Accepts any value and keeps `unknown`.                                                                                                                                          |
+| `s.never()`             | `NeverSchema`              | Always fails.                                                                                                                                                                   |
+| `s.null()`              | `LiteralSchema<null>`      | Useful inside unions.                                                                                                                                                           |
+| `s.undefined()`         | `LiteralSchema<undefined>` | Useful inside unions.                                                                                                                                                           |
+| `s.string()`            | `StringSchema`             | String constraints and string format helpers.                                                                                                                                   |
+| `s.number()`            | `NumberSchema`             | Numeric range, integer, sign, and multiplicity helpers.                                                                                                                         |
+| `s.boolean()`           | `BooleanSchema`            | Boolean parsing and coercion helpers.                                                                                                                                           |
+| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`. Constraints are runtime-only — `toDescriptor()` warns and does not serialize `min()`, `max()`, etc.                                            |
+| `s.date()`              | `DateSchema`               | Date instance validation and range helpers.                                                                                                                                     |
+| `s.literal(value)`      | `LiteralSchema<T>`         | Exact primitive matching.                                                                                                                                                       |
+| `s.enum(values)`        | `EnumSchema<T>`            | Fixed string union from a readonly tuple.                                                                                                                                       |
+| `s.array(schema)`       | `ArraySchema<T>`           | Element validation plus min/max/length/nonEmpty.                                                                                                                                |
+| `s.tuple(items)`        | `TupleSchema<T>`           | Fixed positions with typed output.                                                                                                                                              |
+| `s.object(shape)`       | `ObjectSchema<T>`          | Strict object parsing by default.                                                                                                                                               |
+| `s.record(key, val)`    | `RecordSchema<K, V>`       | String-keyed record validation.                                                                                                                                                 |
+| `s.set(schema)`         | `SetSchema<T>`             | Set size and element validation.                                                                                                                                                |
+| `s.map(key, val)`       | `MapSchema<K, V>`          | Map entry validation.                                                                                                                                                           |
+| `s.union(...items)`     | `UnionSchema`              | First successful branch wins.                                                                                                                                                   |
+| `s.or(a, b)`            | `UnionSchema`              | Alias for `s.union()` with exactly two schemas.                                                                                                                                 |
+| `s.and(a, b)`           | `IntersectSchema`          | Alias for `s.intersect()` with two schemas.                                                                                                                                     |
+| `s.intersect(...items)` | `IntersectSchema`          | Merges compatible outputs deeply and safely.                                                                                                                                    |
 | `s.variant(key, map)`   | `VariantSchema`            | Discriminated object union. Async field validators on branch objects are silently skipped — use `s.object()` with `parseAsync()` directly if you need async branch-field rules. |
-| `s.lazy(getter)`        | `LazySchema<T>`            | Recursive schema definitions.                                                                                                        |
-| `s.instanceof(cls)`     | `InstanceOfSchema<T>`      | Runtime class instance checks.                                                                                                       |
+| `s.lazy(getter)`        | `LazySchema<T>`            | Recursive schema definitions.                                                                                                                                                   |
+| `s.instanceof(cls)`     | `InstanceOfSchema<T>`      | Runtime class instance checks.                                                                                                                                                  |
 
 ---
 

@@ -5,31 +5,31 @@ description: Complete API reference for @vielzeug/lingua.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol                   | Purpose                                                                            | Execution mode | Common gotcha                                                               |
-| ------------------------ | ---------------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------- |
-| `createI18n()`           | Create an i18n instance with locale catalogs                                       | Sync           | Catalogs are lazy; call `preload()` before SSR render                       |
-| `i18n.t()`               | Translate a leaf key with optional vars                                            | Sync           | Missing keys use `onMissingKey` or return the key itself                    |
-| `i18n.tp()`              | Translate a plural branch key                                                      | Sync           | `count` is injected automatically — do not pass it in `vars`                |
-| `i18n.extend()`          | Register and immediately load a namespace                                          | Async          | Deduplicates per `ns + locale`; throws synchronously if disposed            |
-| `i18n.setLocale()`       | Switch the active locale                                                           | Async          | Await before rendering; throws if locale is not registered                  |
-| `i18n.preload()`         | Pre-load a locale catalog without switching                                        | Async          | Locale must be registered first                                             |
-| `i18n.register()`        | Replace a locale's full catalog at runtime                                         | Sync           | Replaces entirely — use `extend()` to add keys without replacing            |
-| `i18n.scope()`           | Return a prefix-bound `{ fmt, t, tp, has }` helper                                 | Sync           | Returns a new object each call — do not compare references                  |
-| `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork extend() calls are independent        |
-| `i18n.has()`             | Check if a leaf or branch key exists in the active chain                           | Sync           | Returns `true` for branch keys and pipe-plural base keys                    |
-| `i18n.isLoaded()`        | Check if a locale catalog is fully resolved                                        | Sync           | Returns `false` for async loaders not yet preloaded; safe predicate         |
-| `i18n.isRegistered()`    | Check if a locale is in the known registry                                         | Sync           | `true` for both resolved catalogs and pending loaders; never throws         |
-| `i18n.disposalSignal`    | `AbortSignal` aborted on disposal                                                  | Sync getter    | Tie external lifetimes (SSE, polling) to this i18n instance                 |
-| `i18n.dispose()`         | Release all subscribers and catalog state                                          | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key            |
-| `i18n.disposed`          | `true` after `dispose()` is called                                                 | Sync getter    | —                                                                           |
-| `i18n[Symbol.dispose]()` | Delegates to `dispose()`                                                           | Sync           | Enables `using` declarations                                                |
-| `serializeI18n()`        | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling         |
-| `hydrateI18n()`          | Hydrate a client instance from server-serialised state                             | Sync           | Throws `[lingua/E006]` if `state.locale` has no catalog                     |
-| `LinguaError` / `E`      | Typed error class and error-code constants                                         | —              | All runtime errors are `instanceof LinguaError`; use `E.*` for stable codes |
-| `createFormatter()`      | Create a standalone Intl formatter                                                 | Sync           | Pass a getter `() => i18n.locale` to follow locale changes                  |
-| `validateCatalog()`      | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                |
+| Symbol                   | Purpose                                                                            | Execution mode | Common gotcha                                                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `createI18n()`           | Create an i18n instance with locale catalogs                                       | Sync           | Catalogs are lazy; call `preload()` before SSR render                                                              |
+| `i18n.t()`               | Translate a leaf key with optional vars                                            | Sync           | Missing keys use `onMissingKey` or return the key itself                                                           |
+| `i18n.tp()`              | Translate a plural branch key                                                      | Sync           | `count` is injected automatically — do not pass it in `vars`                                                       |
+| `i18n.extend()`          | Register and immediately load a namespace                                          | Async          | Deduplicates per `ns + locale`; new factory updates registry but does not reload; throws synchronously if disposed |
+| `i18n.setLocale()`       | Switch the active locale                                                           | Async          | Await before rendering; throws if locale is not registered                                                         |
+| `i18n.preload()`         | Pre-load a locale catalog without switching                                        | Async          | Locale must be registered first                                                                                    |
+| `i18n.register()`        | Replace a locale's full catalog at runtime                                         | Sync           | Replaces entirely — use `extend()` to add keys without replacing                                                   |
+| `i18n.scope()`           | Return a prefix-bound `{ fmt, t, tp, has }` helper                                 | Sync           | Memoized per prefix — same object returned for same prefix string                                                  |
+| `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork extend() calls are independent                                               |
+| `i18n.has()`             | Check if a leaf or branch key exists in the active chain                           | Sync           | Returns `true` for branch keys and pipe-plural base keys                                                           |
+| `i18n.isLoaded()`        | Check if a locale catalog is fully resolved                                        | Sync           | Returns `false` for async loaders not yet preloaded; safe predicate                                                |
+| `i18n.isRegistered()`    | Check if a locale is in the known registry                                         | Sync           | `true` for both resolved catalogs and pending loaders; never throws                                                |
+| `i18n.disposalSignal`    | `AbortSignal` aborted on disposal                                                  | Sync getter    | Tie external lifetimes (SSE, polling) to this i18n instance                                                        |
+| `i18n.dispose()`         | Release all subscribers and catalog state                                          | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key                                                   |
+| `i18n.disposed`          | `true` after `dispose()` is called                                                 | Sync getter    | —                                                                                                                  |
+| `i18n[Symbol.dispose]()` | Delegates to `dispose()`                                                           | Sync           | Enables `using` declarations                                                                                       |
+| `serializeI18n()`        | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
+| `hydrateI18n()`          | Hydrate a client instance from server-serialised state                             | Sync           | Throws `[lingua/E006]` if `state.locale` has no catalog                                                            |
+| `LinguaError` / `E`      | Typed error class and error-code constants                                         | —              | All runtime errors are `instanceof LinguaError`; use `E.*` for stable codes                                        |
+| `createFormatter()`      | Create a standalone Intl formatter                                                 | Sync           | Pass a getter `() => i18n.locale` to follow locale changes                                                         |
+| `validateCatalog()`      | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
 
 ## Package Entry Points
 
@@ -93,7 +93,7 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `preload(locale)`               | `(locale: Locale) => Promise<void>`                                                       | Load a catalog without switching the active locale.                                                                            |
 | `setLocale(locale)`             | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and notify subscribers. On load failure, locale is unchanged.                                      |
 | `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => void`                                       | Replace the full catalog for a locale. Use `extend()` to add keys without replacing.                                           |
-| `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Returns a new object on each call.                                         |
+| `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Memoized per prefix — same object reference for the same prefix string.    |
 | `fork(overrides?)`              | `(overrides?: Omit<I18nOptions<M>, 'catalogs'>) => I18n<M>`                               | Create an isolated child instance from the current catalog snapshot.                                                           |
 | `has(key)`                      | `(key: MessageLeafKeys<M> \| MessageBranchKeys<M> \| string) => boolean`                  | Check if a leaf or branch key exists in the active fallback chain.                                                             |
 | `isLoaded(locale)`              | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Never throws.                                                     |
@@ -156,6 +156,8 @@ extend(ns: string, factory: NamespaceFactory<M>, locale?: Locale): Promise<void>
 
 Registers a namespace factory and immediately loads it for `locale` (defaults to the active locale). The factory receives the target locale string and must return `Promise<M>`. Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
 
+> **Note:** Calling `extend()` with a **new factory** after the namespace is already loaded updates the registry for future reloads (e.g. after `register()` replaces the catalog) but does **not** reload the namespace immediately. The new factory takes effect the next time the namespace marker is cleared.
+
 ```ts
 // Load settings keys when entering the settings route
 await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default));
@@ -181,7 +183,7 @@ nav.has('logout'); // equivalent to i18n.has('nav.logout')
 nav.tp('items', 3); // equivalent to i18n.tp('nav.items', 3)
 ```
 
-`scope()` returns a new object on every call. Do not compare references.
+`scope()` is memoized per prefix — repeated calls with the same prefix string return the same object reference. The cached object is invalidated when `dispose()` is called.
 
 ### `fork()`
 

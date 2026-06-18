@@ -35,7 +35,19 @@ import * as arsenal from '@vielzeug/arsenal';
 ### Arrays
 
 ```ts
-import { filterMap, fuzzy, fuzzyFilter, fuzzyScore, groupBy, indexBy, partition, sort, toggle, uniq, zip } from '@vielzeug/arsenal';
+import {
+  filterMap,
+  fuzzy,
+  fuzzyFilter,
+  fuzzyScore,
+  groupBy,
+  indexBy,
+  partition,
+  sort,
+  toggle,
+  uniq,
+  zip,
+} from '@vielzeug/arsenal';
 
 const values = [null, 1, 2, 3];
 
@@ -111,18 +123,7 @@ console.log(withDefaults, changes, port, arr, safe, clean, parsed, publicUser, i
 ### Functions
 
 ```ts
-import {
-  assert,
-  debounce,
-  memo,
-  once,
-  pipe,
-  runAll,
-  throttle,
-  allOf,
-  noneOf,
-  tap,
-} from '@vielzeug/arsenal';
+import { assert, debounce, memo, once, pipe, runAll, throttle, allOf, noneOf, tap } from '@vielzeug/arsenal';
 
 const toUpperTrimmed = pipe(
   (s: string) => s.trim(),
@@ -275,7 +276,7 @@ const alice = sessionCache.get('user:1');
 // Custom key type — provide a hash function for non-string keys
 const userCache = stash<User, readonly unknown[]>({
   hash: (key) => JSON.stringify(key),
-  maxSize: 500,  // FIFO eviction when exceeded
+  maxSize: 500, // FIFO eviction when exceeded
   onEvict: (key, value) => console.log('evicted', key, value),
   ttlMs: 60_000, // global default TTL
 });
@@ -340,10 +341,9 @@ import { memo, stash } from '@vielzeug/arsenal';
 const computeScore = memo((id: number, weight: number) => id * weight, { maxSize: 100 });
 
 // Custom key for object arguments
-const formatLabel = memo(
-  (params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`,
-  { key: ({ page, size }) => `${page}:${size}` },
-);
+const formatLabel = memo((params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`, {
+  key: ({ page, size }) => `${page}:${size}`,
+});
 
 // memo only accepts sync functions — use stash.getOrSet for async caching with TTL
 const apiCache = stash<unknown>({ ttlMs: 60_000 });

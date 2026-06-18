@@ -6,6 +6,12 @@
 import { signal, type Signal } from '@vielzeug/ripple';
 
 import {
+  createGroupedVirtualizer,
+  type GroupVirtualizer,
+  type GroupVirtualizerOptions,
+  type GroupVirtualizerState,
+} from './grouped-virtualizer';
+import {
   createVirtualizer,
   type ScrollTarget,
   type Virtualizer,
@@ -15,9 +21,51 @@ import {
 
 export type { Signal };
 
+export interface ReactiveGroupVirtualizer<T> extends GroupVirtualizer<T> {
+  /** Reactive signal carrying the current grouped virtualizer state. */
+  readonly state: Signal<GroupVirtualizerState<T>>;
+}
+
 export interface ReactiveVirtualizer extends Virtualizer {
   /** Reactive signal carrying the current virtualizer state. */
   readonly state: Signal<VirtualizerState>;
+}
+
+/**
+ * Create a grouped virtualizer whose current state is exposed as a reactive signal.
+ *
+ * All `GroupVirtualizer` accessors remain live — they are proxied through to the
+ * underlying virtualizer on every access.
+ *
+ * @example
+ * ```ts
+ * const v = createReactiveGroupedVirtualizer(el, { sections, estimateItemSize: 48 });
+ * effect(() => {
+ *   const { headers, items, stickyHeader, totalSize } = v.state.value;
+ *   render(headers, items, totalSize);
+ * });
+ * ```
+ */
+export function createReactiveGroupedVirtualizer<T>(
+  target: ScrollTarget,
+  options: Omit<GroupVirtualizerOptions<T>, 'onChange'>,
+): ReactiveGroupVirtualizer<T> {
+  const state = signal<GroupVirtualizerState<T>>({ headers: [], items: [], stickyHeader: null, totalSize: 0 });
+
+  const v = createGroupedVirtualizer<T>(target, {
+    ...options,
+    onChange: (s) => {
+      state.value = s;
+    },
+  });
+
+  return new Proxy(v, {
+    get(t, p, r) {
+      if (p === 'state') return state;
+
+      return Reflect.get(t, p, r);
+    },
+  }) as unknown as ReactiveGroupVirtualizer<T>;
 }
 
 /**
@@ -50,11 +98,11 @@ export function createReactiveVirtualizer(
     },
   });
 
-  return new Proxy(v as ReactiveVirtualizer, {
+  return new Proxy(v, {
     get(t, p, r) {
       if (p === 'state') return state;
 
       return Reflect.get(t, p, r);
     },
-  });
+  }) as unknown as ReactiveVirtualizer;
 }

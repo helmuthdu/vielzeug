@@ -5,7 +5,7 @@ description: Complete API reference for Arsenal.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 <!-- markdownlint-disable MD060 -->
 
@@ -16,11 +16,11 @@ description: Complete API reference for Arsenal.
 | `groupBy(array, selector)`              | Group items into a record by key                                  | Sync      | Key must be a `PropertyKey`                                                                              |
 | `fuzzyFilter(array, query, options?)`   | Filter array by fuzzy string similarity                           | Sync      | Returns `T[]`; empty query returns all items unchanged                                                   |
 | `fuzzyScore(array, query, options?)`    | Score and rank array items by similarity                          | Sync      | Returns `ScoredResult<T>[]` sorted by score descending; empty query returns all at score `1`             |
-| `sort(array, selectors)`                | Multi-key sort without mutation                                   | Sync      | Pass an object `{ key: 'asc' }` or a comparator                                                         |
+| `sort(array, selectors)`                | Multi-key sort without mutation                                   | Sync      | Pass an object `{ key: 'asc' }` or a comparator                                                          |
 | `uniq(array, selector?)`                | Deduplicate by value or key                                       | Sync      | Uses deep equality without a selector                                                                    |
 | `parallel(array, fn, options?)`         | Bounded async fan-out                                             | Async     | `limit` defaults to unbounded                                                                            |
 | `queue(options?)`                       | Serialise async jobs with concurrency cap                         | Async     | `.onIdle()` resolves when queue drains; `.onSettled(cb)` subscribes to all task completions              |
-| `attempt(fn)`                           | Run a sync or async fn and return `AttemptResult` — never throws  | Both      | Use `isOk(r)` / `isFail(r)` to narrow the result type                                                   |
+| `attempt(fn)`                           | Run a sync or async fn and return `AttemptResult` — never throws  | Both      | Use `isOk(r)` / `isFail(r)` to narrow the result type                                                    |
 | `retry(fn, options?)`                   | Retry a throwing async function with timeout and signal           | Async     | Rethrows on exhaustion; `shouldRetry` receives `(error, failureIndex)` — not called on the final attempt |
 | `allOf(...predicates)`                  | AND combinator — all must pass                                    | Sync      | Zero predicates → vacuous truth (always `true`)                                                          |
 | `anyOf(...predicates)`                  | OR combinator — at least one must pass                            | Sync      | Zero predicates → vacuous falsity (always `false`)                                                       |
@@ -28,8 +28,8 @@ description: Complete API reference for Arsenal.
 | `debounce(fn, delay?, options?)`        | Delay execution until input settles (trailing by default)         | Sync      | Returns `.cancel()`, `.flush()`, `.pending()`; reuse the returned function across renders                |
 | `memo(fn, options?)`                    | Memoize a **sync** function with optional LRU size cap            | Sync      | Does **not** accept async functions; use `stash.getOrSet` for async caching                              |
 | `assert(condition, message?, options?)` | Throw if condition is falsy; narrows type via `asserts condition` | Sync      | Accepts `{ type: ErrorConstructor }` for custom error class                                              |
-| `diff(before?, after?)`                 | Structural diff between two objects                               | Sync      | Returns `DiffResult` with `added`, `removed`, `changed` arrays — no sentinel symbols                                                                |
-| `parseJSON(json, options?)`             | Safe JSON parse with fallback                                     | Sync      | Accepts `string \| null \| undefined`; returns `undefined` on failure                                   |
+| `diff(before?, after?)`                 | Structural diff between two objects                               | Sync      | Returns `DiffResult` with `added`, `removed`, `changed` arrays — no sentinel symbols                     |
+| `parseJSON(json, options?)`             | Safe JSON parse with fallback                                     | Sync      | Accepts `string \| null \| undefined`; returns `undefined` on failure                                    |
 | `stash(options?)`                       | TTL-aware key-value cache with stampede prevention                | Sync      | `undefined` is a valid cached value — `getOrSet` will not re-invoke the factory                          |
 | `hash(value, options?)`                 | Deterministic JSON-like string for any value                      | Sync      | Pass `{ onClassInstance: 'throw' }` to throw on class instances instead of coercing to `String()`        |
 | `getPath(item, path, options?)`         | Nested dot-notation access                                        | Sync      | Bracket notation auto-converted by default; pass `{ bracketNotation: false }` to throw instead           |
@@ -42,18 +42,18 @@ description: Complete API reference for Arsenal.
 
 ## Package Entry Points
 
-| Import                       | Purpose                                                |
-| ---------------------------- | ------------------------------------------------------ |
-| `@vielzeug/arsenal`          | All public exports                                     |
-| `@vielzeug/arsenal/array`    | Array utilities only                                   |
-| `@vielzeug/arsenal/async`    | Async utilities only                                   |
-| `@vielzeug/arsenal/cache`    | `memo` and `stash`                                     |
-| `@vielzeug/arsenal/function` | `debounce`, `throttle`, `pipe`, `assert`, and more     |
-| `@vielzeug/arsenal/guards`   | Typed predicates and combinators (`allOf`, `anyOf`, …) |
-| `@vielzeug/arsenal/math`     | Math utilities only                                    |
+| Import                       | Purpose                                                       |
+| ---------------------------- | ------------------------------------------------------------- |
+| `@vielzeug/arsenal`          | All public exports                                            |
+| `@vielzeug/arsenal/array`    | Array utilities only                                          |
+| `@vielzeug/arsenal/async`    | Async utilities only                                          |
+| `@vielzeug/arsenal/cache`    | `memo` and `stash`                                            |
+| `@vielzeug/arsenal/function` | `debounce`, `throttle`, `pipe`, `assert`, and more            |
+| `@vielzeug/arsenal/guards`   | Typed predicates and combinators (`allOf`, `anyOf`, …)        |
+| `@vielzeug/arsenal/math`     | Math utilities only                                           |
 | `@vielzeug/arsenal/object`   | `deepMerge`, `diff`, `getPath`, `parseJSON`, `hash`, and more |
-| `@vielzeug/arsenal/random`   | `draw`, `random`, `shuffle`, `uuid`                    |
-| `@vielzeug/arsenal/string`   | String utilities only                                  |
+| `@vielzeug/arsenal/random`   | `draw`, `random`, `shuffle`, `uuid`                           |
+| `@vielzeug/arsenal/string`   | String utilities only                                         |
 
 ## Array
 
@@ -332,9 +332,9 @@ type DeepMergeOptions = { arrayStrategy?: 'concat' | 'replace' }; // default: 'r
 - Prototype pollution is prevented: `__proto__`, `constructor`, and `prototype` keys are silently skipped.
 
 ```ts
-deepMerge({ a: { x: 1 } }, { a: { y: 2 } });                           // { a: { x: 1, y: 2 } }
+deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
 deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a', 'b'] }
-shallowMerge({ a: 1 }, { b: 2 }, { c: 3 });                             // { a: 1, b: 2, c: 3 }
+shallowMerge({ a: 1 }, { b: 2 }, { c: 3 }); // { a: 1, b: 2, c: 3 }
 ```
 
 ### diffArrays
@@ -370,11 +370,11 @@ type GetPathOptions = {
 ```ts
 const obj = { a: { b: { c: 3 } }, d: [1, 2, 3] };
 
-getPath(obj, 'a.b.c');                               // 3
-getPath(obj, 'a.b.x', { fallback: 'fallback' });     // 'fallback'
-getPath(obj, 'd[1]');                                // 2  (bracket auto-converted)
-getPath(obj, 'e.f.g', { strict: true });             // throws Error
-getPath(obj, 'a[0]', { bracketNotation: false });    // throws TypeError
+getPath(obj, 'a.b.c'); // 3
+getPath(obj, 'a.b.x', { fallback: 'fallback' }); // 'fallback'
+getPath(obj, 'd[1]'); // 2  (bracket auto-converted)
+getPath(obj, 'e.f.g', { strict: true }); // throws Error
+getPath(obj, 'a[0]', { bracketNotation: false }); // throws TypeError
 ```
 
 ```ts
@@ -412,16 +412,22 @@ type HashOptions = {
 Produces a deterministic, order-independent JSON-like string. Object keys are sorted alphabetically. Handles `Date`, `RegExp`, `Set`, `Map`, and `bigint`. Circular references produce `'[Circular]'`.
 
 ```ts
-hash({ b: 2, a: 1 })                            // '{"a":1,"b":2}'
-hash([3, 1, 2])                                  // '[3,1,2]'
-hash(new Date('2024-01-01T00:00:00Z'))            // '[Date:2024-01-01T00:00:00.000Z]'
-hash(new Set([3, 1, 2]))                          // '[Set:1,2,3]'
-hash(new Map([['b', 2], ['a', 1]]))               // '[Map:"a"=>1,"b"=>2]'
-hash(42n)                                         // '42n'
-hash(new MyClass())                               // String(instance) by default
-hash(new MyClass(), { onClassInstance: 'throw' }) // throws TypeError
-const o: Record<string, unknown> = { x: 1 }; o.self = o;
-hash(o)                                           // '{"self":[Circular],"x":1}'
+hash({ b: 2, a: 1 }); // '{"a":1,"b":2}'
+hash([3, 1, 2]); // '[3,1,2]'
+hash(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
+hash(new Set([3, 1, 2])); // '[Set:1,2,3]'
+hash(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:"a"=>1,"b"=>2]'
+hash(42n); // '42n'
+hash(new MyClass()); // String(instance) by default
+hash(new MyClass(), { onClassInstance: 'throw' }); // throws TypeError
+const o: Record<string, unknown> = { x: 1 };
+o.self = o;
+hash(o); // '{"self":[Circular],"x":1}'
 ```
 
 ## Random

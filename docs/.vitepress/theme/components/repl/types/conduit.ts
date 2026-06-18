@@ -22,6 +22,7 @@ declare module '/conduit' {
 
   export interface FactoryResolver {
     resolve<T>(tok: Token<T>): Promise<T>;
+    resolveSync<T>(tok: Token<T>): T;
   }
 
   export type ContainerModule = (container: Container) => Promise<void> | void;
@@ -34,6 +35,7 @@ declare module '/conduit' {
   export type ResolveResult<T> = { ok: true; value: T } | { ok: false; error: unknown };
 
   export type ContainerNode = {
+    deps?: string[];
     description: string;
     kind: 'value' | 'factory';
     lifetime?: 'singleton' | 'transient' | string;
@@ -77,6 +79,7 @@ declare module '/conduit' {
   export function tryResolve<T>(container: Container, tok: Token<T>): Promise<ResolveResult<T>>;
   export function resolveSyncOptional<T>(container: Container, tok: Token<T>): T | undefined;
   export function resolveSyncOrDefault<T>(container: Container, tok: Token<T>, defaultValue: T): T;
+  export function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveResult<T>;
 
   export class ContainerError extends Error {}
   export class CircularDependencyError extends ContainerError {}

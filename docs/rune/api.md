@@ -5,7 +5,7 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol               | Purpose                                          | Execution mode | Common gotcha                                                |
 | -------------------- | ------------------------------------------------ | -------------- | ------------------------------------------------------------ |
@@ -14,6 +14,7 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                         |
 | `pipe()`             | Fan-out dispatcher to multiple transports        | Sync           | Errors in one transport don't propagate to others            |
 | `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                               |
+| `resolveTheme()`     | Merge a partial theme onto the default           | Sync           | Returns a fully-populated `ResolvedTheme`                    |
 | `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
 | `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`               |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
@@ -107,13 +108,21 @@ All five methods share the same signature:
 
 ```ts
 log.debug / info / warn / error / fatal(message: string): void
+log.debug / info / warn / error / fatal(error: Error, context?: Bindings, message?: string): void
 log.debug / info / warn / error / fatal(context: Bindings, message?: string): void
 ```
 
 Argument rules:
 
 - String-only calls accept a single message argument.
-- Context object comes first when providing structured data. Pass `Error` instances as values inside the context object: `log.error({ err: new Error('boom') }, 'failed')` — `Error` values are auto-serialized to `{ message, name, stack }`.
+- **Error-first form:** pass an `Error` as the first argument — it is auto-serialized to `{ message, name, stack }` under the `err` key. Optionally follow with a `Bindings` object and/or a message string.
+- Context object comes first when providing structured data without a top-level Error. `Error` values inside the context object are also auto-serialized to `{ message, name, stack }`.
+
+```ts
+log.error(err, 'request failed'); // err auto-serialized to data.err
+log.error(err, { requestId }, 'request failed'); // err + context + message
+log.error({ err: new Error('boom') }, 'failed'); // Error nested in context object
+```
 
 ### Composition
 
@@ -197,12 +206,12 @@ remoteTransport(options: RemoteTransportOptions): Transport
 
 Forwards entries asynchronously to a remote handler. Fire-and-forget — handler errors are swallowed to `console.warn` and never propagate to the caller.
 
-| Option    | Type                            | Default       | Description                             |
-| --------- | ------------------------------- | ------------- | --------------------------------------- |
-| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry |
-| `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
-| `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
-| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws          |
+| Option    | Type                            | Default       | Description                                                                                                                                                     |
+| --------- | ------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry                                                                                                                         |
+| `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                                                                                                                                        |
+| `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker                                                                                                                         |
+| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws or rejects. Default: a dev-only `console.warn`. Silent in production — provide an explicit handler for production observability. |
 
 **Returns:** `Transport`
 
@@ -420,13 +429,20 @@ isLevelEnabled('warn', 'info'); // false
 isLevelEnabled('debug', 'off'); // false
 ```
 
-### PRIORITY
+### resolveTheme(override?)
 
 ```ts
-const PRIORITY: Record<LogLevel, number>;
+resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme
 ```
 
-Exported priority map: `{ debug: 0, info: 1, warn: 2, error: 3, fatal: 4, off: 5 }`. Useful for building custom transports or middleware that perform level comparisons.
+Deep-merges a partial `ConsoleTheme` override onto `DEFAULT_THEME`. Returns a fully-populated `ResolvedTheme` where every level and every field is present. Used internally by `consoleTransport()` — call directly when building a custom transport that needs to honour theme overrides.
+
+```ts
+import { resolveTheme } from '@vielzeug/rune';
+
+const theme = resolveTheme({ warn: { badge: '⚡' } });
+// theme.warn.badge === '⚡', theme.warn.bg === DEFAULT_THEME.warn.bg (unchanged)
+```
 
 ### DEFAULT_THEME
 
@@ -508,11 +524,16 @@ Payload shape delivered to `RemoteHandler`:
 ```ts
 type LogMethod = {
   (message: string): void;
+  (error: Error, context?: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
 };
 ```
 
-Every log-level method uses this signature. Every call must provide at least one argument. Pass `Error` instances as values inside the context object — they are auto-serialized to `{ message, name, stack }`.
+Every log-level method uses this signature. Three call forms are supported:
+
+- **String-only:** `log.info('message')`
+- **Error-first:** `log.error(err, { requestId }, 'failed')` — `Error` is auto-serialized to `{ message, name, stack }` under `data.err`. Optionally follow with a `Bindings` object and/or a message string.
+- **Context-first:** `log.info({ key: 'value' }, 'message')` — structured context object, optional message. `Error` values nested inside the context are also auto-serialized.
 
 ### LogMiddleware
 
@@ -565,6 +586,7 @@ type Logger = {
   readonly transports: readonly Transport[];
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
+  /** Returns a new child logger with additional pinned bindings. The returned logger is fully independent — disposing it does not affect the parent, and vice versa. */
   withBindings: (bindings: Bindings) => Logger;
 };
 ```

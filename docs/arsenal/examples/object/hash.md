@@ -20,10 +20,15 @@ const key1 = hash({ sort: 'asc', filter: { role: 'admin' } });
 const key2 = hash({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true
 
-hash(new Set([3, 1, 2]));                   // '[Set:1,2,3]'
-hash(new Date('2024-01-01T00:00:00Z'));      // '[Date:2024-01-01T00:00:00.000Z]'
-hash(new Map([['b', 2], ['a', 1]]));         // '[Map:"a"=>1,"b"=>2]'
-hash(42n);                                   // '42n'
+hash(new Set([3, 1, 2])); // '[Set:1,2,3]'
+hash(new Date('2024-01-01T00:00:00Z')); // '[Date:2024-01-01T00:00:00.000Z]'
+hash(
+  new Map([
+    ['b', 2],
+    ['a', 1],
+  ]),
+); // '[Map:"a"=>1,"b"=>2]'
+hash(42n); // '42n'
 ```
 
 #### Circular references
@@ -42,7 +47,7 @@ hash(o); // '{"self":[Circular],"x":1}'
 import { hash } from '@vielzeug/arsenal';
 
 class Token {}
-hash(new Token());                               // String(instance) — default
+hash(new Token()); // String(instance) — default
 hash(new Token(), { onClassInstance: 'throw' }); // throws TypeError
 ```
 

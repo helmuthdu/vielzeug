@@ -18,6 +18,7 @@ exports:
     pipe,
     lazy,
     isLevelEnabled,
+    resolveTheme,
     DEFAULT_THEME,
   ]
 environments: [browser, node, ssr, deno]
@@ -140,8 +141,8 @@ const nodeLog = createLogger({
 
 - Level filtering (`debug` to `off`) with `enabled()` checks, including `fatal` above `error`
 - Immutable config after construction — use `child()` or `withBindings()` to scope
-- Two call forms: `log.info('msg')` or `log.info({ key: 'val' }, 'msg')` — context object always first
-- `Error` values in context fields are auto-serialized to `{ message, name, stack }` — survives JSON.stringify
+- Three call forms: `log.info('msg')`, `log.error(err, { id }, 'msg')` (Error-first), or `log.info({ key: 'val' }, 'msg')` — Error-first form auto-serializes to `data.err`
+- `Error` values in context fields are also auto-serialized to `{ message, name, stack }` — survives JSON.stringify
 - Pinned context bindings via `withBindings({ requestId })` — fields on every line
 - Lazy bindings via `lazy(fn)` — expensive computations gated behind the level check
 - Namespaced child loggers via `createLogger('name')` or `logger.child({ namespace })`

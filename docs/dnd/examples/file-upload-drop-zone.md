@@ -75,10 +75,8 @@ using zone = createDropZone({
     }
   },
 
-  onDropRejected: (files, event) => {
-    // event is ClipboardEvent when rejection came from a paste
-    const source = event instanceof ClipboardEvent ? 'paste' : 'drop';
-    showToast(`${files.length} file(s) rejected (${source}). Only images and PDFs up to quota are allowed.`);
+  onDropRejected: (files) => {
+    showToast(`${files.length} file(s) rejected. Only images and PDFs up to quota are allowed.`);
   },
 
   onHoverChange: (hovered) => {

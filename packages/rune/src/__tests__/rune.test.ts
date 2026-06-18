@@ -2300,3 +2300,87 @@ describe('withBindings() with lazy bindings', () => {
     expect((entries[1].data['req'] as { count: number }).count).toBe(2);
   });
 });
+
+/* ─── C1: batchTransport flush() on empty buffer ─── */
+
+describe('batchTransport flush() on empty buffer', () => {
+  it('flush() is a no-op when the buffer is empty', async () => {
+    let flushCount = 0;
+    const batch = batchTransport({
+      interval: 10_000,
+      onFlush: () => {
+        flushCount++;
+      },
+    });
+
+    batch.flush();
+    await Promise.resolve();
+
+    expect(flushCount).toBe(0);
+
+    batch.dispose();
+  });
+});
+
+/* ─── C2: redactTransport empty keys[] ─── */
+
+describe('redactTransport with empty keys[]', () => {
+  it('passes data through unchanged when keys is empty', () => {
+    const { entries, transport } = createTestTransport();
+    const log = createLogger({
+      transports: [redactTransport({ keys: [], transport })],
+    });
+
+    log.info({ password: 'secret', user: 'alice' }, 'login');
+
+    expect(entries[0].data).toEqual({ password: 'secret', user: 'alice' });
+  });
+});
+
+/* ─── D1: LogMethod 3-arg Error overload ─── */
+
+describe('LogMethod 3-arg Error overload', () => {
+  it('log.error(err, context, message) auto-serializes error and preserves message', () => {
+    const { entries, log } = setup();
+    const err = new Error('timeout');
+
+    log.error(err, { requestId: 'abc' }, 'request failed');
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBe('request failed');
+    expect(entries[0].data['requestId']).toBe('abc');
+    expect(entries[0].data['err']).toMatchObject({ message: 'timeout', name: 'Error' });
+  });
+
+  it('log.error(err, message) — Error first, string second = message with no extra context', () => {
+    const { entries, log } = setup();
+    const err = new Error('fail');
+
+    log.error(err, 'request failed');
+
+    expect(entries[0].message).toBe('request failed');
+    expect(entries[0].data['err']).toMatchObject({ message: 'fail', name: 'Error' });
+  });
+
+  it('log.error(err) — Error only, no message', () => {
+    const { entries, log } = setup();
+    const err = new Error('bare');
+
+    log.error(err);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].message).toBeUndefined();
+    expect(entries[0].data['err']).toMatchObject({ message: 'bare', name: 'Error' });
+  });
+
+  it('log.error(err, context) — Error + context, no message', () => {
+    const { entries, log } = setup();
+    const err = new Error('err');
+
+    log.error(err, { userId: 42 });
+
+    expect(entries[0].message).toBeUndefined();
+    expect(entries[0].data['err']).toMatchObject({ message: 'err' });
+    expect(entries[0].data['userId']).toBe(42);
+  });
+});

@@ -53,6 +53,12 @@ export type FactoryOptions<T> = {
 /** Minimal resolver passed to every factory function. */
 export interface FactoryResolver {
   resolve<T>(tok: Token<T>): Promise<T>;
+  /**
+   * Resolve synchronously. Works for value providers and already-resolved
+   * singleton/scoped instances. Throws `SyncResolutionError` if the instance
+   * has not been resolved yet.
+   */
+  resolveSync<T>(tok: Token<T>): T;
 }
 
 // ---------------------------------------------------------------------------
@@ -236,6 +242,8 @@ type CacheEntry<T = unknown> = {
 // ---------------------------------------------------------------------------
 
 export type ContainerNode = {
+  /** Statically-declared dependency token descriptions (from `deps:` option). */
+  deps?: string[];
   description: string;
   kind: 'factory' | 'value';
   /** 'singleton', 'transient', or 'scope:<name>' for named scopes. */
@@ -309,9 +317,10 @@ export interface Container {
   /**
    * Freeze the container, locking it against further registrations.
    * After `freeze()`, `value()` and `factory()` throw `ContainerFrozenError`.
-   * Runs a registration-completeness check (all registered tokens have a provider);
-   * throws `ProviderNotFoundError` if any token in the graph is unregistered.
-   * Note: cycle detection happens lazily at resolve time, not during freeze.
+   * Validates statically-declared `deps`: throws `ProviderNotFoundError` if a
+   * declared dep is missing, or `CircularDependencyError` if they form a cycle.
+   * Idempotent — calling `freeze()` again on an already-frozen container is a no-op.
+   * Note: cycle detection for lazy (undeclared) deps happens at resolve time.
    */
   freeze(): this;
 
@@ -359,7 +368,13 @@ class ContainerImpl implements Container {
   constructor(parent?: ContainerImpl, opts: { name?: string; scopeTag?: ScopeToken } = {}) {
     this.#parent = parent;
     this.#scopeTag = opts.scopeTag;
-    this.name = opts.name ?? (parent ? `${parent.name}:child` : 'root');
+    this.name =
+      opts.name ??
+      (parent
+        ? opts.scopeTag
+          ? `${parent.name}:${opts.scopeTag.description ?? 'scope'}`
+          : `${parent.name}:child`
+        : 'root');
   }
 
   #assertNotDisposed(): void {
@@ -471,6 +486,13 @@ class ContainerImpl implements Container {
     const seen = new Set<Token<any>>();
     const work: Promise<unknown>[] = [];
 
+    const resolveAndNotify = async (tok: Token<unknown>): Promise<void> => {
+      const value = await this.#resolveToken(tok, new Set(), []);
+
+      this.#emit({ description: tokenName(tok), source: this.name, type: 'resolve' });
+      this.#fireInterceptors(tok, value);
+    };
+
     for (const c of this.#ancestors()) {
       for (const [tok, reg] of c.#registry) {
         if (seen.has(tok as Token<any>) || reg.kind !== 'factory') continue;
@@ -478,11 +500,11 @@ class ContainerImpl implements Container {
         seen.add(tok as Token<any>);
 
         if (reg.lifetime === 'singleton') {
-          work.push(this.#resolveToken(tok as Token<unknown>, new Set(), []));
+          work.push(resolveAndNotify(tok as Token<unknown>));
         } else if (opts?.includeScoped && typeof reg.lifetime === 'symbol') {
           const scopeContainer = this.#findScope(reg.lifetime);
 
-          if (scopeContainer) work.push(this.#resolveToken(tok as Token<unknown>, new Set(), []));
+          if (scopeContainer) work.push(resolveAndNotify(tok as Token<unknown>));
         }
       }
     }
@@ -511,6 +533,7 @@ class ContainerImpl implements Container {
                 : (reg.lifetime as 'singleton' | 'transient');
 
             nodes.push({
+              deps: reg.deps?.map((d) => tokenName(d)),
               description: tokenName(tok as Token<any>),
               kind: 'factory',
               lifetime,
@@ -527,9 +550,8 @@ class ContainerImpl implements Container {
 
   /**
    * Validate the registration graph. Checks:
-   * 1. All registered tokens have a provider.
-   * 2. Statically declared `deps` are registered (ProviderNotFoundError).
-   * 3. Statically declared `deps` do not form a cycle (CircularDependencyError).
+   * 1. Statically declared `deps` are registered (ProviderNotFoundError).
+   * 2. Statically declared `deps` do not form a cycle (CircularDependencyError).
    * Lazy (runtime) deps without `deps:` declarations are checked at resolve time.
    */
   #validate(): void {
@@ -543,10 +565,6 @@ class ContainerImpl implements Container {
         if (visited.has(tok as Token<any>)) continue;
 
         visited.add(tok as Token<any>);
-
-        if (this.#getRegistration(tok as Token<any>) === undefined) {
-          throw new ProviderNotFoundError(tok as Token<any>, this.name);
-        }
 
         if (reg.kind === 'factory' && reg.deps && reg.deps.length > 0) {
           staticDeps.set(tok as Token<any>, reg.deps);
@@ -588,6 +606,9 @@ class ContainerImpl implements Container {
 
   freeze(): this {
     this.#assertNotDisposed();
+
+    if (this.#frozen) return this;
+
     this.#validate();
     this.#frozen = true;
 
@@ -733,6 +754,7 @@ class ContainerImpl implements Container {
   #makeResolver(visiting: Set<Token<any>>, path: Token<any>[]): FactoryResolver {
     return {
       resolve: <T>(tok: Token<T>): Promise<T> => this.#resolveToken(tok, new Set(visiting), path),
+      resolveSync: <T>(tok: Token<T>): T => this.resolveSync(tok),
     };
   }
 
@@ -872,7 +894,9 @@ export async function resolveOrDefault<T>(container: Container, tok: Token<T>, d
 
 /**
  * Resolve a token, returning a result object instead of throwing.
- * Returns `{ ok: true, value }` on success, `{ ok: false, error }` on any failure.
+ * Returns `{ ok: true, value }` on success or `{ ok: false, error }` when the
+ * token is not registered. Re-throws all other errors — including
+ * `ContainerDisposedError` and `CircularDependencyError`.
  */
 export async function tryResolve<T>(container: Container, tok: Token<T>): Promise<ResolveResult<T>> {
   try {
@@ -880,7 +904,9 @@ export async function tryResolve<T>(container: Container, tok: Token<T>): Promis
 
     return { ok: true, value };
   } catch (error) {
-    return { error, ok: false };
+    if (error instanceof ProviderNotFoundError) return { error, ok: false };
+
+    throw error;
   }
 }
 
@@ -906,6 +932,24 @@ export function resolveSyncOrDefault<T>(container: Container, tok: Token<T>, def
   const result = resolveSyncOptional(container, tok);
 
   return result === undefined ? defaultValue : result;
+}
+
+/**
+ * Resolve a token synchronously, returning a result object instead of throwing.
+ * Returns `{ ok: true, value }` on success or `{ ok: false, error }` when the
+ * token is not registered. Re-throws all other errors — including
+ * `SyncResolutionError`, `ContainerDisposedError`, and `ScopedResolutionError`.
+ */
+export function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveResult<T> {
+  try {
+    const value = container.resolveSync(tok);
+
+    return { ok: true, value };
+  } catch (error) {
+    if (error instanceof ProviderNotFoundError) return { error, ok: false };
+
+    throw error;
+  }
 }
 
 /**

@@ -5,7 +5,7 @@ description: Complete API reference for @vielzeug/familiar.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                 | Purpose                                          | Execution mode | Common gotcha                                   |
 | ---------------------- | ------------------------------------------------ | -------------- | ----------------------------------------------- |
@@ -217,8 +217,8 @@ type TaskGroup<TInput, TOutput> = {
 
 Returned by `worker.group()`. See [`group()`](#group) below.
 
-| Member    | Description                                                              |
-| --------- | ------------------------------------------------------------------------ |
+| Member    | Description                                                                                                                                     |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | `abort`   | Cancels all pending tasks. In-flight tasks run to completion.                                                                                   |
 | `drain`   | Resolves with `PromiseSettledResult[]` for every task submitted so far. Also closes the group (decrements `groupCount`).                        |
 | `name`    | Optional name passed to `group(name)`, useful for logging and debugging.                                                                        |
@@ -294,9 +294,9 @@ Creates a pool where each slot is a `{ type: 'module' }` Web Worker loaded from 
 
 ### Parameters
 
-| Parameter | Type            | Description                                                                             |
-| --------- | --------------- | --------------------------------------------------------------------------------------- |
-| `url`     | `URL \| string` | URL of the worker module. Use `new URL('./my-worker.ts', import.meta.url)` in bundlers. |
+| Parameter | Type            | Description                                                                                                                                                                                                          |
+| --------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`     | `URL \| string` | URL of the worker module. Use `new URL('./my-worker.ts', import.meta.url)` in bundlers.                                                                                                                              |
 | `options` | `WorkerOptions` | Optional pool configuration (same as `createWorker`). Note: `heartbeatWindow` is validated but has no effect on module workers (they must implement heartbeat manually). A dev-mode warning is emitted if it is set. |
 
 ### Worker File Protocol
@@ -601,15 +601,15 @@ const result = await pool.run(21); // no cold-start
 
 ### Metrics
 
-| Member        | Type           | Description                                                                      |
-| ------------- | -------------- | -------------------------------------------------------------------------------- |
-| `active`      | `number`       | Slots currently executing a task                                                                         |
-| `completed`   | `number`       | Successful tasks since creation                                                                          |
-| `concurrency` | `number`       | Configured slot count                                                                                    |
-| `failed`      | `number`       | Tasks rejected with task/timeout/worker error (excludes aborts and terminations)                        |
-| `groupCount`  | `number`       | Active groups — decrements when all tasks settle naturally or when `drain()` is called                   |
-| `queued`      | `number`       | Tasks waiting in queue (accurate — excludes cancelled items)                                             |
-| `status`      | `WorkerStatus` | Current lifecycle state                                                                                  |
+| Member        | Type           | Description                                                                            |
+| ------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `active`      | `number`       | Slots currently executing a task                                                       |
+| `completed`   | `number`       | Successful tasks since creation                                                        |
+| `concurrency` | `number`       | Configured slot count                                                                  |
+| `failed`      | `number`       | Tasks rejected with task/timeout/worker error (excludes aborts and terminations)       |
+| `groupCount`  | `number`       | Active groups — decrements when all tasks settle naturally or when `drain()` is called |
+| `queued`      | `number`       | Tasks waiting in queue (accurate — excludes cancelled items)                           |
+| `status`      | `WorkerStatus` | Current lifecycle state                                                                |
 
 ---
 

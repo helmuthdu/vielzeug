@@ -383,12 +383,20 @@ await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
 Eagerly run data loaders without navigating — useful for hover-prefetch:
 
 ```ts
+// Preload a parameterised route
 anchor.addEventListener('mouseenter', () => {
   router.preload('userDetail', { id: '42' });
 });
+
+// Preload with a query string to avoid a cache miss on navigation
+searchInput.addEventListener('focus', () => {
+  router.preload('search', undefined, { q: searchInput.value });
+});
 ```
 
-Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route+query combination; a navigation with different query params runs the loaders fresh.
+Concurrent calls for the same `name + params + query` combination are deduplicated. Results are consumed on the next navigation to the same route with the same cache key. Pass the same `query` you intend to navigate with — without it, the preload key is the bare path and any navigation with a query string will re-run the loaders.
+
+In-flight preloads are aborted automatically when `router.dispose()` is called.
 
 ### Leave Guards
 

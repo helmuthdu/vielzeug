@@ -18,9 +18,9 @@ import { getPath } from '@vielzeug/arsenal';
 
 const config = { api: { host: 'localhost', port: 3000 }, items: [10, 20] };
 
-getPath(config, 'api.port');        // 3000
-getPath(config, 'items[1]');        // 20 — bracket auto-converted
-getPath(config, 'api.timeout');     // undefined
+getPath(config, 'api.port'); // 3000
+getPath(config, 'items[1]'); // 20 — bracket auto-converted
+getPath(config, 'api.timeout'); // undefined
 ```
 
 #### Default values
@@ -29,7 +29,7 @@ getPath(config, 'api.timeout');     // undefined
 import { getPath } from '@vielzeug/arsenal';
 
 getPath(config, 'api.timeout', { fallback: 5_000 }); // 5000
-getPath(config, 'missing.deep', { fallback: null });  // null
+getPath(config, 'missing.deep', { fallback: null }); // null
 ```
 
 #### Strict mode — throw on missing path

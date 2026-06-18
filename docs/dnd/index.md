@@ -111,10 +111,11 @@ using sortable = createSortable({
   onBeforeReorder: (from, to) => {
     // record positions here before the DOM commits (for FLIP animations)
   },
-  onReorder: (ids) => {
+  getKey: (el) => el.dataset.sortId!,
+  onReorder: ({ ids, setRevert }) => {
     const prev = currentOrder;
     setOrder(ids);
-    return () => setOrder(prev); // enable sortable.revert() on failure
+    setRevert(() => setOrder(prev)); // enable sortable.revert() on failure
   },
 });
 ```
@@ -128,18 +129,18 @@ using sortable = createSortable({
 - **Flexible accept patterns** — MIME types (`image/png`), wildcards (`image/*`), and file extensions (`.pdf`)
 - **`maxFiles` limit** — cap the number of accepted files per drop; excess files are forwarded to `onDropRejected`
 - **`onValidate` async gating** — optional async step after type filtering; `zone.validating` is `true` while a promise is pending; only receives type-accepted files
-- **Clipboard paste support** — `paste: true` routes pasted files through the same `accept`, `maxFiles`, and `onValidate` pipeline; `onPaste` provides a separate callback; `onDropRejected` receives a `ClipboardEvent` for paste rejections
+- **Clipboard paste support** — `paste: true` routes pasted files through the same `accept`, `maxFiles`, and `onValidate` pipeline; `onPaste` provides a separate callback; paste rejections are forwarded to `onDropRejected` with the same `(files: File[]) => void` signature as drop rejections
 - **`onDropRejected`** — separate callback for files that didn't match `accept`, exceeded `maxFiles`, or were rejected by `onValidate`; event type reflects whether the rejection came from a drop or a paste
 - **Sortable lists** — reorders DOM children with a placeholder indicator; fires `onReorder` only when the order actually changes
 - **Drag handles** — scope dragging to a child selector via `handle`; whole item is draggable when omitted
 - **Custom drag preview** — pass an element or a `(id, item, event) => element | null` factory; control hotspot with `dragImageOffset`
 - **`onBeforeReorder` FLIP hook** — fires before commit for both drag and keyboard moves; items are still in pre-commit positions, making it ideal for FLIP animation setup
-- **`sortable.revert()`** — `onReorder` may return a revert function; `revert()` calls it and clears it for rolling back optimistic updates on server failure
+- **`sortable.revert()`** — register a revert function via `event.setRevert(fn)` inside `onReorder`; `sortable.revert()` invokes it and clears it for rolling back optimistic updates on server failure
 - **Boundary-safe keyboard reordering** — arrow keys at the first/last item no longer suppress `preventDefault`, so the browser can scroll the page normally
 - **Explicit connected scopes** — lists only exchange items when they share a `createSortableScope()` instance
 - **Explicit DOM sync** — call `sortable.sync()` after DOM mutations instead of relying on hidden observers
 - **`[Symbol.dispose]`** — both primitives support the `using` keyword for automatic cleanup
-- **Reactive-friendly options** — pass booleans/arrays or getter functions for `disabled` and `accept`
+- **Reactive-friendly options** — `disabled` is re-read on each event (reassign `options.disabled = true` to toggle); `accept` captures the array reference, so push/splice mutations are reflected without recreating the zone
 - **Zero dependencies** — <PackageInfo package="dnd" type="size" /> gzipped, <PackageInfo package="dnd" type="dependencies" /> dependencies
 
 </div>

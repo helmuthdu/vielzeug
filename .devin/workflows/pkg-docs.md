@@ -448,7 +448,7 @@ description: Complete API reference for <PackageName>.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol           | Purpose              | Execution mode | Common gotcha    |
 | ---------------- | -------------------- | -------------- | ---------------- |
@@ -505,7 +505,7 @@ const result = functionName('value', { optionA: 'x' });
 **Rules:**
 
 - `[[toc]]` immediately after frontmatter.
-- `## API At a Glance` includes all primary exports and has all four columns.
+- `## API Overview` includes all primary exports and has all four columns.
 - `## Package Entry Point` table is required.
 - Every exported function has: signature block, parameters table (if it takes an options object), returns, example.
 - Every exported type is under `## Types` with full definition.
@@ -628,7 +628,7 @@ Run through this checklist mentally for each page:
 - [ ] `index.md` has all required frontmatter fields
 - [ ] `index.md` has `<PackageHero>`, `## Why`, comparison table, decision-callout
 - [ ] `usage.md` has `[[toc]]`, ends with Best Practices
-- [ ] `api.md` has `## API At a Glance` with 4 columns, `## Package Entry Point`
+- [ ] `api.md` has `## API Overview` with 4 columns, `## Package Entry Point`
 - [ ] `examples.md` links match files on disk
 - [ ] Each `examples/*.md` has Problem/Solution/Pitfalls/Related structure
 

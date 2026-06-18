@@ -307,6 +307,95 @@ describe('createDatePickerControl', () => {
     });
   });
 
+  // ── monthCells disabled ──────────────────────────────────────────────────
+
+  describe('monthCells isDisabled', () => {
+    it('marks months before min as disabled', () => {
+      const ctrl = makeCtrl({ min: plain(2025, 6, 1), value: plain(2025, 1, 1) });
+      const cells = ctrl.monthCells();
+
+      expect(cells[0].isDisabled).toBe(true); // January — ends before June
+      expect(cells[5].isDisabled).toBe(false); // June — not disabled
+      expect(cells[6].isDisabled).toBe(false); // July — not disabled
+    });
+
+    it('marks months after max as disabled', () => {
+      const ctrl = makeCtrl({ max: plain(2025, 6, 30), value: plain(2025, 1, 1) });
+      const cells = ctrl.monthCells();
+
+      expect(cells[5].isDisabled).toBe(false); // June — last day is max
+      expect(cells[6].isDisabled).toBe(true); // July — starts after max
+    });
+
+    it('no cells disabled when no min/max set', () => {
+      const cells = makeCtrl({ value: plain(2025, 1, 1) }).monthCells();
+
+      expect(cells.every((c) => !c.isDisabled)).toBe(true);
+    });
+  });
+
+  // ── yearCells disabled ───────────────────────────────────────────────────
+
+  describe('yearCells isDisabled', () => {
+    it('marks years before min as disabled', () => {
+      const ctrl = makeCtrl({ min: plain(2024, 6, 1), value: plain(2025, 1, 1) });
+      const cells = ctrl.yearCells();
+
+      const cell2023 = cells.find((c) => c.year === 2023);
+      const cell2024 = cells.find((c) => c.year === 2024);
+
+      expect(cell2023?.isDisabled).toBe(true);
+      expect(cell2024?.isDisabled).toBe(false);
+    });
+
+    it('marks years after max as disabled', () => {
+      const ctrl = makeCtrl({ max: plain(2025, 6, 30), value: plain(2025, 1, 1) });
+      const cells = ctrl.yearCells();
+
+      const cell2025 = cells.find((c) => c.year === 2025);
+      const cell2026 = cells.find((c) => c.year === 2026);
+
+      expect(cell2025?.isDisabled).toBe(false);
+      expect(cell2026?.isDisabled).toBe(true);
+    });
+
+    it('no cells disabled when no min/max set', () => {
+      const cells = makeCtrl({ value: plain(2025, 1, 1) }).yearCells();
+
+      expect(cells.every((c) => !c.isDisabled)).toBe(true);
+    });
+  });
+
+  // ── goTo() NaN guard ─────────────────────────────────────────────────────
+
+  describe('goTo()', () => {
+    it('ignores NaN year and leaves displayYear unchanged', () => {
+      const ctrl = makeCtrl({ value: plain(2025, 6, 1) });
+
+      ctrl.goTo(Number.NaN, 3);
+
+      expect(ctrl.displayYear()).toBe(2025);
+      expect(ctrl.displayMonth()).toBe(6);
+    });
+
+    it('ignores Infinity year and leaves displayYear unchanged', () => {
+      const ctrl = makeCtrl({ value: plain(2025, 6, 1) });
+
+      ctrl.goTo(Infinity, 3);
+
+      expect(ctrl.displayYear()).toBe(2025);
+    });
+
+    it('applies valid year and month', () => {
+      const ctrl = makeCtrl({ value: plain(2025, 6, 1) });
+
+      ctrl.goTo(2030, 3);
+
+      expect(ctrl.displayYear()).toBe(2030);
+      expect(ctrl.displayMonth()).toBe(3);
+    });
+  });
+
   // ── Weekday labels ───────────────────────────────────────────────────────
 
   describe('weekdayLabels', () => {

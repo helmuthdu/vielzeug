@@ -36,9 +36,7 @@ effect(() => {
 
 // Derived computeds from the signal
 const onlineCount = computed(() => lobby.state.value.size);
-const memberNames = computed(() =>
-  [...lobby.state.value.values()].map((m) => m.name).sort(),
-);
+const memberNames = computed(() => [...lobby.state.value.values()].map((m) => m.name).sort());
 
 effect(() => {
   document.querySelector('#count')!.textContent = String(onlineCount.value);

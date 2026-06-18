@@ -5,7 +5,7 @@ description: Complete API reference for Wayfinder.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol                                  | Purpose                                                    | Execution mode       | Common gotcha                                                                                             |
 | --------------------------------------- | ---------------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------- |
@@ -20,7 +20,7 @@ description: Complete API reference for Wayfinder.
 | `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
 | `router.resolve(pathname)`              | Resolve a pathname to a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                        |
 | `router.match(url, options?)`           | Resolve a URL to a full state including data loaders       | Async                | Lazy modules are resolved as a side effect                                                                |
-| `router.preload(name, params?)`         | Eagerly run data loaders without navigating                | Async                | Results are consumed on the first matching navigation; different query params use a separate cache entry  |
+| `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; aborted automatically when the router is disposed         |
 | `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `RouterDisposedError` if disposed while pending |
 | `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                            |
 | `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                  |
@@ -295,16 +295,25 @@ Waits for the router to reach `status: 'idle'` with the named route active in th
 
 ---
 
-#### `router.preload(name, params?)`
+#### `router.preload(name, params?, query?)`
 
 ```ts
-// Hover-prefetch
+// Hover-prefetch without query
 anchor.addEventListener('mouseenter', () => {
   router.preload('userDetail', { id: '42' });
 });
+
+// Hover-prefetch with matching query to avoid a cache miss
+anchor.addEventListener('mouseenter', () => {
+  router.preload('search', undefined, { q: 'hello' });
+});
 ```
 
-Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route; a second navigation (or a navigation with different query params) runs the loaders fresh with a new `AbortSignal`.
+Eagerly runs the data loaders for a named route without navigating. Useful for hover-prefetch. Concurrent calls for the same `name + params + query` combination are deduplicated. Results are consumed on the next navigation to the same route with the same cache key.
+
+Pass the same `query` you intend to navigate with to ensure the preloaded result hits the cache. Without `query`, the key is the bare path — a navigation with a query string will produce a cache miss and re-run the loader.
+
+In-flight preloads are aborted automatically via the router's disposal signal when `router.dispose()` is called.
 
 **Returns:** `Promise<void>`
 

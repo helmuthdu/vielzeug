@@ -20,6 +20,8 @@ export type FocusManagerOptions = {
 export type FocusManager = {
   /** Move focus to the element matching `getInitialFocusSelector` (deferred one frame). */
   applyInitialFocus: () => void;
+  /** Cancel a pending `applyInitialFocus` rAF, if any. */
+  cancelInitialFocus: () => void;
   /** Capture the currently focused element so it can be restored later. */
   captureReturnFocus: () => void;
   /** Restore focus to the element captured by `captureReturnFocus`. */
@@ -67,6 +69,13 @@ export function createFocusManager(options: FocusManagerOptions): FocusManager {
             target.focus();
           });
         }
+      }
+    },
+
+    cancelInitialFocus() {
+      if (rafHandle !== null) {
+        cancelAnimationFrame(rafHandle);
+        rafHandle = null;
       }
     },
 

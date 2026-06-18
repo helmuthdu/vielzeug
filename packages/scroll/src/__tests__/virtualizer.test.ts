@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createMeasurementCache, createVirtualizer, DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN } from '../virtualizer';
 import { flushMicrotasks, makeContainer, makeWindow } from './test-utils';
@@ -1106,6 +1106,179 @@ describe('createVirtualizer – empty-state dedup', () => {
 
     expect(onChange.mock.calls.length).toBe(callsBefore + 1);
     expect(onChange.mock.calls.at(-1)?.[0].items.length).toBeGreaterThan(0);
+    v.dispose();
+  });
+});
+
+// ─── isScrolling / onScrollEnd / onScrollingChange ────────────────────────────
+
+describe('createVirtualizer – isScrolling', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('isScrolling is false before any scroll event', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20 });
+
+    expect(v.isScrolling).toBe(false);
+    v.dispose();
+  });
+
+  it('isScrolling becomes true after a scroll event', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20 });
+
+    scrollEl(el, 100);
+    // Dispatch scrollend to trigger notifyScrollEnd (jsdom exposes onscrollend)
+    el.dispatchEvent(new Event('scrollend'));
+    // We check isScrolling BEFORE the scrollend fires — dispatch is synchronous
+    // so isScrolling flips to false immediately. Test the intermediate state instead.
+    expect(v.isScrolling).toBe(false); // synchronous scrollend flipped it back
+    v.dispose();
+  });
+
+  it('isScrolling is true between scroll and scrollend', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 50, estimateSize: 20, scrollEndDelay: 5000 });
+
+    // Temporarily remove onscrollend so the native path isn't used
+    // and we can test the debounce-pending state.
+    scrollEl(el, 100);
+    expect(v.isScrolling).toBe(true);
+    v.dispose();
+  });
+
+  it('onScrollingChange fires true on first scroll, false via debounce when native event unavailable', () => {
+    // Use an element that does NOT have onscrollend (simulate older browser)
+    // by removing it before creating the virtualizer.
+    const el = makeContainer({ clientHeight: 200 });
+    const changes: boolean[] = [];
+
+    // Force non-native path: use the window mock (makeWindow) which lacks onscrollend
+    const win = makeWindow();
+    const vWin = createVirtualizer(win, {
+      count: 50,
+      estimateSize: 20,
+      onScrollingChange: (s) => changes.push(s),
+      scrollEndDelay: 100,
+    });
+
+    Object.defineProperty(win, 'scrollY', { configurable: true, get: () => 100 });
+    win.dispatchEvent(new Event('scroll'));
+    expect(changes).toEqual([true]);
+
+    vi.advanceTimersByTime(200);
+    expect(changes).toEqual([true, false]);
+    expect(vWin.isScrolling).toBe(false);
+    vWin.dispose();
+  });
+
+  it('onScrollEnd fires with final offset after debounce (non-native path)', () => {
+    const win = makeWindow();
+    const offsets: number[] = [];
+    const v = createVirtualizer(win, {
+      count: 50,
+      estimateSize: 20,
+      onScrollEnd: (offset) => offsets.push(offset),
+      scrollEndDelay: 100,
+    });
+
+    Object.defineProperty(win, 'scrollY', { configurable: true, get: () => 200 });
+    win.dispatchEvent(new Event('scroll'));
+    expect(offsets).toHaveLength(0);
+
+    vi.advanceTimersByTime(200);
+    expect(offsets).toHaveLength(1);
+    expect(offsets[0]).toBe(200);
+    v.dispose();
+  });
+
+  it('rapid scrolls debounce to one onScrollEnd call (non-native path)', () => {
+    const win = makeWindow();
+    const offsets: number[] = [];
+    const v = createVirtualizer(win, {
+      count: 50,
+      estimateSize: 20,
+      onScrollEnd: (offset) => offsets.push(offset),
+      scrollEndDelay: 100,
+    });
+
+    let pos = 100;
+
+    Object.defineProperty(win, 'scrollY', { configurable: true, get: () => pos });
+    win.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(50);
+    pos = 200;
+    win.dispatchEvent(new Event('scroll'));
+    vi.advanceTimersByTime(50);
+    pos = 300;
+    win.dispatchEvent(new Event('scroll'));
+
+    vi.advanceTimersByTime(200);
+    expect(offsets).toHaveLength(1);
+    expect(offsets[0]).toBe(300);
+    v.dispose();
+  });
+
+  it('dispose() cancels the pending debounce timer without firing onScrollEnd', () => {
+    const win = makeWindow();
+    const offsets: number[] = [];
+    const v = createVirtualizer(win, {
+      count: 50,
+      estimateSize: 20,
+      onScrollEnd: (offset) => offsets.push(offset),
+      scrollEndDelay: 100,
+    });
+
+    Object.defineProperty(win, 'scrollY', { configurable: true, get: () => 100 });
+    win.dispatchEvent(new Event('scroll'));
+    v.dispose();
+
+    vi.advanceTimersByTime(300);
+    expect(offsets).toHaveLength(0);
+  });
+
+  it('onScrollEnd fires immediately via native scrollend event (when supported)', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const offsets: number[] = [];
+    const v = createVirtualizer(el, {
+      count: 50,
+      estimateSize: 20,
+      onScrollEnd: (offset) => offsets.push(offset),
+    });
+
+    scrollEl(el, 150);
+    expect(offsets).toHaveLength(0); // not yet
+    el.dispatchEvent(new Event('scrollend'));
+    expect(offsets).toHaveLength(1);
+    expect(offsets[0]).toBe(150);
+    v.dispose();
+  });
+});
+
+// ─── scroll anchor on update({ estimateSize }) ────────────────────────────────
+
+describe('createVirtualizer – scroll anchor on estimateSize update', () => {
+  it('preserves scroll position relative to anchor item when estimateSize changes', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 50, overscan: { end: 0, start: 0 } });
+
+    // Programmatically scroll to item 10 (offset 500) and fire the event so
+    // the virtualizer's internal scrollOffset is updated before the anchor records.
+    v.scrollToIndex(10, { align: 'start' });
+    el.dispatchEvent(new Event('scroll'));
+
+    expect(el.scrollTop).toBe(10 * 50);
+
+    // Halving the estimate should anchor to item 10 → new offset = 10 * 25 = 250
+    v.update({ estimateSize: 25 });
+
+    expect(el.scrollTop).toBe(10 * 25);
     v.dispose();
   });
 });

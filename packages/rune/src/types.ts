@@ -74,7 +74,9 @@ export type RemoteTransportOptions = {
   /**
    * Called when the handler throws or rejects.
    * The async error path is separate from any synchronous errors in the emit call stack.
-   * Default: dev-only warn.
+   * Default: a dev-only `console.warn` (gated by `__RUNE_PROD__`). In production builds,
+   * unhandled remote transport errors are silently swallowed — pass an explicit `onError`
+   * if you need delivery-failure observability in production.
    */
   onError?: (error: unknown, data: RemoteLogData) => void;
 };
@@ -213,12 +215,16 @@ export type RuneOptions = {
  * - `log.info('message')` — string-only, most common.
  * - `log.info({ ...fields }, 'message')` — structured context + optional message.
  *   `Error` values in `fields` are automatically serialized to `{ message, name, stack }`.
+ * - `log.error(err, { ...fields }, 'message')` — Error first, then optional context + message.
+ *   Shorthand for the pattern where an Error is the primary subject of the log call.
  *
  * @example
  * log.error({ err: new Error('timeout'), requestId }, 'request failed')
+ * log.error(new Error('timeout'), { requestId }, 'request failed')
  */
 export type LogMethod = {
   (message: string): void;
+  (error: Error, context?: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
 };
 
@@ -285,6 +291,10 @@ export type Logger = {
    */
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
-  /** Derive a child logger with additional pinned bindings. */
+  /**
+   * Derive a child logger with additional pinned bindings.
+   * The returned logger is fully independent — disposing it does not affect the parent,
+   * and disposing the parent does not affect child loggers.
+   */
   withBindings: (bindings: Bindings) => Logger;
 };

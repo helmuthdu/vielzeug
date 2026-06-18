@@ -174,17 +174,21 @@ Level threshold order: `debug` < `info` < `warn` < `error` < `fatal` < `off`
 
 ## Call Signature
 
-All log methods share a consistent two-form signature:
+All log methods share a consistent three-form signature:
 
 ```ts
 log.info('message'); // string only
+log.error(err, 'request failed'); // Error first — auto-serialized to data.err
+log.error(err, { requestId }, 'request failed'); // Error + context + message
 log.info({ key: 'value' }, 'message'); // context object first, message second
-log.error({ err: new Error('boom') }, 'request failed'); // Error in context — auto-serialized
-log.error({ err: new Error('boom'), requestId }, 'failed'); // Error + extra fields
+log.error({ err: new Error('boom') }, 'request failed'); // Error nested in context — also auto-serialized
 ```
 
-`Error` values inside the context object are automatically serialized to `{ message, name, stack }` before dispatch. The per-call context is shallow-merged with `withBindings()` bindings into `entry.data`.
-String-first calls accept only a single message argument.
+- **Error-first form:** pass an `Error` as the first argument. It is automatically serialized to `{ message, name, stack }` under the `err` key in `data`. Optionally follow with a `Bindings` object and/or a message string. This is the idiomatic form when the Error is the primary subject of the call.
+- **Context-first form:** pass a plain object as the first argument. `Error` values nested inside are also auto-serialized. Optionally follow with a message string.
+- **String-only form:** a single string message, no structured context.
+
+The per-call context is shallow-merged with `withBindings()` bindings into `entry.data`.
 
 ## Logging Methods
 

@@ -18,10 +18,10 @@ export type {
   Transport,
 } from './types';
 
-export { PRIORITY, isLevelEnabled } from './types';
+export { isLevelEnabled } from './types';
 export type { LazyBinding } from './lazy';
 export { lazy } from './lazy';
 export { Rune, createLogger } from './logger';
 export type { ConsoleTheme, ConsoleThemeEntry, ConsoleTransportOptions, ResolvedTheme } from './console';
-export { DEFAULT_THEME, consoleTransport } from './console';
+export { DEFAULT_THEME, consoleTransport, resolveTheme } from './console';
 export { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from './transports';

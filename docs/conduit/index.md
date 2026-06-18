@@ -14,6 +14,7 @@ exports:
     resolveOptional,
     resolveOrDefault,
     tryResolve,
+    trySyncResolve,
     resolveSyncOptional,
     resolveSyncOrDefault,
     ContainerError,
@@ -131,13 +132,13 @@ await container.dispose();
 - Named scope tokens via `scope()` and `createScope()` for explicit lifecycle isolation
 - Async-first resolution with singleton deduplication for concurrent callers
 - Sync resolution path (`resolveSync`) for hot paths after warm-up — rethrows cached rejections for failed singletons
-- Free-function helpers: `resolveSyncOptional`, `resolveSyncOrDefault`, `resolveOptional`, `resolveOrDefault`, `tryResolve`
+- Free-function helpers: `resolveSyncOptional`, `resolveSyncOrDefault`, `resolveOptional`, `resolveOrDefault`, `tryResolve`, `trySyncResolve`
 - `resolveMany()` to resolve multiple tokens in parallel with typed tuples
 - `resolveAll()` to eagerly warm all singletons; pass `{ includeScoped: true }` to also pre-warm named-scope factories
 - `InferTokenTypes<T>` utility type to infer a typed tuple from a token array
 - Registration existence check (`has`) without triggering factory execution
 - `ContainerModule` + `loadModules()` for grouping and async provider setup
-- `freeze()` to lock the container after startup; declare `deps:` on factories for static cycle detection at freeze time
+- `freeze()` to lock the container after startup; idempotent — safe to call multiple times; declare `deps:` on factories for static cycle detection at freeze time
 - `inspect()` to get a serializable dependency graph
 - `on()` to subscribe to container lifecycle events (each event carries a `source` field)
 - `onResolve()` interceptor called after every successful resolution — for telemetry and hot-path observability
