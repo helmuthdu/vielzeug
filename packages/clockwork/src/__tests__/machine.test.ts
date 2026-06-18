@@ -8,6 +8,7 @@ import {
   type InterceptorFn,
   type MachineConfig,
   MachineError,
+  MachineErrorCode,
   type MachineEvent,
   type MachineSnapshot,
   resolveTransition,
@@ -1525,9 +1526,6 @@ describe('getTrace immutability', () => {
 describe('debugInterpret', () => {
   it('transitions correctly and logs to console.debug', () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
-
-    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
     const m = debugInterpret(trafficConfig);
 
@@ -1535,7 +1533,7 @@ describe('debugInterpret', () => {
     m.send({ type: 'NEXT' });
     expect(m.state.value).toBe('yellow');
 
-    expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('NEXT: green → yellow'));
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('NEXT: green → yellow'));
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('guard'));
 
     vi.restoreAllMocks();
@@ -2564,5 +2562,211 @@ describe('R9 — validateContext returns true | string', () => {
 
     expect(calls).toContain(1);
     expect(calls).toContain(2);
+  });
+});
+
+describe('C1 — can() evaluates guards without onDebug side effects', () => {
+  it('evaluates guard and returns false when guard blocks', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+      context: { allowed: false },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { guard: ({ context }) => context.allowed, target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    expect(m.can({ type: 'GO' })).toBe(false);
+    expect(m.state.value).toBe('a');
+  });
+
+  it('returns true when guard passes', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+      context: { allowed: true },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { guard: ({ context }) => context.allowed, target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    expect(m.can({ type: 'GO' })).toBe(true);
+  });
+
+  it('does NOT fire onDebug when can() is called', () => {
+    const debugCalls: string[] = [];
+
+    const def = define<'a' | 'b', Record<string, never>, { type: 'GO' }>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start({ onDebug: (ev) => debugCalls.push(ev.type) });
+
+    m.can({ type: 'GO' });
+
+    expect(debugCalls).toHaveLength(0);
+  });
+});
+
+describe('C2 — subscribe() snapshot isolation between subscribers', () => {
+  it('snapshot is frozen so mutation by one subscriber cannot affect another', () => {
+    const m = trafficDef.start();
+
+    let mutationThrew = false;
+    let snapSeenByB: string | undefined;
+
+    m.subscribe((snap) => {
+      try {
+        (snap as { state: string }).state = 'mutated';
+      } catch {
+        mutationThrew = true;
+      }
+    });
+
+    m.subscribe((snap) => {
+      snapSeenByB = snap.state as string;
+    });
+
+    m.send({ type: 'NEXT' });
+
+    expect(mutationThrew).toBe(true);
+    expect(snapSeenByB).toBe('yellow');
+  });
+});
+
+describe('C3 — getSnapshot() independence from machine state', () => {
+  it('mutating the returned snapshot does not affect machine.context.value', () => {
+    type Event = { type: 'INC' };
+
+    const def = define<'idle', { count: number }, Event>({
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+    const snap = m.getSnapshot();
+
+    try {
+      (snap.context as { count: number }).count = 999;
+    } catch {
+      // frozen — expected
+    }
+
+    expect(m.context.value.count).toBe(0);
+  });
+
+  it('two getSnapshot() calls return structurally equal but referentially distinct objects', () => {
+    const m = trafficDef.start();
+    const s1 = m.getSnapshot();
+    const s2 = m.getSnapshot();
+
+    expect(s1).toEqual(s2);
+    expect(s1).not.toBe(s2);
+  });
+});
+
+describe('C4 — resolveTransition ancestor chain bubbling', () => {
+  it('finds transition defined on parent when child has no handler', () => {
+    type Event = { type: 'CANCEL' } | { type: 'GO' };
+
+    const config: MachineConfig<'done' | 'work', Record<string, never>, Event> = {
+      initial: 'work',
+      states: {
+        done: {},
+        work: {
+          initial: 'active',
+          on: { CANCEL: { target: 'done' } },
+          states: {
+            active: {},
+          },
+        },
+      },
+    };
+
+    const result = resolveTransition(config, {
+      context: {},
+      event: { type: 'CANCEL' },
+      state: 'work.active' as 'done' | 'work',
+    });
+
+    expect(result).toBeDefined();
+    expect(result?.target).toBe('done');
+  });
+
+  it('returns undefined when no ancestor handles the event', () => {
+    type Event = { type: 'CANCEL' } | { type: 'GO' };
+
+    const config: MachineConfig<'done' | 'work', Record<string, never>, Event> = {
+      initial: 'work',
+      states: {
+        done: {},
+        work: {
+          initial: 'active',
+          states: { active: {} },
+        },
+      },
+    };
+
+    const result = resolveTransition(config, {
+      context: {},
+      event: { type: 'GO' },
+      state: 'work.active' as 'done' | 'work',
+    });
+
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('D1 — MachineErrorCode const object', () => {
+  it('exports MachineErrorCode as a const object with all codes', () => {
+    expect(MachineErrorCode.MACHINE_INVALID_AFTER_DELAY).toBe('MACHINE_INVALID_AFTER_DELAY');
+    expect(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE).toBe('MACHINE_INVALID_INITIAL_STATE');
+    expect(MachineErrorCode.MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH).toBe(
+      'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH',
+    );
+    expect(MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE).toBe('MACHINE_INVALID_SNAPSHOT_STATE');
+    expect(MachineErrorCode.MACHINE_INVALID_TRANSITION_ARRAY).toBe('MACHINE_INVALID_TRANSITION_ARRAY');
+    expect(MachineErrorCode.MACHINE_INVALID_VALIDATE_CONTEXT).toBe('MACHINE_INVALID_VALIDATE_CONTEXT');
+    expect(MachineErrorCode.MACHINE_MISSING_COMPOUND_INITIAL).toBe('MACHINE_MISSING_COMPOUND_INITIAL');
+    expect(MachineErrorCode.MACHINE_TRANSITION_LOOP_GUARD).toBe('MACHINE_TRANSITION_LOOP_GUARD');
+    expect(MachineErrorCode.MACHINE_UNKNOWN_TARGET).toBe('MACHINE_UNKNOWN_TARGET');
+  });
+
+  it('MachineError.code matches MachineErrorCode constant', () => {
+    try {
+      define({ initial: 'NOPE', states: {} as never });
+    } catch (err) {
+      expect(MachineError.is(err)).toBe(true);
+
+      if (MachineError.is(err)) {
+        expect(err.code).toBe(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE);
+      }
+    }
   });
 });

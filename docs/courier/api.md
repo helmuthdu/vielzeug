@@ -119,6 +119,7 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | `watchKey`         | `<T>(key: QueryKey) => SyncStore<QueryState<T>>`                        | Read-through store for one key; no fetch triggered                                   |
 | `observeMany`      | `<T>(keys: QueryKey[]) => SyncStore<QueryState<T>[]>`                   | Observe multiple keys as one combined store; updates on any key change               |
 | `invalidate`       | `(key) => void`                                                         | Evict or background-revalidate a key/prefix                                          |
+| `remove`           | `(key: QueryKey) => void`                                               | Evict a single entry; aborts any in-flight fetch; resets observers to idle if active |
 | `cancel`           | `(key) => void`                                                         | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success          |
 | `clear`            | `() => void`                                                            | Clear all entries; active subscribers see `'idle'`                                   |
 | `refetchStale`     | `() => void`                                                            | Manually revalidate all stale observed entries                                       |
@@ -563,16 +564,16 @@ type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
 ```ts
 type CourierMutationOptions<TData, TVariables> = MutationOptions<TData, TVariables> & {
   invalidates?: QueryKey[];
-  sets?: (data: TData, variables: TVariables) => [QueryKey, unknown] | Array<[QueryKey, unknown]>;
+  sets?: (data: TData, variables: TVariables) => Array<[QueryKey, unknown]>;
 };
 ```
 
 Extra options accepted by `client.mutation()` (not `createMutation()`). Applied automatically on success before `onSuccess` fires.
 
-| Option        | Type                                                  | Description                                                                          |
-| ------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `invalidates` | `QueryKey[]`                                          | Keys to invalidate in the embedded query cache after a successful run                |
-| `sets`        | `(data, variables) => [QueryKey, unknown] \| pairs[]` | Seed one or more cache entries with transformed mutation data after a successful run |
+| Option        | Type                                           | Description                                                                          |
+| ------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `invalidates` | `QueryKey[]`                                   | Keys to invalidate in the embedded query cache after a successful run                |
+| `sets`        | `(data, variables) => Array<[QueryKey, unknown]>` | Seed one or more cache entries; always return an array of `[key, data]` pairs     |
 
 **Example:**
 
@@ -580,11 +581,14 @@ Extra options accepted by `client.mutation()` (not `createMutation()`). Applied 
 const createUser = client.mutation(
   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
   {
-    sets: (user) => [['users', user.id], user],
+    sets: (user) => [
+      [['users', user.id], user],
+      [['users', 'latest'], user],
+    ],
     invalidates: [['users']],
   },
 );
-// On success: client.query.set(['users', user.id], user) then client.query.invalidate(['users'])
+// On success: seeds ['users', user.id] and ['users', 'latest'], then invalidates ['users']
 ```
 
 ---

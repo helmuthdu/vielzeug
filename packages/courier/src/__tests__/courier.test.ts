@@ -156,6 +156,107 @@ describe('createCourier', () => {
     expect(log).toEqual(['intercepted', 'intercepted']);
   });
 
+  describe('mutation() cache shorthands', () => {
+    it('invalidates: seeds the cache then invalidates after success', async () => {
+      const client = createCourier();
+      let fetchCalls = 0;
+
+      await client.query.fetch({
+        fn: async () => {
+          fetchCalls++;
+
+          return { count: fetchCalls };
+        },
+        key: ['items'],
+        staleTime: 60_000,
+      });
+
+      expect(fetchCalls).toBe(1);
+
+      const mut = client.mutation(async () => 'ok', {
+        invalidates: [['items']],
+      });
+
+      await mut.mutate(undefined);
+
+      // entry evicted (no observers) — next fetch goes to network
+      await client.query.fetch({
+        fn: async () => {
+          fetchCalls++;
+
+          return { count: fetchCalls };
+        },
+        key: ['items'],
+        staleTime: 60_000,
+      });
+
+      expect(fetchCalls).toBe(2);
+      client.dispose();
+    });
+
+    it('sets: writes multiple cache entries on success', async () => {
+      const client = createCourier();
+
+      type User = { id: number; name: string };
+
+      const mut = client.mutation<User, { name: string }>(async (input) => ({ id: 42, name: input.name }), {
+        sets: (user) => [
+          [['users', user.id], user],
+          [['users', 'latest'], user],
+        ],
+      });
+
+      await mut.mutate({ name: 'Alice' });
+
+      expect(client.query.get<User>(['users', 42])).toEqual({ id: 42, name: 'Alice' });
+      expect(client.query.get<User>(['users', 'latest'])).toEqual({ id: 42, name: 'Alice' });
+      client.dispose();
+    });
+
+    it('sets: receives variables as second argument', async () => {
+      const client = createCourier();
+      let capturedVars: string | undefined;
+
+      const mut = client.mutation<string, string>(async (v) => v.toUpperCase(), {
+        sets: (data, variables) => {
+          capturedVars = variables;
+
+          return [[['result'], data]];
+        },
+      });
+
+      await mut.mutate('hello');
+
+      expect(capturedVars).toBe('hello');
+      expect(client.query.get<string>(['result'])).toBe('HELLO');
+      client.dispose();
+    });
+
+    it('sets + invalidates both run before onSuccess', async () => {
+      const client = createCourier();
+      const order: string[] = [];
+
+      const mut = client.mutation<string, void>(async () => 'data', {
+        invalidates: [['to-invalidate']],
+        onSuccess: () => {
+          order.push('onSuccess');
+        },
+        sets: (data) => {
+          order.push('sets');
+
+          return [[['stored'], data]];
+        },
+      });
+
+      await client.query.fetch({ fn: async () => 'seed', key: ['to-invalidate'], staleTime: 60_000 });
+      await mut.mutate(undefined);
+
+      expect(order).toEqual(['sets', 'onSuccess']);
+      expect(client.query.get<string>(['stored'])).toBe('data');
+      client.dispose();
+    });
+  });
+
   it('dispose() marks the client as disposed and api/stream throw thereafter', async () => {
     const client = createCourier();
 

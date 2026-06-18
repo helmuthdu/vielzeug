@@ -13,6 +13,7 @@ description: Complete API reference for Clockwork.
 | `define()`            | Validate config for reuse; call `.start()`   | Sync           | Returns a definition handle, not an instance                |
 | `resolveTransition()` | Pure transition resolver for testing         | Sync           | Does not fire debug hooks; returns `TransitionDef` directly |
 | `MachineError`        | Typed error for all validation failures      | —              | Check `.code`, not `.message`                               |
+| `MachineErrorCode`    | Const object of all error code strings       | —              | Same identifier used as both type and const object          |
 
 ## Package Entry Points
 
@@ -564,7 +565,7 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 | Method               | Returns                  | Description                                                                                                                                                                                               |
 | -------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `can(event)`         | `boolean`                | `true` if a valid transition exists for the event in the current state. Evaluates guards but fires no side effects or debug hooks. Returns `false` when disposed.                                         |
-| `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned snapshot of current state and context.                                                                                                                                                        |
+| `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned, frozen snapshot of current state and context. The outer snapshot object is frozen — reassigning `snap.state` throws in strict mode.                                                          |
 | `getTrace()`         | `TransitionTraceEntry[]` | Recent transitions in chronological order (oldest to newest). Returns cloned entries. Empty array when tracing is disabled.                                                                               |
 | `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any (e.g. `matches('loading')` matches `'loading.pending'`). Returns `false` when disposed.                                     |
 | `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = machine(...)`.                                        |
@@ -699,6 +700,35 @@ catch (err) {
 
 All error `.message` strings are prefixed with `[@vielzeug/clockwork]`. Use `.code` for programmatic checks — `.message` is for human-readable logs only.
 
+### `MachineErrorCode`
+
+A const object of all error code strings. Useful for `switch` statements and `if` comparisons without typing raw strings:
+
+```ts
+import { MachineError, MachineErrorCode } from '@vielzeug/clockwork';
+
+catch (err) {
+  if (MachineError.is(err)) {
+    switch (err.code) {
+      case MachineErrorCode.MACHINE_INVALID_VALIDATE_CONTEXT:
+        // context failed validation
+        break;
+      case MachineErrorCode.MACHINE_TRANSITION_LOOP_GUARD:
+        // infinite loop guard hit
+        break;
+    }
+  }
+}
+```
+
+The identifier is both the const object (value) and the string union type:
+
+```ts
+import type { MachineErrorCode } from '@vielzeug/clockwork';
+
+function handleCode(code: MachineErrorCode) { /* ... */ }
+```
+
 **Error codes:**
 
 | Code                                        | Thrown when                                                                                                                                  |
@@ -714,12 +744,12 @@ All error `.message` strings are prefixed with `[@vielzeug/clockwork]`. Use `.co
 | `MACHINE_UNKNOWN_TARGET`                    | A transition `target` does not exist in `states` — thrown for both unknown root states and unknown nested paths (e.g. `loading.nonexistent`) |
 
 ```ts
-import { MachineError } from '@vielzeug/clockwork';
+import { MachineError, MachineErrorCode } from '@vielzeug/clockwork';
 
 try {
   const m = machine(config, { snapshot: corruptedSnapshot });
 } catch (err) {
-  if (err instanceof MachineError && err.code === 'MACHINE_INVALID_SNAPSHOT_STATE') {
+  if (MachineError.is(err) && err.code === MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE) {
     // discard snapshot and start fresh
   }
 }

@@ -1624,3 +1624,35 @@ describe('createBus - logger option', () => {
     spy.mockRestore();
   });
 });
+
+describe('createBus - waitAny() guards', () => {
+  it('throws RangeError when called with fewer than 2 event keys', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(RangeError);
+    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(
+      'waitAny() requires at least 2 event keys',
+    );
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - events() maxBuffer guards', () => {
+  it('throws RangeError when maxBuffer is NaN', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow('maxBuffer must be a positive number');
+
+    bus.dispose();
+  });
+
+  it('throws RangeError when maxBuffer is 0', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(RangeError);
+
+    bus.dispose();
+  });
+});

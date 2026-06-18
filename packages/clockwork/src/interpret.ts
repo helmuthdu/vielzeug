@@ -219,7 +219,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   const notifySubscribers = (): void => {
     if (subscribers.size === 0) return;
 
-    const snap: MachineSnapshot<State, Ctx> = { context: context_.value, state: state_.value };
+    const snap: MachineSnapshot<State, Ctx> = Object.freeze({ context: context_.value, state: state_.value });
 
     for (const fn of subscribers) fn(snap);
   };
@@ -290,10 +290,9 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
       getNodeAtPath(states, path)?.entry?.({ context: draft, event });
     }
 
-    assertContext(draft, 'transition');
-
-    // R6: Freeze draft after assertContext so any post-commit mutation throws TypeError
+    // Freeze before assertContext so validateContext always receives a read-only context
     Object.freeze(draft);
+    assertContext(draft, 'transition');
 
     batch(() => {
       stopInvokes();
@@ -526,10 +525,8 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     }
   };
 
-  const getSnapshot = (): MachineSnapshot<State, Ctx> => ({
-    context: clone(context_.value),
-    state: state_.value,
-  });
+  const getSnapshot = (): MachineSnapshot<State, Ctx> =>
+    Object.freeze({ context: clone(context_.value), state: state_.value });
 
   const getTrace = (): readonly TransitionTraceEntry<State, Ev>[] => {
     if (!traceBuffer || traceCount === 0) return [];

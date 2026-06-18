@@ -76,7 +76,8 @@ function makeEventStream<V>(gen: AsyncGenerator<V>, onDispose: () => Promise<voi
   }) as unknown as EventStream<V>;
 }
 
-type InternalBusOptions<T extends EventMap> = BusOptions<T> & {
+/** @internal */
+export type InternalBusOptions<T extends EventMap> = BusOptions<T> & {
   /** @internal Called after middleware passes, before listeners run. Used by BehaviorBus. */
   _onDispatch?: (event: EventKey<T>, payload: unknown) => void;
 };
@@ -272,7 +273,7 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
   ): EventStream<T[K]> {
     const maxBuffer = opts?.maxBuffer ?? Infinity;
 
-    if (maxBuffer <= 0) throw new RangeError('maxBuffer must be a positive number');
+    if (!(maxBuffer > 0)) throw new RangeError('maxBuffer must be a positive number');
 
     const activeSignal = mergeSignal(opts?.signal);
 
@@ -438,6 +439,8 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     eventList: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
+    if (eventList.length < 2) throw new RangeError('waitAny() requires at least 2 event keys');
+
     const activeSignal = mergeSignal(opts?.signal);
 
     if (activeSignal.aborted) return Promise.reject(activeSignal.reason);

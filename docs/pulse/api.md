@@ -52,10 +52,11 @@ Creates and returns a new `Pulse<TServer, TClient>` instance. The WebSocket conn
 | ------------ | --------------------------------- | ----------- | -------------------------------------------------------------------------------------------- |
 | `heartbeat`  | `boolean \| HeartbeatOptions`     | `false`     | `true` uses defaults; `false` disables; object for custom interval/timeout                   |
 | `middleware` | `readonly Middleware[]`           | `[]`        | Functions run on every outgoing `send()` before the message is written to the socket         |
-| `onClose`    | `(code: number, reason: string) => void` | —  | Called when the connection is closed by either side                                          |
-| `onError`    | `(error: Error) => void`          | —           | Called on a WebSocket error event; errors almost always precede a close                      |
-| `onMessage`  | `(event: MessageEvent) => void`   | —           | Called with every raw `MessageEvent` before parsing; useful for low-level debugging          |
-| `onOpen`     | `() => void`                      | —           | Called when the connection is established or re-established                                  |
+| `onClose`      | `(code: number, reason: string) => void` | —  | Called when the connection is closed by either side                                          |
+| `onError`      | `(error: Error) => void`          | —           | Called on a WebSocket error event; errors almost always precede a close                      |
+| `onMessage`    | `(event: MessageEvent) => void`   | —           | Called with every raw `MessageEvent` before parsing; useful for low-level debugging          |
+| `onOpen`       | `() => void`                      | —           | Called when the connection is established or re-established                                  |
+| `onReconnect`  | `(attempt: number) => void`       | —           | Called at the start of each reconnect attempt; `attempt` is 1-based                         |
 | `protocols`  | `string \| string[]`              | —           | Sub-protocols passed to the `WebSocket` constructor                                          |
 | `reconnect`  | `boolean \| ReconnectOptions`     | `false`     | `true` uses defaults; `false` disables; object for custom delay/maxAttempts                  |
 
@@ -214,6 +215,8 @@ connect(): Promise<void>
 
 Opens the WebSocket connection. Resolves when the connection is open. Returns immediately if already open.
 
+> **Note:** The connection is opened automatically on construction. Call `connect()` explicitly only when reconnecting after `disconnect()`, or to await the initial open in code that runs before the first `onopen` fires.
+
 **Rejects when:**
 - Already disposed — `DisposedError`
 - Socket closes before it opens — `ConnectionError`
@@ -276,6 +279,13 @@ leave(room: string, opts?: { signal?: AbortSignal }): Promise<void>
 
 Requests to leave a room. Resolves when the server confirms with a `left` frame. The room is removed from `pulse.rooms` on confirmation.
 
+If the socket is not open, `leave()` connects first (mirroring `join()` behaviour).
+
+**Rejects when:**
+- Already disposed — `DisposedError`
+- The signal fires — `AbortError`
+- Connection fails — `ConnectionError`
+
 ```ts
 await pulse.leave('lobby');
 ```
@@ -291,6 +301,8 @@ channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = T
 ```
 
 Returns a new `PulseChannel` scoped to `name`. Each call returns an independent object with its own listener set. Multiple calls with the same name create independent channels.
+
+The channel is automatically re-subscribed on reconnect. Calling `channel.dispose()` sends an `unsubscribe` frame to the server only when the last channel with that name is disposed.
 
 ```ts
 const chat = pulse.channel<ChatServer, ChatClient>('chat');
@@ -560,6 +572,7 @@ type PulseOptions = {
   onError?: (error: Error) => void;
   onMessage?: (event: MessageEvent) => void;
   onOpen?: () => void;
+  onReconnect?: (attempt: number) => void;
   protocols?: string | string[];
   reconnect?: boolean | ReconnectOptions;
 };

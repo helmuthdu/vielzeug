@@ -1,8 +1,7 @@
 import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
 
+import { createWaitPromise } from './_wait';
 import { warn } from './_warn';
-import { AbortError, TimeoutError } from './errors';
-import { combineSignals } from './utils';
 
 type SendFn = (channel: string, event: string, payload: unknown) => void;
 type SubscribeFn = (channel: string, event: string, handler: (payload: unknown) => void) => () => void;
@@ -16,6 +15,7 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
   send: SendFn,
   subscribe: SubscribeFn,
   disposalSignal: AbortSignal,
+  onDispose?: () => void,
 ): PulseChannel<TServer, TClient> {
   let disposed = false;
 
@@ -34,6 +34,7 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
       for (const unsub of tracked) unsub();
 
       tracked.clear();
+      onDispose?.();
     },
 
     get disposed() {
@@ -99,51 +100,9 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
       event: K,
       opts?: { signal?: AbortSignal; timeout?: number },
     ): Promise<TServer[K]> {
-      return new Promise((resolve, reject) => {
-        const signals: AbortSignal[] = [ctrl.signal];
-
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-        if (opts?.signal) signals.push(opts.signal);
-
-        if (opts?.timeout !== undefined) {
-          const timeoutCtrl = new AbortController();
-
-          timeoutId = setTimeout(() => {
-            timeoutCtrl.abort(new TimeoutError(event as string));
-          }, opts.timeout);
-          signals.push(timeoutCtrl.signal);
-        }
-
-        const combined = signals.length === 1 ? signals[0]! : combineSignals(signals[0]!, ...signals.slice(1));
-
-        if (combined.aborted) {
-          const reason = combined.reason instanceof TimeoutError ? combined.reason : new AbortError();
-
-          reject(reason);
-
-          return;
-        }
-
-        let unsub: Unsubscribe = () => {};
-
-        const onAbort = (): void => {
-          clearTimeout(timeoutId);
-          unsub();
-
-          const reason = combined.reason instanceof TimeoutError ? combined.reason : new AbortError();
-
-          reject(reason);
-        };
-
-        combined.addEventListener('abort', onAbort, { once: true });
-
-        unsub = subscribe(name, event, (payload) => {
-          clearTimeout(timeoutId);
-          combined.removeEventListener('abort', onAbort);
-          resolve(payload as TServer[K]);
-        });
-      });
+      return createWaitPromise<TServer[K]>(event as string, ctrl.signal, opts, (ev, handler) =>
+        subscribe(name, ev, handler),
+      );
     },
   };
 

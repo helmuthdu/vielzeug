@@ -126,6 +126,8 @@ declare module '/courier' {
     getState<T>(key: QueryKey): QueryState<T> | null;
     invalidate(key: QueryKey): void;
     keys(): QueryKey[];
+    /** Evict a single entry; aborts in-flight fetch; resets observers to idle. */
+    remove(key: QueryKey): void;
     /** Return a SyncStore and trigger a background fetch if stale. Errors surface via \`store.peek().status === 'error'\`. */
     observe<T = unknown, S = T>(options: ObserveOptions<T, S>): SyncStore<QueryState<S>>;
     /** Observe multiple keys as one combined store; updates on any key change. */
@@ -158,8 +160,8 @@ declare module '/courier' {
   export type CourierMutationOptions<TData = unknown, TVariables = void> = MutationOptions<TData, TVariables> & {
     /** Keys to invalidate in the shared query cache after a successful run. */
     invalidates?: QueryKey[];
-    /** Seed one or more cache entries with transformed mutation data after a successful run. */
-    sets?: (data: TData, variables: TVariables) => [QueryKey, unknown] | Array<[QueryKey, unknown]>;
+    /** Always return an array of \`[key, data]\` pairs. Runs before \`onSuccess\`. */
+    sets?: (data: TData, variables: TVariables) => Array<[QueryKey, unknown]>;
   };
 
   export interface Mutation<TData, TVariables = void> {

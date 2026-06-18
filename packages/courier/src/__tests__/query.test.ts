@@ -1268,6 +1268,65 @@ describe('Query Client', () => {
       });
     });
 
+    describe('remove()', () => {
+      it('evicts entry with no observers — entry is deleted immediately', async () => {
+        const qc = createQuery();
+
+        await qc.fetch({ fn: async () => ({ id: 1 }), key: ['remove-test'] });
+        expect(qc.get(['remove-test'])).toBeDefined();
+
+        qc.remove(['remove-test']);
+        expect(qc.get(['remove-test'])).toBeUndefined();
+        expect(qc.size).toBe(0);
+      });
+
+      it('evicts entry with observers — resets to idle and notifies', async () => {
+        const qc = createQuery();
+
+        await qc.fetch({ fn: async () => ({ id: 1 }), key: ['remove-observed'] });
+
+        const states: string[] = [];
+        const store = qc.watchKey(['remove-observed']);
+        const unsub = store.subscribe(() => states.push(store.peek().status));
+
+        qc.remove(['remove-observed']);
+
+        unsub();
+        expect(states).toContain('idle');
+        expect(store.peek().status).toBe('idle');
+        expect(store.peek().data).toBeUndefined();
+      });
+
+      it('aborts an in-flight fetch when the entry is removed', async () => {
+        const qc = createQuery();
+        let aborted = false;
+
+        const fetchPromise = qc
+          .fetch({
+            fn: ({ signal }) =>
+              new Promise<void>((_, reject) => {
+                signal.addEventListener('abort', () => {
+                  aborted = true;
+                  reject(new DOMException('Aborted', 'AbortError'));
+                });
+              }),
+            key: ['remove-inflight'],
+          })
+          .catch(() => {});
+
+        qc.remove(['remove-inflight']);
+        await fetchPromise;
+
+        expect(aborted).toBe(true);
+      });
+
+      it('is a no-op for keys that do not exist', () => {
+        const qc = createQuery();
+
+        expect(() => qc.remove(['nonexistent'])).not.toThrow();
+      });
+    });
+
     describe('fetchMany()', () => {
       it('fetches multiple queries in parallel and returns results in order', async () => {
         const qc = createQuery();

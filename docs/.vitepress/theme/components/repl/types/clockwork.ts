@@ -162,6 +162,8 @@ declare module '/clockwork' {
     static is(value: unknown): value is MachineError;
   }
 
+  export const MachineErrorCode: Record<MachineErrorCode, MachineErrorCode>;
+
   export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
     readonly context: import('/ripple').ReadonlySignal<Ctx>;
     readonly disposalSignal: AbortSignal;

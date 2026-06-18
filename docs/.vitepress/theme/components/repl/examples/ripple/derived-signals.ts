@@ -1,5 +1,5 @@
 export const derivedSignalsExample = {
-  code: `import { signal, computed, selector } from '@vielzeug/ripple'
+  code: `import { signal, computed, derive, filter } from '@vielzeug/ripple'
 
 const price = signal(100)
 const quantity = signal(2)
@@ -24,19 +24,25 @@ subtotal.dispose()
 tax.dispose()
 total.dispose()
 
-// selector() — project a reactive source (replaces .map())
+// derive() — project a reactive source into a new computed
 const count = signal(3)
-const doubled = selector(count, (n) => n * 2)
+const doubled = derive(count, (n) => n * 2)
 console.log('doubled:', doubled.value) // 6
 count.value = 5
 console.log('doubled:', doubled.value) // 10
 doubled.dispose()
 
-// selector() with predicate — undefined when predicate is false (replaces .filter())
-const evens = selector(count, undefined, (n) => n % 2 === 0)
+// filter() — returns source value when predicate is true, undefined otherwise
+const evens = filter(count, (n) => n % 2 === 0)
 console.log('evens (5 is odd):', evens.value) // undefined
 count.value = 8
 console.log('evens (8):', evens.value) // 8
-evens.dispose()`,
+evens.dispose()
+
+// filter() with type-predicate narrows the return type
+const mixed = signal(42)
+const nums = filter(mixed, (v) => typeof v === 'number')
+console.log('nums:', nums.value) // 42
+nums.dispose()`,
   name: 'Derived Signals & Combinators',
 };

@@ -29,10 +29,10 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `db.entries(table)`                   | Return all `[key, record]` pairs                               | Async            | Skips expired records                                                               |
 | `db.getOrDefault(table, key, fn)`     | Read-or-insert at the adapter level                            | Async            | Not atomic on memory/WebStorage; wrap in `batch()` on IDB for atomicity             |
 | `db.query(table)`                     | Start a lazy query pipeline                                    | Sync (lazy)      | `count()` respects `limit`/`offset`; use `totalCount()` for the full set size       |
-| `db.batch(tables, fn)`                | Multi-table write with deferred notifications                  | Async            | On IDB, the callback throwing aborts the whole transaction                          |
+| `db.batch(tables, fn)`                | Multi-table write with deferred notifications                  | Async            | Atomic only on IndexedDB — a dev warning fires on Memory/WebStorage adapters        |
 | `db.isEmpty(table)`                   | Returns `true` when the table has no live records              | Async            | Treats TTL-expired records as absent — consistent with `count()`                    |
-| `db.observe(table, fn)`               | Subscribe to table changes — fires immediately on registration | Sync             | Returns `Unsubscribe` — forgetting to call it leaks listeners                       |
-| `db.watch(table, opts?)`              | Async iterable of table snapshots                              | Async            | Always yields an initial snapshot; use `signal` to stop externally                  |
+| `db.observe(table, fn, opts?)`        | Subscribe to table changes — fires immediately on registration | Sync             | Pass `{ immediate: false }` to skip the initial snapshot; returns `Unsubscribe`     |
+| `db.watch(table, opts?)`              | Async iterable of table snapshots                              | Async            | Subscribes eagerly on `[Symbol.asyncIterator]()`; always pass `signal` or `break`   |
 | `db.iterate(table)`                   | Cursor-based async iteration — IDB only                        | Async            | Not available on memory or web storage adapters                                     |
 | `toReadableStream(iterable)`          | Convert `db.watch()` to a `ReadableStream`                     | Sync             | Always cancel the stream when done to stop the underlying observer                  |
 | `isExpired(expiresAt)`                | Check if an epoch-ms timestamp has passed                      | Sync             | Safe to call with `undefined` — returns `false`                                     |
@@ -342,7 +342,11 @@ interface Adapter<S extends AnySchema> {
   observe<K extends keyof S>(
     table: K,
     listener: Observer<RecordOf<S, K>>,
-    options?: { signal?: AbortSignal },
+    options?: {
+      /** Skip the automatic initial snapshot. Defaults to `true` (fire immediately). */
+      immediate?: boolean;
+      signal?: AbortSignal;
+    },
   ): Unsubscribe;
 
   /**
@@ -355,7 +359,15 @@ interface Adapter<S extends AnySchema> {
   observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    options?: { signal?: AbortSignal },
+    options?: {
+      /**
+       * When `true`, fires as soon as any table delivers its first snapshot.
+       * Tables not yet resolved are represented as empty arrays.
+       * Defaults to `false` (wait for all tables).
+       */
+      eager?: boolean;
+      signal?: AbortSignal;
+    },
   ): Unsubscribe;
 
   /**
@@ -405,23 +417,25 @@ interface Adapter<S extends AnySchema> {
 
 ### `observe` behavior
 
-`observe` **always fires immediately** with the current table state on registration — there is no deferred-first-call mode. Subsequent calls fire whenever the table is mutated.
+`observe` **fires immediately** with the current table state on registration by default, then again on every subsequent mutation. Pass `{ immediate: false }` to skip the initial snapshot — useful when you already have the table state from a preceding `getAll()` call and only want change notifications.
 
-| Option   | Type          | Description                                                                                                                |
-| -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `signal` | `AbortSignal` | When aborted, automatically unsubscribes the listener. Already-aborted signals are a no-op — no initial snapshot is fired. |
+| Option      | Type          | Default | Description                                                                                                                |
+| ----------- | ------------- | ------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `immediate` | `boolean`     | `true`  | When `false`, skips the automatic initial snapshot fired on registration.                                                  |
+| `signal`    | `AbortSignal` | —       | When aborted, automatically unsubscribes the listener. Already-aborted signals are a no-op — no initial snapshot is fired. |
 
 Returns an `Unsubscribe` function. Calling it and aborting the signal both cancel the observer — either approach works.
 
 ### `observeMany` behavior
 
-`observeMany` always populates the snapshot map immediately on registration (once per-table snapshot is delivered). The combined listener fires as soon as all tables have reported their initial state.
+`observeMany` populates the snapshot map immediately on registration. By default, the combined listener fires once all tables have reported their initial state. Set `eager: true` to fire as soon as any table delivers its first snapshot — tables not yet resolved appear as empty arrays. This is useful when some tables are large and you want to render partial data immediately.
 
 Duplicate entries in the `tables` array are silently deduplicated. The combined snapshot will still include a key for each entry in the original array, but duplicate keys reference the same data.
 
-| Option   | Type          | Description                                                                                              |
-| -------- | ------------- | -------------------------------------------------------------------------------------------------------- |
-| `signal` | `AbortSignal` | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately. |
+| Option   | Type          | Default | Description                                                                                                                          |
+| -------- | ------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `eager`  | `boolean`     | `false` | When `true`, fires after the first table delivers its snapshot, using empty arrays for tables not yet resolved.                      |
+| `signal` | `AbortSignal` | —       | When aborted, unsubscribes all underlying observers. Already-aborted signals return a no-op immediately.                             |
 
 ### `watch` options
 
@@ -429,6 +443,8 @@ Duplicate entries in the `tables` array are silently deduplicated. The combined 
 | -------- | ------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | `mode`   | `'latest' \| 'all'` | `'latest'` | Whether intermediate snapshots are dropped (`latest`) or queued (`all`) when the consumer lags                               |
 | `signal` | `AbortSignal`       | —          | When aborted, terminates the iteration. If already aborted before the first `next()` call, the iterator is done immediately. |
+
+> **Resource note:** The observer subscription is created eagerly on `[Symbol.asyncIterator]()` — not on the first `next()` call. This prevents mutations from being silently lost in the window between iterator creation and first consumption. Always `break`, `return`, or pass a `signal` to clean up the subscription; otherwise it remains active until the adapter is disposed.
 
 ## `toReadableStream`
 

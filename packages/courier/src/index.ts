@@ -8,7 +8,7 @@ export type { Batcher, BatcherOptions } from './batcher';
 
 // Root factory
 export { createCourier } from './courier';
-export type { Courier, CourierOptions } from './courier';
+export type { Courier, CourierMutationOptions, CourierOptions } from './courier';
 
 // Errors
 export { AbortError, CourierError, HttpError, NetworkError, SchemaValidationError, TimeoutError } from './errors';

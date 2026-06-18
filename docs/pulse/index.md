@@ -123,11 +123,11 @@ using _ = pulse;
 
 - **Typed event maps** — `TServer` and `TClient` generics enforce payload types on both sides of the wire
 - **`on()` / `once()` / `wait()`** — persistent, one-shot, and async-await event subscriptions
-- **`channel()`** — isolated namespaces multiplexed over the shared connection; each has its own lifecycle
+- **`channel()`** — isolated namespaces multiplexed over the shared connection; auto-resubscribed on reconnect; `dispose()` sends an `unsubscribe` frame
 - **`join()` / `leave()`** — room membership with server-confirmation promises
 - **`presence()`** — reactive `Signal<Map<memberId, T>>` state, with `onJoin`/`onLeave` callbacks and `update()` for broadcasting state
 - **Middleware pipeline** — intercept every outgoing `send()` call; omit `next()` to suppress
-- **Auto-reconnect** — exponential backoff (full-jitter by default), configurable `maxAttempts` and custom `delay` function
+- **Auto-reconnect** — exponential backoff (full-jitter by default), configurable `maxAttempts`, custom `delay` function, and `onReconnect` callback
 - **Heartbeat** — configurable ping/pong keep-alive with dead-connection detection and automatic reconnect trigger
 - **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `ReadonlySignal`
 - **Reactive `rooms` signal** — current room membership as a `ReadonlySignal<ReadonlySet<string>>`

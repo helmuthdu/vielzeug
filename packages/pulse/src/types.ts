@@ -79,6 +79,11 @@ export type PulseOptions = {
   onMessage?: (event: MessageEvent) => void;
   /** Called when the connection is established (or re-established). */
   onOpen?: () => void;
+  /**
+   * Called at the start of each reconnect attempt.
+   * `attempt` is 1-based (1 = first retry).
+   */
+  onReconnect?: (attempt: number) => void;
   /** Sub-protocols to pass to the WebSocket constructor. */
   protocols?: string | string[];
   /**

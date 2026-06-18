@@ -10,6 +10,7 @@ import type {
   TtlMs,
 } from './types';
 
+import { warn } from './_warn';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserveMany, createObserverHub, createWatchIterable, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';
@@ -425,6 +426,8 @@ export function buildAdapterOps<S extends AnySchema>(
 
   const nativeBatch = options?.buildBatch?.({ notifyMutation, validate });
 
+  let warnedNonAtomic = false;
+
   const txCtx = buildTxContext<S, keyof S & string>(schema, core, notifyMutation, validate);
 
   const observeMany = createObserveMany<S>(observers);
@@ -441,6 +444,13 @@ export function buildAdapterOps<S extends AnySchema>(
       checkDisposed();
 
       if (tables.length === 0) throw new VaultScopeError('batch requires at least one table');
+
+      if (!nativeBatch && !warnedNonAtomic) {
+        warnedNonAtomic = true;
+        warn(
+          'batch() on this adapter is not atomic — concurrent mutations may interleave. Use createIndexedDB for atomic batches.',
+        );
+      }
 
       return timed('*', 'batch', () => (nativeBatch ? nativeBatch(tables, fn) : deferredBatch(fn, new Set(tables))));
     },

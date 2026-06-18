@@ -341,13 +341,19 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Me
         async *[Symbol.asyncIterator]() {
           if (adapter.disposed) throw new VaultDisposedError();
 
-          for (const [, raw] of store) {
+          const expiredKeys: string[] = [];
+
+          for (const [key, raw] of store) {
             const decoded = codec.decode<RecordOf<S, K>>(raw);
 
-            if (decoded && !isExpired(decoded.expiresAt)) {
+            if (!decoded || isExpired(decoded.expiresAt)) {
+              expiredKeys.push(key);
+            } else {
               yield decoded.value;
             }
           }
+
+          for (const key of expiredKeys) store.delete(key);
         },
       };
     },

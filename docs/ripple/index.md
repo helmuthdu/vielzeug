@@ -184,9 +184,9 @@ label.dispose();
 - **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
 - **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
 - **`derive(source, project, options?)`** — project a reactive source into a `ComputedSignal`; cleaner alternative to `selector(source, project)`
-- **`filter(source, predicate, options?)`** — filter a reactive source; returns value when predicate is `true`, `undefined` otherwise
-- **`selector(source, project?, predicate?, options?)`** — combined project + filter utility; prefer `derive()` / `filter()` for single-concern cases
-- **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level
+- **`filter(source, predicate, options?)`** — filter a reactive source; returns value when predicate is `true`, `undefined` otherwise; type-predicate overload narrows `T → U | undefined`
+- **`selector(source, project, predicate?, options?)`** — project + optional filter utility; use `derive()` / `filter()` for single-concern cases
+- **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level; `dispose()` is always a no-op
 - **`debugEffect(fn, options?)`** — like `effect()`, but logs reactive deps on every run; import from `@vielzeug/ripple/devtools` — tree-shaken from production bundles
 - **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
 - **`store(init, options?)`** — structured reactive object container
@@ -194,7 +194,7 @@ label.dispose();
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
-- **`storeWithHistory(init, options?)`** — store with snapshot history; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties
+- **`storeWithHistory(storeOrInit, options?)`** — store with snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)

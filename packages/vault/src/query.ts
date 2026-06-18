@@ -213,8 +213,8 @@ export function createQueryBuilder<T extends Record<string, unknown>, N extends 
       }
 
       return createQueryBuilder<T & Record<K, V>>(ctx as unknown as QueryContext<T & Record<K, V>>, [
-        { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
         ...(ops as unknown as QueryOp<T & Record<K, V>>[]),
+        { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
       ]);
     },
     filter(fn) {

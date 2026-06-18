@@ -32,14 +32,12 @@ export const derive = <T, U>(
 
 // ── filter() ─────────────────────────────────────────────────────────────────
 //
-// Cleaner replacement for selector(source, undefined, predicate). Returns the
-// source value when the predicate holds, or undefined otherwise.
+// Returns source value when predicate holds, or undefined otherwise.
+// Supports type-predicate overload for narrowing (T → U | undefined).
 
 /**
  * Creates a computed signal that returns the source value when `predicate` is `true`,
- * or `undefined` when it is `false`.
- *
- * Prefer this over `selector(source, undefined, predicate)` — no undefined placeholder needed.
+ * or `undefined` when it is `false`. Supports type-predicate narrowing.
  *
  * @example
  * ```ts
@@ -50,16 +48,27 @@ export const derive = <T, U>(
  * console.log(evens.value); // 8
  * ```
  */
-export const filter = <T>(
+export function filter<T, U extends T>(
+  source: ReadonlySignal<T>,
+  predicate: (value: T) => value is U,
+  options?: ComputedOptions<U | undefined>,
+): ComputedSignal<U | undefined>;
+export function filter<T>(
   source: ReadonlySignal<T>,
   predicate: (value: T) => boolean,
   options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined> =>
-  computed(() => {
+): ComputedSignal<T | undefined>;
+export function filter<T>(
+  source: ReadonlySignal<T>,
+  predicate: (value: T) => boolean,
+  options?: ComputedOptions<T | undefined>,
+): ComputedSignal<T | undefined> {
+  return computed(() => {
     const v = source.value;
 
     return predicate(v) ? v : undefined;
   }, options);
+}
 
 // ── Readonly wrapper ──────────────────────────────────────────────────────────
 //
@@ -77,9 +86,6 @@ export const filter = <T>(
  * not affect the underlying source signal. The caller retains ownership of the
  * source and is responsible for disposing it independently.
  *
- * Exception: if `source` is already a `ComputedSignal`, `readonly()` returns it
- * directly (no wrapper), so `dispose()` will dispose the computed as expected.
- *
  * @example
  * ```ts
  * const count = signal(0);
@@ -89,8 +95,6 @@ export const filter = <T>(
  * ```
  */
 export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
-  if (isComputed(source)) return source as ComputedSignal<T>;
-
   const noop = (): void => {};
 
   return {
@@ -120,19 +124,18 @@ export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
 
 /**
  * Creates a computed signal derived from a reactive source using a projection
- * and/or a filter predicate. Combines the old `map()` and `filter()` methods
- * into a single, general-purpose standalone utility.
+ * and/or a filter predicate.
  *
- * - `selector(source, project)` — like `source.map(project)`
+ * - `selector(source, project)` — project source to a new type
  * - `selector(source, project, predicate)` — project then filter; returns `U | undefined`
- * - `selector(source, undefined, predicate)` — filter only; returns `T | undefined`
+ *
+ * For filter-only use cases, prefer `filter(source, predicate)` directly.
  *
  * @example
  * ```ts
  * const count = signal(5);
  * const doubled = selector(count, (n) => n * 2);
  * const evenDoubled = selector(count, (n) => n * 2, (n) => n % 2 === 0);
- * const onlyEven = selector(count, undefined, (n) => n % 2 === 0);
  * ```
  */
 export function selector<T, U>(
@@ -146,18 +149,9 @@ export function selector<T, U>(
   predicate: (value: U) => boolean,
   options?: ComputedOptions<U | undefined>,
 ): ComputedSignal<U | undefined>;
-/**
- * @deprecated Use `filter(source, predicate, options)` instead — no `undefined` placeholder needed.
- */
-export function selector<T>(
-  source: ReadonlySignal<T>,
-  project: undefined,
-  predicate: (value: T) => boolean,
-  options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined>;
 export function selector<T, U = T>(
   source: ReadonlySignal<T>,
-  project?: (value: T) => U,
+  project: (value: T) => U,
   predicateOrOptions?: ((value: U) => boolean) | ComputedOptions<U>,
   options?: ComputedOptions<U | undefined>,
 ): ComputedSignal<U | U | undefined> {
@@ -165,32 +159,17 @@ export function selector<T, U = T>(
     const predicate = predicateOrOptions;
     const opts = options;
 
-    if (project) {
-      return computed(
-        () => {
-          const projected = project(source.value);
-
-          return predicate(projected) ? projected : undefined;
-        },
-        opts as ComputedOptions<U | undefined>,
-      );
-    }
-
     return computed(
       () => {
-        const v = source.value as unknown as U;
+        const projected = project(source.value);
 
-        return predicate(v) ? v : undefined;
+        return predicate(projected) ? projected : undefined;
       },
       opts as ComputedOptions<U | undefined>,
     );
   }
 
-  if (project) {
-    return computed(() => project(source.value), predicateOrOptions as ComputedOptions<U> | undefined);
-  }
-
-  return computed(() => source.value as unknown as U, predicateOrOptions as ComputedOptions<U> | undefined);
+  return computed(() => project(source.value), predicateOrOptions as ComputedOptions<U> | undefined);
 }
 
 // ── Type guards ───────────────────────────────────────────────────────────────

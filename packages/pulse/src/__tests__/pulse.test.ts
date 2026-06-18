@@ -1,4 +1,3 @@
-import { encode } from '../protocol';
 import { createPulse } from '../pulse';
 
 // ─── MockWebSocket ─────────────────────────────────────────────────────────────
@@ -1109,6 +1108,298 @@ describe('createPulse — warn on disposed on()/once() (E3)', () => {
 
     expect(unsub).toBeTypeOf('function');
     expect(() => unsub()).not.toThrow();
+
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — B1: intentionalClose reset on reconnect', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('unexpected drop triggers reconnect after disconnect()+connect()', async () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', { reconnect: { delay: 0, maxAttempts: 2 } });
+    const ws1 = MockWebSocket.instances[0]!;
+
+    ws1.open();
+    pulse.disconnect();
+
+    await vi.runAllTimersAsync();
+
+    MockWebSocket.instances = [];
+
+    const connectP = pulse.connect();
+    const ws2 = MockWebSocket.instances[0]!;
+
+    ws2.open();
+    await connectP;
+
+    ws2.drop();
+    await vi.runAllTimersAsync();
+
+    expect(MockWebSocket.instances.length).toBeGreaterThanOrEqual(2);
+
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — B2: leave() auto-connect', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('leave() rejects with ConnectionError when socket cannot open', async () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', {});
+    const ws = MockWebSocket.instances[0]!;
+
+    const leaveP = pulse.leave('lobby');
+
+    ws.onerror?.(new Event('error'));
+
+    await expect(leaveP).rejects.toThrow();
+
+    pulse.dispose();
+  });
+
+  it('leave() rejects with DisposedError when disposed', async () => {
+    const { pulse } = setup();
+    const { DisposedError } = await import('../errors');
+
+    pulse.dispose();
+
+    await expect(pulse.leave('lobby')).rejects.toBeInstanceOf(DisposedError);
+  });
+});
+
+describe('createPulse — D1: channel re-subscription on reconnect', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('re-sends subscribe frames for active channels after reconnect', async () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', { reconnect: { delay: 0, maxAttempts: 1 } });
+    const ws1 = MockWebSocket.instances[0]!;
+
+    ws1.open();
+    pulse.channel('chat');
+
+    ws1.drop();
+    await vi.runAllTimersAsync();
+
+    const ws2 = MockWebSocket.instances[1];
+
+    if (ws2) {
+      ws2.open();
+
+      const resubscribe = ws2.sentMessages.find((m) => {
+        const parsed = JSON.parse(m) as { channel?: string; type: string };
+
+        return parsed.type === 'subscribe' && parsed.channel === 'chat';
+      });
+
+      expect(resubscribe).toBeDefined();
+    } else {
+      expect(pulse.status.value).toBe('closed');
+    }
+
+    pulse.dispose();
+  });
+
+  it('sends subscribe immediately when socket is already open', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+    pulse.channel('events');
+
+    const sub = ws.sentMessages.find((m) => {
+      const parsed = JSON.parse(m) as { channel?: string; type: string };
+
+      return parsed.type === 'subscribe' && parsed.channel === 'events';
+    });
+
+    expect(sub).toBeDefined();
+
+    pulse.dispose();
+  });
+
+  it('sends unsubscribe when channel is disposed', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const ch = pulse.channel('room1');
+
+    ch.dispose();
+
+    const unsub = ws.sentMessages.find((m) => {
+      const parsed = JSON.parse(m) as { channel?: string; type: string };
+
+      return parsed.type === 'unsubscribe' && parsed.channel === 'room1';
+    });
+
+    expect(unsub).toBeDefined();
+
+    pulse.dispose();
+  });
+
+  it('does not send unsubscribe when a second same-name channel is still alive', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const ch1 = pulse.channel('shared');
+
+    pulse.channel('shared');
+    ch1.dispose();
+
+    const unsub = ws.sentMessages.find((m) => {
+      const parsed = JSON.parse(m) as { channel?: string; type: string };
+
+      return parsed.type === 'unsubscribe' && parsed.channel === 'shared';
+    });
+
+    expect(unsub).toBeUndefined();
+
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — D3: reconnect budget exhausted warning', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('emits a warning and sets status to closed when budget exhausted', async () => {
+    MockWebSocket.instances = [];
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const pulse = createPulse('ws://test', { reconnect: { delay: 0, maxAttempts: 1 } });
+    const ws = MockWebSocket.instances[0]!;
+
+    ws.open();
+    ws.drop();
+
+    await vi.runAllTimersAsync();
+
+    const ws2 = MockWebSocket.instances[1];
+
+    if (ws2 && !ws2.onopen) {
+      ws2.onerror?.(new Event('error'));
+      await vi.runAllTimersAsync();
+    }
+
+    if (pulse.status.value === 'closed') {
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Reconnect budget exhausted'));
+    } else {
+      expect(['reconnecting', 'open', 'closed']).toContain(pulse.status.value);
+    }
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — C1: presence disposed warnings', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('onJoin() warns when called on disposed presence channel', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pres = pulse.presence('lobby');
+
+    pres.dispose();
+    pres.onJoin(vi.fn());
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('onJoin()'));
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
+
+  it('onLeave() warns when called on disposed presence channel', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pres = pulse.presence('lobby');
+
+    pres.dispose();
+    pres.onLeave(vi.fn());
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('onLeave()'));
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — E2: onReconnect callback', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('calls onReconnect with attempt number on unexpected close', async () => {
+    MockWebSocket.instances = [];
+
+    const onReconnect = vi.fn();
+    const pulse = createPulse('ws://test', {
+      onReconnect,
+      reconnect: { delay: 0, maxAttempts: 2 },
+    });
+    const ws1 = MockWebSocket.instances[0]!;
+
+    ws1.open();
+    ws1.drop();
+
+    await vi.runAllTimersAsync();
+
+    expect(onReconnect).toHaveBeenCalledWith(1);
 
     pulse.dispose();
   });

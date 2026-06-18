@@ -135,4 +135,19 @@ describe('createReconnect — enabled', () => {
 
     expect(delayFn).toHaveBeenCalledWith(0);
   });
+
+  it('calls onReconnect with 1-based attempt number', async () => {
+    const handle = createReconnect({ delay: 0, maxAttempts: 3 });
+    const connect = vi.fn().mockResolvedValue(undefined);
+    const ctrl = new AbortController();
+    const onReconnect = vi.fn();
+
+    const p = handle.attempt(connect, ctrl.signal, onReconnect);
+
+    await vi.runAllTimersAsync();
+    await p;
+
+    expect(onReconnect).toHaveBeenCalledWith(1);
+    expect(onReconnect).toHaveBeenCalledTimes(1);
+  });
 });

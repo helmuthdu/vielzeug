@@ -28,10 +28,6 @@ export class StateError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;
   }
-
-  static is(err: unknown): err is StateError {
-    return err instanceof StateError;
-  }
 }
 
 // ── Error utilities ───────────────────────────────────────────────────────────

@@ -30,7 +30,9 @@ console.log('historyLength after new write:', editor.historyLength) // 3
 
 stopButtons.dispose()
 
-// dispose() releases the cursor signal and the underlying store
+// dispose() releases the cursor signal; also disposes the store
+// because the adapter created it (ownership). Pass an existing store
+// to storeWithHistory(s) if you want the adapter to leave it alive.
 editor.dispose()`,
   name: 'Store History — Undo/Redo',
 };

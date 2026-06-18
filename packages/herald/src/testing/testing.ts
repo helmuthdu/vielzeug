@@ -1,4 +1,5 @@
-import type { Bus, BusOptions, EventKey, EventMap } from '..';
+import type { Bus, BusOptions, EventKey, EventMap, SubscribeOptions } from '..';
+import type { InternalBusOptions } from '../bus';
 
 import { makeBusDelegate } from '../_delegate';
 import { createBus } from '../bus';
@@ -29,7 +30,7 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
       if (list) list.push(payload);
       else records.set(event, [payload]);
     },
-  } as BusOptions<T>);
+  } as InternalBusOptions<T>);
 
   function allEmitted(): { [K in EventKey<T>]?: T[K][] } {
     const result: { [K in EventKey<T>]?: T[K][] } = {};
@@ -58,8 +59,8 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
 
   const originalOn = delegate.on.bind(delegate);
 
-  delegate.on = <K extends EventKey<T>>(event: K, listener: (payload: T[K]) => void) => {
-    const unsub = originalOn(event, listener);
+  delegate.on = <K extends EventKey<T>>(event: K, listener: (payload: T[K]) => void, opts?: SubscribeOptions) => {
+    const unsub = originalOn(event, listener, opts);
     const key = event as string;
     let set = unsubs.get(key);
 

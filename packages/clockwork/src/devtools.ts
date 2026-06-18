@@ -55,8 +55,7 @@ export function debugInterpret<State extends string, Ctx extends object, Ev exte
           console.debug(`[clockwork:invoke] #${event.invokeId} started in "${event.state}"`);
           break;
         case 'transition':
-          console.group(`[clockwork:transition] ${event.event.type}: ${event.from} → ${event.to}`);
-          console.groupEnd();
+          console.debug(`[clockwork:transition] ${event.event.type}: ${event.from} → ${event.to}`);
           break;
         case 'transition-skipped':
           console.debug(`[clockwork:skip] ${event.event.type}: no matching transition in "${event.from}"`);

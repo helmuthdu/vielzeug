@@ -86,7 +86,9 @@ describe('renderHook()', () => {
     const log: string[] = [];
 
     await renderHook({ name: prop.string('world') }, (_props, ctx) => {
-      ctx.onMounted(() => log.push('mounted'));
+      ctx.onMounted(() => {
+        log.push('mounted');
+      });
     });
 
     expect(log).toEqual(['mounted']);

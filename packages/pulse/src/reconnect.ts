@@ -9,7 +9,7 @@ export type ReconnectHandle = {
    * Attempt a reconnect. Waits for the computed delay then calls `connect`.
    * Returns `true` if `connect` succeeded, `false` if attempts are exhausted or aborted.
    */
-  attempt(connect: () => Promise<void>, signal: AbortSignal): Promise<boolean>;
+  attempt(connect: () => Promise<void>, signal: AbortSignal, onReconnect?: (attempt: number) => void): Promise<boolean>;
   /** Cancel any pending reconnect attempt and reset the counter. */
   reset(): void;
 };
@@ -38,12 +38,17 @@ export function createReconnect(opts: boolean | ReconnectOptions | undefined): R
   let attempts = 0;
 
   return {
-    async attempt(connect: () => Promise<void>, signal: AbortSignal): Promise<boolean> {
+    async attempt(
+      connect: () => Promise<void>,
+      signal: AbortSignal,
+      onReconnect?: (attempt: number) => void,
+    ): Promise<boolean> {
       if (attempts >= maxAttempts) return false;
 
       const delay = delayFn(attempts);
 
       attempts++;
+      onReconnect?.(attempts);
 
       await sleep(delay, signal);
 

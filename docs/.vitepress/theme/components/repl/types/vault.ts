@@ -102,12 +102,12 @@ declare module '@vielzeug/vault' {
     observe<K extends keyof S>(
       table: K,
       listener: Observer<RecordOf<S, K>>,
-      options?: { signal?: AbortSignal },
+      options?: { immediate?: boolean; signal?: AbortSignal },
     ): () => void;
     observeMany<K extends keyof S>(
       tables: readonly K[],
       listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-      options?: { signal?: AbortSignal },
+      options?: { eager?: boolean; signal?: AbortSignal },
     ): () => void;
     pruneExpired(tables?: readonly (keyof S & string)[]): Promise<{ [K in keyof S & string]: number }>;
     watch<K extends keyof S>(table: K, options?: { mode?: 'all' | 'latest'; signal?: AbortSignal }): AsyncIterable<RecordOf<S, K>[]>;

@@ -6,6 +6,25 @@ import { createQuery, type QueryClientOptions } from './query';
 import { createStream } from './stream';
 import { createTransportCore, type TransportOptions } from './transport';
 
+/**
+ * Extended mutation options for `client.mutation()` on a `Courier` instance.
+ * Includes all `MutationOptions` plus `invalidates` and `sets` cache shorthands.
+ */
+export type CourierMutationOptions<TData = unknown, TVariables = void> = MutationOptions<TData, TVariables> & {
+  /** Query keys to invalidate in the shared cache on success. Runs before `onSuccess`. */
+  invalidates?: QueryKey[];
+  /**
+   * Imperatively seed the cache on success. Return an array of `[key, data]` pairs.
+   * Runs before `onSuccess`.
+   *
+   * @example
+   * ```ts
+   * sets: (user) => [[ ['users', user.id], user ], [ ['users'], allUsers ]]
+   * ```
+   */
+  sets?: (data: TData, variables: TVariables) => Array<[QueryKey, unknown]>;
+};
+
 export type CourierOptions = TransportOptions & {
   /**
    * Default options merged into every `mutation()` call.
@@ -94,31 +113,20 @@ export function createCourier(opts?: CourierOptions) {
      *   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
      *   {
      *     invalidates: [['users']],
-     *     sets: (user) => [['users', user.id], user],
+     *     sets: (user) => [[ ['users', user.id], user ]],
      *   },
      * );
      * ```
      */
     mutation<TData, TVariables = void>(
       fn: MutationFn<TData, TVariables>,
-      mutOpts?: MutationOptions<TData, TVariables> & {
-        /** Query keys to invalidate on success. Runs before `onSuccess`. */
-        invalidates?: QueryKey[];
-        /**
-         * Imperatively seed the cache on success. Return `[key, data]` pairs.
-         * Runs before `onSuccess`.
-         */
-        sets?: (data: TData, variables: TVariables) => [QueryKey, unknown] | Array<[QueryKey, unknown]>;
-      },
+      mutOpts?: CourierMutationOptions<TData, TVariables>,
     ): Mutation<TData, TVariables> {
       const { invalidates, sets, ...rest } = mutOpts ?? {};
 
       const wrappedOnSuccess = async (data: TData, variables: TVariables): Promise<void> => {
         if (sets) {
-          const result = sets(data, variables);
-          const pairs: Array<[QueryKey, unknown]> = Array.isArray(result[0])
-            ? (result as Array<[QueryKey, unknown]>)
-            : [result as [QueryKey, unknown]];
+          const pairs = sets(data, variables);
 
           for (const [key, val] of pairs) queryClient.set(key, val);
         }

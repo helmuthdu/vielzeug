@@ -53,13 +53,25 @@ class LensSignal<V> implements Signal<V> {
   private write_: (v: V) => void;
   private evict_: () => void;
   private disposeSource_: (() => void) | undefined;
+  private name_: string | undefined;
 
-  constructor(source: ReadonlySignal<V>, write: (v: V) => void, evict: () => void, disposeSource?: () => void) {
+  get name(): string | undefined {
+    return this.name_ ?? this.source_.name;
+  }
+
+  constructor(
+    source: ReadonlySignal<V>,
+    write: (v: V) => void,
+    evict: () => void,
+    disposeSource?: () => void,
+    name?: string,
+  ) {
     this[IS_SIGNAL] = true;
     this.source_ = source;
     this.write_ = write;
     this.evict_ = evict;
     this.disposeSource_ = disposeSource;
+    this.name_ = name;
   }
 
   get value(): V {
@@ -240,7 +252,7 @@ export class StoreImpl<T extends object> {
 
   replace(fn: (state: Readonly<T>) => T): void {
     const current = this.current_;
-    const snapshot = { ...current } as Readonly<T>;
+    const snapshot = structuredClone(current) as Readonly<T>;
     const next = fn(snapshot);
 
     if (next === snapshot) return;
@@ -332,6 +344,7 @@ export class StoreImpl<T extends object> {
         },
         evict,
         () => readComputed.dispose(),
+        this.name ? `${this.name}.${path}` : path,
       ) as unknown as LensSignal<unknown>;
     }
 

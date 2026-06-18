@@ -1123,10 +1123,10 @@ describe('ripple', () => {
       unsubscribe.dispose();
     });
 
-    it('selector filter on lens returns undefined when predicate is false', () => {
+    it('filter() on lens returns undefined when predicate is false', () => {
       const s = store({ active: false, name: 'test' });
       const activeLens = s.lens('active');
-      const onlyActive = selector(activeLens, undefined, (v) => v === true);
+      const onlyActive = filter(activeLens, (v) => v === true);
 
       expect(onlyActive.value).toBeUndefined();
 
@@ -1207,7 +1207,7 @@ describe('ripple', () => {
 
     it('trace logs changed sources on re-run without throwing', () => {
       const consoleSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
-      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
       vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
@@ -1223,7 +1223,7 @@ describe('ripple', () => {
       n.value = 1;
 
       expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('tracer'));
-      expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('counter'));
+      expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('counter'));
 
       stop.dispose();
       vi.restoreAllMocks();
@@ -1645,9 +1645,9 @@ describe('ripple', () => {
       half.dispose();
     });
 
-    it('selector(source, undefined, predicate) filters value — returns undefined when false', () => {
+    it('filter() filters value — returns undefined when false', () => {
       const n = signal(4);
-      const evens = selector(n, undefined, (x) => x % 2 === 0);
+      const evens = filter(n, (x) => x % 2 === 0);
 
       expect(evens.value).toBe(4);
 
@@ -1678,9 +1678,9 @@ describe('ripple', () => {
       doubled.dispose();
     });
 
-    it('selector type predicate narrows the output type', () => {
+    it('filter() type predicate narrows the output type', () => {
       const mixed = signal<number | string>(42);
-      const nums = selector(mixed, undefined, (v): v is number => typeof v === 'number');
+      const nums = filter(mixed, (v): v is number => typeof v === 'number');
 
       expect(nums.value).toBe(42);
 
@@ -1966,6 +1966,26 @@ describe('ripple', () => {
     });
   });
 
+  describe('store.lens() — name property (D3)', () => {
+    it('named store lens exposes the composite name', () => {
+      const s = store({ count: 0 }, { name: 'myStore' });
+
+      expect(s.lens('count').name).toBe('myStore.count');
+    });
+
+    it('unnamed store lens exposes just the key name', () => {
+      const s = store({ count: 0 });
+
+      expect(s.lens('count').name).toBe('count');
+    });
+
+    it('nested lens name includes the full dot path', () => {
+      const s = store({ a: { b: 0 } }, { name: 'ns' });
+
+      expect(s.lens('a.b').name).toBe('ns.a.b');
+    });
+  });
+
   describe('effect scheduler option', () => {
     it('scheduler: sync (default) runs immediately on signal change', () => {
       const n = signal(0);
@@ -2182,7 +2202,7 @@ describe('ripple', () => {
   });
 
   describe('R11 — readonly().dispose() semantics', () => {
-    it('disposes the underlying computed when readonly wraps a computed (short-circuit path)', () => {
+    it('readonly(computed).dispose() is a no-op — source computed stays alive', () => {
       const n = signal(1);
       const doubled = computed(() => n.value * 2);
       const r = readonly(doubled);
@@ -2190,9 +2210,13 @@ describe('ripple', () => {
       expect(r.value).toBe(2);
       r.dispose();
 
-      // doubled should be disposed — it returns last value silently (inert node)
-      expect(doubled.disposed).toBe(true);
-      expect(doubled.peek()).toBe(2); // last value, no throw
+      // doubled should still be alive — readonly does not own the source
+      expect(doubled.disposed).toBe(false);
+      n.value = 5;
+      expect(doubled.value).toBe(10);
+
+      doubled.dispose();
+      n.dispose();
     });
 
     it('readonly(signal).dispose() is a no-op — source signal remains alive', () => {
@@ -2636,11 +2660,11 @@ describe('ripple', () => {
     });
   });
 
-  describe('selector() on readonly() wrappers', () => {
-    it('selector filters on readonly — no extra graph node for the wrapper', () => {
+  describe('filter() on readonly() wrappers', () => {
+    it('filter() on readonly — tracks deps through the wrapper', () => {
       const n = signal(4);
       const ro = readonly(n);
-      const evens = selector(ro, undefined, (x) => x % 2 === 0);
+      const evens = filter(ro, (x) => x % 2 === 0);
 
       expect(evens.value).toBe(4);
 
@@ -2653,10 +2677,10 @@ describe('ripple', () => {
       evens.dispose();
     });
 
-    it('selector type predicate on readonly narrows correctly', () => {
+    it('filter() type predicate on readonly narrows correctly', () => {
       const mixed = signal<string | number>(42);
       const ro = readonly(mixed);
-      const nums = selector(ro, undefined, (v): v is number => typeof v === 'number');
+      const nums = filter(ro, (v): v is number => typeof v === 'number');
 
       expect(nums.value).toBe(42);
 
@@ -2856,20 +2880,24 @@ describe('ripple', () => {
     });
   });
 
-  describe('readonly() — double-wrap short-circuit', () => {
-    it('readonly(readonly(x)) returns the same object reference', () => {
+  describe('readonly() — always wraps', () => {
+    it('readonly(readonly(s)) creates a distinct wrapper but value is correct', () => {
       const s = signal(0);
       const r1 = readonly(s);
       const r2 = readonly(r1);
 
-      expect(r2).toBe(r1);
+      expect(r2).not.toBe(r1); // always a fresh wrapper
+      expect(r2.value).toBe(0);
+      s.value = 99;
+      expect(r2.value).toBe(99);
     });
 
-    it('readonly(computed()) returns the computed directly', () => {
+    it('readonly(computed()) creates a wrapper — does not return computed directly', () => {
       const c = computed(() => 1);
       const r = readonly(c);
 
-      expect(r).toBe(c);
+      expect(r).not.toBe(c); // wrapper, not the source
+      expect(r.value).toBe(1);
 
       c.dispose();
     });
@@ -3107,6 +3135,55 @@ describe('ripple', () => {
     });
   });
 
+  describe('store.replace() — deep snapshot safety (B2)', () => {
+    it('mutating a nested object in the snapshot does not corrupt live state', () => {
+      const s = store({ outer: { inner: 0 } });
+      const runs: number[] = [];
+
+      const stop = effect(() => {
+        runs.push(s.value.outer.inner);
+      });
+
+      runs.length = 0; // clear initial run
+
+      s.replace((state) => {
+        // Mutate nested — before B2 fix this silently corrupted live state
+        (state as { outer: { inner: number } }).outer.inner = 42;
+
+        return { outer: { inner: 99 } }; // return correct new value
+      });
+
+      expect(s.peek().outer.inner).toBe(99);
+      expect(runs).toHaveLength(1); // exactly one reactive update
+
+      stop.dispose();
+    });
+
+    it('no-op when fn returns the same snapshot ref — nested mutation has no effect', () => {
+      const s = store({ outer: { inner: 0 } });
+      const runs: number[] = [];
+
+      const stop = effect(() => {
+        runs.push(s.value.outer.inner);
+      });
+
+      runs.length = 0;
+
+      s.replace((state) => {
+        // Mutate nested then return same ref — before fix inner was silently 42
+        (state as { outer: { inner: number } }).outer.inner = 42;
+
+        return state; // same snapshot ref = no-op
+      });
+
+      // With structuredClone, state is fully independent — live state unchanged
+      expect(s.peek().outer.inner).toBe(0);
+      expect(runs).toHaveLength(0);
+
+      stop.dispose();
+    });
+  });
+
   describe('storeWithHistory — canUndo / canRedo', () => {
     it('canUndo is false at initial state, true after a patch', () => {
       const h = storeWithHistory({ n: 0 });
@@ -3207,6 +3284,48 @@ describe('ripple', () => {
       h.undo();
 
       expect(h.store.peek().count).toBe(0);
+    });
+  });
+
+  describe('storeWithHistory — historyAt() out-of-bounds (C4)', () => {
+    it('historyAt(-1) returns undefined', () => {
+      const h = storeWithHistory({ n: 0 });
+
+      expect(h.historyAt(-1)).toBeUndefined();
+    });
+
+    it('historyAt(index >= historyLength) returns undefined', () => {
+      const h = storeWithHistory({ n: 0 });
+
+      h.store.patch({ n: 1 });
+
+      expect(h.historyAt(2)).toBeUndefined();
+      expect(h.historyAt(999)).toBeUndefined();
+    });
+  });
+
+  describe('storeWithHistory — wrap existing store (F1)', () => {
+    it('records mutations on an externally created store', () => {
+      const s = store({ x: 0 });
+      const h = storeWithHistory(s);
+
+      s.patch({ x: 1 });
+
+      expect(h.historyLength).toBe(2);
+      expect(h.store).toBe(s);
+    });
+
+    it('dispose() of the adapter does NOT dispose the externally owned store', () => {
+      const s = store({ x: 0 });
+      const h = storeWithHistory(s);
+
+      h.dispose();
+
+      expect(s.disposed).toBe(false);
+
+      void s.value; // still readable
+
+      s.dispose();
     });
   });
 
@@ -3632,14 +3751,13 @@ describe('ripple', () => {
       expect(ro.disposed).toBe(true);
     });
 
-    it('disposed is true after source computed is disposed (short-circuit path returns source)', () => {
+    it('disposed is true after source computed is disposed (wrapper delegates disposed)', () => {
       const c = computed(() => 42);
       const ro = readonly(c);
 
-      // short-circuit: readonly(computed) returns the computed directly
-      expect(ro).toBe(c);
+      expect(ro).not.toBe(c); // always a wrapper now — never the source directly
       c.dispose();
-      expect(ro.disposed).toBe(true);
+      expect(ro.disposed).toBe(true); // wrapper delegates to source.disposed
     });
   });
 

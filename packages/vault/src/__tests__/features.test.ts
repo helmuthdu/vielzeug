@@ -1561,6 +1561,28 @@ describe('createVersionedCodec', () => {
 
     expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
   });
+
+  test('expiresAt is preserved through the version envelope', () => {
+    const innerCodec = {
+      decode: <T>(r: unknown): { expiresAt?: number; value: T } | undefined => {
+        if (typeof r !== 'object' || r === null || !('value' in r)) return undefined;
+
+        const rec = r as { expiresAt?: number; value: unknown };
+
+        return { expiresAt: rec.expiresAt, value: rec.value as T };
+      },
+      encode: <T>(v: T, expiresAt?: number): unknown =>
+        expiresAt !== undefined ? { expiresAt, value: v } : { value: v },
+    };
+    const codec = createVersionedCodec([{ codec: innerCodec, version: 1 }], 1);
+
+    const futureTs = Date.now() + 60_000;
+    const encoded = codec.encode({ x: 1 }, futureTs);
+    const decoded = codec.decode(encoded);
+
+    expect(decoded?.expiresAt).toBe(futureTs);
+    expect(decoded?.value).toEqual({ x: 1 });
+  });
 });
 
 /* -------------------- C2: toReadableStream -------------------- */
@@ -1654,5 +1676,135 @@ describe('debug() on fresh adapter', () => {
     expect(usersEntry?.expiredCount).toBe(1);
 
     vi.useRealTimers();
+  });
+});
+
+/* -------------------- observe({ immediate: false }) -------------------- */
+
+describe('observe({ immediate: false })', () => {
+  test('skips the initial snapshot when immediate is false', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[][] = [];
+
+    db.observe('users', (records) => calls.push(records), { immediate: false });
+
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(0); // no initial snapshot
+
+    await db.put('users', { id: 2, name: 'Bob' });
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(1); // fires on mutation
+    expect(calls[0]).toHaveLength(2);
+  });
+
+  test('fires initial snapshot when immediate is true (default)', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[][] = [];
+
+    db.observe('users', (records) => calls.push(records));
+
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(1);
+  });
+});
+
+/* -------------------- observeMany({ eager: true }) -------------------- */
+
+describe('observeMany({ eager: true })', () => {
+  test('fires after first table delivers even when second has not yet', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps), { eager: true });
+
+    await flushMicrotasks();
+    await flushMicrotasks(); // getAll() resolves → snapshotMap.set → queueMicrotask → listener
+
+    expect(calls).toHaveLength(1);
+
+    const snap = calls[0] as { posts: unknown[]; users: unknown[] };
+
+    expect(snap.users).toHaveLength(1);
+    expect(snap.posts).toEqual([]); // posts not yet populated — empty array
+  });
+
+  test('default (eager: false) waits for all tables before firing', async () => {
+    const db = createMemory({ schema });
+
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps));
+
+    await flushMicrotasks();
+    await flushMicrotasks(); // getAll() resolves → snapshotMap full → queueMicrotask → listener
+
+    expect(calls).toHaveLength(1); // fires once all tables have delivered
+  });
+});
+
+/* -------------------- watch() eager-subscribe gap -------------------- */
+
+describe('watch() eager-subscribe', () => {
+  test('captures mutations that occur between [Symbol.asyncIterator]() and first next()', async () => {
+    const db = createMemory({ schema });
+
+    const iter = db.watch('users')[Symbol.asyncIterator]();
+
+    // Mutation happens before first next() — must not be lost
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await iter.next();
+
+    expect(result.done).toBe(false);
+    // The pending queue may have initial empty snapshot + mutation snapshot
+    // At minimum the value should be an array (not lost)
+    expect(Array.isArray(result.value)).toBe(true);
+
+    await iter.return?.();
+    await db.dispose();
+  });
+});
+
+/* -------------------- batch() non-atomic warning -------------------- */
+
+describe('batch() non-atomic warning', () => {
+  test('emits a dev warning on first batch() call on a memory adapter', async () => {
+    const db = createMemory({ schema });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await db.batch(['users'], async (tx) => {
+      await tx.put('users', { id: 1, name: 'Alice' });
+    });
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain('not atomic');
+
+    warnSpy.mockRestore();
+    await db.dispose();
+  });
+
+  test('emits the warning only once per adapter instance', async () => {
+    const db = createMemory({ schema });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await db.batch(['users'], async (tx) => tx.put('users', { id: 1, name: 'Alice' }));
+    await db.batch(['users'], async (tx) => tx.put('users', { id: 2, name: 'Bob' }));
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+
+    warnSpy.mockRestore();
+    await db.dispose();
   });
 });

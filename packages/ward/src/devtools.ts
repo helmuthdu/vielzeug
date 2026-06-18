@@ -46,7 +46,7 @@ export function debugWard<TAction extends string = string, TData = unknown>(
         ? ctx.principal.roles.join(', ')
         : ctx.principal.id
       : 'anonymous';
-    const outcome = ctx.allowed ? 'allow' : 'reason' in ctx ? ctx.reason : 'no-matching-rule';
+    const outcome = ctx.allowed ? 'allow' : ctx.reason;
     const decision = outcome.padEnd(16);
     const effect = 'rule' in ctx ? `(${ctx.rule.effect})`.padEnd(8) : '        ';
 

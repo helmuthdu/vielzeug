@@ -167,12 +167,11 @@ declare module '/ripple' {
   export function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
   /** Project a reactive source into a computed signal. Cleaner alternative to selector(). */
   export function derive<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, options?: ComputedOptions<U>): ComputedSignal<U>;
-  /** Filter a reactive source — returns value when predicate is true, undefined otherwise. */
+  /** Filter a reactive source — returns value when predicate is true, undefined otherwise. Type-predicate form narrows T → U | undefined. */
+  export function filter<T, U extends T>(source: ReadonlySignal<T>, predicate: (value: T) => value is U, options?: ComputedOptions<U | undefined>): ComputedSignal<U | undefined>;
   export function filter<T>(source: ReadonlySignal<T>, predicate: (value: T) => boolean, options?: ComputedOptions<T | undefined>): ComputedSignal<T | undefined>;
   export function selector<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, options?: ComputedOptions<U>): ComputedSignal<U>;
   export function selector<T, U>(source: ReadonlySignal<T>, project: (value: T) => U, predicate: (value: U) => boolean, options?: ComputedOptions<U | undefined>): ComputedSignal<U | undefined>;
-  /** @deprecated Use filter(source, predicate, options) instead. */
-  export function selector<T>(source: ReadonlySignal<T>, project: undefined, predicate: (value: T) => boolean, options?: ComputedOptions<T | undefined>): ComputedSignal<T | undefined>;
   export function onCleanup(fn: CleanupFn): void;
   export function scope(setup?: () => void): Scope;
   /** @deprecated Use scope(setup) directly — withScope(fn) is identical to scope(fn). */
@@ -180,7 +179,7 @@ declare module '/ripple' {
   /** @deprecated Use const s = scope(); await s.run(async () => { ... }); instead. */
   export function asyncScope(setup: () => Promise<void>): Promise<Scope>;
   export function store<T extends object>(initial: T, options?: { name?: string }): Store<T>;
-  export function storeWithHistory<T extends object>(initial: T, options?: { maxHistory?: number; name?: string }): StoreWithHistory<T>;
+  export function storeWithHistory<T extends object>(storeOrInitial: Store<T> | T, options?: { maxHistory?: number; name?: string }): StoreWithHistory<T>;
   export function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
   export function isComputed<T = unknown>(value: unknown): value is ComputedSignal<T>;
   export function isStore<T extends object = Record<string, unknown>>(value: unknown): value is Store<T>;

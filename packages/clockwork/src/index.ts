@@ -1,6 +1,5 @@
-export { MachineError } from './errors.js';
+export { MachineError, MachineErrorCode } from './errors.js';
 export { define, machine, resolveTransition } from './interpret.js';
-export type { MachineErrorCode } from './errors.js';
 export type {
   ActionArgs,
   ActionFn,

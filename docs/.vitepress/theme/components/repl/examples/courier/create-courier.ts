@@ -25,7 +25,7 @@ console.log('User:', user.name)
 const createPost = client.mutation(
   (input, signal) => client.api.post('/posts', { body: input, signal }),
   {
-    sets: (created) => [['posts', created.id], created],
+    sets: (created) => [[ ['posts', created.id], created ]],
     invalidates: [['posts']],
     onSuccess: (data) => console.log('Created id:', data.id, '| cache size:', client.query.size),
   },

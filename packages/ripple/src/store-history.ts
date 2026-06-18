@@ -2,16 +2,24 @@ import type { Store, StoreWithHistory } from './types';
 
 import { signal } from './signal';
 import { store } from './store';
+import { isStore } from './utilities';
 
 const snapshot = <T extends object>(state: Readonly<T>): Readonly<T> =>
   Object.freeze(structuredClone({ ...state })) as Readonly<T>;
 
 /**
- * Wraps an existing store (or creates one) with snapshot history for undo/redo / time-travel.
+ * Wraps a store (or creates one from an initial value) with snapshot history
+ * for undo/redo / time-travel.
+ *
+ * **Ownership:** if called with an initial value, the adapter creates and owns
+ * the underlying store — `dispose()` will also dispose it. If called with an
+ * existing `Store<T>`, the adapter does NOT own it — `dispose()` leaves the
+ * store alive.
  *
  * History is recorded by subscribing to the store's change notifications.
- * Every mutation triggers a new snapshot, truncating any redo history ahead of the cursor.
- * History is stored as a circular buffer of `maxHistory` snapshots (default: 50).
+ * Every mutation triggers a new snapshot, truncating any redo history ahead of
+ * the cursor. History is stored as a circular buffer of `maxHistory` snapshots
+ * (default: 50).
  *
  * This is a pure external adapter — it does not access any store internals.
  *
@@ -25,14 +33,20 @@ const snapshot = <T extends object>(state: Readonly<T>): Readonly<T> =>
  * s.redo();  // forward to { count: 2 }
  * s.historyAt(0); // { count: 0 }
  * s.canUndo; // true
+ *
+ * // Wrap an existing store:
+ * const existingStore = store({ x: 0 });
+ * const h = storeWithHistory(existingStore);
+ * h.dispose(); // existingStore is NOT disposed
  * ```
  */
 export const storeWithHistory = <T extends object>(
-  initial: T,
+  storeOrInitial: Store<T> | T,
   options?: { maxHistory?: number; name?: string },
 ): StoreWithHistory<T> => {
   const maxHistory = options?.maxHistory ?? 50;
-  const base: Store<T> = store(initial, { name: options?.name });
+  const ownsStore = !isStore(storeOrInitial);
+  const base: Store<T> = ownsStore ? store(storeOrInitial as T, { name: options?.name }) : (storeOrInitial as Store<T>);
 
   const snapshots: Readonly<T>[] = [snapshot(base.peek())];
 
@@ -96,7 +110,8 @@ export const storeWithHistory = <T extends object>(
     disposed = true;
     sub.dispose();
     cursor.dispose();
-    base.dispose();
+
+    if (ownsStore) base.dispose();
   };
 
   return {

@@ -1,9 +1,11 @@
-import { cleanup, fire, mock, mount, user, waitFor } from '.';
 /**
  * Testing - Render Utilities Tests
  * Tests for the testing utilities themselves
  */
-import { html, signal } from '..';
+import { signal } from '@vielzeug/ripple';
+
+import { cleanup, fire, mock, mount, user, waitFor } from '.';
+import { html } from '..';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {

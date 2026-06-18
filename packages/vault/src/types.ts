@@ -426,6 +426,13 @@ export interface Adapter<S extends AnySchema> {
     listener: Observer<RecordOf<S, K>>,
     options?: {
       /**
+       * When `false`, skips the automatic initial snapshot fired on registration.
+       * Useful when the caller already has the current table state (e.g. from a
+       * preceding `getAll()` call) and only wants change notifications.
+       * Defaults to `true`.
+       */
+      immediate?: boolean;
+      /**
        * An `AbortSignal` that, when aborted, automatically unsubscribes this observer.
        * Aligns with the platform pattern used by `fetch`, `addEventListener`, etc.
        *
@@ -453,7 +460,16 @@ export interface Adapter<S extends AnySchema> {
   observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    options?: { signal?: AbortSignal },
+    options?: {
+      /**
+       * When `true`, fires the listener as soon as any table delivers its first snapshot,
+       * using empty arrays for tables not yet resolved. Defaults to `false` (wait for all tables).
+       *
+       * Useful when some tables may be large and you want to render partial data immediately.
+       */
+      eager?: boolean;
+      signal?: AbortSignal;
+    },
   ): Unsubscribe;
   /**
    * Explicitly delete all TTL-expired records from the specified tables (or all tables when

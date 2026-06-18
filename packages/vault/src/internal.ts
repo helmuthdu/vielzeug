@@ -88,7 +88,7 @@ export function createObserverHub<S extends AnySchema>(
   const observe = <K extends keyof S & string>(
     table: K,
     listener: (records: RecordOf<S, K>[]) => void,
-    { signal }: { signal?: AbortSignal } = {},
+    { immediate = true, signal }: { immediate?: boolean; signal?: AbortSignal } = {},
   ): (() => void) => {
     if (disposed) {
       throw new VaultDisposedError('observer hub is disposed');
@@ -107,8 +107,8 @@ export function createObserverHub<S extends AnySchema>(
 
     listeners.add(wrapped);
 
-    // Always fire an initial snapshot so every subscriber sees current state immediately.
-    notify(table);
+    // Fire an initial snapshot unless the caller opted out.
+    if (immediate) notify(table);
 
     const stop = (): void => {
       const current = observers.get(key);
@@ -149,6 +149,11 @@ export function createObserverHub<S extends AnySchema>(
  * for await (const users of db.watch('users', { signal: controller.signal })) { ... }
  * controller.abort(); // stops the loop
  * ```
+ *
+ * **Resource note:** The observer subscription is created eagerly on `[Symbol.asyncIterator]()` to
+ * avoid missing mutations before the first `next()` call. Always consume the iterator to completion,
+ * `break`/`return` out of `for await`, or pass an `AbortSignal` — otherwise the subscription
+ * will remain active until the adapter is disposed.
  */
 export function createWatchIterable<T>(
   subscribe: (listener: (snapshot: T[]) => void, signal?: AbortSignal) => () => void,
@@ -177,10 +182,9 @@ export function createWatchIterable<T>(
 
       signal?.addEventListener('abort', finish, { once: true });
 
-      const ensureSubscribed = (): void => {
-        if (unsubscribe || done) return;
-
-        // Lazy registration: observer is wired on first next() call.
+      // Eager registration: subscribe immediately so mutations between iterator
+      // creation and first next() are not silently lost.
+      if (!done) {
         unsubscribe = subscribe((snapshot) => {
           if (done) return;
 
@@ -195,13 +199,11 @@ export function createWatchIterable<T>(
             pending = [snapshot];
           }
         });
-      };
+      }
 
       return {
         async next(): Promise<IteratorResult<T[]>> {
           if (done) return { done: true, value: undefined };
-
-          ensureSubscribed();
 
           if (pending.length > 0) {
             const value = pending.shift()!;
@@ -242,7 +244,7 @@ export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof cr
   return function observeMany<K extends keyof S & string>(
     tables: readonly K[],
     listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-    { signal }: { signal?: AbortSignal } = {},
+    { eager = false, signal }: { eager?: boolean; signal?: AbortSignal } = {},
   ): () => void {
     const distinctTables = [...new Set(tables)] as K[];
 
@@ -262,7 +264,8 @@ export function createObserveMany<S extends AnySchema>(hub: ReturnType<typeof cr
       Object.fromEntries(tables.map((t) => [t, snapshotMap.get(t) ?? []])) as { [T in K]: RecordOf<S, T>[] };
 
     const scheduleFlush = (): void => {
-      if (microtaskQueued || snapshotMap.size < distinctTables.length) return;
+      // In eager mode fire as soon as any table has delivered; in default mode wait for all.
+      if (microtaskQueued || (!eager && snapshotMap.size < distinctTables.length)) return;
 
       microtaskQueued = true;
       queueMicrotask(() => {

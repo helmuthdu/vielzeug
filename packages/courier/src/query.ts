@@ -27,7 +27,12 @@ export type QueryFnContext = {
  * Use `observe()` for reactive subscriptions with select/placeholder support.
  */
 export type QueryOptions<T> = {
-  /** When `false` the fetch is skipped and the entry stays in its current state. Defaults to `true`. */
+  /**
+   * When `false` the fetch is skipped and the current cached value is returned.
+   * If no cached data exists yet, the return value is `undefined` even though the
+   * return type is `Promise<T>` — use `getState()` to inspect entry status in that case.
+   * Defaults to `true`.
+   */
   enabled?: boolean;
   fn: (ctx: QueryFnContext) => Promise<T>;
   gcTime?: number;
@@ -692,6 +697,17 @@ export function createQuery(opts?: QueryClientOptions) {
       };
     },
     refetchStale,
+    /**
+     * Evict a single cache entry by key.
+     * If the entry has active observers, it is reset to idle and observers are notified.
+     * If it has no observers, it is deleted immediately.
+     * Any in-flight fetch for this key is aborted.
+     */
+    remove(key: QueryKey): void {
+      const entry = entries.get(hash(key));
+
+      if (entry) evictEntry(entry);
+    },
     set,
     /** Number of entries currently held in the cache. */
     get size(): number {

@@ -92,7 +92,7 @@ export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 't
         console.group(`[ripple:debug] "${label}" initial deps:`);
 
         for (const dep of currentDeps) {
-          console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.source.version})`);
+          console.debug(`  ${dep.source.name ?? '(unnamed)'} (v${dep.source.version})`);
         }
 
         console.groupEnd();
@@ -105,7 +105,7 @@ export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 't
         console.group(`[ripple:debug] "${label}" re-running — changed sources:`);
 
         for (const dep of changed) {
-          console.log(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} -> v${dep.source.version})`);
+          console.debug(`  ${dep.source.name ?? '(unnamed)'} (v${dep.version} -> v${dep.source.version})`);
         }
 
         console.groupEnd();

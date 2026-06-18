@@ -847,6 +847,29 @@ Signature: `dispose() => void`
 
 Clears recorded payloads and then calls the underlying `bus.dispose()`, removing all listeners and rejecting pending waits. Idempotent.
 
+---
+
+### `testBus.removeAllListeners()`
+
+Signature: `removeAllListeners(event) => void`
+
+Unsubscribes all listeners registered via `on()` for the given event key. Emission records are preserved — call `reset()` separately to clear them.
+
+```ts
+bus.on('user:login', handlerA);
+bus.on('user:login', handlerB);
+bus.emit('user:login', { userId: '1' });
+
+bus.removeAllListeners('user:login');
+bus.emit('user:login', { userId: '2' }); // neither handler fires
+
+bus.emitted('user:login'); // => [{ userId: '1' }, { userId: '2' }] — records intact
+```
+
+::: tip Test-only utility
+`removeAllListeners` is available on `TestBus` only — it is not part of the standard `Bus<T>` interface. Use unsubscribe handles or `{ signal }` options for lifecycle-managed cleanup in production code.
+:::
+
 ## `combineSignals()`
 
 Signature: `combineSignals(first: AbortSignal, ...rest: AbortSignal[]) => AbortSignal`

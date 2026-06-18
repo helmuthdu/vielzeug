@@ -1,3 +1,4 @@
+import type { InternalBusOptions } from './bus';
 import type {
   BehaviorBus,
   BehaviorBusOptions,
@@ -44,7 +45,7 @@ export function createBehaviorBus<T extends EventMap>(
     _onDispatch: (event: EventKey<T>, payload: unknown) => {
       buffers.set(event as string, payload);
     },
-  } as Parameters<typeof createBus<T>>[0]);
+  } as InternalBusOptions<T>);
 
   // Wrap listener calls during synchronous replay so throws route through onError when set.
   function callSafeReplay(listener: Listener<unknown>, event: EventKey<T>, value: unknown): void {

@@ -1,5 +1,5 @@
 export const resolveAndErrorExample = {
-  code: `import { machine, resolveTransition, MachineError } from '@vielzeug/clockwork'
+  code: `import { machine, resolveTransition, MachineError, MachineErrorCode } from '@vielzeug/clockwork'
 
 // resolveTransition is a pure function — no side effects, no state change.
 // Use it to inspect transition logic in tests or decision UIs.
@@ -42,7 +42,7 @@ console.log('Resolved target:', result?.target)  // 'locked' (fallthrough)
 console.log('Guard log:', guardLog)
 // ['guard → unlocked: blocked', 'guard → locked: passed']
 
-// --- MachineError.is() for safe error handling ---
+// --- MachineError.is() + MachineErrorCode for safe error handling ---
 try {
   machine({
     initial: 'missing',
@@ -52,6 +52,13 @@ try {
   if (MachineError.is(err)) {
     console.log('Error code:', err.code)     // 'MACHINE_INVALID_INITIAL_STATE'
     console.log('Details:', err.details)
+
+    // MachineErrorCode const — autocomplete-safe switch
+    switch (err.code) {
+      case MachineErrorCode.MACHINE_INVALID_INITIAL_STATE:
+        console.log('Fix: check that "initial" matches a key in "states"')
+        break
+    }
   }
 }
 

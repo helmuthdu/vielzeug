@@ -12,9 +12,10 @@ import type {
   Unsubscribe,
 } from './types';
 
+import { createWaitPromise } from './_wait';
 import { warn } from './_warn';
 import { createChannel } from './channel';
-import { AbortError, ConnectionError, DisposedError, TimeoutError } from './errors';
+import { AbortError, ConnectionError, DisposedError } from './errors';
 import { createHeartbeat } from './heartbeat';
 import { createPresence } from './presence';
 import { type InFrame, decode, encode } from './protocol';
@@ -106,6 +107,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
   let intentionalClose = false;
 
   const pendingOpens: Array<{ reject: (e: Error) => void; resolve: () => void }> = [];
+  const activeChannels = new Map<string, number>();
 
   // ── Reconnect / Heartbeat ──────────────────────────────────────────────────
 
@@ -160,6 +162,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     ws = new WebSocket(url, opts.protocols);
 
     ws.onopen = (): void => {
+      intentionalClose = false;
       status.value = 'open';
       reconnect.reset();
       heartbeat.start();
@@ -168,6 +171,10 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       const pending = pendingOpens.splice(0);
 
       for (const p of pending) p.resolve();
+
+      for (const name of activeChannels.keys()) {
+        ws!.send(encode({ channel: name, type: 'subscribe' }));
+      }
     };
 
     ws.onmessage = (ev: MessageEvent): void => {
@@ -222,9 +229,11 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
           openSocket();
         }),
       disposalCtrl.signal,
+      opts.onReconnect,
     );
 
     if (!ok && !disposed) {
+      warn('Reconnect budget exhausted — connection permanently closed');
       status.value = 'closed';
     }
   }
@@ -309,6 +318,8 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = TClient>(
       name: string,
     ): PulseChannel<TChServer, TChClient> {
+      activeChannels.set(name, (activeChannels.get(name) ?? 0) + 1);
+
       const ch = createChannel<TChServer, TChClient>(
         name,
         (chan, event, payload) => {
@@ -318,9 +329,21 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         },
         (chan, event, handler) => listeners.add(chan, event, handler),
         disposalCtrl.signal,
+        () => {
+          const count = (activeChannels.get(name) ?? 1) - 1;
+
+          if (count <= 0) {
+            activeChannels.delete(name);
+            rawSend(encode({ channel: name, type: 'unsubscribe' }));
+          } else {
+            activeChannels.set(name, count);
+          }
+        },
       );
 
-      rawSend(encode({ channel: name, type: 'subscribe' }));
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(encode({ channel: name, type: 'subscribe' }));
+      }
 
       return ch;
     },
@@ -359,6 +382,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       for (const p of pending) p.reject(new DisposedError());
 
+      activeChannels.clear();
       pendingJoins.clear();
       pendingLeaves.clear();
       status.dispose();
@@ -480,7 +504,26 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         registered = true;
         sig.addEventListener('abort', onAbort, { once: true });
 
-        rawSend(encode({ room, type: 'leave' }));
+        if (ws?.readyState === WebSocket.OPEN) {
+          rawSend(encode({ room, type: 'leave' }));
+        } else {
+          pulse
+            .connect()
+            .then(() => rawSend(encode({ room, type: 'leave' })))
+            .catch((err: unknown) => {
+              sig.removeEventListener('abort', onAbort);
+
+              if (registered) {
+                const set = pendingLeaves.get(room);
+
+                set?.delete(onConfirm);
+
+                if (set?.size === 0) pendingLeaves.delete(room);
+              }
+
+              reject(err);
+            });
+        }
       });
     },
 
@@ -521,7 +564,9 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         disposalCtrl.signal,
       );
 
-      pulse.join(room).catch(() => {});
+      pulse.join(room).catch((err: unknown) => {
+        warn(`presence() join failed for room '${room}': ${String(err)}`);
+      });
 
       return ch;
     },
@@ -550,51 +595,9 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       event: K,
       waitOpts?: { signal?: AbortSignal; timeout?: number },
     ): Promise<TServer[K]> {
-      return new Promise((resolve, reject) => {
-        const signals: AbortSignal[] = [disposalCtrl.signal];
-
-        let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-        if (waitOpts?.signal) signals.push(waitOpts.signal);
-
-        if (waitOpts?.timeout !== undefined) {
-          const timeoutCtrl = new AbortController();
-
-          timeoutId = setTimeout(() => {
-            timeoutCtrl.abort(new TimeoutError(event as string));
-          }, waitOpts.timeout);
-          signals.push(timeoutCtrl.signal);
-        }
-
-        const combined = signals.length === 1 ? signals[0]! : combineSignals(signals[0]!, ...signals.slice(1));
-
-        if (combined.aborted) {
-          const reason = combined.reason instanceof TimeoutError ? combined.reason : new AbortError();
-
-          reject(reason);
-
-          return;
-        }
-
-        let unsub: Unsubscribe = () => {};
-
-        const onAbort = (): void => {
-          clearTimeout(timeoutId);
-          unsub();
-
-          const reason = combined.reason instanceof TimeoutError ? combined.reason : new AbortError();
-
-          reject(reason);
-        };
-
-        combined.addEventListener('abort', onAbort, { once: true });
-
-        unsub = listeners.add(null, event as string, (payload) => {
-          clearTimeout(timeoutId);
-          combined.removeEventListener('abort', onAbort);
-          resolve(payload as TServer[K]);
-        });
-      });
+      return createWaitPromise<TServer[K]>(event as string, disposalCtrl.signal, waitOpts, (ev, handler) =>
+        listeners.add(null, ev, handler),
+      );
     },
   };
 

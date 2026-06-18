@@ -2,6 +2,7 @@ import { type Signal, signal } from '@vielzeug/ripple';
 
 import type { PresenceChannel, Unsubscribe } from './types';
 
+import { warn } from './_warn';
 import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame, encode } from './protocol';
 
 type RawSubscribeFn = (channel: string | null, event: string, handler: (payload: unknown) => void) => () => void;
@@ -99,7 +100,11 @@ export function createPresence<T>(
     },
 
     onJoin(handler: (memberId: string, state: T) => void): Unsubscribe {
-      if (disposed) return () => {};
+      if (disposed) {
+        warn(`onJoin() called on a disposed presence channel '${room}' — listener ignored`);
+
+        return () => {};
+      }
 
       joinHandlers.add(handler);
 
@@ -107,7 +112,11 @@ export function createPresence<T>(
     },
 
     onLeave(handler: (memberId: string) => void): Unsubscribe {
-      if (disposed) return () => {};
+      if (disposed) {
+        warn(`onLeave() called on a disposed presence channel '${room}' — listener ignored`);
+
+        return () => {};
+      }
 
       leaveHandlers.add(handler);
 

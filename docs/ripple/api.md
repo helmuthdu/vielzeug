@@ -18,7 +18,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `watch()`            | Subscribe to value changes                     | Sync           | Does not fire immediately unlike `effect()`                                       |
 | `batch()`            | Coalesce multiple writes                       | Sync           | Nested batches merge into the outermost                                           |
 | `untrack()`          | Read without subscribing                       | Sync           | Only suppresses dependency registration, value is still read                      |
-| `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | Returns `ComputedSignal<T>`; dispose it when done                                 |
+| `readonly()`         | Wrap any signal as a read-only ComputedSignal  | Sync           | `dispose()` is always a no-op — the caller retains ownership of the source        |
 | `scope()`            | Isolated cleanup context                       | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
 | ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)` | Async   | `onCleanup()` only works before the first `await`                                 |
 | `debugEffect()`      | Effect that logs changed sources before re-run | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
@@ -27,7 +27,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `installDevTools()`  | Install DevTools observation hook              | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
 | `getDevToolsHook()`  | Return current DevTools hook                   | Sync           | Returns `null` if none installed                                                  |
 | `derive()`           | Project a reactive source into a computed      | Sync           | Cleaner alternative to `selector(source, project)` — no overload ambiguity        |
-| `filter()`           | Filter a reactive source                       | Sync           | Cleaner alternative to `selector(source, undefined, predicate)`                   |
+| `filter()`           | Filter a reactive source; type-predicate narrows `T → U \| undefined` | Sync  | Returns `undefined` when predicate is `false`; use type-guard for narrowing        |
 | `selector()`         | Project / filter any reactive source           | Sync           | Use `derive()` / `filter()` for new code                                          |
 | `isSignal()`         | Type guard for any signal/computed/store       | Sync           | Uses an internal symbol marker, not duck-typing                                   |
 | `isComputed()`       | Type guard for computed signals                | Sync           | Returns `false` for plain signals and stores                                      |
@@ -310,7 +310,7 @@ function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
 
 Wraps `source` in a thin delegation object — the returned `ComputedSignal<T>` exposes `value`, `peek()`, and `subscribe()`. Mutator methods are hidden at the type level.
 
-When `source` is already a `ComputedSignal`, `readonly()` returns it unchanged (no extra node). `.dispose()` is a no-op when wrapping a plain `signal()` — the source signal owns its own lifecycle. When wrapping a `computed()`, `.dispose()` disposes that computed.
+Always creates a new wrapper object — never returns the source directly. `.dispose()` is always a no-op: the caller retains ownership of the source and is responsible for disposing it independently. This applies to both `signal()` and `computed()` sources.
 
 ```ts
 const count = signal(0);
@@ -597,14 +597,16 @@ Creates a reactive store for the given object state. Stores accept `effect()`, `
 
 ```ts
 function storeWithHistory<T extends object>(
-  initial: T,
+  storeOrInitial: Store<T> | T,
   options?: { maxHistory?: number; name?: string },
 ): StoreWithHistory<T>;
 ```
 
-Creates a `Store<T>` augmented with snapshot-based undo/redo history. Every call to `.patch()`, `.replace()`, `.reset()`, or a `lens()` write pushes a new snapshot. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
+Wraps a store (or creates one from an initial value) with snapshot-based undo/redo history. Every call to `.patch()`, `.replace()`, `.reset()`, or a `lens()` write pushes a new snapshot. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
 
-Snapshots are shallow copies (structural sharing). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
+Snapshots are deep-frozen clones (`structuredClone`). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
+
+**Ownership:** when called with an initial value (`T`), the adapter creates and owns the underlying store — `dispose()` also disposes it. When called with an existing `Store<T>`, the adapter does **not** own it — `dispose()` leaves the store alive.
 
 ```ts
 const editor = storeWithHistory({ text: '' }, { maxHistory: 100 });
@@ -621,15 +623,20 @@ editor.redo();
 console.log(editor.store.peek().text); // 'hello world'
 
 console.log(editor.historyAt(0)); // { text: '' }
+
+// Wrap an existing store — adapter does not own it
+const s = store({ x: 0 });
+const h = storeWithHistory(s);
+h.dispose(); // h is gone; s is still alive
 ```
 
 **Parameters**
 
-| Parameter            | Type     | Default | Description                                       |
-| -------------------- | -------- | ------- | ------------------------------------------------- |
-| `initial`            | `T`      |         | Starting state                                    |
-| `options.maxHistory` | `number` | `50`    | Maximum number of snapshots in the history buffer |
-| `options.name`       | `string` |         | Name passed to the underlying `store()`           |
+| Parameter            | Type            | Default | Description                                                              |
+| -------------------- | --------------- | ------- | ------------------------------------------------------------------------ |
+| `storeOrInitial`     | `Store<T> \| T` |         | Existing `Store<T>` (not owned) or a plain object to create a store from |
+| `options.maxHistory` | `number`        | `50`    | Maximum number of snapshots in the history buffer                        |
+| `options.name`       | `string`        |         | Name passed to the underlying `store()` when creating a new one          |
 
 **Returns** — `StoreWithHistory<T>`
 
@@ -680,7 +687,7 @@ See also: [`PathValue<T, P>`](#pathvaluet-p)
 
 ## Signal Combinators
 
-Three utilities are available to derive computed values from a reactive source. `derive()` and `filter()` are the preferred API. `selector()` remains available for the combined project+filter case.
+Three utilities are available to derive computed values from a reactive source. `derive()` and `filter()` are the preferred API. `selector()` remains available for the combined project+filter (two-argument projection) case — the filter-only `selector(source, undefined, predicate)` form has been removed; use `filter()` directly.
 
 ### `derive`
 
@@ -717,6 +724,12 @@ doubled.value; // 10
 ### `filter`
 
 ```ts
+function filter<T, U extends T>(
+  source: ReadonlySignal<T>,
+  predicate: (value: T) => value is U,
+  options?: ComputedOptions<U | undefined>,
+): ComputedSignal<U | undefined>;
+
 function filter<T>(
   source: ReadonlySignal<T>,
   predicate: (value: T) => boolean,
@@ -724,9 +737,7 @@ function filter<T>(
 ): ComputedSignal<T | undefined>;
 ```
 
-Creates a `ComputedSignal` that returns the source value when `predicate` returns `true`, or `undefined` otherwise.
-
-Prefer this over `selector(source, undefined, predicate)` — no `undefined` placeholder needed.
+Creates a `ComputedSignal` that returns the source value when `predicate` returns `true`, or `undefined` otherwise. When a type-predicate function (`value is U`) is passed, the returned signal is narrowed to `ComputedSignal<U | undefined>`.
 
 ```ts
 const count = signal(5);
@@ -734,17 +745,22 @@ const evens = filter(count, (n) => n % 2 === 0);
 evens.value; // undefined (5 is odd)
 count.value = 8;
 evens.value; // 8
+
+// Type-predicate narrowing
+const mixed = signal<number | string>(42);
+const nums = filter(mixed, (v): v is number => typeof v === 'number');
+// nums: ComputedSignal<number | undefined>
 ```
 
 **Parameters**
 
-| Parameter   | Type                             | Description                                          |
-| ----------- | -------------------------------- | ---------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`              | Any signal, computed, or store                       |
-| `predicate` | `(value: T) => boolean`          | Returns `true` to pass through, `false` for undefined|
-| `options`   | `ComputedOptions<T \| undefined>`| Optional `equals`, `name`, `fallback`                |
+| Parameter   | Type                                | Description                                                      |
+| ----------- | ----------------------------------- | ---------------------------------------------------------------- |
+| `source`    | `ReadonlySignal<T>`                 | Any signal, computed, or store                                   |
+| `predicate` | `(value: T) => boolean \| value is U` | Returns `true` to pass through, `false` for `undefined`        |
+| `options`   | `ComputedOptions<T \| undefined>`   | Optional `equals`, `name`, `fallback`                            |
 
-**Returns** — `ComputedSignal<T | undefined>`
+**Returns** — `ComputedSignal<T | undefined>` (or `ComputedSignal<U | undefined>` for type-predicate form)
 
 ---
 
@@ -763,16 +779,9 @@ function selector<T, U>(
   predicate: (value: U) => boolean,
   options?: ComputedOptions<U | undefined>,
 ): ComputedSignal<U | undefined>;
-
-function selector<T>(
-  source: ReadonlySignal<T>,
-  project: undefined,
-  predicate: (value: T) => boolean,
-  options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined>;
 ```
 
-Creates a `ComputedSignal` derived from `source` via an optional projection and/or filter predicate. Replaces the removed `.map()` and `.filter()` instance methods.
+Creates a `ComputedSignal` derived from `source` via a projection and optional filter predicate. For filter-only use cases prefer `filter(source, predicate)` directly.
 
 ```ts
 const count = signal(3);
@@ -780,12 +789,6 @@ const count = signal(3);
 // Project only
 const doubled = selector(count, (n) => n * 2);
 doubled.value; // 6
-
-// Filter only
-const evens = selector(count, undefined, (n) => n % 2 === 0);
-evens.value; // undefined (3 is odd)
-count.value = 4;
-evens.value; // 4
 
 // Project + filter
 const bigDoubles = selector(
@@ -802,12 +805,12 @@ doubled.dispose();
 
 **Parameters**
 
-| Parameter   | Type                             | Description                                                   |
-| ----------- | -------------------------------- | ------------------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`              | Any signal, computed, store, or lens                          |
-| `project`   | `(value: T) => U` or `undefined` | Projection function; omit or pass `undefined` to pass through |
-| `predicate` | `(value: U) => boolean`          | Optional filter; when `false`, result is `undefined`          |
-| `options`   | `ComputedOptions<U>`             | Optional `equals`, `name`, `fallback`                         |
+| Parameter   | Type                    | Description                                                      |
+| ----------- | ----------------------- | ---------------------------------------------------------------- |
+| `source`    | `ReadonlySignal<T>`     | Any signal, computed, store, or lens                             |
+| `project`   | `(value: T) => U`       | Projection function (required)                                   |
+| `predicate` | `(value: U) => boolean` | Optional filter; when `false`, result is `undefined`             |
+| `options`   | `ComputedOptions<U>`    | Optional `equals`, `name`, `fallback`                            |
 
 **Returns** — `ComputedSignal<U>` or `ComputedSignal<U | undefined>` (when predicate is provided)
 
@@ -924,7 +927,7 @@ interface Store<T extends object> {
 | `.dispose()`      | Permanently disposes the store — releases all internal prop signals and cached lenses. Idempotent.                  |
 | `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy                    |
 | `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                |
-| `.replace(fn)`    | Receive a plain shallow copy of current state; return the new state; returning the same reference is a silent no-op |
+| `.replace(fn)`    | Receive a deep clone (`structuredClone`) of current state; return the new state; returning the same clone reference is a silent no-op |
 | `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                              |
 
 ::: tip store.value is a read-only proxy
@@ -1194,7 +1197,7 @@ Returned by `storeWithHistory()`. Wraps a `Store<T>` with snapshot navigation. A
 | `historyLength`      | Number of snapshots currently in the buffer (≤ `maxHistory`)                                                                                |
 | `undo()`             | Move cursor back one step; no-op at the oldest state                                                                                        |
 | `redo()`             | Move cursor forward one step; no-op at the newest state                                                                                     |
-| `dispose()`          | Disposes the history adapter, cursor signal, and the underlying store. Idempotent.                                                          |
+| `dispose()`          | Disposes the history adapter and cursor signal. Also disposes the underlying store only when the adapter created it (ownership). Idempotent. |
 | `[Symbol.dispose]()` | Same as `dispose()` — enables `using h = storeWithHistory(...)` declarations                                                                |
 
 ---
