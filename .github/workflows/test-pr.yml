@@ -27,13 +27,6 @@ jobs:
       - name: Rush rebuild
         run: node common/scripts/install-run-rush.js rebuild --verbose
 
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-dist-${{ github.run_id }}
-          path: packages/*/dist
-          retention-days: 1
-
   # ── Tests ─────────────────────────────────────────────────────────────────────
   test:
     name: Unit Tests
@@ -44,11 +37,8 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Download dist artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: pr-dist-${{ github.run_id }}
-          path: packages
+      - name: Rush build
+        run: node common/scripts/install-run-rush.js build --verbose
 
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
