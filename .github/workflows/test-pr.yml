@@ -1,60 +1,54 @@
-name: Test Pull Request
+name: Pull Request
 
 on:
   pull_request:
-    branches: [main, next]
-    types: [opened, synchronize]
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-${{ github.head_ref }}
+  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Test
+  # ── Build ─────────────────────────────────────────────────────────────────────
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+      - uses: ./.github/actions/setup
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10.33.4'
+      - name: Verify change logs
+        run: node common/scripts/install-run-rush.js change --verify
 
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rush cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            common/temp/install-run
-            common/temp/pnpm-store
-            ~/.rush
-          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-rush-
-
-      - name: Rush Install
-        run: node common/scripts/install-run-rush.js install
-
-      - name: Rush Build
+      - name: Rush rebuild
         run: node common/scripts/install-run-rush.js rebuild --verbose
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-dist-${{ github.run_id }}
+          path: packages/*/dist
+          retention-days: 1
+
+  # ── Tests ─────────────────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: pr-dist-${{ github.run_id }}
+          path: packages
 
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
@@ -62,5 +56,26 @@ jobs:
       - name: Generate codex bundled data
         run: pnpm --dir packages/codex run prepare:data
 
-      - name: Run Tests
+      - name: Run unit tests
         run: pnpm test --run
+
+  # ── Lint ──────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+        with:
+          rush-install: 'false'
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint JS/TS
+        run: pnpm lint:js
+
+      - name: Lint CSS
+        run: pnpm lint:css

@@ -1,117 +1,50 @@
 name: CI
+
 on:
   push:
-    branches: ['main']
-  pull_request:
-    branches: ['main']
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # ── Build all packages ───────────────────────────────────────────────────────
   build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10.33.4'
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rush cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            common/temp/install-run
-            common/temp/pnpm-store
-            ~/.rush
-          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-rush-
-
-      - name: Rush Install
-        run: node common/scripts/install-run-rush.js install
-
-      - name: Verify Change Logs
-        if: github.event_name == 'pull_request'
-        run: node common/scripts/install-run-rush.js change --verify
+      - uses: ./.github/actions/setup
 
       - name: Rush rebuild
         run: node common/scripts/install-run-rush.js rebuild --verbose
 
-  # ── Unit tests + accessibility audit ────────────────────────────────────────
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: packages/*/dist
+          retention-days: 1
+
+  # ── Unit tests ───────────────────────────────────────────────────────────────
   test:
-    name: Unit Tests & A11y
+    name: Unit Tests
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/setup
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: '10.33.4'
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rush cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            common/temp/install-run
-            common/temp/pnpm-store
-            ~/.rush
-          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-rush-
-
-      - name: Rush Install
-        run: node common/scripts/install-run-rush.js install
-
-      - name: Rush build
-        run: node common/scripts/install-run-rush.js build --verbose
+          name: dist
+          path: packages
 
       - name: Install root dependencies
         run: pnpm install --frozen-lockfile
@@ -130,25 +63,18 @@ jobs:
           path: coverage/
           retention-days: 14
 
-  # ── Lint ────────────────────────────────────────────────────────────────────
+  # ── Lint ─────────────────────────────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/setup
         with:
-          version: '10.33.4'
+          rush-install: 'false'
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: pnpm
-
-      - name: Install dependencies
+      - name: Install root dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Lint JS/TS

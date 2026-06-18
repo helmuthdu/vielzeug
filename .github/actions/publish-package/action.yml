@@ -1,0 +1,111 @@
+name: Publish package to npm
+description: Pack, publish, tag, and create a GitHub release for a single @vielzeug package.
+
+inputs:
+  package:
+    description: Package name e.g. @vielzeug/coins
+    required: true
+  version:
+    description: Version to publish e.g. 1.2.3
+    required: true
+  folder:
+    description: Project folder relative to repo root e.g. packages/coins
+    required: true
+  npm-token:
+    description: npm automation token with publish rights to @vielzeug
+    required: true
+
+outputs:
+  published:
+    description: 'true if the package was published, false if skipped (already on npm)'
+    value: ${{ steps.publish.outputs.published }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check if already published
+      id: check
+      shell: bash
+      run: |
+        NPM_VERSION=$(npm view "${{ inputs.package }}@${{ inputs.version }}" version 2>/dev/null || echo "")
+        if [ "$NPM_VERSION" = "${{ inputs.version }}" ]; then
+          echo "skip=true" >> $GITHUB_OUTPUT
+          echo "⚠️  ${{ inputs.package }}@${{ inputs.version }} already on npm — skipping"
+        else
+          echo "skip=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Pack and publish
+      id: publish
+      if: steps.check.outputs.skip == 'false'
+      shell: bash
+      working-directory: ${{ inputs.folder }}
+      env:
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
+      run: |
+        TARBALL=$(npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
+        echo "📦 Packed: ${TARBALL}"
+        tar -tzf "${TARBALL}" | head -15
+
+        set +e
+        PUBLISH_OUT=$(npm publish "${TARBALL}" --access public 2>&1)
+        PUBLISH_EXIT=$?
+        set -e
+
+        echo "$PUBLISH_OUT"
+        rm -f "${TARBALL}"
+
+        if [ $PUBLISH_EXIT -ne 0 ]; then
+          if echo "$PUBLISH_OUT" | grep -q "E404"; then
+            echo "❌ E404: NPM_TOKEN lacks publish rights for @vielzeug scope."
+          elif echo "$PUBLISH_OUT" | grep -q "E409"; then
+            echo "❌ E409: Registry conflict — a previous publish is still processing. Retry in a minute."
+          fi
+          exit $PUBLISH_EXIT
+        fi
+
+        echo "published=true" >> $GITHUB_OUTPUT
+        echo "✅ Published ${{ inputs.package }}@${{ inputs.version }}"
+
+    - name: Skip output
+      if: steps.check.outputs.skip == 'true'
+      shell: bash
+      run: echo "published=false" >> $GITHUB_OUTPUT
+
+    - name: Tag release
+      if: steps.publish.outputs.published == 'true'
+      shell: bash
+      run: |
+        TAG="${{ inputs.package }}@${{ inputs.version }}"
+        git tag -f "$TAG"
+        git push origin "$TAG" --force
+        echo "🏷️  Tagged $TAG"
+
+    - name: Create GitHub Release
+      if: steps.publish.outputs.published == 'true'
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        PKG="${{ inputs.package }}"
+        VER="${{ inputs.version }}"
+        FOLDER="${{ inputs.folder }}"
+        TAG="${PKG}@${VER}"
+
+        cat > /tmp/release-notes.md << NOTES
+        ## ${PKG} v${VER}
+
+        ### Installation
+
+            npm install ${PKG}@${VER}
+
+        ### Links
+
+        - npm: https://www.npmjs.com/package/${PKG}/v/${VER}
+        - CHANGELOG: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${TAG}/${FOLDER}/CHANGELOG.md
+        NOTES
+
+        gh release create "${TAG}" \
+          --title "${PKG} v${VER}" \
+          --generate-notes \
+          --notes-file /tmp/release-notes.md

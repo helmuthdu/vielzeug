@@ -1,0 +1,56 @@
+name: Setup monorepo
+description: Install Node, pnpm, Rush and restore caches. Single source of truth for toolchain versions.
+
+inputs:
+  rush-install:
+    description: Run rush install after cache restore
+    default: 'true'
+  node-registry-url:
+    description: npm registry URL (set when publishing)
+    default: ''
+  node-scope:
+    description: npm scope for auth (set when publishing)
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        registry-url: ${{ inputs.node-registry-url }}
+        scope: ${{ inputs.node-scope }}
+        always-auth: ${{ inputs.node-registry-url != '' }}
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: '10.33.4'
+
+    - name: Get pnpm store path
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: ${{ runner.os }}-pnpm-
+
+    - name: Cache Rush
+      uses: actions/cache@v4
+      with:
+        path: |
+          common/temp/install-run
+          common/temp/pnpm-store
+          ~/.rush
+        key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
+        restore-keys: ${{ runner.os }}-rush-
+
+    - name: Rush Install
+      if: inputs.rush-install == 'true'
+      shell: bash
+      run: node common/scripts/install-run-rush.js install
