@@ -10,7 +10,7 @@ export type HashOptions = {
 };
 
 /**
- * Produces a deterministic, order-independent JSON-like string for any value.
+ * Produces a deterministic, order-independent string representation of any value.
  * Object keys are sorted alphabetically, so `{ b: 1, a: 2 }` and `{ a: 2, b: 1 }` produce
  * the same output. Handles `Date`, `RegExp`, `Set`, `Map`, and `bigint` in addition to plain JSON.
  *
