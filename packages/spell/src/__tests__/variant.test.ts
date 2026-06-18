@@ -103,4 +103,35 @@ describe('s.variant() — async', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('parseAsync() resolves with sync branch field validators', async () => {
+    const schema = s.variant('kind', {
+      user: s.object({
+        name: s.string().min(2),
+      }),
+    });
+
+    await expect(schema.parseAsync({ kind: 'user', name: 'alice' })).resolves.toEqual({
+      kind: 'user',
+      name: 'alice',
+    });
+    await expect(schema.parseAsync({ kind: 'user', name: 'x' })).rejects.toThrow();
+  });
+
+  it('parseAsync() async branch field validators are silently skipped (VariantSchema uses _parseFullSync internally)', async () => {
+    // VariantSchema._parse delegates to the matched ObjectSchema._parseFullSync.
+    // Async validators on branch fields are silently skipped in the sync parse path
+    // per the spell design. The variant itself does not override parseAsync.
+    const schema = s.variant('kind', {
+      user: s.object({
+        name: s.string().validate(async (_v) => 'Always fails async'),
+      }),
+    });
+
+    // The async validator is silently skipped — parse succeeds.
+    await expect(schema.parseAsync({ kind: 'user', name: 'alice' })).resolves.toEqual({
+      kind: 'user',
+      name: 'alice',
+    });
+  });
 });

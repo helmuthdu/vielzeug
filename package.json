@@ -6,6 +6,7 @@
   "packageManager": "pnpm@10.33.4",
   "scripts": {
     "setup": "rush install",
+    "prepare": "lefthook install",
     "build": "rush build",
     "fix": "concurrently -c \"auto\" \"pnpm:fix:js\" \"pnpm:fix:css\"",
     "fix:css": "prettier \"packages/**/*.css\" --write & stylelint --fix \"strict\" packages/**/*.css",
@@ -31,6 +32,7 @@
     "eslint-plugin-prettier": "^5.5.6",
     "globals": "^17.6.0",
     "jiti": "^2.7.0",
+    "lefthook": "^2.1.9",
     "jsdom": "^29.1.1",
     "lightningcss": "^1.32.0",
     "prettier": "^3.8.4",

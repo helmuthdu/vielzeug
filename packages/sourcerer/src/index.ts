@@ -27,6 +27,7 @@ export type {
   InfiniteSourceQuery,
   LocalSource,
   LocalSourceConfig,
+  LocalSourceQuery,
   MergedSource,
   PageNavigator,
   Predicate,

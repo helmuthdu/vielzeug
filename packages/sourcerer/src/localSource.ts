@@ -1,4 +1,4 @@
-import type { LocalSource, LocalSourceConfig, SearchOptions, SourceQuery } from './types';
+import type { LocalSource, LocalSourceConfig, LocalSourceQuery, SearchOptions, SourceQuery } from './types';
 
 import { createSourceCore } from './core';
 import { clampPage, createMeta, pageCount } from './pagination';
@@ -207,7 +207,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       return this.goTo(page + 1);
     },
 
-    patch(changes: Partial<SourceQuery>) {
+    patch(changes: LocalSourceQuery<T>) {
       let changed = false;
 
       if (changes.limit !== undefined) {
@@ -217,6 +217,16 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
           limit = next;
           changed = true;
         }
+      }
+
+      if ('filter' in changes) {
+        filter = changes.filter;
+        changed = true;
+      }
+
+      if ('sort' in changes) {
+        sort = changes.sort;
+        changed = true;
       }
 
       if ('search' in changes && changes.search !== search) {
@@ -236,7 +246,10 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       if (!changed) return Promise.resolve();
 
       // Reset page only when non-page query fields changed without an explicit page
-      if ((changes.limit !== undefined || 'search' in changes) && changes.page === undefined) {
+      if (
+        (changes.limit !== undefined || 'filter' in changes || 'sort' in changes || 'search' in changes) &&
+        changes.page === undefined
+      ) {
         page = 1;
       }
 
@@ -248,7 +261,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     ready(timeout?: number) {
-      return core.ready(() => !isLoading, timeout);
+      return core.ready(() => !isLoading && !core.isScheduled, timeout);
     },
 
     reset() {

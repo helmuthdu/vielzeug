@@ -136,6 +136,23 @@ describe('ValidationError message and shaping', () => {
     expect(({} as { polluted?: string }).polluted).toBeUndefined();
   });
 
+  it('format() remaps "_errors" path segment to avoid corrupting the internal field', () => {
+    const error = new ValidationError([{ code: 'custom', message: 'Nested', path: ['_errors', 'field'] }]);
+    const tree = error.format();
+
+    expect(tree._errors).toEqual([]);
+    expect(Array.isArray(tree._errors)).toBe(true);
+    expect(errorsAt(tree, '_errors', 'field')).toEqual(['Nested']);
+  });
+
+  it('errorsAt() with "_errors" segment does not fall into the string[] internal field', () => {
+    const error = new ValidationError([{ code: 'custom', message: 'Deep', path: ['_errors'] }]);
+    const tree = error.format();
+
+    expect(tree._errors).toEqual([]);
+    expect(errorsAt(tree, '_errors')).toEqual(['Deep']);
+  });
+
   it('ValidationError.is() narrows unknown errors', () => {
     const result = s.string().safeParse(42);
 

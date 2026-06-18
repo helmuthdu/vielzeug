@@ -297,7 +297,9 @@ declare module '/spell' {
     record<K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): RecordSchema<K, V>;
 
     union<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): UnionSchema<NormalizeItems<T> & readonly Schema<any>[]>;
+    or<A extends RawOrSchema, B extends RawOrSchema>(a: A, b: B): UnionSchema<readonly [NormalizeItem<A>, NormalizeItem<B>]>;
     intersect<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): IntersectSchema<NormalizeItems<T> & readonly Schema<any>[]>;
+    and<A extends RawOrSchema, B extends RawOrSchema>(a: A, b: B): IntersectSchema<readonly [NormalizeItem<A>, NormalizeItem<B>]>;
     variant<K extends string, M extends Record<string, ObjectSchema<any>>>(discriminator: K, map: M): VariantSchema<K, M>;
 
     lazy<T>(getter: () => Schema<T>): LazySchema<T>;

@@ -265,6 +265,8 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     },
 
     subscribe: (listener) => {
+      if (base.disposed) return () => {};
+
       listeners.add(listener);
 
       return () => {

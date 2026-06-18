@@ -121,6 +121,8 @@ export interface WorkerHandle<TInput, TOutput> {
   readonly concurrency: number;
   /** Number of tasks that failed with a task / timeout / worker error (excludes aborts and terminations). */
   readonly failed: number;
+  /** Number of active groups (created but not yet fully drained or aborted). */
+  readonly groupCount: number;
   /** Number of queued tasks waiting to run (excludes cancelled/aborted items). */
   readonly queued: number;
 
@@ -169,7 +171,10 @@ export type TaskGroup<TInput, TOutput> = {
   readonly name: string | undefined;
   /** Number of tasks not yet settled (decrements as tasks complete). */
   readonly pending: number;
-  /** Submit a task to the pool, associating it with this group. */
+  /**
+   * Submit a task to the pool, associating it with this group.
+   * Throws `WorkerTerminatedError` synchronously if the pool has been disposed or is closing.
+   */
   run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
   /** Total number of tasks ever submitted to this group (never decrements). */
   readonly size: number;

@@ -501,3 +501,74 @@ describe('applyLocalQuery', () => {
     expect(source.meta.pageCount).toBe(3);
   });
 });
+
+describe('createLocalSource — patch() with filter and sort', () => {
+  it('patch({ filter }) applies filter and resets to page 1', async () => {
+    const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
+
+    await source.goTo(1);
+    await source.patch({ filter: (n) => n % 2 === 0 });
+
+    expect(source.current).toEqual([2, 4]);
+    expect(source.meta.pageNumber).toBe(1);
+  });
+
+  it('patch({ sort }) applies sort in one recompute', async () => {
+    const source = createLocalSource([3, 1, 2], { limit: 10 });
+
+    await source.patch({ sort: (a, b) => a - b });
+
+    expect(source.current).toEqual([1, 2, 3]);
+  });
+
+  it('patch({ filter, sort, search }) applies all three atomically', async () => {
+    const source = createLocalSource(['apple', 'apricot', 'banana', 'avocado'], { limit: 10 });
+    const listener = vi.fn();
+
+    source.subscribe(listener);
+    await source.patch({
+      filter: (s) => s.startsWith('a'),
+      sort: (a, b) => a.localeCompare(b),
+    });
+
+    expect(source.current).toEqual(['apple', 'apricot', 'avocado']);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('patch({ filter: undefined }) clears the filter', async () => {
+    const source = createLocalSource([1, 2, 3, 4, 5], {
+      filter: (n) => n > 3,
+      limit: 10,
+    });
+
+    expect(source.current).toEqual([4, 5]);
+
+    await source.patch({ filter: undefined });
+
+    expect(source.current).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('patch({ sort: undefined }) clears the sort', async () => {
+    const source = createLocalSource([3, 1, 2], {
+      limit: 10,
+      sort: (a, b) => a - b,
+    });
+
+    expect(source.current).toEqual([1, 2, 3]);
+
+    await source.patch({ sort: undefined });
+
+    expect(source.current).toEqual([3, 1, 2]);
+  });
+
+  it('patch({ filter }) always triggers recompute (even same reference)', async () => {
+    const f = (n: number) => n > 0;
+    const source = createLocalSource([1, 2, 3], { filter: f, limit: 10 });
+    const listener = vi.fn();
+
+    source.subscribe(listener);
+    await source.patch({ filter: f });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+});

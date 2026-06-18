@@ -122,6 +122,38 @@ describe('deriveSource', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('disposes itself when parent is disposed', () => {
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, (items) => items);
+
+    expect(derived.disposed).toBe(false);
+    parent.dispose();
+    expect(derived.disposed).toBe(true);
+  });
+
+  it('does not call listener after parent disposal', async () => {
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, (items) => items);
+    const listener = vi.fn();
+
+    derived.subscribe(listener);
+    parent.dispose();
+
+    expect(listener).not.toHaveBeenCalled();
+    expect(derived.disposed).toBe(true);
+  });
+
+  it('subscribe on derived returns no-op when parent already disposed', () => {
+    const parent = createLocalSource([1, 2, 3]);
+
+    parent.dispose();
+
+    const derived = deriveSource(parent, (items) => items);
+    const unsub = derived.subscribe(vi.fn());
+
+    expect(() => unsub()).not.toThrow();
+  });
+
   it('meta proxy reflects live parent meta updates', async () => {
     const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
     const derived = deriveSource(source, (items) => items.map(String));

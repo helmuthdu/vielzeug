@@ -5,6 +5,7 @@ import { errorHandlingExample } from './error-handling';
 import { infiniteSourceExample } from './infinite-source';
 import { lifecycleExample } from './lifecycle';
 import { localSourceExample } from './local-source';
+import { localSourcePatchExample } from './local-source-patch';
 import { presetsExample } from './presets';
 import { remoteSourceExample } from './remote-source';
 import { sourceStateExample } from './source-state';
@@ -17,6 +18,7 @@ export const sourcererExamples = {
   'infinite-source': infiniteSourceExample,
   lifecycle: lifecycleExample,
   'local-source': localSourceExample,
+  'local-source-patch': localSourcePatchExample,
   presets: presetsExample,
   'remote-source': remoteSourceExample,
   'source-state': sourceStateExample,

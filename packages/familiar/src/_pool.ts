@@ -47,6 +47,7 @@ export function createPool<TInput, TOutput>(
   let closePromise: Promise<void> | undefined;
   let completedCount = 0;
   let failedCount = 0;
+  let groupActiveCount = 0;
   let terminated = false;
 
   // ─── Idle tracking ────────────────────────────────────────────────────────────
@@ -156,6 +157,10 @@ export function createPool<TInput, TOutput>(
 
       return item;
     }
+
+    // All remaining items were aborted and rejected above — the pool may now be idle.
+    // Notify any close() waiter so it does not hang.
+    notifyIdle();
 
     return undefined;
   }
@@ -405,9 +410,19 @@ export function createPool<TInput, TOutput>(
       }
     }
 
+    groupActiveCount += 1;
+
     let submittedCount = 0;
     let settledCount = 0;
+    let groupClosed = false;
     const pendingPromises: Promise<TOutput>[] = [];
+
+    function decrementGroupIfDone(): void {
+      if (!groupClosed && submittedCount > 0 && submittedCount === settledCount) {
+        groupClosed = true;
+        groupActiveCount -= 1;
+      }
+    }
 
     return {
       abort(reason?: unknown): void {
@@ -416,6 +431,11 @@ export function createPool<TInput, TOutput>(
 
       drain(): Promise<PromiseSettledResult<TOutput>[]> {
         const snapshot = pendingPromises.splice(0);
+
+        if (!groupClosed) {
+          groupClosed = true;
+          groupActiveCount -= 1;
+        }
 
         return Promise.allSettled(snapshot);
       },
@@ -437,9 +457,11 @@ export function createPool<TInput, TOutput>(
         p.then(
           () => {
             settledCount += 1;
+            decrementGroupIfDone();
           },
           () => {
             settledCount += 1;
+            decrementGroupIfDone();
           },
         );
 
@@ -483,6 +505,9 @@ export function createPool<TInput, TOutput>(
       return failedCount;
     },
     group,
+    get groupCount(): number {
+      return groupActiveCount;
+    },
     prime(): Promise<void> {
       return Promise.all(slots.map((s) => s.prime())).then(() => {});
     },

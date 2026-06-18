@@ -653,3 +653,64 @@ describe('applyInfiniteQuery', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('createInfiniteSource — patch()', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('patch({ limit }) updates page size and resets accumulated items', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['a', 'b'], total: 4 })
+      .mockResolvedValueOnce({ items: ['c'], total: 4 })
+      .mockResolvedValue({ items: ['x'], total: 4 });
+    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+    await source.reset();
+    await source.loadMore();
+
+    expect(source.current).toEqual(['a', 'b', 'c']);
+
+    await source.patch({ limit: 10 });
+
+    expect(source.meta.pageSize).toBe(10);
+    expect(source.meta.loadedPages).toBe(1);
+    expect(fetch).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 10, page: 1 }), expect.any(AbortSignal));
+  });
+
+  it('patch({ search }) resets accumulated items and refetches from page 1', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['a', 'b'], total: 4 })
+      .mockResolvedValueOnce({ items: ['c'], total: 4 })
+      .mockResolvedValue({ items: ['found'], total: 1 });
+    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
+
+    await source.reset();
+    await source.loadMore();
+    await source.patch({ search: 'q' });
+
+    expect(source.meta.loadedPages).toBe(1);
+    expect(source.toQuery().search).toBe('q');
+    expect(source.toQuery().page).toBe(1);
+    expect(source.current).toEqual(['found']);
+  });
+
+  it('patch({ limit }) no-op when same value', async () => {
+    const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
+
+    await source.patch({ limit: 10 });
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('patch({ search }) same query is a no-op', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createInfiniteSource({ autoFetch: false, fetch });
+
+    await source.patch({ search: '' });
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

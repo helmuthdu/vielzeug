@@ -45,6 +45,10 @@ export function deriveSource<T, U, TMeta>(
     core.notify();
   });
 
+  if ('disposalSignal' in parent && parent.disposalSignal instanceof AbortSignal) {
+    parent.disposalSignal.addEventListener('abort', () => core.dispose(), { once: true });
+  }
+
   return {
     get current() {
       return cachedCurrent;

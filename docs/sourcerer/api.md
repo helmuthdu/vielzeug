@@ -16,7 +16,7 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `deriveSource()`                       | Create a reactive projection of another source                                              | Sync           | Derived source disposes automatically when parent disposes                        |
 | `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                         | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
 | `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                  | Async          | Delegates directly to `source.patch(changes)`                                     |
-| `applyLocalQuery()`                    | Typed wrapper: apply `Partial<SourceQuery>` to a `LocalSource`                              | Async          | Delegates to `source.patch()`                                                     |
+| `applyLocalQuery()`                    | Typed wrapper: apply `LocalSourceQuery<T>` (including `filter` and `sort`) to a `LocalSource` | Async        | Delegates to `source.patch()`                                                     |
 | `applyRemoteQuery()`                   | Typed wrapper: apply `Partial<RemoteSourceQuery>` to a `RemoteSource`                       | Async          | Delegates to `source.patch()`                                                     |
 | `applyCursorQuery()`                   | Typed wrapper: apply limit/search patch to a `CursorSource`                                 | Async          | Delegates to `source.patch()`                                                     |
 | `applyInfiniteQuery()`                 | Typed wrapper: apply limit/search patch to an `InfiniteSource`                              | Async          | Delegates to `source.patch()`                                                     |
@@ -236,9 +236,9 @@ All methods return `Promise<void>` unless noted.
 | `goTo(page)`           | Navigate to the given page number                                                                                                                        |
 | `goToLast()`           | Navigate to the last page                                                                                                                                |
 | `next()`               | Navigate to the next page (no-op at last page)                                                                                                           |
-| `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`                                         |
+| `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                       |
 | `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                      |
-| `ready(timeout?)`      | Resolve when no async computation is pending; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
+| `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
 | `reset()`              | Restore initial config and return to page 1                                                                                                              |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                |
 | `setData(data)`        | Replace the dataset and reset to page 1                                                                                                                  |
@@ -351,11 +351,11 @@ await applyQuery(source, q);
 ```ts
 applyLocalQuery<T>(
   source: LocalSource<T>,
-  changes: Partial<SourceQuery>,
+  changes: LocalSourceQuery<T>,
 ): Promise<void>
 ```
 
-Typed wrapper for `applyQuery` — applies `Partial<SourceQuery>` to a `LocalSource` via `source.patch()`.
+Typed wrapper for `applyQuery` — applies a `LocalSourceQuery<T>` (including optional `filter` and `sort`) to a `LocalSource` via `source.patch()`. Triggers a single recompute for any combination of changed fields.
 
 ---
 
@@ -621,7 +621,9 @@ encodeQuery<TFilter, TSort>(
 
 Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
-> <sg-icon name="triangle-alert" size="16"></sg-icon> `filter` and `sort` are serialised with `stableStringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+> <sg-icon name="triangle-alert" size="16"></sg-icon> `filter` and `sort` are serialised with `JSON.stringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+>
+> `encodeQuery` and `decodeQuery` form a round-trip pair: `filter`/`sort` are JSON-stringified on encode and JSON-parsed on decode. Validate/narrow the decoded values before passing them to a source.
 
 **Example:**
 
@@ -670,6 +672,15 @@ type Sorter<T> = (a: T, b: T) => number;
 
 // search is OPTIONAL — omitted when no search is active
 type SourceQuery = Readonly<{ limit: number; page: number; search?: string }>;
+
+// Full set of fields patchable in one atomic recompute on a LocalSource
+type LocalSourceQuery<T> = Partial<{
+  filter: Predicate<T> | undefined;
+  limit: number;
+  page: number;
+  search: string;
+  sort: Sorter<T> | undefined;
+}>;
 
 type SourceMeta = Readonly<{
   error: SourceError | null; // null when healthy

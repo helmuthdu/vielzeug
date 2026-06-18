@@ -129,7 +129,7 @@ Builder reference:
 | `s.or(a, b)`            | `UnionSchema`              | Alias for `s.union()` with exactly two schemas.                                                                                      |
 | `s.and(a, b)`           | `IntersectSchema`          | Alias for `s.intersect()` with two schemas.                                                                                          |
 | `s.intersect(...items)` | `IntersectSchema`          | Merges compatible outputs deeply and safely.                                                                                         |
-| `s.variant(key, map)`   | `VariantSchema`            | Discriminated object union.                                                                                                          |
+| `s.variant(key, map)`   | `VariantSchema`            | Discriminated object union. Async field validators on branch objects are silently skipped — use `s.object()` with `parseAsync()` directly if you need async branch-field rules. |
 | `s.lazy(getter)`        | `LazySchema<T>`            | Recursive schema definitions.                                                                                                        |
 | `s.instanceof(cls)`     | `InstanceOfSchema<T>`      | Runtime class instance checks.                                                                                                       |
 
@@ -729,7 +729,9 @@ if (!result.success && ValidationError.is(result.error)) {
 }
 ```
 
-`format()` guards unsafe path keys when building nested objects. You can safely hand its result to UI code without letting hostile keys write through the prototype chain.
+`format()` guards unsafe path keys when building nested objects. You can safely hand its result to UI code without letting hostile keys write through the prototype chain. Path segments named `'_errors'` are automatically remapped to `'_errors_'` to avoid colliding with the reserved `_errors` field in each `FormattedErrors` node. Use `errorsAt()` with the same path to retrieve messages consistently.
+
+> **Note:** `ValidationError.message` (the human-readable error string) may contain constraint parameter values such as string suffixes, pattern prefixes, or min/max bounds when those appear in your validation messages. For structured access to individual issue details, use `.issues` or the flattening helpers instead of serializing `.message` directly into API responses or logs.
 
 ---
 

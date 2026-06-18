@@ -1598,6 +1598,177 @@ describe('concurrency upper-bound validation', () => {
   });
 });
 
+// ─── close() with all-aborted queue (B1 regression) ─────────────────────────
+
+describe('close() with all-aborted queue', () => {
+  it('resolves when every remaining queued task has a pre-aborted signal', async () => {
+    const worker = createWorker(
+      task<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30))),
+      { concurrency: 1 },
+    );
+
+    const controller = new AbortController();
+
+    controller.abort();
+
+    const running = worker.run(undefined);
+
+    // Queue two tasks with already-aborted signal
+    const q1 = worker.run(undefined, { signal: controller.signal }).catch(() => {});
+    const q2 = worker.run(undefined, { signal: controller.signal }).catch(() => {});
+
+    // close() must resolve, not hang, even though all queued tasks are pre-aborted
+    const closePromise = worker.close();
+
+    await expect(closePromise).resolves.toBeUndefined();
+    await running;
+    await q1;
+    await q2;
+    expect(worker.status).toBe('terminated');
+  }, 2000);
+
+  it('resolves when only queued tasks exist (no running) and all are pre-aborted', async () => {
+    const worker = createWorker(
+      task<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30))),
+      { concurrency: 2 },
+    );
+
+    // Fill both slots
+    const r1 = worker.run(undefined);
+    const r2 = worker.run(undefined);
+
+    const controller = new AbortController();
+
+    controller.abort();
+
+    const controller2 = controller;
+
+    // Queue more tasks that are already aborted
+    worker.run(undefined, { signal: controller2.signal }).catch(() => {});
+    worker.run(undefined, { signal: controller.signal }).catch(() => {});
+
+    // close() waits for running tasks then resolves
+    await expect(worker.close()).resolves.toBeUndefined();
+    await r1;
+    await r2;
+  }, 2000);
+});
+
+// ─── createModuleWorker heartbeatWindow warning (D1) ─────────────────────────
+
+describe('createModuleWorker heartbeatWindow warning', () => {
+  it('emits a console.warn when heartbeatWindow is passed to createModuleWorker', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    createModuleWorker<number, number>('http://localhost/worker.js', { heartbeatWindow: 100 }).dispose();
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0]![0]).toContain('[@vielzeug/familiar]');
+    expect(warnSpy.mock.calls[0]![0]).toContain('heartbeatWindow');
+
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when heartbeatWindow is not passed to createModuleWorker', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    createModuleWorker<number, number>('http://localhost/worker.js').dispose();
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+});
+
+// ─── batch(ordered:false) empty input ────────────────────────────────────────
+
+describe('batch(ordered:false) empty input', () => {
+  it('yields nothing for an empty input array when ordered:false', async () => {
+    const worker = createWorker(task<number, number>((n) => n));
+    const results: number[] = [];
+
+    for await (const r of worker.batch([], { ordered: false })) {
+      results.push(r);
+    }
+
+    expect(results).toEqual([]);
+    worker.dispose();
+  });
+});
+
+// ─── groupCount metric (E2) ──────────────────────────────────────────────────
+
+describe('groupCount metric', () => {
+  it('starts at 0 and increments on group creation', () => {
+    const worker = createWorker(task<number, number>((n) => n));
+
+    expect(worker.groupCount).toBe(0);
+
+    const g1 = worker.group();
+
+    expect(worker.groupCount).toBe(1);
+
+    const g2 = worker.group('named');
+
+    expect(worker.groupCount).toBe(2);
+
+    // Prevent unhandled rejections
+    g1.abort();
+    g2.abort();
+    worker.dispose();
+  });
+
+  it('decrements when all tasks settle naturally', async () => {
+    const worker = createWorker(task<number, number>((n) => n));
+    const g = worker.group();
+
+    expect(worker.groupCount).toBe(1);
+
+    const p = g.run(1);
+
+    await p;
+
+    // All tasks settled — group should auto-close
+    expect(worker.groupCount).toBe(0);
+    worker.dispose();
+  });
+
+  it('decrements on drain() call', async () => {
+    const worker = createWorker(task<number, number>((n) => n));
+    const g = worker.group();
+
+    expect(worker.groupCount).toBe(1);
+    g.run(1).catch(() => {});
+    g.run(2).catch(() => {});
+
+    await g.drain();
+
+    expect(worker.groupCount).toBe(0);
+    worker.dispose();
+  });
+
+  it('drain() on empty group decrements groupCount', async () => {
+    const worker = createWorker(task<number, number>((n) => n));
+    const g = worker.group();
+
+    expect(worker.groupCount).toBe(1);
+    await g.drain();
+    expect(worker.groupCount).toBe(0);
+    worker.dispose();
+  });
+
+  it('abort() alone does not decrement groupCount', () => {
+    const worker = createWorker(task<number, number>((n) => n));
+    const g = worker.group();
+
+    g.abort();
+
+    // abort() alone is insufficient to close a group — drain() is still required
+    expect(worker.groupCount).toBe(1);
+    worker.dispose();
+  });
+});
+
 // ─── TaskQueue.remove() double-call regression ────────────────────────────────
 
 describe('TaskQueue.remove() double-cancel regression', () => {

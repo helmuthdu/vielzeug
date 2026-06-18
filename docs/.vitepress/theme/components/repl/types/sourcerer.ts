@@ -14,6 +14,14 @@ declare module '/sourcerer' {
     search?: string;
   }>;
 
+  export type LocalSourceQuery<T> = Partial<{
+    filter: Predicate<T> | undefined;
+    limit: number;
+    page: number;
+    search: string;
+    sort: Sorter<T> | undefined;
+  }>;
+
   export type RemoteSourceQuery<TFilter = unknown, TSort = unknown> = Readonly<{
     filter?: TFilter;
     limit: number;
@@ -110,6 +118,7 @@ declare module '/sourcerer' {
     goTo(page: number): Promise<void>;
     goToLast(): Promise<void>;
     next(): Promise<void>;
+    patch(changes: LocalSourceQuery<T>): Promise<void>;
     prev(): Promise<void>;
     ready(timeoutMs?: number): Promise<void>;
     reset(): Promise<void>;
@@ -226,28 +235,29 @@ declare module '/sourcerer' {
     fn: (snapshot: { readonly current: readonly T[]; readonly meta: TMeta }) => void,
   ): () => void;
 
-  export function applyLocalQuery(
-    source: { goTo(page: number): Promise<void>; search(q: string, opts: { immediate: true }): Promise<void>; setLimit(n: number): Promise<void> },
-    patch: Partial<SourceQuery>,
-    opts?: { force?: boolean },
+  export function applyQuery<TChanges extends Record<string, unknown>>(
+    source: { patch(changes: Partial<TChanges>): Promise<void> },
+    changes: Partial<TChanges>,
   ): Promise<void>;
 
-  export function applyRemoteQuery<TFilter, TSort>(
-    source: { goTo(page: number): Promise<void>; search(q: string, opts: { immediate: true }): Promise<void>; setFilter(filter?: TFilter): Promise<void>; setLimit(n: number): Promise<void>; setSort(sort?: TSort): Promise<void> },
-    patch: Partial<RemoteSourceQuery<TFilter, TSort>>,
-    opts?: { force?: boolean },
+  export function applyLocalQuery<T>(
+    source: LocalSource<T>,
+    changes: LocalSourceQuery<T>,
+  ): Promise<void>;
+
+  export function applyRemoteQuery<T, TFilter, TSort>(
+    source: RemoteSource<T, TFilter, TSort>,
+    changes: Partial<RemoteSourceQuery<TFilter, TSort>>,
   ): Promise<void>;
 
   export function applyCursorQuery<TCursor>(
-    source: { search(q: string, opts: { immediate: true }): Promise<void>; setLimit(n: number): Promise<void> },
-    patch: Partial<CursorSourceQuery<TCursor>>,
-    opts?: { force?: boolean },
+    source: { patch(changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>): Promise<void> },
+    changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>,
   ): Promise<void>;
 
   export function applyInfiniteQuery(
-    source: { search(q: string, opts: { immediate: true }): Promise<void>; setLimit(n: number): Promise<void> },
-    patch: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>,
-    opts?: { force?: boolean },
+    source: { patch(changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void> },
+    changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>,
   ): Promise<void>;
 
   export function sourceState<T>(source: {

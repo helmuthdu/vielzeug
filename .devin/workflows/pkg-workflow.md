@@ -1,10 +1,18 @@
 ---
-description: Master orchestrator for the full Vielzeug package improvement workflow. Runs plan → implement → review → security → tests → docs → repl with the correct repetition cadence (3×/3×/3×/3×/1×/1×/1×).
+description: Master orchestrator for the full Vielzeug package workflow. Supports three modes — improve (default), feature, and new-package. Runs plan/spec → implement → review → security → tests → docs → repl with the correct repetition cadence (3×/3×/3×/3×/1×/1×/1×).
 ---
 
-# pkg-workflow — Full Package Improvement Workflow
+# pkg-workflow — Full Package Workflow
 
-You are orchestrating the complete improvement cycle for a **Vielzeug** package.
+You are orchestrating the complete workflow for a **Vielzeug** package. This workflow supports three modes:
+
+| Mode | Use when |
+|------|----------|
+| `improve` | Analysing an existing package to find bugs, design issues, and enhancements (default) |
+| `feature` | Adding a specific new feature to an existing package |
+| `new-package` | Creating a new package from scratch |
+
+The mode is declared at invocation (e.g. `/pkg-workflow mode:feature`) or established in §3. It determines which planning workflow is used in Phase 1. **Phases 2–7 are identical across all modes.**
 
 ## 0. Agent Execution Model
 
@@ -53,7 +61,7 @@ Use consistent markers throughout your output:
 The workflow has **7 phases** with specific repetition counts:
 
 ```
-Phase 1: Plan          × 3   (/pkg-plan)
+Phase 1: Plan/Spec     × 3   (/pkg-plan for improve · /pkg-spec for feature & new-package)
 Phase 2: Implement     × 3   (/pkg-implement)
 Phase 3: Review        × 3   (/pkg-review)
 Phase 4: Security      × 3   (/pkg-security)
@@ -104,15 +112,20 @@ If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous
 
 Ask the user for:
 
-1. **Package name** (e.g. `spell`, `ripple`, `courier`)
-2. **Scope** — full workflow, or start from a specific phase?
-3. **Any known issues or goals** to focus on?
+1. **Mode** — `improve` (default) / `feature` / `new-package`
+2. **Package name** — for `improve`/`feature`: an existing package (e.g. `spell`, `ripple`); for `new-package`: the new package name + one-line description
+3. **Scope** — full workflow, or start from a specific phase?
+4. **Feature spec or goals** — for `feature`/`new-package`: describe what to build; for `improve`: any known issues or areas to focus on?
 
 If the user chooses to start from a later phase (e.g. Docs), do not retroactively run earlier phases unless explicitly requested. Treat the chosen phase as a focused, standalone run.
 
 ### Capture the baseline first
 
-Before Phase 1, record the starting state so progress is measurable at closeout (safe to auto-run):
+Before Phase 1, record the starting state so progress is measurable at closeout.
+
+> **`new-package` mode:** skip the commands below. Record `Tests: 0, Files: 0, Exports: 0, Lint: N/A, Build: N/A` in `progress.md`. The scaffold in Phase 2 Round 0 produces the first buildable state.
+
+For `improve` and `feature` modes (safe to auto-run):
 
 // turbo
 
@@ -129,9 +142,11 @@ Record in the run's `progress.md` (see "Persistence" below): passing test count,
 
 **Carry context across passes.** This workflow runs ~12 multi-pass phases. Do not re-read the whole package on every pass — load it once, then on each subsequent pass re-read only what changed or what the previous pass flagged. Persist findings to `runs/<name>/` (plan/review/security/progress) and build on them rather than re-deriving. Prefer the `@vielzeug` MCP for stable API context: use `get-docs` and `get-source` for most packages; for `sigil` prefer `list-components` / `get-component` since its primary API surface is web components, not plain exports.
 
-### Phase 1 — Plan × 3
+### Phase 1 — Plan/Spec × 3
 
-Emit `[PHASE 1]` before starting. Execute the instructions from `/pkg-plan` three times. Each pass deepens the analysis (follow the pass structure defined in `/pkg-plan`):
+Emit `[PHASE 1]` before starting. Choose the planning workflow based on mode:
+
+#### `improve` mode — run `/pkg-plan` three times
 
 - **Pass 1** `[PASS 1/3]`: Greenfield architecture & API review — treat the package as if designing from scratch; promote any still-valid future improvements from a prior `plan.md` if one exists.
 - **Pass 2** `[PASS 2/3]`: DX, simplification, and maintainability deep-dive — reduce complexity, improve ergonomics, refine coupling.
@@ -139,11 +154,18 @@ Emit `[PHASE 1]` before starting. Execute the instructions from `/pkg-plan` thre
 
 Consolidate the output into a single ranked list before moving to Phase 2.
 
+#### `feature` or `new-package` mode — run `/pkg-spec` three times
+
+- **Pass 1** `[PASS 1/3]`: Requirements & scope — define the problem, use cases, constraints, and explicit out-of-scope items. For `feature` mode: read the existing package via MCP first.
+- **Pass 2** `[PASS 2/3]`: API design & types — propose all `[API]`, `[TYPE]`, and `[ERROR]` items; apply the Vielzeug design checks (naming, disposal pattern, options objects). Escalate any `[BREAKING]` changes before proceeding.
+- **Pass 3** `[PASS 3/3]`: Acceptance criteria — convert requirements and API items into `/pkg-implement`-compatible plan items with Done-when conditions; spot-check referenced paths (feature mode); write `plan.md`.
+
 **Phase checkpoint:**
 
 ```
 ✅ PHASE 1: Plan complete (3/3 passes)
-- Items: N (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement)
+- Mode: improve / feature / new-package
+- Items: N (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement/Feature)
 - Future improvements: N
 - plan.md: written
 - Proceeding to Phase 2
@@ -153,7 +175,17 @@ Consolidate the output into a single ranked list before moving to Phase 2.
 
 ### Phase 2 — Implement × 3
 
-Emit `[PHASE 2]` before starting. Execute the instructions from `/pkg-implement` in three iterative rounds:
+Emit `[PHASE 2]` before starting.
+
+> **`new-package` mode only — Round 0 — Scaffold** `[PASS 0/3]`:
+> Before the three implementation rounds, create the package skeleton:
+> 1. Create `packages/<name>/` with all standard files (follow the scaffolding reference in `/pkg-spec` §5).
+> 2. Register the package in `rush.json` (add to `projects` array).
+> 3. Add a `resolve.alias` entry in `docs/.vitepress/config.ts` following the existing pattern.
+> 4. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1.
+> 5. Record the scaffolded baseline in `runs/<name>/progress.md` (0 tests, 0 exports, build clean).
+
+Execute the instructions from `/pkg-implement` in three iterative rounds:
 
 - **Round 1** `[PASS 1/3]`: Implement high-priority (🔴 Bug + 🟠 Design) items from the plan.
 - **Round 2** `[PASS 2/3]`: Implement medium-priority (🟡 Coverage + 🟢 Enhancement) items; re-verify all tests pass.
@@ -406,11 +438,17 @@ Update this table after each phase completes. (Phase 7 is `N/A` for DOM-output p
 ## 8. Quick Reference — Execution Flow
 
 ```
-Baseline capture        → progress.md
+Baseline capture (improve/feature)    OR    skip (new-package: 0/0/N/A)
     ↓
-[PHASE 1] Plan × 3      → plan.md → Checkpoint
+[PHASE 1] Plan/Spec × 3
+  improve    → /pkg-plan  (arch review → DX deep-dive → synthesis)  → plan.md
+  feature    → /pkg-spec  (requirements → API design → spec plan)    → plan.md
+  new-pkg    → /pkg-spec  (same, greenfield scope)                   → plan.md
+                                                           → Checkpoint
     ↓
-[PHASE 2] Implement × 3 → Checkpoint → Propagation Checkpoint
+[PHASE 2] Implement × 3
+  new-pkg only: Round 0 — Scaffold (create pkg, rush.json, alias)
+  Round 1–3: /pkg-implement items by priority        → Checkpoint → Propagation
     ↓
 [PHASE 3] Review × 3    → review.md → Checkpoint
     ↓

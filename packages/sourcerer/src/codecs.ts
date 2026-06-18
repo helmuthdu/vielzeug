@@ -1,15 +1,16 @@
-import { hash } from '@vielzeug/arsenal';
-
 import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } from './types';
 
 /**
  * Serialises a `SourceQuery` or `RemoteSourceQuery` into plain URL-safe string params.
  *
- * ⚠️ `filter` and `sort` are serialised with `stringify`. Circular object references
+ * ⚠️ `filter` and `sort` are JSON-stringified. Circular object references
  * will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
  *
  * ⚠️ Round-trip fidelity: `page` and `limit` must be positive integers. `encodeQuery` will
  * serialise any number (including 0), but `decodeQuery` clamps non-positive values to 1/defaultLimit.
+ *
+ * `encodeQuery` + `decodeQuery` form a round-trip pair: filter/sort values are JSON-stringified
+ * on encode and JSON-parsed on decode.
  */
 export const encodeQuery = <TFilter = unknown, TSort = unknown>(
   query: RemoteSourceQuery<TFilter, TSort> | SourceQuery,
@@ -23,11 +24,11 @@ export const encodeQuery = <TFilter = unknown, TSort = unknown>(
   const rq = query as RemoteSourceQuery<TFilter, TSort>;
 
   if (rq.filter !== undefined) {
-    base['filter'] = hash(rq.filter);
+    base['filter'] = JSON.stringify(rq.filter);
   }
 
   if (rq.sort !== undefined) {
-    base['sort'] = hash(rq.sort);
+    base['sort'] = JSON.stringify(rq.sort);
   }
 
   return base;

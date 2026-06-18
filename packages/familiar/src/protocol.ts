@@ -22,6 +22,12 @@ type ProtocolMessage<TInput> = { id: number; input: TInput };
 
 type ErrorPayload = { message: string; name: string; stack?: string };
 
+function serializeError(e: unknown): ErrorPayload {
+  const err = e instanceof Error ? e : new Error(String(e));
+
+  return { message: err.message, name: err.name, stack: err.stack };
+}
+
 /**
  * Sets up the `self.onmessage` handler for a module worker.
  * Handles the `{ id, input }` → `{ id, result }` / `{ id, error }` protocol automatically.
@@ -46,10 +52,7 @@ export function handleMessages<TInput, TOutput>(fn: (input: TInput) => TOutput |
 
       (self as unknown as { postMessage: (data: unknown) => void }).postMessage({ id, result });
     } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      const error: ErrorPayload = { message: err.message, name: err.name, stack: err.stack };
-
-      (self as unknown as { postMessage: (data: unknown) => void }).postMessage({ error, id });
+      (self as unknown as { postMessage: (data: unknown) => void }).postMessage({ error: serializeError(e), id });
     }
   };
 }
@@ -94,10 +97,7 @@ export function handleStreamMessages<TInput, TOutput>(
 
       _self.postMessage({ id, result: undefined });
     } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      const error: ErrorPayload = { message: err.message, name: err.name, stack: err.stack };
-
-      _self.postMessage({ error, id });
+      _self.postMessage({ error: serializeError(e), id });
     }
   };
 }

@@ -244,12 +244,32 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   setLimit(limit: number): Promise<void>;
 };
 
+/** Full set of fields patchable in one atomic recompute on a local source. */
+export type LocalSourceQuery<T> = Partial<{
+  filter: Predicate<T> | undefined;
+  limit: number;
+  page: number;
+  search: string;
+  sort: Sorter<T> | undefined;
+}>;
+
 /**
  * Full interface for in-memory page-based sources.
  * Synchronous when no async ops are configured; supports async filter/sort
  * pipelines (e.g. Web Worker offloading) when `filterAsync`/`sortAsync` are set.
  */
-export type LocalSource<T> = PageNavigator<T> & {
+export type LocalSource<T> = Omit<PageNavigator<T>, 'patch'> & {
+  /**
+   * Applies one or more query changes atomically — a single recompute for any combination
+   * of limit, page, search, filter, and sort updates.
+   *
+   * @example
+   * ```ts
+   * // Change filter and search in one recompute
+   * await source.patch({ filter: (u) => u.active, search: 'ada', limit: 5 });
+   * ```
+   */
+  patch(changes: LocalSourceQuery<T>): Promise<void>;
   setData(data: readonly T[]): Promise<void>;
   setFilter(filter?: Predicate<T>): Promise<void>;
   setSort(sort?: Sorter<T>): Promise<void>;

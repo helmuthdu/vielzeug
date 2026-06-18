@@ -2,9 +2,9 @@ import type {
   CursorSourceQuery,
   InfiniteSourceQuery,
   LocalSource,
+  LocalSourceQuery,
   RemoteSource,
   RemoteSourceQuery,
-  SourceQuery,
 } from './types';
 
 // ── Unified apply helper ──────────────────────────────────────────────────────
@@ -30,10 +30,11 @@ export function applyQuery<TChanges extends Record<string, unknown>>(
 // ── Typed convenience wrappers ────────────────────────────────────────────────
 
 /**
- * Applies a partial `SourceQuery` patch to a `LocalSource`.
+ * Applies a `LocalSourceQuery` patch to a `LocalSource`, including optional `filter` and `sort`.
+ * Triggers a single recompute for any combination of field changes.
  * @see applyQuery
  */
-export function applyLocalQuery<T>(source: LocalSource<T>, changes: Partial<SourceQuery>): Promise<void> {
+export function applyLocalQuery<T>(source: LocalSource<T>, changes: LocalSourceQuery<T>): Promise<void> {
   return source.patch(changes);
 }
 

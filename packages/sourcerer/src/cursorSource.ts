@@ -263,6 +263,8 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     subscribe: (listener) => {
+      if (base.disposed) return () => {};
+
       listeners.add(listener);
 
       return () => {

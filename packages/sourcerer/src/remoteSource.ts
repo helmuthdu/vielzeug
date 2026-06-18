@@ -406,6 +406,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     subscribe: (listener) => {
+      if (base.disposed) return () => {};
+
       listeners.add(listener);
 
       return () => {

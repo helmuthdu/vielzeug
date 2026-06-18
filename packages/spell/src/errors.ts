@@ -36,7 +36,9 @@ export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[
   for (const key of path) {
     if (Array.isArray(node)) return [];
 
-    node = (node as FormattedErrors)[String(key)] ?? { _errors: [] };
+    const safeKey = String(key) === '_errors' ? '_errors_' : String(key);
+
+    node = (node as FormattedErrors)[safeKey] ?? { _errors: [] };
   }
 
   return Array.isArray(node) ? node : (node as FormattedErrors)._errors;
@@ -153,11 +155,15 @@ export class ValidationError extends Error {
       for (const segment of issue.path) {
         const key = String(segment);
 
-        if (!Object.hasOwn(node, key)) {
-          node[key] = createFormattedErrors();
+        // '_errors' is the reserved internal field; treat it as a sibling key
+        // with a safe prefix to avoid collisions with the FormattedErrors shape.
+        const safeKey = key === '_errors' ? '_errors_' : key;
+
+        if (!Object.hasOwn(node, safeKey)) {
+          node[safeKey] = createFormattedErrors();
         }
 
-        node = node[key] as FormattedErrors;
+        node = node[safeKey] as FormattedErrors;
       }
 
       node._errors.push(issue.message);

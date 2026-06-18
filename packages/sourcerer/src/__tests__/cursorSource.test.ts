@@ -417,3 +417,57 @@ describe('applyCursorQuery', () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe('createCursorSource — patch()', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('patch({ limit }) updates page size and triggers fetch', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
+
+    await source.patch({ limit: 15 });
+
+    expect(source.meta.pageSize).toBe(15);
+    expect(fetch).toHaveBeenCalledWith(expect.objectContaining({ limit: 15 }), expect.any(AbortSignal));
+  });
+
+  it('patch({ limit }) resets cursors', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['a'], nextCursor: 'c1', total: 2 })
+      .mockResolvedValue({ items: ['b'], total: 1 });
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 1 });
+
+    await source.refresh();
+    expect(source.meta.hasNextPage).toBe(true);
+
+    await source.patch({ limit: 2 });
+
+    expect(source.toQuery()).not.toHaveProperty('after');
+  });
+
+  it('patch({ search }) resets cursors and triggers fetch', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['x'], nextCursor: 'c1', total: 1 })
+      .mockResolvedValue({ items: ['found'], total: 1 });
+    const source = createCursorSource({ autoFetch: false, fetch });
+
+    await source.refresh();
+    await source.next();
+    await source.patch({ search: 'q' });
+
+    expect(source.toQuery()).not.toHaveProperty('after');
+    expect(source.toQuery().search).toBe('q');
+  });
+
+  it('patch({ limit }) no-op when same value', async () => {
+    const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+    await source.patch({ limit: 10 });
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});

@@ -30,6 +30,7 @@ import {
   WorkerTerminatedError,
   WorkerTimeoutError,
 } from './_types';
+import { warn } from './_warn';
 
 // ─── task() — optional validation helper ─────────────────────────────────────
 
@@ -157,6 +158,8 @@ type SlotMessage<TOutput> =
 type PendingTask<TOutput> = {
   /** Emits intermediate stream chunks. Undefined for non-streaming tasks. */
   emit?: (chunk: TOutput) => void;
+  /** Called with an error when the streaming dispatch is cancelled mid-flight, so the finish closure drains its waiters. */
+  finishStream?: (err: unknown) => void;
   /**
    * Single-shot timer that fires if no heartbeat is received within watchdogMs.
    * Reset (cleared + recreated) on every incoming heartbeat message.
@@ -222,7 +225,12 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
     };
 
     // Dispatch the task in stream mode. The promise resolves when the worker signals done.
+    // finishStream is stored on the PendingTask so cancel() can drain the waiters if the
+    // consumer exits early (break/throw from for-await), preventing a permanently dangling Promise.
+    // this.pending is set synchronously inside dispatch(), so this assignment is safe.
     this.dispatch(input, transferables, timeout, true, emit).then(() => finish(), finish);
+
+    if (this.pending) this.pending.finishStream = finish;
 
     return {
       [Symbol.asyncIterator]() {
@@ -235,7 +243,14 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
             }
 
             if (cursor < chunks.length) {
-              return { done: false, value: chunks[cursor++]! };
+              const value = chunks[cursor]!;
+
+              // Null-out the consumed slot so GC can collect the value
+              // without waiting for the entire stream to close.
+              (chunks as (TOutput | null)[])[cursor] = null;
+              cursor++;
+
+              return { done: false, value };
             }
 
             if (error !== undefined) throw error;
@@ -258,6 +273,9 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
     // Terminate the worker: the streaming task may still be running and sending chunks.
     // A fresh worker is created on the next run() or runStream() call via ensureWorker().
     this.stopWorker();
+    // Drain the stream finish closure so any pending .next() waiters resolve immediately
+    // rather than leaking as permanently dangling Promises.
+    pending.finishStream?.(new WorkerTerminatedError('Stream was cancelled'));
   }
 
   terminate(): void {
@@ -502,7 +520,14 @@ export function createModuleWorker<TInput, TOutput>(
   url: URL | string,
   options?: WorkerOptions,
 ): WorkerHandle<TInput, TOutput> {
-  const { concurrency, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+  const { concurrency, heartbeatWindow, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+
+  if (heartbeatWindow !== undefined) {
+    warn(
+      '`heartbeatWindow` has no effect on module workers — the worker script must implement the heartbeat protocol manually.',
+    );
+  }
+
   const href = typeof url === 'string' ? url : url.href;
 
   const slots = Array.from(
