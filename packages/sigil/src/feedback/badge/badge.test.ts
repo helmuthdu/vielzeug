@@ -162,4 +162,14 @@ describe('sg-badge accessibility', () => {
       expect(fixture.query('.badge')?.textContent).toContain('99+');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks with default rendering', async () => {
+      fixture = await mount('sg-badge', { html: '<button>Inbox</button>' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -100,4 +100,36 @@ describe('allocate', () => {
       expect(() => allocate(100, [0, 0, 0])).toThrow('Total ratio cannot be zero');
     });
   });
+
+  describe('edge cases', () => {
+    it('zero-bucket ratios: [0, 0, 1] — first two buckets get 0', () => {
+      const result = allocate(100, [0, 0, 1]);
+
+      expect(result[0]).toBe(0);
+      expect(result[1]).toBe(0);
+      expect(result[2]).toBe(100);
+      expect(result.reduce((a, b) => a + b, 0)).toBe(100);
+    });
+
+    it('zero amount distributes all zeros', () => {
+      const result = allocate(0, [1, 2, 3]);
+
+      expect(result).toEqual([0, 0, 0]);
+      expect(result.reduce((a, b) => a + b, 0)).toBe(0);
+    });
+
+    it('zero amount bigint distributes all zero bigints', () => {
+      const result = allocate(0n, [1, 2, 3]);
+
+      expect(result).toEqual([0n, 0n, 0n]);
+    });
+
+    it('bigint zero-bucket ratio: [0, 1] — first bucket gets 0n', () => {
+      const result = allocate(100n, [0, 1]);
+
+      expect(result[0]).toBe(0n);
+      expect(result[1]).toBe(100n);
+      expect(result.reduce((a, b) => a + b, 0n)).toBe(100n);
+    });
+  });
 });

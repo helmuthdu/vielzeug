@@ -1,4 +1,7 @@
-import { define, html, onMounted, prop } from '../index';
+import { signal } from '@vielzeug/ripple';
+
+import { define, html, prop, when } from '../index';
+import { onMounted } from '../runtime';
 import { mount, waitForEvent } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
@@ -127,5 +130,50 @@ describe('component slots and emit', () => {
     await flush();
 
     expect((spy.mock.calls[0]?.[0] as CustomEvent<{ checked: boolean }>).detail.checked).toBe(true);
+  });
+});
+
+describe('slots: stale slot cleanup (C1)', () => {
+  it('slot presence signal reflects false after a conditional slot is removed from shadow DOM', async () => {
+    const showSlot = signal(true);
+    let hasDefault!: import('@vielzeug/ripple').ReadonlySignal<boolean>;
+
+    const { flush } = await mount(
+      (_props, { slots }) => {
+        hasDefault = slots.has();
+
+        return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;
+      },
+      { html: '<span>content</span>' },
+    );
+
+    expect(hasDefault.value).toBe(true);
+
+    showSlot.value = false;
+    await flush();
+
+    expect(hasDefault.value).toBe(false);
+  });
+
+  it('slot presence signal returns true when slot is re-added after removal', async () => {
+    const showSlot = signal(true);
+    let hasDefault!: import('@vielzeug/ripple').ReadonlySignal<boolean>;
+
+    const { flush } = await mount(
+      (_props, { slots }) => {
+        hasDefault = slots.has();
+
+        return html`<div>${when(showSlot, () => html`<slot></slot>`)}</div>`;
+      },
+      { html: '<span>content</span>' },
+    );
+
+    showSlot.value = false;
+    await flush();
+    expect(hasDefault.value).toBe(false);
+
+    showSlot.value = true;
+    await flush();
+    expect(hasDefault.value).toBe(true);
   });
 });

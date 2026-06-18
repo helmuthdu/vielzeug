@@ -1,15 +1,6 @@
-import {
-  createContext,
-  effect,
-  html,
-  inject,
-  type InjectionKey,
-  injectStrict,
-  onMounted,
-  provide,
-  type ReadonlySignal,
-  signal,
-} from '../index';
+import { effect, type ReadonlySignal, signal } from '@vielzeug/ripple';
+
+import { createContext, html, inject, type InjectionKey, injectStrict } from '../index';
 import { mount } from '../testing';
 import { register } from './test-utils';
 
@@ -115,6 +106,92 @@ describe('core/host.ts', () => {
 
       expect(clicks).toBe(1);
     });
+
+    it('applies static host style bindings', async () => {
+      const { element } = await mount((_props, { bind }) => {
+        bind({ style: { color: 'red', fontSize: '14px' } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.style.getPropertyValue('color')).toBe('red');
+      expect(element.style.getPropertyValue('font-size')).toBe('14px');
+    });
+
+    it('applies reactive host style bindings and updates on signal change', async () => {
+      const color = signal('blue');
+      const { element, flush } = await mount((_props, { bind }) => {
+        bind({ style: { color } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.style.getPropertyValue('color')).toBe('blue');
+
+      color.value = 'green';
+      await flush();
+
+      expect(element.style.getPropertyValue('color')).toBe('green');
+    });
+
+    it('sets CSS custom properties (--var) on the host via style binding', async () => {
+      const { element } = await mount((_props, { bind }) => {
+        bind({ style: { '--theme-color': '#ff0000' } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.style.getPropertyValue('--theme-color')).toBe('#ff0000');
+    });
+
+    it('removes the style property when value becomes null/undefined', async () => {
+      const color = signal<string | null>('red');
+      const { element, flush } = await mount((_props, { bind }) => {
+        bind({ style: { color } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.style.getPropertyValue('color')).toBe('red');
+
+      color.value = null;
+      await flush();
+
+      expect(element.style.getPropertyValue('color')).toBe('');
+    });
+
+    it('strips semicolons from style values to prevent CSS injection', async () => {
+      const { element } = await mount((_props, { bind }) => {
+        bind({ style: { color: 'red; display:none' } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.style.getPropertyValue('display')).toBe('');
+    });
+
+    it('strips braces from style values', async () => {
+      const { element } = await mount((_props, { bind }) => {
+        bind({ style: { color: 'red} body{display:none' } });
+
+        return html`<div></div>`;
+      });
+
+      const colorVal = element.style.getPropertyValue('color');
+
+      expect(colorVal).not.toContain('{');
+      expect(colorVal).not.toContain('}');
+    });
+
+    it('skips style property when name reduces to empty after sanitization', async () => {
+      const { element } = await mount((_props, { bind }) => {
+        bind({ style: { ';{}': 'red' } });
+
+        return html`<div></div>`;
+      });
+
+      expect(element.getAttribute('style') ?? '').toBe('');
+    });
   });
 
   describe('Context API', () => {
@@ -123,8 +200,8 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received: string | undefined;
 
-        await mount(() => {
-          provide(ThemeKey, 'dark');
+        await mount((_p, ctx) => {
+          ctx.provide(ThemeKey, 'dark');
           received = inject(ThemeKey);
 
           return html`<div></div>`;
@@ -171,13 +248,13 @@ describe('core/host.ts', () => {
 
           return html`<div class="v">${consumerValue}</div>`;
         });
-        register(innerTag, () => {
-          provide(CountKey, 2);
+        register(innerTag, (_p, c) => {
+          c.provide(CountKey, 2);
 
           return html`<${consumerTag}></${consumerTag}>`;
         });
-        register(outerTag, () => {
-          provide(CountKey, 1);
+        register(outerTag, (_p, c) => {
+          c.provide(CountKey, 1);
 
           return html`<${innerTag}></${innerTag}>`;
         });
@@ -199,8 +276,8 @@ describe('core/host.ts', () => {
         const ThemeKey = Symbol('theme') as InjectionKey<string>;
         let received!: string;
 
-        await mount(() => {
-          provide(ThemeKey, 'dark');
+        await mount((_p, ctx) => {
+          ctx.provide(ThemeKey, 'dark');
           received = injectStrict(ThemeKey);
 
           return html`<div></div>`;
@@ -246,8 +323,8 @@ describe('core/host.ts', () => {
           return html`<div class="info">${user?.name} (${user?.role})</div>`;
         });
 
-        const { element, flush } = await mount(() => {
-          provide(UserCtx, { name: 'Alice', role: 'admin' });
+        const { element, flush } = await mount((_p, ctx) => {
+          ctx.provide(UserCtx, { name: 'Alice', role: 'admin' });
 
           return html`<${childTag}></${childTag}>`;
         });
@@ -350,10 +427,10 @@ describe('mount slot timing', () => {
   it('mount callbacks run after slot assignment', async () => {
     const mountFn = vi.fn();
 
-    register('test-slot-timing-element', () => {
+    register('test-slot-timing-element', (_props, ctx) => {
       const host = el;
 
-      onMounted(() => {
+      ctx.onMounted(() => {
         mountFn();
 
         const slot = host.shadowRoot?.querySelector('slot');
@@ -384,9 +461,9 @@ describe('mount slot timing', () => {
   it('slot signals receive assigned elements by mount time', async () => {
     const slotFn = vi.fn();
 
-    register('test-slot-change-element', (_props, { slots }) => {
-      onMounted(() => {
-        slotFn(slots.elements().value.length);
+    register('test-slot-change-element', (_props, ctx) => {
+      ctx.onMounted(() => {
+        slotFn(ctx.slots.elements().value.length);
       });
 
       return html`<slot></slot>`;

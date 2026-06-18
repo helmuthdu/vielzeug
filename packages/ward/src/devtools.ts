@@ -7,7 +7,7 @@
  * ```
  */
 
-import type { Ward, WardLoggerContext, WardOptions, WardRuleInput } from './types';
+import type { Ward, WardLoggerContext, WardOptions, WardRule } from './types';
 
 import { createWard } from './factory';
 
@@ -18,8 +18,8 @@ import { createWard } from './factory';
  * imported from a dedicated sub-path so `console.debug` references are tree-shaken from
  * production bundles when this sub-path is not imported.
  *
- * Logs every authorization decision made by any decision method (`can`, `canAll`, `canAny`,
- * `checkAll`, `explain`, `trace`) with `[ward:decision]` prefixes showing the outcome,
+ * Logs every authorization decision made by any decision method (`checkAll`, `explain`)
+ * with `[ward:decision]` prefixes showing the outcome,
  * principal, resource, action, and — when a rule matched — its effect.
  *
  * @example
@@ -27,15 +27,17 @@ import { createWard } from './factory';
  * import { debugWard } from '@vielzeug/ward/devtools';
  *
  * const permit = debugWard(rules);
- * permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+ * permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
  * // [ward:decision] allow            (allow)  viewer  posts  read
  *
- * permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
+ * permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
  * // [ward:decision] no-matching-rule          viewer  posts  delete
+ *
+ * // Note: `trace()` does NOT fire the logger — it is a side-channel-free inspection tool.
  * ```
  */
 export function debugWard<TAction extends string = string, TData = unknown>(
-  rules: readonly WardRuleInput<TAction, TData>[],
+  rules: readonly WardRule<TAction, TData>[],
   options?: Omit<WardOptions<TAction, TData>, 'logger'>,
 ): Ward<TAction, TData> {
   const logger = (ctx: WardLoggerContext<TAction, TData>): void => {
@@ -44,8 +46,9 @@ export function debugWard<TAction extends string = string, TData = unknown>(
         ? ctx.principal.roles.join(', ')
         : ctx.principal.id
       : 'anonymous';
-    const decision = ctx.decision.padEnd(16);
-    const effect = ctx.decision !== 'no-matching-rule' ? `(${ctx.rule.effect})`.padEnd(8) : '        ';
+    const outcome = ctx.allowed ? 'allow' : ctx.reason;
+    const decision = outcome.padEnd(16);
+    const effect = 'rule' in ctx ? `(${ctx.rule.effect})`.padEnd(8) : '        ';
 
     console.debug(`[ward:decision] ${decision}  ${effect}  ${principal}  ${ctx.resource}  ${ctx.action}`);
   };

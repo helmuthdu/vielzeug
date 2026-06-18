@@ -1,4 +1,5 @@
-import { computed, define, effect, html, inject, prop } from '@vielzeug/craft';
+import { define, html, inject, prop } from '@vielzeug/craft';
+import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -63,11 +64,11 @@ define<SgTabItemProps>(TAB_ITEM_TAG, {
     value: prop.string(''),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, el }) {
+  setup(props, { bind, el, watch }) {
     const tabsCtx = inject(TABS_CTX);
 
     if (tabsCtx) {
-      effect(() => {
+      watch(() => {
         const color = tabsCtx.color.value;
         const size = tabsCtx.size.value;
         const variant = tabsCtx.variant.value;

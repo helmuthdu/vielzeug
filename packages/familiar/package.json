@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/familiar",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "files": [
     "dist"
@@ -14,6 +14,12 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./protocol": {
+      "source": "./src/protocol.ts",
+      "types": "./dist/protocol.d.ts",
+      "import": "./dist/protocol.js",
+      "require": "./dist/protocol.cjs"
     },
     "./testing": {
       "source": "./src/testing/index.ts",
@@ -40,9 +46,9 @@
     "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

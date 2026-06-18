@@ -1,4 +1,4 @@
-import { define, defineField, html, inject, onCleanup, prop } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -77,15 +77,17 @@ define<SgSwitchProps, SgSwitchEvents>(SWITCH_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, emit }) {
+  setup(props, { bind, emit, onCleanup }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
 
+    let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
       checked: props.checked,
       clearIndeterminateFirst: false,
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       onToggle: (payload) => {
         checkable.triggerValidation('change');
@@ -96,20 +98,19 @@ define<SgSwitchProps, SgSwitchEvents>(SWITCH_TAG, {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
-    const { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, labelId } = checkable;
 
-    checkable.bindFormField(
-      defineField<string | null>({
-        disabled: checkable.disabled,
-        toFormValue: (v) => v,
-        value: checkable.checkableFormValue,
-      }),
-    );
+    _formField = useField<string | null>({
+      disabled: checkable.disabled,
+      toFormValue: (v) => v,
+      value: checkable.checkableFormValue,
+    });
+
+    const { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId } = checkable;
 
     applyCheckableBinding(
       bind,
       fCtxProps.size,
-      { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, labelId },
+      { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId },
       'switch',
     );
 
@@ -120,7 +121,7 @@ define<SgSwitchProps, SgSwitchEvents>(SWITCH_TAG, {
         </div>
       </div>
       <span class="label" part="label" id="${labelId}"><slot></slot></span>
-      ${renderHelperRegion(assistiveId, assistive)}
+      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [

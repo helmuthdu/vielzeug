@@ -41,15 +41,17 @@ isEven.dispose();
 
 #### Updating Signal Values
 
+Write `.value` directly. For read-modify-write patterns, read `.value` on the right-hand side:
+
 ```ts
 import { signal } from '@vielzeug/ripple';
 
 const count = signal(0);
-count.update((value) => value + 1); // 1
-count.update((value) => value * 2); // 2
+count.value = count.value + 1; // 1
+count.value = count.value * 2; // 2
 
 const tags = signal(['ts', 'js']);
-tags.update((value) => [...value, 'tsx']); // ['ts', 'js', 'tsx']
+tags.value = [...tags.value, 'tsx']; // ['ts', 'js', 'tsx']
 ```
 
 ---
@@ -127,16 +129,16 @@ const count = signal(0);
 
 ---
 
-#### Signal Combinators — `map` and `filter`
+#### Signal Combinators — `derive` and `filter`
 
-Every signal type exposes `.map()` and `.filter()` combinators that create a `ComputedSignal` without needing to call `computed()` directly:
+Use the standalone `derive()` and `filter()` utilities to create computed signals from a source:
 
 ```ts
-import { signal, store, watch } from '@vielzeug/ripple';
+import { signal, derive, filter, watch } from '@vielzeug/ripple';
 
-// .map() — project to a derived type
+// derive() — project to a derived type
 const count = signal(3);
-const doubled = count.map((n) => n * 2); // ComputedSignal<number>
+const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
@@ -144,8 +146,8 @@ console.log(doubled.value); // 10
 
 doubled.dispose();
 
-// .filter() — pass values matching a predicate, undefined otherwise
-const even = count.filter((n) => n % 2 === 0);
+// filter() — pass values matching a predicate, undefined otherwise
+const even = filter(count, (n) => n % 2 === 0);
 console.log(even.value); // undefined (5 is odd)
 
 count.value = 8;
@@ -154,22 +156,15 @@ even.dispose();
 
 // Type-guard filter — narrow to a subtype
 const maybeStr = signal<string | null>(null);
-const str = maybeStr.filter((v): v is string => v !== null); // ComputedSignal<string | undefined>
+const str = filter(maybeStr, (v): v is string => v !== null);
 maybeStr.value = 'hello';
 console.log(str.value); // 'hello'
 str.dispose();
-
-// Works on stores too
-const cart = store({ items: 5, label: 'cart' });
-const itemCount = cart.map((s) => s.items); // ComputedSignal<number>
-watch(itemCount, (n) => console.log('items:', n));
-cart.patch({ items: 10 }); // → 'items: 10'
-itemCount.dispose();
 ```
 
 ### Pitfalls
 
-- Signal updates are reference-based. Mutating an object in place (for example, pushing into an array) does not notify subscribers — assign a new value or use `update()` to produce a new reference.
+- Signal updates are reference-based. Mutating an object in place (for example, pushing into an array) does not notify subscribers — always assign a new value to trigger notifications.
 - `effect()` runs immediately on creation. If it has side effects (DOM mutations, network calls), it fires before the component is fully initialized. Use a `mounted` flag to defer.
 - Creating a `computed()` inside a component render function without memoization creates a new computed instance on every render, leaking watchers. Create computeds at module scope or in the component setup phase.
 

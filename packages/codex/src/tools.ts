@@ -19,17 +19,33 @@ function error(message: string): CallToolResult {
   return { content: [{ text: message, type: 'text' }], isError: true };
 }
 
+// ---------------------------------------------------------------------------
+// Argument parsing
+// ---------------------------------------------------------------------------
+
 const MAX_ARG_LENGTH = 500;
 
-/** Extract a non-empty trimmed string arg (max 500 chars) or return null. */
-function str(args: Record<string, unknown>, key: string): string | null {
+type ArgResult = { ok: true; value: string } | { ok: false; reason: 'empty' | 'missing' | 'too-long' };
+
+/** Reads a string arg: trims, validates presence and max length. Returns a tagged result. */
+function readStr(args: Record<string, unknown>, key: string): ArgResult {
   const value = args[key];
 
-  if (typeof value !== 'string') return null;
+  if (typeof value !== 'string') return { ok: false, reason: 'missing' };
 
-  const trimmed = value.trim().slice(0, MAX_ARG_LENGTH);
+  const trimmed = value.trim();
 
-  return trimmed.length > 0 ? trimmed : null;
+  if (trimmed.length === 0) return { ok: false, reason: 'empty' };
+
+  if (trimmed.length > MAX_ARG_LENGTH) return { ok: false, reason: 'too-long' };
+
+  return { ok: true, value: trimmed };
+}
+
+function argError(param: string, reason: 'empty' | 'missing' | 'too-long'): string {
+  if (reason === 'too-long') return `${param}: exceeds ${MAX_ARG_LENGTH} character limit. Shorten the value.`;
+
+  return `${param}: required non-empty string.`;
 }
 
 // ---------------------------------------------------------------------------
@@ -40,8 +56,11 @@ interface ToolContext {
   bySlug: Map<string, BundledPackage>;
   /** Null when /sigil was not built before data generation. */
   components: CemDeclaration[] | null;
-  knownSlugs: string;
   packages: BundledPackage[];
+}
+
+function knownSlugs(context: ToolContext): string {
+  return context.packages.map((p) => p.slug).join(', ');
 }
 
 // ---------------------------------------------------------------------------
@@ -60,34 +79,40 @@ interface ToolDefinition {
 // ---------------------------------------------------------------------------
 
 // --- list-packages ---
-// Replaces the old get-package tool: pass packageSlug to filter to a single result.
 
 const listPackagesTool: ToolDefinition = {
   description:
-    'List all vielzeug packages with metadata (version, description, category, keywords, exports, availableDocPages, hasSource). Returns a JSON array of PackageMeta objects sorted by slug. Pass packageSlug to filter to a single-item array. Use this tool first to discover available packages, then call get-docs or get-source for details.',
+    'List all vielzeug packages with metadata (version, description, category, keywords, exports, availableDocPages, hasSource). Returns a JSON array of PackageMeta objects sorted by slug. Use this tool first to discover available packages, then call get-package for a single package, get-docs for docs, or get-source for source.',
+  inputSchema: { properties: {}, type: 'object' },
+  name: 'list-packages',
+  run(_args, context) {
+    return text(JSON.stringify(context.packages.map(packageMeta), null, 2));
+  },
+};
+
+// --- get-package ---
+
+const getPackageTool: ToolDefinition = {
+  description:
+    'Get metadata for a single vielzeug package by slug. Returns a PackageMeta object with version, description, category, keywords, exports, availableDocPages, and hasSource. Use list-packages first to discover available slugs.',
   inputSchema: {
     properties: {
-      packageSlug: {
-        description: 'Optional: filter to one package by slug, e.g. "ripple"',
-        minLength: 1,
-        type: 'string',
-      },
+      packageSlug: { description: 'Package folder name, e.g. "ripple"', minLength: 1, type: 'string' },
     },
+    required: ['packageSlug'],
     type: 'object',
   },
-  name: 'list-packages',
+  name: 'get-package',
   run(args, context) {
-    const slug = str(args, 'packageSlug');
+    const result = readStr(args, 'packageSlug');
 
-    if (slug !== null) {
-      const pkg = context.bySlug.get(slug);
+    if (!result.ok) return error(argError('packageSlug', result.reason));
 
-      if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${context.knownSlugs}`);
+    const pkg = context.bySlug.get(result.value);
 
-      return text(JSON.stringify([packageMeta(pkg)], null, 2));
-    }
+    if (!pkg) return error(`Package "${result.value}" not found. Available slugs: ${knownSlugs(context)}`);
 
-    return text(JSON.stringify(context.packages.map(packageMeta), null, 2));
+    return text(JSON.stringify(packageMeta(pkg), null, 2));
   },
 };
 
@@ -106,22 +131,25 @@ const getDocsTool: ToolDefinition = {
   },
   name: 'get-docs',
   run(args, context) {
-    const slug = str(args, 'packageSlug');
+    const slugResult = readStr(args, 'packageSlug');
 
-    if (!slug) return error('packageSlug: required non-empty string.');
+    if (!slugResult.ok) return error(argError('packageSlug', slugResult.reason));
 
-    const pkg = context.bySlug.get(slug);
+    const pkg = context.bySlug.get(slugResult.value);
 
-    if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${context.knownSlugs}`);
+    if (!pkg) return error(`Package "${slugResult.value}" not found. Available slugs: ${knownSlugs(context)}`);
 
-    const page = (str(args, 'page') ?? 'index') as (typeof DOC_PAGES)[number];
+    const pageResult = readStr(args, 'page');
+    const page = (pageResult.ok ? pageResult.value : 'index') as (typeof DOC_PAGES)[number];
 
     if (!DOC_PAGES.includes(page)) return error(`page: must be one of ${DOC_PAGES.join(', ')}.`);
 
     const content = pkg.docs[page];
 
     if (!content) {
-      return error(`No "${page}" page for "${slug}". Available: ${pkg.availableDocPages.join(', ') || 'none'}.`);
+      return error(
+        `No "${page}" page for "${slugResult.value}". Available: ${pkg.availableDocPages.join(', ') || 'none'}.`,
+      );
     }
 
     return text(content);
@@ -142,15 +170,15 @@ const getSourceTool: ToolDefinition = {
   },
   name: 'get-source',
   run(args, context) {
-    const slug = str(args, 'packageSlug');
+    const result = readStr(args, 'packageSlug');
 
-    if (!slug) return error('packageSlug: required non-empty string.');
+    if (!result.ok) return error(argError('packageSlug', result.reason));
 
-    const pkg = context.bySlug.get(slug);
+    const pkg = context.bySlug.get(result.value);
 
-    if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${context.knownSlugs}`);
+    if (!pkg) return error(`Package "${result.value}" not found. Available slugs: ${knownSlugs(context)}`);
 
-    if (!pkg.apiSource) return error(`Package "${slug}" has no src/index.ts source in bundled data.`);
+    if (!pkg.apiSource) return error(`Package "${result.value}" has no src/index.ts source in bundled data.`);
 
     return text(pkg.apiSource);
   },
@@ -160,7 +188,7 @@ const getSourceTool: ToolDefinition = {
 
 const searchPackagesTool: ToolDefinition = {
   description:
-    'Search vielzeug packages by keyword across name, description, category, keywords, exports, docs, and source. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports, 1=docs/source. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
+    'Search vielzeug packages by keyword across name, description, category, keywords, exports, related, docs, and source. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports/related, 1=docs/source. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
   inputSchema: {
     properties: { query: { description: 'Non-empty search term', minLength: 1, type: 'string' } },
     required: ['query'],
@@ -168,12 +196,12 @@ const searchPackagesTool: ToolDefinition = {
   },
   name: 'search-packages',
   run(args, context) {
-    const query = str(args, 'query');
+    const result = readStr(args, 'query');
 
-    if (!query) return error('query: required non-empty string.');
+    if (!result.ok) return error(argError('query', result.reason));
 
     const results = context.packages
-      .map((pkg) => scorePackage(pkg, query))
+      .map((pkg) => scorePackage(pkg, result.value))
       .filter((hit) => hit !== null)
       .sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug));
 
@@ -224,13 +252,13 @@ const getComponentTool: ToolDefinition = {
   },
   name: 'get-component',
   run(args, context) {
-    const tagName = str(args, 'tagName');
+    const result = readStr(args, 'tagName');
 
-    if (!tagName) return error('tagName: required non-empty string.');
+    if (!result.ok) return error(argError('tagName', result.reason));
 
     if (!context.components) return error(SIGIL_UNAVAILABLE);
 
-    const declaration = context.components.find((d) => d.tagName === tagName);
+    const declaration = context.components.find((d) => d.tagName === result.value);
 
     if (!declaration) {
       const available = context.components
@@ -238,7 +266,7 @@ const getComponentTool: ToolDefinition = {
         .map((d) => d.tagName)
         .join(', ');
 
-      return error(`Component "${tagName}" not found. Available tags: ${available}`);
+      return error(`Component "${result.value}" not found. Available tags: ${available}`);
     }
 
     return text(JSON.stringify(declaration, null, 2));
@@ -251,6 +279,7 @@ const getComponentTool: ToolDefinition = {
 
 const TOOLS: ToolDefinition[] = [
   listPackagesTool,
+  getPackageTool,
   getDocsTool,
   getSourceTool,
   searchPackagesTool,
@@ -266,7 +295,6 @@ export function registerTools(server: Server, data: BundledData): void {
   const context: ToolContext = {
     bySlug: new Map(data.packages.map((pkg) => [pkg.slug, pkg])),
     components: sigilPkg && sigilPkg.components.length > 0 ? sigilPkg.components : null,
-    knownSlugs: data.packages.map((pkg) => pkg.slug).join(', '),
     packages: data.packages,
   };
 

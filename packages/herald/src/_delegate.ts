@@ -24,10 +24,10 @@ export function makeBusDelegate<T extends EventMap>(bus: Bus<T>): Bus<T> {
     on: bus.on,
     onAny: bus.onAny,
     once: bus.once,
-    removeAllListeners: bus.removeAllListeners,
     [Symbol.dispose]: () => bus.dispose(),
     wait: bus.wait,
     waitAny: bus.waitAny,
+    wildcardCount: bus.wildcardCount,
   } satisfies BusMethods<T> as Bus<T>; // satisfies catches any missing method; cast is safe — getters added below.
 
   Object.defineProperty(delegate, 'disposalSignal', {

@@ -7,10 +7,10 @@ description: How to use @vielzeug/coins for monetary arithmetic, formatting, and
 
 ## Basic Usage
 
-Use `money()` to construct a `Money` value from a human-readable decimal, number, or raw bigint minor units. Use `zero()` when you need an idiomatic zero starting point. The currency code is validated against `Intl.NumberFormat` — unrecognised codes throw `RangeError`.
+Use `money()` to construct a `Money` value from a human-readable decimal, number, or raw bigint minor units. The currency code is validated against `Intl.NumberFormat` at creation time — unrecognised codes throw `InvalidCurrencyError`.
 
 ```ts
-import { money, zero } from '@vielzeug/coins';
+import { money } from '@vielzeug/coins';
 
 // From decimal string (preferred — lossless)
 money('1234.56', 'USD'); // { amount: 123456n, currency: 'USD' }
@@ -24,12 +24,12 @@ money(1234.56, 'USD'); // { amount: 123456n, currency: 'USD' }
 // From bigint — raw minor units, passed through as-is
 money(123456n, 'USD'); // { amount: 123456n, currency: 'USD' }
 
-// Zero amount — idiomatic starting value
-zero('USD'); // { amount: 0n, currency: 'USD' }
-zero('JPY'); // { amount: 0n, currency: 'JPY' }
+// Zero accumulator — use money(0n, currency)
+money(0n, 'USD'); // { amount: 0n, currency: 'USD' }
+money(0n, 'JPY'); // { amount: 0n, currency: 'JPY' }
 
-// Invalid currency — throws RangeError
-money('1.00', 'NOTREAL'); // RangeError: Invalid ISO 4217 currency code: "NOTREAL"
+// Invalid currency — throws InvalidCurrencyError (extends RangeError)
+money('1.00', 'NOTREAL'); // InvalidCurrencyError: Invalid ISO 4217 currency code: "NOTREAL"
 ```
 
 `Money` is a plain readonly object — no class, no methods:
@@ -37,28 +37,13 @@ money('1.00', 'NOTREAL'); // RangeError: Invalid ISO 4217 currency code: "NOTREA
 ```ts
 type Money = {
   readonly amount: bigint; // minor units
-  readonly currency: CurrencyCode; // validated, branded string
+  readonly currency: string; // validated ISO 4217 code
 };
 ```
 
-## Validated Currency Codes
-
-`CurrencyCode` is a branded string. Obtain one via `toCurrencyCode()` when you need to build an `ExchangeRate` or process a currency string from user input:
-
-```ts
-import { toCurrencyCode } from '@vielzeug/coins';
-
-const usd = toCurrencyCode('USD'); // CurrencyCode
-const eur = toCurrencyCode('EUR'); // CurrencyCode
-
-toCurrencyCode('XXX'); // throws RangeError for unrecognised codes
-```
-
-The `money()` factory validates its `currency` argument internally, so you don't need `toCurrencyCode` for ordinary `money()` calls.
-
 ## Arithmetic
 
-All binary functions (`add`, `subtract`) throw `TypeError` when currencies differ:
+All binary functions (`add`, `subtract`) throw `CurrencyMismatchError` when currencies differ:
 
 ```ts
 import { add, subtract, multiply, divide, abs, negate } from '@vielzeug/coins';
@@ -71,7 +56,7 @@ subtract(a, b); // { amount:  7000n, currency: 'USD' }  ($70.00)
 abs(money('-50.00', 'USD')); // { amount:  5000n, currency: 'USD' }
 negate(money('10.00', 'USD')); // { amount: -1000n, currency: 'USD' }
 
-// throws TypeError: Currency mismatch: USD and EUR
+// throws CurrencyMismatchError: Currency mismatch: USD and EUR
 add(money('10.00', 'USD'), money('10.00', 'EUR'));
 ```
 
@@ -88,20 +73,6 @@ divide(money('100.00', 'USD'), 3); // $33.33
 divide(money('100.00', 'USD'), 3, 'ceiling'); // $33.34
 
 divide(money('100.00', 'USD'), 0); // throws RangeError: Division by zero
-```
-
-### `percentage(money, pct, mode?)`
-
-Computes `pct`% of a money value — i.e. `money × (pct / 100)`. Use a string `pct` for lossless fractions. Accepts the same rounding modes as `multiply`.
-
-```ts
-import { percentage } from '@vielzeug/coins';
-
-percentage(money('100.00', 'USD'), 10); // $10.00
-percentage(money('199.99', 'USD'), '8.5'); // $17.00  (8.5% = 8.5/100 — lossless with string)
-percentage(money('100.00', 'USD'), 33.33); // $33.33
-percentage(money('-100.00', 'USD'), 10); // -$10.00 (sign preserved)
-percentage(money('100.00', 'USD'), 0); // $0.00
 ```
 
 ### Rounding Modes
@@ -164,8 +135,8 @@ import { clamp, max, min, sum } from '@vielzeug/coins';
 const items = [money('1.00', 'USD'), money('2.50', 'USD'), money('0.99', 'USD')];
 
 sum(items); // $4.49
-min(...items); // $0.99
-max(...items); // $2.50
+min(items); // $0.99
+max(items); // $2.50
 
 sum([]); // throws RangeError: sum requires at least one Money value
 
@@ -180,7 +151,7 @@ clamp(money('150.00', 'USD'), lo, hi); // $99.99 (above maximum)
 
 ## Comparison
 
-All comparison functions throw `TypeError` on currency mismatch.
+Most comparison functions throw `CurrencyMismatchError` on currency mismatch. `isEqual` is the exception — it returns `false` when currencies differ, making it safe for `.filter()` and conditional chains.
 
 ```ts
 import {
@@ -204,6 +175,7 @@ compare(five, five); //  0
 
 isEqual(five, five); // true
 isEqual(five, ten); // false
+isEqual(five, money('5.00', 'EUR')); // false — different currency, no throw
 
 greaterThan(ten, five); // true
 lessThan(five, ten); // true
@@ -218,7 +190,7 @@ isNonNegative(money('-1.00', 'USD')); // false
 isNonPositive(money('0.00', 'USD')); // true  (zero or negative)
 isNonPositive(five); // false
 
-// throws TypeError: Currency mismatch: USD and EUR
+// throws CurrencyMismatchError: Currency mismatch: USD and EUR
 compare(money('5.00', 'USD'), money('5.00', 'EUR'));
 ```
 
@@ -239,6 +211,10 @@ JSON.stringify(serialized);
 // → '{"amount":"123456","currency":"USD"}'
 
 fromJSON(serialized); // → { amount: 123456n, currency: 'USD' }
+
+// fromJSON rejects non-string amount fields
+fromJSON({ amount: 123456 as any, currency: 'USD' }); // TypeError: expected an integer string
+fromJSON({ amount: '1.5', currency: 'USD' }); // TypeError: expected an integer string
 
 // Round-trips
 fromJSON(toJSON(price)); // equals price
@@ -313,28 +289,28 @@ formatParts(m)
 `exchange()` converts a `Money` value using a provided `ExchangeRate`. The `rate` field must be a **decimal string** — not a number — to avoid IEEE-754 errors in the bigint multiplication.
 
 ```ts
-import { exchange, toCurrencyCode } from '@vielzeug/coins';
+import { exchange } from '@vielzeug/coins';
 import type { ExchangeRate } from '@vielzeug/coins';
 
-const usd = toCurrencyCode('USD');
-const eur = toCurrencyCode('EUR');
-const jpy = toCurrencyCode('JPY');
-
-const rate: ExchangeRate = { from: usd, rate: '0.92', to: eur };
+// ExchangeRate.from and .to are plain strings — no pre-validation ceremony
+const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
 
 exchange(money('100.00', 'USD'), rate); // { amount: 9200n, currency: 'EUR' }
 exchange(money('100.00', 'USD'), rate, 'floor'); // explicit rounding mode
 
-// Throws TypeError if money.currency !== rate.from
-exchange(money('100.00', 'EUR'), rate); // TypeError: Currency mismatch: EUR and USD
+// Throws CurrencyMismatchError if money.currency !== rate.from
+exchange(money('100.00', 'EUR'), rate); // CurrencyMismatchError: Currency mismatch: EUR and USD
+
+// Throws InvalidCurrencyError if rate.to is not a recognised ISO 4217 code
+exchange(money('100.00', 'USD'), { from: 'USD', rate: '1.0', to: 'FAKE' }); // InvalidCurrencyError
 
 // Throws RangeError for negative or empty rates
-exchange(money('100.00', 'USD'), { from: usd, rate: '-0.92', to: eur }); // RangeError: Exchange rate must be non-negative
-exchange(money('100.00', 'USD'), { from: usd, rate: '', to: eur }); // RangeError: Exchange rate must be a non-empty decimal string
+exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.92', to: 'EUR' }); // RangeError: Exchange rate must be non-negative
+exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' }); // RangeError: Exchange rate must be a non-empty decimal string
 
 // High-precision rates — string parsing avoids float error
-const jpyRate: ExchangeRate = { from: usd, rate: '0.847532', to: eur };
-exchange(money('1000.00', 'USD'), jpyRate); // { amount: 84753n, currency: 'EUR' }
+const highPrecRate: ExchangeRate = { from: 'USD', rate: '0.847532', to: 'EUR' };
+exchange(money('1000.00', 'USD'), highPrecRate); // { amount: 84753n, currency: 'EUR' }
 ```
 
 ## Practical Patterns
@@ -371,16 +347,15 @@ format(carol); // '$20.00'
 ### Multi-Currency Price Display
 
 ```ts
-import { exchange, format, money, toCurrencyCode } from '@vielzeug/coins';
+import { exchange, format, money } from '@vielzeug/coins';
 import type { ExchangeRate } from '@vielzeug/coins';
 
 const price = money('50.00', 'USD');
-const usd = toCurrencyCode('USD');
 
 const rates: ExchangeRate[] = [
-  { from: usd, rate: '0.92', to: toCurrencyCode('EUR') },
-  { from: usd, rate: '0.79', to: toCurrencyCode('GBP') },
-  { from: usd, rate: '149.5', to: toCurrencyCode('JPY') },
+  { from: 'USD', rate: '0.92', to: 'EUR' },
+  { from: 'USD', rate: '0.79', to: 'GBP' },
+  { from: 'USD', rate: '149.5', to: 'JPY' },
 ];
 
 for (const rate of rates) {
@@ -431,7 +406,10 @@ toDecimal(doubled); // '19.98'
 
 // Useful in reduce / fold patterns on raw bigint values
 const amounts = [100n, 250n, 75n];
-const total = withAmount(price, amounts.reduce((a, b) => a + b, 0n));
+const total = withAmount(
+  price,
+  amounts.reduce((a, b) => a + b, 0n),
+);
 toDecimal(total); // '4.25'
 ```
 
@@ -449,12 +427,65 @@ function displayPrice(raw: unknown): string {
 }
 
 displayPrice({ amount: 1999n, currency: 'USD' }); // '19.99'
-displayPrice({ amount: 9.99,  currency: 'USD' }); // throws — amount is float, not bigint
-displayPrice(null);                               // throws
+displayPrice({ amount: 9.99, currency: 'USD' }); // throws — amount is float, not bigint
+displayPrice(null); // throws
 
-// isMoney does NOT validate the currency code — use toCurrencyCode() for that
+// isMoney does NOT validate the currency code — it only checks shape
 isMoney({ amount: 100n, currency: 'FAKE' }); // true — shape matches but code is unvalidated
 ```
+
+## Typed Error Handling
+
+All currency mismatch errors are `CurrencyMismatchError` (extends `TypeError`) and all invalid currency code errors are `InvalidCurrencyError` (extends `RangeError`). Use `instanceof` for structured error handling:
+
+```ts
+import { CurrencyMismatchError, InvalidCurrencyError, add, money } from '@vielzeug/coins';
+
+try {
+  add(money('1.00', 'USD'), money('1.00', 'EUR'));
+} catch (e) {
+  if (e instanceof CurrencyMismatchError) {
+    // e.expected === 'USD', e.received === 'EUR'
+    console.log(`Expected ${e.expected}, got ${e.received}`);
+  }
+}
+
+try {
+  money('1.00', 'FAKE');
+} catch (e) {
+  if (e instanceof InvalidCurrencyError) {
+    console.log('Unknown currency code:', e.code); // 'FAKE'
+  }
+}
+```
+
+Both error classes extend built-in error types, so existing `instanceof TypeError` / `instanceof RangeError` catch blocks continue to work without any changes.
+
+## Rounding to Fewer Decimal Places
+
+Use `roundTo()` when you need to display a `Money` value at coarser precision than the currency default (e.g. whole dollars for a summary widget, or 1 decimal place for a chart axis).
+
+`places` must be in the range `0..currencyDecimals`. The function is a pure rounding operation — no currency conversion, no allocation.
+
+```ts
+import { money, roundTo } from '@vielzeug/coins';
+
+const price = money('1234.56', 'USD');
+
+roundTo(price, 0); // { amount: 1235n, currency: 'USD' }  — whole dollars, rounds up
+roundTo(price, 1); // { amount: 12346n, currency: 'USD' } — 1 decimal place
+roundTo(price, 2); // price unchanged (2 === USD decimal places)
+
+// Explicit rounding mode
+roundTo(price, 0, 'floor'); // { amount: 1234n, currency: 'USD' } — truncate
+roundTo(price, 0, 'ceiling'); // { amount: 1235n, currency: 'USD' } — always up
+
+// JPY has 0 decimal places — roundTo(m, 0) is always a no-op
+const yen = money(1234n, 'JPY');
+roundTo(yen, 0) === yen; // true — same reference returned
+```
+
+> `roundTo` is for **display** purposes. Do not feed its output back into allocation or arithmetic — the reduced precision may cause downstream rounding errors.
 
 ## Working with Other Vielzeug Libraries
 
@@ -491,24 +522,29 @@ const foodTotal = sum(byCategory.food.map((t) => t.amount));
 **With Spell** — validate and parse currency input from user forms:
 
 ```ts
-import { money, toCurrencyCode } from '@vielzeug/coins';
+import { money, InvalidCurrencyError } from '@vielzeug/coins';
 import { object, string } from '@vielzeug/spell';
 
 const MoneyInput = object({
   amount: string().regex(/^\d+(\.\d{1,3})?$/),
-  currency: string().transform((v) => toCurrencyCode(v)),
+  currency: string(),
 });
 
 const parsed = MoneyInput.parse(formData);
+// money() validates the currency code — throws InvalidCurrencyError for unknown codes
 const value = money(parsed.amount, parsed.currency);
 ```
 
 ## Best Practices
 
-- Prefer decimal strings over numbers when constructing `money()` — `money('1234.56', 'USD')` avoids IEEE-754 rounding before the value ever reaches bigint storage.
-- Always call `toCurrencyCode()` upfront when building `ExchangeRate` objects. Validate at the boundary (API response, user input), not at every call site.
+- Prefer decimal strings over numbers when constructing `money()` — `money('1234.56', 'USD')` avoids IEEE-754 rounding before the value ever reaches bigint storage. In development, `money()` warns via `[@vielzeug/coins]` when a float has more decimal places than the currency supports.
+- Use `money(0n, currency)` for zero accumulators — it bypasses decimal parsing and is explicit about minor units.
+- Use `validateCurrencyCode(code)` when you want to pre-check an ISO 4217 code without immediately creating a `Money` value — it returns the code unchanged or throws `InvalidCurrencyError`. This is the same check `money()` performs internally and results are cached.
+- Pass `ExchangeRate.from`/`to` as plain strings — `money()` validates currencies at creation time, and `exchange()` validates `rate.to` before returning.
 - Use `allocate()` instead of manual `divide` + rounding whenever distributing a total across multiple parties — it guarantees the shares sum exactly to the original amount.
 - Use `'half-even'` (banker's rounding) in bulk-processing scenarios (batch invoices, statement generation) to minimise cumulative rounding drift.
 - Never store `toNumber()` output and feed it back into arithmetic. `toNumber()` is lossy — use it only for display and charting libraries.
 - Pass `ExchangeRate.rate` as a string, not a number. The string is parsed into an exact rational fraction; a `number` would introduce float error before the bigint conversion.
 - Use `sum()` instead of a manual reduce over `add()` — it validates currency consistency across the entire array upfront, so any mismatch is caught immediately with a clear error rather than failing at a mid-array `add()` call.
+- Use `instanceof CurrencyMismatchError` / `instanceof InvalidCurrencyError` in `catch` blocks rather than string-matching error messages — they are stable, typed, and extend built-in error types.
+- Use `getCurrencyDecimals(code)` when building custom formatters or lookup tables that need to know the minor-unit precision for a currency — it is the same call `money()` makes internally and results are cached, so it is cheap to call repeatedly.

@@ -1,6 +1,14 @@
-import type { JsonSchema, SchemaDescriptor } from './types';
+import type { AnySchema, JsonSchema, SchemaDescriptor } from './types';
 
 import { defineOwnProperty } from './safe-object';
+
+/**
+ * Converts a `Schema` to a JSON Schema object by first calling `toDescriptor()`.
+ * This is the entry point used by `Schema.toJsonSchema()`.
+ */
+export function schemaToJsonSchema(schema: AnySchema): JsonSchema {
+  return descriptorToJsonSchema(schema.toDescriptor());
+}
 
 /**
  * Converts a `SchemaDescriptor` to a JSON Schema object (draft 2020-12 compatible).

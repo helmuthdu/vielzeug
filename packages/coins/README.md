@@ -1,6 +1,23 @@
 # @vielzeug/coins
 
-Zero-dependency TypeScript utilities for precise monetary arithmetic — creation, arithmetic, allocation, formatting, exchange rate conversion, and serialization — using `bigint` minor units for lossless precision.
+> Zero-dependency TypeScript utilities for precise monetary arithmetic
+
+Bigint-based money creation, arithmetic, allocation, formatting, exchange rate conversion, and serialization — with no floating-point rounding errors.
+
+## Why Coins?
+
+Float arithmetic silently loses precision:
+
+```ts
+// number (float)
+10.1 + 10.2; // 20.299999999999997
+
+// @vielzeug/coins (bigint)
+import { add, money } from '@vielzeug/coins';
+add(money('10.10', 'USD'), money('10.20', 'USD')); // { amount: 2030n, currency: 'USD' }  — exact
+```
+
+Coins stores every value as bigint **minor units** (cents for USD, whole units for JPY, fils for KWD), so arithmetic and allocation are always lossless.
 
 ## Installation
 
@@ -11,77 +28,36 @@ pnpm add @vielzeug/coins
 ## Quick Start
 
 ```ts
-import {
-  add,
-  allocate,
-  exchange,
-  format,
-  formatParts,
-  money,
-  multiply,
-  divide,
-  percentage,
-  splitEvenly,
-  toCurrencyCode,
-} from '@vielzeug/coins';
+import { add, allocate, exchange, format, money, multiply } from '@vielzeug/coins';
+import type { ExchangeRate, Money } from '@vielzeug/coins';
 
-// Validate and brand a currency code
-const usd = toCurrencyCode('USD'); // CurrencyCode — validated against Intl
-const eur = toCurrencyCode('EUR');
-
-// Create money values (validates currency, parses losslessly)
-const price = money('1234.56', 'USD'); // { amount: 123456n, currency: 'USD' }
-const tax = money('98.77', 'USD');
-const total = add(price, tax); // { amount: 133333n, currency: 'USD' }
+// Create money from a decimal string (lossless) or bigint minor units
+const price: Money = money('19.99', 'USD'); // { amount: 1999n, currency: 'USD' }
+const tax: Money = money('1.60', 'USD');
+const total: Money = add(price, tax); // { amount: 3559n, currency: 'USD' }
 
 // Arithmetic with explicit rounding mode
-multiply(total, '1.5'); // half-away-from-zero (default)
-divide(total, 3, 'ceiling'); // ceiling rounding
+multiply(total, '1.1'); // $39.15  (half-away-from-zero, default)
+multiply(total, '1.1', 'floor'); // $39.14  (explicit mode)
 
-// Allocation — Largest Remainder Method, no penny lost or gained
+// Lossless allocation — no minor unit is ever lost or gained
 allocate(money('10.00', 'USD'), [1, 1, 1]); // [$3.34, $3.33, $3.33]
-splitEvenly(money('10.00', 'USD'), 3); // same result, sugar over allocate
 
-// Format
-format(total); // '$1,333.33'
-format(total, { locale: 'de-DE' }); // '1.333,33 $'
-format(total, { style: 'code' }); // 'USD 1,333.33'
-format(total, { style: 'name' }); // '1,333.33 US dollars'
+// Locale-aware formatting
+format(total); // '$35.59'
+format(total, { locale: 'de-DE' }); // '35,59 $'
+format(total, { style: 'code' }); // 'USD 35.59'
 
-// Structured parts for custom rendering
-formatParts(total);
-// [
-//   { type: 'currency', value: '$' },
-//   { type: 'integer',  value: '1,333' },
-//   { type: 'decimal',  value: '.' },
-//   { type: 'fraction', value: '33' },
-// ]
-
-// Percentage
-percentage(money('199.99', 'USD'), '8.5'); // $17.00  (tax computation)
-percentage(money('100.00', 'USD'), 10, 'floor'); // $10.00
-
-// Currency exchange — rate is a decimal string for lossless bigint arithmetic
-exchange(total, { from: usd, rate: '0.92', to: eur }); // default rounding
-exchange(total, { from: usd, rate: '0.92', to: eur }, 'floor'); // explicit mode
+// Currency exchange — ExchangeRate.from/to are plain strings; rate is a decimal string
+const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
+exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 ```
 
 ## API
 
-### `toCurrencyCode(code)`
-
-Validates an ISO 4217 code string against `Intl.NumberFormat` and returns it as a branded `CurrencyCode`. Throws `RangeError` for unrecognised codes. Results are cached.
-
-```ts
-const usd = toCurrencyCode('USD'); // CurrencyCode
-toCurrencyCode('NOTREAL'); // throws RangeError
-```
-
-Use this when you have a plain string from user input or an API response and need to create an `ExchangeRate` or type-check a currency.
-
 ### `money(amount, currency)`
 
-Creates a `Money` value. Validates the currency code; throws `RangeError` for unrecognised ISO 4217 codes.
+Creates a `Money` value. Validates the currency code against `Intl.NumberFormat`; throws `InvalidCurrencyError` for unrecognised ISO 4217 codes.
 
 | `amount` type        | Behaviour                                                              |
 | -------------------- | ---------------------------------------------------------------------- |
@@ -89,126 +65,146 @@ Creates a `Money` value. Validates the currency code; throws `RangeError` for un
 | `number` `1234.56`   | Converted via `String()` first — IEEE-754 limits apply; prefer strings |
 | `bigint` `123456n`   | Used as-is (already in minor units)                                    |
 
+```ts
+money('1234.56', 'USD'); // { amount: 123456n, currency: 'USD' }
+money(0n, 'USD'); // { amount: 0n, currency: 'USD' }  — zero accumulator
+money('1.00', 'FAKE'); // throws InvalidCurrencyError
+```
+
 ### Arithmetic
 
-All binary functions throw `TypeError` on currency mismatch.
+All binary functions (`add`, `subtract`) throw `CurrencyMismatchError` on currency mismatch.
 
 ```ts
-add(a, b)                           // → Money
-subtract(a, b)                      // → Money
-multiply(money, factor, mode?)      // → Money  (factor: number | string)
-divide(money, divisor, mode?)       // → Money  (throws RangeError on division by zero)
-abs(money)                          // → Money  (absolute value)
-negate(money)                       // → Money  (sign flip)
+add(a, b); // → Money
+subtract(a, b); // → Money
+multiply(money, factor, mode?); // → Money  (factor: number | string)
+divide(money, divisor, mode?); // → Money  (throws RangeError on division by zero)
+abs(money); // → Money  (absolute value)
+negate(money); // → Money  (sign flip)
 ```
 
 ### Allocation
 
+Uses the **Largest Remainder Method** — every output sums exactly to the input, no minor unit is ever lost or gained.
+
 ```ts
-allocate(money, ratios); // → Money[]  (number | string ratios; use strings for lossless decimal weights)
-splitEvenly(money, parts); // → Money[]  (sugar over allocate with equal weights)
+allocate(money, ratios); // → [Money, ...Money[]]  (weighted; use strings for lossless decimal ratios)
+splitEvenly(money, parts); // → [Money, ...Money[]]  (equal shares; sugar over allocate)
 ```
 
-Uses the **Largest Remainder Method** — every output sums exactly to the input, no minor unit is ever lost or gained. Both throw `RangeError` on invalid inputs.
+Both throw `RangeError` on empty ratios, negative ratios, or non-positive parts.
 
 ### Aggregates
 
 ```ts
-sum([...moneys]); // → Money  (throws RangeError if empty; TypeError on mismatch)
-min(first, ...rest); // → Money  (throws TypeError on currency mismatch)
-max(first, ...rest); // → Money  (throws TypeError on currency mismatch)
-```
-
-### `zero(currency)`
-
-Creates a `Money` value with a zero amount for the given currency. Equivalent to `money(0n, currency)` but more expressive.
-
-```ts
-zero('USD'); // { amount: 0n, currency: 'USD' }
-zero('JPY'); // { amount: 0n, currency: 'JPY' }
-```
-
-### `clamp(m, lower, upper)`
-
-Clamps `m` to the inclusive range `[lower, upper]`. All three values must share the same currency. Throws `TypeError` on currency mismatch, `RangeError` if `lower > upper`.
-
-```ts
-clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD')); // $5.00
-clamp(money('0.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD')); // $1.00
-clamp(money('15.00', 'USD'), money('1.00', 'USD'), money('10.00', 'USD')); // $10.00
-```
-
-### `percentage(m, pct, mode?)`
-
-Returns `pct`% of `m`, i.e. `m × (pct / 100)`. Use a string percentage for lossless precision. Accepts an optional `RoundingMode`.
-
-```ts
-percentage(money('100.00', 'USD'), 10); // $10.00
-percentage(money('199.99', 'USD'), '8.5'); // $17.00
-percentage(money('100.00', 'USD'), 10, 'floor');
+sum(moneys); // → Money  (throws RangeError if empty; CurrencyMismatchError on mismatch)
+min(moneys); // → Money  (non-empty array; CurrencyMismatchError on mismatch)
+max(moneys); // → Money  (non-empty array; CurrencyMismatchError on mismatch)
+clamp(m, lower, upper); // → Money  (CurrencyMismatchError on mismatch; RangeError if lower > upper)
 ```
 
 ### Comparison
 
-All comparison functions throw `TypeError` on currency mismatch.
+`isEqual` returns `false` on currency mismatch (safe for `.filter()`). All other comparison functions throw `CurrencyMismatchError` on mismatch.
 
 ```ts
 compare(a, b); // → -1 | 0 | 1
-isEqual(a, b); // → boolean
+isEqual(a, b); // → boolean  (false on currency mismatch — no throw)
 greaterThan(a, b); // → boolean
 greaterThanOrEqual(a, b); // → boolean
 lessThan(a, b); // → boolean
 lessThanOrEqual(a, b); // → boolean
-isZero(money); // → boolean
-isPositive(money); // → boolean
-isNegative(money); // → boolean
-isNonNegative(money); // → boolean  (amount >= 0)
-isNonPositive(money); // → boolean  (amount <= 0)
+isZero(m); // → boolean
+isPositive(m); // → boolean
+isNegative(m); // → boolean
+isNonNegative(m); // → boolean  (>= 0)
+isNonPositive(m); // → boolean  (<= 0)
 ```
 
 ### Serialization
 
 ```ts
-toDecimal(money); // → string  e.g. '1234.56'  (round-trips with money())
-toNumber(money); // → number  e.g. 1234.56    (lossy — display/charting only)
+toDecimal(money); // → string   e.g. '1234.56'  (round-trips losslessly with money())
+toNumber(money); // → number   e.g. 1234.56    (lossy — display/charting only)
 toJSON(money); // → MoneyJSON  { amount: '123456', currency: 'USD' }
-fromJSON(json); // → Money  (validates currency; throws on invalid input)
+fromJSON(json); // → Money     (validates currency; throws on invalid input)
 ```
 
-`toJSON` / `fromJSON` exist because `bigint` cannot be serialized by `JSON.stringify`. Use `JSON.stringify(toJSON(price))`.
+`bigint` cannot be serialized by `JSON.stringify`. Use `JSON.stringify(toJSON(price))` and `fromJSON(JSON.parse(raw))`.
+
+### `roundTo(money, places, mode?)`
+
+Rounds a `Money` value to fewer decimal places than the currency default — useful for display (whole dollars, chart axes). `places` must be in `0..currencyDecimals`.
+
+```ts
+roundTo(money('1234.56', 'USD'), 0); // { amount: 1235n, currency: 'USD' }  ($1,235)
+roundTo(money('1234.56', 'USD'), 1, 'floor'); // { amount: 12345n, currency: 'USD' } ($1,234.5)
+```
 
 ### `format(money, options?)`
 
-Formats a `Money` value as a locale-aware currency string. Uses bigint arithmetic throughout — no floating-point precision loss for any amount.
+Formats a `Money` value as a locale-aware currency string. Uses bigint arithmetic throughout — no floating-point precision loss.
 
-| Option                  | Type                                             | Default          | Description                  |
-| ----------------------- | ------------------------------------------------ | ---------------- | ---------------------------- |
-| `locale`                | `string`                                         | `'en-US'`        | BCP 47 language tag          |
+| Option                  | Type                                              | Default          | Description                  |
+| ----------------------- | ------------------------------------------------- | ---------------- | ---------------------------- |
+| `locale`                | `string`                                          | `'en-US'`        | BCP 47 language tag          |
 | `style`                 | `'symbol' \| 'code' \| 'name' \| 'narrowSymbol'` | `'symbol'`       | Display style                |
-| `minimumFractionDigits` | `number`                                         | currency default | Minimum decimal places shown |
-| `maximumFractionDigits` | `number`                                         | currency default | Maximum decimal places shown |
+| `minimumFractionDigits` | `number`                                          | currency default | Minimum decimal places shown |
+| `maximumFractionDigits` | `number`                                          | currency default | Maximum decimal places shown |
+
+```ts
+format(money('1234.56', 'USD')); // '$1,234.56'
+format(money('1234.56', 'USD'), { locale: 'de-DE' }); // '1.234,56 $'
+format(money('1234.56', 'USD'), { style: 'code' }); // 'USD 1,234.56'
+```
 
 ### `formatParts(money, options?)`
 
-Same options as `format()`. Returns a `MoneyFormatPart[]` array of semantic segments instead of a joined string. Useful for applying CSS to individual parts (symbol, integer, fraction, sign).
+Same options as `format()`. Returns a `MoneyFormatPart[]` array of semantic segments — useful for applying separate styles to symbol, integer, decimal, and fraction parts.
 
-Joining all `value` fields produces the same output as `format()`.
+Joining all `value` fields produces the same string as `format()`.
 
 ### `exchange(money, rate, mode?)`
 
-Converts a `Money` value using an `ExchangeRate`. Throws `TypeError` if `money.currency !== rate.from`. Accepts an optional `RoundingMode` (default `'half-away-from-zero'`).
-
-`ExchangeRate.rate` is a decimal **string** (e.g. `'0.92'`) to avoid IEEE-754 rounding errors in the bigint conversion arithmetic.
+Converts a `Money` value using an `ExchangeRate`. `ExchangeRate.from` and `.to` are plain strings; `rate.rate` is a decimal string for lossless bigint arithmetic. Throws `CurrencyMismatchError` if `money.currency !== rate.from`.
 
 ```ts
-const rate = { from: toCurrencyCode('USD'), rate: '0.92', to: toCurrencyCode('EUR') };
+import type { ExchangeRate } from '@vielzeug/coins';
+
+const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
 exchange(money('100.00', 'USD'), rate); // { amount: 9200n, currency: 'EUR' }
-exchange(money('100.00', 'USD'), rate, 'floor'); // explicit rounding
+exchange(money('100.00', 'USD'), rate, 'floor'); // explicit rounding mode
 ```
 
-### Rounding modes
+### Typed Errors
 
-Used by `multiply`, `divide`, and `exchange`.
+```ts
+import { CurrencyMismatchError, InvalidCurrencyError } from '@vielzeug/coins';
+
+try {
+  add(money('1.00', 'USD'), money('1.00', 'EUR'));
+} catch (e) {
+  if (e instanceof CurrencyMismatchError) {
+    console.log(e.expected, e.received); // 'USD' 'EUR'
+  }
+}
+
+try {
+  money('1.00', 'FAKE');
+} catch (e) {
+  if (e instanceof InvalidCurrencyError) {
+    console.log(e.code); // 'FAKE'
+  }
+}
+```
+
+- `CurrencyMismatchError` extends `TypeError` — existing `instanceof TypeError` catch blocks still work.
+- `InvalidCurrencyError` extends `RangeError` — existing `instanceof RangeError` catch blocks still work.
+
+### Rounding Modes
+
+Used by `multiply`, `divide`, `exchange`, and `roundTo`.
 
 | Mode                    | Description                                    |
 | ----------------------- | ---------------------------------------------- |
@@ -219,20 +215,18 @@ Used by `multiply`, `divide`, and `exchange`.
 | `'floor'`               | Toward −∞                                      |
 | `'ceiling'`             | Toward +∞                                      |
 
-### Types
+### Key Types
 
 ```ts
-type CurrencyCode = string & { readonly [brand]: true }; // validated ISO 4217 — obtain via toCurrencyCode()
-
 type Money = {
   readonly amount: bigint; // minor units (cents for USD, whole units for JPY)
-  readonly currency: CurrencyCode;
+  readonly currency: string; // validated ISO 4217 code
 };
 
 type ExchangeRate = {
-  readonly from: CurrencyCode; // source currency
-  readonly rate: string; // decimal multiplier string, e.g. '0.92'
-  readonly to: CurrencyCode; // target currency
+  readonly from: string; // source currency code
+  readonly rate: string; // decimal multiplier, e.g. '0.92'
+  readonly to: string; // target currency code
 };
 
 type RoundingMode = 'ceiling' | 'down' | 'floor' | 'half-away-from-zero' | 'half-even' | 'up';
@@ -241,7 +235,7 @@ type FormatOptions = {
   locale?: string;
   maximumFractionDigits?: number;
   minimumFractionDigits?: number;
-  style?: 'code' | 'name' | 'symbol';
+  style?: 'code' | 'name' | 'narrowSymbol' | 'symbol';
 };
 
 type MoneyFormatPart = {
@@ -252,7 +246,16 @@ type MoneyFormatPart = {
 type MoneyJSON = { amount: string; currency: string };
 ```
 
-`Money.amount` is always in **minor units** — cents for USD, the whole unit for JPY, fils for KWD (3 decimals), etc. Use `money()` to create from human-readable decimals and `toDecimal()` to convert back.
+## Documentation
+
+- **[Full Guide](https://vielzeug.dev/coins/)** — Overview, concepts, quick start
+- **[Usage Guide](https://vielzeug.dev/coins/usage/)** — Common patterns and best practices
+- **[API Reference](https://vielzeug.dev/coins/api/)** — All types and function signatures
+- **[Examples](https://vielzeug.dev/coins/examples/)** — Real-world integration examples
+
+## TypeScript
+
+Requires TypeScript 5.0+ with `strict: true`.
 
 ## License
 

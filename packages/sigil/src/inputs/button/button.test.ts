@@ -363,4 +363,22 @@ describe('sg-button accessibility', () => {
       expect(fixture.query('a[part="button"]')?.getAttribute('role')).toBe('button');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks with default rendering', async () => {
+      fixture = await mount('sg-button', { html: 'Click me' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks in disabled state', async () => {
+      fixture = await mount('sg-button', { attrs: { disabled: '' }, html: 'Save' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

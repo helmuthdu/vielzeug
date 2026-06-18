@@ -141,7 +141,7 @@ describe('pipeEvents - teardown', () => {
     const listener = vi.fn();
 
     target.on('count', listener);
-    pipeEvents(source, target, ['count'], controller.signal);
+    pipeEvents(source, target, ['count'], { signal: controller.signal });
 
     source.emit('count', 1);
     controller.abort();
@@ -334,6 +334,41 @@ describe('pipeEvents - runtime guards', () => {
     expect(() => pipeEvents(source, target, [] as any)).toThrow(RangeError);
 
     source.dispose();
+    target.dispose();
+  });
+});
+
+describe('pipeEvents - source disposal', () => {
+  it('stops forwarding when source bus is disposed', () => {
+    const source = createBus<Events>();
+    const target = createBus<Events>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    pipeEvents(source, target, ['count']);
+
+    source.emit('count', 1);
+    source.dispose();
+
+    expect(listener).toHaveBeenCalledOnce();
+    expect(listener).toHaveBeenCalledWith(1);
+
+    target.dispose();
+  });
+
+  it('does not affect target bus subscriptions after source disposes', () => {
+    const source = createBus<Events>();
+    const target = createBus<Events>();
+    const directListener = vi.fn();
+
+    target.on('count', directListener);
+    pipeEvents(source, target, ['count']);
+
+    source.dispose();
+    target.emit('count', 99);
+
+    expect(directListener).toHaveBeenCalledWith(99);
+
     target.dispose();
   });
 });

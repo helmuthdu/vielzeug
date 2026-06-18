@@ -61,6 +61,8 @@ declare module '@vielzeug/vault' {
       ttl?: TtlMs,
     ): Promise<RecordOf<S, T>>;
     has<T extends K>(table: T, key: KeyOf<S, T>): Promise<boolean>;
+    isEmpty<T extends K>(table: T): Promise<boolean>;
+    keys<T extends K>(table: T, filter?: (record: RecordOf<S, T>) => boolean): Promise<KeyOf<S, T>[]>;
     put<T extends K>(table: T, value: RecordOf<S, T>, ttl?: TtlMs): Promise<void>;
     putAll<T extends K>(table: T, values: RecordOf<S, T>[], ttl?: TtlMs): Promise<void>;
     query<T extends K>(table: T): QueryBuilder<RecordOf<S, T>>;
@@ -93,19 +95,22 @@ declare module '@vielzeug/vault' {
       fn: (tx: TransactionContext<S, K>) => Promise<R>,
     ): Promise<R>;
     debug(): Promise<DebugInfo<S>>;
-    dispose(): void;
+    dispose(): Promise<void>;
+    readonly disposalSignal: AbortSignal;
+    readonly disposed: boolean;
+    [Symbol.asyncDispose](): Promise<void>;
     observe<K extends keyof S>(
       table: K,
       listener: Observer<RecordOf<S, K>>,
-      options?: { immediate?: boolean },
+      options?: { immediate?: boolean; signal?: AbortSignal },
     ): () => void;
     observeMany<K extends keyof S>(
       tables: readonly K[],
       listener: (snapshots: { [T in K]: RecordOf<S, T>[] }) => void,
-      options?: { immediate?: boolean },
+      options?: { eager?: boolean; signal?: AbortSignal },
     ): () => void;
-    pruneExpired(): Promise<{ [K in keyof S & string]: number }>;
-    watch<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>[]>;
+    pruneExpired(tables?: readonly (keyof S & string)[]): Promise<{ [K in keyof S & string]: number }>;
+    watch<K extends keyof S>(table: K, options?: { mode?: 'all' | 'latest'; signal?: AbortSignal }): AsyncIterable<RecordOf<S, K>[]>;
   }
 
   export class VaultError extends Error {}
@@ -118,9 +123,19 @@ declare module '@vielzeug/vault' {
     error(messageOrContext?: Record<string, unknown> | Error | string, message?: string): void;
   }
 
+  export type VaultCodec = {
+    decode<T>(raw: unknown): { expiresAt?: number; value: T } | undefined;
+    encode<T>(value: T, expiresAt?: number): unknown;
+  };
+
+  export type CodecVersion = {
+    codec: VaultCodec;
+    version: number;
+  };
+
   export type MetricsEvent = {
     duration: number;
-    operation: 'batch' | 'count' | 'delete' | 'deleteMany' | 'clear' | 'get' | 'getAll' | 'getMany' | 'has' | 'put' | 'putAll' | 'query' | 'queryDelete' | 'update' | 'upsert';
+    operation: 'batch' | 'clear' | 'count' | 'delete' | 'deleteMany' | 'entries' | 'get' | 'getAll' | 'getMany' | 'getOrDefault' | 'has' | 'isEmpty' | 'keys' | 'put' | 'putAll' | 'query' | 'queryDelete' | 'update' | 'upsert';
     table: string;
   };
 
@@ -160,8 +175,13 @@ declare module '@vielzeug/vault' {
 
   export function scheduleExpiredPrune<S extends AnySchema>(
     adapter: Pick<Adapter<S>, 'pruneExpired'>,
-    options: { interval: number },
+    options: { interval: number; onError?: (err: unknown) => void; signal?: AbortSignal },
   ): () => void;
+
+  export function createVersionedCodec(versions: CodecVersion[], currentVersion: number): VaultCodec;
+
+  export const defaultCodec: VaultCodec;
+  export function isExpired(expiresAt: number | undefined): boolean;
 
   export const ttl: {
     ms(n: number): TtlMs;

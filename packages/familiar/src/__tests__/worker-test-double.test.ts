@@ -216,18 +216,6 @@ describe('createTestWorker', () => {
       expect(worker.failed).toBe(0);
     });
 
-    it('reports utilization=1 while running, 0 when idle', async () => {
-      const worker = createTestWorker<number, number>(
-        (n) => new Promise((resolve) => setTimeout(() => resolve(n + 1), 10)),
-      );
-
-      const task = worker.run(1);
-
-      expect(worker.utilization).toBe(1);
-      await expect(task).resolves.toBe(2);
-      expect(worker.utilization).toBe(0);
-    });
-
     it('reports active=1 while running, 0 when idle', async () => {
       const worker = createTestWorker<number, number>(
         (n) => new Promise((resolve) => setTimeout(() => resolve(n + 1), 10)),
@@ -354,7 +342,7 @@ describe('createTestWorker', () => {
   });
 
   describe('runStream()', () => {
-    it('is unsupported by createTestWorker and rejects with worker code', async () => {
+    it('is unsupported by createTestWorker and rejects with worker code on first next()', async () => {
       const worker = createTestWorker<number, number>((n) => n);
       const iterator = worker.runStream(1)[Symbol.asyncIterator]();
 
@@ -371,23 +359,26 @@ describe('createTestWorker', () => {
       const p1 = g.run(1);
       const p2 = g.run(2);
 
-      await g.drain();
+      const results = await g.drain();
 
+      expect(results).toHaveLength(2);
+      expect(results[0]).toMatchObject({ status: 'fulfilled', value: 2 });
+      expect(results[1]).toMatchObject({ status: 'fulfilled', value: 4 });
       await expect(p1).resolves.toBe(2);
       await expect(p2).resolves.toBe(4);
       expect(g.size).toBe(2);
       worker.dispose();
     });
 
-    it('drain() on an empty group resolves immediately', async () => {
+    it('drain() on an empty group resolves with empty array', async () => {
       const worker = createTestWorker<number, number>((n) => n);
       const g = worker.group();
 
-      await expect(g.drain()).resolves.toBeUndefined();
+      await expect(g.drain()).resolves.toEqual([]);
       worker.dispose();
     });
 
-    it('drain() throws the first error after all tasks settle', async () => {
+    it('drain() returns all settled results including failures', async () => {
       const worker = createTestWorker<number, number>((n) => {
         if (n < 0) throw new Error(`fail:${n}`);
 
@@ -399,10 +390,11 @@ describe('createTestWorker', () => {
       g.run(-2).catch(() => {});
       g.run(3).catch(() => {});
 
-      const drainError = await g.drain().catch((e) => e);
+      const settled = await g.drain();
 
-      expect(drainError).toBeInstanceOf(Error);
-      expect(drainError.message).toMatch(/fail:/);
+      expect(settled).toHaveLength(3);
+      expect(settled.filter((r) => r.status === 'rejected')).toHaveLength(2);
+      expect(settled.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
       worker.dispose();
     });
 
@@ -416,6 +408,57 @@ describe('createTestWorker', () => {
 
       await expect(queued).rejects.toThrow(/aborted/i);
       await running.catch(() => {});
+      worker.dispose();
+    });
+  });
+
+  describe('disposalSignal', () => {
+    it('is not aborted before dispose()', () => {
+      const worker = createTestWorker<number, number>((n) => n);
+
+      expect(worker.disposalSignal.aborted).toBe(false);
+      worker.dispose();
+    });
+
+    it('is aborted after dispose()', () => {
+      const worker = createTestWorker<number, number>((n) => n);
+
+      worker.dispose();
+      expect(worker.disposalSignal.aborted).toBe(true);
+    });
+  });
+
+  describe('concurrency > 1', () => {
+    it('runs tasks in parallel across multiple slots', async () => {
+      const worker = createTestWorker<number, number>(
+        (n) => new Promise((resolve) => setTimeout(() => resolve(n * 2), 20)),
+        { concurrency: 3 },
+      );
+
+      const results = await Promise.all([1, 2, 3].map((n) => worker.run(n)));
+
+      expect(results).toEqual([2, 4, 6]);
+      worker.dispose();
+    });
+
+    it('respects concurrency limit', async () => {
+      let maxActive = 0;
+      let current = 0;
+
+      const worker = createTestWorker<void, void>(
+        async () => {
+          current++;
+
+          if (current > maxActive) maxActive = current;
+
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          current--;
+        },
+        { concurrency: 2 },
+      );
+
+      await Promise.all([worker.run(), worker.run(), worker.run(), worker.run()]);
+      expect(maxActive).toBeLessThanOrEqual(2);
       worker.dispose();
     });
   });

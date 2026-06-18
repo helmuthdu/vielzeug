@@ -5,15 +5,15 @@
     --_option-hover-bg: var(--combobox-option-hover-bg, var(--color-contrast-100));
     --_option-focus-bg: var(
       --combobox-option-focus-bg,
-      color-mix(in srgb, var(--_theme-base) 12%, var(--color-contrast-100))
+      color-mix(in oklch, var(--_theme-base) 12%, var(--color-contrast-100))
     );
     --_option-selected-bg: var(
       --combobox-option-selected-bg,
-      color-mix(in srgb, var(--_theme-base) 10%, var(--color-contrast-50))
+      color-mix(in oklch, var(--_theme-base) 10%, var(--color-contrast-50))
     );
     --_option-selected-focus-bg: var(
       --combobox-option-selected-focus-bg,
-      color-mix(in srgb, var(--_theme-base) 20%, var(--color-contrast-100))
+      color-mix(in oklch, var(--_theme-base) 20%, var(--color-contrast-100))
     );
 
     display: inline-flex;
@@ -176,6 +176,7 @@
     border-radius: var(--_radius);
     box-shadow: var(--shadow-lg);
     opacity: 0;
+    backdrop-filter: blur(var(--blur-md));
     transform: translateY(var(--overlay-enter-translate-y));
     transition: var(
       --_motion-transition,
@@ -290,7 +291,7 @@
 
   .no-results-create:hover,
   .no-results-create[data-focused] {
-    background: color-mix(in srgb, var(--_theme-base, var(--color-primary)) 10%, transparent);
+    background: color-mix(in oklch, var(--_theme-base, var(--color-primary)) 10%, transparent);
   }
 
   /* ========================================

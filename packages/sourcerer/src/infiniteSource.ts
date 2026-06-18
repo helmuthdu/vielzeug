@@ -1,20 +1,16 @@
-import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery } from './types';
+import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery, SearchOptions } from './types';
 
-import { createSourceCore } from './core';
-import { createFetchManager } from './fetchManager';
+import { createAsyncSource } from './asyncSource';
 import { SourceError } from './types';
-import { defaultKeyOf, defaultRetryDelay, extractError, retry } from './utils';
+import { defaultKeyOf, extractError, retry } from './utils';
+
+type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates an infinite-scroll source that appends pages on `loadMore()`. */
 export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<T> {
-  const core = createSourceCore();
-
-  // ── Config defaults ─────────────────────────────────────────────────────────
-  const debounceMs = cfg.debounceMs ?? 300;
-  const retryAttempts = cfg.retry?.attempts ?? 0;
-  const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const autoFetch = cfg.autoFetch !== false;
   const keyOf = cfg.queryKey ?? defaultKeyOf;
+  const base = createAsyncSource<InfiniteSourceQuery>(cfg, keyOf);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
   let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
@@ -25,10 +21,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   let total = 0;
   let error: SourceError | null = null;
   let isLoadingMore = false;
-  let refreshTimer: ReturnType<typeof setInterval> | undefined;
-
-  // ── In-flight deduplication ─────────────────────────────────────────────────
-  const fm = createFetchManager<InfiniteSourceQuery>(keyOf);
+  let pendingSearch: PendingSearch | null = null;
 
   // ── Cached accessors ─────────────────────────────────────────────────────────
   let cachedCurrent: readonly T[] = [];
@@ -43,14 +36,16 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     totalItems: 0,
   };
 
+  const listeners = new Set<() => void>();
+
   const refreshMeta = () => {
     cachedCurrent = items;
     cachedMeta = {
       error,
       hasMore: items.length < total,
-      isLoading: fm.pendingCount > 0 && !isLoadingMore,
+      isLoading: base.pendingCount() > 0 && !isLoadingMore,
       isLoadingMore,
-      isSearchPending: core.isScheduled,
+      isSearchPending: base.isScheduled(),
       loadedPages,
       pageSize: limit,
       totalItems: total,
@@ -59,9 +54,20 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
   refreshMeta();
 
-  const commit = () => {
+  const notifyListeners = () => {
+    if (base.disposed) return;
+
     refreshMeta();
-    core.notify();
+    base.notify();
+
+    for (const l of listeners) l();
+  };
+
+  const resolvePendingSearch = () => {
+    if (pendingSearch) {
+      pendingSearch.resolve();
+      pendingSearch = null;
+    }
   };
 
   // ── Core fetch ──────────────────────────────────────────────────────────────
@@ -73,9 +79,8 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     };
 
     error = null;
-    commit();
 
-    return fm.run(
+    return base.fetch(
       q,
       async (q, signal, isLatest) => {
         const startTime = Date.now();
@@ -107,14 +112,21 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
             if (!append) items = [];
 
             total = append ? total : 0;
-            error = new SourceError(extractError(reason), { cause: reason, query: q });
+            error = new SourceError(extractError(reason), {
+              cause: reason,
+              context: { kind: 'infinite', limit: q.limit, page: q.page, ...(q.search && { search: q.search }) },
+            });
             cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
           }
         } finally {
           isLoadingMore = false;
         }
       },
-      commit,
+      () => {
+        notifyListeners();
+
+        if (base.pendingCount() === 0) resolvePendingSearch();
+      },
     );
   };
 
@@ -123,11 +135,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   // ── Auto-fetch + refresh interval ───────────────────────────────────────────
   if (autoFetch) void doFetch();
 
-  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
-    refreshTimer = setInterval(() => {
-      if (!core.isDisposed) void doFetch();
-    }, cfg.refreshInterval);
-  }
+  base.startRefreshInterval(() => void doFetch());
 
   // ── Public API ──────────────────────────────────────────────────────────────
   return {
@@ -135,22 +143,21 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return cachedCurrent;
     },
 
-    dispose() {
-      if (refreshTimer !== undefined) {
-        clearInterval(refreshTimer);
-        refreshTimer = undefined;
-      }
-
-      fm.dispose();
-      core.dispose();
+    get disposalSignal() {
+      return base.disposalSignal;
     },
 
-    flush() {
-      return core.flush(() => doFetch());
+    dispose: () => {
+      resolvePendingSearch();
+      base.dispose();
+    },
+
+    get disposed() {
+      return base.disposed;
     },
 
     loadMore() {
-      if (!cachedMeta.hasMore || fm.pendingCount > 0 || isLoadingMore) return Promise.resolve();
+      if (!cachedMeta.hasMore || base.pendingCount() > 0 || isLoadingMore) return Promise.resolve();
 
       isLoadingMore = true;
       refreshMeta();
@@ -162,12 +169,40 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return cachedMeta;
     },
 
+    patch(changes) {
+      let changed = false;
+
+      if (changes.limit !== undefined) {
+        const next = Math.max(1, Math.trunc(changes.limit));
+
+        if (next !== limit) {
+          limit = next;
+          changed = true;
+        }
+      }
+
+      if ('search' in changes && changes.search !== search) {
+        search = changes.search ?? '';
+        changed = true;
+      }
+
+      if (!changed) return Promise.resolve();
+
+      items = [];
+      total = 0;
+      currentPage = 1;
+      loadedPages = 0;
+
+      return doFetch();
+    },
+
     ready(timeout) {
-      return core.ready(() => fm.pendingCount === 0 && !core.isScheduled, timeout);
+      return base.ready(timeout);
     },
 
     reset() {
-      core.cancelTimer();
+      base.cancelTimer();
+      resolvePendingSearch();
       currentPage = 1;
       loadedPages = 0;
       items = [];
@@ -177,63 +212,42 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return doFetch();
     },
 
-    restoreQuery(patch) {
-      let changed = false;
+    search(q, opts?: SearchOptions): Promise<void> {
+      if (opts?.immediate) {
+        if (q === search) return Promise.resolve();
 
-      if (patch.limit !== undefined) {
-        const n = Math.max(1, Math.trunc(patch.limit));
+        base.cancelTimer();
+        resolvePendingSearch();
+        search = q;
+        items = [];
+        total = 0;
+        loadedPages = 0;
+        currentPage = 1;
 
-        if (n !== limit) {
-          limit = n;
-          changed = true;
-        }
+        return doFetch();
       }
 
-      if ('search' in patch) {
-        const s = patch.search ?? '';
-
-        if (s !== search) {
-          search = s;
-          changed = true;
-        }
-      }
-
-      if (!changed) return Promise.resolve();
-
-      core.cancelTimer();
-      currentPage = 1;
-      loadedPages = 0;
-      items = [];
-      total = 0;
-
-      return doFetch();
-    },
-
-    search(q) {
-      if (q === search) return;
-
-      search = q;
-      items = [];
-      total = 0;
-      loadedPages = 0;
-      currentPage = 1;
-      core.schedule(() => {
-        void doFetch();
-      }, debounceMs);
-      commit();
-    },
-
-    searchNow(q) {
       if (q === search) return Promise.resolve();
 
-      core.cancelTimer();
+      resolvePendingSearch();
+
       search = q;
       items = [];
       total = 0;
       loadedPages = 0;
       currentPage = 1;
 
-      return doFetch();
+      let resolveSearch!: () => void;
+      const promise = new Promise<void>((res) => {
+        resolveSearch = res;
+      });
+
+      pendingSearch = { promise, resolve: resolveSearch };
+
+      base.schedule(() => void doFetch(), debounceMs);
+      notifyListeners();
+
+      return promise;
     },
 
     setLimit(n) {
@@ -250,12 +264,19 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return doFetch();
     },
 
-    subscribe(listener) {
-      return core.subscribe(listener);
+    subscribe: (listener) => {
+      if (base.disposed) return () => {};
+
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
-    [Symbol.dispose]() {
-      this.dispose();
+    [Symbol.dispose]: () => {
+      resolvePendingSearch();
+      base.dispose();
     },
 
     toQuery() {

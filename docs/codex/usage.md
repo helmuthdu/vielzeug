@@ -162,6 +162,30 @@ pnpm run prepare:data
 
 If `list-components` returns an error about missing Sigil metadata, build `@vielzeug/sigil` first so `packages/sigil/dist/custom-elements.json` is available during bundling.
 
+## Security Notes
+
+- **HTTP mode binds with `Access-Control-Allow-Origin: *`** — any local web page can make cross-origin requests to the server. Do not expose the HTTP port on a publicly accessible interface. Use stdio mode for production/shared environments.
+- **Never expose the HTTP port through a firewall or proxy** — the MCP endpoint has no authentication. Treat it as a local-only service.
+
+## Framework Integration
+
+Codex is an MCP server, not a browser library. There is no direct framework integration — connect it from your AI client configuration. For server-side usage, embed the server programmatically:
+
+```ts
+import { createServerFromDisk } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+// Start the MCP server as part of a larger Node.js process:
+const server = createServerFromDisk();
+await server.connect(new StdioServerTransport());
+```
+
+For HTTP-based agents running in CI or a container:
+
+```sh
+node -e "require('@vielzeug/codex/dist/cli.js')" -- --port 3100
+```
+
 ## Working with Other Vielzeug Libraries
 
 **With Sigil** — the codex MCP server exposes Sigil component metadata via `list-components` and `get-component`. After building `@vielzeug/sigil`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
@@ -189,11 +213,6 @@ An AI agent can then call:
 ```
 
 This returns the complete `spell` API reference, letting an agent write correct validation schemas without browsing external docs.
-
-## Security Notes
-
-- **HTTP mode binds with `Access-Control-Allow-Origin: *`** — any local web page can make cross-origin requests to the server. Do not expose the HTTP port on a publicly accessible interface. Use stdio mode for production/shared environments.
-- **Never expose the HTTP port through a firewall or proxy** — the MCP endpoint has no authentication. Treat it as a local-only service.
 
 ## Best Practices
 

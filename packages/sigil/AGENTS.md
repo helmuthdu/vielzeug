@@ -31,7 +31,7 @@ a11y is tested in **jsdom only** (no browser harness). Keep it reliable by asser
 
 ## Work Guidance
 
-- Depends on `arsenal`, `craft`, `grip`, `orbit`, `ripple`, `scroll`, `tempo` (`workspace:*`) plus `lucide`.
+- Depends on `arsenal`, `craft`, `dnd`, `orbit`, `ripple`, `tempo` (`workspace:*`) plus `lucide`.
 - Adding a component: create it under the right category folder, then run `sync:exports` so its sub-path export and types are wired.
 
 ## Verification

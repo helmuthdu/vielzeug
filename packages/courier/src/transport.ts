@@ -1,4 +1,47 @@
-export type FetchContext = { init: RequestInit; url: string };
+/**
+ * Immutable request context passed through the interceptor pipeline.
+ *
+ * **Never mutate `init` or `headers` directly.** Use `ctx.withHeaders(updates)` to
+ * produce a new context with merged headers — this is the safe, idiomatic pattern
+ * for interceptors that need to add or override headers.
+ *
+ * @example
+ * ```ts
+ * // Correct — returns a new context
+ * return next(ctx.withHeaders({ authorization: `Bearer ${token}` }));
+ *
+ * // Wrong — mutates shared state, risks stomping other interceptors
+ * ctx.init.headers = { ...ctx.init.headers, authorization: `Bearer ${token}` };
+ * ```
+ */
+export type FetchContext = {
+  readonly headers: Readonly<Record<string, string>>;
+  readonly init: Readonly<Omit<RequestInit, 'headers'>>;
+  readonly url: string;
+  /** Returns a new `FetchContext` with the given header overrides merged in (lowercase keys). */
+  withHeaders(updates: Record<string, string>): FetchContext;
+};
+
+function makeFetchContext(
+  url: string,
+  headers: Record<string, string>,
+  init: Omit<RequestInit, 'headers'>,
+): FetchContext {
+  const ctx: FetchContext = {
+    headers,
+    init,
+    url,
+    withHeaders(updates: Record<string, string>): FetchContext {
+      const merged = { ...headers };
+
+      for (const [k, v] of Object.entries(updates)) merged[k.toLowerCase()] = v;
+
+      return makeFetchContext(url, merged, init);
+    },
+  };
+
+  return ctx;
+}
 
 export function anySignal(...signals: ReadonlyArray<AbortSignal | null | undefined>): AbortSignal | undefined {
   const active = signals.filter((s): s is AbortSignal => s != null);
@@ -60,7 +103,8 @@ export function createTransportCore(opts: TransportOptions = {}) {
   function getPipeline(): (ctx: FetchContext) => Promise<Response> {
     if (cachedPipeline) return cachedPipeline;
 
-    const base: (ctx: FetchContext) => Promise<Response> = (ctx) => fetchFn(ctx.url, ctx.init);
+    const base: (ctx: FetchContext) => Promise<Response> = (ctx) =>
+      fetchFn(ctx.url, { ...ctx.init, headers: ctx.headers });
 
     cachedPipeline =
       interceptors.length === 0
@@ -120,9 +164,17 @@ export function createTransportCore(opts: TransportOptions = {}) {
     return () => activeControllers.delete(ac);
   }
 
-  /** Dispatch a request through the interceptor pipeline. */
-  function dispatch(ctx: FetchContext): Promise<Response> {
-    return getPipeline()(ctx);
+  /**
+   * Dispatch a request through the interceptor pipeline.
+   * Accepts a plain `{ url, headers, init }` object and promotes it to a
+   * full `FetchContext` with `withHeaders()` before entering the pipeline.
+   */
+  function dispatch(raw: {
+    headers: Record<string, string>;
+    init: Omit<RequestInit, 'headers'>;
+    url: string;
+  }): Promise<Response> {
+    return getPipeline()(makeFetchContext(raw.url, raw.headers, raw.init));
   }
 
   function cancelAll(): void {

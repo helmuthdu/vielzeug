@@ -14,7 +14,7 @@ Shopping carts need to survive page reloads and guide users through shipping →
 Use the persistence adapter to save snapshots on every state change. Replay snapshots on app init to resume interrupted checkouts. Machine definition stays deterministic; persistence is pluggable.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type CartContext = {
   items: Array<{ id: string; name: string; price: number; qty: number }>;
@@ -33,11 +33,7 @@ type CartEvent =
   | { type: 'ORDER_SUCCESS' }
   | { type: 'ORDER_FAILED'; error: string };
 
-const checkoutMachine = defineMachine<
-  'shopping' | 'shipping' | 'payment' | 'confirming' | 'success' | 'error',
-  CartContext,
-  CartEvent
->({
+const checkoutMachine = machine({
   initial: 'shopping',
   context: { items: [], total: 0 },
   states: {
@@ -141,21 +137,21 @@ const checkoutMachine = defineMachine<
   },
 });
 
-const checkout = interpret(checkoutMachine, {
+const checkout = checkoutMachine; // already has persistence via options
+// To add persistence, pass via machine() options:
+/*
+const checkout = machine({  initial: 'shopping', context: { items: [], total: 0 }, states: { /* ... */ } }, {
   persistence: {
     load: () => {
       try {
         const data = localStorage.getItem('checkout_snapshot');
         return data ? JSON.parse(data) : undefined;
       } catch {
-        return undefined; // Corrupted data
+        return undefined;
       }
     },
     save: (snapshot) => {
       localStorage.setItem('checkout_snapshot', JSON.stringify(snapshot));
-    },
-    clear: () => {
-      localStorage.removeItem('checkout_snapshot');
     },
   },
 });
@@ -168,7 +164,7 @@ checkout.send({ type: 'ADD_ITEM', id: 'mug-1', name: 'Coffee Mug', price: 12.99 
 // Proceed to checkout
 checkout.send({ type: 'CHECKOUT' }); // state: 'shipping'
 
-// If page reloads here, interpret() with persistence will restore:
+// If page reloads here, machine() with persistence will restore:
 // state: 'shipping', items and total intact
 
 // Enter shipping

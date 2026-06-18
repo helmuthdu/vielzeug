@@ -2,7 +2,23 @@ export const tempoTypes = `
 declare module '/tempo' {
   export { Temporal };
 
-  export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
+  // ─── Errors ──────────────────────────────────────────────────────────────────
+
+  export type TempoErrorCode = 'INVALID_INPUT' | 'INVALID_TZ' | 'MISSING_TZ' | 'UNSUPPORTED_INPUT';
+
+  export const TempoErrorCode: Readonly<{
+    INVALID_INPUT: 'INVALID_INPUT';
+    INVALID_TZ: 'INVALID_TZ';
+    MISSING_TZ: 'MISSING_TZ';
+    UNSUPPORTED_INPUT: 'UNSUPPORTED_INPUT';
+  }>;
+
+  export class TempoError extends TypeError {
+    readonly code: TempoErrorCode;
+    constructor(code: TempoErrorCode, message: string);
+  }
+
+  // ─── Input types ─────────────────────────────────────────────────────────────
 
   export type TimeInput =
     | Temporal.Instant
@@ -12,24 +28,45 @@ declare module '/tempo' {
 
   export type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
 
-  export type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
+  /** Discriminant for the parse() \`as\` parameter. Controls the expected return type. */
+  export type ParseAs = 'instant' | 'plain-date' | 'plain-datetime' | 'zoned';
 
-  export type BoundaryUnit = 'day' | 'hour' | 'minute' | 'month' | 'week' | 'year';
+  // ─── Unit types ──────────────────────────────────────────────────────────────
 
+  export type TempoUnit =
+    | 'day'
+    | 'hour'
+    | 'microsecond'
+    | 'millisecond'
+    | 'minute'
+    | 'month'
+    | 'nanosecond'
+    | 'second'
+    | 'week'
+    | 'year';
+
+  export type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;
+  export type BoundaryUnit = Exclude<TempoUnit, 'microsecond' | 'millisecond' | 'nanosecond' | 'second'>;
+  export type TimeDiffUnit = Exclude<TempoUnit, 'microsecond' | 'nanosecond'>;
+  export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
   export type WeekStartDay = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-  export type TimeDiffUnit = 'day' | 'hour' | 'millisecond' | 'minute' | 'month' | 'second' | 'week' | 'year';
+  // ─── Option types ────────────────────────────────────────────────────────────
 
-  export type TimeDiffResult = { unit: TimeDiffUnit; value: number };
+  export type DateTimeDisambiguation = 'compatible' | 'earlier' | 'later' | 'reject';
+  export type FormatPattern = 'date-only' | 'long' | 'medium' | 'short' | 'time-only';
 
   export interface TimeOptions {
-    prefer?: DateTimeDisambiguation;
     tz?: string;
   }
 
-  export type TimeOptionsWithTz = TimeOptions & { tz: string };
+  export interface DisambiguationOptions {
+    prefer?: DateTimeDisambiguation;
+  }
 
-  export interface DifferenceOptions extends TimeOptions {
+  export interface ShiftOptions extends DisambiguationOptions, TimeOptions {}
+
+  export interface DifferenceOptions extends DisambiguationOptions, TimeOptions {
     largestUnit?: Temporal.DateTimeUnit;
     roundingIncrement?: number;
     roundingMode?: Temporal.RoundingMode;
@@ -46,8 +83,8 @@ declare module '/tempo' {
   }
 
   export type FormatOptions =
-    | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; tz?: string }
-    | { locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
+    | { intl: Intl.DateTimeFormatOptions; locale?: Intl.LocalesArgument; pattern?: never; tz?: string }
+    | { intl?: never; locale?: Intl.LocalesArgument; pattern?: FormatPattern; tz?: string };
 
   export interface RelativeFormatOptions {
     base?: RelativeTimeInput;
@@ -72,7 +109,13 @@ declare module '/tempo' {
 
   export function now(tz: string): Temporal.ZonedDateTime;
   export function nowInstant(): Temporal.Instant;
-  export function parseDate(input: string): TimeInput;
+
+  export function parse(input: string, as: 'zoned'): Temporal.ZonedDateTime;
+  export function parse(input: string, as: 'instant'): Temporal.Instant;
+  export function parse(input: string, as: 'plain-datetime'): Temporal.PlainDateTime;
+  export function parse(input: string, as: 'plain-date'): Temporal.PlainDate;
+  export function parse(input: string, as?: ParseAs): TimeInput;
+
   export function parseInstant(input: string): Temporal.Instant;
   export function parsePlainDate(input: string): Temporal.PlainDate;
   export function parsePlainDateTime(input: string): Temporal.PlainDateTime;
@@ -82,11 +125,11 @@ declare module '/tempo' {
   // ─── Conversion ──────────────────────────────────────────────────────────────
 
   export function toInstant(input: TimeInput, options?: TimeOptions): Temporal.Instant;
-  export function toZoned(input: TimeInput, options: TimeOptionsWithTz): Temporal.ZonedDateTime;
+  export function inTz(input: TimeInput, tz: string): Temporal.ZonedDateTime;
 
   // ─── Arithmetic ──────────────────────────────────────────────────────────────
 
-  export function shift(input: TimeInput, duration: Temporal.DurationLike, options?: TimeOptions): Temporal.ZonedDateTime;
+  export function shift(input: TimeInput, duration: Temporal.DurationLike, options?: ShiftOptions): Temporal.ZonedDateTime;
   export function difference(start: TimeInput, end: TimeInput, options?: DifferenceOptions): Temporal.Duration;
 
   // ─── Comparison ──────────────────────────────────────────────────────────────
@@ -116,10 +159,9 @@ declare module '/tempo' {
 
   // ─── Classification ──────────────────────────────────────────────────────────
 
-  export function expires<K extends string>(date: TimeInput, thresholds: Record<K, Temporal.DurationLike>, options?: TimeOptions): K | null;
-  export function classify<K extends string>(date: TimeInput, thresholds: Record<K, Temporal.DurationLike>, options?: TimeOptions): { diff: TimeDiffResult; key: K | null };
+  export function expires<K extends string>(date: TimeInput, thresholds: Record<K, Temporal.DurationLike>, options?: TimeOptions, now?: Temporal.Instant): K | null;
   export function timeDiff(a: TimeInput, b?: TimeInput, options?: TimeOptions): TimeDiffResult;
-  export function humanize(diff: TimeDiffResult): string;
+  export function humanize(diff: TimeDiffResult, options?: { locale?: Intl.LocalesArgument }): string;
 
   // ─── Range / recurrence ──────────────────────────────────────────────────────
 

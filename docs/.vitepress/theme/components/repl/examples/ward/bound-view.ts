@@ -1,23 +1,24 @@
 export const boundViewExample = {
-  code: `import { createWard, owns, rule } from '@vielzeug/ward'
+  code: `import { allow, createWard, deny, predicate } from '@vielzeug/ward'
 
 // Principal-bound view: capture user once, check many times
 const ward = createWard([
-  ...rule().allow('editor').on('posts').to('read', 'update', 'delete').build(),
-  ...rule().allow('editor').on('posts').to('delete').when(owns('authorId')).priority(1).build(),
-  ...rule().deny('editor').on('posts').to('delete').priority(0).build(),
+  ...allow('editor', 'posts', ['read', 'update']),
+  // delete: allow only when user owns the post (higher priority wins)
+  ...allow('editor', 'posts', ['delete'], { when: predicate.owns('authorId'), priority: 1 }),
+  ...deny('editor',  'posts', ['delete'], { priority: 0 }),
 ])
 
 const user = ward.forUser({ id: 'alice', roles: ['editor'] })
 
-console.log('read:         ', user.can('posts', 'read'))
-console.log('update:       ', user.can('posts', 'update'))
+console.log('read:         ', user.explain('posts', 'read').allowed)
+console.log('update:       ', user.explain('posts', 'update').allowed)
 
 // delete requires ownership
 const myPost    = { authorId: 'alice' }
 const otherPost = { authorId: 'bob' }
-console.log('delete own:   ', user.can('posts', 'delete', myPost))
-console.log('delete other: ', user.can('posts', 'delete', otherPost))
+console.log('delete own:   ', user.explain('posts', 'delete', myPost).allowed)
+console.log('delete other: ', user.explain('posts', 'delete', otherPost).allowed)
 
 // allowedActions — enumerate what alice can do
 const actions = user.allowedActions('posts', ['read', 'update', 'delete'], myPost)

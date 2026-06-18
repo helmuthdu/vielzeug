@@ -14,12 +14,12 @@ Notifications that stay on screen indefinitely create visual clutter. You need a
 Use `after` on the `visible` state to schedule a delayed transition. Clockwork automatically cancels the timer when the state is exited:
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DISMISS' } | { type: 'SHOW'; message: string };
 type Context = { message: string };
 
-const notification = defineMachine<'hidden' | 'visible', Context, Event>({
+const notification = machine({
   context: { message: '' },
   initial: 'hidden',
   states: {
@@ -42,7 +42,7 @@ const notification = defineMachine<'hidden' | 'visible', Context, Event>({
   },
 });
 
-const m = interpret(notification);
+const m = notification;
 
 m.send({ type: 'SHOW', message: 'File saved!' });
 // Auto-dismisses after 5 seconds, or user can send DISMISS manually

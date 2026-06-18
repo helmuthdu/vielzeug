@@ -62,7 +62,7 @@ type MountProps = { readonly [x: string]: ReadonlySignal<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
 export type MountSetup = {
-  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult | Promise<HTMLResult>;
+  bivarianceHack: (props: MountProps, ctx: SetupContextBag<any>) => HTMLResult | null | Promise<HTMLResult | null>;
 }['bivarianceHack'];
 
 // ─── Test environment state ───────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export async function mount<T extends HTMLElement = HTMLElement>(
   if (typeof tagOrSetup === 'string') {
     tagName = tagOrSetup;
   } else {
-    tagName = `trial-${++_componentTagCounter}`;
+    tagName = `trial-${++_componentTagCounter}-${Math.random().toString(36).slice(2, 7)}`;
     inlineDefinition = {
       ...(componentOptions ?? {}),
       setup: tagOrSetup as ComponentDefinition<any, any>['setup'],
@@ -235,6 +235,28 @@ export async function mount<T extends HTMLElement = HTMLElement>(
       return element.shadowRoot;
     },
   };
+}
+
+/**
+ * Register and mount a component definition in a single call.
+ *
+ * Combines `define(tag, definition)` + `mount(tag, options)` — the standard
+ * pattern for testing full custom-element lifecycle (props, reconnect, etc.).
+ *
+ * @example
+ * const { query } = await mountComponent('my-counter', {
+ *   props: { count: prop.number(0) },
+ *   setup: (props) => html`<div>${props.count}</div>`,
+ * });
+ */
+export async function mountComponent<T extends HTMLElement = HTMLElement>(
+  tag: string,
+  definition: ComponentDefinition<any, any>,
+  options?: MountOptions,
+): Promise<Fixture<T>> {
+  define(tag, definition);
+
+  return mount<T>(tag, options);
 }
 
 /**

@@ -10,6 +10,15 @@ export type StateErrorCode =
   | 'INVALID_CLEANUP'
   | 'INVALID_STORE';
 
+export const StateErrorCode = {
+  COMPUTED_CYCLE: 'COMPUTED_CYCLE',
+  DISPOSED_READ: 'DISPOSED_READ',
+  DISPOSED_SCOPE: 'DISPOSED_SCOPE',
+  INFINITE_LOOP: 'INFINITE_LOOP',
+  INVALID_CLEANUP: 'INVALID_CLEANUP',
+  INVALID_STORE: 'INVALID_STORE',
+} as const satisfies Record<StateErrorCode, StateErrorCode>;
+
 export class StateError extends Error {
   readonly code: StateErrorCode;
 
@@ -18,10 +27,6 @@ export class StateError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;
-  }
-
-  static is(err: unknown): err is StateError {
-    return err instanceof StateError;
   }
 }
 

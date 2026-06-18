@@ -22,3 +22,4 @@ description: Typed predicate examples for Arsenal.
 - [isPromise](./typed/isPromise.md)
 - [isRegex](./typed/isRegex.md)
 - [isString](./typed/isString.md)
+- [shallowEqual](./typed/shallowEqual.md)

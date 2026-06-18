@@ -48,17 +48,13 @@ export async function renderDocument(locale: string) {
 }
 ```
 
-If namespaces are registered on the shared instance before forking, they are available on the fork too:
+If namespaces are extended on the shared instance before forking, the dedup markers are copied to the fork:
 
 ```ts
-sharedI18n.registerNamespace('settings', (locale) =>
-  import(`./locales/${locale}/settings.json`).then((m) => m.default),
-);
-
-// In the request handler:
+// In the request handler, extend() runs at most once per ns + locale
 const reqI18n = sharedI18n.fork({ locale: req.locale });
 await reqI18n.setLocale(req.locale);
-await reqI18n.loadNamespace('settings'); // loads for req.locale only
+await reqI18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default)); // loads for req.locale only; no-op if already loaded
 ```
 
 ### Pitfalls

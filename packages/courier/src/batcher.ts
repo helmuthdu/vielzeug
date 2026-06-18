@@ -1,11 +1,6 @@
-export type BatcherOptions<K, V> = {
+type BatcherBase = {
   /** Maximum batch size before a flush is forced. Defaults to `25`. */
   maxSize?: number;
-  /**
-   * Execute a batch of keys and return results in the same order.
-   * The returned array must have the same length as `keys`.
-   */
-  resolve: (keys: K[]) => Promise<V[]>;
   /**
    * Scheduling window in ms. Defaults to `0` (next microtask), which coalesces
    * all `load()` calls within the same synchronous block into one batch.
@@ -13,6 +8,31 @@ export type BatcherOptions<K, V> = {
    */
   window?: number;
 };
+
+/**
+ * Batcher options. Exactly one of `resolve` or `resolveSettled` must be provided — they are mutually exclusive.
+ *
+ * - **`resolve`**: execute a batch and return results in the same order. All succeed or all fail.
+ * - **`resolveSettled`**: per-key error isolation — each `load()` fulfills or rejects independently.
+ */
+export type BatcherOptions<K, V> =
+  | (BatcherBase & {
+      /**
+       * Execute a batch of keys and return results in the same order.
+       * The returned array must have the same length as `keys`.
+       */
+      resolve: (keys: K[]) => Promise<V[]>;
+      resolveSettled?: never;
+    })
+  | (BatcherBase & {
+      resolve?: never;
+      /**
+       * Per-key error isolation. Receives the same key array but must return a
+       * `PromiseSettledResult<V>[]` of equal length. Each `load()` promise fulfills
+       * or rejects independently based on its corresponding settled result.
+       */
+      resolveSettled: (keys: K[]) => Promise<PromiseSettledResult<V>[]>;
+    });
 
 type PendingItem<K, V> = {
   key: K;
@@ -41,7 +61,7 @@ type PendingItem<K, V> = {
  * ```
  */
 export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
-  const { maxSize = 25, resolve, window: windowMs = 0 } = opts;
+  const { maxSize = 25, resolve, resolveSettled, window: windowMs = 0 } = opts;
 
   const queue: PendingItem<K, V>[] = [];
   let scheduled = false;
@@ -56,23 +76,53 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
     // If more items remain after taking maxSize, schedule another flush immediately.
     if (queue.length > 0) schedule();
 
-    resolve(batch.map((item) => item.key))
-      .then((results) => {
-        if (results.length !== batch.length) {
-          const err = new Error(
-            `[courier] Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
-          );
+    const keys = batch.map((item) => item.key);
 
+    if (resolveSettled) {
+      resolveSettled(keys)
+        .then((results) => {
+          if (results.length !== batch.length) {
+            const err = new Error(
+              `[courier] Batcher: resolveSettled() returned ${results.length} results for ${batch.length} keys`,
+            );
+
+            for (const item of batch) item.reject(err);
+
+            return;
+          }
+
+          batch.forEach((item, i) => {
+            const r = results[i];
+
+            if (r.status === 'fulfilled') {
+              item.resolve(r.value);
+            } else {
+              item.reject(r.reason);
+            }
+          });
+        })
+        .catch((err: unknown) => {
           for (const item of batch) item.reject(err);
+        });
+    } else {
+      resolve(keys)
+        .then((results) => {
+          if (results.length !== batch.length) {
+            const err = new Error(
+              `[courier] Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
+            );
 
-          return;
-        }
+            for (const item of batch) item.reject(err);
 
-        batch.forEach((item, i) => item.resolve(results[i]));
-      })
-      .catch((err: unknown) => {
-        for (const item of batch) item.reject(err);
-      });
+            return;
+          }
+
+          batch.forEach((item, i) => item.resolve(results[i]));
+        })
+        .catch((err: unknown) => {
+          for (const item of batch) item.reject(err);
+        });
+    }
   }
 
   function schedule(): void {
@@ -112,6 +162,10 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
       for (const item of queue.splice(0)) item.reject(err);
 
       scheduled = false;
+    },
+
+    get disposed(): boolean {
+      return disposed;
     },
 
     load(key: K): Promise<V> {

@@ -6,11 +6,14 @@ import type {
   FormatPattern,
   RelativeFormatOptions,
   RelativeTimeInput,
+  TimeDiffResult,
   TimeInput,
   TimeOptions,
 } from './types';
 
-import { fail, inferTimeZone, toInstant, toZoned } from './internal';
+import { toInstant, toZoned } from './_convert';
+import { fail } from './_error';
+import { inferTimeZone } from './_tz';
 
 // ─── Formatter types ──────────────────────────────────────────────────────────
 
@@ -71,7 +74,7 @@ function makeFormatter(options: FormatOptions, fallbackTz?: string): Intl.DateTi
   const tz = options.tz ?? fallbackTz;
   const locale = options.locale;
 
-  if ('intl' in options) {
+  if (options.intl !== undefined) {
     const cacheKey = `${String(locale ?? '')}|intl|${tz ?? ''}|${serializeIntlOptions(options.intl)}`;
 
     return cappedGetOrCreate(DATE_TIME_FORMATTER_CACHE, cacheKey, () => {
@@ -174,6 +177,8 @@ const DURATION_UNITS = [
   'minutes',
   'seconds',
   'milliseconds',
+  'microseconds',
+  'nanoseconds',
 ] as const satisfies ReadonlyArray<keyof Temporal.Duration>;
 
 // English-only fallback; runs only when Intl.DurationFormat is unavailable in the runtime.
@@ -287,18 +292,25 @@ export function formatInstant(input: TimeInput, options: TimeOptions = {}): stri
 
 /**
  * Serializes `input` to a zoned ISO 8601 string (`2026-03-21T11:15:30+01:00[Europe/Berlin]`).
- * Requires `options.tz` when input is a `PlainDate` or `PlainDateTime`.
+ *
+ * @param options.tz - Required when `input` is a `PlainDate` or `PlainDateTime`.
+ *   Inferred automatically from a `ZonedDateTime` or `Instant` input.
+ *
+ * @throws {TempoError} When `input` is a `PlainDate` or `PlainDateTime` and `options.tz` is omitted.
  *
  * @example
  * ```ts
  * formatZoned(parseInstant('2026-03-21T10:15:30Z'), { tz: 'Europe/Berlin' })
  * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'
+ *
+ * formatZoned(parseZoned('2026-03-21T11:15:30+01:00[Europe/Berlin]'))
+ * // '2026-03-21T11:15:30+01:00[Europe/Berlin]'  (tz inferred)
  * ```
  */
 export function formatZoned(input: TimeInput, options: TimeOptions = {}): string {
   const tz = inferTimeZone(input, options);
 
-  return toZoned(input, { prefer: options.prefer, tz }).toString();
+  return toZoned(input, { tz }).toString();
 }
 
 /**
@@ -378,4 +390,27 @@ export function formatParts(input: TimeInput, options: FormatOptions = {}): Intl
   const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
   return makeFormatter(options, tz).formatToParts(new Date(toInstant(input, { tz }).epochMilliseconds));
+}
+
+/**
+ * Converts a `TimeDiffResult` to a human-readable string.
+ * Uses the singular unit name when value is 1, plural (unit + 's') otherwise.
+ *
+ * Pass `options.locale` to localize the numeric part via `Intl.NumberFormat`.
+ * Unit names remain English — for fully localized output use {@link formatRelative}
+ * or {@link formatDuration} instead.
+ *
+ * @example
+ * ```ts
+ * humanize({ unit: 'day', value: 1 })  // '1 day'
+ * humanize({ unit: 'day', value: 3 })  // '3 days'
+ * humanize({ unit: 'day', value: 3 }, { locale: 'ar' }) // '٣ days'
+ * humanize({ unit: 'millisecond', value: 0 }) // '0 milliseconds'
+ * ```
+ */
+export function humanize(diff: TimeDiffResult, options: { locale?: Intl.LocalesArgument } = {}): string {
+  const { unit, value } = diff;
+  const formatted = options.locale ? new Intl.NumberFormat(options.locale).format(value) : String(value);
+
+  return `${formatted} ${value === 1 ? unit : `${unit}s`}`;
 }

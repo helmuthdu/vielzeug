@@ -56,4 +56,26 @@ describe('Schema.pipe()', () => {
     expect(schema.parse('  alice@example.com  ')).toBe('alice@example.com');
     expect(() => schema.parse('  ')).toThrow();
   });
+
+  it('async: surfaces output-schema failure when first schema passes', async () => {
+    const schema = s.string().pipe(s.string().email());
+    const result = await schema.safeParseAsync('not-an-email');
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].code).toBe('invalid_string');
+    }
+  });
+
+  it('async: surfaces first-schema failure before output schema runs', async () => {
+    const schema = s.string().pipe(s.string().email());
+    const result = await schema.safeParseAsync(42);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].code).toBe('invalid_type');
+    }
+  });
 });

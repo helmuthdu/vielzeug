@@ -3,7 +3,7 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 package: orbit
 category: ui-positioning
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
-related: [craft, sigil, grip]
+related: [craft, sigil, dnd]
 exports:
   [
     float,
@@ -41,7 +41,7 @@ exports:
 
 **When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/grip](https://vielzeug.dev/grip/)
+**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/dnd](https://vielzeug.dev/dnd/)
 
 </details>
 

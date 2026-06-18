@@ -383,12 +383,20 @@ await router.navigate({ name: 'dashboard' }, { force: true }); // re-runs
 Eagerly run data loaders without navigating — useful for hover-prefetch:
 
 ```ts
+// Preload a parameterised route
 anchor.addEventListener('mouseenter', () => {
   router.preload('userDetail', { id: '42' });
 });
+
+// Preload with a query string to avoid a cache miss on navigation
+searchInput.addEventListener('focus', () => {
+  router.preload('search', undefined, { q: searchInput.value });
+});
 ```
 
-Concurrent calls for the same route+params are deduplicated. Results are consumed on the next navigation to the same route+query combination; a navigation with different query params runs the loaders fresh.
+Concurrent calls for the same `name + params + query` combination are deduplicated. Results are consumed on the next navigation to the same route with the same cache key. Pass the same `query` you intend to navigate with — without it, the preload key is the bare path and any navigation with a query string will re-run the loaders.
+
+In-flight preloads are aborted automatically when `router.dispose()` is called.
 
 ### Leave Guards
 
@@ -652,6 +660,51 @@ export function useRouter() {
 
 For full RouterView and RouterLink patterns, see [React Integration](./examples/react-integration.md), [Vue Integration](./examples/vue-integration.md), and [Svelte Integration](./examples/svelte-integration.md).
 
+## Debug Mode
+
+Import `debugRouter` from the dedicated sub-path to create a router with navigation logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
+
+```ts
+import { debugRouter } from '@vielzeug/wayfinder/devtools';
+
+const router = debugRouter({
+  routes: {
+    home: { path: '/' },
+    dashboard: { path: '/dashboard', data: () => fetchDashboard() },
+  },
+});
+
+// Logged once the initial navigation completes:
+// [wayfinder:nav] idle      /         [home]
+
+// On navigate({ name: 'dashboard' }):
+// [wayfinder:nav] loading   /dashboard
+// [wayfinder:nav] idle      /dashboard [dashboard]
+```
+
+The router returned is identical to `createRouter()` — all methods (`navigate`, `subscribe`, `waitFor`, etc.) work the same way.
+
+Errors are logged with the error object appended:
+
+```ts
+// [wayfinder:nav] error     /dashboard [dashboard]  Error: fetch failed
+```
+
+Use the `label` option when running multiple routers to distinguish their log output:
+
+```ts
+const main = debugRouter({ routes, label: 'main' });
+const modal = debugRouter({ routes: modalRoutes, label: 'modal' });
+// [wayfinder:main]  loading  /products
+// [wayfinder:modal] loading  /confirm
+```
+
+Debug logging has no effect on behavior and should not be enabled in production.
+
+::: tip Unhandled router errors
+If a route's data loader throws and no `onError` callback is set on the router, the error is surfaced via `console.error` in development and silenced in production (`__WAYFINDER_PROD__` set). Always provide an `onError` callback in production to handle errors explicitly.
+:::
+
 ## Working with Other Vielzeug Libraries
 
 ### With Ward
@@ -697,38 +750,6 @@ router.subscribe((state) => {
   currentRoute.value = state.matches.at(-1)?.name ?? '';
 });
 ```
-
-## Debug Mode
-
-Import `debugRouter` from the dedicated sub-path to create a router with navigation logging pre-enabled. The sub-path is tree-shaken from production bundles when not imported.
-
-```ts
-import { debugRouter } from '@vielzeug/wayfinder/devtools';
-
-const router = debugRouter({
-  routes: {
-    home: { path: '/' },
-    dashboard: { path: '/dashboard', data: () => fetchDashboard() },
-  },
-});
-
-// Initial snapshot is logged immediately:
-// [wayfinder:nav] idle      /         [home]
-
-// On navigate({ name: 'dashboard' }):
-// [wayfinder:nav] loading   /dashboard
-// [wayfinder:nav] idle      /dashboard [dashboard]
-```
-
-The router returned is identical to `createRouter()` — all methods (`navigate`, `subscribe`, `waitFor`, etc.) work the same way.
-
-Errors are logged with the error object appended:
-
-```ts
-// [wayfinder:nav] error     /dashboard [dashboard]  Error: fetch failed
-```
-
-Debug logging has no effect on behavior and should not be enabled in production.
 
 ## Best Practices
 

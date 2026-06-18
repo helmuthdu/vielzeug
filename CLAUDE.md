@@ -64,7 +64,7 @@ herald → arsenal
 orbit → arsenal, ripple
 prism → orbit, ripple
 scroll → ripple
-sigil → arsenal, craft, grip, orbit, ripple, scroll
+sigil → arsenal, craft, dnd, orbit, ripple, scroll
 sourcerer → arsenal, ripple
 spell → arsenal
 tempo → arsenal
@@ -78,7 +78,7 @@ All other packages are fully independent.
 |---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines)                                                                                    |
 | HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API)                                                                                                                                               |
-| UI Primitives | `sigil` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `grip` (drag-and-drop), `scroll` (virtual list engine)                                                                                      |
+| UI Primitives | `sigil` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `dnd` (drag-and-drop), `scroll` (virtual list engine)                                                                                       |
 | Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization)                                                                                                                                                            |
 | Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `codex` (AI/MCP server) |
 | Finance | `coins` (precise monetary arithmetic)                                                                                                                                                                                                     |

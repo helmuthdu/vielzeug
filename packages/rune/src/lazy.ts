@@ -1,11 +1,12 @@
 import type { Bindings } from './types';
 
-export const LAZY = Symbol.for('rune.lazy');
+const LAZY_BRAND = Symbol('rune.lazy');
 
-export type LazyBinding = { readonly fn: () => unknown; readonly [LAZY]: true };
+/** A deferred binding value — evaluated only when an entry is actually emitted. Create via `lazy(fn)`. */
+export type LazyBinding = { readonly factory: () => unknown; readonly [LAZY_BRAND]: true };
 
-export function isLazyBinding(value: unknown): value is LazyBinding {
-  return typeof value === 'object' && value !== null && (value as Record<symbol, unknown>)[LAZY] === true;
+function isLazy(v: unknown): v is LazyBinding {
+  return typeof v === 'object' && v !== null && (v as Record<symbol, unknown>)[LAZY_BRAND] === true;
 }
 
 /**
@@ -17,7 +18,7 @@ export function isLazyBinding(value: unknown): value is LazyBinding {
  * reqLog.debug('trace'); // diagnostics() only called when logLevel allows debug
  */
 export function lazy(fn: () => unknown): LazyBinding {
-  return { fn, [LAZY]: true } as LazyBinding;
+  return { factory: fn, [LAZY_BRAND]: true } as LazyBinding;
 }
 
 /**
@@ -33,14 +34,9 @@ export function resolveBindings(bindings: Bindings): Bindings {
   let resolved: Bindings | undefined;
 
   for (const [k, v] of Object.entries(bindings)) {
-    if (isLazyBinding(v)) {
+    if (isLazy(v)) {
       resolved ??= { ...bindings };
-
-      try {
-        resolved[k] = v.fn();
-      } catch {
-        resolved[k] = undefined;
-      }
+      resolved[k] = v.factory();
     }
   }
 

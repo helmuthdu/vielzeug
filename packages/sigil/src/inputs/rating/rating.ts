@@ -1,4 +1,5 @@
-import { computed, define, defineField, html, inject, prop, signal } from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -91,7 +92,7 @@ define<SgRatingProps, SgRatingEvents>(RATING_TAG, {
       return Math.min(max, Math.max(0, safe));
     });
 
-    const fd = defineField({
+    const fd = useField({
       disabled: fCtxProps.disabled,
       value: computed(() => String(normalizedValue.value || 0)),
     });

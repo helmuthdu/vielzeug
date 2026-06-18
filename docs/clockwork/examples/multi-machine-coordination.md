@@ -20,7 +20,7 @@ Hard-coding dependencies between machines creates tight coupling and race condit
 Use Herald as a message bus to decouple machines. Each machine publishes events about state changes, and other machines subscribe and react accordingly. This creates a pub/sub pattern where machines are independent but coordinated.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 import { createEventBus } from '@vielzeug/herald';
 
 // Shared event types
@@ -41,7 +41,7 @@ const events = createEventBus<
 >();
 
 // User machine
-const userMachine = defineMachine({
+const userMachine = machine({
   initial: 'logged_out',
   context: {
     userId: '',
@@ -79,7 +79,7 @@ const userMachine = defineMachine({
 });
 
 // Session machine
-const sessionMachine = defineMachine({
+const sessionMachine = machine({
   initial: 'idle',
   context: {
     inactiveSeconds: 0,
@@ -127,7 +127,7 @@ const sessionMachine = defineMachine({
 });
 
 // Notification machine
-const notificationMachine = defineMachine({
+const notificationMachine = machine({
   initial: 'idle',
   context: {
     message: '',
@@ -242,9 +242,9 @@ const scheduleAutoDismiss = ({ context }: any) => {
 };
 
 // Initialize machines
-const user = interpret(userMachine);
-const session = interpret(sessionMachine);
-const notification = interpret(notificationMachine);
+const user = userMachine;
+const session = sessionMachine;
+const notification = notificationMachine;
 
 // Connect event bus to machines
 events.on(({ scope, event }) => {
@@ -300,7 +300,7 @@ export function logout() {
 
 1. **Circular event loops** - If machine A publishes event that notifies B, and B publishes back to A, infinite loops occur. Always use directed dependencies: User → Session → Notification, never cycle back.
 
-2. **Lost events during machine initialization** - Events emitted during setup before machine is interpreting get dropped. Use `interpret()` synchronously before subscribing, or buffer events until all machines are ready.
+2. **Lost events during machine initialization** - Events emitted during setup before a machine is ready get dropped. Create machines synchronously before subscribing, or buffer events until all machines are initialized.
 
 3. **Race conditions on simultaneous events** - If both user and session emit events that affect notification simultaneously, notification machine may not handle both. Use a queue in the event bus, or ensure events are idempotent.
 

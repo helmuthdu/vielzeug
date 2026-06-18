@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter, createNamespace, validateCatalog]
+exports: [createI18n, serializeI18n, hydrateI18n, createFormatter, LinguaError, E, validateCatalog]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -28,25 +28,25 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `bind`, `bindPlural`, `preload`, `setLocale`, `register`, `merge`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `hasBranch`, `isLoaded`, `isRegistered`, `dispose`, `getSupportedLocales`
+- Minimal API: `t`, `tp`, `extend`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `isLoaded`, `isRegistered`, `dispose`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
-- Partial catalog merging via `merge()` — add route-level keys without full catalog replacement
+- Typed error class `LinguaError` with stable `E.*` code constants
 - Framework-agnostic store primitives that compose with any UI framework
 - Zero dependencies
 
-| Feature                           | Lingua                                       | i18next | FormatJS |
-| --------------------------------- | -------------------------------------------- | ------- | -------- |
-| Bundle size                       | <PackageInfo package="lingua" type="size" /> | ~24 kB  | ~16 kB   |
-| Typed key ergonomics              | <sg-icon name="check" size="16"></sg-icon>                                           | Partial | Partial  |
-| Deterministic fallback chain      | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>       |
-| Async locale preload              | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>       |
-| Partial catalog merging           | <sg-icon name="check" size="16"></sg-icon> (`merge()`)                               | Partial | <sg-icon name="x" size="16"></sg-icon>       |
-| Runtime snapshots + subscriptions | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>       |
-| External formatter bridge         | <sg-icon name="check" size="16"></sg-icon> (`@vielzeug/lingua/format`)               | Partial | <sg-icon name="check" size="16"></sg-icon>       |
-| Framework agnostic                | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>       |
-| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                                           | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>       |
+| Feature                           | Lingua                                                                 | i18next                                    | FormatJS                                   |
+| --------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size                       | <PackageInfo package="lingua" type="size" />                           | ~24 kB                                     | ~16 kB                                     |
+| Typed key ergonomics              | <sg-icon name="check" size="16"></sg-icon>                             | Partial                                    | Partial                                    |
+| Deterministic fallback chain      | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Async locale preload              | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Namespace lazy loading            | <sg-icon name="check" size="16"></sg-icon> (`extend()`)                | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
+| Runtime snapshots + subscriptions | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| External formatter bridge         | <sg-icon name="check" size="16"></sg-icon> (`@vielzeug/lingua/format`) | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
+| Framework agnostic                | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -106,17 +106,16 @@ const messages = i18n.tp('inbox', 3);
 const nav = i18n.scope('nav');
 nav.t('home'); // resolves 'nav.home'
 
-// Merge route-specific keys on top of the base catalog
-await i18n.merge('en', () => import('./routes/settings.i18n.json').then((m) => m.default));
+// Namespace-based lazy loading for route-specific keys
+await i18n.extend('settings', (locale) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default));
 
 // Formatter bound to the current locale — follows locale changes automatically
 const fmt = createFormatter(() => i18n.locale);
 const price = fmt.currency(12.5, 'EUR');
 
-const snapshot = i18n.getSnapshot();
 const unsubscribe = i18n.subscribe(
   (next) => {
-    console.log(next.locale, next.version);
+    console.log(next.locale);
   },
   { immediate: true },
 );
@@ -133,14 +132,13 @@ i18n.getSupportedLocales();
 - One runtime primitive: `createI18n(options)`
 - Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
-- Partial catalog merging: `merge(locale, source)` adds keys without replacing the full catalog
-- Scoped translation helpers: `scope(prefix)` returns a helper bound to a key prefix — including `bind()` and `bindPlural()` on the scoped object for hot-path caching
-- Bound translation functions: `bind(key)` returns a cached per-key function for render hot-paths; `bindPlural(key)` returns a reusable plural function for count-driven hot-paths
-- Plural branch detection: `hasBranch(key)` checks if any CLDR form exists under a key, including pipe-plural expanded keys where `has()` returns `false`
-- Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for SSR `getState()` guards
+- Namespace lazy loading: `extend(ns, factory, locale?)` registers and immediately loads a partial catalog — deduplicates per `ns + locale`; use for per-route or per-feature keys
+- Scoped translation helpers: `scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix
+- Unified key existence check: `has(key)` returns `true` for leaf keys, branch keys, and pipe-plural base keys in the active fallback chain
+- Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `serializeI18n()` guards
 - Registered-locale predicate: `isRegistered(locale)` distinguishes "never configured" from "async loader not yet called"
 - Instance disposal: `dispose()` clears all subscribers and catalog state — prevents memory leaks in route-scoped SPA instances
-- Typed namespace factories: `createNamespace<M>(factory)` enforces catalog shape on namespace factories
+- Typed error handling: `LinguaError` class with `E.*` code constants for safe error branching
 - Instance forking: `fork(overrides?)` creates an isolated child for SSR or test isolation
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales
@@ -148,7 +146,6 @@ i18n.getSupportedLocales();
 - Formatting kept separate via `createFormatter(source)` from `@vielzeug/lingua/format`
 
 </div>
-
 
 ## Documentation
 

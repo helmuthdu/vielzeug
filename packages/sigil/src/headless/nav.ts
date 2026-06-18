@@ -1,3 +1,5 @@
+import { type ReadonlySignal, signal } from '@vielzeug/ripple';
+
 import { dispatchKeyboardAction } from './keyboard';
 import { createTypeahead } from './typeahead';
 
@@ -44,47 +46,8 @@ const DEFAULT_KEYS: Record<'both' | 'horizontal' | 'vertical', Record<ListNaviga
   vertical: { first: ['Home'], last: ['End'], next: ['ArrowDown'], prev: ['ArrowUp'] },
 };
 
-// ── Keymap builder ────────────────────────────────────────────────────────────
-
-/**
- * A named keymap object mapping navigation actions to key arrays.
- * Pass as `keys` in `ListNavigationOptions` to override default bindings.
- */
-export type Keymap = Partial<Record<ListNavigationAction, string[]>>;
-
-/**
- * Built-in keymap presets. Use `keymap()` to compose or customise them.
- */
-export const keymapPresets = {
-  /** Horizontal grid / tab-strip: Left/Right + Home/End. */
-  horizontal: DEFAULT_KEYS.horizontal,
-  /** Four-directional navigation: all arrow keys + Home/End. */
-  omni: DEFAULT_KEYS.both,
-  /** Standard vertical list: Up/Down + Home/End (default). */
-  vertical: DEFAULT_KEYS.vertical,
-} as const;
-
-/**
- * Compose a custom keymap from a preset plus per-action overrides.
- *
- * @example
- * ```ts
- * // Add Enter/Space as aliases for "next" in a vertical list:
- * const keys = keymap('vertical', { next: ['ArrowDown', 'Enter'] });
- * createListControl({ ..., keys });
- * ```
- */
-export const keymap = (
-  preset: keyof typeof keymapPresets,
-  overrides?: Keymap,
-): Record<ListNavigationAction, string[]> => ({
-  ...keymapPresets[preset],
-  ...overrides,
-});
-
 export type ListNavigationOptions<T> = {
   disabled?: () => boolean;
-  getIndex: () => number;
   /**
    * Returns a plain-text label for an item used by typeahead search.
    * When provided, pressing a printable character key jumps to the first enabled
@@ -97,7 +60,12 @@ export type ListNavigationOptions<T> = {
   /** Override default key bindings for navigation actions. */
   keys?: Partial<Record<ListNavigationAction, string[]>>;
   loop?: boolean;
-  onNavigate?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
+  /**
+   * Called when navigation lands on a new index.
+   * `event` is the originating `KeyboardEvent`, or `undefined` for programmatic navigation.
+   * Use to sync side-effects such as focusing a DOM element.
+   */
+  onNavigate?: (action: ListKeyAction, index: number, event?: KeyboardEvent) => void;
   /**
    * Axis the list navigates along. Controls which arrow keys are treated as
    * `next`/`prev` when no explicit `keys` override is provided.
@@ -108,19 +76,28 @@ export type ListNavigationOptions<T> = {
    * - `'both'`: all four arrow keys
    */
   orientation?: 'both' | 'horizontal' | 'vertical' | (() => 'both' | 'horizontal' | 'vertical');
-  setIndex: (index: number) => void;
+  /** `AbortSignal` from the component lifecycle. Disposes typeahead timer on abort. */
+  signal?: AbortSignal;
 };
 
 export type ListControl<T> = {
-  /** Cancels any pending typeahead timer. Call on list cleanup to prevent post-disposal timer fires. */
-  cleanup(): void;
-  first(): number;
+  [Symbol.dispose](): void;
+  /** Current focused index. `-1` when nothing is focused. */
+  readonly focusedIndex: ReadonlySignal<number>;
   getActiveItem(): T | undefined;
   handleKeydown(event: KeyboardEvent): boolean;
-  last(): number;
-  next(): number;
-  prev(): number;
+  /**
+   * Programmatically navigate to a named position.
+   * Always fires `onNavigate` — consistent with keyboard navigation.
+   * Returns the resolved index, or `-1` if no enabled item was found.
+   */
+  navigate(action: ListNavigationAction): number;
+  /** Reset focused index to `-1`. */
   reset(): void;
+  /**
+   * Set focus to the item at `index`. Returns the resolved index.
+   * Pass a negative index to clear focus (same as `reset()`).
+   */
   set(index: number): number;
 };
 
@@ -128,43 +105,24 @@ const hasDisabledProp = (item: unknown): item is { disabled: boolean } =>
   typeof item === 'object' && item !== null && 'disabled' in item;
 
 export const createListControl = <T>(options: ListNavigationOptions<T>): ListControl<T> => {
-  const isDisabled = (item: T, index: number): boolean =>
+  const _index = signal(-1);
+
+  const isItemDisabled = (item: T, index: number): boolean =>
     options.isItemDisabled?.(item, index) ?? (hasDisabledProp(item) ? item.disabled : false);
 
-  const commitIndex = (idx: number): number => {
-    if (idx >= 0) options.setIndex(idx);
+  const commitIndex = (idx: number, action: ListKeyAction, event?: KeyboardEvent): number => {
+    if (idx >= 0) {
+      _index.value = idx;
+      options.onNavigate?.(action, idx, event);
+    }
 
     return idx;
   };
 
   const findEnabledIndex = (items: T[], start: number, direction: 'forward' | 'backward'): number => {
-    if (direction === 'forward') return findForward(items, start, (item, i) => !isDisabled(item, i));
+    if (direction === 'forward') return findForward(items, start, (item, i) => !isItemDisabled(item, i));
 
-    return findBackward(items, start, (item, i) => !isDisabled(item, i));
-  };
-
-  const first = (): number => {
-    const items = options.getItems();
-
-    if (!items.length) return -1;
-
-    const idx = findEnabledIndex(items, 0, 'forward');
-
-    if (idx < 0) return -1;
-
-    return commitIndex(idx);
-  };
-
-  const last = (): number => {
-    const items = options.getItems();
-
-    if (!items.length) return -1;
-
-    const idx = findEnabledIndex(items, items.length - 1, 'backward');
-
-    if (idx < 0) return -1;
-
-    return commitIndex(idx);
+    return findBackward(items, start, (item, i) => !isItemDisabled(item, i));
   };
 
   const set = (index: number): number => {
@@ -180,16 +138,16 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
 
     const clamped = Math.min(index, items.length - 1);
 
-    if (isDisabled(items[clamped], clamped)) {
-      return -1;
-    }
+    if (isItemDisabled(items[clamped], clamped)) return -1;
 
-    return commitIndex(clamped);
+    _index.value = clamped;
+
+    return clamped;
   };
 
-  const move = (direction: 'forward' | 'backward'): number => {
+  const move = (direction: 'forward' | 'backward', event?: KeyboardEvent): number => {
     const items = options.getItems();
-    const current = options.getIndex();
+    const current = _index.value;
 
     if (!items.length) return -1;
 
@@ -202,32 +160,49 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
           ? current + 1
           : current - 1;
     const idx = findEnabledIndex(items, start, direction);
+    const action: ListNavigationAction = direction === 'forward' ? 'next' : 'prev';
 
-    if (idx >= 0) return commitIndex(idx);
+    if (idx >= 0) return commitIndex(idx, action, event);
 
     if (options.loop) {
       const wrapStart = direction === 'forward' ? 0 : items.length - 1;
       const wrapped = findEnabledIndex(items, wrapStart, direction);
 
-      if (wrapped >= 0) return commitIndex(wrapped);
+      if (wrapped >= 0) return commitIndex(wrapped, action, event);
     }
 
     return current;
   };
 
-  const next = (): number => move('forward');
+  const navigate = (action: ListNavigationAction): number => {
+    const items = options.getItems();
 
-  const prev = (): number => move('backward');
+    if (!items.length) return -1;
+
+    if (action === 'first') {
+      const idx = findEnabledIndex(items, 0, 'forward');
+
+      return commitIndex(idx, 'first');
+    }
+
+    if (action === 'last') {
+      const idx = findEnabledIndex(items, items.length - 1, 'backward');
+
+      return commitIndex(idx, 'last');
+    }
+
+    return move(action === 'next' ? 'forward' : 'backward');
+  };
 
   const getActiveItem = (): T | undefined => {
     const items = options.getItems();
-    const index = options.getIndex();
+    const index = _index.value;
 
     return index >= 0 && index < items.length ? items[index] : undefined;
   };
 
   const reset = (): void => {
-    options.setIndex(-1);
+    _index.value = -1;
   };
 
   // ── Keyboard handling ──────────────────────────────────────────────────────
@@ -251,9 +226,20 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     for (const action of ['next', 'prev', 'first', 'last'] as const) {
       for (const key of resolved[action]) {
         km[key] = (keyboardEvent: KeyboardEvent) => {
-          const index = { first, last, next, prev }[action]();
+          if (action === 'first' || action === 'last') {
+            const items = options.getItems();
 
-          options.onNavigate?.(action, index, keyboardEvent);
+            if (!items.length) return;
+
+            const idx =
+              action === 'first'
+                ? findEnabledIndex(items, 0, 'forward')
+                : findEnabledIndex(items, items.length - 1, 'backward');
+
+            commitIndex(idx, action, keyboardEvent);
+          } else {
+            move(action === 'next' ? 'forward' : 'backward', keyboardEvent);
+          }
         };
       }
     }
@@ -265,13 +251,13 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
 
   const typeahead = options.getItemLabel
     ? createTypeahead({
-        getIndex: options.getIndex,
+        getIndex: () => _index.value,
         getItemLabel: options.getItemLabel,
         getItems: options.getItems,
-        isItemDisabled: (item, index) => isDisabled(item, index),
+        isItemDisabled: (item, index) => isItemDisabled(item, index),
         onNavigate: (index, event) => {
           if (!isKeyDisabled()) {
-            commitIndex(index);
+            _index.value = index;
             options.onNavigate?.('typeahead', index, event);
           }
         },
@@ -282,22 +268,28 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
     typeof options.orientation === 'function' ? null : buildKeymap();
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
-    const keymap = _staticKeymap ?? buildKeymap();
+    const km = _staticKeymap ?? buildKeymap();
 
-    if (dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap })) return true;
+    if (dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap: km })) return true;
 
     return typeahead?.handleKeydown(event) ?? false;
   };
 
+  const dispose = (): void => {
+    typeahead?.reset();
+  };
+
+  if (options.signal) {
+    options.signal.addEventListener('abort', dispose, { once: true });
+  }
+
   return {
-    cleanup: () => typeahead?.reset(),
-    first,
+    focusedIndex: _index,
     getActiveItem,
     handleKeydown,
-    last,
-    next,
-    prev,
+    navigate,
     reset,
     set,
+    [Symbol.dispose]: dispose,
   };
 };

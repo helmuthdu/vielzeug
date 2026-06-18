@@ -14,7 +14,7 @@ You need to fetch remote data, show loading state while the request is in flight
 Use an `invoke` array in the `loading` state. The runtime passes an `AbortSignal` to `src` and cancels it when the state is exited, preventing stale responses from updating context.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type State = 'error' | 'idle' | 'loading';
 type Context = { data: string[]; error: string };
@@ -24,7 +24,7 @@ type Event =
   | { items: string[]; type: 'SUCCESS' }
   | { message: string; type: 'FAILURE' };
 
-const fetcher = defineMachine<State, Context, Event>({
+const fetcher = machine({
   context: { data: [], error: '' },
   initial: 'idle',
   states: {
@@ -37,8 +37,8 @@ const fetcher = defineMachine<State, Context, Event>({
     loading: {
       invoke: [
         {
-          onDone: (items) => ({ items: items as string[], type: 'SUCCESS' }),
-          onError: (err) => ({ message: String(err), type: 'FAILURE' }),
+          onDone: (items, _ctx) => ({ items: items as string[], type: 'SUCCESS' }),
+          onError: (err, _ctx) => ({ message: String(err), type: 'FAILURE' }),
           src: async ({ signal }) => {
             const res = await fetch('/api/items', { signal });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -69,7 +69,6 @@ const fetcher = defineMachine<State, Context, Event>({
   },
 });
 
-const m = interpret(fetcher);
 m.send({ type: 'FETCH' }); // enters loading, invoke starts
 // The AbortSignal is cancelled automatically if the state exits before the response arrives
 ```

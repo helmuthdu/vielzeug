@@ -69,12 +69,15 @@ export type FocusTrapOptions = {
 };
 
 export type FocusTrap = {
+  [Symbol.dispose](): void;
   /** Start trapping Tab/Shift-Tab. Safe to call when already active. */
   activate(): void;
   /** Whether the trap is currently active. */
   readonly active: boolean;
   /** Stop trapping. Safe to call when already inactive. */
   deactivate(): void;
+  /** Alias for `deactivate()`. Conforms to the monorepo disposal convention. */
+  dispose(): void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -178,5 +181,7 @@ export const createFocusTrap = (
       return _active;
     },
     deactivate,
+    dispose: deactivate,
+    [Symbol.dispose]: deactivate,
   };
 };

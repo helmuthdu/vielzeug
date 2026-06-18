@@ -4,7 +4,25 @@ description: Tree-shakeable, zero-dependency utility library for arrays, async c
 package: arsenal
 category: utilities
 keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
-exports: [chunk, debounce, throttle, allOf, clamp, isEqual, attempt, retry, sleep, stableStringify, search, getPath]
+exports:
+  [
+    chunk,
+    debounce,
+    throttle,
+    allOf,
+    clamp,
+    isEqual,
+    attempt,
+    retry,
+    sleep,
+    hash,
+    fuzzy,
+    getPath,
+    deepMerge,
+    diff,
+    stash,
+    memo,
+  ]
 related: [tempo, sourcerer, spell, coins]
 environments: [browser, node, ssr, deno]
 ---
@@ -17,15 +35,15 @@ environments: [browser, node, ssr, deno]
 
 Arsenal favors a curated, typed utility surface over an everything-and-the-kitchen-sink API, with zero dependencies and modern tree-shakeable exports.
 
-| Feature                     | Arsenal                                       | lodash-es | Remeda  |
-| --------------------------- | --------------------------------------------- | --------- | ------- |
-| Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB    | ~18 kB  |
-| TypeScript-first ergonomics | <sg-icon name="check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="check" size="16"></sg-icon>      |
-| Deep utility coverage       | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | Partial |
-| Async control-flow helpers  | <sg-icon name="check" size="16"></sg-icon>                                            | Partial   | <sg-icon name="x" size="16"></sg-icon>      |
-| Typed predicate functions   | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>        | Partial |
-| Tree-shakeable modules      | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="check" size="16"></sg-icon>      |
-| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>        | <sg-icon name="check" size="16"></sg-icon>      |
+| Feature                     | Arsenal                                       | lodash-es                                  | Remeda                                     |
+| --------------------------- | --------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB                                     | ~18 kB                                     |
+| TypeScript-first ergonomics | <sg-icon name="check" size="16"></sg-icon>    | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
+| Deep utility coverage       | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
+| Async control-flow helpers  | <sg-icon name="check" size="16"></sg-icon>    | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
+| Typed predicate functions   | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>     | Partial                                    |
+| Tree-shakeable modules      | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 
 <div class="decision-callout">
 
@@ -56,7 +74,7 @@ yarn add @vielzeug/arsenal
 ## Quick Start
 
 ```ts
-import { chunk, pick, queue, retry, parseJSON, partial, filterMap, search, stableStringify } from '@vielzeug/arsenal';
+import { chunk, deepMerge, diff, fuzzy, hash, parseJSON, pick, queue, retry } from '@vielzeug/arsenal';
 
 const pages = chunk([1, 2, 3, 4, 5], 2);
 const user = pick({ id: 1, name: 'Alice', role: 'admin' }, ['id', 'name']);
@@ -71,35 +89,42 @@ const health = await retry(() => fetch('/api/health').then((r) => r.json()), {
 });
 
 const cfg = parseJSON('{"api":{"host":"localhost","port":3000}}', {
-  defaultValue: { api: { host: 'localhost', port: 3000 } },
+  fallback: { api: { host: 'localhost', port: 3000 } },
 });
 
-const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
-const doubled = doubleAll([1, 2, 3]);
-
-// Fuzzy search — filter mode (default) or scored mode
+// Fuzzy search — filter mode returns T[], scored mode returns ScoredResult<T>[]
 const users = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
 ];
-const hits = search(users, 'alice', { mode: 'scored' });
+const hits = fuzzy(users, 'alice'); // User[]
+const ranked = fuzzy(users, 'alice', { scored: true }); // ScoredResult<User>[]
 // [{ item: { name: 'Alice', ... }, score: 0.91 }, ...]
 
+// Deep merge with optional array concatenation
+deepMerge({ a: { x: 1 } }, { a: { y: 2 } }); // { a: { x: 1, y: 2 } }
+deepMerge({ tags: ['a'] }, { tags: ['b'] }, { arrayStrategy: 'concat' }); // { tags: ['a','b'] }
+
+// Structured diff
+diff({ port: 3000 }, { port: 4000 });
+// { added: [], removed: [], changed: { port: { before: 3000, after: 4000 } } }
+
 // Deterministic cache keys from any value
-const key = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
+const key = hash({ sort: 'asc', filter: { role: 'admin' } });
 ```
 
 ## Features
 
 <div class="features-grid">
 
-- **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `sample`, `search`, `take/drop`, `union/intersection`, `zip/unzip`, and more
-- **Async**: `abortable`, `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
-- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `entries`, `fromEntries`, `keys`, `values`, `defaults`, `deepMerge`, `deepMergeWith`, `shallowMerge`, `parseJSON`, `getPath`, `stash`, `stableStringify`, `flattenPaths`, `cache`, `getOrCreate`
-- **Function**: `partial`, `allOf`, `anyOf`, `noneOf`, `tap`, `identity`, `constant`, `assert`, `runAll`, compose, memoization, and rate limiting
+- **Array**: `chunk`, `compact`, `countBy`, `difference`, `filterMap`, `flatten`, `groupBy`, `indexBy`, `partition`, `fuzzy`, `fuzzyFilter`, `fuzzyScore`, `take/drop`, `union/intersection`, `zip/unzip`, and more
+- **Async**: `abortError`, `attempt`, `parallel`, `queue`, `retry`, `sleep`, `waitFor`
+- **Cache**: `memo` (sync LRU memoization), `stash` (TTL cache with stampede prevention)
+- **Object**: `pick`, `omit`, `mapValues`, `mapKeys`, `filterValues`, `defaults`, `deepMerge`, `shallowMerge`, `diff`, `diffArrays`, `invert`, `prune`, `getPath`, `flattenPaths`, `unflattenPaths`, `parseJSON`, `hash` (deterministic, handles `Date`/`Set`/`Map`/`bigint`)
+- **Function**: `pipe`, `assert`, `runAll`, `debounce`, `throttle`, `tap`, `identity`, `constant`, `once`, `memo`
+- **Guards**: `allOf`, `anyOf`, `noneOf`, `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isError`, `isFunction`, `isMatch`, `isNil`, `isNumber`, `isPlainObject`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isAbortError`, `shallowEqual`
 - **Math**: `lerp`, `normalize`, `mod`, `gcd/lcm`, `variance`, `standardDeviation`, `backoff`, plus numeric helpers
 - **Random**: `draw`, `random`, `shuffle`, `uuid`
-- **Typed predicates**: `isArray`, `isBoolean`, `isDate`, `isDefined`, `isEmpty`, `isEqual`, `isError`, `isFunction`, `isMatch`, `isNil`, `isNumber`, `isPlainObject`, `isPrimitive`, `isPromise`, `isRegex`, `isString`, `isAbortError`
 
 </div>
 

@@ -1,13 +1,12 @@
-import { cache } from '@vielzeug/arsenal';
-
 import type { FormatOptions, Money, MoneyFormatPart } from './types';
 
+import { boundedCache } from './_cache';
 import { applyRounding, getCurrencyDecimals, pow10 } from './utils';
 
 // Template cache key: locale × currency × style × sign — 512 prevents thrashing in multi-locale apps.
-const currencyTemplateCache = cache<string, Intl.NumberFormatPart[]>(512);
+const currencyTemplateCache = boundedCache<string, Intl.NumberFormatPart[]>(512);
 // Locale-only key — 32 covers virtually every realistic multi-locale deployment.
-const integerFormatterCache = cache<string, Intl.NumberFormat>(32);
+const integerFormatterCache = boundedCache<string, Intl.NumberFormat>(32);
 
 /**
  * Resolves and validates all formatting parameters, performs scaling, and
@@ -53,6 +52,9 @@ function resolveFormatState(m: Money, options: FormatOptions): FormatState {
  * Formats a `Money` value as a locale-aware currency string.
  * Uses bigint arithmetic throughout — no floating-point precision loss.
  *
+ * When `maximumFractionDigits` is less than the currency's native decimal
+ * places, the amount is rescaled using `'half-away-from-zero'` rounding.
+ *
  * @example
  * ```ts
  * const price = money('1234.56', 'USD');
@@ -75,6 +77,8 @@ export function format(m: Money, options: FormatOptions = {}): string {
  * (currency symbol, integer, decimal separator, fraction, sign).
  *
  * Joining all `value` fields produces the same string as `format()`.
+ * When `maximumFractionDigits` reduces precision, rescaling uses
+ * `'half-away-from-zero'` rounding.
  *
  * @example
  * ```ts

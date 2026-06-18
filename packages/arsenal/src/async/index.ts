@@ -1,5 +1,6 @@
 export * from './abortError';
-export * from './abortable';
+export * from './attempt';
+export * from './backoff';
 export * from './parallel';
 export * from './queue';
 export * from './retry';

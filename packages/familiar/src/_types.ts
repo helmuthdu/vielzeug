@@ -3,17 +3,6 @@
  * Not part of the public API surface — consumers import from the root entry point.
  */
 
-// ─── Protocol version ─────────────────────────────────────────────────────────
-
-/**
- * Current host↔worker message protocol version.
- * Increment when the protocol changes in a breaking way.
- * Module workers (createModuleWorker) may send { protocol: PROTOCOL_VERSION } on startup
- * as a debugging convention so developers can detect version skew from cached workers.
- * The host does not validate this value at runtime — it is informational only.
- */
-export const PROTOCOL_VERSION = 2 as const;
-
 // ─── Core types ───────────────────────────────────────────────────────────────
 
 export type TaskFn<TInput, TOutput> = (input: TInput) => TOutput | Promise<TOutput>;
@@ -22,16 +11,28 @@ export type WorkerStatus = 'idle' | 'running' | 'terminated';
 
 export type WorkerErrorCode = 'invalid_options' | 'queue_full' | 'task' | 'terminated' | 'timeout' | 'worker';
 
+// ─── SlotStrategy — execution abstraction ────────────────────────────────────
+
+/**
+ * Execution abstraction consumed by `createPool`.
+ * Implementors: `Slot` (real worker) and in-process executor (test double).
+ */
+export type SlotStrategy<TInput, TOutput> = {
+  /**
+   * Cancel the current in-flight task and stop the underlying worker without marking the slot as
+   * permanently disposed. The slot can be reused immediately — a fresh worker will be created on
+   * the next run() or runStream() call. Used for streaming early consumer exit (break/throw).
+   */
+  cancel(): void;
+  prime(): Promise<void>;
+  run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput>;
+  runStream(input: TInput, transferables: Transferable[], timeout: number | undefined): AsyncIterable<TOutput>;
+  terminate(): void;
+};
+
 // ─── RunOptions ───────────────────────────────────────────────────────────────
 
 export type RunOptions = {
-  /**
-   * Watchdog timeout in milliseconds. If the worker does not send a heartbeat message
-   * ({ id, heartbeat: true }) within this window, the task is killed with WorkerTimeoutError.
-   * Useful for long-running CPU tasks that should remain responsive.
-   * For inline workers the heartbeat is sent automatically at heartbeatTimeout / 2 intervals.
-   */
-  heartbeatTimeout?: number;
   /**
    * Task scheduling priority. Higher values run before lower values when tasks queue up.
    * Within the same priority, tasks run FIFO. Default: 0.
@@ -58,6 +59,14 @@ export type BatchOptions = Omit<RunOptions, 'signal'> & {
 export type WorkerOptions = {
   /** Number of concurrent worker slots. Default: 1. Pass 'auto' to use navigator.hardwareConcurrency. */
   concurrency?: number | 'auto';
+  /**
+   * Watchdog window in milliseconds applied to every task in the pool.
+   * If the worker does not send a heartbeat message within this window, the task is
+   * killed with WorkerTimeoutError. Useful for long-running CPU tasks that must stay responsive.
+   * For inline workers the heartbeat is sent automatically at heartbeatWindow / 2 intervals.
+   * Module workers must implement the heartbeat protocol manually.
+   */
+  heartbeatWindow?: number;
   /** Maximum queued tasks. When onFull='reject', exceeding this limit rejects with WorkerQueueFullError. Default: unlimited. */
   maxQueue?: number;
   /**
@@ -75,33 +84,35 @@ export type WorkerOptions = {
   timeout?: number;
 };
 
-// ─── WorkerHandle — split into composable mixin types (R10) ──────────────────
+// ─── WorkerHandle — flat interface ────────────────────────────────────────────
 
-/** Core worker pool API: submit tasks, close gracefully, terminate immediately. */
-export type WorkerPool<TInput, TOutput> = {
+/**
+ * Full handle returned by `createWorker` and `createModuleWorker`.
+ * All capabilities are on one flat interface — no need to cross-reference mixin types.
+ */
+export interface WorkerHandle<TInput, TOutput> {
+  // ── Symbols ──
+
   [Symbol.asyncDispose](): Promise<void>;
   [Symbol.dispose](): void;
+
+  // ── Lifecycle ──
+
   /** Gracefully drain queued/in-flight tasks then terminate workers. Rejects if timeoutMs elapses. */
   close(timeoutMs?: number): Promise<void>;
-  /** `AbortSignal` aborted when the pool is terminated (via `dispose()` or `close()` settling). Use to tie external lifetimes to the pool. */
+  /** `AbortSignal` aborted when the pool is terminated (via `dispose()` or `close()` settling). */
   readonly disposalSignal: AbortSignal;
   /** Terminate immediately, rejecting all in-flight and queued tasks. */
   dispose(): void;
   /** `true` after `dispose()` has been called or `close()` has settled. */
   readonly disposed: boolean;
-  /**
-   * Execute the task function.
-   *
-   * IMPORTANT: The task function is serialized via .toString() and runs in a separate global
-   * scope. It cannot close over variables from the surrounding module.
-   */
-  run(input: TInput, options?: RunOptions): Promise<TOutput>;
+  /** Pre-initialize all worker slots to reduce first-task latency. */
+  prime(): Promise<void>;
   /** Current lifecycle state of the pool. */
   readonly status: WorkerStatus;
-};
 
-/** Live operational metrics for a worker pool. */
-export type WorkerMetrics = {
+  // ── Metrics ──
+
   /** Number of slots currently executing a task. */
   readonly active: number;
   /** Number of successfully completed tasks since creation. */
@@ -110,99 +121,80 @@ export type WorkerMetrics = {
   readonly concurrency: number;
   /** Number of tasks that failed with a task / timeout / worker error (excludes aborts and terminations). */
   readonly failed: number;
-  /** Number of queued tasks waiting to run (accurate: excludes cancelled/aborted items). */
+  /** Number of active groups (created but not yet fully drained or aborted). */
+  readonly groupCount: number;
+  /** Number of queued tasks waiting to run (excludes cancelled/aborted items). */
   readonly queued: number;
-  /** Fraction of worker slots currently executing a task (0–1). */
-  readonly utilization: number;
-};
 
-/** Batch and streaming task capabilities. */
-export type StreamingWorker<TInput, TOutput> = {
+  // ── Execution ──
+
   /**
    * Run all inputs through the pool and yield results.
-   * By default yields in submission order. Pass ordered: false to yield as-completed
-   * (results arrive in completion order, maximizing throughput).
+   * By default yields in submission order. Pass ordered: false to yield as-completed.
    */
   batch(inputs: TInput[], options?: BatchOptions): AsyncIterable<TOutput>;
+  /** Create a task group. All tasks share an AbortController and can be drained together. */
+  group(name?: string, options?: GroupOptions): TaskGroup<TInput, TOutput>;
+  /** Execute the task. Tasks are queued when all slots are busy. */
+  run(input: TInput, options?: RunOptions): Promise<TOutput>;
   /**
    * Run a streaming task and yield partial results as they arrive.
-   * The worker function must return an async iterable; each yielded value is forwarded to
-   * the host as a chunk.
+   * The worker function must return an async iterable; each yielded value is forwarded as a chunk.
    *
-   * Unlike run(), streaming tasks cannot be queued — they require an immediately available
-   * worker slot. If all slots are busy, the iterable throws WorkerRuntimeError on the first
-   * next() call. Use run() for queueable work.
+   * Unlike run(), streaming tasks cannot be queued — they require an immediately available slot.
+   * Throws WorkerRuntimeError synchronously if all slots are busy.
+   * Note: `signal` is not supported for streaming tasks (cannot be queued); use `break` to stop early.
    */
   runStream(input: TInput, options?: Omit<RunOptions, 'signal'>): AsyncIterable<TOutput>;
-};
-
-/** Task grouping: submit related tasks that can be cancelled and awaited as a unit. */
-export type GroupableWorker<TInput, TOutput> = {
-  /**
-   * Create a task group. All tasks submitted via group.run() share an AbortController
-   * and can be drained or cancelled together.
-   */
-  group(): TaskGroup<TInput, TOutput>;
-};
-
-/** Worker slot pre-initialization. */
-export type PrimableWorker = {
-  /** Pre-initialize all worker slots to reduce first-task latency. */
-  prime(): Promise<void>;
-};
-
-/** Full worker handle — the complete intersection of all capability types. */
-export type WorkerHandle<TInput, TOutput> = WorkerPool<TInput, TOutput> &
-  WorkerMetrics &
-  StreamingWorker<TInput, TOutput> &
-  GroupableWorker<TInput, TOutput> &
-  PrimableWorker;
+}
 
 // ─── TaskGroup ────────────────────────────────────────────────────────────────
+
+export type GroupOptions = {
+  /**
+   * When this signal is aborted, the group is aborted automatically.
+   * Composable with `WorkerHandle.disposalSignal` to tie the group lifetime to the pool.
+   */
+  signal?: AbortSignal;
+};
 
 export type TaskGroup<TInput, TOutput> = {
   /** Cancel all pending tasks in this group. In-flight tasks run to natural completion. */
   abort(reason?: unknown): void;
   /**
-   * Wait for all tasks in this group to settle (success or failure).
-   * Throws the first error encountered, only after all tasks have settled —
-   * preventing unhandled promise rejections for subsequent failures.
+   * Wait for all tasks submitted so far to settle.
+   * Returns settled results — both fulfilled values and rejection reasons.
+   * Tasks added after drain() starts are not included in this call.
    */
-  drain(): Promise<void>;
-  /** Submit a task to the pool, associating it with this group. */
+  drain(): Promise<PromiseSettledResult<TOutput>[]>;
+  /** Optional name provided when the group was created. */
+  readonly name: string | undefined;
+  /** Number of tasks not yet settled (decrements as tasks complete). */
+  readonly pending: number;
+  /**
+   * Submit a task to the pool, associating it with this group.
+   * Throws `WorkerTerminatedError` synchronously if the pool has been disposed or is closing.
+   */
   run(input: TInput, options?: Omit<RunOptions, 'signal'>): Promise<TOutput>;
-  /** Number of tasks submitted to this group. */
+  /** Total number of tasks ever submitted to this group (never decrements). */
   readonly size: number;
 };
 
-// ─── Transferable type helpers (F5) ──────────────────────────────────────────
-
-/**
- * Type annotation indicating a value is transferable (avoids structured-clone overhead).
- * Pass the value in RunOptions.transferables to move it to the worker thread.
- *
- * @example
- * const worker = createWorker<Transfer<ArrayBuffer>, number>((buf) => buf.byteLength);
- * const buf = new ArrayBuffer(8);
- * await worker.run(buf, { transferables: [buf] });
- */
-export type Transfer<T extends Transferable> = T;
-
-// ─── Typed WorkerError hierarchy (F6) ────────────────────────────────────────
+// ─── Typed WorkerError hierarchy ──────────────────────────────────────────────
 
 /** Base class for all worker errors. Use instanceof checks against subclasses for specificity. */
 export class WorkerError extends Error {
   readonly code: WorkerErrorCode;
 
   constructor(code: WorkerErrorCode, message: string, cause?: unknown) {
-    super(`[@vielzeug/familiar] ${message}`, { cause });
+    super(message, { cause });
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;
   }
 
-  static is(err: unknown): err is WorkerError {
-    return err instanceof WorkerError;
+  override toString(): string {
+    return `[@vielzeug/familiar] ${this.name}: ${this.message}`;
   }
 }
 
@@ -215,20 +207,12 @@ export class WorkerTimeoutError extends WorkerError {
     super('timeout', `Task timed out after ${timeoutMs}ms`);
     this.timeoutMs = timeoutMs;
   }
-
-  static is(err: unknown): err is WorkerTimeoutError {
-    return err instanceof WorkerTimeoutError;
-  }
 }
 
 /** Thrown when the task function throws. The original error is available as .cause. */
 export class WorkerTaskError extends WorkerError {
   constructor(message: string, cause?: unknown) {
     super('task', message, cause);
-  }
-
-  static is(err: unknown): err is WorkerTaskError {
-    return err instanceof WorkerTaskError;
   }
 }
 
@@ -241,20 +225,12 @@ export class WorkerQueueFullError extends WorkerError {
     super('queue_full', `Queue is full (maxQueue=${maxQueue})`);
     this.maxQueue = maxQueue;
   }
-
-  static is(err: unknown): err is WorkerQueueFullError {
-    return err instanceof WorkerQueueFullError;
-  }
 }
 
 /** Thrown when a task or operation is rejected because the worker was terminated. */
 export class WorkerTerminatedError extends WorkerError {
   constructor(message = 'Worker was terminated') {
     super('terminated', message);
-  }
-
-  static is(err: unknown): err is WorkerTerminatedError {
-    return err instanceof WorkerTerminatedError;
   }
 }
 
@@ -263,19 +239,11 @@ export class WorkerRuntimeError extends WorkerError {
   constructor(message: string, cause?: unknown) {
     super('worker', message, cause);
   }
-
-  static is(err: unknown): err is WorkerRuntimeError {
-    return err instanceof WorkerRuntimeError;
-  }
 }
 
 /** Thrown when invalid options are passed to createWorker or createModuleWorker. */
 export class WorkerInvalidOptionsError extends WorkerError {
   constructor(message: string) {
     super('invalid_options', message);
-  }
-
-  static is(err: unknown): err is WorkerInvalidOptionsError {
-    return err instanceof WorkerInvalidOptionsError;
   }
 }

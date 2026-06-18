@@ -9,6 +9,7 @@ import type { BundledData } from '../types.js';
 
 import { loadData } from '../data.js';
 import { createServer } from '../index.js';
+import { SCHEMA_VERSION } from '../types.js';
 
 type TextContent = { text: string; type: 'text' };
 type ToolCallResult = { content: TextContent[]; isError?: boolean };
@@ -19,7 +20,20 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataFile = resolve(__dirname, '../../data/vielzeug-data.json');
 
 beforeAll(async () => {
-  if (!existsSync(dataFile)) {
+  // Regenerate if missing or if loadData throws (e.g. schema version mismatch from stale file)
+  const needsRegen =
+    !existsSync(dataFile) ||
+    (() => {
+      try {
+        loadData();
+
+        return false;
+      } catch {
+        return true;
+      }
+    })();
+
+  if (needsRegen) {
     // Import the generator function directly — faster than spawning a subprocess
     const { generateBundledData } = await import('../generator.js');
     const { data: generated } = generateBundledData({ incremental: false });
@@ -59,7 +73,7 @@ function readText(result: ToolCallResult): string {
 }
 
 describe('vielzeug MCP server', () => {
-  it('registers six tools', async () => {
+  it('registers seven tools', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
@@ -67,6 +81,7 @@ describe('vielzeug MCP server', () => {
     expect(names).toEqual([
       'get-component',
       'get-docs',
+      'get-package',
       'get-source',
       'list-components',
       'list-packages',
@@ -105,25 +120,25 @@ describe('vielzeug MCP server', () => {
     expect(parsed[0]).not.toHaveProperty('apiSource');
   });
 
-  it('list-packages with packageSlug returns a single-item array', async () => {
+  it('get-package returns a single PackageMeta object', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { packageSlug: 'spell' },
-      name: 'list-packages',
+      name: 'get-package',
     })) as ToolCallResult;
-    const parsed = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
+    const parsed = JSON.parse(readText(result)) as Record<string, unknown>;
 
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed).toHaveLength(1);
-    expect(parsed[0]?.['slug']).toBe('spell');
-    expect(parsed[0]).not.toHaveProperty('docs');
+    expect(result.isError).not.toBe(true);
+    expect(parsed['slug']).toBe('spell');
+    expect(parsed).toHaveProperty('hasSource');
+    expect(parsed).not.toHaveProperty('docs');
   });
 
-  it('list-packages with unknown slug returns an error', async () => {
+  it('get-package with unknown slug returns an error', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { packageSlug: 'does-not-exist' },
-      name: 'list-packages',
+      name: 'get-package',
     })) as ToolCallResult;
 
     expect(result.isError).toBe(true);
@@ -227,7 +242,7 @@ describe('vielzeug MCP server', () => {
     expect(JSON.parse(readText(result))).toEqual([]);
   });
 
-  it('search-packages results have matchedIn as an array and a score', async () => {
+  it('search-packages results have matchedIn as an array and a numeric score', async () => {
     const { client } = await createTestPair();
     const result = (await client.callTool({
       arguments: { query: 'signal' },
@@ -241,6 +256,26 @@ describe('vielzeug MCP server', () => {
     expect(hits.length).toBeGreaterThan(0);
     expect(Array.isArray(hits[0]?.['matchedIn'])).toBe(true);
     expect(typeof hits[0]?.['score']).toBe('number');
+    expect(hits[0]?.['score'] as number).toBeGreaterThan(0);
+  });
+
+  it('search-packages scores name matches higher than description matches', async () => {
+    // ripple matches by name — should score higher than a package that only matches in description
+    const { client } = await createTestPair();
+    const result = (await client.callTool({
+      arguments: { query: 'ripple' },
+      name: 'search-packages',
+    })) as ToolCallResult;
+
+    expect(result.isError).not.toBe(true);
+
+    const hits = JSON.parse(readText(result)) as Array<{ matchedIn: string[]; score: number; slug: string }>;
+    const rippleHit = hits.find((h) => h.slug === 'ripple');
+
+    if (rippleHit) {
+      // name match weight (3.9) is highest in metadata tier
+      expect(rippleHit.score).toBeGreaterThanOrEqual(3.9);
+    }
   });
 
   it('list-components and get-component work when sigil metadata is available', async () => {
@@ -305,23 +340,6 @@ describe('vielzeug MCP server', () => {
     await expect(client.callTool({ arguments: {}, name: 'no-such-tool' })).rejects.toThrow();
   });
 
-  it('exposes MCP resources for doc pages and source', async () => {
-    const { client } = await createTestPair();
-    const { resources } = await client.listResources();
-
-    expect(resources.length).toBeGreaterThan(0);
-
-    const docResource = resources.find((r) => r.uri.startsWith('vielzeug://docs/'));
-
-    expect(docResource).toBeDefined();
-    expect(docResource?.mimeType).toBe('text/markdown');
-
-    const sourceResource = resources.find((r) => r.uri.startsWith('vielzeug://source/'));
-
-    expect(sourceResource).toBeDefined();
-    expect(sourceResource?.mimeType).toBe('text/x-typescript');
-  });
-
   it('get-docs returns error when page enum is valid but package lacks that page', async () => {
     // Use a synthetic data fixture with only index page — guarantees the missing-page path always runs
     const syntheticData: BundledData = {
@@ -341,6 +359,7 @@ describe('vielzeug MCP server', () => {
           version: '1.0.0',
         },
       ],
+      schemaVersion: SCHEMA_VERSION,
       version: '0.0.0',
     };
     const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -408,18 +427,23 @@ describe('vielzeug MCP server', () => {
     expect(readText(result)).toContain('unavailable');
   });
 
-  it('reads a resource by URI', async () => {
+  it('search-packages returns error when query exceeds 500 chars', async () => {
     const { client } = await createTestPair();
-    const { resources } = await client.listResources();
+    const longQuery = 'a'.repeat(501);
 
-    // spell/index is guaranteed to exist — every package has an index doc
-    const spellIndex = resources.find((r) => r.uri === 'vielzeug://docs/spell/index');
+    const result = (await client.callTool({
+      arguments: { query: longQuery },
+      name: 'search-packages',
+    })) as ToolCallResult;
 
-    expect(spellIndex).toBeDefined();
+    expect(result.isError).toBe(true);
+    expect(readText(result)).toContain('500');
+  });
 
-    const { contents } = await client.readResource({ uri: spellIndex!.uri });
+  it('get-package requires packageSlug', async () => {
+    const { client } = await createTestPair();
+    const result = (await client.callTool({ arguments: {}, name: 'get-package' })) as ToolCallResult;
 
-    expect(contents.length).toBeGreaterThan(0);
-    expect(typeof (contents[0] as { text?: string }).text).toBe('string');
+    expect(result.isError).toBe(true);
   });
 });

@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
-import type { BundledPackage } from '../types.js';
+import type { BundledData, BundledPackage } from '../types.js';
 
 import { loadData, packageMeta, validateBundledData } from '../data.js';
 import { parseFrontmatter } from '../frontmatter.js';
 import { generateBundledData } from '../generator.js';
+import { generateLlmsTxt, stripDocMarkup } from '../llms.js';
 import { resolvePort } from '../port.js';
 import { scorePackage } from '../search.js';
+import { SCHEMA_VERSION } from '../types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,12 +111,6 @@ describe('parseFrontmatter', () => {
 
     expect(result).not.toHaveProperty('constructor');
   });
-
-  it('parses multiline [ ... ] array block', () => {
-    const md = `---\nexports:\n  [\n    signal,\n    computed,\n    effect,\n  ]\n---`;
-
-    expect(parseFrontmatter(md)).toEqual({ exports: ['signal', 'computed', 'effect'] });
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -170,62 +166,67 @@ describe('scorePackage', () => {
     expect(scorePackage(pkg, 'zzz_no_match')).toBeNull();
   });
 
-  it('scores metadata matches at 3', () => {
+  it('scores description matches (metadata tier)', () => {
     const pkg = makePkg({ description: 'Reactive signals and computed values' });
     const hit = scorePackage(pkg, 'signal');
 
     expect(hit).not.toBeNull();
-    expect(hit?.score).toBe(3);
+    expect(hit?.score).toBeGreaterThanOrEqual(3);
     expect(hit?.matchedIn).toContain('metadata');
   });
 
-  it('scores name matches at 3', () => {
-    const pkg = makePkg({ name: '@vielzeug/ripple' });
-    const hit = scorePackage(pkg, 'ripple');
+  it('scores name matches higher than description within metadata tier', () => {
+    const byName = makePkg({ name: '@vielzeug/ripple' });
+    const byDesc = makePkg({ description: 'ripple signals library' });
+    const nameHit = scorePackage(byName, 'ripple');
+    const descHit = scorePackage(byDesc, 'ripple');
 
-    expect(hit?.score).toBe(3);
-    expect(hit?.matchedIn).toContain('metadata');
+    expect(nameHit?.score).toBeGreaterThan(descHit?.score ?? 0);
+    expect(nameHit?.matchedIn).toContain('metadata');
   });
 
-  it('scores keyword matches at 2', () => {
+  it('scores keyword matches (keywords tier, score >= 2)', () => {
     const pkg = makePkg({ keywords: ['schema', 'validation', 'zod-like'] });
     const hit = scorePackage(pkg, 'validation');
 
-    expect(hit?.score).toBe(2);
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
     expect(hit?.matchedIn).toContain('keywords');
   });
 
-  it('scores doc page matches at 1', () => {
+  it('scores doc page matches (docs tier, score < 2)', () => {
     const pkg = makePkg({
       availableDocPages: ['api'],
       docs: { api: '# API\n\nUse `createForm()` to build forms.' },
     });
     const hit = scorePackage(pkg, 'createform');
 
-    expect(hit?.score).toBe(1);
+    expect(hit?.score).toBeGreaterThan(0);
+    expect(hit?.score).toBeLessThan(2);
     expect(hit?.matchedIn).toContain('docs');
     expect(hit?.matchedPages).toContain('api');
   });
 
-  it('scores apiSource matches at 1', () => {
+  it('scores apiSource matches below docs tier', () => {
     const pkg = makePkg({ apiSource: 'export function createQuery() {}' });
     const hit = scorePackage(pkg, 'createquery');
 
-    expect(hit?.score).toBe(1);
+    expect(hit?.score).toBeGreaterThan(0);
+    expect(hit?.score).toBeLessThan(2);
     expect(hit?.matchedIn).toContain('source');
     expect(hit?.matchedIn).not.toContain('docs');
     expect(hit?.matchedPages).toBeUndefined();
   });
 
   it('collects all match categories (multi-match)', () => {
-    // Term matches both metadata AND keywords — both reported, score = max (3)
+    // Term matches both metadata AND keywords — both reported, score = highest weight
     const pkg = makePkg({
       description: 'A reactive signal library',
       keywords: ['reactive', 'signal'],
     });
     const hit = scorePackage(pkg, 'reactive');
 
-    expect(hit?.score).toBe(3);
+    expect(hit?.score).toBeGreaterThanOrEqual(3);
     expect(hit?.matchedIn).toContain('metadata');
     expect(hit?.matchedIn).toContain('keywords');
     expect(hit?.matchedIn.length).toBe(2);
@@ -262,16 +263,18 @@ describe('scorePackage', () => {
     const pkg = makePkg({ exports: ['signal'], keywords: ['signal'] });
     const hit = scorePackage(pkg, 'signal');
 
-    expect(hit?.score).toBe(2);
+    // keywords weight (2.5) > exports weight (2.2)
+    expect(hit?.score).toBeGreaterThanOrEqual(2.5);
     expect(hit?.matchedIn).toContain('keywords');
     expect(hit?.matchedIn).toContain('exports');
   });
 
-  it('scores exports array matches at 2 with matchedIn "exports"', () => {
+  it('scores exports array matches in keywords tier (score >= 2, < 3)', () => {
     const pkg = makePkg({ exports: ['signal', 'computed', 'effect'] });
     const hit = scorePackage(pkg, 'signal');
 
-    expect(hit?.score).toBe(2);
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
     expect(hit?.matchedIn).toContain('exports');
     expect(hit?.matchedIn).not.toContain('keywords');
   });
@@ -302,6 +305,50 @@ describe('scorePackage', () => {
 
     // mixed case
     expect(scorePackage(pkg, 'Reactive')).not.toBeNull();
+  });
+
+  it('scores related array matches in keywords tier (score >= 2, < 3)', () => {
+    const pkg = makePkg({ related: ['ripple', 'craft'] });
+    const hit = scorePackage(pkg, 'ripple');
+
+    expect(hit).not.toBeNull();
+    expect(hit?.score).toBeGreaterThanOrEqual(2);
+    expect(hit?.score).toBeLessThan(3);
+    expect(hit?.matchedIn).toContain('related');
+    expect(hit?.matchedIn).not.toContain('keywords');
+    expect(hit?.matchedIn).not.toContain('exports');
+  });
+
+  it('keywords score higher than exports which score higher than related', () => {
+    const kwOnly = makePkg({ keywords: ['forge'] });
+    const exOnly = makePkg({ exports: ['forge'] });
+    const relOnly = makePkg({ related: ['forge'] });
+
+    const kwHit = scorePackage(kwOnly, 'forge');
+    const exHit = scorePackage(exOnly, 'forge');
+    const relHit = scorePackage(relOnly, 'forge');
+
+    expect(kwHit?.score).toBeGreaterThan(exHit?.score ?? 0);
+    expect(exHit?.score).toBeGreaterThan(relHit?.score ?? 0);
+  });
+
+  it('reports "keywords", "exports", and "related" when all match', () => {
+    const pkg = makePkg({ exports: ['forge'], keywords: ['forge'], related: ['forge'] });
+    const hit = scorePackage(pkg, 'forge');
+
+    // keywords weight wins (2.5)
+    expect(hit?.score).toBeGreaterThanOrEqual(2.5);
+    expect(hit?.matchedIn).toContain('keywords');
+    expect(hit?.matchedIn).toContain('exports');
+    expect(hit?.matchedIn).toContain('related');
+  });
+
+  it('returns null for a query consisting only of hyphens', () => {
+    const pkg = makePkg({ description: 'anything' });
+
+    // "-" normalises to " " → splits to [] → terms empty → null
+    expect(scorePackage(pkg, '-')).toBeNull();
+    expect(scorePackage(pkg, '---')).toBeNull();
   });
 });
 
@@ -342,6 +389,12 @@ describe('generateBundledData', () => {
     const result = generateBundledData({ incremental: false });
 
     expect(result.hashes).toBeUndefined();
+  });
+
+  it('returns data with the current schema version', () => {
+    const { data } = generateBundledData();
+
+    expect(data.schemaVersion).toBe(SCHEMA_VERSION);
   });
 
   it('returns hashes with one entry per package when incremental is true', () => {
@@ -413,91 +466,58 @@ describe('resolvePort', () => {
 // validate
 // ---------------------------------------------------------------------------
 
+const VALID_DATA: BundledData = {
+  packages: [
+    {
+      apiSource: null,
+      availableDocPages: [],
+      category: '',
+      components: [],
+      description: '',
+      docs: {},
+      exports: [],
+      keywords: [],
+      name: '@vielzeug/x',
+      related: [],
+      slug: 'x',
+      version: '1.0.0',
+    },
+  ],
+  schemaVersion: SCHEMA_VERSION,
+  version: '1.0.0',
+};
+
 describe('validate', () => {
   it('throws when input is null', () => {
-    expect(() => validateBundledData(null)).toThrow(/malformed/);
+    expect(() => validateBundledData(null)).toThrow(/malformed|schema/);
   });
 
-  it('throws when version field is missing', () => {
-    expect(() => validateBundledData({ packages: [] })).toThrow(/malformed/);
+  it('throws when version is missing', () => {
+    expect(() => validateBundledData({ packages: [], schemaVersion: SCHEMA_VERSION })).toThrow(/malformed|schema/);
   });
 
   it('throws when packages is not an array', () => {
-    expect(() => validateBundledData({ packages: 'bad', version: '1.0.0' })).toThrow(/malformed/);
+    expect(() => validateBundledData({ packages: 'bad', schemaVersion: SCHEMA_VERSION, version: '1.0.0' })).toThrow(
+      /malformed|schema/,
+    );
   });
 
-  it('throws when a package entry is missing slug', () => {
-    expect(() => validateBundledData({ packages: [{ name: '@vielzeug/x' }], version: '1.0.0' })).toThrow(/malformed/);
+  it('throws when schemaVersion is missing', () => {
+    expect(() => validateBundledData({ packages: [], version: '1.0.0' })).toThrow(/malformed|schema/);
   });
 
-  it('throws when a package entry is missing name', () => {
-    expect(() => validateBundledData({ packages: [{ slug: 'x' }], version: '1.0.0' })).toThrow(/malformed/);
+  it('throws when schemaVersion is wrong', () => {
+    expect(() => validateBundledData({ packages: [], schemaVersion: 9999, version: '1.0.0' })).toThrow(
+      /malformed|schema/,
+    );
   });
 
   it('passes valid data through without throwing', () => {
-    const input = {
-      packages: [
-        { availableDocPages: [], components: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' },
-      ],
-      version: '1.0.0',
-    };
-
-    expect(() => validateBundledData(input)).not.toThrow();
+    expect(() => validateBundledData(VALID_DATA)).not.toThrow();
   });
 
-  it('throws when slug is an empty string', () => {
-    expect(() =>
-      validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '@vielzeug/x', slug: '' }],
-        version: '1.0.0',
-      }),
-    ).toThrow(/malformed/);
-  });
-
-  it('throws when name is an empty string', () => {
-    expect(() =>
-      validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: [], keywords: [], name: '', slug: 'x' }],
-        version: '1.0.0',
-      }),
-    ).toThrow(/malformed/);
-  });
-
-  it('throws when exports is not an array', () => {
-    expect(() =>
-      validateBundledData({
-        packages: [{ availableDocPages: [], docs: {}, exports: 'bad', keywords: [], name: '@vielzeug/x', slug: 'x' }],
-        version: '1.0.0',
-      }),
-    ).toThrow(/malformed/);
-  });
-
-  it('throws when docs is not an object', () => {
-    expect(() =>
-      validateBundledData({
-        packages: [{ availableDocPages: [], docs: 42, exports: [], keywords: [], name: '@vielzeug/x', slug: 'x' }],
-        version: '1.0.0',
-      }),
-    ).toThrow(/malformed/);
-  });
-
-  it('throws when components is not an array', () => {
-    expect(() =>
-      validateBundledData({
-        packages: [
-          {
-            availableDocPages: [],
-            components: 'bad',
-            docs: {},
-            exports: [],
-            keywords: [],
-            name: '@vielzeug/x',
-            slug: 'x',
-          },
-        ],
-        version: '1.0.0',
-      }),
-    ).toThrow(/malformed/);
+  it('returns the same object reference on success', () => {
+    expect(validateBundledData(VALID_DATA)).toBe(VALID_DATA);
   });
 
   it('loadData succeeds with the bundled data file (smoke test)', () => {
@@ -521,5 +541,111 @@ describe('index.ts re-exports', () => {
 
     expect(server).toBeDefined();
     expect(typeof server.connect).toBe('function');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// stripDocMarkup
+// ---------------------------------------------------------------------------
+
+describe('stripDocMarkup', () => {
+  it('removes frontmatter', () => {
+    expect(stripDocMarkup('---\ntitle: Test\n---\n# Body')).toBe('# Body');
+  });
+
+  it('removes HTML tags', () => {
+    expect(stripDocMarkup('<Badge type="tip" /> text')).toBe('text');
+  });
+
+  it('removes HTML comments', () => {
+    expect(stripDocMarkup('<!-- comment -->\n# H')).toBe('# H');
+  });
+
+  it('removes [[toc]] directive', () => {
+    expect(stripDocMarkup('[[toc]]\n# H')).toBe('# H');
+  });
+
+  it('passes through plain markdown unchanged', () => {
+    const md = '# Heading\n\nSome paragraph text.\n\n- item 1\n- item 2';
+
+    expect(stripDocMarkup(md)).toBe(md);
+  });
+
+  it('does not produce triple blank lines', () => {
+    expect(stripDocMarkup('# H\n\n\n\nParagraph')).not.toMatch(/\n{3}/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// generateLlmsTxt
+// ---------------------------------------------------------------------------
+
+describe('generateLlmsTxt', () => {
+  const minimalData: BundledData = {
+    packages: [
+      {
+        apiSource: null,
+        availableDocPages: ['index', 'api'],
+        category: 'utilities',
+        components: [],
+        description: 'A minimal test package',
+        docs: {
+          api: '---\ntitle: API\n---\n## Functions\n\nThe `foo()` function does things.',
+          index: '---\ntitle: Index\n---\n# Test\n\nA minimal test package.',
+        },
+        exports: ['foo', 'bar'],
+        keywords: ['test'],
+        name: '@vielzeug/test',
+        related: [],
+        slug: 'test',
+        version: '1.0.0',
+      },
+    ],
+    schemaVersion: SCHEMA_VERSION,
+    version: '1.0.0',
+  };
+
+  it('returns non-empty strings for both outputs', () => {
+    const { llmsFullTxt, llmsTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsTxt.length).toBeGreaterThan(0);
+    expect(llmsFullTxt.length).toBeGreaterThan(0);
+  });
+
+  it('llms.txt contains the package name', () => {
+    const { llmsTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsTxt).toContain('@vielzeug/test');
+  });
+
+  it('llms.txt groups packages under their category heading', () => {
+    const { llmsTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsTxt).toContain('### utilities');
+  });
+
+  it('llms.txt ends with a newline', () => {
+    const { llmsTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsTxt.endsWith('\n')).toBe(true);
+  });
+
+  it('llms-full.txt includes content from all available doc pages', () => {
+    const { llmsFullTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsFullTxt).toContain('The `foo()` function does things.');
+    expect(llmsFullTxt).toContain('A minimal test package.');
+  });
+
+  it('llms-full.txt contains API Reference section label', () => {
+    const { llmsFullTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsFullTxt).toContain('### API Reference');
+  });
+
+  it('llms-full.txt ends with a newline', () => {
+    const { llmsFullTxt } = generateLlmsTxt(minimalData);
+
+    expect(llmsFullTxt.endsWith('\n')).toBe(true);
   });
 });

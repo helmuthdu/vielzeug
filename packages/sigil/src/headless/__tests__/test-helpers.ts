@@ -1,21 +1,12 @@
-import { signal } from '@vielzeug/ripple';
-
 import { createListControl, type ListNavigationOptions } from '../nav';
 import { createOverlayControl, type OverlayControlOptions } from '../overlay';
 
 /**
- * Creates a `ListControl` with a pre-wired index signal.
- * Useful in unit tests to avoid boilerplate setup.
+ * Creates a `ListControl` for use in unit tests.
  */
 export const createTestListControl = <T>(items: T[], opts?: Partial<ListNavigationOptions<T>>) => {
-  const index = signal(-1);
-
   return createListControl({
-    getIndex: () => index.value,
     getItems: () => items,
-    setIndex: (i) => {
-      index.value = i;
-    },
     ...opts,
   });
 };
@@ -23,7 +14,7 @@ export const createTestListControl = <T>(items: T[], opts?: Partial<ListNavigati
 /**
  * Creates an `OverlayControl` with a temporary `<div>` boundary appended to
  * `document.body`. The returned object extends `OverlayControl` with a
- * `teardown()` helper that calls `cleanup()` and removes the DOM boundary —
+ * `teardown()` helper that aborts the lifecycle signal and removes the DOM boundary —
  * call it in `afterEach` to prevent DOM leaks across tests.
  *
  * @example

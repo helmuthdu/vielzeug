@@ -10,13 +10,26 @@ exports:
     createRemoteSource,
     createCursorSource,
     createInfiniteSource,
-    toSignals,
+    deriveSource,
+    mergeSource,
+    applyQuery,
+    applyLocalQuery,
+    applyRemoteQuery,
+    applyCursorQuery,
+    applyInfiniteQuery,
     SourceError,
+    SourceTimeoutError,
+    SourceDisposedError,
     itemRange,
     sourceState,
     prefetchSource,
-    prefetchSourceWithSource,
     composeFetch,
+    filterContains,
+    filterEquals,
+    filterRange,
+    sortBy,
+    encodeQuery,
+    decodeQuery,
   ]
 ---
 
@@ -25,19 +38,6 @@ exports:
 > Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/sourcerer)](https://www.npmjs.com/package/@vielzeug/sourcerer) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-<details>
-<summary>Quick Reference</summary>
-
-**Package:** `@vielzeug/sourcerer` · **Category:** Data
-
-**Key exports:** `createLocalSource`, `createRemoteSource`, `createCursorSource`, `createInfiniteSource`, `toSignals`, `SourceError`, `itemRange`, `sourceState`, `prefetchSource`, `prefetchSourceWithSource`, `composeFetch`
-
-**When to use:** Typed, reactive list models with consistent pagination, filtering, sorting, and search across local and remote data.
-
-**Related:** [@vielzeug/courier](https://vielzeug.dev/courier/) · [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/wayfinder](https://vielzeug.dev/wayfinder/)
-
-</details>
 
 `@vielzeug/sourcerer` is part of Vielzeug and ships as a TypeScript package with ESM+CJS output.
 
@@ -63,8 +63,8 @@ const source = createLocalSource(
   { limit: 2 },
 );
 
-await source.searchNow('a');
-console.log(source.current); // [{ id: 1, name: "Ada" }]
+await source.search('a', { immediate: true });
+console.log(source.current); // [{ id: 1, name: 'Ada' }]
 console.log(source.meta.pageNumber); // 1
 ```
 
@@ -105,7 +105,7 @@ const state = sourceState(source);
 if (state.status === 'error') {
   console.error(state.error.message); // human-readable message
   console.error(state.error.cause); // original thrown value
-  console.error(state.error.query); // query that triggered the failure
+  console.error(state.error.context); // structured context bag (query fields, kind, etc.)
 }
 ```
 

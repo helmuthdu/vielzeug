@@ -377,7 +377,9 @@ Use semantic colors for feedback.
 <sg-text color="warning" weight="medium" style="display: block; margin-bottom: var(--size-2);">
   <sg-icon name="triangle-alert" size="16"></sg-icon> Please review the highlighted fields
 </sg-text>
-<sg-text color="error" weight="medium" style="display: block;"> <sg-icon name="x" size="16"></sg-icon> An error occurred. Please try again </sg-text>
+<sg-text color="error" weight="medium" style="display: block;">
+  <sg-icon name="x" size="16"></sg-icon> An error occurred. Please try again
+</sg-text>
 ```
 
 </ComponentPreview>

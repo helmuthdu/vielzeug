@@ -5,40 +5,41 @@ description: Complete API reference for the Orbit floating positioning library.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol              | Purpose                                                      | Execution mode              | Common gotcha                                          |
-| ------------------- | ------------------------------------------------------------ | --------------------------- | ------------------------------------------------------ |
-| `float()`           | Position a floating element and auto-update                  | Sync, returns `FloatHandle` | Call `handle.dispose()` on teardown                    |
-| `computePosition()` | Compute position once without auto-update                    | Sync                        | Does not watch for layout changes                      |
-| `computeOnce()`     | One-shot async position via microtask deferral               | Async                       | Defers to microtask queue, not next animation frame    |
-| `autoUpdate()`      | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup       | Call cleanup on teardown                               |
-| `detectOverflow()`  | Per-side overflow of the floating rect against boundary      | Sync                        | Positive = overflow, negative = remaining space        |
-| `compose()`         | Validate middleware order and return typed array             | Sync, throws                | Throws at call time on bad ordering                    |
-| `getRects()`        | Read bounding rects of reference and floating from the DOM   | Sync                        | Advanced: useful for custom update loops               |
-| `getSide()`         | Extract the primary side from a placement string             | Sync                        | —                                                      |
-| `getAlignment()`    | Extract the alignment from a placement string                | Sync                        | Returns `null` for cardinal placements                 |
-| `offset()`          | Add space between reference and floating element             | Middleware                  | Apply before `flip` so flip accounts for the gap       |
-| `flip()`            | Flip to opposite side when clipped                           | Middleware                  | Do not combine with `autoPlacement`                    |
-| `autoPlacement()`   | Automatically pick the placement with the most space         | Middleware                  | Do not combine with `flip`                             |
-| `shift()`           | Shift along boundary to keep element in view                 | Middleware                  | Does not change placement, only adjusts coordinates    |
-| `limitShift()`      | Constrain shift drift to keep float near reference           | `ShiftLimiter`              | Pass as `limiter` option to `shift()`                  |
-| `size()`            | Report available space between reference and boundary        | Middleware                  | Read `middlewareData.size` in `apply` or after compute |
-| `arrow()`           | Position an arrow element pointing to the reference          | Middleware                  | Arrow element must be a child of the floating element  |
-| `hide()`            | Detect when reference or floating is hidden outside boundary | Middleware                  | Combine with CSS `visibility` or `opacity`             |
-| `inline()`          | Accurate rect for inline references spanning multiple lines  | Middleware                  | Import from `@vielzeug/orbit/inline`                   |
-| presets             | Pre-configured placement + middleware stacks                 | Factory                     | Import from `@vielzeug/orbit/presets`                  |
+| Symbol                   | Purpose                                                      | Execution mode                  | Common gotcha                                           |
+| ------------------------ | ------------------------------------------------------------ | ------------------------------- | ------------------------------------------------------- |
+| `float()`                | Position a floating element and auto-update                  | Sync, returns `FloatHandle`     | Call `handle.dispose()` on teardown                     |
+| `computePosition()`      | Compute position once without auto-update                    | Sync                            | Does not watch for layout changes                       |
+| `floatWithAnchor()`      | CSS Anchor Positioning (browser-native, no JS loop)          | Sync, returns `CssAnchorHandle` | Use `isCssAnchorSupported()` to guard in production     |
+| `computePositionAsync()` | One-shot async position via microtask deferral               | Async                           | Defers to microtask queue, not next animation frame     |
+| `computePositionRaf()`   | One-shot async position deferred to next animation frame     | Async                           | Waits for the next rAF; use for post-paint measurements |
+| `autoUpdate()`           | Re-run position on scroll/resize/resize-observer             | Sync, returns cleanup           | Call cleanup on teardown                                |
+| `detectOverflow()`       | Per-side overflow of the floating rect against boundary      | Sync                            | Positive = overflow, negative = remaining space         |
+| `compose()`              | Filter falsy middleware entries, return `Middleware[]`       | Sync                            | Ordering validation fires via `computePosition`         |
+| `getRects()`             | Read bounding rects of reference and floating from the DOM   | Sync                            | Advanced: useful for custom update loops                |
+| `getSide()`              | Extract the primary side from a placement string             | Sync                            | —                                                       |
+| `getAlignment()`         | Extract the alignment from a placement string                | Sync                            | Returns `null` for cardinal placements                  |
+| `offset()`               | Add space between reference and floating element             | Middleware                      | Apply before `flip` so flip accounts for the gap        |
+| `flip()`                 | Flip to opposite side when clipped                           | Middleware                      | Do not combine with `autoPlacement`                     |
+| `autoPlacement()`        | Automatically pick the placement with the most space         | Middleware                      | Do not combine with `flip`                              |
+| `shift()`                | Shift along boundary to keep element in view                 | Middleware                      | Does not change placement, only adjusts coordinates     |
+| `limitShift()`           | Constrain shift drift to keep float near reference           | `ShiftLimiter`                  | Pass as `limiter` option to `shift()`                   |
+| `size()`                 | Report available space between reference and boundary        | Middleware                      | Read `middlewareData.size` in `apply` or after compute  |
+| `arrow()`                | Position an arrow element pointing to the reference          | Middleware                      | Arrow element must be a child of the floating element   |
+| `hide()`                 | Detect when reference or floating is hidden outside boundary | Middleware                      | Combine with CSS `visibility` or `opacity`              |
+| `inline()`               | Accurate rect for inline references spanning multiple lines  | Middleware                      | Place before `flip()`; part of main entry               |
+| presets                  | Pre-configured placement + middleware stacks                 | Factory                         | Import from `@vielzeug/orbit/presets`                   |
 
 ## Package Entry Points
 
-| Import                     | Purpose                                      |
-| -------------------------- | -------------------------------------------- |
-| `@vielzeug/orbit`          | Core API, middleware, utilities, types       |
-| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line refs      |
-| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks             |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`) |
-| `@vielzeug/orbit/devtools` | Visual debug overlay (dev only)              |
-| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering        |
+| Import                     | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `@vielzeug/orbit`          | Core API, middleware (`inline` included), utilities, types |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks                           |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)               |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (dev only)                            |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering                      |
 
 ## Core Functions
 
@@ -63,29 +64,64 @@ const handle = float(trigger, tooltip, {
 });
 
 // on teardown:
-handle.cleanup();
+handle.dispose();
 ```
 
 **Options — `FloatOptions`**
 
-| Option            | Type                         | Default    | Description                                                                                               |
-| ----------------- | ---------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
-| `placement`       | `Placement`                  | `'bottom'` | Initial placement. Middleware may change it.                                                              |
-| `middleware`      | `Middleware[]`               | `[]`       | Middleware pipeline.                                                                                      |
-| `apply`           | `(result, elements) => void` | —          | Custom DOM write callback. Defaults to writing `left`/`top`. Providing this disables the CSS anchor path. |
-| `autoUpdate`      | `AutoUpdateOptions \| false` | `{}`       | Auto-update options. Pass `false` to position once without listeners.                                     |
-| `preferCssAnchor` | `boolean`                    | `false`    | Use CSS Anchor Positioning when supported. Requires no `middleware` and no custom `apply`.                |
-
-When `preferCssAnchor: true`, `float()` uses native CSS Anchor Positioning in supporting browsers (no scroll listeners, no JS updates). It falls back to JS positioning when the browser does not support it, when `middleware` is non-empty, or when a custom `apply` is provided.
+| Option       | Type                                      | Default    | Description                                                           |
+| ------------ | ----------------------------------------- | ---------- | --------------------------------------------------------------------- |
+| `placement`  | `Placement`                               | `'bottom'` | Initial placement. Middleware may change it.                          |
+| `middleware` | `Middleware[]`                            | `[]`       | Middleware pipeline.                                                  |
+| `apply`      | `(result: ComputePositionResult) => void` | —          | Custom DOM write callback. Defaults to writing `left`/`top`.          |
+| `autoUpdate` | `AutoUpdateOptions \| false`              | `{}`       | Auto-update options. Pass `false` to position once without listeners. |
 
 **Returns:** `FloatHandle`
 
 ---
 
-### `computeOnce(reference, floating, options?)`
+### `floatWithAnchor(reference, floating, options?)`
 
 ```ts
-computeOnce(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
+floatWithAnchor(reference: HTMLElement, floating: HTMLElement, options?: { placement?: Placement }): CssAnchorHandle;
+```
+
+Uses CSS Anchor Positioning to let the browser reposition the floating element natively — no JavaScript update loop, no scroll or resize listeners. Suitable when you don't need middleware or a custom `apply` callback.
+
+> **Experimental.** CSS Anchor Positioning has [varying browser support](https://caniuse.com/css-anchor-positioning). Always guard with `isCssAnchorSupported()`.
+
+**Example:**
+
+```ts
+import { floatWithAnchor, isCssAnchorSupported } from '@vielzeug/orbit';
+
+if (isCssAnchorSupported()) {
+  const handle = floatWithAnchor(trigger, tooltip, { placement: 'top' });
+  // on teardown:
+  handle.dispose();
+}
+```
+
+The handle exposes `cssAnchor: true` (always) and the standard `FloatHandle` lifecycle methods (`dispose`, `disposed`, `disposalSignal`). `getPosition()` always returns `null` — position is managed by the browser.
+
+**Returns:** `CssAnchorHandle` (extends `FloatHandle` with `cssAnchor: true`)
+
+---
+
+### `isCssAnchorSupported()`
+
+```ts
+isCssAnchorSupported(): boolean;
+```
+
+Returns `true` when the current browser supports CSS Anchor Positioning. Use as a guard before calling `floatWithAnchor()`.
+
+---
+
+### `computePositionAsync(reference, floating, options?)`
+
+```ts
+computePositionAsync(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
 ```
 
 Deferred one-shot position computation. Schedules `computePosition` in the next microtask and resolves with the result. Useful in async component lifecycles (e.g. after `await nextTick()`) where DOM layout may not yet be stable.
@@ -97,10 +133,34 @@ Deferred one-shot position computation. Schedules `computePosition` in the next 
 **Example:**
 
 ```ts
-import { computeOnce } from '@vielzeug/orbit';
+import { computePositionAsync } from '@vielzeug/orbit';
 
 // e.g. in a Vue onMounted or React useEffect:
-const result = await computeOnce(reference, floating, { placement: 'top' });
+const result = await computePositionAsync(reference, floating, { placement: 'top' });
+floating.style.left = `${result.x}px`;
+floating.style.top = `${result.y}px`;
+```
+
+---
+
+### `computePositionRaf(reference, floating, options?)`
+
+```ts
+computePositionRaf(reference: ReferenceElement, floating: HTMLElement, options?: ComputePositionOptions): Promise<ComputePositionResult>;
+```
+
+Deferred one-shot position computation. Schedules `computePosition` in the next `requestAnimationFrame` callback and resolves with the result. Use when you need a position after the next paint — for example, immediately after a CSS transition starts.
+
+> **Note:** This defers to the next animation frame (≈16 ms). For most async lifecycle hooks, `computePositionAsync` (microtask) is faster and sufficient.
+
+**Returns:** `Promise<ComputePositionResult>`
+
+**Example:**
+
+```ts
+import { computePositionRaf } from '@vielzeug/orbit';
+
+const result = await computePositionRaf(reference, floating, { placement: 'top' });
 floating.style.left = `${result.x}px`;
 floating.style.top = `${result.y}px`;
 ```
@@ -148,6 +208,8 @@ const { x, y, placement, middlewareData } = computePosition(trigger, panel, {
 ---
 
 ### `autoUpdate(reference, floating, update, options?)`
+
+> **Advanced.** Most applications should use `float()` instead. Use `autoUpdate` directly only when you need full control over the update callback (e.g. integrating with a custom rendering pipeline).
 
 ```ts
 autoUpdate(reference: ReferenceElement, floating: HTMLElement, update: () => void, options?: AutoUpdateOptions): Cleanup;
@@ -549,23 +611,22 @@ floating.style.visibility = referenceHidden ? 'hidden' : 'visible';
 
 ---
 
-### `inline(options?)` — `@vielzeug/orbit/inline`
+### `inline(options?)`
 
 ```ts
-import { inline } from '@vielzeug/orbit/inline';
-
 inline(options?: InlineOptions): Middleware;
 ```
 
-Improves positioning accuracy for inline references that wrap across line breaks (e.g. `<span>` elements). Must be placed before `flip()` in the pipeline.
+Improves positioning accuracy for inline references that wrap across line breaks (e.g. `<span>` elements). Must be placed **first** in the pipeline — before `flip()`, `shift()`, and `autoPlacement()`. `compose()` enforces this at call time in development.
+
+Exported from the main entry `@vielzeug/orbit` alongside all other middleware.
 
 **Returns:** `Middleware`
 
 **Example:**
 
 ```ts
-import { float, flip, shift } from '@vielzeug/orbit';
-import { inline } from '@vielzeug/orbit/inline';
+import { float, flip, inline, shift } from '@vielzeug/orbit';
 
 float(selectionRef, tooltip, {
   placement: 'top',
@@ -704,44 +765,46 @@ import { effect } from '@vielzeug/ripple';
 import { createFloatState } from '@vielzeug/orbit/reactive';
 import { flip, offset, shift } from '@vielzeug/orbit';
 
-const { position, cleanup } = createFloatState(trigger, tooltip, {
+const handle = createFloatState(trigger, tooltip, {
   placement: 'top',
   middleware: [offset(8), flip(), shift({ padding: 6 })],
 });
 
 effect(() => {
-  const pos = position.value;
+  const pos = handle.position.value;
   if (!pos) return;
   tooltip.style.left = `${pos.x}px`;
   tooltip.style.top = `${pos.y}px`;
 });
 
-cleanup();
+// on teardown:
+handle.dispose();
 ```
 
 **Returns — `ReactiveFloatHandle`**
 
-| Field             | Type                                    | Description                                                                    |
-| ----------------- | --------------------------------------- | ------------------------------------------------------------------------------ |
-| `position`        | `Signal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update or when `cssAnchor` is `true`. |
-| `cssAnchor`       | `boolean`                               | `true` when CSS Anchor Positioning is active.                                  |
-| `disposalSignal`  | `AbortSignal`                           | Aborted when `dispose()` is called. Use to tie external lifetimes.             |
-| `dispose()`       | `() => void`                            | Removes all listeners. Always call on teardown. Idempotent.                    |
-| `disposed`        | `boolean`                               | `true` after `dispose()` has been called.                                      |
-| `update()`        | `() => void`                            | Manually trigger a position recalculation.                                     |
-| `[Symbol.dispose]`| `() => void`                            | Delegates to `dispose()`. Enables `using` declarations.                        |
+| Field              | Type                                            | Description                                                                                 |
+| ------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `position`         | `ReadonlySignal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update. Read-only; position is managed internally. |
+| `disposalSignal`   | `AbortSignal`                                   | Aborted when `dispose()` is called. Use to tie external lifetimes.                          |
+| `dispose()`        | `() => void`                                    | Removes all listeners. Always call on teardown. Idempotent.                                 |
+| `disposed`         | `boolean`                                       | `true` after `dispose()` has been called.                                                   |
+| `update()`         | `() => void`                                    | Manually trigger a position recalculation.                                                  |
+| `[Symbol.dispose]` | `() => void`                                    | Delegates to `dispose()`. Enables `using` declarations.                                     |
 
 ## SSR Stubs — `@vielzeug/orbit/ssr`
 
 ```ts
-import { autoUpdate, computePosition, float } from '@vielzeug/orbit/ssr';
+import { autoUpdate, computePosition, computePositionAsync, computePositionRaf, float } from '@vielzeug/orbit/ssr';
 ```
 
-No-op stubs for server-side rendering. All three exports mirror the real API signatures but perform no DOM operations:
+No-op stubs for server-side rendering. All exports mirror the real API signatures but perform no DOM operations:
 
 - `computePosition` — returns `{ x: 0, y: 0, placement, middlewareData: {} }`
+- `computePositionAsync` — resolves immediately with `{ x: 0, y: 0, placement, middlewareData: {} }`
+- `computePositionRaf` — resolves immediately with `{ x: 0, y: 0, placement, middlewareData: {} }`
 - `autoUpdate` — returns a no-op cleanup; does **not** call `update`
-- `float` — returns a `FloatHandle` with no-op methods; `getPosition()` returns a zero-coord result
+- `float` — returns a `FloatHandle` with no-op methods; `getPosition()` returns `null`; `disposed` is correctly tracked
 
 ```ts
 // vite.config.ts
@@ -834,7 +897,8 @@ interface MiddlewareState {
 ```ts
 type MiddlewareReset = {
   placement?: Placement;
-  rects?: 'remeasure' | { reference: Rect; floating: Rect };
+  rects?: { reference: Rect; floating: Rect };
+  remeasure?: boolean;
 };
 
 interface MiddlewareResult {
@@ -848,7 +912,7 @@ interface MiddlewareResult {
 
 - `reset: {}` — restart the pipeline with the same rects and placement
 - `reset: { placement }` — restart with a new placement
-- `reset: { rects: 'remeasure' }` — re-read both rects from the DOM before restarting
+- `reset: { remeasure: true }` — re-read both rects from the DOM before restarting (takes precedence over `rects`)
 - `reset: { rects: { reference, floating } }` — restart with the provided rects directly
 
 ### `ComputePositionOptions`
@@ -922,7 +986,6 @@ Always written to `middlewareData.shift` (zero when no shift was needed).
 
 ```ts
 interface FloatHandle {
-  readonly cssAnchor: boolean;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
@@ -967,12 +1030,11 @@ Written to `middlewareData.size` by the `size()` middleware.
 
 ```ts
 type TypedMiddleware<K extends string, D> = Middleware & {
-  readonly __middlewareKey: K;
-  readonly __middlewareData: D;
+  readonly __brand: readonly [K, D];
 };
 ```
 
-A branded `Middleware` subtype returned by built-in middleware factories (`flip`, `shift`, `size`, `arrow`, `hide`). Enables typed `middlewareData` inference via `TypedComputePositionResult`.
+A branded `Middleware` subtype returned by built-in middleware factories (`flip`, `shift`, `size`, `arrow`, `hide`). The `__brand` field is never accessed at runtime — it is a compile-time marker. Enables typed `middlewareData` inference via `TypedComputePositionResult`.
 
 ### `InferMiddlewareData`
 

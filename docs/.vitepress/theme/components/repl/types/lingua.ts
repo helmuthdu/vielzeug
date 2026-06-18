@@ -10,27 +10,25 @@ declare module '/lingua' {
 
   export type Loader<M extends Messages = Messages> = () => Promise<M>;
   export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
+  export type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
 
-  export type PluralTranslateOptions = {
+  export type TpOptions = {
     ordinal?: boolean;
     vars?: TranslateVars;
   };
 
-  export type SupportedLocalesOptions = {
-    sorted?: boolean;
-  };
-
   export type SubscribeOptions = {
     immediate?: boolean;
+    signal?: AbortSignal;
   };
-
-  export type MissingInfo =
-    | { key: string; locale: Locale; type: 'key' }
-    | { key: string; locale: Locale; type: 'var'; varName: string };
 
   export type I18nSnapshot = {
     readonly locale: Locale;
-    readonly version: number;
+  };
+
+  export type I18nState = {
+    readonly catalogs: Record<Locale, Record<string, string>>;
+    readonly locale: Locale;
   };
 
   export type AnyKey = string & {};
@@ -58,37 +56,67 @@ declare module '/lingua' {
       : never;
 
   export type ScopedI18n = {
+    readonly fmt: import('/lingua/format').Formatter;
     has(key: string): boolean;
     t(key: string, vars?: TranslateVars): string;
-    tp(key: string, count: number, options?: PluralTranslateOptions): string;
+    tp(key: string, count: number, options?: TpOptions): string;
   };
 
   export type I18nOptions<M extends Messages = Messages> = {
     catalogs?: Record<Locale, LocaleSource<M>>;
     fallback?: Locale | Locale[];
     locale?: Locale;
-    onMissing?: (info: MissingInfo) => string;
+    onMissingKey?: (key: string, locale: Locale) => string;
+    onMissingVar?: (varName: string, key: string, locale: Locale) => string;
     onSubscriberError?: (error: unknown) => void;
   };
 
   export type I18n<M extends Messages = Messages> = {
+    [Symbol.dispose](): void;
+    readonly disposalSignal: AbortSignal;
+    dispose(): void;
+    readonly disposed: boolean;
+    extend(ns: string, factory: NamespaceFactory<M>, locale?: Locale): Promise<void>;
     readonly fmt: import('/lingua/format').Formatter;
+    fork(overrides?: Omit<I18nOptions<M>, 'catalogs'>): I18n<M>;
     getSnapshot(): I18nSnapshot;
-    getSupportedLocales(options?: SupportedLocalesOptions): Locale[];
-    has(key: MessageLeafKeys<M> | AnyKey): boolean;
+    getSupportedLocales(sorted?: boolean): Locale[];
+    has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | AnyKey): boolean;
+    isLoaded(locale: Locale): boolean;
+    isRegistered(locale: Locale): boolean;
     readonly locale: Locale;
-    merge(locale: Locale, source: LocaleSource<M>): Promise<void>;
     preload(locale: Locale): Promise<void>;
     register(locale: Locale, source: LocaleSource<M>): void;
     scope(prefix: MessageBranchKeys<M> | AnyKey): ScopedI18n;
     setLocale(locale: Locale): Promise<void>;
     subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe;
     t(key: MessageLeafKeys<M> | AnyKey, vars?: TranslateVars): string;
-    tp(key: MessageBranchKeys<M> | AnyKey, count: number, options?: PluralTranslateOptions): string;
+    tp(key: MessageBranchKeys<M> | AnyKey, count: number, options?: TpOptions): string;
+  };
+
+  export type ErrorCode = string;
+
+  export class LinguaError extends Error {
+    readonly code: ErrorCode;
+    readonly name: 'LinguaError';
+    constructor(code: ErrorCode, message: string);
+  }
+
+  export const E: {
+    readonly COUNT_IN_VARS: 'lingua/E003';
+    readonly DISPOSED: 'lingua/E007';
+    readonly INVALID_COUNT: 'lingua/E002';
+    readonly INVALID_LOCALE: 'lingua/E004';
+    readonly MISSING_LOCALE: 'lingua/E001';
+    readonly NAMESPACE_MISSING: 'lingua/E005';
+    readonly RESTORE_NO_LOCALE: 'lingua/E006';
   };
 
   export function createI18n<M extends Messages>(options: I18nOptions<M>): I18n<M>;
   export function createI18n(options?: I18nOptions<Messages>): I18n<Messages>;
+
+  export function serializeI18n(i18n: I18n): I18nState;
+  export function hydrateI18n(i18n: I18n, state: I18nState): void;
 }
 
 declare module '/lingua/format' {

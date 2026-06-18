@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/arsenal",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "files": [
     "dist"
@@ -28,6 +28,12 @@
       "import": "./dist/async/index.js",
       "require": "./dist/async/index.cjs"
     },
+    "./cache": {
+      "source": "./src/cache/index.ts",
+      "types": "./dist/cache/index.d.ts",
+      "import": "./dist/cache/index.js",
+      "require": "./dist/cache/index.cjs"
+    },
     "./function": {
       "source": "./src/function/index.ts",
       "types": "./dist/function/index.d.ts",
@@ -39,6 +45,12 @@
       "types": "./dist/math/index.d.ts",
       "import": "./dist/math/index.js",
       "require": "./dist/math/index.cjs"
+    },
+    "./guards": {
+      "source": "./src/guards/index.ts",
+      "types": "./dist/guards/index.d.ts",
+      "import": "./dist/guards/index.js",
+      "require": "./dist/guards/index.cjs"
     },
     "./object": {
       "source": "./src/object/index.ts",
@@ -81,9 +93,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

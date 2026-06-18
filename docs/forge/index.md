@@ -32,17 +32,17 @@ const form = createForm({
 await form.submit(submit);
 ```
 
-| Feature                    | Forge                                       | React Hook Form | VeeValidate |
-| -------------------------- | ------------------------------------------- | --------------- | ----------- |
-| Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB           | ~16 kB      |
-| Framework-agnostic         | <sg-icon name="check" size="16"></sg-icon>                                          | React only      | Vue only    |
-| Typed dot-path APIs        | <sg-icon name="check" size="16"></sg-icon>                                          | Partial         | Partial     |
-| Result-based submit flow   | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
-| Live field observation     | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
-| Full array helpers         | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
-| Scoped sub-forms           | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
-| Form + field subscriptions | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>              | <sg-icon name="check" size="16"></sg-icon>          |
-| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon>              | <sg-icon name="x" size="16"></sg-icon>          |
+| Feature                    | Forge                                       | React Hook Form                            | VeeValidate                                |
+| -------------------------- | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size                | <PackageInfo package="forge" type="size" /> | ~9 kB                                      | ~16 kB                                     |
+| Framework-agnostic         | <sg-icon name="check" size="16"></sg-icon>  | React only                                 | Vue only                                   |
+| Typed dot-path APIs        | <sg-icon name="check" size="16"></sg-icon>  | Partial                                    | Partial                                    |
+| Result-based submit flow   | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Live field observation     | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Full array helpers         | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Scoped sub-forms           | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Form + field subscriptions | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -129,7 +129,6 @@ if (!submission.ok && submission.type === 'validation') {
 - `@vielzeug/forge/validators` adapter: `fieldValidator` and `composeValidators`
 
 </div>
-
 
 ## Documentation
 

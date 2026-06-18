@@ -47,7 +47,7 @@ virt.scrollToIndex(rows.length - 1, { align: 'end', behavior: 'smooth' });
 virt.update({ count: rows.length });
 
 // Cleanup
-virt.destroy();
+virt.dispose();
 ```
 
 ### Reading state outside an effect

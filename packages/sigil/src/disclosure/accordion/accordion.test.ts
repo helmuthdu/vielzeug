@@ -198,4 +198,23 @@ describe('sg-accordion accessibility', () => {
       expect(firstSummary?.getAttribute('aria-expanded')).toBe('false');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks with default rendering', async () => {
+      fixture = await mount('sg-accordion', {
+        html: `
+          <sg-accordion-item>
+            <span slot="summary">Item 1</span>
+            <p>Content 1</p>
+          </sg-accordion-item>
+        `,
+      });
+
+      const results = await axeCheck(fixture.element, {
+        rules: { 'summary-name': { enabled: false } },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

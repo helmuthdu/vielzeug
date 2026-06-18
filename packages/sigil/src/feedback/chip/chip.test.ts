@@ -319,4 +319,14 @@ describe('sg-chip accessibility', () => {
       await fixture.attr('disabled', false);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks with default rendering', async () => {
+      fixture = await mount('sg-chip', { html: 'Label' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

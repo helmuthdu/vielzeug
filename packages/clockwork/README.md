@@ -6,7 +6,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/@vielzeug/clockwork.svg)](https://npmjs.com/package/@vielzeug/clockwork)
 [![TypeScript support](https://img.shields.io/badge/TypeScript-5.0%2B-blue.svg)](#)
 
-A production-ready finite state machine with typed events, reactive state, async invokes, delayed transitions, hierarchical states, middleware, persistence, and debugging—built on `@vielzeug/ripple` with zero external dependencies.
+A production-ready finite state machine with typed events, reactive state, async invokes, delayed transitions, hierarchical states, interceptors, persistence, and debugging—built on `@vielzeug/ripple` with zero external dependencies.
 
 ## Why Clockwork?
 
@@ -15,8 +15,8 @@ A production-ready finite state machine with typed events, reactive state, async
 - **Async-first** — Native Promise support with onDone/onError handlers and automatic AbortSignal cancellation
 - **Delayed transitions** — Timer-based `after` transitions with guards and actions
 - **Hierarchical** — Compound states with automatic leaf resolution
-- **Middleware** — Composable event processing pipeline
-- **Persistent** — Save/load/clear snapshots via pluggable adapters
+- **Interceptors** — Pure event interceptors, run left-to-right; return `null` to block
+- **Persistent** — Save/load snapshots via pluggable adapters
 - **Debuggable** — Discriminated union debug events, `onTransition` callback, and ring-buffer transition tracing
 - **Validated** — Comprehensive definition validation and context checking
 - **Zero overhead** — Debug features have zero cost when unused
@@ -25,30 +25,22 @@ A production-ready finite state machine with typed events, reactive state, async
 ## Quick Start
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type Event = { type: 'INC' } | { type: 'RESET' };
 
-const machine = defineMachine<'idle', { count: number }, Event>({
+const m = machine({
   context: { count: 0 },
   initial: 'idle',
   states: {
     idle: {
       on: {
         INC: {
-          actions: [
-            ({ context }) => {
-              context.count += 1;
-            },
-          ],
+          actions: [({ context }) => { context.count += 1; }],
           target: 'idle',
         },
         RESET: {
-          actions: [
-            ({ context }) => {
-              context.count = 0;
-            },
-          ],
+          actions: [({ context }) => { context.count = 0; }],
           target: 'idle',
         },
       },
@@ -56,13 +48,11 @@ const machine = defineMachine<'idle', { count: number }, Event>({
   },
 });
 
-const m = interpret(machine);
-
-console.log(m.state.value); // 'idle'
+console.log(m.state.value);         // 'idle'
 console.log(m.context.value.count); // 0
 
-m.send({ type: 'INC' });
-m.send({ type: 'INC' });
+console.log(m.send({ type: 'INC' })); // 'transitioned'
+console.log(m.send({ type: 'INC' })); // 'transitioned'
 
 console.log(m.context.value.count); // 2
 
@@ -71,21 +61,31 @@ m[Symbol.dispose](); // cleanup
 
 ## Core Concepts
 
-### Definition and Interpretation
+### `machine()` vs `define()`
 
-Definitions are immutable, validated configurations. Instances are live machines.
+`machine(config, options?)` validates and starts an instance in one call — use it for one-off machines. `define(config)` validates once and returns a handle with `.start(options?)` for spawning multiple independent instances:
 
 ```ts
-const definition = defineMachine({
-  /* ... */
-});
+import { define } from '@vielzeug/clockwork';
 
-const m1 = interpret(definition);
-const m2 = interpret(definition);
+const trafficDef = define({ /* config */ });
 
-m1.send({ type: 'GO' });
+const m1 = trafficDef.start();
+const m2 = trafficDef.start();
+
+m1.send({ type: 'NEXT' });
 console.log(m2.state.value); // Unaffected by m1
 ```
+
+### send() and SendResult
+
+`send()` returns a `SendResult` string — not a boolean:
+
+| Value | Meaning |
+| --- | --- |
+| `'transitioned'` | Transition occurred |
+| `'queued'` | Called re-entrantly from inside an action |
+| `'rejected'` | No match, guard failed, interceptor blocked, or disposed |
 
 ### Transition Syntax
 
@@ -107,15 +107,16 @@ states: {
 
 ### Async Invokes
 
-Run promises when entering states with automatic cancellation on exit:
+Run promises when entering states with automatic cancellation on exit. `onDone` and `onError` receive `(result, context)` — context is captured at invoke start:
 
 ```ts
 states: {
   loading: {
     invoke: [{
+      id: 'fetch-data', // optional — surfaced in debug events
       src: async ({ signal }) => fetch('/api/data', { signal }).then(r => r.json()),
-      onDone:  (result) => ({ type: 'DATA_READY', data: result }),
-      onError: (error)  => ({ type: 'DATA_ERROR', error: String(error) }),
+      onDone:  (result, _ctx) => ({ type: 'DATA_READY', data: result }),
+      onError: (error,  _ctx) => ({ type: 'DATA_ERROR', error: String(error) }),
     }],
     on: {
       DATA_READY: { target: 'idle' },
@@ -137,28 +138,44 @@ states: {
 }
 ```
 
+### Interceptors
+
+Pure functions that run before event processing. Return the event to allow it, `null` to block:
+
+```ts
+import { machine, type InterceptorFn } from '@vielzeug/clockwork';
+
+const authGuard: InterceptorFn<State, Ctx, Event> = (event, snap) => {
+  if (event.type === 'ADMIN_ACTION' && !snap.context.isAdmin) return null; // block
+  return event;
+};
+
+const m = machine(config, { interceptors: [authGuard] });
+```
+
 ### Persistence
 
 Save and restore machine state via pluggable adapters:
 
 ```ts
-const m = interpret(machine, {
+const m = machine(config, {
   persistence: {
     load: () => JSON.parse(localStorage.getItem('state') ?? 'null') ?? undefined,
     save: (snapshot) => localStorage.setItem('state', JSON.stringify(snapshot)),
-    clear: () => localStorage.removeItem('state'),
   },
 });
 ```
 
 ## Key Exports
 
-| Export                | Purpose                                         |
-| --------------------- | ----------------------------------------------- |
-| `defineMachine()`     | Create immutable, validated FSM definition      |
-| `interpret()`         | Create live machine instance from definition    |
-| `resolveTransition()` | Pure function for unit-testing transitions      |
-| `MachineError`        | Typed error for validation and runtime failures |
+| Export                | Purpose                                               |
+| --------------------- | ----------------------------------------------------- |
+| `machine()`           | Validate config and start a machine instance          |
+| `define()`            | Validate once; call `.start()` for multiple instances |
+| `resolveTransition()` | Pure function for unit-testing transitions            |
+| `MachineError`        | Typed error for validation and runtime failures       |
+| `defineMachine()`     | _(Deprecated)_ Use `machine()` or `define()`          |
+| `interpret()`         | _(Deprecated)_ Use `machine()` or `define().start()`  |
 
 ## Features
 
@@ -169,8 +186,8 @@ const m = interpret(machine, {
 | Async tasks         | Native Promises with onDone/onError and AbortSignal     |
 | Delayed transitions | Timer-based `after` with guards and actions             |
 | Hierarchical states | Compound states with automatic leaf resolution          |
-| Middleware          | Composable event interception pipeline                  |
-| Persistence         | Pluggable adapter for snapshot save/load/clear          |
+| Interceptors        | Pure event interceptors — return event or null to block |
+| Persistence         | Pluggable adapter for snapshot save/load                |
 | Context validation  | Type guards at init and every transition                |
 | Entry/exit hooks    | Lifecycle functions per state                           |
 | Guards              | Conditional transitions based on context and event      |

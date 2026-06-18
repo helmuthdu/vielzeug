@@ -3,13 +3,20 @@ title: Conduit — Typed dependency injection for TypeScript
 description: Typed dependency injection for TypeScript.
 package: conduit
 category: di
-keywords: [dependency-injection, ioc, container, singleton, transient, factory, scoped]
+keywords: [dependency-injection, ioc, container, singleton, transient, factory, named-scope]
 related: [rune, herald, ward]
 exports:
   [
     createContainer,
     token,
     scope,
+    loadModules,
+    resolveOptional,
+    resolveOrDefault,
+    tryResolve,
+    trySyncResolve,
+    resolveSyncOptional,
+    resolveSyncOrDefault,
     ContainerError,
     CircularDependencyError,
     ProviderNotFoundError,
@@ -18,6 +25,8 @@ exports:
     ScopedResolutionError,
     ContainerDisposedError,
     ContainerFrozenError,
+    InferTokenTypes,
+    ResolveInterceptor,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -42,22 +51,28 @@ const service = new UserService(repo, logger);
 const container = createContainer();
 container.value(Logger, new ConsoleLogger());
 container.factory(Db, () => connectDb(process.env.DATABASE_URL), { dispose: (db) => db.close() });
-container.factory(UserRepo, (db, logger) => new UserRepo(db, logger), { deps: [Db, Logger] });
-container.factory(UserService, (repo, logger) => new UserService(repo, logger), { deps: [UserRepo, Logger] });
+container.factory(UserRepo, async (r) => {
+  const [db, logger] = await Promise.all([r.resolve(Db), r.resolve(Logger)]);
+  return new UserRepo(db, logger);
+});
+container.factory(UserService, async (r) => {
+  const [repo, logger] = await Promise.all([r.resolve(UserRepo), r.resolve(Logger)]);
+  return new UserService(repo, logger);
+});
 
 const service = await container.resolve(UserService);
 await container.dispose(); // all hooks run automatically
 ```
 
-| Feature                     | Conduit                                       | tsyringe                | InversifyJS                      |
-| --------------------------- | --------------------------------------------- | ----------------------- | -------------------------------- |
-| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                   | ~45 kB                           |
-| Typed token ergonomics      | <sg-icon name="check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
-| Async-first resolution      | <sg-icon name="check" size="16"></sg-icon>                                            | Partial                 | Partial                          |
-| Child container scopes      | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>                      | <sg-icon name="check" size="16"></sg-icon>                               |
-| Explicit disposal lifecycle | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon>                      | Partial                          |
-| Decorator-free usage        | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
-| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>                                            | <sg-icon name="check" size="16"></sg-icon>                      | <sg-icon name="x" size="16"></sg-icon>                               |
+| Feature                     | Conduit                                       | tsyringe                                                    | InversifyJS                                                                       |
+| --------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                                                       | ~45 kB                                                                            |
+| Typed token ergonomics      | <sg-icon name="check" size="16"></sg-icon>    | Partial                                                     | Partial                                                                           |
+| Async-first resolution      | <sg-icon name="check" size="16"></sg-icon>    | Partial                                                     | Partial                                                                           |
+| Child container scopes      | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>                                        |
+| Explicit disposal lifecycle | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>                      | Partial                                                                           |
+| Decorator-free usage        | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
+| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>                                            |
 
 <div class="decision-callout">
 
@@ -96,8 +111,9 @@ const Service = token<{ run(): Promise<void> }>('Service');
 const container = createContainer();
 
 container.value(Logger, console);
-container.factory(Service, (logger) => ({ run: async () => logger.log('Running service') }), {
-  deps: [Logger],
+container.factory(Service, async (r) => {
+  const logger = await r.resolve(Logger);
+  return { run: async () => logger.log('Running service') };
 });
 
 const service = await container.resolve(Service);
@@ -112,24 +128,25 @@ await container.dispose();
 
 - Small core API — `token`, `scope`, `createContainer`, and a focused set of container methods
 - Typed dependency contracts via Symbol tokens with phantom types
+- Factory functions receive a `FactoryResolver` — dependencies resolved lazily via `r.resolve(Token)`
 - Named scope tokens via `scope()` and `createScope()` for explicit lifecycle isolation
 - Async-first resolution with singleton deduplication for concurrent callers
-- Sync resolution path (`resolveSync`) for hot paths after warm-up
+- Sync resolution path (`resolveSync`) for hot paths after warm-up — rethrows cached rejections for failed singletons
+- Free-function helpers: `resolveSyncOptional`, `resolveSyncOrDefault`, `resolveOptional`, `resolveOrDefault`, `tryResolve`, `trySyncResolve`
 - `resolveMany()` to resolve multiple tokens in parallel with typed tuples
-- `tryResolve()` for result-object resolution without throwing
-- `resolveAll()` to eagerly warm all singletons and validate startup
+- `resolveAll()` to eagerly warm all singletons; pass `{ includeScoped: true }` to also pre-warm named-scope factories
+- `InferTokenTypes<T>` utility type to infer a typed tuple from a token array
 - Registration existence check (`has`) without triggering factory execution
-- `ContainerModule` for grouping related registrations and async setup
-- `validate()` for registration-time cycle detection
-- `freeze()` to lock the container after startup
+- `ContainerModule` + `loadModules()` for grouping and async provider setup
+- `freeze()` to lock the container after startup; idempotent — safe to call multiple times; declare `deps:` on factories for static cycle detection at freeze time
 - `inspect()` to get a serializable dependency graph
-- `on()` to subscribe to container lifecycle events
-- Dispose hooks on both factory and value registrations
-- Child containers for request/component/test scope boundaries
+- `on()` to subscribe to container lifecycle events (each event carries a `source` field)
+- `onResolve()` interceptor called after every successful resolution — for telemetry and hot-path observability
+- Dispose hooks on both factory and value registrations; failures warn in dev instead of throwing
+- Named scope containers for request/component/test scope boundaries
 - Explicit disposal lifecycle with `Symbol.asyncDispose` support
 
 </div>
-
 
 ## Documentation
 

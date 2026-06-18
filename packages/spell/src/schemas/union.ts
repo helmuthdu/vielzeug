@@ -1,7 +1,6 @@
-import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, ValidationError } from '../core';
-import { _messages } from '../messages';
+import { ErrorCode, Schema, ValidationError, _makeCtx } from '../core';
 
 export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>> {
   readonly schemas: T;
@@ -15,14 +14,24 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     this.schemas = schemas;
   }
 
-  private _invalidUnionResult(value: unknown, errors: Issue[][]): ParseValue {
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue | Promise<ParseValue> {
+    const branchErrors: Issue[][] = [];
+
+    for (const schema of this.schemas) {
+      const result = schema._parseFullSync(value, ctx);
+
+      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
+
+      branchErrors.push(result.issues);
+    }
+
     return {
       data: value,
       issues: [
         {
           code: ErrorCode.invalid_union,
-          message: _messages().union.invalid(),
-          params: { errors },
+          message: ctx.messages.union.invalid(),
+          params: { errors: branchErrors },
           path: [],
         },
       ],
@@ -30,52 +39,61 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
     };
   }
 
-  protected override _parseValueSync(value: unknown): ParseValue {
-    const branchErrors: Issue[][] = [];
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferOutput<T[number]>> {
+    const c = ctx ?? _makeCtx();
 
-    for (const schema of this.schemas) {
-      const result = schema._parseFullSync(value);
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
 
-      if (result.issues.length === 0) return { data: result.data, issues: [], typeOk: true };
+      if (prepared.skip) return prepared.value as InferOutput<T[number]>;
 
-      branchErrors.push(result.issues);
-    }
+      const v = prepared.value;
 
-    return this._invalidUnionResult(value, branchErrors);
-  }
+      try {
+        const data = await Promise.any(
+          this.schemas.map((schema) =>
+            schema.safeParseAsync(v, c).then((result) => {
+              if (result.success) return result.data;
 
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    // Run all branches in parallel; return the first success (Promise.any semantics).
-    // If all branches fail, collect all branch errors for the invalid_union issue.
-    try {
-      const data = await Promise.any(
-        this.schemas.map((schema) =>
-          schema.safeParseAsync(value).then((result) => {
-            if (result.success) return result.data;
+              throw result.error;
+            }),
+          ),
+        );
 
-            throw result.error;
-          }),
-        ),
-      );
+        const validationIssues = await this._runValidatorsAsync(data, c);
 
-      return { data, issues: [], typeOk: true };
-    } catch (aggregateError) {
-      const errors = (aggregateError as AggregateError).errors as unknown[];
-      const nonValidation = errors.find((e) => !ValidationError.is(e));
+        if (validationIssues.length) throw new ValidationError(validationIssues);
 
-      if (nonValidation !== undefined) throw nonValidation;
+        return this._runPostprocessors(data) as InferOutput<T[number]>;
+      } catch (err) {
+        if (err instanceof AggregateError) {
+          const errors = err.errors as unknown[];
+          const nonValidation = errors.find((e) => !ValidationError.is(e));
 
-      const branchErrors = (errors as ValidationError[]).map((e) => e.issues);
+          if (nonValidation !== undefined) throw nonValidation;
 
-      return this._invalidUnionResult(value, branchErrors);
-    }
+          const branchErrors = (errors as ValidationError[]).map((e) => e.issues);
+
+          throw new ValidationError([
+            {
+              code: ErrorCode.invalid_union,
+              message: c.messages.union.invalid(),
+              params: { errors: branchErrors },
+              path: [],
+            },
+          ]);
+        }
+
+        throw err;
+      }
+    });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {
     return { ...this._describeBase(), branches: this.schemas.map((s) => s.toDescriptor()), kind: 'union' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const branches = this.schemas.map((s) => s.walk(visitor));
 
     if (visitor.union) return visitor.union(this, branches);

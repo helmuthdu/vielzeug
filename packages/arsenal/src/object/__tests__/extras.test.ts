@@ -1,15 +1,10 @@
 import { defaults } from '../defaults';
-import { entries } from '../entries';
 import { filterValues } from '../filterValues';
-import { fromEntries } from '../fromEntries';
-import { has } from '../has';
 import { invert } from '../invert';
-import { keys } from '../keys';
 import { mapKeys } from '../mapKeys';
 import { mapValues } from '../mapValues';
 import { omit } from '../omit';
 import { pick } from '../pick';
-import { values } from '../values';
 
 describe('object extras', () => {
   it('picks and omits keys', () => {
@@ -27,27 +22,9 @@ describe('object extras', () => {
     expect(filterValues(input, (value) => value > 1)).toEqual({ b: 2 });
   });
 
-  it('provides typed object wrappers', () => {
-    const input = { a: 1, b: 2 };
-
-    expect(keys(input)).toEqual(['a', 'b']);
-    expect(values(input)).toEqual([1, 2]);
-    expect(entries(input)).toEqual([
-      ['a', 1],
-      ['b', 2],
-    ]);
-    expect(
-      fromEntries([
-        ['a', 1],
-        ['b', 2],
-      ]),
-    ).toEqual({ a: 1, b: 2 });
-  });
-
   it('guards against __proto__ prototype pollution — security regression', () => {
     const malicious = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
 
-    // None of these should pollute Object.prototype
     const d = defaults({} as Record<string, unknown>, malicious);
     const mv = mapValues(malicious, (v) => v);
     const mk = mapKeys(malicious, (k) => k);
@@ -62,12 +39,11 @@ describe('object extras', () => {
     expect(Object.hasOwn(fv, '__proto__')).toBe(false);
   });
 
-  it('supports invert, has, and defaults', () => {
+  it('invert and defaults', () => {
     const input = { a: 'x', b: 'y' };
     const target = { a: 1, b: undefined as number | undefined };
 
     expect(invert(input)).toEqual({ x: 'a', y: 'b' });
-    expect(has(input, 'a')).toBe(true);
-    expect(defaults(target, { b: 2, c: 3 } as any)).toEqual({ a: 1, b: 2, c: 3 });
+    expect(defaults(target, { b: 2, c: 3 } as never)).toEqual({ a: 1, b: 2, c: 3 });
   });
 });

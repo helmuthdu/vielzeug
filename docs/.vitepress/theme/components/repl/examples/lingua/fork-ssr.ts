@@ -1,8 +1,8 @@
 export const forkSsrExample = {
   code: `import { createI18n } from '@vielzeug/lingua'
 
-// fork() creates an isolated child instance — same catalogs, independent locale.
-// Ideal for SSR (one fork per request) or test isolation.
+// fork() creates an isolated child instance — resolved catalog entries are shared
+// by reference (no template re-compilation), making it cheap for SSR fork-per-request.
 const shared = createI18n({
   locale: 'en',
   catalogs: {

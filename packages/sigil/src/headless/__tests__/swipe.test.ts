@@ -87,6 +87,53 @@ describe('createSwipeControl', () => {
     expect(setPointerCapture).toHaveBeenCalledWith(4);
   });
 
+  it('handlePointerCancel fires onCancel and resets active state', () => {
+    const onCancel = vi.fn();
+    const control = createSwipeControl({ axis: () => 'x', onCancel, threshold: () => 60 });
+
+    control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 9 }));
+    expect(control.isActive()).toBe(true);
+
+    const result = control.handlePointerCancel(new PointerEvent('pointercancel', { clientX: 20, pointerId: 9 }));
+
+    expect(result).toBe(true);
+    expect(control.isActive()).toBe(false);
+    expect(onCancel).toHaveBeenCalledWith(expect.objectContaining({ distance: 20 }));
+  });
+
+  it('handlePointerCancel returns false for unrelated pointer id', () => {
+    const control = createSwipeControl({});
+
+    control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1 }));
+
+    expect(control.handlePointerCancel(new PointerEvent('pointercancel', { pointerId: 99 }))).toBe(false);
+    expect(control.isActive()).toBe(true);
+
+    control.dispose();
+  });
+
+  it('dispose() resets active state', () => {
+    const control = createSwipeControl({ threshold: () => 100 });
+
+    control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 1 }));
+    expect(control.isActive()).toBe(true);
+
+    control.dispose();
+
+    expect(control.isActive()).toBe(false);
+  });
+
+  it('[Symbol.dispose] resets active state', () => {
+    const control = createSwipeControl({ threshold: () => 100 });
+
+    control.handlePointerDown(new PointerEvent('pointerdown', { clientX: 0, pointerId: 2 }));
+    expect(control.isActive()).toBe(true);
+
+    control[Symbol.dispose]();
+
+    expect(control.isActive()).toBe(false);
+  });
+
   it('allows consumers to disable pointer capture explicitly', () => {
     const handle = document.createElement('div');
     const setPointerCapture = vi.fn();

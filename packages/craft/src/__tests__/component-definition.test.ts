@@ -1,4 +1,6 @@
-import { define, html, prop, signal } from '../index';
+import { signal } from '@vielzeug/ripple';
+
+import { define, html, prop } from '../index';
 import { mount } from '../testing';
 import { uniqueTag } from './test-utils';
 

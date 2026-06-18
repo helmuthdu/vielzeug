@@ -21,7 +21,7 @@ Hardcoding permission logic in the state machine makes it inflexible and hard to
 Use Ward as the source of truth for authorization, and call Ward predicates in Clockwork guards. The machine enforces the happy path, while Ward ensures users can only take allowed actions.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 import { createRBAC } from '@vielzeug/ward';
 
 type ApprovalEvent =
@@ -39,7 +39,7 @@ const rbac = createRBAC({
   },
 });
 
-const approvalMachine = defineMachine({
+const approvalMachine = machine({
   initial: 'draft',
   context: {
     userId: 'user123',
@@ -146,34 +146,26 @@ const recordRejection = ({ context, event }: any) => {
 };
 
 // Usage
-const machine = interpret(approvalMachine, {
-  context: {
-    userId: 'user123',
-    userRole: 'reviewer', // This role can review and approve
-    submission: {},
-    reviewerNotes: '',
-    denialReason: '',
-  },
-});
+const m = approvalMachine;
 
 // Attempt to approve - succeeds if user has permission
-machine.send({ type: 'APPROVE' }); // OK if reviewer
-// machine.send({ type: 'APPROVE' }); // Fails silently if submitter
+m.send({ type: 'APPROVE' }); // OK if reviewer (context.userRole = 'reviewer')
+// m.send({ type: 'APPROVE' }); // Blocked by guard if context.userRole = 'submitter'
 
 export function submitForApproval(data: Record<string, unknown>) {
-  machine.send({ type: 'SUBMIT', data });
+  m.send({ type: 'SUBMIT', data });
 }
 
 export function startReview() {
-  machine.send({ type: 'REVIEW' });
+  m.send({ type: 'REVIEW' });
 }
 
 export function approveSubmission(notes: string) {
-  machine.send({ type: 'APPROVE', notes });
+  m.send({ type: 'APPROVE', notes });
 }
 
 export function rejectSubmission(reason: string) {
-  machine.send({ type: 'REJECT', reason });
+  m.send({ type: 'REJECT', reason });
 }
 
 // Check what actions are allowed in current state

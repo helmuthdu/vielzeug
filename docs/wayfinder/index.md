@@ -57,25 +57,25 @@ router.subscribe((state) => {
 
 </div>
 
-| Feature                              | Wayfinder                                       | page.js | Navigo  |
-| ------------------------------------ | ----------------------------------------------- | ------- | ------- |
-| Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB   | ~5 kB   |
-| History mode                         | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>      |
-| Memory history (tests / non-browser) | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Typed path params                    | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Named navigation                     | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | Partial |
-| Middleware                           | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>      |
-| Data loaders with AbortSignal        | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Lazy route loading                   | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Declarative redirects                | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Search param validation              | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Error in state                       | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| History state in context             | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Leave guards                         | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Hover prefetching (`preload()`)      | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Scroll restoration                   | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| View Transition API                  | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>      |
-| Zero dependencies                    | <sg-icon name="check" size="16"></sg-icon>                                              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>      |
+| Feature                              | Wayfinder                                       | page.js                                    | Navigo                                     |
+| ------------------------------------ | ----------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size                          | <PackageInfo package="wayfinder" type="size" /> | ~1 kB                                      | ~5 kB                                      |
+| History mode                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Memory history (tests / non-browser) | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Typed path params                    | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Named navigation                     | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | Partial                                    |
+| Middleware                           | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Data loaders with AbortSignal        | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Lazy route loading                   | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Declarative redirects                | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Search param validation              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Error in state                       | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| History state in context             | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Leave guards                         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Hover prefetching (`preload()`)      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Scroll restoration                   | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| View Transition API                  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Zero dependencies                    | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 
 ## Installation
 

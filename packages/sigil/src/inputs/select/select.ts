@@ -1,16 +1,5 @@
-import { getOrCreate } from '@vielzeug/arsenal';
-import {
-  computed,
-  define,
-  defineField,
-  html,
-  inject,
-  onCleanup,
-  onMounted,
-  prop,
-  signal,
-  watch,
-} from '@vielzeug/craft';
+import { define, useField, html, inject, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
 import type { SelectableFieldProps } from '../../shared';
@@ -154,7 +143,7 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onCleanup, onMounted, slots }) {
     const shadowRoot = el.shadowRoot;
     // ────────────────────────────────────────────────────────────────
     // State & Context
@@ -185,9 +174,11 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
     let dropdownEl: HTMLElement | null = null;
 
     const abortSignal = lifecycleSignal(onCleanup);
+    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
@@ -197,35 +188,28 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
       validateOn: formCtx?.validateOn,
       value: props.value,
     });
+
+    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
+
     const optionList = createOptionList<OptionItem>({
-      dom: {
-        getBoundary: () => el,
-        getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
-        getPanel: () => dropdownEl,
-        getReference: () => triggerEl,
-        getTrigger: () => triggerEl,
-      },
+      getBoundary: () => el,
+      getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
+      getItems: () => options.value,
+      getPanel: () => dropdownEl,
+      getReference: () => triggerEl,
+      getTrigger: () => triggerEl,
       isDisabled: () => choice.disabled.value,
-      items: {
-        getItems: () => options.value,
+      onClose: (reason) => {
+        emit('close', { reason });
+        choice.triggerValidation('blur');
       },
-      on: {
-        onClose: (reason) => {
-          emit('close', { reason });
-          choice.triggerValidation('blur');
-        },
-        onOpen: (reason) => emit('open', { reason }),
-      },
+      onOpen: (reason) => emit('open', { reason }),
       signal: abortSignal,
     });
 
     const { triggerValidation } = choice;
     const selectedValues = choice.selectedValues;
     const isDisabled = choice.disabled;
-
-    choice.bindFormField(
-      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
-    );
 
     const { fieldId: selectId } = choice;
     const listboxId = `listbox-${selectId}`;
@@ -302,7 +286,14 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
       for (const opt of opts) {
         const key = opt.group;
 
-        getOrCreate(groups, key, () => [] as OptionItem[]).push(opt);
+        let group = groups.get(key);
+
+        if (!group) {
+          group = [];
+          groups.set(key, group);
+        }
+
+        group.push(opt);
       }
 
       let globalIdx = 0;
@@ -356,7 +347,7 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
           return;
         }
 
-        optionList.first();
+        optionList.navigate('first');
       });
     }
 

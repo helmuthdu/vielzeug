@@ -1,5 +1,6 @@
-import { html, signal } from '@vielzeug/craft';
+import { html } from '@vielzeug/craft';
 import { type Fixture, mount, user } from '@vielzeug/craft/testing';
+import { signal } from '@vielzeug/ripple';
 
 export const SELECT_OPTIONS = `
   <option value="apple">Apple</option>
@@ -794,6 +795,19 @@ describe('sg-select accessibility', () => {
       expect(fixture.element.hasAttribute('open')).toBe(false);
       expect(changeHandler).toHaveBeenCalledTimes(1);
       expect((changeHandler.mock.calls[0][0] as CustomEvent).detail.values?.[0]).toBe('banana');
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-select', {
+        attrs: { label: 'Fruit', placeholder: 'Pick one' },
+        html: '<option value="apple">Apple</option><option value="banana">Banana</option>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
     });
   });
 });

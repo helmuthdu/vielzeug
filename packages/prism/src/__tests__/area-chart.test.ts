@@ -25,8 +25,8 @@ describe('createAreaChart', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'Test',
         },
@@ -39,7 +39,7 @@ describe('createAreaChart', () => {
 
   it('disposes cleanly', () => {
     const chart = createAreaChart(container, {
-      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
     });
 
     chart.dispose();
@@ -51,9 +51,9 @@ describe('createAreaChart', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
-            { x: 3, y: 15 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+            { key: 3, value: 15 },
           ],
           name: 'Test',
         },
@@ -68,8 +68,8 @@ describe('createAreaChart', () => {
     const chart = createAreaChart(container, {
       legend: true,
       series: [
-        { data: [{ x: 1, y: 10 }], name: 'Alpha' },
-        { data: [{ x: 1, y: 20 }], name: 'Beta' },
+        { data: [{ key: 1, value: 10 }], name: 'Alpha' },
+        { data: [{ key: 1, value: 20 }], name: 'Beta' },
       ],
     });
 
@@ -85,7 +85,7 @@ describe('createAreaChart', () => {
   it('renders legend in specified position', () => {
     const chart = createAreaChart(container, {
       legend: { position: 'top' },
-      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 1, value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend-top')).not.toBeNull();
@@ -95,7 +95,7 @@ describe('createAreaChart', () => {
   it('removes legend element on dispose', () => {
     const chart = createAreaChart(container, {
       legend: true,
-      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 1, value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend')).not.toBeNull();
@@ -105,7 +105,7 @@ describe('createAreaChart', () => {
 
   it('does not render legend when legend is omitted', () => {
     const chart = createAreaChart(container, {
-      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 1, value: 5 }], name: 'Series' }],
     });
 
     expect(container.querySelector('.prism-legend')).toBeNull();
@@ -114,7 +114,7 @@ describe('createAreaChart', () => {
 
   it('double dispose is a no-op', () => {
     const chart = createAreaChart(container, {
-      series: [{ data: [{ x: 1, y: 5 }], name: 'Series' }],
+      series: [{ data: [{ key: 1, value: 5 }], name: 'Series' }],
     });
 
     chart.dispose();
@@ -123,7 +123,7 @@ describe('createAreaChart', () => {
 
   it('does not expose update() on ChartHandle', () => {
     const chart = createAreaChart(container, {
-      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
     });
 
     expect('update' in chart).toBe(false);
@@ -132,7 +132,7 @@ describe('createAreaChart', () => {
 
   it('renders tooltip inside container (not body)', () => {
     const chart = createAreaChart(container, {
-      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
       tooltip: true,
     });
 
@@ -142,12 +142,12 @@ describe('createAreaChart', () => {
   });
 
   it('accepts reactive data via signals', () => {
-    const data = signal([{ x: 1, y: 10 }]);
+    const data = signal([{ key: 1, value: 10 }]);
     const chart = createAreaChart(container, {
       series: [{ data, name: 'Reactive' }],
     });
 
-    data.value = [...data.value, { x: 2, y: 20 }];
+    data.value = [...data.value, { key: 2, value: 20 }];
     chart.dispose();
   });
 
@@ -155,7 +155,7 @@ describe('createAreaChart', () => {
     const onHover = vi.fn();
     const chart = createAreaChart(container, {
       onHover,
-      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
     });
 
     chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
@@ -170,21 +170,21 @@ describe('createAreaChart', () => {
 
     const chart = createAreaChart(container, {
       plugins: [plugin],
-      series: [{ data: [{ x: 1, y: 10 }], name: 'Test' }],
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
     });
 
-    expect(install).toHaveBeenCalledWith(chart.el, container);
+    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
     chart.dispose();
     expect(dispose).toHaveBeenCalledOnce();
   });
 
-  it('renders with Date x-axis (time scale)', () => {
+  it('renders with Date key (time scale)', () => {
     const chart = createAreaChart(container, {
       series: [
         {
           data: [
-            { x: new Date('2024-01-01'), y: 10 },
-            { x: new Date('2024-06-01'), y: 20 },
+            { key: new Date('2024-01-01'), value: 10 },
+            { key: new Date('2024-06-01'), value: 20 },
           ],
           name: 'Time',
         },
@@ -201,8 +201,8 @@ describe('createAreaChart', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'NoLine',
           showLine: false,
@@ -227,8 +227,8 @@ describe('createAreaChart', () => {
 
   it('reactive signal update re-renders area', async () => {
     const data = signal([
-      { x: 1, y: 10 },
-      { x: 2, y: 20 },
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
     ]);
     const chart = createAreaChart(container, {
       series: [{ data, name: 'Reactive' }],
@@ -236,9 +236,9 @@ describe('createAreaChart', () => {
 
     await new Promise((r) => requestAnimationFrame(r));
     data.value = [
-      { x: 1, y: 10 },
-      { x: 2, y: 20 },
-      { x: 3, y: 30 },
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
+      { key: 3, value: 30 },
     ];
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => requestAnimationFrame(r));
@@ -261,8 +261,8 @@ describe('createAreaChart', () => {
 
   it('creates only one crosshair group on repeated reactive renders', async () => {
     const data = signal([
-      { x: 1, y: 10 },
-      { x: 2, y: 20 },
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
     ]);
     const chart = createAreaChart(container, {
       crosshair: true,
@@ -270,13 +270,32 @@ describe('createAreaChart', () => {
     });
 
     data.value = [
-      { x: 1, y: 5 },
-      { x: 2, y: 15 },
-      { x: 3, y: 25 },
+      { key: 1, value: 5 },
+      { key: 2, value: 15 },
+      { key: 3, value: 25 },
     ];
     await new Promise((r) => setTimeout(r, 50));
 
     expect(chart.el.querySelectorAll('.prism-crosshair').length).toBe(1);
+    chart.dispose();
+  });
+
+  it('passes axe accessibility audit', async () => {
+    const chart = createAreaChart(container, {
+      ariaLabel: 'Area chart test',
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'Series',
+        },
+      ],
+    });
+    const results = await axeCheck(container);
+
+    expect(results.violations).toHaveLength(0);
     chart.dispose();
   });
 });

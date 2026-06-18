@@ -228,4 +228,17 @@ describe('sg-dialog accessibility', () => {
       expect(dialog).toBeTruthy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-dialog', {
+        attrs: { label: 'Confirm action' },
+        html: '<p>Are you sure?</p>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

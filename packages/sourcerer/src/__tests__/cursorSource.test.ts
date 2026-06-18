@@ -1,3 +1,4 @@
+import { applyCursorQuery } from '../applyQuery';
 import { createCursorSource } from '../cursorSource';
 
 describe('createCursorSource', () => {
@@ -140,14 +141,14 @@ describe('createCursorSource', () => {
       expect(source.meta.isSearchPending).toBe(false);
     });
 
-    it('searchNow applies immediately', async () => {
+    it('search with immediate:true applies immediately', async () => {
       const fetch = vi.fn(async ({ search }: { search?: string }) => ({
         items: [search ?? 'default'],
         total: 1,
       }));
       const source = createCursorSource({ autoFetch: false, fetch });
 
-      await source.searchNow('quick');
+      await source.search('quick', { immediate: true });
 
       expect(source.current).toEqual(['quick']);
     });
@@ -169,8 +170,8 @@ describe('createCursorSource', () => {
     });
   });
 
-  describe('flush', () => {
-    it('immediately applies pending debounced search', async () => {
+  describe('search debounce', () => {
+    it('resolves promise when debounced search is applied', async () => {
       const fetch = vi.fn(async ({ search }: { cursor?: string; search?: string }) => ({
         cursor: null,
         items: search ? [search] : ['init'],
@@ -179,10 +180,12 @@ describe('createCursorSource', () => {
 
       await source.refresh();
 
-      source.search('fast');
+      const searchDone = source.search('fast');
+
       expect(source.meta.isSearchPending).toBe(true);
 
-      await source.flush();
+      await vi.runAllTimersAsync();
+      await searchDone;
 
       expect(source.meta.isSearchPending).toBe(false);
       expect(source.current).toEqual(['fast']);
@@ -217,18 +220,18 @@ describe('createCursorSource', () => {
     });
   });
 
-  describe('restoreQuery()', () => {
-    it('restores limit from patch', async () => {
+  describe('setLimit / search via applyCursorQuery', () => {
+    it('setLimit fetches with new limit', async () => {
       const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], nextCursor: 'n1', total: 6 }));
       const source = createCursorSource({ autoFetch: false, fetch, limit: 2 });
 
-      await source.restoreQuery({ limit: 3 });
+      await source.setLimit(3);
 
       expect(source.toQuery().limit).toBe(3);
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
-    it('restores search from patch and resets cursors', async () => {
+    it('search immediate resets cursors and fetches', async () => {
       const fetch = vi.fn(async ({ search }: { search?: string }) => ({
         items: search ? [`found-${search}`] : ['all'],
         nextCursor: undefined,
@@ -236,17 +239,17 @@ describe('createCursorSource', () => {
       }));
       const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.restoreQuery({ search: 'hello' });
+      await source.search('hello', { immediate: true });
 
       expect(source.toQuery().search).toBe('hello');
       expect(source.current).toEqual(['found-hello']);
     });
 
-    it('is a no-op when nothing changes', async () => {
+    it('setLimit is a no-op when limit does not change', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
       const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.restoreQuery({ limit: 10 });
+      await source.setLimit(10);
 
       expect(fetch).not.toHaveBeenCalled();
     });
@@ -309,6 +312,47 @@ describe('createCursorSource', () => {
   });
 
   describe('dispose', () => {
+    it('ready() rejects immediately with SourceDisposedError when already disposed', async () => {
+      const { SourceDisposedError } = await import('../types');
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createCursorSource({ autoFetch: false, fetch });
+
+      source.dispose();
+
+      await expect(source.ready()).rejects.toBeInstanceOf(SourceDisposedError);
+    });
+
+    it('double-dispose is idempotent (no throw)', () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createCursorSource({ autoFetch: false, fetch });
+
+      source.dispose();
+
+      expect(() => source.dispose()).not.toThrow();
+    });
+
+    it('disposed getter reflects lifecycle state', () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createCursorSource({ autoFetch: false, fetch });
+
+      expect(source.disposed).toBe(false);
+
+      source.dispose();
+
+      expect(source.disposed).toBe(true);
+    });
+
+    it('disposalSignal aborts on dispose()', () => {
+      const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+      const source = createCursorSource({ autoFetch: false, fetch });
+
+      expect(source.disposalSignal.aborted).toBe(false);
+
+      source.dispose();
+
+      expect(source.disposalSignal.aborted).toBe(true);
+    });
+
     it('stops notifying listeners after dispose', async () => {
       const fetch = vi.fn(async () => ({ cursor: null, items: ['x'] }));
       const source = createCursorSource({ autoFetch: false, fetch });
@@ -336,5 +380,94 @@ describe('createCursorSource', () => {
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
+  });
+});
+
+describe('applyCursorQuery', () => {
+  it('applies limit to cursor source', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], nextCursor: 'n1', total: 3 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
+
+    await applyCursorQuery(source, { limit: 3 });
+
+    expect(source.toQuery().limit).toBe(3);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies search to cursor source', async () => {
+    const fetch = vi.fn(async ({ search }: { search?: string }) => ({
+      items: search ? [`found-${search}`] : ['all'],
+      nextCursor: undefined,
+      total: 1,
+    }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+    await applyCursorQuery(source, { search: 'hello' });
+
+    expect(source.toQuery().search).toBe('hello');
+    expect(source.current).toEqual(['found-hello']);
+  });
+
+  it('no-op when patch is empty', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+    await applyCursorQuery(source, {});
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('createCursorSource — patch()', () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.restoreAllMocks());
+
+  it('patch({ limit }) updates page size and triggers fetch', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
+
+    await source.patch({ limit: 15 });
+
+    expect(source.meta.pageSize).toBe(15);
+    expect(fetch).toHaveBeenCalledWith(expect.objectContaining({ limit: 15 }), expect.any(AbortSignal));
+  });
+
+  it('patch({ limit }) resets cursors', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['a'], nextCursor: 'c1', total: 2 })
+      .mockResolvedValue({ items: ['b'], total: 1 });
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 1 });
+
+    await source.refresh();
+    expect(source.meta.hasNextPage).toBe(true);
+
+    await source.patch({ limit: 2 });
+
+    expect(source.toQuery()).not.toHaveProperty('after');
+  });
+
+  it('patch({ search }) resets cursors and triggers fetch', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce({ items: ['x'], nextCursor: 'c1', total: 1 })
+      .mockResolvedValue({ items: ['found'], total: 1 });
+    const source = createCursorSource({ autoFetch: false, fetch });
+
+    await source.refresh();
+    await source.next();
+    await source.patch({ search: 'q' });
+
+    expect(source.toQuery()).not.toHaveProperty('after');
+    expect(source.toQuery().search).toBe('q');
+  });
+
+  it('patch({ limit }) no-op when same value', async () => {
+    const fetch = vi.fn(async () => ({ items: [], total: 0 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
+
+    await source.patch({ limit: 10 });
+
+    expect(fetch).not.toHaveBeenCalled();
   });
 });

@@ -23,6 +23,12 @@ const authLog = createLogger('auth'); // shorthand namespace
 
 Each `createLogger()` call is fully independent with its own transport pipeline.
 
+The two-arg shorthand combines namespace and options cleanly:
+
+```ts
+const log = createLogger('api', { logLevel: 'warn', transports: [transport] });
+```
+
 ## Transports
 
 Transports are the delivery layer. Every `LogEntry` that passes the logger's level threshold is dispatched to each transport in order. Transports handle their own formatting, level filtering, and delivery.
@@ -113,16 +119,21 @@ const batch = batchTransport({
   maxSize: 100,
 });
 
-const log = createLogger({ transports: [batch] });
+// Pass batch.transport to the logger — batch itself holds flush/dispose
+const log = createLogger({ transports: [batch.transport] });
 
-// on shutdown — dispose the batch directly, or use log.dispose()
-process.on('exit', () => log.dispose());
+// on shutdown — dispose the batch directly
+process.on('exit', () => batch.dispose());
 ```
 
-`log.dispose()` walks the logger's transport array and calls `.dispose()` on any `BatchTransport` instances it finds, making it convenient for shutdown without keeping separate references.
+`batchTransport.dispose()` is idempotent — calling it twice is safe and will not double-flush. `[Symbol.dispose]` is also available for `using` declarations.
 
 ::: warning
-`log.dispose()` only inspects top-level transports. A `batchTransport` wrapped inside `pipe()` is not discovered — hold a direct reference and dispose it manually in that case.
+`log.dispose()` silences the logger but does **not** flush or stop batch transports. Always hold a reference to the `batchTransport` and call `.dispose()` on it explicitly at shutdown.
+:::
+
+::: warning
+After `log.dispose()`, the logger is silenced — all log calls (`debug`, `info`, `warn`, `error`, `fatal`, `time`, `group`) become no-ops. The `fn` callback in `group()` still executes, but no group header is rendered. This is intentional to prevent logging after application teardown.
 :::
 
 ### Node.js: Structured JSON Logging
@@ -153,24 +164,31 @@ const AppLog = Rune.child({
   // pass transports: [] to disable all, or transports: [...] to replace
 });
 
-const cfg: Readonly<RuneConfig> = AppLog.config; // snapshot copy
+// Individual getters — no config snapshot
+console.log(AppLog.logLevel); // 'warn'
+console.log(AppLog.namespace); // 'App'
+console.log(AppLog.transports); // [...]
 ```
 
 Level threshold order: `debug` < `info` < `warn` < `error` < `fatal` < `off`
 
 ## Call Signature
 
-All log methods share a consistent overloaded signature:
+All log methods share a consistent three-form signature:
 
 ```ts
-log.info('message');
+log.info('message'); // string only
+log.error(err, 'request failed'); // Error first — auto-serialized to data.err
+log.error(err, { requestId }, 'request failed'); // Error + context + message
 log.info({ key: 'value' }, 'message'); // context object first, message second
-log.error(new Error('boom')); // Error auto-serialized into context.err
-log.error(new Error('boom'), 'override'); // message override, err still in context
+log.error({ err: new Error('boom') }, 'request failed'); // Error nested in context — also auto-serialized
 ```
 
-The `context` object is merged with any pinned `withBindings()` context before emission.
-String-first calls accept only a single message argument. Structured data always goes in the first argument.
+- **Error-first form:** pass an `Error` as the first argument. It is automatically serialized to `{ message, name, stack }` under the `err` key in `data`. Optionally follow with a `Bindings` object and/or a message string. This is the idiomatic form when the Error is the primary subject of the call.
+- **Context-first form:** pass a plain object as the first argument. `Error` values nested inside are also auto-serialized. Optionally follow with a message string.
+- **String-only form:** a single string message, no structured context.
+
+The per-call context is shallow-merged with `withBindings()` bindings into `entry.data`.
 
 ## Logging Methods
 
@@ -178,7 +196,7 @@ String-first calls accept only a single message argument. Structured data always
 Rune.debug('debug details');
 Rune.info({ port: 3000 }, 'server started');
 Rune.warn('cache stale');
-Rune.error(new Error('timeout')); // auto-serialized
+Rune.error({ err: new Error('timeout') }, 'request failed'); // Error auto-serialized in context
 Rune.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
 ```
 
@@ -258,7 +276,6 @@ log.info('b'); // tick: 2
 ```ts
 const api = Rune.child({ namespace: 'api' });
 const auth = api.child({ namespace: 'auth' }); // → 'api.auth' (dot-joined automatically)
-const root = api.child({ namespace: '/root' }); // → 'root' (/ prefix = absolute, ignores parent)
 
 api.info('GET /users');
 auth.warn('token expiring');
@@ -281,20 +298,19 @@ Child and parent configs remain independent after creation.
 
 ## Timing
 
-`time(label, fn, opts?)` measures execution time of sync or async functions. Emits a structured entry with `{ duration_ms }` in context and `label` as the message. When `fn` throws or rejects, the entry also includes `{ err }` with the serialized error.
+`time(label, fn, level?)` measures execution time of sync or async functions. Emits a structured entry with `{ duration_ms }` in `data` and `label` as the message. When `fn` throws or rejects, the entry also includes `{ err }` with the serialized error.
 
 ```ts
 // Sync
 const result = log.time('parse', () => parseDocument(input));
-// Emits: { level: 'debug', message: 'parse', context: { duration_ms: 2.4 } }
+// Emits: { level: 'debug', message: 'parse', data: { duration_ms: 2.4 } }
 
 // Async
 const users = await log.time('db.users', () => db.query('SELECT * FROM users'));
-// Emits even on rejection, with { err } included in context
+// Emits even on rejection, with { err } included in data
 
 // Custom level
 log.time('health-check', () => ping(), 'info');
-log.time('health-check', () => ping(), { level: 'info' }); // equivalent
 
 // Skipped when logLevel is 'off', but fn still executes
 ```
@@ -322,6 +338,61 @@ log.group(
 ```
 
 When `logLevel` is `'off'`, the group wrapper is bypassed but the callback still executes. When a `level` is provided and it is below the configured threshold, the group header is skipped but the callback still runs.
+
+## Testing
+
+Use a test transport to assert log entries without mocking `console`. This approach is more robust and does not require spy cleanup:
+
+```ts
+import { expect, it } from 'vitest';
+import { createLogger } from '@vielzeug/rune';
+import type { LogEntry, Transport } from '@vielzeug/rune';
+
+function createTestTransport() {
+  const entries: LogEntry[] = [];
+  const transport: Transport = (entry) => entries.push(entry);
+  return { entries, transport };
+}
+
+it('logs errors when enabled', () => {
+  const { entries, transport } = createTestTransport();
+  const log = createLogger({ logLevel: 'error', transports: [transport] });
+
+  log.error('boom');
+
+  expect(entries).toHaveLength(1);
+  expect(entries[0].level).toBe('error');
+  expect(entries[0].message).toBe('boom');
+});
+
+it('suppresses debug when logLevel is warn', () => {
+  const { entries, transport } = createTestTransport();
+  const log = createLogger({ logLevel: 'warn', transports: [transport] });
+
+  log.debug('silent');
+  log.warn('loud');
+
+  expect(entries).toHaveLength(1);
+});
+```
+
+You can still spy on `console` methods when testing `consoleTransport` output directly:
+
+```ts
+import { afterEach, expect, it, vi } from 'vitest';
+import { consoleTransport, createLogger } from '@vielzeug/rune';
+
+afterEach(() => vi.restoreAllMocks());
+
+it('writes error to console.error', () => {
+  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const log = createLogger({ logLevel: 'error', transports: [consoleTransport({ timestamp: false })] });
+
+  log.error('boom');
+
+  expect(spy).toHaveBeenCalled();
+});
+```
 
 ## Framework Integration
 
@@ -429,61 +500,6 @@ const bus = createBus<AppEvents>({
 });
 ```
 
-## Testing
-
-Use a test transport to assert log entries without mocking `console`. This approach is more robust and does not require spy cleanup:
-
-```ts
-import { expect, it } from 'vitest';
-import { createLogger } from '@vielzeug/rune';
-import type { LogEntry, Transport } from '@vielzeug/rune';
-
-function createTestTransport() {
-  const entries: LogEntry[] = [];
-  const transport: Transport = (entry) => entries.push(entry);
-  return { entries, transport };
-}
-
-it('logs errors when enabled', () => {
-  const { entries, transport } = createTestTransport();
-  const log = createLogger({ logLevel: 'error', transports: [transport] });
-
-  log.error('boom');
-
-  expect(entries).toHaveLength(1);
-  expect(entries[0].level).toBe('error');
-  expect(entries[0].message).toBe('boom');
-});
-
-it('suppresses debug when logLevel is warn', () => {
-  const { entries, transport } = createTestTransport();
-  const log = createLogger({ logLevel: 'warn', transports: [transport] });
-
-  log.debug('silent');
-  log.warn('loud');
-
-  expect(entries).toHaveLength(1);
-});
-```
-
-You can still spy on `console` methods when testing `consoleTransport` output directly:
-
-```ts
-import { afterEach, expect, it, vi } from 'vitest';
-import { consoleTransport, createLogger } from '@vielzeug/rune';
-
-afterEach(() => vi.restoreAllMocks());
-
-it('writes error to console.error', () => {
-  const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-  const log = createLogger({ logLevel: 'error', transports: [consoleTransport({ timestamp: false })] });
-
-  log.error('boom');
-
-  expect(spy).toHaveBeenCalled();
-});
-```
-
 ## Best Practices
 
 - Create one child logger per module boundary using `Rune.child({ namespace: 'module.name' })` or `createLogger('module.name')`.
@@ -495,4 +511,5 @@ it('writes error to console.error', () => {
 - Keep remote handlers resilient — network failures should not block app flow.
 - Call `batchTransport.dispose()` on shutdown to flush remaining buffered entries.
 - Use `redactTransport` closest to any remote/persistent transport — never strip before console.
+- To style console output, pass `consoleTransport({ theme })` explicitly in `transports`.
 - Use `fatal()` only for genuinely unrecoverable states.

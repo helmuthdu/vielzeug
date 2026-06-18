@@ -9,10 +9,16 @@ export class InstanceOfSchema<T> extends Schema<T> {
   }
 
   constructor(cls: new (...args: any[]) => T) {
-    super((value) =>
+    super((value, ctx) =>
       value instanceof cls
         ? null
-        : [{ code: ErrorCode.invalid_type, message: _messages().instanceof.type({ className: cls.name }), path: [] }],
+        : [
+            {
+              code: ErrorCode.invalid_type,
+              message: (ctx?.messages ?? _messages()).instanceof.type({ className: cls.name }),
+              path: [],
+            },
+          ],
     );
   }
 
@@ -20,7 +26,7 @@ export class InstanceOfSchema<T> extends Schema<T> {
     return { ...this._describeBase(), kind: 'instanceof' };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.instanceof) return visitor.instanceof(this);
 
     return super._walk(visitor);

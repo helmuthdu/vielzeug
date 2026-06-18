@@ -1,14 +1,12 @@
 export const priorityQueueExample = {
-  code: `import { createWorker } from '@vielzeug/familiar'
+  code: `import { createWorker, task } from '@vielzeug/familiar'
 
 // concurrency=1: a blocker holds the slot while we observe priority ordering
-const pool = createWorker(
-  async (n) => {
-    if (n === -1) await new Promise(r => setTimeout(r, 30))
-    return n
-  },
-  { concurrency: 1 },
-)
+const fn = task(async (n) => {
+  if (n === -1) await new Promise(r => setTimeout(r, 30))
+  return n
+})
+const pool = createWorker(fn, { concurrency: 1 })
 
 const order = []
 const record = (v) => { order.push(v); return v }

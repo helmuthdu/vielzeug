@@ -1,4 +1,5 @@
-import { computed, define, effect, html, inject, prop, signal, styleMap, when } from '@vielzeug/craft';
+import { define, html, inject, prop, styleMap, when } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
@@ -54,7 +55,7 @@ define<SgTabPanelProps>(TAB_PANEL_TAG, {
     padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
     value: prop.string(''),
   },
-  setup(props, { bind, el: _el }) {
+  setup(props, { bind, watch }) {
     const tabsCtx = inject(TABS_CTX);
     const isActive = computed(() =>
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,
@@ -75,7 +76,7 @@ define<SgTabPanelProps>(TAB_PANEL_TAG, {
     // Track whether the panel has ever been active (for lazy rendering)
     const hasBeenActive = signal(false);
 
-    effect(() => {
+    watch(() => {
       if (isActive.value) hasBeenActive.value = true;
     });
 

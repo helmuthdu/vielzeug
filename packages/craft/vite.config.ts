@@ -6,7 +6,7 @@ import { getConfig } from '../../vite.config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const craftExternals = ['@vielzeug/arsenal', '@vielzeug/orbit', '@vielzeug/ripple'];
+const craftExternals = ['@vielzeug/ripple'];
 
 export default defineConfig(
   mergeConfig(

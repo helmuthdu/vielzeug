@@ -1,7 +1,6 @@
 import type { HostBindFn } from '@vielzeug/craft';
 import type { ReadonlySignal, Signal } from '@vielzeug/ripple';
 
-import type { ErrorHelperState } from '../../headless';
 import type { ComponentSize } from '../../types';
 
 /**
@@ -10,12 +9,13 @@ import type { ComponentSize } from '../../types';
  * and switch (without).
  */
 export type CheckableBindingHandle = {
-  assistive: ReadonlySignal<ErrorHelperState>;
   assistiveId: string;
   checked: Signal<boolean>;
   disabled: ReadonlySignal<boolean>;
+  errorText: ReadonlySignal<string>;
   handleClick: (event: MouseEvent) => boolean;
   handleKeydown: (event: KeyboardEvent) => boolean;
+  helperText: ReadonlySignal<string>;
   indeterminate?: Signal<boolean>;
   labelId: string;
 };
@@ -36,7 +36,8 @@ export const applyCheckableBinding = (
   handle: CheckableBindingHandle,
   role: 'checkbox' | 'radio' | 'switch',
 ): void => {
-  const { assistive, assistiveId, checked, disabled, handleClick, handleKeydown, indeterminate, labelId } = handle;
+  const { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, indeterminate, labelId } =
+    handle;
 
   bind({
     attr: {
@@ -46,9 +47,9 @@ export const applyCheckableBinding = (
 
         return checked.value ? 'true' : 'false';
       },
-      ariaDescribedby: () => (assistive.value.errorText || assistive.value.helperText ? assistiveId : null),
+      ariaDescribedby: () => (errorText.value || helperText.value ? assistiveId : null),
       ariaDisabled: () => (disabled.value ? 'true' : null),
-      ariaInvalid: () => (assistive.value.errorText ? 'true' : null),
+      ariaInvalid: () => (errorText.value ? 'true' : null),
       ariaLabelledby: labelId,
       checked,
       role,

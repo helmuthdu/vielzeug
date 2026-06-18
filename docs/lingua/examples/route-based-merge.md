@@ -1,9 +1,9 @@
 ---
-title: 'Lingua Examples — Route-based Partial Catalog Merge'
-description: 'Route-based partial catalog merge example for @vielzeug/lingua.'
+title: 'Lingua Examples — Route-based Namespace Loading'
+description: 'Route-based namespace loading example for @vielzeug/lingua.'
 ---
 
-## Route-based Partial Catalog Merge
+## Route-based Namespace Loading
 
 ### Problem
 
@@ -11,7 +11,7 @@ You want to keep the base catalog small at startup and load route-specific keys 
 
 ### Solution
 
-Use `merge()` in the route enter hook to overlay route-specific keys on top of the base catalog without replacing it.
+Call `extend()` in the route enter hook. It registers the factory and immediately loads it for the active locale in a single step. Deduplication ensures the factory runs at most once per `ns + locale` pair.
 
 ```ts
 import { createI18n } from '@vielzeug/lingua';
@@ -29,18 +29,17 @@ export const i18n = createI18n({
   },
 });
 
-// Route enter hook — load per-route keys on demand
+const settingsFactory = (locale: string) => import(`./routes/${locale}/settings.i18n.json`).then((m) => m.default);
+
+// Route enter hook — register and load per-route keys on demand
 async function onEnterSettings() {
-  await Promise.all([
-    i18n.merge('en', () => import('./routes/settings.i18n.json').then((m) => m.default)),
-    i18n.merge('de', () => import('./routes/settings.i18n.de.json').then((m) => m.default)),
-  ]);
+  await i18n.extend('settings', settingsFactory);
 }
 
-// After merge, route keys are available alongside base keys
+// After loading, route keys are available alongside base keys
 await onEnterSettings();
 
-i18n.t('settings.heading'); // from merge
+i18n.t('settings.heading'); // from namespace
 i18n.t('nav.home'); // from base catalog — still present
 
 // Use scope() to avoid repeating the 'settings' prefix
@@ -51,9 +50,9 @@ s.t('danger.delete'); // 'Delete account'
 
 ### Pitfalls
 
-- Merging a locale that is not in the active fallback chain downloads the data but does not notify subscribers. The merged keys will be available once that locale becomes active via `setLocale()`.
-- A subsequent `register(locale, source)` replaces the full catalog, discarding all previously merged keys. Do not mix `register()` and `merge()` for the same locale.
-- There is no automatic eviction. Merged keys persist for the lifetime of the `i18n` instance — do not merge user-generated content or untrusted catalog data.
+- Calling `extend()` for a locale not in the active fallback chain applies the keys but does not notify subscribers. The keys will be available once that locale becomes active via `setLocale()`.
+- A subsequent `register(locale, source)` replaces the full catalog, discarding all namespace-merged keys for that locale. Avoid mixing `register()` and `extend()` for the same locale after initial setup.
+- Namespace deduplication is per-instance. Forked instances inherit the loaded-namespace markers — calling `extend()` on a fork that already saw it loaded on the parent is a no-op.
 
 ### Related
 

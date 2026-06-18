@@ -225,6 +225,13 @@ describe('formatParts', () => {
 });
 
 describe('format — additional edge cases', () => {
+  it('rescales negative amount with maximumFractionDigits < currency decimals', () => {
+    // -100.99 USD rescaled to 0 decimals: abs=10099, divisor=100, quotient=100, rem=99 → rounds up → 101 → -101
+    expect(format(money('-100.99', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('-$101');
+    // -100.49 USD rescaled to 0 decimals: abs=10049, quotient=100, rem=49 → truncates → 100 → -$100
+    expect(format(money('-100.49', 'USD'), { maximumFractionDigits: 0, minimumFractionDigits: 0 })).toBe('-$100');
+  });
+
   it('formats negative zero-decimal currency (JPY)', () => {
     expect(format(money(-1234n, 'JPY'))).toContain('1,234');
     expect(format(money(-1234n, 'JPY'))).toContain('-');

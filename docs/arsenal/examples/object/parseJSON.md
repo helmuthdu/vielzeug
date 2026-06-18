@@ -11,13 +11,13 @@ You need to parse JSON from localStorage or an API without crashing on malformed
 
 ### Solution
 
-Use `parseJSON(json, options?)` to return the parsed value or a `defaultValue` when parsing fails. It accepts `string | null | undefined`.
+Use `parseJSON(json, options?)` to return the parsed value or a `fallback` when parsing fails. It accepts `string | null | undefined`.
 
 ```ts
 import { parseJSON } from '@vielzeug/arsenal';
 
 const raw = localStorage.getItem('settings');
-const settings = parseJSON(raw, { defaultValue: { theme: 'light' } });
+const settings = parseJSON(raw, { fallback: { theme: 'light' } });
 // returns parsed object or { theme: 'light' } on failure
 ```
 
@@ -29,18 +29,18 @@ import { s } from '@vielzeug/spell';
 
 const Schema = s.object({ theme: s.string() });
 const settings = parseJSON(raw, {
-  defaultValue: { theme: 'light' },
+  fallback: { theme: 'light' },
   validator: (v) => Schema.safeParse(v).ok,
 });
 ```
 
 ### Pitfalls
 
-- Without `defaultValue`, returns `undefined` on failure — the return type includes `undefined`.
-- `null` / `undefined` input immediately returns `defaultValue` without calling `JSON.parse`.
-- The JSON string `"null"` parses to `null` (not `defaultValue`) — only the input being `null` triggers the fallback.
+- Without `fallback`, returns `undefined` on failure — the return type includes `undefined`.
+- `null` / `undefined` input immediately returns `fallback` without calling `JSON.parse`.
+- The JSON string `"null"` parses to `null` (not `fallback`) — only the input being `null` triggers the fallback.
 
 ### Related
 
-- [stableStringify](./stableStringify.md)
-- [getPath](./path.md)
+- [hash](./hash.md)
+- [getPath](./getPath.md)

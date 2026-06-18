@@ -82,6 +82,10 @@ type ChainedQuery<T extends Record<string, unknown>, N extends T, Self extends C
   /**
    * Filter records where `field` starts with `prefix`.
    * Preserves any type narrowing already accumulated by prior `equals()` calls.
+   *
+   * **Index push-down** is only active when `ignoreCase` is `false` (default) and this
+   * is the first operation in the chain. With `ignoreCase: true`, a full-table scan is
+   * always performed regardless of whether the field has an index.
    */
   startsWith<K extends keyof T>(field: K, prefix: string, options?: { ignoreCase?: boolean }): QueryBuilder<T, N>;
   toArray(): Promise<N[]>;
@@ -209,8 +213,8 @@ export function createQueryBuilder<T extends Record<string, unknown>, N extends 
       }
 
       return createQueryBuilder<T & Record<K, V>>(ctx as unknown as QueryContext<T & Record<K, V>>, [
-        { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
         ...(ops as unknown as QueryOp<T & Record<K, V>>[]),
+        { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
       ]);
     },
     filter(fn) {

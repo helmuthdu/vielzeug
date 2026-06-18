@@ -194,34 +194,6 @@ describe('createBus - subscription lifecycle', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('removeAllListeners(event) removes only that event listeners', () => {
-    const bus = createBus<TestEvents>();
-    const countListener = vi.fn();
-    const greetListener = vi.fn();
-
-    bus.on('count', countListener);
-    bus.on('greet', greetListener);
-
-    bus.removeAllListeners('count');
-    bus.emit('count', 1);
-    bus.emit('greet', { name: 'Alice' });
-
-    expect(countListener).not.toHaveBeenCalled();
-    expect(greetListener).toHaveBeenCalledWith({ name: 'Alice' });
-  });
-
-  it('removeAllListeners() removes all listeners', () => {
-    const bus = createBus<TestEvents>();
-
-    bus.on('count', vi.fn());
-    bus.on('greet', vi.fn());
-
-    bus.removeAllListeners();
-
-    expect(bus.listenerCount()).toBe(0);
-    expect(bus.eventNames()).toEqual([]);
-  });
-
   it('eventNames returns only events with active listeners', () => {
     const bus = createBus<TestEvents>();
     const unsubscribe = bus.on('count', vi.fn());
@@ -251,17 +223,17 @@ describe('createBus - subscription lifecycle', () => {
     expect(bus.listenerCount()).toBe(2);
   });
 
-  // R8: per-event count includes wildcard listeners (they fire on every emission).
-  it('listenerCount(event) includes wildcard listeners', () => {
+  it('listenerCount(event) counts specific-event listeners only; wildcardCount() is separate', () => {
     const bus = createBus<TestEvents>();
 
     bus.on('count', vi.fn());
     bus.onAny(vi.fn());
     bus.onAny(vi.fn());
 
-    expect(bus.listenerCount('count')).toBe(3); // 1 specific + 2 wildcards
-    expect(bus.listenerCount('greet')).toBe(2); // 0 specific + 2 wildcards
-    expect(bus.listenerCount()).toBe(3); // 1 specific + 2 wildcards (wildcards counted once)
+    expect(bus.listenerCount('count')).toBe(1); // specific only
+    expect(bus.listenerCount('greet')).toBe(0); // no specific listeners
+    expect(bus.listenerCount()).toBe(1); // total specific across all events
+    expect(bus.wildcardCount()).toBe(2); // onAny listeners
 
     bus.dispose();
   });
@@ -737,30 +709,6 @@ describe('createBus - onAny (wildcard listener)', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('is cleared by removeAllListeners() without argument', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    bus.onAny(listener);
-    bus.removeAllListeners();
-    bus.emit('count', 1);
-
-    expect(listener).not.toHaveBeenCalled();
-    expect(bus.listenerCount()).toBe(0);
-  });
-
-  it('is NOT cleared by removeAllListeners(event)', () => {
-    const bus = createBus<TestEvents>();
-    const listener = vi.fn();
-
-    bus.on('count', vi.fn());
-    bus.onAny(listener);
-    bus.removeAllListeners('count');
-    bus.emit('count', 1);
-
-    expect(listener).toHaveBeenCalledWith('count', 1);
-  });
-
   it('is stopped when bus is disposed', () => {
     const bus = createBus<TestEvents>();
     const listener = vi.fn();
@@ -773,14 +721,15 @@ describe('createBus - onAny (wildcard listener)', () => {
     expect(listener).toHaveBeenCalledOnce();
   });
 
-  it('counts toward listenerCount() total and per-event counts', () => {
+  it('counts are tracked separately via wildcardCount()', () => {
     const bus = createBus<TestEvents>();
 
     bus.onAny(vi.fn());
     bus.onAny(vi.fn());
 
-    expect(bus.listenerCount()).toBe(2);
-    expect(bus.listenerCount('count')).toBe(2); // wildcards fire for every event
+    expect(bus.wildcardCount()).toBe(2);
+    expect(bus.listenerCount()).toBe(0); // specific-only, wildcards not included
+    expect(bus.listenerCount('count')).toBe(0); // no specific listeners for count
   });
 
   it('errors forwarded to onError and remaining wildcard listeners continue', () => {
@@ -1069,7 +1018,7 @@ describe('pipeEvents() - via bus tests', () => {
     const controller = new AbortController();
 
     target.on('count', listener);
-    pipeEvents(source, target, ['count'], controller.signal);
+    pipeEvents(source, target, ['count'], { signal: controller.signal });
 
     source.emit('count', 1);
     controller.abort();
@@ -1366,139 +1315,16 @@ describe('createBus - validatePayload', () => {
   });
 });
 
-// F1: EventStream filter/map operators
-describe('createBus - events().filter() and events().map()', () => {
-  it('filter() yields only values that pass the predicate', async () => {
+describe('createBus - events() stream', () => {
+  it('Symbol.asyncDispose unsubscribes from the bus', async () => {
     const bus = createBus<TestEvents>();
-    const stream = bus.events('count').filter((n) => n % 2 === 0);
-    const results: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of stream) {
-        results.push(n);
-
-        if (results.length === 2) break;
-      }
-    })();
-
-    bus.emit('count', 1); // filtered out
-    bus.emit('count', 2); // passes
-    bus.emit('count', 3); // filtered out
-    bus.emit('count', 4); // passes
-
-    await consume;
-
-    expect(results).toEqual([2, 4]);
-  });
-
-  it('map() transforms each yielded value', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count').map((n) => n * 10);
-    const results: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of stream) {
-        results.push(n);
-
-        if (results.length === 2) break;
-      }
-    })();
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-
-    await consume;
-
-    expect(results).toEqual([10, 20]);
-  });
-
-  it('filter().map() chains work correctly', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus
-      .events('count')
-      .filter((n) => n > 0)
-      .map((n) => `n=${n}`);
-    const results: string[] = [];
-
-    const consume = (async () => {
-      for await (const s of stream) {
-        results.push(s);
-
-        if (results.length === 2) break;
-      }
-    })();
-
-    bus.emit('count', -1); // filtered
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-
-    await consume;
-
-    expect(results).toEqual(['n=1', 'n=2']);
-  });
-
-  it('Symbol.asyncDispose on filtered stream unsubscribes from the bus', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count').filter((n) => n > 0);
+    const stream = bus.events('count');
 
     expect(bus.listenerCount('count')).toBe(1);
 
     await stream[Symbol.asyncDispose]();
 
     expect(bus.listenerCount('count')).toBe(0);
-  });
-
-  it('Symbol.asyncDispose on mapped stream unsubscribes from the bus', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus.events('count').map((n) => n * 2);
-
-    expect(bus.listenerCount('count')).toBe(1);
-
-    await stream[Symbol.asyncDispose]();
-
-    expect(bus.listenerCount('count')).toBe(0);
-  });
-
-  it('bus disposal terminates a filtered stream', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of bus.events('count').filter((n) => n > 0)) {
-        collected.push(n);
-      }
-    })();
-
-    bus.emit('count', 1);
-    await new Promise((r) => setTimeout(r, 0));
-    bus.dispose();
-
-    await consume;
-
-    expect(collected).toEqual([1]);
-  });
-
-  it('sibling streams from the same base share the subscription and disposal handle', async () => {
-    // Two .filter() calls on the same base both iterate `gen`, which uses one subscription.
-    const bus = createBus<TestEvents>();
-    const base = bus.events('count');
-    const evens = base.filter((n) => n % 2 === 0);
-    const odds = base.filter((n) => n % 2 !== 0);
-
-    // One subscription registered for both siblings.
-    expect(bus.listenerCount('count')).toBe(1);
-
-    // Disposing one sibling disposes the shared subscription — the other is also terminated.
-    await evens[Symbol.asyncDispose]();
-
-    expect(bus.listenerCount('count')).toBe(0);
-
-    // odds generator should be done because the underlying gen is closed.
-    const result = await odds.next();
-
-    expect(result.done).toBe(true);
-
-    bus.dispose();
   });
 });
 
@@ -1619,209 +1445,6 @@ describe('createBus - name option', () => {
   });
 });
 
-describe('createBus - waitAny runtime guard', () => {
-  it('throws RangeError when fewer than 2 events are provided', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.waitAny(['count'] as unknown as [string, string])).toThrow(RangeError);
-    expect(() => bus.waitAny([] as unknown as [string, string])).toThrow(RangeError);
-
-    bus.dispose();
-  });
-
-  it('resolves normally with 2 or more events', async () => {
-    const bus = createBus<TestEvents>();
-    const pending = bus.waitAny(['count', 'greet']);
-
-    bus.emit('count', 7);
-
-    await expect(pending).resolves.toEqual({ event: 'count', payload: 7 });
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events().take()', () => {
-  it('yields exactly n values then stops', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of bus.events('count').take(3)) {
-        collected.push(n);
-      }
-    })();
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-    bus.emit('count', 3);
-    bus.emit('count', 4); // should not be collected
-
-    await consume;
-
-    expect(collected).toEqual([1, 2, 3]);
-
-    bus.dispose();
-  });
-
-  it('throws RangeError for non-positive n', () => {
-    const bus = createBus<TestEvents>();
-
-    expect(() => bus.events('count').take(0)).toThrow(RangeError);
-    expect(() => bus.events('count').take(-1)).toThrow(RangeError);
-    expect(() => bus.events('count').take(1.5)).toThrow(RangeError);
-
-    bus.dispose();
-  });
-
-  it('terminates early when bus disposes before n values', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of bus.events('count').take(10)) {
-        collected.push(n);
-      }
-    })();
-
-    bus.emit('count', 1);
-    await new Promise((r) => setTimeout(r, 0));
-    bus.dispose();
-
-    await consume;
-
-    expect(collected).toEqual([1]);
-  });
-
-  it('can be chained after filter()', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of bus
-        .events('count')
-        .filter((n) => n % 2 === 0)
-        .take(2)) {
-        collected.push(n);
-      }
-    })();
-
-    bus.emit('count', 1); // filtered
-    bus.emit('count', 2); // passes, count=1
-    bus.emit('count', 3); // filtered
-    bus.emit('count', 4); // passes, count=2 → stops
-    bus.emit('count', 6); // not reached
-
-    await consume;
-
-    expect(collected).toEqual([2, 4]);
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events() filter + map chaining', () => {
-  it('filter then map transforms values correctly', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus
-      .events('count')
-      .filter((n) => n > 0)
-      .map((n) => n * 10);
-    const results: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of stream) {
-        results.push(n);
-
-        if (results.length === 2) break;
-      }
-    })();
-
-    bus.emit('count', -1); // filtered
-    bus.emit('count', 2); // → 20
-    bus.emit('count', 3); // → 30
-
-    await consume;
-
-    expect(results).toEqual([20, 30]);
-
-    bus.dispose();
-  });
-
-  it('map then filter works in sequence', async () => {
-    const bus = createBus<TestEvents>();
-    const stream = bus
-      .events('count')
-      .map((n) => n * 2)
-      .filter((n) => n > 4);
-    const results: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of stream) {
-        results.push(n);
-
-        if (results.length === 2) break;
-      }
-    })();
-
-    bus.emit('count', 1); // 1*2=2, filtered (<= 4)
-    bus.emit('count', 3); // 3*2=6, passes
-    bus.emit('count', 4); // 4*2=8, passes
-
-    await consume;
-
-    expect(results).toEqual([6, 8]);
-
-    bus.dispose();
-  });
-});
-
-describe('createBus - events().take() subscription cleanup', () => {
-  it('cleans up the subscription after natural exhaustion (no lingering listeners)', async () => {
-    const bus = createBus<TestEvents>();
-
-    const consume = (async () => {
-      for await (const _ of bus.events('count').take(2)) {
-        // consume
-      }
-    })();
-
-    bus.emit('count', 1);
-    bus.emit('count', 2);
-
-    await consume;
-
-    // After take(2) exhausted, the subscription must be removed
-    expect(bus.listenerCount('count')).toBe(0);
-
-    bus.dispose();
-  });
-
-  it('map() then take() yields mapped values and stops', async () => {
-    const bus = createBus<TestEvents>();
-    const collected: number[] = [];
-
-    const consume = (async () => {
-      for await (const n of bus
-        .events('count')
-        .map((n) => n * 3)
-        .take(2)) {
-        collected.push(n);
-      }
-    })();
-
-    bus.emit('count', 1); // → 3
-    bus.emit('count', 2); // → 6
-    bus.emit('count', 3); // not collected
-
-    await consume;
-
-    expect(collected).toEqual([3, 6]);
-
-    bus.dispose();
-  });
-});
-
 describe('createBus - middleware double-next with chain', () => {
   it('double-next in first middleware does not cause second middleware to run twice', () => {
     const order: string[] = [];
@@ -1844,6 +1467,107 @@ describe('createBus - middleware double-next with chain', () => {
     bus.emit('count', 1);
 
     expect(order).toEqual(['mw1-before', 'mw2', 'listener', 'mw1-after']);
+
+    bus.dispose();
+  });
+});
+
+describe('combineSignals - single argument', () => {
+  it('returns the same signal when only one argument is provided', () => {
+    const ctrl = new AbortController();
+
+    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
+  });
+
+  it('returns already-aborted signal directly when only one argument is provided', () => {
+    const ctrl = new AbortController();
+
+    ctrl.abort('reason');
+
+    const result = combineSignals(ctrl.signal);
+
+    expect(result).toBe(ctrl.signal);
+    expect(result.aborted).toBe(true);
+  });
+});
+
+describe('combineSignals - varargs (3+ signals)', () => {
+  it('aborts when any of three signals aborts', () => {
+    const ctrlA = new AbortController();
+    const ctrlB = new AbortController();
+    const ctrlC = new AbortController();
+    const combined = combineSignals(ctrlA.signal, ctrlB.signal, ctrlC.signal);
+
+    expect(combined.aborted).toBe(false);
+
+    ctrlB.abort('from-b');
+
+    expect(combined.aborted).toBe(true);
+    expect(combined.reason).toBe('from-b');
+  });
+
+  it('returns first signal directly when called with one argument', () => {
+    const ctrl = new AbortController();
+
+    expect(combineSignals(ctrl.signal)).toBe(ctrl.signal);
+  });
+
+  it('returns already-aborted signal early when first of three is aborted', () => {
+    const aborted = AbortSignal.abort('first');
+    const ctrlB = new AbortController();
+    const ctrlC = new AbortController();
+    const combined = combineSignals(aborted, ctrlB.signal, ctrlC.signal);
+
+    expect(combined.aborted).toBe(true);
+    expect(combined.reason).toBe('first');
+  });
+
+  it('does not allocate intermediate controllers when tail is already-aborted', () => {
+    const ctrl = new AbortController();
+    const aborted = AbortSignal.abort('tail');
+    const combined = combineSignals(ctrl.signal, aborted);
+
+    expect(combined.aborted).toBe(true);
+    expect(combined.reason).toBe('tail');
+  });
+});
+
+describe('createBus - events() maxBuffer', () => {
+  it('drops oldest values when maxBuffer is exceeded during buffering', async () => {
+    const bus = createBus<TestEvents>();
+    const stream = bus.events('count', { maxBuffer: 2 });
+
+    bus.emit('count', 1);
+    bus.emit('count', 2);
+    bus.emit('count', 3); // 1 dropped — only [2, 3] buffered
+
+    const first = await stream.next();
+    const second = await stream.next();
+
+    expect(first.value).toBe(2);
+    expect(second.value).toBe(3);
+
+    await stream[Symbol.asyncDispose]();
+    bus.dispose();
+  });
+});
+
+describe('createBus - wait() edge cases', () => {
+  it('rejects immediately when bus is already disposed at call time', async () => {
+    const bus = createBus<TestEvents>();
+
+    bus.dispose();
+
+    await expect(bus.wait('count')).rejects.toBeInstanceOf(BusDisposedError);
+  });
+});
+
+describe('createBus - waitAny() edge cases', () => {
+  it('rejects immediately when provided signal is already aborted', async () => {
+    const bus = createBus<TestEvents>();
+    const signal = AbortSignal.abort('already-aborted');
+
+    await expect(bus.waitAny(['count', 'greet'], { signal })).rejects.toBe('already-aborted');
 
     bus.dispose();
   });
@@ -1898,5 +1622,37 @@ describe('createBus - logger option', () => {
 
     bus.dispose();
     spy.mockRestore();
+  });
+});
+
+describe('createBus - waitAny() guards', () => {
+  it('throws RangeError when called with fewer than 2 event keys', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(RangeError);
+    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(
+      'waitAny() requires at least 2 event keys',
+    );
+
+    bus.dispose();
+  });
+});
+
+describe('createBus - events() maxBuffer guards', () => {
+  it('throws RangeError when maxBuffer is NaN', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow('maxBuffer must be a positive number');
+
+    bus.dispose();
+  });
+
+  it('throws RangeError when maxBuffer is 0', () => {
+    const bus = createBus<TestEvents>();
+
+    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(RangeError);
+
+    bus.dispose();
   });
 });

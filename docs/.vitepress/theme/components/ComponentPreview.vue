@@ -558,11 +558,11 @@ const backgroundStyle = computed(() => {
   background-position: 0% 50%;
   background-image: linear-gradient(
     90deg,
-    color-mix(in srgb, var(--color-primary) 15%, transparent),
-    color-mix(in srgb, var(--color-info) 15%, transparent),
-    color-mix(in srgb, var(--color-success) 15%, transparent),
-    color-mix(in srgb, var(--color-warning) 15%, transparent),
-    color-mix(in srgb, var(--color-error) 15%, transparent)
+    color-mix(in oklch, var(--color-primary) 15%, transparent),
+    color-mix(in oklch, var(--color-info) 15%, transparent),
+    color-mix(in oklch, var(--color-success) 15%, transparent),
+    color-mix(in oklch, var(--color-warning) 15%, transparent),
+    color-mix(in oklch, var(--color-error) 15%, transparent)
   );
   animation: colorful-shift 25s ease-in-out infinite;
 }

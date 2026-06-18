@@ -12,6 +12,7 @@ describe('index.ts public API surface', () => {
     'format',
     'formatParts',
     'fromJSON',
+    'getCurrencyDecimals',
     'greaterThan',
     'greaterThanOrEqual',
     'isEqual',
@@ -28,17 +29,25 @@ describe('index.ts public API surface', () => {
     'money',
     'multiply',
     'negate',
-    'percentage',
+    'roundTo',
     'splitEvenly',
     'subtract',
     'sum',
     'toDecimal',
-    'toCurrencyCode',
     'toJSON',
     'toNumber',
+    'validateCurrencyCode',
     'withAmount',
-    'zero',
   ] as const;
+
+  const expectedClasses = ['CurrencyMismatchError', 'InvalidCurrencyError'] as const;
+
+  for (const name of expectedClasses) {
+    it(`exports ${name} as a class`, () => {
+      expect(typeof (coins as Record<string, unknown>)[name]).toBe('function');
+      expect((coins as Record<string, unknown>)[name]).toHaveProperty('prototype');
+    });
+  }
 
   for (const name of expectedFunctions) {
     it(`exports ${name} as a function`, () => {

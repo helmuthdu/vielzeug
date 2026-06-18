@@ -1,4 +1,5 @@
-import { computed, define, html, onMounted, prop, signal, watch } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 
@@ -204,7 +205,7 @@ define<SgCarouselProps, SgCarouselEvents>(CAROUSEL_TAG, {
     variant: prop.string<CarouselVariant>('default'),
   },
 
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onMounted }) {
     // ── State ────────────────────────────────────────────────────────────────
 
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);
@@ -593,7 +594,7 @@ define<SgCarouselProps, SgCarouselEvents>(CAROUSEL_TAG, {
 
       return () => {
         stopAutoplay();
-        swipe.cleanup();
+        swipe.dispose();
         slot.removeEventListener('slotchange', onSlotChange);
         marqueeInstance?.cleanup();
       };

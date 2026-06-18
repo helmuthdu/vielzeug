@@ -436,4 +436,17 @@ describe('sg-table', () => {
       f2.destroy();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-table', {
+        attrs: { caption: 'Users' },
+        html: `<tr><th>Name</th><th>Age</th></tr><tr><td>Alice</td><td>30</td></tr>`,
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -10,11 +10,11 @@ description: Common patterns, best practices, and recipes for building state mac
 ### Minimal Example
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type Event = { type: 'TOGGLE' };
 
-const machine = defineMachine<'off' | 'on', Record<string, never>, Event>({
+const m = machine({
   initial: 'on',
   states: {
     off: { on: { TOGGLE: { target: 'on' } } },
@@ -22,8 +22,7 @@ const machine = defineMachine<'off' | 'on', Record<string, never>, Event>({
   },
 });
 
-const m = interpret(machine);
-m.send({ type: 'TOGGLE' }); // state changes to 'off'
+console.log(m.send({ type: 'TOGGLE' })); // 'transitioned' — state changes to 'off'
 ```
 
 ### With Context
@@ -31,12 +30,11 @@ m.send({ type: 'TOGGLE' }); // state changes to 'off'
 Context holds data that changes during transitions. Mutate it directly inside action functions:
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DEC' } | { type: 'INC' };
-type Context = { count: number };
 
-const machine = defineMachine<'idle', Context, Event>({
+const m = machine({
   context: { count: 0 },
   initial: 'idle',
   states: {
@@ -65,7 +63,7 @@ const machine = defineMachine<'idle', Context, Event>({
 ```
 
 ::: tip Context is required when non-empty
-When your context type has properties (e.g. `{ count: number }`), `context` is a required field in `defineMachine`. For stateless machines, use `Record<string, never>` and omit `context`.
+When your context type has properties (e.g. `{ count: number }`), `context` is a required field. For stateless machines, omit `context` entirely.
 :::
 
 ## Transition Syntax
@@ -182,14 +180,17 @@ Invokes run a Promise when a state is entered and dispatch an event when it sett
 
 ### Basic invoke
 
+`onDone` and `onError` receive `(result, context)` — context is a snapshot from when the invoke started, not the live value at resolution time.
+
 ```ts
 states: {
   loading: {
     invoke: [
       {
+        id: 'fetch-items', // optional; shown in debug events as invokeId
         src: async ({ signal }) => fetch('/api/data', { signal }).then(r => r.json()),
-        onDone: (result) => ({ type: 'DATA_READY', data: result }),
-        onError: (error) => ({ type: 'DATA_ERROR', message: String(error) }),
+        onDone:  (result, _ctx) => ({ type: 'DATA_READY', data: result }),
+        onError: (error,  _ctx) => ({ type: 'DATA_ERROR', message: String(error) }),
       },
     ],
     on: {
@@ -213,24 +214,13 @@ src: async ({ context, signal }) => {
 
 ### Multiple invokes
 
-A state can run multiple invokes in parallel:
+A state can run multiple invokes in parallel. Each invoke can have an optional `id` string that appears as `invokeId` in debug events:
 
 ```ts
 invoke: [
-  { src: async () => fetchUser(), onDone: (user) => ({ type: 'USER_LOADED', user }) },
-  { src: async () => fetchPermissions(), onDone: (perms) => ({ type: 'PERMS_LOADED', perms }) },
+  { id: 'user', src: async () => fetchUser(), onDone: (user, _ctx) => ({ type: 'USER_LOADED', user }) },
+  { id: 'perms', src: async () => fetchPermissions(), onDone: (perms, _ctx) => ({ type: 'PERMS_LOADED', perms }) },
 ],
-```
-
-### Context capture
-
-Invoke callbacks (`onDone`, `onError`) receive the context as it was at the time the invoke was **started**, not when the promise resolves. This prevents stale-context bugs when the machine has transitioned between invoke creation and resolution.
-
-```ts
-onDone: (result, { context }) => {
-  // `context` is a snapshot from when the invoke started
-  return { type: 'DONE', originalState: context.status };
-},
 ```
 
 ## Delayed Transitions (After)
@@ -291,7 +281,9 @@ Compound states contain nested substates. A compound state must have an `initial
 ### Basic hierarchy
 
 ```ts
-const machine = defineMachine<'idle' | 'active', { mode: string }, Event>({
+import { machine } from '@vielzeug/clockwork';
+
+const m = machine({
   context: { mode: '' },
   initial: 'active',
   states: {
@@ -307,7 +299,6 @@ const machine = defineMachine<'idle' | 'active', { mode: string }, Event>({
 });
 
 // Entering 'active' automatically resolves to 'active.editing'
-const m = interpret(machine);
 console.log(m.state.value); // 'active.editing'
 ```
 
@@ -338,9 +329,9 @@ m.matches('active.editing'); // true only when in 'active.editing'
 Validate context at initialization and on every transition:
 
 ```ts
-type Context = { count: number; name: string };
+import { machine } from '@vielzeug/clockwork';
 
-const machine = defineMachine<'idle', Context, Event>({
+const m = machine({
   context: { count: 0, name: 'app' },
   initial: 'idle',
   validateContext: (ctx) => typeof ctx.count === 'number' && typeof ctx.name === 'string',
@@ -357,9 +348,9 @@ Save and restore machine state across sessions using a persistence adapter.
 ### Local Storage
 
 ```ts
-import type { MachineSnapshot } from '@vielzeug/clockwork';
+import { machine, type MachineSnapshot } from '@vielzeug/clockwork';
 
-const m = interpret(machine, {
+const m = machine(config, {
   persistence: {
     load: () => {
       const raw = localStorage.getItem('clockwork:state');
@@ -368,64 +359,78 @@ const m = interpret(machine, {
     save: (snapshot) => {
       localStorage.setItem('clockwork:state', JSON.stringify(snapshot));
     },
-    clear: () => {
-      localStorage.removeItem('clockwork:state');
-    },
   },
 });
 ```
 
 ### Hydration behavior
 
-On creation, `interpret()` checks `options.snapshot` first, then `persistence.load()`. If a persisted snapshot exists, the machine hydrates from it — entry hooks run, invokes start, and after-timers schedule.
+On startup, `machine()` checks `options.snapshot` first, then `persistence.load()`. If a persisted snapshot exists, the machine hydrates from it — entry hooks run, invokes start, and after-timers schedule.
 
-::: warning Disposal and clearing
-`m[Symbol.dispose]()` does **not** clear persisted state. The machine may be recreated (e.g. after HMR or component remount) and should resume from the last saved state.
+::: warning Disposal does not clear persistence
+`m[Symbol.dispose]()` does **not** clear persisted state. The machine may be recreated (e.g. after HMR or component remount) and should resume from the last saved state. To reset persistence, call your adapter's storage API directly.
 :::
 
 ::: tip Validate loaded snapshots
 If context is loaded from untrusted sources (e.g. `localStorage`), run your `validateContext` guard before interpreting, or wrap `persistence.load()` with a try/catch and schema check.
 :::
 
-## Middleware
+## Interceptors
 
-Middleware functions intercept events before they are processed. Each middleware receives the event, a snapshot of the current state, and a `next` function to continue:
+Interceptors are pure functions that run before event processing. Return the event (optionally transformed) to allow it, or `null` to block it. They run left-to-right — the first `null` stops the chain:
 
 ```ts
-import type { MiddlewareFn } from '@vielzeug/clockwork';
+import { machine, type InterceptorFn } from '@vielzeug/clockwork';
 
-const logger: MiddlewareFn<State, Context, Event> = (event, snapshot, next) => {
-  console.log(`[${snapshot.state}] processing ${event.type}`);
-  const result = next();
-  console.log(`  → transition occurred: ${result}`);
-  return result;
+const logger: InterceptorFn<State, Context, Event> = (event, snapshot) => {
+  console.log(`[${snapshot.state}] ${event.type}`);
+  return event; // pass through
 };
 
-const blocker: MiddlewareFn<State, Context, Event> = (event, _snapshot, next) => {
-  if (event.type === 'BLOCKED') return false; // swallow event
-  return next();
+const blocker: InterceptorFn<State, Context, Event> = (event, _snapshot) => {
+  if (event.type === 'BLOCKED') return null; // swallow event
+  return event;
 };
 
-const m = interpret(machine, { middleware: [logger, blocker] });
+const m = machine(config, { interceptors: [logger, blocker] });
 ```
 
-Middleware is composed right-to-left: the first middleware in the array is the outermost wrapper.
+::: tip
+Interceptors can also transform events — return a modified event object to change its type or payload before it reaches the machine.
+:::
+
+## send() and SendResult
+
+`send()` returns a `SendResult` string, not a boolean:
+
+```ts
+const result = m.send({ type: 'GO' });
+// 'transitioned' — a transition occurred
+// 'queued'       — called re-entrantly from inside an action
+// 'rejected'     — no match, guard failed, interceptor blocked, or machine disposed
+```
+
+Use this for conditional feedback or analytics:
+
+```ts
+if (m.send({ type: 'SUBMIT' }) === 'rejected') {
+  showError('Action not allowed in current state');
+}
+```
 
 ## Checking State
 
 ### `matches()` — check multiple states at once
 
 ```ts
-const m = interpret(machine);
-
 m.matches('idle'); // true if current state is 'idle'
 m.matches('loading', 'error'); // true if in either state (or a child of either)
 ```
 
-### `can()` — check if an event is valid right now
+### `can()` — check if an event would be accepted
 
 ```ts
-m.can({ type: 'SUBMIT' }); // true if a transition exists for SUBMIT in the current state
+m.can({ type: 'SUBMIT' }); // true if a valid transition exists for SUBMIT in the current state
 ```
 
 ::: tip
@@ -438,10 +443,10 @@ Subscribe to state/context changes without using `@vielzeug/ripple` directly:
 
 ```ts
 const unsub = m.subscribe(({ state, context }) => {
-  console.log(`State: ${state}, count: ${context.count}`);
+  renderUI(state, context);
 });
 
-m.send({ type: 'INC' }); // triggers callback
+m.send({ type: 'INC' }); // subscriber fires
 
 unsub(); // stop listening
 ```
@@ -465,14 +470,14 @@ m.send({ type: 'START' });
 // [clockwork:guard] START: idle → active — passed
 ```
 
-For custom handling, pass `debug` options directly to `interpret()`.
+For custom handling, pass `debug` options directly to `machine()` or `define().start()`.
 
 ### Debug events
 
 The `onDebug` callback receives a discriminated union of debug events:
 
 ```ts
-const m = interpret(machine, {
+const m = machine(config, {
   debug: {
     onDebug: (event) => {
       switch (event.type) {
@@ -505,7 +510,7 @@ const m = interpret(machine, {
 For lightweight observation without full debug events:
 
 ```ts
-const m = interpret(machine, {
+const m = machine(config, {
   debug: {
     onTransition: ({ from, to, event }) => {
       analytics.track('state_change', { from, to, event: event.type });
@@ -516,10 +521,10 @@ const m = interpret(machine, {
 
 ### Transition trace buffer
 
-Keep a ring buffer of the last N transitions:
+When `onDebug` or `onTransition` is set, a 50-entry trace buffer is enabled automatically. Set `traceLimit` to control size (`0` disables):
 
 ```ts
-const m = interpret(machine, { debug: { traceLimit: 50 } });
+const m = machine(config, { debug: { onTransition: () => {}, traceLimit: 200 } });
 
 m.send({ type: 'GO' });
 m.send({ type: 'BACK' });
@@ -537,36 +542,34 @@ When the buffer is full, the oldest entry is overwritten. The array returned by 
 
 ### Pure transition resolution
 
-`resolveTransition()` is a pure function — it resolves which `TransitionDef` would apply without running any actions, entry/exit handlers, or invokes:
+`resolveTransition()` is a pure function — it resolves which `TransitionDef` would apply without running any actions, entry/exit handlers, or invokes. Pass the config object directly:
 
 ```ts
 import { resolveTransition } from '@vielzeug/clockwork';
 
-const transition = resolveTransition(machine, {
+const config = {
+  /* machine config */
+};
+
+const transition = resolveTransition(config, {
   context: { authorized: false },
   event: { type: 'LOGIN' },
   state: 'idle',
 });
-
 expect(transition).toBeUndefined(); // guard failed
-```
 
-When a transition matches, the resolved `TransitionDef` is returned directly:
-
-```ts
-const transition = resolveTransition(machine, {
+const passing = resolveTransition(config, {
   context: { authorized: true },
   event: { type: 'LOGIN' },
   state: 'idle',
 });
-
-expect(transition?.target).toBe('dashboard');
+expect(passing?.target).toBe('dashboard');
 ```
 
 ### Snapshot testing
 
 ```ts
-const m = interpret(machine);
+const m = machine(config);
 
 const before = m.getSnapshot();
 m.send({ type: 'UPDATE', value: 10 });
@@ -581,15 +584,13 @@ expect(after.context.value).toBe(10);
 Always dispose machines to clean up signals, abort in-flight invokes, and clear after-timers.
 
 ```ts
-const m = interpret(machine);
-
-// ... use machine
+const m = machine(config);
 
 m.dispose(); // aborts invokes, clears timers, disposes reactive signals
 
 // With the explicit resource management proposal (ES2024+):
 {
-  using m = interpret(machine);
+  using m = machine(config);
   m.send({ type: 'GO' });
 } // dispose() called automatically via [Symbol.dispose]
 ```
@@ -603,9 +604,11 @@ Disposal does **not** clear persisted state. The machine may resume from the las
 ### Traffic Light
 
 ```ts
+import { machine } from '@vielzeug/clockwork';
+
 type Event = { type: 'EMERGENCY' } | { type: 'NEXT' };
 
-const trafficLight = defineMachine<'green' | 'red' | 'yellow', Record<string, never>, Event>({
+const trafficLight = machine({
   initial: 'red',
   states: {
     green: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'yellow' } } },
@@ -618,9 +621,11 @@ const trafficLight = defineMachine<'green' | 'red' | 'yellow', Record<string, ne
 ### Auto-dismiss notification
 
 ```ts
+import { machine } from '@vielzeug/clockwork';
+
 type Event = { type: 'DISMISS' } | { type: 'SHOW'; message: string };
 
-const notification = defineMachine<'hidden' | 'visible', { message: string }, Event>({
+const notification = machine({
   context: { message: '' },
   initial: 'hidden',
   states: {
@@ -647,6 +652,8 @@ const notification = defineMachine<'hidden' | 'visible', { message: string }, Ev
 ### Auth flow with async login
 
 ```ts
+import { machine } from '@vielzeug/clockwork';
+
 type Context = { attempts: number; user?: { id: string; token: string } };
 type Event =
   | { email: string; password: string; type: 'SUBMIT' }
@@ -654,7 +661,7 @@ type Event =
   | { type: 'AUTH_SUCCESS'; user: { id: string; token: string } }
   | { type: 'AUTH_FAILED' };
 
-const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthenticated', Context, Event>({
+const auth = machine({
   context: { attempts: 0 },
   initial: 'unauthenticated',
   states: {
@@ -674,17 +681,16 @@ const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthentica
     loading: {
       invoke: [
         {
-          onDone: (user) => ({ type: 'AUTH_SUCCESS', user: user as { id: string; token: string } }),
-          onError: () => ({ type: 'AUTH_FAILED' }),
-          src: async ({ context, entryEvent, signal }) => {
+          src: async ({ entryEvent, signal }) => {
             if (entryEvent.type !== 'SUBMIT') throw new Error('unexpected');
-            const resp = await fetch('/auth/login', {
+            return fetch('/auth/login', {
               body: JSON.stringify({ email: entryEvent.email, password: entryEvent.password }),
               method: 'POST',
               signal,
-            });
-            return resp.json();
+            }).then((r) => r.json());
           },
+          onDone: (user, _ctx) => ({ type: 'AUTH_SUCCESS', user: user as { id: string; token: string } }),
+          onError: (_err, _ctx) => ({ type: 'AUTH_FAILED' }),
         },
       ],
       on: {
@@ -722,14 +728,15 @@ const auth = defineMachine<'authenticated' | 'error' | 'loading' | 'unauthentica
 
 ```tsx [React]
 import { useEffect, useRef, useState } from 'react';
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
+import { trafficConfig } from './machine';
 
 function TrafficLight() {
-  const machineRef = useRef<ReturnType<typeof interpret> | null>(null);
+  const machineRef = useRef<ReturnType<typeof machine> | null>(null);
   const [state, setState] = useState('red');
 
   useEffect(() => {
-    const m = interpret(trafficMachine);
+    const m = machine(trafficConfig);
     machineRef.current = m;
     const unsub = m.subscribe(({ state }) => setState(state));
     return () => {
@@ -750,22 +757,19 @@ function TrafficLight() {
 ```ts [Vue 3]
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { interpret } from '@vielzeug/clockwork';
-import { trafficMachine } from './machine';
+import { machine, type MachineInstance } from '@vielzeug/clockwork';
+import { trafficConfig } from './machine';
 
 const state = ref('red');
-let m: ReturnType<typeof interpret>;
+let m: MachineInstance<string, Record<string, never>, { type: string }>;
 let unsub: (() => void) | undefined;
 
 onMounted(() => {
-  m = interpret(trafficMachine);
+  m = machine(trafficConfig);
   unsub = m.subscribe(({ state: s }) => { state.value = s; });
 });
 
-onUnmounted(() => {
-  unsub?.();
-  m?.dispose();
-});
+onUnmounted(() => { unsub?.(); m?.dispose(); });
 </script>
 
 <template>
@@ -786,9 +790,9 @@ onUnmounted(() => {
 
 ```ts
 import { effect } from '@vielzeug/ripple';
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
-const m = interpret(playerMachine);
+const m = machine(playerConfig);
 
 effect(() => {
   document.getElementById('play-btn')!.textContent = m.state.value === 'playing' ? 'Pause' : 'Play';
@@ -803,11 +807,11 @@ Bridge Clockwork transitions to a shared event bus for cross-machine coordinatio
 
 ```ts
 import { createBus } from '@vielzeug/herald';
-import { interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 const bus = createBus<{ 'auth:login': { userId: string }; 'auth:logout': void }>();
 
-const m = interpret(authMachine, {
+const m = machine(authConfig, {
   debug: {
     onTransition: ({ to }) => {
       if (to === 'anonymous') bus.emit('auth:logout', undefined);
@@ -822,7 +826,7 @@ const m = interpret(authMachine, {
 - **Keep guards pure.** Guards must not produce side effects. All mutation belongs in `actions`.
 - **Mutate context directly in actions.** Actions receive a cloned draft — mutate it in place.
 - **Prefer shorthand transition syntax** (`on: { GO: { target: 'active' } }`) for single transitions. Use arrays only when you need multiple guarded alternatives.
-- **Dispose machines when done.** Always call `m.dispose()` (or `using m = interpret(...)`) to prevent memory leaks and abort dangling invokes.
+- **Dispose machines when done.** Always call `m.dispose()` (or `using m = machine(...)`) to prevent memory leaks and abort dangling invokes.
 - **Test with `resolveTransition()`.** Unit-test guard logic in isolation without spinning up a full machine instance.
 - **Keep machines focused.** A machine with more than 10–15 states is usually a sign it should be split.
 - **Use after for timeouts.** Prefer `after` over manual setTimeout in entry hooks — timers are automatically cleaned up on state exit.

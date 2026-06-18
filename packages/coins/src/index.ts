@@ -1,5 +1,7 @@
+export { CurrencyMismatchError, InvalidCurrencyError } from './errors';
 export { exchange } from './exchange';
 export { format, formatParts } from './format';
+export { getCurrencyDecimals, validateCurrencyCode } from './utils';
 export {
   abs,
   add,
@@ -24,16 +26,14 @@ export {
   money,
   multiply,
   negate,
-  percentage,
+  roundTo,
   splitEvenly,
   subtract,
   sum,
   toDecimal,
   toJSON,
-  toCurrencyCode,
   toNumber,
   withAmount,
-  zero,
 } from './money';
 export type {
   CurrencyCode,

@@ -1,6 +1,6 @@
 import { clamp } from '@vielzeug/arsenal';
-import { computed, define, effect, html, inject, onElement, prop, ref, signal } from '@vielzeug/craft';
-import { watch } from '@vielzeug/ripple';
+import { define, html, inject, prop, ref } from '@vielzeug/craft';
+import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -129,7 +129,7 @@ define<SgNumberInputProps, SgNumberInputEvents>(NUMBER_INPUT_TAG, {
     value: prop.json(undefined as number | undefined),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, emit }) {
+  setup(props, { bind, emit, onElement, watch }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const isDisabled = fCtxProps.disabled;
@@ -139,7 +139,7 @@ define<SgNumberInputProps, SgNumberInputEvents>(NUMBER_INPUT_TAG, {
     const fieldValue = signal(props.value.value != null ? String(props.value.value) : '');
 
     // Keep fieldValue in sync when props.value changes externally
-    watch(props.value, (v) => {
+    rippleWatch(props.value, (v) => {
       const next = v != null ? String(v) : '';
 
       if (fieldValue.value !== next) fieldValue.value = next;
@@ -214,7 +214,7 @@ define<SgNumberInputProps, SgNumberInputEvents>(NUMBER_INPUT_TAG, {
       // Fire user ref callback
       props.ref.value?.(rawInput);
 
-      const sub = watch(props.ref, (cb) => {
+      const sub = rippleWatch(props.ref, (cb) => {
         cb?.(rawInput);
       });
 
@@ -228,7 +228,7 @@ define<SgNumberInputProps, SgNumberInputEvents>(NUMBER_INPUT_TAG, {
     });
 
     // Keep the raw input's displayed value in sync with fieldValue signal
-    effect(() => {
+    watch(() => {
       if (!bitInputRef.value) return;
 
       const el = inputEl;

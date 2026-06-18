@@ -27,11 +27,7 @@ const client = createCourier({
 });
 
 client.use(async (ctx, next) => {
-  ctx.init.headers = {
-    ...(ctx.init.headers as Record<string, string>),
-    'x-request-id': crypto.randomUUID(),
-  };
-  return next(ctx);
+  return next(ctx.withHeaders({ 'x-request-id': crypto.randomUUID() }));
 });
 
 const user = await client.query.fetch({
@@ -190,8 +186,7 @@ await api.get('/users', {
 // Auth — inject a fresh token before each request
 const removeAuth = api.use(async (ctx, next) => {
   const token = await getAccessToken();
-  ctx.init.headers = { ...(ctx.init.headers as Record<string, string>), Authorization: `Bearer ${token}` };
-  return next(ctx);
+  return next(ctx.withHeaders({ Authorization: `Bearer ${token}` }));
 });
 
 // Logging
@@ -261,17 +256,19 @@ const user = await qc.fetch({
 });
 ```
 
-| Option        | Type                                  | Default              | Description                                                               |
-| ------------- | ------------------------------------- | -------------------- | ------------------------------------------------------------------------- |
-| `key`         | `QueryKey`                            | required             | Cache identifier; serialized with stable key ordering                     |
-| `fn`          | `(ctx: QueryFnContext) => Promise<T>` | required             | Data-fetching function; receives `{ key, signal }`                        |
-| `staleTime`   | `number`                              | `0`                  | ms served from cache before the next `fetch()` call refetches             |
-| `gcTime`      | `number`                              | `300000`             | ms before an unobserved entry is GC'd while unobserved                    |
-| `times`       | `number`                              | query-client default | Total attempts for this specific fetch; `1` means one try with no retries |
-| `delay`       | `number \| (attempt) => number`       | query-client default | Delay strategy for this specific fetch                                    |
-| `shouldRetry` | `(error, attempt) => boolean`         | query-client default | Retry predicate for this specific fetch                                   |
-| `enabled`     | `boolean`                             | `true`               | Skip the fetch when `false`; existing cached data is returned             |
-| `initialData` | `T \| () => T \| undefined`           | —                    | Pre-seed the cache as a successful entry when no data exists              |
+| Option            | Type                                       | Default              | Description                                                               |
+| ----------------- | ------------------------------------------ | -------------------- | ------------------------------------------------------------------------- |
+| `key`             | `QueryKey`                                 | required             | Cache identifier; serialized with stable key ordering                     |
+| `fn`              | `(ctx: QueryFnContext) => Promise<T>`      | required             | Data-fetching function; receives `{ key, signal }`                        |
+| `staleTime`       | `number`                                   | `0`                  | ms served from cache before the next `fetch()` call refetches             |
+| `gcTime`          | `number`                                   | `300000`             | ms before an unobserved entry is GC'd while unobserved                    |
+| `times`           | `number`                                   | query-client default | Total attempts for this specific fetch; `1` means one try with no retries |
+| `delay`           | `number \| (attempt) => number`            | query-client default | Delay strategy for this specific fetch                                    |
+| `shouldRetry`     | `(error, attempt) => boolean`              | query-client default | Retry predicate for this specific fetch                                   |
+| `enabled`         | `boolean`                                  | `true`               | Skip the fetch when `false`; existing cached data is returned             |
+| `initialData`     | `T \| () => T \| undefined`                | —                    | Pre-seed the cache as a successful entry when no data exists              |
+| `placeholderData` | `S \| () => S \| undefined`                | —                    | **Observe only.** Pass as part of `ObserveOptions` — ignored by `fetch()` |
+| `select`          | `(data: T \| undefined) => S \| undefined` | —                    | **Observe only.** Pass as part of `ObserveOptions` — ignored by `fetch()` |
 
 Per-fetch retry options override `createQuery()` defaults when provided.
 
@@ -304,31 +301,27 @@ const user = await qc.fetch({
 });
 ```
 
-### Prefetch
+### Warming the Cache
 
-Warms cache data ahead of use. It uses the same key, function, and staleness semantics as `fetch()` but resolves to `void`.
+Use `fetch()` to warm the cache before a page renders. `fetch()` always throws on error — wrap with `try/catch` or use `Promise.allSettled` when warming multiple keys in parallel.
 
 ```ts
-await qc.prefetch({
-  key: ['users', 1],
-  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
-  staleTime: 10_000,
-});
+// Warm the cache
+try {
+  await qc.fetch({
+    key: ['users', 1],
+    fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
+    staleTime: 10_000,
+  });
+} catch {
+  // Error stored in cache state; qc.getState(['users', 1]).status === 'error'
+}
 
+// Later reads hit the cache if still within staleTime
 const user = await qc.fetch({
   key: ['users', 1],
   fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id: 1 }, signal }),
   staleTime: 10_000,
-});
-```
-
-By default `prefetch()` swallows errors after updating query state to `'error'`. Use `throwOnError: true` to rethrow.
-
-```ts
-await qc.prefetch({
-  key: ['config'],
-  fn: ({ signal }) => api.get('/config', { signal }),
-  throwOnError: true,
 });
 ```
 
@@ -347,40 +340,14 @@ qc.set(['users', 1], persistedData, { updatedAt: storedTimestamp });
 const state = qc.getState<User>(['users', 1]);
 ```
 
-### `subscribe(key, listener, opts?)`
+### `watchKey(key)`
 
-Subscribes to live `QueryState` updates for a key. The listener is **not** called immediately on subscription — it fires only when the state next changes. Use `getState(key)` or `watch(key).peek()` to read the current snapshot synchronously before subscribing.
-
-```ts
-const unsub = qc.subscribe<User>(['users', 1], (state) => {
-  console.log(state.status);
-  console.log(state.data);
-  console.log(state.error);
-});
-
-unsub();
-```
-
-`select` projects a smaller slice and `placeholderData` fills the pending state without touching the cache.
+`watchKey()` returns a `SyncStore<QueryState<T>>` for a single key without triggering any fetch. Use it when another code path is responsible for populating the cache entry.
 
 ```ts
-const unsub = qc.subscribe<User, string>(['users', 1], (state) => renderName(state.data), {
-  select: (user) => user?.name,
-  placeholderData: 'Loading…',
-});
-```
+const store = qc.watchKey<User>(['users', 1]);
 
-### `watch(key, opts?)`
-
-`watch()` returns a `SyncStore<QueryState<T>>` for frameworks such as React, Vue, and Svelte.
-
-```ts
-const store = qc.watch<User, string>(['users', 1], {
-  select: (user) => user?.name,
-  placeholderData: 'Loading…',
-});
-
-const initial = store.peek();
+const initial = store.peek(); // idle state if not yet fetched
 const stop = store.subscribe(() => {
   console.log(store.peek());
 });
@@ -388,7 +355,75 @@ const stop = store.subscribe(() => {
 stop();
 ```
 
-Unlike `subscribe()`, `watch()` does **not** fire immediately. Read the initial snapshot with `peek()`.
+The store does **not** fire immediately. Read the initial snapshot with `peek()`. For `select` or `placeholderData` support, use `observe({ fetch: false, ... })` instead.
+
+### `observeMany(keys)`
+
+`observeMany()` returns a combined `SyncStore<QueryState<T>[]>` that updates whenever any of the specified keys change. Useful for parallel query status aggregation.
+
+```ts
+const store = qc.observeMany<User>([
+  ['users', 1],
+  ['users', 2],
+]);
+const states = store.peek(); // QueryState<User>[]
+const stop = store.subscribe(() => {
+  const [user1, user2] = store.peek();
+  if (user1.status === 'success' && user2.status === 'success') render(user1.data, user2.data);
+});
+```
+
+### `observe(options)`
+
+`observe()` is the preferred API for components: it returns a `SyncStore<QueryState<S>>` **and** triggers a background fetch if the cache entry is stale or missing. Pass `placeholderData` and `select` directly on the options object — no second argument needed.
+
+```ts
+const store = qc.observe({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  staleTime: 30_000,
+  placeholderData: { id: 0, name: 'Loading…' },
+});
+
+// Synchronously read the current state
+console.log(store.peek().status); // 'idle' or 'pending'
+console.log(store.peek().data); // placeholderData while fetching
+
+// Subscribe to future changes
+const stop = store.subscribe(() => {
+  const state = store.peek();
+  if (state.status === 'success') render(state.data);
+});
+```
+
+Use `select` to project to a derived type — TypeScript infers `S` from the return type:
+
+```ts
+// store is SyncStore<QueryState<string>>
+const store = qc.observe<User, string>({
+  key: ['users', id],
+  fn: ({ signal }) => api.get<User>('/users/{id}', { params: { id }, signal }),
+  select: (user) => user?.name,
+  placeholderData: 'Loading…',
+});
+```
+
+In React, pass `observe()` directly to `useSyncExternalStore`:
+
+```tsx
+function useUser(id: number) {
+  const store = useMemo(
+    () =>
+      client.query.observe({
+        key: ['users', id],
+        fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+        staleTime: 30_000,
+      }),
+    [id],
+  );
+  return useSyncExternalStore(store.subscribe, store.peek);
+}
+```
 
 ### `invalidate(key)`
 
@@ -434,6 +469,12 @@ const unbind = bindRefetch(qc);
 
 // later, e.g. on logout or component teardown:
 unbind();
+```
+
+Alternatively, pass `qc.disposalSignal` so listeners are removed automatically when the query client is disposed — no manual unbind needed:
+
+```ts
+bindRefetch(qc, { signal: qc.disposalSignal });
 ```
 
 `bindRefetch` attaches a `visibilitychange` listener (fires when `document.visibilityState` becomes `'visible'`) and an `online` listener on `window`. Only entries with active subscribers that are past their `staleTime` are revalidated. Error entries with stale data are also eligible once their `updatedAt` age exceeds `staleTime`.
@@ -495,14 +536,13 @@ qc.clear();
 
 **`PersistOptions`:**
 
-| Option    | Type                         | Default      | Description                                                               |
-| --------- | ---------------------------- | ------------ | ------------------------------------------------------------------------- |
-| `storage` | `PersistStorage`             | required     | Any sync or async `getItem` / `setItem` backend                           |
-| `keys`    | `QueryKey[]`                 | required     | Which keys to persist or hydrate                                          |
-| `include` | `(key: QueryKey) => boolean` | all keys     | Predicate applied consistently in both persist and hydrate                |
-| `prefix`  | `string`                     | `'courier:'` | Storage key namespace to avoid collisions                                 |
-| `maxAge`  | `number`                     | —            | Max entry age in ms during hydration; entries older than this are skipped |
-| `onError` | `(err, key) => void`         | silent       | Called when a storage read or write fails                                 |
+| Option    | Type                                       | Default      | Description                                                               |
+| --------- | ------------------------------------------ | ------------ | ------------------------------------------------------------------------- |
+| `storage` | `PersistStorage`                           | required     | Any sync or async `getItem` / `setItem` backend                           |
+| `keys`    | `QueryKey[] \| (key: QueryKey) => boolean` | required     | Explicit list of keys **or** predicate applied to all cached keys         |
+| `prefix`  | `string`                                   | `'courier:'` | Storage key namespace to avoid collisions                                 |
+| `maxAge`  | `number`                                   | —            | Max entry age in ms during hydration; entries older than this are skipped |
+| `onError` | `(err, key) => void`                       | silent       | Called when a storage read or write fails                                 |
 
 `hydrateQueryCache` restores the original `updatedAt` timestamp so staleTime checks after hydration are accurate — 55-second-old hydrated data with `staleTime: 60_000` will be refetched after 5 more seconds, not after a full 60 seconds.
 
@@ -571,13 +611,14 @@ const createUser = client.mutation(
   (input: NewUser, signal) => client.api.post<User>('/users', { body: input, signal }),
   {
     times: 2,
-    onSuccess: (user, variables) => {
-      client.query.set(['users', user.id], user);
-      client.query.invalidate(['users']);
-      console.log('Created:', variables.name);
-    },
+    // Cache shorthands: applied automatically on success before onSuccess fires
+    sets: (user) => [['users', user.id], user],
+    invalidates: [['users']],
+    onSuccess: (user, variables) => console.log('Created:', variables.name),
     onError: (err, variables) => toast.error(`Failed to create ${variables.name}: ${err.message}`),
-    onSettled: (_data, _error, variables) => hideSpinner(variables),
+    onSettled: (result) => {
+      if (result.status !== 'aborted') hideSpinner(result.variables);
+    },
   },
 );
 
@@ -601,11 +642,11 @@ const createUser = createMutation(
 
 Callbacks are defined on the mutation, not the call site. They fire after each `mutate()` run. Every callback receives the original `variables` passed to `mutate()`.
 
-| Callback    | Signature                                                        | Called when                                                               |
-| ----------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `onSuccess` | `(data: TData, variables: TVariables) => void \| Promise<void>`  | The run succeeds                                                          |
-| `onError`   | `(error: Error, variables: TVariables) => void \| Promise<void>` | The run fails; **not** called on abort                                    |
-| `onSettled` | `(data, error, variables: TVariables) => void \| Promise<void>`  | After every run including abort (`error` is `null` for success and abort) |
+| Callback    | Signature                                                             | Called when                                                                        |
+| ----------- | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `onSuccess` | `(data: TData, variables: TVariables) => void \| Promise<void>`       | The run succeeds                                                                   |
+| `onError`   | `(error: Error, variables: TVariables) => void \| Promise<void>`      | The run fails; **not** called on abort                                             |
+| `onSettled` | `(result: SettledResult<TData, TVariables>) => void \| Promise<void>` | After every run including abort; switch on `result.status` for exhaustive handling |
 
 ::: tip Concurrent mutations
 When multiple `mutate()` calls run simultaneously, state reflects the **latest** call. Each callback fires for its own call independently. Use `mutation.cancel()` before a new `mutate()` for last-call-wins semantics.
@@ -641,7 +682,7 @@ const source = stream.sse<{ message: { text: string }; ping: null }>('/events', 
 source.on('message', (data) => console.log(data.text));
 source.on('ping', () => {});
 
-source.close();
+source.dispose();
 ```
 
 `reconnect: true` uses full-jitter exponential backoff with a default budget of 5 reconnects after the first failure.
@@ -690,10 +731,20 @@ for await (const msg of stream.readable<ChatMessage>('/chat', {
 
 ## Error Handling
 
-All non-2xx responses and network failures throw an `HttpError`.
+Courier throws distinct error classes for different failure modes:
+
+| Class                   | When thrown                                                            |
+| ----------------------- | ---------------------------------------------------------------------- |
+| `HttpError`             | Non-2xx HTTP response — has `status`, `data`, `headers`                |
+| `NetworkError`          | Connection failed before any response was received                     |
+| `TimeoutError`          | Request aborted by the configured timeout                              |
+| `AbortError`            | Request cancelled via `cancel()`, `cancelAll()`, or an external signal |
+| `SchemaValidationError` | `schema.parse()` rejected the response body                            |
+
+All extend `CourierError`. Use `CourierError.is(err)` to catch any Courier error, then narrow:
 
 ```ts
-import { HttpError } from '@vielzeug/courier';
+import { AbortError, HttpError, NetworkError, TimeoutError } from '@vielzeug/courier';
 
 try {
   await api.get('/users/99');
@@ -703,12 +754,16 @@ try {
   } else if (HttpError.is(err)) {
     console.log(err.status, err.method, err.url);
     console.log(err.data);
-    console.log(err.headers?.get('x-request-id'));
+    console.log(err.headers.get('x-request-id'));
+  } else if (err instanceof TimeoutError) {
+    console.log('Timed out after', err.url);
+  } else if (err instanceof AbortError) {
+    // User navigated away — ignore
+  } else if (err instanceof NetworkError) {
+    console.log('Connection failed:', err.cause);
   }
 }
 ```
-
-`HttpError.kind` exposes `'http' | 'network' | 'abort' | 'timeout'`, and `HttpError.headers` gives direct access to response headers.
 
 ## Common Patterns
 
@@ -783,9 +838,8 @@ await retryingQc.fetch({
 
 - `times: 1` means one try and no retries.
 - Use `dedupe: false` when method + URL + response type are the same but you explicitly want separate requests.
-- `subscribe()` does **not** emit immediately; call `getState(key)` for the current snapshot first.
-- `watch()` does **not** emit immediately; call `peek()` for the initial snapshot.
-- `watch()` returns a **new object on every call** — memoize it in framework hooks (e.g. React `useMemo`) to avoid re-subscribing on every render.
+- `watchKey()` and `observe()` do **not** emit immediately; call `peek()` for the initial snapshot.
+- `observe()` returns a **new object on every call** — memoize it in framework hooks (e.g. React `useMemo`) to avoid re-subscribing on every render.
 - Long-lived streams default to `Infinity` timeout per connection.
 
 ## Framework Integration
@@ -795,7 +849,7 @@ Courier exposes a minimal external-store contract compatible with any framework.
 ::: code-group
 
 ```tsx [React]
-import { useEffect, useMemo, useSyncExternalStore } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { createCourier } from '@vielzeug/courier';
 
 const client = createCourier({
@@ -806,23 +860,20 @@ const client = createCourier({
 type User = { id: number; name: string };
 
 function useUserName(id: number) {
+  // observe() returns a store AND triggers a background fetch if stale
   const store = useMemo(
     () =>
-      client.query.watch<User, string>(['users', id], {
-        select: (user) => user?.name,
-        placeholderData: 'Loading…',
+      client.query.observe<User, string>({
+        key: ['users', id],
+        fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+        staleTime: 30_000,
+        select: (user) => user?.name ?? '',
       }),
     [id],
   );
 
-  useEffect(() => {
-    void client.query.fetch({
-      key: ['users', id],
-      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
-    });
-  }, [id]);
-
-  return useSyncExternalStore(store.subscribe, store.peek);
+  const state = useSyncExternalStore(store.subscribe, store.peek);
+  return state.status === 'success' ? state.data : null;
 }
 ```
 
@@ -835,20 +886,17 @@ const client = createCourier({ baseUrl: 'https://api.example.com' });
 type User = { id: number; name: string };
 
 function useUserName(id: number) {
-  const store = client.query.watch<User, string>(['users', id], {
+  // observe() triggers a background fetch and returns a store with select support
+  const store = client.query.observe<User, string>({
+    key: ['users', id],
+    fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    staleTime: 30_000,
     select: (user) => user?.name,
     placeholderData: 'Loading…',
   });
   const name = shallowRef(store.peek().data);
   const stop = store.subscribe(() => {
     name.value = store.peek().data;
-  });
-
-  watchEffect(() => {
-    void client.query.fetch({
-      key: ['users', id],
-      fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
-    });
   });
 
   onScopeDispose(stop);
@@ -866,14 +914,13 @@ const client = createCourier({ baseUrl: 'https://api.example.com' });
 type User = { id: number; name: string };
 
 export function userNameStore(id: number) {
-  const store = client.query.watch<User, string>(['users', id], {
-    select: (user) => user?.name,
-    placeholderData: 'Loading…',
-  });
-
-  void client.query.fetch({
+  // observe() triggers a background fetch and exposes select + placeholderData
+  const store = client.query.observe<User, string>({
     key: ['users', id],
     fn: ({ signal }) => client.api.get<User>('/users/{id}', { params: { id }, signal }),
+    staleTime: 30_000,
+    select: (user) => user?.name,
+    placeholderData: 'Loading…',
   });
 
   return readable(store.peek(), (set) => {
@@ -934,13 +981,13 @@ effect(() => console.log('user:', userStore.value.user?.name));
 ## Best Practices
 
 - Prefer `createCourier()` when your app needs REST, streams, shared interceptors, and one place to manage headers. Use `client.mutation()` for mutations — no separate import needed.
-- Use `times` consistently: `1` (or `NO_RETRY`) means one try and no retries.
+- Use `times` consistently: `1` means one try and no retries.
 - Set `staleTime` on `createQuery` to match your data's freshness requirements; default is `0`.
-- Use `qc.invalidate([prefix])` after successful mutations to refresh related cached data.
+- Use the `invalidates` and `sets` shorthands on `client.mutation()` to keep the cache in sync without boilerplate in `onSuccess`.
 - Always pass the `signal` from query and mutation functions to the underlying request.
 - Use `dedupe: false` when you intentionally want separate in-flight requests for the same method + URL + response type.
-- `subscribe()` does **not** fire immediately. Call `getState(key)` or `watch(key).peek()` to read the current snapshot before subscribing.
-- Use `qc.watch()` and `mutation.toStore()` for framework bindings; keep `subscribe()` for imperative listeners.
+- Use `observe()` for components — it triggers a background fetch and supports `select` and `placeholderData`. Use `watchKey()` when the cache is populated by another path and you only need the store.
+- Use `mutation.store` for framework bindings; subscribe via `store.subscribe()` for reactive updates.
 - Use `bindRefetch(qc)` instead of `refetchOnFocus`/`refetchOnReconnect` options — it is fully opt-in and the returned unbind function gives you explicit control.
 - Remember the timeout split: REST requests default to 30s, SSE and readable streams default to `Infinity` per connection.
 - When using `persistQueryCache`, call it **after** `hydrateQueryCache` resolves. Already-successful entries are eagerly persisted on setup.

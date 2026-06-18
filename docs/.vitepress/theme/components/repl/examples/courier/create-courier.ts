@@ -1,16 +1,14 @@
 export const createCourierExample = {
-  code: `import { createCourier, withBearerAuth, withLogging } from '@vielzeug/courier'
+  code: `import { createCourier, withLogging } from '@vielzeug/courier'
 
-// Single shared transport — interceptors, headers, and timeout apply to both api and stream
+// createCourier() shares one transport across REST, query cache, streams, and mutations.
 const client = createCourier({
   baseUrl: 'https://jsonplaceholder.typicode.com',
-  timeout: 8000,
-  query: { staleTime: 10_000, gcTime: 300_000 },
+  timeout: 8_000,
+  query: { staleTime: 10_000 },
 })
 
-// Built-in interceptor presets (applied to every REST + SSE request)
-client.use(withBearerAuth('my-token'))
-client.use(withLogging())
+client.use(withLogging({ logger: (msg) => console.log(msg) }))
 
 // REST via client.api
 const post = await client.api.get('/posts/1')
@@ -21,22 +19,21 @@ const user = await client.query.fetch({
   key: ['users', 1],
   fn: ({ signal }) => client.api.get('/users/1', { signal }),
 })
-console.log('User:', user?.name)
+console.log('User:', user.name)
 
-// Mutation via client.mutation (inherits mutationDefaults from createCourier)
+// client.mutation() — sets/invalidates shorthands seed + invalidate the shared cache on success
 const createPost = client.mutation(
   (input, signal) => client.api.post('/posts', { body: input, signal }),
   {
-    onSuccess: (data) => console.log('Created id:', data.id),
-  }
+    sets: (created) => [[ ['posts', created.id], created ]],
+    invalidates: [['posts']],
+    onSuccess: (data) => console.log('Created id:', data.id, '| cache size:', client.query.size),
+  },
 )
 
-await createPost.mutate({ title: 'Hello from createCourier' })
+await createPost.mutate({ title: 'Hello Courier', body: 'World', userId: 1 })
 
-// Update shared headers at runtime (applies to both api and stream)
-client.headers({ 'x-tenant': 'acme' })
-console.log('✓ Shared header added')
-
-client.dispose()`,
+client.dispose()
+console.log('✓ Client disposed')`,
   name: 'createCourier - Unified Client',
 };

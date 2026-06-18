@@ -1,48 +1,41 @@
+// API client
+export { createApi } from './api';
+export type { ApiClient, FetchContext, Interceptor } from './api';
+
+// Batcher (DataLoader pattern — coalesces load() calls into single resolve())
+export { createBatcher } from './batcher';
+export type { Batcher, BatcherOptions } from './batcher';
+
+// Root factory
+export { createCourier } from './courier';
+export type { Courier, CourierMutationOptions, CourierOptions } from './courier';
+
 // Errors
-export { CourierError, HttpError, SchemaValidationError } from './errors';
+export { AbortError, CourierError, HttpError, NetworkError, SchemaValidationError, TimeoutError } from './errors';
 
-// Core types
-export type {
-  AsyncState,
-  AsyncStatus,
-  MutationState,
-  MutationStatus,
-  QueryKey,
-  QueryState,
-  QueryStatus,
-  StableValue,
-  SyncStore,
-  Unsubscribe,
-} from './types';
+// Focus / reconnect binding helper (opt-in)
+export { bindRefetch } from './focus';
 
-// Retry options and delay resolver
-export { NO_RETRY, resolveRetryDelay } from './retry';
-export type { RetryOptions } from './retry';
+// Built-in interceptor presets
+export { withBearerAuth, withLogging, withRequestId } from './interceptors';
 
-// URL / request config
-export type { CourierRequestConfig, HttpRequestConfig, ParamValue, Params, PathConfig } from './url';
+// Mutation
+export { createMutation } from './mutation';
+export type { Mutation, MutationFn, MutationOptions, SettledResult } from './mutation';
+
+// Query cache persistence
+export { hydrateQueryCache, persistQueryCache } from './persist';
+export type { PersistOptions, PersistStorage } from './persist';
+
+// Query client
+export { createQuery } from './query';
+export type { ObserveOptions, QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } from './query';
 
 // Response parsing
 export type { ResponseType } from './response';
 
-// Transport — shared pipeline exposed for advanced use
-export { anySignal, createTransportCore } from './transport';
-export type { FetchContext, Interceptor, TransportCore, TransportOptions } from './transport';
-
-// API client
-export { createApi } from './api';
-export type { ApiClient } from './api';
-
-// Query client
-export { createQuery } from './query';
-export type { PrefetchOptions, QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } from './query';
-
-// Focus / reconnect binding helper (opt-in; replaces removed refetchOnFocus/refetchOnReconnect options)
-export { bindRefetch } from './focus';
-
-// Mutation
-export { createMutation } from './mutation';
-export type { Mutation, MutationFn, MutationOptions } from './mutation';
+// Retry options
+export type { RetryOptions } from './retry';
 
 // Stream client (SSE + ReadableStream)
 export { createStream } from './stream';
@@ -51,21 +44,25 @@ export type {
   ReconnectOptions,
   SseOptions,
   SseSource,
+  SseStatus,
   StreamClient,
   StreamRequestConfig,
 } from './stream';
 
-// Root factory
-export { createCourier } from './courier';
-export type { Courier, CourierOptions } from './courier';
+// Transport options (for createApi / createStream configuration)
+export type { TransportOptions } from './transport';
 
-// DataLoader-style request batcher
-export { createBatcher } from './batcher';
-export type { Batcher, BatcherOptions } from './batcher';
+// Core types
+export type {
+  AsyncState,
+  AsyncStatus,
+  MutationState,
+  QueryKey,
+  QueryKeyAtom,
+  QueryState,
+  SyncStore,
+  Unsubscribe,
+} from './types';
 
-// Built-in interceptor presets
-export { withBearerAuth, withLogging, withRequestId } from './interceptors';
-
-// Query cache persistence
-export { hydrateQueryCache, persistQueryCache } from './persist';
-export type { PersistOptions, PersistStorage } from './persist';
+// URL / request config
+export type { CourierRequestConfig as RequestConfig, HttpRequestConfig, Params } from './url';

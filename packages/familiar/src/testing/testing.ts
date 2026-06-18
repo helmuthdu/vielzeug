@@ -1,7 +1,7 @@
-import type { RunOptions, WorkerHandle, WorkerStatus } from '../_types';
+import type { SlotStrategy, WorkerHandle, WorkerStatus } from '../_types';
 
-import { createPool, type Executor } from '../_pool';
-import { WorkerInvalidOptionsError } from '../_types';
+import { createPool } from '../_pool';
+import { WorkerInvalidOptionsError, WorkerRuntimeError, WorkerTaskError, WorkerTerminatedError } from '../_types';
 
 export type TestWorkerOptions = {
   /**
@@ -9,6 +9,11 @@ export type TestWorkerOptions = {
    * Increase only when testing concurrency-specific behavior.
    */
   concurrency?: number;
+  /**
+   * When true, errors from fn are wrapped in WorkerTaskError/WorkerRuntimeError, mirroring
+   * real worker behavior. Default: false (errors propagate unwrapped for better test DX).
+   */
+  errorWrapping?: boolean;
   maxQueue?: number;
   /** 'wait' suspends run() callers when the queue is full instead of rejecting. */
   onFull?: 'reject' | 'wait';
@@ -23,7 +28,7 @@ export function createTestWorker<TInput, TOutput>(
   fn: (input: TInput) => TOutput | Promise<TOutput>,
   options: TestWorkerOptions = {},
 ): TestWorkerHandle<TInput, TOutput> {
-  const { concurrency = 1, maxQueue, onFull = 'reject' } = options;
+  const { concurrency = 1, errorWrapping = false, maxQueue, onFull = 'reject' } = options;
 
   if (!Number.isInteger(concurrency) || concurrency < 1) {
     throw new WorkerInvalidOptionsError('`concurrency` must be a positive integer');
@@ -35,28 +40,69 @@ export function createTestWorker<TInput, TOutput>(
 
   const calls: { input: TInput; output: TOutput }[] = [];
 
-  // The executor runs the task function directly in-process.
-  // Errors from fn propagate naturally without wrapping — this improves test DX because
-  // vitest assertion errors (AssertionError) surface directly rather than wrapped in WorkerError.
-  // If your code tests for `error instanceof WorkerError`, use the real worker instead.
-  const executor: Executor<TInput, TOutput> = async (input) => {
-    const output = await fn(input);
+  /**
+   * In-process SlotStrategy. Errors propagate unwrapped by default (better test DX:
+   * vitest AssertionErrors surface directly). Set errorWrapping: true to mirror real worker
+   * behavior (useful when testing code that checks `error instanceof WorkerError`).
+   */
+  function makeSlot(): SlotStrategy<TInput, TOutput> {
+    let terminated = false;
 
-    calls.push({ input, output });
+    return {
+      cancel(): void {
+        // No-op: in-process tasks cannot be cancelled mid-flight.
+      },
 
-    return output;
-  };
+      prime(): Promise<void> {
+        return Promise.resolve();
+      },
 
-  const pool = createPool(executor, {
+      async run(input: TInput, _transferables: Transferable[], _timeout: number | undefined): Promise<TOutput> {
+        if (terminated) return Promise.reject(new WorkerTerminatedError());
+
+        try {
+          const output = await fn(input);
+
+          calls.push({ input, output });
+
+          return output;
+        } catch (e) {
+          if (!errorWrapping) throw e;
+
+          const err = e instanceof Error ? e : new Error(String(e));
+
+          throw new WorkerTaskError(err.message, err);
+        }
+      },
+
+      runStream(_input: TInput, _transferables: Transferable[], _timeout: number | undefined): AsyncIterable<TOutput> {
+        return {
+          [Symbol.asyncIterator]() {
+            return {
+              next(): Promise<IteratorResult<TOutput>> {
+                return Promise.reject(new WorkerRuntimeError('runStream() is not supported by createTestWorker'));
+              },
+            };
+          },
+        };
+      },
+
+      terminate(): void {
+        terminated = true;
+      },
+    };
+  }
+
+  const slots = Array.from({ length: concurrency }, makeSlot);
+
+  const pool = createPool(slots, {
     concurrency,
     defaultTimeout: undefined,
     maxQueue,
     onFull,
   });
 
-  // Use Object.defineProperty so the `calls` getter is a true accessor descriptor (R8).
-  // Object.assign would invoke the getter at assignment time and copy the array reference as
-  // a data property — correct today due to reference semantics but fragile and misleading.
+  // Use Object.defineProperty so the `calls` getter is a true accessor descriptor.
   Object.defineProperty(pool, 'calls', {
     enumerable: true,
     get(): ReadonlyArray<{ input: TInput; output: TOutput }> {
@@ -68,7 +114,7 @@ export function createTestWorker<TInput, TOutput>(
 }
 
 // Re-export types consumed by test files so they don't need to import from two places.
-export type { RunOptions, WorkerHandle, WorkerStatus };
+export type { WorkerHandle, WorkerStatus };
 export {
   WorkerError,
   WorkerInvalidOptionsError,

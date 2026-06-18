@@ -1,4 +1,4 @@
-import { createStableId, define, html, onEvent, onMounted, prop, ref } from '@vielzeug/craft';
+import { createStableId, define, html, prop, ref } from '@vielzeug/craft';
 
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 
@@ -159,7 +159,7 @@ define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
     size: prop.string<DrawerSize>(),
     title: prop.string(),
   },
-  setup(props, { bind: _bind, el, emit, slots }) {
+  setup(props, { el, emit, onCleanup, onEvent, onMounted, slots }) {
     const drawerLabelId = createStableId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();
@@ -316,7 +316,7 @@ define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
     // Overlay State Management
     // ────────────────────────────────────────────────────────────────
 
-    const { overlay, requestClose, watchOpenProp } = useDialogControl({
+    const { closeWithAnimation, overlay, requestClose, watchOpenProp } = useDialogControl({
       beforeOpen: (dialog) => {
         // Clear any inline drag styles from a previous swipe-close so the CSS
         // entry animation starts from the correct base state.
@@ -332,6 +332,8 @@ define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
       host: el,
       initialFocus: props['initial-focus'],
       isPersistent: () => Boolean(props.persistent.value),
+      onCleanup,
+      onEvent,
       onNativeClose: (reason) => {
         const panelEl = panelRef.value;
 
@@ -348,6 +350,13 @@ define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
       },
       onOpen: (reason) => emit('open', { placement: props.placement.value ?? 'right', reason }),
       openProp: props.open,
+      performClose: (dialog, reason) => {
+        if (reason === 'swipe') {
+          dialog.close();
+        } else {
+          closeWithAnimation();
+        }
+      },
       returnFocus: props['return-focus'],
     });
 
@@ -415,7 +424,7 @@ define<SgDrawerProps, SgDrawerEvents>(DRAWER_TAG, {
       }
 
       return () => {
-        overlay.cleanup();
+        overlay.dispose();
       };
     });
 

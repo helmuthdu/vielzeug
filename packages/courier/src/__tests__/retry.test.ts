@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { NO_RETRY, resolveRetryDelay } from '../retry';
+import { DEFAULT_TIMES, resolveRetryDelay } from '../retry';
 
-describe('NO_RETRY', () => {
-  it('equals 1', () => {
-    expect(NO_RETRY).toBe(1);
+describe('DEFAULT_TIMES', () => {
+  it('equals 1 (single attempt, no retries)', () => {
+    expect(DEFAULT_TIMES).toBe(1);
   });
 });
 

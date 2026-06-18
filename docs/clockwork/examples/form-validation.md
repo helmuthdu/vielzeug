@@ -14,7 +14,7 @@ Building a multi-step form where each step validates input before advancing, and
 Use state nodes with guard conditions to validate input before advancing, and direct context mutation to track progress and capture form data at each step.
 
 ```ts
-import { defineMachine, interpret } from '@vielzeug/clockwork';
+import { machine } from '@vielzeug/clockwork';
 
 type FormContext = {
   step: number;
@@ -30,11 +30,7 @@ type FormEvent =
   | { type: 'SUBMIT_FAILURE'; error: string }
   | { type: 'RESET' };
 
-const formMachine = defineMachine<
-  'step1' | 'step2' | 'step3' | 'submitting' | 'success' | 'error',
-  FormContext,
-  FormEvent
->({
+const formMachine = machine({
   initial: 'step1',
   context: {
     step: 1,
@@ -163,7 +159,7 @@ const formMachine = defineMachine<
   },
 });
 
-const form = interpret(formMachine);
+const form = formMachine;
 
 console.log(form.state.value); // 'step1'
 console.log(form.context.value.step); // 1

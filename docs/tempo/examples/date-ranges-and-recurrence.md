@@ -84,14 +84,7 @@ const quarters = [...recurrence(quarterStart, { frequency: 'monthly', interval: 
 import { dateRange, parsePlainDate, recurrence } from '@vielzeug/tempo';
 
 // PlainDate inputs — must pass tz explicitly
-const days = [
-  ...dateRange(
-    parsePlainDate('2026-03-01'),
-    parsePlainDate('2026-03-31'),
-    { days: 1 },
-    { tz: 'UTC' },
-  ),
-];
+const days = [...dateRange(parsePlainDate('2026-03-01'), parsePlainDate('2026-03-31'), { days: 1 }, { tz: 'UTC' })];
 ```
 
 ### Pitfalls

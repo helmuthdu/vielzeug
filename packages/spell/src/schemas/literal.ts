@@ -11,13 +11,13 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
   }
 
   constructor(value: T) {
-    super((val) =>
+    super((val, ctx) =>
       val === value
         ? null
         : [
             {
               code: ErrorCode.invalid_literal,
-              message: _messages().literal.expected({ expected: value }),
+              message: (ctx?.messages ?? _messages()).literal.expected({ expected: value }),
               params: { expected: value },
               path: [],
             },
@@ -30,7 +30,7 @@ export class LiteralSchema<T extends string | number | boolean | null | undefine
     return { ...this._describeBase(), kind: 'literal', value: this.value };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.literal) return visitor.literal(this);
 
     return super._walk(visitor);

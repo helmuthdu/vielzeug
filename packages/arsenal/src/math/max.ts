@@ -1,4 +1,4 @@
-import { compare } from '../function/compare';
+import { compare } from '../array/compare';
 
 /**
  * Finds the maximum item in an array.

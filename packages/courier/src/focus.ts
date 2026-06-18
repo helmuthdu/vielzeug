@@ -14,7 +14,7 @@
  * unbind();
  * ```
  */
-export function bindRefetch(qc: { refetchStale(): void }): () => void {
+export function bindRefetch(qc: { refetchStale(): void }, opts?: { signal?: AbortSignal }): () => void {
   const disposers: Array<() => void> = [];
 
   if (typeof document !== 'undefined') {
@@ -33,7 +33,12 @@ export function bindRefetch(qc: { refetchStale(): void }): () => void {
     disposers.push(() => window.removeEventListener('online', handler));
   }
 
-  return () => {
+  const unbind = () => {
     for (const dispose of disposers) dispose();
+    disposers.length = 0;
   };
+
+  opts?.signal?.addEventListener('abort', unbind, { once: true });
+
+  return unbind;
 }

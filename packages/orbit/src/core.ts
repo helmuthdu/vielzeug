@@ -9,8 +9,8 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { warn } from './_warn';
-import { baseCoords, toRect } from './utils';
+import { isDev, warn } from './_warn';
+import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
 
@@ -29,7 +29,9 @@ function mergeState(state: MiddlewareState, result: MiddlewareResult | void): Mi
 
   return {
     ...state,
-    middlewareData: result.data ? Object.assign({}, state.middlewareData, result.data) : state.middlewareData,
+    middlewareData: result.data
+      ? (Object.assign(Object.create(null), state.middlewareData, result.data) as MiddlewareData)
+      : state.middlewareData,
     placement: result.placement ?? state.placement,
     x: result.x ?? state.x,
     y: result.y ?? state.y,
@@ -44,7 +46,7 @@ const MAX_RESETS = 8;
 // ── Public API ────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Deferred one-shot position computation. Runs `computePosition` in the next **microtask** and
+ * Deferred position computation. Runs `computePosition` in the next **microtask** and
  * returns a `Promise<ComputePositionResult>`.
  *
  * Useful for async component lifecycles (e.g. `await nextTick()` in Vue/React) where the
@@ -54,17 +56,42 @@ const MAX_RESETS = 8;
  *
  * @example
  * ```ts
- * const result = await computeOnce(reference, floating, { placement: 'top' });
+ * const result = await computePositionAsync(reference, floating, { placement: 'top' });
  * floating.style.left = `${result.x}px`;
  * floating.style.top  = `${result.y}px`;
  * ```
  */
-export function computeOnce(
+export function computePositionAsync(
   reference: ReferenceElement,
   floating: HTMLElement,
   options?: ComputePositionOptions,
 ): Promise<ComputePositionResult> {
   return Promise.resolve().then(() => computePosition(reference, floating, options));
+}
+
+/**
+ * Deferred position computation. Runs `computePosition` in the next **animation frame** and
+ * returns a `Promise<ComputePositionResult>`.
+ *
+ * Useful when the layout has not yet committed (e.g. immediately after DOM insertion). Unlike
+ * `computePositionAsync` which defers to the microtask queue, this waits for the next
+ * `requestAnimationFrame` tick — guaranteeing post-layout DOM measurements.
+ *
+ * @example
+ * ```ts
+ * const result = await computePositionRaf(reference, floating, { placement: 'top' });
+ * floating.style.left = `${result.x}px`;
+ * floating.style.top  = `${result.y}px`;
+ * ```
+ */
+export function computePositionRaf(
+  reference: ReferenceElement,
+  floating: HTMLElement,
+  options?: ComputePositionOptions,
+): Promise<ComputePositionResult> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve(computePosition(reference, floating, options)));
+  });
 }
 
 /**
@@ -77,7 +104,9 @@ export function computePosition(
   floating: HTMLElement,
   { boundary, containingBlock, middleware = [], padding, placement = 'bottom' }: ComputePositionOptions = {},
 ): ComputePositionResult {
-  if (import.meta.env.DEV) {
+  const mws = middleware.filter(Boolean) as Middleware[];
+
+  if (isDev) {
     if (reference === floating) {
       warn('computePosition: reference and floating are the same element.');
     }
@@ -97,9 +126,16 @@ export function computePosition(
           '(or absolute for scoped stacking contexts).',
       );
     }
+
+    const names = mws.map((mw) => {
+      const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
+
+      return typeof tag === 'string' ? tag : null;
+    });
+
+    validateMiddlewareNames(names);
   }
 
-  const mws = middleware.filter(Boolean) as Middleware[];
   let currentPlacement = placement;
   let middlewareData: MiddlewareData = {};
   let rects = getRects(reference, floating);
@@ -145,7 +181,7 @@ export function computePosition(
       return result;
     }
 
-    if (reset.rects === 'remeasure') {
+    if (reset.remeasure) {
       rects = getRects(reference, floating);
     } else if (reset.rects != null) {
       rects = reset.rects;

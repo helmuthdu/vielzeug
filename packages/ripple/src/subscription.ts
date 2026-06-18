@@ -7,15 +7,22 @@ import type { AsyncSubscription, CleanupFn, Subscription } from './types';
 
 export class SubscriptionImpl implements Subscription {
   private fn_: CleanupFn | null;
+  private disposed_ = false;
 
   constructor(fn: CleanupFn) {
     this.fn_ = fn;
   }
 
-  dispose(): void {
-    if (this.fn_ === null) return;
+  get disposed(): boolean {
+    return this.disposed_;
+  }
 
-    const fn = this.fn_;
+  dispose(): void {
+    if (this.disposed_) return;
+
+    this.disposed_ = true;
+
+    const fn = this.fn_!;
 
     this.fn_ = null;
     fn();
@@ -41,6 +48,10 @@ export class AsyncSubscriptionImpl implements AsyncSubscription {
     this.syncStop_ = syncStop;
   }
 
+  get disposed(): boolean {
+    return this.syncStop_.disposed;
+  }
+
   dispose(): void {
     this.syncStop_.dispose();
   }
@@ -56,5 +67,9 @@ export class AsyncSubscriptionImpl implements AsyncSubscription {
 
   [Symbol.dispose](): void {
     this.dispose();
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    return this.disposeAsync();
   }
 }

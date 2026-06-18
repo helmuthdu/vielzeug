@@ -1,33 +1,45 @@
-import type { Bus, BusOptions, EventKey, EventMap } from '..';
+import type { Bus, BusOptions, EventKey, EventMap, SubscribeOptions } from '..';
+import type { InternalBusOptions } from '../bus';
 
-import { createBus } from '..';
 import { makeBusDelegate } from '../_delegate';
+import { createBus } from '../bus';
 
 /** A test bus is a regular bus with typed emission recording on top. */
 export type TestBus<T extends EventMap> = Bus<T> & {
-  /** Snapshot of all payloads emitted for the given event key, in order. */
+  /** Returns a snapshot of all payloads dispatched across every recorded event, keyed by event name. */
+  allEmitted(): { [K in EventKey<T>]?: T[K][] };
+  /** Snapshot of all payloads that were successfully dispatched for the given event key, in order. */
   emitted<K extends EventKey<T>>(event: K): T[K][];
-  /** Number of times the given event has been emitted. Shorthand for `emitted(event).length`. */
+  /** Number of times the given event was successfully dispatched. Shorthand for `emitted(event).length`. */
   emittedCount<K extends EventKey<T>>(event: K): number;
+  /** Unsubscribe all listeners for the given event. Emission records are preserved. */
+  removeAllListeners<K extends EventKey<T>>(event: K): void;
   /** Clear emitted records without disposing the bus. */
   reset(): void;
 };
 
 export function createTestBus<T extends EventMap>(options?: BusOptions<T>): TestBus<T> {
   const records = new Map<string, unknown[]>();
-  const bus = createBus<T>(options);
+  const unsubs = new Map<string, Set<() => void>>();
 
-  function record(event: EventKey<T>, payload: unknown): void {
-    const list = records.get(event);
+  const bus = createBus<T>({
+    ...options,
+    _onDispatch: (event: EventKey<T>, payload: unknown) => {
+      const list = records.get(event);
 
-    if (list) list.push(payload);
-    else records.set(event, [payload]);
-  }
+      if (list) list.push(payload);
+      else records.set(event, [payload]);
+    },
+  } as InternalBusOptions<T>);
 
-  function emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number {
-    if (!bus.disposed) record(event, (args as unknown[])[0]);
+  function allEmitted(): { [K in EventKey<T>]?: T[K][] } {
+    const result: { [K in EventKey<T>]?: T[K][] } = {};
 
-    return (bus.emit as (event: EventKey<T>, payload?: unknown) => number)(event, (args as unknown[])[0]);
+    for (const [key, list] of records) {
+      (result as Record<string, unknown[]>)[key] = [...list];
+    }
+
+    return result;
   }
 
   function emitted<K extends EventKey<T>>(event: K): T[K][] {
@@ -43,13 +55,41 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     records.clear();
   }
 
-  // Use makeBusDelegate to avoid enumerating every Bus<T> method. Override only what differs.
   const delegate = makeBusDelegate<T>(bus) as TestBus<T>;
 
+  const originalOn = delegate.on.bind(delegate);
+
+  delegate.on = <K extends EventKey<T>>(event: K, listener: (payload: T[K]) => void, opts?: SubscribeOptions) => {
+    const unsub = originalOn(event, listener, opts);
+    const key = event as string;
+    let set = unsubs.get(key);
+
+    if (!set) {
+      set = new Set();
+      unsubs.set(key, set);
+    }
+
+    set.add(unsub);
+
+    return unsub;
+  };
+
+  function removeAllListeners<K extends EventKey<T>>(event: K): void {
+    const key = event as string;
+    const set = unsubs.get(key);
+
+    if (!set) return;
+
+    for (const unsub of set) unsub();
+
+    set.clear();
+  }
+
+  delegate.allEmitted = allEmitted;
   delegate.dispose = dispose;
-  delegate.emit = emit as Bus<T>['emit'];
   delegate.emitted = emitted;
   delegate.emittedCount = emittedCount;
+  delegate.removeAllListeners = removeAllListeners;
   delegate.reset = () => records.clear();
   delegate[Symbol.dispose] = dispose;
 

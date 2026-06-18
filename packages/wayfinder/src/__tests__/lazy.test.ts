@@ -144,6 +144,41 @@ describe('lazy routes', () => {
     router.dispose();
   });
 
+  it('concurrent hydrate() calls for the same record share the in-flight promise (factory called once)', async () => {
+    const { promise: lazyGate, resolve: resolveLazy } = createDeferred<void>();
+    let factoryCalls = 0;
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: {
+          lazy: async () => {
+            factoryCalls++;
+            await lazyGate;
+
+            return { data: vi.fn() };
+          },
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    // Fire two navigations simultaneously — both will call hydrate() for 'page'.
+    const first = router.navigate({ path: '/page' });
+    const second = router.navigate({ path: '/page' });
+
+    resolveLazy();
+
+    await Promise.all([first, second]);
+
+    // Factory must have been called exactly once despite two concurrent hydrate() invocations.
+    expect(factoryCalls).toBe(1);
+    router.dispose();
+  });
+
   it('dispose during in-flight navigation stops state updates', async () => {
     // Use a data loader so timing is controlled via settle() rather than
     // synchronising with internal microtask scheduling in #hydrateLazy.

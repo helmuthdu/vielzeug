@@ -25,7 +25,7 @@ define('status-chip', {
 });
 ```
 
-The setup context bag provides `el`, `bind`, `emit`, and `slots`:
+The setup context bag provides `el`, `bind`, `emit`, `slots`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, and `effect`:
 
 ```ts
 define('my-widget', {
@@ -65,26 +65,33 @@ batch(() => {
 
 ## onMounted and lifecycle
 
-Use `onMounted()` for DOM-dependent initialization that must run after the template is mounted.
+Use `ctx.onMounted()` for DOM-dependent initialization that must run after the template is mounted. Use `ctx.onElement(ref, cb)` for work tied to a specific DOM node. `ctx.onEvent()` attaches a listener that is automatically removed on disconnect.
 
 ```ts
-import { define, html, onMounted, signal } from '@vielzeug/craft';
+import { define, html, ref, signal } from '@vielzeug/craft';
 
 define('deferred-init', {
-  setup(_props, { slots }) {
+  setup(_props, { slots, onMounted, onElement, onEvent }) {
     const tabIndex = signal(0);
+    const inputRef = ref<HTMLInputElement>();
 
     onMounted(() => {
       const items = slots.elements('items').value;
-      console.log('Found', items.length, 'items', tabIndex.value);
+      console.log('Found', items.length, 'items');
     });
 
-    return html`<div><slot name="items"></slot></div>`;
+    onElement(inputRef, (input) => {
+      input.focus();
+    });
+
+    onEvent(window, 'keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') tabIndex.value = 0;
+    });
+
+    return html`<div><slot name="items"></slot><input ref=${inputRef} /></div>`;
   },
 });
 ```
-
-For ref-driven DOM work, prefer `onElement()`.
 
 ## prop definitions
 
@@ -252,12 +259,12 @@ When `slots` is declared as a `const` array, TypeScript narrows `slots.has()` an
 ## context provide/inject
 
 ```ts
-import { createContext, define, html, injectStrict, provide, signal } from '@vielzeug/craft';
+import { createContext, define, html, injectStrict, signal } from '@vielzeug/craft';
 
 const COUNT_CTX = createContext<ReturnType<typeof signal<number>>>('count');
 
 define('count-provider', {
-  setup() {
+  setup(_props, { provide }) {
     const count = signal(0);
     provide(COUNT_CTX, count);
 
@@ -277,13 +284,13 @@ define('count-consumer', {
 ## form-associated elements
 
 ```ts
-import { define, defineField, html, prop, signal } from '@vielzeug/craft';
+import { define, html, prop, signal, useField } from '@vielzeug/craft';
 
 define('rating-input', {
   formAssociated: true,
   setup() {
     const value = signal(0);
-    const field = defineField({ value });
+    const field = useField({ value });
 
     return html`
       <button @click=${() => (value.value = 1)}>1</button>
@@ -317,14 +324,14 @@ define('user-profile', {
 
 ## platform observers
 
-Observer helpers from `@vielzeug/craft/observers` require real DOM nodes, so call them in `onMounted()`.
+Observer helpers from `@vielzeug/craft/observers` require real DOM nodes, so call them inside `ctx.onMounted()`.
 
 ```ts
-import { define, effect, html, onMounted, ref } from '@vielzeug/craft';
+import { define, html, ref, watch } from '@vielzeug/craft';
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craft/observers';
 
 define('x-observed', {
-  setup() {
+  setup(_props, { onMounted }) {
     const boxRef = ref<HTMLDivElement>();
 
     onMounted(() => {
@@ -335,7 +342,7 @@ define('x-observed', {
       const visible = intersectionObserver(element, { threshold: 0.5 });
       const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-      effect(() => {
+      watch([size, visible, dark], () => {
         console.log(size.value.width, visible.value?.isIntersecting, dark.value);
       });
     });
@@ -433,7 +440,8 @@ define('theme-toggle', {
   setup() {
     return html`
       <button @click=${() => (theme.value = isDark.value ? 'light' : 'dark')}>
-        ${() => (isDark.value ? '<sg-icon name="sun" size="16"></sg-icon>' : '<sg-icon name="moon" size="16"></sg-icon>')}
+        ${() =>
+          isDark.value ? '<sg-icon name="sun" size="16"></sg-icon>' : '<sg-icon name="moon" size="16"></sg-icon>'}
       </button>
     `;
   },
@@ -442,24 +450,26 @@ define('theme-toggle', {
 
 ### With Forge
 
-Use `@vielzeug/forge` for typed form state and validation alongside Craft's `defineField()` for form-associated elements.
+Use `@vielzeug/forge` for typed form state alongside Craft's `useField()` for form-associated elements.
 
 ```ts
 import { createForm } from '@vielzeug/forge';
 import { s } from '@vielzeug/spell';
-import { define, html, provideFormContext } from '@vielzeug/craft';
+import { createFormContext, define, html, FORM_CONTEXT_KEY } from '@vielzeug/craft';
 
 define('signup-form', {
-  setup() {
-    const form = createForm({
-      defaultValues: { email: '', password: '' },
-      validator: s.object({ email: s.string().email(), password: s.string().min(8) }),
+  setup(_props, { provide }) {
+    const formCtx = createFormContext({
+      onSubmit: async (e) => {
+        e?.preventDefault();
+        // submit logic
+      },
     });
 
-    provideFormContext(form);
+    provide(FORM_CONTEXT_KEY, formCtx);
 
     return html`
-      <form @submit.prevent=${() => form.submit()}>
+      <form @submit.prevent=${() => formCtx.submit()}>
         <slot></slot>
       </form>
     `;
@@ -470,10 +480,11 @@ define('signup-form', {
 ## Best Practices
 
 - Setup returns `html\`...\`` directly — not a function wrapping the template.
-- Use `effect()` inside `setup()` for reactive subscriptions tied to component lifetime.
-- Use `onElement(ref, cb)` instead of `onMounted` when the work is tied to a single DOM node.
-- Bind host attributes and classes via `bind()` rather than mutating the element directly.
+- Use `ctx.effect()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
+- Use `ctx.onElement(ref, cb)` instead of `ctx.onMounted` when the work is tied to a single DOM node.
+- Bind host attributes and classes via `ctx.bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor — avoid global context singletons.
-- Call `onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, event listeners).
+- Call `ctx.onCleanup()` for every resource allocated in `setup()` (WebSockets, intervals, external subscriptions).
 - Use `live(signal)` for form inputs to prevent clobbering user-in-progress edits.
+- Thread lifecycle hooks explicitly into composable helpers via function parameters — do not rely on implicit module-level context.
 - Test with `@vielzeug/craft/testing` helpers (`mount`, `flush`, `waitFor`) rather than direct DOM manipulation.

@@ -12,13 +12,6 @@ exports:
     css,
     prop,
     ref,
-    signal,
-    computed,
-    effect,
-    onCleanup,
-    onMounted,
-    onElement,
-    onEvent,
     each,
     when,
     classMap,
@@ -26,21 +19,21 @@ exports:
     model,
     live,
     raw,
-    provide,
+    setRawSanitizer,
     inject,
     injectStrict,
     createContext,
-    syncAria,
-    createBind,
-    createSlots,
-    defineField,
+    useField,
     createFormContext,
-    useFormContext,
+    syncAria,
+    createStableId,
+    createId,
+    resetIdCounter,
+    CraftError,
     intersectionObserver,
     mediaObserver,
     mutationObserver,
     resizeObserver,
-    CraftitError,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -48,8 +41,6 @@ environments: [browser, node, ssr, deno]
 <!-- markdownlint-disable MD025 MD033 MD060 -->
 
 <PackageHero package="craft" />
-
-
 
 ## Why Craft?
 
@@ -84,15 +75,15 @@ define('my-counter', {
 });
 ```
 
-| Feature                    | Craft                                       | Lit                           | Stencil           |
-| -------------------------- | ------------------------------------------- | ----------------------------- | ----------------- |
-| Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                        | ~60 kB+ toolchain |
-| Signal-first runtime       | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="x" size="16"></sg-icon> (separate signals package) | <sg-icon name="x" size="16"></sg-icon>                |
-| Functional component setup | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="x" size="16"></sg-icon>                |
-| Typed prop helpers         | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | <sg-icon name="check" size="16"></sg-icon>                |
-| Host binding helpers       | <sg-icon name="check" size="16"></sg-icon>                                          | Partial                       | Partial           |
-| Form-associated helpers    | <sg-icon name="check" size="16"></sg-icon>                                          | Manual                        | Partial           |
-| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                                          | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon>                |
+| Feature                    | Craft                                       | Lit                                                               | Stencil                                    |
+| -------------------------- | ------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------ |
+| Bundle size                | <PackageInfo package="craft" type="size" /> | ~12 kB                                                            | ~60 kB+ toolchain                          |
+| Signal-first runtime       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon> (separate signals package) | <sg-icon name="x" size="16"></sg-icon>     |
+| Functional component setup | <sg-icon name="check" size="16"></sg-icon>  | Partial                                                           | <sg-icon name="x" size="16"></sg-icon>     |
+| Typed prop helpers         | <sg-icon name="check" size="16"></sg-icon>  | Partial                                                           | <sg-icon name="check" size="16"></sg-icon> |
+| Host binding helpers       | <sg-icon name="check" size="16"></sg-icon>  | Partial                                                           | Partial                                    |
+| Form-associated helpers    | <sg-icon name="check" size="16"></sg-icon>  | Manual                                                            | Partial                                    |
+| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -138,11 +129,13 @@ define('my-counter', {
       }
     `,
   ],
-  setup(props, { bind }) {
+  setup(props, { bind, onMounted }) {
     const count = signal(0);
     const doubled = computed(() => count.value * 2);
 
     bind({ class: { 'is-positive': () => count.value > 0 } });
+
+    onMounted(() => console.log('mounted'));
 
     return html`
       <button @click=${() => (count.value += props.step.value)}>${props.label}: ${count}</button>
@@ -158,18 +151,17 @@ define('my-counter', {
 
 - Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related ripple APIs
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
-- Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.value`) or raw `PropDef` objects
+- Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
 - Setup returns an `HTMLResult` directly: `return html\`...\``
-- Lifecycle hooks: `onMounted()`, `onCleanup()`, `onElement()`, `effect()`
-- Directives: `each`, `classMap`, `styleMap`, `when`, `live`, `raw`
-- Host bindings via `bind({ attr, class, style, prop, on })` from setup context
-- Form-associated helpers with `defineField()` and `createFormContext()` (with reactive `error` signal for submit errors)
+- Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `effect` — accessed through the setup context bag (`ctx`)
+- Directives: `each` (keyed + snapshot modes), `classMap`, `styleMap`, `when`, `model`, `raw`
+- Host bindings via `bind({ attr, class, style, on })` from setup context bag
+- Form-associated helpers: `useField()`, `createFormContext()`, and `syncAria()` — first-class public APIs for form-aware components
 - Observers (`@vielzeug/craft/observers`)
 - Testing utilities (`@vielzeug/craft/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
 - Debug utilities (`@vielzeug/craft/devtools`) — `debugFlush()` for diagnosing update timing
 
 </div>
-
 
 ## Package Entry Points
 
@@ -186,7 +178,6 @@ define('my-counter', {
 
 - [Usage Guide](./usage.md)
 - [API Reference](./api.md)
-- [Lifecycle Best Practices](./lifecycle-best-practices.md)
 - [Examples](./examples.md)
 
 </div>

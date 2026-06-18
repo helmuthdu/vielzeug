@@ -1,22 +1,16 @@
 // Re-export all public types and classes so consumers only need one import.
 export type {
   BatchOptions,
-  GroupableWorker,
-  PrimableWorker,
+  GroupOptions,
   RunOptions,
-  StreamingWorker,
   TaskFn,
   TaskGroup,
-  Transfer,
   WorkerErrorCode,
   WorkerHandle,
-  WorkerMetrics,
   WorkerOptions,
-  WorkerPool,
   WorkerStatus,
 } from './_types';
 export {
-  PROTOCOL_VERSION,
   WorkerError,
   WorkerInvalidOptionsError,
   WorkerQueueFullError,
@@ -26,17 +20,46 @@ export {
   WorkerTimeoutError,
 } from './_types';
 
-import type { RunOptions, TaskFn, WorkerHandle, WorkerOptions } from './_types';
+import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './_types';
 
-import { createPool, type Executor, type PoolOptions } from './_pool';
+import { createPool } from './_pool';
 import {
-  PROTOCOL_VERSION,
   WorkerInvalidOptionsError,
   WorkerRuntimeError,
   WorkerTaskError,
   WorkerTerminatedError,
   WorkerTimeoutError,
 } from './_types';
+import { warn } from './_warn';
+
+// ─── task() — optional validation helper ─────────────────────────────────────
+
+/**
+ * Optional helper that validates a function is safe to serialize for use in `createWorker`.
+ *
+ * `createWorker` accepts any `TaskFn` directly — this helper exists only to catch the common
+ * mistake of passing a bound or native function whose body cannot be serialized.
+ *
+ * IMPORTANT: The function is serialized via `.toString()` and runs in an isolated Worker scope.
+ * It **cannot** close over variables from the surrounding module — any outer reference resolves
+ * to `undefined` inside the worker.
+ *
+ * @throws WorkerInvalidOptionsError if the function is bound or native.
+ *
+ * @example
+ * // Without task() — works fine for plain arrow functions:
+ * const worker = createWorker((n: number) => n * 2);
+ *
+ * // With task() — catches the mistake of passing Math.sqrt directly:
+ * const worker = createWorker(task((n: number) => Math.sqrt(n)));
+ */
+export function task<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TaskFn<TInput, TOutput> {
+  if (fn.toString().includes('[native code]')) {
+    throw new WorkerInvalidOptionsError('Task function cannot be a bound or native function');
+  }
+
+  return fn;
+}
 
 // ─── Options resolution ───────────────────────────────────────────────────────
 
@@ -47,8 +70,8 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
     return Math.max(1, globalThis.navigator?.hardwareConcurrency ?? 1);
   }
 
-  if (!Number.isInteger(value) || value < 1) {
-    throw new WorkerInvalidOptionsError('`concurrency` must be a positive integer or "auto"');
+  if (!Number.isInteger(value) || value < 1 || value > 512) {
+    throw new WorkerInvalidOptionsError('`concurrency` must be a positive integer ≤ 512 or "auto"');
   }
 
   return value;
@@ -56,13 +79,14 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
 
 function resolveOptions(options: WorkerOptions = {}): {
   concurrency: number;
+  heartbeatWindow: number | undefined;
   maxQueue: number | undefined;
   onFull: 'reject' | 'wait';
   onSlotError: WorkerOptions['onSlotError'];
   timeout: number | undefined;
 } {
   const concurrency = resolveConcurrency(options.concurrency);
-  const { maxQueue, onFull = 'reject', onSlotError, timeout } = options;
+  const { heartbeatWindow, maxQueue, onFull = 'reject', onSlotError, timeout } = options;
 
   if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
     throw new WorkerInvalidOptionsError('`timeout` must be a finite number greater than 0');
@@ -72,48 +96,34 @@ function resolveOptions(options: WorkerOptions = {}): {
     throw new WorkerInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
-  return { concurrency, maxQueue, onFull, onSlotError, timeout };
+  if (heartbeatWindow !== undefined && (!Number.isFinite(heartbeatWindow) || heartbeatWindow <= 0)) {
+    throw new WorkerInvalidOptionsError('`heartbeatWindow` must be a finite number greater than 0');
+  }
+
+  return { concurrency, heartbeatWindow, maxQueue, onFull, onSlotError, timeout };
 }
 
-// ─── Error serialization protocol ────────────────────────────────────────────
+// ─── Worker script builder ────────────────────────────────────────────────────
 
-type SerializedError = { message: string; name: string; stack?: string };
-
-function deserializeError(e: SerializedError): Error {
-  const err = new Error(e.message);
-
-  err.name = e.name;
-
-  if (e.stack) err.stack = e.stack;
-
-  return err;
-}
-
-// ─── Worker script builder (F1) ──────────────────────────────────────────────
-
-function buildWorkerScript(fn: TaskFn<unknown, unknown>): string {
+/**
+ * @security `fn.toString()` is injected verbatim into the blob script. Any code embedded in the
+ * serialized function executes only inside the isolated Worker scope — no shared memory, no access
+ * to the host page's globals. Risk is therefore low, but callers should only pass plain functions
+ * that do not close over module scope.
+ */
+function buildWorkerScript(fn: TaskFn<unknown, unknown>, heartbeatInterval: number | undefined): string {
   return `
-// Protocol version — must match the PROTOCOL_VERSION constant in the host.
-const __PROTOCOL_VERSION__ = ${PROTOCOL_VERSION};
-
 const __fn = (${fn.toString()});
-const __serialize = (e) => {
-  const err = e instanceof Error ? e : new Error(String(e));
-  return { name: err.name, message: err.message, stack: err.stack };
-};
 
 self.onmessage = async function (event) {
-  const { id, input, stream, heartbeatInterval } = event.data;
+  const { id, input, stream } = event.data;
 
-  // Automatically send heartbeats at the requested interval (F4).
+  // Automatically send heartbeats at half the heartbeatWindow interval.
   let heartbeatTimer = null;
-  if (heartbeatInterval) {
-    heartbeatTimer = setInterval(() => self.postMessage({ id, heartbeat: true }), heartbeatInterval);
-  }
+  ${heartbeatInterval != null ? `heartbeatTimer = setInterval(() => self.postMessage({ id, heartbeat: true }), ${heartbeatInterval});` : ''}
 
   try {
     if (stream) {
-      // Streaming mode: fn must return an async iterable or array.
       const iterable = await __fn(input);
       for await (const chunk of iterable) {
         self.postMessage({ id, chunk });
@@ -124,21 +134,23 @@ self.onmessage = async function (event) {
       self.postMessage({ id, result });
     }
   } catch (error) {
-    self.postMessage({ id, error: __serialize(error) });
+    self.postMessage({ id, error });
   } finally {
     if (heartbeatTimer) clearInterval(heartbeatTimer);
   }
-};`.trim();
+}`.trim();
 }
 
-// ─── SlotConfig discriminated union (R5) ─────────────────────────────────────
+// ─── SlotConfig discriminated union ──────────────────────────────────────────
 
-type SlotConfig<TInput, TOutput> = { fn: TaskFn<TInput, TOutput>; kind: 'inline' } | { kind: 'module'; url: string };
+type SlotConfig<TInput, TOutput> =
+  | { fn: TaskFn<TInput, TOutput>; heartbeatInterval: number | undefined; kind: 'inline' }
+  | { kind: 'module'; url: string };
 
 // ─── PendingTask ─────────────────────────────────────────────────────────────
 
 type SlotMessage<TOutput> =
-  | { error: SerializedError; id: number }
+  | { error: unknown; id: number }
   | { chunk: TOutput; id: number }
   | { heartbeat: true; id: number }
   | { id: number; result: TOutput };
@@ -146,10 +158,10 @@ type SlotMessage<TOutput> =
 type PendingTask<TOutput> = {
   /** Emits intermediate stream chunks. Undefined for non-streaming tasks. */
   emit?: (chunk: TOutput) => void;
-  /** Original heartbeatTimeout value, needed to reset the watchdog on each heartbeat. */
-  heartbeatTimeout?: number;
+  /** Called with an error when the streaming dispatch is cancelled mid-flight, so the finish closure drains its waiters. */
+  finishStream?: (err: unknown) => void;
   /**
-   * Single-shot timer that fires if no heartbeat is received within heartbeatTimeout ms.
+   * Single-shot timer that fires if no heartbeat is received within watchdogMs.
    * Reset (cleared + recreated) on every incoming heartbeat message.
    * Uses setTimeout because the watchdog is conceptually one-shot with manual reset,
    * not a recurring interval.
@@ -159,11 +171,13 @@ type PendingTask<TOutput> = {
   reject: (reason: unknown) => void;
   resolve: (value: TOutput) => void;
   timer?: ReturnType<typeof setTimeout>;
+  /** Watchdog window in ms (= heartbeatWindow). Stored on PendingTask to reset the timer on each heartbeat. */
+  watchdogMs?: number;
 };
 
-// ─── Slot ────────────────────────────────────────────────────────────────────
+// ─── Slot — implements SlotStrategy ──────────────────────────────────────────
 
-class Slot<TInput, TOutput> {
+class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
   private readonly config: SlotConfig<TInput, TOutput>;
   private readonly onSlotError: WorkerOptions['onSlotError'];
   private disposed = false;
@@ -188,21 +202,11 @@ class Slot<TInput, TOutput> {
     return Promise.resolve();
   }
 
-  run(
-    input: TInput,
-    transferables: Transferable[],
-    timeout: number | undefined,
-    heartbeatTimeout: number | undefined,
-  ): Promise<TOutput> {
-    return this.dispatch(input, transferables, timeout, heartbeatTimeout, false) as Promise<TOutput>;
+  run(input: TInput, transferables: Transferable[], timeout: number | undefined): Promise<TOutput> {
+    return this.dispatch(input, transferables, timeout, false) as Promise<TOutput>;
   }
 
-  runStream(
-    input: TInput,
-    transferables: Transferable[],
-    timeout: number | undefined,
-    heartbeatTimeout: number | undefined,
-  ): AsyncIterable<TOutput> {
+  runStream(input: TInput, transferables: Transferable[], timeout: number | undefined): AsyncIterable<TOutput> {
     const chunks: TOutput[] = [];
     let done = false;
     let error: unknown;
@@ -221,7 +225,12 @@ class Slot<TInput, TOutput> {
     };
 
     // Dispatch the task in stream mode. The promise resolves when the worker signals done.
-    this.dispatch(input, transferables, timeout, heartbeatTimeout, true, emit).then(() => finish(), finish);
+    // finishStream is stored on the PendingTask so cancel() can drain the waiters if the
+    // consumer exits early (break/throw from for-await), preventing a permanently dangling Promise.
+    // this.pending is set synchronously inside dispatch(), so this assignment is safe.
+    this.dispatch(input, transferables, timeout, true, emit).then(() => finish(), finish);
+
+    if (this.pending) this.pending.finishStream = finish;
 
     return {
       [Symbol.asyncIterator]() {
@@ -234,7 +243,14 @@ class Slot<TInput, TOutput> {
             }
 
             if (cursor < chunks.length) {
-              return { done: false, value: chunks[cursor++]! };
+              const value = chunks[cursor]!;
+
+              // Null-out the consumed slot so GC can collect the value
+              // without waiting for the entire stream to close.
+              (chunks as (TOutput | null)[])[cursor] = null;
+              cursor++;
+
+              return { done: false, value };
             }
 
             if (error !== undefined) throw error;
@@ -246,18 +262,6 @@ class Slot<TInput, TOutput> {
     };
   }
 
-  terminate(): void {
-    this.disposed = true;
-    this.stopWorker();
-    this.failPending(new WorkerTerminatedError());
-  }
-
-  /**
-   * Cancel the current pending task without disposing the slot.
-   * Clears all timers, nulls pending, and terminates the underlying Worker so the slot
-   * can be immediately reused without stale timers contaminating the next task.
-   * Called when a runStream consumer breaks or throws early (R1).
-   */
   cancel(): void {
     const pending = this.pending;
 
@@ -269,13 +273,21 @@ class Slot<TInput, TOutput> {
     // Terminate the worker: the streaming task may still be running and sending chunks.
     // A fresh worker is created on the next run() or runStream() call via ensureWorker().
     this.stopWorker();
+    // Drain the stream finish closure so any pending .next() waiters resolve immediately
+    // rather than leaking as permanently dangling Promises.
+    pending.finishStream?.(new WorkerTerminatedError('Stream was cancelled'));
+  }
+
+  terminate(): void {
+    this.disposed = true;
+    this.stopWorker();
+    this.failPending(new WorkerTerminatedError());
   }
 
   private dispatch(
     input: TInput,
     transferables: Transferable[],
     timeout: number | undefined,
-    heartbeatTimeout: number | undefined,
     stream: boolean,
     emit?: (chunk: TOutput) => void,
   ): Promise<TOutput | void> {
@@ -291,14 +303,20 @@ class Slot<TInput, TOutput> {
       return Promise.reject(error);
     }
 
+    // watchdogMs = heartbeatInterval * 2 (Nyquist margin: worker beats at interval, host allows 2× before firing).
+    const watchdogMs =
+      this.config.kind === 'inline' && this.config.heartbeatInterval != null
+        ? this.config.heartbeatInterval * 2
+        : undefined;
+
     return new Promise<TOutput | void>((resolve, reject) => {
       const id = this.taskId++;
       const pending: PendingTask<TOutput> = {
         emit,
-        heartbeatTimeout,
         id,
         reject,
         resolve: resolve as (v: TOutput) => void,
+        watchdogMs,
       };
 
       if (timeout !== undefined) {
@@ -307,25 +325,16 @@ class Slot<TInput, TOutput> {
         }, timeout);
       }
 
-      // Start heartbeat watchdog (F4).
-      if (heartbeatTimeout !== undefined) {
+      if (watchdogMs !== undefined) {
         pending.heartbeatWatchdog = setTimeout(() => {
-          this.restart(new WorkerTimeoutError(heartbeatTimeout));
-        }, heartbeatTimeout);
+          this.restart(new WorkerTimeoutError(watchdogMs));
+        }, watchdogMs);
       }
 
       this.pending = pending;
 
-      const message: Record<string, unknown> = { id, input, stream };
-
-      // For inline workers the script sends heartbeats automatically;
-      // send the interval as half of heartbeatTimeout (Nyquist margin).
-      if (heartbeatTimeout !== undefined) {
-        message.heartbeatInterval = Math.floor(heartbeatTimeout / 2);
-      }
-
       try {
-        worker.postMessage(message, transferables);
+        worker.postMessage({ id, input, stream }, transferables);
       } catch (err) {
         this.failPending(new WorkerRuntimeError(err instanceof Error ? err.message : String(err), err));
       }
@@ -348,16 +357,11 @@ class Slot<TInput, TOutput> {
         throw new WorkerRuntimeError('Failed to create Worker', error);
       }
     } else {
-      const source = this.config.fn.toString();
-
-      if (source.includes('[native code]')) {
-        throw new WorkerInvalidOptionsError('Task function cannot be a bound or native function');
-      }
-
       try {
-        const blob = new Blob([buildWorkerScript(this.config.fn as TaskFn<unknown, unknown>)], {
-          type: 'application/javascript',
-        });
+        const blob = new Blob(
+          [buildWorkerScript(this.config.fn as TaskFn<unknown, unknown>, this.config.heartbeatInterval)],
+          { type: 'application/javascript' },
+        );
         const url = URL.createObjectURL(blob);
 
         try {
@@ -375,13 +379,13 @@ class Slot<TInput, TOutput> {
 
       if (!pending || event.data.id !== pending.id) return;
 
-      // Handle heartbeat message — reset the watchdog timer (F4).
+      // Handle heartbeat message — reset the watchdog timer.
       if ('heartbeat' in event.data) {
-        if (pending.heartbeatTimeout !== undefined) {
+        if (pending.watchdogMs !== undefined) {
           clearTimeout(pending.heartbeatWatchdog);
           pending.heartbeatWatchdog = setTimeout(() => {
-            this.restart(new WorkerTimeoutError(pending.heartbeatTimeout!));
-          }, pending.heartbeatTimeout);
+            this.restart(new WorkerTimeoutError(pending.watchdogMs!));
+          }, pending.watchdogMs);
         }
 
         return;
@@ -398,7 +402,9 @@ class Slot<TInput, TOutput> {
       this.pending = null;
 
       if ('error' in event.data) {
-        pending.reject(new WorkerTaskError(event.data.error.message, deserializeError(event.data.error)));
+        const cause = event.data.error instanceof Error ? event.data.error : new Error(String(event.data.error));
+
+        pending.reject(new WorkerTaskError(cause.message, cause));
       } else {
         pending.resolve(event.data.result);
       }
@@ -411,7 +417,6 @@ class Slot<TInput, TOutput> {
       this.stopWorker();
       this.failPending(error);
 
-      // F3: notify the caller with the error and a restart-prewarming callback.
       this.onSlotError?.(error, () => void this.prime());
     };
 
@@ -444,135 +449,40 @@ class Slot<TInput, TOutput> {
   }
 }
 
-// ─── Shared factory ───────────────────────────────────────────────────────────
-
-function buildHandle<TInput, TOutput>(
-  slots: Slot<TInput, TOutput>[],
-  poolOptions: PoolOptions,
-): WorkerHandle<TInput, TOutput> {
-  const freeSlots = [...slots];
-
-  const executor: Executor<TInput, TOutput> = (input, transferables, taskTimeout, heartbeatTimeout) => {
-    const slot = freeSlots.pop()!;
-
-    return slot.run(input, transferables, taskTimeout, heartbeatTimeout).finally(() => {
-      freeSlots.push(slot);
-    });
-  };
-
-  const pool = createPool(executor, {
-    ...poolOptions,
-    prime: () => Promise.all(slots.map((s) => s.prime())).then(() => {}),
-  });
-
-  // Override runStream with a real implementation using the free-slot stack.
-  // Implements return() and throw() on the iterator so the slot is released on
-  // early consumer exit (break, throw from for-await-of body). (R4)
-  const runStream = (input: TInput, options: Omit<RunOptions, 'signal'> = {}): AsyncIterable<TOutput> => {
-    if (pool.status === 'terminated') {
-      return {
-        [Symbol.asyncIterator]() {
-          return {
-            next: () => Promise.reject(new WorkerTerminatedError()),
-          };
-        },
-      };
-    }
-
-    const slot = freeSlots.pop();
-
-    if (!slot) {
-      const slotCount = slots.length;
-
-      return {
-        [Symbol.asyncIterator]() {
-          return {
-            next: () =>
-              Promise.reject(
-                new WorkerRuntimeError(
-                  `runStream() requires a free worker slot; all ${slotCount} slot${slotCount === 1 ? '' : 's'} are busy`,
-                ),
-              ),
-          };
-        },
-      };
-    }
-
-    const { heartbeatTimeout, timeout, transferables = [] } = options;
-    const iter = slot.runStream(input, transferables, timeout, heartbeatTimeout);
-
-    return {
-      [Symbol.asyncIterator]() {
-        const inner = iter[Symbol.asyncIterator]();
-        let released = false;
-
-        const releaseSlot = () => {
-          if (!released) {
-            released = true;
-            freeSlots.push(slot!);
-          }
-        };
-
-        return {
-          async next() {
-            const result = await inner.next();
-
-            if (result.done) releaseSlot();
-
-            return result;
-          },
-
-          async return(value?: unknown) {
-            slot.cancel();
-            releaseSlot();
-
-            return inner.return?.(value) ?? { done: true as const, value };
-          },
-
-          async throw(error?: unknown) {
-            slot.cancel();
-            releaseSlot();
-
-            if (inner.throw) return inner.throw(error);
-
-            throw error;
-          },
-        };
-      },
-    };
-  };
-
-  return Object.assign(pool, { runStream });
-}
-
 // ─── createWorker ─────────────────────────────────────────────────────────────
 
 /**
  * Creates a pool of Web Workers that run `fn` in parallel.
  *
- * IMPORTANT: The task function is serialized via `.toString()` and runs in a separate global
- * scope. It cannot close over variables from the surrounding module.
+ * The task function is serialized via `.toString()` and runs in a separate global scope.
+ * It cannot close over variables from the surrounding module.
  *
+ * Use the optional `task()` helper to validate that the function is not bound or native.
  * For workers that need imports, see `createModuleWorker`.
+ *
+ * @example
+ * // Plain arrow function — most common case:
+ * const worker = createWorker((n: number) => n * 2);
+ *
+ * // With task() for validation:
+ * const worker = createWorker(task((n: number) => n * 2));
  */
 export function createWorker<TInput, TOutput>(
   fn: TaskFn<TInput, TOutput>,
   options?: WorkerOptions,
 ): WorkerHandle<TInput, TOutput> {
-  const { concurrency, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+  const { concurrency, heartbeatWindow, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+  const heartbeatInterval = heartbeatWindow != null ? Math.floor(heartbeatWindow / 2) : undefined;
 
   const slots = Array.from(
     { length: concurrency },
-    () => new Slot<TInput, TOutput>({ fn, kind: 'inline' }, onSlotError),
+    () => new Slot<TInput, TOutput>({ fn, heartbeatInterval, kind: 'inline' }, onSlotError),
   );
 
-  return buildHandle(slots, {
+  return createPool(slots, {
     concurrency,
     defaultTimeout: timeout,
     maxQueue,
-    onDispose: () => {
-      for (const slot of slots) slot.terminate();
-    },
     onFull,
   });
 }
@@ -585,33 +495,19 @@ export function createWorker<TInput, TOutput>(
  * Unlike `createWorker`, the worker file is a regular module — it can import utilities,
  * use top-level await, and reference module scope.
  *
+ * Use `handleMessages` from `@vielzeug/familiar/protocol` in the worker file to implement
+ * the message protocol without boilerplate.
+ *
  * **Protocol**: The worker module must handle the `{ id, input }` message format and reply
  * with `{ id, result }` or `{ id, error: { name, message, stack } }`. For streaming, it must
  * send one or more `{ id, chunk }` messages followed by `{ id, result: undefined }`.
  * For heartbeat support, send `{ id, heartbeat: true }` at regular intervals.
  *
- * **Protocol version**: Import `PROTOCOL_VERSION` from `@vielzeug/familiar` and include it in
- * a startup message (`self.postMessage({ protocol: PROTOCOL_VERSION })`) so developers can detect
- * version skew from cached module workers when debugging. The host does not validate this value
- * at runtime — it is a debugging convention only.
- *
  * @example
  * ```ts
- * // my-worker.ts (the worker file)
- * import { PROTOCOL_VERSION } from '@vielzeug/familiar';
- *
- * // Optional: announce protocol version on startup.
- * self.postMessage({ protocol: PROTOCOL_VERSION });
- *
- * self.onmessage = async (event) => {
- *   const { id, input } = event.data;
- *   try {
- *     self.postMessage({ id, result: await process(input) });
- *   } catch (e) {
- *     const err = e instanceof Error ? e : new Error(String(e));
- *     self.postMessage({ id, error: { name: err.name, message: err.message, stack: err.stack } });
- *   }
- * };
+ * // my-worker.ts — use handleMessages for zero boilerplate:
+ * import { handleMessages } from '@vielzeug/familiar/protocol';
+ * handleMessages(async (input: number) => input * 2);
  *
  * // main.ts
  * const pool = createModuleWorker<number, number>(
@@ -624,7 +520,14 @@ export function createModuleWorker<TInput, TOutput>(
   url: URL | string,
   options?: WorkerOptions,
 ): WorkerHandle<TInput, TOutput> {
-  const { concurrency, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+  const { concurrency, heartbeatWindow, maxQueue, onFull, onSlotError, timeout } = resolveOptions(options);
+
+  if (heartbeatWindow !== undefined) {
+    warn(
+      '`heartbeatWindow` has no effect on module workers — the worker script must implement the heartbeat protocol manually.',
+    );
+  }
+
   const href = typeof url === 'string' ? url : url.href;
 
   const slots = Array.from(
@@ -632,13 +535,10 @@ export function createModuleWorker<TInput, TOutput>(
     () => new Slot<TInput, TOutput>({ kind: 'module', url: href }, onSlotError),
   );
 
-  return buildHandle(slots, {
+  return createPool(slots, {
     concurrency,
     defaultTimeout: timeout,
     maxQueue,
-    onDispose: () => {
-      for (const slot of slots) slot.terminate();
-    },
     onFull,
   });
 }

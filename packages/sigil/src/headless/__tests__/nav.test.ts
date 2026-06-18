@@ -1,170 +1,105 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createListControl } from '../index';
+import { createListControl } from '../nav';
 
 describe('createListControl', () => {
-  it('moves to first and last enabled items', () => {
+  it('navigate(first/last) moves to the first/last enabled items', () => {
     const items = [{ disabled: true }, { disabled: false }, { disabled: false }];
-    let activeIndex = -1;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
-    expect(nav.first()).toBe(1);
-    expect(nav.last()).toBe(2);
+    expect(nav.navigate('first')).toBe(1);
+    expect(nav.navigate('last')).toBe(2);
   });
 
-  it('next/prev skip disabled items', () => {
+  it('navigate(next/prev) skips disabled items', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
-    let activeIndex = 0;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
-    expect(nav.next()).toBe(2);
-    expect(nav.prev()).toBe(0);
+    nav.set(0);
+    expect(nav.navigate('next')).toBe(2);
+    expect(nav.navigate('prev')).toBe(0);
   });
 
-  it('marks wrapped navigation when loop=true', () => {
+  it('navigate wraps when loop=true', () => {
     const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
-    let activeIndex = 2;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      loop: true,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items, loop: true });
 
-    expect(nav.next()).toBe(0);
-    expect(nav.prev()).toBe(2);
+    nav.set(2);
+    expect(nav.navigate('next')).toBe(0);
+    nav.set(0);
+    expect(nav.navigate('prev')).toBe(2);
   });
 
-  it('stays unchanged at boundaries when loop=false', () => {
+  it('navigate stays unchanged at boundaries when loop=false', () => {
     const items = [{ disabled: false }, { disabled: false }];
-    let activeIndex = 1;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      loop: false,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items, loop: false });
 
-    expect(nav.next()).toBe(1);
-    activeIndex = 0;
-    expect(nav.prev()).toBe(0);
+    nav.set(1);
+    expect(nav.navigate('next')).toBe(1);
+    nav.set(0);
+    expect(nav.navigate('prev')).toBe(0);
   });
 
-  it('returns no-enabled-item when list has no enabled entries', () => {
+  it('returns -1 when list has no enabled entries', () => {
     const items = [{ disabled: true }, { disabled: true }];
-    let activeIndex = -1;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
-    expect(nav.first()).toBe(-1);
-    expect(nav.last()).toBe(-1);
+    expect(nav.navigate('first')).toBe(-1);
+    expect(nav.navigate('last')).toBe(-1);
   });
 
-  it('returns empty reason for empty lists', () => {
+  it('returns -1 for all navigate actions on empty lists', () => {
     const items: Array<{ disabled: boolean }> = [];
-    let activeIndex = -1;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
-    expect(nav.first()).toBe(-1);
-    expect(nav.last()).toBe(-1);
-    expect(nav.next()).toBe(-1);
-    expect(nav.prev()).toBe(-1);
+    expect(nav.navigate('first')).toBe(-1);
+    expect(nav.navigate('last')).toBe(-1);
+    expect(nav.navigate('next')).toBe(-1);
+    expect(nav.navigate('prev')).toBe(-1);
   });
 
   it('set(-1) clears focus (same as reset) and returns -1', () => {
     const items = [{ disabled: false }, { disabled: false }];
-    let activeIndex = 0;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
     nav.set(1);
-    expect(activeIndex).toBe(1);
+    expect(nav.focusedIndex.value).toBe(1);
 
     const result = nav.set(-1);
 
     expect(result).toBe(-1);
-    expect(activeIndex).toBe(-1);
+    expect(nav.focusedIndex.value).toBe(-1);
   });
 
   it('set clamps out-of-bounds index to the last enabled item', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
-    let activeIndex = 0;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
     expect(nav.set(99)).toBe(2);
+    expect(nav.focusedIndex.value).toBe(2);
   });
 
   it('set returns -1 when the target index is a disabled item', () => {
     const items = [{ disabled: false }, { disabled: true }, { disabled: false }];
-    let activeIndex = 0;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
     nav.set(0);
 
     const result = nav.set(1);
 
     expect(result).toBe(-1);
-    // Index should remain unchanged when set fails
-    expect(activeIndex).toBe(0);
+    expect(nav.focusedIndex.value).toBe(0);
   });
 
   it('supports custom isItemDisabled predicate', () => {
     const items = [{ status: 'enabled' }, { status: 'hidden' }, { status: 'enabled' }];
-    let activeIndex = 0;
     const nav = createListControl({
-      getIndex: () => activeIndex,
       getItems: () => items,
       isItemDisabled: (item) => item.status === 'hidden',
-      setIndex: (index) => {
-        activeIndex = index;
-      },
     });
 
-    expect(nav.next()).toBe(2);
+    nav.set(0);
+    expect(nav.navigate('next')).toBe(2);
   });
 
   it('getActiveItem and reset work as expected', () => {
@@ -172,21 +107,44 @@ describe('createListControl', () => {
       { disabled: false, id: 'a' },
       { disabled: false, id: 'b' },
     ];
-    let activeIndex = 0;
-    const nav = createListControl({
-      getIndex: () => activeIndex,
-      getItems: () => items,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
-    });
+    const nav = createListControl({ getItems: () => items });
 
+    nav.set(0);
     expect(nav.getActiveItem()).toEqual({ disabled: false, id: 'a' });
 
     nav.reset();
 
-    expect(activeIndex).toBe(-1);
+    expect(nav.focusedIndex.value).toBe(-1);
     expect(nav.getActiveItem()).toBeUndefined();
+  });
+
+  it('focusedIndex is a reactive signal', () => {
+    const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
+    const nav = createListControl({ getItems: () => items });
+
+    expect(nav.focusedIndex.value).toBe(-1);
+    nav.set(2);
+    expect(nav.focusedIndex.value).toBe(2);
+    nav.reset();
+    expect(nav.focusedIndex.value).toBe(-1);
+  });
+
+  it('onNavigate is called with action, index, and event on keyboard moves', () => {
+    const items = [{ disabled: false }, { disabled: false }, { disabled: false }];
+    const navigated: Array<{ action: string; index: number }> = [];
+    const nav = createListControl({
+      getItems: () => items,
+      onNavigate: (action, index) => navigated.push({ action, index }),
+    });
+
+    nav.set(0);
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowDown' }));
+    nav.handleKeydown(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+
+    expect(navigated).toEqual([
+      { action: 'next', index: 1 },
+      { action: 'prev', index: 0 },
+    ]);
   });
 });
 
@@ -202,21 +160,18 @@ describe('createListControl typeahead', () => {
   type LabelItem = { disabled: boolean; label: string };
 
   function makeNav(items: LabelItem[], startIndex = -1) {
-    let activeIndex = startIndex;
     const nav = createListControl({
-      getIndex: () => activeIndex,
       getItemLabel: (item) => item.label,
       getItems: () => items,
       isItemDisabled: (item) => item.disabled,
-      setIndex: (index) => {
-        activeIndex = index;
-      },
     });
+
+    if (startIndex >= 0) nav.set(startIndex);
 
     const key = (char: string) =>
       nav.handleKeydown(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: char }));
 
-    return { activeIndex: () => activeIndex, key, nav };
+    return { activeIndex: () => nav.focusedIndex.value, key, nav };
   }
 
   it('jumps to the first item matching the typed character', () => {
@@ -332,13 +287,8 @@ describe('createListControl typeahead', () => {
   });
 
   it('returns false when getItemLabel is not provided', () => {
-    let activeIndex = -1;
     const nav = createListControl({
-      getIndex: () => activeIndex,
       getItems: () => [{ disabled: false }],
-      setIndex: (i) => {
-        activeIndex = i;
-      },
     });
 
     const handled = nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
@@ -361,22 +311,17 @@ describe('createListControl typeahead', () => {
   });
 
   it('does not trigger typeahead when list is disabled', () => {
-    let activeIndex = -1;
     const nav = createListControl({
       disabled: () => true,
-      getIndex: () => activeIndex,
       getItemLabel: (item: { label: string }) => item.label,
       getItems: () => [{ label: 'Apple' }],
-      setIndex: (i) => {
-        activeIndex = i;
-      },
     });
 
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));
-    expect(activeIndex).toBe(-1);
+    expect(nav.focusedIndex.value).toBe(-1);
   });
 
-  it('cleanup() resets the type buffer — subsequent keystrokes start a fresh search', () => {
+  it('[Symbol.dispose]() resets the type buffer — subsequent keystrokes start a fresh search', () => {
     const { activeIndex, nav } = makeNav([
       { disabled: false, label: 'Apple' },
       { disabled: false, label: 'Avocado' },
@@ -388,8 +333,8 @@ describe('createListControl typeahead', () => {
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'v' }));
     expect(activeIndex()).toBe(1);
 
-    // cleanup() resets the buffer without waiting for the 500 ms timeout.
-    nav.cleanup();
+    // [Symbol.dispose]() resets the buffer without waiting for the 500 ms timeout.
+    nav[Symbol.dispose]();
 
     // Now type 'a' again — buffer is cleared so it's a fresh 'a' search from index 2 → wraps → 'Apple' at 0.
     nav.handleKeydown(new KeyboardEvent('keydown', { key: 'a' }));

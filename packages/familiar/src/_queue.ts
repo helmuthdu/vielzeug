@@ -16,7 +16,6 @@ export type QueueItem<TInput, TOutput> = {
   /** Marked true by remove(); the next shift() discards the item silently. */
   cancelled?: boolean;
   cleanupAbort?: () => void;
-  heartbeatTimeout?: number;
   input: TInput;
   /** Scheduling priority. Higher value = runs first. Default: 0. */
   priority: number;
@@ -83,6 +82,8 @@ export class TaskQueue<TInput, TOutput> {
    * Returns true when found and marked, false when the item is not in the queue.
    */
   remove(item: QueueItem<TInput, TOutput>): boolean {
+    if (item.cancelled) return false;
+
     for (let i = 0; i < this.heap.length; i++) {
       if (this.heap[i]!.item === item) {
         item.cancelled = true;

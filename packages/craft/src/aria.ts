@@ -14,7 +14,7 @@ import { normalizeAriaKey } from './utils/aria';
 type AriaScalar = string | number | boolean | null | undefined;
 type AriaValue = AriaScalar | (() => AriaScalar) | ReadonlySignal<AriaScalar>;
 
-type AriaConfig = Record<string, AriaValue>;
+export type AriaConfig = Record<string, AriaValue>;
 
 export type SyncAriaOptions = {
   autoCleanup?: boolean;
@@ -35,12 +35,13 @@ const setA11yAttr = (target: Element, key: string, value: string | number | bool
  * Static values are set immediately; getter functions are tracked as effects.
  * Returns a cleanup function that removes all reactive bindings.
  *
+ * This is the low-level utility. Inside a component setup, prefer `ctx.aria(element, config)`
+ * which auto-registers cleanup with `onCleanup`.
+ *
  * @example
- * syncAria(element, {
- *   role: 'button',
- *   expanded: () => isOpen.value,
- *   disabled: () => isDisabled.value,
- * });
+ * // Outside setup context (e.g. floating trigger callbacks):
+ * const cleanup = syncAria(element, { expanded: () => isOpen.value }, { autoCleanup: false });
+ * onCleanup(cleanup);
  */
 export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaOptions = {}): (() => void) => {
   const { autoCleanup = true } = options;
@@ -85,3 +86,18 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
 
   return cleanup;
 };
+
+/**
+ * Create an `aria()` function bound to a specific `onCleanup` registration.
+ * Used by `context-bag.ts` to produce `ctx.aria(element, config)`.
+ * @internal
+ */
+export const createAriaFn =
+  (registerCleanup: (fn: () => void) => void) =>
+  (target: Element, config: AriaConfig): (() => void) => {
+    const cleanup = syncAria(target, config, { autoCleanup: false });
+
+    registerCleanup(cleanup);
+
+    return cleanup;
+  };

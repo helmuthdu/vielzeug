@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/orbit",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "files": [
     "dist"
@@ -20,12 +20,6 @@
       "types": "./dist/devtools.d.ts",
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
-    },
-    "./inline": {
-      "source": "./src/inline.ts",
-      "types": "./dist/inline.d.ts",
-      "import": "./dist/inline.js",
-      "require": "./dist/inline.cjs"
     },
     "./presets": {
       "source": "./src/presets.ts",
@@ -64,9 +58,9 @@
     "@vielzeug/ripple": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

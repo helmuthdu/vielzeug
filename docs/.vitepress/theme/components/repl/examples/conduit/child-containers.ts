@@ -4,7 +4,7 @@ export const childContainersExample = {
 const Token = token('Value')
 const root = createContainer().value(Token, 'root-value')
 
-const child = root.createChild()
+const child = root.createScope()
 console.log('Root:', await root.resolve(Token))
 console.log('Child inherits:', await child.resolve(Token))
 

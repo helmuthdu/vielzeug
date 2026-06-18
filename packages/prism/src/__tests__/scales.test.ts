@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { describe, expect, it, vi } from 'vitest';
 
-import { buildXScale } from '../core/cartesian-scales';
+import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { bandScale } from '../scales/band';
 import { linearScale } from '../scales/linear';
 import { timeScale } from '../scales/time';
@@ -166,13 +166,11 @@ describe('bandScale', () => {
     expect(scale.ticks()).toEqual(['X', 'Y', 'Z']);
   });
 
-  it('accepts reactive signal for domain', () => {
-    const dom = signal(['A', 'B']);
-    const scale = bandScale({ domain: dom, range: [0, 200] });
+  it('uses plain-value domain (plain array)', () => {
+    const scale = bandScale({ domain: ['A', 'B', 'C'], range: [0, 300] });
 
-    expect(scale.ticks()).toEqual(['A', 'B']);
-    dom.value = ['A', 'B', 'C'];
     expect(scale.ticks()).toEqual(['A', 'B', 'C']);
+    expect(scale.domain).toEqual(['A', 'B', 'C']);
   });
 
   it('ticks() always returns all domain values (count arg ignored for categorical)', () => {
@@ -194,32 +192,25 @@ describe('bandScale', () => {
 
 // ─── linearScale — reactive domain ────────────────────────────────────────────
 
-describe('linearScale — reactive signal domain', () => {
-  it('re-maps after domain signal update', () => {
-    const dom = signal<[number, number]>([0, 10]);
-    const scale = linearScale({ domain: dom, range: [0, 100] });
+describe('linearScale — plain-value domain', () => {
+  it('maps correctly with explicit plain-value domain', () => {
+    const scale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
 
     expect(scale.map(10)).toBe(100);
-    dom.value = [0, 20];
-    expect(scale.map(10)).toBe(50);
+    expect(scale.map(5)).toBe(50);
   });
 });
 
 // ─── timeScale — reactive domain ──────────────────────────────────────────────
 
-describe('timeScale — reactive signal domain', () => {
-  it('re-maps after domain signal update', () => {
+describe('timeScale — plain-value domain', () => {
+  it('maps correctly with explicit plain-value domain', () => {
     const d0 = new Date('2024-01-01');
     const d1 = new Date('2024-12-31');
-    const d2 = new Date('2025-12-31');
-    const dom = signal<[Date, Date]>([d0, d1]);
-    const scale = timeScale({ domain: dom, nice: false, range: [0, 500] });
+    const scale = timeScale({ domain: [d0, d1], nice: false, range: [0, 500] });
 
-    const px1 = scale.map(d1);
-
-    expect(px1).toBeCloseTo(500, 0);
-    dom.value = [d0, d2];
-    expect(scale.map(d1)).toBeLessThan(500);
+    expect(scale.map(d0)).toBe(0);
+    expect(scale.map(d1)).toBeCloseTo(500, 0);
   });
 });
 
@@ -231,5 +222,72 @@ describe('buildXScale — single-point domain', () => {
 
     expect(isFinite(scale.domain[0] as number)).toBe(true);
     expect(isFinite(scale.domain[1] as number)).toBe(true);
+  });
+
+  it('all-same-timestamp Date series produces finite domain', () => {
+    const d = new Date('2024-06-01');
+    const scale = buildXScale([d, d, d], 600);
+    const [d0, d1] = scale.domain as [Date, Date];
+
+    expect(isFinite(d0.getTime())).toBe(true);
+    expect(isFinite(d1.getTime())).toBe(true);
+    expect(d1.getTime()).toBeGreaterThan(d0.getTime());
+  });
+});
+
+// ─── buildYScale — includeZero option ─────────────────────────────────────────
+
+describe('buildYScale — includeZero option', () => {
+  it('default includeZero:true anchors domain at 0 for positive data', () => {
+    const scale = buildYScale([100, 110, 120], 300);
+
+    expect(scale.domain[0]).toBe(0);
+    expect(scale.domain[1]).toBeGreaterThanOrEqual(120);
+  });
+
+  it('includeZero:false uses data minimum as domain floor', () => {
+    const scale = buildYScale([100, 110, 120], 300, false);
+
+    expect(scale.domain[0]).toBe(100);
+    expect(scale.domain[1]).toBeGreaterThanOrEqual(120);
+  });
+
+  it('includeZero:false with negative data keeps negative minimum', () => {
+    const scale = buildYScale([-50, -10, 30], 300, false);
+
+    expect(scale.domain[0]).toBe(-50);
+  });
+
+  it('includeZero:false with all-same values produces a non-zero range', () => {
+    const scale = buildYScale([5, 5, 5], 300, false);
+    const [d0, d1] = scale.domain;
+
+    expect(d1).toBeGreaterThan(d0);
+  });
+});
+
+// ─── buildXScale / buildYScale — null-guard warning paths ─────────────────────
+
+describe('buildXScale — null-guard warning', () => {
+  it('emits warn and returns fallback scale when any x value is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildXScale([null as unknown as number, 1, 2], 300);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    expect(scale.domain).toBeDefined();
+    warnSpy.mockRestore();
+  });
+});
+
+describe('buildYScale — null-guard warning', () => {
+  it('emits warn and returns fallback scale when any y value is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildYScale([null as unknown as number, 10, 20], 300);
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    expect(scale.domain).toBeDefined();
+    warnSpy.mockRestore();
   });
 });

@@ -6,9 +6,12 @@ const Svc = token('Svc')
 
 const app = createContainer()
 app.value(Repo, { list: () => ['prod'] })
-app.factory(Svc, (repo) => ({ list: () => repo.list() }), { deps: [Repo] })
+app.factory(Svc, async (r) => {
+  const repo = await r.resolve(Repo)
+  return { list: () => repo.list() }
+})
 
-const testScope = app.createChild()
+const testScope = app.createScope()
 testScope.value(Repo, { list: () => ['test'] })
 
 const svc = await testScope.resolve(Svc)

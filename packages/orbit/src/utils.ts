@@ -57,6 +57,9 @@ export const MIDDLEWARE_ORDER_RULES: Array<[mustFollow: string, mustPrecede: str
   ['arrow', 'flip'],
   ['arrow', 'shift'],
   ['arrow', 'autoPlacement'],
+  ['flip', 'inline'],
+  ['shift', 'inline'],
+  ['autoPlacement', 'inline'],
   ['size', 'flip'],
   ['size', 'autoPlacement'],
 ];
@@ -66,21 +69,21 @@ export const MIDDLEWARE_ORDER_RULES: Array<[mustFollow: string, mustPrecede: str
  * Throws a descriptive error in dev mode if an invalid ordering is detected.
  * @internal
  */
-export function validateMiddlewareNames(names: Array<string | null>, caller: string): void {
+export function validateMiddlewareNames(names: Array<string | null>): void {
   for (const [mustFollow, mustPrecede] of MIDDLEWARE_ORDER_RULES) {
     const followIdx = names.indexOf(mustFollow);
     const precedeIdx = names.indexOf(mustPrecede);
 
     if (followIdx !== -1 && precedeIdx !== -1 && followIdx < precedeIdx) {
       throw new Error(
-        `[orbit] ${caller}: "${mustFollow}" must come after "${mustPrecede}". ` +
-          `Recommended order: offset → flip/autoPlacement → shift → size → arrow.`,
+        `[orbit] "${mustFollow}" must come after "${mustPrecede}" in the middleware pipeline. ` +
+          `Recommended order: inline → offset → flip/autoPlacement → shift → size → arrow.`,
       );
     }
   }
 
   if (names.includes('flip') && names.includes('autoPlacement')) {
-    throw new Error(`[orbit] ${caller}: use either flip() or autoPlacement(), not both.`);
+    throw new Error(`[orbit] use either flip() or autoPlacement() in the middleware pipeline, not both.`);
   }
 }
 
@@ -96,15 +99,10 @@ export const MIDDLEWARE_NAME = Symbol.for('@vielzeug/orbit/name');
  * as a `TypedMiddleware<K, D>` for compile-time `middlewareData` inference.
  * @internal
  */
-export function tagMiddleware<K extends string, D, F extends Middleware>(
-  fn: F,
-  name: K,
-): F & TypedMiddleware<K, D> & { [MIDDLEWARE_NAME]: string } {
-  return Object.assign(fn, {
-    __middlewareData: undefined as unknown as D,
-    __middlewareKey: name as K,
-    [MIDDLEWARE_NAME]: name,
-  });
+export function tagMiddleware<K extends string, D, F extends Middleware>(fn: F, name: K): F & TypedMiddleware<K, D> {
+  (fn as Record<symbol, unknown>)[MIDDLEWARE_NAME] = name;
+
+  return fn as F & TypedMiddleware<K, D>;
 }
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

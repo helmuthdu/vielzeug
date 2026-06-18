@@ -1,4 +1,8 @@
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+
+import { createPaginatedList } from './paginated-list';
+import { createSelectionControl } from './selection-control';
+import { createSortControl } from './sort-control';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -48,6 +52,17 @@ export type DataGridColumn<T = Record<string, unknown>> = {
   resizable?: boolean;
   /** Whether the column is sortable. Defaults to `false`. */
   sortable?: boolean;
+  /**
+   * Custom sort key extractor for client-side sorting.
+   * Return a `number` or `string` for comparison.
+   * When omitted, the column's `key` property is used as a plain property lookup.
+   *
+   * @example
+   * ```ts
+   * { key: 'createdAt', label: 'Date', sortValue: (row) => new Date(row.createdAt).getTime() }
+   * ```
+   */
+  sortValue?: (item: T) => number | string;
   /** Column width (any valid CSS width value, e.g. `'12rem'`). */
   width?: string;
 };
@@ -85,7 +100,7 @@ export type DataGridControl<T = Record<string, unknown>> = {
   clearSelection(): void;
   /** Current page items (sorted + paginated). Reactive signal. */
   readonly currentPageItems: ReadonlySignal<T[]>;
-  /** Go to an absolute page index. */
+  /** Go to an absolute page index. The index is clamped to the valid page range `[0, pageCount - 1]`. */
   goToPage(index: number): void;
   /** Whether there is a next page. Reactive signal. */
   readonly hasNextPage: ReadonlySignal<boolean>;
@@ -105,8 +120,8 @@ export type DataGridControl<T = Record<string, unknown>> = {
   prevPage(): void;
   /** Select all rows on the current page. */
   selectAll(): void;
-  /** Current selected row keys. Reactive signal. */
-  readonly selectedKeys: ReadonlySignal<Set<string>>;
+  /** Current selected row keys. Reactive signal. Returns a snapshot copy — mutating the returned set has no effect on reactive state; use `toggleRow`, `selectAll`, `setSelection`, or `clearSelection` to update selection. */
+  readonly selectedKeys: ReadonlySignal<ReadonlySet<string>>;
   /** All rows whose keys are in `selectedKeys`. Reactive signal. */
   readonly selectedRows: ReadonlySignal<T[]>;
   /** Set the selection to an explicit set of keys. */
@@ -126,12 +141,13 @@ export type DataGridControl<T = Record<string, unknown>> = {
 /**
  * Headless datagrid control — sorting, pagination, and row selection.
  *
+ * Composed from three focused primitives:
+ * - `createSortControl` — client-side sorting with a cycle (asc → desc → none)
+ * - `createPaginatedList` — reactive pagination over the sorted items
+ * - `createSelectionControl` — single/multi/none row selection
+ *
  * All mutable state is exposed as reactive `ReadonlySignal` values so
  * consumers can bind directly in templates without manual invalidation.
- *
- * Pass `items` as a `ReadonlySignal<T[]>`. For client-side sorting, wrap your
- * full dataset; for server-side sorting, pass a signal whose value is the
- * pre-sorted result. The control fires `onSortChange` in both cases.
  *
  * @example
  * ```ts
@@ -144,192 +160,79 @@ export type DataGridControl<T = Record<string, unknown>> = {
  *   pageSize: () => 20,
  *   signal: lifecycleSignal(onCleanup),
  * });
- *
- * // In template — subscribes automatically:
- * ctrl.currentPageItems.value.map(...)
- * ctrl.sortState.value.direction
- * ctrl.selectedKeys.value.has(key)
  * ```
  */
 export const createDataGridControl = <T = Record<string, unknown>>(
   options: DataGridControlOptions<T>,
 ): DataGridControl<T> => {
-  // ── Sorting ──────────────────────────────────────────────────────────────────
-
-  const _sortKey = signal<string>('');
-  const _sortDir = signal<SortDirection>('none');
-
-  const sortState = computed<SortState>(() => ({ direction: _sortDir.value, key: _sortKey.value }));
-
-  const sortBy = (key: string): void => {
-    if (_sortKey.value !== key) {
-      _sortKey.value = key;
-      _sortDir.value = 'asc';
-    } else if (_sortDir.value === 'asc') {
-      _sortDir.value = 'desc';
-    } else if (_sortDir.value === 'desc') {
-      _sortKey.value = '';
-      _sortDir.value = 'none';
-    }
-
-    _pageIndex.value = 0;
-    options.onSortChange?.({ direction: _sortDir.value, key: _sortKey.value });
-  };
-
-  // ── Sorted items ─────────────────────────────────────────────────────────────
-
-  const sortedItems = computed<T[]>(() => {
-    const items = options.items.value;
-    const key = _sortKey.value;
-    const dir = _sortDir.value;
-
-    if (!key || dir === 'none') return items;
-
-    return items.slice().sort((a, b) => {
-      const av = (a as Record<string, unknown>)[key];
-      const bv = (b as Record<string, unknown>)[key];
-      const cmp =
-        typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av ?? '').localeCompare(String(bv ?? ''));
-
-      return dir === 'asc' ? cmp : -cmp;
-    });
+  // ── Sort ──────────────────────────────────────────────────────────────────
+  const sort = createSortControl<T>({
+    columns: options.columns,
+    items: options.items,
+    onSortChange: options.onSortChange,
   });
 
-  // ── Pagination ────────────────────────────────────────────────────────────────
-
-  const _pageIndex = signal(0);
-
-  const pageCount = computed(() => {
-    const ps = options.pageSize();
-    const len = sortedItems.value.length;
-
-    if (ps <= 0 || len === 0) return 0;
-
-    return Math.ceil(len / ps);
-  });
-
-  const safePage = computed(() => {
-    const pc = pageCount.value;
-
-    return pc === 0 ? 0 : Math.min(_pageIndex.value, pc - 1);
-  });
-
-  const currentPageItems = computed<T[]>(() => {
+  // ── Pagination ────────────────────────────────────────────────────────────
+  // pageSize 0 means "disabled" — pass Number.MAX_SAFE_INTEGER so all items fit on one page.
+  const _pageSize = computed(() => {
     const ps = options.pageSize();
 
-    if (ps <= 0) return sortedItems.value;
-
-    const start = safePage.value * ps;
-
-    return sortedItems.value.slice(start, start + ps);
+    return ps <= 0 ? Number.MAX_SAFE_INTEGER : ps;
   });
 
-  const hasNextPage = computed(() => options.pageSize() > 0 && safePage.value < pageCount.value - 1);
-  const hasPrevPage = computed(() => options.pageSize() > 0 && safePage.value > 0);
+  const pagination = createPaginatedList({
+    getItems: () => sort.sortedItems.value,
+    pageSize: _pageSize,
+  });
 
-  const nextPage = (): void => {
-    if (hasNextPage.value) _pageIndex.value = safePage.value + 1;
+  const totalItems = computed(() => sort.sortedItems.value.length);
+
+  // When pageSize is 0 (disabled), bypass pagination and show all items.
+  const currentPageItems = computed<T[]>(() =>
+    options.pageSize() <= 0 ? sort.sortedItems.value : pagination.pageItems.value,
+  );
+
+  // Reset to page 0 whenever sort changes.
+  const _sortByAndReset = (key: string): void => {
+    sort.sortBy(key);
+    pagination.reset();
   };
 
-  const prevPage = (): void => {
-    if (hasPrevPage.value) _pageIndex.value = safePage.value - 1;
-  };
-
-  const goToPage = (index: number): void => {
-    _pageIndex.value = Math.max(0, index);
-  };
-
-  const totalItems = computed(() => sortedItems.value.length);
-
-  // ── Selection ─────────────────────────────────────────────────────────────────
-
-  const _selectedKeys = signal<Set<string>>(new Set());
-
-  const isSelected = (key: string): boolean => _selectedKeys.value.has(key);
-
-  const isAllSelected = (): boolean => {
-    const page = currentPageItems.value;
-
-    if (!page.length) return false;
-
-    return page.every((item) => _selectedKeys.value.has(options.getRowKey(item)));
-  };
-
-  const _commitSelection = (next: Set<string>): void => {
-    _selectedKeys.value = next;
-    options.onSelectionChange?.(next);
-  };
-
-  const toggleRow = (key: string): void => {
-    const mode = options.selectionMode();
-
-    if (mode === 'none') return;
-
-    const next = new Set(_selectedKeys.value);
-
-    if (next.has(key)) {
-      next.delete(key);
-    } else if (mode === 'single') {
-      next.clear();
-      next.add(key);
-    } else {
-      next.add(key);
-    }
-
-    _commitSelection(next);
-  };
-
-  const selectAll = (): void => {
-    if (options.selectionMode() !== 'multi') return;
-
-    const page = currentPageItems.value;
-
-    if (isAllSelected()) {
-      const next = new Set(_selectedKeys.value);
-
-      for (const item of page) next.delete(options.getRowKey(item));
-
-      _commitSelection(next);
-    } else {
-      const next = new Set(_selectedKeys.value);
-
-      for (const item of page) next.add(options.getRowKey(item));
-
-      _commitSelection(next);
-    }
-  };
-
-  const clearSelection = (): void => {
-    _commitSelection(new Set());
-  };
-
-  const setSelection = (keys: Set<string>): void => {
-    _commitSelection(new Set(keys));
-  };
+  // ── Selection ─────────────────────────────────────────────────────────────
+  const selection = createSelectionControl<T>({
+    getRowKey: options.getRowKey,
+    onSelectionChange: options.onSelectionChange,
+    pageItems: () => pagination.pageItems.value,
+    selectionMode: options.selectionMode,
+  });
 
   const selectedRows = computed<T[]>(() =>
-    options.items.value.filter((item) => _selectedKeys.value.has(options.getRowKey(item))),
+    options.items.value.filter((item) => selection.selectedKeys.value.has(options.getRowKey(item))),
   );
 
   return {
-    clearSelection,
+    clearSelection: selection.clearSelection,
     currentPageItems,
-    goToPage,
-    hasNextPage,
-    hasPrevPage,
-    isAllSelected,
-    isSelected,
-    nextPage,
-    pageCount,
-    pageIndex: safePage,
-    prevPage,
-    selectAll,
-    selectedKeys: _selectedKeys,
+    goToPage: (index: number) => {
+      if (!Number.isFinite(index)) return;
+
+      pagination.goTo(Math.max(0, index));
+    },
+    hasNextPage: pagination.hasNext,
+    hasPrevPage: pagination.hasPrev,
+    isAllSelected: selection.isAllSelected,
+    isSelected: selection.isSelected,
+    nextPage: pagination.next,
+    pageCount: pagination.pageCount,
+    pageIndex: pagination.pageIndex,
+    prevPage: pagination.prev,
+    selectAll: selection.selectAll,
+    selectedKeys: selection.selectedKeys,
     selectedRows,
-    setSelection,
-    sortBy,
-    sortState,
-    toggleRow,
+    setSelection: selection.setSelection,
+    sortBy: _sortByAndReset,
+    sortState: sort.sortState,
+    toggleRow: selection.toggleRow,
     totalItems,
   };
 };

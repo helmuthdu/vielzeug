@@ -114,4 +114,14 @@ describe('sg-grid-item accessibility', () => {
       expect(fixture.element.getAttribute('role')).toBeNull();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-grid-item', { html: 'Content' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

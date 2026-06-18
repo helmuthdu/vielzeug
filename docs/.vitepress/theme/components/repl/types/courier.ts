@@ -9,27 +9,27 @@ declare module '/courier' {
     timeout?: number;
   };
 
-  export type FetchContext = { init: RequestInit; url: string };
-
-  export type ParamValue = string | number | boolean | null | readonly (string | number | boolean | null)[] | undefined;
-  export type Params = Record<string, ParamValue>;
-
-  export type CourierRequestConfig<P extends string = string> = {
-    body?: unknown;
-    /** Set to \`false\` to bypass in-flight deduplication for this request. */
-    dedupe?: boolean;
-    /** Explicit deduplication key for non-idempotent requests. */
-    dedupeKey?: unknown;
-    query?: Params;
-    responseType?: ResponseType;
-    timeout?: number;
-    params?: Record<string, string | number | boolean>;
+  export type FetchContext = {
+    headers: Record<string, string>;
+    init: Omit<RequestInit, 'headers'>;
+    url: string;
+    withHeaders(updates: Record<string, string>): FetchContext;
   };
 
-  export type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
+  export type Params = Record<string, string | number | boolean | null | undefined>;
+
+  export type HttpRequestConfig<P extends string = string> = {
+    body?: unknown;
+    dedupe?: boolean;
+    dedupeKey?: unknown;
     fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
     headers?: Record<string, string>;
+    params?: Record<string, string | number | boolean>;
+    query?: Params;
+    responseType?: ResponseType;
+    schema?: { parse(data: unknown): unknown };
     signal?: AbortSignal;
+    timeout?: number;
   };
 
   export type Interceptor = (
@@ -38,8 +38,10 @@ declare module '/courier' {
   ) => Promise<Response>;
 
   export interface ApiClient {
+    [Symbol.dispose](): void;
     cancelAll(): void;
     delete<T = unknown, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>): Promise<T>;
+    readonly disposalSignal: AbortSignal;
     dispose(): void;
     readonly disposed: boolean;
     get<T = unknown, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>): Promise<T>;
@@ -50,12 +52,13 @@ declare module '/courier' {
     put<T = unknown, P extends string = string>(url: P, cfg?: HttpRequestConfig<P>): Promise<T>;
     request<T = unknown, P extends string = string>(method: string, url: P, config?: HttpRequestConfig<P>): Promise<T>;
     use(interceptor: Interceptor): () => void;
-    [Symbol.dispose](): void;
   }
 
-  export function createApi(opts?: TransportOptions, sharedTransport?: TransportCore): ApiClient;
+  export function createApi(opts?: TransportOptions): ApiClient;
 
-  export type QueryKey = readonly unknown[];
+  export type QueryKeyAtom = string | number | boolean | null | { readonly [k: string]: string | number | boolean | null };
+  export type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
+
   export type Unsubscribe = () => void;
 
   export interface SyncStore<T> {
@@ -64,10 +67,10 @@ declare module '/courier' {
   }
 
   export type RetryOptions = {
-    /** Maximum total attempts. \`1\` = single try, no retries. Defaults to \`1\`. */
-    maxAttempts?: number;
-    retryDelay?: number | ((attempt: number) => number);
+    delay?: number | ((attempt: number) => number);
     shouldRetry?: (error: unknown, attempt: number) => boolean;
+    /** Total attempts including the first. \`1\` = single try, no retries. Defaults to \`1\`. */
+    times?: number;
   };
 
   export type QueryFnContext = {
@@ -76,10 +79,10 @@ declare module '/courier' {
   };
 
   export type AsyncState<T = unknown> =
-    | { data: undefined; error: null; isFetching: false; status: 'idle'; updatedAt: undefined }
-    | { data: T | undefined; error: null; isFetching: true; status: 'pending'; updatedAt: number | undefined }
-    | { data: T; error: null; isFetching: boolean; status: 'success'; updatedAt: number }
-    | { data: T | undefined; error: Error; isFetching: boolean; status: 'error'; updatedAt: number };
+    | { readonly data: undefined; readonly error: null; readonly isFetching: false; readonly status: 'idle'; readonly updatedAt: undefined }
+    | { readonly data: undefined; readonly error: null; readonly isFetching: true; readonly status: 'pending'; readonly updatedAt: number | undefined }
+    | { readonly data: T; readonly error: null; readonly isFetching: boolean; readonly status: 'success'; readonly updatedAt: number }
+    | { readonly data: T | undefined; readonly error: Error; readonly isFetching: boolean; readonly status: 'error'; readonly updatedAt: number };
 
   export type QueryState<T = unknown> = AsyncState<T>;
   export type MutationState<TData = unknown> = AsyncState<TData>;
@@ -93,67 +96,94 @@ declare module '/courier' {
     enabled?: boolean;
     fn: (ctx: QueryFnContext) => Promise<T>;
     gcTime?: number;
+    /** Pre-seed the cache as a successful entry when no data exists. Subject to normal staleTime checks. */
     initialData?: T | (() => T | undefined);
     key: QueryKey;
     staleTime?: number;
   };
 
-  export type PrefetchOptions<T> = QueryOptions<T> & {
-    throwOnError?: boolean;
+  export type ObserveOptions<T, S = T> = QueryOptions<T> & {
+    /** When \`false\`, no background fetch is triggered. Defaults to \`true\`. */
+    fetch?: boolean;
+    /** Temporary value shown while a fetch is in-flight; does not affect cache state. */
+    placeholderData?: S | (() => S | undefined);
+    /** Transform cached data before delivery to store subscribers. \`S\` defaults to \`T\`. */
+    select?: (data: T | undefined) => S | undefined;
   };
 
   export interface QueryClient {
+    [Symbol.dispose](): void;
     cancel(key: QueryKey): void;
+    cancelAll(): void;
     clear(): void;
     dispose(): void;
+    readonly disposalSignal: AbortSignal;
     readonly disposed: boolean;
-    fetch<T>(options: QueryOptions<T>): Promise<T | undefined>;
+    /** Always throws on error. */
+    fetch<T>(options: QueryOptions<T>): Promise<T>;
+    fetchMany<T = unknown>(queries: QueryOptions<T>[]): Promise<T[]>;
     get<T>(key: QueryKey): T | undefined;
     getState<T>(key: QueryKey): QueryState<T> | null;
     invalidate(key: QueryKey): void;
-    prefetch<T>(options: PrefetchOptions<T>): Promise<void>;
+    keys(): QueryKey[];
+    /** Evict a single entry; aborts in-flight fetch; resets observers to idle. */
+    remove(key: QueryKey): void;
+    /** Return a SyncStore and trigger a background fetch if stale. Errors surface via \`store.peek().status === 'error'\`. */
+    observe<T = unknown, S = T>(options: ObserveOptions<T, S>): SyncStore<QueryState<S>>;
+    /** Observe multiple keys as one combined store; updates on any key change. */
+    observeMany<T = unknown>(keys: QueryKey[]): SyncStore<QueryState<T>[]>;
     refetchStale(): void;
     set<T>(key: QueryKey, data: T, opts?: { gcTime?: number; updatedAt?: number }): void;
     set<T>(key: QueryKey, updater: (old: T | undefined) => T, opts?: { gcTime?: number; updatedAt?: number }): void;
-    subscribe<T = unknown, S = T>(
-      key: QueryKey,
-      listener: (state: QueryState<S>) => void,
-      opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined }
-    ): Unsubscribe;
-    watch<T = unknown, S = T>(
-      key: QueryKey,
-      opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined }
-    ): SyncStore<QueryState<S>>;
-    [Symbol.dispose](): void;
+    readonly size: number;
+    /** Read-through store for one key; no fetch triggered. */
+    watchKey<T = unknown>(key: QueryKey): SyncStore<QueryState<T>>;
   }
 
   export function createQuery(opts?: QueryClientOptions): QueryClient;
 
   export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
-  export type MutationOptions<TData = unknown> = RetryOptions & {
+  export type SettledResult<TData, TVariables> =
+    | { readonly data: TData; readonly status: 'success'; readonly variables: TVariables }
+    | { readonly error: Error; readonly status: 'error'; readonly variables: TVariables }
+    | { readonly status: 'aborted'; readonly variables: TVariables };
+
+  export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
     onCallbackError?: (error: Error) => void;
-    onError?: (error: Error) => void | Promise<void>;
-    onSettled?: (data: TData | undefined, error: Error | null) => void | Promise<void>;
-    onSuccess?: (data: TData) => void | Promise<void>;
+    onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+    /** Called after every run (success, error, abort). Switch on \`result.status\` for exhaustive handling. */
+    onSettled?: (result: SettledResult<TData, TVariables>) => void | Promise<void>;
+    onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
+  };
+
+  export type CourierMutationOptions<TData = unknown, TVariables = void> = MutationOptions<TData, TVariables> & {
+    /** Keys to invalidate in the shared query cache after a successful run. */
+    invalidates?: QueryKey[];
+    /** Always return an array of \`[key, data]\` pairs. Runs before \`onSuccess\`. */
+    sets?: (data: TData, variables: TVariables) => Array<[QueryKey, unknown]>;
   };
 
   export interface Mutation<TData, TVariables = void> {
+    [Symbol.dispose](): void;
     cancel(): Promise<void>;
+    dispose(): void;
+    readonly disposed: boolean;
     getState(): MutationState<TData>;
     mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
     reset(): void;
-    subscribe(listener: (state: MutationState<TData>) => void): Unsubscribe;
-    toStore(): SyncStore<MutationState<TData>>;
+    /** Stable \`SyncStore\` for framework integrations. Use \`mutation.store.subscribe\` + \`mutation.store.peek()\`. */
+    readonly store: SyncStore<MutationState<TData>>;
   }
 
   export function createMutation<TData, TVariables = void>(
     mutationFn: MutationFn<TData, TVariables>,
-    opts?: MutationOptions<TData>
+    opts?: MutationOptions<TData, TVariables>
   ): Mutation<TData, TVariables>;
 
   export type StreamRequestConfig<P extends string = string> = {
     body?: unknown;
+    fetchInit?: Omit<RequestInit, 'body' | 'headers' | 'method' | 'signal'>;
     headers?: Record<string, string>;
     method?: string;
     params?: Record<string, string | number | boolean>;
@@ -163,58 +193,56 @@ declare module '/courier' {
   };
 
   export type ReconnectOptions = {
+    delay?: number | ((attempt: number) => number);
     /** Total reconnect attempts after the first failure. Defaults to \`5\`. */
-    maxAttempts?: number;
-    retryDelay?: number | ((attempt: number) => number);
+    times?: number;
+  };
+
+  export type ReadableConfig<P extends string = string> = StreamRequestConfig<P> & {
+    /** Called when the reconnect budget is exhausted or a non-retriable error occurs. */
+    onError?: (error: Error) => void;
+    parse?: 'ndjson' | 'text';
+    /** Auto-reconnect on connection loss. \`true\` uses defaults (5 attempts). */
+    reconnect?: boolean | ReconnectOptions;
   };
 
   export type SseOptions<P extends string = string> = StreamRequestConfig<P> & {
-    /** Called when reconnect budget is exhausted. Not called on \`close()\`. */
+    /** Called when reconnect budget is exhausted. Not called on \`dispose()\`. */
     onError?: (error: Error) => void;
     /** Auto-reconnect with exponential backoff. \`true\` uses defaults (5 attempts). */
     reconnect?: boolean | ReconnectOptions;
   };
 
+  export type SseStatus = 'connecting' | 'open' | 'reconnecting' | 'closed';
+
   export type SseSource<TEvents extends Record<string, unknown> = Record<string, string>> = {
-    close(): void;
+    readonly closed: boolean;
+    readonly status: SseStatus;
+    [Symbol.dispose](): void;
+    dispose(): void;
     on<K extends keyof TEvents & string>(event: K, handler: (data: TEvents[K]) => void): () => void;
   };
 
   export interface StreamClient {
+    [Symbol.dispose](): void;
     cancelAll(): void;
+    readonly disposalSignal: AbortSignal;
     dispose(): void;
     readonly disposed: boolean;
     getHeaders(): Readonly<Record<string, string>>;
     headers(updates: Record<string, string | undefined>): void;
     readable<T = string, P extends string = string>(
       url: P,
-      config?: StreamRequestConfig<P> & { parse?: 'ndjson' | 'text' }
+      config?: ReadableConfig<P>
     ): AsyncGenerator<T>;
     sse<TEvents extends Record<string, unknown> = Record<string, string>, P extends string = string>(
       url: P,
       opts?: SseOptions<P>
     ): SseSource<TEvents>;
     use(interceptor: Interceptor): () => void;
-    [Symbol.dispose](): void;
   }
 
-  export function createStream(opts?: TransportOptions, sharedTransport?: TransportCore): StreamClient;
-
-  export interface TransportCore {
-    readonly baseUrl: string;
-    cancelAll(): void;
-    dispatch(ctx: FetchContext): Promise<Response>;
-    dispose(): void;
-    readonly disposed: boolean;
-    getHeaders(): Readonly<Record<string, string>>;
-    headers(updates: Record<string, string | undefined>): void;
-    mergeHeaders(perRequest?: Record<string, string>, extra?: Record<string, string>): Record<string, string>;
-    readonly timeout: number;
-    track(controller: AbortController): () => void;
-    use(interceptor: Interceptor): () => void;
-  }
-
-  export function createTransportCore(opts?: TransportOptions): TransportCore;
+  export function createStream(opts?: TransportOptions): StreamClient;
 
   export type CourierOptions = TransportOptions & {
     mutationDefaults?: MutationOptions;
@@ -222,34 +250,45 @@ declare module '/courier' {
   };
 
   export interface Courier {
+    [Symbol.dispose](): void;
     api: ApiClient;
     cancelAll(): void;
+    readonly disposalSignal: AbortSignal;
     dispose(): void;
     readonly disposed: boolean;
     headers(updates: Record<string, string | undefined>): void;
+    /** Accepts \`invalidates\` and \`sets\` cache shorthands in addition to \`MutationOptions\`. */
     mutation<TData, TVariables = void>(
       fn: MutationFn<TData, TVariables>,
-      opts?: MutationOptions<TData>
+      opts?: CourierMutationOptions<TData, TVariables>
     ): Mutation<TData, TVariables>;
     query: QueryClient;
     stream: StreamClient;
     use(interceptor: Interceptor): () => void;
-    [Symbol.dispose](): void;
   }
 
   export function createCourier(opts?: CourierOptions): Courier;
 
-  /** Bind qc.refetchStale() to visibilitychange and window online events. Returns unbind fn. */
-  export function bindRefetch(qc: { refetchStale(): void }): () => void;
+  /** Bind qc.refetchStale() to visibilitychange and window online events. Pass \`opts.signal\` (e.g. \`qc.disposalSignal\`) to auto-remove listeners on disposal. Returns unbind fn. */
+  export function bindRefetch(qc: { refetchStale(): void }, opts?: { signal?: AbortSignal }): () => void;
 
-  export type BatcherOptions<K, V> = {
-    maxSize?: number;
-    resolve: (keys: K[]) => Promise<V[]>;
-    window?: number;
-  };
+  export type BatcherOptions<K, V> =
+    | {
+        maxSize?: number;
+        resolve: (keys: K[]) => Promise<V[]>;
+        window?: number;
+      }
+    | {
+        maxSize?: number;
+        /** Per-key error isolation — each \`load()\` fulfills or rejects independently. */
+        resolveSettled: (keys: K[]) => Promise<PromiseSettledResult<V>[]>;
+        window?: number;
+      };
 
   export interface Batcher<K, V> {
+    [Symbol.dispose](): void;
     dispose(): void;
+    readonly disposed: boolean;
     load(key: K): Promise<V>;
   }
 
@@ -268,42 +307,59 @@ declare module '/courier' {
 
   export interface PersistStorage {
     getItem(key: string): Promise<string | null> | string | null;
-    removeItem(key: string): Promise<void> | void;
     setItem(key: string, value: string): Promise<void> | void;
   }
 
   export type PersistOptions = {
-    include?: (key: QueryKey) => boolean;
+    /** Keys to persist/hydrate: explicit \`QueryKey[]\` list or predicate function. */
+    keys: QueryKey[] | ((key: QueryKey) => boolean);
     maxAge?: number;
     onError?: (err: unknown, key: QueryKey) => void;
     prefix?: string;
     storage: PersistStorage;
   };
 
-  export function persistQueryCache(
-    qc: QueryClient,
-    opts: PersistOptions & { keys: QueryKey[] }
-  ): () => void;
+  export function persistQueryCache(qc: QueryClient, opts: PersistOptions): () => void;
+  export function hydrateQueryCache(qc: QueryClient, opts: PersistOptions): Promise<void>;
 
-  export function hydrateQueryCache(
-    qc: QueryClient,
-    opts: PersistOptions & { keys: QueryKey[] }
-  ): Promise<void>;
+  export class CourierError extends Error {
+    readonly name: 'CourierError';
+    static is(err: unknown): err is CourierError;
+  }
 
-  export class HttpError extends Error {
+  export class HttpError extends CourierError {
     readonly name: 'HttpError';
-    readonly kind: 'abort' | 'http' | 'network' | 'timeout';
     readonly url: string;
     readonly method: string;
-    readonly status?: number;
-    readonly data?: unknown;
-    readonly response?: Response;
-    readonly headers?: Headers;
-    readonly isTimeout: boolean;
-    readonly isAborted: boolean;
+    readonly status: number;
+    readonly data: unknown;
+    readonly headers: Headers;
     static is(err: unknown, status?: number): err is HttpError;
-    static fromResponse(response: Response, method: string): Promise<HttpError>;
-    static fromCause(cause: unknown, method: string, url: string): HttpError;
+    static fromResponse(response: Response, body: unknown, method: string, url: string): HttpError;
+  }
+
+  export class NetworkError extends CourierError {
+    readonly name: 'NetworkError';
+    readonly url: string;
+    readonly method: string;
+  }
+
+  export class TimeoutError extends CourierError {
+    readonly name: 'TimeoutError';
+    readonly url: string;
+    readonly method: string;
+  }
+
+  export class AbortError extends CourierError {
+    readonly name: 'AbortError';
+    readonly url: string;
+    readonly method: string;
+  }
+
+  export class SchemaValidationError extends CourierError {
+    readonly name: 'SchemaValidationError';
+    readonly data: unknown;
+    static is(err: unknown): err is SchemaValidationError;
   }
 }
 `;

@@ -1,14 +1,11 @@
 export const scopeSetupExample = {
-  code: `import { signal, effect, scope, onCleanup, getSignalName } from '@vielzeug/ripple'
+  code: `import { signal, effect, scope, onCleanup } from '@vielzeug/ripple'
 
 // scope(setup?) runs setup immediately — no separate s.run() needed.
 // Useful for grouping a set of reactive resources into one lifecycle unit.
 
 const temperature = signal(20, { name: 'temperature' })
 const unit = signal<'C' | 'F'>('C', { name: 'unit' })
-
-console.log('temperature signal name:', getSignalName(temperature))
-console.log('unit signal name:', getSignalName(unit))
 
 // Create a scope with inline setup
 const weatherScope = scope(() => {

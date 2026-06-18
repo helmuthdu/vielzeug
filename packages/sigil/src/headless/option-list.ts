@@ -2,12 +2,7 @@ import { assert } from '@vielzeug/arsenal';
 import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
-import {
-  createOverlayControl,
-  type DialogCloseReason,
-  type OverlayOpenReason,
-  type OverlayPositioner,
-} from './overlay';
+import { createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -18,49 +13,48 @@ export type BaseOptionItem = object;
 export type PlacementOptions = Omit<DropdownPositionerOptions, 'getFloating' | 'getReference'>;
 
 export type OptionListOptions<T extends BaseOptionItem> = {
+  /** Returns the element used as the outside-click boundary. */
+  getBoundary: () => HTMLElement | null;
   /**
-   * Required DOM element accessors. These functions are called lazily so they
-   * safely return `null` before the first render.
+   * Returns the currently focused option element for scroll-into-view.
+   * When omitted, `scrollFocusedIntoView()` is a no-op.
    */
-  dom: {
-    getBoundary: () => HTMLElement | null;
-    /**
-     * Returns the currently focused option element for scroll-into-view.
-     * When omitted, `scrollFocusedIntoView()` is a no-op.
-     */
-    getFocusedOptionElement?: () => HTMLElement | null;
-    getPanel: () => HTMLElement | null;
-    getReference: () => HTMLElement | null;
-    getTrigger?: () => HTMLElement | null;
-  };
+  getFocusedOptionElement?: () => HTMLElement | null;
+  /**
+   * Returns a plain-text label for the item at `index`.
+   * When provided, the list control supports typeahead.
+   */
+  getItemLabel?: (item: T, index: number) => string;
+  /** Returns the current list items. */
+  getItems: () => T[];
+  /**
+   * Derives a stable `id` for the option at `index`.
+   * When provided, `aria-activedescendant` is reactively set on the trigger element
+   * to reflect the currently focused option (WAI-ARIA listbox / combobox pattern).
+   */
+  getOptionId?: (index: number) => string;
+  /** Returns the floating panel element. */
+  getPanel: () => HTMLElement | null;
+  /** Returns the reference (trigger anchor) element for positioning. */
+  getReference: () => HTMLElement | null;
+  /** Returns the trigger element. Focus is restored here on close. */
+  getTrigger?: () => HTMLElement | null;
   /** Returns `true` when all interactions should be suppressed (e.g. the host is disabled). */
   isDisabled?: () => boolean;
-  /** Item accessors — describe the shape and content of each option. */
-  items: {
-    /**
-     * Returns a plain-text label for the item at `index`.
-     * When provided, the list control supports typeahead.
-     */
-    getItemLabel?: (item: T, index: number) => string;
-    getItems: () => T[];
-    /**
-     * Derives a stable `id` for the option at `index`.
-     * When provided, `aria-activedescendant` is reactively set on the trigger element
-     * to reflect the currently focused option (WAI-ARIA listbox / combobox pattern).
-     */
-    getOptionId?: (index: number) => string;
-    isItemDisabled?: (item: T, index: number) => boolean;
-  };
+  isItemDisabled?: (item: T, index: number) => boolean;
   /** Override default keyboard bindings for navigation actions. */
   keys?: Partial<Record<ListNavigationAction, string[]>>;
   /** Whether list navigation wraps around at the first/last item. Default: `true`. */
   loop?: boolean;
-  /** Event callbacks fired on open, close, and keyboard navigation. */
-  on?: {
-    onClose?: (reason: DialogCloseReason) => void;
-    onNavigate?: (action: ListKeyAction, index: number, event: KeyboardEvent) => void;
-    onOpen?: (reason: OverlayOpenReason) => void;
-  };
+  /** Called when the list closes. */
+  onClose?: (reason: DialogCloseReason) => void;
+  /**
+   * Called when keyboard navigation lands on an item.
+   * `event` is the originating `KeyboardEvent`, or `undefined` for programmatic navigation.
+   */
+  onNavigate?: (action: ListKeyAction, index: number, event?: KeyboardEvent) => void;
+  /** Called when the list opens. */
+  onOpen?: (reason: OverlayOpenReason) => void;
   /**
    * Restricts keyboard navigation direction for the option list.
    * Defaults to `'vertical'` when omitted (up/down arrow keys).
@@ -80,8 +74,6 @@ export type OptionListHandle<T extends BaseOptionItem> = {
   /** Reactive `aria-expanded` value as string (`'true'` / `'false'`). */
   readonly ariaExpanded: ReadonlySignal<string>;
   close(reason?: DialogCloseReason): void;
-  /** Navigate to the first enabled item. Returns the resolved index, or -1 if none. */
-  first(): number;
   /**
    * Focused item index (read-only). Write via `set(index)` to update through
    * the list control — this ensures scroll-into-view and disabled-item checks.
@@ -91,20 +83,13 @@ export type OptionListHandle<T extends BaseOptionItem> = {
   handleKeydown(event: KeyboardEvent): boolean;
   /** Open state (read-only). Mutate via `open()`, `close()`, or `toggle()`. */
   readonly isOpen: ReadonlySignal<boolean>;
-  /** Navigate to the last enabled item. Returns the resolved index, or -1 if none. */
-  last(): number;
-  /** Navigate to the next enabled item. Returns the resolved index, or -1 if none. */
-  next(): number;
-  open(reason?: OverlayOpenReason): void;
   /**
-   * The underlying dropdown positioner. Exposed as an escape hatch for components
-   * that need to imperatively trigger a position update (e.g. `combobox` after
-   * filtering options changes the list height).
+   * Programmatically navigate to a named position. Always fires `onNavigate`
+   * (scroll-into-view, aria-activedescendant update).
+   * Returns the resolved index, or `-1` if no enabled item was found.
    */
-  readonly positioner: OverlayPositioner;
-  /** Navigate to the previous enabled item. Returns the resolved index, or -1 if none. */
-  prev(): number;
-  reset(): void;
+  navigate(action: ListNavigationAction): number;
+  open(reason?: OverlayOpenReason): void;
   scrollFocusedIntoView(): void;
   /**
    * Set focus to the item at `index`. Returns the resolved index.
@@ -117,6 +102,8 @@ export type OptionListHandle<T extends BaseOptionItem> = {
    * - Closes with `closeReason` (default `'trigger'`).
    */
   toggle(openReason?: OverlayOpenReason, closeReason?: DialogCloseReason): void;
+  /** Imperatively re-run dropdown positioning (e.g. after filter changes list height). */
+  updatePosition(): void;
 };
 
 // ── Factory ───────────────────────────────────────────────────────────────────
@@ -128,56 +115,54 @@ export type OptionListHandle<T extends BaseOptionItem> = {
  * overlay wiring. Composes overlay.ts + nav.ts into a single complete API.
  */
 export const createOptionList = <T extends BaseOptionItem>(options: OptionListOptions<T>): OptionListHandle<T> => {
-  assert(typeof options.dom.getBoundary === 'function', '[sigil] createOptionList: dom.getBoundary is required');
-  assert(typeof options.dom.getPanel === 'function', '[sigil] createOptionList: dom.getPanel is required');
-  assert(typeof options.dom.getReference === 'function', '[sigil] createOptionList: dom.getReference is required');
+  assert(typeof options.getBoundary === 'function', '[@vielzeug/sigil] createOptionList: getBoundary is required');
+  assert(typeof options.getPanel === 'function', '[@vielzeug/sigil] createOptionList: getPanel is required');
+  assert(typeof options.getReference === 'function', '[@vielzeug/sigil] createOptionList: getReference is required');
 
   const isOpen = signal(false);
-  const focusedIndex = signal(-1);
 
   const ariaExpanded = computed(() => String(isOpen.value));
-  const ariaActiveDescendant = computed<string | null>(() => {
-    const idx = focusedIndex.value;
-
-    return options.items.getOptionId && isOpen.value && idx >= 0 ? options.items.getOptionId(idx) : null;
-  });
 
   const positioner = createDropdownPositioner({
     ...options.positioning,
-    getFloating: options.dom.getPanel,
-    getReference: options.dom.getReference,
+    getFloating: options.getPanel,
+    getReference: options.getReference,
   });
 
   const scrollFocusedIntoView = (): void => {
-    options.dom.getFocusedOptionElement?.()?.scrollIntoView({ block: 'nearest' });
+    options.getFocusedOptionElement?.()?.scrollIntoView({ block: 'nearest' });
   };
 
   const list = createListControl<T>({
     disabled: () => !isOpen.value,
-    getIndex: () => focusedIndex.value,
-    getItemLabel: options.items.getItemLabel,
-    getItems: options.items.getItems,
-    isItemDisabled: options.items.isItemDisabled,
+    getItemLabel: options.getItemLabel,
+    getItems: options.getItems,
+    isItemDisabled: options.isItemDisabled,
     keys: options.keys,
     loop: options.loop ?? true,
     onNavigate: (action, index, event) => {
-      if (index >= 0) options.on?.onNavigate?.(action, index, event);
+      scrollFocusedIntoView();
+
+      if (index >= 0) options.onNavigate?.(action, index, event);
     },
     orientation: options.orientation,
-    setIndex: (index) => {
-      focusedIndex.value = index;
-      scrollFocusedIntoView();
-    },
+    signal: options.signal,
+  });
+
+  const ariaActiveDescendant = computed<string | null>(() => {
+    const idx = list.focusedIndex.value;
+
+    return options.getOptionId && isOpen.value && idx >= 0 ? options.getOptionId(idx) : null;
   });
 
   const overlay = createOverlayControl({
-    getBoundary: options.dom.getBoundary,
-    getPanel: options.dom.getPanel,
-    getTrigger: options.dom.getTrigger,
+    getBoundary: options.getBoundary,
+    getPanel: options.getPanel,
+    getTrigger: options.getTrigger,
     isDisabled: options.isDisabled,
     isOpen: () => isOpen.value,
-    onClose: options.on?.onClose,
-    onOpen: options.on?.onOpen,
+    onClose: options.onClose,
+    onOpen: options.onOpen,
     positioner,
     restoreFocus: options.restoreFocus,
     setOpen: (next) => {
@@ -204,25 +189,19 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
     return list.handleKeydown(event);
   };
 
-  options.signal.addEventListener('abort', () => list.cleanup(), { once: true });
-
   return {
     ariaActiveDescendant,
     ariaExpanded,
     close: (reason) => overlay.close(reason),
-    first: list.first,
-    focusedIndex,
+    focusedIndex: list.focusedIndex,
     getActiveItem: list.getActiveItem,
     handleKeydown,
     isOpen,
-    last: list.last,
-    next: list.next,
+    navigate: list.navigate,
     open: (reason) => overlay.open(reason),
-    positioner,
-    prev: list.prev,
-    reset: list.reset,
     scrollFocusedIntoView,
     set: list.set,
     toggle: (openReason, closeReason) => overlay.toggle(openReason, closeReason),
+    updatePosition: positioner.update,
   };
 };

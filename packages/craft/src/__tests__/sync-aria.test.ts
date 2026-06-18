@@ -116,6 +116,18 @@ describe('syncAria()', () => {
       expect(el.getAttribute('aria-expanded')).toBe('true');
     });
 
+    it('warns when called with autoCleanup outside a setup context', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const el = document.createElement('div');
+      const label = signal('test');
+
+      const cleanup = syncAria(el, { label }, { autoCleanup: true });
+
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('autoCleanup'));
+      cleanup();
+      warnSpy.mockRestore();
+    });
+
     it('registers autoCleanup inside component setup context', async () => {
       const expanded = signal(false);
       let capturedBtn!: HTMLButtonElement;

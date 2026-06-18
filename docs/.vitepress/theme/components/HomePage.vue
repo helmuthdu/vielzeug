@@ -112,57 +112,64 @@ const monoVersion = computed(() => {
 
 const categories = [
   {
-    name: 'State & Reactivity',
-    icon: 'zap',
+    name: 'Core Primitives',
+    icon: 'atom',
     packages: [
-      { id: 'ripple', tagline: 'Signals, computed, effects' },
-      { id: 'craft', tagline: 'Web component primitives' },
       { id: 'clockwork', tagline: 'Finite state machines' },
-      { id: 'forge', tagline: 'Form state & validation' },
+      { id: 'ripple', tagline: 'Signals, computed, effects' },
     ],
   },
   {
-    name: 'Data & Network',
+    name: 'Data Layer',
     icon: 'database',
     packages: [
       { id: 'courier', tagline: 'HTTP client & caching' },
-      { id: 'vault', tagline: 'Browser storage' },
+      { id: 'pulse', tagline: 'WebSocket client & presence' },
       { id: 'sourcerer', tagline: 'Reactive data sources' },
+      { id: 'vault', tagline: 'Browser storage' },
+    ],
+  },
+  {
+    name: 'UI Components',
+    icon: 'layout',
+    packages: [
+      { id: 'craft', tagline: 'Web component primitives' },
+      { id: 'dnd', tagline: 'Drag & drop' },
+      { id: 'orbit', tagline: 'Floating positioning' },
+      { id: 'prism', tagline: 'SVG charts' },
+      { id: 'scroll', tagline: 'Virtual lists' },
+      { id: 'sigil', tagline: 'Accessible components' },
+    ],
+  },
+  {
+    name: 'Forms & Validation',
+    icon: 'check-square',
+    packages: [
+      { id: 'forge', tagline: 'Form state & validation' },
       { id: 'spell', tagline: 'Schema validation' },
     ],
   },
   {
-    name: 'UI & Interaction',
-    icon: 'layers',
-    packages: [
-      { id: 'sigil', tagline: 'Accessible components' },
-      { id: 'prism', tagline: 'SVG charts' },
-      { id: 'orbit', tagline: 'Floating positioning' },
-      { id: 'grip', tagline: 'Drag & drop' },
-      { id: 'scroll', tagline: 'Virtual lists' },
-    ],
-  },
-  {
-    name: 'Architecture',
-    icon: 'box',
+    name: 'App Infrastructure',
+    icon: 'building-2',
     packages: [
       { id: 'conduit', tagline: 'Dependency injection' },
+      { id: 'familiar', tagline: 'Web Worker pool' },
       { id: 'herald', tagline: 'Typed event bus' },
       { id: 'ward', tagline: 'RBAC & permissions' },
       { id: 'wayfinder', tagline: 'Client-side routing' },
-      { id: 'familiar', tagline: 'Web Worker pool' },
     ],
   },
   {
-    name: 'Utilities',
+    name: 'Utilities & Tools',
     icon: 'wrench',
     packages: [
       { id: 'arsenal', tagline: '75+ utility functions' },
-      { id: 'tempo', tagline: 'Date & time' },
+      { id: 'codex', tagline: 'AI / MCP server' },
+      { id: 'coins', tagline: 'Monetary arithmetic' },
       { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },
-      { id: 'coins', tagline: 'Monetary arithmetic' },
-      { id: 'codex', tagline: 'AI / MCP server' },
+      { id: 'tempo', tagline: 'Date & time' },
     ],
   },
 ];
@@ -269,9 +276,7 @@ onUnmounted(() => cancelAnimationFrame(rafId));
               </sg-button>
             </a>
             <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer" tabindex="-1">
-              <sg-button variant="outline" color="primary" size="md">
-                GitHub
-              </sg-button>
+              <sg-button variant="outline" color="primary" size="md"> GitHub </sg-button>
             </a>
           </div>
         </div>
@@ -289,9 +294,7 @@ onUnmounted(() => cancelAnimationFrame(rafId));
               <g transform="matrix(4.0000082,0,0,4.0000082,-249.00051,-70.402338)">
                 <!-- Nucleus: original bolt path + glow circle -->
                 <g transform="rotate(12.883023,70.356812,25.230466)">
-                  <path
-                    style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763"
-                    :d="nucleusTailD" />
+                  <path style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763" :d="nucleusTailD" />
                   <circle style="fill: #f3f3f3; fill-opacity: 0.702703" cx="70.25032" cy="24.120285" r="1.1067405" />
                 </g>
                 <ellipse
@@ -434,7 +437,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     <section class="explorer" :class="{ visible: categoriesVisible }">
       <div class="explorer-inner">
         <h2 class="section-title">The complete toolkit</h2>
-        <p class="section-subtitle">23 packages, each focused on one domain. Pick what you need.</p>
+        <p class="section-subtitle">24 packages, each focused on one domain. Pick what you need.</p>
         <div class="category-grid">
           <div v-for="cat in categories" :key="cat.name" class="category-section">
             <h3 class="category-name">
@@ -730,7 +733,6 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 .hero-actions a {
   text-decoration: none;
 }
-
 
 /* ── Hero Visual ───────────────────────────────────────────── */
 

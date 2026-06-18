@@ -6,8 +6,9 @@ import { debugTracingExample } from './debug-tracing';
 import { entryExitActionsExample } from './entry-exit-actions';
 import { guardsAndActionsExample } from './guards-and-actions';
 import { hierarchicalStatesExample } from './hierarchical-states';
-import { middlewareExample } from './middleware';
+import { interceptorsExample } from './middleware';
 import { persistenceExample } from './persistence';
+import { resolveAndErrorExample } from './resolve-and-error';
 
 export const clockworkExamples = {
   'after-transitions': afterTransitionsExample,
@@ -18,6 +19,7 @@ export const clockworkExamples = {
   'entry-exit-actions': entryExitActionsExample,
   'guards-and-actions': guardsAndActionsExample,
   'hierarchical-states': hierarchicalStatesExample,
-  middleware: middlewareExample,
+  interceptors: interceptorsExample,
   persistence: persistenceExample,
+  'resolve-and-error': resolveAndErrorExample,
 };

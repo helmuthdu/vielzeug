@@ -1,18 +1,16 @@
 export const contextValidationExample = {
-  code: `import { defineMachine, interpret, MachineError } from '@vielzeug/clockwork'
+  code: `import { machine, MachineError } from '@vielzeug/clockwork'
 
-// Context validator — called on init and after every transition
+// Context validator — return true if valid, or a string error message if not
 function isValidProfile(ctx) {
-  return (
-    typeof ctx === 'object' && ctx !== null &&
-    typeof ctx.username === 'string' &&
-    typeof ctx.age === 'number' &&
-    ctx.age >= 0 &&
-    Array.isArray(ctx.tags)
-  )
+  if (typeof ctx !== 'object' || ctx === null) return 'context must be an object'
+  if (typeof ctx.username !== 'string') return 'username must be a string'
+  if (typeof ctx.age !== 'number' || ctx.age < 0) return 'age must be a non-negative number'
+  if (!Array.isArray(ctx.tags)) return 'tags must be an array'
+  return true
 }
 
-const profileMachine = defineMachine({
+const profileConfig = {
   initial: 'idle',
   context: { username: 'guest', age: 0, tags: [] },
   validateContext: isValidProfile,
@@ -36,9 +34,9 @@ const profileMachine = defineMachine({
       },
     },
   },
-})
+}
 
-const m = interpret(profileMachine)
+const m = machine(profileConfig)
 console.log('Initial:', m.state.value, JSON.stringify(m.context.value))
 
 // Valid update
@@ -46,14 +44,14 @@ m.send({ type: 'UPDATE', username: 'alice', age: 30, tags: ['admin'] })
 console.log('After UPDATE:', JSON.stringify(m.context.value))
 
 // Guard blocks ACTIVATE for guest user
-const guest = interpret(profileMachine)
+const guest = machine(profileConfig)
 const activated = guest.send({ type: 'ACTIVATE' })
-console.log('Guest activated?', activated)          // false — guard blocked it
+console.log('Guest activated?', activated.status)   // 'rejected' — guard blocked it
 console.log('State still:', guest.state.value)      // 'idle'
 
 // validateContext also runs when restoring a snapshot — bad context throws
 try {
-  interpret(profileMachine, {
+  machine(profileConfig, {
     snapshot: { state: 'idle', context: { username: 123, age: -1, tags: null } },
   })
 } catch (err) {

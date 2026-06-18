@@ -490,4 +490,17 @@ describe('sg-drawer accessibility', () => {
       });
     }
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-drawer', {
+        attrs: { title: 'Navigation' },
+        html: '<p>Drawer content</p>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

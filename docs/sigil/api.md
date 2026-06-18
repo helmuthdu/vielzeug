@@ -5,21 +5,21 @@ description: Entry points, import paths, and exported symbols for @vielzeug/sigi
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol | Purpose | Execution mode | Common gotcha |
-| --- | --- | --- | --- |
-| `@vielzeug/sigil/styles` | Load shared design tokens and base styles | Sync | Import before any component registration |
-| `@vielzeug/sigil/<component>` | Register a specific component as a custom element | Sync | Import styles first or components render without tokens |
-| `@vielzeug/sigil` | Register all published components + export shared symbols | Sync | Larger bundle — prefer per-component imports |
-| `lifecycleSignal()` | Create an `AbortSignal` tied to a Craft component's cleanup | Sync | Call once per `setup()` — do not share across component instances |
-| `createTextField()` | Headless text/textarea field controller | Sync | Requires `signal` from `lifecycleSignal()` |
-| `createChoiceField()` | Headless single/multi-select controller | Sync | Requires `signal`; normalises both `string` and `string[]` values |
-| `createCheckable()` | Headless checkbox/radio controller | Sync | Wire `handleClick` and `handleKeydown` to the host element |
-| `createOverlayControl()` | Headless open/close/toggle for overlays | Sync | `cleanup()` / `dispose()` close silently — do not fire `onClose` |
-| `createOptionList()` | Headless dropdown list (open state + navigation + positioner) | Sync | Requires `dom.getBoundary`, `dom.getPanel`, `dom.getReference` |
-| `createListControl()` | Keyboard-navigable list (no open state) | Sync | `set(-1)` resets focus; `cleanup()` cancels typeahead timer |
-| `toast` | Programmatic toast notification API | Sync | Requires `sg-toast` to be registered and mounted in the DOM |
+| Symbol                        | Purpose                                                       | Execution mode | Common gotcha                                                     |
+| ----------------------------- | ------------------------------------------------------------- | -------------- | ----------------------------------------------------------------- |
+| `@vielzeug/sigil/styles`      | Load shared design tokens and base styles                     | Sync           | Import before any component registration                          |
+| `@vielzeug/sigil/<component>` | Register a specific component as a custom element             | Sync           | Import styles first or components render without tokens           |
+| `@vielzeug/sigil`             | Register all published components + export shared symbols     | Sync           | Larger bundle — prefer per-component imports                      |
+| `lifecycleSignal()`           | Create an `AbortSignal` tied to a Craft component's cleanup   | Sync           | Call once per `setup()` — do not share across component instances |
+| `createTextField()`           | Headless text/textarea field controller                       | Sync           | Requires `signal` from `lifecycleSignal()`                        |
+| `createChoiceField()`         | Headless single/multi-select controller                       | Sync           | Requires `signal`; normalises both `string` and `string[]` values |
+| `createCheckable()`           | Headless checkbox/radio controller                            | Sync           | Wire `handleClick` and `handleKeydown` to the host element        |
+| `createOverlayControl()`      | Headless open/close/toggle for overlays                       | Sync           | `dispose()` closes silently — does not fire `onClose`             |
+| `createOptionList()`          | Headless dropdown list (open state + navigation + positioner) | Sync           | Requires `dom.getBoundary`, `dom.getPanel`, `dom.getReference`    |
+| `createListControl()`         | Keyboard-navigable list (no open state)                       | Sync           | `set(-1)` resets focus; `dispose()` cancels typeahead timer       |
+| `toast`                       | Programmatic toast notification API                           | Sync           | Requires `sg-toast` to be registered and mounted in the DOM       |
 
 ## Package Entry Points
 
@@ -208,15 +208,15 @@ import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
 
 Shared types used across multiple components:
 
-| Type                | Package path              | Description                                                                          |
-| ------------------- | ------------------------- | ------------------------------------------------------------------------------------ |
-| `ThemeColor`        | `@vielzeug/sigil/types`   | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`           |
-| `VisualVariant`     | `@vielzeug/sigil/types`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'`       |
-| `SurfaceVariant`    | `@vielzeug/sigil/types`   | `VisualVariant \| 'glass'` — use for container components that support glass effect  |
-| `ComponentSize`     | `@vielzeug/sigil/types`   | `'sm' \| 'md' \| 'lg'`                                                               |
-| `RoundedSize`       | `@vielzeug/sigil/types`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`               |
-| `PaddingSize`       | `@vielzeug/sigil/types`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                            |
-| `AddEventListeners` | `@vielzeug/sigil/types`   | Mixin type that adds typed `addEventListener` / `removeEventListener` overloads      |
+| Type                | Package path            | Description                                                                         |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `ThemeColor`        | `@vielzeug/sigil/types` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`           |
+| `VisualVariant`     | `@vielzeug/sigil/types` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'`      |
+| `SurfaceVariant`    | `@vielzeug/sigil/types` | `VisualVariant \| 'glass'` — use for container components that support glass effect |
+| `ComponentSize`     | `@vielzeug/sigil/types` | `'sm' \| 'md' \| 'lg'`                                                              |
+| `RoundedSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`                |
+| `PaddingSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                            |
+| `AddEventListeners` | `@vielzeug/sigil/types` | Mixin type that adds typed `addEventListener` / `removeEventListener` overloads     |
 
 ## Notes
 
@@ -252,7 +252,7 @@ createTextField(options: TextFieldOptions): TextFieldHandle
 
 Headless controller for `<input>` and `<textarea>` elements. Manages value sync, validation triggers, character counter, and event wiring.
 
-**Key handle members:** `value` (writable signal), `wire(el, signal?)` (attaches listeners), `clear()`, `counter` (nullable reactive counter state), ARIA signals from `FieldHandle`.
+**Key handle members:** `value` (writable signal), `wire(el, signal?)` (attaches listeners — `value` is always synced from the DOM on every `input` event regardless of whether `onInput` is provided), `clear()`, `counter` (nullable reactive counter state), ARIA signals from `FieldHandle`.
 
 ### `createChoiceField(options)`
 
@@ -272,7 +272,9 @@ createCheckable(options: CheckableOptions): CheckableHandle
 
 Headless controller for checkboxes and radios. Handles checked/indeterminate state, group delegation, and keyboard activation.
 
-**Key handle members:** `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`, `checkableFormValue`.
+`CheckableHandle` extends `FieldHandle` — all ARIA signals and label state from `FieldHandle` are available directly on the handle.
+
+**Key handle members:** `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`, `checkableFormValue`, plus all `FieldHandle` members.
 
 ### `createOverlayControl(options)`
 
@@ -282,11 +284,9 @@ createOverlayControl(options: OverlayControlOptions): OverlayControl
 
 Headless open/close/toggle controller for dialogs, drawers, menus, and popovers. Handles outside-click detection, focus restoration, and positioner lifecycle.
 
-`cleanup()` closes silently — it does not fire `onClose`. Useful for component teardown. Automatically called on signal abort.
+`dispose()` closes silently — it does not fire `onClose`. Useful for component teardown. Automatically called on signal abort.
 
-**Methods:** `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle(openReason?, closeReason?)`, `cleanup()`, `dispose()`, `[Symbol.dispose]()`.
-
-> `dispose()` and `[Symbol.dispose]()` are aliases for `cleanup()` — use them for `using` declarations or resource-management patterns.
+**Methods:** `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle(openReason?, closeReason?)`, `dispose()`, `[Symbol.dispose]()`.
 
 ### `createOptionList(options)`
 
@@ -298,6 +298,8 @@ Composed headless primitive for dropdown option lists (select, combobox, menu). 
 
 **Required DOM accessors:** `dom.getBoundary`, `dom.getPanel`, `dom.getReference`.
 
+**Flat event callbacks** (no `on:` nesting): `onOpen`, `onClose`, `onNavigate` are passed directly at the top level of `OptionListOptions`.
+
 **Key handle members:** `isOpen`, `focusedIndex`, `ariaExpanded`, `ariaActiveDescendant`, `open()`, `close()`, `toggle()`, `first()`, `last()`, `next()`, `prev()`, `set()`, `reset()`, `handleKeydown()`, `scrollFocusedIntoView()`, `positioner`.
 
 ### `createListControl(options)`
@@ -308,7 +310,7 @@ createListControl<T>(options: ListNavigationOptions<T>): ListControl<T>
 
 Keyboard-navigable list controller without open state. Supports vertical/horizontal/omni navigation, disabled-item skipping, looping, and typeahead.
 
-`cleanup()` resets the typeahead timer — call it when disposing the host. `set(-1)` clears focus (equivalent to `reset()`).
+`dispose()` resets the typeahead timer and releases subscriptions. Implements `[Symbol.dispose]`. `set(-1)` clears focus (equivalent to `reset()`).
 
 **Navigation methods** return the resolved index (`number`), or `-1` when no enabled item was found.
 
@@ -322,27 +324,25 @@ Compose a custom keymap from a preset plus per-action overrides. Pass the result
 
 ### Other headless exports
 
-| Export | Description |
-| --- | --- |
-| `createField()` | Base field: IDs, ARIA signals, label state, validation trigger |
-| `createSpinnerControl()` | Number spinner step/clamp/keyboard logic (for `sg-number-input`) |
-| `createSliderControl()` | Range slider value/step/clamp/keyboard (for `sg-slider`) |
-| `createSwipeControl()` | Touch/pointer swipe gesture detection (carousel, drawer, toast dismiss) |
-| `createPaginatedList()` | Reactive page-index + page-items controller |
-| `createFocusTrap()` | Focus trap for modal dialogs |
-| `createFocusManager()` | Three-step focus lifecycle: capture → move → restore |
-| `createDatePickerControl()` | Full date-picker state (calendar, view switching, ISO parsing) |
-| `createDataGridControl()` | Data grid state (sorting, selection, column management). Note: `renderExpanded` uses `innerHTML` — sanitize untrusted data before returning |
-| `createTypeahead()` | Standalone typeahead search buffer with debounced reset |
-| `createDropdownPositioner()` | Floating dropdown positioner (wraps `orbit`) |
-| `createDialogFocusControl()` | Dialog-specific focus entry and restoration |
-| `createInteraction()` | Unified click/keyboard press handler for accessible interactive elements |
-| `dispatchKeyboardAction()` | Low-level keymap dispatcher — returns `true` when a key matched and was handled |
-| `announce()` | ARIA live-region announcer (polite or assertive, WeakMap-isolated) |
-| `syncedSignal()` | Local writable signal synced from a `ReadonlySignal` source |
-| `parseStringTriggers()` | Parse comma-separated trigger strings against an allowed set |
-| `getChoiceLabel()` | Read the display label from a `<sg-option>` or similar element |
-| `getLightChildrenByTag()` | Collect light-DOM children matching a tag name |
-| `toFiniteNumber()` | Parse a value to a finite number, returning `undefined` for non-finite |
-| `toFiniteNumberOr()` | Parse a value to a finite number with a fallback default |
-| `toPositiveStep()` | Coerce a step value to a positive finite number with a fallback |
+| Export                       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createField()`              | Base field: IDs, ARIA signals, label state, validation trigger                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `createSpinnerControl()`     | Number spinner step/clamp/keyboard logic (for `sg-number-input`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `createSliderControl()`      | Range slider value/step/clamp/keyboard (for `sg-slider`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `createSwipeControl()`       | Touch/pointer swipe gesture detection (carousel, drawer, toast dismiss). `dispose()` / `[Symbol.dispose]` cancel any in-flight swipe.                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `createPaginatedList()`      | Reactive page-index + page-items controller                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `createDatePickerControl()`  | Full date-picker state (calendar, view switching, ISO parsing). `goTo(year, month)` ignores `NaN`/`Infinity` year values.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `createDataGridControl()`    | Data grid state (sorting, selection, column management). Pagination is composed via `createPaginatedList` internally. `DataGridColumn.sortValue(item)` provides a typed sort-key extractor override. `selectedKeys` returns a `ReadonlySet` snapshot — mutate via `toggleRow`/`selectAll`/`setSelection`/`clearSelection`. `goToPage(n)` clamps to `[0, pageCount-1]` and ignores `NaN`/`Infinity`. `pageSize: 0` disables pagination and shows all rows. Note: `renderExpanded` uses `innerHTML` — sanitize untrusted data before returning. |
+| `createTypeahead()`          | Standalone typeahead search buffer with debounced reset. Optional `signal?: AbortSignal` cancels the pending timer on component disconnect.                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `createDropdownPositioner()` | Floating dropdown positioner (wraps `orbit`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `createDialogFocusControl()` | Dialog-specific focus entry and restoration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `createInteraction()`        | Unified click/keyboard press handler for accessible interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `dispatchKeyboardAction()`   | Low-level keymap dispatcher — returns `true` when a key matched and was handled                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `announce()`                 | ARIA live-region announcer (polite or assertive, WeakMap-isolated)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `syncedSignal()`             | Local writable signal synced from a `ReadonlySignal` source. `abortSignal` is optional — omit in non-component contexts (e.g. tests). Canonical implementation lives in `signals.ts`.                                                                                                                                                                                                                                                                                                                                                         |
+| `parseStringTriggers()`      | Parse comma-separated trigger strings against an allowed set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `getChoiceLabel()`           | Read the display label from a `<sg-option>` or similar element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `getLightChildrenByTag()`    | Collect light-DOM children matching a tag name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `toFiniteNumber()`           | Parse a value to a finite number, returning `undefined` for non-finite                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `toFiniteNumberOr()`         | Parse a value to a finite number with a fallback default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `toPositiveStep()`           | Coerce a step value to a positive finite number with a fallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |

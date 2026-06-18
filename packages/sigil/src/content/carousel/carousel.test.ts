@@ -854,4 +854,19 @@ describe('sg-carousel', () => {
       expect(t.style.getPropertyValue('--_marquee-duration')).toBe('');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-carousel', {
+        attrs: { 'aria-label': 'Featured items' },
+        html: '<div>Slide 1</div><div>Slide 2</div>',
+      });
+
+      const results = await axeCheck(fixture.element, {
+        rules: { 'aria-prohibited-attr': { enabled: false } },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

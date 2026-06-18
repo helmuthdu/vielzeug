@@ -19,7 +19,8 @@
     pointer-events: none;
   }
 
-  /* Position variants */
+  /* ── Position variants ────────────────────────────────────────────────── */
+
   :host([position='top-left']) {
     --_inset-top: 1rem;
     --_inset-bottom: auto;
@@ -66,6 +67,8 @@
     --_inset-top: auto;
   }
 
+  /* ── Container ────────────────────────────────────────────────────────── */
+
   .toast-container {
     display: grid;
     grid-template-rows: 1fr;
@@ -73,10 +76,10 @@
     row-gap: 0;
     perspective: 1200px;
     perspective-origin: center center;
-    transition: var(--_motion-transition, row-gap var(--transition-normal) var(--ease-in-out));
+    transition: row-gap var(--transition-normal);
   }
 
-  /* Keep ARIA live regions without affecting stacking layout geometry. */
+  /* ARIA live regions are layout-transparent. */
   .toast-live-region {
     display: contents;
   }
@@ -84,6 +87,16 @@
   :host(.hovered) .toast-container {
     row-gap: var(--_gap);
   }
+
+  /* ── Wrapper (layout / stacking only — no animation) ─────────────────── */
+
+  /* .toast-wrapper owns: grid position, z-index, stacking transforms.       */
+
+  /* It never has opacity or transition set on it directly.                  */
+
+  /* This keeps stacking rules and animation rules on separate elements,     */
+
+  /* eliminating all specificity conflicts and !important usage.             */
 
   :host(:not(.hovered)) .toast-wrapper {
     grid-row: 1;
@@ -99,95 +112,29 @@
     position: relative;
     pointer-events: auto;
     touch-action: pan-y;
-    transform-origin: center bottom;
-    transition: var(
-      --_motion-transition,
-      transform var(--duration-500) var(--ease-overshoot),
-      opacity var(--duration-500) var(--ease-overshoot),
-      filter var(--duration-500) var(--ease-overshoot)
-    );
-    will-change: transform, opacity;
   }
 
-  /* Enter animation via @starting-style — no JS class needed */
-  @starting-style {
-    .toast-wrapper {
-      opacity: 0;
-      transform: translateY(1.5rem) scale(0.92);
-    }
-
-    :host([position^='top']) .toast-wrapper {
-      transform: translateY(-1.5rem) scale(0.92);
-    }
-  }
-
-  /* Exit animation */
-  .toast-wrapper.exiting {
-    z-index: -1 !important;
-    pointer-events: none;
-    transition: none !important;
-    animation: var(--_motion-animation, toast-exit var(--transition-exit) forwards);
-  }
-
-  @keyframes toast-exit {
-    to {
-      opacity: 0;
-      transform: scale(0.7);
-    }
-  }
-
-  /* Stacking (collapsed) */
+  /* Stacking (collapsed) — 3D perspective stack */
   :host(:not(.hovered)) .toast-wrapper:nth-last-child(1) {
     z-index: 3;
-    opacity: 1;
-    filter: brightness(1);
     transform: translateY(0) scale(1);
   }
 
   :host(:not(.hovered)) .toast-wrapper:nth-last-child(2) {
     z-index: 2;
     pointer-events: none;
-    opacity: 0.85;
-    filter: brightness(0.95);
     transform: translateY(-8px) scale(0.95);
   }
 
   :host(:not(.hovered)) .toast-wrapper:nth-last-child(3) {
     z-index: 1;
     pointer-events: none;
-    opacity: 0.7;
-    filter: brightness(0.9);
     transform: translateY(-14px) scale(0.9);
   }
 
   :host(:not(.hovered)) .toast-wrapper:nth-last-child(n + 4) {
+    visibility: hidden;
     pointer-events: none;
-    opacity: 0;
-  }
-
-  /* Expanded (hovered) */
-  :host(.hovered) .toast-wrapper {
-    z-index: auto !important;
-    grid-row: auto;
-    grid-column: 1;
-    align-self: stretch;
-    pointer-events: auto !important;
-    opacity: 1 !important;
-    filter: brightness(1) !important;
-    transform: none !important;
-  }
-
-  /* Staggered expand delays */
-  :host(.hovered) .toast-wrapper:nth-last-child(2) {
-    transition-delay: var(--duration-75);
-  }
-
-  :host(.hovered) .toast-wrapper:nth-last-child(3) {
-    transition-delay: var(--duration-100);
-  }
-
-  :host(.hovered) .toast-wrapper:nth-last-child(n + 4) {
-    transition-delay: var(--duration-150);
   }
 
   /* Top positions: reverse stacking direction */
@@ -203,15 +150,71 @@
     transform: translateY(14px) scale(0.9);
   }
 
-  ::slotted(sg-alert) {
+  /* Expanded (hovered) — stacking transforms are released per wrapper */
+  :host(.hovered) .toast-wrapper {
+    z-index: auto;
+    visibility: visible;
+    grid-row: auto;
+    grid-column: 1;
+    align-self: stretch;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  /* Staggered expand delays (applied to wrapper transform only) */
+  :host(.hovered) .toast-wrapper:nth-last-child(2) {
+    transition-delay: var(--duration-75);
+  }
+
+  :host(.hovered) .toast-wrapper:nth-last-child(3) {
+    transition-delay: var(--duration-100);
+  }
+
+  :host(.hovered) .toast-wrapper:nth-last-child(n + 4) {
+    transition-delay: var(--duration-150);
+  }
+
+  /* ── Inner (animation target only — no layout role) ──────────────────── */
+
+  /* .toast-inner owns: opacity, entry/exit transitions.                    */
+
+  /* It never participates in stacking (that's the wrapper's job).          */
+
+  /* Swipe gesture also animates .toast-inner to keep wrapper state clean.  */
+
+  .toast-inner {
+    position: relative;
+    opacity: 1;
+    transition: opacity var(--toast-exit-duration, 300ms) var(--ease-out);
+  }
+
+  /* Entry: snap to invisible with no transition, then rely on class removal to animate in */
+  .toast-inner.entering {
+    opacity: 0;
+    transition: none;
+  }
+
+  /* Exit: fade out — wrapper stays in-flow so grid doesn't snap shut prematurely */
+  .toast-inner.exiting {
+    pointer-events: none;
+    opacity: 0;
+  }
+
+  /* ── Alert inside toast ───────────────────────────────────────────────── */
+
+  ::slotted(sg-alert),
+  sg-alert {
     width: 100%;
     margin: 0;
     box-shadow: var(--shadow-lg);
+
+    /* Suppress sg-alert's own collapse animation — the toast-inner opacity
+       fade is the canonical exit. Passing --motion-animation: none overrides
+       the @keyframes sg-alert-exit that fires on [dismissing]. */
+    --_motion-animation: none;
   }
 
-  .toast-wrapper.exiting ::slotted(sg-alert) {
-    transition: none !important;
-  }
+  /* ── Action buttons ───────────────────────────────────────────────────── */
 
   .toast-actions {
     display: flex;
@@ -219,9 +222,7 @@
     justify-content: flex-end;
   }
 
-  /* ========================================
-       Responsive: small screens
-       ======================================== */
+  /* ── Responsive: small screens ────────────────────────────────────────── */
 
   @media (width <= 480px) {
     :host {

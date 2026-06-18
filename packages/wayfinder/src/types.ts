@@ -141,7 +141,7 @@ export type RouteContext<Params extends RouteParams = RouteParams, TRoutes exten
   /** Matched branch for the current navigation. Leaf node is the active route. */
   readonly matches: RouteMatchBranch;
   readonly navigate: (
-    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget,
+    target: NamedNavigationTarget<TRoutes> | RawNavigationTarget | string,
     options?: NavigateOptions,
   ) => Promise<void>;
   readonly params: Params;
@@ -367,6 +367,11 @@ export type RouteState<TMeta = unknown, TComponent = unknown> = {
 export type RouterOptions<TRoutes extends RouteTable = RouteTable, TMeta = unknown, TComponent = unknown> = {
   /** Base path for all routes (default: '/'). */
   base?: string;
+  /**
+   * Global search-param coercion applied to every route that does not define its own `coerceSearch`.
+   * Throwing inside this function falls back to the original raw query and is reported via `onError`.
+   */
+  coerceSearch?: CoerceSearchFn;
   /** Custom history driver. Defaults to `createBrowserHistory()`. */
   history?: HistoryDriver;
   /** Global middleware applied to every route. */
@@ -399,15 +404,15 @@ export interface HistoryDriver {
   };
   /** Navigate one entry back in history, equivalent to the browser back button. */
   back(): void;
-  push(url: string, state?: unknown): void;
-  replace(url: string, state?: unknown): void;
   /**
    * Subscribe to backwards/forwards navigation (popstate-equivalent).
    * `push()` and `replace()` are silent — they do not notify subscribers.
    * Only `back()` (and browser popstate events) trigger notifications.
    * Returns an unsubscribe function.
    */
-  subscribe(listener: () => void): () => void;
+  onPopstate(listener: () => void): () => void;
+  push(url: string, state?: unknown): void;
+  replace(url: string, state?: unknown): void;
 }
 
 export type Unsubscribe = () => void;
@@ -452,8 +457,8 @@ export type RouteRecord<TMeta = unknown, TComponent = unknown> = {
   readonly coerceSearch?: CoerceSearchFn;
   readonly leaf: RouteBranchDef<TMeta, TComponent>;
   readonly matcher: RouteMatcher;
-  /** Global + per-route middleware merged at compile time. TRoutes is erased. */
-  readonly middleware: readonly Middleware[];
+  /** Per-route + ancestor middleware only. Global middleware is applied at execution time. */
+  readonly ownMiddleware: readonly Middleware[];
   readonly path: string;
   readonly redirect?: NavigationTarget;
 };

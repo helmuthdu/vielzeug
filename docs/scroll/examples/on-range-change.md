@@ -1,53 +1,17 @@
 ---
-title: Zero-Allocation Range Callback
-description: Use onRangeChange to react to scroll position without allocating VirtualItem arrays.
+title: 'Scroll Examples — Infinite Scroll'
+description: 'Infinite scroll example for @vielzeug/scroll.'
 ---
 
-# Zero-Allocation Range Callback
+## Infinite Scroll
 
-`onRangeChange(first, last)` fires on every visible-window change **before** `onChange`, without allocating a `VirtualItem[]`. Use it for analytics, prefetching, or infinite-scroll triggers when you don't need the full item layout.
+### Problem
 
-## Only `onRangeChange` (zero allocation)
+You want to detect when the user nears the end of a virtual list and load more data. The `onChange` callback receives the current visible item range on every render, making it the natural place to trigger loads.
 
-When `onChange` is omitted, `v.items` stays `[]` — the offset table is still maintained but no array is built:
+### Solution
 
-```ts
-import { createVirtualizer } from '@vielzeug/scroll';
-
-const virt = createVirtualizer(scrollEl, {
-  count: 10_000,
-  estimateSize: 36,
-  // No onChange → zero VirtualItem[] allocation on scroll
-  onRangeChange(first, last) {
-    prefetchRows(first, last);
-  },
-});
-
-console.log(virt.items.length); // 0
-```
-
-## Alongside `onChange`
-
-Both callbacks can coexist. `onRangeChange` fires first — use it for side-effects while `onChange` handles rendering:
-
-```ts
-import { createVirtualizer } from '@vielzeug/scroll';
-
-createVirtualizer(scrollEl, {
-  count: 10_000,
-  estimateSize: 36,
-  onChange({ items, totalSize }) {
-    listEl.style.height = `${totalSize}px`;
-    render(items);
-  },
-  onRangeChange(first, last) {
-    // Fires before onChange — ideal for analytics/prefetch
-    analytics.trackVisible(first, last);
-  },
-});
-```
-
-## Infinite scroll trigger
+Use `virt.update({ count })` to extend the list after fetching. Check the last visible index in `onChange` to decide when to load.
 
 ```ts
 import { createVirtualizer } from '@vielzeug/scroll';
@@ -58,8 +22,11 @@ let count = 50;
 const virt = createVirtualizer(scrollEl, {
   count,
   estimateSize: 40,
-  onChange: ({ items, totalSize }) => render(items, totalSize),
-  onRangeChange: (_first, last) => {
+  onChange: ({ items, totalSize }) => {
+    render(items, totalSize);
+
+    const last = items.at(-1)?.index ?? -1;
+
     if (!loading && last >= count - 10) {
       loading = true;
       fetchMore().then((more) => {
@@ -71,3 +38,36 @@ const virt = createVirtualizer(scrollEl, {
   },
 });
 ```
+
+#### Analytics and prefetch
+
+Read the first and last rendered indices in `onChange` without any extra state:
+
+```ts
+createVirtualizer(scrollEl, {
+  count: 10_000,
+  estimateSize: 36,
+  onChange({ items, totalSize }) {
+    listEl.style.height = `${totalSize}px`;
+    render(items);
+
+    const first = items[0]?.index ?? -1;
+    const last = items.at(-1)?.index ?? -1;
+
+    if (first >= 0) {
+      analytics.trackVisible(first, last);
+      prefetchRows(first, last);
+    }
+  },
+});
+```
+
+### Pitfalls
+
+- Set a `loading` flag before the async call to prevent concurrent fetches while the previous one is in-flight.
+- `virt.update({ count })` only extends the list; call `virt.refresh()` if items are replaced rather than appended.
+
+### Related
+
+- [Basic Fixed Height List](./basic-fixed-height-list.md)
+- [Restore Scroll Position](./restore-scroll-position.md)

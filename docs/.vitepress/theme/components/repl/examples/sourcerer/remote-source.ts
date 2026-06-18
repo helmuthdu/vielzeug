@@ -22,7 +22,7 @@ console.log('Total:', source.meta.totalItems, '— Pages:', source.meta.pageCoun
 await source.next()
 console.log('Page 2:', source.current.map(x => x.name).join(', '))
 
-await source.searchNow('item 4')
+await source.search('item 4', { immediate: true })
 console.log('Search "item 4":', source.current.map(x => x.name))
 
 source.dispose()`,

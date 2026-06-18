@@ -50,14 +50,9 @@ export interface InlineOptions {
  *
  * Must be placed **before** `flip()` and other middleware in the pipeline.
  *
- * Import from the dedicated entrypoint to avoid bundling this for consumers who don't need it:
- * ```ts
- * import { inline } from '@vielzeug/orbit/inline';
- * ```
- *
  * @example Tooltip on selected text:
  * ```ts
- * import { inline } from '@vielzeug/orbit/inline';
+ * import { inline, float, flip, shift } from '@vielzeug/orbit';
  *
  * float(selectionRef, tooltip, {
  *   placement: 'top',

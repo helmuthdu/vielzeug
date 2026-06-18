@@ -45,13 +45,14 @@ async function getFloat() {
 
 #### What the Stubs Return
 
-| Export            | SSR Return Value                                                                         |
-| ----------------- | ---------------------------------------------------------------------------------------- |
-| `computePosition` | `{ x: 0, y: 0, placement, middlewareData: {} }`                                          |
-| `autoUpdate`      | `() => void` (no-op cleanup); `update` is never called                                   |
-| `float`           | `FloatHandle` with no-op `cleanup`/`update`; `getPosition()` returns a zero-coord result |
+| Export                 | SSR Return Value                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| `computePosition`      | `{ x: 0, y: 0, placement, middlewareData: {} }`                                       |
+| `autoUpdate`           | `() => void` (no-op cleanup); `update` is never called                                |
+| `computePositionAsync` | `Promise<{ x: 0, y: 0, placement, middlewareData: {} }>` (resolves immediately)       |
+| `float`                | `FloatHandle` with no-op `update`; `getPosition()` returns `null`; `disposed` tracked |
 
-The stub `FloatHandle` is fully typed — consuming code that calls `handle.cleanup()` or reads `handle.cssAnchor` will work identically on the server and the client.
+The stub `FloatHandle` is fully typed — consuming code that calls `handle.dispose()` will work identically on the server and the client. `disposed` is correctly tracked: it is `false` before `dispose()` and `true` after.
 
 #### SvelteKit Example
 
@@ -91,7 +92,7 @@ export async function loadFloat() {
     });
   });
 
-  onDestroy(() => handle?.cleanup());
+  onDestroy(() => handle?.dispose());
 </script>
 
 <button bind:this={triggerEl}>Hover me</button>

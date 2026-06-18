@@ -32,6 +32,17 @@ describe('QueryBuilder (via query)', () => {
       expect(await db.query('rows').equals('city', 'Paris').toArray()).toEqual([rowsData[0], rowsData[2]]);
     });
 
+    test('filter().equals() evaluates left-to-right — equals applies after filter', async () => {
+      // filter keeps age > 25 → [Bob(Berlin), Charlie(Paris)]; equals keeps city=Paris → [Charlie]
+      const result = await db
+        .query('rows')
+        .filter((r) => r.age > 25)
+        .equals('city', 'Paris')
+        .toArray();
+
+      expect(result).toEqual([rowsData[2]]);
+    });
+
     test('between is inclusive', async () => {
       expect(await db.query('rows').between('age', 25, 30).toArray()).toEqual([rowsData[0], rowsData[1]]);
     });

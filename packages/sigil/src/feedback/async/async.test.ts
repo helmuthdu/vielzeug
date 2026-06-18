@@ -323,4 +323,14 @@ describe('sg-async', () => {
       expect(fixture.query('.region-success')).not.toBeNull();
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-async', { attrs: { status: 'idle' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

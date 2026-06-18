@@ -52,7 +52,7 @@
     color: var(--sidebar-item-active-color, var(--color-primary));
     background: var(
       --sidebar-item-active-bg,
-      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+      var(--color-primary-100, color-mix(in oklch, var(--color-primary) 12%, transparent))
     );
   }
 
@@ -147,7 +147,7 @@
   :host([sidebar-collapsed][active]) .item-icon {
     background: var(
       --sidebar-item-active-bg,
-      var(--color-primary-100, color-mix(in srgb, var(--color-primary) 12%, transparent))
+      var(--color-primary-100, color-mix(in oklch, var(--color-primary) 12%, transparent))
     );
     border-radius: var(--rounded-full);
   }

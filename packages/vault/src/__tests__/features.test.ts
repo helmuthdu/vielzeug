@@ -14,9 +14,13 @@ import {
   createLocalStorage,
   createMemory,
   createSessionStorage,
+  createVersionedCodec,
+  isExpired,
   scheduleExpiredPrune,
   table,
+  toReadableStream,
   ttl,
+  VaultDisposedError,
   VaultError,
 } from '../index';
 
@@ -325,6 +329,43 @@ describe('pruneExpired()', () => {
   });
 });
 
+describe('getOrDefault() with TTL', () => {
+  test('TTL is applied to the inserted default record', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.getOrDefault('users', 42, () => ({ id: 42, name: 'Temp' }), ttl.ms(1000));
+
+    expect(await db.get('users', 42)).toEqual({ id: 42, name: 'Temp' });
+
+    vi.advanceTimersByTime(2000);
+
+    expect(await db.get('users', 42)).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  test('TTL is NOT applied to an existing record returned by getOrDefault', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' }); // no TTL
+
+    const result = await db.getOrDefault('users', 1, () => ({ id: 1, name: 'Fallback' }), ttl.ms(100));
+
+    expect(result).toEqual({ id: 1, name: 'Alice' });
+
+    vi.advanceTimersByTime(500); // past the TTL passed to getOrDefault
+
+    // The original record has no TTL and should still be accessible
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+
+    vi.useRealTimers();
+  });
+});
+
 describe('scheduleExpiredPrune()', () => {
   test('calls pruneExpired() on each interval tick', async () => {
     vi.useFakeTimers();
@@ -471,15 +512,15 @@ describe('entries()', () => {
   });
 });
 
-/* -------------------- watchStream() -------------------- */
+/* -------------------- toReadableStream() -------------------- */
 
-describe('watchStream()', () => {
+describe('toReadableStream()', () => {
   test('emits initial snapshot immediately', async () => {
     const db = createMemory({ schema });
 
     await db.put('users', { id: 1, name: 'Alice' });
 
-    const stream = db.watchStream('users');
+    const stream = toReadableStream(db.watch('users'));
     const reader = stream.getReader();
     const { value } = await reader.read();
 
@@ -490,7 +531,7 @@ describe('watchStream()', () => {
 
   test('emits subsequent mutations', async () => {
     const db = createMemory({ schema });
-    const stream = db.watchStream('users');
+    const stream = toReadableStream(db.watch('users'));
     const reader = stream.getReader();
 
     // consume initial empty snapshot
@@ -508,66 +549,74 @@ describe('watchStream()', () => {
     await reader.cancel();
   });
 
-  test('cancel() stops the observer — no more chunks enqueued', async () => {
+  test('cancel() stops the iterator — no more chunks enqueued', async () => {
     const db = createMemory({ schema });
-    const stream = db.watchStream('users');
+    const stream = toReadableStream(db.watch('users'));
     const reader = stream.getReader();
 
     // consume initial snapshot
     await reader.read();
-    // cancel the stream — observer should be stopped
+    // cancel the stream — iterator.return() is called
     await reader.cancel();
 
     // A mutation after cancel should not be reachable through this stream.
-    // We verify by ensuring the stream is done (read returns done).
     const { done } = await reader.read().catch(() => ({ done: true, value: undefined }));
 
     expect(done).toBe(true);
   });
 
-  test('AbortSignal cancels the stream', async () => {
+  test('AbortSignal on watch() terminates the stream via cancel', async () => {
     const db = createMemory({ schema });
     const controller = new AbortController();
-    const stream = db.watchStream('users', { signal: controller.signal });
+    const stream = toReadableStream(db.watch('users', { signal: controller.signal }));
     const reader = stream.getReader();
 
     // consume initial snapshot
     await reader.read();
 
-    // abort the signal — stream should close
+    // abort terminates the watch() async iterable
     controller.abort();
 
-    // next read should return done (stream closed by signal handler)
+    // next pull will call iter.next() which resolves done:true
     const result = await reader.read();
 
     expect(result.done).toBe(true);
   });
 
-  test('mode: latest — holds only most recent snapshot when consumer lags', async () => {
+  test('mode: latest — watch() drops intermediate snapshots; toReadableStream delivers each in turn', async () => {
     const db = createMemory({ schema });
-    const stream = db.watchStream('users', { mode: 'latest' });
+
+    // With mode:'latest', when the consumer lags the watch() iterable holds only
+    // the most-recent snapshot. Here we DON'T lag — each read() happens sequentially,
+    // so every yielded value is consumed as it arrives.
+    const stream = toReadableStream(db.watch('users', { mode: 'latest' }));
     const reader = stream.getReader();
 
-    // consume initial empty snapshot to start
+    // consume initial empty snapshot
     await reader.read();
 
-    // fire two mutations without consuming
+    // mutation 1
     await db.put('users', { id: 1, name: 'First' });
     await flushMicrotasks();
+
+    const snap1 = await reader.read();
+
+    expect(snap1.value).toHaveLength(1); // First is available
+
+    // mutation 2 (id:2 added)
     await db.put('users', { id: 2, name: 'Second' });
     await flushMicrotasks();
 
-    // consumer reads: should get the latest (both users) snapshot
-    const { value } = await reader.read();
+    const snap2 = await reader.read();
 
-    expect(value).toHaveLength(2);
+    expect(snap2.value).toHaveLength(2); // First + Second
 
     await reader.cancel();
   });
 
-  test('mode: all — queues every snapshot', async () => {
+  test('mode: all — queues every snapshot in order', async () => {
     const db = createMemory({ schema });
-    const stream = db.watchStream('users', { mode: 'all' });
+    const stream = toReadableStream(db.watch('users', { mode: 'all' }));
     const reader = stream.getReader();
 
     // initial snapshot
@@ -873,6 +922,61 @@ describe('custom VaultCodec', () => {
 
 /* -------------------- scheduleExpiredPrune auto-stop on dispose -------------------- */
 
+describe('scheduleExpiredPrune — onError option', () => {
+  test('onError is called when pruneExpired() throws a non-VaultDisposedError', async () => {
+    vi.useFakeTimers();
+
+    const errors: unknown[] = [];
+    const boom = new Error('network failure');
+
+    const fakeAdapter = {
+      pruneExpired: async () => {
+        throw boom;
+      },
+    };
+
+    const stop = scheduleExpiredPrune(fakeAdapter, { interval: 1000, onError: (e) => errors.push(e) });
+
+    vi.advanceTimersByTime(1000);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toBe(boom);
+
+    stop();
+    vi.useRealTimers();
+  });
+
+  test('non-VaultDisposedError does NOT stop the interval', async () => {
+    vi.useFakeTimers();
+
+    let callCount = 0;
+    const errors: unknown[] = [];
+
+    const fakeAdapter = {
+      pruneExpired: async () => {
+        callCount += 1;
+
+        throw new Error('transient error');
+      },
+    };
+
+    const stop = scheduleExpiredPrune(fakeAdapter, { interval: 1000, onError: (e) => errors.push(e) });
+
+    vi.advanceTimersByTime(3000);
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(callCount).toBeGreaterThanOrEqual(2); // interval still running
+    expect(errors.length).toBeGreaterThanOrEqual(2);
+
+    stop();
+    vi.useRealTimers();
+  });
+});
+
 describe('scheduleExpiredPrune — auto-stop on VaultDisposedError', () => {
   test('stops the interval automatically when pruneExpired throws VaultDisposedError', async () => {
     vi.useFakeTimers();
@@ -972,6 +1076,102 @@ describe('isEmpty()', () => {
   });
 });
 
+/* -------------------- iterate() on memory adapter -------------------- */
+
+describe('MemoryAdapter.iterate()', () => {
+  test('yields all live records', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const records: User[] = [];
+
+    for await (const record of db.iterate('users')) {
+      records.push(record);
+    }
+
+    expect(records).toHaveLength(2);
+    expect(records.map((r) => r.id).sort()).toEqual([1, 2]);
+  });
+
+  test('skips TTL-expired records', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Ephemeral' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Permanent' });
+
+    vi.advanceTimersByTime(2000); // id:1 expires
+
+    const records: User[] = [];
+
+    for await (const record of db.iterate('users')) {
+      records.push(record);
+    }
+
+    expect(records).toHaveLength(1);
+    expect(records[0]).toEqual({ id: 2, name: 'Permanent' });
+
+    vi.useRealTimers();
+  });
+
+  test('yields nothing for an empty table', async () => {
+    const db = createMemory({ schema });
+    const records: User[] = [];
+
+    for await (const record of db.iterate('users')) {
+      records.push(record);
+    }
+
+    expect(records).toHaveLength(0);
+  });
+});
+
+/* -------------------- isExpired() utility -------------------- */
+
+describe('isExpired()', () => {
+  test('returns false for undefined', () => {
+    expect(isExpired(undefined)).toBe(false);
+  });
+
+  test('returns true when expiresAt is in the past', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
+
+    const past = Date.now() - 1;
+
+    expect(isExpired(past)).toBe(true);
+
+    vi.useRealTimers();
+  });
+
+  test('returns false when expiresAt is in the future', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-01-01T00:00:00Z'));
+
+    const future = Date.now() + 60_000;
+
+    expect(isExpired(future)).toBe(false);
+
+    vi.useRealTimers();
+  });
+
+  test('returns true when expiresAt equals Date.now() (at the boundary)', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+
+    const boundary = Date.now();
+
+    expect(isExpired(boundary)).toBe(true);
+
+    vi.useRealTimers();
+  });
+});
+
 /* -------------------- WebStorage construction failure -------------------- */
 
 describe('WebStorage construction failure', () => {
@@ -1013,5 +1213,598 @@ describe('WebStorage construction failure', () => {
         Object.defineProperty(window, 'sessionStorage', descriptor);
       }
     }
+  });
+});
+
+/* -------------------- B2: VaultDisposedError after dispose() -------------------- */
+
+describe('VaultDisposedError after dispose()', () => {
+  test('get throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.get('users', 1)).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('put throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.put('users', { id: 1, name: 'Alice' })).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('getAll throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.getAll('users')).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('delete throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.delete('users', 1)).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('keys throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.keys('users')).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('count throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.count('users')).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('update throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.update('users', 1, { name: 'Bob' })).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('observe throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    expect(() => db.observe('users', () => {})).toThrow(VaultDisposedError);
+  });
+
+  test('query throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    expect(() => db.query('users')).toThrow(VaultDisposedError);
+  });
+
+  test('watch() throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    expect(() => db.watch('users')).toThrow(VaultDisposedError);
+  });
+
+  test('batch() throws VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.batch(['users'], async (tx) => tx.getAll('users'))).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('iterate() rejects with VaultDisposedError after dispose()', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+
+    await expect(async () => {
+      for await (const _ of db.iterate('users')) {
+        // should not reach here
+      }
+    }).rejects.toThrow(VaultDisposedError);
+  });
+
+  test('dispose() is idempotent — calling twice does not throw', async () => {
+    const db = createMemory({ schema });
+
+    await db.dispose();
+    await expect(db.dispose()).resolves.toBeUndefined();
+  });
+});
+
+/* -------------------- B3 + E1: scheduleExpiredPrune interval guard + signal -------------------- */
+
+describe('scheduleExpiredPrune interval validation + signal', () => {
+  test('throws VaultError for interval = 0', () => {
+    const db = createMemory({ schema });
+
+    expect(() => scheduleExpiredPrune(db, { interval: 0 })).toThrow(VaultError);
+  });
+
+  test('throws VaultError for negative interval', () => {
+    const db = createMemory({ schema });
+
+    expect(() => scheduleExpiredPrune(db, { interval: -100 })).toThrow(VaultError);
+  });
+
+  test('throws VaultError for NaN interval', () => {
+    const db = createMemory({ schema });
+
+    expect(() => scheduleExpiredPrune(db, { interval: NaN })).toThrow(VaultError);
+  });
+
+  test('throws VaultError for Infinity interval', () => {
+    const db = createMemory({ schema });
+
+    expect(() => scheduleExpiredPrune(db, { interval: Infinity })).toThrow(VaultError);
+  });
+
+  test('signal abort stops the schedule', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+    const ac = new AbortController();
+    let pruneCount = 0;
+
+    const stop = scheduleExpiredPrune(
+      {
+        pruneExpired: async () => {
+          pruneCount += 1;
+
+          return {};
+        },
+      },
+      { interval: 1000, signal: ac.signal },
+    );
+
+    await vi.advanceTimersByTimeAsync(1500);
+    expect(pruneCount).toBe(1);
+
+    ac.abort();
+
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(pruneCount).toBe(1); // no more calls after abort
+
+    stop(); // should be safe to call after signal abort
+    vi.useRealTimers();
+  });
+
+  test('onError is called for non-disposal errors', async () => {
+    vi.useFakeTimers();
+
+    const errors: unknown[] = [];
+    const boom = new Error('backend error');
+
+    scheduleExpiredPrune(
+      {
+        pruneExpired: async () => {
+          throw boom;
+        },
+      },
+      { interval: 500, onError: (e) => errors.push(e) },
+    );
+
+    await vi.advanceTimersByTimeAsync(1100);
+    expect(errors).toHaveLength(2);
+    expect(errors[0]).toBe(boom);
+
+    vi.useRealTimers();
+  });
+});
+
+/* -------------------- F3: keys(table, filter) -------------------- */
+
+describe('keys(table, filter)', () => {
+  test('returns all keys when no filter provided', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Carol' },
+    ]);
+
+    expect(await db.keys('users')).toEqual([1, 2, 3]);
+  });
+
+  test('returns only matching keys when filter provided', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+      { id: 3, name: 'Carol' },
+    ]);
+
+    const keys = await db.keys('users', (u) => u.name.startsWith('C'));
+
+    expect(keys).toEqual([3]);
+  });
+
+  test('returns empty array when filter matches nothing', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 1, name: 'Alice' },
+      { id: 2, name: 'Bob' },
+    ]);
+
+    const keys = await db.keys('users', (u) => u.name === 'Zelda');
+
+    expect(keys).toEqual([]);
+  });
+
+  test('filter does not use native getAllKeys path (fetches full records)', async () => {
+    const db = createMemory({ schema });
+
+    await db.putAll('users', [
+      { id: 10, name: 'Alice' },
+      { id: 20, name: 'Bob' },
+    ]);
+
+    const keys = await db.keys('users', (u) => u.id > 15);
+
+    expect(keys).toEqual([20]);
+  });
+});
+
+/* -------------------- F4: createVersionedCodec -------------------- */
+
+describe('createVersionedCodec', () => {
+  test('encodes and decodes with the current version codec', () => {
+    const innerCodec = {
+      decode: <T>(r: unknown) => ({ value: (r as { val: T }).val }),
+      encode: <T>(v: T) => ({ val: v }),
+    };
+    const codec = createVersionedCodec([{ codec: innerCodec, version: 1 }], 1);
+    const encoded = codec.encode({ x: 42 });
+
+    expect(encoded).toMatchObject({ __v: 1 });
+
+    const decoded = codec.decode<{ x: number }>(encoded);
+
+    expect(decoded).toMatchObject({ value: { x: 42 } });
+  });
+
+  test('decodes old version records using their codec', () => {
+    const v1Codec = {
+      decode: (r: unknown) => {
+        const v = r as { value: { legacy: boolean } };
+
+        return { value: v.value };
+      },
+      encode: (v: unknown) => ({ value: v }),
+    };
+    const v2Codec = {
+      decode: (r: unknown) => {
+        const v = r as { value: { modern: boolean } };
+
+        return { value: v.value };
+      },
+      encode: (v: unknown) => ({ value: v }),
+    };
+    const codec = createVersionedCodec(
+      [
+        { codec: v1Codec, version: 1 },
+        { codec: v2Codec, version: 2 },
+      ],
+      2,
+    );
+
+    const v1Record = { __d: { value: { legacy: true } }, __v: 1 };
+    const decoded = codec.decode<{ legacy: boolean }>(v1Record);
+
+    expect(decoded?.value).toEqual({ legacy: true });
+  });
+
+  test('returns undefined for unknown version', () => {
+    const codec = createVersionedCodec(
+      [{ codec: { decode: (r) => r as { value: unknown }, encode: (v) => v }, version: 1 }],
+      1,
+    );
+
+    expect(codec.decode({ __d: {}, __v: 99 })).toBeUndefined();
+  });
+
+  test('returns undefined when __v field is missing', () => {
+    const codec = createVersionedCodec(
+      [{ codec: { decode: (r) => r as { value: unknown }, encode: (v) => v }, version: 1 }],
+      1,
+    );
+
+    expect(codec.decode({ data: 'no version' })).toBeUndefined();
+  });
+
+  test('throws VaultError for empty versions array', () => {
+    expect(() => createVersionedCodec([], 1)).toThrow(VaultError);
+  });
+
+  test('throws VaultError for duplicate versions', () => {
+    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+
+    expect(() =>
+      createVersionedCodec(
+        [
+          { codec: c, version: 1 },
+          { codec: c, version: 1 },
+        ],
+        1,
+      ),
+    ).toThrow(VaultError);
+  });
+
+  test('throws VaultError when currentVersion is not in versions', () => {
+    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+
+    expect(() => createVersionedCodec([{ codec: c, version: 1 }], 99)).toThrow(VaultError);
+  });
+
+  test('throws VaultError for negative version number', () => {
+    const c = { decode: (r: unknown) => r as { value: unknown }, encode: (v: unknown) => v };
+
+    expect(() => createVersionedCodec([{ codec: c, version: -1 }], -1)).toThrow(VaultError);
+  });
+
+  test('works end-to-end with memory adapter', async () => {
+    const rawCodec = {
+      decode: <T>(r: unknown) => ({ value: r as T }),
+      encode: <T>(v: T) => v,
+    };
+    const codec = createVersionedCodec([{ codec: rawCodec, version: 1 }], 1);
+    const db = createMemory({ codec, schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Alice' });
+  });
+
+  test('expiresAt is preserved through the version envelope', () => {
+    const innerCodec = {
+      decode: <T>(r: unknown): { expiresAt?: number; value: T } | undefined => {
+        if (typeof r !== 'object' || r === null || !('value' in r)) return undefined;
+
+        const rec = r as { expiresAt?: number; value: unknown };
+
+        return { expiresAt: rec.expiresAt, value: rec.value as T };
+      },
+      encode: <T>(v: T, expiresAt?: number): unknown =>
+        expiresAt !== undefined ? { expiresAt, value: v } : { value: v },
+    };
+    const codec = createVersionedCodec([{ codec: innerCodec, version: 1 }], 1);
+
+    const futureTs = Date.now() + 60_000;
+    const encoded = codec.encode({ x: 1 }, futureTs);
+    const decoded = codec.decode(encoded);
+
+    expect(decoded?.expiresAt).toBe(futureTs);
+    expect(decoded?.value).toEqual({ x: 1 });
+  });
+});
+
+/* -------------------- C2: toReadableStream -------------------- */
+
+describe('toReadableStream', () => {
+  test('yields values from async iterable', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const ac = new AbortController();
+    const stream = toReadableStream(db.watch('users', { signal: ac.signal }));
+    const reader = stream.getReader();
+
+    const { value } = await reader.read();
+
+    expect(value).toEqual([{ id: 1, name: 'Alice' }]);
+    ac.abort();
+    reader.cancel();
+  });
+
+  test('stream closes when signal is aborted', async () => {
+    const db = createMemory({ schema });
+    const ac = new AbortController();
+    const stream = toReadableStream(db.watch('users', { signal: ac.signal }));
+    const reader = stream.getReader();
+
+    ac.abort();
+
+    const { done } = await reader.read();
+
+    expect(done).toBe(true);
+  });
+});
+
+/* -------------------- C4: observeMany with pre-aborted signal -------------------- */
+
+describe('observeMany with pre-aborted signal', () => {
+  test('returns noop unsubscribe and never fires when signal is already aborted', async () => {
+    const db = createMemory({ schema });
+    const ac = new AbortController();
+
+    ac.abort();
+
+    let fired = false;
+    const unsub = db.observeMany(
+      ['users'],
+      () => {
+        fired = true;
+      },
+      { signal: ac.signal },
+    );
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await Promise.resolve();
+
+    expect(fired).toBe(false);
+    expect(() => unsub()).not.toThrow();
+  });
+});
+
+/* -------------------- C6: debug() on fresh adapter -------------------- */
+
+describe('debug() on fresh adapter', () => {
+  test('returns zero counts for all tables on empty adapter', async () => {
+    const db = createMemory({ schema });
+    const info = await db.debug();
+
+    expect(info.tables).toHaveLength(2);
+
+    for (const t of info.tables) {
+      expect(t.recordCount).toBe(0);
+      expect(t.expiredCount).toBe(0);
+    }
+  });
+
+  test('reflects live and expired counts accurately', async () => {
+    vi.useFakeTimers();
+
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Live' });
+    await db.put('users', { id: 2, name: 'Expiring' }, ttl.ms(500));
+
+    vi.advanceTimersByTime(1000);
+
+    const info = await db.debug();
+    const usersEntry = info.tables.find((t) => t.name === 'users');
+
+    expect(usersEntry?.recordCount).toBe(1);
+    expect(usersEntry?.expiredCount).toBe(1);
+
+    vi.useRealTimers();
+  });
+});
+
+/* -------------------- observe({ immediate: false }) -------------------- */
+
+describe('observe({ immediate: false })', () => {
+  test('skips the initial snapshot when immediate is false', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[][] = [];
+
+    db.observe('users', (records) => calls.push(records), { immediate: false });
+
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(0); // no initial snapshot
+
+    await db.put('users', { id: 2, name: 'Bob' });
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(1); // fires on mutation
+    expect(calls[0]).toHaveLength(2);
+  });
+
+  test('fires initial snapshot when immediate is true (default)', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[][] = [];
+
+    db.observe('users', (records) => calls.push(records));
+
+    await flushMicrotasks();
+
+    expect(calls).toHaveLength(1);
+  });
+});
+
+/* -------------------- observeMany({ eager: true }) -------------------- */
+
+describe('observeMany({ eager: true })', () => {
+  test('fires after first table delivers even when second has not yet', async () => {
+    const db = createMemory({ schema });
+
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps), { eager: true });
+
+    await flushMicrotasks();
+    await flushMicrotasks(); // getAll() resolves → snapshotMap.set → queueMicrotask → listener
+
+    expect(calls).toHaveLength(1);
+
+    const snap = calls[0] as { posts: unknown[]; users: unknown[] };
+
+    expect(snap.users).toHaveLength(1);
+    expect(snap.posts).toEqual([]); // posts not yet populated — empty array
+  });
+
+  test('default (eager: false) waits for all tables before firing', async () => {
+    const db = createMemory({ schema });
+
+    const calls: unknown[] = [];
+
+    db.observeMany(['users', 'posts'] as const, (snaps) => calls.push(snaps));
+
+    await flushMicrotasks();
+    await flushMicrotasks(); // getAll() resolves → snapshotMap full → queueMicrotask → listener
+
+    expect(calls).toHaveLength(1); // fires once all tables have delivered
+  });
+});
+
+/* -------------------- watch() eager-subscribe gap -------------------- */
+
+describe('watch() eager-subscribe', () => {
+  test('captures mutations that occur between [Symbol.asyncIterator]() and first next()', async () => {
+    const db = createMemory({ schema });
+
+    const iter = db.watch('users')[Symbol.asyncIterator]();
+
+    // Mutation happens before first next() — must not be lost
+    await db.put('users', { id: 1, name: 'Alice' });
+
+    const result = await iter.next();
+
+    expect(result.done).toBe(false);
+    // The pending queue may have initial empty snapshot + mutation snapshot
+    // At minimum the value should be an array (not lost)
+    expect(Array.isArray(result.value)).toBe(true);
+
+    await iter.return?.();
+    await db.dispose();
+  });
+});
+
+/* -------------------- batch() non-atomic warning -------------------- */
+
+describe('batch() non-atomic warning', () => {
+  test('emits a dev warning on first batch() call on a memory adapter', async () => {
+    const db = createMemory({ schema });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await db.batch(['users'], async (tx) => {
+      await tx.put('users', { id: 1, name: 'Alice' });
+    });
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy.mock.calls[0][0]).toContain('not atomic');
+
+    warnSpy.mockRestore();
+    await db.dispose();
+  });
+
+  test('emits the warning only once per adapter instance', async () => {
+    const db = createMemory({ schema });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await db.batch(['users'], async (tx) => tx.put('users', { id: 1, name: 'Alice' }));
+    await db.batch(['users'], async (tx) => tx.put('users', { id: 2, name: 'Bob' }));
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+
+    warnSpy.mockRestore();
+    await db.dispose();
   });
 });

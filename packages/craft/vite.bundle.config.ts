@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
   getBundleConfig(__dirname, {
-    external: ['@vielzeug/arsenal', '@vielzeug/orbit', '@vielzeug/ripple'],
+    external: ['@vielzeug/ripple'],
     fileName: 'craft',
     name: 'Craft',
   }),

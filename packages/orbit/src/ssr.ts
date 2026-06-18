@@ -19,6 +19,8 @@ import type { AutoUpdateOptions } from './auto-update';
 import type { FloatOptions } from './float';
 import type { ComputePositionOptions, ComputePositionResult, FloatHandle, ReferenceElement } from './types';
 
+import { makeHandle } from './float';
+
 const NOOP: () => void = () => {};
 
 const NULL_RESULT = (placement: ComputePositionOptions['placement'] = 'bottom'): ComputePositionResult => ({
@@ -27,6 +29,28 @@ const NULL_RESULT = (placement: ComputePositionOptions['placement'] = 'bottom'):
   x: 0,
   y: 0,
 });
+
+/**
+ * No-op stub. Resolves immediately with zero-coordinate result.
+ */
+export function computePositionRaf(
+  _reference: ReferenceElement,
+  _floating: HTMLElement,
+  options: ComputePositionOptions = {},
+): Promise<ComputePositionResult> {
+  return Promise.resolve(NULL_RESULT(options.placement));
+}
+
+/**
+ * No-op stub. Resolves immediately with zero-coordinate result.
+ */
+export function computePositionAsync(
+  _reference: ReferenceElement,
+  _floating: HTMLElement,
+  options: ComputePositionOptions = {},
+): Promise<ComputePositionResult> {
+  return Promise.resolve(NULL_RESULT(options.placement));
+}
 
 /**
  * No-op stub. Returns zero-coordinate result with the requested placement.
@@ -55,18 +79,6 @@ export function autoUpdate(
  * No-op stub. Returns a FloatHandle with no-op methods. `getPosition()` always returns `null`
  * (position is never computed in an SSR environment).
  */
-export function float(_reference: ReferenceElement, _floating: HTMLElement, _options: FloatOptions = {}): FloatHandle {
-  const controller = new AbortController();
-
-  return {
-    cssAnchor: false,
-    get disposalSignal() {
-      return controller.signal;
-    },
-    dispose: NOOP,
-    disposed: false,
-    getPosition: () => null,
-    [Symbol.dispose]: NOOP,
-    update: NOOP,
-  };
+export function float(_reference: ReferenceElement, _floating: HTMLElement, _options?: FloatOptions): FloatHandle {
+  return makeHandle(NOOP, () => null, NOOP);
 }

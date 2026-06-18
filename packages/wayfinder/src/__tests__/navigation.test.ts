@@ -573,3 +573,111 @@ describe('data error propagation', () => {
     router.dispose();
   });
 });
+
+describe('navigate(string)', () => {
+  it('accepts a plain string path', async () => {
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: {
+        about: { path: '/about' },
+        home: { path: '/' },
+      },
+    });
+
+    await settle();
+    await router.navigate('/about');
+
+    expect(router.getSnapshot().matches.at(-1)?.name).toBe('about');
+    router.dispose();
+  });
+
+  it('accepts a plain string with query string', async () => {
+    const data = vi.fn();
+    const router = createRouter({
+      history: createMemoryHistory('/'),
+      routes: {
+        home: { path: '/' },
+        search: { data, path: '/search' },
+      },
+    });
+
+    await settle();
+    await router.navigate('/search?q=hello');
+
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { q: 'hello' } }));
+    router.dispose();
+  });
+});
+
+describe('global coerceSearch', () => {
+  it('applies RouterOptions.coerceSearch when route has no coerceSearch', async () => {
+    const data = vi.fn();
+    const router = createRouter({
+      coerceSearch: (raw) => ({ count: Number(raw.count ?? 0) }),
+      history: createMemoryHistory('/items?count=5'),
+      routes: { items: { data, path: '/items' } },
+    });
+
+    await settle();
+
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { count: 5 } }));
+    router.dispose();
+  });
+
+  it('per-route coerceSearch takes precedence over global', async () => {
+    const data = vi.fn();
+    const router = createRouter({
+      coerceSearch: (raw) => ({ count: Number(raw.count ?? 0) }),
+      history: createMemoryHistory('/page?count=3&extra=yes'),
+      routes: {
+        page: {
+          coerceSearch: (raw) => ({ extra: raw.extra }),
+          data,
+          path: '/page',
+        },
+      },
+    });
+
+    await settle();
+
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { extra: 'yes' } }));
+    router.dispose();
+  });
+
+  it('falls back to raw query when global coerceSearch throws', async () => {
+    const data = vi.fn();
+    const onError = vi.fn();
+    const router = createRouter({
+      coerceSearch: () => {
+        throw new Error('global coerce error');
+      },
+      history: createMemoryHistory('/page?x=1'),
+      onError,
+      routes: { page: { data, path: '/page' } },
+    });
+
+    await settle();
+
+    expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { x: '1' } }));
+    expect(onError).toHaveBeenCalledWith(expect.any(Error), { source: 'coerce-search' });
+    router.dispose();
+  });
+});
+
+describe('waitFor dispose', () => {
+  it('rejects a pending waitFor when the router is disposed', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { home: { path: '/' }, other: { path: '/other' } },
+    });
+
+    await settle();
+
+    const pending = router.waitFor('other');
+
+    router.dispose();
+
+    await expect(pending).rejects.toBeInstanceOf(Error);
+  });
+});

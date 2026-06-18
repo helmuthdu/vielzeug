@@ -1,16 +1,5 @@
-import {
-  computed,
-  define,
-  defineField,
-  effect,
-  html,
-  inject,
-  onCleanup,
-  onElement,
-  prop,
-  ref,
-  signal,
-} from '@vielzeug/craft';
+import { define, useField, html, inject, prop, ref } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
 
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
 import type { SgComboboxEvents, SgComboboxProps, ComboboxOptionInput, ComboboxOptionItem } from './combobox.types';
@@ -95,7 +84,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props, { bind, el, emit, onCleanup, onElement, watch }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const query = signal('');
@@ -110,9 +99,11 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     const bitInputRef = ref<HTMLElement>();
 
     const abortSignal = lifecycleSignal(onCleanup);
+    let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       helper: props.helper,
       label: props.label,
       labelPlacement: props['label-placement'],
@@ -128,39 +119,31 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     const filteredOptions = signal<ComboboxOptionItem[]>([]);
 
     const optionList = createOptionList<ComboboxOptionItem>({
-      dom: {
-        getBoundary: () => el,
-        getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
-        getPanel: () => dropdownEl,
-        getReference: () => fieldEl,
-        getTrigger: () => inputEl,
-      },
+      getBoundary: () => el,
+      getFocusedOptionElement: () => dropdownEl?.querySelector<HTMLElement>('[data-focused]') ?? null,
+      getItems: () => filteredOptions.value,
+      getOptionId: (index) => `${choice.fieldId}-opt-${index}`,
+      getPanel: () => dropdownEl,
+      getReference: () => fieldEl,
+      getTrigger: () => inputEl,
       isDisabled: () => choice.disabled.value,
-      items: {
-        getItems: () => filteredOptions.value,
-        getOptionId: (index) => `${choice.fieldId}-opt-${index}`,
-      },
-      on: {
-        onClose: (reason) => {
-          emit('close', { reason });
+      onClose: (reason) => {
+        emit('close', { reason });
 
-          if (!abortSignal.aborted) restoreQueryFromSelection();
+        if (!abortSignal.aborted) restoreQueryFromSelection();
 
-          choice.triggerValidation('blur');
-        },
-        onOpen: (reason) => emit('open', { reason }),
+        choice.triggerValidation('blur');
       },
+      onOpen: (reason) => emit('open', { reason }),
       restoreFocus: false,
       signal: abortSignal,
     });
 
     const { disabled: isDisabled, fieldId: comboId, selectedValues, triggerValidation } = choice;
 
-    choice.bindFormField(
-      defineField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue }),
-    );
+    _formField = useField<string>({ disabled: choice.disabled, toFormValue: (v) => v, value: choice.formValue });
 
-    const { focusedIndex, isOpen, positioner, scrollFocusedIntoView } = optionList;
+    const { focusedIndex, isOpen, scrollFocusedIntoView, updatePosition } = optionList;
     // ── State ────────────────────────────────────────────────────────────────
     const isMultiple = () => Boolean(props.multiple.value);
     const isCreatable = () => Boolean(props.creatable.value);
@@ -261,7 +244,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     // Initialize from light DOM immediately; onMounted/observer keep this in sync afterwards.
     readOptions();
 
-    effect(() => {
+    watch(() => {
       const nextOptions = filterOptions(allOptions.value, query.value, isNoFilter());
 
       filteredOptions.value = isMultiple()
@@ -314,7 +297,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
       query.value = '';
     }
 
-    effect(() => {
+    watch(() => {
       if (isOpen.value && !isMultiple() && selectedValue.value && focusedIndex.value === -1 && query.value === '') {
         const selectedIndex = filteredOptions.value.findIndex((option) => option.value === selectedValue.value);
 
@@ -460,7 +443,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
         }
       }
 
-      optionList.first();
+      optionList.navigate('first');
 
       if (!isOpen.value) openPopup(false, 'keyboard');
 
@@ -483,9 +466,9 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
 
           if (!isOpen.value) {
             openPopup(true, 'keyboard');
-            optionList.first();
+            optionList.navigate('first');
           } else {
-            optionList.next();
+            optionList.navigate('next');
           }
 
           break;
@@ -495,7 +478,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
           if (!isOpen.value) {
             openPopup(true, 'keyboard');
           } else {
-            optionList.prev();
+            optionList.navigate('prev');
           }
 
           break;
@@ -663,10 +646,10 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
       listboxListenersTarget = listboxEl;
     };
 
-    effect(() => {
+    watch(() => {
       ensureListboxListeners();
 
-      if (isOpen.value) positioner.update();
+      if (isOpen.value) updatePosition();
     });
 
     // Once sg-input is in the DOM, grab its inner <input> from its shadow root
@@ -713,7 +696,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     // Reactively sync combobox-specific ARIA attrs that sg-input doesn't manage.
     // Uses bitInputRef (a signal) as the gate so the effect re-runs when the
     // inner input mounts — inputEl is a plain variable and would not trigger re-runs.
-    effect(() => {
+    watch(() => {
       if (!bitInputRef.value) return;
 
       const el = inputEl;
@@ -738,7 +721,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     });
 
     // Reactively sync the query signal into the raw input value.
-    effect(() => {
+    watch(() => {
       if (!bitInputRef.value) return;
 
       const el = inputEl;

@@ -159,6 +159,24 @@ describe('createFormatter', () => {
     });
   });
 
+  // ─── cache cap ────────────────────────────────────────────────────────────
+
+  describe('cache cap', () => {
+    test('formatter remains usable after more than 128 distinct currency codes fill the cache', () => {
+      const fmt = createFormatter('en');
+
+      // Drive more than 128 distinct keys into the currency cache to trigger eviction.
+      for (let i = 0; i < 150; i++) {
+        fmt.currency(1, 'USD');
+        fmt.number(i, { maximumFractionDigits: i % 10 });
+      }
+
+      // Cache eviction must not break subsequent calls.
+      expect(() => fmt.currency(9.99, 'USD')).not.toThrow();
+      expect(fmt.number(1_234)).toContain('1,234');
+    });
+  });
+
   // ─── locale source ────────────────────────────────────────────────────────
 
   describe('locale source', () => {

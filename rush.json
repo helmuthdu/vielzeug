@@ -139,8 +139,8 @@
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/grip",
-      "projectFolder": "packages/grip",
+      "packageName": "@vielzeug/dnd",
+      "projectFolder": "packages/dnd",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
@@ -153,6 +153,12 @@
     {
       "packageName": "@vielzeug/clockwork",
       "projectFolder": "packages/clockwork",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/pulse",
+      "projectFolder": "packages/pulse",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     }

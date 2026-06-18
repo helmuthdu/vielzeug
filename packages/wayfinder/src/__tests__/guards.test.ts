@@ -1,7 +1,7 @@
 /**
  * beforeLeave guards — navigation blocking and removal semantics.
  */
-import { createMemoryHistory, createRouter } from '../';
+import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
 import { mockHistory, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -297,5 +297,20 @@ describe('beforeLeave with route scope', () => {
     expect(order).toContain('scoped');
     expect(order).toContain('global');
     router.dispose();
+  });
+});
+
+describe('beforeLeave after dispose', () => {
+  it('throws RouterDisposedError when called after the router is disposed', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { home: { path: '/' } },
+    });
+
+    await settle();
+    router.dispose();
+
+    expect(() => router.beforeLeave(async () => true)).toThrow(RouterDisposedError);
   });
 });

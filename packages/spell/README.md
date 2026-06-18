@@ -1,15 +1,15 @@
 ---
-description: Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
+description: Zero-dependency schema validation library with strict-by-default objects, unified sync/async validate(), coercion, flexible schema composition, and full TypeScript inference.
 package: spell
 category: validation
 keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
 related: [forge, courier, vault]
-exports: [s, ValidationError, configure, ErrorCode, errorsAt, fromDescriptor, descriptorToJsonSchema]
+exports: [s, ValidationError, setMessages, setLogger, resetMessages, ErrorCode, errorsAt, descriptorToJsonSchema]
 ---
 
 # @vielzeug/spell
 
-> Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
+> Zero-dependency schema validation library with strict-by-default objects, unified sync/async `validate()`, coercion, flexible schema composition, and full TypeScript inference.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/spell)](https://www.npmjs.com/package/@vielzeug/spell) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -18,7 +18,7 @@ exports: [s, ValidationError, configure, ErrorCode, errorsAt, fromDescriptor, de
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `ValidationError`, `configure`, `ErrorCode`, `errorsAt`, `fromDescriptor`, `descriptorToJsonSchema`
+**Key exports:** `s`, `ValidationError`, `setMessages`, `setLogger`, `resetMessages`, `ErrorCode`, `errorsAt`, `descriptorToJsonSchema`
 
 **When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 

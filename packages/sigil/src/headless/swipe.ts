@@ -24,8 +24,9 @@ export type SwipeControlOptions = {
 };
 
 export type SwipeControl = {
+  [Symbol.dispose](): void;
   /** Cancel any in-flight swipe and clean up internal state. */
-  cleanup: () => void;
+  dispose: () => void;
   handlePointerCancel: (event: PointerEvent) => boolean;
   handlePointerDown: (event: PointerEvent) => boolean;
   handlePointerMove: (event: PointerEvent) => boolean;
@@ -159,11 +160,12 @@ export const createSwipeControl = (options: SwipeControlOptions): SwipeControl =
   };
 
   return {
-    cleanup: reset,
+    dispose: reset,
     handlePointerCancel,
     handlePointerDown,
     handlePointerMove,
     handlePointerUp,
     isActive: () => active != null,
+    [Symbol.dispose]: reset,
   };
 };

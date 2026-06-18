@@ -498,4 +498,14 @@ describe('sg-textarea accessibility', () => {
       expect(ta.value).toBe('hello');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-textarea', { attrs: { label: 'Description' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

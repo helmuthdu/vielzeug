@@ -6,7 +6,7 @@ import {
   type ReadonlySignal,
 } from '@vielzeug/ripple';
 
-import { CRAFTIT_ERRORS } from './errors';
+import { CRAFT_ERRORS } from './errors';
 import { listen as listenInternal } from './utils/dom';
 
 // ─── Runtime context ──────────────────────────────────────────────────────────
@@ -16,16 +16,14 @@ import { listen as listenInternal } from './utils/dom';
 export type OnMountedCallback = () => CleanupFn | void;
 
 export type RuntimeContext = {
-  /** @internal Lazily-populated ancestor chain used by inject() for cached lookups. */
-  _ancestorChain?: HTMLElement[];
   element: HTMLElement;
   mountCallbacks: OnMountedCallback[];
 };
 
 let currentContext: RuntimeContext | null = null;
 
-/** @internal */
-export const withRuntimeContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
+/** @internal Execute fn with a given runtime context active. */
+export const runWithContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
   const prev = currentContext;
 
   currentContext = ctx;
@@ -37,8 +35,18 @@ export const withRuntimeContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
   }
 };
 
-/** @internal Access to the current runtime context for context.ts caching (R9). */
-export const _getCurrentRuntimeContext = (): RuntimeContext | null => currentContext;
+/** @internal Access to the current runtime context for context.ts caching. */
+export const getSetupContext = (): RuntimeContext | null => currentContext;
+
+/**
+ * Returns the current runtime context, throwing if outside setup.
+ * @internal
+ */
+export const requireSetupContext = (api: string): RuntimeContext => {
+  if (currentContext) return currentContext;
+
+  throw new Error(`${api}: ${CRAFT_ERRORS.lifecycleOutsideSetup}`);
+};
 
 /**
  * Returns the current component's host element.
@@ -48,7 +56,7 @@ export const _getCurrentRuntimeContext = (): RuntimeContext | null => currentCon
 export const getCurrentElement = (): HTMLElement => {
   if (currentContext) return currentContext.element;
 
-  throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+  throw new Error(CRAFT_ERRORS.lifecycleOutsideSetup);
 };
 
 export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
@@ -70,7 +78,7 @@ export const onCleanup = _onCleanup;
  * Multiple callbacks run in registration order.
  */
 export const onMounted = (fn: OnMountedCallback): void => {
-  if (!currentContext) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+  if (!currentContext) throw new Error(CRAFT_ERRORS.lifecycleOutsideSetup);
 
   currentContext.mountCallbacks.push(fn);
 };
@@ -105,7 +113,7 @@ export function onEvent(
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void {
-  if (!currentContext) throw new Error(CRAFTIT_ERRORS.lifecycleOutsideSetup);
+  if (!currentContext) throw new Error(CRAFT_ERRORS.lifecycleOutsideSetup);
 
   if (!target) return;
 

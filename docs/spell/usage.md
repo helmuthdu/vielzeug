@@ -112,54 +112,60 @@ const Port = s.number().int().min(1).max(65535).catch(3000);
 Port.parse('not-a-number'); // 3000
 ```
 
-## Refinements and Async Checks
+## Custom Validation
 
-Use `check()` for synchronous domain rules and `checkAsync()` when the rule needs I/O.
+Use `validate()` for domain rules — both synchronous and asynchronous. A single method handles all cases.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const reservedUsernames = new Set(['admin', 'root']);
-const takenEmails = new Set(['ada@example.com']);
+// Boolean shorthand: return false to fail with default message
+const EvenNumber = s.number().validate((n) => n % 2 === 0);
 
-const Signup = s.object({
-  email: s
-    .string()
-    .email()
-    .checkAsync(async (value, ctx) => {
-      if (takenEmails.has(value)) {
-        ctx.addIssue({ code: 'custom', message: 'Email is already taken' });
-      }
-    }),
-  username: s
-    .string()
-    .min(3)
-    .check(
-      (value) => !reservedUsernames.has(value),
-      ({ value }) => {
-        return `${value} is reserved`;
-      },
-    ),
-});
+// String shorthand: return the message as a string
+const Username = s
+  .string()
+  .min(3)
+  .validate((v) => !v.startsWith('_') || 'Cannot start with underscore');
 
-await Signup.parseAsync({
-  email: 'grace@example.com',
-  username: 'grace',
+// Multiple issues via ctx.addIssue()
+const Signup = s.object({ confirm: s.string(), password: s.string() }).validate((v, ctx) => {
+  if (v.password !== v.confirm) {
+    ctx.addIssue({ code: 'custom', message: 'Passwords must match', path: ['confirm'] });
+  }
 });
 ```
 
-Use `parseAsync()` or `safeParseAsync()` when any nested schema contains an async check.
-
-Use `refine()` instead of `check()` when you only need a boolean predicate and an optional message.
+Async rules work in the same method. Spell awaits them only in `parseAsync()` — async callbacks passed to `validate()` are silently skipped in synchronous `parse()`.
 
 ```ts
 import { s } from '@vielzeug/spell';
 
-const EvenNumber = s.number().refine(
-  (n) => n % 2 === 0,
-  () => 'Must be even',
+const takenEmails = new Set(['ada@example.com']);
+
+const AccountEmail = s
+  .string()
+  .email()
+  .validate(async (value, ctx) => {
+    if (takenEmails.has(value)) {
+      ctx.addIssue({ code: 'custom', message: 'Email is already taken', path: [] });
+    }
+  });
+
+// Must use parseAsync when any validate() callback is async
+await AccountEmail.parseAsync('grace@example.com');
+```
+
+Use `refine()` when you only need a boolean predicate and an optional message function.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const PositivePrice = s.number().refine(
+  (n) => n > 0,
+  () => 'Must be positive',
 );
-EvenNumber.parse(4); // 4
+PositivePrice.parse(9.99);
 ```
 
 ## Strings, Numbers, and Safe Regex Usage
@@ -212,7 +218,7 @@ const Slug = s.string().trim().min(1).pipe(s.string().slug());
 Use descriptors when schemas need to cross process boundaries or feed tooling.
 
 ```ts
-import { descriptorToJsonSchema, fromDescriptor, s } from '@vielzeug/spell';
+import { descriptorToJsonSchema, s } from '@vielzeug/spell';
 
 const Product = s
   .object({
@@ -223,53 +229,52 @@ const Product = s
   .label('Product');
 
 const descriptor = Product.toDescriptor();
-const rebuilt = fromDescriptor(descriptor);
 const jsonSchema = descriptorToJsonSchema(descriptor);
 
-rebuilt.parse({ id: '550e8400-e29b-41d4-a716-446655440000', name: 'Keyboard', price: 129.99 });
+Product.parse({ id: '550e8400-e29b-41d4-a716-446655440000', name: 'Keyboard', price: 129.99 });
 console.log(jsonSchema.title);
 ```
 
-`fromDescriptor()` restores base fields such as `description`, `isOptional`, and `isNullable`. It also restores object strictness, common string annotations, and number hints emitted by built-in helpers such as `.positive()`, `.negative()`, and `.multipleOf()`. The reconstructible descriptor type excludes `variant`, `pipe`, `instanceof`, and `lazy` descriptors because those shapes cannot be rebuilt without executable code.
+Descriptors are serializable snapshots of the schema structure. Use `toDescriptor()` to produce one and `descriptorToJsonSchema()` to convert it to JSON Schema for external consumers.
 
-## Messages and Locales
+## Messages
 
-Use `configure()` for global overrides and `registerLocale()` plus `useLocale()` for switchable locale packs.
+Use `setMessages()` to replace the active validation message catalog. Each call replaces the current overrides — it does not accumulate.
 
 ```ts
-import { configure, currentLocale, registerLocale, reset, s, useLocale } from '@vielzeug/spell';
+import { resetMessages, setMessages } from '@vielzeug/spell';
 
-configure({
-  messages: {
-    string: {
-      email: 'Use a valid work email address',
-    },
-  },
-});
-
-configure({
-  messages: {
-    number: {
-      min: ({ min }) => `Use a value greater than or equal to ${min}`,
-    },
-  },
-});
-
-registerLocale('de', {
+setMessages({
   string: {
-    email: 'Bitte eine gültige E-Mail-Adresse eingeben',
+    email: 'Use a valid work email address',
+    min: ({ min }) => `Must be at least ${min} characters`,
+  },
+  number: {
+    min: ({ min }) => `Use a value of ${min} or greater`,
   },
 });
 
-useLocale('de');
-console.log(currentLocale()); // 'de'
-
-s.string().email().safeParse('not-an-email');
-reset();
-console.log(currentLocale()); // 'en'
+// Restore the built-in defaults when done
+resetMessages();
 ```
 
-`configure({ messages })` merges into the currently active messages. Later `configure()` calls compose with earlier overrides instead of resetting them.
+Use `setLogger()` to route or silence internal development warnings (e.g. conflicting `regex()` constraints).
+
+```ts
+import { setLogger } from '@vielzeug/spell';
+
+setLogger(null); // silence
+setLogger((msg) => myLogger.warn(msg)); // redirect
+```
+
+To integrate with `@vielzeug/lingua`, call `setMessages()` from your locale change callback:
+
+```ts
+import { setMessages } from '@vielzeug/spell';
+
+// spellMessages maps locale keys to DeepPartial<Messages>
+i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
+```
 
 ## Working with Validation Errors
 
@@ -295,6 +300,36 @@ if (!result.success && ValidationError.is(result.error)) {
 ```
 
 Use `bestMatch()` on a union failure when you want the branch that came closest to succeeding.
+
+## Schema Traversal with walk()
+
+Use `walk()` to inspect or transform a schema tree without importing internal implementation classes.
+
+```ts
+import { s, type SchemaWalker } from '@vielzeug/spell';
+
+const fields: string[] = [];
+
+const collectFields: SchemaWalker<void> = {
+  object(schema) {
+    for (const [key, child] of Object.entries(schema.shape)) {
+      fields.push(key);
+      child.walk(collectFields);
+    }
+  },
+  unknown() {},
+};
+
+const User = s.object({
+  email: s.string().email(),
+  profile: s.object({ name: s.string() }),
+});
+
+User.walk(collectFields);
+console.log(fields); // ['email', 'profile', 'name']
+```
+
+`walk()` dispatches by `schema.kind`. If no handler matches and no `unknown` fallback is provided, `walk()` returns `null`. Add an `unknown` handler to capture any kind not explicitly listed in your visitor.
 
 ## Framework Integration
 
@@ -368,42 +403,13 @@ const profile = Profile.parse(await api.get('/profile'));
 
 Use Spell descriptors with `@vielzeug/codex` or other tooling when you need generated docs or external schema consumers.
 
-## Schema Traversal with walk()
-
-Use `walk()` to inspect or transform a schema tree without importing internal implementation classes.
-
-```ts
-import { s, type SchemaWalker } from '@vielzeug/spell';
-
-const fields: string[] = [];
-
-const collectFields: SchemaWalker<void> = {
-  object(schema) {
-    for (const [key, child] of Object.entries(schema.shape)) {
-      fields.push(key);
-      child.walk(collectFields);
-    }
-  },
-  unknown() {},
-};
-
-const User = s.object({
-  email: s.string().email(),
-  profile: s.object({ name: s.string() }),
-});
-
-User.walk(collectFields);
-console.log(fields); // ['email', 'profile', 'name']
-```
-
-`walk()` dispatches by `schema.kind`. Add an `unknown` handler as a fallback for any kind not explicitly listed in your visitor.
-
 ## Best Practices
 
 - Keep schemas close to the boundary where unknown data enters your app.
 - Prefer tree-shakeable `sXxx` exports in libraries and the `s` namespace in app code.
 - Use `.default(() => value)` for mutable defaults such as arrays, objects, `Map`, and `Set`.
 - Call `.required()` when you want to remove `undefined` but keep `null` semantics intact.
-- Keep async validation explicit. Switch to `parseAsync()` as soon as one nested rule performs I/O.
-- Use `refine()` for simple predicate checks; use `check()` with a `ctx` argument when you need `ctx.addIssue()`.
-- Use `toDescriptor()` for tooling. Use `fromDescriptor()` only with trusted `ReconstructibleSchemaDescriptor` input.
+- Use `validate()` with a `ctx` argument when you need `ctx.addIssue()`; use `refine()` for simple boolean predicates.
+- Switch to `parseAsync()` as soon as any `validate()` callback is async.
+- Call `resetMessages()` in test `afterEach()` when tests call `setMessages()` to prevent state leakage.
+- Use `toDescriptor()` for tooling and `descriptorToJsonSchema()` for external JSON Schema consumers.

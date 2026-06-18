@@ -30,13 +30,12 @@
   .indicator {
     position: absolute;
     bottom: 0;
+    left: 0;
     height: 2px;
     pointer-events: none;
     background: var(--tabs-indicator-color, var(--_theme-base));
     border-radius: var(--rounded-full);
-    transition:
-      left var(--tabs-transition),
-      width var(--tabs-transition);
+    transition: transform var(--tabs-transition);
   }
 
   .panels {
@@ -68,14 +67,13 @@
 
   :host([orientation='vertical']) .indicator {
     inset-inline-start: 0;
+    top: 0;
 
     /* Reposition indicator to inline-start side for vertical */
     bottom: unset;
     width: 2px;
     height: unset;
-    transition:
-      top var(--tabs-transition),
-      height var(--tabs-transition);
+    transition: transform var(--tabs-transition);
   }
 }
 
@@ -173,10 +171,10 @@
 
   /* ─── glass ─── */
   :host([variant='glass']) {
-    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in srgb, var(--color-secondary) 20%, transparent));
+    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in oklch, var(--color-secondary) 20%, transparent));
     --_tablist-border-color: var(
       --tabs-tablist-border-color,
-      color-mix(in srgb, var(--color-secondary-contrast) 15%, transparent)
+      color-mix(in oklch, var(--color-secondary-contrast) 15%, transparent)
     );
   }
 
@@ -195,10 +193,10 @@
 
   /* ─── frost ─── */
   :host([variant='frost']) {
-    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in srgb, var(--color-canvas) 55%, transparent));
+    --_tablist-bg: var(--tabs-tablist-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));
     --_tablist-border-color: var(
       --tabs-tablist-border-color,
-      color-mix(in srgb, var(--color-contrast-300) 50%, transparent)
+      color-mix(in oklch, var(--color-contrast-300) 50%, transparent)
     );
   }
 

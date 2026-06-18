@@ -1,5 +1,5 @@
-import { memo } from '../../function/memo';
-import { abortable } from '../abortable';
+import { abortable } from '../../_internal/_abortable';
+import { memo } from '../../cache/memo';
 
 describe('async extras', () => {
   it('supports abortable promises', async () => {
@@ -32,15 +32,15 @@ describe('async extras', () => {
     await expect(abortable(Promise.reject(new Error('inner error')), controller.signal)).rejects.toThrow('inner error');
   });
 
-  it('memoizes async work and deduplicates in-flight calls', async () => {
-    const fn = vi.fn(async (value: number) => value * 2);
-    const memoized = memo(fn);
+  it('memo rejects async functions at the type level', () => {
+    const asyncFn = async (value: number) => value * 2;
 
-    const [first, second] = await Promise.all([memoized(2), memoized(2)]);
+    // @ts-expect-error — memo() does not accept async functions (returns Promise)
+    const memoized = memo(asyncFn);
 
-    expect(first).toBe(4);
-    expect(second).toBe(4);
-    expect(fn).toHaveBeenCalledTimes(1);
+    // At runtime the call succeeds (caches the Promise object), but the type error
+    // is the guard: callers must use stash.getOrSet for async memoization.
+    expect(typeof memoized).toBe('function');
   });
 
   it('abortable: non-aborted signal — resolves with inner value', async () => {

@@ -5,7 +5,28 @@ package: codex
 category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
 related: [sigil, spell]
-exports: [createServer, createServerFromDisk, loadData, packageMeta, validateBundledData, CemDeclaration, CemAttribute, CemEvent, CemMember, CemSlot, SearchHit, BundledData, BundledPackage, PackageMeta, DocPage]
+exports:
+  [
+    createServer,
+    createServerFromDisk,
+    loadData,
+    packageMeta,
+    validateBundledData,
+    HttpServerHandle,
+    CemDeclaration,
+    CemAttribute,
+    CemCssPart,
+    CemCssProperty,
+    CemEvent,
+    CemMember,
+    CemSlot,
+    CemTypeRef,
+    SearchHit,
+    BundledData,
+    BundledPackage,
+    PackageMeta,
+    DocPage,
+  ]
 environments: [node]
 ---
 
@@ -27,14 +48,14 @@ const html = await res.text();
 { "name": "get-docs", "arguments": { "packageSlug": "spell", "page": "api" } }
 ```
 
-| Feature                   | `@vielzeug/codex`                         | Custom fetch | Generic web search |
-| ------------------------- | ----------------------------------------- | ------------ | ------------------ |
-| Bundle size               | <PackageInfo package="mcp" type="size" /> | —            | —                  |
-| Zero external deps        | <sg-icon name="x" size="16"></sg-icon> (MCP SDK)                              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>                 |
-| Structured metadata       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Sigil component CEM       | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Offline / snapshot-backed | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
-| Stdio + HTTP transports   | <sg-icon name="check" size="16"></sg-icon>                                        | <sg-icon name="x" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>                 |
+| Feature                   | `@vielzeug/codex`                                | Custom fetch                               | Generic web search                         |
+| ------------------------- | ------------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
+| Bundle size               | <PackageInfo package="mcp" type="size" />        | —                                          | —                                          |
+| Zero external deps        | <sg-icon name="x" size="16"></sg-icon> (MCP SDK) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Structured metadata       | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Sigil component CEM       | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Offline / snapshot-backed | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Stdio + HTTP transports   | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -82,14 +103,15 @@ Then wire it into your AI client — see the [Usage Guide](./usage.md).
 
 ### Tools
 
-| Tool              | Input                  | Description                                                                      |
-| ----------------- | ---------------------- | -------------------------------------------------------------------------------- |
-| `list-packages`   | `packageSlug?`         | All packages with metadata; pass `packageSlug` to filter to a single-item result |
-| `get-docs`        | `packageSlug`, `page?` | Package docs page (`index`, `api`, `usage`, `examples`); defaults to `index`     |
-| `get-source`      | `packageSlug`          | Bundled `src/index.ts` text for a package                                        |
-| `search-packages` | `query`                | Search package metadata and docs with ranked matches                             |
-| `list-components` | —                      | Sigil component tags from bundled CEM metadata                                   |
-| `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                                      |
+| Tool              | Input                  | Description                                                                  |
+| ----------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| `list-packages`   | —                      | All packages with metadata (no filter)                                       |
+| `get-package`     | `packageSlug`          | Single package metadata by slug                                              |
+| `get-docs`        | `packageSlug`, `page?` | Package docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
+| `get-source`      | `packageSlug`          | Bundled `src/index.ts` text for a package                                    |
+| `search-packages` | `query`                | Search package metadata and docs with weighted ranked matches                |
+| `list-components` | —                      | Sigil component tags from bundled CEM metadata                               |
+| `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                                  |
 
 ### Resources
 
@@ -107,9 +129,9 @@ Then wire it into your AI client — see the [Usage Guide](./usage.md).
 
 <div class="features-grid">
 
-- `list-packages` accepts optional `packageSlug` to retrieve a single package as a one-item array
-- `search-packages` returns ranked hits across `name`, `description`, `keywords`, `exports`, docs, and source
-- `matchedIn` reports distinct categories: `"metadata"`, `"keywords"`, `"exports"`, `"docs"`
+- `list-packages` returns all packages; use `get-package` with `packageSlug` to fetch a single entry
+- `search-packages` returns weighted ranked hits — name matches (3.9) outrank description (3.1) outrank keywords (2.5) outrank exports (2.2) outrank related (2.0) outrank docs (1.0) outrank source (0.9)
+- `matchedIn` reports distinct categories: `"metadata"`, `"keywords"`, `"exports"`, `"related"`, `"docs"`, `"source"`
 - MCP Resources exposed at `vielzeug://docs/<slug>/<page>` and `vielzeug://source/<slug>`
 - Programmatic API: `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData` exported from `@vielzeug/codex`
 - `search-packages` supports multi-word AND queries — all words must match
@@ -120,7 +142,6 @@ Then wire it into your AI client — see the [Usage Guide](./usage.md).
 - Health endpoint at `/health` in HTTP mode
 
 </div>
-
 
 ## Documentation
 

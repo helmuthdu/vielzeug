@@ -9,10 +9,17 @@ type EnumType<T extends EnumValues> = T[number];
 function buildEnumValidator(values: readonly unknown[]): ValidateFn {
   const set = new Set<unknown>(values);
 
-  return (value) =>
+  return (value, ctx) =>
     set.has(value)
       ? null
-      : [{ code: ErrorCode.invalid_enum, message: _messages().enum.invalid({ values }), params: { values }, path: [] }];
+      : [
+          {
+            code: ErrorCode.invalid_enum,
+            message: (ctx?.messages ?? _messages()).enum.invalid({ values }),
+            params: { values },
+            path: [],
+          },
+        ];
 }
 
 export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
@@ -31,7 +38,7 @@ export class EnumSchema<T extends EnumValues> extends Schema<EnumType<T>> {
     return { ...this._describeBase(), kind: 'enum', values: this.values };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     if (visitor.enum) return visitor.enum(this);
 
     return super._walk(visitor);

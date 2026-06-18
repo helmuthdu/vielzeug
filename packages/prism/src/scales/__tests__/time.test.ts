@@ -1,4 +1,3 @@
-import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
 import { timeScale } from '../time';
@@ -54,17 +53,12 @@ describe('timeScale', () => {
     expect(exact.domain[0].getTime()).toBe(start.getTime());
   });
 
-  it('accepts MaybeSignal domain', () => {
+  it('uses plain-value domain', () => {
     const start = new Date('2024-01-01');
     const end = new Date('2024-12-31');
-    const dom = signal<[Date, Date]>([start, end]);
-    const scale = timeScale({ domain: dom, nice: false, range: [0, 1000] });
+    const scale = timeScale({ domain: [start, end], nice: false, range: [0, 1000] });
 
     expect(scale.map(start)).toBe(0);
-
-    const newStart = new Date('2024-06-01');
-
-    dom.value = [newStart, end];
-    expect(scale.map(newStart)).toBeCloseTo(0, 0);
+    expect(scale.map(end)).toBeCloseTo(1000, 0);
   });
 });

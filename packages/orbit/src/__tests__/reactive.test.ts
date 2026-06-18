@@ -52,14 +52,6 @@ describe('createFloatState', () => {
     handle.dispose();
   });
 
-  it('cssAnchor is false on JS-computed handles', () => {
-    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const handle = createFloatState(reference, floating, { autoUpdate: false });
-
-    expect(handle.cssAnchor).toBe(false);
-    handle.dispose();
-  });
-
   it('dispose does not throw', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
     const handle = createFloatState(reference, floating, { autoUpdate: false });
@@ -67,15 +59,28 @@ describe('createFloatState', () => {
     expect(() => handle.dispose()).not.toThrow();
   });
 
-  it('emits a DEV warn when preferCssAnchor is true but browser does not support it', () => {
+  it('disposed is false before dispose and true after', () => {
     const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const handle = createFloatState(reference, floating, { autoUpdate: false });
 
-    const handle = createFloatState(reference, floating, { autoUpdate: false, preferCssAnchor: true });
-
+    expect(handle.disposed).toBe(false);
     handle.dispose();
+    expect(handle.disposed).toBe(true);
+  });
 
-    // jsdom does not support CSS Anchor Positioning, so a DEV warn should fire.
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('preferCssAnchor'));
+  it('[Symbol.dispose] sets disposed to true', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = createFloatState(reference, floating, { autoUpdate: false });
+
+    handle[Symbol.dispose]();
+    expect(handle.disposed).toBe(true);
+  });
+
+  it('position.value is a ComputePositionResult after construction', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+    const handle = createFloatState(reference, floating, { autoUpdate: false, placement: 'bottom' });
+
+    expect(handle.position.value).toMatchObject({ placement: 'bottom', x: 210, y: 340 });
+    handle.dispose();
   });
 });

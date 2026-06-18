@@ -66,11 +66,26 @@ describe('Memory adapter', () => {
     await expect(db.update('users', 1, { id: 2 } as Partial<User>)).rejects.toThrow('key');
   });
 
+  test('update() applies TTL to the updated record', async () => {
+    vi.useFakeTimers();
+
+    await db.put('users', { id: 1, name: 'Alice' });
+    await db.update('users', 1, { city: 'Paris' }, ttl.ms(1000));
+
+    expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+
+    vi.advanceTimersByTime(2000);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
   test('update patches existing records', async () => {
     await db.put('users', { id: 1, name: 'Alice' });
 
     expect(await db.update('users', 1, { city: 'Paris' })).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
-    await expect(db.update('users', 99, { city: 'Berlin' })).rejects.toThrow('not found');
+    expect(await db.update('users', 99, { city: 'Berlin' })).toBeUndefined();
   });
 
   test('upsert inserts when record does not exist', async () => {
@@ -140,6 +155,37 @@ describe('Memory adapter', () => {
     });
 
     expect(await db.get('users', 1)).toEqual({ city: 'Paris', id: 1, name: 'Alice' });
+  });
+
+  test('upsert() inside batch() applies TTL to the stored record', async () => {
+    vi.useFakeTimers();
+
+    await db.batch(['users'], async (tx) => {
+      await tx.upsert('users', 1, () => ({ id: 1, name: 'Temp' }), ttl.ms(1000));
+    });
+
+    expect(await db.get('users', 1)).toEqual({ id: 1, name: 'Temp' });
+
+    vi.advanceTimersByTime(2000);
+
+    expect(await db.get('users', 1)).toBeUndefined();
+
+    vi.useRealTimers();
+  });
+
+  test('batch count() excludes ad-hoc TTL-expired records even without schema defaultTtl', async () => {
+    vi.useFakeTimers();
+
+    await db.put('users', { id: 1, name: 'Ephemeral' }, ttl.ms(1000));
+    await db.put('users', { id: 2, name: 'Permanent' });
+
+    vi.advanceTimersByTime(2000); // id:1 expires
+
+    const result = await db.batch(['users'], async (tx) => tx.count('users'));
+
+    expect(result).toBe(1); // only the non-expired record counted
+
+    vi.useRealTimers();
   });
 
   test('batch rejects access to tables outside its declared scope', async () => {

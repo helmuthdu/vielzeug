@@ -11,16 +11,16 @@ You need a custom form control that participates in native form submission, vali
 
 ### Solution
 
-Use `defineField()` with `formAssociated: true` to wire a signal to the element's form internals.
+Use `useField()` with `formAssociated: true` to wire a signal to the element's form internals.
 
 ```ts
-import { define, defineField, html, signal } from '@vielzeug/craft';
+import { define, html, signal, useField } from '@vielzeug/craft';
 
 define('rating-input', {
   formAssociated: true,
   setup() {
     const value = signal(0);
-    const field = defineField({ value });
+    const field = useField({ value });
 
     return html`
       <button @click=${() => (value.value = 1)}>1</button>
@@ -36,7 +36,7 @@ define('rating-input', {
 #### With custom serialisation
 
 ```ts
-import { define, defineField, html, prop, signal } from '@vielzeug/craft';
+import { define, html, prop, signal, useField } from '@vielzeug/craft';
 
 define<{ disabled?: boolean }>('rating-input-v2', {
   formAssociated: true,
@@ -44,7 +44,7 @@ define<{ disabled?: boolean }>('rating-input-v2', {
   setup(props) {
     const value = signal<number[]>([]);
 
-    const field = defineField({
+    const field = useField({
       disabled: props.disabled,
       value,
       toFormValue: (v) => v.join(','),
@@ -63,7 +63,7 @@ define<{ disabled?: boolean }>('rating-input-v2', {
 
 ### Pitfalls
 
-- Forgetting `formAssociated: true` on the definition causes `defineField()` to fail silently — the element won't have `ElementInternals` attached.
+- Forgetting `formAssociated: true` on the definition causes `useField()` to fail silently — the element won't have `ElementInternals` attached.
 - The default `toFormValue` stringifies primitives. For arrays or objects, provide a custom serializer to avoid `[object Object]` in form data.
 - `reportValidity()` triggers the browser's native validation UI. Use `checkValidity()` for programmatic checks without user-visible tooltips.
 

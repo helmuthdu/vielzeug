@@ -1,174 +1,184 @@
-import type { LocalConfig, LocalSource, Sorter, SourceMeta, SourceQuery } from './types';
+import type { LocalSource, LocalSourceConfig, LocalSourceQuery, SearchOptions, SourceQuery } from './types';
 
 import { createSourceCore } from './core';
 import { clampPage, createMeta, pageCount } from './pagination';
-import { SourceError } from './types';
-import { extractError } from './utils';
 
-const defaultSearchFn = <T>(items: readonly T[], query: string): readonly T[] => {
+type PendingSearch = { promise: Promise<void>; resolve: () => void };
+
+const DEFAULT_LIMIT = 20;
+const DEFAULT_DEBOUNCE_MS = 300;
+
+function defaultSearch<T>(items: readonly T[], query: string): readonly T[] {
   const q = query.toLowerCase();
 
   return items.filter((item) => JSON.stringify(item).toLowerCase().includes(q));
-};
+}
 
-/** Creates an in-memory paginatable source with optional async filter and sort support. */
-export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {}): LocalSource<T> {
+/**
+ * Creates an in-memory paginated source with optional async filter/sort pipelines.
+ *
+ * When neither `filterAsync` nor `sortAsync` are configured, all operations
+ * complete synchronously — there is no loading state and `ready()` resolves immediately.
+ * Provide async ops to offload heavy computation (e.g. to a Web Worker).
+ *
+ * @example
+ * ```ts
+ * // Synchronous (common case)
+ * const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
+ * await source.goTo(2);
+ * console.log(source.current); // [3, 4]
+ *
+ * // Async pipeline (Web Worker offloading)
+ * const source = createLocalSource(users, {
+ *   filterAsync: (items, signal) => myWorker.filter(items, signal),
+ *   sortAsync: (items, signal) => myWorker.sort(items, signal),
+ * });
+ * ```
+ */
+export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<T> = {}): LocalSource<T> {
   const core = createSourceCore();
+  const isAsync = cfg.filterAsync !== undefined || cfg.sortAsync !== undefined;
+  const debounceMs = cfg.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
-  // ── Config ──────────────────────────────────────────────────────────────────
-  const debounceMs = cfg.debounceMs ?? 300;
-  const searchFn = cfg.searchFn ?? defaultSearchFn;
-  const hasAsync = !!(cfg.filterAsync ?? cfg.sortAsync);
-
-  // ── Mutable state ───────────────────────────────────────────────────────────
-  let rawData: readonly T[] = cfg.initialData ?? data;
-  let filterFn: ((item: T, index: number, arr: readonly T[]) => boolean) | undefined = cfg.filter;
-  let sortFn: Sorter<T> | undefined = cfg.sort;
-  let query = '';
-  let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
+  let allData: readonly T[] = cfg.initialData ?? data;
+  let search = '';
+  let filter = cfg.filter;
+  let sort = cfg.sort;
+  let limit = cfg.limit ?? DEFAULT_LIMIT;
   let page = 1;
-  let view: readonly T[] = [];
+  let processed: readonly T[] = [];
   let isLoading = false;
-  let error: SourceError | null = null;
-  let asyncAbort: AbortController | null = null;
+  let isSearchPending = false;
+  let asyncController: AbortController | null = null;
+  let pendingSearch: PendingSearch | null = null;
 
-  // ── Cached accessors ────────────────────────────────────────────────────────
-  let cachedCurrent: readonly T[] = [];
-  let cachedMeta: SourceMeta = createMeta({
-    error: null,
-    isLoading: false,
-    isSearchPending: false,
-    pageNumber: 1,
-    pageSize: limit,
-    totalItems: 0,
-  });
+  const commit = () => core.notify();
 
-  const refreshCache = () => {
-    if (!view.length) {
-      cachedCurrent = [];
-    } else {
-      const start = (page - 1) * limit;
-
-      cachedCurrent = view.slice(start, start + limit);
-    }
-
-    cachedMeta = createMeta({
-      error,
-      isLoading,
-      isSearchPending: core.isScheduled,
-      pageNumber: page,
-      pageSize: limit,
-      totalItems: view.length,
-    });
-  };
-
-  const commit = () => {
-    refreshCache();
-    core.notify();
-  };
-
-  // ── Sync recompute ──────────────────────────────────────────────────────────
-  const recomputeSync = (): void => {
-    try {
-      let next: readonly T[] = query ? searchFn(rawData, query) : rawData;
-
-      if (filterFn) next = next.filter(filterFn);
-
-      if (sortFn) next = [...next].sort(sortFn);
-
-      page = clampPage(page, pageCount(next.length, limit));
-      view = next;
-      error = null;
-    } catch (e: unknown) {
-      error = new SourceError(extractError(e), { cause: e });
-      view = [];
+  const resolvePendingSearch = () => {
+    if (pendingSearch) {
+      pendingSearch.resolve();
+      pendingSearch = null;
     }
   };
 
-  // ── Async recompute ─────────────────────────────────────────────────────────
-  const recomputeAsync = async (): Promise<void> => {
-    if (asyncAbort) asyncAbort.abort();
+  // ── Sync pipeline (used when no async ops) ──────────────────────────────────
+  const runSyncPipeline = (): readonly T[] => {
+    let result: readonly T[] = allData;
 
-    asyncAbort = new AbortController();
+    if (search) result = (cfg.searchFn ?? defaultSearch)(result, search);
 
-    const sig = asyncAbort.signal;
+    if (filter) result = result.filter(filter);
 
-    let next: readonly T[] = query ? searchFn(rawData, query) : rawData;
+    if (sort) result = [...result].sort(sort);
 
-    if (filterFn) next = next.filter(filterFn);
+    return result;
+  };
 
-    if (sortFn) next = [...next].sort(sortFn);
+  const recompute = () => {
+    processed = runSyncPipeline();
 
+    const pages = pageCount(processed.length, limit);
+
+    page = clampPage(page, pages);
+  };
+
+  // ── Async pipeline ──────────────────────────────────────────────────────────
+  const runAsyncPipeline = async (): Promise<void> => {
+    asyncController?.abort();
+
+    const controller = new AbortController();
+
+    asyncController = controller;
     isLoading = true;
-    error = null;
-    refreshCache();
-    core.notify();
+    commit();
 
     try {
-      if (cfg.filterAsync) next = await cfg.filterAsync(next, sig);
+      let result: readonly T[] = allData;
 
-      if (sig.aborted) return;
+      if (search) result = (cfg.searchFn ?? defaultSearch)(result, search);
 
-      if (cfg.sortAsync) next = await cfg.sortAsync(next, sig);
+      if (filter) result = result.filter(filter);
 
-      if (sig.aborted) return;
-    } catch (e: unknown) {
-      if (sig.aborted) return;
+      if (cfg.filterAsync && !controller.signal.aborted) {
+        result = await cfg.filterAsync(result, controller.signal);
+      }
 
-      error = new SourceError(extractError(e), { cause: e });
+      if (sort) result = [...result].sort(sort);
+
+      if (cfg.sortAsync && !controller.signal.aborted) {
+        result = await cfg.sortAsync(result, controller.signal);
+      }
+
+      if (controller.signal.aborted) return;
+
+      processed = result;
       isLoading = false;
-      asyncAbort = null;
-      view = [];
-      commit();
+      isSearchPending = false;
 
-      return;
+      const pages = pageCount(processed.length, limit);
+
+      page = clampPage(page, pages);
+    } catch {
+      if (!controller.signal.aborted) {
+        isLoading = false;
+        isSearchPending = false;
+      }
+    } finally {
+      if (asyncController === controller) asyncController = null;
     }
 
-    page = clampPage(page, pageCount(next.length, limit));
-    view = next;
-    isLoading = false;
-    asyncAbort = null;
     commit();
+    resolvePendingSearch();
   };
 
-  // ── Unified emit ────────────────────────────────────────────────────────────
-  const emit = (): Promise<void> => {
-    if (hasAsync) {
-      return recomputeAsync();
-    }
+  // Internal flush — not part of public API
+  const flushInternal = (): Promise<void> => {
+    if (isAsync) return runAsyncPipeline();
 
-    recomputeSync();
+    isSearchPending = false;
+    recompute();
     commit();
+    resolvePendingSearch();
 
     return Promise.resolve();
   };
 
-  // ── Initial compute ─────────────────────────────────────────────────────────
-  recomputeSync();
-  refreshCache();
+  // ── Initial state ───────────────────────────────────────────────────────────
+  if (isAsync) {
+    // Async: run initial sync pass (no async ops involved yet)
+    processed = runSyncPipeline();
+  } else {
+    recompute();
+  }
 
-  // ── Public API ──────────────────────────────────────────────────────────────
   return {
     get current() {
-      return cachedCurrent;
+      const start = (page - 1) * limit;
+
+      return processed.slice(start, start + limit);
+    },
+
+    get disposalSignal() {
+      return core.disposalSignal;
     },
 
     dispose() {
-      if (asyncAbort) {
-        asyncAbort.abort();
-        asyncAbort = null;
-      }
+      if (core.isDisposed) return;
 
+      core.cancelTimer();
+      asyncController?.abort();
+      asyncController = null;
+      resolvePendingSearch();
       core.dispose();
     },
 
-    flush() {
-      return core.flush(() => emit());
+    get disposed() {
+      return core.isDisposed;
     },
 
-    goTo(target) {
-      const pages = pageCount(view.length, limit);
-      const clamped = clampPage(target, pages);
+    goTo(n) {
+      const pages = pageCount(processed.length, limit);
+      const clamped = clampPage(n, pages);
 
       if (clamped === page) return Promise.resolve();
 
@@ -179,135 +189,145 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
     },
 
     goToLast() {
-      const last = pageCount(view.length, limit);
-
-      if (page === last) return Promise.resolve();
-
-      page = last;
-      commit();
-
-      return Promise.resolve();
+      return this.goTo(pageCount(processed.length, limit));
     },
 
     get meta() {
-      return cachedMeta;
+      return createMeta({
+        error: null,
+        isLoading,
+        isSearchPending,
+        pageNumber: page,
+        pageSize: limit,
+        totalItems: processed.length,
+      });
     },
 
     next() {
-      const pages = pageCount(view.length, limit);
-
-      if (page >= pages) return Promise.resolve();
-
-      page++;
-      commit();
-
-      return Promise.resolve();
+      return this.goTo(page + 1);
     },
 
-    prev() {
-      if (page <= 1) return Promise.resolve();
-
-      page--;
-      commit();
-
-      return Promise.resolve();
-    },
-
-    ready(timeout) {
-      return core.ready(() => !isLoading && !core.isScheduled, timeout);
-    },
-
-    reset() {
-      core.cancelTimer();
-      query = '';
-      page = 1;
-      filterFn = cfg.filter;
-      sortFn = cfg.sort;
-
-      return emit();
-    },
-
-    restoreQuery(patch) {
+    patch(changes: LocalSourceQuery<T>) {
       let changed = false;
 
-      if (patch.limit !== undefined) {
-        const n = Math.max(1, Math.trunc(patch.limit));
+      if (changes.limit !== undefined) {
+        const next = Math.max(1, Math.trunc(changes.limit));
 
-        if (n !== limit) {
-          limit = n;
+        if (next !== limit) {
+          limit = next;
           changed = true;
         }
       }
 
-      if ('search' in patch) {
-        const s = patch.search ?? '';
-
-        if (s !== query) {
-          query = s;
-          changed = true;
-        }
-      }
-
-      if ('filter' in patch && patch.filter !== filterFn) {
-        filterFn = patch.filter;
-        page = 1;
+      if ('filter' in changes) {
+        filter = changes.filter;
         changed = true;
       }
 
-      if ('sort' in patch && patch.sort !== sortFn) {
-        sortFn = patch.sort as Sorter<T> | undefined;
-        page = 1;
+      if ('sort' in changes) {
+        sort = changes.sort;
         changed = true;
       }
 
-      if (patch.page !== undefined) {
-        const p = clampPage(patch.page, pageCount(view.length, limit));
+      if ('search' in changes && changes.search !== search) {
+        search = changes.search ?? '';
+        changed = true;
+      }
 
-        if (p !== page) {
-          page = p;
+      if (changes.page !== undefined) {
+        const next = clampPage(changes.page, pageCount(processed.length, limit));
+
+        if (next !== page) {
+          page = next;
           changed = true;
         }
       }
 
       if (!changed) return Promise.resolve();
 
-      return emit();
+      // Reset page only when non-page query fields changed without an explicit page
+      if (
+        (changes.limit !== undefined || 'filter' in changes || 'sort' in changes || 'search' in changes) &&
+        changes.page === undefined
+      ) {
+        page = 1;
+      }
+
+      return flushInternal();
     },
 
-    search(q) {
-      if (q === query) return;
-
-      query = q;
-      page = 1;
-      core.schedule(() => {
-        void emit();
-      }, debounceMs);
-      commit();
+    prev() {
+      return this.goTo(page - 1);
     },
 
-    searchNow(q) {
-      if (q === query) return Promise.resolve();
+    ready(timeout?: number) {
+      return core.ready(() => !isLoading && !core.isScheduled, timeout);
+    },
 
+    reset() {
       core.cancelTimer();
-      query = q;
+      isSearchPending = false;
+      search = '';
+      filter = cfg.filter;
+      sort = cfg.sort;
       page = 1;
+      resolvePendingSearch();
 
-      return emit();
+      return flushInternal();
+    },
+
+    search(q, opts?: SearchOptions): Promise<void> {
+      if (opts?.immediate) {
+        if (q === search) return Promise.resolve();
+
+        core.cancelTimer();
+        isSearchPending = false;
+        search = q;
+        page = 1;
+        resolvePendingSearch();
+
+        return flushInternal();
+      }
+
+      if (q === search) return Promise.resolve();
+
+      // Cancel any previous pending search promise
+      resolvePendingSearch();
+
+      search = q;
+      page = 1;
+      isSearchPending = true;
+      commit();
+
+      let resolveSearch!: () => void;
+      const promise = new Promise<void>((res) => {
+        resolveSearch = res;
+      });
+
+      pendingSearch = { promise, resolve: resolveSearch };
+
+      core.schedule(() => {
+        isSearchPending = false;
+        void flushInternal();
+      }, debounceMs);
+
+      return promise;
     },
 
     setData(d) {
-      rawData = d;
+      allData = d;
+      page = 1;
 
-      return emit();
+      return flushInternal();
     },
 
     setFilter(f) {
-      if (f === filterFn) return Promise.resolve();
+      if (f === filter) return Promise.resolve();
 
-      filterFn = f;
+      filter = f;
       page = 1;
 
-      return emit();
+      return flushInternal();
     },
 
     setLimit(n) {
@@ -318,16 +338,16 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
       limit = next;
       page = 1;
 
-      return emit();
+      return flushInternal();
     },
 
     setSort(s) {
-      if (s === sortFn) return Promise.resolve();
+      if (s === sort) return Promise.resolve();
 
-      sortFn = s;
+      sort = s;
       page = 1;
 
-      return emit();
+      return flushInternal();
     },
 
     subscribe(listener) {
@@ -339,7 +359,11 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalConfig<T> = {
     },
 
     toQuery(): SourceQuery {
-      return { ...(query && { search: query }), limit, page };
+      return {
+        limit,
+        page,
+        ...(search && { search }),
+      };
     },
   };
 }

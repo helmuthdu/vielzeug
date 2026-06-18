@@ -1,9 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
+import { renderAxis } from '../axes/axis';
+import { computeAreaPoints } from '../charts/area/area-renderer';
+import { computePoints } from '../charts/line/line-renderer';
 import { arcCentroid, computeArcs } from '../charts/pie/pie-renderer';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { chartArea, resolveMargin } from '../core/layout';
 import { nearestPointX } from '../interaction/hit-test';
+import { linearScale } from '../scales/linear';
 import { areaPath, linePath, monotonePath, stepPath } from '../svg/path';
 import { seriesColor } from '../theme';
 
@@ -201,6 +205,93 @@ describe('arcCentroid', () => {
   });
 });
 
+// ─── renderAxis: axis title (C2) ─────────────────────────────────────────────
+
+describe('renderAxis — axis title', () => {
+  it('renders .prism-axis-title element when config.label is set', () => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    const scale = linearScale({ domain: [0, 100], range: [0, 400] });
+
+    renderAxis(g, scale, { label: 'My Axis', position: 'bottom' }, 400);
+
+    const title = g.querySelector('.prism-axis-title');
+
+    expect(title).not.toBeNull();
+    expect(title?.textContent).toBe('My Axis');
+  });
+
+  it('does not render .prism-axis-title when config.label is absent', () => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    const scale = linearScale({ domain: [0, 100], range: [0, 400] });
+
+    renderAxis(g, scale, { position: 'bottom' }, 400);
+
+    expect(g.querySelector('.prism-axis-title')).toBeNull();
+  });
+});
+
+// ─── linearScale clamp (C4) ───────────────────────────────────────────────────
+
+describe('linearScale — clamp', () => {
+  it('clamps output to range when clamp is true', () => {
+    const scale = linearScale({ clamp: true, domain: [0, 100], range: [0, 400] });
+
+    expect(scale.map(-50)).toBe(0);
+    expect(scale.map(150)).toBe(400);
+  });
+
+  it('does not clamp by default', () => {
+    const scale = linearScale({ domain: [0, 100], range: [0, 400] });
+
+    expect(scale.map(-50)).toBeLessThan(0);
+    expect(scale.map(150)).toBeGreaterThan(400);
+  });
+});
+
+// ─── renderAxis smart tick density (F3) ──────────────────────────────────────
+
+describe('renderAxis — smart tick density', () => {
+  it('uses fewer ticks for narrow horizontal axis (< 160px → 2 ticks)', () => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    const scale = linearScale({ domain: [0, 100], range: [0, 120] });
+
+    renderAxis(g, scale, { position: 'bottom' }, 120);
+
+    const labels = g.querySelectorAll('.prism-axis-label');
+
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('respects explicit tickCount over smart default', () => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g') as SVGGElement;
+    const scale = linearScale({ domain: [0, 100], range: [0, 800] });
+
+    renderAxis(g, scale, { position: 'bottom', tickCount: 2 }, 800);
+
+    const ticks = g.querySelectorAll('.prism-axis-tick');
+
+    expect(ticks.length).toBe(2);
+  });
+});
+
+// ─── buildYScale includeZero (E2) ─────────────────────────────────────────────
+
+describe('buildYScale — includeZero', () => {
+  it('forces min to 0 by default for positive-only data', () => {
+    const scale = buildYScale([100, 110], 400);
+    const [d0] = scale.domain;
+
+    expect(d0).toBeLessThanOrEqual(0);
+  });
+
+  it('does not force 0 when includeZero is false', () => {
+    const scale = buildYScale([100, 110], 400, false);
+    const [d0] = scale.domain;
+
+    expect(d0).toBeGreaterThan(0);
+  });
+});
+
 // ─── SVG path generators ──────────────────────────────────────────────────────
 
 describe('SVG path generators', () => {
@@ -254,5 +345,84 @@ describe('SVG path generators', () => {
 
     expect(d).toContain('H');
     expect(d).toContain('V');
+  });
+});
+
+// ─── computePoints / computeAreaPoints — null-key warning ───────────────────────────────
+
+describe('computePoints — null-key warning', () => {
+  it('emits warn when datum.key is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computePoints(
+      [{ key: null as unknown as number, value: 10 }],
+      xScale as Parameters<typeof computePoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    warnSpy.mockRestore();
+  });
+});
+
+describe('computeAreaPoints — null-key warning', () => {
+  it('emits warn when datum.key is null', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computeAreaPoints(
+      [{ key: null as unknown as number, value: 10 }],
+      xScale as Parameters<typeof computeAreaPoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('null or undefined'));
+    warnSpy.mockRestore();
+  });
+});
+
+// ─── computePoints — string-key warning ────────────────────────────────────────────────
+
+describe('computePoints — string-key warning', () => {
+  it('emits warn once when any datum has a string key', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computePoints(
+      [
+        { key: 'A', value: 10 },
+        { key: 'B', value: 20 },
+      ],
+      xScale as Parameters<typeof computePoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('string keys'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when all keys are numbers', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computePoints(
+      [
+        { key: 1, value: 10 },
+        { key: 2, value: 20 },
+      ],
+      xScale as Parameters<typeof computePoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 });

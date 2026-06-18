@@ -18,8 +18,11 @@ Reach for the workflow that matches the task (full definitions in `.devin/workfl
 
 | Situation | Workflow |
 | --- | --- |
-| Improve one package end-to-end | `/pkg-workflow` (orchestrates all phases) |
+| Improve one package end-to-end | `/pkg-workflow` (default `improve` mode) |
+| Add a feature to an existing package | `/pkg-workflow mode:feature` |
+| Create a new package from scratch | `/pkg-workflow mode:new-package` |
 | Analyse and produce an improvement plan | `/pkg-plan` (run 3×) |
+| Design a feature or new-package spec | `/pkg-spec` (run 3×) |
 | Apply an existing plan | `/pkg-implement` (run 3×) |
 | Suspected bug / quality concern | `/pkg-review` (Lens A correctness, B design, C types) |
 | Security concern (injection, prototype pollution, leaks) | `/pkg-security` (run 3×) |
@@ -27,7 +30,7 @@ Reach for the workflow that matches the task (full definitions in `.devin/workfl
 | Docs out of sync with the API | `/pkg-docs` |
 | REPL examples stale or missing | `/pkg-repl` |
 
-Cadence inside `/pkg-workflow`: plan ×3 → implement ×3 → review ×3 → security ×3 → tests ×1 → docs ×1 → repl ×1.
+Cadence inside `/pkg-workflow`: plan/spec ×3 → implement ×3 → review ×3 → security ×3 → tests ×1 → docs ×1 → repl ×1. Phase 1 uses `/pkg-plan` for `improve` mode and `/pkg-spec` for `feature`/`new-package` modes.
 
 ## Local Contracts
 

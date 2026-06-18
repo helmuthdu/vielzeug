@@ -1,15 +1,19 @@
 export const eventStreamTakeExample = {
   code: `import { createBus } from '@vielzeug/herald'
 
-// .take(n) closes the stream after yielding exactly n values
+// Collect the first 3 emits then break — await using ensures cleanup
 const bus = createBus()
 
 async function collectFirstThree() {
   const collected = []
-  for await (const n of bus.events('score').take(3)) {
+
+  await using stream = bus.events('score')
+  for await (const n of stream) {
     collected.push(n)
     console.log('score:', n)
+    if (collected.length >= 3) break
   }
+
   console.log('done — collected:', collected.length, 'values')
 }
 
@@ -23,5 +27,5 @@ const timer = setInterval(() => {
     bus.dispose()
   }
 }, 40)`,
-  name: 'events().take()',
+  name: 'events() with break',
 };

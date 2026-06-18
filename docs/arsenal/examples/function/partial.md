@@ -1,38 +1,38 @@
 ---
-title: 'Arsenal Examples — partial'
-description: 'partial example for @vielzeug/arsenal.'
+title: 'Arsenal Examples — runAll'
+description: 'runAll example for @vielzeug/arsenal.'
 ---
 
-## partial
+## runAll
 
 ### Problem
 
-You need to pre-fill the leading arguments of a function to create a more specific version — for example binding a fixed multiplier or a known resource prefix.
+You need to invoke a list of callbacks — teardown functions, event listeners, or cleanup handlers — and collect all errors instead of stopping on the first failure.
 
 ### Solution
 
-Use `partial(fn, ...args)` to bind leading arguments and return a new function expecting only the remaining parameters.
+Use `runAll(fns, options?)` to call every function in the array. If any throw, the errors are collected into an `AggregateError` thrown after all functions have run.
 
 ```ts
-import { partial } from '@vielzeug/arsenal';
+import { runAll } from '@vielzeug/arsenal';
 
-const multiply = (factor: number, value: number) => value * factor;
-const double = partial(multiply, 2);
-const triple = partial(multiply, 3);
+const cleanups = [() => socket.close(), () => db.disconnect(), () => timer.cancel()];
 
-double(5); // 10
-triple(5); // 15
-
-// Works well in pipelines
-const addPrefix = partial((prefix: string, str: string) => `${prefix}${str}`, 'api/');
-['users', 'posts'].map(addPrefix); // ['api/users', 'api/posts']
+try {
+  runAll(cleanups, { reverse: true }); // reverse: true for teardown-safe LIFO order
+} catch (err) {
+  if (err instanceof AggregateError) {
+    console.error('cleanup errors', err.errors);
+  }
+}
 ```
 
 ### Pitfalls
 
-- Only binds leading arguments. Use `curry` for argument-at-a-time application at any position.
+- `runAll` always throws `AggregateError` (never plain `Error`) when any callback fails.
+- `{ reverse: true }` runs in LIFO order, which matches typical teardown semantics.
 
 ### Related
 
-- [curry](./curry.md)
-- [compose](./compose.md)
+- [once](./once.md)
+- [pipe](./pipe.md)

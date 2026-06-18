@@ -32,7 +32,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 
 // Cleanup
-virt.destroy();
+virt.dispose();
 ```
 
 ```html
@@ -109,7 +109,7 @@ domVirtualList.setItems(isOpen ? options : []);
 domVirtualList.scrollToIndex(focusedIndex, { align: 'auto' });
 
 // Component teardown
-domVirtualList.destroy();
+domVirtualList.dispose();
 ```
 
 For variable-height rows, pass `getItemKey` so measurements survive `setItems()` calls when items reorder or are filtered.
@@ -218,24 +218,6 @@ for (const item of virt.items) {
 }
 ```
 
-## Zero-Allocation Range Callback
-
-Use `onRangeChange` instead of (or alongside) `onChange` when you only need the first/last visible index — for analytics, prefetching, or infinite-scroll triggers — without paying the cost of building a `VirtualItem[]` array on every scroll event.
-
-```ts
-createVirtualizer(scrollEl, {
-  count: 10_000,
-  estimateSize: 36,
-  // No onChange → v.items stays [] (zero allocation on scroll)
-  onRangeChange(first, last) {
-    // Prefetch rows in [first, last]
-    prefetchRows(first, last);
-  },
-});
-```
-
-When both `onChange` and `onRangeChange` are provided, `onRangeChange` fires first (before `onChange`) and `v.items` is populated normally.
-
 ## Overscan
 
 `overscan` controls how many extra items render outside the visible viewport on each side. Higher values reduce the chance of blank rows during fast scrolling; lower values keep the DOM smaller.
@@ -329,9 +311,6 @@ virt.update({ count: data.length, overscan: { start: 5, end: 5 } });
 
 // Rebuild after reordering/filtering stable-key rows
 virt.refresh();
-
-// Re-emit without rebuilding offsets when only data changed, not sizes
-virt.redraw();
 ```
 
 ## Switching Row Density
@@ -444,9 +423,9 @@ On variable-height lists, `scrollToIndex()` uses the current estimate/measured c
 
 For same-length updates, call `setItems()` (DOM adapter) or `update()` (core). If the rendered height of rows changed, call `invalidate()` before scrolling again.
 
-## Lifecycle — create and destroy
+## Lifecycle — create and dispose
 
-`createVirtualizer(el, options)` attaches immediately to the provided scroll container. If your container is replaced, destroy the old instance and create a new one.
+`createVirtualizer(el, options)` attaches immediately to the provided scroll container. If your container is replaced, dispose the old instance and create a new one.
 
 ```ts
 let virt = createVirtualizer(scrollContainerEl, {
@@ -456,7 +435,7 @@ let virt = createVirtualizer(scrollContainerEl, {
 });
 
 function remount(nextScrollContainerEl: HTMLElement) {
-  virt.destroy();
+  virt.dispose();
   virt = createVirtualizer(nextScrollContainerEl, {
     count: rows.length,
     estimateSize: 36,
@@ -465,21 +444,21 @@ function remount(nextScrollContainerEl: HTMLElement) {
 }
 ```
 
-`destroy()` is idempotent and safe to call multiple times.
+`dispose()` is idempotent and safe to call multiple times.
 
 ### Explicit Resource Management
 
 ```ts
-// The `using` keyword calls virt.destroy() automatically at block exit
+// The `using` keyword calls virt.dispose() automatically at block exit
 {
   using virt = createVirtualizer(scrollEl, { count: rows.length, onChange: render });
   // ... use virt ...
-} // → virt.destroy() called here
+} // → virt.dispose() called here
 ```
 
 ## Framework Integration
 
-Scroll is rendering-layer agnostic. The pattern is always the same: create the virtualizer when your scroll container is mounted, re-render your DOM in `onChange`, and call `destroy()` on unmount.
+Scroll is rendering-layer agnostic. The pattern is always the same: create the virtualizer when your scroll container is mounted, re-render your DOM in `onChange`, and call `dispose()` on unmount.
 
 ::: code-group
 
@@ -517,7 +496,7 @@ function VirtualList({ rows }: { rows: Row[] }) {
       },
     });
     virtRef.current = virt;
-    return () => virt.destroy();
+    return () => virt.dispose();
   }, []); // attach once
 
   useEffect(() => {
@@ -566,7 +545,7 @@ watch(
     virt?.update({ count: n });
   },
 );
-onUnmounted(() => virt?.destroy());
+onUnmounted(() => virt?.dispose());
 </script>
 
 <template>
@@ -600,7 +579,7 @@ onUnmounted(() => virt?.destroy());
         }
       },
     });
-    return () => virt.destroy();
+    return () => virt.dispose();
   });
 
   $effect(() => { virt?.update({ count: rows.length }); });
@@ -655,7 +634,7 @@ class VirtualList extends LitElement {
     this.#virt?.update({ count: this.rows.length });
   }
   disconnectedCallback() {
-    this.#virt?.destroy();
+    this.#virt?.dispose();
     super.disconnectedCallback();
   }
   render() {
@@ -701,7 +680,7 @@ define('virtual-list', {
         },
         },
       });
-      return () => virt.destroy();
+      return () => virt.dispose();
     });
 
     return () => html`
@@ -716,10 +695,10 @@ define('virtual-list', {
 ## Best Practices
 
 - Always provide `count` and `estimateSize` as a starting point, even for variable-height lists — measurements refine the estimates.
-- Call `destroy()` in the framework cleanup callback (useEffect return, onUnmounted, onDestroy) to free resize observers.
+- Call `dispose()` in the framework cleanup callback (useEffect return, onUnmounted, onDestroy) to free resize observers.
 - Use `overscan` to pre-render rows above and below the visible area to reduce blank flicker during fast scrolling.
 - Prefer `scrollToIndex()` with `align: 'start'` for programmatic navigation; use `align: 'center'` for focus management.
 - Use `createDomVirtualList()` for comboboxes, listboxes, and selects — it manages the virtualizer lifecycle and DOM node pooling for you.
 - Invalidate measurements with `invalidate()` when item content changes size (e.g., after expanding an accordion row).
 - For very large lists (>100k items), set a narrower `overscan` to limit DOM node count at any one time.
-- Use `redraw()` when item data changes but sizes stay the same (O(1)). Use `refresh()` when sizes may have changed (O(n)).
+- Use `refresh()` when item data or sizes may have changed; it rebuilds the offset table and re-emits.

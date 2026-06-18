@@ -8,33 +8,22 @@
  * ```
  */
 
-import type { Signal } from '@vielzeug/ripple';
+import type { ReadonlySignal } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
 import type { FloatOptions } from './float';
 import type { ComputePositionResult, FloatHandle, ReferenceElement } from './types';
 
-import { warn } from './_warn';
 import { float } from './float';
 
-export interface ReactiveFloatHandle {
-  /**
-   * Reactive signal that holds the most recently computed position.
-   * `null` only if the handle was created via the CSS anchor path (`cssAnchor: true`).
-   */
-  position: Signal<ComputePositionResult | null>;
-  /** `true` when position is managed natively by CSS Anchor Positioning. */
-  readonly cssAnchor: boolean;
-  /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this handle. */
-  readonly disposalSignal: AbortSignal;
-  /** Removes all event listeners and observers. Always call on teardown. */
-  dispose(): void;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  /** Manually trigger a position recalculation. */
-  update(): void;
-  [Symbol.dispose](): void;
+/**
+ * Reactive handle returned by `createFloatState`.
+ * Extends {@link FloatHandle} with a `position` signal that updates on every reposition.
+ */
+export interface ReactiveFloatHandle extends FloatHandle {
+  /** Reactive signal that holds the most recently computed position. Read-only. */
+  readonly position: ReadonlySignal<ComputePositionResult | null>;
 }
 
 /**
@@ -69,33 +58,14 @@ export function createFloatState(
 ): ReactiveFloatHandle {
   const position = signal<ComputePositionResult | null>(null);
 
-  const handle: FloatHandle = float(reference, floating, {
+  const handle = float(reference, floating, {
     ...options,
     apply: (result) => {
       position.value = result;
     },
   });
 
-  if (import.meta.env.DEV && handle.cssAnchor) {
-    warn(
-      'createFloatState: CSS Anchor Positioning is active — ' +
-        '`position` will remain null. Use a CSS rule or effect instead of reading the signal.',
-    );
-  }
-
-  return {
-    cssAnchor: handle.cssAnchor,
-    get disposalSignal(): AbortSignal {
-      return handle.disposalSignal;
-    },
-    dispose: handle.dispose.bind(handle),
-    get disposed(): boolean {
-      return handle.disposed;
-    },
-    position,
-    [Symbol.dispose](): void {
-      handle.dispose();
-    },
-    update: handle.update.bind(handle),
-  };
+  return Object.assign(handle, {
+    position: position as ReadonlySignal<ComputePositionResult | null>,
+  });
 }

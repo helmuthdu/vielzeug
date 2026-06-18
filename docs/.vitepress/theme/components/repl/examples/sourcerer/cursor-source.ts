@@ -1,6 +1,6 @@
 export const cursorSourceExample = {
-  code: `// Cursor-based source: navigate by opaque tokens; restore state with restoreQuery()
-import { createCursorSource } from '@vielzeug/sourcerer'
+  code: `// Cursor-based source: navigate by opaque tokens; restore state with applyCursorQuery()
+import { applyCursorQuery, createCursorSource } from '@vielzeug/sourcerer'
 
 const allItems = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, label: \`Item \${i + 1}\` }))
 
@@ -32,10 +32,10 @@ console.log('Snapshot limit:', snapshot.limit, '— after cursor:', snapshot.aft
 await source.reset()
 console.log('After reset, back to page 1:', source.current[0]?.label)
 
-// restoreQuery() re-applies a saved snapshot without redundant fetches
-await source.restoreQuery({ limit: 10 })
-console.log('After restoreQuery (no change) — fetch count unchanged')
+// applyCursorQuery() re-applies a saved snapshot without redundant fetches
+await applyCursorQuery(source, { limit: 10 })
+console.log('After applyCursorQuery (no change) — fetch count unchanged')
 
 source.dispose()`,
-  name: 'Cursor Source & restoreQuery',
+  name: 'Cursor Source & applyCursorQuery',
 };

@@ -1,3 +1,4 @@
+import { isDev } from './_warn';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
 
 export type Messages = {
@@ -119,7 +120,7 @@ export type DeepPartial<T> = {
   [K in keyof T]?: T[K] extends Record<string, unknown> ? DeepPartial<T[K]> : T[K];
 };
 
-const _defaultMessages: Messages = {
+const _builtinMessages: Messages = {
   array: {
     length: ({ exact }) => `Must have exactly ${exact} items`,
     max: ({ max }) => `Must have at most ${max} items`,
@@ -235,18 +236,13 @@ const _defaultMessages: Messages = {
   },
 };
 
-let _activeMessages: Messages = _defaultMessages;
-let _activeLocale = 'en';
-const _localeRegistry = new Map<string, Messages>([['en', _defaultMessages]]);
+let _activeMessages: Messages = _builtinMessages;
 
 /** A function that receives internal warning messages from spell. */
 export type Logger = (message: string) => void;
 
-/** @internal */
-const _isDev = !(globalThis as { __SPELL_PROD__?: boolean }).__SPELL_PROD__;
-
 let _logger: Logger = (msg) => {
-  if (_isDev) console.warn(`[@vielzeug/spell] ${msg}`);
+  if (isDev) console.warn(`[@vielzeug/spell] ${msg}`);
 };
 
 /** @internal */
@@ -282,51 +278,33 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
 }
 
 /**
- * Override any subset of default validation messages and/or the warning logger globally.
- * Pass `logger: null` to silence all internal warnings.
+ * Override any subset of the default validation messages globally.
+ * Merges deeply into the current active messages — call again to update.
+ *
+ * For locale integration (e.g. with \@vielzeug/lingua), call this inside
+ * your locale-change handler:
+ * ```ts
+ * i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
+ * ```
  */
-export function configure(opts: { logger?: Logger | null; messages?: DeepPartial<Messages> }): void {
-  if (opts.messages) _activeMessages = mergeMessages(_activeMessages, opts.messages);
-
-  if ('logger' in opts) _logger = opts.logger ?? (() => {});
+export function setMessages(messages: DeepPartial<Messages>): void {
+  _activeMessages = mergeMessages(_builtinMessages, messages);
 }
 
-/** Reset all messages, the active locale, and the logger to defaults. */
-export function reset(): void {
-  _activeMessages = _defaultMessages;
-  _activeLocale = 'en';
-  _logger = (msg) => {
-    if (_isDev) console.warn(`[@vielzeug/spell] ${msg}`);
-  };
+/**
+ * Override the internal warning logger.
+ * Pass `null` to silence all internal warnings.
+ */
+export function setLogger(logger: Logger | null): void {
+  _logger = logger ?? (() => {});
 }
 
-/** @internal — for use by schema files only. */
+/** Reset all messages to the built-in defaults. */
+export function resetMessages(): void {
+  _activeMessages = _builtinMessages;
+}
+
+/** @internal — returns the active (possibly overridden) message set. */
 export function _messages(): Messages {
   return _activeMessages;
-}
-
-/**
- * Register a full or partial locale message set under the given locale key.
- * Call `useLocale(locale)` to activate it.
- */
-export function registerLocale(locale: string, messages: DeepPartial<Messages>): void {
-  _localeRegistry.set(locale, mergeMessages(_defaultMessages, messages));
-}
-
-/**
- * Switch the active locale. The locale must have been previously registered
- * with `registerLocale()`.
- */
-export function useLocale(locale: string): void {
-  const msgs = _localeRegistry.get(locale);
-
-  if (!msgs) throw new Error(`[@vielzeug/spell] Locale "${locale}" is not registered. Call registerLocale() first.`);
-
-  _activeLocale = locale;
-  _activeMessages = msgs;
-}
-
-/** Returns the currently active locale key. */
-export function currentLocale(): string {
-  return _activeLocale;
 }

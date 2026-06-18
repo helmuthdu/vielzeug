@@ -5,19 +5,18 @@ description: Complete API reference for spell schema builders, helpers, validato
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol                                             | Purpose                                                                       | Execution mode      | Common gotcha                                                       |
-| -------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
-| `s`                                                | Namespace of all schema builders (`s.string()`, `s.object()`, etc.)           | Sync setup          | All builders are accessed via this single export.                   |
-| `Schema.parse()` / `safeParse()`                   | Validate synchronously; `parse()` throws, `safeParse()` returns tagged result | Sync                | See `Schema` class section below.                                   |
-| `s.coerce.*`                                       | Coerce string-like input before validation                                    | Sync setup          | Coercion changes the accepted input type, not only the output type. |
-| `Schema.parseAsync()` / `safeParseAsync()`         | Validate async refinements                                                    | Async               | Required when any nested rule uses `checkAsync()`.                  |
-| `fromDescriptor()`                                 | Rebuild a schema from a reconstructible descriptor                            | Sync setup          | Only accepts reconstructible kinds.                                 |
-| `descriptorToJsonSchema()`                         | Convert descriptors to JSON Schema                                            | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
-| `configure()` / `registerLocale()` / `useLocale()` | Override and switch validation messages                                       | Sync setup          | `configure()` composes with the active message set.                 |
-| `ValidationError`                                  | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
-| `prependIssuePath()`                               | Prefix a path segment to an array of issues                                   | Sync                | Use inside custom parsers that delegate to inner schemas.           |
+| Symbol                                              | Purpose                                                                       | Execution mode      | Common gotcha                                                       |
+| --------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
+| `s`                                                 | Namespace of all schema builders (`s.string()`, `s.object()`, etc.)           | Sync setup          | All builders are accessed via this single export.                   |
+| `Schema.parse()` / `safeParse()`                    | Validate synchronously; `parse()` throws, `safeParse()` returns tagged result | Sync                | See `Schema` class section below.                                   |
+| `s.coerce.*`                                        | Coerce string-like input before validation                                    | Sync setup          | Coercion changes the accepted input type, not only the output type. |
+| `Schema.parseAsync()` / `safeParseAsync()`          | Validate including async `validate()` callbacks                               | Async               | Required when any nested rule uses an async `validate()` callback.  |
+| `descriptorToJsonSchema()`                          | Convert descriptors to JSON Schema                                            | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
+| `setMessages()` / `setLogger()` / `resetMessages()` | Override validation messages and warning logger                               | Sync setup          | `setMessages()` replaces the active message set each call.          |
+| `ValidationError`                                   | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
+| `prependIssuePath()`                                | Prefix a path segment to an array of issues                                   | Sync                | Use inside custom parsers that delegate to inner schemas.           |
 
 ## Package Entry Point
 
@@ -31,9 +30,9 @@ Use this table to scan every runtime export.
 
 | Category                  | Exports                                                                                                                                                                                                                                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Classes                   | `Schema`, `WrapperSchema`, `PipeSchema`, `ValidationError`                                                                                                                                                                                                                                                                       |
-| Message and error helpers | `ErrorCode`, `errorsAt`, `fail`, `prependIssuePath`, `configure`, `currentLocale`, `registerLocale`, `reset`, `useLocale`                                                                                                                                                                                                        |
-| Descriptor helpers        | `fromDescriptor`, `descriptorToJsonSchema`                                                                                                                                                                                                                                                                                       |
+| Classes                   | `Schema`, `PipeSchema`, `ValidationError`                                                                                                                                                                                                                                                                                        |
+| Message and error helpers | `ErrorCode`, `errorsAt`, `fail`, `prependIssuePath`, `setMessages`, `setLogger`, `resetMessages`                                                                                                                                                                                                                                 |
+| Descriptor helpers        | `descriptorToJsonSchema`                                                                                                                                                                                                                                                                                                         |
 | Pure validators           | `hasMaxLength`, `hasMinLength`, `isArray`, `isBoolean`, `isDate`, `isInteger`, `isMultipleOf`, `isNegative`, `isNonNegative`, `isNullOrUndefined`, `isNumber`, `isPositive`, `isString`, `isInRange`                                                                                                                             |
 | String format validators  | `isBase64`, `isBase64url`, `isCuid`, `isCuid2`, `isDuration`, `isEmail`, `isEmoji`, `isHex`, `isHexColor`, `isIp`, `isIsoDate`, `isIsoDateTime`, `isJwt`, `isNanoid`, `isNumeric`, `isSemver`, `isSlug`, `isTime`, `isUlid`, `isUrl`, `isUuid`                                                                                   |
 | Namespace                 | `s`                                                                                                                                                                                                                                                                                                                              |
@@ -106,33 +105,33 @@ const Filter = s.union(
 
 Builder reference:
 
-| Builder                 | Returns                    | Notes                                                   |
-| ----------------------- | -------------------------- | ------------------------------------------------------- |
-| `s.any()`               | `Schema<any>`              | Accepts any value.                                      |
-| `s.unknown()`           | `Schema<unknown>`          | Accepts any value and keeps `unknown`.                  |
-| `s.never()`             | `NeverSchema`              | Always fails.                                           |
-| `s.null()`              | `LiteralSchema<null>`      | Useful inside unions.                                   |
-| `s.undefined()`         | `LiteralSchema<undefined>` | Useful inside unions.                                   |
-| `s.string()`            | `StringSchema`             | String constraints and string format helpers.           |
-| `s.number()`            | `NumberSchema`             | Numeric range, integer, sign, and multiplicity helpers. |
-| `s.boolean()`           | `BooleanSchema`            | Boolean parsing and coercion helpers.                   |
-| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`. Constraints are runtime-only — `toDescriptor()` warns and does not serialize `min()`, `max()`, etc. |
-| `s.date()`              | `DateSchema`               | Date instance validation and range helpers.             |
-| `s.literal(value)`      | `LiteralSchema<T>`         | Exact primitive matching.                               |
-| `s.enum(values)`        | `EnumSchema<T>`            | Fixed string union from a readonly tuple.               |
-| `s.array(schema)`       | `ArraySchema<T>`           | Element validation plus min/max/length/nonEmpty.        |
-| `s.tuple(items)`        | `TupleSchema<T>`           | Fixed positions with typed output.                      |
-| `s.object(shape)`       | `ObjectSchema<T>`          | Strict object parsing by default.                       |
-| `s.record(key, val)`    | `RecordSchema<K, V>`       | String-keyed record validation.                         |
-| `s.set(schema)`         | `SetSchema<T>`             | Set size and element validation.                        |
-| `s.map(key, val)`       | `MapSchema<K, V>`          | Map entry validation.                                   |
-| `s.union(...items)`     | `UnionSchema`              | First successful branch wins.                           |
-| `s.or(a, b)`            | `UnionSchema`              | Alias for `s.union()` with exactly two schemas.         |
-| `s.and(a, b)`           | `IntersectSchema`          | Alias for `s.intersect()` with two schemas.             |
-| `s.intersect(...items)` | `IntersectSchema`          | Merges compatible outputs deeply and safely.            |
-| `s.variant(key, map)`   | `VariantSchema`            | Discriminated object union.                             |
-| `s.lazy(getter)`        | `LazySchema<T>`            | Recursive schema definitions.                           |
-| `s.instanceof(cls)`     | `InstanceOfSchema<T>`      | Runtime class instance checks.                          |
+| Builder                 | Returns                    | Notes                                                                                                                                                                           |
+| ----------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `s.any()`               | `Schema<any>`              | Accepts any value.                                                                                                                                                              |
+| `s.unknown()`           | `Schema<unknown>`          | Accepts any value and keeps `unknown`.                                                                                                                                          |
+| `s.never()`             | `NeverSchema`              | Always fails.                                                                                                                                                                   |
+| `s.null()`              | `LiteralSchema<null>`      | Useful inside unions.                                                                                                                                                           |
+| `s.undefined()`         | `LiteralSchema<undefined>` | Useful inside unions.                                                                                                                                                           |
+| `s.string()`            | `StringSchema`             | String constraints and string format helpers.                                                                                                                                   |
+| `s.number()`            | `NumberSchema`             | Numeric range, integer, sign, and multiplicity helpers.                                                                                                                         |
+| `s.boolean()`           | `BooleanSchema`            | Boolean parsing and coercion helpers.                                                                                                                                           |
+| `s.bigint()`            | `BigIntSchema`             | Integer boundaries for `bigint`. Constraints are runtime-only — `toDescriptor()` warns and does not serialize `min()`, `max()`, etc.                                            |
+| `s.date()`              | `DateSchema`               | Date instance validation and range helpers.                                                                                                                                     |
+| `s.literal(value)`      | `LiteralSchema<T>`         | Exact primitive matching.                                                                                                                                                       |
+| `s.enum(values)`        | `EnumSchema<T>`            | Fixed string union from a readonly tuple.                                                                                                                                       |
+| `s.array(schema)`       | `ArraySchema<T>`           | Element validation plus min/max/length/nonEmpty.                                                                                                                                |
+| `s.tuple(items)`        | `TupleSchema<T>`           | Fixed positions with typed output.                                                                                                                                              |
+| `s.object(shape)`       | `ObjectSchema<T>`          | Strict object parsing by default.                                                                                                                                               |
+| `s.record(key, val)`    | `RecordSchema<K, V>`       | String-keyed record validation.                                                                                                                                                 |
+| `s.set(schema)`         | `SetSchema<T>`             | Set size and element validation.                                                                                                                                                |
+| `s.map(key, val)`       | `MapSchema<K, V>`          | Map entry validation.                                                                                                                                                           |
+| `s.union(...items)`     | `UnionSchema`              | First successful branch wins.                                                                                                                                                   |
+| `s.or(a, b)`            | `UnionSchema`              | Alias for `s.union()` with exactly two schemas.                                                                                                                                 |
+| `s.and(a, b)`           | `IntersectSchema`          | Alias for `s.intersect()` with two schemas.                                                                                                                                     |
+| `s.intersect(...items)` | `IntersectSchema`          | Merges compatible outputs deeply and safely.                                                                                                                                    |
+| `s.variant(key, map)`   | `VariantSchema`            | Discriminated object union. Async field validators on branch objects are silently skipped — use `s.object()` with `parseAsync()` directly if you need async branch-field rules. |
+| `s.lazy(getter)`        | `LazySchema<T>`            | Recursive schema definitions.                                                                                                                                                   |
+| `s.instanceof(cls)`     | `InstanceOfSchema<T>`      | Runtime class instance checks.                                                                                                                                                  |
 
 ---
 
@@ -173,10 +172,8 @@ class Schema<Output = unknown, Input = Output> {
   safeParse(value: unknown): ParseResult<Output>;
   parseAsync(value: unknown): Promise<Output>;
   safeParseAsync(value: unknown): Promise<ParseResult<Output>>;
-  check(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
-  check(fn: (value: Output, ctx: CheckContext) => Exclude<CheckFnResult, Promise<any>>): this;
+  validate(fn: (value: Output, ctx: CheckContext) => ValidateResult | Promise<ValidateResult>): this;
   refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
-  checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this;
   optional(): WrapperSchema<this, 'optional'>;
   nullable(): WrapperSchema<this, 'nullable'>;
   nullish(): WrapperSchema<this, 'nullish'>;
@@ -217,22 +214,61 @@ console.log(descriptor.description, sameShape);
 
 Use this table to decide which methods to call most often.
 
-| Method family                                            | What it does                                                                                              |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `parse*`                                                 | Returns data or throws / returns an error object.                                                         |
-| `check*` / `refine`                                      | Adds synchronous or asynchronous custom validation. `refine()` is the predicate-only alias for `check()`. |
-| `optional` / `nullable` / `nullish` / `required`         | Changes missing-value semantics.                                                                          |
-| `default` / `catch`                                      | Supplies fallback output on `undefined` or validation failure.                                            |
-| `transform` / `preprocess` / `pipe`                      | Converts input before or after validation.                                                                |
-| `label` / `description`                                  | Adds a human-readable description that also appears in descriptors.                                       |
-| `is(value)`                                              | Type-predicate guard. Returns `true` if `value` passes `safeParse()`.                                     |
-| `kind`                                                   | Read-only string identifier for this schema's type (e.g. `'string'`, `'object'`).                        |
-| `equals(other)`                                          | Structural equality check comparing shape, constraints, and annotations (not pre/postprocessors).         |
-| `toDescriptor` / `toJsonSchema` / `walk` / `equals`      | Supports tooling and schema introspection. `toDescriptor()` emits a dev warning if the schema has preprocessors (e.g. `trim()`, `coerce`), since they cannot survive a round-trip. |
+| Method family                                       | What it does                                                                                                                                                                       |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parse*`                                            | Returns data or throws / returns an error object.                                                                                                                                  |
+| `validate` / `refine`                               | Adds custom validation. `validate()` accepts sync or async callbacks and boolean/string shorthands. `refine()` is the predicate-only alias for boolean predicates.                 |
+| `optional` / `nullable` / `nullish` / `required`    | Changes missing-value semantics.                                                                                                                                                   |
+| `default` / `catch`                                 | Supplies fallback output on `undefined` or validation failure.                                                                                                                     |
+| `transform` / `preprocess` / `pipe`                 | Converts input before or after validation.                                                                                                                                         |
+| `label` / `description`                             | Adds a human-readable description that also appears in descriptors.                                                                                                                |
+| `is(value)`                                         | Type-predicate guard. Returns `true` if `value` passes `safeParse()`.                                                                                                              |
+| `kind`                                              | Read-only string identifier for this schema's type (e.g. `'string'`, `'object'`).                                                                                                  |
+| `equals(other)`                                     | Structural equality check comparing shape, constraints, and annotations (not pre/postprocessors).                                                                                  |
+| `toDescriptor` / `toJsonSchema` / `walk` / `equals` | Supports tooling and schema introspection. `toDescriptor()` emits a dev warning if the schema has preprocessors (e.g. `trim()`, `coerce`), since they cannot survive a round-trip. |
+
+### `Schema.validate()`
+
+Use `validate()` to add a custom synchronous or asynchronous rule to any schema.
+
+```ts
+validate(fn: (value: Output, ctx: CheckContext) => ValidateResult | Promise<ValidateResult>): this
+```
+
+**Parameters**
+
+| Name | Type                                                                 | Notes                                                                                   |
+| ---- | -------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `fn` | `(value: Output, ctx: CheckContext) => ValidateResult \| Promise<…>` | Sync or async. Return `false` or a `string` to fail; `true`, `null`, or `void` to pass. |
+
+**Returns:** `this` (fluent)
+
+The callback receives the parsed `value` and a `ctx` object with `addIssue()`. All three of the following forms are equivalent:
+
+```ts
+import { s } from '@vielzeug/spell';
+
+// Boolean shorthand
+const EvenNumber = s.number().validate((n) => n % 2 === 0);
+
+// String message shorthand (falsy condition || message)
+const Email = s.string().validate((v) => v.includes('@') || 'Must be a valid email');
+
+// Explicit ctx.addIssue() for multiple issues or custom codes
+const Signup = s.object({ email: s.string(), username: s.string() }).validate((v, ctx) => {
+  if (v.email === v.username) {
+    ctx.addIssue({ code: 'custom', message: 'Email and username must differ', path: ['email'] });
+  }
+});
+```
+
+Async callbacks are awaited only in `parseAsync()` / `safeParseAsync()`. Passing an async callback to `validate()` and calling `parse()` synchronously silently skips the async rule. Use `parseAsync()` whenever any `validate()` callback may return a `Promise`.
+
+---
 
 ### `Schema.refine()`
 
-Use `refine()` as the predicate-only alias for `check()`. Familiar for users coming from other schema libraries.
+Use `refine()` as the predicate-only alias for boolean validation. Familiar for users coming from other schema libraries.
 
 ```ts
 refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this
@@ -247,7 +283,7 @@ refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Outpu
 
 **Returns:** `this` (fluent)
 
-For context-based refinements that use `ctx.addIssue()`, use `check()` directly.
+For context-based checks that call `ctx.addIssue()`, use `validate()` directly.
 
 ```ts
 import { s } from '@vielzeug/spell';
@@ -341,39 +377,6 @@ schema.defaults(); // {}
 
 ---
 
-### `WrapperSchema<T, Mode>`
-
-Use `WrapperSchema` when you inspect or type wrapper results directly.
-
-```ts
-class WrapperSchema<T extends AnySchema, Mode extends WrapperMode> extends Schema<
-  WrapperOutput<T, Mode>,
-  WrapperInput<T, Mode>
-> {
-  readonly inner: T;
-  readonly mode: Mode;
-  required(): Schema<Exclude<WrapperOutput<T, Mode>, undefined>, Exclude<WrapperInput<T, Mode>, undefined>>;
-}
-```
-
-**Returns:** A schema that changes whether `undefined`, `null`, or both are accepted.
-
-Use wrapper schemas to make optionality explicit without rebuilding the inner constraints.
-
-```ts
-import { s } from '@vielzeug/spell';
-
-const Nickname = s.string().min(2).optional().default('guest').nullable();
-const RequiredNickname = Nickname.required();
-
-RequiredNickname.parse(null);
-// RequiredNickname.parse(undefined); // throws
-```
-
-`required()` only removes `undefined`. A chain such as `.optional().nullable().required()` stays nullable.
-
----
-
 ### `PipeSchema<Output, Input = unknown>`
 
 Use `pipe()` when one schema should feed another schema instead of a custom transform.
@@ -396,45 +399,7 @@ const Slug = s.string().trim().pipe(s.string().slug());
 Slug.parse('release-notes');
 ```
 
-## Descriptor, Locale, and Helper Functions
-
-### `fromDescriptor()`
-
-Use `fromDescriptor()` to rebuild a schema from a reconstructible descriptor.
-
-```ts
-fromDescriptor(descriptor: ReconstructibleSchemaDescriptor): AnySchema
-```
-
-**Parameters**
-
-| Name         | Type                              | Notes                                                                        |
-| ------------ | --------------------------------- | ---------------------------------------------------------------------------- |
-| `descriptor` | `ReconstructibleSchemaDescriptor` | A descriptor produced by `toDescriptor()` for a reconstructible schema kind. |
-
-**Returns:** `AnySchema`
-
-Use it when descriptors travel through storage, code generation, or network boundaries.
-
-```ts
-import { fromDescriptor, s } from '@vielzeug/spell';
-
-const descriptor = s
-  .object({
-    email: s.string().email(),
-    age: s.number().positive(),
-  })
-  .toDescriptor();
-
-const schema = fromDescriptor(descriptor);
-schema.parse({ email: 'ada@example.com', age: 32 });
-```
-
-`fromDescriptor()` restores base fields such as `description`, `isOptional`, and `isNullable`. It also restores string annotations like `format`, `pattern`, and `contentEncoding`, object strictness, and number hints emitted by built-in helpers such as `.positive()`, `.negative()`, and `.multipleOf()`. It does not accept `variant`, `pipe`, `instanceof`, or `lazy` descriptors.
-
-**Known limitation:** Non-zero exclusive bounds (e.g. `exclusiveMinimum: 5`) are not restored — only the zero-exclusive forms used by `.positive()` and `.negative()` round-trip correctly. Descriptors with other exclusive bound values produce a plain `number()` schema without those bounds.
-
----
+## Descriptor and Helper Functions
 
 ### `descriptorToJsonSchema()`
 
@@ -467,144 +432,94 @@ const jsonSchema = descriptorToJsonSchema(schema.toDescriptor());
 
 ---
 
-### `configure()`
+### `setMessages()`
 
-Use `configure()` to override any subset of the global message catalog or the internal warning logger.
+Use `setMessages()` to override any subset of the global validation message catalog.
 
 ```ts
-configure(opts: { logger?: Logger | null; messages?: DeepPartial<Messages> }): void
+setMessages(messages: DeepPartial<Messages>): void
 ```
 
 **Parameters**
 
-| Name            | Type                    | Notes                                                                 |
-| --------------- | ----------------------- | --------------------------------------------------------------------- |
-| `opts.logger`   | `Logger \| null`        | Pass `null` to silence internal warnings.                             |
-| `opts.messages` | `DeepPartial<Messages>` | Deep partial message overrides. Nested keys are merged, not replaced. |
+| Name       | Type                    | Notes                                                                                  |
+| ---------- | ----------------------- | -------------------------------------------------------------------------------------- |
+| `messages` | `DeepPartial<Messages>` | Partial message overrides. Merged into the built-in defaults, not composed additively. |
 
 **Returns:** `void`
 
-Use repeated calls to compose message overrides in stages.
+Each `setMessages()` call replaces the active overrides. Call `resetMessages()` to restore the built-in defaults.
 
 ```ts
-import { configure } from '@vielzeug/spell';
+import { setMessages } from '@vielzeug/spell';
 
-configure({
-  messages: {
-    string: {
-      email: 'Use a valid email address',
-    },
-  },
-});
-
-configure({
-  messages: {
-    number: {
-      min: ({ min }) => `Use ${min} or greater`,
-    },
-  },
-});
-```
-
-Each `configure({ messages })` call merges into the currently active messages. It does not reset the message tree back to the defaults first.
-
----
-
-### `registerLocale()`
-
-Use `registerLocale()` to install a named locale pack before switching to it.
-
-```ts
-registerLocale(locale: string, messages: DeepPartial<Messages>): void
-```
-
-**Parameters**
-
-| Name       | Type                    | Notes                                         |
-| ---------- | ----------------------- | --------------------------------------------- |
-| `locale`   | `string`                | Locale key such as `'en'` or `'de'`.          |
-| `messages` | `DeepPartial<Messages>` | Full or partial message tree for that locale. |
-
-**Returns:** `void`
-
-Use locale registration during app startup.
-
-```ts
-import { registerLocale } from '@vielzeug/spell';
-
-registerLocale('de', {
+setMessages({
   string: {
-    email: 'Bitte eine gültige E-Mail-Adresse eingeben',
+    email: 'Use a valid work email address',
+    min: ({ min }) => `Must be at least ${min} characters`,
   },
 });
 ```
 
----
-
-### `useLocale()`
-
-Use `useLocale()` to switch the active message locale.
+To integrate with `@vielzeug/lingua` (or any i18n library), call `setMessages()` from your locale change callback:
 
 ```ts
-useLocale(locale: string): void
+import { setMessages } from '@vielzeug/spell';
+
+// spellMessages is your locale → DeepPartial<Messages> map
+i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
+```
+
+---
+
+### `setLogger()`
+
+Use `setLogger()` to route or silence internal Spell development warnings.
+
+```ts
+setLogger(logger: Logger | null): void
 ```
 
 **Parameters**
 
-| Name     | Type     | Notes                                                       |
-| -------- | -------- | ----------------------------------------------------------- |
-| `locale` | `string` | A locale key previously registered with `registerLocale()`. |
+| Name     | Type             | Notes                                                    |
+| -------- | ---------------- | -------------------------------------------------------- |
+| `logger` | `Logger \| null` | Custom `(msg: string) => void` fn, or `null` to silence. |
 
 **Returns:** `void`
 
-Use locale switching before parsing when the current request or user chooses the language.
+Internal warnings include things like multiple `regex()` constraints on a single string schema. Pass `null` to silence them completely.
 
 ```ts
-import { useLocale } from '@vielzeug/spell';
+import { setLogger } from '@vielzeug/spell';
 
-useLocale('de');
+// Silence all internal warnings
+setLogger(null);
+
+// Redirect to your own logging infrastructure
+setLogger((msg) => myLogger.warn(msg));
 ```
 
 ---
 
-### `currentLocale()`
+### `resetMessages()`
 
-Use `currentLocale()` to read the active locale key.
-
-```ts
-currentLocale(): string
-```
-
-**Returns:** The current locale key.
-
-Use it when your UI and validation layer share locale state.
+Use `resetMessages()` to restore the built-in message catalog and the default warning logger.
 
 ```ts
-import { currentLocale } from '@vielzeug/spell';
-
-console.log(currentLocale());
-```
-
----
-
-### `reset()`
-
-Use `reset()` to restore the default logger, messages, and locale.
-
-```ts
-reset(): void
+resetMessages(): void
 ```
 
 **Returns:** `void`
 
-Use it in tests or isolated environments that need a clean global Spell state.
+Useful in tests to ensure each test starts from a clean global state.
 
 ```ts
-import { currentLocale, reset, useLocale } from '@vielzeug/spell';
+import { resetMessages, setMessages } from '@vielzeug/spell';
 
-useLocale('de');
-reset();
-console.log(currentLocale()); // 'en'
+setMessages({ string: { email: 'Custom message' } });
+// ... run tests ...
+resetMessages(); // restore defaults
 ```
 
 ---
@@ -756,31 +671,30 @@ console.log(isUuid('550e8400-e29b-41d4-a716-446655440000'));
 
 Use these exported types when Spell drives your public TypeScript API.
 
-| Type                                                           | Purpose                                                                                                 |
-| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ---------- | ----------- |
-| `AnySchema`                                                    | Union of all schema instances. Useful for generic helpers.                                              |
-| `Infer<T>`                                                     | Output type alias for a schema instance.                                                                |
-| `InferInput<T>`                                                | Accepted input type for a schema instance.                                                              |
-| `InferOutput<T>`                                               | Explicit output type helper for a schema instance.                                                      |
-| `ParseResult<T>`                                               | Result union used by `safeParse()` and `safeParseAsync()`.                                              |
-| `ValidateFn`                                                   | Low-level validator function signature used by custom schema implementations.                           |
-| `CheckContext`                                                 | Context object for `check()` and `checkAsync()` issue emission.                                         |
-| `CheckFnResult`                                                | Allowed return type from custom checks.                                                                 |
-| `SchemaWalker<R>`                                              | Visitor interface used by `walk()`.                                                                     |
-| `OptionalSchema<T>` / `NullableSchema<T>` / `NullishSchema<T>` | Wrapper output aliases for common wrapper modes.                                                        |
-| `WrapperMode`                                                  | `'optional' \| 'nullable' \| 'nullish'`                                                                 |
-| `SchemaDescriptor`                                             | Full serializable descriptor produced by `toDescriptor()`.                                              |
-| `ReconstructibleSchemaDescriptor`                              | Descriptor subset accepted by `fromDescriptor()`. Excludes `variant`, `pipe`, `instanceof`, and `lazy`. |
-| `JsonSchema`                                                   | JSON Schema output shape returned by `toJsonSchema()` and `descriptorToJsonSchema()`.                   |
-| `ErrorCode`                                                    | String union derived from the `ErrorCode` constant. Useful for typed custom issues.                     |
-| `Issue`                                                        | Single validation issue object with `code`, `message`, `path`, and `params`.                            |
-| `MessageFn<Ctx>`                                               | Message callback signature for schema and locale overrides.                                             |
-| `Messages`                                                     | Full locale message catalog shape.                                                                      |
-| `DeepPartial<Messages>`                                        | Deep-optional version of `Messages`; accepted by `configure()` and `registerLocale()`.                  |
-| `Logger`                                                       | Global warning logger signature used by `configure()`.                                                  |
-| `FormattedErrors`                                              | Nested error object returned by `ValidationError.format()`.                                             |
-| `FlatError`                                                    | `{ path, messages }` entry returned by `flatten()`.                                                     |
-| `FlatErrorFirst`                                               | `{ path, message }` entry returned by `flattenFirst()`.                                                 |
+| Type                                                           | Purpose                                                                               |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `AnySchema`                                                    | Union of all schema instances. Useful for generic helpers.                            |
+| `Infer<T>`                                                     | Output type alias for a schema instance.                                              |
+| `InferInput<T>`                                                | Accepted input type for a schema instance.                                            |
+| `InferOutput<T>`                                               | Explicit output type helper for a schema instance.                                    |
+| `ParseResult<T>`                                               | Result union used by `safeParse()` and `safeParseAsync()`.                            |
+| `ValidateFn`                                                   | Low-level validator function signature used by custom schema implementations.         |
+| `CheckContext`                                                 | Context object passed to `validate()` callbacks for explicit issue emission.          |
+| `ValidateResult`                                               | Allowed return type from `validate()` callbacks: `boolean \| string \| null \| void`. |
+| `SchemaWalker<R>`                                              | Visitor interface used by `walk()`.                                                   |
+| `OptionalSchema<T>` / `NullableSchema<T>` / `NullishSchema<T>` | Wrapper output aliases for common wrapper modes.                                      |
+| `WrapperMode`                                                  | `'optional' \| 'nullable' \| 'nullish'`                                               |
+| `SchemaDescriptor`                                             | Full serializable descriptor produced by `toDescriptor()`.                            |
+| `JsonSchema`                                                   | JSON Schema output shape returned by `toJsonSchema()` and `descriptorToJsonSchema()`. |
+| `ErrorCode`                                                    | String union derived from the `ErrorCode` constant. Useful for typed custom issues.   |
+| `Issue`                                                        | Single validation issue object with `code`, `message`, `path`, and `params`.          |
+| `MessageFn<Ctx>`                                               | Message callback signature for schema and locale overrides.                           |
+| `Messages`                                                     | Full locale message catalog shape.                                                    |
+| `DeepPartial<Messages>`                                        | Deep-optional version of `Messages`; accepted by `setMessages()`.                     |
+| `Logger`                                                       | Warning logger signature used by `setLogger()`: `(msg: string) => void`.              |
+| `FormattedErrors`                                              | Nested error object returned by `ValidationError.format()`.                           |
+| `FlatError`                                                    | `{ path, messages }` entry returned by `flatten()`.                                   |
+| `FlatErrorFirst`                                               | `{ path, message }` entry returned by `flattenFirst()`.                               |
 
 ## Errors
 
@@ -815,7 +729,9 @@ if (!result.success && ValidationError.is(result.error)) {
 }
 ```
 
-`format()` guards unsafe path keys when building nested objects. You can safely hand its result to UI code without letting hostile keys write through the prototype chain.
+`format()` guards unsafe path keys when building nested objects. You can safely hand its result to UI code without letting hostile keys write through the prototype chain. Path segments named `'_errors'` are automatically remapped to `'_errors_'` to avoid colliding with the reserved `_errors` field in each `FormattedErrors` node. Use `errorsAt()` with the same path to retrieve messages consistently.
+
+> **Note:** `ValidationError.message` (the human-readable error string) may contain constraint parameter values such as string suffixes, pattern prefixes, or min/max bounds when those appear in your validation messages. For structured access to individual issue details, use `.issues` or the flattening helpers instead of serializing `.message` directly into API responses or logs.
 
 ---
 

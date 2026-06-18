@@ -7,7 +7,9 @@
       <aside class="ide-sidebar">
         <div class="sidebar-header">
           <img :src="withBase(`/logo-${selectedLibrary}.svg`)" :alt="selectedLibrary" class="sidebar-active-logo" />
-          <span class="sidebar-active-name">@vielzeug/<strong>{{ selectedLibrary }}</strong></span>
+          <span class="sidebar-active-name"
+            >@vielzeug/<strong>{{ selectedLibrary }}</strong></span
+          >
         </div>
         <nav class="sidebar-nav">
           <button
@@ -16,7 +18,10 @@
             class="sidebar-item"
             :class="{ 'is-active': selectedLibrary === lib }"
             :title="desc"
-            @click="selectedLibrary = lib; switchLibrary()">
+            @click="
+              selectedLibrary = lib;
+              switchLibrary();
+            ">
             <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="sidebar-logo" />
             <span class="sidebar-info">
               <span class="sidebar-name">{{ lib }}</span>
@@ -75,10 +80,11 @@ const LIBRARY_DESCRIPTIONS = {
   courier: 'Advanced HTTP client with caching, retries, mutations, and more.',
   familiar: 'Web Worker pool abstraction with queuing, timeout, and more.',
   forge: 'Form state management with reactive fields and async validation.',
-  grip: 'Drag-and-drop primitives with file filtering and more.',
+  dnd: 'Drag-and-drop primitives with file filtering and more.',
   herald: 'Publish/Subscribe event bus with async support.',
   lingua: 'Internationalization library with TypeScript support.',
   orbit: 'Lightweight floating-element positioning for elements.',
+  pulse: 'WebSocket client with auto-reconnect, message buffering, and more.',
   ripple: 'Reactive state based on signals, with stores, derived state, and more.',
   rune: 'Structured logger with level filtering, scoped namespaces, and more.',
   scroll: 'Virtual list engine for performant rendering of large datasets.',
@@ -96,15 +102,16 @@ const LIBRARY_LOADERS = {
   coins: () => import('@vielzeug/coins'),
   conduit: () => import('@vielzeug/conduit'),
   courier: () => import('@vielzeug/courier'),
+  dnd: () => import('@vielzeug/dnd'),
   familiar: () => import('@vielzeug/familiar'),
   forge: () => import('@vielzeug/forge'),
-  grip: () => import('@vielzeug/grip'),
   herald: () => import('@vielzeug/herald'),
   lingua: () => import('@vielzeug/lingua'),
   orbit: async () => {
     const [main, presetsModule] = await Promise.all([import('@vielzeug/orbit'), import('@vielzeug/orbit/presets')]);
     return { ...main, ...presetsModule };
   },
+  pulse: () => import('@vielzeug/pulse'),
   ripple: () => import('@vielzeug/ripple'),
   rune: () => import('@vielzeug/rune'),
   scroll: () => import('@vielzeug/scroll'),
@@ -118,7 +125,7 @@ const LIBRARY_LOADERS = {
 
 const LIBRARY_EXPORTS = {
   vault: ['createLocalStorage', 'createIndexedDB', 'createMemory', 'createSessionStorage', 'table', 'ttl'],
-  grip: ['createDropZone', 'createSortable', 'createSortableScope', 'applyReorder'],
+  dnd: ['createDropZone', 'createSortable', 'createSortableScope', 'applyReorder'],
   herald: ['createBus', 'BusDisposedError'],
   courier: ['createApi', 'createQuery', 'createMutation', 'createCourier', 'HttpError'],
   orbit: [
@@ -398,6 +405,15 @@ const LIBRARY_EXPORTS = {
     'ContainerDisposedError',
   ],
   familiar: ['createWorker', 'WorkerError'],
+  pulse: [
+    'createPulse',
+    'AbortError',
+    'ConnectionError',
+    'DisposedError',
+    'ProtocolError',
+    'PulseError',
+    'TimeoutError',
+  ],
 } as const;
 
 const ARSENAL_CATEGORIES = [
@@ -781,17 +797,19 @@ onMounted(() => {
   cursor: pointer;
   text-align: left;
   position: relative;
-  transition: color var(--transition-fast), background var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
 }
 
 .sidebar-item:hover {
   color: var(--text-color-body);
-  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  background: color-mix(in oklch, var(--color-primary) 6%, transparent);
 }
 
 .sidebar-item.is-active {
   color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  background: color-mix(in oklch, var(--color-primary) 10%, transparent);
   font-weight: var(--font-semibold);
 }
 
@@ -855,7 +873,6 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
 }
-
 
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 768px) {

@@ -1,7 +1,7 @@
 export const debugTracingExample = {
-  code: `import { defineMachine, interpret, resolveTransition } from '@vielzeug/clockwork'
+  code: `import { machine, resolveTransition } from '@vielzeug/clockwork'
 
-const orderMachine = defineMachine({
+const orderConfig = {
   initial: 'pending',
   context: { cancelledAt: null },
   states: {
@@ -12,15 +12,13 @@ const orderMachine = defineMachine({
     delivered: {},
     cancelled: {},
   },
-})
+}
 
-const m = interpret(orderMachine, {
-  debug: {
-    traceLimit: 50,
-    onDebug: (ev) => {
-      if (ev.type === 'transition-skipped')
-        console.log('Skipped in ' + ev.from + ': ' + ev.event.type)
-    },
+const m = machine(orderConfig, {
+  traceLimit: 50,
+  onDebug: (ev) => {
+    if (ev.type === 'transition-skipped')
+      console.log('Skipped in ' + ev.from + ': ' + ev.event.type)
   },
 })
 
@@ -39,7 +37,7 @@ trace.forEach(({ from, to, event }) => {
 })
 
 // resolveTransition is a pure function — no side effects, useful for tests
-const resolution = resolveTransition(orderMachine, {
+const resolution = resolveTransition(orderConfig, {
   state:   'pending',
   context: { cancelledAt: null },
   event:   { type: 'SUBMIT' },

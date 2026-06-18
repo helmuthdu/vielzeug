@@ -290,13 +290,13 @@ Use `backdrop` to match dialog behavior:
 
 ### CSS Custom Properties
 
-| Property            | Description                                |
-| ------------------- | ------------------------------------------ |
-| `--drawer-backdrop-bg`  | Backdrop background color          |
-| `--drawer-bg`           | Panel background color             |
-| `--drawer-size`         | Panel width (horizontal) or height (vertical) |
-| `--drawer-shadow`       | Panel box shadow                   |
-| `--drawer-panel-blur`   | Panel backdrop blur amount         |
+| Property               | Description                                   |
+| ---------------------- | --------------------------------------------- |
+| `--drawer-backdrop-bg` | Backdrop background color                     |
+| `--drawer-bg`          | Panel background color                        |
+| `--drawer-size`        | Panel width (horizontal) or height (vertical) |
+| `--drawer-shadow`      | Panel box shadow                              |
+| `--drawer-panel-blur`  | Panel backdrop blur amount                    |
 
 ## Accessibility
 

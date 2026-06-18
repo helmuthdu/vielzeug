@@ -76,7 +76,7 @@ function onArrowUp() {
 }
 
 function destroyCombobox() {
-  controller?.destroy();
+  controller?.dispose();
   controller = null;
 }
 ```

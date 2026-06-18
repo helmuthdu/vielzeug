@@ -1,4 +1,4 @@
-import type { AnySchema, Issue, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, prependIssuePath, Schema } from '../core';
 import { _messages } from '../messages';
@@ -27,20 +27,16 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     return this._copyStateTo(new TupleSchema(this.items, schema));
   }
 
-  private _guardTupleInput(value: unknown): { ok: true; value: unknown[] } | { issues: Issue[]; ok: false } {
-    if (!Array.isArray(value)) {
-      return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
-        ok: false,
-      };
-    }
-
+  private _guardTupleInput(
+    value: unknown[],
+    ctx: ParseContext,
+  ): { ok: true; value: unknown[] } | { issues: Issue[]; ok: false } {
     if (this.restSchema === null && value.length !== this.items.length) {
       return {
         issues: [
           {
             code: ErrorCode.invalid_length,
-            message: _messages().tuple.length({ exact: this.items.length }),
+            message: ctx.messages.tuple.length({ exact: this.items.length }),
             params: { exact: this.items.length },
             path: [],
           },
@@ -54,7 +50,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
         issues: [
           {
             code: ErrorCode.too_small,
-            message: _messages().tuple.min({ min: this.items.length }),
+            message: ctx.messages.tuple.min({ min: this.items.length }),
             params: { min: this.items.length },
             path: [],
           },
@@ -66,16 +62,16 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     return { ok: true, value };
   }
 
-  protected override _parseValueSync(value: unknown): ParseValue {
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
     if (!Array.isArray(value)) {
       return {
         data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.tuple.type(), path: [] }],
         typeOk: false,
       };
     }
 
-    const guarded = this._guardTupleInput(value);
+    const guarded = this._guardTupleInput(value, ctx);
 
     if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
@@ -84,7 +80,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     const tupleValue = guarded.value;
 
     for (let i = 0; i < this.items.length; i++) {
-      const result = this.items[i]._parseFullSync(tupleValue[i]);
+      const result = this.items[i]._parseFullSync(tupleValue[i], ctx);
 
       if (result.issues.length === 0) {
         output.push(result.data);
@@ -96,51 +92,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
 
     if (this.restSchema !== null) {
       for (let i = this.items.length; i < tupleValue.length; i++) {
-        const result = this.restSchema._parseFullSync(tupleValue[i]);
-
-        if (result.issues.length === 0) {
-          output.push(result.data);
-        } else {
-          issues.push(...prependIssuePath(result.issues, i));
-          output.push(tupleValue[i]);
-        }
-      }
-    }
-
-    return { data: output, issues, typeOk: true };
-  }
-
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    if (!Array.isArray(value)) {
-      return {
-        data: value,
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().tuple.type(), path: [] }],
-        typeOk: false,
-      };
-    }
-
-    const guarded = this._guardTupleInput(value);
-
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
-
-    const tupleValue = guarded.value;
-    const output: unknown[] = [];
-    const issues: Issue[] = [];
-
-    for (let i = 0; i < this.items.length; i++) {
-      const result = await this.items[i]._parseFullAsync(tupleValue[i]);
-
-      if (result.issues.length === 0) {
-        output.push(result.data);
-      } else {
-        issues.push(...prependIssuePath(result.issues, i));
-        output.push(tupleValue[i]);
-      }
-    }
-
-    if (this.restSchema !== null) {
-      for (let i = this.items.length; i < tupleValue.length; i++) {
-        const result = await this.restSchema._parseFullAsync(tupleValue[i]);
+        const result = this.restSchema._parseFullSync(tupleValue[i], ctx);
 
         if (result.issues.length === 0) {
           output.push(result.data);
@@ -163,7 +115,7 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const items = this.items.map((s) => s.walk(visitor));
     const rest = this.restSchema !== null ? this.restSchema.walk(visitor) : null;
 

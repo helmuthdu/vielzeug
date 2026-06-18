@@ -1,13 +1,14 @@
-import { cache } from '@vielzeug/arsenal';
+import type { RoundingMode } from './types';
 
-import type { CurrencyCode, RoundingMode } from './types';
+import { boundedCache } from './_cache';
+import { InvalidCurrencyError } from './errors';
 
-const currencyDecimalsCache = cache<string, number>(512);
+const currencyDecimalsCache = boundedCache<string, number>(512);
 
 /**
  * Returns the number of minor-unit decimal places for a given ISO 4217 currency code.
  * Uses `Intl.NumberFormat` to resolve the canonical value (e.g. USD→2, JPY→0, KWD→3).
- * Throws `RangeError` for unrecognized codes or when the runtime cannot determine decimals.
+ * Throws `InvalidCurrencyError` for unrecognized codes or when the runtime cannot determine decimals.
  */
 export function getCurrencyDecimals(currencyCode: string): number {
   const cached = currencyDecimalsCache.get(currencyCode);
@@ -20,11 +21,11 @@ export function getCurrencyDecimals(currencyCode: string): number {
     resolved = new Intl.NumberFormat('en', { currency: currencyCode, style: 'currency' }).resolvedOptions()
       .maximumFractionDigits;
   } catch {
-    throw new RangeError(`Invalid ISO 4217 currency code: "${currencyCode}"`);
+    throw new InvalidCurrencyError(currencyCode);
   }
 
   if (resolved === undefined) {
-    throw new RangeError(`Could not determine decimal places for currency: "${currencyCode}"`);
+    throw new InvalidCurrencyError(currencyCode);
   }
 
   currencyDecimalsCache.set(currencyCode, resolved);
@@ -33,14 +34,14 @@ export function getCurrencyDecimals(currencyCode: string): number {
 }
 
 /**
- * Validates an ISO 4217 currency code and returns it as a `CurrencyCode`.
- * Throws `RangeError` if unrecognized. Uses `getCurrencyDecimals` internally so
+ * Validates an ISO 4217 currency code and returns it.
+ * Throws `InvalidCurrencyError` if unrecognized. Uses `getCurrencyDecimals` internally so
  * the result is cached for subsequent decimal lookups.
  */
-export function validateCurrencyCode(code: string): CurrencyCode {
+export function validateCurrencyCode(code: string): string {
   getCurrencyDecimals(code);
 
-  return code as CurrencyCode;
+  return code;
 }
 
 /** Returns `10n ** BigInt(exponent)`. */
@@ -53,15 +54,24 @@ const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
 /** Regex matching JavaScript scientific-notation strings, e.g. `'1e-7'`, `'-3.14E+5'`. */
 const SCIENTIFIC_RE = /^(-?\d+\.?\d*)[eE]([+-]?\d+)$/;
 
+/** Maximum absolute exponent allowed in scientific notation. Prevents '0'.repeat(N) allocation attacks. */
+const MAX_SCIENTIFIC_EXP = 1000;
+
 /**
  * Expands a scientific-notation decimal string into a plain decimal string.
  * `'1e-7'` → `'0.0000001'`, `'1.23e+5'` → `'123000'`.
  * Only called when `SCIENTIFIC_RE` already matched — no extra validation.
+ * Throws `RangeError` if the absolute exponent exceeds `MAX_SCIENTIFIC_EXP` (1000).
  */
 function expandScientific(s: string): string {
   const match = SCIENTIFIC_RE.exec(s)!;
   const coeff = match[1]!;
   const exp = parseInt(match[2]!, 10);
+
+  if (Math.abs(exp) > MAX_SCIENTIFIC_EXP) {
+    throw new RangeError(`Scientific notation exponent too large: "${s}" (max ±${MAX_SCIENTIFIC_EXP})`);
+  }
+
   const isNeg = coeff.startsWith('-');
   const absCoeff = isNeg ? coeff.slice(1) : coeff;
   const dotIndex = absCoeff.indexOf('.');

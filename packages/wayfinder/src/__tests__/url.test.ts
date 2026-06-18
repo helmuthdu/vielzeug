@@ -100,6 +100,21 @@ describe('url()', () => {
     expect(() => router.url('user', {} as never)).toThrow('[wayfinder] Missing path param');
     router.dispose();
   });
+
+  it('includes the hash fragment when navigate target carries a hash', async () => {
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: { home: { path: '/' }, section: { path: '/docs' } },
+    });
+
+    await settle();
+
+    await router.navigate({ hash: 'intro', name: 'section' });
+
+    expect(router.getSnapshot().location.hash).toBe('intro');
+    router.dispose();
+  });
 });
 
 describe('Symbol.dispose', () => {

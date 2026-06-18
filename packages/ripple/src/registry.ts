@@ -1,15 +1,8 @@
-// ── Signal name registry ─────────────────────────────────────────────────────
+// ── Signal name lookup ────────────────────────────────────────────────────────
 //
-// A WeakMap-based registry that maps signal instances to their names.
-// Registration happens automatically when a signal is created with a `name`
-// option. Zero overhead for unnamed signals.
+// `name` is a first-class property on ReadonlySignal (and ReactiveBase).
+// getSignalName() is kept as a convenience for code that holds an opaque
+// `object` reference and can't use the typed `.name` property directly.
 
-const registry = new WeakMap<object, string>();
-
-/** @internal Called by ReactiveBase constructor when `name` is set. */
-export const registerSignal = (signal: object, name: string): void => {
-  registry.set(signal, name);
-};
-
-/** Returns the registered name for a signal, or `undefined` if unnamed or unknown. */
-export const getSignalName = (signal: object): string | undefined => registry.get(signal);
+/** Returns the debug name for any signal or store, or `undefined` if unnamed. */
+export const getSignalName = (signal: object): string | undefined => (signal as { name?: string }).name;

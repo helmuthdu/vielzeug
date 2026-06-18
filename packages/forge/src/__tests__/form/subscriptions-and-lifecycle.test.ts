@@ -97,7 +97,7 @@ describe('form subscriptions', () => {
     aCalls = 0;
     bCalls = 0;
 
-    await form.validateFields([...form.state.touchedFields]);
+    await form.validate([...form.state.touchedFields]);
 
     expect(aCalls).toBe(1);
     expect(bCalls).toBe(0);
@@ -236,6 +236,25 @@ describe('async iterator (F4)', () => {
     // First state was clean; should have yielded at least one state.
     expect(states.length).toBeGreaterThanOrEqual(1);
     expect(states[0]).toBe(false);
+  });
+
+  test('untouchAll() clears all touched fields and fires subscriber notification', () => {
+    const form = createForm({ defaultValues: { email: '', name: '' } });
+
+    form.touch('name');
+    form.touch('email');
+    expect(form.state.touchedFields).toHaveLength(2);
+
+    const notifications: number[] = [];
+
+    form.subscribe(() => notifications.push(1));
+
+    form.untouchAll();
+
+    expect(form.state.touchedFields).toHaveLength(0);
+    expect(form.field('name').touched).toBe(false);
+    expect(form.field('email').touched).toBe(false);
+    expect(notifications.length).toBeGreaterThanOrEqual(1);
   });
 
   test('for-await break calls return() and stops the iterator', async () => {

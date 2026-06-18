@@ -1,18 +1,5 @@
-import {
-  computed,
-  define,
-  defineField,
-  html,
-  inject,
-  onEvent,
-  onMounted,
-  prop,
-  ref,
-  signal,
-  createStableId,
-  syncAria,
-  watch,
-} from '@vielzeug/craft';
+import { createStableId, define, useField, html, inject, prop, ref, syncAria } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -127,7 +114,7 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
     value: prop.number(0),
     'value-text': prop.string(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onEvent, onMounted, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -158,7 +145,7 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
     const valueSignal = signal('0');
 
     if (!isRange) {
-      sliderFd = defineField({ disabled: isDisabled, value: valueSignal });
+      sliderFd = useField({ disabled: isDisabled, value: valueSignal });
       watch(
         props.value,
         (v) => {
@@ -185,7 +172,7 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
     const endVal = signal(100);
 
     if (isRange) {
-      sliderFd = defineField<{
+      sliderFd = useField<{
         from: number;
         to: number;
       }>({

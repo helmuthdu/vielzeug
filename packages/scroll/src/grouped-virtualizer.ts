@@ -8,7 +8,6 @@ import {
   type ScrollTarget,
   type ScrollToIndexOptions,
   type VirtualItem,
-  type Virtualizer,
   type VirtualizerState,
   type VirtualKey,
 } from './virtualizer';
@@ -46,32 +45,59 @@ export interface GroupVirtualizerOptions<T> {
   getItemKey?: (item: T, itemIndex: number, sectionIndex: number) => VirtualKey;
   horizontal?: boolean;
   measurementCache?: MeasurementCache;
+  /**
+   * Called after every render cycle with the new state.
+   * **Fixed at construction** \u2014 cannot be changed after creation.
+   */
   onChange?: (state: GroupVirtualizerState<T>) => void;
+  /**
+   * Called when scrolling has settled. Fixed at construction.
+   * See `VirtualizerOptions.onScrollEnd` for details.
+   */
+  onScrollEnd?: (offset: number) => void;
+  /**
+   * Called when the scrolling state changes. Fixed at construction.
+   */
+  onScrollingChange?: (isScrolling: boolean) => void;
   overscan?: Overscan;
+  /**
+   * Debounce delay (ms) for scroll-end detection. Defaults to 150.
+   * See `VirtualizerOptions.scrollEndDelay` for details.
+   */
+  scrollEndDelay?: number;
   sections: Array<GroupSection<T>>;
 }
 
-export type GroupVirtualizer<T> = Omit<Virtualizer, 'items' | 'prepend' | 'update'> & {
-  /**
-   * Currently rendered data items. These are the typed `GroupVirtualItem<T>` entries
-   * from the last `onChange` state — NOT the raw flat-index `VirtualItem[]` from the
-   * underlying virtualizer. Prefer consuming items via the `onChange` callback.
-   */
+export interface GroupVirtualizer<T> {
+  readonly count: number;
+  readonly disposed: boolean;
+  /** `true` while the user is actively scrolling; `false` once scroll has settled. */
+  readonly isScrolling: boolean;
   readonly items: ReadonlyArray<GroupVirtualItem<T>>;
+  readonly scrollOffset: number;
+  readonly stickyItems: VirtualItem[];
+  readonly totalSize: number;
+  dispose: () => void;
+  invalidate: () => void;
+  measure: (index: number, size: number) => void;
+  measureBatch: (entries: Array<{ index: number; size: number }>) => void;
+  measureEl: (index: number, el: HTMLElement) => () => void;
+  refresh: () => void;
+  scrollToBottom: (options?: { behavior?: ScrollBehavior }) => void;
+  scrollToIndex: (index: number, options?: ScrollToIndexOptions) => void;
   scrollToItem: (sectionIndex: number, itemIndex: number, options?: ScrollToIndexOptions) => void;
+  scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
   scrollToSection: (sectionIndex: number, options?: ScrollToIndexOptions) => void;
+  scrollToTop: (options?: { behavior?: ScrollBehavior }) => void;
   update: (sections: Array<GroupSection<T>>) => void;
-};
+  [Symbol.dispose]: () => void;
+}
 
 // ─── Flat entry map ───────────────────────────────────────────────────────────
 
-interface FlatEntry<T> {
-  isHeader: boolean;
-  itemIndex: number;
-  sectionIndex: number;
-  item?: T;
-  label?: string;
-}
+type FlatHeader = { isHeader: true; itemIndex: -1; label: string; sectionIndex: number };
+type FlatItem<T> = { isHeader: false; item: T; itemIndex: number; sectionIndex: number };
+type FlatEntry<T> = FlatHeader | FlatItem<T>;
 
 function buildFlatEntries<T>(sections: Array<GroupSection<T>>): FlatEntry<T>[] {
   const flat: FlatEntry<T>[] = [];
@@ -127,9 +153,9 @@ export function createGroupedVirtualizer<T>(
 
     if (!entry) return DEFAULT_ESTIMATE_SIZE;
 
-    if (entry.isHeader) return (estimateHeader as (i: number) => number)(globalIndex);
+    if (entry.isHeader) return estimateHeader(globalIndex);
 
-    if (estimateItemFn) return estimateItemFn(entry.item as T, entry.itemIndex, entry.sectionIndex);
+    if (estimateItemFn) return estimateItemFn(entry.item, entry.itemIndex, entry.sectionIndex);
 
     return estimateItemFixed!(globalIndex);
   }
@@ -141,11 +167,12 @@ export function createGroupedVirtualizer<T>(
 
     if (entry.isHeader) return `__header_${entry.sectionIndex}`;
 
-    if (options.getItemKey) return options.getItemKey(entry.item as T, entry.itemIndex, entry.sectionIndex);
+    if (options.getItemKey) return options.getItemKey(entry.item, entry.itemIndex, entry.sectionIndex);
 
     return globalIndex;
   }
 
+  let destroyed = false;
   let lastItems: Array<GroupVirtualItem<T>> = [];
 
   function mapState(state: VirtualizerState): GroupVirtualizerState<T> {
@@ -161,7 +188,7 @@ export function createGroupedVirtualizer<T>(
       if (entry.isHeader) {
         headers.push({ ...vi, label: entry.label ?? '', sectionIndex: entry.sectionIndex });
       } else {
-        items.push({ ...vi, data: entry.item as T, itemIndex: entry.itemIndex, sectionIndex: entry.sectionIndex });
+        items.push({ ...vi, data: entry.item, itemIndex: entry.itemIndex, sectionIndex: entry.sectionIndex });
       }
     }
 
@@ -190,7 +217,10 @@ export function createGroupedVirtualizer<T>(
 
       options.onChange?.(mapped);
     },
+    onScrollEnd: options.onScrollEnd,
+    onScrollingChange: options.onScrollingChange,
     overscan: options.overscan ?? DEFAULT_OVERSCAN,
+    scrollEndDelay: options.scrollEndDelay,
     sticky: (i) => flat[i]?.isHeader ?? false,
   });
 
@@ -219,39 +249,61 @@ export function createGroupedVirtualizer<T>(
       return virtualizer.count;
     },
     dispose() {
+      if (destroyed) return;
+
+      destroyed = true;
       virtualizer.dispose();
     },
+    get disposed() {
+      return destroyed;
+    },
     invalidate() {
+      if (destroyed) return;
+
       virtualizer.invalidate();
+    },
+    get isScrolling() {
+      return virtualizer.isScrolling;
     },
     get items() {
       return lastItems;
     },
     measure(index: number, size: number) {
+      if (destroyed) return;
+
       virtualizer.measure(index, size);
     },
     measureBatch(entries: Array<{ index: number; size: number }>) {
+      if (destroyed) return;
+
       virtualizer.measureBatch(entries);
     },
     measureEl(index: number, el: HTMLElement) {
+      if (destroyed) return () => {};
+
       return virtualizer.measureEl(index, el);
     },
-    redraw() {
-      virtualizer.redraw();
-    },
     refresh() {
+      if (destroyed) return;
+
       virtualizer.refresh();
     },
     get scrollOffset() {
       return virtualizer.scrollOffset;
     },
     scrollToBottom(opts?: { behavior?: ScrollBehavior }) {
+      if (destroyed) return;
+
       virtualizer.scrollToBottom(opts);
     },
     scrollToIndex(index: number, opts?: ScrollToIndexOptions) {
+      if (destroyed) return;
+
       virtualizer.scrollToIndex(index, opts);
     },
     scrollToItem(sectionIndex, itemIndex, opts = {}) {
+      if (destroyed) return;
+
       const globalIndex = flatIndexOf(sectionIndex, itemIndex);
 
       if (globalIndex < 0) return;
@@ -259,9 +311,13 @@ export function createGroupedVirtualizer<T>(
       virtualizer.scrollToIndex(globalIndex, opts);
     },
     scrollToOffset(offset: number, opts?: { behavior?: ScrollBehavior }) {
+      if (destroyed) return;
+
       virtualizer.scrollToOffset(offset, opts);
     },
     scrollToSection(sectionIndex, opts = {}) {
+      if (destroyed) return;
+
       const globalIndex = flatIndexOf(sectionIndex);
 
       if (globalIndex < 0) return;
@@ -269,28 +325,41 @@ export function createGroupedVirtualizer<T>(
       virtualizer.scrollToIndex(globalIndex, opts);
     },
     scrollToTop(opts?: { behavior?: ScrollBehavior }) {
+      if (destroyed) return;
+
       virtualizer.scrollToTop(opts);
     },
     get stickyItems() {
       return virtualizer.stickyItems;
     },
     [Symbol.dispose]() {
-      virtualizer.dispose();
+      this.dispose();
     },
     get totalSize() {
       return virtualizer.totalSize;
     },
+    /**
+     * Replace all sections. Closures for estimateFn and getItemKey already
+     * capture the live `flat`/`sections` references — only count is passed to
+     * the underlying virtualizer to avoid discarding measured sizes on every
+     * data refresh. `refresh()` rebuilds offsets while preserving the cache.
+     */
     update(nextSections) {
+      if (destroyed) return;
+
       sections = nextSections;
+
+      const prevCount = flat.length;
+
       flat = buildFlatEntries(sections);
-      // estimateFn and getItemKey are closures that already read the live
-      // `flat`/`sections` — passing them to update() would trigger
-      // measuredByKey.clear(), discarding all DOM measurements on every data
-      // refresh. Only pass count, then refresh to rebuild offsets.
-      virtualizer.update({ count: flat.length });
-      // refresh() rebuilds the offset table with the current estimates while
-      // preserving any cached measurements.
-      virtualizer.refresh();
+
+      if (flat.length !== prevCount) {
+        // update() with a changed count triggers rebuild + re-emit internally.
+        virtualizer.update({ count: flat.length });
+      } else {
+        // Count unchanged: closures already see new data, re-emit with refresh().
+        virtualizer.refresh();
+      }
     },
   };
 }

@@ -22,7 +22,7 @@ describe('createMemoryHistory', () => {
     const h = createMemoryHistory('/');
     const listener = vi.fn();
 
-    h.subscribe(listener);
+    h.onPopstate(listener);
     h.push('/about');
 
     expect(h.location.pathname).toBe('/about');
@@ -33,7 +33,7 @@ describe('createMemoryHistory', () => {
     const h = createMemoryHistory('/a');
     const listener = vi.fn();
 
-    h.subscribe(listener);
+    h.onPopstate(listener);
     h.push('/b');
     h.replace('/c');
 
@@ -48,7 +48,7 @@ describe('createMemoryHistory', () => {
 
     const listener = vi.fn();
 
-    h.subscribe(listener);
+    h.onPopstate(listener);
     h.back();
 
     expect(h.location.pathname).toBe('/');
@@ -59,17 +59,17 @@ describe('createMemoryHistory', () => {
     const h = createMemoryHistory('/');
     const listener = vi.fn();
 
-    h.subscribe(listener);
+    h.onPopstate(listener);
     h.back();
 
     expect(h.location.pathname).toBe('/');
     expect(listener).not.toHaveBeenCalled();
   });
 
-  it('subscribe returns an unsubscribe function that stops further notifications', () => {
+  it('onPopstate returns an unsubscribe function that stops further notifications', () => {
     const h = createMemoryHistory('/');
     const listener = vi.fn();
-    const unsub = h.subscribe(listener);
+    const unsub = h.onPopstate(listener);
 
     unsub();
     h.push('/a'); // silent; now at /a

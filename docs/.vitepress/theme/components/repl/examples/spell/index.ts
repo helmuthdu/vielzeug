@@ -1,10 +1,12 @@
 import { arrayValidationExample } from './array-validation';
+import { asyncValidateExample } from './async-validate';
 import { basicParsingExample } from './basic-parsing';
 import { basicSchemaExample } from './basic-schema';
 import { coercionExample } from './coercion';
 import { descriptorRoundtripExample } from './descriptor-roundtrip';
+import { discriminatedUnionExample } from './discriminated-union';
 import { formatValidatorsExample } from './format-validators';
-import { localeConfigureResetExample } from './locale-configure-reset';
+import { messagesOverrideExample } from './locale-configure-reset';
 import { nestedObjectsExample } from './nested-objects';
 import { numberValidationExample } from './number-validation';
 import { objectDefaultsExample } from './object-defaults';
@@ -17,12 +19,14 @@ import { wrappersAndDefaultsExample } from './wrappers-and-defaults';
 
 export const spellExamples = {
   'array-validation': arrayValidationExample,
+  'async-validate': asyncValidateExample,
   'basic-parsing': basicParsingExample,
   'basic-schema': basicSchemaExample,
   coercion: coercionExample,
   'descriptor-roundtrip': descriptorRoundtripExample,
+  'discriminated-union': discriminatedUnionExample,
   'format-validators': formatValidatorsExample,
-  'locale-configure-reset': localeConfigureResetExample,
+  'messages-override': messagesOverrideExample,
   'nested-objects': nestedObjectsExample,
   'number-validation': numberValidationExample,
   'object-defaults': objectDefaultsExample,

@@ -54,7 +54,7 @@
       border-color var(--transition-normal),
       box-shadow var(--transition-normal),
       color var(--transition-normal),
-      transform var(--transition-fast)
+      transform 120ms var(--ease-spring)
     );
   }
 
@@ -154,7 +154,7 @@
   :host([variant='flat']) {
     --_bg: var(--button-bg, color-mix(in oklch, var(--_theme-backdrop) 25%, var(--color-contrast-100)));
     --_color: var(--button-color, var(--_theme-base));
-    --_border-color: var(--button-border-color, color-mix(in srgb, var(--_theme-focus) 20%, transparent));
+    --_border-color: var(--button-border-color, color-mix(in oklch, var(--_theme-focus) 20%, transparent));
     --_hover-bg: var(--_theme-focus);
     --_hover-color: var(--_theme-contrast);
     --_active-bg: color-mix(in oklch, var(--_theme-focus) 85%, black);
@@ -237,28 +237,31 @@
 
   /* Frost — sets its own interactive tokens so the shared rules below apply uniformly */
   :host([variant='frost']:not([color])) {
-    --_hover-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--color-canvas) 70%, transparent));
+    --_hover-bg: var(--button-frost-active-bg, color-mix(in oklch, var(--color-canvas) 70%, transparent));
     --_hover-border-color: var(
       --button-frost-active-border-color,
-      color-mix(in srgb, var(--_theme-focus) 40%, transparent)
+      color-mix(in oklch, var(--_theme-focus) 40%, transparent)
     );
-    --_active-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--color-canvas) 70%, transparent));
+    --_active-bg: var(--button-frost-active-bg, color-mix(in oklch, var(--color-canvas) 70%, transparent));
     --_active-border-color: var(
       --button-frost-active-border-color,
-      color-mix(in srgb, var(--_theme-focus) 40%, transparent)
+      color-mix(in oklch, var(--_theme-focus) 40%, transparent)
     );
   }
 
   :host([variant='frost'][color]) {
-    --_hover-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_hover-bg: var(--button-frost-active-bg, color-mix(in oklch, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
     --_hover-border-color: var(
       --button-frost-active-border-color,
-      color-mix(in srgb, var(--_theme-focus) 65%, transparent)
+      color-mix(in oklch, var(--_theme-focus) 65%, transparent)
     );
-    --_active-bg: var(--button-frost-active-bg, color-mix(in srgb, var(--_theme-backdrop) 50%, var(--_theme-base) 50%));
+    --_active-bg: var(
+      --button-frost-active-bg,
+      color-mix(in oklch, var(--_theme-backdrop) 50%, var(--_theme-base) 50%)
+    );
     --_active-border-color: var(
       --button-frost-active-border-color,
-      color-mix(in srgb, var(--_theme-focus) 65%, transparent)
+      color-mix(in oklch, var(--_theme-focus) 65%, transparent)
     );
   }
 
@@ -306,6 +309,6 @@
   /* Physical press feedback */
   button:active,
   a:active {
-    transform: scale(0.97);
+    transform: translateY(1px);
   }
 }

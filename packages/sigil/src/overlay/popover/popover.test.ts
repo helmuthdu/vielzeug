@@ -441,4 +441,34 @@ describe('sg-popover accessibility', () => {
       expect(btn?.getAttribute('aria-expanded')).toBe('true');
     });
   });
+
+  describe('Controlled mode — B2 regression', () => {
+    it('does not fire close event when open prop starts as false', async () => {
+      const handler = vi.fn();
+
+      fixture = await mount('sg-popover', {
+        attrs: { open: 'false' },
+        html: '<button>Open</button>',
+      });
+
+      fixture.element.addEventListener('close', handler);
+
+      await fixture.flush();
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('passes axe checks when closed', async () => {
+      fixture = await mount('sg-popover', {
+        attrs: { label: 'Options panel' },
+        html: '<button>Open</button>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -172,6 +172,21 @@ describe('prune', () => {
     });
   });
 
+  describe('type accuracy', () => {
+    it('prune([]) returns undefined (honest return type)', () => {
+      const result = prune([] as number[]);
+
+      expect(result).toBeUndefined();
+    });
+
+    it('prune(T[]) strips null/undefined and returns NonNullable<T>[]', () => {
+      const input: Array<number | null | undefined> = [1, null, 2, undefined, 3];
+      const result = prune(input);
+
+      expect(result).toEqual([1, 2, 3]);
+    });
+  });
+
   describe('edge cases', () => {
     it('should handle objects with numeric keys', () => {
       expect(prune({ 0: 'a', 1: null, 2: 'c' })).toEqual({ 0: 'a', 2: 'c' });

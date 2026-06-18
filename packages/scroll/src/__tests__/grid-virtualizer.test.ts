@@ -475,3 +475,158 @@ describe('createGridVirtualizer – lifecycle', () => {
     expect(onChange.mock.calls.length).toBe(callsBefore);
   });
 });
+
+// ─── update() clears measurement cache on estimator change ────────────────────
+
+describe('createGridVirtualizer – update clears measurement cache', () => {
+  it('changing estimateRowSize clears row measurement cache', () => {
+    const el = makeGrid(300, 400);
+    const states: { totalHeight: number }[] = [];
+
+    const v = createGridVirtualizer(el, {
+      colCount: 3,
+      estimateColSize: 80,
+      estimateRowSize: 50,
+      onChange: (s) => states.push({ totalHeight: s.totalHeight }),
+      overscanX: { end: 0, start: 0 },
+      overscanY: { end: 0, start: 0 },
+      rowCount: 5,
+    });
+
+    // Measure row 0 at 100px
+    v.measureRow(0, 100);
+
+    // Wait for microtask flush then update estimateRowSize — cache should clear
+    // and totalHeight should revert to the new estimate
+    v.update({ estimateRowSize: 60 });
+
+    // After update: all rows should use new estimate (60px × 5 = 300px)
+    // Row 0 was measured at 100px but cache is cleared, so reverts to 60px estimate
+    expect(v.totalHeight).toBe(5 * 60);
+    v.dispose();
+  });
+
+  it('changing estimateColSize clears col measurement cache', () => {
+    const el = makeGrid(300, 400);
+
+    const v = createGridVirtualizer(el, {
+      colCount: 4,
+      estimateColSize: 100,
+      estimateRowSize: 50,
+      overscanX: { end: 0, start: 0 },
+      overscanY: { end: 0, start: 0 },
+      rowCount: 3,
+    });
+
+    // Measure col 0 at 200px
+    v.measureColumn(0, 200);
+
+    // Update estimateColSize — col measurement cache clears
+    v.update({ estimateColSize: 80 });
+
+    // Col 0 was 200px but cache is cleared → reverts to 80px estimate
+    expect(v.totalWidth).toBe(4 * 80);
+    v.dispose();
+  });
+});
+
+// ─── scrollToRow / scrollToColumn ─────────────────────────────────────────────
+
+describe('createGridVirtualizer – scrollToRow / scrollToColumn', () => {
+  it('scrollToRow scrolls to the start of the given row (start align)', () => {
+    const el = makeGrid(300, 400);
+    const v = createGridVirtualizer(el, {
+      colCount: 3,
+      estimateColSize: 100,
+      estimateRowSize: 50,
+      rowCount: 20,
+    });
+
+    v.scrollToRow(5, { rowAlign: 'start' });
+    expect(el.scrollTop).toBe(5 * 50);
+    v.dispose();
+  });
+
+  it('scrollToRow clamps out-of-range row to last row', () => {
+    const el = makeGrid(100, 400);
+    const v = createGridVirtualizer(el, {
+      colCount: 3,
+      estimateColSize: 100,
+      estimateRowSize: 50,
+      rowCount: 10,
+    });
+
+    v.scrollToRow(999, { rowAlign: 'start' });
+    // Row 9 starts at 450px but maxScrollTop = 500 - 100 = 400px
+    expect(el.scrollTop).toBe(400);
+    v.dispose();
+  });
+
+  it('scrollToRow is a no-op when rowCount is 0', () => {
+    const el = makeGrid(300, 400);
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 100, estimateRowSize: 50, rowCount: 0 });
+
+    expect(() => v.scrollToRow(0)).not.toThrow();
+    expect(el.scrollTop).toBe(0);
+    v.dispose();
+  });
+
+  it('scrollToColumn scrolls to the start of the given column (start align)', () => {
+    const el = makeGrid(300, 400);
+    const v = createGridVirtualizer(el, {
+      colCount: 10,
+      estimateColSize: 80,
+      estimateRowSize: 50,
+      rowCount: 5,
+    });
+
+    v.scrollToColumn(3, { colAlign: 'start' });
+    expect(el.scrollLeft).toBe(3 * 80);
+    v.dispose();
+  });
+
+  it('scrollToColumn is a no-op when colCount is 0', () => {
+    const el = makeGrid(300, 400);
+    const v = createGridVirtualizer(el, { colCount: 0, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    expect(() => v.scrollToColumn(0)).not.toThrow();
+    expect(el.scrollLeft).toBe(0);
+    v.dispose();
+  });
+
+  it('scrollToCell is a no-op when rowCount is 0', () => {
+    const el = makeGrid(300, 400);
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 0 });
+
+    expect(() => v.scrollToCell(0, 0)).not.toThrow();
+    v.dispose();
+  });
+});
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createGridVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    expect(v.disposed).toBe(false);
+    v.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    v.dispose();
+    expect(v.disposed).toBe(true);
+  });
+
+  it('disposed is true after [Symbol.dispose]()', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 80, estimateRowSize: 50, rowCount: 5 });
+
+    v[Symbol.dispose]();
+    expect(v.disposed).toBe(true);
+  });
+});

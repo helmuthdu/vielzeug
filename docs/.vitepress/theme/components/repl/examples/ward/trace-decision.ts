@@ -14,9 +14,10 @@ const { decision, candidates } = ward.trace(
   'read',
 )
 
-candidates.forEach(({ rule, priority, score, won }) => {
+candidates.forEach(({ index, rule, priority, score, won }) => {
   console.log(
     won ? '[WINNER]' : '[      ]',
+    \`Rule[\${index}]\`,
     \`effect=\${rule.effect}\`,
     \`role=\${rule.role}\`,
     \`priority=\${priority}\`,

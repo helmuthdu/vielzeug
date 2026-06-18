@@ -746,4 +746,19 @@ describe('sg-calendar', () => {
       expect(events.length).toBe(0);
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-calendar', { attrs: { value: '2024-03-15' } });
+
+      const results = await axeCheck(fixture.element, {
+        rules: {
+          'aria-required-children': { enabled: false },
+          'aria-required-parent': { enabled: false },
+        },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

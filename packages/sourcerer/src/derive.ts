@@ -35,11 +35,7 @@ export function deriveSource<T, U, TMeta>(
   let cachedCurrent: readonly U[] = [];
 
   const applyTransform = () => {
-    try {
-      cachedCurrent = transform(parent.current);
-    } catch {
-      // Swallow transform errors to avoid breaking the parent's notify chain.
-    }
+    cachedCurrent = transform(parent.current);
   };
 
   applyTransform();
@@ -49,14 +45,28 @@ export function deriveSource<T, U, TMeta>(
     core.notify();
   });
 
+  if ('disposalSignal' in parent && parent.disposalSignal instanceof AbortSignal) {
+    parent.disposalSignal.addEventListener('abort', () => core.dispose(), { once: true });
+  }
+
   return {
     get current() {
       return cachedCurrent;
     },
 
+    get disposalSignal() {
+      return core.disposalSignal;
+    },
+
     dispose() {
+      if (core.isDisposed) return;
+
       unsubscribeParent();
       core.dispose();
+    },
+
+    get disposed() {
+      return core.isDisposed;
     },
 
     get meta() {

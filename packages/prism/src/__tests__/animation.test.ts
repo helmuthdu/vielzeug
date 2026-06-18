@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { resolveEasing } from '../animation/easing';
 import { animate } from '../animation/transition';
@@ -106,21 +106,28 @@ describe('resolveEasing', () => {
 // ─── animate ──────────────────────────────────────────────────────────────────
 
 describe('animate', () => {
-  it('empty targets resolves immediately without RAF', async () => {
-    const p = animate([], { duration: 300 });
+  it('empty targets calls onComplete immediately without RAF', () => {
+    const onComplete = vi.fn();
 
-    await expect(p).resolves.toBeUndefined();
+    animate([], { duration: 300 }, onComplete);
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it('duration=0 sets final values synchronously', async () => {
+  it('empty targets with no onComplete does not throw', () => {
+    expect(() => animate([], { duration: 300 })).not.toThrow();
+  });
+
+  it('duration=0 sets final values synchronously and calls onComplete', () => {
     const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const targets = [{ attrs: { width: { from: 0, to: 100 } }, el }];
+    const onComplete = vi.fn();
 
-    await animate(targets, { duration: 0 });
+    animate(targets, { duration: 0 }, onComplete);
     expect(el.getAttribute('width')).toBe('100');
+    expect(onComplete).toHaveBeenCalledOnce();
   });
 
-  it('negative stagger is clamped to 0 — all targets animate without negative delay', async () => {
+  it('negative stagger is clamped to 0 — all targets animate without negative delay', () => {
     const el1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const el2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const targets = [
@@ -128,7 +135,7 @@ describe('animate', () => {
       { attrs: { width: { from: 0, to: 80 } }, el: el2 },
     ];
 
-    await animate(targets, { duration: 0, stagger: -999 });
+    animate(targets, { duration: 0, stagger: -999 });
     expect(el1.getAttribute('width')).toBe('50');
     expect(el2.getAttribute('width')).toBe('80');
   });

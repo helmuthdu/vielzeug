@@ -271,8 +271,9 @@ When more than one toast is present, they stack with a 3D perspective. Only the 
 
 - Hover or focus the container to expand the full list
 - Toasts beyond the 3rd are hidden until the stack is expanded
-- Enter animation is handled by CSS `@starting-style` (no JS class toggling)
-- Exit animation fires from `animationend`, no hardcoded timeouts
+- Entry animation uses a reactive `.entering` class — no JS timing hacks
+- Exit animation uses a CSS opacity fade on `.toast-inner` — the wrapper stays in-flow until the fade completes
+- Multiple toasts can exit in parallel (no serial dismiss queue)
 
 ## `toast` Singleton Service
 
@@ -287,8 +288,8 @@ const id = toast.add({ message: 'Hello!', color: 'primary' });
 // Update in-place
 toast.update(id, { message: 'Updated!', color: 'success', duration: 3000 });
 
-// Remove by id
-toast.remove(id);
+// Dismiss by id (animated)
+toast.dismiss(id);
 
 // Dismiss all (animated)
 toast.clear();
@@ -323,8 +324,8 @@ const toaster = document.querySelector('sg-toast');
 
 const id = toaster.add({ message: 'Hello!', color: 'success' }); // returns id
 toaster.update(id, { message: 'Updated!' });
-toaster.remove(id);
-toaster.clear(); // animated clear
+toaster.dismiss(id); // animated exit
+toaster.clear(); // dismiss all (animated)
 ```
 
 ## ToastItem Properties
@@ -400,7 +401,7 @@ The toast component follows WAI-ARIA best practices.
 <sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
 
 - Auto-dismiss timers pause on both `mouseenter` and `focusin`, satisfying WCAG 2.1 SC 2.2.3.
-- Dismiss buttons are keyboard-reachable and labelled `"Dismiss alert"`.
+- The `dismissible` prop is forwarded to `sg-alert`'s built-in close button — correctly positioned within the alert grid, themed to match the alert color, and labelled `"Dismiss alert"`.
 
 ::: tip Best Practices
 

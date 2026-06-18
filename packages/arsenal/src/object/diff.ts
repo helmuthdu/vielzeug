@@ -1,58 +1,60 @@
 import type { Obj } from '../types';
 
-import { isEqual } from '../typed/isEqual';
-import { isPlainObject } from '../typed/isPlainObject';
+import { isEqual } from '../guards/isEqual';
 
-/** Sentinel value returned by `diff` when a key exists in `prev` but not in `curr`. */
-export const DELETED: unique symbol = Symbol('deleted');
-
-export type DiffResult<T extends Obj> = { [K in keyof T]?: T[K] | typeof DELETED };
+export type DiffResult<T extends Obj> = {
+  /** Keys present in `after` but not in `before`. */
+  added: Array<keyof T & string>;
+  /** Keys present in both objects whose values differ. Maps key → `{ before, after }`. */
+  changed: { [K in keyof T]?: { after: T[K]; before: T[K] } };
+  /** Keys present in `before` but not in `after`. */
+  removed: Array<keyof T & string>;
+};
 
 /**
- * Computes the difference between two objects.
- *
- * Keys present in `prev` but absent in `curr` are marked with the `DELETED` sentinel.
+ * Computes the structural difference between two plain objects.
+ * Returns an `{ added, removed, changed }` result — no sentinel symbols needed.
  *
  * @example
  * ```ts
- * import { diff, DELETED } from '@vielzeug/arsenal';
+ * diff({ a: 1, b: 2, c: 3 }, { a: 1, b: 99 });
+ * // { added: [], removed: ['c'], changed: { b: { before: 2, after: 99 } } }
  *
- * diff({ a: 1, b: 2, c: 3 }, { a: 1, b: 2 }); // { c: DELETED }
- * diff({ a: 1, b: 2 }, { a: 1, b: 99 });       // { b: 99 }
+ * diff({ x: { n: 1 } }, { x: { n: 2 } });
+ * // { added: [], removed: [], changed: { x: { before: { n: 1 }, after: { n: 2 } } } }
  * ```
  *
- * @param before - The previous (original) object.
- * @param after - The current (updated) object.
- * @param [compareFn] - A custom function to compare values.
- * @returns An object containing new/modified/deleted properties.
+ * @param before - The original object.
+ * @param after - The updated object.
+ * @param compareFn - Custom equality function. Defaults to deep `isEqual`.
  */
 export function diff<T extends Obj>(
-  before?: T,
-  after?: T,
+  before: T = {} as T,
+  after: T = {} as T,
   compareFn: (a: unknown, b: unknown) => boolean = isEqual,
 ): DiffResult<T> {
-  if (after == null && before == null) return {};
+  const added: Array<keyof T & string> = [];
+  const removed: Array<keyof T & string> = [];
+  const changed: Record<string, { after: unknown; before: unknown }> = {};
 
-  const result: Record<string, unknown> = {};
+  const beforeKeys = new Set(Object.keys(before));
+  const afterKeys = new Set(Object.keys(after));
 
-  for (const key of new Set([...Object.keys(after ?? {}), ...Object.keys(before ?? {})])) {
-    const _after = after?.[key];
-    const _before = before?.[key];
-
-    if (isPlainObject(_after) && isPlainObject(_before)) {
-      const nestedDiff = diff(_before as Obj, _after as Obj, compareFn);
-
-      if (Object.keys(nestedDiff).length > 0) {
-        result[key] = nestedDiff;
-      }
-    } else if (!compareFn(_after, _before)) {
-      const wasDeleted = before != null && key in before && (after == null || !(key in after));
-
-      result[key] = wasDeleted ? DELETED : _after;
+  for (const key of afterKeys) {
+    if (!beforeKeys.has(key)) {
+      added.push(key as keyof T & string);
+    } else if (!compareFn(before[key], after[key])) {
+      changed[key] = { after: after[key], before: before[key] };
     }
   }
 
-  return result as DiffResult<T>;
+  for (const key of beforeKeys) {
+    if (!afterKeys.has(key)) {
+      removed.push(key as keyof T & string);
+    }
+  }
+
+  return { added, changed: changed as DiffResult<T>['changed'], removed };
 }
 
 export type ArrayDiff<T> = {
@@ -60,10 +62,15 @@ export type ArrayDiff<T> = {
   removed: T[];
 };
 
+export type ArrayDiffOptions<T> = {
+  compareFn?: (a: T, b: T) => boolean;
+};
+
 /**
  * Computes the set-difference between two arrays.
  * Items present in `after` but not `before` are `added`.
  * Items present in `before` but not `after` are `removed`.
+ * Order-independent; uses deep equality by default.
  *
  * @example
  * ```ts
@@ -71,20 +78,18 @@ export type ArrayDiff<T> = {
  * diffArrays(
  *   [{ id: 1 }, { id: 2 }],
  *   [{ id: 2 }, { id: 3 }],
- *   (a, b) => a.id === b.id,
+ *   { compareFn: (a, b) => a.id === b.id },
  * ); // { added: [{ id: 3 }], removed: [{ id: 1 }] }
  * ```
  *
  * @param before - The original array.
  * @param after - The updated array.
- * @param [compareFn] - Custom equality comparator. Defaults to deep equality.
+ * @param [options.compareFn] - Custom equality function. Defaults to deep `isEqual`.
  * @returns An object with `added` and `removed` arrays.
  */
-export function diffArrays<T>(
-  before: T[],
-  after: T[],
-  compareFn: (a: T, b: T) => boolean = (a, b) => isEqual(a, b),
-): ArrayDiff<T> {
+export function diffArrays<T>(before: T[], after: T[], options?: ArrayDiffOptions<T>): ArrayDiff<T> {
+  const compareFn = options?.compareFn ?? ((a: T, b: T) => isEqual(a, b));
+
   return {
     added: after.filter((item) => !before.some((b) => compareFn(b, item))),
     removed: before.filter((item) => !after.some((a) => compareFn(item, a))),

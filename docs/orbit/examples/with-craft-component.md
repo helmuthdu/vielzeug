@@ -60,7 +60,7 @@ define('my-tooltip', {
 
 ### Related
 
-- [Web Component with Craft (Grip)](@vielzeug/grip/examples/web-component-with-craft)
+- [Web Component with Craft (Dnd)](@vielzeug/dnd/examples/web-component-with-craft)
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

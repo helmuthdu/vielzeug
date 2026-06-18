@@ -1,49 +1,44 @@
-import type {
-  BatchTransport,
-  Bindings,
-  LogEntry,
-  Logger,
-  LogLevel,
-  LogMiddleware,
-  LogType,
-  RuneConfig,
-  RuneOptions,
-  TimeOptions,
-} from './types';
+import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneOptions, Transport } from './types';
 
+import { DEFAULT_THEME, consoleTransport, renderGroup } from './console';
 import { resolveBindings } from './lazy';
-import { DEFAULT_TRANSPORT, renderGroup, resolveTheme } from './transports';
 import { isLevelEnabled } from './types';
 
-/* --- Arg parsing --- */
+/* --- Arg parsing (simplified) --- */
 
 function serializeError(err: Error): { message: string; name: string; stack?: string } {
   return { message: err.message, name: err.name, stack: err.stack };
 }
 
-type ParsedArgs = { context: Bindings | undefined; message: string | undefined };
+function serializeErrors(ctx: Bindings): Bindings {
+  const out: Bindings = {};
 
-function parseArgs(msgOrCtx: unknown, second: unknown, third: unknown): ParsedArgs {
-  if (msgOrCtx instanceof Error) {
-    const ctx: Bindings = { err: serializeError(msgOrCtx) };
-
-    // Accept a plain object as an extra context bag alongside the Error.
-    // Reject Error as the second arg to prevent double-serialization.
-    if (second !== undefined && typeof second === 'object' && second !== null && !(second instanceof Error)) {
-      return {
-        context: { ...ctx, ...(second as Bindings) },
-        message: third !== undefined ? String(third) : msgOrCtx.message,
-      };
-    }
-
-    return {
-      context: ctx,
-      message: second !== undefined ? String(second) : msgOrCtx.message,
-    };
+  for (const [k, v] of Object.entries(ctx)) {
+    out[k] = v instanceof Error ? serializeError(v) : v;
   }
 
+  return out;
+}
+
+type ParsedArgs = { context: Bindings | undefined; message: string | undefined };
+
+function parseArgs(msgOrCtx: unknown, second: unknown, third?: unknown): ParsedArgs {
   if (typeof msgOrCtx === 'string') {
     return { context: undefined, message: msgOrCtx };
+  }
+
+  if (msgOrCtx instanceof Error) {
+    const ctx: Bindings = second !== null && typeof second === 'object' ? (second as Bindings) : {};
+
+    return {
+      context: { err: serializeError(msgOrCtx), ...ctx },
+      message:
+        third !== undefined
+          ? String(third)
+          : second !== undefined && typeof second !== 'object'
+            ? String(second)
+            : undefined,
+    };
   }
 
   if (typeof msgOrCtx === 'object' && msgOrCtx !== null) {
@@ -56,53 +51,16 @@ function parseArgs(msgOrCtx: unknown, second: unknown, third: unknown): ParsedAr
   return { context: undefined, message: msgOrCtx !== undefined ? String(msgOrCtx) : undefined };
 }
 
-/* --- Config resolution --- */
-
-function defaultOnTransportError(error: unknown, _entry: LogEntry, index: number): void {
-  console.warn(`[rune] transport[${index}] error:`, error);
-}
-
-function resolveConfig(opts: RuneOptions): RuneConfig {
-  return {
-    logLevel: opts.logLevel ?? 'debug',
-    middleware: opts.middleware ?? [],
-    namespace: opts.namespace ?? '',
-    now: opts.now ?? (() => new Date()),
-    onTransportError: opts.onTransportError ?? defaultOnTransportError,
-    sample: opts.sample ?? 1,
-    theme: opts.theme,
-    transports: opts.transports ?? [DEFAULT_TRANSPORT],
-  };
-}
-
-/** Converts resolved config back to RuneOptions — single source of truth for child/use/withBindings. */
-function cfgToOpts(cfg: RuneConfig, ownBindings: Bindings): RuneOptions {
-  return {
-    bindings: ownBindings,
-    logLevel: cfg.logLevel,
-    middleware: cfg.middleware,
-    namespace: cfg.namespace,
-    now: cfg.now,
-    onTransportError: cfg.onTransportError,
-    sample: cfg.sample,
-    theme: cfg.theme,
-    transports: cfg.transports,
-  };
-}
-
 /* --- Namespace joining --- */
 
 /**
- * Joins a parent namespace with a child namespace using '.' as the separator.
- * If `child` starts with '/' it is treated as an absolute namespace (the leading slash is stripped).
+ * Joins parent and child namespaces with '.' as separator.
  * Examples:
- *   joinNamespace('api', 'auth')   → 'api.auth'
- *   joinNamespace('', 'api')       → 'api'
- *   joinNamespace('api', '/root')  → 'root'
+ *   joinNamespace('api', 'auth') → 'api.auth'
+ *   joinNamespace('', 'api')     → 'api'
+ *   joinNamespace('api', '')     → 'api'
  */
 function joinNamespace(parent: string, child: string): string {
-  if (child.startsWith('/')) return child.slice(1);
-
   if (!parent) return child;
 
   if (!child) return parent;
@@ -112,27 +70,39 @@ function joinNamespace(parent: string, child: string): string {
 
 /* --- createLogger --- */
 
-export function createLogger(initial: RuneOptions | string = {}): Logger {
-  const initialOpts: RuneOptions = typeof initial === 'string' ? { namespace: initial } : initial;
-  const cfg = resolveConfig(initialOpts);
-  const initialLogLevel = cfg.logLevel;
+/**
+ * Creates an isolated logger instance.
+ *
+ * Accepts two call signatures:
+ * - `createLogger()` / `createLogger(options)` — configure via `RuneOptions`
+ * - `createLogger('namespace', options?)` — namespace shorthand + optional options
+ *
+ * Each instance has its own immutable config (logLevel, transports, middleware).
+ * To change the log level at runtime, create a new logger or child.
+ */
+export function createLogger(namespace: string, options?: Omit<RuneOptions, 'namespace'>): Logger;
+export function createLogger(options?: RuneOptions): Logger;
+export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<RuneOptions, 'namespace'>): Logger {
+  const initialOpts: RuneOptions = typeof initial === 'string' ? { namespace: initial, ...extra } : initial;
+
+  const logLevel: LogLevel = initialOpts.logLevel ?? 'debug';
+  const middleware: LogMiddleware[] = initialOpts.middleware ?? [];
+  const namespace: string = initialOpts.namespace ?? '';
+  const transports = initialOpts.transports ?? [consoleTransport()];
   const ownBindings: Bindings = { ...(initialOpts.bindings ?? {}) };
 
-  // R5: Resolve theme once per logger instance — theme is immutable after construction.
-  // Re-resolved only in child() when theme changes.
-  const resolvedTheme = resolveTheme(cfg.theme);
   const disposeController = new AbortController();
-  let disposed = false;
+  let isDisposed = false;
 
-  const passes = (type: LogType): boolean => isLevelEnabled(cfg.logLevel, type);
+  const passes = (type: LogType): boolean => isLevelEnabled(logLevel, type);
 
   const dispatch = (entry: LogEntry): void => {
     let current: LogEntry = entry;
 
-    if (cfg.middleware.length > 0) {
+    if (middleware.length > 0) {
       let c: LogEntry = entry;
 
-      for (const mw of cfg.middleware) {
+      for (const mw of middleware) {
         const next = mw(c);
 
         if (next == null) return;
@@ -143,39 +113,37 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
       current = c;
     }
 
-    if (cfg.sample < 1 && Math.random() >= cfg.sample) return;
-
-    for (let i = 0; i < cfg.transports.length; i++) {
-      try {
-        cfg.transports[i](current);
-      } catch (err) {
-        cfg.onTransportError(err, current, i);
-      }
+    for (const t of transports) {
+      t(current);
     }
   };
 
   const emit = (type: LogType, msgOrCtx: unknown, second?: unknown, third?: unknown): void => {
+    if (isDisposed) return;
+
     if (!passes(type)) return;
 
     const { context, message } = parseArgs(msgOrCtx, second, third);
     const resolvedBindings = resolveBindings(ownBindings);
-    const resolvedContext = context ? resolveBindings(context) : undefined;
+
+    const data: Bindings = context
+      ? { ...resolvedBindings, ...serializeErrors(resolveBindings(context)) }
+      : Object.keys(resolvedBindings).length > 0
+        ? resolvedBindings
+        : {};
 
     dispatch({
-      bindings: resolvedBindings,
-      context: resolvedContext,
+      data,
       level: type,
       message,
-      namespace: cfg.namespace,
-      timestamp: cfg.now(),
+      namespace,
+      timestamp: new Date(),
     });
   };
 
-  const timeImpl = <T>(label: string, fn: () => T, opts?: LogType | TimeOptions): T => {
-    const level: LogType = typeof opts === 'string' ? opts : (opts?.level ?? 'debug');
+  const timeImpl = <T>(label: string, fn: () => T, level: LogType = 'debug'): T => {
     const start = performance.now();
 
-    // R7: label is the human message; duration_ms goes into context (not the other way around)
     const done = (thrownErr?: unknown): void => {
       const duration_ms = Math.round((performance.now() - start) * 100) / 100;
       const ctx: Bindings = { duration_ms };
@@ -213,17 +181,14 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     }
   };
 
-  // R1: theme comes from cfg — no symbol scanning of transports
-  // R5: resolvedTheme is pre-computed once per logger instance
   const wrapGroup = <T>(collapsed: boolean, label: string, fn: () => T, level?: LogType): T => {
-    if (cfg.logLevel === 'off') return fn();
+    if (isDisposed || logLevel === 'off') return fn();
 
     if (level !== undefined && !passes(level)) {
-      // level supplied but below threshold — skip group header, still run fn
       return fn();
     }
 
-    renderGroup(collapsed, label, cfg.namespace, resolvedTheme);
+    renderGroup(collapsed, label, namespace, DEFAULT_THEME);
 
     try {
       const result = fn();
@@ -239,27 +204,21 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     }
   };
 
+  const childLogger = (overrides: RuneOptions = {}): Logger =>
+    createLogger({
+      bindings: { ...ownBindings, ...(overrides.bindings ?? {}) },
+      logLevel: overrides.logLevel ?? logLevel,
+      middleware: overrides.middleware ?? middleware,
+      namespace: overrides.namespace !== undefined ? joinNamespace(namespace, overrides.namespace) : namespace,
+      transports: overrides.transports ?? transports,
+    });
+
   const logger: Logger = {
     get bindings(): Readonly<Bindings> {
       return { ...ownBindings };
     },
 
-    // R2: child() is the single place where config is forwarded
-    child: (overrides: RuneOptions = {}): Logger =>
-      createLogger({
-        ...cfgToOpts(cfg, ownBindings),
-        ...overrides,
-        bindings: { ...ownBindings, ...(overrides.bindings ?? {}) },
-        // namespace dot-joins parent.child unless child starts with '/' (absolute)
-        namespace:
-          overrides.namespace !== undefined ? joinNamespace(cfg.namespace, overrides.namespace) : cfg.namespace,
-        // theme merges rather than replaces — child can extend parent overrides
-        theme: overrides.theme !== undefined ? { ...cfg.theme, ...overrides.theme } : cfg.theme,
-      }),
-
-    get config(): Readonly<RuneConfig> {
-      return { ...cfg, middleware: [...cfg.middleware], transports: [...cfg.transports] };
-    },
+    child: childLogger,
 
     debug: (m: unknown, s?: unknown, t?: unknown) => emit('debug', m, s, t),
 
@@ -268,24 +227,17 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
     },
 
     dispose: (): void => {
-      if (disposed) return;
+      if (isDisposed) return;
 
-      disposed = true;
+      isDisposed = true;
       disposeController.abort();
-
-      for (const t of cfg.transports) {
-        if (typeof (t as BatchTransport).dispose === 'function') {
-          (t as BatchTransport).dispose();
-        }
-      }
     },
 
     get disposed(): boolean {
-      return disposed;
+      return isDisposed;
     },
 
-    // R6: isLevelEnabled now handles 'off' → false, so no special-case needed
-    enabled: (type: LogLevel): boolean => isLevelEnabled(cfg.logLevel, type),
+    enabled: (type: LogLevel): boolean => isLevelEnabled(logLevel, type),
 
     error: (m: unknown, s?: unknown, t?: unknown) => emit('error', m, s, t),
 
@@ -297,12 +249,16 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     info: (m: unknown, s?: unknown, t?: unknown) => emit('info', m, s, t),
 
-    resetLevel: (): void => {
-      cfg.logLevel = initialLogLevel;
+    get logLevel(): LogLevel {
+      return logLevel;
     },
 
-    setLevel: (level: LogLevel): void => {
-      cfg.logLevel = level;
+    get middleware(): readonly LogMiddleware[] {
+      return [...middleware];
+    },
+
+    get namespace(): string {
+      return namespace;
     },
 
     [Symbol.dispose](): void {
@@ -311,13 +267,15 @@ export function createLogger(initial: RuneOptions | string = {}): Logger {
 
     time: timeImpl,
 
-    // R2: delegates to child() — no manual config forwarding
-    use: (middleware: LogMiddleware): Logger => logger.child({ middleware: [...cfg.middleware, middleware] }),
+    get transports(): readonly Transport[] {
+      return [...transports];
+    },
+
+    use: (mw: LogMiddleware): Logger => childLogger({ middleware: [...middleware, mw] }),
 
     warn: (m: unknown, s?: unknown, t?: unknown) => emit('warn', m, s, t),
 
-    // R2: delegates to child() — no manual config forwarding
-    withBindings: (bindings: Bindings): Logger => logger.child({ bindings }),
+    withBindings: (bindings: Bindings): Logger => childLogger({ bindings }),
   };
 
   return logger;

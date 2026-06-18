@@ -35,7 +35,19 @@ import * as arsenal from '@vielzeug/arsenal';
 ### Arrays
 
 ```ts
-import { filterMap, groupBy, indexBy, partition, search, sort, toggle, uniq, zip } from '@vielzeug/arsenal';
+import {
+  filterMap,
+  fuzzy,
+  fuzzyFilter,
+  fuzzyScore,
+  groupBy,
+  indexBy,
+  partition,
+  sort,
+  toggle,
+  uniq,
+  zip,
+} from '@vielzeug/arsenal';
 
 const values = [null, 1, 2, 3];
 
@@ -62,22 +74,24 @@ const zipped = zip(['a', 'b'], [1, 2]); // [['a', 1], ['b', 2]]
 const byRole = groupBy([{ role: 'admin' }, { role: 'user' }], (item) => item.role);
 const byId = indexBy([{ id: 1 }, { id: 2 }], (item) => item.id);
 
-// Fuzzy search — filter mode returns matching items
+// fuzzy() is the unified entry point — filter mode or scored mode
 const roster = [
   { id: 1, name: 'Alice' },
   { id: 2, name: 'Bob' },
 ];
-const hits = search(roster, 'alice', { threshold: 0.4 }); // typeof roster[number][]
-
-// Scored mode returns items with similarity score, sorted best-first
-const ranked = search(roster, 'alice', { mode: 'scored' });
+const hits = fuzzy(roster, 'alice', { threshold: 0.4 }); // typeof roster[number][]
+const ranked = fuzzy(roster, 'alice', { scored: true });
 // [{ item: { id: 1, name: 'Alice' }, score: 0.91 }, ...]
+
+// Lower-level variants are also exported
+const filtered = fuzzyFilter(roster, 'alice', { threshold: 0.4 });
+const scored = fuzzyScore(roster, 'alice');
 ```
 
 ### Objects
 
 ```ts
-import { defaults, diff, getPath, parseJSON, pick, omit, mapValues, prune, stableStringify } from '@vielzeug/arsenal';
+import { defaults, diff, getPath, hash, parseJSON, pick, omit, mapValues, prune } from '@vielzeug/arsenal';
 
 const prev = { api: { host: 'localhost', port: 3000 }, secure: undefined as boolean | undefined };
 const curr = structuredClone(prev);
@@ -85,54 +99,35 @@ const curr = structuredClone(prev);
 curr.api.port = 4000;
 
 const withDefaults = defaults(curr, { secure: true });
-const changes = diff(prev, curr); // { api: { port: 4000 } }
+const changes = diff(prev, curr);
+// { added: [], removed: [], changed: { api: { before: { ... }, after: { ... } } } }
 
-// Dot notation only — use 'api.port' not 'api["port"]'
+// Bracket notation is auto-converted by default
 const port = getPath(curr, 'api.port'); // 4000
-const arr = getPath({ items: [10, 20] }, 'items.1'); // 20
+const arr = getPath({ items: [10, 20] }, 'items[1]'); // 20
+const safe = getPath(curr, 'api.missing', { fallback: 0 }); // 0
 
 const clean = prune({ a: 1, b: null, c: '' }); // { a: 1 }
-const parsed = parseJSON('{"ok":true}', { defaultValue: { ok: false } });
+const parsed = parseJSON('{"ok":true}', { fallback: { ok: false } });
 
 const publicUser = pick({ id: 1, name: 'Alice', password: 'secret' }, ['id', 'name']);
 const internalUser = omit({ id: 1, name: 'Alice', password: 'secret' }, ['password']);
 const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
 
 // Deterministic cache key from any value
-const key = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
+const key = hash({ sort: 'asc', filter: { role: 'admin' } });
 
-console.log(withDefaults, changes, port, clean, parsed, publicUser, internalUser, renamed, key);
+console.log(withDefaults, changes, port, arr, safe, clean, parsed, publicUser, internalUser, renamed, key);
 ```
 
 ### Functions
 
 ```ts
-import {
-  assert,
-  compose,
-  debounce,
-  memo,
-  once,
-  partial,
-  pipe,
-  runAll,
-  throttle,
-  allOf,
-  noneOf,
-  tap,
-} from '@vielzeug/arsenal';
-
-const doubleAll = partial((factor: number, values: number[]) => values.map((n) => n * factor), 2);
-const doubled = doubleAll([1, 2, 3]); // [2, 4, 6]
+import { assert, debounce, memo, once, pipe, runAll, throttle, allOf, noneOf, tap } from '@vielzeug/arsenal';
 
 const toUpperTrimmed = pipe(
   (s: string) => s.trim(),
   (s) => s.toUpperCase(),
-);
-
-const toUpperTrimmedRtl = compose(
-  (s: string) => s.toUpperCase(),
-  (s: string) => s.trim(),
 );
 
 const loadOnce = once(() => initApp());
@@ -157,7 +152,7 @@ runAll(cleanups, { reverse: true });
 ### Async
 
 ```ts
-import { parallel, queue, retry, sleep, waitFor, memo, backoff } from '@vielzeug/arsenal';
+import { parallel, queue, retry, sleep, stash, waitFor, backoff } from '@vielzeug/arsenal';
 
 const values = await parallel([1, 2, 3, 4], async (n) => n * 2, { limit: 3 });
 
@@ -181,8 +176,9 @@ await retry((signal) => fetch('/health', { signal }).then((r) => r.json()), {
 await sleep(100);
 await waitFor(() => document.querySelector('#app') !== null, { timeout: 3_000 });
 
-const fetchJSON = memo((url: string) => fetch(url).then((r) => r.json()), { maxSize: 50 });
-const payload = await fetchJSON('/api/profile');
+// memo only accepts sync functions — use stash.getOrSet for async caching
+const apiCache = stash<unknown>({ ttlMs: 60_000 });
+const payload = await apiCache.getOrSet('/api/profile', () => fetch('/api/profile').then((r) => r.json()));
 
 await Promise.all([a, b]);
 ```
@@ -218,7 +214,7 @@ percent(1, 4); // 25
 backoff(0); // 1000
 backoff(1); // 2000
 backoff(2); // 4000
-backoff(3, 5_000); // 5000 (capped)
+backoff(3, 5_000); // 5000 (capped — custom ceiling overrides the 30 000 default)
 ```
 
 ## Typed Predicates
@@ -272,13 +268,18 @@ try {
 ```ts
 import { stash } from '@vielzeug/arsenal';
 
+// Simple string cache — no options needed for string keys
+const sessionCache = stash<User>();
+sessionCache.set('user:1', { id: 1, name: 'Alice' }, { ttlMs: 30_000 });
+const alice = sessionCache.get('user:1');
+
+// Custom key type — provide a hash function for non-string keys
 const userCache = stash<User, readonly unknown[]>({
   hash: (key) => JSON.stringify(key),
+  maxSize: 500, // FIFO eviction when exceeded
   onEvict: (key, value) => console.log('evicted', key, value),
+  ttlMs: 60_000, // global default TTL
 });
-
-userCache.set(['user', 1], { id: 1, name: 'Alice' }, { ttlMs: 30_000 });
-const alice = userCache.get(['user', 1]);
 
 // getOrSet: caches the result including undefined — factory called only once per key
 const data = await userCache.getOrSet(['user', 2], () => fetchUser(2));
@@ -288,30 +289,30 @@ const data = await userCache.getOrSet(['user', 2], () => fetchUser(2));
 ### Stable cache keys
 
 ```ts
-import { stableStringify } from '@vielzeug/arsenal';
+import { hash } from '@vielzeug/arsenal';
 
 // Consistent key regardless of object key insertion order
-const key1 = stableStringify({ sort: 'asc', filter: { role: 'admin' } });
-const key2 = stableStringify({ filter: { role: 'admin' }, sort: 'asc' });
+const key1 = hash({ sort: 'asc', filter: { role: 'admin' } });
+const key2 = hash({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true
 
 // Handles Dates, Sets, Maps, bigints, null, undefined
-stableStringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
-stableStringify(
+hash(new Set([3, 1, 2])); // '[Set:1,2,3]'
+hash(
   new Map([
     ['b', 2],
     ['a', 1],
   ]),
 ); // '[Map:"a"=>1,"b"=>2]'
 
-// Class instances: String(instance) by default; throw with strict: true
-stableStringify(new MyClass(), { strict: true }); // TypeError
+// Class instances: String(instance) by default; throw with onClassInstance: 'throw'
+hash(new MyClass(), { onClassInstance: 'throw' }); // TypeError
 ```
 
 ### Fuzzy search with scoring
 
 ```ts
-import { search } from '@vielzeug/arsenal';
+import { fuzzy } from '@vielzeug/arsenal';
 
 const users = [
   { id: 1, name: 'Alice Smith', role: 'admin' },
@@ -319,34 +320,34 @@ const users = [
   { id: 3, name: 'Bob Brown', role: 'user' },
 ];
 
-// Filter mode: returns T[] above threshold
-const filtered = search(users, 'alice', { threshold: 0.4 });
+// Filter mode — returns T[] in original order
+const filtered = fuzzy(users, 'alice', { threshold: 0.4 });
 
-// Scored mode: returns ScoredResult<T>[] sorted by score descending
-const ranked = search(users, 'ali', { mode: 'scored', threshold: 0.3 });
+// Scored mode — returns ScoredResult<T>[] sorted by score descending
+const ranked = fuzzy(users, 'ali', { scored: true, threshold: 0.3 });
 // [{ item: { id: 1, name: 'Alice Smith', ... }, score: 0.91 },
 //  { item: { id: 2, name: 'Alan Jones',  ... }, score: 0.52 }]
 
 // Restrict search to specific fields
-const byName = search(users, 'ali', { fields: ['name'], mode: 'scored' });
+const byName = fuzzy(users, 'ali', { fields: ['name'], scored: true });
 ```
 
 ### Memoization with LRU eviction
 
 ```ts
-import { memo } from '@vielzeug/arsenal';
+import { memo, stash } from '@vielzeug/arsenal';
 
-// LRU cache with max 100 entries and 60s TTL
-const fetchUser = memo((id: number) => fetch(`/api/users/${id}`).then((r) => r.json()), {
-  maxSize: 100,
-  ttl: 60_000,
-});
+// LRU cache with max 100 entries
+const computeScore = memo((id: number, weight: number) => id * weight, { maxSize: 100 });
 
 // Custom key for object arguments
-const fetchPage = memo(
-  (params: { page: number; size: number }) => fetch(`/api/items?page=${params.page}&size=${params.size}`),
-  { key: ({ page, size }) => `${page}:${size}` },
-);
+const formatLabel = memo((params: { page: number; size: number }) => `Page ${params.page} of ${params.size}`, {
+  key: ({ page, size }) => `${page}:${size}`,
+});
+
+// memo only accepts sync functions — use stash.getOrSet for async caching with TTL
+const apiCache = stash<unknown>({ ttlMs: 60_000 });
+const data = await apiCache.getOrSet('user:1', () => fetch('/api/users/1').then((r) => r.json()));
 ```
 
 ## Framework Integration
@@ -395,20 +396,20 @@ const UserSchema = s.object({ id: s.number(), name: s.string() });
 const raw = localStorage.getItem('user');
 const user = parseJSON(raw, {
   validator: (v) => UserSchema.safeParse(v).ok,
-  defaultValue: null,
+  fallback: null,
 });
 ```
 
 ### With Sourcerer
 
-Use `search` and `sort` from arsenal as transform functions inside a `createLocalSource`.
+Use `fuzzy` and `sort` from arsenal as transform functions inside a `createLocalSource`.
 
 ```ts
-import { search, sort } from '@vielzeug/arsenal';
+import { fuzzy, sort } from '@vielzeug/arsenal';
 import { createLocalSource } from '@vielzeug/sourcerer';
 
 const source = createLocalSource(users, {
-  search: (items, query) => search(items, query),
+  search: (items, query) => fuzzy(items, query),
   sort: (items, key, dir) => sort(items, { [key]: dir }),
 });
 ```
@@ -437,13 +438,12 @@ const price = currency({ amount: 123456n, currency: 'USD' }); // $1,234.56
 ## Best Practices
 
 - Prefer named imports from `@vielzeug/arsenal`.
-- Use `getPath(obj, 'a.b.c')` for nested access — dot notation only; bracket notation (`a[0]`) throws a `TypeError`.
-- Use `partial` when adapting multi-arg APIs to unary composition flows.
+- Use `getPath(obj, 'a.b.c')` for nested access. Bracket notation (`a[0]`) is auto-converted to dot notation by default; pass `{ bracketNotation: false }` to throw on bracket syntax instead.
 - For cancellation-aware async work, pass `AbortSignal` through your callback stack; use `isAbortError(err)` to distinguish cancellation from other errors.
 - Use `queue` for explicit concurrency and `parallel` for bounded fan-out processing.
 - Prefer `memo` over ad-hoc caching; supply a `key` function when arguments are objects. Use `maxSize` to bound memory usage.
 - Use `stash` when you need TTL-based expiry, stampede prevention, or an eviction callback. It correctly caches `undefined` values.
-- Use `stableStringify` to generate deterministic cache keys from complex option objects.
+- Use `stringify` to generate deterministic cache keys from complex option objects.
 - `isMatch` supports plain objects and arrays only — do not pass `Map` or `Set` as the source argument.
-- Use `isPlainObject` over the removed `isObject` for plain-object checks.
+- Use `isPlainObject` for plain-object checks; it returns `false` for class instances, `Map`, `Set`, and arrays.
 - Reuse debounced/throttled functions instead of recreating them per render.

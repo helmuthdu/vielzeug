@@ -68,7 +68,7 @@
 
   .nav-btn:hover:not(:disabled) {
     color: var(--color-contrast-900);
-    background: color-mix(in srgb, var(--color-contrast-900) 8%, transparent);
+    background: var(--color-contrast-300);
   }
 
   .nav-btn:focus-visible {
@@ -96,7 +96,7 @@
   }
 
   .cal-label-btn:hover:not(:disabled) {
-    background: color-mix(in srgb, var(--color-contrast-900) 8%, transparent);
+    background: var(--color-contrast-300);
   }
 
   .cal-label-btn:focus-visible {
@@ -178,7 +178,7 @@
 
   .cal-cell-day:hover:not([data-disabled]) {
     color: var(--color-contrast-900);
-    background: color-mix(in srgb, var(--_day-selected-bg) 15%, transparent);
+    background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
   }
 
   .cal-cell-day:focus-visible {
@@ -249,7 +249,7 @@
 
   .cal-cell-month:hover:not([data-disabled]),
   .cal-cell-year:hover:not([data-disabled]) {
-    background: color-mix(in srgb, var(--_day-selected-bg) 15%, transparent);
+    background: color-mix(in oklch, var(--_day-selected-bg) 15%, transparent);
   }
 
   .cal-cell-month:focus-visible,
@@ -337,7 +337,7 @@
   }
 
   :host([expanded]) .cal-cell-day:hover:not([data-disabled]) {
-    background: color-mix(in srgb, var(--_day-selected-bg) 6%, transparent);
+    background: color-mix(in oklch, var(--_day-selected-bg) 6%, transparent);
   }
 
   /* Selected day — circle around the number only */
@@ -422,7 +422,7 @@
   }
 
   :host([expanded]) .cal-cell-day[data-outside] {
-    background: color-mix(in srgb, var(--color-contrast-900) 2%, transparent);
+    background: color-mix(in oklch, var(--color-contrast-900) 2%, transparent);
   }
 
   /* Expanded month / year grids */

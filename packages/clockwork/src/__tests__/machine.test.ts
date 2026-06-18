@@ -3,26 +3,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { debugInterpret } from '../devtools.js';
 import {
-  defineMachine,
-  interpret,
+  define,
+  machine,
+  type InterceptorFn,
   type MachineConfig,
   MachineError,
+  MachineErrorCode,
   type MachineEvent,
   type MachineSnapshot,
-  type MiddlewareFn,
   resolveTransition,
 } from '../index.js';
 
 type TrafficEvent = { type: 'NEXT' };
 
-const trafficDefinition = defineMachine<'green' | 'red' | 'yellow', Record<string, never>, TrafficEvent>({
+const trafficConfig: MachineConfig<'green' | 'red' | 'yellow', Record<string, never>, TrafficEvent> = {
   initial: 'green',
   states: {
     green: { on: { NEXT: { target: 'yellow' } } },
     red: { on: { NEXT: { target: 'green' } } },
     yellow: { on: { NEXT: { target: 'red' } } },
   },
-});
+};
+
+const trafficDef = define(trafficConfig);
 
 const flush = async (): Promise<void> => {
   await Promise.resolve();
@@ -31,15 +34,15 @@ const flush = async (): Promise<void> => {
 
 describe('core runtime', () => {
   it('starts in initial state and transitions', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     expect(m.state.value).toBe('green');
-    expect(m.send({ type: 'NEXT' })).toBe(true);
+    expect(m.send({ type: 'NEXT' }).status).toBe('transitioned');
     expect(m.state.value).toBe('yellow');
   });
 
   it('state signal is readonly', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     expect(() => {
       // @ts-expect-error readonly signal
@@ -48,7 +51,7 @@ describe('core runtime', () => {
   });
 
   it('state updates are reactive', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const states: string[] = [];
 
     effect(() => {
@@ -61,26 +64,26 @@ describe('core runtime', () => {
     expect(states).toEqual(['green', 'yellow', 'red']);
   });
 
-  it('send returns false for unknown event', () => {
-    const m = interpret(trafficDefinition);
+  it('send returns rejected for unknown event', () => {
+    const m = trafficDef.start();
 
     // @ts-expect-error invalid event type
-    expect(m.send({ type: 'UNKNOWN' })).toBe(false);
+    expect(m.send({ type: 'UNKNOWN' }).status).toBe('rejected');
   });
 
   it('dispose prevents can/send', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     m[Symbol.dispose]();
 
     expect(m.can({ type: 'NEXT' })).toBe(false);
-    expect(m.send({ type: 'NEXT' })).toBe(false);
+    expect(m.send({ type: 'NEXT' }).status).toBe('rejected');
   });
 
   it('processes multiple transitions from queued events', () => {
     type Event = { type: 'INC' };
 
-    const machine = defineMachine<'idle', { count: number }, Event>({
+    const def = define<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -101,7 +104,7 @@ describe('core runtime', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'INC' });
     m.send({ type: 'INC' });
@@ -111,7 +114,7 @@ describe('core runtime', () => {
   });
 
   it('matches() returns true for current state', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     expect(m.matches('green')).toBe(true);
     expect(m.matches('red', 'yellow')).toBe(false);
@@ -124,7 +127,7 @@ describe('core runtime', () => {
   });
 
   it('matches() returns false after dispose', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     m[Symbol.dispose]();
 
@@ -137,7 +140,7 @@ describe('core runtime', () => {
     const exitSpy = vi.fn();
     const entrySpy = vi.fn();
 
-    const machine = defineMachine<'idle', { count: number }, Event>({
+    const def = define<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -160,7 +163,7 @@ describe('core runtime', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(entrySpy).toHaveBeenCalledTimes(1);
 
@@ -176,7 +179,7 @@ describe('core runtime', () => {
 
     const order: string[] = [];
 
-    const machine = defineMachine<'a' | 'b', { n: number }, Event>({
+    const def = define<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -212,7 +215,7 @@ describe('core runtime', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     order.length = 0;
     m.send({ type: 'GO' });
@@ -223,7 +226,7 @@ describe('core runtime', () => {
   it('context validation failure rolls back', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', { count: number }, Event>({
+    const def = define<'a' | 'b', { count: number }, Event>({
       context: { count: 0 },
       initial: 'a',
       states: {
@@ -243,10 +246,10 @@ describe('core runtime', () => {
         },
         b: {},
       },
-      validateContext: (ctx) => ctx.count >= 0,
+      validateContext: (ctx) => ctx.count >= 0 || 'count must be >= 0',
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(() => m.send({ type: 'GO' })).toThrow(MachineError);
     expect(m.state.value).toBe('a');
@@ -258,7 +261,7 @@ describe('shorthand transition syntax', () => {
   it('single object (non-array) works like array syntax', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -266,16 +269,16 @@ describe('shorthand transition syntax', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
-    expect(m.send({ type: 'GO' })).toBe(true);
+    expect(m.send({ type: 'GO' }).status).toBe('transitioned');
     expect(m.state.value).toBe('b');
   });
 
   it('can() works with shorthand transitions', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const def = define<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -284,7 +287,7 @@ describe('shorthand transition syntax', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(m.can({ type: 'GO' })).toBe(false);
   });
@@ -292,15 +295,15 @@ describe('shorthand transition syntax', () => {
   it('resolveTransition works with shorthand', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const config: MachineConfig<'a' | 'b', Record<string, never>, Event> = {
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
         b: {},
       },
-    });
+    };
 
-    const result = resolveTransition(machine, { context: {}, event: { type: 'GO' }, state: 'a' });
+    const result = resolveTransition(config, { context: {}, event: { type: 'GO' }, state: 'a' });
 
     expect(result?.target).toBe('b');
   });
@@ -310,7 +313,7 @@ describe('snapshot and hydration', () => {
   it('snapshot context is deep-cloned', () => {
     type Event = { type: 'SET'; value: number };
 
-    const machine = defineMachine<'idle', { nested: { value: number } }, Event>({
+    const def = define<'idle', { nested: { value: number } }, Event>({
       context: { nested: { value: 1 } },
       initial: 'idle',
       states: {
@@ -331,7 +334,7 @@ describe('snapshot and hydration', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
     const snap = m.getSnapshot();
 
     (snap.context as { nested: { value: number } }).nested.value = 999;
@@ -343,13 +346,13 @@ describe('snapshot and hydration', () => {
 
     const entrySpy = vi.fn();
 
-    const machine = defineMachine<'idle', { count: number }, Event>({
+    const def = define<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: { idle: { entry: entrySpy, on: { NOOP: [{ target: 'idle' }] } } },
     });
 
-    const m = interpret(machine, { snapshot: { context: { count: 10 }, state: 'idle' } });
+    const m = def.start({ snapshot: { context: { count: 10 }, state: 'idle' } });
 
     expect(m.context.value.count).toBe(10);
     expect(entrySpy).not.toHaveBeenCalled();
@@ -358,7 +361,7 @@ describe('snapshot and hydration', () => {
   it('invokes run after hydration', async () => {
     type Event = { type: 'LOADED' };
 
-    const machine = defineMachine<'done' | 'loading', { loaded: boolean }, Event>({
+    const def = define<'done' | 'loading', { loaded: boolean }, Event>({
       context: { loaded: false },
       initial: 'loading',
       states: {
@@ -381,7 +384,7 @@ describe('snapshot and hydration', () => {
       },
     });
 
-    const m = interpret(machine, { snapshot: { context: { loaded: false }, state: 'loading' } });
+    const m = def.start({ snapshot: { context: { loaded: false }, state: 'loading' } });
 
     await flush();
 
@@ -394,7 +397,7 @@ describe('typed events', () => {
   it('enforces event payload types via discriminated union', () => {
     type Event = { type: 'INC' } | { type: 'SET'; value: number };
 
-    const machine = defineMachine<'idle', { value: number }, Event>({
+    const def = define<'idle', { value: number }, Event>({
       context: { value: 0 },
       initial: 'idle',
       states: {
@@ -425,7 +428,7 @@ describe('typed events', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'INC' });
     m.send({ type: 'SET', value: 7 });
@@ -436,16 +439,16 @@ describe('typed events', () => {
   it('resolveTransition as pure transition selector', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const config: MachineConfig<'a' | 'b', { ok: boolean }, Event> = {
       context: { ok: true },
       initial: 'a',
       states: {
         a: { on: { GO: [{ guard: ({ context }) => context.ok, target: 'b' }] } },
         b: {},
       },
-    });
+    };
 
-    const result = resolveTransition(machine, { context: { ok: true }, event: { type: 'GO' }, state: 'a' });
+    const result = resolveTransition(config, { context: { ok: true }, event: { type: 'GO' }, state: 'a' });
 
     expect(result?.target).toBe('b');
   });
@@ -455,7 +458,7 @@ describe('invokes', () => {
   it('maps onDone result to event and transitions', async () => {
     type Event = { type: 'RESOLVE'; value: number };
 
-    const machine = defineMachine<'done' | 'loading', { value: number }, Event>({
+    const def = define<'done' | 'loading', { value: number }, Event>({
       context: { value: 0 },
       initial: 'loading',
       states: {
@@ -478,7 +481,7 @@ describe('invokes', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     await flush();
 
@@ -489,7 +492,7 @@ describe('invokes', () => {
   it('maps onError to event', async () => {
     type Event = { reason: string; type: 'FAIL' };
 
-    const machine = defineMachine<'failed' | 'loading', { reason: string }, Event>({
+    const def = define<'failed' | 'loading', { reason: string }, Event>({
       context: { reason: '' },
       initial: 'loading',
       states: {
@@ -519,7 +522,7 @@ describe('invokes', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     await flush();
 
@@ -532,7 +535,7 @@ describe('invokes', () => {
 
     let resolveWork: (() => void) | undefined;
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const def = define<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -553,7 +556,7 @@ describe('invokes', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'CANCEL' });
     resolveWork?.();
@@ -564,14 +567,14 @@ describe('invokes', () => {
 
   it('validates maxTransitionsPerFlush option', () => {
     expect(() => {
-      interpret(trafficDefinition, { maxTransitionsPerFlush: 0 });
+      trafficDef.start({ maxTransitionsPerFlush: 0 });
     }).toThrowError(MachineError);
   });
 
   it('does not transition after dispose', async () => {
     type Event = { type: 'DONE' };
 
-    const machine = defineMachine<'done' | 'loading', Record<string, never>, Event>({
+    const def = define<'done' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         done: {},
@@ -582,7 +585,7 @@ describe('invokes', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m[Symbol.dispose]();
     await flush();
@@ -595,7 +598,7 @@ describe('invokes', () => {
 
     const customClone = vi.fn((v: unknown) => JSON.parse(JSON.stringify(v)));
 
-    const machine = defineMachine<'idle', { count: number }, Event>({
+    const def = define<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -616,7 +619,7 @@ describe('invokes', () => {
       },
     });
 
-    const m = interpret(machine, { clone: customClone as <T>(v: T) => T });
+    const m = def.start({ clone: customClone as <T>(v: T) => T });
 
     m.send({ type: 'INC' });
 
@@ -631,7 +634,7 @@ describe('debug options', () => {
 
     const onDebug = vi.fn();
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const def = define<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -640,9 +643,9 @@ describe('debug options', () => {
       },
     });
 
-    const m = interpret(machine, { debug: { onDebug, traceLimit: 10 } });
+    const m = def.start({ onDebug, traceLimit: 10 });
 
-    expect(m.send({ type: 'GO' })).toBe(false);
+    expect(m.send({ type: 'GO' }).status).toBe('rejected');
 
     const guardEvent = onDebug.mock.calls.find((c) => c[0].type === 'guard');
 
@@ -654,24 +657,31 @@ describe('debug options', () => {
     expect(skippedEvent).toBeDefined();
   });
 
-  it('onTransition called after successful transitions', () => {
-    const onTransition = vi.fn();
-    const m = interpret(trafficDefinition, { debug: { onTransition } });
+  it('onDebug transition event fired after successful transitions', () => {
+    const onDebugFn = vi.fn();
+    const m = trafficDef.start({ onDebug: onDebugFn });
 
     m.send({ type: 'NEXT' });
     m.send({ type: 'NEXT' });
 
-    expect(onTransition).toHaveBeenCalledTimes(2);
-    expect(onTransition).toHaveBeenNthCalledWith(1, { event: { type: 'NEXT' }, from: 'green', to: 'yellow' });
-    expect(onTransition).toHaveBeenNthCalledWith(2, { event: { type: 'NEXT' }, from: 'yellow', to: 'red' });
+    const transitions = onDebugFn.mock.calls.filter((c) => c[0].type === 'transition');
+
+    expect(transitions).toHaveLength(2);
+    expect(transitions[0][0]).toMatchObject({
+      event: { type: 'NEXT' },
+      from: 'green',
+      to: 'yellow',
+      type: 'transition',
+    });
+    expect(transitions[1][0]).toMatchObject({ event: { type: 'NEXT' }, from: 'yellow', to: 'red', type: 'transition' });
   });
 
-  it('onTransition not called when guard fails', () => {
+  it('onDebug transition not fired when guard fails', () => {
     type Event = { type: 'GO' };
 
-    const onTransition = vi.fn();
+    const onDebugFn = vi.fn();
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const def = define<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -680,13 +690,15 @@ describe('debug options', () => {
       },
     });
 
-    interpret(machine, { debug: { onTransition } }).send({ type: 'GO' });
+    def.start({ onDebug: onDebugFn }).send({ type: 'GO' });
 
-    expect(onTransition).not.toHaveBeenCalled();
+    const transitions = onDebugFn.mock.calls.filter((c) => c[0].type === 'transition');
+
+    expect(transitions).toHaveLength(0);
   });
 
   it('trace buffer as circular ring', () => {
-    const m = interpret(trafficDefinition, { debug: { traceLimit: 2 } });
+    const m = trafficDef.start({ traceLimit: 2 });
 
     m.send({ type: 'NEXT' }); // green→yellow
     m.send({ type: 'NEXT' }); // yellow→red
@@ -708,7 +720,7 @@ describe('persistence', () => {
 
     const snapshot: MachineSnapshot<'a' | 'b', { n: number }> = { context: { n: 2 }, state: 'a' };
 
-    const machine = defineMachine<'a' | 'b', { n: number }, Event>({
+    const def = define<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -730,7 +742,7 @@ describe('persistence', () => {
       },
     });
 
-    const m = interpret(machine, { persistence: { load: () => snapshot, save } });
+    const m = def.start({ persistence: { load: () => snapshot, save } });
 
     expect(m.context.value.n).toBe(2);
 
@@ -744,7 +756,7 @@ describe('persistence', () => {
 
     const save = vi.fn();
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -752,7 +764,7 @@ describe('persistence', () => {
       },
     });
 
-    interpret(machine, { persistence: { load: () => ({ context: {}, state: 'a' as const }), save } });
+    def.start({ persistence: { load: () => ({ context: {}, state: 'a' as const }), save } });
 
     expect(save).not.toHaveBeenCalled();
   });
@@ -760,7 +772,7 @@ describe('persistence', () => {
 
 describe('subscribe', () => {
   it('calls subscriber on state change', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
 
     m.subscribe((snap) => snapshots.push(snap));
@@ -774,7 +786,7 @@ describe('subscribe', () => {
   });
 
   it('returns unsubscribe function', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
 
     const unsub = m.subscribe((snap) => snapshots.push(snap));
@@ -787,7 +799,7 @@ describe('subscribe', () => {
   });
 
   it('unsubscribing inside a subscriber callback stops further notifications', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const snapshots: Array<MachineSnapshot<string, Record<string, never>>> = [];
 
     const unsub = m.subscribe((snap) => {
@@ -803,23 +815,19 @@ describe('subscribe', () => {
   });
 });
 
-describe('middleware', () => {
-  it('intercepts and allows events', () => {
+describe('interceptors', () => {
+  it('allows events through (pass-through interceptor)', () => {
     type Event = { type: 'GO' };
 
     const log: string[] = [];
 
-    const logger: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (event, _snap, next) => {
-      log.push(`before:${event.type}`);
+    const logger: InterceptorFn<'a' | 'b', Record<string, never>, Event> = (event, _snap) => {
+      log.push(`intercept:${event.type}`);
 
-      const result = next();
-
-      log.push(`after:${event.type}:${result}`);
-
-      return result;
+      return event;
     };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -827,20 +835,20 @@ describe('middleware', () => {
       },
     });
 
-    const m = interpret(machine, { middleware: [logger] });
+    const m = def.start({ interceptors: [logger] });
 
     m.send({ type: 'GO' });
 
     expect(m.state.value).toBe('b');
-    expect(log).toEqual(['before:GO', 'after:GO:true']);
+    expect(log).toEqual(['intercept:GO']);
   });
 
-  it('blocks events', () => {
+  it('blocks events by returning null', () => {
     type Event = { type: 'GO' };
 
-    const blocker: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = () => false;
+    const blocker: InterceptorFn<'a' | 'b', Record<string, never>, Event> = () => null;
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -848,38 +856,30 @@ describe('middleware', () => {
       },
     });
 
-    const m = interpret(machine, { middleware: [blocker] });
+    const m = def.start({ interceptors: [blocker] });
 
-    expect(m.send({ type: 'GO' })).toBe(false);
+    expect(m.send({ type: 'GO' }).status).toBe('rejected');
     expect(m.state.value).toBe('a');
   });
 
-  it('chains multiple middleware in order', () => {
+  it('chains multiple interceptors left-to-right', () => {
     type Event = { type: 'GO' };
 
     const order: string[] = [];
 
-    const mw1: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap, next) => {
-      order.push('mw1:before');
+    const ic1: InterceptorFn<'a' | 'b', Record<string, never>, Event> = (event, _snap) => {
+      order.push('ic1');
 
-      const r = next();
-
-      order.push('mw1:after');
-
-      return r;
+      return event;
     };
 
-    const mw2: MiddlewareFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap, next) => {
-      order.push('mw2:before');
+    const ic2: InterceptorFn<'a' | 'b', Record<string, never>, Event> = (event, _snap) => {
+      order.push('ic2');
 
-      const r = next();
-
-      order.push('mw2:after');
-
-      return r;
+      return event;
     };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -887,9 +887,41 @@ describe('middleware', () => {
       },
     });
 
-    interpret(machine, { middleware: [mw1, mw2] }).send({ type: 'GO' });
+    def.start({ interceptors: [ic1, ic2] }).send({ type: 'GO' });
 
-    expect(order).toEqual(['mw1:before', 'mw2:before', 'mw2:after', 'mw1:after']);
+    expect(order).toEqual(['ic1', 'ic2']);
+  });
+
+  it('first null interceptor stops the chain', () => {
+    type Event = { type: 'GO' };
+
+    const order: string[] = [];
+
+    const ic1: InterceptorFn<'a' | 'b', Record<string, never>, Event> = (_event, _snap) => {
+      order.push('ic1');
+
+      return null;
+    };
+
+    const ic2: InterceptorFn<'a' | 'b', Record<string, never>, Event> = (event, _snap) => {
+      order.push('ic2');
+
+      return event;
+    };
+
+    const def = define<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start({ interceptors: [ic1, ic2] });
+
+    expect(m.send({ type: 'GO' }).status).toBe('rejected');
+    expect(order).toEqual(['ic1']);
+    expect(m.state.value).toBe('a');
   });
 });
 
@@ -897,7 +929,7 @@ describe('hierarchical states', () => {
   it('resolves initial state to leaf substate', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const def = define<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -912,7 +944,7 @@ describe('hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(m.state.value).toBe('loading.fetching');
     expect(m.matches('loading')).toBe(true);
@@ -922,7 +954,7 @@ describe('hierarchical states', () => {
   it('events bubble up to parent state', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const def = define<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -937,7 +969,7 @@ describe('hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'DONE' });
 
@@ -947,7 +979,7 @@ describe('hierarchical states', () => {
   it('transitions between sibling substates', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const def = define<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -962,7 +994,7 @@ describe('hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'RETRY' });
     expect(m.state.value).toBe('loading.retrying');
@@ -976,7 +1008,7 @@ describe('hierarchical states', () => {
 
     const order: string[] = [];
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const def = define<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: { entry: () => order.push('idle:entry') },
@@ -995,7 +1027,7 @@ describe('hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(order).toEqual(['loading:entry', 'fetching:entry']);
 
@@ -1009,7 +1041,7 @@ describe('hierarchical states', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      defineMachine<'a', Record<string, never>, Event>({
+      define<'a', Record<string, never>, Event>({
         initial: 'a',
         states: { a: { states: { sub: {} } } },
       });
@@ -1027,7 +1059,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'RESET' };
 
-    const machine = defineMachine<'idle' | 'timeout', Record<string, never>, Event>({
+    const def = define<'idle' | 'timeout', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         idle: {
@@ -1038,7 +1070,7 @@ describe('after transitions', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(m.state.value).toBe('idle');
 
@@ -1054,7 +1086,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b' | 'c', Record<string, never>, Event>({
+    const def = define<'a' | 'b' | 'c', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: {
@@ -1066,7 +1098,7 @@ describe('after transitions', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'GO' });
     vi.advanceTimersByTime(1000);
@@ -1079,7 +1111,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const machine = defineMachine<'a' | 'b', { ready: boolean }, Event>({
+    const def = define<'a' | 'b', { ready: boolean }, Event>({
       context: { ready: false },
       initial: 'a',
       states: {
@@ -1090,7 +1122,7 @@ describe('after transitions', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     vi.advanceTimersByTime(100);
     expect(m.state.value).toBe('a');
@@ -1101,7 +1133,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const machine = defineMachine<'a' | 'b', { count: number }, Event>({
+    const def = define<'a' | 'b', { count: number }, Event>({
       context: { count: 0 },
       initial: 'a',
       states: {
@@ -1122,7 +1154,7 @@ describe('after transitions', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     vi.advanceTimersByTime(200);
 
@@ -1135,7 +1167,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { after: [{ delay: 100, target: 'b' }] },
@@ -1143,7 +1175,7 @@ describe('after transitions', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m[Symbol.dispose]();
     vi.advanceTimersByTime(200);
@@ -1155,7 +1187,7 @@ describe('after transitions', () => {
 describe('validation', () => {
   it('throws for unknown initial state', () => {
     expect(() => {
-      defineMachine({
+      define({
         initial: 'missing',
         states: { idle: {} },
       } as unknown as MachineConfig<string, object, MachineEvent>);
@@ -1166,7 +1198,7 @@ describe('validation', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      defineMachine<'idle', Record<string, never>, Event>({
+      define<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'missing' as 'idle' }] } } },
       });
@@ -1177,7 +1209,7 @@ describe('validation', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      defineMachine<'idle', Record<string, never>, Event>({
+      define<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [] } } },
       });
@@ -1188,7 +1220,7 @@ describe('validation', () => {
     type Event = { type: 'NOOP' };
 
     expect(() => {
-      defineMachine<'a' | 'b', Record<string, never>, Event>({
+      define<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: -100, target: 'b' }] },
@@ -1208,7 +1240,7 @@ describe('after + invoke interaction', () => {
     const afterAction = vi.fn();
     let resolveInvoke: (value: string) => void;
 
-    const machine = defineMachine<'loading' | 'success' | 'timeout', Record<string, never>, Event>({
+    const def = define<'loading' | 'success' | 'timeout', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         loading: {
@@ -1226,7 +1258,7 @@ describe('after + invoke interaction', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     // Resolve invoke before the after-timer fires
     resolveInvoke!('ok');
@@ -1247,7 +1279,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      defineMachine<'a' | 'b', Record<string, never>, Event>({
+      define<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { on: { GO: [{ target: 'b.nonexistent' as 'a' | 'b' }] } },
@@ -1261,7 +1293,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'NOOP' };
 
     expect(() => {
-      defineMachine<'a' | 'b', Record<string, never>, Event>({
+      define<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: 100, target: 'b.ghost' as 'a' | 'b' }] },
@@ -1275,7 +1307,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      defineMachine<'a' | 'b', Record<string, never>, Event>({
+      define<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { on: { GO: [{ target: 'b.sub' as 'a' | 'b' }] } },
@@ -1290,7 +1322,7 @@ describe('can()', () => {
   it('returns true when guard passes', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const def = define<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: true },
       initial: 'a',
       states: {
@@ -1299,13 +1331,13 @@ describe('can()', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(m.can({ type: 'GO' })).toBe(true);
   });
 
   it('returns false for unknown event type', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     // @ts-expect-error unknown event
     expect(m.can({ type: 'UNKNOWN' })).toBe(false);
@@ -1316,7 +1348,7 @@ describe('getSnapshot()', () => {
   it('returns deep-cloned snapshot independent of live context', () => {
     type Event = { type: 'SET'; value: number };
 
-    const machine = defineMachine<'idle', { n: number }, Event>({
+    const def = define<'idle', { n: number }, Event>({
       context: { n: 1 },
       initial: 'idle',
       states: {
@@ -1337,7 +1369,7 @@ describe('getSnapshot()', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
     const snap = m.getSnapshot();
 
     m.send({ type: 'SET', value: 99 });
@@ -1348,12 +1380,12 @@ describe('getSnapshot()', () => {
   });
 });
 
-describe('maxTransitionsPerFlush via middleware path', () => {
-  it('enforces maxTransitionsPerFlush when middleware is active', () => {
+describe('maxTransitionsPerFlush via interceptors path', () => {
+  it('enforces maxTransitionsPerFlush when interceptors are active', () => {
     expect(() => {
-      interpret(trafficDefinition, {
+      trafficDef.start({
+        interceptors: [(event) => event],
         maxTransitionsPerFlush: 0,
-        middleware: [(_event, _snap, next) => next()],
       });
     }).toThrow(MachineError);
   });
@@ -1363,20 +1395,20 @@ describe('validateContext at init', () => {
   it('throws when initial context fails validateContext', () => {
     type Event = { type: 'NOOP' };
 
-    const machine = defineMachine<'idle', { count: number }, Event>({
+    const def = define<'idle', { count: number }, Event>({
       context: { count: -1 },
       initial: 'idle',
       states: { idle: {} },
-      validateContext: (ctx) => ctx.count >= 0,
+      validateContext: (ctx) => ctx.count >= 0 || 'count must be >= 0',
     });
 
-    expect(() => interpret(machine)).toThrow(MachineError);
+    expect(() => def.start()).toThrow(MachineError);
   });
 });
 
 describe('subscribe — no spurious fire', () => {
   it('does not call subscriber when event is ignored (no transition)', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const calls: unknown[] = [];
 
     m.subscribe((snap) => calls.push(snap));
@@ -1398,7 +1430,7 @@ describe('multiple after defs', () => {
 
     type Event = { type: 'NOOP' };
 
-    const machine = defineMachine<'a' | 'b' | 'c', Record<string, never>, Event>({
+    const def = define<'a' | 'b' | 'c', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: {
@@ -1412,21 +1444,20 @@ describe('multiple after defs', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     vi.advanceTimersByTime(100);
     expect(m.state.value).toBe('b');
   });
 });
 
-describe('persistence.clear', () => {
-  it('adapter clear() is callable', () => {
+describe('persistence', () => {
+  it('save is called after every transition', () => {
     type Event = { type: 'GO' };
 
-    const clear = vi.fn();
     const save = vi.fn();
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -1434,18 +1465,18 @@ describe('persistence.clear', () => {
       },
     });
 
-    const m = interpret(machine, { persistence: { clear, load: () => undefined, save } });
+    const m = def.start({ persistence: { load: () => undefined, save } });
 
-    m[Symbol.dispose]();
-    clear();
-
-    expect(clear).toHaveBeenCalled();
+    expect(save).toHaveBeenCalledTimes(1);
+    m.send({ type: 'GO' });
+    expect(save).toHaveBeenCalledTimes(2);
+    expect(save.mock.calls[1][0].state).toBe('b');
   });
 });
 
 describe('getTrace — no traceLimit', () => {
   it('returns empty array when traceLimit is not set', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     m.send({ type: 'NEXT' });
 
@@ -1453,7 +1484,7 @@ describe('getTrace — no traceLimit', () => {
   });
 
   it('returns only filled entries when fewer transitions than traceLimit', () => {
-    const m = interpret(trafficDefinition, { debug: { traceLimit: 10 } });
+    const m = trafficDef.start({ traceLimit: 10 });
 
     m.send({ type: 'NEXT' }); // green→yellow
     m.send({ type: 'NEXT' }); // yellow→red
@@ -1472,7 +1503,7 @@ describe('getTrace immutability', () => {
   it('returns cloned trace entries', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', Record<string, never>, Event>({
+    const def = define<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: [{ target: 'b' }] } },
@@ -1480,7 +1511,7 @@ describe('getTrace immutability', () => {
       },
     });
 
-    const m = interpret(machine, { debug: { traceLimit: 10 } });
+    const m = def.start({ traceLimit: 10 });
 
     m.send({ type: 'GO' });
 
@@ -1495,24 +1526,21 @@ describe('getTrace immutability', () => {
 describe('debugInterpret', () => {
   it('transitions correctly and logs to console.debug', () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
-    const groupSpy = vi.spyOn(console, 'group').mockImplementation(() => {});
 
-    vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
-
-    const m = debugInterpret(trafficDefinition);
+    const m = debugInterpret(trafficConfig);
 
     expect(m.state.value).toBe('green');
     m.send({ type: 'NEXT' });
     expect(m.state.value).toBe('yellow');
 
-    expect(groupSpy).toHaveBeenCalledWith(expect.stringContaining('NEXT: green → yellow'));
+    expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('NEXT: green → yellow'));
     expect(debugSpy).toHaveBeenCalledWith(expect.stringContaining('guard'));
 
     vi.restoreAllMocks();
   });
 
-  it('returns a MachineInstance with the same API as interpret', () => {
-    const m = debugInterpret(trafficDefinition);
+  it('returns a MachineInstance with the same API as machine', () => {
+    const m = debugInterpret(trafficConfig);
 
     expect(typeof m.send).toBe('function');
     expect(typeof m.can).toBe('function');
@@ -1528,7 +1556,7 @@ describe('debugInterpret', () => {
     vi.spyOn(console, 'group').mockImplementation(() => {});
     vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
-    const m = debugInterpret(trafficDefinition);
+    const m = debugInterpret(trafficConfig);
 
     // @ts-expect-error unknown event
     m.send({ type: 'UNKNOWN' });
@@ -1543,7 +1571,7 @@ describe('snapshot hierarchical state validation', () => {
   it('accepts a valid nested snapshot state', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+    const def = define<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1557,15 +1585,13 @@ describe('snapshot hierarchical state validation', () => {
       },
     });
 
-    expect(() =>
-      interpret(machine, { snapshot: { context: {}, state: 'active.running' as 'idle' | 'active' } }),
-    ).not.toThrow();
+    expect(() => def.start({ snapshot: { context: {}, state: 'active.running' as 'idle' | 'active' } })).not.toThrow();
   });
 
   it('rejects a snapshot with a non-existent nested state', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+    const def = define<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1578,9 +1604,9 @@ describe('snapshot hierarchical state validation', () => {
       },
     });
 
-    expect(() =>
-      interpret(machine, { snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } }),
-    ).toThrow(MachineError);
+    expect(() => def.start({ snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } })).toThrow(
+      MachineError,
+    );
   });
 });
 
@@ -1588,7 +1614,7 @@ describe('re-entrant send', () => {
   it('queues events sent inside an action and processes them after the current transition', () => {
     type Event = { type: 'A' } | { type: 'B' };
 
-    const machine = defineMachine<'start' | 'middle' | 'end', Record<string, never>, Event>({
+    const def = define<'start' | 'middle' | 'end', Record<string, never>, Event>({
       initial: 'start',
       states: {
         end: {},
@@ -1608,7 +1634,7 @@ describe('re-entrant send', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'A' });
 
@@ -1618,13 +1644,13 @@ describe('re-entrant send', () => {
 
 describe('matches() edge cases', () => {
   it('returns false with no arguments', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     expect(m.matches()).toBe(false);
   });
 
   it('returns false after dispose', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
 
     m[Symbol.dispose]();
 
@@ -1634,7 +1660,7 @@ describe('matches() edge cases', () => {
   it('returns true for a parent state when in a child state', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'idle' | 'active', Record<string, never>, Event>({
+    const def = define<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1647,7 +1673,7 @@ describe('matches() edge cases', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'GO' });
 
@@ -1662,7 +1688,7 @@ describe('resolveTransition — onGuard callback', () => {
   it('calls onGuard for every guard evaluated (passed and failed)', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b' | 'c', { ok: boolean }, Event>({
+    const config: MachineConfig<'a' | 'b' | 'c', { ok: boolean }, Event> = {
       context: { ok: false },
       initial: 'a',
       states: {
@@ -1674,12 +1700,12 @@ describe('resolveTransition — onGuard callback', () => {
         b: {},
         c: {},
       },
-    });
+    };
 
     const guardCalls: Array<{ passed: boolean; target: string }> = [];
 
     const result = resolveTransition(
-      machine,
+      config,
       { context: { ok: false }, event: { type: 'GO' }, state: 'a' },
       ({ passed, target }) => guardCalls.push({ passed, target }),
     );
@@ -1694,18 +1720,18 @@ describe('resolveTransition — onGuard callback', () => {
   it('calls onGuard with passed=true when guard succeeds', () => {
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'a' | 'b', { ok: boolean }, Event>({
+    const config: MachineConfig<'a' | 'b', { ok: boolean }, Event> = {
       context: { ok: true },
       initial: 'a',
       states: {
         a: { on: { GO: [{ guard: ({ context }) => context.ok, target: 'b' }] } },
         b: {},
       },
-    });
+    };
 
     const guardCalls: Array<{ passed: boolean }> = [];
 
-    resolveTransition(machine, { context: { ok: true }, event: { type: 'GO' }, state: 'a' }, ({ passed }) =>
+    resolveTransition(config, { context: { ok: true }, event: { type: 'GO' }, state: 'a' }, ({ passed }) =>
       guardCalls.push({ passed }),
     );
 
@@ -1718,7 +1744,7 @@ describe('MachineError properties', () => {
     expect.assertions(4);
 
     try {
-      defineMachine({
+      define({
         initial: 'missing',
         states: { idle: {} },
       } as unknown as import('../index.js').MachineConfig<string, object, import('../index.js').MachineEvent>);
@@ -1739,7 +1765,7 @@ describe('MachineError properties', () => {
     type Event = { type: 'GO' };
 
     try {
-      defineMachine<'idle', Record<string, never>, Event>({
+      define<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'ghost' as 'idle' }] } } },
       });
@@ -1767,7 +1793,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
 
     type Event = { type: 'DONE' };
 
-    const machine = defineMachine<'done' | 'loading', Record<string, never>, Event>({
+    const config: MachineConfig<'done' | 'loading', Record<string, never>, Event> = {
       initial: 'loading',
       states: {
         done: {},
@@ -1776,9 +1802,9 @@ describe('debugInterpret — invoke lifecycle events', () => {
           on: { DONE: [{ target: 'done' }] },
         },
       },
-    });
+    };
 
-    const m = debugInterpret(machine);
+    const m = debugInterpret(config);
 
     await flush();
 
@@ -1795,7 +1821,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
 
     type Event = { type: 'FAILED' };
 
-    const machine = defineMachine<'failed' | 'loading', Record<string, never>, Event>({
+    const config: MachineConfig<'failed' | 'loading', Record<string, never>, Event> = {
       initial: 'loading',
       states: {
         failed: {},
@@ -1811,9 +1837,9 @@ describe('debugInterpret — invoke lifecycle events', () => {
           on: { FAILED: [{ target: 'failed' }] },
         },
       },
-    });
+    };
 
-    const m = debugInterpret(machine);
+    const m = debugInterpret(config);
 
     await flush();
 
@@ -1829,7 +1855,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
 
     type Event = { type: 'CANCEL' };
 
-    const machine = defineMachine<'idle' | 'loading', Record<string, never>, Event>({
+    const config: MachineConfig<'idle' | 'loading', Record<string, never>, Event> = {
       initial: 'loading',
       states: {
         idle: {},
@@ -1838,9 +1864,9 @@ describe('debugInterpret — invoke lifecycle events', () => {
           on: { CANCEL: [{ target: 'idle' }] },
         },
       },
-    });
+    };
 
-    const m = debugInterpret(machine);
+    const m = debugInterpret(config);
 
     m.send({ type: 'CANCEL' });
 
@@ -1858,7 +1884,7 @@ describe('after transitions in hierarchical states', () => {
 
     type Event = { type: 'GO' };
 
-    const machine = defineMachine<'done' | 'working', Record<string, never>, Event>({
+    const def = define<'done' | 'working', Record<string, never>, Event>({
       initial: 'working',
       states: {
         done: {},
@@ -1873,7 +1899,7 @@ describe('after transitions in hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     expect(m.state.value).toBe('working.step1');
 
@@ -1887,7 +1913,7 @@ describe('after transitions in hierarchical states', () => {
 
     type Event = { type: 'ABORT' };
 
-    const machine = defineMachine<'cancelled' | 'done' | 'working', Record<string, never>, Event>({
+    const def = define<'cancelled' | 'done' | 'working', Record<string, never>, Event>({
       initial: 'working',
       states: {
         cancelled: {},
@@ -1903,7 +1929,7 @@ describe('after transitions in hierarchical states', () => {
       },
     });
 
-    const m = interpret(machine);
+    const m = def.start();
 
     m.send({ type: 'ABORT' });
     vi.advanceTimersByTime(1000);
@@ -1914,7 +1940,7 @@ describe('after transitions in hierarchical states', () => {
 
 describe('subscribe after dispose', () => {
   it('does not fire subscriber callback after dispose', () => {
-    const m = interpret(trafficDefinition);
+    const m = trafficDef.start();
     const calls: unknown[] = [];
 
     m.subscribe((snap) => calls.push(snap));
@@ -1923,6 +1949,337 @@ describe('subscribe after dispose', () => {
     m.send({ type: 'NEXT' });
 
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe('MachineError.is()', () => {
+  it('returns true for MachineError instances', () => {
+    try {
+      define({ initial: 'missing', states: { idle: {} } } as unknown as MachineConfig<string, object, MachineEvent>);
+    } catch (err) {
+      expect(MachineError.is(err)).toBe(true);
+    }
+
+    expect.assertions(1);
+  });
+
+  it('returns false for non-MachineError values', () => {
+    expect(MachineError.is(new Error('plain'))).toBe(false);
+    expect(MachineError.is(null)).toBe(false);
+    expect(MachineError.is('string')).toBe(false);
+    expect(MachineError.is(42)).toBe(false);
+  });
+});
+
+describe('disposalSignal', () => {
+  it('is aborted after dispose()', () => {
+    const m = trafficDef.start();
+
+    expect(m.disposalSignal.aborted).toBe(false);
+    m.dispose();
+    expect(m.disposalSignal.aborted).toBe(true);
+  });
+
+  it('disposalSignal is not aborted before dispose', () => {
+    const m = trafficDef.start();
+
+    expect(m.disposalSignal.aborted).toBe(false);
+    m.dispose();
+  });
+});
+
+describe('send — re-entrant returns false', () => {
+  it("returns 'queued' when called re-entrantly inside an action", () => {
+    type Event = { type: 'A' } | { type: 'B' };
+
+    let reentrantResult: string | undefined;
+
+    const def = define<'end' | 'middle' | 'start', Record<string, never>, Event>({
+      initial: 'start',
+      states: {
+        end: {},
+        middle: { on: { B: { target: 'end' } } },
+        start: {
+          on: {
+            A: {
+              actions: [
+                () => {
+                  reentrantResult = m.send({ type: 'B' });
+                },
+              ],
+              target: 'middle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+
+    m.send({ type: 'A' });
+
+    expect(reentrantResult?.status).toBe('queued');
+    expect(m.state.value).toBe('end');
+  });
+});
+
+describe('subscribe — context-only change', () => {
+  it('fires when only context changes (self-transition)', () => {
+    type Event = { type: 'INC' };
+
+    const def = define<'idle', { count: number }, Event>({
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+    const snapshots: number[] = [];
+
+    m.subscribe((snap) => snapshots.push((snap.context as { count: number }).count));
+
+    m.send({ type: 'INC' });
+    m.send({ type: 'INC' });
+
+    expect(snapshots).toEqual([1, 2]);
+  });
+});
+
+describe('persistence — load returning undefined', () => {
+  it('starts from initial state when load returns undefined', () => {
+    type Event = { type: 'GO' };
+
+    const save = vi.fn();
+
+    const def = define<'a' | 'b', { n: number }, Event>({
+      context: { n: 0 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start({ persistence: { load: () => undefined, save } });
+
+    expect(m.state.value).toBe('a');
+    expect(m.context.value.n).toBe(0);
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('validation — empty invoke array', () => {
+  it('throws for empty invoke array', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      define<'idle', Record<string, never>, Event>({
+        initial: 'idle',
+        states: { idle: { invoke: [] } },
+      });
+    }).toThrow(MachineError);
+  });
+});
+
+describe('traceLimit: 0 opt-out', () => {
+  it('disables trace even when onDebug is set', () => {
+    const m = trafficDef.start({
+      onDebug: () => {},
+      traceLimit: 0,
+    });
+
+    m.send({ type: 'NEXT' });
+    m.send({ type: 'NEXT' });
+
+    expect(m.getTrace()).toHaveLength(0);
+    m.dispose();
+  });
+});
+
+describe('after guard returning false', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('suppresses transition when after guard returns false', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'NOOP' };
+
+    const def = define<'a' | 'b', { skip: boolean }, Event>({
+      context: { skip: true },
+      initial: 'a',
+      states: {
+        a: {
+          after: [
+            {
+              delay: 100,
+              guard: ({ context }) => !context.skip,
+              target: 'b',
+            },
+          ],
+        },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    vi.advanceTimersByTime(200);
+
+    expect(m.state.value).toBe('a');
+    m.dispose();
+  });
+});
+
+describe('getTrace ring-buffer wrap-around', () => {
+  it('returns only the most recent traceLimit entries when capacity exceeded', () => {
+    type Event = { type: 'NEXT' };
+
+    const def = define<'a' | 'b', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: { on: { NEXT: { target: 'b' } } },
+        b: { on: { NEXT: { target: 'a' } } },
+      },
+    });
+
+    const m = def.start({ traceLimit: 3 });
+
+    for (let i = 0; i < 7; i++) m.send({ type: 'NEXT' });
+
+    const trace = m.getTrace();
+
+    expect(trace).toHaveLength(3);
+    // 7 transitions: a→b, b→a, a→b, b→a, a→b, b→a, a→b (entries 4,5,6 retained)
+    // each entry's 'to' should equal the next entry's 'from'
+    expect(trace[1].from).toBe(trace[0].to);
+    expect(trace[2].from).toBe(trace[1].to);
+    m.dispose();
+  });
+});
+
+describe('validateContext — skip on hydration', () => {
+  it('does not throw when persisted context fails validateContext', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { n: number }, Event>({
+      context: { n: 0 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+      validateContext: (ctx) => ctx.n >= 0 || 'n must be >= 0',
+    });
+
+    expect(() => {
+      def.start({
+        persistence: {
+          load: () => ({ context: { n: -99 }, state: 'a' }),
+          save: () => {},
+        },
+      });
+    }).not.toThrow();
+  });
+});
+
+describe('validation — after delay NaN/Infinity', () => {
+  it('throws for NaN delay', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      define<'a' | 'b', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: { after: [{ delay: NaN, target: 'b' }] },
+          b: {},
+        },
+      });
+    }).toThrow(MachineError);
+  });
+
+  it('throws for Infinity delay', () => {
+    type Event = { type: 'GO' };
+
+    expect(() => {
+      define<'a' | 'b', Record<string, never>, Event>({
+        initial: 'a',
+        states: {
+          a: { after: [{ delay: Infinity, target: 'b' }] },
+          b: {},
+        },
+      });
+    }).toThrow(MachineError);
+  });
+});
+
+describe('queue cleared on validateContext throw', () => {
+  it('does not process stale queued events after a validateContext error in a re-entrant action', () => {
+    type Event = { type: 'A' } | { type: 'B' };
+
+    let calls = 0;
+
+    const def = define<'end' | 'middle' | 'start', { valid: boolean }, Event>({
+      context: { valid: true },
+      initial: 'start',
+      states: {
+        end: {},
+        middle: {},
+        start: {
+          on: {
+            A: {
+              actions: [
+                ({ context }) => {
+                  context.valid = false;
+                },
+              ],
+              target: 'middle',
+            },
+          },
+        },
+      },
+      validateContext: (ctx) => {
+        calls++;
+
+        return ctx.valid || 'context is invalid';
+      },
+    });
+
+    const m = def.start();
+
+    calls = 0;
+
+    expect(() => m.send({ type: 'A' })).toThrow(MachineError);
+
+    expect(m.state.value).toBe('start');
+
+    const result = m.send({ type: 'B' });
+
+    expect(result.status).toBe('rejected');
+    m.dispose();
+  });
+});
+
+describe('TransitionInput export', () => {
+  it('is exported from the package index', async () => {
+    const mod = await import('../index.js');
+
+    expect(typeof (mod as Record<string, unknown>).machine).toBe('function');
+    expect('machine' in mod).toBe(true);
   });
 });
 
@@ -1939,7 +2296,7 @@ describe('AfterEvent shape', () => {
 
     let captured: import('../index.js').AfterEvent | null = null;
 
-    const machine = defineMachine<'a' | 'b', Ctx, Event>({
+    const def = define<'a' | 'b', Ctx, Event>({
       context: { receivedEvent: null },
       initial: 'a',
       states: {
@@ -1961,12 +2318,455 @@ describe('AfterEvent shape', () => {
       },
     });
 
-    interpret(machine);
+    def.start();
 
     vi.advanceTimersByTime(250);
 
     expect(captured).not.toBeNull();
     expect(captured!.type).toBe('$after');
     expect(captured!.delay).toBe(250);
+  });
+});
+
+describe('R4 — GuardFn receives Readonly<Ctx>', () => {
+  it('guard receives the current context value and can read it', () => {
+    type Event = { type: 'GO' };
+
+    let seenCount: number | undefined;
+
+    const def = define<'a' | 'b', { count: number }, Event>({
+      context: { count: 42 },
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            GO: [
+              {
+                guard: ({ context }) => {
+                  seenCount = context.count;
+
+                  return true;
+                },
+                target: 'b',
+              },
+            ],
+          },
+        },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    m.send({ type: 'GO' });
+
+    expect(seenCount).toBe(42);
+  });
+
+  it('TypeScript rejects guard mutation of context (compile-time only)', () => {
+    type Event = { type: 'GO' };
+    type Ctx = { count: number };
+
+    define<'a' | 'b', Ctx, Event>({
+      context: { count: 0 },
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            GO: [
+              {
+                guard: ({ context }) => {
+                  // @ts-expect-error Readonly<Ctx> — mutation disallowed by type system
+                  context.count = 99;
+
+                  return true;
+                },
+                target: 'b',
+              },
+            ],
+          },
+        },
+        b: {},
+      },
+    });
+  });
+});
+
+describe('R5 — subscribe() via plain Set', () => {
+  it('unsubscribe removes the callback from the Set', () => {
+    const m = trafficDef.start();
+    const calls: number[] = [];
+
+    const unsub = m.subscribe(() => calls.push(1));
+
+    m.send({ type: 'NEXT' });
+
+    expect(calls).toHaveLength(1);
+
+    unsub();
+    m.send({ type: 'NEXT' });
+
+    expect(calls).toHaveLength(1);
+  });
+
+  it('multiple independent subscribers each receive snapshots', () => {
+    const m = trafficDef.start();
+    const snapsA: string[] = [];
+    const snapsB: string[] = [];
+
+    m.subscribe((snap) => snapsA.push(snap.state as string));
+    m.subscribe((snap) => snapsB.push(snap.state as string));
+
+    m.send({ type: 'NEXT' });
+    m.send({ type: 'NEXT' });
+
+    expect(snapsA).toEqual(['yellow', 'red']);
+    expect(snapsB).toEqual(['yellow', 'red']);
+  });
+});
+
+describe('R7 — SendResult object', () => {
+  it('returns { status: "transitioned" } on success', () => {
+    const m = trafficDef.start();
+    const result = m.send({ type: 'NEXT' });
+
+    expect(result).toMatchObject({ status: 'transitioned' });
+  });
+
+  it('returns { status: "rejected" } for unknown event', () => {
+    const m = trafficDef.start();
+
+    // @ts-expect-error unknown event
+    const result = m.send({ type: 'UNKNOWN' });
+
+    expect(result).toMatchObject({ status: 'rejected' });
+  });
+
+  it('returns { status: "queued" } for re-entrant send inside action', () => {
+    type Event = { type: 'A' } | { type: 'B' };
+
+    let innerResult: ReturnType<typeof m.send> | undefined;
+
+    const def = define<'end' | 'middle' | 'start', Record<string, never>, Event>({
+      initial: 'start',
+      states: {
+        end: {},
+        middle: { on: { B: { target: 'end' } } },
+        start: {
+          on: {
+            A: {
+              actions: [
+                () => {
+                  innerResult = m.send({ type: 'B' });
+                },
+              ],
+              target: 'middle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+
+    m.send({ type: 'A' });
+
+    expect(innerResult?.status).toBe('queued');
+  });
+
+  it('returns { status: "rejected" } after dispose', () => {
+    const m = trafficDef.start();
+
+    m.dispose();
+
+    const result = m.send({ type: 'NEXT' });
+
+    expect(result.status).toBe('rejected');
+  });
+});
+
+describe('R9 — validateContext returns true | string', () => {
+  it('does not throw when validateContext returns true', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { n: number }, Event>({
+      context: { n: 5 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+      validateContext: (ctx) => ctx.n > 0 || 'n must be positive',
+    });
+
+    expect(() => def.start()).not.toThrow();
+  });
+
+  it('throws MachineError with the string message when validateContext returns a string', () => {
+    type Event = { type: 'GO' };
+
+    let errorDetails: unknown;
+
+    const def = define<'a' | 'b', { n: number }, Event>({
+      context: { n: -1 },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+      validateContext: (ctx) => ctx.n > 0 || 'n must be positive',
+    });
+
+    try {
+      def.start();
+    } catch (err) {
+      errorDetails = err;
+    }
+
+    expect(errorDetails).toBeInstanceOf(MachineError);
+  });
+
+  it('validateContext receives the current context snapshot after each transition', () => {
+    type Event = { type: 'INC' };
+
+    const calls: number[] = [];
+
+    const def = define<'idle', { count: number }, Event>({
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+      validateContext: (ctx) => {
+        calls.push(ctx.count);
+
+        return true;
+      },
+    });
+
+    const m = def.start();
+
+    m.send({ type: 'INC' });
+    m.send({ type: 'INC' });
+
+    expect(calls).toContain(1);
+    expect(calls).toContain(2);
+  });
+});
+
+describe('C1 — can() evaluates guards without onDebug side effects', () => {
+  it('evaluates guard and returns false when guard blocks', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+      context: { allowed: false },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { guard: ({ context }) => context.allowed, target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    expect(m.can({ type: 'GO' })).toBe(false);
+    expect(m.state.value).toBe('a');
+  });
+
+  it('returns true when guard passes', () => {
+    type Event = { type: 'GO' };
+
+    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+      context: { allowed: true },
+      initial: 'a',
+      states: {
+        a: { on: { GO: { guard: ({ context }) => context.allowed, target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start();
+
+    expect(m.can({ type: 'GO' })).toBe(true);
+  });
+
+  it('does NOT fire onDebug when can() is called', () => {
+    const debugCalls: string[] = [];
+
+    const def = define<'a' | 'b', Record<string, never>, { type: 'GO' }>({
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    });
+
+    const m = def.start({ onDebug: (ev) => debugCalls.push(ev.type) });
+
+    m.can({ type: 'GO' });
+
+    expect(debugCalls).toHaveLength(0);
+  });
+});
+
+describe('C2 — subscribe() snapshot isolation between subscribers', () => {
+  it('snapshot is frozen so mutation by one subscriber cannot affect another', () => {
+    const m = trafficDef.start();
+
+    let mutationThrew = false;
+    let snapSeenByB: string | undefined;
+
+    m.subscribe((snap) => {
+      try {
+        (snap as { state: string }).state = 'mutated';
+      } catch {
+        mutationThrew = true;
+      }
+    });
+
+    m.subscribe((snap) => {
+      snapSeenByB = snap.state as string;
+    });
+
+    m.send({ type: 'NEXT' });
+
+    expect(mutationThrew).toBe(true);
+    expect(snapSeenByB).toBe('yellow');
+  });
+});
+
+describe('C3 — getSnapshot() independence from machine state', () => {
+  it('mutating the returned snapshot does not affect machine.context.value', () => {
+    type Event = { type: 'INC' };
+
+    const def = define<'idle', { count: number }, Event>({
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+    const snap = m.getSnapshot();
+
+    try {
+      (snap.context as { count: number }).count = 999;
+    } catch {
+      // frozen — expected
+    }
+
+    expect(m.context.value.count).toBe(0);
+  });
+
+  it('two getSnapshot() calls return structurally equal but referentially distinct objects', () => {
+    const m = trafficDef.start();
+    const s1 = m.getSnapshot();
+    const s2 = m.getSnapshot();
+
+    expect(s1).toEqual(s2);
+    expect(s1).not.toBe(s2);
+  });
+});
+
+describe('C4 — resolveTransition ancestor chain bubbling', () => {
+  it('finds transition defined on parent when child has no handler', () => {
+    type Event = { type: 'CANCEL' } | { type: 'GO' };
+
+    const config: MachineConfig<'done' | 'work', Record<string, never>, Event> = {
+      initial: 'work',
+      states: {
+        done: {},
+        work: {
+          initial: 'active',
+          on: { CANCEL: { target: 'done' } },
+          states: {
+            active: {},
+          },
+        },
+      },
+    };
+
+    const result = resolveTransition(config, {
+      context: {},
+      event: { type: 'CANCEL' },
+      state: 'work.active' as 'done' | 'work',
+    });
+
+    expect(result).toBeDefined();
+    expect(result?.target).toBe('done');
+  });
+
+  it('returns undefined when no ancestor handles the event', () => {
+    type Event = { type: 'CANCEL' } | { type: 'GO' };
+
+    const config: MachineConfig<'done' | 'work', Record<string, never>, Event> = {
+      initial: 'work',
+      states: {
+        done: {},
+        work: {
+          initial: 'active',
+          states: { active: {} },
+        },
+      },
+    };
+
+    const result = resolveTransition(config, {
+      context: {},
+      event: { type: 'GO' },
+      state: 'work.active' as 'done' | 'work',
+    });
+
+    expect(result).toBeUndefined();
+  });
+});
+
+describe('D1 — MachineErrorCode const object', () => {
+  it('exports MachineErrorCode as a const object with all codes', () => {
+    expect(MachineErrorCode.MACHINE_INVALID_AFTER_DELAY).toBe('MACHINE_INVALID_AFTER_DELAY');
+    expect(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE).toBe('MACHINE_INVALID_INITIAL_STATE');
+    expect(MachineErrorCode.MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH).toBe(
+      'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH',
+    );
+    expect(MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE).toBe('MACHINE_INVALID_SNAPSHOT_STATE');
+    expect(MachineErrorCode.MACHINE_INVALID_TRANSITION_ARRAY).toBe('MACHINE_INVALID_TRANSITION_ARRAY');
+    expect(MachineErrorCode.MACHINE_INVALID_VALIDATE_CONTEXT).toBe('MACHINE_INVALID_VALIDATE_CONTEXT');
+    expect(MachineErrorCode.MACHINE_MISSING_COMPOUND_INITIAL).toBe('MACHINE_MISSING_COMPOUND_INITIAL');
+    expect(MachineErrorCode.MACHINE_TRANSITION_LOOP_GUARD).toBe('MACHINE_TRANSITION_LOOP_GUARD');
+    expect(MachineErrorCode.MACHINE_UNKNOWN_TARGET).toBe('MACHINE_UNKNOWN_TARGET');
+  });
+
+  it('MachineError.code matches MachineErrorCode constant', () => {
+    try {
+      define({ initial: 'NOPE', states: {} as never });
+    } catch (err) {
+      expect(MachineError.is(err)).toBe(true);
+
+      if (MachineError.is(err)) {
+        expect(err.code).toBe(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE);
+      }
+    }
   });
 });

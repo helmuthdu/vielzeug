@@ -1,5 +1,5 @@
 import { createStableId } from '@vielzeug/craft';
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type ReadonlySignal } from '@vielzeug/ripple';
 
 // ── Validation / context types ────────────────────────────────────────────────
 
@@ -12,6 +12,11 @@ export type ControlValidationMode = ValidationTrigger | undefined;
 export type FieldOptions = {
   disabled?: ReadonlySignal<boolean | undefined>;
   error?: ReadonlySignal<string | undefined>;
+  /**
+   * Returns the underlying form field object used for validation triggering.
+   * Called lazily — safe to return `null` before the first render.
+   */
+  getFormField?: () => { reportValidity(): void } | null;
   /**
    * Override for label visibility that takes precedence over deriving it from
    * the `label` text signal. Pass a computed signal that checks both prop and
@@ -121,6 +126,14 @@ export type LabelPlacement = 'inset' | 'outside' | undefined;
  *   :aria-invalid="${ariaInvalid}" />
  * ```
  */
+/** Flat ARIA attribute bag ready to spread into a template bind call. */
+export type AriaProps = {
+  'aria-describedby': string | null;
+  'aria-errormessage': string | null;
+  'aria-invalid': 'true' | null;
+  'aria-labelledby': string | null;
+};
+
 export type FieldHandle = {
   /** `aria-describedby` value. Non-null when helper or error text is present. */
   ariaDescribedBy: ReadonlySignal<string | null>;
@@ -130,18 +143,29 @@ export type FieldHandle = {
   ariaInvalid: ReadonlySignal<'true' | null>;
   /** `aria-labelledby` value. Non-null when a label is visible. */
   ariaLabelledBy: ReadonlySignal<string | null>;
-  /** Reactive error + helper assistive text. */
-  assistive: ReadonlySignal<ErrorHelperState>;
+  /**
+   * Returns a snapshot of the four ARIA attributes as a plain object.
+   * Spread into a template bind call to avoid repeating each signal individually.
+   *
+   * @example
+   * ```ts
+   * bind(inputEl, { attr: field.ariaProps() });
+   * ```
+   */
+  ariaProps(): AriaProps;
   /**
    * The stable `id` used for `aria-describedby` on the input. Points at the
    * assistive-text region (covers both helper text and error text per WAI-ARIA).
    */
   assistiveId: string;
-  bindFormField: (field: { reportValidity(): void }) => void;
   disabled: ReadonlySignal<boolean>;
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
   errorId: string;
+  /** Reactive error text. Empty string when no error is set. */
+  errorText: ReadonlySignal<string>;
   fieldId: string;
+  /** Reactive helper text. Empty string when no helper is set. */
+  helperText: ReadonlySignal<string>;
   /** Stable `id` for the label element. Stamp this on your `<label id="...">`. */
   labelId: string;
   /** Whether the label should be visible. Use to toggle `hidden` on the `<label>`. */
@@ -155,20 +179,14 @@ export type FieldHandle = {
  * on top of this.
  */
 export const createField = (options: FieldOptions): FieldHandle => {
-  // ── Core (formerly createFieldCore) ──────────────────────────────────────
+  // ── Core ──────────────────────────────────────────────────────────────────
   const disabled = computed(() => Boolean(options.disabled?.value));
   const validateOn = options.validateOn;
   const fieldId = options.id ?? createStableId(options.prefix ?? 'field');
   const assistiveId = createStableId('helper');
 
-  const formFieldRef = signal<{ reportValidity(): void } | null>(null);
-
-  const bindFormField = (field: { reportValidity(): void }): void => {
-    formFieldRef.value = field;
-  };
-
   const triggerValidation = (on: Extract<ValidationTrigger, 'blur' | 'change'>): void => {
-    if (validateOn?.value === on) formFieldRef.value?.reportValidity();
+    if (validateOn?.value === on) options.getFormField?.()?.reportValidity();
   };
 
   // ── Label + ARIA state ────────────────────────────────────────────────────
@@ -185,19 +203,30 @@ export const createField = (options: FieldOptions): FieldHandle => {
 
   const resolvedAssistive = createErrorHelperState({ error: options.error, helper: options.helper });
 
+  const ariaDescribedBy = computed(() =>
+    resolvedAssistive.value.errorText || resolvedAssistive.value.helperText ? assistiveId : null,
+  );
+  const ariaErrorMessage = computed(() => (resolvedAssistive.value.errorText ? errorId : null));
+  const ariaInvalid = computed<'true' | null>(() => (resolvedAssistive.value.errorText ? 'true' : null));
+  const ariaLabelledBy = computed(() => (labelVisible$.value ? labelId : null));
+
   return {
-    ariaDescribedBy: computed(() =>
-      resolvedAssistive.value.errorText || resolvedAssistive.value.helperText ? assistiveId : null,
-    ),
-    ariaErrorMessage: computed(() => (resolvedAssistive.value.errorText ? errorId : null)),
-    ariaInvalid: computed(() => (resolvedAssistive.value.errorText ? ('true' as const) : null)),
-    ariaLabelledBy: computed(() => (labelVisible$.value ? labelId : null)),
-    assistive: resolvedAssistive,
+    ariaDescribedBy,
+    ariaErrorMessage,
+    ariaInvalid,
+    ariaLabelledBy,
+    ariaProps: () => ({
+      'aria-describedby': ariaDescribedBy.value,
+      'aria-errormessage': ariaErrorMessage.value,
+      'aria-invalid': ariaInvalid.value,
+      'aria-labelledby': ariaLabelledBy.value,
+    }),
     assistiveId,
-    bindFormField,
     disabled,
     errorId,
+    errorText: computed(() => resolvedAssistive.value.errorText),
     fieldId,
+    helperText: computed(() => resolvedAssistive.value.helperText),
     labelId,
     labelVisible: labelVisible$,
     triggerValidation,

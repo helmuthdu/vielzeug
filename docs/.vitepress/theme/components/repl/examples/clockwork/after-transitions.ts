@@ -1,8 +1,8 @@
 export const afterTransitionsExample = {
-  code: `import { defineMachine, interpret } from '@vielzeug/clockwork'
+  code: `import { machine } from '@vielzeug/clockwork'
 
 // Delayed (timer-based) transitions using 'after'
-const notificationMachine = defineMachine({
+const m = machine({
   initial: 'idle',
   context: { shown: 0, dismissed: 0 },
   states: {
@@ -28,8 +28,6 @@ const notificationMachine = defineMachine({
     },
   },
 })
-
-const m = interpret(notificationMachine)
 
 console.log('State:', m.state.value)   // 'idle'
 m.send({ type: 'SHOW' })

@@ -56,10 +56,11 @@ export const createPaginatedList = <T>(options: PaginatedListOptions<T>): Pagina
     return typeof ps === 'number' ? ps : (ps.value ?? 10);
   };
 
-  const pageCount = computed(() => Math.max(1, Math.ceil(options.getItems().length / resolvedPageSize())));
+  const pageCount = computed(() => Math.ceil(options.getItems().length / resolvedPageSize()));
 
   // Clamp page index when total page count shrinks (e.g. after filter change).
-  const safePage = computed(() => Math.min(pageIndex.value, pageCount.value - 1));
+  // When pageCount is 0 (empty list), safePage returns -1 to signal no valid page.
+  const safePage = computed(() => (pageCount.value === 0 ? -1 : Math.min(pageIndex.value, pageCount.value - 1)));
 
   const pageItems = computed(() => {
     const pg = safePage.value;
@@ -72,11 +73,14 @@ export const createPaginatedList = <T>(options: PaginatedListOptions<T>): Pagina
   const goTo = (index: number): void => {
     // Lower-bound guard only — safePage handles the upper-bound clamp reactively
     // so that any subsequent pageCount reduction is also handled automatically.
+    // Guard against NaN/Infinity (e.g. parseInt() failures) which Math.max propagates silently.
+    if (!Number.isFinite(index)) return;
+
     pageIndex.value = Math.max(0, index);
   };
 
   const next = (): void => {
-    if (safePage.value < pageCount.value - 1) pageIndex.value = safePage.value + 1;
+    if (pageCount.value > 0 && safePage.value < pageCount.value - 1) pageIndex.value = safePage.value + 1;
   };
 
   const prev = (): void => {
@@ -87,7 +91,7 @@ export const createPaginatedList = <T>(options: PaginatedListOptions<T>): Pagina
     pageIndex.value = 0;
   };
 
-  const hasNext = computed(() => safePage.value < pageCount.value - 1);
+  const hasNext = computed(() => pageCount.value > 0 && safePage.value < pageCount.value - 1);
   const hasPrev = computed(() => safePage.value > 0);
 
   return {

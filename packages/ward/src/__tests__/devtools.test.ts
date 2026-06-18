@@ -20,14 +20,14 @@ describe('debugWard', () => {
   it('returns a Ward instance that evaluates decisions correctly', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
-    expect(permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete' as any)).toBe(false);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
+    expect(permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete' as any).allowed).toBe(false);
   });
 
   it('calls console.debug for each authorization decision', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     expect(consoleSpy).toHaveBeenCalledTimes(1);
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('[ward:decision]'));
@@ -36,7 +36,7 @@ describe('debugWard', () => {
   it('logs the allow outcome and rule effect when a rule matches', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+    permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
     const logLine: string = consoleSpy.mock.calls[0][0];
 
@@ -50,7 +50,7 @@ describe('debugWard', () => {
   it('logs no-matching-rule outcome without an effect when nothing matches', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete' as any);
+    permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete' as any);
 
     const logLine: string = consoleSpy.mock.calls[0][0];
 
@@ -62,7 +62,7 @@ describe('debugWard', () => {
   it('logs explicit-deny outcome with deny effect', () => {
     const permit = debugWard([{ action: 'read', effect: 'deny', resource: 'posts', role: ['blocked'] }]);
 
-    permit.can({ id: 'u1', roles: ['blocked'] }, 'posts', 'read');
+    permit.explain({ id: 'u1', roles: ['blocked'] }, 'posts', 'read');
 
     const logLine: string = consoleSpy.mock.calls[0][0];
 
@@ -73,7 +73,7 @@ describe('debugWard', () => {
   it('logs anonymous as principal label for null principal', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: '*' }]);
 
-    permit.can(null, 'posts', 'read');
+    permit.explain(null, 'posts', 'read');
 
     expect(consoleSpy.mock.calls[0][0]).toContain('anonymous');
   });
@@ -81,18 +81,18 @@ describe('debugWard', () => {
   it('logs the principal id when roles array is empty', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
-    permit.can({ id: 'user-xyz', roles: [] }, 'posts', 'read');
+    permit.explain({ id: 'user-xyz', roles: [] }, 'posts', 'read');
 
     expect(consoleSpy.mock.calls[0][0]).toContain('user-xyz');
   });
 
-  it('fires logger for explain() and trace() as well as can()', () => {
+  it('fires logger for explain() but not trace()', () => {
     const permit = debugWard([{ action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] }]);
 
     permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
     permit.trace({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 
-    expect(consoleSpy).toHaveBeenCalledTimes(2);
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
   });
 
   it('passes through ward options (strict) when provided', () => {

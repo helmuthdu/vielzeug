@@ -160,14 +160,14 @@ Listen to change events for custom logic.
 
 ### CSS Custom Properties
 
-| Property             | Description                   | Default                |
-| -------------------- | ----------------------------- | ---------------------- |
-| `--switch-width`       | Track width                           | Size-dependent  |
-| `--switch-height`      | Track height                          | Size-dependent  |
-| `--switch-track-bg`    | Inactive (unchecked) track background | Theme-dependent |
-| `--switch-checked-bg`  | Active (checked) track background     | Color-dependent |
-| `--switch-thumb-bg`    | Thumb background color                | Theme-dependent |
-| `--switch-font-size`   | Label font size                       | Size-dependent  |
+| Property              | Description                           | Default         |
+| --------------------- | ------------------------------------- | --------------- |
+| `--switch-width`      | Track width                           | Size-dependent  |
+| `--switch-height`     | Track height                          | Size-dependent  |
+| `--switch-track-bg`   | Inactive (unchecked) track background | Theme-dependent |
+| `--switch-checked-bg` | Active (checked) track background     | Color-dependent |
+| `--switch-thumb-bg`   | Thumb background color                | Theme-dependent |
+| `--switch-font-size`  | Label font size                       | Size-dependent  |
 
 ## Accessibility
 

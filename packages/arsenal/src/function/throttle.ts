@@ -5,7 +5,7 @@ export type ThrottleOptions = {
   trailing?: boolean; // invoke at the end with the last args
 };
 
-export type Throttled<T extends Fn> = ((...args: Parameters<T>) => void) & {
+export type Throttled<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T> | undefined) & {
   cancel(): void;
   flush(): ReturnType<T> | undefined;
   pending(): boolean; // whether there's a pending call that flush() would execute
@@ -31,7 +31,7 @@ export function throttle<T extends Fn>(
   const trailing = options.trailing ?? false;
 
   let timerId: number | undefined;
-  let lastInvokeTime = 0;
+  let lastInvokeTime = -Infinity;
   let lastArgs: Parameters<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
 
@@ -77,10 +77,10 @@ export function throttle<T extends Fn>(
   };
 
   return Object.assign(
-    (...args: Parameters<T>): void => {
+    (...args: Parameters<T>): ReturnType<T> | undefined => {
       const now = Date.now();
 
-      if (lastInvokeTime === 0 && !leading) {
+      if (lastInvokeTime === -Infinity && !leading) {
         // If leading is false, start the window now but don't invoke immediately
         lastInvokeTime = now;
       }
@@ -91,22 +91,24 @@ export function throttle<T extends Fn>(
 
       if (rem <= 0) {
         // Window elapsed: invoke now
-        invoke(now);
+        return invoke(now);
       } else if (trailing && !timerId) {
         // Schedule trailing call if not already scheduled
         scheduleTimer(rem);
       }
+
+      return lastResult;
     },
     {
       cancel: () => {
         clearTimer();
         lastArgs = undefined;
-        lastInvokeTime = 0;
+        lastInvokeTime = -Infinity;
       },
       flush: (): ReturnType<T> | undefined => {
         if (!lastArgs) return undefined;
 
-        return invoke(Date.now()) as ReturnType<T> | undefined;
+        return invoke(Date.now());
       },
       // Pending if a trailing call is scheduled OR there are queued args.
       pending: () => lastArgs !== undefined || timerId !== undefined,

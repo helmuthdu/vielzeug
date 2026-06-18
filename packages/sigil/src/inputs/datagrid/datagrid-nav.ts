@@ -1,4 +1,4 @@
-import { type ReadonlySignal, signal } from '@vielzeug/craft';
+import { type ReadonlySignal, signal } from '@vielzeug/ripple';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

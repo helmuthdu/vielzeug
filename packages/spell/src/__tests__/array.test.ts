@@ -35,7 +35,7 @@ describe('s.array()', () => {
   it('check() on an array receives the parsed items, not the raw input', () => {
     const schema = s
       .array(s.coerce.number())
-      .check((items) => items.every((n) => typeof n === 'number') || 'Items should be numbers');
+      .validate((items) => items.every((n) => typeof n === 'number') || 'Items should be numbers');
 
     expect(schema.parse(['1', '2', '3'])).toEqual([1, 2, 3]);
   });
@@ -71,5 +71,92 @@ describe('array parseAsync — optional / nullable / catch', () => {
         .catch([])
         .parseAsync('not-an-array' as any),
     ).toEqual([]);
+  });
+});
+
+describe('ArraySchema.unique()', () => {
+  it('passes for arrays with no duplicate primitives', () => {
+    expect(s.array(s.number()).unique().parse([1, 2, 3])).toEqual([1, 2, 3]);
+    expect(s.array(s.string()).unique().parse(['a', 'b', 'c'])).toEqual(['a', 'b', 'c']);
+  });
+
+  it('fails for arrays with duplicate primitives', () => {
+    expect(() => s.array(s.number()).unique().parse([1, 2, 1])).toThrow();
+  });
+
+  it('passes empty array', () => {
+    expect(s.array(s.string()).unique().parse([])).toEqual([]);
+  });
+
+  it('passes structurally identical objects (referential equality — no custom fn)', () => {
+    const schema = s.array(s.object({ id: s.number() })).unique();
+    const result = schema.safeParse([{ id: 1 }, { id: 1 }]);
+
+    expect(result.success).toBe(true);
+  });
+
+  it('custom equalsFn detects structural duplicates in object arrays', () => {
+    type Item = { id: number };
+
+    const schema = s.array(s.object({ id: s.number() })).unique((a: Item, b: Item) => a.id === b.id);
+
+    expect(() => schema.parse([{ id: 1 }, { id: 1 }])).toThrow();
+    expect(schema.parse([{ id: 1 }, { id: 2 }])).toEqual([{ id: 1 }, { id: 2 }]);
+  });
+
+  it('custom equalsFn: empty array passes', () => {
+    const schema = s.array(s.string()).unique((a, b) => a === b);
+
+    expect(schema.parse([])).toEqual([]);
+  });
+
+  it('accepts custom message', () => {
+    const schema = s.array(s.number()).unique(() => 'No dupes allowed');
+
+    const result = schema.safeParse([1, 1]);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues[0].message).toBe('No dupes allowed');
+    }
+  });
+});
+
+describe('ArraySchema.parseAsync() concurrent item parsing', () => {
+  it('resolves all items concurrently', async () => {
+    const schema = s.array(s.string().validate(async (val) => val.length > 0 || 'Empty'));
+
+    await expect(schema.parseAsync(['a', 'b', 'c'])).resolves.toEqual(['a', 'b', 'c']);
+  });
+
+  it('collects errors from all failing items', async () => {
+    const schema = s.array(s.string().validate(async (val) => val !== 'bad' || 'Bad value'));
+    const result = await schema.safeParseAsync(['ok', 'bad', 'bad']);
+
+    expect(result.success).toBe(false);
+
+    if (!result.success) {
+      expect(result.error.issues).toHaveLength(2);
+      expect(result.error.issues[0].path).toEqual([1]);
+      expect(result.error.issues[1].path).toEqual([2]);
+    }
+  });
+
+  it('rejects non-array input', async () => {
+    await expect(s.array(s.string()).parseAsync('not-an-array')).rejects.toThrow('Expected array');
+  });
+
+  it('respects catch() on the array schema', async () => {
+    const schema = s.array(s.number()).catch([]);
+
+    await expect(schema.parseAsync('not-an-array')).resolves.toEqual([]);
+  });
+
+  it('runs array-level validators after items pass', async () => {
+    const schema = s.array(s.number()).validate(async (arr) => arr.length > 0 || 'Empty array');
+
+    await expect(schema.parseAsync([])).rejects.toThrow('Empty array');
+    await expect(schema.parseAsync([1])).resolves.toEqual([1]);
   });
 });

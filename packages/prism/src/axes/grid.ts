@@ -1,6 +1,6 @@
 import type { BandScale, GridConfig, Scale } from '../types';
 
-import { createSvgElement } from '../svg/element';
+import { createSvgElement, removeChildren } from '../svg/element';
 
 export function renderGrid(
   parent: SVGGElement,
@@ -9,7 +9,7 @@ export function renderGrid(
   crossLength: number,
   direction: 'horizontal' | 'vertical',
 ): void {
-  while (parent.firstChild) parent.removeChild(parent.firstChild);
+  removeChildren(parent);
 
   const color = (config !== true && config.color) || undefined;
   const dash = (config !== true && config.dash) || undefined;

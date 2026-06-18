@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { DataPoint, Series, StackSegment } from '../types';
+import type { Datum, Series, StackSegment } from '../types';
 
 import { issue, warn } from '../_warn';
 import { animate } from '../animation/transition';
@@ -92,8 +92,8 @@ describe('crosshair', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'S',
         },
@@ -111,8 +111,8 @@ describe('crosshair', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'S',
         },
@@ -193,7 +193,7 @@ describe('null-object tooltip/legend', () => {
   it('line chart works with no tooltip/legend config (null-objects used)', () => {
     expect(() => {
       const chart = createLineChart(container, {
-        series: [{ data: [{ x: 1, y: 5 }], name: 'S' }],
+        series: [{ data: [{ key: 1, value: 5 }], name: 'S' }],
       });
 
       chart.dispose();
@@ -203,7 +203,7 @@ describe('null-object tooltip/legend', () => {
   it('area chart works with no tooltip/legend config', () => {
     expect(() => {
       const chart = createAreaChart(container, {
-        series: [{ data: [{ x: 1, y: 5 }], name: 'S' }],
+        series: [{ data: [{ key: 1, value: 5 }], name: 'S' }],
       });
 
       chart.dispose();
@@ -213,7 +213,7 @@ describe('null-object tooltip/legend', () => {
   it('bar chart works with no tooltip/legend config', () => {
     expect(() => {
       const chart = createBarChart(container, {
-        series: [{ data: [{ x: 'A', y: 5 }], name: 'S' }],
+        series: [{ data: [{ key: 'A', value: 5 }], name: 'S' }],
       });
 
       chart.dispose();
@@ -270,7 +270,7 @@ describe('createPieChart — scaffold lifecycle', () => {
       transition: { duration: 0 },
     });
 
-    expect(install).toHaveBeenCalledWith(chart.el, container);
+    expect(install).toHaveBeenCalledWith(expect.objectContaining({ container, svg: chart.el }));
     chart.dispose();
     expect(dispose).toHaveBeenCalledOnce();
   });
@@ -320,15 +320,15 @@ describe('crosshair — no DOM leak on reactive update', () => {
   });
 
   it('line chart: only one .prism-crosshair group after signal update', async () => {
-    const data = signal([{ x: 1, y: 10 }]);
+    const data = signal([{ key: 1, value: 10 }]);
     const chart = createLineChart(container, {
       crosshair: true,
       series: [{ data, name: 'S' }],
     });
 
     data.value = [
-      { x: 1, y: 10 },
-      { x: 2, y: 20 },
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
     ];
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => requestAnimationFrame(r));
@@ -338,15 +338,15 @@ describe('crosshair — no DOM leak on reactive update', () => {
   });
 
   it('area chart: only one .prism-crosshair group after signal update', async () => {
-    const data = signal([{ x: 1, y: 10 }]);
+    const data = signal([{ key: 1, value: 10 }]);
     const chart = createAreaChart(container, {
       crosshair: true,
       series: [{ data, name: 'S' }],
     });
 
     data.value = [
-      { x: 1, y: 10 },
-      { x: 2, y: 20 },
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
     ];
     await new Promise((r) => requestAnimationFrame(r));
     await new Promise((r) => requestAnimationFrame(r));
@@ -393,13 +393,13 @@ describe('tooltip — custom render function', () => {
   });
 
   it('line chart: custom render fn is called and output injected into tooltip', () => {
-    const render = vi.fn((_pt: DataPoint, s: Series) => `<b>${s.name}</b>`);
+    const render = vi.fn((_pt: Datum, s: Series) => `<b>${s.name}</b>`);
     const chart = createLineChart(container, {
       series: [
         {
           data: [
-            { x: 1, y: 42 },
-            { x: 2, y: 55 },
+            { key: 1, value: 42 },
+            { key: 2, value: 55 },
           ],
           name: 'Rev',
         },
@@ -447,8 +447,8 @@ describe('axis — right and top positions', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'S',
         },
@@ -465,8 +465,8 @@ describe('axis — right and top positions', () => {
       series: [
         {
           data: [
-            { x: 1, y: 10 },
-            { x: 2, y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'S',
         },
@@ -524,7 +524,7 @@ describe('createSparkline — interaction cleanup', () => {
 // ─── animate utility ─────────────────────────────────────────────────────────
 
 describe('animate', () => {
-  it('returns a Promise', () => {
+  it('returns void (not a Promise)', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 
@@ -533,20 +533,21 @@ describe('animate', () => {
 
     const result = animate([{ attrs: { width: { from: 0, to: 100 } }, el: rect }], { duration: 0 });
 
-    expect(result).toBeInstanceOf(Promise);
+    expect(result).toBeUndefined();
     svg.remove();
   });
 
-  it('resolves after duration: 0', async () => {
+  it('calls onComplete after duration: 0', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 
     svg.appendChild(rect);
     document.body.appendChild(svg);
 
-    await expect(
-      animate([{ attrs: { width: { from: 0, to: 50 } }, el: rect }], { duration: 0 }),
-    ).resolves.toBeUndefined();
+    const onComplete = vi.fn();
+
+    animate([{ attrs: { width: { from: 0, to: 50 } }, el: rect }], { duration: 0 }, onComplete);
+    expect(onComplete).toHaveBeenCalledOnce();
     svg.remove();
   });
 });
@@ -570,13 +571,13 @@ describe('TooltipConfig.sanitize', () => {
 
   it('applies sanitize fn before setting innerHTML', () => {
     const sanitize = vi.fn((html: string) => html.replace(/<script.*?<\/script>/gi, ''));
-    const render = (_pt: DataPoint, s: Series) => `<b>${s.name}</b><script>alert(1)</script>`;
+    const render = (_pt: Datum, s: Series) => `<b>${s.name}</b><script>alert(1)</script>`;
     const chart = createLineChart(container, {
       series: [
         {
           data: [
-            { x: 1, y: 42 },
-            { x: 2, y: 55 },
+            { key: 1, value: 42 },
+            { key: 2, value: 55 },
           ],
           name: 'Rev',
         },
@@ -600,9 +601,9 @@ describe('TooltipConfig.sanitize', () => {
   });
 });
 
-// ─── computePoints — string x warn ────────────────────────────────────────
+// ─── Datum.key type contract ──────────────────────────────────────────────────
 
-describe('createLineChart — string x warn', () => {
+describe('createLineChart — Datum.key type contract', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -617,23 +618,103 @@ describe('createLineChart — string x warn', () => {
     container.remove();
   });
 
-  it('emits warn when x values are strings', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  it('renders without errors when key values are numbers', () => {
     const chart = createLineChart(container, {
       series: [
         {
           data: [
-            { x: 'Q1', y: 10 },
-            { x: 'Q2', y: 20 },
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
           ],
           name: 'S',
         },
       ],
     });
 
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('is a string'));
+    expect(chart.el.querySelector('.prism-series')).not.toBeNull();
     chart.dispose();
-    warn.mockRestore();
+  });
+
+  it('renders without errors when key values are Dates', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { key: new Date('2024-01-01'), value: 10 },
+            { key: new Date('2024-06-01'), value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    expect(chart.el.querySelector('.prism-series')).not.toBeNull();
+    chart.dispose();
+  });
+});
+
+// ─── axis — label (title) rendering ──────────────────────────────────────────
+
+describe('AxisConfig.label — axis title rendering', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('renders .prism-axis-title element when xAxis.label is set', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+      xAxis: { label: 'Time' },
+    });
+
+    expect(chart.el.querySelector('.prism-axis-title')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-axis-title')?.textContent).toBe('Time');
+    chart.dispose();
+  });
+
+  it('renders .prism-axis-title element when yAxis.label is set', () => {
+    const chart = createLineChart(container, {
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+      yAxis: { label: 'Value' },
+    });
+
+    expect(chart.el.querySelector('.prism-axis-title')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-axis-title')?.textContent).toBe('Value');
+    chart.dispose();
+  });
+
+  it('renders no .prism-axis-title when no label is set', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+    });
+
+    expect(chart.el.querySelector('.prism-axis-title')).toBeNull();
+    chart.dispose();
   });
 });
 
@@ -643,10 +724,10 @@ describe('createTooltip — isConnected guard', () => {
   it('show() does not throw when container is detached from DOM', () => {
     const container = document.createElement('div');
     const tooltip = createTooltip(container, true);
-    const point: DataPoint = { x: 1, y: 10 };
+    const datum: Datum = { key: 1, value: 10 };
     const series: Series = { data: [], name: 'S' };
 
-    expect(() => tooltip.show(10, 10, point, series)).not.toThrow();
+    expect(() => tooltip.show(10, 10, datum, series)).not.toThrow();
     tooltip.dispose();
   });
 });
@@ -655,27 +736,27 @@ describe('createTooltip — isConnected guard', () => {
 
 describe('createTooltip — XSS warning', () => {
   it('emits warn when render is provided without sanitize', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const container = document.createElement('div');
 
     document.body.appendChild(container);
-    createTooltip(container, { render: (_pt, s) => `<b>${s.name}</b>` });
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('sanitize'));
-    warn.mockRestore();
+    createTooltip(container, { render: (_datum, s) => `<b>${s.name}</b>` });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('sanitize'));
+    warnSpy.mockRestore();
     container.remove();
   });
 
   it('does NOT warn when render is provided with sanitize', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const container = document.createElement('div');
 
     document.body.appendChild(container);
     createTooltip(container, {
-      render: (_pt, s) => `<b>${s.name}</b>`,
+      render: (_datum, s) => `<b>${s.name}</b>`,
       sanitize: (html) => html,
     });
-    expect(warn).not.toHaveBeenCalled();
-    warn.mockRestore();
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
     container.remove();
   });
 });

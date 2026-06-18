@@ -16,17 +16,23 @@ Basic line chart with tooltip and crosshair:
 <script>
   const { createLineChart } = Prism;
   createLineChart(document.getElementById('ex-line'), {
-    series: [{
-      name: 'Revenue',
-      data: [
-        { x: 1, y: 120 }, { x: 2, y: 180 }, { x: 3, y: 150 },
-        { x: 4, y: 220 }, { x: 5, y: 195 }, { x: 6, y: 280 },
-      ],
-      color: '#3b82f6',
-      curve: 'monotone',
-      strokeWidth: 2,
-      showPoints: true,
-    }],
+    series: [
+      {
+        name: 'Revenue',
+        data: [
+          { key: 1, value: 120 },
+          { key: 2, value: 180 },
+          { key: 3, value: 150 },
+          { key: 4, value: 220 },
+          { key: 5, value: 195 },
+          { key: 6, value: 280 },
+        ],
+        color: '#3b82f6',
+        curve: 'monotone',
+        strokeWidth: 2,
+        showPoints: true,
+      },
+    ],
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left', grid: true },
     tooltip: true,
@@ -51,13 +57,25 @@ Multiple lines with different curves:
     series: [
       {
         name: 'Product A',
-        data: [{ x: 1, y: 40 }, { x: 2, y: 65 }, { x: 3, y: 55 }, { x: 4, y: 80 }, { x: 5, y: 72 }],
+        data: [
+          { key: 1, value: 40 },
+          { key: 2, value: 65 },
+          { key: 3, value: 55 },
+          { key: 4, value: 80 },
+          { key: 5, value: 72 },
+        ],
         color: '#3b82f6',
         curve: 'monotone',
       },
       {
         name: 'Product B',
-        data: [{ x: 1, y: 20 }, { x: 2, y: 35 }, { x: 3, y: 60 }, { x: 4, y: 45 }, { x: 5, y: 90 }],
+        data: [
+          { key: 1, value: 20 },
+          { key: 2, value: 35 },
+          { key: 3, value: 60 },
+          { key: 4, value: 45 },
+          { key: 5, value: 90 },
+        ],
         color: '#10b981',
         curve: 'monotone',
       },
@@ -85,13 +103,25 @@ Add `legend: true` to label each series below the chart:
     series: [
       {
         name: 'Revenue',
-        data: [{ x: 1, y: 120 }, { x: 2, y: 180 }, { x: 3, y: 150 }, { x: 4, y: 220 }, { x: 5, y: 195 }],
+        data: [
+          { key: 1, value: 120 },
+          { key: 2, value: 180 },
+          { key: 3, value: 150 },
+          { key: 4, value: 220 },
+          { key: 5, value: 195 },
+        ],
         color: '#3b82f6',
         curve: 'monotone',
       },
       {
         name: 'Expenses',
-        data: [{ x: 1, y: 80 }, { x: 2, y: 95 }, { x: 3, y: 110 }, { x: 4, y: 130 }, { x: 5, y: 125 }],
+        data: [
+          { key: 1, value: 80 },
+          { key: 2, value: 95 },
+          { key: 3, value: 110 },
+          { key: 4, value: 130 },
+          { key: 5, value: 125 },
+        ],
         color: '#ef4444',
         curve: 'monotone',
       },
@@ -121,13 +151,23 @@ Grouped bar chart comparing categories:
     series: [
       {
         name: '2023',
-        data: [{ x: 'Q1', y: 120 }, { x: 'Q2', y: 180 }, { x: 'Q3', y: 150 }, { x: 'Q4', y: 210 }],
+        data: [
+          { key: 'Q1', value: 120 },
+          { key: 'Q2', value: 180 },
+          { key: 'Q3', value: 150 },
+          { key: 'Q4', value: 210 },
+        ],
         color: '#94a3b8',
         borderRadius: 4,
       },
       {
         name: '2024',
-        data: [{ x: 'Q1', y: 150 }, { x: 'Q2', y: 220 }, { x: 'Q3', y: 190 }, { x: 'Q4', y: 280 }],
+        data: [
+          { key: 'Q1', value: 150 },
+          { key: 'Q2', value: 220 },
+          { key: 'Q3', value: 190 },
+          { key: 'Q4', value: 280 },
+        ],
         color: '#3b82f6',
         borderRadius: 4,
       },
@@ -155,19 +195,34 @@ Bar chart with `variant: 'stacked'` — series stack vertically per category:
     series: [
       {
         name: 'Mobile',
-        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        data: [
+          { key: 'Q1', value: 80 },
+          { key: 'Q2', value: 110 },
+          { key: 'Q3', value: 95 },
+          { key: 'Q4', value: 130 },
+        ],
         color: '#3b82f6',
         borderRadius: 0,
       },
       {
         name: 'Desktop',
-        data: [{ x: 'Q1', y: 60 }, { x: 'Q2', y: 90 }, { x: 'Q3', y: 75 }, { x: 'Q4', y: 100 }],
+        data: [
+          { key: 'Q1', value: 60 },
+          { key: 'Q2', value: 90 },
+          { key: 'Q3', value: 75 },
+          { key: 'Q4', value: 100 },
+        ],
         color: '#10b981',
         borderRadius: 0,
       },
       {
         name: 'Tablet',
-        data: [{ x: 'Q1', y: 20 }, { x: 'Q2', y: 30 }, { x: 'Q3', y: 25 }, { x: 'Q4', y: 35 }],
+        data: [
+          { key: 'Q1', value: 20 },
+          { key: 'Q2', value: 30 },
+          { key: 'Q3', value: 25 },
+          { key: 'Q4', value: 35 },
+        ],
         color: '#f59e0b',
         borderRadius: 0,
       },
@@ -198,7 +253,12 @@ Bar chart with `variant: 'grouped-horizontal'` — categories on the Y axis, val
     series: [
       {
         name: 'Revenue',
-        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        data: [
+          { key: 'Q1', value: 80 },
+          { key: 'Q2', value: 110 },
+          { key: 'Q3', value: 95 },
+          { key: 'Q4', value: 130 },
+        ],
         color: '#3b82f6',
       },
     ],
@@ -226,13 +286,23 @@ Use `variant: 'stacked-horizontal'` — horizontal bars stacked per category:
     series: [
       {
         name: 'Mobile',
-        data: [{ x: 'Q1', y: 80 }, { x: 'Q2', y: 110 }, { x: 'Q3', y: 95 }, { x: 'Q4', y: 130 }],
+        data: [
+          { key: 'Q1', value: 80 },
+          { key: 'Q2', value: 110 },
+          { key: 'Q3', value: 95 },
+          { key: 'Q4', value: 130 },
+        ],
         color: '#3b82f6',
         borderRadius: 0,
       },
       {
         name: 'Desktop',
-        data: [{ x: 'Q1', y: 60 }, { x: 'Q2', y: 90 }, { x: 'Q3', y: 75 }, { x: 'Q4', y: 100 }],
+        data: [
+          { key: 'Q1', value: 60 },
+          { key: 'Q2', value: 90 },
+          { key: 'Q3', value: 75 },
+          { key: 'Q4', value: 100 },
+        ],
         color: '#10b981',
         borderRadius: 0,
       },
@@ -261,13 +331,23 @@ Grouped bar chart with a legend positioned at the top:
     series: [
       {
         name: '2023',
-        data: [{ x: 'Q1', y: 120 }, { x: 'Q2', y: 180 }, { x: 'Q3', y: 150 }, { x: 'Q4', y: 210 }],
+        data: [
+          { key: 'Q1', value: 120 },
+          { key: 'Q2', value: 180 },
+          { key: 'Q3', value: 150 },
+          { key: 'Q4', value: 210 },
+        ],
         color: '#94a3b8',
         borderRadius: 4,
       },
       {
         name: '2024',
-        data: [{ x: 'Q1', y: 150 }, { x: 'Q2', y: 220 }, { x: 'Q3', y: 190 }, { x: 'Q4', y: 280 }],
+        data: [
+          { key: 'Q1', value: 150 },
+          { key: 'Q2', value: 220 },
+          { key: 'Q3', value: 190 },
+          { key: 'Q4', value: 280 },
+        ],
         color: '#3b82f6',
         borderRadius: 4,
       },
@@ -293,17 +373,23 @@ Filled area with monotone curve and low opacity:
 <script>
   const { createAreaChart } = Prism;
   createAreaChart(document.getElementById('ex-area'), {
-    series: [{
-      name: 'Signups',
-      data: [
-        { x: 1, y: 500 }, { x: 2, y: 650 }, { x: 3, y: 800 },
-        { x: 4, y: 720 }, { x: 5, y: 900 }, { x: 6, y: 1100 },
-      ],
-      color: '#8b5cf6',
-      curve: 'monotone',
-      fillOpacity: 0.2,
-      showLine: true,
-    }],
+    series: [
+      {
+        name: 'Signups',
+        data: [
+          { key: 1, value: 500 },
+          { key: 2, value: 650 },
+          { key: 3, value: 800 },
+          { key: 4, value: 720 },
+          { key: 5, value: 900 },
+          { key: 6, value: 1100 },
+        ],
+        color: '#8b5cf6',
+        curve: 'monotone',
+        fillOpacity: 0.2,
+        showLine: true,
+      },
+    ],
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left', grid: { color: '#f1f5f9' } },
     crosshair: { vertical: true },
@@ -328,8 +414,12 @@ Multi-series area chart with a bottom legend:
       {
         name: 'Mobile',
         data: [
-          { x: 1, y: 300 }, { x: 2, y: 420 }, { x: 3, y: 510 },
-          { x: 4, y: 480 }, { x: 5, y: 620 }, { x: 6, y: 750 },
+          { key: 1, value: 300 },
+          { key: 2, value: 420 },
+          { key: 3, value: 510 },
+          { key: 4, value: 480 },
+          { key: 5, value: 620 },
+          { key: 6, value: 750 },
         ],
         color: '#8b5cf6',
         curve: 'monotone',
@@ -338,8 +428,12 @@ Multi-series area chart with a bottom legend:
       {
         name: 'Desktop',
         data: [
-          { x: 1, y: 200 }, { x: 2, y: 230 }, { x: 3, y: 290 },
-          { x: 4, y: 240 }, { x: 5, y: 280 }, { x: 6, y: 350 },
+          { key: 1, value: 200 },
+          { key: 2, value: 230 },
+          { key: 3, value: 290 },
+          { key: 4, value: 240 },
+          { key: 5, value: 280 },
+          { key: 6, value: 350 },
         ],
         color: '#06b6d4',
         curve: 'monotone',
@@ -367,16 +461,22 @@ Line chart with step interpolation:
 <script>
   const { createLineChart } = Prism;
   createLineChart(document.getElementById('ex-step'), {
-    series: [{
-      name: 'Status',
-      data: [
-        { x: 1, y: 0 }, { x: 2, y: 1 }, { x: 3, y: 1 },
-        { x: 4, y: 0 }, { x: 5, y: 1 }, { x: 6, y: 0 },
-      ],
-      color: '#f59e0b',
-      curve: 'step',
-      strokeWidth: 3,
-    }],
+    series: [
+      {
+        name: 'Status',
+        data: [
+          { key: 1, value: 0 },
+          { key: 2, value: 1 },
+          { key: 3, value: 1 },
+          { key: 4, value: 0 },
+          { key: 5, value: 1 },
+          { key: 6, value: 0 },
+        ],
+        color: '#f59e0b',
+        curve: 'step',
+        strokeWidth: 3,
+      },
+    ],
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left' },
   });
@@ -403,7 +503,10 @@ Chart that updates when signal data changes:
   const { signal } = Ripple;
 
   const data = signal([
-    { x: 1, y: 20 }, { x: 2, y: 35 }, { x: 3, y: 28 }, { x: 4, y: 45 },
+    { key: 1, value: 20 },
+    { key: 2, value: 35 },
+    { key: 3, value: 28 },
+    { key: 4, value: 45 },
   ]);
 
   createLineChart(document.getElementById('ex-reactive'), {
@@ -414,11 +517,11 @@ Chart that updates when signal data changes:
     transition: { duration: 400, easing: 'ease-out' },
   });
 
-  document.getElementById('ex-reactive-btn').addEventListener('click', function() {
+  document.getElementById('ex-reactive-btn').addEventListener('click', function () {
     var prev = data.value;
     var nextX = prev.length + 1;
     var nextY = 20 + Math.floor(Math.random() * 40);
-    data.value = prev.concat([{ x: nextX, y: nextY }]);
+    data.value = prev.concat([{ key: nextX, value: nextY }]);
   });
 </script>
 ```
@@ -443,7 +546,10 @@ Bar chart that updates when signal data changes, with stagger animation on new b
   const { signal } = Ripple;
 
   const barData = signal([
-    { x: 'Q1', y: 120 }, { x: 'Q2', y: 180 }, { x: 'Q3', y: 150 }, { x: 'Q4', y: 210 },
+    { key: 'Q1', value: 120 },
+    { key: 'Q2', value: 180 },
+    { key: 'Q3', value: 150 },
+    { key: 'Q4', value: 210 },
   ]);
 
   createBarChart(document.getElementById('ex-reactive-bar'), {
@@ -456,10 +562,10 @@ Bar chart that updates when signal data changes, with stagger animation on new b
 
   var quarters = ['Q5', 'Q6', 'Q7', 'Q8'];
   var qIdx = 0;
-  document.getElementById('ex-reactive-bar-btn').addEventListener('click', function() {
+  document.getElementById('ex-reactive-bar-btn').addEventListener('click', function () {
     if (qIdx >= quarters.length) return;
     var nextY = 150 + Math.floor(Math.random() * 120);
-    barData.value = barData.value.concat([{ x: quarters[qIdx++], y: nextY }]);
+    barData.value = barData.value.concat([{ key: quarters[qIdx++], value: nextY }]);
   });
 </script>
 ```
@@ -481,25 +587,29 @@ Using `onHover` and `onClick` to react to chart interactions:
   const info = document.getElementById('ex-events-info');
 
   createLineChart(document.getElementById('ex-events'), {
-    series: [{
-      name: 'Revenue',
-      data: [
-        { x: 1, y: 120 }, { x: 2, y: 180 }, { x: 3, y: 150 },
-        { x: 4, y: 220 }, { x: 5, y: 195 }, { x: 6, y: 280 },
-      ],
-      color: '#3b82f6',
-      curve: 'monotone',
-      showPoints: true,
-    }],
+    series: [
+      {
+        name: 'Revenue',
+        data: [
+          { key: 1, value: 120 },
+          { key: 2, value: 180 },
+          { key: 3, value: 150 },
+          { key: 4, value: 220 },
+          { key: 5, value: 195 },
+          { key: 6, value: 280 },
+        ],
+        color: '#3b82f6',
+        curve: 'monotone',
+        showPoints: true,
+      },
+    ],
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left', grid: true },
-    onHover: function(event) {
-      info.textContent = event
-        ? 'Hovering x=' + event.point.x + ' y=' + event.point.y
-        : '';
+    onHover: function (event) {
+      info.textContent = event ? 'Hovering key=' + event.datum.key + ' value=' + event.datum.value : '';
     },
-    onClick: function(event) {
-      info.textContent = 'Clicked x=' + event.point.x + ' y=' + event.point.y;
+    onClick: function (event) {
+      info.textContent = 'Clicked key=' + event.datum.key + ' value=' + event.datum.value;
     },
   });
 </script>
@@ -674,7 +784,7 @@ Sparkline that updates when signal data changes:
     transition: { duration: 300, easing: 'ease-out' },
   });
 
-  document.getElementById('ex-spark-btn').addEventListener('click', function() {
+  document.getElementById('ex-spark-btn').addEventListener('click', function () {
     sparkData.value = sparkData.value.concat([10 + Math.floor(Math.random() * 25)]);
   });
 </script>
@@ -695,10 +805,10 @@ Horizontal stacked bar — proportional segments with per-segment colors:
   createSparkline(document.getElementById('ex-spark-stack'), {
     variant: 'stack',
     data: [
-      { label: 'Chrome',  value: 341, color: '#3b82f6' },
-      { label: 'Safari',  value: 217,  color: '#06b6d4' },
-      { label: 'Firefox', value: 124,  color: '#10b981' },
-      { label: 'Edge',    value: 53,   color: '#f59e0b' },
+      { label: 'Chrome', value: 341, color: '#3b82f6' },
+      { label: 'Safari', value: 217, color: '#06b6d4' },
+      { label: 'Firefox', value: 124, color: '#10b981' },
+      { label: 'Edge', value: 53, color: '#f59e0b' },
     ],
     cornerRadius: 4,
     padPixels: 4,
@@ -719,23 +829,36 @@ Rich HTML tooltip with custom formatting:
 <script>
   const { createBarChart } = Prism;
   createBarChart(document.getElementById('ex-tooltip'), {
-    series: [{
-      name: 'Revenue',
-      data: [
-        { x: 'Jan', y: 4200 }, { x: 'Feb', y: 5100 },
-        { x: 'Mar', y: 4800 }, { x: 'Apr', y: 6300 },
-        { x: 'May', y: 5900 }, { x: 'Jun', y: 7200 },
-      ],
-      color: '#6366f1',
-      borderRadius: 6,
-    }],
+    series: [
+      {
+        name: 'Revenue',
+        data: [
+          { key: 'Jan', value: 4200 },
+          { key: 'Feb', value: 5100 },
+          { key: 'Mar', value: 4800 },
+          { key: 'Apr', value: 6300 },
+          { key: 'May', value: 5900 },
+          { key: 'Jun', value: 7200 },
+        ],
+        color: '#6366f1',
+        borderRadius: 6,
+      },
+    ],
     xAxis: { position: 'bottom' },
     yAxis: { position: 'left', grid: true },
     tooltip: {
-      render: function(point, series) {
-        return '<div style="font-weight:600">' + series.name + '</div>' +
-          '<div style="opacity:0.7;font-size:11px">' + point.x + '</div>' +
-          '<div style="font-size:14px;margin-top:2px">$' + point.y.toLocaleString() + '</div>';
+      render: function (datum, series) {
+        return (
+          '<div style="font-weight:600">' +
+          series.name +
+          '</div>' +
+          '<div style="opacity:0.7;font-size:11px">' +
+          datum.key +
+          '</div>' +
+          '<div style="font-size:14px;margin-top:2px">$' +
+          datum.value.toLocaleString() +
+          '</div>'
+        );
       },
     },
   });
@@ -756,17 +879,17 @@ A donut chart that installs a custom plugin to draw a total count label in the c
   const { createPieChart } = Prism;
 
   const data = [
-    { label: 'Direct',  value: 42, color: '#6366f1' },
+    { label: 'Direct', value: 42, color: '#6366f1' },
     { label: 'Organic', value: 28, color: '#10b981' },
-    { label: 'Social',  value: 18, color: '#f59e0b' },
-    { label: 'Referral',value: 12, color: '#8b5cf6' },
+    { label: 'Social', value: 18, color: '#f59e0b' },
+    { label: 'Referral', value: 12, color: '#8b5cf6' },
   ];
 
   const total = data.reduce((s, d) => s + d.value, 0);
   let centerLabel;
 
   const centerPlugin = {
-    install(svg) {
+    install(ctx) {
       const ns = 'http://www.w3.org/2000/svg';
       centerLabel = document.createElementNS(ns, 'text');
       centerLabel.setAttribute('text-anchor', 'middle');
@@ -775,18 +898,17 @@ A donut chart that installs a custom plugin to draw a total count label in the c
       centerLabel.setAttribute('font-weight', '600');
       centerLabel.setAttribute('fill', 'var(--prism-text-color, #334155)');
       centerLabel.textContent = total;
-      svg.appendChild(centerLabel);
+      ctx.svg.appendChild(centerLabel);
       // Position at SVG center once dimensions are available
       requestAnimationFrame(() => {
-        const w = parseFloat(svg.getAttribute('width') || '0');
-        const h = parseFloat(svg.getAttribute('height') || '0');
-        if (w && h) {
-          centerLabel.setAttribute('x', String(w / 2));
-          centerLabel.setAttribute('y', String(h / 2));
+        const { width, height } = ctx.dimensions.value;
+        if (width && height) {
+          centerLabel.setAttribute('x', String(width / 2));
+          centerLabel.setAttribute('y', String(height / 2));
         }
       });
     },
-    destroy() {
+    dispose() {
       centerLabel?.remove();
     },
   };

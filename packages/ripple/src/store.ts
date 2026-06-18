@@ -1,9 +1,8 @@
-import type { ComputedSignal, PathValue, ReactiveOptions, Signal, Store, Subscription } from './types';
+import type { PathValue, ReadonlySignal, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
 import { StateError } from './error';
-import { registerSignal } from './registry';
 import { batch } from './scheduling';
 import { SignalImpl } from './signal';
 import { IS_SIGNAL, IS_STORE } from './symbols';
@@ -50,22 +49,29 @@ const setNestedValue = <T>(obj: T, parts: string[], value: unknown): T => {
 class LensSignal<V> implements Signal<V> {
   declare [IS_SIGNAL]: true;
 
-  private source_: Signal<V> | ComputedSignal<V>;
+  private source_: ReadonlySignal<V>;
   private write_: (v: V) => void;
   private evict_: () => void;
   private disposeSource_: (() => void) | undefined;
+  private name_: string | undefined;
+
+  get name(): string | undefined {
+    return this.name_ ?? this.source_.name;
+  }
 
   constructor(
-    source: Signal<V> | ComputedSignal<V>,
+    source: ReadonlySignal<V>,
     write: (v: V) => void,
     evict: () => void,
     disposeSource?: () => void,
+    name?: string,
   ) {
     this[IS_SIGNAL] = true;
     this.source_ = source;
     this.write_ = write;
     this.evict_ = evict;
     this.disposeSource_ = disposeSource;
+    this.name_ = name;
   }
 
   get value(): V {
@@ -80,26 +86,12 @@ class LensSignal<V> implements Signal<V> {
     return this.source_.peek();
   }
 
-  update(fn: (current: V) => V): void {
-    this.value = fn(this.peek());
-  }
-
   subscribe(listener: () => void): Subscription {
     return this.source_.subscribe(listener);
   }
 
-  map<U>(fn: (value: V) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return this.source_.map(fn, options);
-  }
-
-  filter<U extends V>(predicate: (value: V) => value is U): ComputedSignal<U | undefined>;
-  filter(predicate: (value: V) => boolean): ComputedSignal<V | undefined>;
-  filter(predicate: (value: V) => boolean): ComputedSignal<V | undefined> {
-    return this.source_.filter(predicate);
-  }
-
   get disposed(): boolean {
-    return this.source_.disposed;
+    return (this.source_ as { disposed?: boolean }).disposed ?? false;
   }
 
   dispose(): void {
@@ -118,16 +110,14 @@ class LensSignal<V> implements Signal<V> {
 //
 // Internal layout:
 // - current_: mutable backing object — NEVER exposed directly, internal writes only
-// - readonlyProxy_: Proxy over current_ that throws on set/delete — returned by .value / .peek()
+// - readonlyProxy_: Proxy over current_ that throws on set/delete — returned by .peek()
 // - propSignals_: per-top-level-key SignalImpl, lazily created on first lens/read
 // - version_: whole-store monotonic counter (bumped on any change, used by subscribe())
 //
-// R3: StoreImpl is a standalone class — does not extend ReactiveBase.
-// R4: applyTopLevelChange_() has NO batch() wrapper — callers that need atomicity
-//     (patch, replace, reset) already wrap with an outer batch(). The only other
-//     write path (nested lens write) wraps at the call site, not here.
-// R10: The readonlyProxy_ is shallowly protected — top-level set/delete throws,
-//      but nested object properties are plain references. See store.value JSDoc.
+// StoreImpl is a standalone class — does not extend ReactiveBase.
+// applyTopLevelChange_() has NO batch() wrapper — callers that need atomicity
+// (patch, replace, reset) already wrap with an outer batch(). The only other
+// write path (nested lens write) wraps at the call site, not here.
 
 export class StoreImpl<T extends object> {
   declare [IS_SIGNAL]: true;
@@ -136,23 +126,19 @@ export class StoreImpl<T extends object> {
   readonly name: string | undefined;
 
   private current_: T;
+  private disposed_: boolean;
   private readonly initial_: T;
   private readonly lensCache_: Map<string, LensSignal<unknown>>;
   private readonly propSignals_: Map<string, SignalImpl<unknown>>;
   private readonly readonlyProxy_: Readonly<T>;
   private readonly version_: SignalImpl<number>;
 
-  private readonly onMutation_?: (key: string, newValue: unknown) => void;
-
-  constructor(initial: T, name?: string, onMutation?: (key: string, newValue: unknown) => void) {
+  constructor(initial: T, name?: string) {
     this[IS_SIGNAL] = true;
     this[IS_STORE] = true;
     this.name = name;
-
-    if (name !== undefined) registerSignal(this, name);
-
-    this.onMutation_ = onMutation;
     this.current_ = structuredClone(initial);
+    this.disposed_ = false;
     this.initial_ = structuredClone(initial);
     this.lensCache_ = new Map();
     this.propSignals_ = new Map();
@@ -219,27 +205,25 @@ export class StoreImpl<T extends object> {
     (this.current_ as Record<string, unknown>)[key] = newValue;
     this.propSignalFor_(key).value = newValue as never;
     this.version_.value = this.version_.peek() + 1;
-    this.onMutation_?.(key, newValue);
   }
 
   /**
-   * Returns the current store state.
-   *
-   * The returned object is **shallowly protected**: direct assignment to top-level
-   * properties throws a `StateError`. However, nested objects are plain references —
-   * mutations on nested properties bypass reactivity entirely and will NOT notify effects.
-   *
-   * Use `store.lens('a.b')`, `store.patch()`, or `store.replace()` to update nested state.
-   *
-   * Reading `.value` in an effect or computed registers a whole-store dependency
-   * (fires on any key change). For fine-grained dependencies, use `store.lens()` or `store.map()`.
+   * Returns the current state as a tracked read — registers the store as a dependency
+   * inside `effect()` / `computed()`. Any mutation re-runs the subscriber.
+   * For untracked one-off reads, use `peek()` instead.
    */
   get value(): Readonly<T> {
-    this.version_.value; // eslint-disable-line @typescript-eslint/no-unused-expressions
+    void this.version_.value;
 
     return this.readonlyProxy_;
   }
 
+  /**
+   * Returns a non-reactive snapshot of the current state.
+   * The returned object is shallowly protected — top-level mutations throw.
+   * Use for serialization or one-off reads outside reactive contexts.
+   * For reactive reads, use `store.lens(path)` instead.
+   */
   peek(): Readonly<T> {
     return this.readonlyProxy_;
   }
@@ -247,20 +231,6 @@ export class StoreImpl<T extends object> {
   readonly subscribe = (listener: () => void): Subscription => {
     return this.version_.subscribe(listener);
   };
-
-  map<U>(fn: (value: Readonly<T>) => U, options?: ReactiveOptions<U>): ComputedSignal<U> {
-    return computed(() => fn(this.value), options);
-  }
-
-  filter<U extends T>(predicate: (value: Readonly<T>) => value is U): ComputedSignal<U | undefined>;
-  filter(predicate: (value: Readonly<T>) => boolean): ComputedSignal<T | undefined>;
-  filter(predicate: (value: Readonly<T>) => boolean): ComputedSignal<T | undefined> {
-    return computed(() => {
-      const v = this.value;
-
-      return predicate(v) ? (v as T) : undefined;
-    });
-  }
 
   patch(partial: Partial<T>): void {
     if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
@@ -282,7 +252,7 @@ export class StoreImpl<T extends object> {
 
   replace(fn: (state: Readonly<T>) => T): void {
     const current = this.current_;
-    const snapshot = { ...current } as Readonly<T>;
+    const snapshot = structuredClone(current) as Readonly<T>;
     const next = fn(snapshot);
 
     if (next === snapshot) return;
@@ -293,7 +263,7 @@ export class StoreImpl<T extends object> {
       }
 
       for (const key of Object.keys(next)) {
-        if (Object.prototype.hasOwnProperty.call(current, key)) continue;
+        if (Object.hasOwn(current as Record<string, unknown>, key)) continue;
 
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
@@ -331,6 +301,10 @@ export class StoreImpl<T extends object> {
     }
 
     for (const part of parts) {
+      if (part === '') {
+        throw new StateError('INVALID_STORE', `Empty path segment in lens path "${path}". Check for consecutive dots.`);
+      }
+
       if (part === '__proto__' || part === 'constructor' || part === 'prototype') {
         throw new StateError('INVALID_STORE', `Unsafe path segment "${part}" in lens path "${path}".`);
       }
@@ -370,12 +344,41 @@ export class StoreImpl<T extends object> {
         },
         evict,
         () => readComputed.dispose(),
+        this.name ? `${this.name}.${path}` : path,
       ) as unknown as LensSignal<unknown>;
     }
 
     this.lensCache_.set(path, lens);
 
     return lens as unknown as Signal<PathValue<T, P>>;
+  }
+
+  get disposed(): boolean {
+    return this.disposed_;
+  }
+
+  dispose(): void {
+    if (this.disposed_) return;
+
+    this.disposed_ = true;
+
+    for (const lens of [...this.lensCache_.values()]) {
+      lens.dispose();
+    }
+
+    this.lensCache_.clear();
+
+    for (const sig of this.propSignals_.values()) {
+      sig.dispose();
+    }
+
+    this.propSignals_.clear();
+    this.version_.dispose();
+    getDevToolsHook()?.dispose?.({ kind: 'store', name: this.name });
+  }
+
+  [Symbol.dispose](): void {
+    this.dispose();
   }
 }
 

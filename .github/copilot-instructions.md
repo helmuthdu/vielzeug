@@ -30,7 +30,7 @@ packages/<name>/
 
 ```
 @vielzeug/sigil  → @vielzeug/craft → @vielzeug/ripple, @vielzeug/orbit
-@vielzeug/sigil  → @vielzeug/arsenal, @vielzeug/grip, @vielzeug/scroll
+@vielzeug/sigil  → @vielzeug/arsenal, @vielzeug/dnd, @vielzeug/scroll
 @vielzeug/courier  → @vielzeug/arsenal
 @vielzeug/sourcerer  → @vielzeug/arsenal
 @vielzeug/clockwork  → @vielzeug/ripple
@@ -56,7 +56,7 @@ All other packages are fully independent.
 | `@vielzeug/lingua`    | i18n       | Typed i18n with pluralization and async loading                    |
 | `@vielzeug/herald`    | Events     | Typed event bus, pub/sub, async streams                            |
 | `@vielzeug/familiar`  | Workers    | Web Worker pool with tasks, timeouts, cancellation                 |
-| `@vielzeug/grip`      | UI         | Drag-and-drop — drop zones and sortable lists                      |
+| `@vielzeug/dnd`       | UI         | Drag-and-drop — drop zones and sortable lists                      |
 | `@vielzeug/orbit`     | UI         | Floating element positioning (tooltip, popover)                    |
 | `@vielzeug/sourcerer` | Data       | Reactive data sources with pagination and search                   |
 | `@vielzeug/tempo`     | Date/Time  | Temporal-powered date utilities                                    |

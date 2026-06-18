@@ -5,6 +5,6 @@ export default defineConfig({
   test: {
     environment: 'node',
     globals: true,
-    name: 'relay',
+    name: 'herald',
   },
 });

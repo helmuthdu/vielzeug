@@ -1,5 +1,5 @@
-import { compare } from '../function/compare';
-import { compareBy } from '../function/compareBy';
+import { compare } from './compare';
+import { compareBy } from './compareBy';
 
 export type SortDirection = 'asc' | 'desc';
 export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
@@ -32,6 +32,8 @@ export function sort<T>(
   selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
   direction: SortDirection = 'asc',
 ): T[] {
+  if (!Array.isArray(array)) throw new TypeError('sort: first argument must be an array');
+
   if (typeof selectorOrSelectors === 'function') {
     const multiplier = direction === 'desc' ? -1 : 1;
 

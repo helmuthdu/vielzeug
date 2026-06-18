@@ -228,4 +228,14 @@ describe('sg-otp-input accessibility', () => {
       expect(sep?.getAttribute('aria-hidden')).toBe('true');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-otp-input', { attrs: { label: 'One-time password', length: '6' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

@@ -1,6 +1,6 @@
+import { createScrollAdapter } from './_adapter';
 import { createAxis1D, type VirtualItem } from './axis1d';
 import {
-  createScrollAdapter,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   normalizeOverscan,
@@ -50,6 +50,10 @@ export interface GridVirtualizerOptions {
   estimateRowSize?: number | ((row: number) => number);
   initialScrollLeft?: number;
   initialScrollTop?: number;
+  /**
+   * Called after every render cycle with the new state.
+   * **Fixed at construction** \u2014 cannot be changed after creation.
+   */
   onChange?: (state: GridVirtualizerState) => void;
   /** Zero-allocation alternative to onChange for range-based consumers. */
   onRangeChange?: (range: GridRangeChangeEvent) => void;
@@ -78,6 +82,7 @@ export interface GridVirtualizerUpdateOptions {
 
 export interface GridVirtualizer {
   readonly cols: VirtualItem[];
+  readonly disposed: boolean;
   readonly rows: VirtualItem[];
   readonly scrollLeft: number;
   readonly scrollTop: number;
@@ -97,6 +102,10 @@ export interface GridVirtualizer {
   prependRows: (additionalRowCount: number) => void;
   refresh: () => void;
   scrollToCell: (row: number, col: number, options?: ScrollToCellOptions) => void;
+  /** Scroll to bring a row into view without changing the horizontal position. */
+  scrollToColumn: (col: number, options?: Pick<ScrollToCellOptions, 'behavior' | 'colAlign'>) => void;
+  /** Scroll to bring a column into view without changing the vertical position. */
+  scrollToRow: (row: number, options?: Pick<ScrollToCellOptions, 'behavior' | 'rowAlign'>) => void;
   update: (next: GridVirtualizerUpdateOptions) => void;
   [Symbol.dispose]: () => void;
 }
@@ -424,8 +433,50 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     computeVisible();
   }
 
+  function scrollToRow(row: number, opts: Pick<ScrollToCellOptions, 'behavior' | 'rowAlign'> = {}): void {
+    if (destroyed || rowCount === 0) return;
+
+    const safeRow = Math.max(0, Math.min(Math.floor(Number.isFinite(row) ? row : 0), rowCount - 1));
+    const behavior = opts.behavior ?? 'auto';
+    const rowStart = rowAx.startAt(safeRow);
+    const rowSize = rowAx.sizeAt(safeRow);
+    const targetTop = alignOffset(
+      rowStart,
+      rowStart + rowSize,
+      rowSize,
+      scrollTop,
+      viewportHeight,
+      opts.rowAlign ?? 'auto',
+    );
+
+    if (targetTop === null) return;
+
+    adapter.scrollTo(scrollLeft, clampTop(targetTop), behavior);
+  }
+
+  function scrollToColumn(col: number, opts: Pick<ScrollToCellOptions, 'behavior' | 'colAlign'> = {}): void {
+    if (destroyed || colCount === 0) return;
+
+    const safeCol = Math.max(0, Math.min(Math.floor(Number.isFinite(col) ? col : 0), colCount - 1));
+    const behavior = opts.behavior ?? 'auto';
+    const colStart = colAx.startAt(safeCol);
+    const colSize = colAx.sizeAt(safeCol);
+    const targetLeft = alignOffset(
+      colStart,
+      colStart + colSize,
+      colSize,
+      scrollLeft,
+      viewportWidth,
+      opts.colAlign ?? 'auto',
+    );
+
+    if (targetLeft === null) return;
+
+    adapter.scrollTo(clampLeft(targetLeft), scrollTop, behavior);
+  }
+
   function scrollToCell(row: number, col: number, opts: ScrollToCellOptions = {}): void {
-    if (destroyed) return;
+    if (destroyed || rowCount === 0 || colCount === 0) return;
 
     const safeRow = Math.max(0, Math.min(Math.floor(Number.isFinite(row) ? row : 0), rowCount - 1));
     const safeCol = Math.max(0, Math.min(Math.floor(Number.isFinite(col) ? col : 0), colCount - 1));
@@ -591,6 +642,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       return cols;
     },
     dispose: destroy,
+    get disposed() {
+      return destroyed;
+    },
     invalidate,
     measureBatch,
     measureColEl,
@@ -606,9 +660,11 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       return scrollLeft;
     },
     scrollToCell,
+    scrollToColumn,
     get scrollTop() {
       return scrollTop;
     },
+    scrollToRow,
     [Symbol.dispose]: destroy,
     get totalHeight() {
       return rowAx.totalSize;

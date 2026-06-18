@@ -243,4 +243,36 @@ describe('per-binding debounce isolation', () => {
     form.dispose();
     vi.useRealTimers();
   });
+
+  test('connect() binding.disposed is false initially and true after dispose()', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const binding = form.connect('name');
+
+    expect(binding.disposed).toBe(false);
+
+    binding.dispose();
+
+    expect(binding.disposed).toBe(true);
+  });
+
+  test('connect() binding.disposed is true after [Symbol.dispose]()', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const binding = form.connect('name');
+
+    expect(binding.disposed).toBe(false);
+
+    binding[Symbol.dispose]();
+
+    expect(binding.disposed).toBe(true);
+  });
+
+  test('connect() binding.dispose() is idempotent — multiple calls keep disposed true', () => {
+    const form = createForm({ defaultValues: { name: '' } });
+    const binding = form.connect('name');
+
+    binding.dispose();
+    binding.dispose();
+
+    expect(binding.disposed).toBe(true);
+  });
 });

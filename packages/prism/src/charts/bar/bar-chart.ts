@@ -1,3 +1,5 @@
+import { isSignal } from '@vielzeug/ripple';
+
 import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
 import type { BarScaleContext } from './bar-scale-context';
 
@@ -6,7 +8,6 @@ import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
-import { resolve } from '../../core/resolve';
 import { getMousePosition } from '../../interaction/events';
 import { bandScale } from '../../scales/band';
 import { linearScale } from '../../scales/linear';
@@ -29,9 +30,9 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     const { groups, legend, tooltip } = ctx;
     const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
-    const seriesList = resolve(config.series);
-    const allData = seriesList.map((s) => resolve(s.data));
-    const categories = [...new Set(allData.flat().map((d) => String(d.x)))];
+    const seriesList = isSignal(config.series) ? config.series.value : config.series;
+    const allData = seriesList.map((s) => (isSignal(s.data) ? s.data.value : s.data));
+    const categories = [...new Set(allData.flat().map((d) => String(d.key)))];
 
     if (categories.length === 0) {
       warn('createBarChart: no data');
@@ -48,16 +49,16 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     if (stacked) {
       const sums = categories.map((cat) =>
         allData.reduce((sum, sd) => {
-          const pt = sd.find((d) => String(d.x) === cat);
+          const pt = sd.find((d) => String(d.key) === cat);
 
-          return sum + (pt ? Math.max(0, pt.y) : 0);
+          return sum + (pt ? Math.max(0, pt.value) : 0);
         }, 0),
       );
 
       vMax = Math.max(...sums);
       vMin = 0;
     } else {
-      const allY = allData.flat().map((d) => d.y);
+      const allY = allData.flat().map((d) => d.value);
 
       vMax = Math.max(...allY);
       vMin = Math.min(0, ...allY);
@@ -125,18 +126,18 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       }
 
       const barData = allData[i].map((d) => {
-        const x = String(d.x);
+        const key = String(d.key);
 
         if (stacked) {
-          const base = stackTops[x] ?? 0;
-          const top = base + Math.max(0, d.y);
+          const base = stackTops[key] ?? 0;
+          const top = base + Math.max(0, d.value);
 
-          stackTops[x] = top;
+          stackTops[key] = top;
 
-          return { base, x, y: top };
+          return { base, key, y: top };
         }
 
-        return { base: 0, x, y: d.y };
+        return { base: 0, key, y: d.value };
       });
 
       stackedTops[i] = barData.map((d) => d.y);
@@ -155,11 +156,8 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       });
     }
 
-    if (legend) {
-      legend.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
-    }
-
-    if (tooltip) tooltip.hide();
+    legend?.update(seriesList.map((s, i) => ({ color: seriesColor(i, s.color), name: s.name })));
+    tooltip?.hide();
 
     // ─── Event handlers (close over render-derived state) ─────────────────────
 
@@ -194,14 +192,14 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
       if (point) {
         const bandCenterPx = sc.bandCenter(categories[catIdx]);
-        const stackedTop = stacked ? (stackedTops[seriesIdx]?.[catIdx] ?? point.y) : point.y;
+        const stackedTop = stacked ? (stackedTops[seriesIdx]?.[catIdx] ?? point.value) : point.value;
         const valuePx = valScale.map(stackedTop);
 
         const tooltipX = horizontal ? valuePx + d.margin.left : bandCenterPx + d.margin.left;
         const tooltipY = horizontal ? bandCenterPx + d.margin.top : valuePx + d.margin.top;
 
         tooltip?.show(tooltipX, tooltipY, point, seriesList[seriesIdx]);
-        config.onHover?.({ originalEvent: event, point, series: seriesList[seriesIdx] });
+        config.onHover?.({ datum: point, originalEvent: event, series: seriesList[seriesIdx] });
       }
     };
 
@@ -228,7 +226,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
       const point = allData[seriesIdx]?.[catIdx];
 
       if (point) {
-        config.onClick({ originalEvent: event, point, series: seriesList[seriesIdx] });
+        config.onClick({ datum: point, originalEvent: event, series: seriesList[seriesIdx] });
       }
     };
 

@@ -70,7 +70,7 @@ await source.setFilter((p) => p.name.toLowerCase().includes('a') && p.price <= 3
 
 ### Pitfalls
 
-- Calling `setFilter()` and `setSort()` separately triggers two recomputes and two subscriber notifications. If that is a problem, use `filterAsync`/`sortAsync` in the initial config or await both calls.
+- Calling `setFilter()` and `setSort()` separately triggers two recomputes and two subscriber notifications. Use `patch({ filter, sort })` instead to apply both in a single recompute with one notification.
 - The default `searchFn` uses fuzzy matching. For exact substring matching in tests or precise UIs, provide a custom `searchFn`:
   ```ts
   createLocalSource(data, {

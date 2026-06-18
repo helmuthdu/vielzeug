@@ -23,356 +23,170 @@ jobs:
       - name: Verify confirmation
         run: |
           if [ "${{ inputs.confirm }}" != "release-all" ]; then
-            echo "❌ Release cancelled. You must type 'release-all' to confirm."
+            echo "❌ You must type 'release-all' to confirm."
             exit 1
           fi
-          echo "✅ Confirmation verified. Proceeding with release of all packages."
 
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@vielzeug'
-          always-auth: true
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.4
-
-      - name: Get pnpm store directory
-        id: pnpm-cache
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Setup pnpm cache
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Setup Rush cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            common/temp/install-run
-            common/temp/pnpm-store
-            ~/.rush
-          key: ${{ runner.os }}-rush-${{ hashFiles('rush.json', 'pnpm-lock.yaml', 'common/config/rush/pnpm-config.json') }}
-          restore-keys: |
-            ${{ runner.os }}-rush-
-
-      - name: Setup build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            **/dist
-            **/node_modules/.cache
-          key: ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ hashFiles('**/package.json') }}-
-            ${{ runner.os }}-build-
+      - uses: ./.github/actions/setup
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Rush Install
-        run: node common/scripts/install-run-rush.js install
+      - name: Require pending change files
+        id: changes
+        run: |
+          PACKAGES=$(find common/changes -name "*.json" -exec \
+            jq -r '.changes[]?.packageName // empty' {} \; \
+            | sort -u | tr '\n' ' ')
+
+          if [ -z "$PACKAGES" ]; then
+            echo "❌ No pending change files found. Run 'rush change' for each package, commit, then re-trigger."
+            exit 1
+          fi
+
+          echo "packages=${PACKAGES}" >> $GITHUB_OUTPUT
+          echo "📦 Packages with pending changes: ${PACKAGES}"
+
+      - name: Verify npm auth
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "❌ NPM_TOKEN secret is missing."
+            exit 1
+          fi
+          NPM_USER=$(npm whoami 2>/dev/null || true)
+          if [ -z "$NPM_USER" ]; then
+            echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
+            exit 1
+          fi
+          echo "✅ Authenticated as: ${NPM_USER}"
+
+      - name: Record versions before bump
+        run: |
+          for pkg in ${{ steps.changes.outputs.packages }}; do
+            FOLDER=$(node -e "const r=require('./rush.json'); process.stdout.write(r.projects.find(p=>p.packageName==='${pkg}').projectFolder)")
+            VERSION=$(node -e "process.stdout.write(require('./${FOLDER}/package.json').version)")
+            echo "${pkg}=${VERSION}"
+          done > /tmp/versions-before.txt
+          cat /tmp/versions-before.txt
 
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
-      - name: Check for pending changes
-        id: check-changes
+      - name: Apply version bumps
         run: |
-          # Find all packages referenced by pending Rush change files.
-          # Supports both per-package and batched-folder change file layouts.
-          CHANGE_FILES=$(find common/changes -type f -name "*.json" 2>/dev/null)
+          node common/scripts/install-run-rush.js publish \
+            --apply --target-branch main --add-commit-details
+          echo "✅ Rush publish --apply complete"
 
-          if [ -z "$CHANGE_FILES" ]; then
-            echo "❌ No packages have pending changes to release"
-            echo "has-changes=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
-          PACKAGES_WITH_CHANGES=$(printf '%s\n' "$CHANGE_FILES" \
-            | xargs -I{} jq -r '.changes[]?.packageName // empty' {} \
-            | sort -u \
-            | tr '\n' ' ')
-
-          CHANGE_COUNT=$(printf '%s\n' "$CHANGE_FILES" | wc -l | tr -d ' ')
-
-          if [ -z "$PACKAGES_WITH_CHANGES" ]; then
-            echo "❌ Change files exist, but no valid package entries were found"
-            echo "has-changes=false" >> $GITHUB_OUTPUT
-            exit 1
-          fi
-
-          echo "has-changes=true" >> $GITHUB_OUTPUT
-          echo "packages=$PACKAGES_WITH_CHANGES" >> $GITHUB_OUTPUT
-          echo "✅ Found ${CHANGE_COUNT} change file(s) across packages:"
-          echo "📦 Packages to release: $PACKAGES_WITH_CHANGES"
-
-      - name: Get versions before release
-        id: versions-before
+      - name: Push version bump commit
         run: |
-          # Store current versions of all packages
-          echo "📋 Recording current versions..."
-          > /tmp/versions-before.json
-
-          for pkg in ${{ steps.check-changes.outputs.packages }}; do
-            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
-            VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
-            echo "${pkg}=${VERSION}" >> /tmp/versions-before.json
-            echo "  ${pkg}: ${VERSION}"
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              echo "✅ Pushed version bumps to main"
+              break
+            fi
+            [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
+            echo "🔄 Retry ${attempt}/3..."
           done
 
-      - name: Apply version bumps and process changelogs with Rush
-        run: |
-          # Rush publish --apply will:
-          # - Read ALL change files across all packages
-          # - Update package.json versions based on change types
-          # - Generate/update CHANGELOG.md and CHANGELOG.json for each package
-          # - Delete all processed change files
-          # - Commit changes
-          node common/scripts/install-run-rush.js publish --apply --target-branch main --add-commit-details
+      - name: Configure npm auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@vielzeug'
 
-      - name: Verify npm auth and @vielzeug access
-        run: |
-          if [ -z "$NODE_AUTH_TOKEN" ]; then
-            echo "❌ NPM_TOKEN is empty or missing. Configure repository secret NPM_TOKEN."
-            exit 1
-          fi
-
-          echo "🔐 Verifying npm authentication..."
-          NPM_USER=$(npm whoami 2>/dev/null || true)
-
-          if [ -z "$NPM_USER" ]; then
-            echo "❌ npm authentication failed for NPM_TOKEN (npm whoami returned nothing)."
-            echo "   Use an npm Automation token from an account with publish rights to @vielzeug."
-            exit 1
-          fi
-
-          echo "✅ Authenticated as npm user: $NPM_USER"
-          echo "🔍 Verifying access to npm org @vielzeug..."
-
-          if ! npm org ls vielzeug >/dev/null 2>&1; then
-            echo "❌ Token is valid, but has no visible access to npm org @vielzeug."
-            echo "   This causes npm publish to fail with E404 for @vielzeug/* packages."
-            echo "   Ensure this npm user is in org @vielzeug with publish permissions and regenerate NPM_TOKEN."
-            exit 1
-          fi
-
-          echo "✅ npm org access looks valid. Proceeding to publish."
+      - name: Publish each package
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Detect version changes and publish to npm
-        id: versions-after
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          PUBLISHED_PACKAGES=""
-          TAGS_TO_PUSH=""
+          RELEASED=""
 
-          echo "📋 Detecting version changes..."
-
-          for pkg in ${{ steps.check-changes.outputs.packages }}; do
-            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${pkg}'); console.log(project.projectFolder);")
-            OLD_VERSION=$(grep "^${pkg}=" /tmp/versions-before.json | cut -d'=' -f2)
-            NEW_VERSION=$(node -e "console.log(require('./${FOLDER}/package.json').version)")
+          for pkg in ${{ steps.changes.outputs.packages }}; do
+            FOLDER=$(node -e "const r=require('./rush.json'); process.stdout.write(r.projects.find(p=>p.packageName==='${pkg}').projectFolder)")
+            OLD=$(grep "^${pkg}=" /tmp/versions-before.txt | cut -d'=' -f2)
+            NEW=$(node -e "process.stdout.write(require('./${FOLDER}/package.json').version)")
 
             echo ""
-            echo "📦 ${pkg}:"
-            echo "   Old version: ${OLD_VERSION}"
-            echo "   New version: ${NEW_VERSION}"
+            echo "📦 ${pkg}: ${OLD} → ${NEW}"
 
-            # Only publish if version actually changed
-            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
-              echo "   ✅ Version changed - publishing..."
-
-              # Check if this version already exists on npm
-              NPM_VERSION=$(npm view "${pkg}@${NEW_VERSION}" version 2>/dev/null || echo "not-found")
-
-              if [ "$NPM_VERSION" = "$NEW_VERSION" ]; then
-                echo "   ⚠️  Version ${NEW_VERSION} already exists on npm - skipping publish"
-                continue
-              fi
-
-              cd "$FOLDER"
-
-              # Pack the package to create a tarball
-              echo "   📦 Packing..."
-              TARBALL=$(npm pack --json | node -e "const data = JSON.parse(require('fs').readFileSync(0)); console.log(data[0].filename);")
-
-              echo "   📦 Tarball created: ${TARBALL}"
-
-              # Verify tarball contents
-              echo "   📋 Tarball contents:"
-              tar -tzf "${TARBALL}" | head -10
-
-              # Publish the tarball
-              echo "   🚀 Publishing to npm..."
-              set +e
-              PUBLISH_OUTPUT=$(npm publish "${TARBALL}" --access public 2>&1)
-              PUBLISH_EXIT=$?
-              set -e
-
-              echo "$PUBLISH_OUTPUT"
-
-              if [ $PUBLISH_EXIT -ne 0 ]; then
-                if echo "$PUBLISH_OUTPUT" | grep -q "E404"; then
-                  echo "   ❌ npm returned E404 while publishing ${pkg}@${NEW_VERSION}."
-                  echo "   This usually means NPM_TOKEN lacks publish rights for scope @vielzeug."
-                  echo "   Verify org membership/permissions and rotate NPM_TOKEN from an authorized npm account."
-                elif echo "$PUBLISH_OUTPUT" | grep -q "E409"; then
-                  echo "   ❌ npm returned E409 (Conflict) while publishing ${pkg}@${NEW_VERSION}."
-                  echo "   The npm registry is still processing the previous package."
-                  echo "   This usually happens when publishing multiple packages too quickly."
-                  echo "   Try again in a few minutes to allow npm registry to catch up."
-                fi
-
-                exit $PUBLISH_EXIT
-              fi
-
-              # Clean up tarball
-              rm -f "${TARBALL}"
-
-              cd - > /dev/null
-
-              PUBLISHED_PACKAGES="${PUBLISHED_PACKAGES}${pkg}@${NEW_VERSION} "
-
-              # Wait before publishing next package to avoid E409 registry conflicts
-              # npm registry needs time to process each scoped package
-              echo "   ⏳ Waiting 15 seconds before next publish (allow npm registry to process)..."
-              sleep 15
-
-              # Tag this release
-              TAG_NAME="${pkg}@${NEW_VERSION}"
-
-              # Check if tag already exists
-              if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-                echo "   ⚠️  Tag $TAG_NAME already exists, deleting old tag..."
-                git tag -d "$TAG_NAME" || true
-                git push origin ":refs/tags/$TAG_NAME" || true
-              fi
-
-              echo "   🏷️  Creating tag $TAG_NAME"
-              git tag "$TAG_NAME"
-              TAGS_TO_PUSH="${TAGS_TO_PUSH}${TAG_NAME} "
-            else
-              echo "   ℹ️  Version unchanged - skipping publish"
+            if [ "$OLD" = "$NEW" ]; then
+              echo "   ℹ️  Version unchanged — skipping"
+              continue
             fi
-          done
 
-          if [ -z "$PUBLISHED_PACKAGES" ]; then
-            echo ""
-            echo "⚠️  No packages had version changes - nothing to publish"
-            echo "This might mean the change files were already processed or had no version impact."
-            echo "packages=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "packages=${PUBLISHED_PACKAGES}" >> $GITHUB_OUTPUT
-
-          # Push all tags at once
-          if [ -n "$TAGS_TO_PUSH" ]; then
-            echo ""
-            echo "🚀 Pushing tags: $TAGS_TO_PUSH"
-            git push origin --tags
-          fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Verify npm publications
-        if: steps.versions-after.outputs.packages != ''
-        run: |
-          echo "Waiting 10 seconds for npm to update..."
-          sleep 10
-
-          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
-            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
-            EXPECTED_VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
-
-            NPM_VERSION=$(npm view "$PKG" version 2>/dev/null || echo "not-found")
-
-            if [ "$NPM_VERSION" = "$EXPECTED_VERSION" ]; then
-              echo "✅ Successfully published ${PKG}@${EXPECTED_VERSION} to npm"
-            else
-              echo "⚠️  Warning: npm shows version $NPM_VERSION for $PKG, expected $EXPECTED_VERSION"
-              echo "This might be a propagation delay. Check https://www.npmjs.com/package/$PKG"
+            # Skip if already on npm
+            EXISTING=$(npm view "${pkg}@${NEW}" version 2>/dev/null || echo "")
+            if [ "$EXISTING" = "$NEW" ]; then
+              echo "   ⚠️  ${NEW} already on npm — skipping publish"
+              RELEASED="${RELEASED}${pkg}@${NEW} "
+              continue
             fi
-          done
 
-      - name: Create GitHub Releases
-        if: steps.versions-after.outputs.packages != ''
-        run: |
-          for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
-            PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
-            VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
-            FOLDER=$(node -e "const rush = require('./rush.json'); const project = rush.projects.find(p => p.packageName === '${PKG}'); console.log(project.projectFolder);")
+            # Pack
+            TARBALL=$(cd "$FOLDER" && npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
+            echo "   📦 Tarball: ${TARBALL}"
 
-            # Create release notes
-            cat > /tmp/release-notes.md << EOF
-          ## ${PKG} v${VERSION}
+            # Publish
+            set +e
+            OUT=$(cd "$FOLDER" && npm publish "${TARBALL}" --access public 2>&1)
+            EXIT=$?
+            set -e
+            echo "$OUT"
+            cd "$FOLDER" && rm -f "${TARBALL}" && cd - > /dev/null
+
+            if [ $EXIT -ne 0 ]; then
+              echo "   ❌ publish failed (exit ${EXIT})"
+              exit $EXIT
+            fi
+
+            # Tag
+            git tag -f "${pkg}@${NEW}"
+
+            RELEASED="${RELEASED}${pkg}@${NEW} "
+
+            # Brief pause to avoid E409 registry conflicts on rapid multi-package publishes
+            echo "   ⏳ 15s pause before next package..."
+            sleep 15
+
+            # GitHub release
+            TAG="${pkg}@${NEW}"
+            cat > /tmp/notes.md << NOTES
+          ## ${pkg} v${NEW}
 
           ### Installation
 
-          \`\`\`bash
-          npm install ${PKG}@${VERSION}
-          \`\`\`
+              npm install ${pkg}@${NEW}
 
           ### Links
 
-          - 📦 [npm package](https://www.npmjs.com/package/${PKG}/v/${VERSION})
-          - 📋 [CHANGELOG](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${PKG}@${VERSION}/${FOLDER}/CHANGELOG.md)
-
-          ### Changes
-
-          See full changelog in the package directory.
-          EOF
-
-            # Create release for each package
-            gh release create "${PKG}@${VERSION}" \
-              --title "${PKG} v${VERSION}" \
-              --notes-file /tmp/release-notes.md \
-              --generate-notes
+          - npm: https://www.npmjs.com/package/${pkg}/v/${NEW}
+          - CHANGELOG: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${TAG}/${FOLDER}/CHANGELOG.md
+          NOTES
+            gh release create "${TAG}" --title "${pkg} v${NEW}" --generate-notes --notes-file /tmp/notes.md || true
           done
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Summary
-        run: |
-          echo "## 🚀 Release Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          # Push all tags at once
+          git push origin --tags
 
-          if [ -z "${{ steps.versions-after.outputs.packages }}" ]; then
-            echo "⚠️ **No packages were released**" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "This can happen if:" >> $GITHUB_STEP_SUMMARY
-            echo "- Change files were already processed" >> $GITHUB_STEP_SUMMARY
-            echo "- Change files had no version impact" >> $GITHUB_STEP_SUMMARY
-            echo "- Versions were already published to npm" >> $GITHUB_STEP_SUMMARY
+          # Step summary
+          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -z "$RELEASED" ]; then
+            echo "⚠️ No packages were published." >> $GITHUB_STEP_SUMMARY
           else
-            echo "The following packages have been released:" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-
-            for pkg_version in ${{ steps.versions-after.outputs.packages }}; do
-              PKG=$(echo "$pkg_version" | cut -d'@' -f1-2)
-              VERSION=$(echo "$pkg_version" | cut -d'@' -f3)
-              echo "- ✅ **${PKG}** → \`${VERSION}\`" >> $GITHUB_STEP_SUMMARY
+            for pv in $RELEASED; do
+              echo "- ✅ **${pv}**" >> $GITHUB_STEP_SUMMARY
             done
-
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "All packages have been published to npm and GitHub releases have been created." >> $GITHUB_STEP_SUMMARY
           fi

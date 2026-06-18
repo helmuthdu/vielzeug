@@ -67,4 +67,29 @@ describe('bindRefetch', () => {
       unbind();
     }).not.toThrow();
   });
+
+  it('removes listeners when the provided signal aborts', () => {
+    const ac = new AbortController();
+
+    bindRefetch(qc, { signal: ac.signal });
+
+    ac.abort();
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('online'));
+
+    expect(refetchStale).not.toHaveBeenCalled();
+  });
+
+  it('works without the signal option (backward-compatible)', () => {
+    const unbind = bindRefetch(qc);
+
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' });
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    expect(refetchStale).toHaveBeenCalledTimes(1);
+
+    unbind();
+  });
 });

@@ -1,17 +1,6 @@
-import {
-  computed,
-  createContext,
-  define,
-  html,
-  inject,
-  onMounted,
-  prop,
-  provide,
-  type ReadonlySignal,
-  signal,
-  watch,
-} from '@vielzeug/craft';
+import { createContext, define, html, inject, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
+import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
@@ -201,7 +190,7 @@ define<SgSidebarProps, SgSidebarEvents>(SIDEBAR_TAG, {
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
-  setup(props, { bind, el, emit, slots }) {
+  setup(props, { bind, el, emit, onMounted, provide, slots }) {
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
@@ -683,7 +672,7 @@ define<SgSidebarGroupProps, SgSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
       reflect: false,
     },
   },
-  setup(props, { bind, el: _el, slots }) {
+  setup(props, { bind, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
@@ -820,7 +809,7 @@ define<SgSidebarItemProps>(SIDEBAR_ITEM_TAG, {
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { bind, el: _el, slots }) {
+  setup(props, { bind, slots }) {
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX);

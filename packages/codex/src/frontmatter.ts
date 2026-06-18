@@ -1,7 +1,7 @@
 /**
  * Minimal YAML frontmatter parser.
- * Handles: inline arrays [a,b,c], block sequences (- item), quoted strings,
- * values containing colons, and CRLF line endings.
+ * Supported formats: inline arrays [a,b,c], block sequences (- item),
+ * quoted strings, values containing colons, and CRLF line endings.
  */
 const MAX_FRONTMATTER_INPUT = 102_400; // 100 KB — frontmatter is always tiny; guard against crafted large inputs
 
@@ -50,58 +50,10 @@ export function parseFrontmatter(markdown: string): Record<string, string | stri
       continue;
     }
 
-    // Empty value → look ahead for block sequence (- item) or multiline inline array ([ ... ])
+    // Empty value → look ahead for block sequence items (- item)
     if (rest === '') {
       i++;
 
-      // Peek: is next non-empty line an inline or multiline array?
-      while (i < lines.length && lines[i].trim() === '') i++;
-
-      // Handle single-line deferred inline array: "  [a, b, c]"
-      if (i < lines.length && lines[i].trim().startsWith('[') && lines[i].trim().endsWith(']')) {
-        const inner = lines[i].trim().slice(1, -1);
-
-        result[key] = inner
-          .split(',')
-          .map((s) => s.trim().replace(/^['"`]|['"`]$/g, ''))
-          .filter(Boolean);
-        i++;
-        continue;
-      }
-
-      if (i < lines.length && lines[i].trim() === '[') {
-        // Collect everything until the matching closing ]
-        i++; // skip the [
-
-        const items: string[] = [];
-
-        while (i < lines.length) {
-          const next = lines[i].trim();
-
-          if (next === ']') {
-            i++;
-            break;
-          }
-
-          if (next) {
-            // Each line may contain one or more comma-separated items
-            next
-              .replace(/,$/, '')
-              .split(',')
-              .map((s) => s.trim().replace(/^['"`]|['"`]$/g, ''))
-              .filter(Boolean)
-              .forEach((item) => items.push(item));
-          }
-
-          i++;
-        }
-
-        if (items.length > 0) result[key] = items;
-
-        continue;
-      }
-
-      // Fall back to block sequence items (- item)
       const items: string[] = [];
 
       while (i < lines.length) {

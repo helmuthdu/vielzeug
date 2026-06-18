@@ -1,4 +1,61 @@
+import { boundedCache } from '../_cache';
+import { InvalidCurrencyError } from '../errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from '../utils';
+
+describe('boundedCache', () => {
+  it('returns undefined for a missing key', () => {
+    const cache = boundedCache<string, number>(4);
+
+    expect(cache.get('x')).toBeUndefined();
+  });
+
+  it('stores and retrieves a value', () => {
+    const cache = boundedCache<string, number>(4);
+
+    cache.set('a', 1);
+    expect(cache.get('a')).toBe(1);
+  });
+
+  it('overwrites an existing key', () => {
+    const cache = boundedCache<string, number>(4);
+
+    cache.set('a', 1);
+    cache.set('a', 2);
+    expect(cache.get('a')).toBe(2);
+  });
+
+  it('evicts the oldest entry when full (FIFO)', () => {
+    const cache = boundedCache<string, number>(3);
+
+    cache.set('a', 1);
+    cache.set('b', 2);
+    cache.set('c', 3);
+    cache.set('d', 4); // evicts 'a'
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe(2);
+    expect(cache.get('c')).toBe(3);
+    expect(cache.get('d')).toBe(4);
+  });
+
+  it('does not evict when size is below maxSize', () => {
+    const cache = boundedCache<string, number>(10);
+
+    for (let i = 0; i < 9; i++) cache.set(String(i), i);
+
+    expect(cache.get('0')).toBe(0);
+    expect(cache.get('8')).toBe(8);
+  });
+
+  it('works with maxSize of 1 (single-slot cache)', () => {
+    const cache = boundedCache<string, number>(1);
+
+    cache.set('a', 10);
+    expect(cache.get('a')).toBe(10);
+    cache.set('b', 20); // evicts 'a'
+    expect(cache.get('a')).toBeUndefined();
+    expect(cache.get('b')).toBe(20);
+  });
+});
 
 describe('pow10', () => {
   it('returns 1n for exponent 0', () => {
@@ -79,6 +136,21 @@ describe('parseRational', () => {
     it('throws RangeError for empty string', () => {
       expect(() => parseRational('')).toThrow(RangeError);
       expect(() => parseRational('')).toThrow('Invalid decimal string');
+    });
+
+    it('throws RangeError for exponent > 1000 (S1 security guard)', () => {
+      expect(() => parseRational('1e1001')).toThrow(RangeError);
+      expect(() => parseRational('1e1001')).toThrow('exponent too large');
+    });
+
+    it('throws RangeError for negative exponent < -1000 (S1 security guard)', () => {
+      expect(() => parseRational('1e-1001')).toThrow(RangeError);
+      expect(() => parseRational('1e-1001')).toThrow('exponent too large');
+    });
+
+    it('does not throw for exponent exactly at the limit (±1000)', () => {
+      expect(() => parseRational('1e1000')).not.toThrow();
+      expect(() => parseRational('1e-1000')).not.toThrow();
     });
 
     it('throws RangeError for non-numeric string', () => {
@@ -208,19 +280,19 @@ describe('getCurrencyDecimals', () => {
     expect(getCurrencyDecimals('EUR')).toBe(2);
   });
 
-  it('throws RangeError for invalid currency code', () => {
-    expect(() => getCurrencyDecimals('NOTREAL')).toThrow(RangeError);
+  it('throws InvalidCurrencyError for invalid currency code', () => {
+    expect(() => getCurrencyDecimals('NOTREAL')).toThrow(InvalidCurrencyError);
     expect(() => getCurrencyDecimals('NOTREAL')).toThrow('Invalid ISO 4217 currency code');
   });
 });
 
 describe('validateCurrencyCode', () => {
-  it('returns code as CurrencyCode for valid code', () => {
+  it('returns code string for valid code', () => {
     expect(validateCurrencyCode('USD')).toBe('USD');
     expect(validateCurrencyCode('EUR')).toBe('EUR');
   });
 
-  it('throws RangeError for invalid code', () => {
-    expect(() => validateCurrencyCode('FAKE')).toThrow(RangeError);
+  it('throws InvalidCurrencyError for invalid code', () => {
+    expect(() => validateCurrencyCode('FAKE')).toThrow(InvalidCurrencyError);
   });
 });

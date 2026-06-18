@@ -1,140 +1,98 @@
-import type { StoreWithHistory } from './types';
+import type { Store, StoreWithHistory } from './types';
 
-import { SignalImpl } from './signal';
-import { StoreImpl } from './store';
+import { signal } from './signal';
+import { store } from './store';
+import { isStore } from './utilities';
+
+const snapshot = <T extends object>(state: Readonly<T>): Readonly<T> =>
+  Object.freeze(structuredClone({ ...state })) as Readonly<T>;
 
 /**
- * Creates a reactive store with snapshot history for undo/redo / time-travel.
+ * Wraps a store (or creates one from an initial value) with snapshot history
+ * for undo/redo / time-travel.
  *
- * History is stored as a circular buffer of `maxHistory` snapshots (default: 50).
- * Every mutation via `patch()`, `replace()`, or `lens()` pushes a new snapshot.
- * `undo()` / `redo()` jump through the history without re-running any logic.
+ * **Ownership:** if called with an initial value, the adapter creates and owns
+ * the underlying store — `dispose()` will also dispose it. If called with an
+ * existing `Store<T>`, the adapter does NOT own it — `dispose()` leaves the
+ * store alive.
  *
- * Snapshots are **shallow copies** — the same structural-sharing constraint as
- * the base store applies. Use `store.replace()` with immutable patterns to keep
- * history entries clean.
+ * History is recorded by subscribing to the store's change notifications.
+ * Every mutation triggers a new snapshot, truncating any redo history ahead of
+ * the cursor. History is stored as a circular buffer of `maxHistory` snapshots
+ * (default: 50).
+ *
+ * This is a pure external adapter — it does not access any store internals.
  *
  * @example
  * ```ts
  * const s = storeWithHistory({ count: 0 }, { maxHistory: 10 });
  *
- * s.patch({ count: 1 });
- * s.patch({ count: 2 });
+ * s.store.patch({ count: 1 });
+ * s.store.patch({ count: 2 });
  * s.undo();  // back to { count: 1 }
  * s.redo();  // forward to { count: 2 }
  * s.historyAt(0); // { count: 0 }
+ * s.canUndo; // true
+ *
+ * // Wrap an existing store:
+ * const existingStore = store({ x: 0 });
+ * const h = storeWithHistory(existingStore);
+ * h.dispose(); // existingStore is NOT disposed
  * ```
  */
 export const storeWithHistory = <T extends object>(
-  initial: T,
+  storeOrInitial: Store<T> | T,
   options?: { maxHistory?: number; name?: string },
 ): StoreWithHistory<T> => {
   const maxHistory = options?.maxHistory ?? 50;
-  const snapshots: Readonly<T>[] = [Object.freeze(structuredClone({ ...initial }))];
-  // cursor_ is a reactive signal so that canUndo/canRedo participate in the reactive graph.
-  // Reading h.canUndo inside an effect() will re-run when cursor changes.
-  const cursor_ = new SignalImpl(0, undefined, options?.name ? `${options.name}.cursor` : undefined);
+  const ownsStore = !isStore(storeOrInitial);
+  const base: Store<T> = ownsStore ? store(storeOrInitial as T, { name: options?.name }) : (storeOrInitial as Store<T>);
+
+  const snapshots: Readonly<T>[] = [snapshot(base.peek())];
+
+  // cursor is a reactive signal so canUndo/canRedo participate in the reactive graph.
+  const cursor = signal(0, { name: options?.name ? `${options.name}.cursor` : undefined });
+
   let pauseHistory = false;
+  let disposed = false;
 
-  // Push a new snapshot after every mutation, truncating redo history.
-  const pushSnapshot = (state: Readonly<T>): void => {
-    if (pauseHistory) return;
+  const pushSnapshot = (): void => {
+    if (pauseHistory || disposed) return;
 
-    // Truncate any redo states ahead of cursor
-    snapshots.splice(cursor_.peek() + 1);
-    // Spread through the proxy to get a plain object before cloning.
-    // store.peek() returns a read-only Proxy; structuredClone fails on raw Proxies
-    // in some environments (jsdom). Spreading copies enumerable own properties.
-    snapshots.push(Object.freeze(structuredClone({ ...state })) as Readonly<T>);
+    snapshots.splice(cursor.peek() + 1);
+    snapshots.push(snapshot(base.peek()));
 
-    // Trim to maxHistory
     if (snapshots.length > maxHistory) {
       snapshots.splice(0, snapshots.length - maxHistory);
     }
 
-    cursor_.value = snapshots.length - 1;
+    cursor.value = snapshots.length - 1;
   };
 
-  // Use the onMutation constructor callback to observe each top-level key change without
-  // monkey-patching applyTopLevelChange_. patch/replace/reset already batch
-  // all key changes internally, so we guard with `highLevelMutating` to push
-  // only one snapshot per high-level operation rather than one per key.
-  let highLevelMutating = false;
-
-  const onMutation = (): void => {
-    if (!highLevelMutating && !pauseHistory) {
-      pushSnapshot(baseImpl.peek());
-    }
-  };
-
-  const baseImpl = new StoreImpl(initial, options?.name, onMutation) as StoreImpl<T> & {
-    patch: (partial: Partial<T>) => void;
-    replace: (fn: (state: Readonly<T>) => T) => void;
-    reset: () => void;
-  };
-  const base = baseImpl as unknown as StoreWithHistory<T>;
-
-  const originalPatch = baseImpl.patch.bind(baseImpl);
-  const originalReplace = baseImpl.replace.bind(baseImpl);
-  const originalReset = baseImpl.reset.bind(baseImpl);
-
-  const patch = (partial: Partial<T>): void => {
-    highLevelMutating = true;
-
-    try {
-      originalPatch(partial);
-    } finally {
-      highLevelMutating = false;
-    }
-
-    pushSnapshot(baseImpl.peek());
-  };
-
-  const replace = (fn: (state: Readonly<T>) => T): void => {
-    highLevelMutating = true;
-
-    try {
-      originalReplace(fn);
-    } finally {
-      highLevelMutating = false;
-    }
-
-    pushSnapshot(baseImpl.peek());
-  };
-
-  const reset = (): void => {
-    highLevelMutating = true;
-
-    try {
-      originalReset();
-    } finally {
-      highLevelMutating = false;
-    }
-
-    pushSnapshot(baseImpl.peek());
-  };
+  // Subscribe to the store — every change triggers a snapshot.
+  const sub = base.subscribe(pushSnapshot);
 
   const undo = (): void => {
-    if (cursor_.peek() <= 0) return;
+    if (cursor.peek() <= 0) return;
 
-    cursor_.value = cursor_.peek() - 1;
+    cursor.value = cursor.peek() - 1;
     pauseHistory = true;
 
     try {
-      originalReplace(() => snapshots[cursor_.peek()] as T);
+      base.replace(() => snapshots[cursor.peek()] as T);
     } finally {
       pauseHistory = false;
     }
   };
 
   const redo = (): void => {
-    if (cursor_.peek() >= snapshots.length - 1) return;
+    if (cursor.peek() >= snapshots.length - 1) return;
 
-    cursor_.value = cursor_.peek() + 1;
+    cursor.value = cursor.peek() + 1;
     pauseHistory = true;
 
     try {
-      originalReplace(() => snapshots[cursor_.peek()] as T);
+      base.replace(() => snapshots[cursor.peek()] as T);
     } finally {
       pauseHistory = false;
     }
@@ -147,35 +105,32 @@ export const storeWithHistory = <T extends object>(
   };
 
   const dispose = (): void => {
-    cursor_.dispose();
+    if (disposed) return;
+
+    disposed = true;
+    sub.dispose();
+    cursor.dispose();
+
+    if (ownsStore) base.dispose();
   };
 
-  // Use defineProperties so live getters (historyLength, canUndo, canRedo) are preserved
-  // as accessors. Object.assign would evaluate them once at call time and freeze the value.
-  Object.defineProperties(baseImpl, {
-    canRedo: {
-      configurable: true,
-      enumerable: true,
-      get: () => cursor_.value < snapshots.length - 1,
+  return {
+    get canRedo() {
+      return cursor.value < snapshots.length - 1;
     },
-    canUndo: {
-      configurable: true,
-      enumerable: true,
-      get: () => cursor_.value > 0,
+    get canUndo() {
+      return cursor.value > 0;
     },
-    dispose: { configurable: true, enumerable: true, value: dispose, writable: true },
-    historyAt: { configurable: true, enumerable: true, value: historyAt, writable: true },
-    historyLength: {
-      configurable: true,
-      enumerable: true,
-      get: () => snapshots.length,
+    dispose,
+    historyAt,
+    get historyLength() {
+      return snapshots.length;
     },
-    patch: { configurable: true, enumerable: true, value: patch, writable: true },
-    redo: { configurable: true, enumerable: true, value: redo, writable: true },
-    replace: { configurable: true, enumerable: true, value: replace, writable: true },
-    reset: { configurable: true, enumerable: true, value: reset, writable: true },
-    undo: { configurable: true, enumerable: true, value: undo, writable: true },
-  });
-
-  return base as unknown as StoreWithHistory<T>;
+    redo,
+    get store() {
+      return base;
+    },
+    [Symbol.dispose]: dispose,
+    undo,
+  } as unknown as StoreWithHistory<T>;
 };

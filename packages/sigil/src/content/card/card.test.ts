@@ -179,4 +179,14 @@ describe('sg-card', () => {
     expect(fixture.element.getAttribute('variant')).toBe('glass');
     expect(fixture.element.getAttribute('orientation')).toBe('horizontal');
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-card', { html: 'Card content' });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

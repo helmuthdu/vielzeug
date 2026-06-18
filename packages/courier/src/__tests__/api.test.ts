@@ -1,4 +1,12 @@
-import { createApi, HttpError, SchemaValidationError } from '../index';
+import {
+  AbortError,
+  CourierError,
+  createApi,
+  HttpError,
+  NetworkError,
+  SchemaValidationError,
+  TimeoutError,
+} from '../index';
 
 async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<HttpError> {
   try {
@@ -14,6 +22,23 @@ async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<Ht
   }
 
   throw new Error('Expected promise to reject with HttpError');
+}
+
+async function getCourierError<T, E extends CourierError>(
+  promise: Promise<T>,
+  cls: new (...args: never[]) => E,
+): Promise<E> {
+  try {
+    await promise;
+  } catch (error) {
+    if (error instanceof cls) return error;
+
+    throw new Error(`Expected ${cls.name} but got ${error instanceof Error ? error.constructor.name : String(error)}`, {
+      cause: error,
+    });
+  }
+
+  throw new Error(`Expected promise to reject with ${cls.name}`);
 }
 
 describe('HTTP Client', () => {
@@ -287,14 +312,18 @@ describe('HTTP Client', () => {
   });
 
   describe('Error Classification', () => {
-    it('classifies kind as "abort" when the signal is aborted and cause is a non-DOMException', async () => {
+    it('throws AbortError when the signal is aborted and cause is a non-DOMException', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
       const ac = new AbortController();
 
       // Interceptor that rejects with a plain Error on abort (simulates third-party interceptors)
-      http.use(async (ctx) => {
-        return new Promise<never>((_, reject) => {
-          ctx.init.signal?.addEventListener('abort', () => reject(new Error('User cancelled')));
+      http.use(async (ctx, next) => {
+        return new Promise<Response>((res, rej) => {
+          (ctx.init.signal as AbortSignal | undefined)?.addEventListener('abort', () =>
+            rej(new Error('User cancelled')),
+          );
+
+          next(ctx).then(res, rej);
         });
       });
 
@@ -302,31 +331,29 @@ describe('HTTP Client', () => {
 
       ac.abort();
 
-      const err: HttpError = await getHttpError(promise);
+      const err = await getCourierError(promise, AbortError);
 
-      expect(err.kind).toBe('abort');
-      expect(err.isAborted).toBe(true);
+      expect(err).toBeInstanceOf(AbortError);
     });
 
-    it('classifies timeout aborts as kind "timeout" when transport throws a generic error', async () => {
+    it('throws TimeoutError when transport throws a generic error on timeout', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
 
       fetchMock.mockImplementation(
         (_url: string, init: RequestInit) =>
           new Promise<Response>((_resolve, reject) => {
             // Simulate a transport that throws a plain Error on abort, not the timeout
-            // DOMException. The library must still classify this as 'timeout' via signal.reason.
+            // DOMException. The library must still classify this as TimeoutError via signal.reason.
             init.signal?.addEventListener('abort', () => reject(new Error('Request cancelled')));
           }),
       );
 
-      const err: HttpError = await getHttpError(http.get('/slow'));
+      const err = await getCourierError(http.get('/slow'), TimeoutError);
 
-      expect(err.kind).toBe('timeout');
-      expect(err.isTimeout).toBe(true);
+      expect(err).toBeInstanceOf(TimeoutError);
     });
 
-    it('classifies timeout aborts as kind "timeout" when transport propagates the DOMException cause', async () => {
+    it('throws TimeoutError when transport propagates the DOMException TimeoutError cause', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
 
       fetchMock.mockImplementation(
@@ -336,25 +363,22 @@ describe('HTTP Client', () => {
           }),
       );
 
-      const err: HttpError = await getHttpError(http.get('/slow'));
+      const err = await getCourierError(http.get('/slow'), TimeoutError);
 
-      expect(err.kind).toBe('timeout');
-      expect(err.isTimeout).toBe(true);
+      expect(err).toBeInstanceOf(TimeoutError);
     });
 
-    it('classifies kind as "network" for errors without a status or abort signal', async () => {
+    it('throws NetworkError for errors without a status or abort signal', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-      const err: HttpError = await getHttpError(http.get('/users/1'));
+      const err = await getCourierError(http.get('/users/1'), NetworkError);
 
-      expect(err.kind).toBe('network');
-      expect(err.isTimeout).toBe(false);
-      expect(err.isAborted).toBe(false);
+      expect(err).toBeInstanceOf(NetworkError);
     });
 
-    it('classifies kind as "abort" when an external signal aborts before the timeout fires', async () => {
+    it('throws AbortError when an external signal aborts before the timeout fires', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
       const ac = new AbortController();
 
@@ -369,11 +393,9 @@ describe('HTTP Client', () => {
 
       ac.abort();
 
-      const err: HttpError = await getHttpError(promise);
+      const err = await getCourierError(promise, AbortError);
 
-      expect(err.kind).toBe('abort');
-      expect(err.isAborted).toBe(true);
-      expect(err.isTimeout).toBe(false);
+      expect(err).toBeInstanceOf(AbortError);
     });
   });
 
@@ -554,14 +576,14 @@ describe('HTTP Client', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('wraps network errors in HttpError preserving url and method', async () => {
+    it('wraps network errors in NetworkError preserving url and method', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockRejectedValue(new Error('Network error'));
 
-      const err: HttpError = await getHttpError(http.get('/users/1'));
+      const err = await getCourierError(http.get('/users/1'), NetworkError);
 
-      expect(err).toBeInstanceOf(HttpError);
+      expect(err).toBeInstanceOf(NetworkError);
       expect(err).toMatchObject({ method: 'GET', url: 'https://api.example.com/users/1' });
     });
 
@@ -600,6 +622,14 @@ describe('HTTP Client', () => {
       expect(http.disposed).toBe(false);
       http[Symbol.dispose]();
       expect(http.disposed).toBe(true);
+    });
+
+    it('disposalSignal is not aborted before dispose and aborted after', () => {
+      const http = createApi();
+
+      expect(http.disposalSignal.aborted).toBe(false);
+      http.dispose();
+      expect(http.disposalSignal.aborted).toBe(true);
     });
 
     it('schema validation errors propagate as-is and are NOT wrapped in HttpError', async () => {
@@ -658,13 +688,15 @@ describe('HTTP Client', () => {
   });
 
   describe('URL building errors', () => {
-    it('unresolved path param throws HttpError (kind: network)', async () => {
+    it('unresolved path param throws NetworkError', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
-      const err = await getHttpError(http.get('/users/{id}', { params: { id: undefined as unknown as string } }));
+      const err = await getCourierError(
+        http.get('/users/{id}', { params: { id: undefined as unknown as string } }),
+        NetworkError,
+      );
 
-      expect(err).toBeInstanceOf(HttpError);
-      expect(err.kind).toBe('network');
+      expect(err).toBeInstanceOf(NetworkError);
       expect(err.message).toMatch(/unresolved path param/);
     });
   });

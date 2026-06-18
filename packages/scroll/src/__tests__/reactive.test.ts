@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createReactiveVirtualizer } from '../reactive';
+import { createReactiveGroupedVirtualizer, createReactiveVirtualizer } from '../reactive';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
 function scrollEl(el: HTMLElement, top: number) {
@@ -122,12 +122,12 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     rv.dispose();
   });
 
-  it('redraw() re-emits state', () => {
+  it('refresh() re-emits state', () => {
     const el = makeContainer({ clientHeight: 200 });
     const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
     const before = rv.state.value;
 
-    rv.redraw();
+    rv.refresh();
 
     // state.value should be a new object reference (re-emitted)
     expect(rv.state.value).not.toBe(before);
@@ -149,5 +149,103 @@ describe('createReactiveVirtualizer – method passthrough', () => {
     const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
 
     expect(() => rv[Symbol.dispose]()).not.toThrow();
+  });
+});
+
+// ─── disposed getter ───────────────────────────────────────────────────────────
+
+describe('createReactiveVirtualizer – disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect(rv.disposed).toBe(false);
+    rv.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    rv.dispose();
+    expect(rv.disposed).toBe(true);
+  });
+
+  it('methods are no-ops after dispose', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    rv.dispose();
+    expect(() => {
+      rv.update({ count: 10 });
+      rv.refresh();
+      rv.invalidate();
+    }).not.toThrow();
+  });
+});
+
+// ─── createReactiveGroupedVirtualizer ─────────────────────────────────────────
+
+describe('createReactiveGroupedVirtualizer', () => {
+  const makeSections = () => [
+    { items: ['a', 'b'], label: 'Group 1' },
+    { items: ['c'], label: 'Group 2' },
+  ];
+
+  it('state.value is populated after construction', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect(rv.state.value.items.length).toBeGreaterThan(0);
+    expect(rv.state.value.totalSize).toBeGreaterThan(0);
+    rv.dispose();
+  });
+
+  it('state.value updates when sections change via update()', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    const before = rv.state.value.totalSize;
+
+    rv.update([{ items: ['a', 'b', 'c', 'd'], label: 'Big Group' }]);
+    expect(rv.state.value.totalSize).not.toBe(before);
+    rv.dispose();
+  });
+
+  it('state signal is the same reference on repeated access', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect(rv.state).toBe(rv.state);
+    rv.dispose();
+  });
+
+  it('state.value.headers contains header entries for each section', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    // 2 sections → 2 header entries
+    expect(rv.state.value.headers.length).toBe(2);
+    rv.dispose();
+  });
+
+  it('live getters proxy through to the underlying virtualizer', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect(rv.count).toBeGreaterThan(0);
+    expect(rv.disposed).toBe(false);
+    rv.dispose();
+    expect(rv.disposed).toBe(true);
+  });
+
+  it('dispose() is idempotent', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect(() => {
+      rv.dispose();
+      rv.dispose();
+    }).not.toThrow();
   });
 });

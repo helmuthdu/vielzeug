@@ -164,6 +164,37 @@ describe('createTypeahead()', () => {
     });
   });
 
+  describe('signal option', () => {
+    it('clears a pending reset timer when the signal aborts', () => {
+      vi.useFakeTimers();
+
+      const controller = new AbortController();
+      const { onNavigate, typeahead } = makeTypeahead({ signal: controller.signal });
+
+      typeahead.handleKeydown(key('a'));
+      expect(onNavigate).toHaveBeenCalledTimes(1);
+
+      controller.abort();
+
+      // Timer is cancelled — advancing time should NOT trigger an extra reset.
+      vi.advanceTimersByTime(1000);
+
+      // Buffer cleared by abort; current index is still 0, so next 'a' searches forward from 1 → Avocado.
+      typeahead.handleKeydown(key('a'));
+      expect(onNavigate).toHaveBeenLastCalledWith(1, expect.any(KeyboardEvent));
+
+      vi.useRealTimers();
+    });
+
+    it('does nothing when signal is already aborted at construction', () => {
+      const controller = new AbortController();
+
+      controller.abort();
+
+      expect(() => makeTypeahead({ signal: controller.signal })).not.toThrow();
+    });
+  });
+
   describe('reset()', () => {
     it('clears the buffer so the next key starts fresh', () => {
       const { onNavigate, typeahead } = makeTypeahead();

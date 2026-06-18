@@ -9,6 +9,8 @@ exports:
   [
     createWorker,
     createModuleWorker,
+    task,
+    transfer,
     createTestWorker,
     WorkerError,
     WorkerTimeoutError,
@@ -36,27 +38,28 @@ const rawWorker = new Worker(URL.createObjectURL(blob));
 rawWorker.postMessage(21);
 rawWorker.onmessage = (e) => console.log(e.data); // 42 — untyped, no await, no error handling
 
-// After — Worker
-import { createWorker } from '@vielzeug/familiar';
-const typedWorker = createWorker<number, number>((n) => n * 2);
+// After — familiar
+import { createWorker, task } from '@vielzeug/familiar';
+const double = task<number, number>((n) => n * 2);
+const typedWorker = createWorker(double);
 console.log(await typedWorker.run(21)); // 42 — typed, awaitable, error-safe
 typedWorker.dispose();
 ```
 
-| Feature           | Worker                                         | Comlink | workerpool |
-| ----------------- | ---------------------------------------------- | ------- | ---------- |
-| Bundle size       | <PackageInfo package="familiar" type="size" /> | ~2 kB   | ~10 kB     |
-| Worker pools      | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>         |
-| Typed payloads    | <sg-icon name="check" size="16"></sg-icon>                                             | Partial | <sg-icon name="x" size="16"></sg-icon>         |
-| Timeout support   | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>         |
-| Priority queue    | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| AbortSignal       | <sg-icon name="check" size="16"></sg-icon> Queued tasks                                | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Streaming         | <sg-icon name="check" size="16"></sg-icon> `runStream()`                               | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Heartbeat         | <sg-icon name="check" size="16"></sg-icon> Auto for inline workers                     | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Typed errors      | <sg-icon name="check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc.        | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Testing utilities | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="x" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Module workers    | <sg-icon name="check" size="16"></sg-icon> `createModuleWorker`                        | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
-| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                             | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>         |
+| Feature           | Worker                                                                          | Comlink                                    | workerpool                                 |
+| ----------------- | ------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
+| Bundle size       | <PackageInfo package="familiar" type="size" />                                  | ~2 kB                                      | ~10 kB                                     |
+| Worker pools      | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon> |
+| Typed payloads    | <sg-icon name="check" size="16"></sg-icon>                                      | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
+| Timeout support   | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon> |
+| Priority queue    | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| AbortSignal       | <sg-icon name="check" size="16"></sg-icon> Queued tasks                         | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Streaming         | <sg-icon name="check" size="16"></sg-icon> `runStream()`                        | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Heartbeat         | <sg-icon name="check" size="16"></sg-icon> Auto for inline workers              | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Typed errors      | <sg-icon name="check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc. | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Testing utilities | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Module workers    | <sg-icon name="check" size="16"></sg-icon> `createModuleWorker`                 | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
+| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
 
 <div class="decision-callout">
 
@@ -87,15 +90,19 @@ yarn add @vielzeug/familiar
 ## Quick Start
 
 ```ts
-import { createWorker } from '@vielzeug/familiar';
+import { createWorker, task, WorkerTimeoutError, WorkerQueueFullError } from '@vielzeug/familiar';
+
+// Wrap the function with task() to mark it as self-contained (safe to serialize)
+const sum = task<number[], number>((nums) => nums.reduce((a, b) => a + b, 0));
 
 // Single worker — processes one task at a time
-const worker = createWorker<number[], number>((nums) => nums.reduce((a, b) => a + b, 0));
-const sum = await worker.run([1, 2, 3, 4, 5]); // 15
+const worker = createWorker(sum);
+console.log(await worker.run([1, 2, 3, 4, 5])); // 15
 worker.dispose();
 
 // Worker pool — 4 concurrent slots with a timeout
-const pool = createWorker<string, string>((text) => text.toUpperCase(), { concurrency: 4, timeout: 5000 });
+const upper = task<string, string>((text) => text.toUpperCase());
+const pool = createWorker(upper, { concurrency: 4, timeout: 5000 });
 const items = ['alpha', 'beta', 'gamma', 'delta'];
 const results = await Promise.all(items.map((item) => pool.run(item)));
 pool.dispose();
@@ -104,7 +111,6 @@ pool.dispose();
 await pool.run(urgentTask, { priority: 10 });
 
 // Typed errors — precise instanceof checks
-import { WorkerTimeoutError, WorkerQueueFullError } from '@vielzeug/familiar';
 try {
   await pool.run(input, { timeout: 100 });
 } catch (err) {
@@ -137,7 +143,6 @@ try {
 - **Zero dependencies** — no supply chain risk, minimal bundle size
 
 </div>
-
 
 ## Documentation
 

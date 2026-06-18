@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/coins",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Currency formatting and exchange utilities for precise monetary arithmetic",
   "type": "module",
   "files": [
@@ -34,9 +34,9 @@
     "@vielzeug/arsenal": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

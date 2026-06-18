@@ -1,31 +1,34 @@
 import type { ExchangeRate, Money, RoundingMode } from './types';
 
-import { applyRounding, parseRational } from './utils';
+import { CurrencyMismatchError } from './errors';
+import { applyRounding, parseRational, validateCurrencyCode } from './utils';
 
 /**
  * Converts a `Money` value to another currency using the provided exchange rate.
  * Uses lossless bigint arithmetic throughout — `rate.rate` is parsed as a decimal
  * string to avoid IEEE-754 rounding errors.
  *
- * `rate.from` and `rate.to` must be `CurrencyCode` values (produced by `toCurrencyCode()`).
- * The TypeScript type system prevents passing an unvalidated string directly.
- *
  * @param mode Rounding mode applied when the converted amount is not a whole minor unit.
  *             Defaults to `'half-away-from-zero'`.
  *
- * @throws {TypeError}   If `money.currency` does not match `rate.from` (programming error).
- * @throws {RangeError}  If `rate.rate` is an empty string or a negative value.
+ * @throws {CurrencyMismatchError} If `money.currency` does not match `rate.from`.
+ *   Note: `rate.from` is validated implicitly — because `money.currency` is always a valid ISO 4217
+ *   code (enforced by `money()`), the mismatch check ensures `rate.from` must equal a valid code.
+ *   If you supply an invalid code in `rate.from`, you will receive `CurrencyMismatchError`, not
+ *   `InvalidCurrencyError`. Pre-validate `rate.from` with `validateCurrencyCode()` if needed.
+ * @throws {InvalidCurrencyError}  If `rate.to` is not a recognised ISO 4217 currency code.
+ * @throws {RangeError}            If `rate.rate` is an empty string or a negative value.
  *
  * @example
  * ```ts
  * const usd = money('1000.00', 'USD');
- * exchange(usd, { from: toCurrencyCode('USD'), to: toCurrencyCode('EUR'), rate: '0.85' });
+ * exchange(usd, { from: 'USD', to: 'EUR', rate: '0.85' });
  * // { amount: 85000n, currency: 'EUR' }
  * ```
  */
 export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'half-away-from-zero'): Money {
   if (m.currency !== rate.from) {
-    throw new TypeError(`exchange: money.currency (${m.currency}) does not match rate.from (${rate.from})`);
+    throw new CurrencyMismatchError(m.currency, rate.from);
   }
 
   if (rate.rate === '') throw new RangeError('Exchange rate must be a non-empty decimal string');
@@ -40,5 +43,5 @@ export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'hal
   const quotient = raw / denominator;
   const result = applyRounding(quotient, raw % denominator, denominator, mode, negative);
 
-  return { amount: negative ? -result : result, currency: rate.to };
+  return { amount: negative ? -result : result, currency: validateCurrencyCode(rate.to) };
 }

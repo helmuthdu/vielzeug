@@ -71,12 +71,12 @@
 
   /* Glass variant - translucent with blur */
   :host([variant='glass']) {
-    --_bg: var(--accordion-bg, color-mix(in srgb, var(--color-secondary) 30%, var(--color-contrast) 10%));
+    --_bg: var(--accordion-bg, color-mix(in oklch, var(--color-secondary) 30%, var(--color-contrast) 10%));
   }
 
   /* Frost variant - canvas-based transparency */
   :host([variant='frost']) {
-    --_bg: var(--accordion-bg, color-mix(in srgb, var(--color-canvas) 55%, transparent));
+    --_bg: var(--accordion-bg, color-mix(in oklch, var(--color-canvas) 55%, transparent));
   }
 
   /* Nested item border radius for glass and frost variants */

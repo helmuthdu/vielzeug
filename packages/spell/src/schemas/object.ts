@@ -1,7 +1,6 @@
-import type { AnySchema, InferOutput, Issue, ParseValue, SchemaDescriptor } from '../core';
+import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
-import { _messages } from '../messages';
+import { ErrorCode, Schema, ValidationError, _makeCtx, prependIssuePath } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { UnionSchema } from './union';
@@ -24,10 +23,10 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   private _unknownKeys(obj: Record<string, unknown>): string[] {
-    return Object.keys(obj).filter((k) => !Object.prototype.hasOwnProperty.call(this.shape, k));
+    return Object.keys(obj).filter((k) => !Object.hasOwn(this.shape, k));
   }
 
-  private _strictUnknownKeyIssues(obj: Record<string, unknown>): Issue[] {
+  private _strictUnknownKeyIssues(obj: Record<string, unknown>, ctx: ParseContext): Issue[] {
     if (this._isRelaxed) return [];
 
     const unknownKeys = this._unknownKeys(obj);
@@ -37,7 +36,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return [
       {
         code: ErrorCode.invalid_keys,
-        message: _messages().object.invalidKeys({ keys: unknownKeys }),
+        message: ctx.messages.object.invalidKeys({ keys: unknownKeys }),
         params: { keys: unknownKeys },
         path: [],
       },
@@ -63,10 +62,11 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
   private _guardObjectInput(
     value: unknown,
+    ctx: ParseContext,
   ): { obj: Record<string, unknown>; ok: true } | { issues: Issue[]; ok: false } {
     if (value == null || typeof value !== 'object' || Array.isArray(value)) {
       return {
-        issues: [{ code: ErrorCode.invalid_type, message: _messages().object.type(), path: [] }],
+        issues: [{ code: ErrorCode.invalid_type, message: ctx.messages.object.type(), path: [] }],
         ok: false,
       };
     }
@@ -74,12 +74,15 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return { obj: value as Record<string, unknown>, ok: true };
   }
 
-  private _createObjectParseContext(obj: Record<string, unknown>): {
+  private _createObjectParseContext(
+    obj: Record<string, unknown>,
+    ctx: ParseContext,
+  ): {
     issues: Issue[];
     output: Record<string, unknown>;
   } {
     return {
-      issues: [...this._strictUnknownKeyIssues(obj)],
+      issues: [...this._strictUnknownKeyIssues(obj, ctx)],
       output: {},
     };
   }
@@ -88,17 +91,17 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return this._copyStateTo(new ObjectSchema(shape, isRelaxed));
   }
 
-  protected override _parseValueSync(value: unknown): ParseValue {
-    const guarded = this._guardObjectInput(value);
+  protected override _parse(value: unknown, ctx: ParseContext): ParseValue {
+    const guarded = this._guardObjectInput(value, ctx);
 
     if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
 
     const { obj } = guarded;
-    const { issues, output } = this._createObjectParseContext(obj);
+    const { issues, output } = this._createObjectParseContext(obj, ctx);
 
     for (const key of Object.keys(this.shape)) {
       const fieldSchema = this.shape[key];
-      const result = fieldSchema._parseFullSync(obj[key]);
+      const result = fieldSchema._parseFullSync(obj[key], ctx);
 
       if (result.issues.length === 0) {
         defineOwnProperty(output, key, result.data);
@@ -114,36 +117,44 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return { data: output, issues, typeOk: true };
   }
 
-  protected override async _parseValueAsync(value: unknown): Promise<ParseValue> {
-    const guarded = this._guardObjectInput(value);
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferObject<T>> {
+    const c = ctx ?? _makeCtx();
 
-    if (!guarded.ok) return { data: value, issues: guarded.issues, typeOk: false };
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
 
-    const { obj } = guarded;
-    const { issues, output } = this._createObjectParseContext(obj);
+      if (prepared.skip) return prepared.value as unknown as InferObject<T>;
 
-    // Async field parsing
-    const keyResults = await Promise.all(
-      Object.keys(this.shape).map((key) =>
-        this.shape[key].safeParseAsync(obj[key]).then((result) => ({
-          data: result.success ? result.data : obj[key],
-          issues: result.success ? [] : prependIssuePath(result.error.issues, key),
-          key,
-        })),
-      ),
-    );
+      const guarded = this._guardObjectInput(prepared.value, c);
 
-    for (const r of keyResults) {
-      if (r.issues.length === 0) {
-        defineOwnProperty(output, r.key, r.data);
+      if (!guarded.ok) throw new ValidationError(guarded.issues);
+
+      const { obj } = guarded;
+      const { issues, output } = this._createObjectParseContext(obj, c);
+
+      const keys = Object.keys(this.shape);
+      const results = await Promise.all(keys.map((key) => this.shape[key]._parseFullAsync(obj[key], c)));
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const result = results[i];
+
+        if (result.issues.length === 0) {
+          defineOwnProperty(output, key, result.data);
+        } else {
+          issues.push(...prependIssuePath(result.issues, key));
+        }
       }
 
-      issues.push(...r.issues);
-    }
+      this._copyRelaxedUnknownKeys(obj, output);
 
-    this._copyRelaxedUnknownKeys(obj, output);
+      const validationIssues = await this._runValidatorsAsync(output, c);
+      const allIssues = [...issues, ...validationIssues];
 
-    return { data: output, issues, typeOk: true };
+      if (allIssues.length > 0) throw new ValidationError(allIssues);
+
+      return this._runPostprocessors(output) as InferObject<T>;
+    });
   }
 
   partial(): ObjectSchema<{ [K in keyof T]: Schema<InferOutput<T[K]> | undefined> }>;
@@ -201,6 +212,52 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   /**
+   * Returns a partial object containing only the fields that have a default value set.
+   * Fields without a `.default()` or `.catch()` are silently omitted rather than throwing.
+   *
+   * Useful for pre-filling forms where only some fields have defaults.
+   *
+   * @example
+   * const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
+   * Form.partialDefaults(); // { role: 'viewer' }  — name is omitted
+   */
+  partialDefaults(): Partial<InferObject<T>> {
+    const result: Record<string, unknown> = {};
+
+    for (const key of Object.keys(this.shape)) {
+      const parsed = this.shape[key]._parseFullSync(undefined);
+
+      if (parsed.issues.length === 0) {
+        defineOwnProperty(result, key, parsed.data);
+      }
+    }
+
+    return result as Partial<InferObject<T>>;
+  }
+
+  /**
+   * Returns an array of field keys that are **required** (not optional and not nullish).
+   *
+   * @example
+   * const User = s.object({ id: s.number(), name: s.string().optional() });
+   * User.requiredFields(); // ['id']
+   */
+  requiredFields(): (keyof T & string)[] {
+    return Object.keys(this.shape).filter((k) => !this.shape[k].isOptional) as (keyof T & string)[];
+  }
+
+  /**
+   * Returns an array of field keys that are **optional** (accept `undefined`).
+   *
+   * @example
+   * const User = s.object({ id: s.number(), name: s.string().optional() });
+   * User.optionalFields(); // ['name']
+   */
+  optionalFields(): (keyof T & string)[] {
+    return Object.keys(this.shape).filter((k) => this.shape[k].isOptional) as (keyof T & string)[];
+  }
+
+  /**
    * Allow additional unknown properties (relaxed mode).
    * Default is strict mode (rejects unknown keys).
    *
@@ -246,7 +303,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     return { ...this._describeBase(), fields, kind: 'object', strict: !this._isRelaxed };
   }
 
-  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R {
+  protected override _walk<R>(visitor: import('../core').SchemaWalker<R>): R | null {
     const fields = objectFromEntries(Object.entries(this.shape).map(([k, s]) => [k, s.walk(visitor)]));
 
     if (visitor.object) return visitor.object(this, fields);
@@ -271,7 +328,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
     if (keys.length !== Object.keys(other.shape).length) return false;
 
     for (const k of keys) {
-      if (!Object.prototype.hasOwnProperty.call(other.shape, k)) return false;
+      if (!Object.hasOwn(other.shape, k)) return false;
 
       if (!this.shape[k].equals(other.shape[k])) return false;
     }

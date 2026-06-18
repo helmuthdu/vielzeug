@@ -5,7 +5,7 @@ description: Canonical structure, language, and formatting rules for all Vielzeu
 
 # Vielzeug Documentation Template
 
-This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 23 libraries is the primary goal.
+This document defines the canonical structure, language, and formatting rules for all library documentation pages in the Vielzeug monorepo. When writing or revising docs for any package, follow this template exactly. Consistency across all 24 libraries is the primary goal.
 
 ## Documentation Philosophy
 
@@ -99,8 +99,8 @@ environments: [browser, node, ssr, deno]
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>                                          | ...            | ...            |
-| <Key differentiator> | <sg-icon name="check" size="16"></sg-icon>                                          | ...            | ...            |
+| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
+| <Key differentiator> | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
 
 <div class="decision-callout">
 
@@ -154,7 +154,7 @@ yarn add @vielzeug/<pkg>
 
 <div class="see-also">
 
-<2–4 links to related Vielzeug packages. Each bullet: `[PackageName](/pkg/)` followed by an em-dash and one sentence explaining *why* the reader should look at it in the context of this package.>
+<2–4 links to related Vielzeug packages. Each bullet: `[PackageName](/pkg/)` followed by an em-dash and one sentence explaining _why_ the reader should look at it in the context of this package.>
 
 </div>
 
@@ -207,6 +207,10 @@ description: <One sentence covering what this guide teaches.>
 
 ...
 
+## Testing
+
+<Optional — include if the library ships test utilities or has a recommended testing pattern (e.g., mock transports, test helpers, virtual time control). Omit if the library has no testing-specific API.>
+
 ## Framework Integration
 
 <This section is REQUIRED for every library that maintains its own subscription or lifecycle model. It belongs in usage.md, not in a separate example file.>
@@ -227,7 +231,9 @@ description: <One sentence covering what this guide teaches.>
 - No `#` top-level heading. The frontmatter `title` is sufficient; VitePress renders it as the page title.
 - `[[toc]]` must appear immediately after the frontmatter, before any content.
 - Sections should be ordered from simple to complex. The first code block in the page must be copy-paste runnable.
-- `## Framework Integration` placement: after all core concept sections, before Best Practices.
+- **Canonical tail order:** `… concept sections → Testing (if present) → Framework Integration → Working with Other Vielzeug Libraries → Best Practices`.
+- Testing, Debug Mode, or any other package-specific utility sections must appear **before** `## Framework Integration`, never after it.
+- `## Framework Integration` placement: after all core concept and utility sections, before `## Working with Other Vielzeug Libraries`.
 - `## Working with Other Vielzeug Libraries` placement: after Framework Integration, before Best Practices.
 - If the library has no natural framework interop (e.g., a pure-utility library like `arsenal`), omit `## Framework Integration` — but document any utility functions that simplify framework usage in the relevant concept section.
 - Best Practices must be the last section.
@@ -300,7 +306,7 @@ description: Complete API reference for <PackageName>.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
 | Symbol           | Purpose              | Execution mode | Common gotcha    |
 | ---------------- | -------------------- | -------------- | ---------------- |
@@ -360,7 +366,7 @@ const result = functionName('value', { optionA: 'x' });
 
 ### Rules
 
-- `## API At a Glance` is always the first content section and must include all primary exported symbols. The four columns — Symbol, Purpose, Execution mode, Common gotcha — are required.
+- `## API Overview` is always the first content section and must include all primary exported symbols. The four columns — Symbol, Purpose, Execution mode, Common gotcha — are required.
 - Every exported function must have: signature block, parameters table (if it accepts an options object), return value, and an inline example.
 - Every exported class/error must be listed under `## Errors` with what triggers it.
 - Every exported type must appear under `## Types` with its full definition.
@@ -466,16 +472,16 @@ import { relevantExport } from '@vielzeug/<pkg>';
 
 ## Frontmatter Conventions
 
-| Field         | `index.md`                           | `usage.md`                  | `api.md`                       | `examples.md`                          | `examples/*.md`                                        |
-| ------------- | ------------------------------------ | --------------------------- | ------------------------------ | -------------------------------------- | ------------------------------------------------------ |
-| `title`       | `PackageName — One-line description` | `PackageName — Usage Guide` | `PackageName — API Reference`  | `PackageName — Examples`               | `'PackageName Examples — Recipe Name'` (single-quoted) |
-| `description` | Tweet-length summary                 | What the guide teaches      | "Complete API reference for …" | "Practical examples and recipes for …" | "Recipe Name example for @vielzeug/pkg."               |
-| `package`     | `<pkg>` (always)                     | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `category`    | one of the 12 categories (always)    | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `keywords`    | `[keyword1, keyword2, …]` (always)   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `related`     | `[pkg1, pkg2, …]` (always)           | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `exports`      | top exports as `[name1, name2, …]`               | \_not required\_ | \_not required\_               | \_not required\_                       | \_not required\_                                       |
-| `environments` | `[browser, node, ssr, deno]` (list supported only) | \_not required\_ | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| Field          | `index.md`                                         | `usage.md`                  | `api.md`                       | `examples.md`                          | `examples/*.md`                                        |
+| -------------- | -------------------------------------------------- | --------------------------- | ------------------------------ | -------------------------------------- | ------------------------------------------------------ |
+| `title`        | `PackageName — One-line description`               | `PackageName — Usage Guide` | `PackageName — API Reference`  | `PackageName — Examples`               | `'PackageName Examples — Recipe Name'` (single-quoted) |
+| `description`  | Tweet-length summary                               | What the guide teaches      | "Complete API reference for …" | "Practical examples and recipes for …" | "Recipe Name example for @vielzeug/pkg."               |
+| `package`      | `<pkg>` (always)                                   | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `category`     | one of the 12 categories (always)                  | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `keywords`     | `[keyword1, keyword2, …]` (always)                 | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `related`      | `[pkg1, pkg2, …]` (always)                         | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `exports`      | top exports as `[name1, name2, …]`                 | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
+| `environments` | `[browser, node, ssr, deno]` (list supported only) | \_not required\_            | \_not required\_               | \_not required\_                       | \_not required\_                                       |
 
 Use em-dash (—) as the separator in titles, except for individual example files where the frontmatter title is wrapped in single quotes and uses an em-dash.
 
@@ -573,14 +579,16 @@ Use this list when auditing or updating a library. The first check applies to al
 - [ ] No `#` heading (frontmatter title only)
 - [ ] `[[toc]]` immediately after frontmatter
 - [ ] First code block is copy-paste runnable
-- [ ] `## Framework Integration` section present (or explicitly omitted with reason)
+- [ ] Package-specific utility sections (Testing, Debug Mode, etc.) appear **before** `## Framework Integration`
+- [ ] `## Framework Integration` section present (or explicitly omitted with reason for pure-utility packages)
 - [ ] `## Working with Other Vielzeug Libraries` present (if applicable)
 - [ ] `## Best Practices` is the last section
+- [ ] Tail order is: `… → Testing → Framework Integration → Working with Other Vielzeug Libraries → Best Practices`
 
 ### `api.md`
 
 - [ ] `[[toc]]` immediately after frontmatter
-- [ ] `## API At a Glance` table present with all four columns
+- [ ] `## API Overview` table present with all four columns
 - [ ] `## Package Entry Point` table present
 - [ ] Every exported function has: signature, parameters table, return, example
 - [ ] Every exported error class listed under `## Errors`

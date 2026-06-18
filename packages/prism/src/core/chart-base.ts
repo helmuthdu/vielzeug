@@ -1,4 +1,4 @@
-import type { Signal } from '@vielzeug/ripple';
+import type { ReadonlySignal } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
@@ -11,20 +11,21 @@ import { observeResize } from './responsive';
 
 export interface ChartBase {
   chartArea: SVGGElement;
-  dimensions: Signal<ChartDimensions>;
+  dimensions: ReadonlySignal<ChartDimensions>;
   svg: SVGSVGElement;
   dispose(): void;
 }
 
 export function createChartBase(
   container: HTMLElement,
-  options: { ariaLabel?: string; margin?: Partial<ChartMargin> },
+  options: { ariaHidden?: boolean; ariaLabel?: string; margin?: Partial<ChartMargin> },
 ): ChartBase {
   const margin = resolveMargin(options.margin);
   const svg = createSvgElement('svg', {
-    'aria-label': options.ariaLabel,
+    ...(options.ariaHidden
+      ? { 'aria-hidden': 'true' }
+      : { ...(options.ariaLabel ? { 'aria-label': options.ariaLabel } : {}), role: 'img' }),
     class: 'prism-chart',
-    role: 'img',
     style: 'display:block;width:100%;height:100%',
   });
 
@@ -40,6 +41,14 @@ export function createChartBase(
   if (rect.width === 0 || rect.height === 0) {
     warn(
       'Chart container has zero dimensions. Ensure the container has a defined width and height before mounting a chart.',
+    );
+  }
+
+  const computedStyle = typeof getComputedStyle !== 'undefined' ? getComputedStyle(container) : null;
+
+  if (computedStyle && computedStyle.position === 'static') {
+    warn(
+      'Chart container has position:static. Set position:relative (or absolute/fixed) on the container so tooltip and overlay elements are positioned correctly.',
     );
   }
 

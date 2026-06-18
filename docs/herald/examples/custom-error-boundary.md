@@ -7,7 +7,7 @@ description: 'Custom error boundary example for @vielzeug/herald.'
 
 ### Problem
 
-A listener that throws will silently swallow the error unless you provide a global `onError` handler. Without one, Relay rethrows inside `emit`, which can break the call site and prevent other listeners from running.
+A listener that throws will silently swallow the error unless you provide a global `onError` handler. Without one, Herald rethrows inside `emit`, which can break the call site and prevent other listeners from running.
 
 ### Solution
 

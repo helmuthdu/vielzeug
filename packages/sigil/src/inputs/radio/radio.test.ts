@@ -602,4 +602,15 @@ describe('sg-radio accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      const fix = await mount('sg-radio', { attrs: { value: 'a' }, html: 'Option A' });
+
+      const results = await axeCheck(fix.element, { rules: { 'aria-required-parent': { enabled: false } } });
+
+      fix.destroy();
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

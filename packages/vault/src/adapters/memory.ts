@@ -1,8 +1,9 @@
 import type { Adapter, AnySchema, BaseAdapterOptions, KeyOf, RecordOf, TtlMs } from '../types';
 
 import { buildAdapterOps, type StorageBackend } from '../adapter-core';
+import { VaultDisposedError } from '../errors';
 import { getRecordKey } from '../internal';
-import { defaultCodec, type StoredRecord } from '../ttl';
+import { defaultCodec, isExpired, type StoredRecord } from '../ttl';
 
 type MemoryBroadcastMsg =
   | { table: string; type: 'clear' }
@@ -57,7 +58,11 @@ type MemoryOptions<S extends AnySchema> = BaseAdapterOptions<S> & {
   name?: string;
 };
 
-export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Adapter<S> {
+export type MemoryAdapter<S extends AnySchema> = Adapter<S> & {
+  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
+};
+
+export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): MemoryAdapter<S> {
   const { codec = defaultCodec, logger, name, onMetrics, schema, signals, validators } = options;
   const tables = new Map(Object.keys(schema).map((k) => [k, new Map<string, StoredRecord<unknown>>()]));
   const getTableStore = (table: string) => tables.get(table)!;
@@ -81,9 +86,8 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       for (const [key, raw] of store) {
         const decoded = codec.decode<RecordOf<S, K>>(raw);
-        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (!decoded || expired) {
+        if (!decoded || isExpired(decoded.expiresAt)) {
           expiredKeys.push(key);
         } else {
           liveCount += 1;
@@ -102,8 +106,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       if (!raw) return false;
 
       const decoded = codec.decode<RecordOf<S, K>>(raw);
-      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
-      const isLive = decoded !== undefined && !expired;
+      const isLive = decoded !== undefined && !isExpired(decoded.expiresAt);
 
       store.delete(String(key));
 
@@ -122,9 +125,8 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
         if (raw) {
           const decoded = codec.decode<RecordOf<S, K>>(raw);
-          const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-          if (decoded !== undefined && !expired) deletedKeys.push(strKey);
+          if (decoded !== undefined && !isExpired(decoded.expiresAt)) deletedKeys.push(strKey);
 
           store.delete(strKey);
         }
@@ -144,9 +146,8 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       if (!raw) return undefined;
 
       const decoded = codec.decode<RecordOf<S, K>>(raw);
-      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-      if (!decoded || expired) {
+      if (!decoded || isExpired(decoded.expiresAt)) {
         store.delete(String(key));
 
         return undefined;
@@ -162,9 +163,8 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       for (const [key, raw] of store) {
         const decoded = codec.decode<RecordOf<S, K>>(raw);
-        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (!decoded || expired) {
+        if (!decoded || isExpired(decoded.expiresAt)) {
           expiredKeys.push(key);
         } else {
           records.push(decoded.value);
@@ -187,11 +187,11 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
       if (!raw) return false;
 
       const decoded = codec.decode<RecordOf<S, K>>(raw);
-      const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
+      const live = decoded !== undefined && !isExpired(decoded.expiresAt);
 
-      if (!decoded || expired) store.delete(String(key));
+      if (!live) store.delete(String(key));
 
-      return decoded !== undefined && !expired;
+      return live;
     },
 
     async pruneExpiredInTable<K extends keyof S & string>(table: K): Promise<number> {
@@ -200,9 +200,8 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
 
       for (const [key, raw] of store) {
         const decoded = codec.decode<RecordOf<S, K>>(raw);
-        const expired = decoded !== undefined && decoded.expiresAt !== undefined && Date.now() >= decoded.expiresAt;
 
-        if (!decoded || expired) {
+        if (!decoded || isExpired(decoded.expiresAt)) {
           store.delete(key);
           pruned += 1;
         }
@@ -237,7 +236,7 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
     },
   };
 
-  return buildAdapterOps(schema, core, {
+  const adapter = buildAdapterOps(schema, core, {
     logger,
     onCrossTabMessage: channel
       ? (notify) => {
@@ -332,4 +331,31 @@ export function createMemory<S extends AnySchema>(options: MemoryOptions<S>): Ad
     signals,
     validators,
   });
+
+  return {
+    ...adapter,
+    iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>> {
+      const store = getTableStore(String(table));
+
+      return {
+        async *[Symbol.asyncIterator]() {
+          if (adapter.disposed) throw new VaultDisposedError();
+
+          const expiredKeys: string[] = [];
+
+          for (const [key, raw] of store) {
+            const decoded = codec.decode<RecordOf<S, K>>(raw);
+
+            if (!decoded || isExpired(decoded.expiresAt)) {
+              expiredKeys.push(key);
+            } else {
+              yield decoded.value;
+            }
+          }
+
+          for (const key of expiredKeys) store.delete(key);
+        },
+      };
+    },
+  };
 }

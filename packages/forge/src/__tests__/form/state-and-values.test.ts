@@ -1,3 +1,5 @@
+import { vi } from 'vitest';
+
 import { createForm } from '../../index';
 
 describe('form state and values', () => {
@@ -65,7 +67,13 @@ describe('form state and values', () => {
     form.reset();
 
     expect(form.values()).toEqual({ age: 25, name: 'Alice' });
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'Alice' });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: 'Alice',
+    });
   });
 
   test('replace updates current values and baseline for future reset', () => {
@@ -110,14 +118,20 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validateField('name');
+    const pendingValidation = form.validate('name');
 
     await started;
 
     form.reset();
     await pendingValidation;
 
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'ok' });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: 'ok',
+    });
   });
 
   test('replace aborts in-flight validation and prevents stale errors', async () => {
@@ -152,14 +166,20 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validateField('name');
+    const pendingValidation = form.validate('name');
 
     await started;
 
     form.replace({ name: 'replaced' });
     await pendingValidation;
 
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'replaced' });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: 'replaced',
+    });
   });
 
   test('resetField only affects the targeted field', () => {
@@ -171,7 +191,13 @@ describe('form state and values', () => {
     form.setError('name', 'Too long');
     form.resetField('name');
 
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'Alice' });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: 'Alice',
+    });
     expect(form.get('age')).toBe(30);
   });
 
@@ -207,14 +233,20 @@ describe('form state and values', () => {
 
     form.set('name', 'bad');
 
-    const pendingValidation = form.validateField('name');
+    const pendingValidation = form.validate('name');
 
     await started;
 
     form.resetField('name');
     await pendingValidation;
 
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: 'ok' });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: 'ok',
+    });
   });
 
   test('removeField removes value, baseline, and validator state', async () => {
@@ -233,14 +265,20 @@ describe('form state and values', () => {
     form.touch('name');
     form.setError('name', 'Required');
 
-    form.removeField('name');
+    form.fields.remove('name');
     form.reset();
 
     await expect(form.validate()).resolves.toEqual({ errors: {}, valid: true });
 
     expect(form.get('name')).toBeUndefined();
     expect(form.get('email')).toBe('');
-    expect(form.field('name')).toEqual({ dirty: false, error: undefined, touched: false, value: undefined });
+    expect(form.field('name')).toEqual({
+      dirty: false,
+      error: undefined,
+      hasError: false,
+      touched: false,
+      value: undefined,
+    });
     expect(validatorCalls).toBe(0);
   });
 
@@ -352,7 +390,7 @@ describe('registerField (F1)', () => {
   test('declares a field with a default value when not already present', () => {
     const form = createForm<{ email?: string; name: string }>({ defaultValues: { name: 'Alice' } });
 
-    form.registerField('email', { defaultValue: 'test@example.com' });
+    form.fields.register('email', { defaultValue: 'test@example.com' });
 
     expect(form.get('email')).toBe('test@example.com');
     expect(form.field('email').dirty).toBe(false);
@@ -361,7 +399,7 @@ describe('registerField (F1)', () => {
   test('does not overwrite an existing value when called on an already-present field', () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
 
-    form.registerField('name', { defaultValue: 'Ignored' });
+    form.fields.register('name', { defaultValue: 'Ignored' });
 
     expect(form.get('name')).toBe('Alice');
   });
@@ -369,7 +407,7 @@ describe('registerField (F1)', () => {
   test('registered field is clean (part of baseline)', () => {
     const form = createForm<{ age?: number; name: string }>({ defaultValues: { name: 'Alice' } });
 
-    form.registerField('age', { defaultValue: 30 });
+    form.fields.register('age', { defaultValue: 30 });
 
     expect(form.field('age').dirty).toBe(false);
 
@@ -383,29 +421,96 @@ describe('registerField (F1)', () => {
     expect(form.field('age').dirty).toBe(false);
   });
 
-  test('registered per-field validator runs on validateField', async () => {
+  test('registered per-field validator runs on validate(name)', async () => {
     const form = createForm<{ email?: string; name: string }>({ defaultValues: { name: 'Alice' } });
 
-    form.registerField('email', {
+    form.fields.register('email', {
       defaultValue: '',
       validator: (value: unknown) => (!value ? 'Required' : undefined),
     });
 
-    const result = await form.validateField('email');
+    const result = await form.validate('email');
 
-    expect(result).toBe('Required');
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual({ email: 'Required' });
     expect(form.field('email').error).toBe('Required');
   });
 
-  test('unsubscribe returned by registerField removes the field', async () => {
+  test('unregister callback from fields.register is a no-op when form is already disposed', () => {
+    const form = createForm({ defaultValues: { name: 'Alice', tag: '' } });
+    const unregister = form.fields.register('tag');
+
+    form.dispose();
+
+    // Must not throw — the guard `if (!disposed) removeField(name)` handles this.
+    expect(() => unregister()).not.toThrow();
+  });
+
+  test('unsubscribe returned by fields.register removes the field', async () => {
     const form = createForm<{ name: string; tag?: string }>({ defaultValues: { name: 'Alice' } });
 
-    const unregister = form.registerField('tag', { defaultValue: 'initial' });
+    const unregister = form.fields.register('tag', { defaultValue: 'initial' });
 
     expect(form.get('tag')).toBe('initial');
 
     unregister();
 
     expect(form.get('tag')).toBeUndefined();
+  });
+});
+
+describe('snapshot and restore', () => {
+  test('restore() round-trips values, baseline, errors, dirty, touched, and submitCount', async () => {
+    const form = createForm({
+      defaultValues: { city: 'NYC', name: 'Alice' },
+      validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
+    });
+
+    form.set('name', 'Bob');
+    form.touch('city');
+    await form.submit(() => {});
+    form.setError('city', 'Bad city');
+
+    const snap = form.snapshot();
+
+    form.set('name', 'Charlie');
+    form.untouchAll();
+    form.resetErrors();
+
+    form.restore(snap);
+
+    expect(form.get('name')).toBe('Bob');
+    expect(form.get('city')).toBe('NYC');
+    expect(form.field('name').dirty).toBe(true);
+    expect(form.field('city').touched).toBe(true);
+    expect(form.field('city').error).toBe('Bad city');
+    expect(form.state.submitCount).toBe(1);
+  });
+});
+
+describe('async defaultValues', () => {
+  test('rejection sets isLoading to false and calls onLoadError', async () => {
+    const err = new Error('network failure');
+    const onLoadError = vi.fn();
+
+    const form = createForm({
+      defaultValues: () => Promise.reject(err),
+      onLoadError,
+    });
+
+    expect(form.isLoading).toBe(true);
+
+    await vi.waitFor(() => expect(form.isLoading).toBe(false));
+    expect(onLoadError).toHaveBeenCalledWith(err);
+  });
+
+  test('rejection leaves form empty (no values from rejected factory)', async () => {
+    const form = createForm({
+      defaultValues: () => Promise.reject(new Error('fail')),
+      onLoadError: () => {},
+    });
+
+    await vi.waitFor(() => expect(form.isLoading).toBe(false));
+    expect(form.values()).toEqual({});
   });
 });

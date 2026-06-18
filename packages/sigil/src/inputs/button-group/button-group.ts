@@ -1,4 +1,5 @@
-import { createContext, define, html, prop, provide, type ReadonlySignal } from '@vielzeug/craft';
+import { createContext, define, html, prop } from '@vielzeug/craft';
+import { type ReadonlySignal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../shared';
 import type { ButtonVariant } from '../button/button';
@@ -79,7 +80,7 @@ define<SgButtonGroupProps>(BUTTON_GROUP_TAG, {
     orientation: prop.string<'horizontal' | 'vertical'>(),
     variant: prop.string(),
   },
-  setup(props) {
+  setup(props, { provide }) {
     provide(BUTTON_GROUP_CTX, {
       color: props.color!,
       size: props.size!,

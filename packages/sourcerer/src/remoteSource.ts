@@ -1,24 +1,22 @@
-import type { RemoteConfig, RemoteFetchQuery, RemoteSource, RemoteSourceQuery } from './types';
+import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SearchOptions } from './types';
 
-import { createSourceCore } from './core';
-import { createFetchManager } from './fetchManager';
+import { createAsyncSource } from './asyncSource';
 import { clampPage, createMeta, pageCount } from './pagination';
 import { SourceError } from './types';
-import { defaultKeyOf, defaultRetryDelay, extractError, retry } from './utils';
+import { defaultKeyOf, extractError, retry } from './utils';
+
+type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
 /** Creates a remote page-based source that fetches data from a network endpoint. */
 export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   cfg: RemoteConfig<T, TFilter, TSort>,
 ): RemoteSource<T, TFilter, TSort> {
-  const core = createSourceCore();
+  const keyOf = cfg.queryKey ?? defaultKeyOf;
+  const base = createAsyncSource<RemoteSourceQuery<TFilter, TSort>>(cfg, keyOf);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Config defaults ─────────────────────────────────────────────────────────
-  const debounceMs = cfg.debounceMs ?? 300;
-  const retryAttempts = cfg.retry?.attempts ?? 0;
-  const retryDelay = cfg.retry?.delay ?? defaultRetryDelay;
-  const autoFetch = cfg.autoFetch !== false;
   const staleTimeMs = cfg.staleTime ?? 0;
-  const keyOf = cfg.queryKey ?? defaultKeyOf;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
   let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
@@ -31,13 +29,10 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   let error: SourceError | null = null;
   let lastFetchTime = 0;
   let lastFetchKey = '';
-  let refreshTimer: ReturnType<typeof setInterval> | undefined;
+  let pendingSearch: PendingSearch | null = null;
 
   // Optimistic update state.
   let optimistic: { active: boolean; prevItems: readonly T[]; prevTotal: number } | null = null;
-
-  // ── In-flight deduplication ─────────────────────────────────────────────────
-  const fm = createFetchManager<RemoteSourceQuery<TFilter, TSort>>(keyOf);
 
   // ── Snapshot pre-population ─────────────────────────────────────────────────
   if (cfg.snapshot) {
@@ -70,8 +65,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     cachedCurrent = items;
     cachedMeta = createMeta({
       error,
-      isLoading: fm.pendingCount > 0,
-      isSearchPending: core.isScheduled,
+      isLoading: base.pendingCount() > 0,
+      isSearchPending: base.isScheduled(),
       pageNumber: safePage,
       pageSize: limit,
       totalItems: total,
@@ -81,9 +76,16 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   // Initialise cache before first fetch.
   refreshMeta();
 
-  const commit = () => {
+  // Own listener set — notifications are driven by fetchManager's onPendingChange callback.
+  const listeners = new Set<() => void>();
+
+  const notifyListeners = () => {
+    if (base.disposed) return;
+
     refreshMeta();
-    core.notify();
+    base.notify();
+
+    for (const l of listeners) l();
   };
 
   // ── Assign result ───────────────────────────────────────────────────────────
@@ -98,8 +100,15 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     page = clampPage(page, pageCount(total, limit));
   };
 
+  const resolvePendingSearch = () => {
+    if (pendingSearch) {
+      pendingSearch.resolve();
+      pendingSearch = null;
+    }
+  };
+
   // ── Core fetch ──────────────────────────────────────────────────────────────
-  const toRemoteQuery = (): RemoteFetchQuery<TFilter, TSort> => ({
+  const toRemoteQuery = (): RemoteSourceQuery<TFilter, TSort> => ({
     ...(filter !== undefined && { filter }),
     ...(sort !== undefined && { sort }),
     ...(search && { search }),
@@ -107,7 +116,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     page,
   });
 
-  const fetchQuery = (q: RemoteFetchQuery<TFilter, TSort>): Promise<void> => {
+  const fetchQuery = (q: RemoteSourceQuery<TFilter, TSort>): Promise<void> => {
     const key = keyOf(q);
 
     if (staleTimeMs > 0 && key === lastFetchKey && total > 0 && Date.now() - lastFetchTime < staleTimeMs) {
@@ -116,9 +125,9 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
     error = null;
 
-    return fm.run(
+    return base.fetch(
       q,
-      async (q, signal, isLatest) => {
+      async (q: RemoteSourceQuery<TFilter, TSort>, signal, isLatest) => {
         const startTime = Date.now();
 
         try {
@@ -149,28 +158,28 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
               total = 0;
             }
 
-            error = new SourceError(extractError(reason), { cause: reason, query: q });
+            error = new SourceError(extractError(reason), {
+              cause: reason,
+              context: { kind: 'remote', limit: q.limit, page: q.page, ...(q.search && { search: q.search }) },
+            });
             cfg.onFetch?.({ durationMs: Date.now() - startTime, error, query: q, status: 'error' });
           }
         }
       },
-      commit,
+      () => {
+        notifyListeners();
+
+        if (base.pendingCount() === 0) resolvePendingSearch();
+      },
     );
   };
 
   const doUpdate = () => fetchQuery(toRemoteQuery());
 
-  // ── Auto-fetch ──────────────────────────────────────────────────────────────
-  if (autoFetch) {
-    void doUpdate();
-  }
+  // ── Auto-fetch + refresh interval ───────────────────────────────────────────
+  if (autoFetch) void doUpdate();
 
-  // ── Refresh interval ────────────────────────────────────────────────────────
-  if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
-    refreshTimer = setInterval(() => {
-      if (!core.isDisposed) void doUpdate();
-    }, cfg.refreshInterval);
-  }
+  base.startRefreshInterval(() => void doUpdate());
 
   // ── Public API ──────────────────────────────────────────────────────────────
   return {
@@ -178,18 +187,17 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       return cachedCurrent;
     },
 
-    dispose() {
-      if (refreshTimer !== undefined) {
-        clearInterval(refreshTimer);
-        refreshTimer = undefined;
-      }
-
-      fm.dispose();
-      core.dispose();
+    get disposalSignal() {
+      return base.disposalSignal;
     },
 
-    flush() {
-      return core.flush(() => doUpdate());
+    dispose: () => {
+      resolvePendingSearch();
+      base.dispose();
+    },
+
+    get disposed() {
+      return base.disposed;
     },
 
     goTo(target) {
@@ -246,7 +254,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       }
 
       total = options?.total ?? total;
-      commit();
+      notifyListeners();
 
       return () => {
         if (optimistic?.active) {
@@ -254,9 +262,59 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
           items = prevItems;
           total = prevTotal;
           optimistic = null;
-          commit();
+          notifyListeners();
         }
       };
+    },
+
+    patch(changes) {
+      let changed = false;
+
+      if (changes.limit !== undefined) {
+        const next = Math.max(1, Math.trunc(changes.limit));
+
+        if (next !== limit) {
+          limit = next;
+          changed = true;
+        }
+      }
+
+      if ('filter' in changes) {
+        filter = changes.filter as TFilter | undefined;
+        changed = true;
+      }
+
+      if ('sort' in changes) {
+        sort = changes.sort as TSort | undefined;
+        changed = true;
+      }
+
+      if ('search' in changes && changes.search !== search) {
+        search = changes.search ?? '';
+        changed = true;
+      }
+
+      if (changes.page !== undefined) {
+        const next =
+          total > 0 ? clampPage(changes.page, pageCount(total, limit)) : Math.max(1, Math.trunc(changes.page));
+
+        if (next !== page) {
+          page = next;
+          changed = true;
+        }
+      }
+
+      if (!changed) return Promise.resolve();
+
+      // Reset to page 1 when non-page query fields changed without explicit page
+      if (
+        (changes.limit !== undefined || 'filter' in changes || 'sort' in changes || 'search' in changes) &&
+        changes.page === undefined
+      ) {
+        page = 1;
+      }
+
+      return doUpdate();
     },
 
     prev() {
@@ -268,7 +326,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     ready(timeout) {
-      return core.ready(() => fm.pendingCount === 0 && !core.isScheduled, timeout);
+      return base.ready(timeout);
     },
 
     refresh() {
@@ -276,7 +334,8 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     reset() {
-      core.cancelTimer();
+      base.cancelTimer();
+      resolvePendingSearch();
       search = '';
       page = 1;
       filter = cfg.filter;
@@ -285,75 +344,36 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       return doUpdate();
     },
 
-    restoreQuery(patch) {
-      core.cancelTimer();
+    search(q, opts?: SearchOptions): Promise<void> {
+      if (opts?.immediate) {
+        if (q === search) return Promise.resolve();
 
-      let changed = false;
-
-      if (patch.limit !== undefined) {
-        const n = Math.max(1, Math.trunc(patch.limit));
-
-        if (n !== limit) {
-          limit = n;
-          changed = true;
-        }
-      }
-
-      if ('search' in patch) {
-        const s = patch.search ?? '';
-
-        if (s !== search) {
-          search = s;
-          changed = true;
-        }
-      }
-
-      if ('filter' in patch && patch.filter !== filter) {
-        filter = patch.filter;
+        base.cancelTimer();
+        resolvePendingSearch();
+        search = q;
         page = 1;
-        changed = true;
+
+        return doUpdate();
       }
 
-      if ('sort' in patch && patch.sort !== sort) {
-        sort = patch.sort;
-        page = 1;
-        changed = true;
-      }
-
-      if (patch.page !== undefined) {
-        const clamped =
-          total > 0 ? clampPage(patch.page, pageCount(total, limit)) : Math.max(1, Math.trunc(patch.page));
-
-        if (clamped !== page) {
-          page = clamped;
-          changed = true;
-        }
-      }
-
-      if (!changed) return Promise.resolve();
-
-      return doUpdate();
-    },
-
-    search(q) {
-      if (q === search) return;
-
-      search = q;
-      page = 1;
-      core.schedule(() => {
-        void doUpdate();
-      }, debounceMs);
-      commit();
-    },
-
-    searchNow(q) {
       if (q === search) return Promise.resolve();
 
-      core.cancelTimer();
+      resolvePendingSearch();
+
       search = q;
       page = 1;
 
-      return doUpdate();
+      let resolveSearch!: () => void;
+      const promise = new Promise<void>((res) => {
+        resolveSearch = res;
+      });
+
+      pendingSearch = { promise, resolve: resolveSearch };
+
+      base.schedule(() => void doUpdate(), debounceMs);
+      notifyListeners();
+
+      return promise;
     },
 
     setFilter(f) {
@@ -385,12 +405,19 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       return doUpdate();
     },
 
-    subscribe(listener) {
-      return core.subscribe(listener);
+    subscribe: (listener) => {
+      if (base.disposed) return () => {};
+
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
     },
 
-    [Symbol.dispose]() {
-      this.dispose();
+    [Symbol.dispose]: () => {
+      resolvePendingSearch();
+      base.dispose();
     },
 
     toQuery() {

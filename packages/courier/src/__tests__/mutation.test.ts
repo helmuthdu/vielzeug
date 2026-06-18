@@ -1,4 +1,4 @@
-import { createMutation, type MutationState } from '../index';
+import { createMutation, type MutationState, type SettledResult } from '../index';
 
 describe('Mutation', () => {
   afterEach(() => {
@@ -38,12 +38,12 @@ describe('Mutation', () => {
       const addUser = createMutation(async () => ({ id: 1 }));
 
       const states: MutationState[] = [];
-      const unsub = addUser.subscribe((s) => states.push({ ...s }));
+      const unsub = addUser.store.subscribe(() => states.push({ ...addUser.store.peek() }));
 
       await addUser.mutate(undefined);
       unsub();
 
-      // subscribe() no longer fires immediately — first notification is 'pending'
+      // store.subscribe() fires on each state change — first notification is 'pending'
       expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
@@ -57,11 +57,11 @@ describe('Mutation', () => {
 
       const states: MutationState[] = [];
 
-      fail.subscribe((s) => states.push({ ...s }));
+      fail.store.subscribe(() => states.push({ ...fail.store.peek() }));
 
       await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
 
-      // subscribe() no longer fires immediately — first notification is 'pending'
+      // store.subscribe() fires on each state change — first notification is 'pending'
       expect(states.map((s) => s.status)).toEqual(['pending', 'error']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
@@ -184,45 +184,57 @@ describe('Mutation', () => {
       expect(receivedVars).toBe('Bob');
     });
 
-    it('onSettled is called after success with data, null error, and variables', async () => {
-      const calls: Array<[unknown, Error | null, unknown]> = [];
+    it('onSettled is called after success with status success, data, and variables', async () => {
+      const results: SettledResult<{ id: number }, number>[] = [];
       const mutation = createMutation(async (n: number) => ({ id: n }), {
-        onSettled: (data, error, variables) => {
-          calls.push([data, error, variables]);
+        onSettled: (result) => {
+          results.push(result);
         },
       });
 
       await mutation.mutate(42);
-      expect(calls).toEqual([[{ id: 42 }, null, 42]]);
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe('success');
+
+      if (results[0].status === 'success') {
+        expect(results[0].data).toEqual({ id: 42 });
+        expect(results[0].variables).toBe(42);
+      }
     });
 
-    it('onSettled is called after failure with undefined data, error, and variables', async () => {
-      const calls: Array<[unknown, Error | null, unknown]> = [];
+    it('onSettled is called after failure with status error, error, and variables', async () => {
+      const results: SettledResult<{ id: number }, number>[] = [];
       const mutation = createMutation(
         async (n: number) => {
           throw new Error(`fail:${n}`);
         },
         {
-          onSettled: (data, error, variables) => {
-            calls.push([data, error, variables]);
+          onSettled: (result) => {
+            results.push(result);
           },
         },
       );
 
       await mutation.mutate(7).catch(() => {});
-      expect(calls[0]).toEqual([undefined, expect.objectContaining({ message: 'fail:7' }), 7]);
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe('error');
+
+      if (results[0].status === 'error') {
+        expect(results[0].error.message).toBe('fail:7');
+        expect(results[0].variables).toBe(7);
+      }
     });
 
-    it('onSettled is called after abort with undefined data and null error', async () => {
-      const calls: Array<[unknown, Error | null]> = [];
+    it('onSettled is called after abort with status aborted', async () => {
+      const results: SettledResult<void, void>[] = [];
       const mutation = createMutation(
         (_input: void, signal: AbortSignal) =>
           new Promise<void>((_resolve, reject) => {
             signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
           }),
         {
-          onSettled: (data, error) => {
-            calls.push([data, error]);
+          onSettled: (result) => {
+            results.push(result);
           },
         },
       );
@@ -232,7 +244,8 @@ describe('Mutation', () => {
       await mutation.cancel();
 
       await expect(running).rejects.toThrow('Aborted');
-      expect(calls).toEqual([[undefined, null]]);
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe('aborted');
     });
 
     it('callback errors do not suppress the original result', async () => {
@@ -278,12 +291,11 @@ describe('Mutation', () => {
     });
   });
 
-  describe('External Store (toStore)', () => {
-    it('peek() returns idle state before subscribe()', () => {
+  describe('External Store (store property)', () => {
+    it('peek() returns idle state before any mutate()', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
-      const store = mutation.toStore();
 
-      expect(store.peek()).toEqual({
+      expect(mutation.store.peek()).toEqual({
         data: undefined,
         error: null,
         isFetching: false,
@@ -292,19 +304,18 @@ describe('Mutation', () => {
       });
     });
 
-    it('returns the same store instance across repeated toStore() calls', () => {
+    it('store is a stable property reference', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
 
-      expect(mutation.toStore()).toBe(mutation.toStore());
+      expect(mutation.store).toBe(mutation.store);
     });
 
     it('subscribe() + peek() track mutation lifecycle', async () => {
       const mutation = createMutation(async () => ({ id: 1 }));
-      const store = mutation.toStore();
       const snapshots: MutationState[] = [];
 
-      const unsub = store.subscribe(() => {
-        snapshots.push({ ...store.peek() });
+      const unsub = mutation.store.subscribe(() => {
+        snapshots.push({ ...mutation.store.peek() });
       });
 
       await mutation.mutate(undefined);
@@ -312,17 +323,16 @@ describe('Mutation', () => {
       expect(snapshots.map((s) => s.status)).toEqual(['pending', 'success']);
       expect(snapshots[0].isFetching).toBe(true);
       expect(snapshots[1].isFetching).toBe(false);
-      expect(store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
+      expect(mutation.store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
 
       unsub();
     });
 
     it('unsubscribe() stops store notifications', async () => {
       const mutation = createMutation(async () => ({ id: 1 }));
-      const store = mutation.toStore();
       let notifications = 0;
 
-      const unsub = store.subscribe(() => {
+      const unsub = mutation.store.subscribe(() => {
         notifications++;
       });
 
@@ -335,8 +345,8 @@ describe('Mutation', () => {
   });
 
   describe('Lifecycle callbacks — abort behavior', () => {
-    it('onSettled receives null error when mutation is cancelled', async () => {
-      const settled: Array<{ data: unknown; error: unknown }> = [];
+    it('onSettled receives status aborted when mutation is cancelled', async () => {
+      const results: SettledResult<string, void>[] = [];
 
       const mutation = createMutation(
         (_: void, signal: AbortSignal) =>
@@ -344,8 +354,8 @@ describe('Mutation', () => {
             signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
           }),
         {
-          onSettled: (data, error) => {
-            settled.push({ data, error });
+          onSettled: (result) => {
+            results.push(result);
           },
         },
       );
@@ -355,9 +365,8 @@ describe('Mutation', () => {
       await mutation.cancel();
       await running.catch(() => {});
 
-      expect(settled).toHaveLength(1);
-      expect(settled[0].error).toBeNull();
-      expect(settled[0].data).toBeUndefined();
+      expect(results).toHaveLength(1);
+      expect(results[0].status).toBe('aborted');
     });
 
     it('onError is NOT called when mutation is cancelled', async () => {

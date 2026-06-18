@@ -83,7 +83,7 @@ virt.scrollToSection(2, { align: 'start' });
 virt.scrollToItem(0, 1, { align: 'auto' });
 
 // Cleanup
-virt.destroy();
+virt.dispose();
 ```
 
 ---

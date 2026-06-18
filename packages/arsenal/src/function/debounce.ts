@@ -7,7 +7,7 @@ export type DebounceOptions = {
   trailing?: boolean;
 };
 
-export type Debounced<T extends Fn> = ((...args: Parameters<T>) => void) & {
+export type Debounced<T extends Fn> = ((...args: Parameters<T>) => ReturnType<T> | undefined) & {
   cancel(): void;
   flush(): ReturnType<T> | undefined;
   pending(): boolean;
@@ -40,6 +40,7 @@ export function debounce<T extends Fn>(
 
   let timerId: number | undefined;
   let lastArgs: Parameters<T> | undefined;
+  let lastResult: ReturnType<T> | undefined;
   let leadingFired = false;
 
   const clearTimer = () => {
@@ -58,35 +59,40 @@ export function debounce<T extends Fn>(
     const args = lastArgs;
 
     lastArgs = undefined;
+    lastResult = fn(...args) as ReturnType<T>;
 
-    return fn(...args) as ReturnType<T>;
+    return lastResult;
   };
 
   return Object.assign(
-    (...args: Parameters<T>): void => {
+    (...args: Parameters<T>): ReturnType<T> | undefined => {
       lastArgs = args;
 
       if (leading && !leadingFired) {
         leadingFired = true;
-        lastArgs = undefined;
-        fn(...args);
+        lastResult = fn(...args) as ReturnType<T>;
 
         if (!trailing) {
-          // Start the cooldown window; don't schedule a trailing call
+          // Leading-only: clear args and start cooldown — no trailing call needed
+          lastArgs = undefined;
           timerId = setTimeout(() => {
             timerId = undefined;
             leadingFired = false;
           }, delay) as unknown as number;
 
-          return;
+          return lastResult;
         }
+
+        // Leading + trailing: keep lastArgs so the trailing timer can re-invoke
       }
 
       // When leading-only, ignore calls within the cooldown window
-      if (leading && !trailing && leadingFired) return;
+      if (leading && !trailing && leadingFired) return lastResult;
 
       clearTimer();
       timerId = setTimeout(invokeTrailing, delay) as unknown as number;
+
+      return lastResult;
     },
     {
       cancel: () => {

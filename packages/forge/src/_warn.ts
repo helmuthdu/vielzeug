@@ -1,5 +1,5 @@
 /** @internal */
-const isDev = !(globalThis as { __FORGE_PROD__?: boolean }).__FORGE_PROD__;
+export const isDev = !(globalThis as { __FORGE_PROD__?: boolean }).__FORGE_PROD__;
 
 /**
  * Emits a `console.warn` in development builds only.

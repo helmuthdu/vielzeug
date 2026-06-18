@@ -58,4 +58,19 @@ describe('sg-tab-panel', () => {
       expect(fixture.query('[role="tabpanel"]')?.textContent?.trim()).toBe('');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-tab-panel', {
+        attrs: { value: 'overview' },
+        html: 'Overview content',
+      });
+
+      const results = await axeCheck(fixture.element, {
+        rules: { 'aria-required-parent': { enabled: false } },
+      });
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

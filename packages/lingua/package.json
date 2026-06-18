@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/lingua",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "type": "module",
   "files": [
     "dist"
@@ -20,6 +20,18 @@
       "types": "./dist/format.d.ts",
       "import": "./dist/format.js",
       "require": "./dist/format.cjs"
+    },
+    "./ssr": {
+      "source": "./src/ssr.ts",
+      "types": "./dist/ssr.d.ts",
+      "import": "./dist/ssr.js",
+      "require": "./dist/ssr.cjs"
+    },
+    "./testing": {
+      "source": "./src/testing.ts",
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     },
     "./validate": {
       "source": "./src/validate.ts",
@@ -43,9 +55,9 @@
     "registry": "https://registry.npmjs.org/"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1",
+    "@types/node": "^25.9.3",
     "typescript": "~6.0.3",
-    "vite": "^8.0.14",
-    "vitest": "^4.1.7"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
   }
 }

@@ -20,7 +20,7 @@ export function isLevelEnabled(threshold: LogLevel, level: LogLevel): boolean {
   return PRIORITY[threshold] <= PRIORITY[level];
 }
 
-/* ─── Bindings & errors ─── */
+/* ─── Bindings ─── */
 
 export type Bindings = Record<string, unknown>;
 
@@ -28,13 +28,16 @@ export type Bindings = Record<string, unknown>;
 
 /**
  * The structured record produced by every log call and dispatched to all transports.
- * Transports receive this value and are responsible for their own formatting/delivery.
+ * `data` is the merged result of pinned bindings and per-call context — transports
+ * receive a single flat object and do not need to merge anything themselves.
+ * Any `Error` instances in the context are automatically serialized to `{ message, name, stack }`.
  */
 export type LogEntry = {
-  /** Pinned bindings from withBindings() — already shallow-copied. */
-  bindings: Readonly<Bindings>;
-  /** Per-call context passed as the first argument. */
-  context?: Bindings;
+  /**
+   * Merged structured data: pinned bindings overlaid with per-call context.
+   * Already shallow-copied and immutable — do not mutate.
+   */
+  data: Readonly<Bindings>;
   level: LogType;
   message?: string;
   namespace: string;
@@ -50,70 +53,10 @@ export type Transport = (entry: LogEntry) => void;
 /** Middleware function that transforms or filters log entries before dispatch. Return null to drop the entry. */
 export type LogMiddleware = (entry: LogEntry) => LogEntry | null;
 
-/* ─── Console theme ─── */
-
-/**
- * Per-level style definition for the console transport.
- * All fields are optional when providing a level override — unspecified fields fall back to the default theme.
- */
-export type ConsoleThemeEntry = {
-  /** Badge text / glyph to display (e.g. '🅸', '→', 'INFO'). */
-  badge: string;
-  /** Background color (CSS hex). Used as badge background in browser; as badge text tint in Node ANSI. */
-  bg: string;
-  /** Border color for the badge (browser only). */
-  border: string;
-  /** Foreground / text color inside the badge (browser only). */
-  color: string;
-};
-
-/**
- * Partial theme overrides merged on top of the default theme.
- * Each level entry is also partial — only specify the fields you want to change.
- *
- * @example
- * consoleTransport({ theme: { error: { badge: '✖' } } }) // only changes the badge glyph
- */
-export type ConsoleTheme = Partial<Record<LogType | 'group' | 'ns', Partial<ConsoleThemeEntry>>>;
-
-/**
- * Fully-resolved console theme where every level and every field is populated.
- * Returned by `resolveTheme()`. Useful for building custom transports on top of the default theme.
- */
-export type ResolvedTheme = Record<LogType | 'group' | 'ns', ConsoleThemeEntry>;
-
 /* ─── Transport option types ─── */
 
-export type ConsoleTransportOptions = {
-  /**
-   * Enable ANSI 24-bit color output in Node.js.
-   * Default: true when process.stdout.isTTY is true, false otherwise.
-   */
-  ansi?: boolean;
-  /**
-   * Object serialization format for Node.js output.
-   * - 'json' — JSON.stringify (machine-readable, fails on circular refs)
-   * - 'raw' — pass the object directly to the console method (default)
-   * Default: 'raw'.
-   */
-  format?: 'json' | 'raw';
-  /**
-   * Custom object inspector function. When provided, context/bindings objects are
-   * passed through this function before being written to the console.
-   * Typical use: pass `require('util').inspect` or `(v) => util.inspect(v, { colors: true, depth: 4 })`
-   * in Node.js environments for richer object formatting.
-   */
-  inspectFn?: (value: unknown) => string;
-  /** Minimum level to output. Default: 'debug'. */
-  level?: LogLevel;
-  /** Partial theme overrides merged on top of the default theme. */
-  theme?: ConsoleTheme;
-  /** Whether to include timestamp in console output. Default: true. */
-  timestamp?: boolean;
-};
-
 export type RemoteLogData = {
-  context?: Bindings;
+  data?: Bindings;
   env: 'development' | 'production';
   level: LogType;
   message?: string;
@@ -130,9 +73,10 @@ export type RemoteTransportOptions = {
   level?: LogLevel;
   /**
    * Called when the handler throws or rejects.
-   * Defaults to console.warn. The async error path is separate from the synchronous
-   * onTransportError on the logger, because async delivery failures happen outside
-   * the emit call stack.
+   * The async error path is separate from any synchronous errors in the emit call stack.
+   * Default: a dev-only `console.warn` (gated by `__RUNE_PROD__`). In production builds,
+   * unhandled remote transport errors are silently swallowed — pass an explicit `onError`
+   * if you need delivery-failure observability in production.
    */
   onError?: (error: unknown, data: RemoteLogData) => void;
 };
@@ -163,11 +107,16 @@ export type JsonTransportOptions = {
   safe?: boolean;
 };
 
-export type BatchTransport = Transport & {
-  /** Stop the interval timer and flush remaining entries. Call on shutdown. */
+/** Handle returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`. */
+export type BatchHandle = {
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose]: () => void;
+  /** Stop the interval timer and flush remaining entries. Call on shutdown. Idempotent. */
   dispose: () => void;
   /** Immediately flush buffered entries to the downstream handler without stopping the timer. */
   flush: () => void;
+  /** The transport function to pass to `createLogger({ transports: [handle.transport] })`. */
+  transport: Transport;
 };
 
 export type BatchTransportOptions = {
@@ -216,18 +165,28 @@ export type SampleTransportOptions = {
 
 export type RedactTransportOptions = {
   /**
-   * Field names to replace at any depth in bindings and context.
+   * Field names to replace at any depth in `data`.
    * Matched by exact field name — dot-path notation (e.g. `'user.password'`) is NOT supported.
    * A key like `'password'` will redact every field named `'password'` at any nesting level.
    */
   keys: string[];
+  /**
+   * Maximum object nesting depth to traverse during redaction.
+   * Objects deeper than this limit are returned as-is (not redacted).
+   * A dev-only warning is emitted when the cap is hit.
+   * Default: 20.
+   * @security In production builds, the depth warning is suppressed — deeply-nested sensitive
+   * fields beyond `maxDepth` will pass through unredacted without any indication. Ensure that
+   * sensitive payloads are not nested beyond this limit, or lower `maxDepth` as needed.
+   */
+  maxDepth?: number;
   /** Replacement value for redacted fields. Default: '[REDACTED]'. */
   replacement?: string;
   /** Downstream transport to receive the redacted entry. */
   transport: Transport;
 };
 
-/* ─── Logger config ─── */
+/* ─── Logger options ─── */
 
 export type RuneOptions = {
   /** Initial pinned bindings for this logger instance. */
@@ -239,34 +198,8 @@ export type RuneOptions = {
   /**
    * Namespace for this logger. When passed to `child()`, it is automatically
    * dot-joined to the parent namespace (e.g. parent `'api'` + child `'auth'` → `'api.auth'`).
-   * Prefix with `/` to set an absolute namespace that replaces the parent
-   * (e.g. `'/root'` → `'root'`, ignoring the parent namespace).
    */
   namespace?: string;
-  /**
-   * Override the timestamp source. Accepts any zero-arg function returning a Date.
-   * Use a fixed date in tests for deterministic timestamps without mocking Date.
-   * Default: () => new Date()
-   */
-  now?: () => Date;
-  /**
-   * Called when a transport throws. Defaults to console.warn.
-   * Receives the thrown error, the entry that caused it, and the transport index.
-   */
-  onTransportError?: (error: unknown, entry: LogEntry, transportIndex: number) => void;
-  /**
-   * Fraction of entries to sample before they reach transports (0–1).
-   * Applied after middleware, before transport dispatch.
-   * More efficient than sampleTransport — skips the entire transport pipeline for dropped entries.
-   * Default: 1 (no sampling).
-   */
-  sample?: number;
-  /**
-   * Console theme overrides. Applies to both consoleTransport (for log entries) and
-   * group()/groupCollapsed() (for group labels). Inherited by child loggers.
-   * Default: DEFAULT_THEME.
-   */
-  theme?: ConsoleTheme;
   /**
    * Transport pipeline. Each transport receives every entry that passes the level threshold.
    * Default: [consoleTransport()].
@@ -274,39 +207,25 @@ export type RuneOptions = {
   transports?: Transport[];
 };
 
-export type RuneConfig = {
-  logLevel: LogLevel;
-  middleware: LogMiddleware[];
-  namespace: string;
-  now: () => Date;
-  onTransportError: (error: unknown, entry: LogEntry, transportIndex: number) => void;
-  sample: number;
-  theme: ConsoleTheme | undefined;
-  transports: Transport[];
-};
-
-/* ─── TimeOptions ─── */
-
-/**
- * Options for the `time()` method. Can be passed as a plain `LogType` string
- * (e.g. `'info'`) or as an object to allow future extension.
- */
-export type TimeOptions = {
-  /** Log level for the timing entry. Default: `'debug'`. */
-  level?: LogType;
-};
-
 /* ─── Log method ─── */
 
 /**
- * Overloaded signature shared by all five log-level methods.
- * No-arg calls are intentionally excluded — every call must produce output.
+ * Signature shared by all five log-level methods.
+ *
+ * - `log.info('message')` — string-only, most common.
+ * - `log.info({ ...fields }, 'message')` — structured context + optional message.
+ *   `Error` values in `fields` are automatically serialized to `{ message, name, stack }`.
+ * - `log.error(err, { ...fields }, 'message')` — Error first, then optional context + message.
+ *   Shorthand for the pattern where an Error is the primary subject of the log call.
+ *
+ * @example
+ * log.error({ err: new Error('timeout'), requestId }, 'request failed')
+ * log.error(new Error('timeout'), { requestId }, 'request failed')
  */
 export type LogMethod = {
   (message: string): void;
+  (error: Error, context?: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
-  (error: Error, context: Bindings, message?: string): void;
-  (error: Error, message?: string): void;
 };
 
 /* ─── Logger interface ─── */
@@ -318,17 +237,14 @@ export type Logger = {
   readonly bindings: Readonly<Bindings>;
   /** Create a child logger with config overrides. Inherits all config and bindings by default. */
   child: (overrides?: RuneOptions) => Logger;
-  /** Snapshot of current resolved configuration. */
-  readonly config: Readonly<RuneConfig>;
   debug: LogMethod;
   /** `AbortSignal` aborted when `dispose()` is called. Use to tie external lifetimes to this logger. */
   readonly disposalSignal: AbortSignal;
   /**
-   * Dispose all `BatchTransport` instances in the transport array (calls their `.dispose()`).
-   * Call on app shutdown to flush pending entries and stop interval timers.
-   * Safe to call on loggers without batch transports — it is a no-op in that case.
-   * **Note:** only top-level transports are inspected. A `batchTransport` wrapped inside
-   * `pipe(...)` will not be discovered; hold a reference to the batch and dispose it manually.
+   * Marks the logger as disposed — all subsequent log calls become no-ops.
+   * Aborts `disposalSignal`. Does NOT auto-discover or dispose batch transports;
+   * hold a direct reference to `batchTransport` and call its `dispose()` on shutdown.
+   * Idempotent — safe to call multiple times.
    */
   dispose: () => void;
   /** `true` after `dispose()` has been called. */
@@ -350,27 +266,23 @@ export type Logger = {
    */
   groupCollapsed: <T>(label: string, fn: () => T, level?: LogType) => T;
   info: LogMethod;
-  /**
-   * Restore the log level to the value set at construction time, undoing any `setLevel()` calls.
-   */
-  resetLevel: () => void;
-  /**
-   * Mutate the log level threshold in-place. Affects this logger instance immediately.
-   * Useful for toggling debug mode at runtime without recreating logger instances.
-   * Note: children created via `child()` after this call inherit the new level;
-   * children created before retain their own independent snapshot.
-   */
-  setLevel: (level: LogLevel) => void;
+  /** Active log level for this logger instance. */
+  readonly logLevel: LogLevel;
+  /** Middleware pipeline applied before dispatch. */
+  readonly middleware: readonly LogMiddleware[];
+  /** Namespace string for this logger instance. */
+  readonly namespace: string;
   /**
    * Measure execution time of `fn` and emit a structured log entry.
-   * The entry message is `label`; context contains `{ duration_ms }` (rounded to 2 dp).
-   * When `fn` throws or rejects, the entry also includes `{ err }` with the serialized error.
+   * The entry message is `label`; `data` contains `{ duration_ms }` (rounded to 2 dp).
+   * When `fn` throws or rejects, `data` also includes `{ err }` with the serialized error.
    * @param label - Human-readable description of the operation.
    * @param fn - Synchronous or async function to time.
-   * @param opts - Log level for the timing entry. Default: `'debug'`.
-   *   Accepts a `LogType` string or a `TimeOptions` object `{ level?: LogType }`.
+   * @param level - Log level for the timing entry. Default: `'debug'`.
    */
-  time: <T>(label: string, fn: () => T, opts?: LogType | TimeOptions) => T;
+  time: <T>(label: string, fn: () => T, level?: LogType) => T;
+  /** Transport pipeline for this logger instance. */
+  readonly transports: readonly Transport[];
   /**
    * Add a middleware function to the pipeline. Returns a **new** logger — the original is unchanged.
    * Discarding the return value is a common mistake: always assign the result.
@@ -379,6 +291,10 @@ export type Logger = {
    */
   use: (middleware: LogMiddleware) => Logger;
   warn: LogMethod;
-  /** Derive a child logger with additional pinned bindings. */
+  /**
+   * Derive a child logger with additional pinned bindings.
+   * The returned logger is fully independent — disposing it does not affect the parent,
+   * and disposing the parent does not affect child loggers.
+   */
   withBindings: (bindings: Bindings) => Logger;
 };

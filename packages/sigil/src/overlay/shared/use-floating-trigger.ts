@@ -1,12 +1,9 @@
-import type { ReadonlySignal, Signal } from '@vielzeug/craft';
 import type { Placement } from '@vielzeug/orbit';
 
-import { onCleanup, signal, watch } from '@vielzeug/craft';
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
+import { type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/ripple';
 
-import type { DialogCloseReason, OverlayOpenReason } from '../../headless';
-
-import { lifecycleSignal, createOverlayControl } from '../../headless';
+import { lifecycleSignal, createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from '../../headless';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,6 +20,8 @@ export type FloatingTriggerOptions = {
   getPanel: () => HTMLElement | null;
   /** Gap from reference to floating panel in px. Default: 8. Accepts a signal for runtime reactivity. */
   offset?: ReadonlySignal<number | undefined> | number;
+  /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
+  onCleanup: (fn: () => void) => void;
   /** Called when the popover closes. */
   onClose?: (reason: DialogCloseReason) => void;
   /** Called when the popover opens. */
@@ -95,9 +94,11 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
     if (o == null) return 8;
 
-    return typeof o === 'object' ? (o as ReadonlySignal<number>).value : o;
+    const val = typeof o === 'object' ? (o as ReadonlySignal<number | undefined>).value : o;
+
+    return val ?? 8;
   };
-  const abortSignal = lifecycleSignal(onCleanup);
+  const abortSignal = lifecycleSignal(options.onCleanup);
   const visible = signal(false);
   const isControlled = () => openProp.value !== undefined;
   let currentTrigger: HTMLElement | null = null;
@@ -139,7 +140,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
     panel.style.left = `${result.x}px`;
     panel.style.top = `${result.y}px`;
 
-    if ('dataset' in panel) (panel as HTMLElement).dataset.placement = result.placement;
+    panel.dataset.placement = result.placement;
 
     onPlacementChange?.(result.placement as Placement);
   }
@@ -277,7 +278,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
         if (openVal) {
           showFloat();
           onOpen?.('programmatic');
-        } else {
+        } else if (visible.value) {
           hideFloat();
           onClose?.('programmatic');
         }
@@ -297,7 +298,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
       if (panel?.matches(':popover-open')) panel.hidePopover();
 
-      overlay.cleanup();
+      overlay.dispose();
     };
   };
 

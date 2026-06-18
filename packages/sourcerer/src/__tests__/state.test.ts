@@ -58,13 +58,16 @@ describe('sourceState', () => {
     }
   });
 
-  it('SourceError carries message, cause, and query', () => {
+  it('SourceError carries message, cause, and context', () => {
     const cause = new TypeError('network');
-    const err = new SourceError('Request failed', { cause, query: { page: 1 } });
+    const err = new SourceError('Request failed', {
+      cause,
+      context: { kind: 'remote', limit: 10, page: 1 },
+    });
 
     expect(err.message).toBe('Request failed');
     expect(err.cause).toBe(cause);
-    expect(err.query).toEqual({ page: 1 });
+    expect(err.context).toEqual({ kind: 'remote', limit: 10, page: 1 });
     expect(err.name).toBe('SourceError');
     expect(err).toBeInstanceOf(Error);
     expect(err).toBeInstanceOf(SourceError);
@@ -89,5 +92,26 @@ describe('sourceState', () => {
     expect(err).toBeInstanceOf(SourceTimeoutError);
     expect(err.name).toBe('SourceTimeoutError');
     expect(err.message).toBe('Source.ready() timed out after 500ms');
+  });
+
+  it('returns loading when isSearchPending is true (even if isLoading is false)', () => {
+    const source = { current: [1, 2], meta: { error: null, isLoading: false, isSearchPending: true } };
+    const state = sourceState(source);
+
+    expect(state.status).toBe('loading');
+  });
+
+  it('returns success when isSearchPending is false', () => {
+    const source = { current: [1, 2], meta: { error: null, isLoading: false, isSearchPending: false } };
+    const state = sourceState(source);
+
+    expect(state).toEqual({ items: [1, 2], status: 'success' });
+  });
+
+  it('returns success when isSearchPending is absent', () => {
+    const source = { current: [1], meta: { error: null, isLoading: false } };
+    const state = sourceState(source);
+
+    expect(state.status).toBe('success');
   });
 });

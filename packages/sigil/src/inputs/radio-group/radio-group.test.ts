@@ -177,4 +177,17 @@ describe('sg-radio-group', () => {
       expect(radios[1].getAttribute('tabindex')).toBe('0');
     });
   });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('sg-radio-group', {
+        attrs: { label: 'Plan' },
+        html: '<sg-radio value="a">Free</sg-radio><sg-radio value="b">Pro</sg-radio>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
 });

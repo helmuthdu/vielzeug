@@ -10,8 +10,8 @@ export type SizeOptions = DetectOverflowOptions;
  *
  * Available dimensions are written to `middlewareData.size`.
  *
- * Read `result.middlewareData.size` in the `float()` `apply` callback to constrain
- * the floating element's dimensions.
+ * Read `result.middlewareData.size` in the `float()` `apply` option or after `computePosition()`
+ * to constrain the floating element's dimensions.
  *
  * @example
  * ```ts

@@ -3,44 +3,40 @@
  * double. Handles queue management, iterative drain loop, abort handling, lifecycle (close /
  * dispose), metrics, batch streaming, task groups, and backpressure.
  *
- * Callers provide an executor — a function that runs a single task and returns a Promise.
- * The pool does not care whether the executor uses a Web Worker or runs in-process.
+ * Callers provide a SlotStrategy array — each slot encapsulates run/runStream/prime/terminate.
+ * The pool does not care whether slots use a Web Worker or run in-process.
  *
  * Not part of the public API surface.
  */
 
 import { abortError } from '@vielzeug/arsenal';
 
-import type { BatchOptions, RunOptions, TaskGroup, WorkerHandle, WorkerStatus } from './_types';
+import type {
+  BatchOptions,
+  GroupOptions,
+  RunOptions,
+  SlotStrategy,
+  TaskGroup,
+  WorkerHandle,
+  WorkerStatus,
+} from './_types';
 
 import { type QueueItem, TaskQueue } from './_queue';
 import { WorkerQueueFullError, WorkerRuntimeError, WorkerTerminatedError, WorkerTimeoutError } from './_types';
-
-/** Strategy that executes one task. Provided by the caller (real Slot or in-process fn). */
-export type Executor<TInput, TOutput> = (
-  input: TInput,
-  transferables: Transferable[],
-  timeout: number | undefined,
-  heartbeatTimeout: number | undefined,
-) => Promise<TOutput>;
 
 export type PoolOptions = {
   concurrency: number;
   defaultTimeout: number | undefined;
   maxQueue: number | undefined;
-  /** Called during dispose() — used by the real worker to terminate Worker threads. */
-  onDispose?: () => void;
-  /** 'wait' suspends run() callers when the queue is full instead of rejecting. */
   onFull: 'reject' | 'wait';
-  /** Called during prime() — used by the real worker to pre-initialize slots. */
-  prime?: () => Promise<void>;
 };
 
 export function createPool<TInput, TOutput>(
-  executor: Executor<TInput, TOutput>,
+  slots: SlotStrategy<TInput, TOutput>[],
   options: PoolOptions,
 ): WorkerHandle<TInput, TOutput> {
-  const { concurrency, defaultTimeout, maxQueue, onDispose, onFull } = options;
+  const { concurrency, defaultTimeout, maxQueue, onFull } = options;
+  const freeSlots = [...slots];
   const queue = new TaskQueue<TInput, TOutput>();
   const disposeController = new AbortController();
   const idleResolvers: Array<() => void> = [];
@@ -51,6 +47,7 @@ export function createPool<TInput, TOutput>(
   let closePromise: Promise<void> | undefined;
   let completedCount = 0;
   let failedCount = 0;
+  let groupActiveCount = 0;
   let terminated = false;
 
   // ─── Idle tracking ────────────────────────────────────────────────────────────
@@ -104,10 +101,12 @@ export function createPool<TInput, TOutput>(
 
     draining = true;
 
-    while (!terminated && activeCount < concurrency && queue.size > 0) {
+    while (!terminated && freeSlots.length > 0 && queue.size > 0) {
       const item = nextItem();
 
       if (!item) break;
+
+      const slot = freeSlots.pop()!;
 
       item.cleanupAbort?.();
       activeCount += 1;
@@ -115,8 +114,9 @@ export function createPool<TInput, TOutput>(
 
       const taskTimeout = item.timeout ?? defaultTimeout;
 
-      executor(item.input, item.transferables, taskTimeout, item.heartbeatTimeout).then(
+      slot.run(item.input, item.transferables, taskTimeout).then(
         (result) => {
+          freeSlots.push(slot);
           activeCount -= 1;
           completedCount += 1;
           item.resolve(result);
@@ -125,6 +125,7 @@ export function createPool<TInput, TOutput>(
           if (isIdle()) notifyIdle();
         },
         (error: unknown) => {
+          freeSlots.push(slot);
           activeCount -= 1;
 
           if (!(error instanceof WorkerTerminatedError)) failedCount += 1;
@@ -157,6 +158,10 @@ export function createPool<TInput, TOutput>(
       return item;
     }
 
+    // All remaining items were aborted and rejected above — the pool may now be idle.
+    // Notify any close() waiter so it does not hang.
+    notifyIdle();
+
     return undefined;
   }
 
@@ -167,7 +172,8 @@ export function createPool<TInput, TOutput>(
 
     terminated = true;
     disposeController.abort();
-    onDispose?.();
+
+    for (const slot of slots) slot.terminate();
 
     while (queue.size > 0) {
       const item = queue.shift();
@@ -201,7 +207,7 @@ export function createPool<TInput, TOutput>(
   // ─── run() ───────────────────────────────────────────────────────────────────
 
   async function run(input: TInput, runOptions: RunOptions = {}): Promise<TOutput> {
-    const { heartbeatTimeout, priority = 0, signal, timeout, transferables = [] } = runOptions;
+    const { priority = 0, signal, timeout, transferables = [] } = runOptions;
 
     if (terminated) {
       throw new WorkerTerminatedError();
@@ -234,7 +240,6 @@ export function createPool<TInput, TOutput>(
     });
 
     const item: QueueItem<TInput, TOutput> = {
-      heartbeatTimeout,
       input,
       priority,
       reject,
@@ -271,6 +276,65 @@ export function createPool<TInput, TOutput>(
     return promise;
   }
 
+  // ─── runStream() ─────────────────────────────────────────────────────────────
+
+  function runStream(input: TInput, options: Omit<RunOptions, 'signal'> = {}): AsyncIterable<TOutput> {
+    if (terminated) {
+      throw new WorkerRuntimeError('Worker was terminated');
+    }
+
+    const slot = freeSlots.pop();
+
+    if (!slot) {
+      throw new WorkerRuntimeError(
+        `runStream() requires a free worker slot; all ${slots.length} slot${slots.length === 1 ? '' : 's'} are busy`,
+      );
+    }
+
+    const { timeout, transferables = [] } = options;
+    const iter = slot.runStream(input, transferables, timeout);
+
+    return {
+      [Symbol.asyncIterator]() {
+        const inner = iter[Symbol.asyncIterator]();
+        let released = false;
+
+        const releaseSlot = () => {
+          if (!released) {
+            released = true;
+            freeSlots.push(slot);
+          }
+        };
+
+        return {
+          async next() {
+            const result = await inner.next();
+
+            if (result.done) releaseSlot();
+
+            return result;
+          },
+
+          async return(value?: unknown) {
+            slot.cancel();
+            releaseSlot();
+
+            return inner.return?.(value) ?? { done: true as const, value };
+          },
+
+          async throw(error?: unknown) {
+            slot.cancel();
+            releaseSlot();
+
+            if (inner.throw) return inner.throw(error);
+
+            throw error;
+          },
+        };
+      },
+    };
+  }
+
   // ─── batch() ─────────────────────────────────────────────────────────────────
 
   async function* batch(inputs: TInput[], batchOptions: BatchOptions = {}): AsyncIterable<TOutput> {
@@ -289,6 +353,8 @@ export function createPool<TInput, TOutput>(
       } else {
         // As-completed: yield results in the order tasks finish, not submission order.
         // A single-slot notification channel wakes the consumer when the next result is ready.
+        // Note: `completions` accumulates all settled results until the consumer reads them.
+        // For large batches this retains all outputs in memory simultaneously.
         type Completion = { error: unknown } | { value: TOutput };
 
         const completions: Completion[] = [];
@@ -331,49 +397,79 @@ export function createPool<TInput, TOutput>(
 
   // ─── group() ─────────────────────────────────────────────────────────────────
 
-  function group(): TaskGroup<TInput, TOutput> {
+  function group(name?: string, options: GroupOptions = {}): TaskGroup<TInput, TOutput> {
     const ac = new AbortController();
-    const promises: Promise<TOutput>[] = [];
+
+    if (options.signal) {
+      const sig = options.signal;
+
+      if (sig.aborted) {
+        ac.abort(sig.reason);
+      } else {
+        sig.addEventListener('abort', () => ac.abort(sig.reason), { once: true });
+      }
+    }
+
+    groupActiveCount += 1;
+
+    let submittedCount = 0;
+    let settledCount = 0;
+    let groupClosed = false;
+    const pendingPromises: Promise<TOutput>[] = [];
+
+    function decrementGroupIfDone(): void {
+      if (!groupClosed && submittedCount > 0 && submittedCount === settledCount) {
+        groupClosed = true;
+        groupActiveCount -= 1;
+      }
+    }
 
     return {
       abort(reason?: unknown): void {
         ac.abort(reason);
       },
 
-      async drain(): Promise<void> {
-        // Snapshot before awaiting so tasks added concurrently with drain() are not included.
-        const snapshot = promises.slice();
-        const results = await Promise.allSettled(snapshot);
-        const failure = results.find((r): r is PromiseRejectedResult => r.status === 'rejected');
+      drain(): Promise<PromiseSettledResult<TOutput>[]> {
+        const snapshot = pendingPromises.splice(0);
 
-        if (failure) throw failure.reason;
+        if (!groupClosed) {
+          groupClosed = true;
+          groupActiveCount -= 1;
+        }
+
+        return Promise.allSettled(snapshot);
+      },
+
+      get name() {
+        return name;
+      },
+
+      get pending() {
+        return submittedCount - settledCount;
       },
 
       run(input: TInput, runOpts: Omit<RunOptions, 'signal'> = {}): Promise<TOutput> {
+        submittedCount += 1;
+
         const p = run(input, { ...runOpts, signal: ac.signal });
 
-        promises.push(p);
+        pendingPromises.push(p);
+        p.then(
+          () => {
+            settledCount += 1;
+            decrementGroupIfDone();
+          },
+          () => {
+            settledCount += 1;
+            decrementGroupIfDone();
+          },
+        );
 
         return p;
       },
 
       get size() {
-        return promises.length;
-      },
-    };
-  }
-
-  // ─── runStream() ─────────────────────────────────────────────────────────────
-  // Default implementation; the real worker overrides this via the handle returned by createWorker.
-
-  function runStreamUnsupported(): AsyncIterable<never> {
-    return {
-      [Symbol.asyncIterator]() {
-        return {
-          next(): Promise<IteratorResult<never>> {
-            return Promise.reject(new WorkerRuntimeError('runStream() is not supported by this handle type'));
-          },
-        };
+        return submittedCount;
       },
     };
   }
@@ -409,21 +505,21 @@ export function createPool<TInput, TOutput>(
       return failedCount;
     },
     group,
-
-    prime: options.prime ?? (() => Promise.resolve()),
+    get groupCount(): number {
+      return groupActiveCount;
+    },
+    prime(): Promise<void> {
+      return Promise.all(slots.map((s) => s.prime())).then(() => {});
+    },
     get queued(): number {
       return queue.size;
     },
     run,
-    runStream: runStreamUnsupported,
+    runStream,
     get status(): WorkerStatus {
       return getStatus();
     },
     [Symbol.asyncDispose]: () => close(),
     [Symbol.dispose]: dispose,
-
-    get utilization(): number {
-      return activeCount / concurrency;
-    },
   };
 }

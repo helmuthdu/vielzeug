@@ -1,20 +1,11 @@
 @layer sigil.base {
   :host {
-    --_backdrop-bg: var(--drawer-backdrop-bg, color-mix(in srgb, var(--color-canvas) 40%, transparent));
+    --_backdrop-bg: var(--drawer-backdrop-bg, color-mix(in oklch, var(--color-canvas) 40%, transparent));
     --_backdrop-filter: none;
-    --_panel-bg: var(
-      --drawer-bg,
-      light-dark(
-        color-mix(in srgb, var(--color-contrast-50) 85%, transparent),
-        color-mix(in srgb, var(--color-contrast-100) 85%, transparent)
-      )
-    );
+    --_panel-bg: var(--drawer-bg, var(--color-canvas));
     --_panel-blur: var(--drawer-panel-blur, var(--blur-md));
     --_panel-shadow: var(--drawer-shadow, var(--shadow-xl));
-    --_panel-border-color: light-dark(
-      color-mix(in srgb, var(--color-contrast-900) 8%, transparent),
-      color-mix(in srgb, var(--color-contrast-100) 8%, transparent)
-    );
+    --_panel-border-color: var(--color-divider);
     --_panel-bleed: var(--size-8);
     --_drag-handle-inset: calc(var(--size-1) * -1);
 
@@ -33,11 +24,15 @@
     max-height: 100%;
     pointer-events: none;
     transition:
-      display var(--transition-normal) allow-discrete,
-      overlay var(--transition-normal) allow-discrete;
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete;
   }
 
   dialog:not([open]) {
+    display: none;
+  }
+
+  dialog:not([open]) .panel {
     display: none;
   }
 
@@ -51,17 +46,20 @@
     opacity: 1;
     backdrop-filter: var(--_backdrop-filter);
     transition:
-      display var(--transition-normal) allow-discrete,
-      overlay var(--transition-normal) allow-discrete,
+      display 200ms allow-discrete,
+      overlay 200ms allow-discrete,
       opacity var(--transition-normal),
       backdrop-filter var(--transition-normal);
-  }
 
-  @starting-style {
-    dialog[open]::backdrop {
+    @starting-style {
       opacity: 0;
       backdrop-filter: blur(0);
     }
+  }
+
+  dialog.closing::backdrop {
+    opacity: 0;
+    backdrop-filter: blur(0);
   }
 
   .panel {
@@ -78,15 +76,17 @@
     transform: translate3d(0, 0, 0);
     transition:
       opacity var(--transition-normal),
-      transform var(--transition-slow) var(--ease-move),
-      display var(--transition-normal) allow-discrete;
-  }
+      transform 300ms var(--ease-move);
 
-  @starting-style {
-    dialog[open] .panel {
+    @starting-style {
       opacity: 0;
       transform: var(--_panel-exit-transform, translate3d(0, 0, 0));
     }
+  }
+
+  dialog.closing .panel {
+    opacity: 0;
+    transform: var(--_panel-exit-transform, translate3d(0, 0, 0));
   }
 
   /* left */

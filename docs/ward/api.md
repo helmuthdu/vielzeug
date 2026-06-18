@@ -5,30 +5,30 @@ description: Complete API reference for @vielzeug/ward.
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol                                                                   | Purpose                                              | Execution  | Common gotcha                                                                     |
-| ------------------------------------------------------------------------ | ---------------------------------------------------- | ---------- | --------------------------------------------------------------------------------- |
-| `createWard(rules, options?)`                                            | Create an immutable ward instance                    | Sync       | Rules cannot be mutated after creation                                            |
-| `rule<TAction, TData>()`                                                 | Fluent rule builder                                  | Sync       | Call `.build()` to get a `WardRuleInput[]` for `createWard`                       |
-| `defineRules<TAction, TData>(rules)`                                     | Typed rule slice factory                             | Sync       | Returns the array unchanged; value is in type inference only                      |
-| `matchesPattern(pattern, value)`                                         | Test a pattern against a concrete string             | Sync       | Works for both resources and actions (namespace wildcards)                        |
-| `patternCovers(broad, narrow)`                                           | Test whether one pattern statically covers another   | Sync       | Used by `detectConflicts`; exported for custom tooling                            |
-| `ward.can(principal, resource, action, data?)`                           | Evaluate one decision                                | Sync       | Invalid principal throws; `null` is valid for anonymous                           |
-| `ward.canAll(principal, resource, actions, data?)`                       | Require all actions to be allowed                    | Sync       | Empty array always returns `true` without validating the principal                |
-| `ward.canAny(principal, resource, actions, data?)`                       | Require at least one allowed action                  | Sync       | Empty array always returns `false` without validating the principal               |
-| `ward.checkAll(principal, checks)`                                       | Evaluate multiple decisions in one call              | Sync       | Returns `WardDecisionResult[]` — each entry includes originating `resource`+`action`   |
-| `ward.explain(principal, resource, action, data?)`                       | Full decision object with deny reason                | Sync       | `rule` only present on `'allow'` and `'explicit-deny'` variants                   |
-| `ward.trace(principal, resource, action, data?)`                         | Decision trace with all matching candidates          | Sync       | Also fires the logger; audit-safe replacement for `explain`                       |
-| `ward.allowedActions(principal, resource, knownActions, data?)`          | List allowed actions; no logger                      | Sync       | Wildcard-action rules require a non-empty `knownActions`                          |
-| `ward.rulesInScope(principal, resource, data?)`                          | Rules in scope for introspection; no logger          | Sync       | Without `data`, predicate rules appear unfiltered                                 |
-| `ward.detectConflicts()`                                                 | Lazily detect and cache policy conflicts             | Sync       | O(n²); predicate-gated rules excluded from static analysis                        |
-| `ward.forUser(principal)`                                                | Create a principal-bound ward view                   | Sync       | Principal is deep-snapshotted at bind time                                        |
-| `guardRequest(ward, principal, resource, action, data?)`                 | Framework-agnostic sync guard — direct principal     | Sync       | Use `guardRequestWith` when the principal must be extracted from a request object |
-| `guardRequestWith(ward, req, extractPrincipal, resource, action, data?)` | Framework-agnostic async guard — request + extractor | Async      | Extractor may be async (e.g. JWT verification)                                    |
-| `createExpressGuard(ward, extractPrincipal, resource, action, options?)` | Express middleware guard factory                     | Sync/Async | Calls `next()` on allow, `403` on deny; supports `options.data`                   |
-| `createHonoGuard(ward, extractPrincipal, resource, action, options?)`    | Hono middleware guard factory                        | Async      | Extractor errors propagate to `app.onError`; supports `options.data`              |
-| `owns(attributeKey)`                                                     | Create an ownership predicate helper                 | Sync       | Returns `false` when `data` is absent or not an object                            |
+| Symbol                                                                   | Purpose                                              | Execution | Common gotcha                                                                        |
+| ------------------------------------------------------------------------ | ---------------------------------------------------- | --------- | ------------------------------------------------------------------------------------ |
+| `createWard(rules, options?)`                                            | Create an immutable ward instance                    | Sync      | Rules cannot be mutated after creation                                               |
+| `allow(role, resource, actions, options?)`                               | Create allow rules — returns `WardRule[]`            | Sync      | Spread into `createWard([ ...allow(...) ])` — returns an array                       |
+| `deny(role, resource, actions, options?)`                                | Create deny rules — returns `WardRule[]`             | Sync      | Same spreading pattern as `allow`                                                    |
+| `ruleFor(effect, role, resource, actions, options?)`                     | Low-level rule factory (effect as first arg)         | Sync      | Prefer `allow`/`deny` for readability                                                |
+| `predicate.owns(attributeKey)`                                           | Ownership predicate — `data[key] === principal.id`   | Sync      | Returns `false` when `data` is absent, not an object, or key not an own property     |
+| `predicate.and(...preds)`                                                | Combine predicates with AND                          | Sync      | Zero arguments → always returns `true` (vacuously)                                   |
+| `predicate.or(...preds)`                                                 | Combine predicates with OR                           | Sync      | Zero arguments → always returns `false`                                              |
+| `predicate.not(pred)`                                                    | Invert a predicate                                   | Sync      | —                                                                                    |
+| `owns(attributeKey)`                                                     | Top-level alias for `predicate.owns`                 | Sync      | Prefer `predicate.owns` when using other `predicate.*` helpers                       |
+| `matchesPattern(pattern, value)`                                         | Test a pattern against a concrete string             | Sync      | Works for both resources and actions (namespace wildcards)                           |
+| `patternCovers(broad, narrow)`                                           | Test whether one pattern statically covers another   | Sync      | Used by `detectConflicts`; exported for custom tooling                               |
+| `ward.checkAll(principal, checks)`                                       | Evaluate multiple decisions in one call              | Sync      | Returns `WardDecisionResult[]` — each entry includes originating `resource`+`action` |
+| `ward.explain(principal, resource, action, data?)`                       | Full decision object with deny reason                | Sync      | `rule` only present on `'allow'` and `'explicit-deny'` variants; fires logger        |
+| `ward.trace(principal, resource, action, data?)`                         | Decision trace with all matching candidates          | Sync      | **Does not fire the logger** — use `explain` when logger output is needed            |
+| `ward.allowedActions(principal, resource, knownActions, data?)`          | List allowed actions; no logger                      | Sync      | Wildcard-action rules require a non-empty `knownActions`                             |
+| `ward.rulesInScope(principal, resource, data?)`                          | Rules in scope for introspection; no logger          | Sync      | Without `data`, predicate rules appear unfiltered                                    |
+| `ward.detectConflicts()`                                                 | Lazily detect and cache policy conflicts             | Sync      | O(n²); predicate-gated rules excluded from static analysis                           |
+| `ward.forUser(principal)`                                                | Create a principal-bound ward view                   | Sync      | Principal is deep-snapshotted at bind time                                           |
+| `guardRequest(ward, principal, resource, action, data?)`                 | Framework-agnostic sync guard — direct principal     | Sync      | Use `guardRequestWith` when the principal must be extracted from a request object    |
+| `guardRequestWith(ward, req, extractPrincipal, resource, action, data?)` | Framework-agnostic async guard — request + extractor | Async     | Extractor may be async (e.g. JWT verification)                                       |
 
 ## Package Entry Points
 
@@ -46,14 +46,14 @@ description: Complete API reference for @vielzeug/ward.
 
 ## WardRule Fields
 
-| Field      | Type                          | Required | Description                                                                                                                                                                                                 |
-| ---------- | ----------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `role`     | `string \| readonly string[]` | <sg-icon name="check" size="16"></sg-icon>       | One role or an array of roles. A rule matches if the principal holds **any** of the listed roles (OR semantics). Use `WILDCARD` for all authenticated principals, `ANONYMOUS` for unauthenticated requests. |
-| `resource` | `string`                      | <sg-icon name="check" size="16"></sg-icon>       | Resource identifier. Use `WILDCARD` to match any resource.                                                                                                                                                  |
-| `action`   | `string`                      | <sg-icon name="check" size="16"></sg-icon>       | Action identifier. Use `WILDCARD` to match any action.                                                                                                                                                      |
-| `effect`   | `'allow' \| 'deny'`           | <sg-icon name="check" size="16"></sg-icon>       | Whether the rule grants or denies access.                                                                                                                                                                   |
-| `priority` | `number`                      | —        | Higher value wins. Optional in `WardRuleInput` (defaults to `0`); always a `number` on `WardRule`. Must be a finite number.                                                                                 |
-| `when`     | `WardPredicate<TData>`        | —        | Runtime predicate evaluated only for authenticated principals.                                                                                                                                              |
+| Field      | Type                          | Required                                   | Description                                                                                                                                                                                                 |
+| ---------- | ----------------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `role`     | `string \| readonly string[]` | <sg-icon name="check" size="16"></sg-icon> | One role or an array of roles. A rule matches if the principal holds **any** of the listed roles (OR semantics). Use `WILDCARD` for all authenticated principals, `ANONYMOUS` for unauthenticated requests. |
+| `resource` | `string`                      | <sg-icon name="check" size="16"></sg-icon> | Resource identifier. Use `WILDCARD` to match any resource.                                                                                                                                                  |
+| `action`   | `string`                      | <sg-icon name="check" size="16"></sg-icon> | Action identifier. Use `WILDCARD` to match any action.                                                                                                                                                      |
+| `effect`   | `'allow' \| 'deny'`           | <sg-icon name="check" size="16"></sg-icon> | Whether the rule grants or denies access.                                                                                                                                                                   |
+| `priority` | `number`                      | —                                          | Higher value wins. Optional in `WardRuleInput` (defaults to `0`); always a `number` on `WardRule`. Must be a finite number.                                                                                 |
+| `when`     | `WardPredicate<TData>`        | —                                          | Runtime predicate evaluated only for authenticated principals.                                                                                                                                              |
 
 ### Multi-Role Rules
 
@@ -880,17 +880,16 @@ Intermediate types for the fluent `rule()` builder chain. Export these to annota
 import type { ActionStep, FinalStep, ResourceStep, RoleStep } from '@vielzeug/ward';
 
 // Annotate a stored builder step
-const editorStep: RoleStep<'read' | 'update', { authorId: string }> =
-  rule<'read' | 'update', { authorId: string }>().allow('editor');
+const editorStep: RoleStep<'read' | 'update', { authorId: string }> = rule<
+  'read' | 'update',
+  { authorId: string }
+>().allow('editor');
 
-const resourceStep: ResourceStep<'read' | 'update', { authorId: string }> =
-  editorStep.on('posts');
+const resourceStep: ResourceStep<'read' | 'update', { authorId: string }> = editorStep.on('posts');
 
-const actionStep: ActionStep<'read' | 'update', { authorId: string }> =
-  resourceStep.to('update');
+const actionStep: ActionStep<'read' | 'update', { authorId: string }> = resourceStep.to('update');
 
-const finalStep: FinalStep<'read' | 'update', { authorId: string }> =
-  actionStep.when(owns('authorId'));
+const finalStep: FinalStep<'read' | 'update', { authorId: string }> = actionStep.when(owns('authorId'));
 ```
 
 ### `WardRequest`

@@ -1,5 +1,5 @@
-import { define, defineField, html, inject, live, onCleanup, onElement, prop, ref, signal } from '@vielzeug/craft';
-import { computed, watch } from '@vielzeug/ripple';
+import { define, useField, html, inject, live, prop, ref } from '@vielzeug/craft';
+import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
 import type { InputType, VisualVariant } from '../../types';
@@ -142,7 +142,7 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el: _el, emit, slots }) {
+  setup(props, { bind, emit, onCleanup, onElement, slots }) {
     const formCtx = inject(FORM_CTX);
     const fCtxProps = useFormContext(bind, props, formCtx);
     const showPassword = signal(false);
@@ -151,9 +151,11 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
     const hasLabel = computed(() => !!props.label.value || slots.has('label').value);
 
     const abortSignal = lifecycleSignal(onCleanup);
+    let _formField: { reportValidity(): void } | null = null;
     const tf = createTextField({
       disabled: fCtxProps.disabled,
       error: props.error,
+      getFormField: () => _formField,
       hasLabel,
       helper: props.helper,
       label: props.label,
@@ -171,19 +173,20 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
       value: props.value,
     });
 
-    tf.bindFormField(defineField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value }));
+    _formField = useField<string>({ disabled: tf.disabled, toFormValue: (v) => v, value: tf.value });
 
     const {
       ariaDescribedBy,
       ariaErrorMessage,
       ariaInvalid,
       ariaLabelledBy,
-      assistive,
       assistiveId,
       clear: clearValue,
       counter,
       errorId,
+      errorText,
       fieldId: inputId,
+      helperText,
       labelId,
       labelVisible,
       value: fieldValue,
@@ -219,7 +222,7 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
 
     bind({
       attr: {
-        error: () => (assistive.value.errorText ? assistive.value.errorText : undefined),
+        error: () => errorText.value || undefined,
         'has-value': () => (fieldValue.value ? true : undefined),
         size: fCtxProps.size,
         variant: fCtxProps.variant,
@@ -233,10 +236,8 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
       showPassword.value
         ? html`<sg-icon name="eye-off" size="14" stroke-width="2" aria-hidden="true"></sg-icon>`
         : html`<sg-icon name="eye" size="14" stroke-width="2" aria-hidden="true"></sg-icon>`;
-    const helperHidden = () => !!assistive.value.errorText || !assistive.value.helperText;
-    const helperText = () => assistive.value.helperText;
-    const errorHidden = () => !assistive.value.errorText;
-    const errorText = () => assistive.value.errorText;
+    const helperHidden = () => !!errorText.value || !helperText.value;
+    const errorHidden = () => !errorText.value;
     const counterNearLimit = () => (counter?.value.counterNearLimit && !counter?.value.counterAtLimit ? '' : null);
     const counterAtLimit = () => (counter?.value.counterAtLimit ? '' : null);
     const counterHidden = () => !counter;
@@ -301,10 +302,10 @@ define<SgInputProps, SgInputEvents>(INPUT_TAG, {
           </div>
         </div>
         <div class="helper-text" aria-live="polite" id="${assistiveId}" part="helper" ?hidden="${helperHidden}">
-          <slot name="helper">${helperText}</slot>
+          <slot name="helper">${() => helperText.value}</slot>
         </div>
         <div class="helper-text" id="${errorId}" role="alert" part="error" ?hidden="${errorHidden}">
-          <slot name="error">${errorText}</slot>
+          <slot name="error">${() => errorText.value}</slot>
         </div>
         <div
           class="char-counter"

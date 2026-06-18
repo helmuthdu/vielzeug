@@ -64,7 +64,7 @@ grid.scrollToCell(500, 3, { colAlign: 'start', rowAlign: 'center' });
 grid.update({ colCount: 25, rowCount: 200_000 });
 
 // Cleanup
-grid.destroy();
+grid.dispose();
 ```
 
 ```html

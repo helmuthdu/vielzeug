@@ -5,28 +5,28 @@ description: Complete API reference for Forge form creation, validation, submiss
 
 [[toc]]
 
-## API At a Glance
+## API Overview
 
-| Symbol                                                                    | Purpose                                                        | Execution mode                                 | Common gotcha                                                                                                |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `createForm()`                                                            | Create a typed form controller                                 | Sync (async when `defaultValues` is a factory) | Infer `TValues` from `defaultValues`; explicit type param needed for dynamic shapes                          |
-| `form.get()` / `form.set()`                                               | Read/write field values by dot-path                            | Sync                                           | `set()` after `dispose()` throws                                                                             |
-| `form.field()` / `form.state`                                             | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                            |
-| `form.validate()` / `form.validateFields()` / `form.validateField()`      | Run validation for all, selected, or one field                 | Async                                          | Each call re-runs validators from scratch                                                                    |
-| `form.validateStream()`                                                   | Streaming validation — yields each field result as it resolves | Async (iterator)                               | Read-only — does not write errors to form state                                                              |
-| `form.submit()`                                                           | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Throws if called while already submitting — guard with `form.isSubmitting`                                   |
-| `form.connect()`                                                          | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `disconnect()` on unmount                               |
-| `form.scope()`                                                            | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state.touchedFields` still uses full paths |
-| `form.array()`                                                            | Array mutation helpers                                         | Sync                                           | Returns a cached helper — call once and reuse                                                                |
-| `form.subscribe()` / `form.subscribeField()` / `form.subscribeScoped()`   | Synchronous form and field subscriptions                       | Sync                                           | Callbacks receive frozen snapshots                                                                           |
-| `form.snapshot()` / `form.restore()`                                      | Capture and replay complete form state                         | Sync                                           | Useful for undo/redo and draft saving                                                                        |
-| `form.batch()`                                                            | Group mutations into one notification                          | Sync                                           | Nested `batch()` calls are safe — only the outermost flush notifies                                          |
-| `form.touch()` / `form.touchAll()`                                        | Mark fields touched                                            | Sync                                           | `touchAll()` marks every key currently in the store                                                          |
-| `form.setError()` / `form.clearError()` / `form.resetErrors()`            | Manual error management                                        | Sync                                           | `setError()` bypasses validators; cleared on next `validate()` run for that field                            |
-| `form.reset()` / `form.replace()` / `form.patch()` / `form.removeField()` | Baseline and value management                                  | Sync                                           | `replace()` updates the baseline; `reset()` restores to it                                                   |
-| `toFormData()`                                                            | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                     |
-| `ValidationModes`                                                         | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                              |
-| `FORM_ERROR`                                                              | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                        |
+| Symbol                                                                      | Purpose                                                        | Execution mode                                 | Common gotcha                                                                                                         |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `createForm()`                                                              | Create a typed form controller                                 | Sync (async when `defaultValues` is a factory) | Infer `TValues` from `defaultValues`; explicit type param needed for dynamic shapes                                   |
+| `form.get()` / `form.set()`                                                 | Read/write field values by dot-path                            | Sync                                           | `set()` after `dispose()` throws                                                                                      |
+| `form.field()` / `form.state`                                               | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                                     |
+| `form.validate()`                                                           | Run validation — all fields, a subset, or a single field       | Async                                          | Each call re-runs validators from scratch                                                                             |
+| `form.validateStream()`                                                     | Streaming validation — yields each field result as it resolves | Async (iterator)                               | Read-only — does not write errors to form state                                                                       |
+| `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Throws if called while already submitting — guard with `form.isSubmitting`                                            |
+| `form.connect()`                                                            | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `dispose()` on unmount                                           |
+| `form.scope()`                                                              | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state` is scoped — flags reflect only prefix fields |
+| `form.array()`                                                              | Array mutation helpers                                         | Sync                                           | Returns a cached helper — call once and reuse                                                                         |
+| `form.subscribe()` / `form.subscribeField()` / `form.subscribeScoped()`     | Synchronous form and field subscriptions                       | Sync                                           | Callbacks receive frozen snapshots                                                                                    |
+| `form.snapshot()` / `form.restore()`                                        | Capture and replay complete form state                         | Sync                                           | Useful for undo/redo and draft saving                                                                                 |
+| `form.batch()`                                                              | Group mutations into one notification                          | Sync                                           | Nested `batch()` calls are safe — only the outermost flush notifies                                                   |
+| `form.touch()` / `form.touchAll()`                                          | Mark fields touched                                            | Sync                                           | `touchAll()` marks every key currently in the store                                                                   |
+| `form.setError()` / `form.clearError()` / `form.resetErrors()`              | Manual error management                                        | Sync                                           | `setError()` bypasses validators; cleared on next `validate()` run for that field                                     |
+| `form.reset()` / `form.replace()` / `form.patch()` / `form.fields.remove()` | Baseline and value management                                  | Sync                                           | `replace()` updates the baseline; `reset()` restores to it                                                            |
+| `toFormData()`                                                              | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                              |
+| `ValidationModes`                                                           | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                                       |
+| `FORM_ERROR`                                                                | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                                 |
 
 ## Package Entry Points
 
@@ -121,6 +121,8 @@ field<K extends FlatKeyOf<TValues>>(name: K): FieldState<TypeAtPath<TValues, K>>
 type FieldState<V = unknown> = {
   value: V;
   error: string | undefined;
+  /** Convenience alias — `true` when `error` is not `undefined`. */
+  hasError: boolean;
   touched: boolean;
   dirty: boolean;
 };
@@ -175,7 +177,6 @@ readonly isSubmitting: boolean
 setError(name: ErrorKeyOf<TValues>, message: string): void
 clearError(name: ErrorKeyOf<TValues>): void
 resetErrors(errors?: Partial<Record<ErrorKeyOf<TValues>, string | undefined>>): void
-setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void
 touch(name: FlatKeyOf<TValues>): void
 untouch(name: FlatKeyOf<TValues>): void
 touchAll(): void
@@ -185,15 +186,23 @@ untouchAll(): void
 - `setError` — set one field error (does not clear the value).
 - `clearError` — remove one field error.
 - `resetErrors` — replace the full error map; omit entries with `undefined` values.
-- `setValidator` — add, replace, or remove a field validator. Removing (`undefined`) immediately clears that field's error.
 - `touch` / `untouch` / `touchAll` / `untouchAll` — manage touched state.
+
+To manage validators dynamically see [`form.fields`](#formfields).
 
 ## Validation
 
+All three variants share a single unified method:
+
 ```ts
+// All fields + form-level validator
 validate(signal?: AbortSignal): Promise<ValidateResult>
-validateFields(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
-validateField(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<string | undefined>
+
+// Single named field (no form-level validator)
+validate(name: FlatKeyOf<TValues>, signal?: AbortSignal): Promise<ValidateResult>
+
+// Specific subset of fields (no form-level validator)
+validate(fields: FlatKeyOf<TValues>[], signal?: AbortSignal): Promise<ValidateResult>
 
 type ValidateResult = {
   valid: boolean;
@@ -202,17 +211,21 @@ type ValidateResult = {
 ```
 
 - `validate()` — runs all registered field validators plus the form-level validator.
-- `validateFields([...])` — runs only the specified fields (no form-level validator).
-- `validateField(name)` — runs one field's validator; returns the error string or `undefined`.
+- `validate(name)` — runs one field's validator; `errors` contains at most one entry.
+- `validate(fields[])` — runs only the specified fields (no form-level validator).
 
-`errors` reflects the full current error map after the run. `valid` is `true` only when `errors` is empty after the run.
+`valid` is `true` only when `errors` is empty after the run.
 
-## submit()
+## submit() / submitOrThrow()
 
 ```ts
 submit<TResult = void>(
   handler: (values: TValues) => MaybePromise<TResult>,
 ): Promise<SubmitResult<TResult>>
+
+submitOrThrow<TResult = void>(
+  handler: (values: TValues) => MaybePromise<TResult>,
+): Promise<TResult>
 
 type SubmitResult<T> =
   | { ok: true; value: T }
@@ -223,10 +236,14 @@ Submit behavior:
 
 1. Marks all known fields touched
 2. Runs full validation
-3. If invalid: returns `{ ok: false, type: 'validation', errors }`
-4. If valid: calls `handler(values())` and returns `{ ok: true, value }`
+3. If invalid: returns `{ ok: false, type: 'validation', errors }` / throws `ValidationError`
+4. If valid: calls `handler(values())` and returns `{ ok: true, value }` / resolves with the handler return value
 
-`submit()` always resolves — it never throws for validation failures. Exceptions thrown inside `handler` propagate normally. Calling `submit()` while `state.isSubmitting` is `true` throws synchronously.
+`submit()` always resolves — it never throws for validation failures. Exceptions thrown inside `handler` propagate normally.
+
+`submitOrThrow()` throws a `ValidationError` when validation fails. Exceptions thrown inside `handler` propagate as-is (not wrapped).
+
+Calling either method while `state.isSubmitting` is `true` throws synchronously.
 
 ## connect()
 
@@ -249,14 +266,17 @@ type ConnectionResult<V = unknown> = {
   readonly error: string | undefined;
   readonly touched: boolean;
   readonly dirty: boolean;
+  /** true after dispose() has been called on this binding. */
+  readonly disposed: boolean;
   onBlur(): void;
   onChange(value: V): void;
   /** Cancel any pending debounce timer owned by this binding. Call on field unmount. */
-  disconnect(): void;
+  dispose(): void;
+  [Symbol.dispose](): void;
 };
 ```
 
-Call once per field and store the result. Do not destructure — getters re-evaluate on every property access. Each `connect()` call creates its own independent debounce timer; cancelling one binding does not affect others. Call `disconnect()` when the field unmounts to avoid stale timer fires.
+Call once per field and store the result. Do not destructure — getters re-evaluate on every property access. Each `connect()` call creates its own independent debounce timer; cancelling one binding does not affect others. Call `dispose()` when the field unmounts to avoid stale timer fires. Supports `using` declarations.
 
 ### ValidationModes
 
@@ -291,9 +311,9 @@ address.submit((vals) => save(vals)); // validates and submits only address.* sc
 **Characteristics:**
 
 - `dispose()` on a scoped form is a no-op. Call `parentForm.dispose()` to tear down.
-- `scope.state` reflects the **entire** form — `state.isDirty`, `state.isValid`, etc. are not scoped. Use `scope.validate()` or `scope.submit()` for scoped validity, or use `scope.subscribeScoped()` for a projected state where `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only the scope's fields.
-- `validate()` and `submit()` return errors with relative keys (no prefix) and a `valid` flag reflecting only the scoped fields.
-- `validateFields([...])` on a scoped form also returns relative keys and a scoped `valid` flag.
+- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form.
+- `validate()`, `validate(name)`, `validate(fields[])`, and `submit()` / `submitOrThrow()` return errors with relative keys (no prefix) and a `valid` / throw that reflects only the scoped fields.
+- Memoized — `scope(prefix)` always returns the same object; safe to call on every render.
 
 ## Subscriptions
 
@@ -395,7 +415,7 @@ validateStream(signal?: AbortSignal): AsyncIterableIterator<{
 }>
 ```
 
-Runs all field validators in parallel and yields each result as soon as its validator resolves. If a form-level validator is configured, its result is yielded last with `field: '_form'`.
+Runs all field validators in parallel and yields each result as soon as its validator resolves. If a form-level validator is configured, all keys it returns are yielded last — including `field: '_form'` and any field-specific keys returned by the form validator.
 
 **Read-only**: `validateStream()` does not write to `fieldErrors` or trigger subscriber notifications. Use `validate()` when you want errors applied to form state.
 
@@ -416,21 +436,51 @@ for await (const result of form.validateStream(ctrl.signal)) {
 ctrl.abort(); // cancels any remaining in-flight validators
 ```
 
-## snapshot() / restore()
+## Baseline and Value Management
 
 ```ts
 reset(): void
 replace(newValues: TValues): void
 patch(partial: DeepPartial<TValues>): void
 resetField(name: FlatKeyOf<TValues>): void
-removeField(name: FlatKeyOf<TValues>): void
 ```
 
 - `reset()` — restore all values to the current baseline; clear errors, touched, dirty, and `submitCount`. Aborts in-flight validation.
 - `replace(newValues)` — replace values **and** the baseline in one operation; resets `submitCount` to `0`. Aborts in-flight validation.
 - `patch(partial)` — merge specific fields into the store and baseline; those fields become clean.
 - `resetField(name)` — restore one field to its baseline value; clear its error, touched, and dirty state.
-- `removeField(name)` — drop a field entirely: value, dirty, touched, error, and validator.
+
+## form.fields
+
+Namespace for dynamic field lifecycle management.
+
+```ts
+form.fields: {
+  register<K extends FlatKeyOf<TValues>>(
+    name: K,
+    options?: RegisterFieldOptions<TypeAtPath<TValues, K>>,
+  ): Unsubscribe;
+  remove(name: FlatKeyOf<TValues>): void;
+  setValidator(name: FlatKeyOf<TValues>, validator?: FieldValidator): void;
+}
+
+type RegisterFieldOptions<V> = {
+  defaultValue?: V;
+  validator?: FieldValidator<V>;
+};
+```
+
+- `fields.register(name, opts?)` — declare a dynamic field with an optional default value and validator. Returns an unregister callback that calls `fields.remove()` on the same field. If the field already exists, `defaultValue` is ignored.
+- `fields.remove(name)` — drop a field entirely: value, dirty, touched, error, and validator.
+- `fields.setValidator(name, validator?)` — add, replace, or remove a field validator. Removing (`undefined`) immediately clears that field's error.
+
+On a scoped form, all paths are relative:
+
+```ts
+const address = form.scope('address');
+const unsub = address.fields.register('zip', { defaultValue: '' });
+// Equivalent to: form.fields.register('address.zip', { defaultValue: '' })
+```
 
 ## Lifecycle
 
@@ -454,18 +504,25 @@ Batches all mutations inside `fn` into a single subscriber notification. Notific
 ### React (`@vielzeug/forge/react`)
 
 ```ts
-import { useSyncExternalStore } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { createForgeHooks } from '@vielzeug/forge/react';
 import type { ForgeHooks } from '@vielzeug/forge/react';
 
-const hooks: ForgeHooks = createForgeHooks(useSyncExternalStore);
+const hooks: ForgeHooks = createForgeHooks({
+  useEffect,
+  useRef,
+  useSyncExternalStore,
+});
 
-const { useField, useFormState, useFormValues } = hooks;
+const { useConnect, useField, useFormState, useFormValues } = hooks;
 ```
 
 - `useFormState(form)` — subscribes to the full `FormState`. Re-renders when any state changes.
 - `useField(form, name)` — subscribes to a single field. Re-renders only when that field changes.
 - `useFormValues(form)` — subscribes to all values. Re-renders when any field value changes.
+- `useConnect(form, name, options?)` — creates and manages a `ConnectionResult` binding tied to the component lifecycle. Created on mount (or when `form` / `name` change) and **automatically disposed on unmount**. No manual `dispose()` call needed. Requires `useEffect` and `useRef` to be passed to `createForgeHooks`.
+
+> **Note** — `createForgeHooks` also accepts a bare `useSyncExternalStore` function (legacy). In that case, `useConnect` is available but throws at runtime if called, since `useEffect` / `useRef` were not provided.
 
 ### Vue (`@vielzeug/forge/vue`)
 
@@ -543,12 +600,14 @@ type FormOptions<TValues>
 type FormState
 type FieldState<V>
 type FormSnapshot<TValues>
+type RegisterFieldOptions<V>
 type ValidateResult
 type SubmitResult<T>
 type SetOptions
 type SubscribeOptions
 type Unsubscribe
 type MaybePromise<T>
+class ValidationError  // thrown by submitOrThrow() on validation failure
 
 // Validation
 type FieldValidator<V>
@@ -582,8 +641,15 @@ type SvelteReadable<T>
 
 ## Errors
 
-Forge does not export error classes. Validation failures are returned as result objects rather than thrown errors:
+Forge exports `ValidationError` for throw-based validation error handling:
 
-- `form.submit()` returns `{ ok: false, type: 'validation', errors }` — it never throws for validation failures.
-- `form.validate()` and `form.validateFields()` return `{ valid: boolean, errors }`.
-- The only thrown exceptions are programming errors: calling mutating APIs after `dispose()`, or calling `submit()` while already submitting.
+```ts
+class ValidationError extends Error {
+  readonly errors: Readonly<Record<string, string>>;
+}
+```
+
+- `form.submit()` returns `{ ok: false, type: 'validation', errors }` — it **never throws** for validation failures.
+- `form.submitOrThrow()` throws a `ValidationError` when validation fails — use when you prefer exception-based control flow.
+- `form.validate()` (all overloads) returns `{ valid: boolean, errors }` — never throws for validation failures.
+- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()`, or calling `submit()` / `submitOrThrow()` while already submitting.

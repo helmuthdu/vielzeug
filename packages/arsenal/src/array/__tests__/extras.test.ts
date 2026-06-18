@@ -1,6 +1,7 @@
 import { compact } from '../compact';
 import { countBy } from '../countBy';
 import { difference } from '../difference';
+import { drawMany } from '../draw';
 import { drop } from '../drop';
 import { dropLast } from '../dropLast';
 import { first } from '../first';
@@ -8,7 +9,6 @@ import { flatten } from '../flatten';
 import { intersection } from '../intersection';
 import { last } from '../last';
 import { partition } from '../partition';
-import { sample } from '../sample';
 import { take } from '../take';
 import { takeLast } from '../takeLast';
 import { union } from '../union';
@@ -81,8 +81,8 @@ describe('array extras', () => {
     ]);
   });
 
-  it('samples unique values without exceeding bounds', () => {
-    const result = sample([1, 2, 3, 4], 2);
+  it('draws unique values without exceeding bounds', () => {
+    const result = drawMany([1, 2, 3, 4], 2);
 
     expect(result).toHaveLength(2);
     expect(new Set(result).size).toBe(2);

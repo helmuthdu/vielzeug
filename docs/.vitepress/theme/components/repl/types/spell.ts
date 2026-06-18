@@ -47,13 +47,11 @@ declare module '/spell' {
     static is(value: unknown): value is ValidationError;
   }
 
-  export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[];
-
   export type ParseResult<T> =
     | { data: T; success: true }
     | { error: ValidationError; success: false };
 
-  export type CheckFnResult = void | null | undefined | boolean | string;
+  export type ValidateResult = boolean | string | null | void;
 
   export type CheckContext = {
     addIssue: (issue: Omit<Issue, 'path'> & { path?: (string | number)[] }) => void;
@@ -105,8 +103,8 @@ declare module '/spell' {
     parseAsync(value: Input): Promise<Output>;
     safeParseAsync(value: Input): Promise<ParseResult<Output>>;
 
-    check(fn: (value: Output, ctx: CheckContext) => CheckFnResult): this;
-    checkAsync(fn: (value: Output, ctx: CheckContext) => Promise<CheckFnResult>): this;
+    validate(fn: (value: Output, ctx: CheckContext) => ValidateResult | Promise<ValidateResult>): this;
+    refine(predicate: (value: Output) => boolean, message?: MessageFn<{ value: Output }>): this;
 
     optional(): Schema<Output | undefined, Input | undefined>;
     nullable(): Schema<Output | null, Input | null>;
@@ -117,14 +115,19 @@ declare module '/spell' {
     catch(value: Output | (() => Output)): this;
     transform<U>(fn: (value: Output) => U): Schema<U, Input>;
     preprocess(fn: (value: unknown) => unknown): this;
-
-    describe(description: string): this;
-    describe(): SchemaDescriptor;
+    pipe<B>(next: Schema<B, Output>): Schema<B, Input>;
+    label(description: string): this;
+    toDescriptor(): SchemaDescriptor;
     toJsonSchema(): JsonSchema;
-    walk<R>(visitor: SchemaWalker<R>): R;
+    walk<R>(visitor: SchemaWalker<R>): R | null;
 
-    brand<Brand extends string>(): Schema<Output & { __brand: Brand }, Input>;
+    get kind(): string;
+    get description(): string | undefined;
+    get isOptional(): boolean;
+    get isNullable(): boolean;
+    equals(other: Schema<any>): boolean;
     is(value: unknown): value is Output;
+    assert(value: unknown, label?: string): asserts value is Output;
   }
 
   export class StringSchema<Input = string> extends Schema<string, Input> {
@@ -259,12 +262,16 @@ declare module '/spell' {
   export type InferOutput<T> = T extends Schema<infer O, any> ? O : never;
 
   export type Messages = Record<string, unknown>;
-  export function configure(opts: { logger?: ((msg: string) => void) | null; messages?: Record<string, unknown> }): void;
-  export function reset(): void;
-  export function registerLocale(locale: string, messages: Record<string, unknown>): void;
-  export function useLocale(locale: string): void;
-  export function currentLocale(): string;
-  export function fromDescriptor(descriptor: SchemaDescriptor): Schema<any>;
+  export type Logger = (msg: string) => void;
+  export type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+  export function setMessages(messages: DeepPartial<Messages>): void;
+  export function setLogger(logger: Logger | null): void;
+  export function resetMessages(): void;
+  export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[];
+  export function prependIssuePath(issues: Issue[], prefix: string | number): Issue[];
+  export function fail(code: string, message: string, params?: Record<string, unknown>): Issue[];
+  export function descriptorToJsonSchema(descriptor: SchemaDescriptor): JsonSchema;
+  export function schemaToJsonSchema(schema: Schema<any>): JsonSchema;
 
   export const s: {
     any(): Schema<any>;
@@ -290,7 +297,9 @@ declare module '/spell' {
     record<K extends string, V>(keySchema: Schema<K>, valueSchema: Schema<V>): RecordSchema<K, V>;
 
     union<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): UnionSchema<NormalizeItems<T> & readonly Schema<any>[]>;
+    or<A extends RawOrSchema, B extends RawOrSchema>(a: A, b: B): UnionSchema<readonly [NormalizeItem<A>, NormalizeItem<B>]>;
     intersect<T extends readonly [RawOrSchema, RawOrSchema, ...RawOrSchema[]]>(...items: T): IntersectSchema<NormalizeItems<T> & readonly Schema<any>[]>;
+    and<A extends RawOrSchema, B extends RawOrSchema>(a: A, b: B): IntersectSchema<readonly [NormalizeItem<A>, NormalizeItem<B>]>;
     variant<K extends string, M extends Record<string, ObjectSchema<any>>>(discriminator: K, map: M): VariantSchema<K, M>;
 
     lazy<T>(getter: () => Schema<T>): LazySchema<T>;

@@ -8,6 +8,9 @@ export type SourceCore = {
   /** Cancels any pending timer without invoking the callback. */
   cancelTimer(): void;
 
+  /** `AbortSignal` that is aborted when `dispose()` is called. */
+  readonly disposalSignal: AbortSignal;
+
   /**
    * Clears all listeners, cancels any pending timer, and marks the core as disposed.
    * Subsequent method calls on the core become no-ops.
@@ -53,6 +56,7 @@ export function createSourceCore(): SourceCore {
     reject: (err: unknown) => void;
     timeoutId?: ReturnType<typeof setTimeout>;
   }>();
+  const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let disposed = false;
 
@@ -62,6 +66,10 @@ export function createSourceCore(): SourceCore {
         clearTimeout(timer);
         timer = undefined;
       }
+    },
+
+    get disposalSignal() {
+      return controller.signal;
     },
 
     dispose() {
@@ -79,6 +87,7 @@ export function createSourceCore(): SourceCore {
       readyWaiters.clear();
       listeners.clear();
       disposed = true;
+      controller.abort();
     },
 
     flush(fn) {
@@ -111,6 +120,8 @@ export function createSourceCore(): SourceCore {
     },
 
     ready(isIdle, timeoutMs) {
+      if (disposed) return Promise.reject(new SourceDisposedError());
+
       if (isIdle()) return Promise.resolve();
 
       return new Promise<void>((resolve, reject) => {
