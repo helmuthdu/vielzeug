@@ -42,5 +42,5 @@ const settings = parseJSON(raw, {
 
 ### Related
 
-- [stringify](./stringify.md)
+- [hash](./hash.md)
 - [getPath](./getPath.md)

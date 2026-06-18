@@ -1,6 +1,6 @@
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
@@ -37,144 +37,27 @@ const makePackageSidebarsCollapsible = (sidebar: DefaultTheme.SidebarMulti): Def
 };
 
 // ---------------------------------------------------------------------------
-// llms.txt + llms-full.txt generator
+// llms.txt + llms-full.txt — copy pre-generated files from codex data/
 // ---------------------------------------------------------------------------
 
-interface RushProject {
-  packageName: string;
-  projectFolder: string;
-}
+function copyLlmsTxt(siteConfig: { outDir: string }): void {
+  const codexData = resolve(__dirname, '../../packages/codex/data');
 
-type FrontmatterValue = string | string[];
+  for (const name of ['llms.txt', 'llms-full.txt'] as const) {
+    const src = resolve(codexData, name);
 
-function parseFrontmatter(md: string): Record<string, FrontmatterValue> {
-  const match = md.match(/^---\n([\s\S]*?)\n---/);
-
-  if (!match) return {};
-
-  const out: Record<string, FrontmatterValue> = {};
-
-  for (const line of match[1].split('\n')) {
-    const colon = line.indexOf(':');
-
-    if (colon < 1) continue;
-
-    const key = line.slice(0, colon).trim();
-    const val = line.slice(colon + 1).trim();
-
-    if (val.startsWith('[') && val.endsWith(']')) {
-      out[key] = val
-        .slice(1, -1)
-        .split(',')
-        .map((s) => s.trim().replace(/^['"]|['"]$/g, ''))
-        .filter(Boolean);
-    } else {
-      out[key] = val.replace(/^['"]|['"]$/g, '');
+    if (existsSync(src)) {
+      copyFileSync(src, resolve(siteConfig.outDir, name));
     }
   }
-
-  return out;
-}
-
-function stripDocMarkup(md: string): string {
-  return md
-    .replace(/^---\n[\s\S]*?\n---\n?/, '') // frontmatter
-    .replace(/<!--[\s\S]*?-->/g, '') // HTML comments
-    .replace(/<[^>]+>/g, '') // HTML tags
-    .replace(/^\[\[toc]]\s*$/gm, '') // VitePress TOC directive
-    .replace(/^:::[\s\S]*?:::\s*$/gm, (m) => m.replace(/^:::[^\n]*\n?|^:::\s*$/gm, '')) // containers
-    .replace(/^\s*\n{2,}/gm, '\n\n') // normalise blank lines
-    .trim();
-}
-
-async function generateLlmsTxt(siteConfig: { outDir: string }): Promise<void> {
-  const root = resolve(__dirname, '../..');
-  const docsDir = resolve(__dirname, '..');
-  const outDir = siteConfig.outDir;
-
-  const rushJson = JSON.parse(readFileSync(resolve(root, 'rush.json'), 'utf8')) as { projects: RushProject[] };
-  const DOC_PAGES = ['index', 'api', 'usage', 'examples'] as const;
-  const totalPackages = rushJson.projects.length;
-
-  const packageLines: string[] = [];
-  const fullSections: string[] = [];
-
-  for (const project of rushJson.projects) {
-    const slug = project.projectFolder.replace('packages/', '');
-    const indexPath = resolve(docsDir, `${slug}/index.md`);
-
-    if (!existsSync(indexPath)) continue;
-
-    const indexContent = readFileSync(indexPath, 'utf8');
-    const fm = parseFrontmatter(indexContent);
-    const description = (fm['description'] as string) || '';
-    const category = (fm['category'] as string) || '';
-    const keywords = Array.isArray(fm['keywords']) ? fm['keywords'].join(', ') : '';
-
-    const availablePages = DOC_PAGES.filter((p) => existsSync(resolve(docsDir, `${slug}/${p}.md`)));
-
-    const pageLinks = availablePages
-      .filter((p) => p !== 'index')
-      .map((p) => `[${p}](/${slug}/${p})`)
-      .join(' · ');
-
-    let line = `- [${project.packageName}](/${slug}/): ${description}`;
-
-    if (pageLinks) line += ` → ${pageLinks}`;
-
-    packageLines.push(line);
-
-    // full section: index content only (stripped)
-    let section = `\n\n---\n\n## ${project.packageName}`;
-
-    section += `\n\n**Category:** ${category || 'general'}`;
-
-    if (keywords) section += `  \n**Keywords:** ${keywords}`;
-
-    section += `\n\n${stripDocMarkup(indexContent)}`;
-    fullSections.push(section);
-  }
-
-  const llmsTxt = [
-    '# Vielzeug',
-    '',
-    `> ${totalPackages} focused TypeScript packages for state, UI, data, storage, routing, utilities, and AI tooling.`,
-    '',
-    'Vielzeug is a monorepo of focused TypeScript packages — from low-level utilities to UI primitives,',
-    'routing, storage, validation, workers, and an MCP server for AI assistants. Packages are designed',
-    'to be independently consumable, ship ESM + CJS output, and target ES2022.',
-    '',
-    'Install any package independently: `pnpm add @vielzeug/<name>`',
-    '',
-    '**MCP (AI agents):** `npx -y @vielzeug/codex` runs the Vielzeug MCP server in standalone stdio mode with bundled data,',
-    'so no monorepo checkout is required. Use `npx -y @vielzeug/codex --port 3100` for Streamable HTTP with the same package discovery, docs lookup, source inspection, and Sigil component metadata tools.',
-    '',
-    '## Packages',
-    '',
-    ...packageLines,
-    '',
-    '## Getting Started',
-    '',
-    '- [Getting Started](/guide/): Installation and package overview',
-  ].join('\n');
-
-  const llmsFullTxt = [
-    '# Vielzeug — Full documentation',
-    '',
-    `> Complete index documentation for all ${totalPackages} Vielzeug packages.`,
-    ...fullSections,
-  ].join('\n');
-
-  writeFileSync(resolve(outDir, 'llms.txt'), llmsTxt, 'utf8');
-  writeFileSync(resolve(outDir, 'llms-full.txt'), llmsFullTxt, 'utf8');
 }
 
 // ---------------------------------------------------------------------------
 
 export default defineConfig({
   base: '/',
-  async buildEnd(siteConfig) {
-    await generateLlmsTxt(siteConfig);
+  buildEnd(siteConfig) {
+    copyLlmsTxt(siteConfig);
   },
   description: 'Documentation for the Vielzeug monorepo',
   head: [
@@ -420,19 +303,19 @@ export default defineConfig({
               collapsed: true,
               items: [
                 { link: '/arsenal/examples/object/defaults', text: 'defaults' },
-                { link: '/arsenal/examples/object/merge', text: 'deepMerge / shallowMerge' },
                 { link: '/arsenal/examples/object/diff', text: 'diff / diffArrays' },
                 { link: '/arsenal/examples/object/filterValues', text: 'filterValues' },
                 { link: '/arsenal/examples/object/flattenPaths', text: 'flattenPaths / unflattenPaths' },
                 { link: '/arsenal/examples/object/getPath', text: 'getPath' },
+                { link: '/arsenal/examples/object/hash', text: 'hash' },
                 { link: '/arsenal/examples/object/invert', text: 'invert' },
                 { link: '/arsenal/examples/object/mapKeys', text: 'mapKeys' },
                 { link: '/arsenal/examples/object/mapValues', text: 'mapValues' },
+                { link: '/arsenal/examples/object/merge', text: 'deepMerge / shallowMerge' },
                 { link: '/arsenal/examples/object/omit', text: 'omit' },
                 { link: '/arsenal/examples/object/parseJSON', text: 'parseJSON' },
                 { link: '/arsenal/examples/object/pick', text: 'pick' },
                 { link: '/arsenal/examples/object/prune', text: 'prune' },
-                { link: '/arsenal/examples/object/stringify', text: 'stringify' },
               ],
               link: '/arsenal/examples/object',
               text: 'Object',

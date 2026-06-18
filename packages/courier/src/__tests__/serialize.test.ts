@@ -1,50 +1,50 @@
-import { buildRequestInit, isBodyInit, stringify } from '../serialize';
+import { buildRequestInit, hash, isBodyInit } from '../serialize';
 
-describe('stringify', () => {
+describe('hash', () => {
   it('serializes common structured query-key values deterministically', () => {
-    expect(stringify(42n)).toBe('42n');
-    expect(stringify(new Date('2026-05-12T12:34:56.000Z'))).toBe('[Date:2026-05-12T12:34:56.000Z]');
-    expect(stringify(/foo/gi)).toBe('[RegExp:foo/gi]');
+    expect(hash(42n)).toBe('42n');
+    expect(hash(new Date('2026-05-12T12:34:56.000Z'))).toBe('[Date:2026-05-12T12:34:56.000Z]');
+    expect(hash(/foo/gi)).toBe('[RegExp:foo/gi]');
   });
 
   it('keeps Map and Set order-independent', () => {
-    const first = stringify(
+    const first = hash(
       new Map([
         ['b', 2],
         ['a', 1],
       ]),
     );
-    const second = stringify(
+    const second = hash(
       new Map([
         ['a', 1],
         ['b', 2],
       ]),
     );
-    const setFirst = stringify(new Set([3, 1, 2]));
-    const setSecond = stringify(new Set([2, 3, 1]));
+    const setFirst = hash(new Set([3, 1, 2]));
+    const setSecond = hash(new Set([2, 3, 1]));
 
     expect(first).toBe(second);
     expect(setFirst).toBe(setSecond);
   });
 });
 
-describe('stringify with plain object QueryKey segments', () => {
+describe('hash with plain object QueryKey segments', () => {
   it('produces the same output regardless of object key insertion order', () => {
-    const a = stringify({ a: 1, b: 2 });
-    const b = stringify({ a: 1, b: 2 });
+    const a = hash({ a: 1, b: 2 });
+    const b = hash({ a: 1, b: 2 });
 
     expect(a).toBe(b);
   });
 
   it('differentiates objects with different values', () => {
-    expect(stringify({ a: 1 })).not.toBe(stringify({ a: 2 }));
+    expect(hash({ a: 1 })).not.toBe(hash({ a: 2 }));
   });
 
   it('handles nested QueryKey arrays with object segments stably', () => {
     const key1 = [['users', { limit: 10, page: 1 }]];
     const key2 = [['users', { limit: 10, page: 1 }]];
 
-    expect(stringify(key1)).toBe(stringify(key2));
+    expect(hash(key1)).toBe(hash(key2));
   });
 });
 

@@ -98,7 +98,7 @@ export * from './object/omit';
 export * from './object/parseJSON';
 export * from './object/pick';
 export * from './object/prune';
-export * from './object/stringify';
+export * from './object/hash';
 export * from './random/random';
 export * from './random/uuid';
 export * from './string/camelCase';

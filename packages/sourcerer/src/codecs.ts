@@ -1,4 +1,4 @@
-import { stringify } from '@vielzeug/arsenal';
+import { hash } from '@vielzeug/arsenal';
 
 import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } from './types';
 
@@ -23,11 +23,11 @@ export const encodeQuery = <TFilter = unknown, TSort = unknown>(
   const rq = query as RemoteSourceQuery<TFilter, TSort>;
 
   if (rq.filter !== undefined) {
-    base['filter'] = stringify(rq.filter);
+    base['filter'] = hash(rq.filter);
   }
 
   if (rq.sort !== undefined) {
-    base['sort'] = stringify(rq.sort);
+    base['sort'] = hash(rq.sort);
   }
 
   return base;

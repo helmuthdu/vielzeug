@@ -31,7 +31,7 @@ description: Complete API reference for Arsenal.
 | `diff(before?, after?)`                 | Structural diff between two objects                               | Sync      | Returns `DiffResult` with `added`, `removed`, `changed` arrays — no sentinel symbols                                                                |
 | `parseJSON(json, options?)`             | Safe JSON parse with fallback                                     | Sync      | Accepts `string \| null \| undefined`; returns `undefined` on failure                                   |
 | `stash(options?)`                       | TTL-aware key-value cache with stampede prevention                | Sync      | `undefined` is a valid cached value — `getOrSet` will not re-invoke the factory                          |
-| `stringify(value, options?)`            | Deterministic JSON-like string for any value                      | Sync      | Pass `{ onClassInstance: 'throw' }` to throw on class instances instead of coercing to `String()`        |
+| `hash(value, options?)`                 | Deterministic JSON-like string for any value                      | Sync      | Pass `{ onClassInstance: 'throw' }` to throw on class instances instead of coercing to `String()`        |
 | `getPath(item, path, options?)`         | Nested dot-notation access                                        | Sync      | Bracket notation auto-converted by default; pass `{ bracketNotation: false }` to throw instead           |
 | `deepMerge(...items)`                   | Recursive object merge                                            | Sync      | Arrays are replaced by default; pass `{ arrayStrategy: 'concat' }` as last arg to concatenate            |
 | `isMatch(object, source)`               | Partial deep structural comparison                                | Sync      | `Map` and `Set` sources are never matched — use `isEqual` for those                                      |
@@ -51,7 +51,7 @@ description: Complete API reference for Arsenal.
 | `@vielzeug/arsenal/function` | `debounce`, `throttle`, `pipe`, `assert`, and more     |
 | `@vielzeug/arsenal/guards`   | Typed predicates and combinators (`allOf`, `anyOf`, …) |
 | `@vielzeug/arsenal/math`     | Math utilities only                                    |
-| `@vielzeug/arsenal/object`   | `deepMerge`, `diff`, `getPath`, `parseJSON`, `stringify`, and more |
+| `@vielzeug/arsenal/object`   | `deepMerge`, `diff`, `getPath`, `parseJSON`, `hash`, and more |
 | `@vielzeug/arsenal/random`   | `draw`, `random`, `shuffle`, `uuid`                    |
 | `@vielzeug/arsenal/string`   | String utilities only                                  |
 
@@ -385,7 +385,7 @@ unflattenPaths(flat: Record<string, unknown>): Record<string, unknown>
 - `flattenPaths` flattens nested objects to `{ 'a.b': value }` maps. Nesting beyond 10 levels is treated as an opaque leaf. Unsafe path segments are silently skipped.
 - `unflattenPaths` reconstructs nested objects from dot-notation flat maps. Unsafe segments are silently skipped.
 
-### parseJSON / stringify
+### parseJSON / hash
 
 ```ts
 parseJSON<T>(json: string | null | undefined, options?: ParseJSONOptions<T>): T | undefined
@@ -402,9 +402,9 @@ type ParseJSONOptions<T> = {
 - `validator` receives the parsed value; returning `false` falls back to `fallback`.
 
 ```ts
-stringify(value: unknown, options?: StringifyOptions): string
+hash(value: unknown, options?: HashOptions): string
 
-type StringifyOptions = {
+type HashOptions = {
   onClassInstance?: 'coerce' | 'throw'; // default: 'coerce' — calls String(value)
 };
 ```
@@ -412,16 +412,16 @@ type StringifyOptions = {
 Produces a deterministic, order-independent JSON-like string. Object keys are sorted alphabetically. Handles `Date`, `RegExp`, `Set`, `Map`, and `bigint`. Circular references produce `'[Circular]'`.
 
 ```ts
-stringify({ b: 2, a: 1 })                            // '{"a":1,"b":2}'
-stringify([3, 1, 2])                                  // '[3,1,2]'
-stringify(new Date('2024-01-01T00:00:00Z'))            // '[Date:2024-01-01T00:00:00.000Z]'
-stringify(new Set([3, 1, 2]))                          // '[Set:1,2,3]'
-stringify(new Map([['b', 2], ['a', 1]]))               // '[Map:"a"=>1,"b"=>2]'
-stringify(42n)                                         // '42n'
-stringify(new MyClass())                               // String(instance) by default
-stringify(new MyClass(), { onClassInstance: 'throw' }) // throws TypeError
+hash({ b: 2, a: 1 })                            // '{"a":1,"b":2}'
+hash([3, 1, 2])                                  // '[3,1,2]'
+hash(new Date('2024-01-01T00:00:00Z'))            // '[Date:2024-01-01T00:00:00.000Z]'
+hash(new Set([3, 1, 2]))                          // '[Set:1,2,3]'
+hash(new Map([['b', 2], ['a', 1]]))               // '[Map:"a"=>1,"b"=>2]'
+hash(42n)                                         // '42n'
+hash(new MyClass())                               // String(instance) by default
+hash(new MyClass(), { onClassInstance: 'throw' }) // throws TypeError
 const o: Record<string, unknown> = { x: 1 }; o.self = o;
-stringify(o)                                           // '{"self":[Circular],"x":1}'
+hash(o)                                           // '{"self":[Circular],"x":1}'
 ```
 
 ## Random
@@ -529,7 +529,7 @@ export type CacheOptions<K = string, T = unknown> = {
 };
 export type CacheSetOptions = { forceRefresh?: boolean; ttlMs?: number };
 
-export type StringifyOptions = { onClassInstance?: 'coerce' | 'throw' };
+export type HashOptions = { onClassInstance?: 'coerce' | 'throw' };
 
 export type GetPathOptions = { bracketNotation?: boolean; fallback?: unknown; strict?: boolean };
 

@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { generateBundledData } from '../src/generator.ts';
+import { generateLlmsTxt } from '../src/llms.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = resolve(__dirname, '../data');
@@ -19,4 +20,10 @@ if (hashes) {
   writeFileSync(cacheFile, `${JSON.stringify(hashes, null, 2)}\n`, 'utf8');
 }
 
+const { llmsFullTxt, llmsTxt } = generateLlmsTxt(data);
+
+writeFileSync(resolve(dataDir, 'llms.txt'), llmsTxt, 'utf8');
+writeFileSync(resolve(dataDir, 'llms-full.txt'), llmsFullTxt, 'utf8');
+
 process.stderr.write(`Wrote bundled MCP data to ${outputFile}\n`);
+process.stderr.write(`Wrote llms.txt and llms-full.txt to ${dataDir}\n`);

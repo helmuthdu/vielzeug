@@ -4,7 +4,7 @@ import type { RetryOptions } from './retry';
 import type { AsyncStatus, QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
 import { DEFAULT_TIMES, resolveRetryDelay } from './retry';
-import { stringify } from './serialize';
+import { hash } from './serialize';
 
 const DEFAULT_GC = 5 * 60_000;
 const IDLE_STATE: QueryState<unknown> = Object.freeze({
@@ -236,24 +236,24 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function ensureEntry<T>(key: QueryKey): CacheEntry<T> {
-    const hash = stringify(key);
-    let entry = entries.get(hash) as CacheEntry<T> | undefined;
+    const entryHash = hash(key);
+    let entry = entries.get(entryHash) as CacheEntry<T> | undefined;
 
     if (!entry) {
       entry = {
         data: undefined,
         error: null,
-        hash,
+        hash: entryHash,
         inflight: null,
         isFetching: false,
         key,
         lastConfig: undefined,
         observers: new Set(),
-        segmentHashes: key.map((k) => stringify(k)),
+        segmentHashes: key.map((k) => hash(k)),
         status: 'idle',
         updatedAt: undefined,
       };
-      entries.set(hash, entry as CacheEntry<unknown>);
+      entries.set(entryHash, entry as CacheEntry<unknown>);
     }
 
     return entry;
@@ -460,7 +460,7 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function invalidate(key: QueryKey) {
-    const prefixHash = key.map((k) => stringify(k));
+    const prefixHash = key.map((k) => hash(k));
 
     for (const entry of [...entries.values()]) {
       if (isKeyOrPrefix(entry, prefixHash)) {
@@ -504,13 +504,13 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function get<T>(key: QueryKey): T | undefined {
-    const entry = entries.get(stringify(key));
+    const entry = entries.get(hash(key));
 
     return entry ? (entry.data as T | undefined) : undefined;
   }
 
   function getState<T>(key: QueryKey): QueryState<T> | null {
-    const entry = entries.get(stringify(key)) as CacheEntry<T> | undefined;
+    const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
 
     if (!entry) return null;
 
@@ -527,7 +527,7 @@ export function createQuery(opts?: QueryClientOptions) {
 
     return {
       peek(): QueryState<S> {
-        const entry = entries.get(stringify(key)) as CacheEntry<T> | undefined;
+        const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
 
         if (!entry) return IDLE_STATE as QueryState<S>;
 
@@ -562,7 +562,7 @@ export function createQuery(opts?: QueryClientOptions) {
   }
 
   function cancel(key: QueryKey) {
-    const entry = entries.get(stringify(key));
+    const entry = entries.get(hash(key));
 
     if (!entry?.inflight) return;
 

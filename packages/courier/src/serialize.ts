@@ -1,6 +1,6 @@
-import { stringify } from '@vielzeug/arsenal';
+import { hash } from '@vielzeug/arsenal';
 
-export { stringify };
+export { hash };
 
 /**
  * Build a `RequestInit` object from the request components, handling body serialisation.

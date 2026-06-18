@@ -18,4 +18,4 @@ description: Object utility examples for Arsenal.
 - [parseJSON](./object/parseJSON.md)
 - [pick](./object/pick.md)
 - [prune](./object/prune.md)
-- [stringify](./object/stringify.md)
+- [hash](./object/hash.md)

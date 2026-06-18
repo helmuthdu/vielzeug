@@ -30,7 +30,7 @@ declare module '@vielzeug/arsenal' {
 
   export type GetPathOptions = { bracketNotation?: boolean; fallback?: unknown; strict?: boolean };
   export type DeepMergeOptions = { arrayStrategy?: 'concat' | 'replace' };
-  export type StringifyOptions = { onClassInstance?: 'coerce' | 'throw' };
+  export type HashOptions = { onClassInstance?: 'coerce' | 'throw' };
   export type ParseJSONOptions<T> = {
     fallback?: T;
     reviver?: (key: string, value: unknown) => unknown;
@@ -204,7 +204,7 @@ declare module '@vielzeug/arsenal' {
   export function pick<T extends Obj, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K>;
   export function prune<T>(value: T): T | undefined;
   export function shallowMerge<T extends Obj[]>(...items: [...T]): Obj;
-  export function stringify(value: unknown, options?: StringifyOptions): string;
+  export function hash(value: unknown, options?: HashOptions): string;
   export function unflattenPaths(flat: Record<string, unknown>): Record<string, unknown>;
 
   // Random

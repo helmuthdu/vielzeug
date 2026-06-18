@@ -77,4 +77,4 @@ const fresh = await cache.getOrSet('user-1', () => fetchUser(1), { forceRefresh:
 ### Related
 
 - [memo](../function/memo.md)
-- [stringify](./stringify.md)
+- [hash](./hash.md)

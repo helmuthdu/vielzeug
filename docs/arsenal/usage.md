@@ -79,7 +79,7 @@ const scored = fuzzyScore(roster, 'alice');
 ### Objects
 
 ```ts
-import { defaults, diff, getPath, parseJSON, pick, omit, mapValues, prune, stringify } from '@vielzeug/arsenal';
+import { defaults, diff, getPath, hash, parseJSON, pick, omit, mapValues, prune } from '@vielzeug/arsenal';
 
 const prev = { api: { host: 'localhost', port: 3000 }, secure: undefined as boolean | undefined };
 const curr = structuredClone(prev);
@@ -103,7 +103,7 @@ const internalUser = omit({ id: 1, name: 'Alice', password: 'secret' }, ['passwo
 const renamed = mapValues({ a: 1, b: 2 }, (value) => value * 10);
 
 // Deterministic cache key from any value
-const key = stringify({ sort: 'asc', filter: { role: 'admin' } });
+const key = hash({ sort: 'asc', filter: { role: 'admin' } });
 
 console.log(withDefaults, changes, port, arr, safe, clean, parsed, publicUser, internalUser, renamed, key);
 ```
@@ -288,16 +288,16 @@ const data = await userCache.getOrSet(['user', 2], () => fetchUser(2));
 ### Stable cache keys
 
 ```ts
-import { stringify } from '@vielzeug/arsenal';
+import { hash } from '@vielzeug/arsenal';
 
 // Consistent key regardless of object key insertion order
-const key1 = stringify({ sort: 'asc', filter: { role: 'admin' } });
-const key2 = stringify({ filter: { role: 'admin' }, sort: 'asc' });
+const key1 = hash({ sort: 'asc', filter: { role: 'admin' } });
+const key2 = hash({ filter: { role: 'admin' }, sort: 'asc' });
 key1 === key2; // true
 
 // Handles Dates, Sets, Maps, bigints, null, undefined
-stringify(new Set([3, 1, 2])); // '[Set:1,2,3]'
-stringify(
+hash(new Set([3, 1, 2])); // '[Set:1,2,3]'
+hash(
   new Map([
     ['b', 2],
     ['a', 1],
@@ -305,7 +305,7 @@ stringify(
 ); // '[Map:"a"=>1,"b"=>2]'
 
 // Class instances: String(instance) by default; throw with onClassInstance: 'throw'
-stringify(new MyClass(), { onClassInstance: 'throw' }); // TypeError
+hash(new MyClass(), { onClassInstance: 'throw' }); // TypeError
 ```
 
 ### Fuzzy search with scoring

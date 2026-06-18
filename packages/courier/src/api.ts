@@ -2,7 +2,7 @@ import type { HttpRequestConfig, Params } from './url';
 
 import { classifyRequestError, HttpError, SchemaValidationError } from './errors';
 import { parseResponse } from './response';
-import { buildRequestInit, stringify } from './serialize';
+import { buildRequestInit, hash } from './serialize';
 import {
   anySignal,
   buildTimeoutSignal,
@@ -39,7 +39,7 @@ function getDedupeKey(
     return undefined;
   }
 
-  return `${method}:${url}:${stringify(dedupeKey)}`;
+  return `${method}:${url}:${hash(dedupeKey)}`;
 }
 
 export function createApi(opts?: TransportOptions & { transport?: TransportCore }) {

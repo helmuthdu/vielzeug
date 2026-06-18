@@ -21,6 +21,7 @@ import { mathAverageExample } from './math-average';
 import { objectDiffExample } from './object-diff';
 import { objectDiffArraysExample } from './object-diffArrays';
 import { objectGetPathExample } from './object-getPath';
+import { objectHashExample } from './object-hash';
 import { objectMergeExample } from './object-merge';
 import { objectParseJSONExample } from './object-parseJSON';
 import { objectPruneExample } from './object-prune';
@@ -52,6 +53,7 @@ export const arsenalExamples = {
   'object-diff': objectDiffExample,
   'object-diffArrays': objectDiffArraysExample,
   'object-getPath': objectGetPathExample,
+  'object-hash': objectHashExample,
   'object-merge': objectMergeExample,
   'object-parseJSON': objectParseJSONExample,
   'object-prune': objectPruneExample,

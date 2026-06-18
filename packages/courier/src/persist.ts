@@ -1,6 +1,6 @@
 import type { QueryKey, QueryState } from './types';
 
-import { stringify } from './serialize';
+import { hash } from './serialize';
 
 /**
  * A sync-or-async key-value storage backend. Compatible with `localStorage`,
@@ -78,7 +78,7 @@ export function persistQueryCache(
   const unsubs: Array<() => void> = [];
 
   function storageKey(key: QueryKey): string {
-    return `${prefix}${stringify(key)}`;
+    return `${prefix}${hash(key)}`;
   }
 
   function persistState(key: QueryKey, state: QueryState): void {
@@ -137,7 +137,7 @@ export async function hydrateQueryCache(
   await Promise.all(
     keys.map(async (key) => {
       try {
-        const raw = await storage.getItem(`${prefix}${stringify(key)}`);
+        const raw = await storage.getItem(`${prefix}${hash(key)}`);
 
         if (!raw) return;
 
