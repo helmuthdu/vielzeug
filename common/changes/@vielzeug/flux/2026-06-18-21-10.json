@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Initial public release",
+      "type": "major",
+      "packageName": "@vielzeug/flux"
+    }
+  ],
+  "packageName": "@vielzeug/flux",
+  "email": "helmuthdu@gmail.com"
+}

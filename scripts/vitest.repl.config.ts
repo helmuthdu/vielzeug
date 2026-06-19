@@ -18,6 +18,7 @@ const vielzeugAliases: Record<string, string> = {
   '@vielzeug/courier': path.resolve(ROOT, 'packages/courier/src/index.ts'),
   '@vielzeug/dnd': path.resolve(ROOT, 'packages/dnd/src/index.ts'),
   '@vielzeug/familiar': path.resolve(ROOT, 'packages/familiar/src/index.ts'),
+  '@vielzeug/flux': path.resolve(ROOT, 'packages/flux/src/index.ts'),
   '@vielzeug/forge': path.resolve(ROOT, 'packages/forge/src/index.ts'),
   '@vielzeug/herald': path.resolve(ROOT, 'packages/herald/src/index.ts'),
   '@vielzeug/lingua': path.resolve(ROOT, 'packages/lingua/src/index.ts'),

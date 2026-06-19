@@ -5,6 +5,7 @@ import { conduitExamples } from './conduit';
 import { courierExamples } from './courier';
 import { dndExamples } from './dnd';
 import { familiarExamples } from './familiar';
+import { fluxExamples } from './flux';
 import { forgeExamples } from './forge';
 import { heraldExamples } from './herald';
 import { linguaExamples } from './lingua';
@@ -28,6 +29,7 @@ export const examples = {
   courier: courierExamples,
   dnd: dndExamples,
   familiar: familiarExamples,
+  flux: fluxExamples,
   forge: forgeExamples,
   herald: heraldExamples,
   lingua: linguaExamples,
