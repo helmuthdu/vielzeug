@@ -1,5 +1,5 @@
 import { createContext, createStableId, define, useField, html, inject, prop, when } from '@vielzeug/craft';
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -18,11 +18,11 @@ import componentStyles from './checkbox-group.css?inline';
 // ─── Context ──────────────────────────────────────────────────────────────────
 
 export type CheckboxGroupContext = {
-  color: ReadonlySignal<ThemeColor | undefined>;
-  disabled: ReadonlySignal<boolean>;
-  size: ReadonlySignal<ComponentSize | undefined>;
+  color: Readable<ThemeColor | undefined>;
+  disabled: Readable<boolean>;
+  size: Readable<ComponentSize | undefined>;
   toggle: (value: string, originalEvent?: Event) => void;
-  values: ReadonlySignal<string[]>;
+  values: Readable<string[]>;
 };
 
 export const CHECKBOX_GROUP_CTX = createContext<CheckboxGroupContext>('CheckboxGroupContext');

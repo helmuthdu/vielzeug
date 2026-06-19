@@ -195,6 +195,18 @@
       "require": "./dist/chip.cjs",
       "types": "./dist/feedback/chip/chip.d.ts"
     },
+    "./code-window": {
+      "source": "./src/content/code-window/code-window.ts",
+      "import": "./dist/code-window.js",
+      "require": "./dist/code-window.cjs",
+      "types": "./dist/content/code-window/code-window.d.ts"
+    },
+    "./copy-command": {
+      "source": "./src/content/copy-command/copy-command.ts",
+      "import": "./dist/copy-command.js",
+      "require": "./dist/copy-command.cjs",
+      "types": "./dist/content/copy-command/copy-command.d.ts"
+    },
     "./combobox": {
       "source": "./src/inputs/combobox/combobox.ts",
       "import": "./dist/combobox.js",

@@ -213,12 +213,12 @@ declare module '/orbit/presets' {
 declare module '/orbit/reactive' {
   import type { ComputePositionResult, FloatOptions, ReferenceElement } from '/orbit';
 
-  export interface ReadonlySignal<T> {
+  export interface Reactive<T> {
     readonly value: T;
   }
 
   export interface ReactiveFloatHandle extends FloatHandle {
-    readonly position: ReadonlySignal<ComputePositionResult | null>;
+    readonly position: Reactive<ComputePositionResult | null>;
   }
 
   export function createFloatState(

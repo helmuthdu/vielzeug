@@ -5,13 +5,13 @@
  * `slots.elements(name?)`: Signal<Element[]> — assigned elements for a slot (flattened).
  */
 
-import { type ReadonlySignal, signal, type Signal } from '@vielzeug/ripple';
+import { type Readable, signal, type Signal } from '@vielzeug/ripple';
 
 import { onCleanup, onMounted } from './runtime';
 
 export type ComponentSlots<SlotNames extends string = string> = {
-  elements: (name?: SlotNames) => ReadonlySignal<Element[]>;
-  has: (name?: SlotNames) => ReadonlySignal<boolean>;
+  elements: (name?: SlotNames) => Readable<Element[]>;
+  has: (name?: SlotNames) => Readable<boolean>;
 };
 
 const SLOT_DEFAULT = 'default';

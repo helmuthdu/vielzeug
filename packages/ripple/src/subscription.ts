@@ -1,9 +1,9 @@
 import type { AsyncSubscription, CleanupFn, Subscription } from './types';
 
-// ── SubscriptionImpl (R6, R7) ────────────────────────────────────────────────
+// ── SubscriptionImpl ────────────────────────────────────────────────────────
 //
-// R6: [Symbol.dispose] delegates to dispose() instead of duplicating the logic.
-// R7: dispose() is idempotent — calling it twice is safe (fn_ set to null after first call).
+// [Symbol.dispose] delegates to dispose() instead of duplicating the logic.
+// dispose() is idempotent — calling it twice is safe (fn_ set to null after first call).
 
 export class SubscriptionImpl implements Subscription {
   private fn_: CleanupFn | null;
@@ -36,15 +36,18 @@ export class SubscriptionImpl implements Subscription {
 // ── AsyncSubscriptionImpl ─────────────────────────────────────────────────────
 //
 // Wraps a synchronous stop handle + an async drain function.
-// disposeAsync() stops the effect synchronously and then awaits full teardown.
+// run() awaits the current in-flight run without stopping the effect.
+// [Symbol.asyncDispose] stops the effect synchronously and then awaits full teardown.
 
 export class AsyncSubscriptionImpl implements AsyncSubscription {
   private awaitDone_: () => Promise<void>;
+  private getCurrentRun_: () => Promise<void> | null;
   private syncStop_: Subscription;
-  private disposeAsyncPromise_: Promise<void> | null = null;
+  private asyncDisposePromise_: Promise<void> | null = null;
 
-  constructor(syncStop: Subscription, awaitDone: () => Promise<void>) {
+  constructor(syncStop: Subscription, awaitDone: () => Promise<void>, getCurrentRun: () => Promise<void> | null) {
     this.awaitDone_ = awaitDone;
+    this.getCurrentRun_ = getCurrentRun;
     this.syncStop_ = syncStop;
   }
 
@@ -56,20 +59,20 @@ export class AsyncSubscriptionImpl implements AsyncSubscription {
     this.syncStop_.dispose();
   }
 
-  disposeAsync(): Promise<void> {
-    if (this.disposeAsyncPromise_ !== null) return this.disposeAsyncPromise_;
-
-    this.dispose();
-    this.disposeAsyncPromise_ = this.awaitDone_();
-
-    return this.disposeAsyncPromise_;
+  run(): Promise<void> {
+    return this.getCurrentRun_() ?? Promise.resolve();
   }
 
   [Symbol.dispose](): void {
     this.dispose();
   }
 
-  async [Symbol.asyncDispose](): Promise<void> {
-    return this.disposeAsync();
+  [Symbol.asyncDispose](): Promise<void> {
+    if (this.asyncDisposePromise_ !== null) return this.asyncDisposePromise_;
+
+    this.dispose();
+    this.asyncDisposePromise_ = this.awaitDone_();
+
+    return this.asyncDisposePromise_;
   }
 }

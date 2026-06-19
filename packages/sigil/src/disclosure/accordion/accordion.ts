@@ -1,5 +1,5 @@
 import { createContext, define, html, prop } from '@vielzeug/craft';
-import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, VisualVariant } from '../../types';
 
@@ -9,9 +9,9 @@ import styles from './accordion.css?inline';
 /** Context provided by sg-accordion to its sg-accordion-item children. */
 export type AccordionContext = {
   notifyExpand: (expandedItem: HTMLElement) => void;
-  selectionMode: ReadonlySignal<'single' | 'multiple' | undefined>;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  variant: ReadonlySignal<VisualVariant | undefined>;
+  selectionMode: Readable<'single' | 'multiple' | undefined>;
+  size: Readable<ComponentSize | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext');

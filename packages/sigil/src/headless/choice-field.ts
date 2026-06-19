@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import { createField, type FieldHandle, type FieldOptions } from './field-base';
 
@@ -13,7 +13,7 @@ export type ChoiceChangeDetail = {
 // ── Choice field ──────────────────────────────────────────────────────────────────────
 
 export type ChoiceFieldOptions = FieldOptions & {
-  multiple?: ReadonlySignal<boolean | undefined>;
+  multiple?: Readable<boolean | undefined>;
   /** `AbortSignal` from the component lifecycle. All internal subscriptions are disposed on abort. */
   signal: AbortSignal;
   /**
@@ -21,15 +21,15 @@ export type ChoiceFieldOptions = FieldOptions & {
    * (legacy/single-select form serialisation) or a `string[]` array.
    * The field normalises both formats internally via `parseChoiceValues`.
    */
-  value: ReadonlySignal<string | string[] | undefined>;
+  value: Readable<string | string[] | undefined>;
 };
 
 export type ChoiceFieldHandle = FieldHandle & {
   clear: () => void;
-  formValue: ReadonlySignal<string>;
+  formValue: Readable<string>;
   removeValue: (value: string) => void;
-  selectedValue: ReadonlySignal<string | undefined>;
-  selectedValues: ReadonlySignal<string[]>;
+  selectedValue: Readable<string | undefined>;
+  selectedValues: Readable<string[]>;
   selectValue: (value: string) => void;
   setValues: (values: string[]) => void;
   /**

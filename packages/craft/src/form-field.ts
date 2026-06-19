@@ -1,4 +1,4 @@
-import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { type Readable, type Signal } from '@vielzeug/ripple';
 
 import { warn } from './_warn';
 import { CRAFT_ERRORS } from './errors';
@@ -8,7 +8,7 @@ import { effect, getCurrentElement, onCleanup } from './runtime';
 const internalsRegistry = new WeakMap<HTMLElement, ElementInternals>();
 
 export type FormFieldOptions<T = unknown> = {
-  disabled?: ReadonlySignal<boolean>;
+  disabled?: Readable<boolean>;
   /**
    * The host element to attach `ElementInternals` to.
    * Defaults to the element currently being set up via `getCurrentElement()`.
@@ -26,7 +26,7 @@ export type FormFieldOptions<T = unknown> = {
    */
   emptyStringForNull?: boolean;
   toFormValue?: (value: T) => File | FormData | string | null;
-  value: Signal<T> | ReadonlySignal<T>;
+  value: Signal<T> | Readable<T>;
 };
 
 export type FormFieldHandle = {

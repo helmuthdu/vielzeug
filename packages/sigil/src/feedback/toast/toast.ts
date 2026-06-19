@@ -255,13 +255,10 @@ define<SgToastProps, SgToastEvents>(TOAST_TAG, {
     };
 
     // Watch reactive pause state — automatically pauses/resumes all timers.
-    watch(
-      () => paused.value,
-      (isPaused) => {
-        if (isPaused) pauseTimers();
-        else resumeTimers();
-      },
-    );
+    watch(paused, (isPaused) => {
+      if (isPaused) pauseTimers();
+      else resumeTimers();
+    });
 
     // ── Swipe gesture ──────────────────────────────────────────────────────
     // Animates .toast-inner to avoid polluting the wrapper transition state.

@@ -1,4 +1,4 @@
-import type { ReadonlySignal, Signal } from '@vielzeug/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
@@ -8,7 +8,7 @@ import { issue } from '../_warn';
 import { flux } from '../core';
 
 /**
- * Create a `Flux` that emits a new value every time a ripple `ReadonlySignal` changes.
+ * Create a `Flux` that emits a new value every time a ripple `Reactive` changes.
  * The current value is emitted immediately on subscribe.
  *
  * @example
@@ -16,7 +16,7 @@ import { flux } from '../core';
  * const count$ = fromSignal(count);
  * count$.subscribe((n) => console.log(n)); // logs 0 immediately, then on every change
  */
-export function fromSignal<T>(source: ReadonlySignal<T>): Flux<T> {
+export function fromSignal<T>(source: Readable<T>): Flux<T> {
   return flux<T>((observer) => {
     observer.next(source.value);
 

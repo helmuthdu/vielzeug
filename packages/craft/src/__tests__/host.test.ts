@@ -1,4 +1,4 @@
-import { effect, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { effect, type Readable, signal } from '@vielzeug/ripple';
 
 import { createContext, html, inject, type InjectionKey, injectStrict } from '../index';
 import { mount } from '../testing';
@@ -341,8 +341,8 @@ describe('core/host.ts', () => {
 
   describe('Slots API', () => {
     it('tracks default and named slot presence from setup context', async () => {
-      let headerAssigned!: ReadonlySignal<boolean>;
-      let defaultAssigned!: ReadonlySignal<boolean>;
+      let headerAssigned!: Readable<boolean>;
+      let defaultAssigned!: Readable<boolean>;
 
       const { flush } = await mount(
         (_props, { slots }) => {
@@ -361,7 +361,7 @@ describe('core/host.ts', () => {
     });
 
     it('exposes named assigned elements from setup context', async () => {
-      let triggerElements!: ReadonlySignal<Element[]>;
+      let triggerElements!: Readable<Element[]>;
 
       const { flush } = await mount(
         (_props, { slots }) => {
@@ -395,7 +395,7 @@ describe('core/host.ts', () => {
     });
 
     it('updates slot signals when assigned light-DOM content changes', async () => {
-      let defaultElements!: ReadonlySignal<Element[]>;
+      let defaultElements!: Readable<Element[]>;
 
       const { element, flush } = await mount((_props, { slots }) => {
         defaultElements = slots.elements();

@@ -7,11 +7,11 @@ description: 'Time-travel state management with storeWithHistory for @vielzeug/r
 
 ### Problem
 
-You need undo/redo support for structured state without implementing your own snapshot buffer. Use `storeWithHistory()` to wrap any `store()` with automatic snapshot tracking across `patch()`, `replace()`, `reset()`, and `lens()` writes.
+You need undo/redo support for structured state without implementing your own snapshot buffer. Use `storeWithHistory()` to wrap any `store()` with explicit snapshot checkpoints.
 
 ### Solution
 
-Use `storeWithHistory()` in place of `store()` and call `undo()` / `redo()` to navigate the snapshot buffer.
+Use `storeWithHistory()` and call `.push()` (or `.pushNamed(label)`) explicitly after each logical change to record a checkpoint. Then call `undo()` / `redo()` to navigate.
 
 ```ts
 import { storeWithHistory, effect } from '@vielzeug/ripple';
@@ -19,42 +19,48 @@ import { storeWithHistory, effect } from '@vielzeug/ripple';
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100, name: 'editor' });
 
 effect(() => {
-  console.log('text:', editor.value.text);
+  console.log('text:', editor.store.peek().text);
 });
 
-editor.patch({ text: 'H' });
-editor.patch({ text: 'He' });
-editor.patch({ text: 'Hello' });
+editor.store.patch({ text: 'H' });
+editor.push(); // checkpoint 1
 
-console.log(editor.historyLength); // 4 (initial + 3 patches)
-console.log(editor.historyAt(0)); // { text: '', cursor: 0 }
-console.log(editor.historyAt(1)); // { text: 'H', cursor: 0 }
+editor.store.patch({ text: 'He' });
+editor.push(); // checkpoint 2
+
+editor.store.patch({ text: 'Hello' });
+editor.push(); // checkpoint 3
+
+console.log(editor.historyLength); // 4 (initial + 3 explicit pushes)
+console.log(editor.historyAt(0).state); // { text: '', cursor: 0 }
+console.log(editor.historyAt(1).state); // { text: 'H', cursor: 0 }
 
 editor.undo();
-console.log(editor.value.text); // 'He'
+console.log(editor.store.peek().text); // 'He'
 
 editor.undo();
-console.log(editor.value.text); // 'H'
+console.log(editor.store.peek().text); // 'H'
 
 editor.redo();
-console.log(editor.value.text); // 'He'
+console.log(editor.store.peek().text); // 'He'
 ```
 
 #### With lens writes
 
-Lens writes also push snapshots and are individually undoable:
+Lens writes do not push snapshots automatically. Call `.push()` after lens writes to record them:
 
 ```ts
-import { storeWithHistory, watch } from '@vielzeug/ripple';
+import { storeWithHistory } from '@vielzeug/ripple';
 
 const doc = storeWithHistory({ title: 'Draft', content: '' });
-const titleLens = doc.lens('title');
+const titleLens = doc.store.lens('title');
 
-titleLens.value = 'Published'; // snapshot pushed
+titleLens.value = 'Published';
+doc.push(); // explicit checkpoint
 
 console.log(doc.historyLength); // 2
 doc.undo();
-console.log(doc.value.title); // 'Draft'
+console.log(doc.store.peek().title); // 'Draft'
 ```
 
 #### With branching history
@@ -63,19 +69,19 @@ Writing after an undo discards the redo stack — no branch-divergence support:
 
 ```ts
 const s = storeWithHistory({ n: 0 });
-s.patch({ n: 1 });
-s.patch({ n: 2 });
-s.undo(); // n = 1
+s.store.patch({ n: 1 }); s.push();
+s.store.patch({ n: 2 }); s.push();
+s.undo(); // cursor at n = 1
 
-s.patch({ n: 99 }); // redo to 2 is no longer possible
+s.store.patch({ n: 99 }); s.push(); // redo to 2 is no longer possible
 console.log(s.historyLength); // 3: [0, 1, 99]
 ```
 
 ### Pitfalls
 
-- Snapshots are **shallow copies** — nested objects are cloned one level deep via `structuredClone`. Deep mutations inside nested objects are not individually tracked.
-- `maxHistory` is a ring buffer; oldest snapshots are evicted silently when the cap is reached.
-- Lens writes each push a separate snapshot — batch multiple lens writes inside `batch()` if you want a single undo step.
+- Mutations to `.store` do **not** automatically push snapshots — you must call `.push()` explicitly.
+- Snapshots are deep clones (`structuredClone`). `maxHistory` is a ring buffer; oldest snapshots are evicted silently when the cap is reached.
+- To bundle multiple lens writes into one undo step, wrap them in `batch()` then call `.push()` once after.
 
 ### Related
 

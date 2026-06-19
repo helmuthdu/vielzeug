@@ -1,4 +1,4 @@
-import type { ReadonlySignal, Signal } from '@vielzeug/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
 // ─── Utility types ─────────────────────────────────────────────────────────────
 
@@ -163,7 +163,7 @@ export type PresenceChannel<T = unknown> = {
   /** Room name passed to `pulse.presence()`. */
   readonly room: string;
   /** Reactive map of `memberId → state`. Updates whenever any member joins, leaves, or updates. */
-  readonly state: ReadonlySignal<ReadonlyMap<string, T>>;
+  readonly state: Readable<ReadonlyMap<string, T>>;
   /**
    * Broadcast this client's presence state to all room members.
    * Calling this also implicitly joins the room if not already joined.
@@ -242,14 +242,14 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
    */
   presence<T>(room: string): PresenceChannel<T>;
   /** Reactive set of rooms the client is currently a member of. */
-  readonly rooms: ReadonlySignal<ReadonlySet<string>>;
+  readonly rooms: Readable<ReadonlySet<string>>;
   /**
    * Send a typed event to the server.
    * No-op if the connection is not open — messages are not buffered.
    */
   send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
   /** Reactive connection status. */
-  readonly status: ReadonlySignal<PulseStatus>;
+  readonly status: Readable<PulseStatus>;
   /**
    * Resolve on the next emission of the given server event.
    * Rejects when `opts.signal` aborts or the instance is disposed.
@@ -260,4 +260,4 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
 // ─── Internal re-exports for sibling modules ────────────────────────────────────
 
 /** @internal */
-export type { ReadonlySignal, Signal };
+export type { Readable, Signal };

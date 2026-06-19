@@ -3,7 +3,7 @@
  * applied directly to the component's host element.
  */
 
-import { isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+import { isSignal, type Readable } from '@vielzeug/ripple';
 
 import { warn } from './_warn';
 import { effect, tryRegisterCleanup } from './runtime';
@@ -15,7 +15,7 @@ import { listen, setAttr, toKebab } from './utils/dom';
  */
 export type HostBindingValue =
   | (() => string | number | boolean | null | undefined)
-  | ReadonlySignal<string | number | boolean | null | undefined>
+  | Readable<string | number | boolean | null | undefined>
   | string
   | number
   | boolean
@@ -27,7 +27,7 @@ export type HostBindingValue =
  */
 export type ReflectConfig = Record<string, HostBindingValue>;
 
-type HostClassBindingValue = ReadonlySignal<boolean> | (() => boolean) | boolean;
+type HostClassBindingValue = Readable<boolean> | (() => boolean) | boolean;
 // Bivariant callback allows consumers to use narrower event types.
 type HostEventListener = { bivarianceHack(event: Event): void }['bivarianceHack'];
 

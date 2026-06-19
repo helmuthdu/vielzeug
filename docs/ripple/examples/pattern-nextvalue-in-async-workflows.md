@@ -11,23 +11,26 @@ Implement an async workflow that waits for a reactive value to reach a specific 
 
 ### Solution
 
-Use `watch` with a `Promise` wrapper to bridge reactive state into async code:
+Use `watch` with a `Promise` wrapper to bridge reactive state into async code.
+
+`watch()` accepts a `Reactive` — pass the signal directly or wrap a derived expression in `computed()`:
 
 ```ts
-import { store, watch, untrack } from '@vielzeug/ripple';
+import { store, computed, watch } from '@vielzeug/ripple';
+import type { Reactive } from '@vielzeug/ripple';
 
-function waitFor<T>(get: () => T, predicate: (v: T) => boolean): Promise<T> {
+function waitFor<T>(source: Reactive<T>, predicate: (v: T) => boolean): Promise<T> {
   return new Promise((resolve) => {
-    const current = untrack(get);
+    const current = source.peek();
 
     if (predicate(current)) {
       resolve(current);
       return;
     }
 
-    const stop = watch(get, (next) => {
+    const stop = watch(source, (next) => {
       if (predicate(next)) {
-        stop();
+        stop.dispose();
         resolve(next);
       }
     });
@@ -39,11 +42,10 @@ const modalStore = store({ open: false, result: null as string | null });
 export async function openModal(): Promise<string | null> {
   modalStore.patch({ open: true, result: null });
 
-  // Wait until result is set (modal closed with a value)
-  const result = await waitFor(
-    () => modalStore.value.result,
-    (v) => v !== null,
-  );
+  // Use computed() to derive the slice, then wait on that signal
+  const resultSignal = computed(() => modalStore.value.result);
+  const result = await waitFor(resultSignal, (v) => v !== null);
+  resultSignal.dispose();
 
   modalStore.patch({ open: false });
   return result;
@@ -58,9 +60,9 @@ import { signal, watch } from '@vielzeug/ripple';
 const status = signal<'idle' | 'loading' | 'done'>('idle');
 
 function onNextChange(cb: (value: 'idle' | 'loading' | 'done') => void) {
-  const stop = watch(status, (value, prev) => {
+  const stop = watch(status, (value) => {
     cb(value);
-    if (value !== prev) stop();
+    stop.dispose();
   });
 }
 ```

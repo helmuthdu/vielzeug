@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { clamp as clampRange } from '@vielzeug/arsenal';
 
@@ -7,13 +7,13 @@ import { toFiniteNumber, toPositiveStep } from './numbers';
 
 export type SpinnerControlOptions = {
   commit: (value: number | null, originalEvent?: Event) => void;
-  disabled?: ReadonlySignal<boolean | undefined>;
-  largeStep?: ReadonlySignal<number | string | undefined>;
-  max?: ReadonlySignal<number | string | undefined>;
-  min?: ReadonlySignal<number | string | undefined>;
+  disabled?: Readable<boolean | undefined>;
+  largeStep?: Readable<number | string | undefined>;
+  max?: Readable<number | string | undefined>;
+  min?: Readable<number | string | undefined>;
   parse: () => number | null;
-  readonly?: ReadonlySignal<boolean | undefined>;
-  step?: ReadonlySignal<number | string | undefined>;
+  readonly?: Readable<boolean | undefined>;
+  step?: Readable<number | string | undefined>;
 };
 
 export type SpinnerControl = {

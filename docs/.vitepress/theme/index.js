@@ -1,6 +1,7 @@
 import { Rune } from '@vielzeug/rune';
 import DefaultTheme from 'vitepress/theme';
 
+import CodeWindow from './components/CodeWindow.vue';
 import ColorPalette from './components/ColorPalette.vue';
 import ComponentPreview from './components/ComponentPreview.vue';
 import HomePage from './components/HomePage.vue';
@@ -26,6 +27,7 @@ if (typeof window !== 'undefined') {
 export default {
   ...DefaultTheme,
   async enhanceApp({ app }) {
+    app.component('CodeWindow', CodeWindow);
     app.component('HomePage', HomePage);
     app.component('REPL', Repl);
     app.component('ColorPalette', ColorPalette);

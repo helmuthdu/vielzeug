@@ -295,7 +295,16 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
   function batch(fn: () => void): void {
     ensureNotDisposed();
-    rippleBatch(fn);
+
+    try {
+      rippleBatch(fn);
+    } catch (e) {
+      // rippleBatch clears its pending-subscriber queue on error to prevent
+      // stale flushes on future unrelated writes. Re-notify here so subscribers
+      // still see the partial mutations that succeeded before the throw.
+      requestNotify();
+      throw e;
+    }
   }
 
   /* ======== Value access ======== */

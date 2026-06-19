@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import type { SelectionMode } from './datagrid';
 
@@ -25,7 +25,7 @@ export type SelectionControl = {
   /** Select (or deselect if already all selected) all rows on the current page. */
   selectAll(): void;
   /** Current selected row keys. Reactive signal. Returns a snapshot copy. */
-  readonly selectedKeys: ReadonlySignal<ReadonlySet<string>>;
+  readonly selectedKeys: Readable<ReadonlySet<string>>;
   /** Set the selection to an explicit set of keys. */
   setSelection(keys: Set<string>): void;
   /** Toggle selection for a single row. */

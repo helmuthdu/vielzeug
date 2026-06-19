@@ -8,7 +8,7 @@
  * ```
  */
 
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
@@ -23,7 +23,7 @@ import { float } from './float';
  */
 export interface ReactiveFloatHandle extends FloatHandle {
   /** Reactive signal that holds the most recently computed position. Read-only. */
-  readonly position: ReadonlySignal<ComputePositionResult | null>;
+  readonly position: Readable<ComputePositionResult | null>;
 }
 
 /**
@@ -66,6 +66,6 @@ export function createFloatState(
   });
 
   return Object.assign(handle, {
-    position: position as ReadonlySignal<ComputePositionResult | null>,
+    position: position as Readable<ComputePositionResult | null>,
   });
 }

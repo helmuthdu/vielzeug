@@ -1,14 +1,14 @@
 import { createContext, type HostBindFn } from '@vielzeug/craft';
-import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
 import type { ComponentSize, VisualVariant } from '../../types';
 
 export type FormContext = {
   /** Whether all child fields are disabled */
-  disabled: ReadonlySignal<boolean>;
+  disabled: Readable<boolean>;
   /** Default size propagated to all child form fields */
-  size: ReadonlySignal<ComponentSize | undefined>;
+  size: Readable<ComponentSize | undefined>;
   /**
    * When to validate child form controls:
    * - `'submit'` (default): only on form submit
@@ -16,9 +16,9 @@ export type FormContext = {
    * - `'change'`: validate on every value change
    * - `'input'`: validate on every input event
    */
-  validateOn: ReadonlySignal<ValidationTrigger>;
+  validateOn: Readable<ValidationTrigger>;
   /** Default variant propagated to all child form fields */
-  variant: ReadonlySignal<VisualVariant | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 
 export const FORM_CTX = createContext<FormContext>('FormContext');
@@ -26,9 +26,9 @@ export const FORM_CTX = createContext<FormContext>('FormContext');
 // ── Prop resolver ─────────────────────────────────────────────────────────────
 
 type FormContextResolvedProps = {
-  disabled: ReadonlySignal<boolean>;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  variant: ReadonlySignal<VisualVariant | undefined>;
+  disabled: Readable<boolean>;
+  size: Readable<ComponentSize | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 
 /**
@@ -38,9 +38,9 @@ type FormContextResolvedProps = {
  */
 export const mergeFormContext = (
   props: {
-    disabled?: ReadonlySignal<boolean | undefined> | ReadonlySignal<boolean>;
-    size?: ReadonlySignal<string | undefined> | ReadonlySignal<string>;
-    variant?: ReadonlySignal<string | undefined> | ReadonlySignal<string>;
+    disabled?: Readable<boolean | undefined> | Readable<boolean>;
+    size?: Readable<string | undefined> | Readable<string>;
+    variant?: Readable<string | undefined> | Readable<string>;
   },
   formCtx?: FormContext,
 ): FormContextResolvedProps => ({

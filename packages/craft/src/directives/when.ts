@@ -1,11 +1,11 @@
-import { computed, effect as rawEffect, isSignal, type ReadonlySignal, untrack } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, type Readable, untrack } from '@vielzeug/ripple';
 
 import type { RegisterCleanup } from '../template';
 
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
-type MaybeReactive<T> = T | (() => T) | ReadonlySignal<T>;
+type MaybeReactive<T> = T | (() => T) | Readable<T>;
 
 type WhenRenderable = HTMLResult | null | undefined | false;
 
@@ -55,7 +55,7 @@ export function when(
 
   return createDirectiveResult((anchor, registerCleanup) => {
     const ownedComputed = typeof condition === 'function' ? computed(condition as () => boolean) : null;
-    const conditionSignal = ownedComputed ?? (condition as ReadonlySignal<boolean>);
+    const conditionSignal = ownedComputed ?? (condition as Readable<boolean>);
 
     if (ownedComputed) registerCleanup(() => ownedComputed.dispose());
 

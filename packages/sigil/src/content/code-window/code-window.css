@@ -1,0 +1,116 @@
+@layer sigil.base {
+  :host {
+    --_bg: var(--code-window-bg, var(--color-canvas));
+    --_header-bg: var(--code-window-header-bg, var(--color-contrast-100));
+    --_border-color: var(--code-window-border-color, var(--color-contrast-300));
+    --_radius: var(--code-window-radius, var(--rounded-lg));
+    --_shadow: var(--code-window-shadow, var(--shadow-sm));
+    --_body-padding: var(--code-window-body-padding, var(--size-5) var(--size-6));
+
+    display: block;
+  }
+
+  .window {
+    overflow: hidden;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    box-shadow: var(--_shadow);
+    transition:
+      border-color var(--transition-normal),
+      box-shadow var(--transition-normal);
+  }
+
+  .header {
+    display: flex;
+    gap: var(--size-1-5);
+    align-items: center;
+    padding: var(--size-3) var(--size-5);
+    overflow: hidden;
+    background: var(--_header-bg);
+    border-bottom: var(--border) solid var(--_border-color);
+    transition: background var(--transition-normal);
+  }
+
+  /* ── code variant ─────────────────────────────────────────── */
+
+  .lang {
+    flex-shrink: 0;
+    padding: 2px var(--size-1-5);
+    font-family: var(--font-mono);
+    font-size: var(--text-2xs);
+    font-weight: var(--font-semibold);
+    color: var(--color-primary);
+    letter-spacing: 0.03em;
+    background: var(--color-primary-backdrop);
+    border: var(--border) solid oklch(70% 0.12 293deg / 20%);
+    border-radius: var(--rounded-sm);
+  }
+
+  .filename {
+    min-width: 0;
+    margin-inline-start: var(--size-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-color-secondary);
+    white-space: nowrap;
+  }
+
+  /* ── chat variant ─────────────────────────────────────────── */
+
+  .dots {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--size-1-5);
+    align-items: center;
+    padding-inline-end: var(--size-3);
+    margin-inline-end: var(--size-1-5);
+    border-inline-end: var(--border) solid var(--_border-color);
+  }
+
+  /* Authentic macOS traffic-light palette — muted so they don't fight the content */
+  .dots span {
+    display: block;
+    width: var(--size-3);
+    height: var(--size-3);
+    border-radius: var(--rounded-full);
+  }
+
+  .dots span:nth-child(1) {
+    background: oklch(65% 0.18 25deg);
+  }
+
+  .dots span:nth-child(2) {
+    background: oklch(72% 0.18 80deg);
+  }
+
+  .dots span:nth-child(3) {
+    background: oklch(62% 0.18 145deg);
+  }
+
+  .title {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-color-secondary);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── header-end spacer ────────────────────────────────────── */
+
+  .header-spacer {
+    flex: 1;
+  }
+
+  ::slotted([slot='header-end']) {
+    flex-shrink: 0;
+  }
+
+  /* ── body ─────────────────────────────────────────────────── */
+
+  .body {
+    padding: var(--_body-padding);
+    overflow-x: auto;
+  }
+}

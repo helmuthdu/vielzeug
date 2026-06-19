@@ -1,5 +1,5 @@
 import { createContext, define, html, prop } from '@vielzeug/craft';
-import { type ReadonlySignal } from '@vielzeug/ripple';
+import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../shared';
 import type { ButtonVariant } from '../button/button';
@@ -27,9 +27,9 @@ export type SgButtonGroupProps = {
 
 /** Shared context propagated from sg-button-group to child sg-button elements */
 export type ButtonGroupContext = {
-  color: ReadonlySignal<ThemeColor | undefined>;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  variant: ReadonlySignal<ButtonVariant | undefined>;
+  color: Readable<ThemeColor | undefined>;
+  size: Readable<ComponentSize | undefined>;
+  variant: Readable<ButtonVariant | undefined>;
 };
 
 export const BUTTON_GROUP_CTX = createContext<ButtonGroupContext | undefined>('SgButtonGroup');

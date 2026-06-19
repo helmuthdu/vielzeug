@@ -1,7 +1,6 @@
 import type { Signal, SignalOptions, Subscription } from './types';
 
 import { getDevToolsHook } from './devtools-hook';
-import { StateError } from './error';
 import { ReactiveBase } from './reactive-base';
 import { notifyNodeChange } from './scheduling';
 import { SubscriptionImpl } from './subscription';
@@ -11,16 +10,12 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
   private value_: T;
   private equals_: (a: T, b: T) => boolean;
   private disposed_: boolean;
-  private batched_: boolean;
-  private batchPending_: boolean;
 
-  constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string, batched?: boolean) {
+  constructor(initial: T, equals?: (a: T, b: T) => boolean, name?: string) {
     super(name);
     this.value_ = initial;
     this.equals_ = equals ?? Object.is;
-    this.batched_ = batched ?? false;
     this.disposed_ = false;
-    this.batchPending_ = false;
   }
 
   get value(): T {
@@ -40,18 +35,7 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
     this.version = tickRevision();
 
     getDevToolsHook()?.write?.({ name: this.name, newValue: next, oldValue });
-
-    if (this.batched_) {
-      if (!this.batchPending_) {
-        this.batchPending_ = true;
-        queueMicrotask(() => {
-          this.batchPending_ = false;
-          notifyNodeChange(this);
-        });
-      }
-    } else {
-      notifyNodeChange(this);
-    }
+    notifyNodeChange(this);
   }
 
   peek(): T {
@@ -60,9 +44,11 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
 
   readonly subscribe = (listener: () => void): Subscription => {
     if (this.disposed_) {
-      const label = this.name ? ` "${this.name}"` : '';
+      const noop = new SubscriptionImpl(() => {});
 
-      throw new StateError('DISPOSED_READ', `Cannot subscribe to disposed signal${label}`);
+      noop.dispose();
+
+      return noop;
     }
 
     this.addEffectSub(listener);
@@ -97,4 +83,4 @@ export class SignalImpl<T> extends ReactiveBase<T> implements Signal<T> {
 }
 
 export const signal = <T>(initial: T, options?: SignalOptions<T>): Signal<T> =>
-  new SignalImpl(initial, options?.equals, options?.name, options?.batched);
+  new SignalImpl(initial, options?.equals, options?.name);

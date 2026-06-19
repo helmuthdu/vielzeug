@@ -6,7 +6,7 @@
  * that the previous design required.
  */
 
-import { type ReadonlySignal, signal, type Signal } from '@vielzeug/ripple';
+import { type Readable, signal, type Signal } from '@vielzeug/ripple';
 
 // ─── REF TYPES ───────────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ export type RefCallback<T extends Element> = (el: T | null) => void;
 
 export type TextBinding = {
   node: Text;
-  signal: ReadonlySignal<unknown>;
+  signal: Readable<unknown>;
   type: 'text';
 };
 
@@ -56,7 +56,7 @@ type AttrBaseFields = {
 export type AttrStaticBinding = AttrBaseFields & { value: unknown };
 
 /** Attribute binding driven by a reactive signal. */
-export type AttrReactiveBinding = AttrBaseFields & { signal: ReadonlySignal<unknown> };
+export type AttrReactiveBinding = AttrBaseFields & { signal: Readable<unknown> };
 
 export type AttrBinding = AttrStaticBinding | AttrReactiveBinding;
 
@@ -79,7 +79,7 @@ export type HtmlBindingValue = HTMLResult | string | number | boolean | null | u
 
 export type HtmlBinding = {
   anchor: Comment;
-  signal: ReadonlySignal<HtmlBindingValue[]>;
+  signal: Readable<HtmlBindingValue[]>;
   type: 'html';
 };
 

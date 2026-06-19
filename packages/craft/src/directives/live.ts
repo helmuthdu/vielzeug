@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 const LIVE_BRAND: unique symbol = Symbol.for('craft:live');
 
@@ -10,7 +10,7 @@ const LIVE_BRAND: unique symbol = Symbol.for('craft:live');
  * @example
  * html`<input :value="${live(model)}" />`
  */
-export type LiveSignal<T> = ReadonlySignal<T> & { readonly [LIVE_BRAND]: true };
+export type LiveSignal<T> = Readable<T> & { readonly [LIVE_BRAND]: true };
 
 // WeakSet tracks which signal objects have been marked live — zero allocation on call.
 let liveSignals = new WeakSet<object>();
@@ -23,7 +23,7 @@ let liveSignals = new WeakSet<object>();
  * by this binding, subsequent app-state writes are silently dropped until the
  * DOM value matches the incoming value or no prior write has been recorded.
  */
-export const live = <T>(source: ReadonlySignal<T>): LiveSignal<T> => {
+export const live = <T>(source: Readable<T>): LiveSignal<T> => {
   liveSignals.add(source as object);
 
   return source as LiveSignal<T>;

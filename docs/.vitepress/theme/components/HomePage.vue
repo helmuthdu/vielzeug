@@ -4,47 +4,28 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 
 const prefersReducedMotion = ref(false);
 
-// Three orbital rings in root SVG space (viewBox 0 0 64 64).
-// Each ring: center (cx,cy), semi-axes (rx,ry), tilt angle in radians.
-// Derived from logo.svg g1 matrix(4,0,0,4,-249,-70.4) applied to the
-// Inkscape-local ring ellipses. See inline SVG comment for full derivation.
 const RINGS = [
   { cx: 32.0, cy: 32.0, rx: 28.902, ry: 11.221, tilt: -Math.PI / 2, dur: 3800 },
   { cx: 27.15, cy: 23.72, rx: 28.902, ry: 11.221, tilt: (-Math.PI * 5) / 6, dur: 5200 },
   { cx: 36.84, cy: 23.71, rx: 28.902, ry: 11.221, tilt: -Math.PI / 6, dur: 4500 },
 ];
 
-const TAIL_LEN = 18; // comet tail length (number of ghost positions)
+const TAIL_LEN = 18;
 
 type Pt = { x: number; y: number };
 
-// Current head + ring-buffer tail per electron
-const electrons = ref(
-  RINGS.map(() => ({
-    head: { x: 0, y: 0 } as Pt,
-    tail: [] as Pt[],
-  })),
-);
+const electrons = ref(RINGS.map(() => ({ head: { x: 0, y: 0 } as Pt, tail: [] as Pt[] })));
 
 let rafId = 0;
-// Phase offsets (0..1) so each electron starts at a different point on its ring
 const phases = [0, -1.7 / 5.2, -0.9 / 4.5];
 
-// Nucleus comet tail animation — tail tip moves toward ball, ball stays fixed.
-// Tail tip in absolute coords: (74.014653, 20.358239)
-// Ball entry in absolute coords: tail tip + cumulative tail offsets = (69.239759, 22.948267)
-// Animation: move start point toward ball by (1-t), scale tail segments by t so they
-// still connect start→ball. Ball and everything after stays at its fixed absolute position.
 const TAIL_TIP = { x: 74.014653, y: 20.358239 };
-const BALL_ENTRY = { x: 69.239759, y: 22.948267 }; // = tail tip + sum of 3 tail segs
+const BALL_ENTRY = { x: 69.239759, y: 22.948267 };
 
 function buildNucleusTailD(t: number): string {
-  // Start point moves toward ball as t decreases
   const sx = TAIL_TIP.x + (BALL_ENTRY.x - TAIL_TIP.x) * (1 - t);
   const sy = TAIL_TIP.y + (BALL_ENTRY.y - TAIL_TIP.y) * (1 - t);
-  // Tail segments scaled by t (they still sum to BALL_ENTRY - new start)
   const sc = (v: number) => (v * t).toFixed(6);
-  // Spike tip also scales (it returns from ball side back toward tail tip)
   return (
     `m ${sx.toFixed(6)},${sy.toFixed(6)} ` +
     `c 0,0 ${sc(-2.742591)},${sc(1.622434)} ${sc(-2.877972)},${sc(1.556451)} ` +
@@ -72,25 +53,25 @@ function posAt(r: (typeof RINGS)[0], ts: number, phase: number): Pt {
 }
 
 function tickElectrons(ts: number) {
-  // Animate nucleus tail: breathe in toward ball and back out
   if (!prefersReducedMotion.value) {
-    const t = 0.845 + Math.sin(ts / 700) * 0.125; // oscillates 0.72 → 0.97
+    const t = 0.845 + Math.sin(ts / 700) * 0.125;
     nucleusTailD.value = buildNucleusTailD(t);
   }
-
   electrons.value = RINGS.map((r, i) => {
     const head = posAt(r, ts, phases[i]);
-    // Sample tail positions by stepping back in time uniformly
     const tail: Pt[] = [];
-    for (let t = 1; t <= TAIL_LEN; t++) {
-      tail.push(posAt(r, ts - t * 16, phases[i])); // ~1 frame (16ms) per tail segment
+    for (let j = 1; j <= TAIL_LEN; j++) {
+      tail.push(posAt(r, ts - j * 16, phases[i]));
     }
     return { head, tail };
   });
   rafId = requestAnimationFrame(tickElectrons);
 }
 
-const { isDark, theme } = useData();
+const glowPaused = ref(false);
+let glowObserver: IntersectionObserver | null = null;
+
+const { theme } = useData();
 
 const packages = computed(() => theme.value.packages || {});
 
@@ -175,114 +156,110 @@ const categories = [
   },
 ];
 
-const copied = ref(false);
-const copyError = ref(false);
-const installCmd = 'pnpm add @vielzeug/arsenal';
+const featuredPackages = [
+  { id: 'arsenal', desc: '75+ zero-dep utilities — the Swiss Army knife' },
+  { id: 'ripple', desc: 'Signals, computed values, and reactive stores' },
+  { id: 'spell', desc: 'Schema validation with a fluent TypeScript API' },
+];
 
-async function copyInstall() {
-  try {
-    await navigator.clipboard.writeText(installCmd);
-    copied.value = true;
-    copyError.value = false;
-    setTimeout(() => (copied.value = false), 2000);
-  } catch {
-    copyError.value = true;
-    setTimeout(() => (copyError.value = false), 3000);
-  }
+const installCmds = ['pnpm add @vielzeug/ripple', 'pnpm add @vielzeug/arsenal', 'pnpm add @vielzeug/spell'];
+const installCmdIndex = ref(0);
+const installCmd = computed(() => installCmds[installCmdIndex.value]);
+
+function cycleInstall() {
+  installCmdIndex.value = (installCmdIndex.value + 1) % installCmds.length;
 }
 
-const heroVisible = ref(false);
-const categoriesVisible = ref(false);
-
-const stats = computed(() => [
-  { icon: 'package', value: String(packageCount.value || '—'), label: 'Packages' },
-  { icon: 'link-2', value: '0', label: 'External deps' },
-  { icon: 'cpu', value: 'ES2022', label: 'ES Target' },
-  { icon: 'scale', value: 'MIT', label: 'License' },
-]);
-
 onMounted(() => {
+  installCmdIndex.value = 0;
+
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
   prefersReducedMotion.value = mq.matches;
   mq.addEventListener('change', (e) => {
     prefersReducedMotion.value = e.matches;
-    if (e.matches) {
-      cancelAnimationFrame(rafId);
-    } else {
-      rafId = requestAnimationFrame(tickElectrons);
-    }
+    if (e.matches) cancelAnimationFrame(rafId);
+    else rafId = requestAnimationFrame(tickElectrons);
   });
 
-  if (!prefersReducedMotion.value) {
-    rafId = requestAnimationFrame(tickElectrons);
+  if (!prefersReducedMotion.value) rafId = requestAnimationFrame(tickElectrons);
+
+  const logoEl = document.querySelector('.hero-logo-wrapper');
+  if (logoEl) {
+    glowObserver = new IntersectionObserver(
+      ([entry]) => {
+        glowPaused.value = !entry.isIntersecting;
+      },
+      { rootMargin: '200px' },
+    );
+    glowObserver.observe(logoEl);
   }
-
-  requestAnimationFrame(() => {
-    heroVisible.value = true;
-    setTimeout(() => (categoriesVisible.value = true), 200);
-  });
 });
 
-onUnmounted(() => cancelAnimationFrame(rafId));
+onUnmounted(() => {
+  cancelAnimationFrame(rafId);
+  glowObserver?.disconnect();
+});
 </script>
 
 <template>
   <div class="home-page">
     <!-- Hero -->
-    <section class="hero" :class="{ visible: heroVisible }">
+    <section class="hero">
       <div class="hero-inner">
         <div class="hero-content">
           <div class="hero-badge">
-            <sg-badge variant="primary">{{ packageCount }} packages</sg-badge>
+            <a href="#packages" class="hero-badge-link">
+              <sg-badge variant="primary">{{ packageCount }} packages</sg-badge>
+            </a>
             <sg-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</sg-badge>
           </div>
           <h1 class="hero-title">
             <span class="hero-title-main">Vielzeug</span>
-            <span class="hero-title-sub">Many tools. One Good Decision.</span>
+            <span class="hero-title-sub">Many Tools. Zero Weight.</span>
           </h1>
           <p class="hero-description">
-            A curated ecosystem of zero-dependency, tree-shakeable TypeScript packages. Each one a focused spell —
-            together, magical.
+            State with <em>Ripple</em>, forms via <em>Forge</em>, validation by <em>Spell</em>. TypeScript tools with zero external dependencies. Pick one or compose them all.
           </p>
           <div class="hero-values">
-            <span class="value-item"><sg-icon name="shield-check" size="16"></sg-icon> Type-safe</span>
-            <span class="value-item"><sg-icon name="package" size="16"></sg-icon> Zero deps</span>
-            <span class="value-item"><sg-icon name="scissors" size="16"></sg-icon> Tree-shakeable</span>
-            <span class="value-item"><sg-icon name="monitor" size="16"></sg-icon> ESM + CJS</span>
+            <sg-tooltip
+              content="No external npm dependencies — only other vielzeug packages where needed"
+              placement="top">
+              <span class="value-item"><sg-icon name="ban" size="16"></sg-icon> Zero external deps</span>
+            </sg-tooltip>
+            <sg-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
+              <span class="value-item"><sg-icon name="scissors" size="16"></sg-icon> Tree-shakeable</span>
+            </sg-tooltip>
+            <sg-tooltip content="Free to use in any project, commercial or open-source" placement="top">
+              <span class="value-item"><sg-icon name="scale" size="16"></sg-icon> MIT</span>
+            </sg-tooltip>
           </div>
           <div class="hero-install">
-            <button
-              type="button"
-              class="install-box"
-              :aria-label="
-                copied ? 'Copied!' : copyError ? 'Copy failed — select and copy manually' : 'Copy install command'
-              "
-              @click="copyInstall">
-              <code>{{ installCmd }}</code>
-              <sg-icon
-                :name="copied ? 'check' : 'copy'"
-                size="14"
-                class="install-copy-icon"
-                aria-hidden="true"></sg-icon>
-            </button>
-            <div aria-live="polite" aria-atomic="true" class="sr-only">
-              {{ copied ? 'Copied to clipboard.' : copyError ? 'Copy failed. Please select and copy manually.' : '' }}
-            </div>
+            <sg-copy-command :value="installCmd" class="install-row">
+              <sg-button
+                slot="suffix"
+                size="sm"
+                variant="text"
+                icon-only
+                aria-label="Show next package example"
+                @click="cycleInstall">
+                <sg-icon name="chevron-right" size="14" aria-hidden="true"></sg-icon>
+              </sg-button>
+            </sg-copy-command>
           </div>
           <div class="hero-actions">
-            <a href="/guide/" tabindex="-1">
+            <a href="/guide/">
               <sg-button variant="solid" color="primary" size="md">
                 <sg-icon slot="prefix" name="book-open" size="16"></sg-icon>
                 Get Started
               </sg-button>
             </a>
-            <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer" tabindex="-1">
+            <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">
               <sg-button variant="outline" color="primary" size="md"> GitHub </sg-button>
             </a>
           </div>
         </div>
         <div class="hero-visual">
-          <div class="hero-logo-wrapper" aria-label="Vielzeug logo" role="img">
+          <div class="hero-logo-wrapper" :class="{ 'glow-paused': glowPaused }" aria-label="Vielzeug logo" role="img">
             <svg
               class="hero-logo"
               width="256"
@@ -291,9 +268,7 @@ onUnmounted(() => cancelAnimationFrame(rafId));
               fill="none"
               aria-hidden="true"
               xmlns="http://www.w3.org/2000/svg">
-              <!-- Original logo geometry verbatim — rings + nucleus -->
               <g transform="matrix(4.0000082,0,0,4.0000082,-249.00051,-70.402338)">
-                <!-- Nucleus: original bolt path + glow circle -->
                 <g transform="rotate(12.883023,70.356812,25.230466)">
                   <path style="fill: #e92063; fill-opacity: 1; stroke-width: 0.0103763" :d="nucleusTailD" />
                   <circle style="fill: #f3f3f3; fill-opacity: 0.702703" cx="70.25032" cy="24.120285" r="1.1067405" />
@@ -319,7 +294,6 @@ onUnmounted(() => cancelAnimationFrame(rafId));
                   rx="7.2255325"
                   ry="2.805326"
                   transform="rotate(-29.999999)" />
-                <!-- Static electron fallback (reduced-motion) — original positions -->
                 <template v-if="prefersReducedMotion">
                   <g transform="matrix(0.25,0,0,0.25,67.131837,13.058119)">
                     <ellipse
@@ -371,15 +345,8 @@ onUnmounted(() => cancelAnimationFrame(rafId));
                   </g>
                 </template>
               </g>
-
-              <!--
-                Animated electrons — rendered in ROOT SVG space (viewBox 0 0 64 64).
-                Positions driven by tickElectrons() rAF loop via `electrons` ref.
-                Each electron: soft glow halo + solid white dot.
-              -->
               <template v-if="!prefersReducedMotion">
                 <g v-for="(e, i) in electrons" :key="i">
-                  <!-- Comet tail: oldest segment first (painted under the head) -->
                   <circle
                     v-for="(pt, t) in e.tail"
                     :key="t"
@@ -398,20 +365,16 @@ onUnmounted(() => cancelAnimationFrame(rafId));
     </section>
 
     <!-- Code Showcase -->
-    <section class="showcase">
+    <section id="showcase" class="showcase">
       <div class="showcase-inner">
-        <h2 class="section-title">Compose your toolkit</h2>
+        <h2 class="section-title">Modular by Design</h2>
         <p class="section-subtitle">Import what you need. Each package works alone or together.</p>
-        <div class="code-window">
-          <div class="code-header">
-            <span class="code-lang">ts</span>
-            <span class="code-filename">app.ts</span>
-          </div>
+        <CodeWindow lang="ts" filename="app.ts">
           <pre
-            class="code-body"><code><span class="hl-keyword">import</span> { createForm } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/forge'</span>;
+            class="showcase-pre"><code><span class="hl-keyword">import</span> { <span class="hl-fn">createForm</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/forge'</span>;
 <span class="hl-keyword">import</span> { s } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/spell'</span>;
-<span class="hl-keyword">import</span> { createApi } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/courier'</span>;
-<span class="hl-keyword">import</span> { createLogger } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/rune'</span>;
+<span class="hl-keyword">import</span> { <span class="hl-fn">createApi</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/courier'</span>;
+<span class="hl-keyword">import</span> { <span class="hl-fn">createLogger</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/rune'</span>;
 
 <span class="hl-keyword">const</span> log = <span class="hl-fn">createLogger</span>(<span class="hl-string">'auth'</span>);
 <span class="hl-keyword">const</span> api = <span class="hl-fn">createApi</span>({ baseUrl: <span class="hl-string">'https://api.example.com'</span> });
@@ -430,16 +393,19 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   <span class="hl-keyword">const</span> user = <span class="hl-keyword">await</span> api.<span class="hl-fn">post</span>(<span class="hl-string">'/auth/login'</span>, { body: values });
   log.<span class="hl-fn">info</span>(<span class="hl-string">'Login successful'</span>, { user });
 });</code></pre>
-        </div>
+        </CodeWindow>
       </div>
     </section>
 
     <!-- Package Explorer -->
-    <section class="explorer" :class="{ visible: categoriesVisible }">
+    <section id="packages" class="explorer">
       <div class="explorer-inner">
-        <h2 class="section-title">The complete toolkit</h2>
-        <p class="section-subtitle">25 packages, each focused on one domain. Pick what you need.</p>
-        <div class="category-grid">
+        <h2 class="section-title">The Complete Toolkit</h2>
+        <p class="section-subtitle">
+          Organized by domain. Every package ships independently, works alongside the rest.
+        </p>
+
+        <sg-grid responsive min-col-width="320px" gap="xl" class="category-grid">
           <div v-for="cat in categories" :key="cat.name" class="category-section">
             <h3 class="category-name">
               <sg-icon :name="cat.icon" size="16"></sg-icon>
@@ -462,69 +428,136 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               </a>
             </div>
           </div>
-        </div>
+        </sg-grid>
       </div>
     </section>
 
-    <!-- Stats -->
-    <section class="stats">
-      <div class="stats-inner">
-        <dl class="stats-list">
-          <div v-for="s in stats" :key="s.label" class="stat">
-            <dt class="stat-label">{{ s.label }}</dt>
-            <dd class="stat-value">{{ s.value }}</dd>
+    <!-- Codex AI Section -->
+    <section id="codex" class="codex-ai">
+      <div class="codex-ai-inner">
+        <sg-grid cols="1" cols-md="2" gap="2xl" align="start" class="codex-ai-content">
+          <div class="codex-ai-copy">
+            <h2 class="codex-ai-title">Your AI already knows Vielzeug</h2>
+            <p class="codex-ai-desc">
+              <code class="codex-inline-pkg">@vielzeug/codex</code> is an MCP server that bundles the entire
+              documentation, package APIs, and Sigil component metadata into a single offline snapshot. Wire it into
+              Claude Desktop, Copilot Chat, or any MCP-compatible client — then ask anything.
+            </p>
+            <ul class="codex-caps">
+              <li class="codex-cap">
+                <sg-icon name="search" size="14"></sg-icon>
+                <span
+                  ><strong>search-packages</strong> — find the right package by keyword across docs and exports</span
+                >
+              </li>
+              <li class="codex-cap">
+                <sg-icon name="book-open" size="14"></sg-icon>
+                <span><strong>get-docs</strong> — fetch any package's index, API, usage, or examples page</span>
+              </li>
+              <li class="codex-cap">
+                <sg-icon name="layers" size="14"></sg-icon>
+                <span
+                  ><strong>get-component</strong> — full Sigil component CEM: attributes, slots, CSS parts, events</span
+                >
+              </li>
+            </ul>
+            <div class="codex-setup">
+              <sg-text color="muted" size="sm" weight="medium" class="codex-setup-label"
+                >One command. No install required.</sg-text
+              >
+              <sg-copy-command value="npx -y @vielzeug/codex" class="codex-setup-cmd"></sg-copy-command>
+              <a href="/codex/" class="codex-learn-link">
+                <sg-icon name="arrow-right" size="14"></sg-icon>
+                Setup guide &amp; all tools
+              </a>
+            </div>
           </div>
-        </dl>
+          <div class="codex-ai-demo">
+            <CodeWindow variant="chat" title="MCP tool call">
+              <div class="chat-body">
+                <div class="chat-turn chat-user">
+                  <span class="chat-role">user</span>
+                  <span class="chat-text">How do I debounce a function call in Arsenal?</span>
+                </div>
+                <div class="chat-turn chat-tool">
+                  <span class="chat-role">tool</span>
+                  <pre
+                    class="chat-call"><span class="hl-fn">get-docs</span>({ packageSlug: <span class="hl-string">"arsenal"</span>, page: <span class="hl-string">"api"</span> })</pre>
+                </div>
+                <div class="chat-turn chat-assistant">
+                  <span class="chat-role">assistant</span>
+                  <span class="chat-text"
+                    >Use <code>debounce(fn, wait)</code> — returns a version of <code>fn</code> that delays invoking
+                    until <code>wait</code> ms after the last call. Pass <code>{ leading: true }</code> to fire on the
+                    first call instead.</span
+                  >
+                </div>
+                <div class="chat-code">
+                  <pre><span class="hl-keyword">import</span> { debounce } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/arsenal'</span>;
+
+<span class="hl-keyword">const</span> save = <span class="hl-fn">debounce</span>(<span class="hl-fn">persistToDb</span>, <span class="hl-number">300</span>);
+input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input'</span>, save);</pre>
+                </div>
+              </div>
+            </CodeWindow>
+          </div>
+        </sg-grid>
       </div>
     </section>
 
     <!-- Community & Support -->
-    <section class="community">
+    <section id="community" class="community">
       <div class="community-inner">
-        <h2 class="section-title">Community & Support</h2>
-        <p class="section-subtitle">Questions, bugs, or want to contribute? We'd love to hear from you.</p>
+        <h2 class="section-title">Built in the open</h2>
+        <p class="section-subtitle">Questions, bug reports, and contributions all live on GitHub. Come find us.</p>
         <div class="community-links">
           <a
             href="https://github.com/helmuthdu/vielzeug/issues"
             target="_blank"
             rel="noopener noreferrer"
-            class="community-card">
-            <div class="community-card-icon">
-              <sg-icon name="circle-alert" size="22"></sg-icon>
-            </div>
-            <div class="community-card-body">
-              <span class="community-card-title">GitHub Issues</span>
-              <span class="community-card-desc">Report bugs or request features</span>
-            </div>
-            <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+            class="community-card-link">
+            <sg-card padding="md">
+              <div class="community-card-inner">
+                <div class="community-card-icon"><sg-icon name="circle-alert" size="22"></sg-icon></div>
+                <div class="community-card-body">
+                  <sg-text weight="semibold" class="community-card-title">GitHub Issues</sg-text>
+                  <sg-text color="muted" size="sm" class="community-card-desc">Report bugs or request features</sg-text>
+                </div>
+                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+              </div>
+            </sg-card>
           </a>
           <a
             href="https://github.com/helmuthdu/vielzeug/discussions"
             target="_blank"
             rel="noopener noreferrer"
-            class="community-card">
-            <div class="community-card-icon">
-              <sg-icon name="message-circle" size="22"></sg-icon>
-            </div>
-            <div class="community-card-body">
-              <span class="community-card-title">Discussions</span>
-              <span class="community-card-desc">Ask questions and share ideas</span>
-            </div>
-            <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+            class="community-card-link">
+            <sg-card padding="md">
+              <div class="community-card-inner">
+                <div class="community-card-icon"><sg-icon name="message-circle" size="22"></sg-icon></div>
+                <div class="community-card-body">
+                  <sg-text weight="semibold" class="community-card-title">Discussions</sg-text>
+                  <sg-text color="muted" size="sm" class="community-card-desc">Ask questions and share ideas</sg-text>
+                </div>
+                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+              </div>
+            </sg-card>
           </a>
           <a
             href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
             target="_blank"
             rel="noopener noreferrer"
-            class="community-card">
-            <div class="community-card-icon">
-              <sg-icon name="git-pull-request" size="22"></sg-icon>
-            </div>
-            <div class="community-card-body">
-              <span class="community-card-title">Contributing</span>
-              <span class="community-card-desc">Learn how to contribute</span>
-            </div>
-            <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+            class="community-card-link">
+            <sg-card padding="md">
+              <div class="community-card-inner">
+                <div class="community-card-icon"><sg-icon name="git-pull-request" size="22"></sg-icon></div>
+                <div class="community-card-body">
+                  <sg-text weight="semibold" class="community-card-title">Contributing</sg-text>
+                  <sg-text color="muted" size="sm" class="community-card-desc">Learn how to contribute</sg-text>
+                </div>
+                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+              </div>
+            </sg-card>
           </a>
         </div>
       </div>
@@ -538,9 +571,9 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
             <img src="/logo-main.svg" alt="Vielzeug" class="footer-logo" />
             <span class="footer-brand-name">Vielzeug</span>
           </div>
-          <p class="footer-tagline">Zero deps. Fully tree-shakeable.</p>
+          <sg-text color="muted" size="sm" class="footer-tagline">Zero deps. Fully tree-shakeable.</sg-text>
         </div>
-        <div class="footer-links-col">
+        <sg-grid cols="1" cols-sm="3" gap="xl" class="footer-links-col">
           <div class="footer-link-group">
             <h4 class="footer-link-heading">Resources</h4>
             <a href="/guide/">Documentation</a>
@@ -566,7 +599,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               >MIT License</a
             >
           </div>
-        </div>
+        </sg-grid>
       </div>
       <div class="footer-bottom">
         <sg-separator></sg-separator>
@@ -590,29 +623,33 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   --hp-text: var(--text-color-body);
   --hp-text-muted: var(--text-color-secondary);
   --hp-border: var(--color-contrast-300);
-  --hp-radius: var(--rounded-xl);
+  --hp-radius: var(--rounded-lg);
   padding-top: var(--size-10);
 }
 
 .dark .home-page {
   --hp-purple-glow: color-mix(in oklch, var(--color-primary) 15%, transparent);
   --hp-purple-subtle: var(--color-primary-backdrop);
+  --hp-text-muted: oklch(65% 0.01 260deg);
 }
 
 /* ── Hero ──────────────────────────────────────────────────── */
 
 .hero {
-  padding: 2rem 1.5rem 3rem;
-  opacity: 0;
-  transform: translateY(12px);
+  padding: 3rem 1.5rem 4rem;
+}
+
+@starting-style {
+  .hero {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.hero {
   transition:
     opacity 0.6s ease-out,
     transform 0.6s ease-out;
-}
-
-.hero.visible {
-  opacity: 1;
-  transform: translateY(0);
 }
 
 .hero-inner {
@@ -628,6 +665,11 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   display: flex;
   gap: 8px;
   margin-bottom: 1.5rem;
+}
+
+.hero-badge-link {
+  text-decoration: none;
+  display: contents;
 }
 
 .hero-title {
@@ -650,6 +692,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   color: var(--hp-text);
   margin-top: 0.5rem;
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .hero-description {
@@ -680,6 +723,25 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   margin-bottom: 1.5rem;
 }
 
+.install-row {
+  --copy-command-bg: var(--hp-surface-alt);
+  --copy-command-color: var(--hp-text);
+  --copy-command-border-color: var(--hp-border);
+  --copy-command-radius: var(--hp-radius);
+  --copy-command-padding: 0.625rem 1rem;
+  --copy-command-font-size: 0.875rem;
+  --copy-command-hover-bg: var(--hp-surface-alt);
+  border-radius: var(--hp-radius);
+  transition:
+    border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+
+.install-row:hover {
+  --copy-command-border-color: var(--hp-purple);
+  box-shadow: 0 0 0 3px var(--hp-purple-glow);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -690,40 +752,6 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
-}
-
-.install-box {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0.625rem 1rem;
-  background: var(--hp-surface-alt);
-  border: 1px solid var(--hp-border);
-  border-radius: var(--hp-radius);
-  cursor: pointer;
-  transition:
-    border-color 0.2s ease-out,
-    box-shadow 0.2s ease-out;
-  font-family: var(--font-mono);
-  font-size: 0.875rem;
-  color: var(--hp-text);
-  font-weight: inherit;
-  text-align: left;
-}
-
-.install-box:hover {
-  border-color: var(--hp-purple);
-  box-shadow: 0 0 0 3px var(--hp-purple-glow);
-}
-
-.install-copy-icon {
-  opacity: 0.55;
-  flex-shrink: 0;
-  transition: opacity 0.15s ease-out;
-}
-
-.install-box:hover .install-copy-icon {
-  opacity: 0.9;
 }
 
 .hero-actions {
@@ -769,8 +797,13 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   filter: blur(80px);
   opacity: 0.55;
   animation: glow-rotate 8s linear infinite;
+  animation-play-state: running;
   will-change: transform;
   border-radius: 50%;
+}
+
+.hero-logo-wrapper.glow-paused::before {
+  animation-play-state: paused;
 }
 
 @keyframes glow-rotate {
@@ -795,8 +828,9 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 /* ── Code Showcase ─────────────────────────────────────────── */
 
 .showcase {
-  padding: 4rem 1.5rem;
+  padding: 3rem 1.5rem;
   background: var(--hp-surface-alt);
+  border-top: 1px solid var(--hp-border);
 }
 
 .showcase-inner {
@@ -819,48 +853,11 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   margin: 0 0 2rem;
 }
 
-.code-window {
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--hp-border);
-  background: var(--hp-surface);
-}
-
-.code-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0.75rem 1rem;
-  background: var(--hp-surface-alt);
-  border-bottom: 1px solid var(--hp-border);
-}
-
-.code-lang {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 0.6875rem;
-  font-family: var(--font-mono);
-  font-weight: 600;
-  color: var(--hp-purple);
-  background: var(--hp-purple-subtle);
-  border: 1px solid oklch(70% 0.12 293deg / 20%);
-  letter-spacing: 0.03em;
-}
-
-.code-filename {
-  margin-left: 8px;
-  font-size: 0.8125rem;
-  font-family: var(--font-mono);
-  color: var(--hp-text-muted);
-}
-
-.code-body {
-  padding: 1.25rem 1.5rem;
+.showcase-pre {
   margin: 0;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.7;
-  overflow-x: auto;
   color: var(--hp-text);
 }
 
@@ -877,6 +874,14 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   color: oklch(60% 0.16 50deg);
 }
 
+.hl-comment {
+  color: oklch(52% 0.02 260deg);
+}
+
+.dark .hl-comment {
+  color: oklch(58% 0.02 260deg);
+}
+
 .dark .hl-keyword {
   color: oklch(72% 0.18 293deg);
 }
@@ -890,31 +895,110 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   color: oklch(72% 0.16 50deg);
 }
 
+/* ── Featured row ─────────────────────────────────────────── */
+
+.featured-row {
+  margin-bottom: 2.5rem;
+  display: block;
+}
+
+.featured-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--hp-purple);
+  margin: 0 0 0.875rem;
+  letter-spacing: 0.01em;
+}
+
+.featured-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.featured-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0.625rem 0.875rem;
+  border-radius: var(--rounded-md);
+  background: var(--hp-surface-alt);
+  border: 1px solid transparent;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease-out,
+    background 0.15s ease-out;
+}
+
+.featured-tile:hover {
+  border-color: var(--hp-purple);
+  background: var(--hp-purple-subtle);
+}
+
+.featured-tile-logo {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.featured-tile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.featured-tile-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--hp-text);
+}
+
+.featured-tile-desc {
+  font-size: 0.75rem;
+  color: var(--hp-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featured-tile-arrow {
+  color: var(--hp-text-muted);
+  flex-shrink: 0;
+  transition:
+    color 0.15s ease-out,
+    transform 0.15s ease-out;
+}
+
+.featured-tile:hover .featured-tile-arrow {
+  color: var(--hp-purple);
+  transform: translateX(2px);
+}
+
 /* ── Package Explorer ──────────────────────────────────────── */
 
 .explorer {
   padding: 4rem 1.5rem;
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 0.6s ease-out 0.1s,
-    transform 0.6s ease-out 0.1s;
 }
 
-.explorer.visible {
-  opacity: 1;
-  transform: translateY(0);
+@starting-style {
+  .explorer {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.explorer {
+  transition:
+    opacity 0.6s ease-out 0.15s,
+    transform 0.6s ease-out 0.15s;
 }
 
 .explorer-inner {
   max-width: 1152px;
   margin: 0 auto;
-}
-
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 2rem;
 }
 
 .category-section {
@@ -990,63 +1074,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   white-space: nowrap;
   padding: 2px 6px;
   background: var(--hp-surface-alt);
-  border-radius: 4px;
-}
-
-/* ── Stats ─────────────────────────────────────────────────── */
-
-.stats {
-  padding: 2.5rem 1.5rem;
-  background: var(--hp-surface-alt);
-  border-top: 1px solid var(--hp-border);
-  border-bottom: 1px solid var(--hp-border);
-}
-
-.stats-inner {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
-.stats-list {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border: 1px solid var(--hp-border);
-  border-radius: var(--hp-radius);
-  overflow: hidden;
-  background: var(--hp-surface);
-}
-
-.stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 1.5rem 1rem;
-  border-right: 1px solid var(--hp-border);
-}
-
-.stat:last-child {
-  border-right: none;
-}
-
-.stat-value {
-  font-size: 1.625rem;
-  font-weight: 800;
-  font-family: var(--font-mono);
-  letter-spacing: -0.03em;
-  color: var(--hp-purple);
-  margin: 0;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--hp-text-muted);
-  margin: 0;
+  border-radius: var(--rounded-sm);
 }
 
 /* ── Community ─────────────────────────────────────────────── */
@@ -1067,27 +1095,25 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   margin-top: 2rem;
 }
 
-.community-card {
+.community-card-link {
+  display: block;
+  text-decoration: none;
+}
+
+.community-card-link sg-card {
+  transition: transform 0.15s ease-out;
+}
+
+.community-card-link:hover sg-card {
+  --card-border-color: var(--hp-purple);
+  --card-shadow: 0 4px 20px var(--hp-purple-glow), 0 0 0 3px var(--hp-purple-glow);
+  transform: translateY(-2px);
+}
+
+.community-card-inner {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.25rem 1.5rem;
-  border-radius: 12px;
-  border: 1px solid var(--hp-border);
-  background: var(--hp-surface);
-  text-decoration: none;
-  transition:
-    border-color 0.2s ease-out,
-    box-shadow 0.2s ease-out,
-    transform 0.15s ease-out;
-}
-
-.community-card:hover {
-  border-color: var(--hp-purple);
-  box-shadow:
-    0 4px 20px var(--hp-purple-glow),
-    0 0 0 3px var(--hp-purple-glow);
-  transform: translateX(4px);
 }
 
 .community-card-icon {
@@ -1096,8 +1122,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  background: var(--hp-purple-subtle);
+  border-radius: var(--rounded-md);
   border: 1px solid oklch(70% 0.12 293deg / 20%);
   color: var(--hp-purple);
   flex-shrink: 0;
@@ -1111,17 +1136,6 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   min-width: 0;
 }
 
-.community-card-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--hp-text);
-}
-
-.community-card-desc {
-  font-size: 0.8125rem;
-  color: var(--hp-text-muted);
-}
-
 .community-card-arrow {
   color: var(--hp-text-muted);
   flex-shrink: 0;
@@ -1130,7 +1144,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     transform 0.15s ease-out;
 }
 
-.community-card:hover .community-card-arrow {
+.community-card-link:hover .community-card-arrow {
   color: var(--hp-purple);
   transform: translateX(3px);
 }
@@ -1174,18 +1188,6 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   color: var(--hp-text);
 }
 
-.footer-tagline {
-  font-size: 0.8125rem;
-  color: var(--hp-text-muted);
-  margin: 0;
-}
-
-.footer-links-col {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 2rem;
-}
-
 .footer-link-group {
   display: flex;
   flex-direction: column;
@@ -1193,12 +1195,10 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
 }
 
 .footer-link-heading {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--hp-text);
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.5rem;
 }
 
 .footer-link-group a {
@@ -1245,6 +1245,193 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
   color: var(--hp-purple);
 }
 
+/* ── Codex AI ──────────────────────────────────────────────── */
+
+.codex-ai {
+  padding: 4rem 1.5rem;
+  background: color-mix(in oklch, var(--color-primary-backdrop) 60%, var(--color-canvas));
+  border-top: 1px solid var(--hp-border);
+  border-bottom: 1px solid var(--hp-border);
+}
+
+.codex-ai-inner {
+  max-width: 1152px;
+  margin: 0 auto;
+}
+
+.codex-ai-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.codex-ai-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--hp-text);
+  margin: 0;
+  text-wrap: balance;
+}
+
+.codex-ai-desc {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: var(--hp-text-muted);
+  margin: 0;
+}
+
+.codex-inline-pkg {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--hp-purple);
+  background: var(--hp-purple-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.codex-caps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.codex-cap {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  color: var(--hp-text);
+  line-height: 1.5;
+}
+
+.codex-cap sg-icon {
+  color: var(--hp-purple);
+  flex-shrink: 0;
+  position: relative;
+  top: 1px;
+}
+
+.codex-cap strong {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--hp-text);
+}
+
+.codex-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+.codex-setup-cmd {
+  --copy-command-color: var(--hp-text);
+  --copy-command-font-size: 0.875rem;
+}
+
+.codex-learn-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hp-purple);
+  text-decoration: none;
+}
+
+.codex-learn-link sg-icon {
+  transition: transform 0.15s ease-out;
+}
+
+.codex-learn-link:hover sg-icon {
+  transform: translateX(3px);
+}
+
+/* Chat content styles (window chrome is in sg-code-window) */
+
+.chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.chat-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chat-role {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chat-user .chat-role {
+  color: var(--hp-text-muted);
+}
+
+.chat-tool .chat-role {
+  color: oklch(58% 0.16 250deg);
+}
+
+.dark .chat-tool .chat-role {
+  color: oklch(70% 0.16 250deg);
+}
+
+.chat-assistant .chat-role {
+  color: var(--hp-purple);
+}
+
+.chat-text {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--hp-text);
+}
+
+.chat-text code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--hp-purple);
+  background: var(--hp-purple-subtle);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.chat-call {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--hp-text);
+  background: var(--hp-surface-alt);
+  border: 1px solid var(--hp-border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  overflow-x: auto;
+}
+
+.chat-code {
+  border-top: 1px solid var(--hp-border);
+  padding-top: 0.875rem;
+  margin-top: 0.125rem;
+}
+
+.chat-code pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--hp-text);
+  overflow-x: auto;
+}
+
 /* ── Responsive ────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
@@ -1289,21 +1476,8 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     height: 252px;
   }
 
-  .category-grid {
+  .featured-tiles {
     grid-template-columns: 1fr;
-  }
-
-  .stats-list {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .stat:nth-child(2) {
-    border-right: none;
-  }
-
-  .stat:nth-child(1),
-  .stat:nth-child(2) {
-    border-bottom: 1px solid var(--hp-border);
   }
 
   .community-links {
@@ -1314,26 +1488,23 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     grid-template-columns: 1fr;
     gap: 2rem;
   }
-
-  .footer-links-col {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  @starting-style {
+    .hero,
+    .explorer {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   .hero,
   .explorer {
-    opacity: 1;
-    transform: none;
     transition: none;
   }
 
-  .stat,
-  .community-card,
-  .install-box,
-  .action-primary,
-  .action-secondary {
+  .community-card {
     transition: none;
     transform: none;
   }

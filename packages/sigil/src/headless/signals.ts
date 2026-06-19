@@ -1,10 +1,10 @@
-import { type ReadonlySignal, signal, type Signal, untrack, watch } from '@vielzeug/ripple';
+import { type Readable, signal, type Signal, untrack, watch } from '@vielzeug/ripple';
 
 // ── syncedSignal ──────────────────────────────────────────────────────────────
 
 /**
  * Creates a local writable `Signal<T>` that stays in sync with an external
- * `ReadonlySignal<T>`. When `abortSignal` is provided the watcher subscription
+ * `Reactive<T>`. When `abortSignal` is provided the watcher subscription
  * is disposed automatically on abort; otherwise the caller is responsible for
  * disposal.
  *
@@ -20,7 +20,7 @@ import { type ReadonlySignal, signal, type Signal, untrack, watch } from '@vielz
  * ```
  */
 export const syncedSignal = <TIn, TOut = TIn>(
-  source: ReadonlySignal<TIn>,
+  source: Readable<TIn>,
   abortSignal?: AbortSignal,
   transform: (value: TIn) => TOut = (v) => v as unknown as TOut,
 ): Signal<TOut> => {

@@ -1,4 +1,4 @@
-import { type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/ripple';
+import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
 import {
   lifecycleSignal,
@@ -21,7 +21,7 @@ export type UseDialogOptions = {
   dialogRef: { value: HTMLDialogElement | null | undefined };
   getPanelEl: () => HTMLElement | null | undefined;
   host: HTMLElement;
-  initialFocus: ReadonlySignal<string | undefined>;
+  initialFocus: Readable<string | undefined>;
   isPersistent: () => boolean;
   /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
   onCleanup: (fn: () => void) => void;
@@ -43,13 +43,13 @@ export type UseDialogOptions = {
   /** Called by the overlay on open. Use to emit events. */
   onOpen?: (reason: OverlayOpenReason) => void;
   /** Open prop from the component — drives programmatic open/close via watch. */
-  openProp: ReadonlySignal<boolean | undefined>;
+  openProp: Readable<boolean | undefined>;
   /**
    * Called by the overlay when closing. Orchestrates the close animation.
    * Default: `dialog.close()`. Override in dialog.ts to add the CSS exit animation.
    */
   performClose?: (dialog: HTMLDialogElement, reason: DialogCloseReason) => void;
-  returnFocus: ReadonlySignal<boolean | undefined>;
+  returnFocus: Readable<boolean | undefined>;
 };
 
 export type UseDialogHandle = {

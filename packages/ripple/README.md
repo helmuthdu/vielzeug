@@ -75,7 +75,7 @@ import { signal, computed, effect, store, watch, batch } from '@vielzeug/ripple'
 
 // Signals
 const count = signal(0);
-const doubled = count.map((n) => n * 2); // combinator — returns ComputedSignal
+const doubled = count.map((n) => n * 2); // combinator — returns OwnedReactive
 
 const sub = effect(() => {
   console.log('doubled:', doubled.value); // re-runs when count changes

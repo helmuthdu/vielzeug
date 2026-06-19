@@ -1,6 +1,6 @@
 import { createContext, define, html, inject, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import '../../content/icon/icon';
 import { coarsePointerMixin, reducedMotionMixin } from '../../styles';
@@ -59,10 +59,10 @@ const readContainerWidth = (el: HTMLElement): number => {
 
 /** Context provided by `sg-sidebar` to its `sg-sidebar-group` and `sg-sidebar-item` children. */
 export type SidebarContext = {
-  collapsed: ReadonlySignal<boolean>;
-  mobileOpen: ReadonlySignal<boolean>;
-  mode: ReadonlySignal<SidebarMode>;
-  variant: ReadonlySignal<SidebarVariant | undefined>;
+  collapsed: Readable<boolean>;
+  mobileOpen: Readable<boolean>;
+  mode: Readable<SidebarMode>;
+  variant: Readable<SidebarVariant | undefined>;
 };
 
 /** Injection key for the sidebar context. */
@@ -265,9 +265,9 @@ define<SgSidebarProps, SgSidebarEvents>(SIDEBAR_TAG, {
     };
 
     provide(SIDEBAR_CTX, {
-      collapsed: computed(() => !isBottomNav.value && collapsedState.value) as ReadonlySignal<boolean>,
-      mobileOpen: computed(() => isBottomNav.value && isMobileOpen.value) as ReadonlySignal<boolean>,
-      mode: mode as ReadonlySignal<SidebarMode>,
+      collapsed: computed(() => !isBottomNav.value && collapsedState.value) as Readable<boolean>,
+      mobileOpen: computed(() => isBottomNav.value && isMobileOpen.value) as Readable<boolean>,
+      mode: mode as Readable<SidebarMode>,
       variant: props.variant,
     });
 

@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
@@ -11,7 +11,7 @@ import { observeResize } from './responsive';
 
 export interface ChartBase {
   chartArea: SVGGElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
   svg: SVGSVGElement;
   dispose(): void;
 }

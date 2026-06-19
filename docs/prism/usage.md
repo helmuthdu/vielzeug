@@ -65,7 +65,7 @@ data.value = [...data.value, { key: 3, value: 30 }];
 All data-bearing config fields use the `MaybeSignal<T>` type:
 
 ```ts
-type MaybeSignal<T> = T | ReadonlySignal<T>;
+type MaybeSignal<T> = T | Reactive<T>;
 ```
 
 Pass a plain value when data is fixed, or a signal when it changes dynamically. The chart handles both identically.

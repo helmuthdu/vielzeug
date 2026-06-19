@@ -41,24 +41,32 @@ cart.reset();
 
 ---
 
-#### Slice Watch via Getter + `watch()`
+#### Slice Watch via Lens + `watch()`
+
+`watch()` accepts a `Reactive`. Use `store.lens(path)` for a named property or `computed()` for an arbitrary derived slice:
 
 ```ts
-import { store, watch } from '@vielzeug/ripple';
+import { store, watch, computed } from '@vielzeug/ripple';
 
 const user = store({ id: 1, name: 'Alice', role: 'admin' });
 
-const sub = watch(
-  () => user.value.name,
-  (name, prev) => {
-    console.log('name:', prev, '→', name);
-  },
-);
+// Preferred: lens gives a cached, fine-grained writable signal
+const nameLens = user.lens('name');
+const sub = watch(nameLens, (name, prev) => {
+  console.log('name:', prev, '→', name);
+});
 
 user.patch({ role: 'editor' }); // ← does NOT fire (name unchanged)
 user.patch({ name: 'Bob' }); // → "name: Alice → Bob"
 
 sub.dispose();
+
+// For arbitrary derived slices, wrap in computed() first
+const fullLabel = computed(() => `${user.value.name} (${user.value.role})`);
+const subLabel = watch(fullLabel, (label) => console.log('label:', label));
+user.patch({ role: 'admin' }); // fires — role is part of the slice
+subLabel.dispose();
+fullLabel.dispose();
 ```
 
 ---

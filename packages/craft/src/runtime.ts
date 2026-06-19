@@ -3,7 +3,7 @@ import {
   effect as _effect,
   type EffectCallback,
   onCleanup as _onCleanup,
-  type ReadonlySignal,
+  type Readable,
 } from '@vielzeug/ripple';
 
 import { CRAFT_ERRORS } from './errors';
@@ -127,7 +127,7 @@ export function onEvent(
  * The callback's return value is used as a cleanup function.
  */
 export const onElement = <T extends HTMLElement>(
-  ref: ReadonlySignal<T | null>,
+  ref: Readable<T | null>,
   callback: (el: T) => CleanupFn | undefined | void,
 ): (() => void) => {
   return effect(() => {

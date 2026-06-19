@@ -1,5 +1,5 @@
 import { createContext, createStableId, define, useField, html, inject, prop, when } from '@vielzeug/craft';
-import { type ReadonlySignal } from '@vielzeug/ripple';
+import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
@@ -41,12 +41,12 @@ export type SgRadioGroupProps = {
 };
 
 export type RadioGroupContext = {
-  color: ReadonlySignal<ThemeColor | undefined>;
-  disabled: ReadonlySignal<boolean>;
-  name: ReadonlySignal<string | undefined>;
+  color: Readable<ThemeColor | undefined>;
+  disabled: Readable<boolean>;
+  name: Readable<string | undefined>;
   select: (value: string, originalEvent?: Event) => void;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  value: ReadonlySignal<string | undefined>;
+  size: Readable<ComponentSize | undefined>;
+  value: Readable<string | undefined>;
 };
 
 export const RADIO_GROUP_CTX = createContext<RadioGroupContext | undefined>('SgRadioGroup');
@@ -151,11 +151,11 @@ define<SgRadioGroupProps, SgRadioGroupEvents>(RADIO_GROUP_TAG, {
     };
 
     provide(RADIO_GROUP_CTX, {
-      color: props.color as ReadonlySignal<ThemeColor | undefined>,
+      color: props.color as Readable<ThemeColor | undefined>,
       disabled: isDisabled,
       name: props.name,
       select: selectRadio,
-      size: props.size as ReadonlySignal<ComponentSize | undefined>,
+      size: props.size as Readable<ComponentSize | undefined>,
       value: selectedValue,
     });
 

@@ -3,7 +3,7 @@
  * These are the types consumers interact with when calling define().
  */
 
-import type { CleanupFn, EffectCallback, ReadonlySignal } from '@vielzeug/ripple';
+import type { CleanupFn, EffectCallback, Readable } from '@vielzeug/ripple';
 
 import type { AriaConfig } from './aria';
 import type { InjectionKey } from './context';
@@ -60,7 +60,7 @@ export type SetupContextBag<
    * The callback's return value is used as a cleanup function.
    */
   onElement: <T extends HTMLElement>(
-    ref: ReadonlySignal<T | null>,
+    ref: Readable<T | null>,
     callback: (el: T) => CleanupFn | undefined | void,
   ) => () => void;
   /**

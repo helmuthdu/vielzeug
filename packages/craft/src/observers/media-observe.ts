@@ -1,11 +1,11 @@
-import { type ReadonlySignal, signal, onCleanup } from '@vielzeug/ripple';
+import { type Readable, signal, onCleanup } from '@vielzeug/ripple';
 
 /**
- * Observes a CSS media query via `window.matchMedia`. Returns a `ReadonlySignal`
+ * Observes a CSS media query via `window.matchMedia`. Returns a `Reactive`
  * that is `true` when the query matches and `false` when it does not.
  * Must be called inside a `mount()` callback.
  */
-export const mediaObserver = (query: string): ReadonlySignal<boolean> => {
+export const mediaObserver = (query: string): Readable<boolean> => {
   const mql = window.matchMedia(query);
   const matches = signal(mql.matches);
   const handler = (e: MediaQueryListEvent) => {

@@ -1,5 +1,5 @@
 import { define, html, prop, when } from '@vielzeug/craft';
-import { type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { type Readable, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './async.css?inline';
@@ -85,9 +85,8 @@ define<SgAsyncProps, SgAsyncEvents>(ASYNC_TAG, {
       },
     });
 
-    const renderText =
-      (className: 'title' | 'description', text: ReadonlySignal<string | undefined> | undefined) => () =>
-        text?.value ? html`<p class="${className}">${text}</p>` : '';
+    const renderText = (className: 'title' | 'description', text: Readable<string | undefined> | undefined) => () =>
+      text?.value ? html`<p class="${className}">${text}</p>` : '';
 
     // All four regions are always in the shadow DOM — CSS on :host([status="…"])
     // toggles their visibility. This means:

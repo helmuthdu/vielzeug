@@ -1,7 +1,7 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { CleanupFn, Subscriber } from './types';
 
-// ── Global revision clock (F1) ────────────────────────────────────────────────
+// ── Global revision clock ─────────────────────────────────────────────────────
 //
 // Monotonically-increasing counter incremented on every signal write.
 // ComputedImpl records the clock value after each successful recompute and uses
@@ -19,60 +19,111 @@ export type DepEntry = {
   version: number;
 };
 
-// R1: computed variant no longer carries `cleanups` — computeds do not support
-// onCleanup() (it throws immediately), so allocating a CleanupFn[] per recompute
-// was dead overhead.
+/** Called by trackSource to observe each reactive source accessed during a tracked run. */
+export type SourceObserver = (source: ReactiveBase<unknown>) => void;
+
+// TrackingCtx carries both dep-collection state AND an optional sourceObserver.
+// Putting the observer inside the context (R12) scopes it to the specific effect/computed
+// run rather than making it a process-wide global — nested computed recomputes use their
+// own context (no observer), so the debugEffect pattern works without identity checks.
 export type TrackingCtx =
   | {
       computed: ComputedBase<unknown>;
       depCollector: DepEntry[];
       kind: 'computed';
+      sourceObserver?: SourceObserver;
     }
   | {
       cleanups: CleanupFn[];
+      deps: Map<ReactiveBase<unknown>, number>;
       effect: Subscriber;
       kind: 'effect';
+      sourceObserver?: SourceObserver;
       subscriptions: Set<CleanupFn>;
-    }
-  | {
-      cleanups: CleanupFn[];
-      kind: 'scope';
     };
 
-/** Called by withSourceObserver to observe each reactive source accessed during a tracked run. */
-export type SourceObserver = (source: ReactiveBase<unknown>) => void;
+// ── ExecutionContext ──────────────────────────────────────────────────────────
+//
+// Unified context replaces two separate globals (_tracking and _scopeStack).
+// Both the dep-tracking context and the innermost scope's cleanup array live here.
+// The SSR hook overrides the entire context per-request — fixing the prior bug
+// where scope cleanups were always a process-wide singleton even with the hook.
 
-// ── Tracking hook (for SSR) ───────────────────────────────────────────────────
-
-export type TrackingHook = {
-  get(): TrackingCtx | null;
-  run<T>(ctx: TrackingCtx | null, fn: () => T): T;
+export type ExecutionContext = {
+  readonly scopeCleanups: CleanupFn[] | null;
+  readonly tracking: TrackingCtx | null;
 };
 
-let _tracking: TrackingCtx | null = null;
-let _hook: TrackingHook | null = null;
+export type ContextHook = {
+  get(): ExecutionContext;
+  run<T>(ctx: ExecutionContext, fn: () => T): T;
+};
 
-export const getTracking = (): TrackingCtx | null => (_hook !== null ? _hook.get() : _tracking);
+let _ctx: ExecutionContext = { scopeCleanups: null, tracking: null };
+let _hook: ContextHook | null = null;
 
-export const withTracking = <T>(ctx: TrackingCtx | null, fn: () => T): T => {
-  if (_hook !== null) return _hook.run(ctx, fn);
+const getCtx = (): ExecutionContext => (_hook !== null ? _hook.get() : _ctx);
 
-  const prev = _tracking;
+// ── Tracking ──────────────────────────────────────────────────────────────────
 
-  _tracking = ctx;
+export const getTracking = (): TrackingCtx | null => getCtx().tracking;
+
+export const withTracking = <T>(tracking: TrackingCtx | null, fn: () => T): T => {
+  if (_hook !== null) {
+    const current = _hook.get();
+
+    return _hook.run({ ...current, tracking }, fn);
+  }
+
+  const prev = _ctx;
+
+  _ctx = { ..._ctx, tracking };
 
   try {
     return fn();
   } finally {
-    _tracking = prev;
+    _ctx = prev;
+  }
+};
+
+// ── Scope cleanup ─────────────────────────────────────────────────────────────
+
+/**
+ * Pushes `cleanups` as the active scope cleanup array for the duration of `fn`.
+ * Any `onCleanup()` calls inside `fn` will register into these cleanups.
+ * Effects and computed values created inside `fn` are also auto-registered.
+ */
+export const withScopeCleanups = <T>(cleanups: CleanupFn[], fn: () => T): T => {
+  if (_hook !== null) {
+    const current = _hook.get();
+
+    return _hook.run({ ...current, scopeCleanups: cleanups }, fn);
+  }
+
+  const prev = _ctx;
+
+  _ctx = { ..._ctx, scopeCleanups: cleanups };
+
+  try {
+    return fn();
+  } finally {
+    _ctx = prev;
   }
 };
 
 /**
- * @internal Used only by `/ripple/ssr`.
- * Installs a custom tracking hook and returns the previous one.
+ * Returns the cleanup array of the innermost active scope, or `null` if not inside a scope.
  */
-export const _installTrackingHook = (hook: TrackingHook | null): TrackingHook | null => {
+export const getScopeCleanups = (): CleanupFn[] | null => getCtx().scopeCleanups;
+
+// ── Context hook (for SSR) ────────────────────────────────────────────────────
+
+/**
+ * @internal Used only by `/ripple/ssr`.
+ * Installs a context hook that overrides both tracking and scope-cleanup access.
+ * Returns the previous hook so callers can restore it.
+ */
+export const _installContextHook = (hook: ContextHook | null): ContextHook | null => {
   const prev = _hook;
 
   _hook = hook;
@@ -82,29 +133,21 @@ export const _installTrackingHook = (hook: TrackingHook | null): TrackingHook | 
 
 // ── Source observer ───────────────────────────────────────────────────────────
 //
-// Allows debugEffect to intercept each reactive source read during an effect run
-// without coupling the debug logic into effect() itself.
-//
-// R2: effect() no longer checks getSourceObserver(). debugEffect wraps its fn
-// with withSourceObserver before passing it to effect(), so the observer is
-// already installed by the time fn() runs.
-
-let _sourceObserver: SourceObserver | null = null;
+// Observer is now scoped to the active TrackingCtx instead of a process-wide global.
+// This means it only fires for direct deps of the current effect/computed — nested
+// computed recomputes use their own context (no observer) so no identity check needed.
 
 /**
- * Runs `fn` while calling `observer` for every reactive source that is accessed.
+ * Runs `fn` while calling `observer` for every reactive source directly accessed.
  * Used by `debugEffect` to detect which sources changed between runs.
+ * No-op if called outside an active tracking context.
  */
 export const withSourceObserver = <T>(observer: SourceObserver, fn: () => T): T => {
-  const prev = _sourceObserver;
+  const current = getTracking();
 
-  _sourceObserver = observer;
+  if (current === null) return fn();
 
-  try {
-    return fn();
-  } finally {
-    _sourceObserver = prev;
-  }
+  return withTracking({ ...current, sourceObserver: observer }, fn);
 };
 
 // ── untrack ───────────────────────────────────────────────────────────────────
@@ -129,14 +172,15 @@ export const untrack = <T>(fn: () => T): T => withTracking(null, fn);
 // For computed contexts: only records the dep entry — addComputedSub is called
 // later by updateDeps() in computed.ts (only for genuinely NEW deps, preventing
 // duplicate WeakRef entries).
-// For effect contexts: immediately subscribes the effect to the source.
+// For effect contexts: immediately subscribes the effect to the source and
+// records the dep for getDependencies().
 
 export const trackSource = (source: ReactiveBase<unknown>): void => {
-  _sourceObserver?.(source);
-
   const ctx = getTracking();
 
   if (ctx === null) return;
+
+  ctx.sourceObserver?.(source);
 
   if (ctx.kind === 'computed') {
     ctx.depCollector.push({ source, version: source.version });
@@ -145,6 +189,6 @@ export const trackSource = (source: ReactiveBase<unknown>): void => {
 
     source.addEffectSub(owner);
     ctx.subscriptions.add(() => source.removeEffectSub(owner));
+    ctx.deps.set(source, source.version);
   }
-  // scope: no dep tracking
 };

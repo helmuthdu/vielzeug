@@ -1,17 +1,17 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { Subscriber } from './types';
 
-import { ensureError, runAll, StateError } from './error';
-import { _NONE } from './symbols';
+import { warn } from './_warn';
+import { runAll, StateError } from './error';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
 // NOTE: These are module-level singletons. In SSR environments with concurrent requests,
 // signal writes from different requests share the same flush queue. The /ripple/ssr
 // sub-path isolates reactive *tracking* per request via AsyncLocalStorage, but does NOT
-// isolate the flush queue. Ripple signals are designed for use in a single synchronous
-// render context per module instance (e.g. one Node.js worker per request via isolation).
+// isolate the flush queue. Use one Node.js worker (or isolate) per concurrent request.
 let batchDepth = 0;
+let ssrWarnFired = false;
 const pendingSubscribers = new Set<Subscriber>();
 const dirtyWithEffectSubs = new Set<ComputedBase<unknown>>();
 
@@ -38,47 +38,62 @@ const dirtyWithEffectSubs = new Set<ComputedBase<unknown>>();
 // Computeds without direct effect subs (pure lazy nodes) are still pulled
 // lazily when an effect reads them during re-run.
 
+// Hoisted to module level to avoid allocations on every signal write in the hot path.
+// Epoch-based visited marking — _propEpoch is incremented on each propagation call.
+// Each computed node stores its lastPropEpoch_; if it matches the current epoch it was
+// already visited this propagation. No Set needed — no cleanup required, no corruption
+// risk if an exception interrupts mid-traversal.
+let _propEpoch = 0;
+const _propagateStack: ComputedBase<unknown>[] = [];
+
 const propagateDirty = (node: {
-  computedSubs(): Iterable<ComputedBase<unknown>>;
+  computedSubs(): Generator<ComputedBase<unknown>>;
   effectSubs(): ReadonlySet<Subscriber>;
 }): void => {
+  const epoch = ++_propEpoch;
+
   // Queue direct effect subs of the changed node
   for (const sub of node.effectSubs()) {
     pendingSubscribers.add(sub);
   }
 
-  const stack: ComputedBase<unknown>[] = [...node.computedSubs()];
-  const seen = new Set<ComputedBase<unknown>>();
+  for (const c of node.computedSubs()) {
+    _propagateStack.push(c);
+  }
 
-  while (stack.length > 0) {
-    const c = stack.pop()!;
+  try {
+    while (_propagateStack.length > 0) {
+      const c = _propagateStack.pop()!;
 
-    if (seen.has(c)) continue;
+      if (c.lastPropEpoch_ === epoch) continue;
 
-    seen.add(c);
+      c.lastPropEpoch_ = epoch;
 
-    if (!c.markDirty()) continue; // already dirty — already processed
+      if (!c.markDirty()) continue; // already dirty — already processed
 
-    // If this computed has effect subs, defer recompute to the pull phase.
-    // We cannot queue them immediately because the computed might not change.
-    if (c.effectSubs().size > 0) {
-      dirtyWithEffectSubs.add(c);
+      // If this computed has effect subs, defer recompute to the pull phase.
+      // We cannot queue them immediately because the computed might not change.
+      if (c.effectSubs().size > 0) {
+        dirtyWithEffectSubs.add(c);
+      }
+
+      for (const downstream of c.computedSubs()) {
+        _propagateStack.push(downstream);
+      }
     }
-
-    for (const downstream of c.computedSubs()) {
-      stack.push(downstream);
-    }
+  } finally {
+    _propagateStack.length = 0;
   }
 };
 
 const recomputeWithEffectSubs = (): void => {
   // Iterate until stable — recomputing one computed may dirty others.
   while (dirtyWithEffectSubs.size > 0) {
-    const batch = [...dirtyWithEffectSubs];
+    const toProcess = [...dirtyWithEffectSubs];
 
     dirtyWithEffectSubs.clear();
 
-    for (const c of batch) {
+    for (const c of toProcess) {
       if (!c.hasSubscribers()) continue;
 
       const changed = c.refreshIfDirty();
@@ -100,12 +115,12 @@ const recomputeWithEffectSubs = (): void => {
   }
 };
 
-const flushEffects = (maxIterations: number): void => {
+const flushEffects = (): void => {
   let iterations = 0;
 
   while (pendingSubscribers.size > 0 || dirtyWithEffectSubs.size > 0) {
-    if (++iterations > maxIterations) {
-      throw new StateError('INFINITE_LOOP', `infinite flush loop (> ${maxIterations} iterations)`);
+    if (++iterations > DEFAULT_MAX_ITERATIONS) {
+      throw new StateError('INFINITE_LOOP', `infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
     }
 
     if (dirtyWithEffectSubs.size > 0) recomputeWithEffectSubs();
@@ -122,42 +137,43 @@ const flushEffects = (maxIterations: number): void => {
 export const notifyNodeChange = (node: ReactiveBase<unknown>): void => {
   if (!node.hasSubscribers()) return;
 
+  if (!ssrWarnFired && typeof window === 'undefined') {
+    ssrWarnFired = true;
+    warn(
+      'Signal updated in a server environment. The module-level flush queue is shared across concurrent requests ' +
+        '— use per-request worker isolation or the @vielzeug/ripple/ssr sub-path for tracking isolation.',
+    );
+  }
+
   propagateDirty(node);
 
-  if (batchDepth === 0) flushEffects(DEFAULT_MAX_ITERATIONS);
+  if (batchDepth === 0) flushEffects();
 };
 
 export const batch = <T>(fn: () => T): T => {
-  const maxIterations = DEFAULT_MAX_ITERATIONS;
-
   batchDepth++;
 
-  let result: T | undefined;
-  let bodyError: unknown = _NONE;
+  let result: T;
 
   try {
     result = fn();
   } catch (e) {
-    bodyError = e;
+    batchDepth--;
+
+    // Outermost batch: clear the pending flush queue on body error.
+    // Leaving stale subscribers in the queue would flush them on the next unrelated
+    // signal write, surfacing errors in unexpected contexts.
+    if (batchDepth === 0) {
+      pendingSubscribers.clear();
+      dirtyWithEffectSubs.clear();
+    }
+
+    throw e;
   }
 
   batchDepth--;
 
-  if (batchDepth === 0) {
-    try {
-      flushEffects(maxIterations);
-    } catch (flushError) {
-      if (bodyError !== _NONE) {
-        throw new AggregateError([bodyError, flushError], '[ripple] batch error with flush errors', {
-          cause: flushError,
-        });
-      }
+  if (batchDepth === 0) flushEffects();
 
-      throw ensureError(flushError);
-    }
-  }
-
-  if (bodyError !== _NONE) throw bodyError;
-
-  return result as T;
+  return result;
 };

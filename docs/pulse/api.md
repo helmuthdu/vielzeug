@@ -82,7 +82,7 @@ const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws'
 
 ### `pulse.status`
 
-Type: `ReadonlySignal<PulseStatus>`
+Type: `Reactive<PulseStatus>`
 
 Reactive connection status. Subscribe with ripple `effect()` to react to status changes.
 
@@ -99,7 +99,7 @@ console.log(pulse.status.value); // 'connecting' | 'open' | 'reconnecting' | 'cl
 
 ### `pulse.rooms`
 
-Type: `ReadonlySignal<ReadonlySet<string>>`
+Type: `Reactive<ReadonlySet<string>>`
 
 Reactive set of rooms the client is currently a confirmed member of.
 
@@ -445,7 +445,7 @@ Obtain via `pulse.presence(room)`.
 
 ### `presence.state`
 
-Type: `ReadonlySignal<ReadonlyMap<string, T>>`
+Type: `Reactive<ReadonlyMap<string, T>>`
 
 Reactive map of `memberId → state`. Updates whenever any member joins, leaves, or changes state.
 

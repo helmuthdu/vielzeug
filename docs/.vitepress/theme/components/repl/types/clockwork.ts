@@ -165,10 +165,10 @@ declare module '/clockwork' {
   export const MachineErrorCode: Record<MachineErrorCode, MachineErrorCode>;
 
   export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
-    readonly context: import('/ripple').ReadonlySignal<Ctx>;
+    readonly context: import('/ripple').Reactive<Ctx>;
     readonly disposalSignal: AbortSignal;
     readonly disposed: boolean;
-    readonly state: import('/ripple').ReadonlySignal<State>;
+    readonly state: import('/ripple').Reactive<State>;
     can(event: Ev): boolean;
     dispose(): void;
     getSnapshot(): MachineSnapshot<State, Ctx>;

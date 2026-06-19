@@ -1,27 +1,30 @@
+import type { ReactiveBase } from './reactive-base';
 import type {
   AsyncEffectCallback,
   AsyncSubscription,
   CleanupFn,
+  DepInfo,
   EffectAsyncOptions,
   EffectCallback,
+  EffectHandle,
   EffectOptions,
   EqualityFn,
-  ReadonlySignal,
+  Readable,
   Scope,
   Subscriber,
   Subscription,
   WatchOptions,
 } from './types';
 
-import { issue } from './_warn';
 import { getDevToolsHook } from './devtools-hook';
 import { collectErrors, rethrowWith, runAll, StateError } from './error';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
-import { getTracking, withTracking } from './tracking';
+import { IS_COMPUTED } from './symbols';
+import { getScopeCleanups, getTracking, withScopeCleanups, withTracking } from './tracking';
 
 /**
- * Wraps a core `run` function with a scheduler that coalesces rapid re-runs.
+ * Wraps a core `run` function with a microtask-based scheduler that coalesces rapid re-runs.
  * The `subscriber` returned here is what gets registered in signal subscriber sets —
  * so notifications call the deferred wrapper, not `run` directly.
  *
@@ -31,21 +34,6 @@ import { getTracking, withTracking } from './tracking';
  */
 const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): Subscriber => {
   if (scheduler === 'sync' || scheduler === undefined) return run;
-
-  if (typeof scheduler === 'function') {
-    const customScheduler = scheduler;
-    let scheduled = false;
-
-    return (): void => {
-      if (scheduled) return;
-
-      scheduled = true;
-      customScheduler(() => {
-        scheduled = false;
-        run();
-      });
-    };
-  }
 
   // 'microtask'
   let scheduled = false;
@@ -74,25 +62,23 @@ const withScheduler = (run: Subscriber, scheduler: EffectOptions['scheduler']): 
  * });
  *
  * stop.dispose(); // or: using stop = effect(...)
+ * console.log(stop.getDependencies()); // reactive graph introspection
  * ```
  */
-export const effect = (fn: EffectCallback, options?: EffectOptions): Subscription => effectCore(fn, options);
-
-const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription => {
+export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandle => {
   const scheduler = options?.scheduler ?? 'sync';
-  const maxIterations = options?.maxIterations ?? DEFAULT_MAX_ITERATIONS;
   const effectName = options?.name;
 
-  // R11: single shared array for cleanups — used directly by onCleanup() via the
-  // tracking context, and cleared + run by teardown() on each re-run or dispose.
-  // No wrapper closure allocated per run; the array is re-used in place.
   const runCleanups: CleanupFn[] = [];
   const subscriptions = new Set<CleanupFn>();
+  const currentDeps = new Map<ReactiveBase<unknown>, number>();
   let isRunning = false;
   let isDirty = false;
   let isDisposed = false;
 
   const teardown = (): void => {
+    currentDeps.clear();
+
     if (runCleanups.length === 0 && subscriptions.size === 0) return;
 
     const toRun = [...runCleanups, ...subscriptions];
@@ -120,10 +106,13 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
       let iterations = 0;
 
       do {
-        if (++iterations > maxIterations) {
+        if (++iterations > DEFAULT_MAX_ITERATIONS) {
           const label = effectName ? ` in "${effectName}"` : '';
 
-          throw new StateError('INFINITE_LOOP', `infinite effect loop (> ${maxIterations} iterations)${label}`);
+          throw new StateError(
+            'INFINITE_LOOP',
+            `infinite effect loop (> ${DEFAULT_MAX_ITERATIONS} iterations)${label}`,
+          );
         }
 
         isDirty = false;
@@ -135,7 +124,7 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
 
         try {
           returnedCleanup = withTracking(
-            { cleanups: runCleanups, effect: subscriber, kind: 'effect', subscriptions },
+            { cleanups: runCleanups, deps: currentDeps, effect: subscriber, kind: 'effect', subscriptions },
             fn,
           );
         } catch (error) {
@@ -146,7 +135,6 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
           rethrowWith(error, cleanupErrors, 'effect failure with cleanup errors');
         }
 
-        // Throws on non-function truthy returns — catches bugs like returning array.push() result
         if (returnedCleanup !== undefined && typeof returnedCleanup !== 'function') {
           throw new StateError(
             'INVALID_CLEANUP',
@@ -154,7 +142,6 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
           );
         }
 
-        // R11: push returned cleanup directly into runCleanups (no wrapper closure).
         if (typeof returnedCleanup === 'function') runCleanups.push(returnedCleanup);
       } while (isDirty && !isDisposed);
     } finally {
@@ -177,15 +164,27 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
     getDevToolsHook()?.dispose?.({ kind: 'effect', name: effectName });
   });
 
-  // Auto-register disposal into the enclosing scope context (withScope / scope.run).
-  // This allows withScope(() => { effect(...) }) to own effect lifetimes automatically.
-  const ctx = getTracking();
+  // Auto-register disposal into the enclosing scope (if any).
+  // Uses the separate scope stack — orthogonal to the effect/computed tracking context.
+  getScopeCleanups()?.push(() => sub.dispose());
 
-  if (ctx !== null && ctx.kind === 'scope') {
-    ctx.cleanups.push(() => sub.dispose());
-  }
+  const handle: EffectHandle = {
+    dispose: () => sub.dispose(),
+    get disposed() {
+      return sub.disposed;
+    },
+    getDependencies(): ReadonlyArray<DepInfo> {
+      return [...currentDeps.keys()].map((src) => ({
+        kind: IS_COMPUTED in (src as object) ? 'computed' : 'signal',
+        name: src.name,
+      }));
+    },
+    [Symbol.dispose]() {
+      sub.dispose();
+    },
+  };
 
-  return sub;
+  return handle;
 };
 
 /**
@@ -193,7 +192,8 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
  * effect re-runs or is disposed. Read reactive dependencies synchronously before the first
  * `await` to register them as tracked.
  *
- * Returns an {@link AsyncSubscription} — call `disposeAsync()` to await full teardown.
+ * Returns an {@link AsyncSubscription} — call `await stop[Symbol.asyncDispose]()` to await
+ * full teardown, or `stop.run()` to await just the current in-flight run.
  *
  * @example
  * ```ts
@@ -204,7 +204,7 @@ const effectCore = (fn: EffectCallback, options?: EffectOptions): Subscription =
  *   renderUser(data);
  * });
  *
- * await stop.disposeAsync();
+ * await stop[Symbol.asyncDispose]();
  * ```
  */
 export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOptions): AsyncSubscription => {
@@ -215,7 +215,9 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
   const onError =
     options?.onError ??
     ((err: unknown) => {
-      issue('unhandled effectAsync error:', err);
+      queueMicrotask(() => {
+        throw err;
+      });
     });
 
   const syncStop = effect(
@@ -227,16 +229,28 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
       controller = new AbortController();
 
       const { signal } = controller;
+      const runOwner = scope(); // per-run owner scope for async body resources
 
-      currentRunPromise = (async () => {
+      let theRun!: Promise<void>;
+
+      currentRunPromise = theRun = (async () => {
         try {
-          const returned = await fn(signal);
+          const returned = await fn(signal, runOwner);
 
-          if (!signal.aborted && typeof returned === 'function') {
-            asyncCleanup = returned;
+          if (typeof returned === 'function') {
+            if (signal.aborted) {
+              // Aborted while async fn was running — run cleanup immediately.
+              returned();
+            } else {
+              asyncCleanup = returned;
+            }
           }
         } catch (err) {
           if (!signal.aborted) onError(err);
+        } finally {
+          runOwner.dispose();
+
+          if (currentRunPromise === theRun) currentRunPromise = null;
         }
       })();
 
@@ -249,21 +263,35 @@ export const effectAsync = (fn: AsyncEffectCallback, options?: EffectAsyncOption
     { name: options?.name },
   );
 
-  return new AsyncSubscriptionImpl(syncStop, async () => {
-    const runningPromise = currentRunPromise;
+  return new AsyncSubscriptionImpl(
+    syncStop,
+    async () => {
+      const runningPromise = currentRunPromise;
 
-    if (runningPromise) await runningPromise;
-  });
+      if (runningPromise) await runningPromise;
+    },
+    () => currentRunPromise,
+  );
 };
 
 export const onCleanup = (fn: CleanupFn): void => {
   const ctx = getTracking();
 
-  if (ctx === null || ctx.kind === 'computed') {
-    throw new StateError('INVALID_CLEANUP', 'onCleanup() must be called from within an active effect or scope.');
+  if (ctx?.kind === 'effect') {
+    ctx.cleanups.push(fn);
+
+    return;
   }
 
-  ctx.cleanups.push(fn);
+  const scopeCleanups = getScopeCleanups();
+
+  if (scopeCleanups !== null) {
+    scopeCleanups.push(fn);
+
+    return;
+  }
+
+  throw new StateError('INVALID_CLEANUP', 'onCleanup() must be called from within an active effect or scope.');
 };
 
 /**
@@ -274,11 +302,20 @@ export const onCleanup = (fn: CleanupFn): void => {
  * `onCleanup()` calls in setup are captured without requiring a separate
  * `scope.run(setup)` call.
  *
+ * Use `scope.add(fn)` to explicitly register a cleanup into this scope from
+ * anywhere — including from inside an effect body where `onCleanup()` would otherwise
+ * go to the effect's own cleanup queue.
+ *
  * @example
  * ```ts
  * const s = scope(() => {
- *   const sub = effect(() => { ... });
- *   onCleanup(() => sub.dispose());
+ *   onCleanup(() => expensiveCleanup()); // captured by scope
+ * });
+ *
+ * const stop = effect(() => {
+ *   void count.value;
+ *   s.add(() => doWork()); // explicit: goes to scope, not effect
+ *   onCleanup(() => cheapCleanup()); // goes to effect
  * });
  *
  * // later:
@@ -289,10 +326,16 @@ export const scope = (setup?: () => void): Scope => {
   const cleanups: CleanupFn[] = [];
   let disposed = false;
 
+  const scopeOnCleanup = (fn: CleanupFn): void => {
+    if (disposed) throw new StateError('DISPOSED_SCOPE', 'Cannot register cleanup on a disposed scope.');
+
+    cleanups.push(fn);
+  };
+
   const run = <T>(fn: () => T): T => {
     if (disposed) throw new StateError('DISPOSED_SCOPE', 'Cannot run inside a disposed scope.');
 
-    return withTracking({ cleanups, kind: 'scope' }, fn);
+    return withScopeCleanups(cleanups, fn);
   };
 
   const dispose = (): void => {
@@ -305,6 +348,7 @@ export const scope = (setup?: () => void): Scope => {
   };
 
   const api: Scope = {
+    add: scopeOnCleanup,
     dispose,
     get disposed() {
       return disposed;
@@ -318,53 +362,14 @@ export const scope = (setup?: () => void): Scope => {
   return api;
 };
 
-/**
- * @deprecated Use `scope()` + `s.run()` directly instead:
- * ```ts
- * const s = scope();
- * await s.run(async () => {
- *   onCleanup(() => resourceA.close()); // ✓ before any await — captured
- *   const db = await openDB();
- * });
- * ```
- *
- * **Important:** `onCleanup()` can only be called synchronously — before the
- * first `await` in the setup function. Reactive tracking does not survive
- * `await` boundaries; any `onCleanup()` calls after an `await` will throw
- * `INVALID_CLEANUP`.
- */
-export const asyncScope = async (setup: () => Promise<void>): Promise<Scope> => {
-  const s = scope();
-
-  await s.run(setup);
-
-  return s;
-};
-
-/**
- * @deprecated Use `scope(setup)` directly — `withScope(fn)` is identical to `scope(fn)`.
- *
- * @example
- * ```ts
- * // Before
- * const s = withScope(() => {
- *   effect(() => { document.title = count.value.toString(); });
- * });
- *
- * // After
- * const s = scope(() => {
- *   effect(() => { document.title = count.value.toString(); });
- * });
- * ```
- */
-export const withScope = (setup: () => void): Scope => scope(setup);
-
 // ── watch() ───────────────────────────────────────────────────────────────────
 
 /**
  * Observes a reactive source and calls `callback` whenever its value changes.
  * Does NOT invoke `callback` on creation (unless `immediate: true` is passed).
- * Receives the new value and the previous value on each change.
+ *
+ * When called without `immediate`, `prev` is always `T` — the previous value.
+ * When `immediate: true` is passed, `prev` is `T | undefined` on the first call.
  *
  * @example
  * ```ts
@@ -375,25 +380,29 @@ export const withScope = (setup: () => void): Scope => scope(setup);
  * stop.dispose();
  * ```
  */
-export const watch = <T>(
-  source: ReadonlySignal<T> | (() => T),
+export function watch<T>(
+  source: Readable<T>,
+  callback: (value: T, prev: T) => CleanupFn | void,
+  options?: WatchOptions<T>,
+): Subscription;
+export function watch<T>(
+  source: Readable<T>,
+  callback: (value: T, prev: T | undefined) => CleanupFn | void,
+  options: WatchOptions<T> & { immediate: true },
+): Subscription;
+export function watch<T>(
+  source: Readable<T>,
   callback: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
-): Subscription => {
-  const read: () => T = typeof source === 'function' ? source : () => source.value;
+): Subscription {
   const equals: EqualityFn<T> = options?.equals ?? Object.is;
-  const immediate = options?.immediate ?? false;
-  const name = options?.name;
-
-  let prev: T | undefined = undefined;
-  let firstRun = true;
+  let prev: T = source.peek();
   let pendingCleanup: CleanupFn | undefined;
-
   const invokeCallback = (next: T, p: T | undefined): void => {
     pendingCleanup?.();
     pendingCleanup = undefined;
 
-    const returned = withTracking(null, () => callback(next, p));
+    const returned = callback(next, p);
 
     if (returned !== undefined && typeof returned !== 'function') {
       throw new StateError(
@@ -405,28 +414,37 @@ export const watch = <T>(
     if (typeof returned === 'function') pendingCleanup = returned;
   };
 
-  return effectCore(
-    (): CleanupFn => {
-      const next = read();
+  // Declared before innerSub so both the subscriber closure and the immediate path
+  // can call watchSub.dispose() when once:true. Subscribers always fire asynchronously
+  // so watchSub is guaranteed to be assigned before the closure executes.
+  // eslint-disable-next-line prefer-const -- forward reference: innerSub subscriber closes over watchSub; both are assigned synchronously before any subscriber fires
+  let watchSub!: SubscriptionImpl;
 
-      if (firstRun) {
-        firstRun = false;
+  const innerSub = source.subscribe(() => {
+    const next = source.peek();
 
-        if (immediate) invokeCallback(next, undefined);
+    if (!equals(prev, next)) {
+      invokeCallback(next, prev);
+      prev = next;
 
-        prev = next;
-      } else {
-        if (!equals(prev as T, next)) {
-          invokeCallback(next, prev);
-          prev = next;
-        }
-      }
+      if (options?.once) watchSub.dispose();
+    }
+  });
 
-      return () => {
-        pendingCleanup?.();
-        pendingCleanup = undefined;
-      };
-    },
-    { name },
-  );
-};
+  watchSub = new SubscriptionImpl(() => {
+    pendingCleanup?.();
+    pendingCleanup = undefined;
+    innerSub.dispose();
+  });
+
+  if (options?.immediate) {
+    invokeCallback(prev, undefined);
+
+    if (options.once) watchSub.dispose();
+  }
+
+  // Auto-register disposal into the enclosing scope (if any) — matches effect() behaviour.
+  getScopeCleanups()?.push(() => watchSub.dispose());
+
+  return watchSub;
+}

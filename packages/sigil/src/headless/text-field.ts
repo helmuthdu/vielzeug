@@ -1,4 +1,4 @@
-import { type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { type Readable, type Signal } from '@vielzeug/ripple';
 
 import { type CounterState, createCounterState, createField, type FieldHandle, type FieldOptions } from './field-base';
 import { syncedSignal } from './signals';
@@ -9,7 +9,7 @@ import { syncedSignal } from './signals';
 export type TextFieldDetach = () => void;
 
 export type TextFieldOptions = FieldOptions & {
-  maxLength?: ReadonlySignal<number | undefined>;
+  maxLength?: Readable<number | undefined>;
   /**
    * Called synchronously before value extraction on every input event.
    * Use only for DOM side-effects (e.g. auto-resize measurement) that must
@@ -22,7 +22,7 @@ export type TextFieldOptions = FieldOptions & {
   onInput?: (event: Event, value: string) => void;
   /** `AbortSignal` from the component lifecycle. The internal value-sync watcher is disposed on abort. */
   signal: AbortSignal;
-  value: ReadonlySignal<string | undefined>;
+  value: Readable<string | undefined>;
 };
 
 export type TextFieldHandle = FieldHandle & {
@@ -32,7 +32,7 @@ export type TextFieldHandle = FieldHandle & {
    * Reactive counter state. Non-null when `maxLength` was provided; `null` otherwise.
    * Components should only render a counter element when this is non-null.
    */
-  counter: ReadonlySignal<CounterState> | null;
+  counter: Readable<CounterState> | null;
   /** The local mutable field value (two-way bound to the input element via `wire()`). */
   value: Signal<string>;
   /**

@@ -267,7 +267,7 @@ interface BaseChartConfig {
 ### `MaybeSignal<T>`
 
 ```ts
-type MaybeSignal<T> = T | ReadonlySignal<T>;
+type MaybeSignal<T> = T | Reactive<T>;
 ```
 
 Accepts either a plain value or a `@vielzeug/ripple` signal. Used throughout config types for optional reactivity.
@@ -381,7 +381,7 @@ Passed to `renderFn` inside `createChartScaffold`. Available to plugin authors v
 interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Reactive<ChartDimensions>;
   groups: ScaffoldGroups;
   legend: LegendState | null;
   svg: SVGSVGElement;
@@ -819,7 +819,7 @@ The live tooltip object available on `ctx.tooltip` inside `ChartPlugin.install`.
 ```ts
 interface ChartPluginContext {
   container: HTMLElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Reactive<ChartDimensions>;
   svg: SVGSVGElement;
 }
 ```

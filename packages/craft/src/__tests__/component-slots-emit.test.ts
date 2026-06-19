@@ -115,8 +115,8 @@ describe('component slots and emit', () => {
     define<{ checked?: boolean; label?: string }, { toggle: { checked: boolean } }>(tag, {
       props: toggleProps,
       setup: (props, { emit }) => {
-        expectType<import('@vielzeug/ripple').ReadonlySignal<boolean | undefined>>(props.checked);
-        expectType<import('@vielzeug/ripple').ReadonlySignal<string | undefined>>(props.label);
+        expectType<import('@vielzeug/ripple').Reactive<boolean | undefined>>(props.checked);
+        expectType<import('@vielzeug/ripple').Reactive<string | undefined>>(props.label);
 
         return html`<button @click=${() => emit('toggle', { checked: !props.checked.value })}>${props.label}</button>`;
       },
@@ -136,7 +136,7 @@ describe('component slots and emit', () => {
 describe('slots: stale slot cleanup (C1)', () => {
   it('slot presence signal reflects false after a conditional slot is removed from shadow DOM', async () => {
     const showSlot = signal(true);
-    let hasDefault!: import('@vielzeug/ripple').ReadonlySignal<boolean>;
+    let hasDefault!: import('@vielzeug/ripple').Reactive<boolean>;
 
     const { flush } = await mount(
       (_props, { slots }) => {
@@ -157,7 +157,7 @@ describe('slots: stale slot cleanup (C1)', () => {
 
   it('slot presence signal returns true when slot is re-added after removal', async () => {
     const showSlot = signal(true);
-    let hasDefault!: import('@vielzeug/ripple').ReadonlySignal<boolean>;
+    let hasDefault!: import('@vielzeug/ripple').Reactive<boolean>;
 
     const { flush } = await mount(
       (_props, { slots }) => {

@@ -8,7 +8,7 @@
  * - Expose `applyBinding()` as the single dispatch entry point.
  */
 
-import { computed, effect as rawEffect, isSignal, type ReadonlySignal, StateError, untrack } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isSignal, type Readable, untrack } from '@vielzeug/ripple';
 
 import { isLiveSignal } from '../directives/live';
 import { getPropMeta } from '../props';
@@ -34,7 +34,7 @@ export type RegisterCleanup = (fn: () => void) => void;
 // ─── Signal helpers ───────────────────────────────────────────────────────────
 
 const signalEffect = (
-  signal: ReadonlySignal<unknown>,
+  signal: Readable<unknown>,
   update: (v: unknown) => void,
   registerCleanup: RegisterCleanup,
 ): void => {
@@ -44,17 +44,10 @@ const signalEffect = (
 };
 
 /**
- * Read a signal safely, suppressing disposed-signal errors during scope teardown.
+ * Read a signal safely during scope teardown. Disposed signals and computeds
+ * return their last known value (or undefined) without throwing — no try/catch needed.
  */
-const readSignalSafe = <T>(sig: ReadonlySignal<T>): T | undefined => {
-  try {
-    return sig.value;
-  } catch (error) {
-    if (error instanceof StateError && error.code === 'DISPOSED_READ') return undefined;
-
-    throw error;
-  }
-};
+const readSignalSafe = <T>(sig: Readable<T>): T | undefined => sig.value;
 
 // ─── Text ─────────────────────────────────────────────────────────────────────
 
@@ -305,7 +298,7 @@ export const createAttrBindingFromValue = (
   const propMeta = getPropMeta(el, name) as AttrPropMeta | undefined;
 
   if (isLiveSignal(value)) {
-    return { el, live: true, mode, name, propMeta, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+    return { el, live: true, mode, name, propMeta, signal: value as Readable<unknown>, type: 'attr' };
   }
 
   if (typeof value === 'function') {
@@ -313,7 +306,7 @@ export const createAttrBindingFromValue = (
   }
 
   if (isSignal(value)) {
-    return { el, mode, name, propMeta, signal: value as ReadonlySignal<unknown>, type: 'attr' };
+    return { el, mode, name, propMeta, signal: value as Readable<unknown>, type: 'attr' };
   }
 
   return { el, mode, name, propMeta, type: 'attr', value };

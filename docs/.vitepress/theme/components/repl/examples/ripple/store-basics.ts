@@ -1,5 +1,5 @@
 export const storeBasicsExample = {
-  code: `import { store, selector, watch } from '@vielzeug/ripple'
+  code: `import { store, computed, watch } from '@vielzeug/ripple'
 
 // Create an object-state store
 const user = store({ name: 'Alice', age: 30, email: 'alice@example.com' })
@@ -20,9 +20,9 @@ console.log('Name via lens:', nameLens.value)
 nameLens.value = 'Alice Jones'
 console.log('After lens write:', user.peek().name)
 
-// selector() — read-only derived slice (replaces .map())
+// computed() — read-only projection of a signal or lens
 const ageLens = user.lens('age')
-const greeting = selector(nameLens, (name) => \`\${name} (age \${ageLens.value})\`)
+const greeting = computed(() => \`\${nameLens.value} (age \${ageLens.value})\`)
 console.log('Greeting:', greeting.value)
 
 // Watch a lens — only fires when that path changes
@@ -39,5 +39,5 @@ greeting.dispose()
 // Reset to initial state
 user.reset()
 console.log('After reset:', user.peek())`,
-  name: 'Store — patch, lens & selector',
+  name: 'Store — patch, lens & computed',
 };

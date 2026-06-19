@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -6,25 +6,25 @@ export type PaginatedListOptions<T> = {
   /** All items to paginate. Can be a reactive signal accessor. */
   getItems: () => T[];
   /** Number of items per page. Defaults to 10. */
-  pageSize?: ReadonlySignal<number> | number;
+  pageSize?: Readable<number> | number;
 };
 
 export type PaginatedListHandle<T> = {
   /** Navigate to an absolute page index (clamped). */
   goTo(index: number): void;
   /** Whether there is a next page. */
-  readonly hasNext: ReadonlySignal<boolean>;
+  readonly hasNext: Readable<boolean>;
   /** Whether there is a previous page. */
-  readonly hasPrev: ReadonlySignal<boolean>;
+  readonly hasPrev: Readable<boolean>;
 
   /** Navigate to the next page. No-op on last page. */
   next(): void;
   /** Total number of pages. */
-  readonly pageCount: ReadonlySignal<number>;
+  readonly pageCount: Readable<number>;
   /** Current 0-based page index. */
-  readonly pageIndex: ReadonlySignal<number>;
+  readonly pageIndex: Readable<number>;
   /** Items visible on the current page. */
-  readonly pageItems: ReadonlySignal<T[]>;
+  readonly pageItems: Readable<T[]>;
   /** Navigate to the previous page. No-op on first page. */
   prev(): void;
   /** Reset to the first page. */

@@ -593,7 +593,7 @@ Returns a `Promise` that resolves with all emitted values when the source comple
 ### `fromSignal()` (Ripple)
 
 ```ts
-fromSignal<T>(source: ReadonlySignal<T>): Flux<T>;
+fromSignal<T>(source: Reactive<T>): Flux<T>;
 ```
 
 Emits the signal's current value immediately on subscribe, then emits on every change. Requires `@vielzeug/ripple`.

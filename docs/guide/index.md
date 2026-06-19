@@ -379,7 +379,7 @@ subject.next('hello'); // after 300 ms: 'hello'
 | **Scroll + Orbit**        | Render a virtualised list inside a Orbit-positioned dropdown for high-item-count comboboxes            |
 | **Dnd + Scroll**          | Combine sortable drag handles with a virtual list for large reorderable datasets                       |
 | **Sourcerer + Wayfinder** | Sync a source's query state (page, filters, sort) with the URL so links stay shareable                 |
-| **Clockwork + Ripple**    | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates        |
+| **Clockwork + Ripple**    | Clockwork state and context are Reactives — bind them directly to effects or UI templates        |
 | **Clockwork + Ward**      | Call ward predicates inside clockwork guards to block unauthorized transitions                         |
 | **Clockwork + Herald**    | Publish state-change events to decouple multiple machines from each other                              |
 | **Flux + Ripple**         | `fromSignal()` / `toSignal()` bridge reactive signals and streams — use Ripple for state, Flux for pipelines |

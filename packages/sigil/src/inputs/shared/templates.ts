@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { html } from '@vielzeug/craft';
 
@@ -14,8 +14,8 @@ import { html } from '@vielzeug/craft';
  */
 export const renderHelperRegion = (
   assistiveId: string,
-  errorText: ReadonlySignal<string>,
-  helperText: ReadonlySignal<string>,
+  errorText: Readable<string>,
+  helperText: Readable<string>,
   setRef?: (el: HTMLElement | null) => void,
 ) => {
   return html`<div

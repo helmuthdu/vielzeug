@@ -1,4 +1,4 @@
-import { type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { type Readable, signal } from '@vielzeug/ripple';
 
 import { dispatchKeyboardAction } from './keyboard';
 import { createTypeahead } from './typeahead';
@@ -83,7 +83,7 @@ export type ListNavigationOptions<T> = {
 export type ListControl<T> = {
   [Symbol.dispose](): void;
   /** Current focused index. `-1` when nothing is focused. */
-  readonly focusedIndex: ReadonlySignal<number>;
+  readonly focusedIndex: Readable<number>;
   getActiveItem(): T | undefined;
   handleKeydown(event: KeyboardEvent): boolean;
   /**

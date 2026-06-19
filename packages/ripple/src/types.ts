@@ -2,52 +2,29 @@
 
 export type CleanupFn = () => void;
 export type EffectCallback = () => CleanupFn | void;
-export type AsyncEffectCallback = (signal: AbortSignal) => Promise<CleanupFn | void>;
+export type AsyncEffectCallback = (signal: AbortSignal, owner: Scope) => Promise<CleanupFn | void>;
 export type EqualityFn<T> = (a: T, b: T) => boolean;
 
 /**
  * Controls when an effect re-runs after a dependency changes.
  * - `'sync'` (default): runs immediately in the same flush.
  * - `'microtask'`: deferred to the next microtask.
- * - function: custom scheduler — receives the `run` callback and is responsible
- *   for calling it (once) at the appropriate time. Enables integration with
- *   React's scheduler, priority queues, or other custom timing strategies.
- *
- * @example Custom scheduler:
- * ```ts
- * effect(fn, { scheduler: (run) => setTimeout(run, 100) });
- * ```
  */
-export type EffectScheduler = ((run: () => void) => void) | 'microtask' | 'sync';
+export type EffectScheduler = 'microtask' | 'sync';
 
 /** Options accepted by `computed()`. */
 export type ComputedOptions<T> = {
   equals?: EqualityFn<T>;
-  /**
-   * Called when the compute function throws during evaluation.
-   * Receives the thrown error and the last successfully computed value (or
-   * `undefined` on the first run). The return value is used as the node value,
-   * allowing graceful degradation instead of propagating the error.
-   */
-  fallback?: (error: unknown, lastValue: T | undefined) => T;
   name?: string;
 };
 
 /** Options accepted by `signal()`. */
 export type SignalOptions<T> = {
-  /**
-   * When `true`, multiple synchronous writes to this signal are coalesced into
-   * a single downstream notification dispatched in the next microtask.
-   * Useful for rapidly-updated values (scroll position, input events) without
-   * wrapping every write site in `batch()`.
-   */
-  batched?: boolean;
   equals?: EqualityFn<T>;
   name?: string;
 };
 
 export type EffectOptions = {
-  maxIterations?: number;
   name?: string;
   scheduler?: EffectScheduler;
 };
@@ -67,12 +44,43 @@ export interface Subscription {
   [Symbol.dispose](): void;
 }
 
-export interface AsyncSubscription extends Subscription {
+/**
+ * A snapshot of one reactive dependency recorded by an effect.
+ * Returned by `EffectHandle.getDependencies()`.
+ */
+export type DepInfo = {
+  readonly kind: 'computed' | 'signal';
+  readonly name?: string;
+};
+
+/**
+ * Extended handle returned by `effect()`.
+ * Extends `Subscription` with `getDependencies()` for reactive graph introspection.
+ *
+ * @example
+ * ```ts
+ * const handle = effect(() => { console.log(count.value); });
+ * console.log(handle.getDependencies()); // [{ name: 'count' }]
+ * handle.dispose();
+ * ```
+ */
+export interface EffectHandle extends Subscription {
   /**
-   * @deprecated Use `await using stop = effectAsync(...)` with `[Symbol.asyncDispose]` instead.
+   * Returns the reactive sources the effect is currently subscribed to.
+   * Reflects the deps collected during the last completed run.
+   * Returns an empty array after `dispose()`.
    */
-  disposeAsync(): Promise<void>;
-  /** ES2024 `await using` compatible async disposal. Equivalent to `disposeAsync()`. */
+  getDependencies(): ReadonlyArray<DepInfo>;
+}
+
+/**
+ * Extended async subscription returned by `effectAsync()`.
+ * Adds `run()` for structured concurrency — await the current async run before proceeding.
+ */
+export interface AsyncSubscription extends Subscription {
+  /** Awaits the current async run without disposing the effect. Resolves immediately if idle. */
+  run(): Promise<void>;
+  /** ES2024 `await using` compatible async disposal. Stops the effect and awaits full teardown. */
   [Symbol.asyncDispose](): Promise<void>;
 }
 
@@ -82,92 +90,90 @@ export type WatchOptions<T> = {
   equals?: EqualityFn<T>;
   immediate?: boolean;
   name?: string;
+  /** Auto-dispose the watch after the first callback invocation. */
+  once?: boolean;
 };
 
-// ── AsyncComputed ─────────────────────────────────────────────────────────────
+// ── Resource (async computed) ─────────────────────────────────────────────────
 
-export type AsyncComputedOptions<T> = {
-  /** Initial value shown on `data` before the first run resolves. */
+export type ResourceOptions<T> = {
+  /** Value exposed via `data` while the first run is loading. */
   initialValue?: T;
-  /** Debug name for the internal effect. */
+  /** Debug name for the internal effect and state signal. */
   name?: string;
 };
 
 /**
- * The reactive handle returned by `asyncComputed()`.
- * Exposes three flat `ReadonlySignal` projections:
- * - `data`      — latest fulfilled value (`T | undefined`)
- * - `error`     — last thrown error (`unknown | undefined`)
- * - `isLoading` — `true` while a run is in-flight (starts `true`)
+ * Discriminated-union state emitted by a `resource()` signal.
+ *
+ * - `'loading'` — async factory is in-flight. `data` carries the last fulfilled value (if any).
+ * - `'ready'`   — factory resolved. `data` is the fulfilled value.
+ * - `'error'`   — factory rejected. `error` holds the thrown value. `data` carries the last fulfilled value (if any).
+ *
+ * @example
+ * ```ts
+ * const user = resource(async () => fetchUser(id.value));
+ *
+ * effect(() => {
+ *   const s = user.value;
+ *   if (s.status === 'loading') return showSpinner();
+ *   if (s.status === 'error')   return showError(s.error);
+ *   renderUser(s.data);
+ * });
+ * ```
  */
-export interface AsyncComputedSignal<T> {
-  /** The latest fulfilled value, or `undefined` while pending / after error. */
-  readonly data: ReadonlySignal<T | undefined>;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  /** The last thrown error, or `undefined` when fulfilled or loading. */
-  readonly error: ReadonlySignal<unknown | undefined>;
-  /** `true` while the async factory is in-flight. `true` on first frame. */
-  readonly isLoading: ReadonlySignal<boolean>;
-  /** Disposes the underlying effect and all projections. Cancels any in-flight run. */
-  dispose(): void;
-  [Symbol.dispose](): void;
-}
+export type ResourceState<T> =
+  | { readonly data?: T; readonly status: 'loading' }
+  | { readonly data: T; readonly status: 'ready' }
+  | { readonly data?: T; readonly error: unknown; readonly status: 'error' };
 
 // ── Store history / time-travel ───────────────────────────────────────────────
 
 /**
- * An external undo/redo adapter wrapping a `Store<T>`.
- * Access the underlying store via `.store` for reads and mutations.
+ * A single snapshot entry in `StoreWithHistory`.
+ * Carries the frozen state and an optional label for annotated checkpoints.
  */
-export interface StoreWithHistory<T extends object> {
-  /** The underlying reactive store. Use this to read, patch, replace, or reset state. */
-  readonly store: Store<T>;
-  /** `true` when there is at least one snapshot to undo to. Reactive — reads inside effects re-run on change. */
-  readonly canUndo: boolean;
-  /** `true` when there is at least one snapshot ahead to redo. Reactive — reads inside effects re-run on change. */
-  readonly canRedo: boolean;
-  /** Returns a snapshot of state at the given index (0 = oldest). */
-  historyAt(index: number): Readonly<T> | undefined;
-  /** Number of snapshots in history. */
-  readonly historyLength: number;
-  /** Move back one snapshot. No-op when at the beginning. */
-  undo(): void;
-  /** Move forward one snapshot. No-op when at the end. */
-  redo(): void;
-  /** Dispose the history adapter, cursor signal, and the underlying store. */
-  dispose(): void;
-  [Symbol.dispose](): void;
-}
+export type HistoryEntry<T> = {
+  readonly label?: string;
+  readonly state: Readonly<T>;
+};
 
 // ── Core reactive interfaces ──────────────────────────────────────────────────
 
 /**
- * The minimal read-only contract for any reactive value.
- * This is what effects and computed functions consume — `.value` for tracked reads,
- * `peek()` for untracked reads, and `subscribe()` for external imperative listeners.
+ * The minimal read-only contract for consuming any reactive value.
+ * Effects and computed functions read `.value` (tracked) or `peek()` (untracked).
+ * Use `subscribe()` for external imperative listeners.
  */
-export interface ReadonlySignal<T> {
+export interface Readable<T> {
+  /** `true` after the underlying node has been disposed. */
+  readonly disposed: boolean;
   /** The debug name assigned at creation time, or `undefined` if unnamed. */
   readonly name?: string;
   peek(): T;
+  /**
+   * Subscribes a listener to value change notifications.
+   * Implementations MUST NOT invoke `listener` synchronously during registration.
+   */
   subscribe(listener: () => void): Subscription;
   readonly value: T;
 }
 
-export interface Signal<T> extends ReadonlySignal<T> {
+/**
+ * A disposable derived value. The holder is responsible for calling `dispose()`.
+ * Returned by `computed()`, `readonly()`, and `resource()`.
+ */
+export interface Computed<T> extends Readable<T> {
   dispose(): void;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  value: T;
   [Symbol.dispose](): void;
 }
 
-export interface ComputedSignal<T> extends ReadonlySignal<T> {
-  dispose(): void;
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
-  [Symbol.dispose](): void;
+/**
+ * A writable owned signal. The holder can both read and write `.value`,
+ * and is responsible for calling `dispose()` when done.
+ */
+export interface Signal<T> extends Computed<T> {
+  value: T;
 }
 
 /**
@@ -185,39 +191,16 @@ export type PathValue<T, P extends string> = P extends keyof T
       : never
     : never;
 
-// ── Greenfield aliases ────────────────────────────────────────────────────────
-
-/**
- * Alias for {@link ReadonlySignal}. Prefer `Accessor<T>` for clarity —
- * the name communicates "you can read this" rather than implying the value never changes.
- */
-export type Accessor<T> = ReadonlySignal<T>;
-
-/**
- * Alias for {@link AsyncComputedOptions}. Use with {@link resource}.
- */
-export type ResourceOptions<T> = AsyncComputedOptions<T>;
-
-/**
- * Alias for {@link AsyncComputedSignal}. Returned by {@link resource}.
- */
-export type ResourceSignal<T> = AsyncComputedSignal<T>;
-
 /**
  * A fine-grained reactive store for objects.
+ * Extends `Computed<Readonly<T>>` — `store.value` provides a tracked whole-store read.
  *
  * `lens()` is the primary reactive read/write API — it returns a `Signal` for
  * a specific property or nested path and registers fine-grained dependencies.
  * `peek()` returns a non-reactive snapshot (useful for serialization).
  * `subscribe()` fires on any mutation (useful for adapters like `storeWithHistory`).
  */
-export interface Store<T extends object> {
-  /**
-   * Permanently disposes the store, releasing all internal reactive resources.
-   * All cached lenses and prop signals are disposed.
-   */
-  dispose(): void;
-  [Symbol.dispose](): void;
+export interface Store<T extends object> extends Computed<Readonly<T>> {
   /**
    * Returns a writable `Signal` scoped to a single property or nested path.
    * Reads register a fine-grained dependency on that property's signal —
@@ -225,10 +208,6 @@ export interface Store<T extends object> {
    * Lenses are cached — `store.lens('x') === store.lens('x')`.
    */
   lens<P extends string>(path: P): Signal<PathValue<T, P>>;
-  /** Whether the store has been disposed. */
-  readonly disposed: boolean;
-  /** The debug name assigned at creation, or `undefined` if unnamed. */
-  readonly name?: string;
   /** Atomic partial update — only changed keys notify their subscribers. */
   patch(partial: Partial<T>): void;
   /**
@@ -236,13 +215,13 @@ export interface Store<T extends object> {
    * Use for serialization or one-off reads outside reactive contexts.
    */
   peek(): Readonly<T>;
-  /** Resets the store to its initial state. */
-  reset(): void;
   /**
    * Replaces the entire store state by passing the current state to `fn` and
    * applying the returned value. Only changed properties trigger downstream effects.
    */
   replace(fn: (state: Readonly<T>) => T): void;
+  /** Resets the store to its initial state. */
+  reset(): void;
   /**
    * Subscribes to any store mutation (patch / replace / reset / lens write).
    * Used by external adapters — prefer `store.lens()` for reactive reads.
@@ -250,20 +229,73 @@ export interface Store<T extends object> {
   subscribe(listener: () => void): Subscription;
 }
 
+/**
+ * A lifecycle scope that collects cleanup functions and runs them on dispose.
+ * Effects and computeds created inside `scope.run()` auto-register their disposal.
+ */
 export interface Scope {
-  readonly dispose: () => void;
   /** `true` after `dispose()` has been called. */
   readonly disposed: boolean;
-  readonly run: <T>(fn: () => T) => T;
-  readonly [Symbol.dispose]: () => void;
+  /**
+   * Registers `fn` to run when this scope is disposed.
+   * Throws `DISPOSED_SCOPE` if called on an already-disposed scope.
+   * Use this from within an effect body to explicitly direct a cleanup into the scope
+   * rather than the effect's own cleanup queue.
+   */
+  add(fn: CleanupFn): void;
+  dispose(): void;
+  /**
+   * Runs `fn` inside this scope's cleanup context.
+   * `onCleanup()` calls and resource auto-disposals inside `fn` are registered
+   * to this scope when there is no enclosing effect or computed context.
+   * Reactive reads inside `fn` are tracked normally against any enclosing effect.
+   * Throws `DISPOSED_SCOPE` if the scope has already been disposed.
+   */
+  run<T>(fn: () => T): T;
+  [Symbol.dispose](): void;
 }
 
 /**
- * A Scope variant for async setup functions.
- * Captures `onCleanup()` registrations from the synchronous preamble of `setup`
- * (before the first `await`), awaits the rest of setup, then returns the scope.
+ * An undo/redo adapter wrapping a `Store<T>`.
+ * Extends `Store<T>` directly — all store mutations (`patch`, `replace`, `reset`, `lens`)
+ * work on the history adapter without `.store` indirection.
+ *
+ * History is **explicit** — call `push()` or `pushNamed()` after any mutation you want undoable.
+ *
+ * @example
+ * ```ts
+ * const h = storeWithHistory({ count: 0 });
+ *
+ * h.patch({ count: 1 });
+ * h.push();           // save a checkpoint
+ * h.undo();           // restore to { count: 0 }
+ * h.redo();           // restore to { count: 1 }
+ * ```
  */
-export type AsyncScopeSetup = () => Promise<void>;
+export interface StoreWithHistory<T extends object> extends Store<T> {
+  /** `true` when there is at least one snapshot ahead to redo. Reactive — reads inside effects re-run on change. */
+  readonly canRedo: boolean;
+  /** `true` when there is at least one snapshot to undo to. Reactive — reads inside effects re-run on change. */
+  readonly canUndo: boolean;
+  /** Returns the history entry at the given index (0 = oldest). */
+  historyAt(index: number): HistoryEntry<T> | undefined;
+  /** Number of snapshots currently in history. */
+  readonly historyLength: number;
+  /** Saves the current store state as an explicit undo checkpoint. */
+  push(): void;
+  /**
+   * Saves the current store state as an annotated checkpoint.
+   * Use to mark significant transitions (e.g. `'import'`, `'reset'`) so time-travel
+   * debuggers can distinguish user-initiated from programmatic mutations.
+   */
+  pushNamed(label: string): void;
+  /** Move forward one snapshot. No-op when at the most recent checkpoint. */
+  redo(): void;
+  /** The underlying store — kept as an escape hatch for adapters that need direct store access. */
+  readonly store: Store<T>;
+  /** Move back one snapshot. No-op when at the oldest checkpoint. */
+  undo(): void;
+}
 
 // Needed by reactive-base.ts (kept here to avoid the circular dep
 // reactive-base → types → reactive-base).

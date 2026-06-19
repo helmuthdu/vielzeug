@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { createContext } from './context';
 
@@ -8,13 +8,13 @@ import { createContext } from './context';
  */
 export type FormFieldContext = {
   /** Whether any field has been touched (interacted with). Set via markDirty(). */
-  readonly dirty: ReadonlySignal<boolean>;
+  readonly dirty: Readable<boolean>;
   markDirty(): void;
   /**
    * Register a field's validity signal with the form context.
    * Returns a cleanup function.
    */
-  registerField(validity: ReadonlySignal<boolean>): () => void;
+  registerField(validity: Readable<boolean>): () => void;
 };
 
 /**
@@ -29,13 +29,13 @@ export type FormController = FormFieldContext & {
    */
   clearStatus(): void;
   /** The last submit error, or null if the last submit succeeded. */
-  readonly error: ReadonlySignal<unknown>;
+  readonly error: Readable<unknown>;
   /** Submit the form programmatically. */
   submit(e?: Event): Promise<void>;
   /** Whether the form is currently submitting. */
-  readonly submitting: ReadonlySignal<boolean>;
+  readonly submitting: Readable<boolean>;
   /** Whether all fields in the form are valid. */
-  readonly valid: ReadonlySignal<boolean>;
+  readonly valid: Readable<boolean>;
 };
 
 export const FORM_CONTEXT_KEY = createContext<FormFieldContext>('craft:form-context');
@@ -61,7 +61,7 @@ export function createFormContext(
     onSubmit?: (e?: Event) => void | Promise<void>;
   } = {},
 ): FormController {
-  const fieldValiditySignals = signal<Array<ReadonlySignal<boolean>>>([]);
+  const fieldValiditySignals = signal<Array<Readable<boolean>>>([]);
   const submitting = signal(false);
   const dirty = signal(false);
   const error = signal<unknown>(null);
@@ -98,7 +98,7 @@ export function createFormContext(
     dirty.value = true;
   };
 
-  const registerField = (validity: ReadonlySignal<boolean>): (() => void) => {
+  const registerField = (validity: Readable<boolean>): (() => void) => {
     fieldValiditySignals.value = [...fieldValiditySignals.value, validity];
 
     return () => {

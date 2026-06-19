@@ -16,7 +16,7 @@ Structure stores as plain modules — no class registration or plugin needed:
 ```ts
 // stores/auth.store.ts
 import { computed, readonly, store } from '@vielzeug/ripple';
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Reactive } from '@vielzeug/ripple';
 
 type User = { id: string; name: string };
 type Credentials = { email: string; password: string };
@@ -39,14 +39,14 @@ export const isAuthenticated = computed(() => !!s.value.token);
 export const currentUser = computed(() => s.value.user);
 
 // Public read-only view — callers can observe but not mutate
-export const authStore: ReadonlySignal<AuthState> = readonly(s);
+export const authStore: Reactive<AuthState> = readonly(s);
 
 // Mutations (exported as functions, not methods)
 export async function login(credentials: Credentials) {
   s.patch({ loading: true });
   try {
     const { token, user } = await authenticate(credentials);
-    s.update(() => ({ token, user, loading: false }));
+    s.replace(() => ({ token, user, loading: false }));
   } catch {
     s.patch({ loading: false });
   }
