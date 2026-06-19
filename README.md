@@ -602,32 +602,32 @@ pnpm docs:dev
 ```
 vielzeug/
 ├── packages/
-│   ├── ripple/        # Reactive signals and state
-│   ├── craft/         # Web component primitives
-│   ├── sigil/         # Accessible web components (built on craft)
+│   └── codex/         # AI / MCP server
+│   ├── arsenal/       # 75+ utility functions
 │   ├── clockwork/     # Finite state machines
-│   ├── forge/         # Form state management
-│   ├── spell/         # Schema validation
-│   ├── courier/       # HTTP client & query management
-│   ├── vault/         # Browser storage (IndexedDB + LocalStorage)
-│   ├── wayfinder/     # Client-side routing
-│   ├── ward/          # RBAC & permission management
+│   ├── coins/         # Monetary arithmetic & formatting
 │   ├── conduit/       # Dependency injection
-│   ├── rune/          # Structured logging
-│   ├── lingua/        # Internationalization
-│   ├── herald/        # Typed event bus
+│   ├── courier/       # HTTP client & query management
+│   ├── craft/         # Web component primitives
+│   ├── dnd/           # Drag-and-drop utilities
 │   ├── familiar/      # Web Worker pool
 │   ├── flux/          # Reactive streams & operators
-│   ├── dnd/           # Drag-and-drop utilities
+│   ├── forge/         # Form state management
+│   ├── herald/        # Typed event bus
+│   ├── lingua/        # Internationalization
 │   ├── orbit/         # Floating element positioning
 │   ├── prism/         # Reactive SVG charts
-│   ├── sourcerer/     # Reactive data sources
-│   ├── scroll/        # Virtual list engine
-│   ├── tempo/         # Date & time utilities
-│   ├── coins/         # Monetary arithmetic & formatting
 │   ├── pulse/         # WebSocket client
-│   ├── arsenal/       # 75+ utility functions
-│   └── codex/         # AI / MCP server
+│   ├── ripple/        # Reactive signals and state
+│   ├── rune/          # Structured logging
+│   ├── scroll/        # Virtual list engine
+│   ├── sigil/         # Accessible web components (built on craft)
+│   ├── sourcerer/     # Reactive data sources
+│   ├── spell/         # Schema validation
+│   ├── tempo/         # Date & time utilities
+│   ├── vault/         # Browser storage (IndexedDB + LocalStorage)
+│   ├── ward/          # RBAC & permission management
+│   ├── wayfinder/     # Client-side routing
 ├── docs/              # VitePress documentation
 └── common/            # Shared Rush configuration
 ```
@@ -650,36 +650,36 @@ pnpm docs:build     # Build documentation
 
 All sizes are **minified + gzipped** production builds:
 
-| Package                  | Minified                   | Gzipped        | Dependencies |
-| ------------------------ | -------------------------- | -------------- | ------------ |
-| `@vielzeug/ripple`       | **7.0 KB**                 | **2.4 KB**     | 0            |
-| `@vielzeug/craft`        | **18 KB**                  | **5.0 KB**     | 1\*          |
-| `@vielzeug/sigil`        | —                          | —              | 3\*          |
-| `@vielzeug/clockwork`    | —                          | —              | 1\*          |
-| `@vielzeug/forge`        | **7.2 KB**                 | **3.0 KB**     | 0            |
-| `@vielzeug/spell`        | **14 KB**                  | **2.8 KB**     | 0            |
-| `@vielzeug/courier`      | **10 KB**                  | **3.4 KB**     | 1\*          |
-| `@vielzeug/vault`        | **16 KB**                  | **4.5 KB**     | 0            |
-| `@vielzeug/wayfinder`    | **9.0 KB**                 | **3.1 KB**     | 0            |
-| `@vielzeug/ward`         | **5.9 KB**                 | **2.0 KB**     | 0            |
-| `@vielzeug/conduit`      | **8.0 KB**                 | **2.1 KB**     | 0            |
-| `@vielzeug/rune`         | **6.8 KB**                 | **2.7 KB**     | 0            |
-| `@vielzeug/lingua`       | **7.4 KB**                 | **1.6 KB**     | 0            |
-| `@vielzeug/herald`       | —                          | —              | 0            |
-| `@vielzeug/familiar`     | —                          | —              | 0            |
-| `@vielzeug/flux`         | —                          | —              | 1\*          |
-| `@vielzeug/dnd`          | —                          | —              | 0            |
-| `@vielzeug/orbit`        | —                          | —              | 0            |
-| `@vielzeug/prism`        | **32 KB**                  | **10.3 KB**    | 2\*          |
-| `@vielzeug/sourcerer`    | —                          | —              | 1\*          |
-| `@vielzeug/scroll`       | —                          | —              | 0            |
-| `@vielzeug/tempo`        | —                          | —              | 0            |
-| `@vielzeug/coins`        | —                          | —              | 0            |
-| `@vielzeug/pulse`        | —                          | —              | 1\*          |
-| `@vielzeug/arsenal`      | **0.1–1.0 KB** per utility | **0.1–0.5 KB** | 0            |
-| `@vielzeug/codex`        | —                          | —              | 0            |
+| Package                  | Minified                     | Gzipped        | Dependencies |
+| ------------------------ | ---------------------------- | -------------- | ------------ |
+| `@vielzeug/arsenal`      | **25.0 KB** (full bundle)    | **9.0 KB**     | 0            |
+| `@vielzeug/clockwork`    | **8.5 KB**                   | **3.1 KB**     | 1\*          |
+| `@vielzeug/codex`        | **0.7 KB**                   | **0.4 KB**     | 0            |
+| `@vielzeug/coins`        | **9.5 KB**                   | **3.5 KB**     | 0            |
+| `@vielzeug/conduit`      | **7.8 KB**                   | **2.6 KB**     | 0            |
+| `@vielzeug/courier`      | **21.9 KB**                  | **7.4 KB**     | 1\*          |
+| `@vielzeug/craft`        | **28.9 KB**                  | **10.5 KB**    | 1\*          |
+| `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
+| `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
+| `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
+| `@vielzeug/forge`        | **17.9 KB**                  | **5.6 KB**     | 0            |
+| `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
+| `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
+| `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
+| `@vielzeug/prism`        | **33.7 KB**                  | **11.0 KB**    | 2\*          |
+| `@vielzeug/pulse`        | **13.4 KB**                  | **4.6 KB**     | 1\*          |
+| `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
+| `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
+| `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
+| `@vielzeug/sigil`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
+| `@vielzeug/sourcerer`    | **17.2 KB**                  | **5.2 KB**     | 1\*          |
+| `@vielzeug/spell`        | **49.1 KB**                  | **11.9 KB**    | 0            |
+| `@vielzeug/tempo`        | **12.5 KB**                  | **4.0 KB**     | 0            |
+| `@vielzeug/vault`        | **26.9 KB**                  | **8.7 KB**     | 0            |
+| `@vielzeug/ward`         | **7.1 KB**                   | **2.6 KB**     | 0            |
+| `@vielzeug/wayfinder`    | **16.3 KB**                  | **5.9 KB**     | 0            |
 
-\* Only depends on other `@vielzeug` packages. Packages marked — haven't published a final build size yet.
+\* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable — individual utilities average 0.1–0.8 KB each. `sigil` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
 
 ---
 
