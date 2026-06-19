@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**23 independent, zero-dependency TypeScript packages for modern JavaScript**
+**26 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -101,6 +101,25 @@ pnpm add @vielzeug/clockwork
 
 ---
 
+### [@vielzeug/flux](packages/flux) – Reactive Streams
+
+Composable, cold-by-default reactive streams with a full operator library and ecosystem adapters.
+
+```bash
+pnpm add @vielzeug/flux
+```
+
+**Key Features:**
+- `flux()` factory for cold, pipeable, disposable streams
+- Subjects: `createSubject()` and `createBehaviorSubject()` for hot multicast sources
+- 40+ operators — creation, transformation, filtering, combination, and utility
+- Ecosystem adapters: Ripple signals, Herald bus, Pulse WebSocket, Courier SSE/queries
+- Zero external dependencies (adapters use optional `@vielzeug` peer deps)
+
+[📖 Documentation](https://vielzeug.dev/flux/) • [Examples](https://vielzeug.dev/flux/examples)
+
+---
+
 ### [@vielzeug/forge](packages/forge) – Form State Management
 
 Effortless, type-safe form state and validation for modern web applications.
@@ -152,6 +171,25 @@ pnpm add @vielzeug/courier
 - Automatic retry with exponential backoff (10 KB min / 3.4 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/courier/) • [Examples](https://vielzeug.dev/courier/examples)
+
+---
+
+### [@vielzeug/pulse](packages/pulse) – WebSocket Client
+
+Full-featured WebSocket client with typed messaging, channel multiplexing, reactive presence, and auto-reconnect.
+
+```bash
+pnpm add @vielzeug/pulse @vielzeug/ripple
+```
+
+**Key Features:**
+- Typed event maps — payload types inferred from the event key
+- Channel multiplexing and room management
+- Reactive `status`, `latency`, and presence signals via `@vielzeug/ripple`
+- Auto-reconnect with configurable backoff and heartbeat (ping/pong) support
+- Typed error hierarchy: `ConnectionError`, `TimeoutError`, `DisposedError`, and more
+
+[📖 Documentation](https://vielzeug.dev/pulse/) • [Examples](https://vielzeug.dev/pulse/examples)
 
 ---
 
@@ -415,6 +453,25 @@ pnpm add @vielzeug/tempo
 
 ---
 
+### [@vielzeug/coins](packages/coins) – Monetary Arithmetic
+
+Bigint-based monetary arithmetic with formatting, exchange, and allocation — no IEEE-754 rounding surprises.
+
+```bash
+pnpm add @vielzeug/coins
+```
+
+**Key Features:**
+- `money(amount, currency)` as an immutable value type backed by bigint — exact precision throughout
+- Full arithmetic: `add`, `subtract`, `multiply`, `divide`, `allocate`, `splitEvenly`
+- Locale-aware formatting via `Intl.NumberFormat` with `format()` and `formatParts()`
+- `exchange()` for currency conversion with custom rate maps
+- Zero dependencies
+
+[📖 Documentation](https://vielzeug.dev/coins/) • [Examples](https://vielzeug.dev/coins/examples)
+
+---
+
 ### [@vielzeug/arsenal](packages/arsenal) – Utility Library
 
 75+ tree-shakeable helpers for arrays, objects, strings, async, math, and more.
@@ -560,12 +617,15 @@ vielzeug/
 │   ├── lingua/        # Internationalization
 │   ├── herald/        # Typed event bus
 │   ├── familiar/      # Web Worker pool
+│   ├── flux/          # Reactive streams & operators
 │   ├── dnd/           # Drag-and-drop utilities
 │   ├── orbit/         # Floating element positioning
 │   ├── prism/         # Reactive SVG charts
 │   ├── sourcerer/     # Reactive data sources
 │   ├── scroll/        # Virtual list engine
 │   ├── tempo/         # Date & time utilities
+│   ├── coins/         # Monetary arithmetic & formatting
+│   ├── pulse/         # WebSocket client
 │   ├── arsenal/       # 75+ utility functions
 │   └── codex/         # AI / MCP server
 ├── docs/              # VitePress documentation
@@ -607,12 +667,15 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/lingua`       | **7.4 KB**                 | **1.6 KB**     | 0            |
 | `@vielzeug/herald`       | —                          | —              | 0            |
 | `@vielzeug/familiar`     | —                          | —              | 0            |
+| `@vielzeug/flux`         | —                          | —              | 1\*          |
 | `@vielzeug/dnd`          | —                          | —              | 0            |
 | `@vielzeug/orbit`        | —                          | —              | 0            |
 | `@vielzeug/prism`        | **32 KB**                  | **10.3 KB**    | 2\*          |
 | `@vielzeug/sourcerer`    | —                          | —              | 1\*          |
 | `@vielzeug/scroll`       | —                          | —              | 0            |
 | `@vielzeug/tempo`        | —                          | —              | 0            |
+| `@vielzeug/coins`        | —                          | —              | 0            |
+| `@vielzeug/pulse`        | —                          | —              | 1\*          |
 | `@vielzeug/arsenal`      | **0.1–1.0 KB** per utility | **0.1–0.5 KB** | 0            |
 | `@vielzeug/codex`        | —                          | —              | 0            |
 

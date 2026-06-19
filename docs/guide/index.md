@@ -324,6 +324,31 @@ console.log(auth.state.value); // 'active'
 
 ---
 
+### Reactive Streams — [Flux](/flux/)
+
+Composable, cold-by-default reactive streams with a pipeable operator library and adapters for every Vielzeug primitive.
+
+```typescript
+import { flux, map, filter, debounce, createSubject } from '@vielzeug/flux';
+
+const subject = createSubject<string>();
+
+// Build a type-ahead search pipeline
+const results$ = flux(subject)
+  .pipe(
+    filter((q) => q.length > 1),
+    debounce(300),
+    map((q) => q.toLowerCase().trim()),
+  );
+
+results$.subscribe(console.log);
+subject.next('hello'); // after 300 ms: 'hello'
+```
+
+**Start here if** you need multi-value, cancellable, composable data flows — event streams, WebSocket messages, polling, or anything that doesn't fit a single `Promise`.
+
+---
+
 ### Other Packages
 
 | Package                      | What it does                                                                                    |
@@ -337,6 +362,8 @@ console.log(auth.state.value); // 'active'
 | **[Sourcerer](/sourcerer/)** | Typed local and remote data sources for pagination, filtering, sorting, and search              |
 | **[Tempo](/tempo/)**         | Date parsing, timezone conversion, DST-safe arithmetic, and Intl formatting                     |
 | **[Scroll](/scroll/)**       | Virtual list engine with variable heights, smooth scrolling, and zero dependencies              |
+| **[Pulse](/pulse/)**         | Typed WebSocket client with channel multiplexing, reactive presence, and auto-reconnect         |
+| **[Coins](/coins/)**         | Bigint-based monetary arithmetic, locale formatting, and currency exchange with exact precision  |
 
 ## Packages That Work Well Together
 
@@ -355,6 +382,10 @@ console.log(auth.state.value); // 'active'
 | **Clockwork + Ripple**    | Clockwork state and context are ReadonlySignals — bind them directly to effects or UI templates        |
 | **Clockwork + Ward**      | Call ward predicates inside clockwork guards to block unauthorized transitions                         |
 | **Clockwork + Herald**    | Publish state-change events to decouple multiple machines from each other                              |
+| **Flux + Ripple**         | `fromSignal()` / `toSignal()` bridge reactive signals and streams — use Ripple for state, Flux for pipelines |
+| **Flux + Herald**         | `fromBus()` / `toBus()` turn a typed Herald bus into a Flux stream and back                           |
+| **Flux + Courier**        | `fromSse()` / `fromQuery()` wrap Courier SSE and query responses as cancellable stream pipelines       |
+| **Flux + Pulse**          | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams         |
 
 ## Philosophy
 
