@@ -116,6 +116,7 @@ const categories = [
     icon: 'atom',
     packages: [
       { id: 'clockwork', tagline: 'Finite state machines' },
+      { id: 'flux', tagline: 'Reactive streams & operators' },
       { id: 'ripple', tagline: 'Signals, computed, effects' },
     ],
   },
@@ -437,7 +438,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     <section class="explorer" :class="{ visible: categoriesVisible }">
       <div class="explorer-inner">
         <h2 class="section-title">The complete toolkit</h2>
-        <p class="section-subtitle">24 packages, each focused on one domain. Pick what you need.</p>
+        <p class="section-subtitle">25 packages, each focused on one domain. Pick what you need.</p>
         <div class="category-grid">
           <div v-for="cat in categories" :key="cat.name" class="category-section">
             <h3 class="category-name">

@@ -161,6 +161,12 @@
       "projectFolder": "packages/pulse",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/flux",
+      "projectFolder": "packages/flux",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

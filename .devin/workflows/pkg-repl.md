@@ -166,6 +166,19 @@ Before creating the folder, read an existing package as a structural reference (
 1. Create `docs/.vitepress/theme/components/repl/examples/<name>/` with at least one example module and an `index.ts` that exports a `Record<string, ExampleModule>`.
 2. Create `docs/.vitepress/theme/components/repl/types/<name>.ts` with the Monaco type declarations for the package's public API.
 3. Register the package in the root `docs/.vitepress/theme/components/repl/examples/index.ts` and `docs/.vitepress/theme/components/repl/types/index.ts` — follow the exact pattern used by the reference package.
+4. Register the package in `docs/.vitepress/theme/components/REPL.vue` — **three additions required**, all sorted alphabetically among the existing entries:
+   - `LIBRARY_DESCRIPTIONS` — add `<name>: '<one-line description>'`
+   - `LIBRARY_LOADERS` — add `<name>: () => import('@vielzeug/<name>')`
+   - `LIBRARY_EXPORTS` — add `<name>: [list of every runtime-value export from `src/index.ts`]` (omit type-only exports; they are not present on the module object at runtime)
+5. Add the source alias to `scripts/vitest.repl.config.ts` so `pnpm validate:repl` can resolve the package **without a prior build**. In the `vielzeugAliases` object, add (sorted alphabetically):
+   ```ts
+   '@vielzeug/<name>': path.resolve(ROOT, 'packages/<name>/src/index.ts'),
+   ```
+6. Add the Vite resolve alias to `docs/.vitepress/config.ts` so `pnpm docs:build` can resolve the package. In the `vite.resolve.alias` object, add (sorted alphabetically):
+   ```ts
+   '@vielzeug/<name>': resolve(__dirname, '../../packages/<name>/src'),
+   ```
+   **Both aliases are required** — omitting step 5 causes `validate:repl` to fail with "Failed to resolve import"; omitting step 6 causes `docs:build` to fail with "Rollup failed to resolve import".
 
 **Checkpoint:**
 

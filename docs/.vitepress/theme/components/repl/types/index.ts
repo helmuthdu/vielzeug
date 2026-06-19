@@ -5,6 +5,7 @@ import { conduitTypes } from './conduit';
 import { courierTypes } from './courier';
 import { dndTypes } from './dnd';
 import { familiarTypes } from './familiar';
+import { fluxTypes } from './flux';
 import { forgeTypes } from './forge';
 import { heraldTypes } from './herald';
 import { linguaTypes } from './lingua';
@@ -27,6 +28,7 @@ export const libraryTypes = {
   courier: courierTypes,
   dnd: dndTypes,
   familiar: familiarTypes,
+  flux: fluxTypes,
   forge: forgeTypes,
   herald: heraldTypes,
   lingua: linguaTypes,
