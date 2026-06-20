@@ -1473,12 +1473,10 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
-                { link: '/sigil/usage#basic-usage', text: 'Basic Usage' },
+                { link: '/sigil/usage#installation', text: 'Installation' },
+                { link: '/sigil/usage#attributes-and-events', text: 'Attributes & Events' },
                 { link: '/sigil/usage#slots', text: 'Slots' },
-                { link: '/sigil/usage#accessibility', text: 'Accessibility' },
-                { link: '/sigil/usage#framework-integration', text: 'Framework Integration' },
-                { link: '/sigil/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
-                { link: '/sigil/usage#best-practices', text: 'Best Practices' },
+                { link: '/sigil/usage#composing-with-craft-and-ripple', text: 'Craft & Ripple' },
               ],
               link: '/sigil/usage',
               text: 'Usage Guide',

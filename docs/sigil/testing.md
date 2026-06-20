@@ -5,48 +5,45 @@ description: ARIA helpers, typed mount wrappers, and event utilities for testing
 
 # Testing Utilities
 
-`@vielzeug/sigil/testing` exports a focused set of helpers for writing component tests with
-`@vielzeug/craft/testing`. All helpers are tree-shakeable and have no runtime side-effects.
-
 [[toc]]
 
-## Installation
+`@vielzeug/sigil/testing` provides helpers for writing component tests on top of `@vielzeug/craft/testing`. All helpers are tree-shakeable with no runtime side-effects.
+
+The module groups into four concerns: **ARIA assertions** (check what the DOM exposes to assistive technology), **shadow DOM queries** (reach inside component internals), **form helpers** (read form-associated values), and **event / timing utilities** (simulate keyboard input and wait for reactive updates).
 
 ```ts
-import { ... } from '@vielzeug/sigil/testing';
+import { isAriaInvalid, queryInShadow, mountSgInput } from '@vielzeug/sigil/testing';
 ```
 
-No additional setup is required — the module is a pure helper layer on top of `@vielzeug/craft/testing`.
+## ARIA Helpers
 
-## ARIA Attribute Helpers
+Boolean predicates and getters for the most common ARIA states:
 
-Boolean predicates for the most common ARIA states:
-
-| Helper                    | Checks                               |
+| Helper                    | Returns                              |
 | ------------------------- | ------------------------------------ |
-| `isAriaInvalid(el)`       | `aria-invalid="true"`                |
-| `isAriaDisabled(el)`      | `aria-disabled="true"`               |
-| `isAriaChecked(el)`       | `aria-checked="true"`                |
-| `isAriaIndeterminate(el)` | `aria-checked="mixed"`               |
-| `isAriaExpanded(el)`      | `aria-expanded="true"`               |
-| `isAriaPressed(el)`       | `aria-pressed="true"`                |
-| `isAriaRequired(el)`      | `aria-required="true"`               |
-| `isAriaHidden(el)`        | `aria-hidden="true"`                 |
-| `getAriaLabel(el)`        | Returns `aria-label` or `null`       |
-| `getAriaLabelledBy(el)`   | Returns `aria-labelledby` or `null`  |
-| `getAriaDescribedBy(el)`  | Returns `aria-describedby` or `null` |
-| `getAriaControls(el)`     | Returns `aria-controls` or `null`    |
-| `getRole(el)`             | Returns `role` or `null`             |
+| `isAriaInvalid(el)`       | `true` when `aria-invalid="true"`    |
+| `isAriaDisabled(el)`      | `true` when `aria-disabled="true"`   |
+| `isAriaChecked(el)`       | `true` when `aria-checked="true"`    |
+| `isAriaIndeterminate(el)` | `true` when `aria-checked="mixed"`   |
+| `isAriaExpanded(el)`      | `true` when `aria-expanded="true"`   |
+| `isAriaPressed(el)`       | `true` when `aria-pressed="true"`    |
+| `isAriaRequired(el)`      | `true` when `aria-required="true"`   |
+| `isAriaHidden(el)`        | `true` when `aria-hidden="true"`     |
+| `getAriaLabel(el)`        | `aria-label` value or `null`         |
+| `getAriaLabelledBy(el)`   | `aria-labelledby` value or `null`    |
+| `getAriaDescribedBy(el)`  | `aria-describedby` value or `null`   |
+| `getAriaControls(el)`     | `aria-controls` value or `null`      |
+| `getRole(el)`             | `role` value or `null`               |
 
-### ARIA Snapshot
+### Snapshot Assertions
 
-`getAriaState(el)` returns a plain object with the eight most commonly asserted ARIA attributes — useful for inline snapshot assertions:
+`getAriaState(el)` returns a plain object snapshot of the eight most commonly asserted ARIA attributes — useful for inline snapshot assertions:
 
 ```ts
 expect(getAriaState(input)).toMatchObject({ invalid: 'true', required: 'true' });
 ```
 
-## Shadow DOM Helpers
+## Shadow DOM Queries
 
 ```ts
 // Query a single element inside the host's shadow root
@@ -59,17 +56,17 @@ const items = queryAllInShadow(host, '[role="option"]');
 ## Form-Associated Helpers
 
 ```ts
-// Returns the current form value (ElementInternals-based or reflected `.value`)
+// Read the current form value (ElementInternals-based or reflected .value)
 const value = getFormValue(el);
 
-// Returns true when the element has no constraint violations
+// True when the element has no constraint violations
 const valid = isFormValid(el);
 ```
 
 ## Event Helpers
 
 ```ts
-// Create a synthetic KeyboardEvent for keyboard navigation tests
+// Synthetic KeyboardEvent for keyboard navigation tests
 const ev = keyEvent('ArrowDown', { shiftKey: true });
 element.dispatchEvent(ev);
 ```
@@ -77,16 +74,16 @@ element.dispatchEvent(ev);
 ## Timing Helpers
 
 ```ts
-// Wait for reactive signal effects to settle (microtask)
+// Wait for reactive signal effects to settle (microtask flush)
 await nextTick();
 
-// Wait a fixed number of milliseconds (use sparingly)
+// Wait a fixed number of milliseconds — use sparingly
 await wait(50);
 ```
 
 ## ID Counter Reset
 
-Call `resetIdCounter()` in a `beforeEach` hook when you need **deterministic stable IDs** across test runs:
+Sigil components generate stable IDs for ARIA associations. Reset the counter in `beforeEach` when you need deterministic IDs across test runs:
 
 ```ts
 import { resetIdCounter } from '@vielzeug/sigil/testing';
@@ -96,7 +93,7 @@ beforeEach(() => resetIdCounter());
 
 ## Typed Mount Wrappers
 
-Typed wrappers catch prop-name typos at compile time and avoid manual HTML serialization.
+Typed wrappers catch prop-name typos at compile time and avoid manual HTML serialization. Each wrapper is named `mountSg{ComponentName}`:
 
 ```ts
 import {
@@ -120,15 +117,15 @@ import {
 } from '@vielzeug/sigil/testing';
 ```
 
-Each wrapper follows the same signature:
+All wrappers share the same signature:
 
 ```ts
-mountBit<Component>(props?, opts?)
-// props  — Partial<Bit<Component>Props>, type-checked
-// opts   — { innerHTML?: string }        for slotted content
+mountSg{Component}(props?, opts?)
+// props — Partial<ComponentProps>, type-checked at compile time
+// opts  — { innerHTML?: string } for slotted content
 ```
 
-Example:
+**Example — asserting ARIA state:**
 
 ```ts
 const fixture = await mountSgInput({ label: 'Name', required: true });
@@ -137,7 +134,7 @@ const input = queryInShadow(fixture.el, 'input')!;
 expect(isAriaRequired(input)).toBe(true);
 ```
 
-Pass slot content via `opts.innerHTML`:
+**Example — passing slot content:**
 
 ```ts
 const fixture = await mountSgSelect(

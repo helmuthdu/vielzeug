@@ -1,68 +1,73 @@
 ---
 title: Sigil — Usage Guide
-description: Import patterns, slots, events, and accessibility for Sigil components.
+description: Installation, attributes, events, slots, and ecosystem integration for Sigil components.
 ---
+
+# Usage Guide
 
 [[toc]]
 
-## Basic Usage
+Sigil components are native Web Components. Once imported, they behave like regular HTML elements — set attributes, listen to DOM events, use slots for content projection.
 
-### Using Components
+## Installation
 
-Once registered, components are available as custom elements:
+Import the global styles first, then register only the components you need:
 
-```html
-<sg-button>Click me</sg-button>
+```ts
+import '@vielzeug/sigil/styles';
+import '@vielzeug/sigil/button';
+import '@vielzeug/sigil/input';
+import '@vielzeug/sigil/dialog';
 ```
 
-### Setting Attributes
+The styles import loads design tokens and base styles. Components still render without it, but they will miss tokens and visual polish. Always import it first.
 
-Set attributes directly on the custom element:
+To register every component at once (larger bundle):
 
-```html
-<sg-button variant="outline" color="secondary" size="lg" disabled> Large Outline Button </sg-button>
+```ts
+import '@vielzeug/sigil/styles';
+import '@vielzeug/sigil';
 ```
 
-### Event Handling
+## Attributes and Events
 
-Components emit standard DOM events. Common names: `click`, `input`, `change`, `open`, `close`, `select`.
+Set attributes directly on the element. Attributes map to component props:
+
+```html
+<sg-button variant="outline" color="secondary" size="lg" disabled>
+  Large Outline Button
+</sg-button>
+```
+
+Components emit standard DOM events. Common event names: `click`, `input`, `change`, `open`, `close`, `select`. Custom events carry a `detail` object:
 
 ```javascript
-const button = document.querySelector('sg-button');
-
-button.addEventListener('click', () => {
-  console.log('Button clicked');
-});
-
 const input = document.querySelector('sg-input');
 
 input.addEventListener('change', (event) => {
-  console.log('Input value:', event.detail.value);
+  console.log(event.detail.value);
 });
 ```
 
-Check the **[Framework Integration](./frameworks.md)** guide for framework-specific interop details.
+Native browser events (`click`, `focus`, `blur`) work as normal. Custom events with `event.detail` require `addEventListener` in React 18 and earlier — see the [Framework Integration](./frameworks.md) guide.
 
 ## Slots
 
-Sigil components use named and default slots for content projection. Slots let you pass arbitrary HTML — icons, text, other components — into designated regions of a component without JavaScript.
-
-### Default Slot
+Slots let you pass HTML into named regions of a component without JavaScript.
 
 Content placed directly inside the element fills the default slot:
 
 ```html
-<sg-button>Save Changes</sg-button> <sg-card>Any HTML content here</sg-card>
+<sg-button>Save Changes</sg-button>
+<sg-card>Any HTML content here</sg-card>
 ```
 
-### Named Slots
-
-Components that have distinct regions expose them as named slots:
+Components with distinct regions expose named slots:
 
 ```html
 <sg-card>
   <span slot="header">Card Heading</span>
-  <p>Main card body content fills the default slot.</p>
+  <p>Main body content fills the default slot.</p>
   <div slot="footer">
     <sg-button size="sm" variant="outline">Cancel</sg-button>
     <sg-button size="sm">Confirm</sg-button>
@@ -70,158 +75,49 @@ Components that have distinct regions expose them as named slots:
 </sg-card>
 ```
 
-### Icon Slots
-
-Many interactive components expose leading or trailing content slots. For example, `sg-button` and `sg-input` use `prefix` and `suffix`:
+Many input components expose `prefix` and `suffix` slots for icons or actions:
 
 ```html
 <sg-button>
-  <svg slot="prefix" aria-hidden="true"><!-- ... --></svg>
-  Submit
+  <sg-icon slot="prefix" name="arrow-left" size="18"></sg-icon>
+  Back
 </sg-button>
 
 <sg-input label="Search">
-  <svg slot="suffix" aria-hidden="true"><!-- search icon --></svg>
+  <sg-icon slot="suffix" name="search" size="18" aria-hidden="true"></sg-icon>
 </sg-input>
 ```
 
-Slot availability varies by component; see the component pages in the Sigil sidebar and the **[API Reference](./api.md)** for the currently published surface.
+Each component's available slots are listed in its API Reference table.
 
-## Accessibility
+## Composing with Craft and Ripple
 
-Sigil components are designed to meet **WCAG 2.1 AA** standards out-of-the-box. The key patterns are documented below.
+Sigil components are plain HTML elements — they compose naturally with [Craft](/craft/) custom elements and [Ripple](/ripple/) signals.
 
-### Keyboard Navigation
-
-| Component type | Key                       | Behavior                                 |
-| -------------- | ------------------------- | ---------------------------------------- |
-| `sg-button`    | `Space` / `Enter`         | Activates the button                     |
-| `sg-checkbox`  | `Space`                   | Toggles checked state                    |
-| `sg-radio`     | `Arrow Up` / `Arrow Down` | Moves focus between options in the group |
-| `sg-select`    | `Enter` / `Space`         | Opens/closes the listbox                 |
-| `sg-select`    | `Arrow Up` / `Arrow Down` | Navigates options                        |
-| `sg-accordion` | `Enter` / `Space`         | Expands/collapses panel                  |
-| `sg-tabs`      | `Arrow Left` / `Right`    | Moves focus between tab triggers         |
-| `sg-tooltip`   | `Escape`                  | Dismisses an open tooltip                |
-
-### ARIA Attributes
-
-Components manage their ARIA roles and states automatically. You can override specific attributes where needed:
-
-```html
-<!-- Custom label when visual label is not enough -->
-<sg-button aria-label="Delete item">×</sg-button>
-
-<!-- Associate an input with external help text -->
-<sg-input label="Password" aria-describedby="pwd-hint" />
-<p id="pwd-hint">Minimum 8 characters, one uppercase, one number.</p>
-```
-
-### Focus Management
-
-- All interactive components participate in the native tab order.
-- Use `disabled` to remove a component from the tab order. Disabled elements are not focusable.
-- Modal-style overlays such as `sg-dialog` and `sg-drawer` manage focus entry and restoration automatically.
-
-### Screen Readers
-
-- Labels are connected to inputs via `aria-labelledby` internally.
-- Loading and error states announce themselves with `aria-live` regions.
-- Decorative icons should receive `aria-hidden="true"`; meaningful icons should have an `aria-label`.
-
-## Framework Integration
-
-Sigil components are standard custom elements and work anywhere custom elements are supported.
-
-::: code-group
-
-```tsx [React]
-// React 19+ passes custom element props natively
-import '@vielzeug/sigil/styles';
-import '@vielzeug/sigil/button';
-import '@vielzeug/sigil/input';
-
-function LoginForm() {
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const data = new FormData(form);
-    console.log(Object.fromEntries(data));
-  };
-
-  return (
-    <sg-form onSubmit={handleSubmit}>
-      <sg-input name="email" type="email" label="Email" required />
-      <sg-button type="submit" color="primary" variant="solid">
-        Log in
-      </sg-button>
-    </sg-form>
-  );
-}
-```
-
-```vue [Vue 3]
-<!-- vite.config.ts: set compilerOptions.isCustomElement: tag => tag.startsWith('sg-') -->
-<script setup lang="ts">
-import '@vielzeug/sigil/styles';
-import '@vielzeug/sigil/button';
-import '@vielzeug/sigil/input';
-
-function handleChange(e: CustomEvent) {
-  console.log(e.detail.value);
-}
-</script>
-
-<template>
-  <sg-form @submit.prevent="submit">
-    <sg-input name="email" type="email" label="Email" required @change="handleChange" />
-    <sg-button type="submit" color="primary" variant="solid">Log in</sg-button>
-  </sg-form>
-</template>
-```
-
-```svelte [Svelte]
-<script>
-  import '@vielzeug/sigil/styles';
-  import '@vielzeug/sigil/button';
-  import '@vielzeug/sigil/input';
-
-  function handleChange(e) {
-    console.log(e.detail.value);
-  }
-</script>
-
-<sg-form on:submit|preventDefault={submit}>
-  <sg-input name="email" type="email" label="Email" required on:change={handleChange} />
-  <sg-button type="submit" color="primary" variant="solid">Log in</sg-button>
-</sg-form>
-```
-
-:::
-
-## Working with Other Vielzeug Libraries
-
-**With Craft** — build custom components that compose Sigil elements:
+**Build a custom component that wraps Sigil elements:**
 
 ```ts
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/input';
-import { define } from '@vielzeug/craft';
-import { html } from '@vielzeug/craft';
+import { define, html } from '@vielzeug/craft';
 import { signal } from '@vielzeug/ripple';
 
-define('my-search-bar', {
-  setup() {
-    const query = signal('');
-    return html`
-      <sg-input .value=${query} @input=${(e) => (query.value = e.detail.value)} label="Search" />
-      <sg-button @click=${() => search(query.value)} variant="solid" color="primary">Search</sg-button>
-    `;
-  },
+define('my-search-bar', () => {
+  const query = signal('');
+  return html`
+    <sg-input
+      .value=${query}
+      @input=${(e) => (query.value = e.detail.value)}
+      label="Search"
+    />
+    <sg-button @click=${() => search(query.value)} variant="solid" color="primary">
+      Search
+    </sg-button>
+  `;
 });
 ```
 
-**With Ripple** — drive Sigil component state from reactive signals:
+**Drive component state from reactive signals:**
 
 ```ts
 import { signal, effect } from '@vielzeug/ripple';
@@ -234,57 +130,15 @@ effect(() => {
 });
 ```
 
-## Best Practices
+## Framework Integration
 
-### Design Intensity
+For React, Vue, Svelte, and Angular wiring — including event handling, TypeScript declarations, Vite setup, and SSR guards — see the [Framework Integration](./frameworks.md) guide.
 
-Use component variants to tune visual intensity without rebuilding layouts:
+## Accessibility
 
-- `bolder`: Pair `solid` buttons with semantic colors and stronger elevation for one clear primary action.
-- `quieter`: Use `ghost`, `text`, or `outline` variants for secondary actions and dense toolbars.
-- `delight`: Add short, purposeful motion after meaningful events (save complete, invite sent), and always respect `prefers-reduced-motion`.
-- `onboard`: Start with clear labels, helper text, and one recommended next action in empty states.
+All Sigil components target WCAG 2.1 AA. ARIA roles and states are managed automatically. For the full compliance contract, per-component coverage, and testing strategy, see the [Accessibility](./accessibility.md) page.
 
-### 1. Import Global Styles First
+The two things you always control:
 
-Always import `@vielzeug/sigil/styles` before any component registration. Without it, components still render, but they will miss the intended token and base-style layer.
-
-### 2. Use Named Component Imports for Tree-Shaking
-
-```ts
-// ✓ registers only what you use
-import '@vielzeug/sigil/button';
-import '@vielzeug/sigil/input';
-
-// ✗ registers all components — larger bundle
-import '@vielzeug/sigil';
-```
-
-### 3. Control Appearance with CSS Custom Properties
-
-```css
-sg-button {
-  --button-radius: 4px;
-  --button-font-size: 0.875rem;
-}
-```
-
-### 4. Use Declarative Attributes Over JavaScript
-
-```html
-<!-- ✓ prefer attribute-driven state -->
-<sg-button loading disabled>Saving…</sg-button>
-
-<!-- ✗ avoid manual DOM manipulation when an attribute exists -->
-<sg-button id="btn">Save</sg-button>
-<script>
-  document.getElementById('btn').setAttribute('loading', '');
-</script>
-```
-
-### 5. Listen to Component Events
-
-```js
-const input = document.querySelector('sg-input');
-input.addEventListener('change', (e) => console.log(e.detail.value));
-```
+- **Icon-only buttons** require a `label` attribute — it becomes `aria-label`.
+- **Decorative icons** should have `aria-hidden="true"` so screen readers skip them.

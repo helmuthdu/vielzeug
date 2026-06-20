@@ -1,48 +1,34 @@
 ---
 title: Sigil — API Reference
-description: Entry points, import paths, and exported symbols for @vielzeug/sigil.
+description: Entry points, import paths, exported symbols, and headless primitives for @vielzeug/sigil.
 ---
+
+# API Reference
 
 [[toc]]
 
-## API Overview
+## Import Paths
 
-| Symbol                        | Purpose                                                       | Execution mode | Common gotcha                                                     |
-| ----------------------------- | ------------------------------------------------------------- | -------------- | ----------------------------------------------------------------- |
-| `@vielzeug/sigil/styles`      | Load shared design tokens and base styles                     | Sync           | Import before any component registration                          |
-| `@vielzeug/sigil/<component>` | Register a specific component as a custom element             | Sync           | Import styles first or components render without tokens           |
-| `@vielzeug/sigil`             | Register all published components + export shared symbols     | Sync           | Larger bundle — prefer per-component imports                      |
-| `lifecycleSignal()`           | Create an `AbortSignal` tied to a Craft component's cleanup   | Sync           | Call once per `setup()` — do not share across component instances |
-| `createTextField()`           | Headless text/textarea field controller                       | Sync           | Requires `signal` from `lifecycleSignal()`                        |
-| `createChoiceField()`         | Headless single/multi-select controller                       | Sync           | Requires `signal`; normalises both `string` and `string[]` values |
-| `createCheckable()`           | Headless checkbox/radio controller                            | Sync           | Wire `handleClick` and `handleKeydown` to the host element        |
-| `createOverlayControl()`      | Headless open/close/toggle for overlays                       | Sync           | `dispose()` closes silently — does not fire `onClose`             |
-| `createOptionList()`          | Headless dropdown list (open state + navigation + positioner) | Sync           | Requires `dom.getBoundary`, `dom.getPanel`, `dom.getReference`    |
-| `createListControl()`         | Keyboard-navigable list (no open state)                       | Sync           | `set(-1)` resets focus; `dispose()` cancels typeahead timer       |
-| `toast`                       | Programmatic toast notification API                           | Sync           | Requires `sg-toast` to be registered and mounted in the DOM       |
+Every published subpath and what it does:
 
-## Package Entry Points
-
-| Import                                 | Purpose                                                                |
+| Import path                            | Purpose                                                                |
 | -------------------------------------- | ---------------------------------------------------------------------- |
-| `@vielzeug/sigil`                      | Registers all published components and re-exports shared symbols/types |
-| `@vielzeug/sigil/types`                | Shared TypeScript types                                                |
-| `@vielzeug/sigil/headless`             | Headless primitive controllers for custom component authoring          |
-| `@vielzeug/sigil/testing`              | Test utilities: ARIA helpers, DOM queries, mount wrappers, event utils |
-| `@vielzeug/sigil/styles`               | Global tokens and shared component styles                              |
-| `@vielzeug/sigil/styles/styles.css`    | Explicit base stylesheet path                                          |
-| `@vielzeug/sigil/styles/theme.css`     | Theme token stylesheet                                                 |
+| `@vielzeug/sigil/styles`               | Global design tokens and base styles — **import before components**    |
+| `@vielzeug/sigil/styles/theme.css`     | Theme token stylesheet (direct CSS path)                               |
 | `@vielzeug/sigil/styles/animation.css` | Animation helpers                                                      |
 | `@vielzeug/sigil/styles/layers.css`    | Cascade layer definitions                                              |
 | `@vielzeug/sigil/styles/preflight.css` | CSS reset / preflight (importable separately to opt out)               |
+| `@vielzeug/sigil/<component>`          | Register a single component as a custom element                        |
+| `@vielzeug/sigil`                      | Register all published components + re-export shared symbols           |
+| `@vielzeug/sigil/headless`             | Headless primitive controllers for custom component authoring          |
+| `@vielzeug/sigil/testing`              | Test utilities: ARIA helpers, DOM queries, typed mount wrappers        |
+| `@vielzeug/sigil/types`                | Shared TypeScript types                                                |
 
-Headless controller primitives (`createTextField`, `createChoiceField`, `createCheckable`, `createListControl`, `createOverlayControl`, and others) are also available via the dedicated `@vielzeug/sigil/headless` subpath. Use `lifecycleSignal(onCleanup)` to wire an `AbortSignal` from a Craft component's `onCleanup` callback into any headless primitive that accepts a `signal` option.
+Prefer per-component imports to keep bundles small and registration explicit. Import `@vielzeug/sigil` only when convenience matters more than granular control.
 
-The `@vielzeug/sigil/testing` subpath provides utilities for component tests: ARIA helpers (`isAriaInvalid`, `getAriaState`, …), DOM query helpers (`queryInShadow`, `queryAllInShadow`), typed mount wrappers (`mountSgInput`, `mountSgSelect`, …), serialization helpers (`propsToAttrs`, `attrsToHtml`), and event helpers (`keyEvent`, `nextTick`, `wait`).
+## Runtime Registration
 
-## Runtime Registration Imports
-
-Use side-effect imports to register only the elements you need:
+Register only the elements you need:
 
 ```ts
 import '@vielzeug/sigil/styles';
@@ -118,30 +104,57 @@ import '@vielzeug/sigil/toast';
 import '@vielzeug/sigil/tooltip';
 ```
 
-## Root Export Surface
+## Shared Exported Symbols
 
-The package root is a **flat named-export surface**. It re-exports symbols from the internal content/disclosure/feedback/inputs/layout/overlay/type modules while also registering all published components as a side effect.
+The package root re-exports these symbols alongside component registration:
 
-Notable root exports include:
+| Symbol                  | Description                                                   |
+| ----------------------- | ------------------------------------------------------------- |
+| `toast`                 | Programmatic toast notification singleton                     |
+| `lifecycleSignal()`     | `AbortSignal` tied to a Craft component's cleanup             |
+| `createTextField()`     | Headless text/textarea field controller                       |
+| `createChoiceField()`   | Headless single/multi-select controller                       |
+| `createCheckable()`     | Headless checkbox/radio controller                            |
+| `createOverlayControl()`| Headless open/close/toggle for overlays                       |
+| `createOptionList()`    | Headless dropdown list with open state, navigation, positioner|
+| `createListControl()`   | Keyboard-navigable list without open state                    |
+| Tag constants           | `BUTTON_TAG`, `INPUT_TAG`, `DIALOG_TAG`, …                    |
+| Context constants       | `FORM_CTX`, `TABS_CTX`, `CHECKBOX_GROUP_CTX`, …               |
+| Component prop types    | `SgButtonProps`, `SgInputEvents`, …                           |
 
-- tag constants like `BUTTON_TAG`, `INPUT_TAG`, `DIALOG_TAG`
-- context constants like `FORM_CTX`, `TABS_CTX`, `CHECKBOX_GROUP_CTX`
-- component prop/event types like `SgButtonProps`, `SgInputEvents`
-- toast runtime API: `toast`
+## TypeScript Types
+
+Every component exports types named after the component. Import from the component subpath:
+
+```ts
+import type { SgButtonProps, SgButtonEvents } from '@vielzeug/sigil/button';
+import type { SgInputProps, SgInputEvents } from '@vielzeug/sigil/input';
+import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
+```
+
+Shared types used across components:
+
+| Type                | Path                    | Values                                                                              |
+| ------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
+| `ThemeColor`        | `@vielzeug/sigil/types` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`          |
+| `VisualVariant`     | `@vielzeug/sigil/types` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'`     |
+| `SurfaceVariant`    | `@vielzeug/sigil/types` | `VisualVariant \| 'glass'`                                                          |
+| `ComponentSize`     | `@vielzeug/sigil/types` | `'sm' \| 'md' \| 'lg'`                                                              |
+| `RoundedSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`               |
+| `PaddingSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                           |
+| `AddEventListeners` | `@vielzeug/sigil/types` | Mixin that adds typed `addEventListener` / `removeEventListener` overloads          |
 
 ## Component Documentation Index
 
-Use the following pages as the canonical per-component API source.
+Per-component API — attributes, events, slots, CSS custom properties:
 
 ### Disclosure
-
 - [Accordion](./components/accordion.md)
 - [Tabs](./components/tabs.md)
 
 ### Feedback
-
 - [Alert](./components/alert.md)
-- [Async (sg-async)](./components/async.md)
+- [Async](./components/async.md)
 - [Badge](./components/badge.md)
 - [Chip](./components/chip.md)
 - [Password Strength](./components/password-strength.md)
@@ -150,7 +163,6 @@ Use the following pages as the canonical per-component API source.
 - [Toast](./components/toast.md)
 
 ### Content
-
 - [Avatar](./components/avatar.md)
 - [Breadcrumb](./components/breadcrumb.md)
 - [Card](./components/card.md)
@@ -163,7 +175,6 @@ Use the following pages as the canonical per-component API source.
 - [Text](./components/text.md)
 
 ### Overlay
-
 - [Dialog](./components/dialog.md)
 - [Drawer](./components/drawer.md)
 - [Menu](./components/menu.md)
@@ -171,7 +182,6 @@ Use the following pages as the canonical per-component API source.
 - [Tooltip](./components/tooltip.md)
 
 ### Inputs
-
 - [Button (+ Button Group)](./components/button.md)
 - [Calendar](./components/calendar.md)
 - [Checkbox (+ Checkbox Group)](./components/checkbox.md)
@@ -192,51 +202,30 @@ Use the following pages as the canonical per-component API source.
 - [Time Picker](./components/time-picker.md)
 
 ### Layout
-
 - [Box](./components/box.md)
 - [Grid (+ Grid Item)](./components/grid.md)
 - [Navbar](./components/navbar.md)
 - [Sidebar](./components/sidebar.md)
 
-## Types
-
-Every component exports TypeScript types named after the component. Import them from the component's subpath:
-
-```ts
-import type { SgButtonProps, SgButtonEvents } from '@vielzeug/sigil/button';
-import type { SgInputProps, SgInputEvents } from '@vielzeug/sigil/input';
-import type { SgDialogProps, SgDialogEvents } from '@vielzeug/sigil/dialog';
-```
-
-Shared types used across multiple components:
-
-| Type                | Package path            | Description                                                                         |
-| ------------------- | ----------------------- | ----------------------------------------------------------------------------------- |
-| `ThemeColor`        | `@vielzeug/sigil/types` | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`           |
-| `VisualVariant`     | `@vielzeug/sigil/types` | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'`      |
-| `SurfaceVariant`    | `@vielzeug/sigil/types` | `VisualVariant \| 'glass'` — use for container components that support glass effect |
-| `ComponentSize`     | `@vielzeug/sigil/types` | `'sm' \| 'md' \| 'lg'`                                                              |
-| `RoundedSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`                |
-| `PaddingSize`       | `@vielzeug/sigil/types` | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl'`                                            |
-| `AddEventListeners` | `@vielzeug/sigil/types` | Mixin type that adds typed `addEventListener` / `removeEventListener` overloads     |
-
-## Notes
-
-- Prefer subpath imports for runtime registration to keep bundles small and registration explicit.
-- Import `@vielzeug/sigil/styles` before component registration.
-- Importing `@vielzeug/sigil` registers every published component; use it when convenience matters more than granular control.
-- For attribute/event/CSS variable details, use each component page in this section.
-- For WCAG compliance details and the axe-core testing contract, see the **[Accessibility Quality Bar](./accessibility.md)**.
-
 ## Headless API
 
-Import headless primitives from `@vielzeug/sigil/headless` or from `@vielzeug/sigil` directly.
+Headless primitives let you build fully custom components that share Sigil's interaction logic — keyboard navigation, overlay management, field validation — without any Sigil styling.
+
+Import from `@vielzeug/sigil/headless`:
 
 ```ts
-import { lifecycleSignal, createTextField, createChoiceField, createCheckable } from '@vielzeug/sigil/headless';
+import {
+  lifecycleSignal,
+  createTextField,
+  createChoiceField,
+  createCheckable,
+  createOverlayControl,
+  createOptionList,
+  createListControl,
+} from '@vielzeug/sigil/headless';
 ```
 
-All stateful primitives accept a required `signal: AbortSignal` option. Use `lifecycleSignal(onCleanup)` inside a Craft `setup()` function to produce this signal.
+All stateful primitives require a `signal: AbortSignal` option. Use `lifecycleSignal(onCleanup)` inside a Craft `setup()` function to produce one tied to the component's lifecycle.
 
 ### `lifecycleSignal(onCleanup)`
 
@@ -244,7 +233,7 @@ All stateful primitives accept a required `signal: AbortSignal` option. Use `lif
 lifecycleSignal(onCleanup: (fn: () => void) => void): AbortSignal
 ```
 
-Creates an `AbortSignal` that is aborted when the Craft component disconnects. Pass the signal as the `signal` option to any stateful headless primitive.
+Creates an `AbortSignal` that aborts when the Craft component disconnects. Pass it as `signal` to any stateful headless primitive.
 
 ### `createTextField(options)`
 
@@ -252,9 +241,9 @@ Creates an `AbortSignal` that is aborted when the Craft component disconnects. P
 createTextField(options: TextFieldOptions): TextFieldHandle
 ```
 
-Headless controller for `<input>` and `<textarea>` elements. Manages value sync, validation triggers, character counter, and event wiring.
+Controller for `<input>` and `<textarea>`. Manages value sync, validation triggers, character counter, and event wiring.
 
-**Key handle members:** `value` (writable signal), `wire(el, signal?)` (attaches listeners — `value` is always synced from the DOM on every `input` event regardless of whether `onInput` is provided), `clear()`, `counter` (nullable reactive counter state), ARIA signals from `FieldHandle`.
+Key members: `value` (writable signal), `wire(el, signal?)`, `clear()`, `counter`.
 
 ### `createChoiceField(options)`
 
@@ -262,9 +251,9 @@ Headless controller for `<input>` and `<textarea>` elements. Manages value sync,
 createChoiceField(options: ChoiceFieldOptions): ChoiceFieldHandle
 ```
 
-Headless controller for single and multi-select inputs. Normalises `string | string[]` values. Disposes internal watchers on signal abort.
+Controller for single and multi-select inputs. Normalises `string | string[]` values.
 
-**Key handle members:** `selectedValues`, `selectedValue`, `selectValue()`, `toggleValue()`, `removeValue()`, `clear()`, `setValues()`, `formValue`.
+Key members: `selectedValues`, `selectedValue`, `selectValue()`, `toggleValue()`, `removeValue()`, `clear()`, `setValues()`, `formValue`.
 
 ### `createCheckable(options)`
 
@@ -272,11 +261,9 @@ Headless controller for single and multi-select inputs. Normalises `string | str
 createCheckable(options: CheckableOptions): CheckableHandle
 ```
 
-Headless controller for checkboxes and radios. Handles checked/indeterminate state, group delegation, and keyboard activation.
+Controller for checkboxes and radios. Handles checked/indeterminate state, group delegation, and keyboard activation.
 
-`CheckableHandle` extends `FieldHandle` — all ARIA signals and label state from `FieldHandle` are available directly on the handle.
-
-**Key handle members:** `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`, `checkableFormValue`, plus all `FieldHandle` members.
+Key members: `checked`, `indeterminate`, `toggle()`, `handleClick()`, `handleKeydown()`.
 
 ### `createOverlayControl(options)`
 
@@ -284,11 +271,11 @@ Headless controller for checkboxes and radios. Handles checked/indeterminate sta
 createOverlayControl(options: OverlayControlOptions): OverlayControl
 ```
 
-Headless open/close/toggle controller for dialogs, drawers, menus, and popovers. Handles outside-click detection, focus restoration, and positioner lifecycle.
+Open/close/toggle controller for dialogs, drawers, menus, and popovers. Handles outside-click, focus restoration, and positioner lifecycle.
 
-`dispose()` closes silently — it does not fire `onClose`. Useful for component teardown. Automatically called on signal abort.
+`dispose()` closes silently — it does not fire `onClose`. Useful for component teardown.
 
-**Methods:** `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle(openReason?, closeReason?)`, `dispose()`, `[Symbol.dispose]()`.
+Methods: `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle()`, `dispose()`.
 
 ### `createOptionList(options)`
 
@@ -296,13 +283,11 @@ Headless open/close/toggle controller for dialogs, drawers, menus, and popovers.
 createOptionList<T extends BaseOptionItem>(options: OptionListOptions<T>): OptionListHandle<T>
 ```
 
-Composed headless primitive for dropdown option lists (select, combobox, menu). Owns `isOpen`, `focusedIndex`, the dropdown positioner, list navigation, and overlay wiring.
+Composed primitive for dropdown option lists. Owns `isOpen`, `focusedIndex`, the dropdown positioner, list navigation, and overlay wiring.
 
-**Required DOM accessors:** `dom.getBoundary`, `dom.getPanel`, `dom.getReference`.
+Required DOM accessors: `dom.getBoundary`, `dom.getPanel`, `dom.getReference`.
 
-**Flat event callbacks** (no `on:` nesting): `onOpen`, `onClose`, `onNavigate` are passed directly at the top level of `OptionListOptions`.
-
-**Key handle members:** `isOpen`, `focusedIndex`, `ariaExpanded`, `ariaActiveDescendant`, `open()`, `close()`, `toggle()`, `first()`, `last()`, `next()`, `prev()`, `set()`, `reset()`, `handleKeydown()`, `scrollFocusedIntoView()`, `positioner`.
+Key members: `isOpen`, `focusedIndex`, `open()`, `close()`, `toggle()`, `first()`, `last()`, `next()`, `prev()`, `handleKeydown()`.
 
 ### `createListControl(options)`
 
@@ -310,41 +295,30 @@ Composed headless primitive for dropdown option lists (select, combobox, menu). 
 createListControl<T>(options: ListNavigationOptions<T>): ListControl<T>
 ```
 
-Keyboard-navigable list controller without open state. Supports vertical/horizontal/omni navigation, disabled-item skipping, looping, and typeahead.
+Keyboard-navigable list without open state. Supports vertical/horizontal/omni navigation, disabled-item skipping, looping, and typeahead. Navigation methods return the resolved index, or `-1` when no enabled item was found.
 
-`dispose()` resets the typeahead timer and releases subscriptions. Implements `[Symbol.dispose]`. `set(-1)` clears focus (equivalent to `reset()`).
+### Other Headless Exports
 
-**Navigation methods** return the resolved index (`number`), or `-1` when no enabled item was found.
-
-### `keymap()` / `keymapPresets`
-
-```ts
-keymap(preset: 'vertical' | 'horizontal' | 'omni', overrides?: Keymap): Record<ListNavigationAction, string[]>
-```
-
-Compose a custom keymap from a preset plus per-action overrides. Pass the result as `keys` in `ListNavigationOptions`.
-
-### Other headless exports
-
-| Export                       | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createField()`              | Base field: IDs, ARIA signals, label state, validation trigger                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `createSpinnerControl()`     | Number spinner step/clamp/keyboard logic (for `sg-number-input`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `createSliderControl()`      | Range slider value/step/clamp/keyboard (for `sg-slider`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `createSwipeControl()`       | Touch/pointer swipe gesture detection (carousel, drawer, toast dismiss). `dispose()` / `[Symbol.dispose]` cancel any in-flight swipe.                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `createPaginatedList()`      | Reactive page-index + page-items controller                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `createDatePickerControl()`  | Full date-picker state (calendar, view switching, ISO parsing). `goTo(year, month)` ignores `NaN`/`Infinity` year values.                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| `createDataGridControl()`    | Data grid state (sorting, selection, column management). Pagination is composed via `createPaginatedList` internally. `DataGridColumn.sortValue(item)` provides a typed sort-key extractor override. `selectedKeys` returns a `ReadonlySet` snapshot — mutate via `toggleRow`/`selectAll`/`setSelection`/`clearSelection`. `goToPage(n)` clamps to `[0, pageCount-1]` and ignores `NaN`/`Infinity`. `pageSize: 0` disables pagination and shows all rows. Note: `renderExpanded` uses `innerHTML` — sanitize untrusted data before returning. |
-| `createTypeahead()`          | Standalone typeahead search buffer with debounced reset. Optional `signal?: AbortSignal` cancels the pending timer on component disconnect.                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `createDropdownPositioner()` | Floating dropdown positioner (wraps `orbit`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `createDialogFocusControl()` | Dialog-specific focus entry and restoration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `createInteraction()`        | Unified click/keyboard press handler for accessible interactive elements                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `dispatchKeyboardAction()`   | Low-level keymap dispatcher — returns `true` when a key matched and was handled                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| `announce()`                 | ARIA live-region announcer (polite or assertive, WeakMap-isolated)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `syncedSignal()`             | Local writable signal synced from a `Reactive` source. `abortSignal` is optional — omit in non-component contexts (e.g. tests). Canonical implementation lives in `signals.ts`.                                                                                                                                                                                                                                                                                                                                                         |
-| `parseStringTriggers()`      | Parse comma-separated trigger strings against an allowed set                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| `getChoiceLabel()`           | Read the display label from a `<sg-option>` or similar element                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `getLightChildrenByTag()`    | Collect light-DOM children matching a tag name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `toFiniteNumber()`           | Parse a value to a finite number, returning `undefined` for non-finite                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| `toFiniteNumberOr()`         | Parse a value to a finite number with a fallback default                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `toPositiveStep()`           | Coerce a step value to a positive finite number with a fallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Export                       | Description                                                        |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `createField()`              | Base field: IDs, ARIA signals, label state, validation trigger     |
+| `createSpinnerControl()`     | Number spinner step/clamp/keyboard logic                           |
+| `createSliderControl()`      | Range slider value/step/clamp/keyboard                             |
+| `createSwipeControl()`       | Touch/pointer swipe gesture detection                              |
+| `createPaginatedList()`      | Reactive page-index + page-items controller                        |
+| `createDatePickerControl()`  | Full date-picker state (calendar, view switching, ISO parsing)     |
+| `createDataGridControl()`    | Data grid state (sorting, selection, column management, pagination)|
+| `createTypeahead()`          | Standalone typeahead buffer with debounced reset                   |
+| `createDropdownPositioner()` | Floating dropdown positioner (wraps Orbit)                         |
+| `createDialogFocusControl()` | Dialog-specific focus entry and restoration                        |
+| `createInteraction()`        | Unified click/keyboard press handler for interactive elements      |
+| `keymap()` / `keymapPresets` | Compose custom keymaps from vertical/horizontal/omni presets       |
+| `dispatchKeyboardAction()`   | Low-level keymap dispatcher                                        |
+| `announce()`                 | ARIA live-region announcer (polite or assertive)                   |
+| `syncedSignal()`             | Local writable signal synced from a `Reactive` source              |
+| `parseStringTriggers()`      | Parse comma-separated trigger strings against an allowed set       |
+| `getChoiceLabel()`           | Read the display label from `<sg-option>` or similar              |
+| `getLightChildrenByTag()`    | Collect light-DOM children matching a tag name                     |
+| `toFiniteNumber()`           | Parse a value to a finite number, `undefined` for non-finite       |
+| `toFiniteNumberOr()`         | Parse a value to a finite number with a fallback                   |
+| `toPositiveStep()`           | Coerce a step value to a positive finite number with a fallback    |
