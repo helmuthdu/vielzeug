@@ -1,4 +1,5 @@
-import { define, html, prop, styleMap } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { styleMap } from '@vielzeug/craft/directives';
 import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';

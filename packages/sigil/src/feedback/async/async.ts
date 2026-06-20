@@ -1,4 +1,5 @@
-import { define, html, prop, when } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { when } from '@vielzeug/craft/directives';
 import { type Readable, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';

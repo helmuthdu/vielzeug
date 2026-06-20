@@ -1,6 +1,6 @@
 import { type Readable, type Signal } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { isDev, warn } from './_warn';
 import { CRAFT_ERRORS } from './errors';
 import { effect, getCurrentElement, onCleanup } from './runtime';
 
@@ -72,9 +72,10 @@ export const useField = <T = unknown>(options: FormFieldOptions<T>): FormFieldHa
 
   if (disabled) {
     if (!('states' in internals)) {
-      warn(
-        'useField(): ElementInternals.states (CustomStateSet) is not available in this environment — disabled state tracking skipped.',
-      );
+      if (isDev)
+        warn(
+          'useField(): ElementInternals.states (CustomStateSet) is not available in this environment — disabled state tracking skipped.',
+        );
     } else {
       const states = internals.states as CustomStateSet;
 

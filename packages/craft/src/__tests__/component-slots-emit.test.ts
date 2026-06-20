@@ -1,6 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 
-import { define, html, prop, when } from '../index';
+import { when } from '../directives/index';
+import { define, html, prop } from '../index';
 import { onMounted } from '../runtime';
 import { mount, waitForEvent } from '../testing';
 import { expectType, uniqueTag } from './test-utils';

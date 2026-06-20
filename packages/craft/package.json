@@ -22,6 +22,12 @@
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
+    "./directives": {
+      "source": "./src/directives/index.ts",
+      "types": "./dist/directives/index.d.ts",
+      "import": "./dist/directives.js",
+      "require": "./dist/directives.cjs"
+    },
     "./observers": {
       "source": "./src/observers/index.ts",
       "types": "./dist/observers/index.d.ts",

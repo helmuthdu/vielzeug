@@ -5,7 +5,7 @@
 
 import { isSignal, type Readable } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { isDev, warn } from './_warn';
 import { effect, tryRegisterCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
@@ -81,7 +81,7 @@ export const createBind = (el: HTMLElement): HostBindFn => {
 
     const registered = tryRegisterCleanup(cleanup);
 
-    if (!registered) {
+    if (!registered && isDev) {
       warn(
         'bind() called outside component setup context — cleanup will not be registered. Effects and event listeners will leak.',
       );

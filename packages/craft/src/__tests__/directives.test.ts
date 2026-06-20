@@ -5,8 +5,8 @@
 
 import { computed, signal } from '@vielzeug/ripple';
 
-import { live } from '../directives/live';
-import { classMap, each, html, model, raw, setRawSanitizer, styleMap, when } from '../index';
+import { classMap, each, live, model, raw, setRawSanitizer, styleMap, when } from '../directives/index';
+import { html } from '../index';
 import { fire, mount } from '../testing';
 import { register } from './test-utils';
 

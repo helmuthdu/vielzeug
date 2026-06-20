@@ -33,7 +33,7 @@ describe('component definition and rendering', () => {
         define(tag, {
           setup: () => html`<div>Second</div>`,
         });
-      }).toThrow(`define('${tag}') was called more than once`);
+      }).toThrow(`define('${tag}') called twice`);
     });
 
     it('duplicate registration error includes diagnostic guidance', () => {
@@ -55,8 +55,8 @@ describe('component definition and rendering', () => {
 
       const msg = (caught as Error).message;
 
-      expect(msg).toContain('more than once');
-      expect(msg).toContain('registered exactly once');
+      expect(msg).toContain('called twice');
+      expect(msg).toContain('already registered');
     });
   });
 

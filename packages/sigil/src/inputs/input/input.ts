@@ -1,4 +1,5 @@
-import { define, useField, html, inject, live, prop, ref } from '@vielzeug/craft';
+import { define, useField, html, inject, prop, ref } from '@vielzeug/craft';
+import { live } from '@vielzeug/craft/directives';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';

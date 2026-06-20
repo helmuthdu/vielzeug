@@ -1,4 +1,5 @@
-import { define, html, prop, raw } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { raw } from '@vielzeug/craft/directives';
 import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
 

@@ -2,7 +2,7 @@ import { scope as _scope, type Scope, untrack } from '@vielzeug/ripple';
 
 import type { ComponentDefinition } from './component-types';
 
-import { warn } from './_warn';
+import { isDev, warn } from './_warn';
 import { createContextBag } from './context-bag';
 import { type CraftErrorPhase, CraftError, reportRuntimeError } from './errors';
 import { createProps, getPropMeta, type InferProps, type PropInputDefs, type PropsDef } from './props';
@@ -179,7 +179,8 @@ export class BaseElement extends HTMLElement {
 
       // Discard stale results: element disconnected+reconnected since this setup started.
       if (this._component.generation !== capturedGeneration || !this.isConnected) {
-        warn(`<${this.localName}> async setup result discarded — element disconnected before setup resolved.`);
+        if (isDev)
+          warn(`<${this.localName}> async setup result discarded — element disconnected before setup resolved.`);
 
         return;
       }
@@ -193,7 +194,8 @@ export class BaseElement extends HTMLElement {
       this._scheduleMountCallbacks();
     } catch (error) {
       if (this._component.generation !== capturedGeneration || !this.isConnected) {
-        warn(`<${this.localName}> async setup error discarded — element disconnected before setup resolved.`);
+        if (isDev)
+          warn(`<${this.localName}> async setup error discarded — element disconnected before setup resolved.`);
 
         return;
       }

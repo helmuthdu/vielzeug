@@ -1,4 +1,5 @@
-import { createContext, createStableId, define, useField, html, inject, prop, when } from '@vielzeug/craft';
+import { createContext, createStableId, define, useField, html, inject, prop } from '@vielzeug/craft';
+import { when } from '@vielzeug/craft/directives';
 import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';

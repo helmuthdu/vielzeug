@@ -8,7 +8,7 @@
 
 import { computed, isSignal, type Readable } from '@vielzeug/ripple';
 
-import { warn } from '../_warn';
+import { isDev, warn } from '../_warn';
 import {
   type Binding,
   createHtmlResult,
@@ -68,7 +68,11 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     const tagName = String(value);
 
     if (!/^[a-z][a-z0-9._-]*$/i.test(tagName)) {
-      warn(`html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name — skipping slot replacement.`);
+      if (isDev)
+        warn(
+          `html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name — skipping slot replacement.`,
+        );
+
       continue;
     }
 

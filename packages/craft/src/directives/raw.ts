@@ -1,6 +1,6 @@
 import { computed, effect as rawEffect, isSignal, type Readable, type Signal } from '@vielzeug/ripple';
 
-import { warn } from '../_warn';
+import { isDev, warn } from '../_warn';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
 import { removeNodes } from '../utils/dom';
 
@@ -24,7 +24,7 @@ export const _resetRawSanitizer = (): void => {
 const sanitize = (value: string): string => {
   if (_sanitizer) return _sanitizer(value);
 
-  if (value && !_warned) {
+  if (isDev && value && !_warned) {
     _warned = true;
     warn(
       'raw() was called without a sanitizer registered. ' +

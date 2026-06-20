@@ -1,4 +1,4 @@
-const isDev = !(globalThis as { __CRAFT_PROD__?: boolean }).__CRAFT_PROD__;
+export const isDev = !(globalThis as { __CRAFT_PROD__?: boolean }).__CRAFT_PROD__;
 
 /** @internal @security Messages may include user-supplied data. */
 export function warn(msg: string): void {

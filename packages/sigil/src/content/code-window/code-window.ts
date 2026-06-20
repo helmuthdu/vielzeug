@@ -1,4 +1,5 @@
-import { define, html, prop, when } from '@vielzeug/craft';
+import { define, html, prop } from '@vielzeug/craft';
+import { when } from '@vielzeug/craft/directives';
 import { computed } from '@vielzeug/ripple';
 
 import componentStyles from './code-window.css?inline';

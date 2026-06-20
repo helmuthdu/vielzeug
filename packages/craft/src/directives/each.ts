@@ -1,6 +1,6 @@
 import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
 
-import { warn } from '../_warn';
+import { isDev, warn } from '../_warn';
 import { CRAFT_ERRORS } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
@@ -63,18 +63,16 @@ const reconcileItems = <T>(
   parent: ParentNode,
   endMarker: Node,
 ): ItemEntry<T>[] => {
-  const nextKeys: string[] = next.map((item, i) => String(keyFn(item, i)));
-  const nextKeySet = new Set(nextKeys);
+  const nextKeys: string[] = [];
+  const nextKeySet = new Set<string>();
 
-  // Detect duplicate keys
-  const seen = new Set<string>();
+  for (let i = 0; i < next.length; i++) {
+    const key = String(keyFn(next[i], i));
 
-  for (let i = 0; i < nextKeys.length; i++) {
-    const key = nextKeys[i];
+    if (nextKeySet.has(key)) throw new Error(CRAFT_ERRORS.eachDuplicateKey(key, i));
 
-    if (seen.has(key)) throw new Error(CRAFT_ERRORS.eachDuplicateKey(key, i));
-
-    seen.add(key);
+    nextKeySet.add(key);
+    nextKeys.push(key);
   }
 
   // Remove stale entries from the map
@@ -191,17 +189,19 @@ export function each<T>(
       ? computed(list as () => T[])
       : list;
 
-  try {
-    const SENTINEL_IDX = 99999;
-    const testKey = keyFn({} as T, SENTINEL_IDX);
+  if (isDev) {
+    try {
+      const SENTINEL_IDX = 99999;
+      const testKey = keyFn({} as T, SENTINEL_IDX);
 
-    if (testKey === SENTINEL_IDX) {
-      warn(
-        'each(): key function returns only the index. Index keys cause full list re-renders on insert/remove — pass a stable item identifier (e.g. item.id) instead.',
-      );
+      if (testKey === SENTINEL_IDX) {
+        warn(
+          'each(): key function returns only the index. Index keys cause full list re-renders on insert/remove — pass a stable item identifier (e.g. item.id) instead.',
+        );
+      }
+    } catch {
+      /* ignore — keyFn may throw on a non-item sentinel; that is fine */
     }
-  } catch {
-    /* ignore — keyFn may throw on a non-item sentinel; that is fine */
   }
 
   return createDirectiveResult((anchor, registerCleanup) => {
@@ -253,7 +253,8 @@ export function each<T>(
       try {
         itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, signalRender, parent, endMarker));
       } catch (err) {
-        warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
+        if (isDev) warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
+
         for (const entry of itemsMap.values()) removeItem(entry);
         itemsMap = new Map();
         itemsOrdered = [];

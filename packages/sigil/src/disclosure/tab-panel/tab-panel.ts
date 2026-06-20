@@ -1,4 +1,5 @@
-import { define, html, inject, prop, styleMap, when } from '@vielzeug/craft';
+import { define, html, inject, prop } from '@vielzeug/craft';
+import { styleMap, when } from '@vielzeug/craft/directives';
 import { computed, signal } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';

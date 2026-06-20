@@ -1,6 +1,6 @@
 import { type Readable, type Signal, signal } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { isDev, warn } from './_warn';
 import { CRAFT_ERRORS } from './errors';
 import { effect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';
@@ -43,19 +43,7 @@ type PropFactory = {
 
 /** @internal JS-only prop implementation — never reads/writes attributes. */
 function _jsOnlyProp<T>(defaultValue?: T): PropDef<T | undefined> | PropDef<T> {
-  if (defaultValue !== undefined) {
-    return {
-      default: defaultValue,
-      parse: () => defaultValue,
-      reflect: false,
-    } as PropDef<T>;
-  }
-
-  return {
-    default: undefined,
-    parse: () => undefined,
-    reflect: false,
-  } as PropDef<T | undefined>;
+  return { default: defaultValue, parse: () => defaultValue, reflect: false } as PropDef<T | undefined>;
 }
 
 export const prop: PropFactory = {
@@ -115,7 +103,8 @@ export const prop: PropFactory = {
         const n = Number(value);
 
         if (Number.isNaN(n)) {
-          warn(`prop.number(): attribute value "${value}" is not a valid number, using default (${String(def)})`);
+          if (isDev)
+            warn(`prop.number(): attribute value "${value}" is not a valid number, using default (${String(def)})`);
 
           return def;
         }
@@ -171,9 +160,7 @@ const isPropDef = (value: unknown): value is PropDef<unknown> =>
 export function normalizePropDefinition<T>(value: unknown, propName: string): PropDef<T> {
   if (!isPropDef(value)) {
     throw new Error(
-      `Prop "${propName}" must be defined with prop.* helper or PropDef object. ` +
-        `Received plain value: ${typeof value}. Use prop.string(), prop.number(), prop.bool(), prop.json(), or prop.oneOf() ` +
-        `instead of plain defaults.`,
+      `Prop "${propName}" must use a prop.* helper (string/number/bool/json/oneOf). Received: ${typeof value}`,
     );
   }
 
@@ -187,9 +174,7 @@ export function normalizePropDefinition<T>(value: unknown, propName: string): Pr
 
   // Validate: structured defaults with reflect:true are not allowed
   if (reflect && isStructuredValue(descriptor.default)) {
-    throw new Error(
-      `Prop "${propName}": ${CRAFT_ERRORS.propInvalidReflect} Use prop.json() with reflect:false instead.`,
-    );
+    throw new Error(`Prop "${propName}": ${CRAFT_ERRORS.propInvalidReflect}`);
   }
 
   return {
