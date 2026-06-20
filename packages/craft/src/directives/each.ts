@@ -1,12 +1,4 @@
-import {
-  batch,
-  computed,
-  effect as rawEffect,
-  type ReadonlySignal,
-  signal,
-  type Signal,
-  untrack,
-} from '@vielzeug/ripple';
+import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
 
 import { warn } from '../_warn';
 import { CRAFT_ERRORS } from '../errors';
@@ -15,7 +7,7 @@ import { removeNodes, runAll } from '../utils/dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type MaybeReactiveArray<T> = ReadonlySignal<T[]> | (() => T[]) | T[];
+type MaybeReactiveArray<T> = Readable<T[]> | (() => T[]) | T[];
 
 type ItemEntry<T> = {
   cleanups: (() => void)[];
@@ -31,7 +23,7 @@ type ItemEntry<T> = {
 const createItem = <T>(
   item: T,
   index: number,
-  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
+  render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   parent: ParentNode,
   insertBefore: Node,
 ): ItemEntry<T> => {
@@ -67,7 +59,7 @@ const reconcileItems = <T>(
   itemsMap: Map<string, ItemEntry<T>>,
   next: T[],
   keyFn: (item: T, index: number) => string | number,
-  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
+  render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   parent: ParentNode,
   endMarker: Node,
 ): ItemEntry<T>[] => {
@@ -142,7 +134,7 @@ const reconcileItems = <T>(
  * Each item is rendered by the provided render function.
  * Items are reused by key when the list changes; only stale items are destroyed.
  *
- * **Reactive (default):** render receives `ReadonlySignal<T>` and `ReadonlySignal<number>`.
+ * **Reactive (default):** render receives `Reactive<T>` and `Reactive<number>`.
  * In-place updates (reorder, value change) avoid DOM teardown.
  *
  * **Snapshot:** render receives plain `T` and `number`. Items are destroyed and
@@ -167,7 +159,7 @@ const reconcileItems = <T>(
 export function each<T>(
   list: MaybeReactiveArray<T>,
   keyFn: (item: T, index: number) => string | number,
-  render: (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult,
+  render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   fallback?: () => HTMLResult,
 ): DirectiveResult;
 export function each<T>(
@@ -179,9 +171,7 @@ export function each<T>(
 export function each<T>(
   list: MaybeReactiveArray<T>,
   keyFn: (item: T, index: number) => string | number,
-  render:
-    | ((item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult)
-    | ((item: T, index: number) => HTMLResult),
+  render: ((item: Readable<T>, index: Readable<number>) => HTMLResult) | ((item: T, index: number) => HTMLResult),
   fallbackOrOptions?: (() => HTMLResult) | { fallback?: () => HTMLResult; snapshot: true },
 ): DirectiveResult {
   const isSnapshot =
@@ -192,9 +182,9 @@ export function each<T>(
 
   // Wrap snapshot render as a signal-based render
   const signalRender = isSnapshot
-    ? (item: ReadonlySignal<T>, index: ReadonlySignal<number>): HTMLResult =>
+    ? (item: Readable<T>, index: Readable<number>): HTMLResult =>
         (render as (item: T, index: number) => HTMLResult)(item.value, index.value)
-    : (render as (item: ReadonlySignal<T>, index: ReadonlySignal<number>) => HTMLResult);
+    : (render as (item: Readable<T>, index: Readable<number>) => HTMLResult);
   const listSignal = Array.isArray(list)
     ? signal(list as T[])
     : typeof list === 'function'

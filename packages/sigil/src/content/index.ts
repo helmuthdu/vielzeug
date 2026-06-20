@@ -1,3 +1,7 @@
+export { CODE_WINDOW_TAG } from './code-window/code-window';
+export type { CodeWindowVariant, SgCodeWindowProps } from './code-window/code-window';
+export { COPY_COMMAND_TAG } from './copy-command/copy-command';
+export type { SgCopyCommandEvents, SgCopyCommandProps } from './copy-command/copy-command';
 export { CAROUSEL_SLIDE_TAG, CAROUSEL_TAG } from './carousel/carousel';
 export type { SgCarouselEvents, SgCarouselProps, CarouselOrientation } from './carousel/carousel';
 export { AVATAR_GROUP_TAG, AVATAR_TAG } from './avatar/avatar';

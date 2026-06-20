@@ -11,7 +11,7 @@ You need tooltip/popover positioning to drive reactive UI updates — but `float
 
 ### Solution
 
-Use `createFloatState()` from `@vielzeug/orbit/reactive`. It wraps `float()` and exposes position as a Ripple `ReadonlySignal<ComputePositionResult | null>`:
+Use `createFloatState()` from `@vielzeug/orbit/reactive`. It wraps `float()` and exposes position as a Ripple `Reactive<ComputePositionResult | null>`:
 
 #### Basic Usage
 

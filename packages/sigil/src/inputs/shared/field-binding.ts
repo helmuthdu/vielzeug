@@ -1,5 +1,5 @@
 import type { HostBindFn } from '@vielzeug/craft';
-import type { ReadonlySignal, Signal } from '@vielzeug/ripple';
+import type { Readable, Signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
 
@@ -11,11 +11,11 @@ import type { ComponentSize } from '../../types';
 export type CheckableBindingHandle = {
   assistiveId: string;
   checked: Signal<boolean>;
-  disabled: ReadonlySignal<boolean>;
-  errorText: ReadonlySignal<string>;
+  disabled: Readable<boolean>;
+  errorText: Readable<string>;
   handleClick: (event: MouseEvent) => boolean;
   handleKeydown: (event: KeyboardEvent) => boolean;
-  helperText: ReadonlySignal<string>;
+  helperText: Readable<string>;
   indeterminate?: Signal<boolean>;
   labelId: string;
 };
@@ -32,7 +32,7 @@ export type CheckableBindingHandle = {
  */
 export const applyCheckableBinding = (
   bind: HostBindFn,
-  fCtxSize: ReadonlySignal<ComponentSize | undefined>,
+  fCtxSize: Readable<ComponentSize | undefined>,
   handle: CheckableBindingHandle,
   role: 'checkbox' | 'radio' | 'switch',
 ): void => {

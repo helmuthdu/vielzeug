@@ -1,5 +1,5 @@
 import { assert } from '@vielzeug/arsenal';
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import { createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from './overlay';
@@ -70,19 +70,19 @@ export type OptionListOptions<T extends BaseOptionItem> = {
 
 export type OptionListHandle<T extends BaseOptionItem> = {
   /** Reactive `aria-activedescendant` value. `null` when no option is focused or the list is closed. */
-  readonly ariaActiveDescendant: ReadonlySignal<string | null>;
+  readonly ariaActiveDescendant: Readable<string | null>;
   /** Reactive `aria-expanded` value as string (`'true'` / `'false'`). */
-  readonly ariaExpanded: ReadonlySignal<string>;
+  readonly ariaExpanded: Readable<string>;
   close(reason?: DialogCloseReason): void;
   /**
    * Focused item index (read-only). Write via `set(index)` to update through
    * the list control — this ensures scroll-into-view and disabled-item checks.
    */
-  readonly focusedIndex: ReadonlySignal<number>;
+  readonly focusedIndex: Readable<number>;
   getActiveItem(): T | undefined;
   handleKeydown(event: KeyboardEvent): boolean;
   /** Open state (read-only). Mutate via `open()`, `close()`, or `toggle()`. */
-  readonly isOpen: ReadonlySignal<boolean>;
+  readonly isOpen: Readable<boolean>;
   /**
    * Programmatically navigate to a named position. Always fires `onNavigate`
    * (scroll-into-view, aria-activedescendant update).

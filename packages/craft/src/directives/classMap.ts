@@ -1,4 +1,4 @@
-import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, isSignal, type Readable } from '@vielzeug/ripple';
 
 /**
  * Produces a reactive string of class names from an object map.
@@ -8,7 +8,7 @@ import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
  * - a `Signal<boolean>`
  * - a getter `() => boolean`
  *
- * Returns a `ReadonlySignal<string>` that can be used directly in a template
+ * Returns a `Reactive<string>` that can be used directly in a template
  * class attribute:
  *
  * @example
@@ -16,9 +16,7 @@ import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
  * html`<div class="${classMap({ active: isActive, hidden: () => !isVisible.value })}"></div>`
  * ```
  */
-export const classMap = (
-  map: Record<string, (() => boolean) | ReadonlySignal<boolean> | boolean>,
-): ReadonlySignal<string> => {
+export const classMap = (map: Record<string, (() => boolean) | Readable<boolean> | boolean>): Readable<string> => {
   return computed(() =>
     Object.entries(map)
       .filter(([, v]) => (typeof v === 'function' ? v() : isSignal(v) ? v.value : v))

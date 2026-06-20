@@ -256,12 +256,9 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     // The per-page size selector also writes to this signal directly.
     const pageSize = signal<number>(props['page-size'].value ?? 10);
 
-    watch(
-      () => props['page-size'].value,
-      (n) => {
-        if (n != null) pageSize.value = n;
-      },
-    );
+    watch(props['page-size'], (n) => {
+      if (n != null) pageSize.value = n;
+    });
 
     // ── Declarative sg-column children ─────────────────────────────────────
     // A writable signal holding columns parsed from <sg-column> children.
@@ -319,8 +316,10 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     const filterDefs = computed(() => props.filters.value ?? []);
 
     // Prune stale filter state when columns are removed so ghost filters don't re-activate.
+    const columnKeys = computed(() => resolvedColumns.value.map((c) => c.key));
+
     watch(
-      () => resolvedColumns.value.map((c) => c.key),
+      columnKeys,
       (activeKeys) => {
         const keySet = new Set(activeKeys);
         const current = filterValues.value;
@@ -390,7 +389,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     // ── Sync external selected-keys prop into ctrl ────────────────────────────
 
     watch(
-      () => props['selected-keys'].value,
+      props['selected-keys'],
       (keys) => {
         if (Array.isArray(keys)) ctrl.setSelection(new Set(keys));
       },
@@ -438,11 +437,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
 
     // B4: reactive page reset — any change to the filtered result set resets to page 0.
     // Removes the need to call ctrl.goToPage(0) manually in every event handler.
-    watch(
-      () => filteredRows.value,
-      () => ctrl.goToPage(0),
-      { immediate: false },
-    );
+    watch(filteredRows, () => ctrl.goToPage(0), { immediate: false });
 
     // ── Pagination handlers ───────────────────────────────────────────────────
 

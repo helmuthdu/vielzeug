@@ -1,7 +1,7 @@
 import type { Placement } from '@vielzeug/orbit';
 
 import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
-import { type ReadonlySignal, type Signal, signal, watch } from '@vielzeug/ripple';
+import { type Readable, type Signal, signal, watch } from '@vielzeug/ripple';
 
 import { lifecycleSignal, createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from '../../headless';
 
@@ -15,11 +15,11 @@ export type FloatingTriggerOptions = {
   /** ARIA binding factory: called with the trigger element, returns a cleanup. */
   bindTriggerAria: AriaBindFn;
   /** If true, disable all trigger interactions and close if open. */
-  disabled: ReadonlySignal<boolean>;
+  disabled: Readable<boolean>;
   /** Returns the panel element, if mounted. */
   getPanel: () => HTMLElement | null;
   /** Gap from reference to floating panel in px. Default: 8. Accepts a signal for runtime reactivity. */
-  offset?: ReadonlySignal<number | undefined> | number;
+  offset?: Readable<number | undefined> | number;
   /** Cleanup registrar from the component setup ctx. Automatically called on disconnect. */
   onCleanup: (fn: () => void) => void;
   /** Called when the popover closes. */
@@ -29,15 +29,15 @@ export type FloatingTriggerOptions = {
   /** Callback when resolved placement changes (useful for CSS attribute). */
   onPlacementChange?: (placement: Placement) => void;
   /** Controlled open prop. When defined, disables uncontrolled logic. */
-  openProp: ReadonlySignal<boolean | undefined>;
+  openProp: Readable<boolean | undefined>;
   /** Preferred placement. Default: 'bottom'. */
-  placement: ReadonlySignal<Placement>;
+  placement: Readable<Placement>;
   /** Slot element or a factory to lazily find it. Resolved each time bindEvents runs. */
   slot: HTMLSlotElement | null | (() => HTMLSlotElement | null);
   /** Slot elements signal — used to rebind when slotted elements change. */
-  slotElements: ReadonlySignal<Element[]>;
+  slotElements: Readable<Element[]>;
   /** Which triggers are active. Set to empty array or omit if handling events manually. */
-  triggers: ReadonlySignal<FloatingTriggerType[]>;
+  triggers: Readable<FloatingTriggerType[]>;
 };
 
 export type FloatingTriggerHandle = {
@@ -94,7 +94,7 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
     if (o == null) return 8;
 
-    const val = typeof o === 'object' ? (o as ReadonlySignal<number | undefined>).value : o;
+    const val = typeof o === 'object' ? (o as Readable<number | undefined>).value : o;
 
     return val ?? 8;
   };

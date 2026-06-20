@@ -3,24 +3,23 @@
 // are intentionally NOT exported to keep the surface stable.
 
 export type {
-  Accessor,
-  AsyncComputedOptions,
-  AsyncComputedSignal,
   AsyncEffectCallback,
-  AsyncScopeSetup,
   AsyncSubscription,
   CleanupFn,
+  Computed,
   ComputedOptions,
-  ComputedSignal,
+  DepInfo,
   EffectAsyncOptions,
   EffectCallback,
+  EffectHandle,
   EffectOptions,
   EffectScheduler,
   EqualityFn,
+  HistoryEntry,
   PathValue,
-  ReadonlySignal,
+  Readable,
   ResourceOptions,
-  ResourceSignal,
+  ResourceState,
   Scope,
   Signal,
   SignalOptions,
@@ -30,7 +29,8 @@ export type {
   WatchOptions,
 } from './types';
 
-export { StateError, StateErrorCode } from './error';
+export type { StateErrorCode } from './error';
+export { StateError } from './error';
 
 // Core primitives
 export { computed } from './computed';
@@ -39,13 +39,12 @@ export { store } from './store';
 
 // Effect system
 export { batch } from './scheduling';
-export { asyncScope, effect, effectAsync, onCleanup, scope, watch, withScope } from './effect';
+export { effect, effectAsync, onCleanup, scope, watch } from './effect';
 
 // Utilities
-export { derive, filter, isComputed, isSignal, isStore, readonly, selector, untrack } from './utilities';
+export { isComputed, isSignal, isStore, readonly, untrack } from './utilities';
 
-// Async computed — `resource` is the preferred name; `asyncComputed` is kept for compatibility
-export { asyncComputed } from './async-computed';
+// Async computed
 export { asyncComputed as resource } from './async-computed';
 
 // Store with history / time-travel

@@ -13,24 +13,21 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `computed()`         | Derive memoized values from dependencies                              | Sync           | Avoid side effects inside computed callbacks                                      |
 | `effect()`           | Run and re-run sync side effects                                      | Sync           | Dispose when no longer needed to prevent memory leaks                             |
 | `effectAsync()`      | Run async side effects with AbortSignal                               | Async          | Read reactive deps synchronously before the first `await`                         |
-| `resource()`         | Preferred alias for `asyncComputed()`                                 | Async          | `isLoading` starts `true`; read `.data.value`, `.error.value`, `.isLoading.value` |
+| `resource()`         | Preferred alias for `asyncComputed()`                                 | Async          | `status` starts `'loading'`; read `resource.value.status` for the discriminated union |
 | `asyncComputed()`    | Async computed with lifecycle state (legacy name)                     | Async          | Use `resource()` instead; kept for compatibility                                  |
 | `watch()`            | Subscribe to value changes                                            | Sync           | Does not fire immediately unlike `effect()`                                       |
 | `batch()`            | Coalesce multiple writes                                              | Sync           | Nested batches merge into the outermost                                           |
 | `untrack()`          | Read without subscribing                                              | Sync           | Only suppresses dependency registration, value is still read                      |
-| `readonly()`         | Wrap any signal as a read-only ComputedSignal                         | Sync           | `dispose()` is always a no-op — the caller retains ownership of the source        |
+| `readonly()`         | Wrap any signal as a read-only view                                  | Sync           | Returns `Readable<T>` — no `dispose()` method; the caller retains ownership of the source |
 | `scope()`            | Isolated cleanup context                                              | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
 | ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)`            | Async          | `onCleanup()` only works before the first `await`                                 |
 | `debugEffect()`      | Effect that logs changed sources before re-run                        | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
 | `store()`            | Create object-like state container                                    | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
-| `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Lens writes also push snapshots; `maxHistory` caps the buffer                     |
+| `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Call `.push()` / `.pushNamed()` explicitly to record a checkpoint; `maxHistory` caps the buffer |
 | `installDevTools()`  | Install DevTools observation hook                                     | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; pass `null` to uninstall              |
 | `getDevToolsHook()`  | Return current DevTools hook                                          | Sync           | Returns `null` if none installed                                                  |
-| `derive()`           | Project a reactive source into a computed                             | Sync           | Cleaner alternative to `selector(source, project)` — no overload ambiguity        |
-| `filter()`           | Filter a reactive source; type-predicate narrows `T → U \| undefined` | Sync           | Returns `undefined` when predicate is `false`; use type-guard for narrowing       |
-| `selector()`         | Project / filter any reactive source                                  | Sync           | Use `derive()` / `filter()` for new code                                          |
 | `isSignal()`         | Type guard for any signal/computed/store                              | Sync           | Uses an internal symbol marker, not duck-typing                                   |
-| `isComputed()`       | Type guard for computed signals                                       | Sync           | Returns `false` for plain signals and stores                                      |
+| `isComputed()`       | Type guard for computed signals                                       | Sync           | Returns `false` for plain signals, stores, and `readonly()` wrappers             |
 | `isStore()`          | Type guard for stores                                                 | Sync           | Returns `false` for plain signals and computed signals                            |
 
 ## Package Entry Point
@@ -67,9 +64,8 @@ count.value = 1; // notifies dependents
 | Parameter         | Type            | Description                                                                                            |
 | ----------------- | --------------- | ------------------------------------------------------------------------------------------------------ |
 | `initial`         | `T`             | The starting value                                                                                     |
-| `options.equals`  | `EqualityFn<T>` | Custom equality; skip notification when `true`. Default: `Object.is`                                   |
-| `options.name`    | `string`        | Name used in DevTools and error messages                                                               |
-| `options.batched` | `boolean`       | When `true`, coalesces rapid synchronous writes into a single microtask notification. Default: `false` |
+| `options.equals`  | `EqualityFn<T>` | Custom equality; skip notification when `true`. Default: `Object.is` |
+| `options.name`    | `string`        | Name used in DevTools and error messages                              |
 
 **Returns** — `Signal<T>`
 
@@ -80,7 +76,7 @@ See also: [`SignalOptions<T>`](#signaloptions)
 ### `computed`
 
 ```ts
-function computed<T>(compute: () => T, options?: ComputedOptions<T>): ComputedSignal<T>;
+function computed<T>(compute: () => T, options?: ComputedOptions<T>): Computed<T>;
 ```
 
 Creates a lazy derived read-only signal. The `compute` function runs on the first `.value` read and again after any dependency changes. Propagation is **glitch-free**: when a signal that multiple computed nodes share changes, all computed nodes are marked dirty before any subscribed effects run — effects always observe a consistent snapshot.
@@ -100,18 +96,17 @@ doubled.dispose(); // stop tracking
 // or: using doubled = computed(...) — TC39 using declaration
 ```
 
-When `options.equals` is provided, downstream subscribers are suppressed if the recomputed value equals the previous value. When `options.fallback` is provided, compute errors are caught and the fallback is called instead of propagating.
+When `options.equals` is provided, downstream subscribers are suppressed if the recomputed value equals the previous value.
 
 **Parameters**
 
-| Parameter          | Type               | Description                                                            |
-| ------------------ | ------------------ | ---------------------------------------------------------------------- |
-| `compute`          | `() => T`          | Computation function; signals read inside are tracked as dependencies  |
-| `options.equals`   | `EqualityFn<T>`    | Suppress downstream if result is unchanged. Default: `Object.is`       |
-| `options.name`     | `string`           | Name used in DevTools and cycle error messages                         |
-| `options.fallback` | `(err, last) => T` | Called when compute throws; return value is used as the computed value |
+| Parameter        | Type            | Description                                                           |
+| ---------------- | --------------- | --------------------------------------------------------------------- |
+| `compute`        | `() => T`       | Computation function; signals read inside are tracked as dependencies |
+| `options.equals` | `EqualityFn<T>` | Suppress downstream if result is unchanged. Default: `Object.is`      |
+| `options.name`   | `string`        | Name used in DevTools and cycle error messages                        |
 
-**Returns** — `ComputedSignal<T>`
+**Returns** — `Computed<T>`
 
 See also: [`ComputedOptions<T>`](#computedoptions)
 
@@ -120,10 +115,10 @@ See also: [`ComputedOptions<T>`](#computedoptions)
 ### `effect`
 
 ```ts
-function effect(fn: EffectCallback, options?: EffectOptions): Subscription;
+function effect(fn: EffectCallback, options?: EffectOptions): EffectHandle;
 ```
 
-Runs `fn` immediately and re-runs it whenever any signal read inside it changes. If `fn` returns a function, that function is called as cleanup before each re-run and on final dispose. Returns a `Subscription` — dispose is idempotent.
+Runs `fn` immediately and re-runs it whenever any signal read inside it changes. If `fn` returns a function, that function is called as cleanup before each re-run and on final dispose. Returns an `EffectHandle` — dispose is idempotent.
 
 ```ts
 const sub = effect(() => {
@@ -144,11 +139,10 @@ sub.dispose(); // cleanup called, effect removed
 const stop = effect(() => console.log('count:', count.value), {
   scheduler: 'microtask', // defer re-runs to a microtask queue
   name: 'count-logger', // appears in error messages
-  maxIterations: 50, // loop guard (default: 100)
 });
 
-// Custom scheduler function
-const stop2 = effect(() => renderFrame(data.value), { scheduler: (run) => requestIdleCallback(run) });
+// 'sync' (default) or 'microtask'
+const stop2 = effect(() => renderFrame(data.value), { scheduler: 'microtask' });
 ```
 
 **Parameters**
@@ -156,13 +150,12 @@ const stop2 = effect(() => renderFrame(data.value), { scheduler: (run) => reques
 | Parameter               | Type              | Default     | Description                                                                   |
 | ----------------------- | ----------------- | ----------- | ----------------------------------------------------------------------------- |
 | `fn`                    | `EffectCallback`  |             | Runs immediately and on each dependency change; may return a cleanup function |
-| `options.scheduler`     | `EffectScheduler` | `'sync'`    | When/how to schedule re-runs; accepts built-in strings or a custom function   |
+| `options.scheduler`     | `EffectScheduler` | `'sync'`    | `'sync'` or `'microtask'`; sync runs immediately, microtask defers and coalesces |
 | `options.name`          | `string`          | `undefined` | Name shown in error messages for loop and cycle errors                        |
-| `options.maxIterations` | `number`          | `100`       | Loop guard: throws `StateError('INFINITE_LOOP')` if exceeded                  |
 
-**Returns** — `Subscription`
+**Returns** — `EffectHandle`
 
-See also: [`EffectOptions`](#effectoptions), [`EffectScheduler`](#effectscheduler)
+See also: [`EffectOptions`](#effectoptions), [`EffectHandle`](#effecthandle), [`EffectScheduler`](#effectscheduler)
 
 ---
 
@@ -206,7 +199,7 @@ stop.dispose(); // aborts current fetch, calls cleanup
 | `options.name`    | `string`              | Name used to identify this async effect in DevTools                 |
 | `options.onError` | `(err) => void`       | Handler for non-aborted errors. Default: logs via `console.error`   |
 
-**Returns** — `AsyncSubscription` (extends `Subscription` with `disposeAsync(): Promise<void>`)
+**Returns** — `AsyncSubscription` — extends `Subscription`; also provides `run(): Promise<void>` to await the current in-flight run, and `[Symbol.asyncDispose]()` for full async teardown.
 
 See also: [`EffectAsyncOptions`](#effectasyncoptions), [`AsyncEffectCallback`](#asynceffectcallback), [`AsyncSubscription`](#asyncsubscription)
 
@@ -216,13 +209,13 @@ See also: [`EffectAsyncOptions`](#effectasyncoptions), [`AsyncEffectCallback`](#
 
 ```ts
 function watch<T>(
-  source: ReadonlySignal<T> | (() => T),
+  source: Reactive<T>,
   cb: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
 ): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, pass a getter function or use `selector()`. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `StateError` with code `INVALID_CLEANUP`.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, use `computed()` or `store.lens(path)` and pass the resulting signal. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `StateError` with code `INVALID_CLEANUP`.
 
 ```ts
 // Plain watch
@@ -230,27 +223,25 @@ const sub = watch(count, (next, prev) => console.log(prev, '→', next));
 count.value = 5; // fires
 sub.dispose();
 
-// Slice watch — getter source
+// Slice watch — lens (preferred)
 const userStore = store({ name: 'Alice' });
-watch(
-  () => userStore.peek().name,
-  (name) => console.log('name:', name),
-);
+watch(userStore.lens('name'), (name) => console.log('name:', name));
 
-// Slice watch — lens
-const nameLens = userStore.lens('name');
-watch(nameLens, (name) => console.log('name:', name));
+// Slice watch — computed
+const nameSig = computed(() => userStore.value.name);
+watch(nameSig, (name) => console.log('name:', name));
 ```
 
 **Parameters**
 
 | Parameter           | Type                                                    | Description                                               |
 | ------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
-| `source`            | `ReadonlySignal<T>` or `() => T`                        | The signal, store, or getter to watch                     |
+| `source`            | `Reactive<T>`                                     | Any signal, computed, store, or lens to watch             |
 | `cb`                | `(value: T, prev: T \| undefined) => CleanupFn \| void` | Called on each change; may return a cleanup function      |
 | `options.immediate` | `boolean`                                               | Fire once immediately on subscription. Default `false`    |
 | `options.equals`    | `EqualityFn<T>`                                         | Custom equality for change detection. Default `Object.is` |
 | `options.name`      | `string`                                                | Name passed to the internal effect for DevTools tracing   |
+| `options.once`      | `boolean`                                               | Auto-dispose after the first callback invocation. Default `false` |
 
 **Returns** — `Subscription`
 
@@ -305,12 +296,12 @@ effect(() => {
 ### `readonly`
 
 ```ts
-function readonly<T>(source: ReadonlySignal<T>): ComputedSignal<T>;
+function readonly<T>(source: Readable<T>): Readable<T>;
 ```
 
-Wraps `source` in a thin delegation object — the returned `ComputedSignal<T>` exposes `value`, `peek()`, and `subscribe()`. Mutator methods are hidden at the type level.
+Wraps `source` in a thin delegation object — the returned `Readable<T>` exposes `value`, `peek()`, and `subscribe()`. Mutator methods are hidden at the type level. The wrapper has **no** `dispose()` method — it carries no ownership over the source.
 
-Always creates a new wrapper object — never returns the source directly. `.dispose()` is always a no-op: the caller retains ownership of the source and is responsible for disposing it independently. This applies to both `signal()` and `computed()` sources.
+Always creates a new wrapper object — never returns the source directly. The caller retains full ownership of the source and is responsible for disposing it independently.
 
 ```ts
 const count = signal(0);
@@ -320,17 +311,17 @@ console.log(ro.value); // 0
 count.value = 1;
 console.log(ro.value); // 1
 
-ro.dispose(); // no-op — count remains alive
+// ro has no dispose() — count remains owned by the caller
 count.dispose(); // disposes the source
 ```
 
 **Parameters**
 
-| Parameter | Type                | Description                         |
-| --------- | ------------------- | ----------------------------------- |
-| `source`  | `ReadonlySignal<T>` | Any signal/store/computed to expose |
+| Parameter | Type          | Description                         |
+| --------- | ------------- | ----------------------------------- |
+| `source`  | `Readable<T>` | Any signal/store/computed to expose |
 
-**Returns** — `ComputedSignal<T>`
+**Returns** — `Readable<T>`
 
 ---
 
@@ -354,7 +345,7 @@ effect(() => {
 ### `isSignal`
 
 ```ts
-function isSignal<T = unknown>(value: unknown): value is ReadonlySignal<T>;
+function isSignal<T = unknown>(value: unknown): value is Readable<T>;
 ```
 
 Type guard returning `true` for values created by `signal()`, `computed()`, or `store()`. Uses an internal symbol marker.
@@ -371,15 +362,15 @@ isSignal({ value: 42 }); // false — not a real signal
 ### `isComputed`
 
 ```ts
-function isComputed<T = unknown>(value: unknown): value is ComputedSignal<T>;
+function isComputed<T = unknown>(value: unknown): value is Computed<T>;
 ```
 
-Type guard returning `true` only for values created by `computed()` or `readonly()`. Returns `false` for plain `signal()` and `store()` instances.
+Type guard returning `true` only for values created by `computed()`. Returns `false` for plain `signal()`, `store()`, and `readonly()` wrappers.
 
 ```ts
 isComputed(computed(() => 1)); // true
-isComputed(readonly(signal(0))); // true
 isComputed(signal(42)); // false
+isComputed(readonly(signal(0))); // false
 isComputed(store({ n: 0 })); // false
 ```
 
@@ -449,11 +440,48 @@ function resource<T>(
 ): ResourceSignal<T>;
 ```
 
-Preferred alias for `asyncComputed()`. Use `resource()` for new code — the name more clearly communicates intent. The two functions are identical at runtime.
+Preferred alias for `asyncComputed()`. Creates a reactive async resource. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
 
-See [`asyncComputed`](#asynccomputed) for full documentation.
+The returned `ResourceSignal<T>` is a `Reactive<ResourceState<T>>` — a single discriminated union signal:
 
-See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions)
+```ts
+type ResourceState<T> =
+  | { status: 'loading'; data: T | undefined }
+  | { status: 'ready';   data: T }
+  | { status: 'error';   data: T | undefined; error: unknown };
+```
+
+```ts
+const userId = signal('u1');
+
+const user = resource(async (abortSignal) => {
+  const id = userId.value; // tracked dep — re-runs when userId changes
+  return fetch(`/users/${id}`, { signal: abortSignal }).then((r) => r.json());
+});
+
+effect(() => {
+  const s = user.value; // ResourceState<User>
+  if (s.status === 'loading') return showSpinner();
+  if (s.status === 'error')   return showError(s.error);
+  renderUser(s.data); // s.data is User here
+});
+
+userId.value = 'u2'; // aborts in-flight fetch, re-runs factory
+user.dispose();
+console.log(user.disposed); // true
+```
+
+**Parameters**
+
+| Parameter              | Type                                       | Description                                                          |
+| ---------------------- | ------------------------------------------ | -------------------------------------------------------------------- |
+| `factory`              | `(abortSignal: AbortSignal) => Promise<T>` | Async factory; tracked deps must be read synchronously before `await` |
+| `options.initialValue` | `T`                                        | Populates `data` in the initial `loading` state before the first result |
+| `options.name`         | `string`                                   | Debug name propagated to the internal signal and effect              |
+
+**Returns** — `ResourceSignal<T>`
+
+See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions), [`ResourceState<T>`](#resourcestate)
 
 ---
 
@@ -462,48 +490,15 @@ See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resour
 ```ts
 function asyncComputed<T>(
   factory: (abortSignal: AbortSignal) => Promise<T>,
-  options?: AsyncComputedOptions<T>,
-): AsyncComputedSignal<T>;
+  options?: ResourceOptions<T>,
+): ResourceSignal<T>;
 ```
 
-Creates a reactive async computed. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
+Legacy name for `resource()`. The two functions are identical at runtime — `asyncComputed` is exported as `resource` from the main entry point. Prefer `resource()` for new code.
 
-The returned object exposes three flat `ReadonlySignal` projections:
+See [`resource`](#resource) for full documentation.
 
-- `data` — latest fulfilled value (`T | undefined`)
-- `error` — last thrown error (`unknown | undefined`)
-- `isLoading` — `true` while a run is in-flight (starts `true`)
-
-```ts
-const userId = signal('u1');
-
-const user = asyncComputed(async (abortSignal) => {
-  const id = userId.value; // tracked dep
-  return fetch(`/users/${id}`, { signal: abortSignal }).then((r) => r.json());
-});
-
-effect(() => {
-  if (user.isLoading.value) return showSpinner();
-  if (user.error.value) return showError(user.error.value);
-  renderUser(user.data.value);
-});
-
-userId.value = 'u2'; // aborts in-flight fetch, re-runs
-user.dispose();
-console.log(user.disposed); // true
-```
-
-**Parameters**
-
-| Parameter              | Type                                       | Description                                                                                                          |
-| ---------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
-| `factory`              | `(abortSignal: AbortSignal) => Promise<T>` | Async factory; tracked deps must be read synchronously before `await`                                                |
-| `options.initialValue` | `T`                                        | Initial value exposed in `data` before the first result                                                              |
-| `options.name`         | `string`                                   | Debug name propagated to the internal effect and all three projections (`name.data`, `name.error`, `name.isLoading`) |
-
-**Returns** — `AsyncComputedSignal<T>`
-
-See also: [`AsyncComputedSignal<T>`](#asynccomputedsignal), [`AsyncComputedOptions<T>`](#asynccomputedoptions)
+See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions)
 
 ---
 
@@ -514,7 +509,7 @@ See also: [`AsyncComputedSignal<T>`](#asynccomputedsignal), [`AsyncComputedOptio
 :::
 
 ```ts
-function debugEffect(fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription;
+function debugEffect(fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): EffectHandle;
 ```
 
 Like `effect()`, but logs reactive dependency information on every run using `console.group`: the initial run lists all subscribed deps; subsequent runs list which deps changed and their version delta.
@@ -529,7 +524,7 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 // → userId (v1 -> v2)
 ```
 
-**Returns** — `Subscription`
+**Returns** — `EffectHandle`
 
 ---
 
@@ -603,9 +598,9 @@ function storeWithHistory<T extends object>(
 ): StoreWithHistory<T>;
 ```
 
-Wraps a store (or creates one from an initial value) with snapshot-based undo/redo history. Every call to `.patch()`, `.replace()`, `.reset()`, or a `lens()` write pushes a new snapshot. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
+Wraps a store (or creates one from an initial value) with snapshot-based undo/redo history. Mutations through `.store.patch()`, `.store.replace()`, `.store.reset()`, or lens writes do **not** automatically push snapshots. Call `.push()` (or `.pushNamed(label)`) explicitly to record a checkpoint. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
 
-Snapshots are deep-frozen clones (`structuredClone`). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
+The initial state is saved as the first snapshot automatically. Snapshots are deep-frozen clones (`structuredClone`). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
 
 **Ownership:** when called with an initial value (`T`), the adapter creates and owns the underlying store — `dispose()` also disposes it. When called with an existing `Store<T>`, the adapter does **not** own it — `dispose()` leaves the store alive.
 
@@ -613,9 +608,12 @@ Snapshots are deep-frozen clones (`structuredClone`). `maxHistory` caps the ring
 const editor = storeWithHistory({ text: '' }, { maxHistory: 100 });
 
 editor.store.patch({ text: 'hello' });
-editor.store.patch({ text: 'hello world' });
+editor.push(); // checkpoint 1
 
-console.log(editor.historyLength); // 3 (initial + 2 patches)
+editor.store.patch({ text: 'hello world' });
+editor.push(); // checkpoint 2
+
+console.log(editor.historyLength); // 3 (initial + 2 explicit pushes)
 
 editor.undo();
 console.log(editor.store.peek().text); // 'hello'
@@ -623,7 +621,7 @@ console.log(editor.store.peek().text); // 'hello'
 editor.redo();
 console.log(editor.store.peek().text); // 'hello world'
 
-console.log(editor.historyAt(0)); // { text: '' }
+console.log(editor.historyAt(0).state); // { text: '' }
 
 // Wrap an existing store — adapter does not own it
 const s = store({ x: 0 });
@@ -688,132 +686,15 @@ See also: [`PathValue<T, P>`](#pathvaluet-p)
 
 ## Signal Combinators
 
-Three utilities are available to derive computed values from a reactive source. `derive()` and `filter()` are the preferred API. `selector()` remains available for the combined project+filter (two-argument projection) case — the filter-only `selector(source, undefined, predicate)` form has been removed; use `filter()` directly.
-
-### `derive`
-
-```ts
-function derive<T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  options?: ComputedOptions<U>,
-): ComputedSignal<U>;
-```
-
-Creates a `ComputedSignal` by projecting `source` through `project`. Equivalent to `computed(() => project(source.value), options)` but more ergonomic and self-documenting.
-
-Prefer this over `selector(source, project)` for new code.
+Use `computed()` to project a reactive source into a derived value:
 
 ```ts
 const count = signal(5);
-const doubled = derive(count, (n) => n * 2);
+const doubled = computed(() => count.value * 2);
 doubled.value; // 10
 ```
 
-**Parameters**
-
-| Parameter | Type                 | Description                           |
-| --------- | -------------------- | ------------------------------------- |
-| `source`  | `ReadonlySignal<T>`  | Any signal, computed, or store        |
-| `project` | `(value: T) => U`    | Projection function                   |
-| `options` | `ComputedOptions<U>` | Optional `equals`, `name`, `fallback` |
-
-**Returns** — `ComputedSignal<U>`
-
----
-
-### `filter`
-
-```ts
-function filter<T, U extends T>(
-  source: ReadonlySignal<T>,
-  predicate: (value: T) => value is U,
-  options?: ComputedOptions<U | undefined>,
-): ComputedSignal<U | undefined>;
-
-function filter<T>(
-  source: ReadonlySignal<T>,
-  predicate: (value: T) => boolean,
-  options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined>;
-```
-
-Creates a `ComputedSignal` that returns the source value when `predicate` returns `true`, or `undefined` otherwise. When a type-predicate function (`value is U`) is passed, the returned signal is narrowed to `ComputedSignal<U | undefined>`.
-
-```ts
-const count = signal(5);
-const evens = filter(count, (n) => n % 2 === 0);
-evens.value; // undefined (5 is odd)
-count.value = 8;
-evens.value; // 8
-
-// Type-predicate narrowing
-const mixed = signal<number | string>(42);
-const nums = filter(mixed, (v): v is number => typeof v === 'number');
-// nums: ComputedSignal<number | undefined>
-```
-
-**Parameters**
-
-| Parameter   | Type                                  | Description                                             |
-| ----------- | ------------------------------------- | ------------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`                   | Any signal, computed, or store                          |
-| `predicate` | `(value: T) => boolean \| value is U` | Returns `true` to pass through, `false` for `undefined` |
-| `options`   | `ComputedOptions<T \| undefined>`     | Optional `equals`, `name`, `fallback`                   |
-
-**Returns** — `ComputedSignal<T | undefined>` (or `ComputedSignal<U | undefined>` for type-predicate form)
-
----
-
-### `selector`
-
-```ts
-function selector<T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  options?: ComputedOptions<U>,
-): ComputedSignal<U>;
-
-function selector<T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  predicate: (value: U) => boolean,
-  options?: ComputedOptions<U | undefined>,
-): ComputedSignal<U | undefined>;
-```
-
-Creates a `ComputedSignal` derived from `source` via a projection and optional filter predicate. For filter-only use cases prefer `filter(source, predicate)` directly.
-
-```ts
-const count = signal(3);
-
-// Project only
-const doubled = selector(count, (n) => n * 2);
-doubled.value; // 6
-
-// Project + filter
-const bigDoubles = selector(
-  count,
-  (n) => n * 2,
-  (n) => n > 5,
-);
-
-// With name option
-const named = selector(count, (n) => n + 1, { name: 'count+1' });
-
-doubled.dispose();
-```
-
-**Parameters**
-
-| Parameter   | Type                    | Description                                          |
-| ----------- | ----------------------- | ---------------------------------------------------- |
-| `source`    | `ReadonlySignal<T>`     | Any signal, computed, store, or lens                 |
-| `project`   | `(value: T) => U`       | Projection function (required)                       |
-| `predicate` | `(value: U) => boolean` | Optional filter; when `false`, result is `undefined` |
-| `options`   | `ComputedOptions<U>`    | Optional `equals`, `name`, `fallback`                |
-
-**Returns** — `ComputedSignal<U>` or `ComputedSignal<U | undefined>` (when predicate is provided)
+All projection options (`equals`, `name`, `fallback`) are available on `computed()` directly via [`ComputedOptions`](#computedoptions).
 
 ## Errors
 
@@ -859,7 +740,7 @@ Errors from multiple subscribers or cleanup functions in the same flush are aggr
 ### `Signal<T>`
 
 ```ts
-interface Signal<T> extends ReadonlySignal<T> {
+interface Signal<T> extends Readable<T> {
   dispose(): void;
   readonly disposed: boolean;
   value: T; // notifying setter — write triggers downstream notifications
@@ -869,10 +750,10 @@ interface Signal<T> extends ReadonlySignal<T> {
 
 ---
 
-### `ReadonlySignal<T>`
+### `Readable<T>`
 
 ```ts
-interface ReadonlySignal<T> {
+interface Readable<T> {
   readonly name?: string; // debug name assigned at creation, or undefined
   peek(): T;
   subscribe(onStoreChange: () => void): Subscription;
@@ -889,17 +770,17 @@ interface ReadonlySignal<T> {
 
 ---
 
-### `ComputedSignal<T>`
+### `Computed<T>`
 
 ```ts
-interface ComputedSignal<T> extends ReadonlySignal<T> {
+interface Computed<T> extends Readable<T> {
   dispose(): void;
   readonly disposed: boolean;
   [Symbol.dispose](): void;
 }
 ```
 
-Returned by `computed()` and `readonly()`. A read-only signal with an explicit dispose method. `disposed` is `true` after `dispose()` is called.
+Returned by `computed()`. A read-only derived signal with an explicit dispose method. `disposed` is `true` after `dispose()` is called. `readonly()` returns `Readable<T>` (no dispose) — use `computed()` when ownership and explicit disposal are needed.
 
 ---
 
@@ -941,6 +822,7 @@ interface Store<T extends object> {
 
 ```ts
 interface Scope {
+  readonly add: (fn: CleanupFn) => void;
   readonly run: <T>(fn: () => T) => T;
   readonly dispose: () => void;
   /** `true` after `dispose()` has been called. */
@@ -949,7 +831,7 @@ interface Scope {
 }
 ```
 
-Returned by `scope()` and `asyncScope()`. `run(fn)` activates the scope for `onCleanup()` calls. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called.
+Returned by `scope()` and `asyncScope()`. `run(fn)` activates the scope for `onCleanup()` calls. `add(fn)` explicitly registers a cleanup into the scope regardless of the current tracking context — use it to direct cleanups from inside an effect body into the scope rather than the effect. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called.
 
 ---
 
@@ -1038,13 +920,12 @@ type ComputedOptions<T> = {
 
 ```ts
 type EffectOptions = {
-  maxIterations?: number; // default: 100
   name?: string; // appears in error messages
   scheduler?: EffectScheduler; // default: 'sync'
 };
 ```
 
-All fields are optional. `name` is used in `StateError` messages. For debugging, use `debugEffect()` instead of `{ trace: true }`. `scheduler` accepts either a built-in string or a custom function.
+All fields are optional. `name` is used in `StateError` messages and in the `INFINITE_LOOP` error when the built-in loop guard fires. For debugging, use `debugEffect()` instead. `scheduler` accepts either a built-in string or a custom function.
 
 ---
 
@@ -1103,14 +984,14 @@ type CityType = PathValue<Settings, 'user.address.city'>; // string
 
 ---
 
-### `AsyncComputedSignal`
+### `AsyncOwnedReactive`
 
 ```ts
-interface AsyncComputedSignal<T> {
-  readonly data: ReadonlySignal<T | undefined>;
+interface AsyncOwnedReactive<T> {
+  readonly data: Reactive<T | undefined>;
   readonly disposed: boolean;
-  readonly error: ReadonlySignal<unknown | undefined>;
-  readonly isLoading: ReadonlySignal<boolean>;
+  readonly error: Reactive<unknown | undefined>;
+  readonly isLoading: Reactive<boolean>;
   dispose(): void;
   [Symbol.dispose](): void;
 }
@@ -1134,20 +1015,20 @@ type AsyncComputedOptions<T> = {
 ### `Accessor<T>`
 
 ```ts
-type Accessor<T> = ReadonlySignal<T>;
+type Accessor<T> = Reactive<T>;
 ```
 
-Alias for `ReadonlySignal<T>`. Prefer `Accessor<T>` in new code — the name communicates "you can read this" rather than implying the underlying value never changes.
+Alias for `Reactive<T>`. Prefer `Accessor<T>` in new code — the name communicates "you can read this" rather than implying the underlying value never changes.
 
 ---
 
 ### `ResourceSignal<T>`
 
 ```ts
-type ResourceSignal<T> = AsyncComputedSignal<T>;
+type ResourceSignal<T> = AsyncOwnedReactive<T>;
 ```
 
-Alias for `AsyncComputedSignal<T>`. Returned by `resource()`.
+Alias for `AsyncOwnedReactive<T>`. Returned by `resource()`.
 
 ---
 
@@ -1256,7 +1137,12 @@ installDevTools({
 type CleanupFn = () => void;
 type EffectCallback = () => CleanupFn | void;
 type EqualityFn<T> = (a: T, b: T) => boolean;
-type WatchOptions<T> = ComputedOptions<T> & { immediate?: boolean };
+type WatchOptions<T> = {
+  equals?: EqualityFn<T>;
+  immediate?: boolean;
+  name?: string;
+  once?: boolean; // auto-dispose after first invocation
+};
 ```
 
 ## DevTools

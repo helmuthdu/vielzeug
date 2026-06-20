@@ -785,7 +785,7 @@ handle.dispose();
 
 | Field              | Type                                            | Description                                                                                 |
 | ------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `position`         | `ReadonlySignal<ComputePositionResult \| null>` | Reactive signal. `null` before the first update. Read-only; position is managed internally. |
+| `position`         | `Reactive<ComputePositionResult \| null>` | Reactive signal. `null` before the first update. Read-only; position is managed internally. |
 | `disposalSignal`   | `AbortSignal`                                   | Aborted when `dispose()` is called. Use to tie external lifetimes.                          |
 | `dispose()`        | `() => void`                                    | Removes all listeners. Always call on teardown. Idempotent.                                 |
 | `disposed`         | `boolean`                                       | `true` after `dispose()` has been called.                                                   |

@@ -103,7 +103,7 @@ const authToken = signal<string | null>(null);
 
 const stop = watch(authToken, (token) => {
   console.log('First login:', token);
-  stop();
+  stop.dispose();
 });
 ```
 
@@ -129,37 +129,21 @@ const count = signal(0);
 
 ---
 
-#### Signal Combinators — `derive` and `filter`
+#### Signal Combinators — `computed`
 
-Use the standalone `derive()` and `filter()` utilities to create computed signals from a source:
+Use `computed()` to project a reactive source into a new derived signal:
 
 ```ts
-import { signal, derive, filter, watch } from '@vielzeug/ripple';
+import { signal, computed, watch } from '@vielzeug/ripple';
 
-// derive() — project to a derived type
 const count = signal(3);
-const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
+const doubled = computed(() => count.value * 2); // Computed<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
 console.log(doubled.value); // 10
 
 doubled.dispose();
-
-// filter() — pass values matching a predicate, undefined otherwise
-const even = filter(count, (n) => n % 2 === 0);
-console.log(even.value); // undefined (5 is odd)
-
-count.value = 8;
-console.log(even.value); // 8
-even.dispose();
-
-// Type-guard filter — narrow to a subtype
-const maybeStr = signal<string | null>(null);
-const str = filter(maybeStr, (v): v is string => v !== null);
-maybeStr.value = 'hello';
-console.log(str.value); // 'hello'
-str.dispose();
 ```
 
 ### Pitfalls

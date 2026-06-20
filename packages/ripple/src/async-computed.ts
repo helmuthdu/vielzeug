@@ -1,31 +1,29 @@
-import type { AsyncComputedOptions, AsyncComputedSignal } from './types';
+import type { Computed, ResourceOptions, ResourceState } from './types';
 
 import { effect } from './effect';
 import { signal } from './signal';
-import { untrack } from './tracking';
+import { IS_COMPUTED, IS_SIGNAL } from './symbols';
 
 /**
- * Creates a reactive async computed with three projected signals:
- * - `data`      — the latest fulfilled value (`T | undefined`)
- * - `error`     — the last thrown error (`unknown | undefined`)
- * - `isLoading` — `true` while a run is in-flight (starts `true` on first frame)
+ * Creates a reactive async resource that emits a `ResourceState<T>` discriminated union.
  *
  * Dependencies are tracked synchronously in the factory (before the first `await`).
- * The factory receives an `AbortSignal` that is aborted when the factory is
- * superseded by a newer run or when the asyncComputed is disposed.
+ * The factory receives an `AbortSignal` that fires when dependencies change or
+ * the resource is disposed, cancelling any in-flight work.
  *
  * @example
  * ```ts
  * const userId = signal('u1');
- * const user = asyncComputed(async (abortSignal) => {
+ * const user = resource(async (signal) => {
  *   const id = userId.value; // tracked dep — re-runs when userId changes
- *   return fetchUser(id, { signal: abortSignal });
+ *   return fetchUser(id, { signal });
  * });
  *
  * effect(() => {
- *   if (user.isLoading.value) return showSpinner();
- *   if (user.error.value)     return showError(user.error.value);
- *   renderUser(user.data.value);
+ *   const s = user.value;
+ *   if (s.status === 'loading') return showSpinner();
+ *   if (s.status === 'error')   return showError(s.error);
+ *   renderUser(s.data);
  * });
  *
  * user.dispose();
@@ -33,12 +31,13 @@ import { untrack } from './tracking';
  */
 export const asyncComputed = <T>(
   factory: (abortSignal: AbortSignal) => Promise<T>,
-  options?: AsyncComputedOptions<T>,
-): AsyncComputedSignal<T> => {
+  options?: ResourceOptions<T>,
+): Computed<ResourceState<T>> => {
   const name = options?.name;
-  const data = signal<T | undefined>(options?.initialValue, name ? { name: `${name}.data` } : undefined);
-  const error = signal<unknown | undefined>(undefined, name ? { name: `${name}.error` } : undefined);
-  const isLoading = signal<boolean>(true, name ? { name: `${name}.isLoading` } : undefined);
+  const state = signal<ResourceState<T>>(
+    { data: options?.initialValue, status: 'loading' },
+    name ? { name } : undefined,
+  );
 
   let controller: AbortController | null = null;
   let disposed = false;
@@ -50,24 +49,21 @@ export const asyncComputed = <T>(
 
       const { signal: abortSignal } = controller;
 
-      untrack(() => {
-        error.value = undefined;
-        isLoading.value = true;
-      });
+      const current = state.peek();
+      const prevData = 'data' in current ? current.data : undefined;
+
+      state.value = { data: prevData, status: 'loading' };
 
       void (async () => {
         try {
           const result = await factory(abortSignal);
 
           if (!abortSignal.aborted && !disposed) {
-            data.value = result;
-            error.value = undefined;
-            isLoading.value = false;
+            state.value = { data: result, status: 'ready' };
           }
         } catch (err) {
           if (!abortSignal.aborted && !disposed) {
-            error.value = err;
-            isLoading.value = false;
+            state.value = { data: prevData, error: err, status: 'error' };
           }
         }
       })();
@@ -76,22 +72,29 @@ export const asyncComputed = <T>(
   );
 
   const dispose = (): void => {
+    if (disposed) return;
+
     disposed = true;
     controller?.abort();
     stop.dispose();
-    data.dispose();
-    error.dispose();
-    isLoading.dispose();
+    state.dispose();
   };
 
   return {
-    data,
     dispose,
     get disposed() {
       return disposed;
     },
-    error,
-    isLoading,
+    [IS_COMPUTED]: true as const,
+    [IS_SIGNAL]: true as const,
+    get name() {
+      return state.name;
+    },
+    peek: () => state.peek(),
+    subscribe: (listener: () => void) => state.subscribe(listener),
     [Symbol.dispose]: dispose,
-  } as AsyncComputedSignal<T>;
+    get value() {
+      return state.value;
+    },
+  } as Computed<ResourceState<T>>;
 };

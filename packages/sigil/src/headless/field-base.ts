@@ -1,5 +1,5 @@
 import { createStableId } from '@vielzeug/craft';
-import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
 // ── Validation / context types ────────────────────────────────────────────────
 
@@ -10,8 +10,8 @@ export type ControlValidationMode = ValidationTrigger | undefined;
 
 /** Options shared by both `createTextField` and `createChoiceField`. */
 export type FieldOptions = {
-  disabled?: ReadonlySignal<boolean | undefined>;
-  error?: ReadonlySignal<string | undefined>;
+  disabled?: Readable<boolean | undefined>;
+  error?: Readable<string | undefined>;
   /**
    * Returns the underlying form field object used for validation triggering.
    * Called lazily — safe to return `null` before the first render.
@@ -28,8 +28,8 @@ export type FieldOptions = {
    * const field = createField({ ...options, hasLabel });
    * ```
    */
-  hasLabel?: ReadonlySignal<boolean>;
-  helper?: ReadonlySignal<string | undefined>;
+  hasLabel?: Readable<boolean>;
+  helper?: Readable<string | undefined>;
   /**
    * When provided, used directly as `fieldId` instead of generating one via
    * `createStableId`. Useful in tests for deterministic ID assertions.
@@ -39,11 +39,11 @@ export type FieldOptions = {
    * Label text signal. When provided, `labelVisible` and `ariaLabelledBy` are
    * computed reactively from this value and `labelPlacement`.
    */
-  label?: ReadonlySignal<string | undefined>;
+  label?: Readable<string | undefined>;
   /** Label placement signal. Defaults to `'inset'`. */
-  labelPlacement?: ReadonlySignal<LabelPlacement>;
+  labelPlacement?: Readable<LabelPlacement>;
   prefix?: string;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
+  validateOn?: Readable<ControlValidationMode>;
 };
 
 // ── Error/helper assistive state ──────────────────────────────────────────────
@@ -54,11 +54,11 @@ export type ErrorHelperState = {
 };
 
 export type ErrorHelperOptions = {
-  error?: ReadonlySignal<string | undefined>;
-  helper?: ReadonlySignal<string | undefined>;
+  error?: Readable<string | undefined>;
+  helper?: Readable<string | undefined>;
 };
 
-export const createErrorHelperState = (options: ErrorHelperOptions): ReadonlySignal<ErrorHelperState> =>
+export const createErrorHelperState = (options: ErrorHelperOptions): Readable<ErrorHelperState> =>
   computed(() => ({
     errorText: options.error?.value ?? '',
     helperText: options.helper?.value ?? '',
@@ -74,8 +74,8 @@ export type CounterState = {
 };
 
 export type CounterOptions = {
-  maxLength?: ReadonlySignal<number | undefined>;
-  value: ReadonlySignal<string | undefined>;
+  maxLength?: Readable<number | undefined>;
+  value: Readable<string | undefined>;
 };
 
 /**
@@ -87,7 +87,7 @@ export type CounterOptions = {
  * const counter = createCounterState({ value: tf.value, maxLength: props.maxlength });
  * ```
  */
-export const createCounterState = (options: CounterOptions): ReadonlySignal<CounterState> =>
+export const createCounterState = (options: CounterOptions): Readable<CounterState> =>
   computed<CounterState>(() => {
     const value = options.value?.value ?? '';
     const maxLength = options.maxLength?.value;
@@ -136,13 +136,13 @@ export type AriaProps = {
 
 export type FieldHandle = {
   /** `aria-describedby` value. Non-null when helper or error text is present. */
-  ariaDescribedBy: ReadonlySignal<string | null>;
+  ariaDescribedBy: Readable<string | null>;
   /** `aria-errormessage` value. Non-null when error text is present. */
-  ariaErrorMessage: ReadonlySignal<string | null>;
+  ariaErrorMessage: Readable<string | null>;
   /** `aria-invalid` value. `'true'` when error text is present, otherwise `null`. */
-  ariaInvalid: ReadonlySignal<'true' | null>;
+  ariaInvalid: Readable<'true' | null>;
   /** `aria-labelledby` value. Non-null when a label is visible. */
-  ariaLabelledBy: ReadonlySignal<string | null>;
+  ariaLabelledBy: Readable<string | null>;
   /**
    * Returns a snapshot of the four ARIA attributes as a plain object.
    * Spread into a template bind call to avoid repeating each signal individually.
@@ -158,18 +158,18 @@ export type FieldHandle = {
    * assistive-text region (covers both helper text and error text per WAI-ARIA).
    */
   assistiveId: string;
-  disabled: ReadonlySignal<boolean>;
+  disabled: Readable<boolean>;
   /** Stable `id` for the inline error message element (`aria-errormessage`). */
   errorId: string;
   /** Reactive error text. Empty string when no error is set. */
-  errorText: ReadonlySignal<string>;
+  errorText: Readable<string>;
   fieldId: string;
   /** Reactive helper text. Empty string when no helper is set. */
-  helperText: ReadonlySignal<string>;
+  helperText: Readable<string>;
   /** Stable `id` for the label element. Stamp this on your `<label id="...">`. */
   labelId: string;
   /** Whether the label should be visible. Use to toggle `hidden` on the `<label>`. */
-  labelVisible: ReadonlySignal<boolean>;
+  labelVisible: Readable<boolean>;
   triggerValidation: (on: Extract<ValidationTrigger, 'blur' | 'change'>) => void;
 };
 

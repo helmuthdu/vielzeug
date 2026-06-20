@@ -6,7 +6,7 @@
  * - Expose `compileTemplate()` and `html` as the public authoring API.
  */
 
-import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, isSignal, type Readable } from '@vielzeug/ripple';
 
 import { warn } from '../_warn';
 import {
@@ -124,7 +124,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
         // HTMLResult values, preventing silent "[object Object]" corruption when a
         // signal's runtime type changes from null/string to HTMLResult.
         const sig = computed(() => {
-          const raw = (value as ReadonlySignal<HtmlBindingValue | HtmlBindingValue[]>).value;
+          const raw = (value as Readable<HtmlBindingValue | HtmlBindingValue[]>).value;
 
           return Array.isArray(raw) ? (raw as HtmlBindingValue[]) : [raw as HtmlBindingValue];
         });
@@ -163,7 +163,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
         bindings.push({ el: target, handler, name: slot.name!, options, type: 'event' });
       } else if (isSignal(value)) {
-        const signalValue = value as ReadonlySignal<unknown>;
+        const signalValue = value as Readable<unknown>;
         const handler = (e: Event) => {
           const h = signalValue.value;
 

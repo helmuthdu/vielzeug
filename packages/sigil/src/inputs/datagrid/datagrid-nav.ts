@@ -1,4 +1,4 @@
-import { type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { type Readable, signal } from '@vielzeug/ripple';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ export type GridCellPos = { col: number; row: number };
 /** Handle returned by createGridNav for programmatic control. */
 export type GridNavHandle = {
   /** Current active cell position. Reactive signal. */
-  readonly activeCell: ReadonlySignal<GridCellPos>;
+  readonly activeCell: Readable<GridCellPos>;
   /**
    * Move focus to a specific cell by position.
    * Clamps to valid grid bounds; no-ops for invalid positions.

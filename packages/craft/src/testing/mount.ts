@@ -2,7 +2,7 @@
  * Component mounting utilities for test environments.
  */
 
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { type ComponentDefinition, type SetupContextBag } from '../component-types';
 import { define } from '../define';
@@ -58,7 +58,7 @@ export interface MountOptions {
   componentOptions?: Omit<ComponentDefinition<any, any>, 'setup'>;
 }
 
-type MountProps = { readonly [x: string]: ReadonlySignal<unknown> };
+type MountProps = { readonly [x: string]: Readable<unknown> };
 
 // Bivariant callback type keeps inline test callbacks ergonomic across varying setup context specializations.
 export type MountSetup = {

@@ -5,14 +5,14 @@
  * Static values are applied once; getter functions are tracked as reactive effects.
  */
 
-import { effect as rawEffect, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+import { effect as rawEffect, isSignal, type Readable } from '@vielzeug/ripple';
 
 import { warn } from './_warn';
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
 
 type AriaScalar = string | number | boolean | null | undefined;
-type AriaValue = AriaScalar | (() => AriaScalar) | ReadonlySignal<AriaScalar>;
+type AriaValue = AriaScalar | (() => AriaScalar) | Readable<AriaScalar>;
 
 export type AriaConfig = Record<string, AriaValue>;
 

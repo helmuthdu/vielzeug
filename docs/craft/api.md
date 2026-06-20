@@ -204,7 +204,7 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 
 | Directive                                       | Purpose                                                                                              |
 | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `each(source, key, render, fallback?)`          | Keyed reactive list; render receives `ReadonlySignal<T>` and `ReadonlySignal<number>`                |
+| `each(source, key, render, fallback?)`          | Keyed reactive list; render receives `Reactive<T>` and `Reactive<number>`                |
 | `each(source, key, render, { snapshot: true })` | Snapshot list; render receives plain `T` and `number`; simpler, recreates items on change            |
 | `when(condition, truthy, falsy?)`               | Conditional rendering                                                                                |
 | `classMap(record)`                              | Reactive class string from object map                                                                |
@@ -254,8 +254,8 @@ bind({
 
 ## Slots
 
-- `slots.has(name?)` — `ReadonlySignal<boolean>` — whether the named (or default) slot has assigned content
-- `slots.elements(name?)` — `ReadonlySignal<Element[]>` — the assigned elements for the slot
+- `slots.has(name?)` — `Reactive<boolean>` — whether the named (or default) slot has assigned content
+- `slots.elements(name?)` — `Reactive<Element[]>` — the assigned elements for the slot
 
 Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount.
 
@@ -304,7 +304,7 @@ Wire a form-associated element to `ElementInternals`. Requires `formAssociated: 
 
 ```ts
 type FormFieldOptions<T> = {
-  disabled?: ReadonlySignal<boolean>;
+  disabled?: Reactive<boolean>;
   /**
    * When true, a null/undefined value is submitted as '' instead of null,
    * keeping the field's key present in FormData even when the value is absent.
@@ -313,7 +313,7 @@ type FormFieldOptions<T> = {
    */
   emptyStringForNull?: boolean;
   toFormValue?: (value: T) => File | FormData | string | null;
-  value: Signal<T> | ReadonlySignal<T>;
+  value: Signal<T> | Reactive<T>;
 };
 
 type FormFieldHandle = {
@@ -335,13 +335,13 @@ Coordinate form state across child field components:
 ```ts
 type FormController = {
   clearStatus(): void; // Clears dirty + error signals; calls onReset callback
-  readonly dirty: ReadonlySignal<boolean>;
-  readonly error: ReadonlySignal<unknown>; // Last submit error; null if last submit succeeded
+  readonly dirty: Reactive<boolean>;
+  readonly error: Reactive<unknown>; // Last submit error; null if last submit succeeded
   markDirty(): void; // Call from input/change handlers
-  registerField(validity: ReadonlySignal<boolean>): () => void;
+  registerField(validity: Reactive<boolean>): () => void;
   submit(e?: Event): Promise<void>; // Resets dirty to false on success; preserves dirty on failure
-  readonly submitting: ReadonlySignal<boolean>;
-  readonly valid: ReadonlySignal<boolean>; // true when all registered fields are valid
+  readonly submitting: Reactive<boolean>;
+  readonly valid: Reactive<boolean>; // true when all registered fields are valid
 };
 ```
 
@@ -349,10 +349,10 @@ type FormController = {
 
 Import from `@vielzeug/craft/observers`.
 
-- `resizeObserver(element)` — Returns `ReadonlySignal<ResizeObserverEntry>`
-- `intersectionObserver(element, options?)` — Returns `ReadonlySignal<IntersectionObserverEntry>`
-- `mutationObserver(element, options?)` — Returns `ReadonlySignal<MutationRecord[]>`
-- `mediaObserver(query)` — Returns `ReadonlySignal<boolean>`
+- `resizeObserver(element)` — Returns `Reactive<ResizeObserverEntry>`
+- `intersectionObserver(element, options?)` — Returns `Reactive<IntersectionObserverEntry>`
+- `mutationObserver(element, options?)` — Returns `Reactive<MutationRecord[]>`
+- `mediaObserver(query)` — Returns `Reactive<boolean>`
 
 ## Testing APIs
 
@@ -418,7 +418,7 @@ expect(result.value).toBe('hello');
 Craft re-exports these from `@vielzeug/ripple`:
 
 - `signal`, `computed`, `batch`, `untrack`, `watch`, `isSignal`, `scope`
-- `type Signal`, `type ReadonlySignal`, `type Scope`, `type WatchOptions`
+- `type Signal`, `type Reactive`, `type Scope`, `type WatchOptions`
 
 ## Lifecycle Events
 
@@ -439,10 +439,10 @@ type PropDef<T> = {
 
 /**
  * Infer reactive props type from a PropInputDefs map.
- * Each entry becomes ReadonlySignal<T> keyed by prop name.
+ * Each entry becomes Reactive<T> keyed by prop name.
  */
 type InferProps<D extends PropInputDefs> = {
-  readonly [K in keyof D]-?: ReadonlySignal<InferPropValue<D[K]>>;
+  readonly [K in keyof D]-?: Reactive<InferPropValue<D[K]>>;
 };
 
 type SetupContextBag<
@@ -455,7 +455,7 @@ type SetupContextBag<
   emit: EmitFn<Emits>; // Dispatch typed custom events
   inject: <T>(key: InjectionKey<T>, fallback?: T) => T | undefined; // Resolve context from nearest ancestor
   onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
-  onElement: <T extends HTMLElement>(ref: ReadonlySignal<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
+  onElement: <T extends HTMLElement>(ref: Reactive<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
   onEvent: {
     <K extends keyof HTMLElementEventMap>(
       target: EventTarget | null | undefined,
@@ -490,14 +490,14 @@ type ComponentDefinition<Props, Emits, SlotNames extends string> = {
 
 type HostBindConfig = {
   attr?: Record<string, HostBindingValue>;
-  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | ReadonlySignal<boolean>>;
+  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | Reactive<boolean>>;
   on?: Record<string, (event: Event) => void>;
   style?: Record<string, HostBindingValue>;
 };
 
 type ComponentSlots<S extends string = string> = {
-  elements(name?: S): ReadonlySignal<Element[]>;
-  has(name?: S): ReadonlySignal<boolean>;
+  elements(name?: S): Reactive<Element[]>;
+  has(name?: S): Reactive<boolean>;
 };
 
 type Ref<T extends Element> = Signal<T | null>;

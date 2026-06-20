@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
 import { createPaginatedList } from './paginated-list';
 import { createSelectionControl } from './selection-control';
@@ -82,7 +82,7 @@ export type DataGridControlOptions<T = Record<string, unknown>> = {
    * from your server. For client-side sorting, pass a plain signal wrapping your
    * full dataset — the control will sort it automatically via `sortBy()`.
    */
-  items: ReadonlySignal<T[]>;
+  items: Readable<T[]>;
   /** Called when selection changes. Receives the full set of selected keys. */
   onSelectionChange?: (keys: Set<string>) => void;
   /** Called when sort state changes. */
@@ -99,13 +99,13 @@ export type DataGridControl<T = Record<string, unknown>> = {
   /** Deselect all rows. */
   clearSelection(): void;
   /** Current page items (sorted + paginated). Reactive signal. */
-  readonly currentPageItems: ReadonlySignal<T[]>;
+  readonly currentPageItems: Readable<T[]>;
   /** Go to an absolute page index. The index is clamped to the valid page range `[0, pageCount - 1]`. */
   goToPage(index: number): void;
   /** Whether there is a next page. Reactive signal. */
-  readonly hasNextPage: ReadonlySignal<boolean>;
+  readonly hasNextPage: Readable<boolean>;
   /** Whether there is a previous page. Reactive signal. */
-  readonly hasPrevPage: ReadonlySignal<boolean>;
+  readonly hasPrevPage: Readable<boolean>;
   /** Whether all current-page rows are selected. */
   isAllSelected(): boolean;
   /** Whether a given row key is selected. */
@@ -113,27 +113,27 @@ export type DataGridControl<T = Record<string, unknown>> = {
   /** Navigate to the next page. */
   nextPage(): void;
   /** Total page count. Reactive signal. */
-  readonly pageCount: ReadonlySignal<number>;
+  readonly pageCount: Readable<number>;
   /** Current 0-based page index. Reactive signal. */
-  readonly pageIndex: ReadonlySignal<number>;
+  readonly pageIndex: Readable<number>;
   /** Navigate to the previous page. */
   prevPage(): void;
   /** Select all rows on the current page. */
   selectAll(): void;
   /** Current selected row keys. Reactive signal. Returns a snapshot copy — mutating the returned set has no effect on reactive state; use `toggleRow`, `selectAll`, `setSelection`, or `clearSelection` to update selection. */
-  readonly selectedKeys: ReadonlySignal<ReadonlySet<string>>;
+  readonly selectedKeys: Readable<ReadonlySet<string>>;
   /** All rows whose keys are in `selectedKeys`. Reactive signal. */
-  readonly selectedRows: ReadonlySignal<T[]>;
+  readonly selectedRows: Readable<T[]>;
   /** Set the selection to an explicit set of keys. */
   setSelection(keys: Set<string>): void;
   /** Sort by the given column key — cycles asc → desc → none. */
   sortBy(key: string): void;
   /** Current sort state. Reactive signal. */
-  readonly sortState: ReadonlySignal<SortState>;
+  readonly sortState: Readable<SortState>;
   /** Toggle selection for a single row. */
   toggleRow(key: string): void;
   /** Total item count across all pages. Reactive signal. */
-  readonly totalItems: ReadonlySignal<number>;
+  readonly totalItems: Readable<number>;
 };
 
 // ── Implementation ─────────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ export type DataGridControl<T = Record<string, unknown>> = {
  * - `createPaginatedList` — reactive pagination over the sorted items
  * - `createSelectionControl` — single/multi/none row selection
  *
- * All mutable state is exposed as reactive `ReadonlySignal` values so
+ * All mutable state is exposed as reactive `Reactive` values so
  * consumers can bind directly in templates without manual invalidation.
  *
  * @example

@@ -536,10 +536,10 @@ The live machine object returned by `machine()` or `define().start()`.
 
 ```ts
 interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  readonly context: ReadonlySignal<Ctx>;
+  readonly context: Reactive<Ctx>;
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
-  readonly state: ReadonlySignal<State>;
+  readonly state: Reactive<State>;
   can(event: Ev): boolean;
   dispose(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
@@ -555,8 +555,8 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 
 | Property         | Type                    | Description                                                                        |
 | ---------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `state`          | `ReadonlySignal<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
-| `context`        | `ReadonlySignal<Ctx>`   | Current context — reactive                                                         |
+| `state`          | `Reactive<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
+| `context`        | `Reactive<Ctx>`   | Current context — reactive                                                         |
 | `disposed`       | `boolean`               | `true` after `dispose()` has been called                                           |
 | `disposalSignal` | `AbortSignal`           | Aborted when the machine is disposed. Use to tie external lifetimes to the machine |
 
@@ -759,7 +759,7 @@ try {
 
 ## Signals and Reactivity
 
-`state` and `context` are `ReadonlySignal` values from `@vielzeug/ripple`. Use `effect()` to react to changes:
+`state` and `context` are `Reactive` values from `@vielzeug/ripple`. Use `effect()` to react to changes:
 
 ```ts
 import { effect } from '@vielzeug/ripple';

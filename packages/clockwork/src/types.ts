@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 // ── Events ───────────────────────────────────────────────────────────────────
 
@@ -230,12 +230,12 @@ export interface MachineDefinition<State extends string, Ctx extends object, Ev 
 // ── Instance ─────────────────────────────────────────────────────────────────
 
 export interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  readonly context: ReadonlySignal<Ctx>;
+  readonly context: Readable<Ctx>;
   /** Fires when the machine is disposed. Use to tie external lifecycles to the machine's lifetime. */
   readonly disposalSignal: AbortSignal;
   /** Whether the machine has been permanently disposed. */
   readonly disposed: boolean;
-  readonly state: ReadonlySignal<State>;
+  readonly state: Readable<State>;
   /**
    * Returns `true` if a valid transition exists for `event` in the current state.
    * Evaluates guards but fires no side effects or debug hooks.

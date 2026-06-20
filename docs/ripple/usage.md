@@ -37,20 +37,6 @@ const name = signal('Alice');
 const items = signal<string[]>([]);
 ```
 
-### Batched Signals
-
-When a signal receives many rapid synchronous writes (e.g., scroll positions, pointer events), set `batched: true` to coalesce them into a single microtask notification:
-
-```ts
-const pointer = signal({ x: 0, y: 0 }, { batched: true });
-
-// All three writes coalesce into one microtask notification
-pointer.value = { x: 10, y: 0 };
-pointer.value = { x: 20, y: 5 };
-pointer.value = { x: 30, y: 10 };
-// downstream effects receive only { x: 30, y: 10 }
-```
-
 ### Reading and Writing
 
 ```ts
@@ -137,18 +123,12 @@ const sub = effect(() => console.log('count:', count.value), { name: 'count-logg
 // Microtask scheduler — re-runs are deferred and coalesce within the same task
 effect(() => (document.title = count.value.toString()), { scheduler: 'microtask' });
 
-// Custom scheduler function — any scheduling strategy is supported
-effect(() => renderHighFrequency(pos.value), { scheduler: (run) => requestIdleCallback(run) });
-
-// Increase the loop guard for known deep cascade graphs
-effect(() => processGraph(root.value), { maxIterations: 500 });
 ```
 
-| Option          | Type                                           | Default  | Description                                     |
-| --------------- | ---------------------------------------------- | -------- | ----------------------------------------------- |
-| `scheduler`     | `EffectScheduler \| (run: () => void) => void` | `'sync'` | `'sync'` \| `'microtask'`, or a custom function |
-| `name`          | `string`                                       | —        | Shown in error messages                         |
-| `maxIterations` | `number`                                       | `100`    | Loop guard threshold for this effect            |
+| Option      | Type              | Default  | Description               |
+| ----------- | ----------------- | -------- | ------------------------- |
+| `scheduler` | `EffectScheduler` | `'sync'` | `'sync'` or `'microtask'` |
+| `name`      | `string`          | —        | Shown in error messages   |
 
 For debugging which deps trigger re-runs, use `debugEffect()` instead of `effect()` — see [debugEffect](#debugeffect) below.
 
@@ -250,23 +230,25 @@ sub.dispose();
 // Fire once immediately on subscription
 watch(count, (v) => console.log(v), { immediate: true });
 
+// Auto-dispose after the first change — one-shot listener
+watch(status, (v) => onFirstChange(v), { once: true });
+
 // Custom equality — suppress callback when result is considered equal
 watch(list, (v) => renderList(v), { equals: (a, b) => a.length === b.length });
 ```
 
 ### Watching a Slice
 
-Use a getter function when you want to watch a derived slice directly:
+Use a lens or a `computed()` to watch a derived slice:
 
 ```ts
-watch(
-  () => userStore.value.name,
-  (name, prevName) => {
-    console.log('name:', prevName, '→', name);
-  },
-);
+// Lens — fine-grained subscription to one field
+const userStore = store({ name: 'Alice', role: 'user' });
+watch(userStore.lens('name'), (name, prevName) => {
+  console.log('name:', prevName, '→', name);
+});
 
-// For reusable derived values, keep using computed()
+// computed() — arbitrary derived slice
 const nameSignal = computed(() => userStore.value.name);
 watch(nameSignal, (name, prev) => console.log('name:', prev, '→', name));
 nameSignal.dispose();
@@ -391,11 +373,11 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 
 `resource(factory, options?)` (preferred) or `asyncComputed()` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
 
-The returned handle exposes three flat reactive signals:
+The returned `ResourceSignal<T>` emits a single `ResourceState<T>` discriminated union:
 
-- `.data` — latest fulfilled value (`T | undefined`)
-- `.error` — last thrown value (`unknown | undefined`)
-- `.isLoading` — `true` while a factory run is in-flight (starts `true`)
+- `{ status: 'loading', data: T | undefined }` — initial state or while re-running
+- `{ status: 'ready', data: T }` — last successful result
+- `{ status: 'error', data: T | undefined, error: unknown }` — last thrown error
 
 ```ts
 import { signal, effect, resource } from '@vielzeug/ripple';
@@ -410,9 +392,10 @@ const user = resource(async (abortSignal) => {
 });
 
 effect(() => {
-  if (user.isLoading.value) return showSpinner();
-  if (user.error.value) return showError(user.error.value);
-  renderUser(user.data.value);
+  const s = user.value; // ResourceState<User>
+  if (s.status === 'loading') return showSpinner();
+  if (s.status === 'error')   return showError(s.error);
+  renderUser(s.data); // narrowed to User
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
@@ -425,24 +408,27 @@ user.dispose();
 
 ## Store History / Time-Travel
 
-`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Every `.patch()`, `.replace()`, `.reset()`, and `lens()` write pushes a snapshot. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
+`storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Mutations do **not** automatically push snapshots — call `.push()` (or `.pushNamed(label)`) explicitly after each logical change. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
 
 ```ts
 import { storeWithHistory } from '@vielzeug/ripple';
 
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100 });
 
-editor.patch({ text: 'hello', cursor: 5 });
-editor.patch({ text: 'hello world', cursor: 11 });
+editor.store.patch({ text: 'hello', cursor: 5 });
+editor.push(); // checkpoint 1
 
-console.log(editor.historyLength); // 3  (initial + 2 patches)
-console.log(editor.historyAt(0)); // { text: '', cursor: 0 }
+editor.store.patch({ text: 'hello world', cursor: 11 });
+editor.push(); // checkpoint 2
+
+console.log(editor.historyLength); // 3  (initial + 2 explicit pushes)
+console.log(editor.historyAt(0).state); // { text: '', cursor: 0 }
 
 editor.undo();
-console.log(editor.value.text); // 'hello'
+console.log(editor.store.peek().text); // 'hello'
 
 editor.redo();
-console.log(editor.value.text); // 'hello world'
+console.log(editor.store.peek().text); // 'hello world'
 ```
 
 `canUndo` and `canRedo` are reactive boolean properties — read them inside `effect()` or `computed()` and they will re-run automatically when the history cursor moves:
@@ -454,7 +440,7 @@ effect(() => {
 });
 ```
 
-All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`) work as usual on a `StoreWithHistory<T>`.
+All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`) are accessible via `editor.store` on a `StoreWithHistory<T>`.
 
 Call `dispose()` when the store is no longer needed to release the internal reactive cursor signal:
 
@@ -660,10 +646,10 @@ To expose a store at API boundaries where consumers should observe but not mutat
 
 ```ts
 import { readonly, store } from '@vielzeug/ripple';
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Reactive } from '@vielzeug/ripple';
 
 type CounterService = {
-  state: ReadonlySignal<{ count: number }>;
+  state: Reactive<{ count: number }>;
   increment(): void;
   decrement(): void;
 };
@@ -689,17 +675,13 @@ counter.state.value.count; // readable
 
 ## Signal Combinators
 
-Three standalone utilities create computed signals from a reactive source. They replace the removed per-instance `.map()` / `.filter()` methods.
-
-### `derive(source, project, options?)`
-
-Projects a signal into a new derived signal. Equivalent to `computed(() => project(source.value))` but more ergonomic:
+Use `computed()` to project a reactive source into a derived value:
 
 ```ts
-import { signal, derive } from '@vielzeug/ripple';
+import { signal, computed } from '@vielzeug/ripple';
 
 const count = signal(3);
-const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
+const doubled = computed(() => count.value * 2); // Computed<number>
 console.log(doubled.value); // 6
 
 count.value = 5;
@@ -708,60 +690,15 @@ console.log(doubled.value); // 10
 doubled.dispose();
 ```
 
-### `filter(source, predicate, options?)`
-
-Passes the value through when the predicate returns `true`, otherwise yields `undefined`:
+For a named projection, pass `options.name`:
 
 ```ts
-import { signal, filter } from '@vielzeug/ripple';
-
-const count = signal(3);
-const even = filter(count, (n) => n % 2 === 0);
-console.log(even.value); // undefined (3 is odd)
-
-count.value = 4;
-console.log(even.value); // 4
-
-even.dispose();
-```
-
-Supports type-guard predicates for narrowing:
-
-```ts
-const val = signal<string | null>(null);
-const str = filter(val, (v): v is string => v !== null);
-
-val.value = 'hello';
-console.log(str.value); // 'hello'
-```
-
-### `selector(source, project, predicate?, options?)`
-
-Combines projection and filtering in a single call. Use `derive()` + `filter()` for single-concern cases; `selector()` is available when you need both:
-
-```ts
-import { signal, selector } from '@vielzeug/ripple';
-
-const count = signal(3);
-
-// Project only — prefer derive() for this
-const doubled = selector(count, (n) => n * 2);
-
-// Project + filter
-const bigDoubles = selector(
-  count,
-  (n) => n * 2,
-  (n) => n > 5,
-);
-bigDoubles.value; // 6 (3*2=6, predicate 6>5 is true — value passes through)
-
-doubled.dispose();
-bigDoubles.dispose();
+const doubled = computed(() => count.value * 2, { name: 'doubled' });
 ```
 
 ## `Symbol.dispose` / `using` Declarations
 
-All `Subscription`, `ComputedSignal`, and `Scope` handles implement `[Symbol.dispose]`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
+All `Subscription`, `Computed`, and `Scope` handles implement `[Symbol.dispose]`, enabling the TC39 [explicit resource management](https://github.com/tc39/proposal-explicit-resource-management) syntax:
 
 ```ts
 {
@@ -866,10 +803,10 @@ All hook methods are optional. The hook is stored in a module-level variable (no
 
 ```tsx [React]
 import { useSyncExternalStore } from 'react';
-import { signal, computed, effect, type ReadonlySignal } from '@vielzeug/ripple';
+import { signal, computed, effect, type Reactive } from '@vielzeug/ripple';
 
 // Generic hook — works with any signal or computed
-function useSignalValue<T>(source: ReadonlySignal<T>): T {
+function useSignalValue<T>(source: Reactive<T>): T {
   return useSyncExternalStore(source.subscribe, () => source.value);
 }
 
@@ -894,7 +831,7 @@ function Counter() {
 
 ```ts [Vue 3]
 import { customRef, onScopeDispose } from 'vue';
-import { signal, computed, watch, type ReadonlySignal, type Signal } from '@vielzeug/ripple';
+import { signal, computed, watch, type Reactive, type Signal } from '@vielzeug/ripple';
 
 // Composable for read/write signals
 function useSignal<T>(source: Signal<T>) {
@@ -911,7 +848,7 @@ function useSignal<T>(source: Signal<T>) {
 }
 
 // Composable for read-only signals and computeds
-function useSignalValue<T>(source: ReadonlySignal<T>) {
+function useSignalValue<T>(source: Reactive<T>) {
   const stop = watch(source, () => {}, { immediate: true });
   onScopeDispose(() => stop.dispose());
   return customRef<T>((track) => ({
@@ -929,10 +866,10 @@ function useSignalValue<T>(source: ReadonlySignal<T>) {
 ```svelte [Svelte]
 <script lang="ts">
   import { signal, computed } from '@vielzeug/ripple';
-  import type { ReadonlySignal } from '@vielzeug/ripple';
+  import type { Reactive } from '@vielzeug/ripple';
 
   // Manual Svelte store adapter — calls run() immediately, then on each change
-  function toSvelteStore<T>(source: ReadonlySignal<T>) {
+  function toSvelteStore<T>(source: Reactive<T>) {
     return {
       subscribe(run: (value: T) => void) {
         run(source.value); // Svelte contract: fire immediately with current value

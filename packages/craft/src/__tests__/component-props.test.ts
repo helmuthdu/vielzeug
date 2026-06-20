@@ -142,7 +142,7 @@ describe('component props', () => {
         },
       },
       setup: (props) => {
-        expectType<import('@vielzeug/ripple').ReadonlySignal<string | undefined>>(props.value);
+        expectType<import('@vielzeug/ripple').Reactive<string | undefined>>(props.value);
 
         return html`<div class="value">${() => props.value.value ?? ''}</div>`;
       },

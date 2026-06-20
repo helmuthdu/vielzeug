@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, signal } from '@vielzeug/ripple';
 
 import type { DataGridColumn, SortDirection, SortState } from './datagrid';
 
@@ -8,7 +8,7 @@ export type SortControlOptions<T> = {
   /** Returns the current column definitions reactively. */
   columns: () => DataGridColumn<T>[];
   /** The reactive list of items to sort. */
-  items: ReadonlySignal<T[]>;
+  items: Readable<T[]>;
   /** Called when sort state changes. */
   onSortChange?: (sort: SortState) => void;
 };
@@ -17,9 +17,9 @@ export type SortControl<T> = {
   /** Sort by the given column key — cycles asc → desc → none. */
   sortBy(key: string): void;
   /** Sorted version of the provided items. Reactive signal. */
-  readonly sortedItems: ReadonlySignal<T[]>;
+  readonly sortedItems: Readable<T[]>;
   /** Current sort state. Reactive signal. */
-  readonly sortState: ReadonlySignal<SortState>;
+  readonly sortState: Readable<SortState>;
 };
 
 export const createSortControl = <T>(options: SortControlOptions<T>): SortControl<T> => {

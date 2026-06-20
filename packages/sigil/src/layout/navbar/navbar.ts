@@ -1,6 +1,6 @@
 import { createContext, define, html, inject, prop } from '@vielzeug/craft';
 import { resizeObserver } from '@vielzeug/craft/observers';
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ElevationLevel, RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -92,8 +92,8 @@ const findScrollContainer = (start: HTMLElement): HTMLElement | null => {
 
 /** Context provided by `sg-navbar` to `sg-navbar-item` children. */
 export type NavbarContext = {
-  isMobile: ReadonlySignal<boolean>;
-  mobileMenuOpen: ReadonlySignal<boolean>;
+  isMobile: Readable<boolean>;
+  mobileMenuOpen: Readable<boolean>;
 };
 
 /** Injection key for navbar context. */
@@ -251,8 +251,8 @@ define<SgNavbarProps, SgNavbarEvents>(NAVBAR_TAG, {
     const isPreviewMode = signal(false);
 
     provide(NAVBAR_CTX, {
-      isMobile: computed(() => isMobile.value) as ReadonlySignal<boolean>,
-      mobileMenuOpen: computed(() => isMobileMenuOpen.value) as ReadonlySignal<boolean>,
+      isMobile: computed(() => isMobile.value) as Readable<boolean>,
+      mobileMenuOpen: computed(() => isMobileMenuOpen.value) as Readable<boolean>,
     });
 
     const computeMode = (): NavbarMode | undefined => {

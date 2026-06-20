@@ -9,11 +9,11 @@
 // part that ships in the core bundle.
 
 import type { DepEntry } from './tracking';
-import type { CleanupFn, EffectCallback, EffectOptions, RippleDevToolsHook, Subscription } from './types';
+import type { CleanupFn, EffectCallback, EffectHandle, EffectOptions, RippleDevToolsHook } from './types';
 
 import { setDevToolsHook } from './devtools-hook';
 import { effect } from './effect';
-import { getTracking, withSourceObserver } from './tracking';
+import { withSourceObserver } from './tracking';
 
 // Re-export all hook types from the core types module so consumers of the
 // sub-path don't need to import from two places.
@@ -67,7 +67,7 @@ export const installDevTools = (hook: RippleDevToolsHook | null): void => {
  * }, { name: 'renderUser' });
  * ```
  */
-export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): Subscription => {
+export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 'trace'>): EffectHandle => {
   const label = options?.name ?? 'anonymous';
 
   // Track versions seen on the last run so we can diff on the next run.
@@ -76,14 +76,10 @@ export const debugEffect = (fn: EffectCallback, options?: Omit<EffectOptions, 't
   const wrappedFn = (): CleanupFn | void => {
     const currentDeps: DepEntry[] = [];
 
-    // Capture the effect's own tracking context by identity so we only record
-    // direct deps (not sources accessed inside nested computed recomputes).
-    const effectCtx = getTracking();
-
+    // SourceObserver is scoped to the current TrackingCtx — nested computed
+    // recomputes run in their own context (no observer), so no identity check needed.
     const result = withSourceObserver((source) => {
-      if (getTracking() === effectCtx) {
-        currentDeps.push({ source, version: source.version });
-      }
+      currentDeps.push({ source, version: source.version });
     }, fn);
 
     if (prevDeps.length === 0) {

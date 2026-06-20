@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { LinkTarget } from '../shared';
 
@@ -53,10 +53,10 @@ export type LinkProps = {
  * ```
  */
 export function useLinkProps(
-  href: ReadonlySignal<string | undefined>,
-  rel: ReadonlySignal<string | undefined>,
-  target: ReadonlySignal<LinkTarget | undefined>,
-  disabled?: ReadonlySignal<boolean>,
+  href: Readable<string | undefined>,
+  rel: Readable<string | undefined>,
+  target: Readable<LinkTarget | undefined>,
+  disabled?: Readable<boolean>,
 ) {
   const isLink = computed(() => !!href.value && !disabled?.value);
   const effectiveRel = computed(() => computeSafeRel(rel.value, target.value));

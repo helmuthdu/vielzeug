@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import type { ButtonType } from '../../shared';
 
@@ -17,8 +17,8 @@ import type { ButtonType } from '../../shared';
  */
 export function useFormAction(
   getForm: () => HTMLFormElement | null,
-  type: ReadonlySignal<ButtonType | undefined>,
-  isDisabled: ReadonlySignal<boolean>,
+  type: Readable<ButtonType | undefined>,
+  isDisabled: Readable<boolean>,
   host: HTMLElement,
 ): (e: MouseEvent) => void {
   return (e: MouseEvent) => {

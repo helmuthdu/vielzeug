@@ -38,7 +38,7 @@ pulse.send('chat:send', { text: 'Hello!' });
 
 ### Reactive status
 
-`pulse.status` is a ripple `ReadonlySignal<PulseStatus>`. Use `effect()` to react to connection state changes.
+`pulse.status` is a ripple `Reactive<PulseStatus>`. Use `effect()` to react to connection state changes.
 
 ```ts
 import { effect } from '@vielzeug/ripple';
@@ -159,7 +159,7 @@ const joinP = pulse.join('arena', { signal: ctrl.signal });
 ctrl.abort(); // rejects joinP with AbortError
 ```
 
-`pulse.rooms` is a `ReadonlySignal<ReadonlySet<string>>`. Derive computed views with ripple:
+`pulse.rooms` is a `Reactive<ReadonlySet<string>>`. Derive computed views with ripple:
 
 ```ts
 import { computed } from '@vielzeug/ripple';

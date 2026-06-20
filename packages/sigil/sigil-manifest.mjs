@@ -26,6 +26,8 @@ export const componentManifest = [
   { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
   { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
   { name: 'chip', source: './src/feedback/chip/chip' },
+  { name: 'code-window', source: './src/content/code-window/code-window' },
+  { name: 'copy-command', source: './src/content/copy-command/copy-command' },
   { name: 'combobox', source: './src/inputs/combobox/combobox' },
   { name: 'datagrid', source: './src/inputs/datagrid/datagrid' },
   { name: 'date-picker', source: './src/inputs/date-picker/date-picker' },

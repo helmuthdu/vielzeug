@@ -1540,6 +1540,8 @@ export default defineConfig({
                 { link: '/sigil/components/breadcrumb', text: 'Breadcrumb' },
                 { link: '/sigil/components/card', text: 'Card' },
                 { link: '/sigil/components/carousel', text: 'Carousel' },
+                { link: '/sigil/components/code-window', text: 'Code Window' },
+                { link: '/sigil/components/copy-command', text: 'Copy Command' },
                 { link: '/sigil/components/icon', text: 'Icon' },
                 { link: '/sigil/components/pagination', text: 'Pagination' },
                 { link: '/sigil/components/separator', text: 'Separator' },

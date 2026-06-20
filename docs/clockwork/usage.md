@@ -786,7 +786,7 @@ onUnmounted(() => { unsub?.(); m?.dispose(); });
 
 ### With `@vielzeug/ripple`
 
-`state` and `context` are `ReadonlySignal` values from `@vielzeug/ripple`. Use `effect()` to drive reactive UI from Clockwork state:
+`state` and `context` are `Reactive` values from `@vielzeug/ripple`. Use `effect()` to drive reactive UI from Clockwork state:
 
 ```ts
 import { effect } from '@vielzeug/ripple';

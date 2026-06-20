@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { effect, scope } from '@vielzeug/ripple';
 
@@ -21,7 +21,7 @@ export interface ScaffoldGroups {
 export interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
   groups: ScaffoldGroups;
   legend: LegendState | null;
   svg: SVGSVGElement;
@@ -30,7 +30,7 @@ export interface ScaffoldContext {
 
 export interface RadialScaffoldContext {
   container: HTMLElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
   legend: LegendState | null;
   svg: SVGSVGElement;
   tooltip: TooltipState | null;
@@ -48,7 +48,7 @@ function runScaffold<TCtx>(
   buildCtx: (
     base: {
       chartArea: SVGGElement;
-      dimensions: ReadonlySignal<ChartDimensions>;
+      dimensions: Readable<ChartDimensions>;
       svg: SVGSVGElement;
     },
     tooltip: TooltipState | null,
@@ -71,7 +71,7 @@ function runScaffold<TCtx>(
 
         events.attach(renderFn(ctx));
       },
-      { scheduler: (run) => requestAnimationFrame(run) },
+      { scheduler: 'microtask' },
     );
   });
 

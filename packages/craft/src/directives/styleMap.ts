@@ -1,4 +1,4 @@
-import { computed, isSignal, type ReadonlySignal } from '@vielzeug/ripple';
+import { computed, isSignal, type Readable } from '@vielzeug/ripple';
 
 import { toKebab } from '../utils/dom';
 
@@ -9,7 +9,7 @@ type StyleInput =
   | undefined
   | false
   | (() => string | number | null | undefined | false)
-  | ReadonlySignal<string | number | null | undefined | false>;
+  | Readable<string | number | null | undefined | false>;
 
 const toStyleValue = (value: StyleInput): string => {
   const resolved = typeof value === 'function' ? value() : isSignal(value) ? value.value : value;
@@ -47,7 +47,7 @@ const UNSAFE_CSS_CHARS = /[;{}]/g;
  * })}></div>`
  * ```
  */
-export const styleMap = (record: Record<string, StyleInput>): ReadonlySignal<string> => {
+export const styleMap = (record: Record<string, StyleInput>): Readable<string> => {
   return computed(() => {
     const declarations: string[] = [];
 

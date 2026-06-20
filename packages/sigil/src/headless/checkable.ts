@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, type Signal, signal } from '@vielzeug/ripple';
+import { computed, type Readable, type Signal, signal } from '@vielzeug/ripple';
 
 import { createField, type ControlValidationMode, type FieldHandle } from './field-base';
 import { createInteraction } from './keyboard';
@@ -13,29 +13,29 @@ export type CheckableChangePayload = {
 };
 
 export type CheckableOptions = {
-  checked: ReadonlySignal<boolean | undefined>;
+  checked: Readable<boolean | undefined>;
   clearIndeterminateFirst?: boolean;
-  disabled?: ReadonlySignal<boolean | undefined>;
-  error?: ReadonlySignal<string | undefined>;
+  disabled?: Readable<boolean | undefined>;
+  error?: Readable<string | undefined>;
   /**
    * Returns the underlying form field object used for validation triggering.
    * Called lazily — safe to return `null` before the first render.
    */
   getFormField?: () => { reportValidity(): void } | null;
   group?: { toggle: (value: string, originalEvent?: Event) => void };
-  helper?: ReadonlySignal<string | undefined>;
-  indeterminate?: ReadonlySignal<boolean | undefined>;
+  helper?: Readable<string | undefined>;
+  indeterminate?: Readable<boolean | undefined>;
   onToggle?: (payload: CheckableChangePayload) => void;
   prefix?: string;
   /** `AbortSignal` from the component lifecycle. All reactive subscriptions are torn down on abort. */
   signal: AbortSignal;
-  validateOn?: ReadonlySignal<ControlValidationMode>;
-  value: ReadonlySignal<string | undefined>;
+  validateOn?: Readable<ControlValidationMode>;
+  value: Readable<string | undefined>;
 };
 
 export type CheckableHandle = FieldHandle & {
   /** The form submission value: null when unchecked/indeterminate, the value string when checked. */
-  checkableFormValue: ReadonlySignal<string | null>;
+  checkableFormValue: Readable<string | null>;
   checked: Signal<boolean>;
   handleClick: (event: MouseEvent) => boolean;
   handleKeydown: (event: KeyboardEvent) => boolean;

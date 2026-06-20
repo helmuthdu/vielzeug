@@ -1,4 +1,4 @@
-import { type ReadonlySignal, signal, onCleanup } from '@vielzeug/ripple';
+import { type Readable, signal, onCleanup } from '@vielzeug/ripple';
 
 export type MutationObserverValue = {
   entries: MutationRecord[];
@@ -16,7 +16,7 @@ export const mutationObserver = (
     childList: true,
     subtree: true,
   },
-): ReadonlySignal<MutationObserverValue> => {
+): Readable<MutationObserverValue> => {
   const value = signal<MutationObserverValue>({ entries: [], latest: null });
   const observer = new MutationObserver((entries) => {
     value.value = {

@@ -60,7 +60,7 @@ using _ = pulse;
 - **Middleware** — intercept outgoing `send()` calls; omit `next()` to suppress
 - **Auto-reconnect** — exponential backoff, configurable `maxAttempts` and `delay`
 - **Heartbeat** — ping/pong keep-alive with dead-connection detection
-- **Reactive signals** — `pulse.status` and `pulse.rooms` are ripple `ReadonlySignal`s
+- **Reactive signals** — `pulse.status` and `pulse.rooms` are ripple `Reactive`s
 - **`dispose()` + `[Symbol.dispose]`** — deterministic teardown via `using` declarations
 
 ## Documentation

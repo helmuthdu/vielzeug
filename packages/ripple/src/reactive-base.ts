@@ -5,17 +5,17 @@ import { IS_COMPUTED, IS_SIGNAL } from './symbols';
 // ── Global FinalizationRegistry (F1) ──────────────────────────────────────────
 //
 // When a ComputedBase node becomes garbage-collectible, the registry fires and
-// removes the dead WeakRef from its source's computedSubs_ set.  This lets
-// orphaned computeds (created outside a scope/effect and never explicitly
-// disposed) be reclaimed by the GC without manual lifecycle management.
+// removes the entry from its source's computedSubs_ map.  This lets orphaned
+// computeds (created outside a scope/effect and never explicitly disposed) be
+// reclaimed by the GC without manual lifecycle management.
 
 type ComputedWeakEntry = {
-  readonly ref: WeakRef<ComputedBase<unknown>>;
-  readonly set: Set<WeakRef<ComputedBase<unknown>>>;
+  readonly key: ComputedBase<unknown>;
+  readonly map: Map<ComputedBase<unknown>, WeakRef<ComputedBase<unknown>>>;
 };
 
-const computedSubRegistry = new FinalizationRegistry<ComputedWeakEntry>(({ ref, set }) => {
-  set.delete(ref);
+const computedSubRegistry = new FinalizationRegistry<ComputedWeakEntry>(({ key, map }) => {
+  map.delete(key);
 });
 
 // ── ReactiveBase ──────────────────────────────────────────────────────────────
@@ -33,7 +33,9 @@ export abstract class ReactiveBase<T> {
   readonly name: string | undefined;
   [IS_SIGNAL] = true;
 
-  private readonly computedSubs_ = new Set<WeakRef<ComputedBase<unknown>>>();
+  // A single Map<computed, WeakRef> replaces the previous Set<WeakRef> + WeakMap pair.
+  // O(1) add, remove, and lookup without keeping two structures in sync.
+  private readonly computedSubs_ = new Map<ComputedBase<unknown>, WeakRef<ComputedBase<unknown>>>();
   private readonly effectSubs_ = new Set<Subscriber>();
 
   constructor(name?: string) {
@@ -50,24 +52,17 @@ export abstract class ReactiveBase<T> {
   addComputedSub(c: ComputedBase<unknown>): void {
     const ref = new WeakRef(c);
 
-    this.computedSubs_.add(ref);
-    computedSubRegistry.register(c, { ref, set: this.computedSubs_ }, ref);
+    this.computedSubs_.set(c, ref);
+    computedSubRegistry.register(c, { key: c, map: this.computedSubs_ }, ref);
   }
 
   removeComputedSub(c: ComputedBase<unknown>): void {
-    for (const ref of this.computedSubs_) {
-      const node = ref.deref();
+    const ref = this.computedSubs_.get(c);
 
-      if (node === undefined) {
-        // Dead ref not yet cleaned by the registry — purge eagerly.
-        this.computedSubs_.delete(ref);
-      } else if (node === c) {
-        this.computedSubs_.delete(ref);
-        computedSubRegistry.unregister(ref);
+    if (ref === undefined) return;
 
-        return;
-      }
-    }
+    this.computedSubs_.delete(c);
+    computedSubRegistry.unregister(ref);
   }
 
   addEffectSub(subscriber: Subscriber): void {
@@ -79,7 +74,7 @@ export abstract class ReactiveBase<T> {
   }
 
   protected clearSubscribers(): void {
-    for (const ref of this.computedSubs_) {
+    for (const ref of this.computedSubs_.values()) {
       computedSubRegistry.unregister(ref);
     }
 
@@ -90,7 +85,7 @@ export abstract class ReactiveBase<T> {
   hasSubscribers(): boolean {
     if (this.effectSubs_.size > 0) return true;
 
-    for (const ref of this.computedSubs_) {
+    for (const ref of this.computedSubs_.values()) {
       if (ref.deref() !== undefined) return true;
     }
 
@@ -98,31 +93,21 @@ export abstract class ReactiveBase<T> {
   }
 
   /**
-   * Returns a live iterable of downstream computed subscribers, automatically
-   * skipping any WeakRefs whose targets have already been collected.
+   * Yields live downstream computed subscribers.
+   * Dead WeakRefs (GC'd computeds) are pruned eagerly from the map on each traversal,
+   * keeping the subscriber set compact without requiring manual dispose calls.
    */
-  computedSubs(): Iterable<ComputedBase<unknown>> {
-    const set = this.computedSubs_;
+  *computedSubs(): Generator<ComputedBase<unknown>> {
+    for (const [key, ref] of this.computedSubs_) {
+      const node = ref.deref();
 
-    return {
-      [Symbol.iterator](): Iterator<ComputedBase<unknown>> {
-        const iter = set[Symbol.iterator]();
-
-        return {
-          next(): IteratorResult<ComputedBase<unknown>> {
-            for (;;) {
-              const { done, value: ref } = iter.next();
-
-              if (done) return { done: true, value: undefined as unknown as ComputedBase<unknown> };
-
-              const node = ref.deref();
-
-              if (node !== undefined) return { done: false, value: node };
-            }
-          },
-        };
-      },
-    };
+      if (node !== undefined) {
+        yield node;
+      } else {
+        this.computedSubs_.delete(key);
+        computedSubRegistry.unregister(ref);
+      }
+    }
   }
 
   effectSubs(): ReadonlySet<Subscriber> {
@@ -133,6 +118,17 @@ export abstract class ReactiveBase<T> {
   abstract peek(): T;
 }
 
+// ── Refreshable ──────────────────────────────────────────────────────────────
+
+/**
+ * Structural interface for lazy nodes that support dirty-flagging and
+ * on-demand recompute. Used by tracking.ts to pull computed deps without
+ * importing the concrete ComputedImpl class.
+ */
+export interface Refreshable {
+  refreshIfDirty(): boolean;
+}
+
 // ── ComputedBase ──────────────────────────────────────────────────────────────
 
 /**
@@ -140,8 +136,9 @@ export abstract class ReactiveBase<T> {
  * and refreshed on demand.  Exposes the two methods scheduling.ts needs without
  * importing the concrete ComputedImpl class (breaks the potential circular dep).
  */
-export abstract class ComputedBase<T> extends ReactiveBase<T> {
+export abstract class ComputedBase<T> extends ReactiveBase<T> implements Refreshable {
   [IS_COMPUTED] = true;
+  lastPropEpoch_ = 0;
 
   abstract markDirty(): boolean;
   abstract refreshIfDirty(): boolean;

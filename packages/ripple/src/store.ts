@@ -1,4 +1,4 @@
-import type { PathValue, ReadonlySignal, Signal, Store, Subscription } from './types';
+import type { PathValue, Readable, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
@@ -37,19 +37,24 @@ const setNestedValue = <T>(obj: T, parts: string[], value: unknown): T => {
   return { ...currentObj, [key!]: setNestedValue(currentObj[key!], rest, value) } as T;
 };
 
-// ── LensSignal ────────────────────────────────────────────────────────────────
+// ── LensSignal ───────────────────────────────────────────────────────────────
 //
-// A unified writable Signal that delegates reads to an inner ReadonlySignal
+// A unified writable Signal that delegates reads to an inner Reactive<V>
 // and writes to an injected callback.  Replaces the old TopLevelLens +
 // NestedLens pair — same interface, one class to update when Signal<T> changes.
-//
-// R9: consolidated from two lens classes into one.
-// R4: batch() lives at write sites (NestedLens path), not inside applyTopLevelChange_.
+
+type LensOptions<V> = {
+  disposeSource?: () => void;
+  evict: () => void;
+  name?: string;
+  source: Readable<V>;
+  write: (v: V) => void;
+};
 
 class LensSignal<V> implements Signal<V> {
   declare [IS_SIGNAL]: true;
 
-  private source_: ReadonlySignal<V>;
+  private source_: Readable<V>;
   private write_: (v: V) => void;
   private evict_: () => void;
   private disposeSource_: (() => void) | undefined;
@@ -59,19 +64,13 @@ class LensSignal<V> implements Signal<V> {
     return this.name_ ?? this.source_.name;
   }
 
-  constructor(
-    source: ReadonlySignal<V>,
-    write: (v: V) => void,
-    evict: () => void,
-    disposeSource?: () => void,
-    name?: string,
-  ) {
+  constructor(opts: LensOptions<V>) {
     this[IS_SIGNAL] = true;
-    this.source_ = source;
-    this.write_ = write;
-    this.evict_ = evict;
-    this.disposeSource_ = disposeSource;
-    this.name_ = name;
+    this.source_ = opts.source;
+    this.write_ = opts.write;
+    this.evict_ = opts.evict;
+    this.disposeSource_ = opts.disposeSource;
+    this.name_ = opts.name;
   }
 
   get value(): V {
@@ -91,7 +90,7 @@ class LensSignal<V> implements Signal<V> {
   }
 
   get disposed(): boolean {
-    return (this.source_ as { disposed?: boolean }).disposed ?? false;
+    return this.source_.disposed;
   }
 
   dispose(): void {
@@ -116,10 +115,10 @@ class LensSignal<V> implements Signal<V> {
 //
 // StoreImpl is a standalone class — does not extend ReactiveBase.
 // applyTopLevelChange_() has NO batch() wrapper — callers that need atomicity
-// (patch, replace, reset) already wrap with an outer batch(). The only other
-// write path (nested lens write) wraps at the call site, not here.
+// (patch, replace, reset, and both lens write paths) wrap with batch() at their
+// own call sites; the method itself stays free of any scheduling concern.
 
-export class StoreImpl<T extends object> {
+export class StoreImpl<T extends object> implements Store<T> {
   declare [IS_SIGNAL]: true;
   declare [IS_STORE]: true;
 
@@ -219,13 +218,13 @@ export class StoreImpl<T extends object> {
   }
 
   /**
-   * Returns a non-reactive snapshot of the current state.
-   * The returned object is shallowly protected — top-level mutations throw.
+   * Returns a frozen shallow snapshot of the current state.
+   * The returned object reflects state at call time — it does not update as the store mutates.
    * Use for serialization or one-off reads outside reactive contexts.
    * For reactive reads, use `store.lens(path)` instead.
    */
   peek(): Readonly<T> {
-    return this.readonlyProxy_;
+    return Object.freeze({ ...this.current_ }) as Readonly<T>;
   }
 
   readonly subscribe = (listener: () => void): Subscription => {
@@ -251,19 +250,18 @@ export class StoreImpl<T extends object> {
   }
 
   replace(fn: (state: Readonly<T>) => T): void {
-    const current = this.current_;
-    const snapshot = structuredClone(current) as Readonly<T>;
+    const snapshot = structuredClone(this.current_) as Readonly<T>;
     const next = fn(snapshot);
 
     if (next === snapshot) return;
 
     batch(() => {
-      for (const key of Object.keys(current)) {
+      for (const key of Object.keys(snapshot)) {
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
 
       for (const key of Object.keys(next)) {
-        if (Object.hasOwn(current as Record<string, unknown>, key)) continue;
+        if (Object.hasOwn(snapshot as Record<string, unknown>, key)) continue;
 
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
@@ -273,12 +271,11 @@ export class StoreImpl<T extends object> {
   }
 
   reset(): void {
-    const current = this.current_;
-    const next = structuredClone(this.initial_);
+    const initial = this.initial_ as Record<string, unknown>;
 
     batch(() => {
-      for (const key of Object.keys(current)) {
-        this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
+      for (const key of Object.keys(this.current_)) {
+        this.applyTopLevelChange_(key, initial[key]);
       }
     });
 
@@ -316,25 +313,28 @@ export class StoreImpl<T extends object> {
       // Top-level lens: backed directly by the per-property signal.
       const propSig = this.propSignalFor_(parts[0]!) as SignalImpl<PathValue<T, P>>;
 
-      lens = new LensSignal<PathValue<T, P>>(
-        propSig,
-        (v) => {
-          this.applyTopLevelChange_(parts[0]!, v);
-          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
-        },
+      lens = new LensSignal<PathValue<T, P>>({
         evict,
         // propSig lifecycle is owned by the store — do not dispose it
-      ) as unknown as LensSignal<unknown>;
+        source: propSig,
+        write: (v) => {
+          batch(() => this.applyTopLevelChange_(parts[0]!, v));
+          getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
+        },
+      }) as unknown as LensSignal<unknown>;
     } else {
       // Nested lens: backed by a derived computed over the root property signal.
-      // R9: write path uses batch() here (was previously inside applyTopLevelChange_).
+      // Write path uses batch() here so nested lens writes remain atomic.
       const readComputed = computed(
         () => getNestedValue(this.propSignalFor_(parts[0]!).value, parts.slice(1)) as PathValue<T, P>,
       );
 
-      lens = new LensSignal<PathValue<T, P>>(
-        readComputed,
-        (v) => {
+      lens = new LensSignal<PathValue<T, P>>({
+        disposeSource: () => readComputed.dispose(),
+        evict,
+        name: this.name ? `${this.name}.${path}` : path,
+        source: readComputed,
+        write: (v) => {
           const current = readComputed.peek();
 
           if (Object.is(current, v)) return;
@@ -342,10 +342,7 @@ export class StoreImpl<T extends object> {
           batch(() => this.setPath_(parts, v));
           getDevToolsHook()?.mutate?.({ kind: 'lens', name: this.name, path });
         },
-        evict,
-        () => readComputed.dispose(),
-        this.name ? `${this.name}.${path}` : path,
-      ) as unknown as LensSignal<unknown>;
+      }) as unknown as LensSignal<unknown>;
     }
 
     this.lensCache_.set(path, lens);

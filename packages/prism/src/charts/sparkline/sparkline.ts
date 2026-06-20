@@ -283,7 +283,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       () => {
         renderAll();
       },
-      { scheduler: (run) => requestAnimationFrame(run) },
+      { scheduler: 'microtask' },
     );
   });
 

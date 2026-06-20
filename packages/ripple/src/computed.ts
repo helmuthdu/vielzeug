@@ -1,14 +1,15 @@
+import type { Refreshable } from './reactive-base';
 import type { DepEntry } from './tracking';
-import type { ComputedOptions, ComputedSignal, Subscription } from './types';
+import type { Computed, ComputedOptions, Subscription } from './types';
 
 import { getDevToolsHook } from './devtools-hook';
 import { ensureError, StateError } from './error';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';
-import { getRevision, getTracking, trackSource, withTracking } from './tracking';
+import { getScopeCleanups, getRevision, getTracking, trackSource, withTracking } from './tracking';
 
-export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T> {
+export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
   private value_: T | typeof UNINITIALIZED;
   private dirty_: boolean;
   private computing_: boolean;
@@ -16,12 +17,11 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
   private deps_: DepEntry[];
   private compute_: () => T;
   private equals_: (a: unknown, b: unknown) => boolean;
-  private fallback_: ((error: unknown, lastValue: T | undefined) => T) | undefined;
-  // F1: global revision at last successful compute — enables O(1) "nothing changed" fast-path.
+  // Global revision at last successful compute — enables O(1) "nothing changed" fast-path.
   private maxRevision_: number;
 
   constructor(compute: () => T, options?: ComputedOptions<T>) {
-    const { equals, fallback, name } = options ?? {};
+    const { equals, name } = options ?? {};
 
     super(name);
     this.value_ = UNINITIALIZED;
@@ -32,7 +32,6 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
     this.maxRevision_ = -1;
     this.compute_ = compute;
     this.equals_ = equals !== undefined ? (a, b) => equals(a as T, b as T) : Object.is;
-    this.fallback_ = fallback;
   }
 
   markDirty(): boolean {
@@ -46,7 +45,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
   refreshIfDirty(): boolean {
     if (!this.dirty_) return false;
 
-    // F1 — O(1) global revision fast-path:
+    // O(1) global revision fast-path:
     // If the global revision clock has not advanced past our recorded maximum,
     // no signal anywhere in the system has been written since our last compute.
     // No dep can have changed — clear dirty and skip the per-dep scan entirely.
@@ -67,7 +66,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
 
         // Flush dirty computed deps before comparing versions (lazy pull chain).
         if ('refreshIfDirty' in src) {
-          (src as import('./reactive-base').ComputedBase<unknown>).refreshIfDirty();
+          (src as Refreshable).refreshIfDirty();
         }
 
         if (src.version !== d.version) {
@@ -106,15 +105,9 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
       try {
         next = withTracking({ computed: this, depCollector: newDeps, kind: 'computed' }, this.compute_);
       } catch (error) {
-        if (this.fallback_) {
-          const lastValue = this.value_ !== UNINITIALIZED ? (this.value_ as T) : undefined;
-
-          next = this.fallback_(error, lastValue);
-        } else {
-          // Sources accessed before the throw remain in their computedSubs_ until the
-          // next successful recompute or dispose(). The computed stays dirty and will retry.
-          throw ensureError(error);
-        }
+        // Sources accessed before the throw remain in their computedSubs_ until the
+        // next successful recompute or dispose(). The computed stays dirty and will retry.
+        throw ensureError(error);
       }
 
       this.dirty_ = false;
@@ -201,9 +194,11 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
 
   readonly subscribe = (listener: () => void): Subscription => {
     if (this.disposed_) {
-      const label = this.name ? ` "${this.name}"` : '';
+      const noop = new SubscriptionImpl(() => {});
 
-      throw new StateError('DISPOSED_READ', `Cannot subscribe to disposed computed${label}`);
+      noop.dispose();
+
+      return noop;
     }
 
     this.refreshIfDirty();
@@ -240,13 +235,16 @@ export class ComputedImpl<T> extends ComputedBase<T> implements ComputedSignal<T
 
 // ── computed() ───────────────────────────────────────────────────────────────
 
-export const computed = <T>(compute: () => T, options?: ComputedOptions<T>): ComputedSignal<T> => {
+export const computed = <T>(compute: () => T, options?: ComputedOptions<T>): Computed<T> => {
   const comp = new ComputedImpl(compute, options);
   const ctx = getTracking();
 
-  // Auto-dispose when created inside an effect or scope — they own the lifetime.
-  if (ctx !== null && ctx.kind !== 'computed') {
+  // Auto-dispose when created inside an effect — effect owns the lifetime.
+  if (ctx?.kind === 'effect') {
     ctx.cleanups.push(() => comp.dispose());
+  } else {
+    // Auto-dispose when created inside a scope — scope owns the lifetime.
+    getScopeCleanups()?.push(() => comp.dispose());
   }
 
   return comp;

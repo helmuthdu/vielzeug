@@ -11,7 +11,15 @@ You need to fetch data reactively — re-running the fetch whenever a reactive d
 
 ### Solution
 
-Use `resource()` to wrap an async factory. Dependencies read synchronously before the first `await` are tracked. The factory receives an `AbortSignal` that fires when it is superseded or disposed. The returned handle exposes `.data`, `.error`, and `.isLoading` as individual reactive signals.
+Use `resource()` to wrap an async factory. Dependencies read synchronously before the first `await` are tracked. The factory receives an `AbortSignal` that fires when it is superseded or disposed.
+
+The returned `ResourceSignal<T>` emits a single `ResourceState<T>` discriminated union:
+
+| `status`    | Fields present                          |
+| ----------- | --------------------------------------- |
+| `'loading'` | `data: T \| undefined`                  |
+| `'ready'`   | `data: T`                               |
+| `'error'`   | `data: T \| undefined`, `error: unknown` |
 
 ```ts
 import { signal, effect, resource } from '@vielzeug/ripple';
@@ -26,16 +34,17 @@ const user = resource(async (abortSignal) => {
 });
 
 effect(() => {
-  if (user.isLoading.value) {
+  const s = user.value; // ResourceState<{ id: string; name: string }>
+  if (s.status === 'loading') {
     document.body.innerHTML = '<p>Loading…</p>';
     return;
   }
-  if (user.error.value) {
-    document.body.innerHTML = `<p>Error: ${String(user.error.value)}</p>`;
+  if (s.status === 'error') {
+    document.body.innerHTML = `<p>Error: ${String(s.error)}</p>`;
     return;
   }
-  const u = user.data.value;
-  document.body.innerHTML = u ? `<p>Hello, ${u.name}!</p>` : '';
+  // s.status === 'ready' — s.data is narrowed to { id: string; name: string }
+  document.body.innerHTML = `<p>Hello, ${s.data.name}!</p>`;
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch and re-runs
@@ -44,7 +53,7 @@ user.dispose(); // cancel and detach
 
 #### With an Initial Value
 
-Provide `initialValue` to expose a placeholder in `.data` before the first factory run resolves:
+Provide `initialValue` to populate `data` in the initial `loading` state before the first factory run resolves:
 
 ```ts
 import { signal, resource } from '@vielzeug/ripple';
@@ -58,14 +67,14 @@ const results = resource(
       (r) => r.json() as Promise<string[]>,
     );
   },
-  { initialValue: [] }, // results.data.value is [] while isLoading is true
+  { initialValue: [] }, // results.value.data is [] while status is 'loading'
 );
 ```
 
 ### Pitfalls
 
 - Dependencies must be read **synchronously** before the first `await`. Reads inside `await` expressions are not tracked.
-- When a dep changes while a fetch is in-flight, the old `AbortSignal` fires. Always pass it to `fetch()` to respect cancellation. `.isLoading.value` immediately becomes `true` again.
+- When a dep changes while a fetch is in-flight, the old `AbortSignal` fires. Always pass it to `fetch()` to respect cancellation. `status` immediately becomes `'loading'` again.
 - `resource()` does not retry on error. Handle retries inside the factory by catching and re-throwing after a delay.
 
 ### Related

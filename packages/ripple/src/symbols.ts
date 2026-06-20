@@ -9,6 +9,3 @@ export const IS_STORE: unique symbol = Symbol('ripple.is-store');
 
 /** Marks an uninitialized computed value — distinct from any user-provided value. */
 export const UNINITIALIZED: unique symbol = Symbol('ripple.uninitialized');
-
-/** Sentinel for `batch()` to distinguish "no error thrown" from `throw undefined`. */
-export const _NONE: unique symbol = Symbol('ripple.none');

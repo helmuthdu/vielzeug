@@ -66,7 +66,7 @@ describe('syncAria()', () => {
     });
   });
 
-  describe('ReadonlySignal values', () => {
+  describe('Reactive values', () => {
     it('sets attribute reactively via signal', async () => {
       const hidden = signal(false);
       const el = document.createElement('div');

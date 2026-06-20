@@ -1,4 +1,4 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { clamp as clampRange } from '@vielzeug/arsenal';
 
@@ -7,11 +7,11 @@ import { toFiniteNumberOr, toPositiveStep } from './numbers';
 // ── Slider control ────────────────────────────────────────────────────────────
 
 export type SliderControlOptions = {
-  disabled?: ReadonlySignal<boolean | undefined>;
-  max?: ReadonlySignal<number | string | undefined>;
-  min?: ReadonlySignal<number | string | undefined>;
-  readonly?: ReadonlySignal<boolean | undefined>;
-  step?: ReadonlySignal<number | string | undefined>;
+  disabled?: Readable<boolean | undefined>;
+  max?: Readable<number | string | undefined>;
+  min?: Readable<number | string | undefined>;
+  readonly?: Readable<boolean | undefined>;
+  step?: Readable<number | string | undefined>;
 };
 
 export type SliderControl = {

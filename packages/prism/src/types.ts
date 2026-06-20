@@ -1,8 +1,8 @@
-import type { ReadonlySignal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 // ─── Reactive Utility ────────────────────────────────────────────────────────
 
-export type MaybeSignal<T> = ReadonlySignal<T> | T;
+export type MaybeSignal<T> = Readable<T> | T;
 
 // ─── Theme ───────────────────────────────────────────────────────────────────
 
@@ -143,7 +143,7 @@ export interface TransitionConfig {
 
 export interface ChartPluginContext {
   container: HTMLElement;
-  dimensions: ReadonlySignal<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
   svg: SVGSVGElement;
 }
 

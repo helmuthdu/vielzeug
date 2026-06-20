@@ -1,183 +1,77 @@
-import type { ComputedOptions, ComputedSignal, ReadonlySignal } from './types';
+import type { Computed, Readable } from './types';
 
-import { computed } from './computed';
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
 import { untrack } from './tracking';
 
 export { untrack };
 
-// ── derive() ─────────────────────────────────────────────────────────────────
-//
-// Cleaner replacement for selector(source, project). Projects a reactive source
-// into a new computed signal. No filter — use filter() for that.
-
-/**
- * Creates a computed signal by projecting a reactive source through `project`.
- * Equivalent to `computed(() => project(source.value))` with options support.
- *
- * Prefer this over `selector(source, project)` for clarity.
- *
- * @example
- * ```ts
- * const count = signal(5);
- * const doubled = derive(count, (n) => n * 2);
- * console.log(doubled.value); // 10
- * ```
- */
-export const derive = <T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  options?: ComputedOptions<U>,
-): ComputedSignal<U> => computed(() => project(source.value), options);
-
-// ── filter() ─────────────────────────────────────────────────────────────────
-//
-// Returns source value when predicate holds, or undefined otherwise.
-// Supports type-predicate overload for narrowing (T → U | undefined).
-
-/**
- * Creates a computed signal that returns the source value when `predicate` is `true`,
- * or `undefined` when it is `false`. Supports type-predicate narrowing.
- *
- * @example
- * ```ts
- * const count = signal(5);
- * const evens = filter(count, (n) => n % 2 === 0);
- * console.log(evens.value); // undefined (5 is odd)
- * count.value = 8;
- * console.log(evens.value); // 8
- * ```
- */
-export function filter<T, U extends T>(
-  source: ReadonlySignal<T>,
-  predicate: (value: T) => value is U,
-  options?: ComputedOptions<U | undefined>,
-): ComputedSignal<U | undefined>;
-export function filter<T>(
-  source: ReadonlySignal<T>,
-  predicate: (value: T) => boolean,
-  options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined>;
-export function filter<T>(
-  source: ReadonlySignal<T>,
-  predicate: (value: T) => boolean,
-  options?: ComputedOptions<T | undefined>,
-): ComputedSignal<T | undefined> {
-  return computed(() => {
-    const v = source.value;
-
-    return predicate(v) ? v : undefined;
-  }, options);
-}
-
 // ── Readonly wrapper ──────────────────────────────────────────────────────────
 //
-// Returns a thin delegation object instead of a full ComputedImpl — zero graph
-// overhead. dispose() is a no-op: the wrapper does not own the source signal.
-// All reads delegate to the source, registering the caller as a dep on the
-// source directly rather than on an intermediary node.
+// readonly() returns Readable<T> — no dispose() because the wrapper does not
+// own the source. Callers retain ownership and must dispose the source themselves.
+// The [IS_SIGNAL] brand is set so isSignal(readonly(s)) returns true (it is a
+// reactive Readable), but [IS_COMPUTED] is intentionally NOT set — the wrapper
+// is not a Computed<T> and does not have dispose().
 
 /**
- * Wraps a signal or computed to produce a structurally read-only view.
+ * Wraps a reactive value to produce a structurally read-only view.
  * The `value` setter is hidden. Delegates reads directly to the source —
- * no extra graph node, no allocation beyond the wrapper object.
+ * no extra reactive graph node, no extra subscription.
  *
- * **Dispose semantics:** calling `dispose()` on the wrapper is a no-op — it does
- * not affect the underlying source signal. The caller retains ownership of the
- * source and is responsible for disposing it independently.
+ * The caller retains ownership of the source and is responsible for disposing it.
  *
  * @example
  * ```ts
  * const count = signal(0);
  * const readCount = readonly(count);
  * readCount.value; // fine — tracks dep on count
- * // readCount.value = 1; // TypeScript error — ComputedSignal has no setter
+ * // readCount.value = 1; // TypeScript error — Readable has no setter
  * ```
  */
-export const readonly = <T>(source: ReadonlySignal<T>): ComputedSignal<T> => {
-  const noop = (): void => {};
-
-  return {
-    dispose: noop,
-    get disposed() {
-      return (source as unknown as { disposed?: boolean }).disposed ?? false;
+export const readonly = <T>(source: Readable<T>): Readable<T> => {
+  const wrapper = {
+    get disposed(): boolean {
+      return source.disposed;
     },
-    [IS_COMPUTED]: true as const,
     [IS_SIGNAL]: true as const,
-    get name() {
+    get name(): string | undefined {
       return source.name;
     },
-    peek: () => source.peek(),
-    subscribe: (l: () => void) => source.subscribe(l),
-    [Symbol.dispose]: noop,
-    get value() {
+    peek(): T {
+      return source.peek();
+    },
+    subscribe(listener: () => void) {
+      return source.subscribe(listener);
+    },
+    get value(): T {
       return source.value;
     },
-  } as unknown as ComputedSignal<T>;
+  };
+
+  return wrapper as unknown as Readable<T>;
 };
-
-// ── selector() ────────────────────────────────────────────────────────────────
-//
-// Replaces per-instance .map() / .filter() methods, which polluted the reactive
-// interfaces and caused name clashes with Array.prototype methods in mixed code.
-// A standalone function keeps the public interface minimal and explicit.
-
-/**
- * Creates a computed signal derived from a reactive source using a projection
- * and/or a filter predicate.
- *
- * - `selector(source, project)` — project source to a new type
- * - `selector(source, project, predicate)` — project then filter; returns `U | undefined`
- *
- * For filter-only use cases, prefer `filter(source, predicate)` directly.
- *
- * @example
- * ```ts
- * const count = signal(5);
- * const doubled = selector(count, (n) => n * 2);
- * const evenDoubled = selector(count, (n) => n * 2, (n) => n % 2 === 0);
- * ```
- */
-export function selector<T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  options?: ComputedOptions<U>,
-): ComputedSignal<U>;
-export function selector<T, U>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  predicate: (value: U) => boolean,
-  options?: ComputedOptions<U | undefined>,
-): ComputedSignal<U | undefined>;
-export function selector<T, U = T>(
-  source: ReadonlySignal<T>,
-  project: (value: T) => U,
-  predicateOrOptions?: ((value: U) => boolean) | ComputedOptions<U>,
-  options?: ComputedOptions<U | undefined>,
-): ComputedSignal<U | U | undefined> {
-  if (typeof predicateOrOptions === 'function') {
-    const predicate = predicateOrOptions;
-    const opts = options;
-
-    return computed(
-      () => {
-        const projected = project(source.value);
-
-        return predicate(projected) ? projected : undefined;
-      },
-      opts as ComputedOptions<U | undefined>,
-    );
-  }
-
-  return computed(() => project(source.value), predicateOrOptions as ComputedOptions<U> | undefined);
-}
 
 // ── Type guards ───────────────────────────────────────────────────────────────
 
-export const isSignal = <T = unknown>(value: unknown): value is ReadonlySignal<T> =>
+/**
+ * Returns `true` for any reactive value that implements `Readable<T>` — including
+ * `signal()`, `computed()`, `store()`, and `readonly()` wrappers.
+ *
+ * This is a broad "is this value reactive?" check, not a specific writable-signal
+ * check. Use `isComputed` to distinguish computed-only values.
+ *
+ * @example
+ * ```ts
+ * isSignal(signal(0))            // true
+ * isSignal(computed(() => 1))    // true
+ * isSignal(readonly(signal(0)))  // true
+ * isSignal({})                   // false
+ * ```
+ */
+export const isSignal = <T = unknown>(value: unknown): value is Readable<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_SIGNAL, unknown>)[IS_SIGNAL];
 
-export const isComputed = <T = unknown>(value: unknown): value is ComputedSignal<T> =>
+export const isComputed = <T = unknown>(value: unknown): value is Computed<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_COMPUTED, unknown>)[IS_COMPUTED];
 
 export const isStore = <T extends object = object>(value: unknown): value is import('./types').Store<T> =>

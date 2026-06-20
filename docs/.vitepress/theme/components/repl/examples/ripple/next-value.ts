@@ -1,17 +1,18 @@
 export const nextValueExample = {
-  code: `import { signal, watch, untrack } from '@vielzeug/ripple'
+  code: `import { signal, computed, watch, untrack } from '@vielzeug/ripple'
 
-// Bridge reactive state into async code with watch()
-function waitFor(get, predicate) {
+// Bridge reactive state into async code with watch().
+// watch() accepts a Reactive — use computed() for derived slices.
+function waitFor(source, predicate) {
   return new Promise((resolve) => {
-    const current = untrack(get)
+    const current = untrack(() => source.value)
 
     if (predicate(current)) {
       resolve(current)
       return
     }
 
-    const stop = watch(get, (next) => {
+    const stop = watch(source, (next) => {
       if (predicate(next)) {
         stop.dispose()
         resolve(next)
@@ -23,7 +24,7 @@ function waitFor(get, predicate) {
 async function run() {
   const status = signal('idle')
 
-  const waitForDone = waitFor(() => status.value, (v) => v === 'done')
+  const waitForDone = waitFor(status, (v) => v === 'done')
 
   // Simulate async state transitions
   setTimeout(() => { status.value = 'loading'; console.log('→ loading') }, 100)
@@ -34,9 +35,16 @@ async function run() {
 
   // Await a simple next change
   const counter = signal(0)
-  const next = waitFor(() => counter.value, (v) => v !== 0)
+  const next = waitFor(counter, (v) => v !== 0)
   counter.value = 42
   console.log('Next value:', await next)
+
+  // For derived slices, wrap in computed() first
+  const items = signal([1, 2, 3])
+  const count = computed(() => items.value.length)
+  const waitForFive = waitFor(count, (n) => n >= 5)
+  items.value = [1, 2, 3, 4, 5]
+  console.log('Count reached:', await waitForFive)
 }
 
 void run()`,

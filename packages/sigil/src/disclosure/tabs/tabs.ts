@@ -1,5 +1,5 @@
 import { createContext, define, html, prop, ref } from '@vielzeug/craft';
-import { computed, type ReadonlySignal, signal, watch } from '@vielzeug/ripple';
+import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
 
@@ -10,11 +10,11 @@ import styles from './tabs.css?inline';
 
 /** Context provided by sg-tabs to its sg-tab-item and sg-tab-panel children. */
 export type TabsContext = {
-  color: ReadonlySignal<ThemeColor | undefined>;
-  orientation: ReadonlySignal<'horizontal' | 'vertical'>;
-  size: ReadonlySignal<ComponentSize | undefined>;
-  value: ReadonlySignal<string | undefined>;
-  variant: ReadonlySignal<VisualVariant | undefined>;
+  color: Readable<ThemeColor | undefined>;
+  orientation: Readable<'horizontal' | 'vertical'>;
+  size: Readable<ComponentSize | undefined>;
+  value: Readable<string | undefined>;
+  variant: Readable<VisualVariant | undefined>;
 };
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');

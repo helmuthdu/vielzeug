@@ -13,7 +13,6 @@ exports:
     effect,
     effectAsync,
     resource,
-    asyncComputed,
     watch,
     batch,
     store,
@@ -23,17 +22,16 @@ exports:
     onCleanup,
     readonly,
     derive,
-    filter,
-    selector,
     isSignal,
     isComputed,
     isStore,
     getDevToolsHook,
     StateError,
     StateErrorCode,
-    Accessor,
-    ResourceSignal,
     ResourceOptions,
+    ResourceState,
+    HistoryEntry,
+    EffectHandle,
     PathValue,
   ]
 environments: [browser, node, ssr, deno]
@@ -109,10 +107,10 @@ yarn add @vielzeug/ripple
 ## Quick Start
 
 ```ts
-import { signal, derive, effect, watch, batch } from '@vielzeug/ripple';
+import { signal, computed, effect, watch, batch } from '@vielzeug/ripple';
 
 const count = signal(0);
-const doubled = derive(count, (n) => n * 2); // ComputedSignal<number>
+const doubled = computed(() => count.value * 2); // Computed<number>
 
 // Side-effect: runs immediately and re-runs on change
 const sub = effect(() => {
@@ -151,7 +149,7 @@ const stopWatch = watch(countLens, (next, prev) => {
 });
 
 // Derived slice
-const label = computed(() => counter.value.label); // ComputedSignal<string>
+const label = computed(() => counter.value.label); // Computed<string>
 
 // Mutations
 counter.patch({ count: 1 }); // shallow merge
@@ -172,21 +170,17 @@ label.dispose();
 
 <div class="features-grid">
 
-- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; `batched: true` coalesces rapid writes into one microtask notification
+- **`signal(value, options?)`** — reactive atom; read `.value`, write `.value = next`; equality check prevents notification when value is unchanged
 - **`computed(fn, options?)`** — lazy derived signal; glitch-free; auto-tracks dependencies read inside `fn`
-- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; options: `scheduler` (`'sync'` | `'microtask'` | custom fn), `maxIterations`, `name`
+- **`effect(fn, options?)`** — side-effect that re-runs when dependencies change; returns `EffectHandle` with `getDependencies()`; options: `scheduler` (`'sync'` | `'microtask'`), `name`
 - **`effectAsync(fn, options?)`** — async side-effect with an `AbortSignal` that fires on re-run or dispose; returns `AsyncSubscription` with `[Symbol.asyncDispose]`
-- **`resource(factory, options?)`** — preferred name for async computed; exposes `.data`, `.error`, `.isLoading` signals; factory receives an `AbortSignal`
-- **`asyncComputed(factory, options?)`** — same as `resource()`; kept for compatibility
+- **`resource(factory, options?)`** — reactive async data source; emits a `ResourceState<T>` discriminated union (`loading` / `ready` / `error`); factory receives an `AbortSignal` that fires on re-run or dispose
 - **`watch(source, cb, options?)`** — explicit subscription that fires only when the value changes; returns a `Subscription`
 - **`batch(fn)`** — flush all notifications once after bulk updates
 - **`untrack(fn)`** — read signals inside an effect without creating subscriptions
 - **`onCleanup(fn)`** — register teardown from inside an effect or `scope` without using the return value
 - **`scope(setup?)`** — isolated cleanup context; collect teardown via `onCleanup` inside `scope.run(fn)`; release with `scope.dispose()`
-- **`derive(source, project, options?)`** — project a reactive source into a `ComputedSignal`; cleaner alternative to `selector(source, project)`
-- **`filter(source, predicate, options?)`** — filter a reactive source; returns value when predicate is `true`, `undefined` otherwise; type-predicate overload narrows `T → U | undefined`
-- **`selector(source, project, predicate?, options?)`** — project + optional filter utility; use `derive()` / `filter()` for single-concern cases
-- **`readonly(source)`** — wraps any signal as a `ComputedSignal` — read-only at the type level; `dispose()` is always a no-op
+- **`readonly(source)`** — wraps any signal as `Readable<T>` — read-only at the type level; no `dispose()` (caller retains ownership)
 - **`debugEffect(fn, options?)`** — like `effect()`, but logs reactive deps on every run; import from `@vielzeug/ripple/devtools` — tree-shaken from production bundles
 - **`isSignal(v)`**, **`isComputed(v)`**, **`isStore(v)`** — type guards using an internal symbol marker
 - **`store(init, options?)`** — structured reactive object container
@@ -194,7 +188,7 @@ label.dispose();
 - **`.replace(fn)`** — derive next state from current via a function; same-reference return is a no-op
 - **`.reset()`** — restore the initial state baseline
 - **`.lens<P>(path)`** — cached writable `Signal` for a property or dot-path; writes produce an immutable copy
-- **`storeWithHistory(storeOrInit, options?)`** — store with snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; `undo()`, `redo()`, `historyAt(i)`, `historyLength`; reactive `canUndo`/`canRedo` properties
+- **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
 - **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)

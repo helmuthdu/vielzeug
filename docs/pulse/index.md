@@ -142,8 +142,8 @@ using _ = pulse;
 - **Middleware pipeline** — intercept every outgoing `send()` call; omit `next()` to suppress
 - **Auto-reconnect** — exponential backoff (full-jitter by default), configurable `maxAttempts`, custom `delay` function, and `onReconnect` callback
 - **Heartbeat** — configurable ping/pong keep-alive with dead-connection detection and automatic reconnect trigger
-- **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `ReadonlySignal`
-- **Reactive `rooms` signal** — current room membership as a `ReadonlySignal<ReadonlySet<string>>`
+- **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `Reactive`
+- **Reactive `rooms` signal** — current room membership as a `Reactive<ReadonlySet<string>>`
 - **`disposalSignal`** — `AbortSignal` that fires on `dispose()`; ties external cleanup to the connection lifetime
 - **`dispose()` and `[Symbol.dispose]`** — deterministic teardown; closes the socket, clears all listeners, aborts pending `wait()` calls
 - **Protocol-agnostic** — works with any WebSocket server that speaks the Pulse JSON frame format
