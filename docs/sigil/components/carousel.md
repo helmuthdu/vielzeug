@@ -2,32 +2,9 @@
 
 An accessible, keyboard-navigable carousel and slideshow. Place `<sg-carousel-slide>` children directly inside — no JS array or data binding required. Supports autoplay, swipe gestures, indicator dots, and five layout variants including continuous marquee scrolling.
 
-## Features
-
-- <sg-icon name="image" size="16"></sg-icon> **Slot-based slides** — `<sg-carousel-slide>` children; no JS array required
-- <sg-icon name="theater" size="16"></sg-icon> **5 layout variants** — `default`, `fade`, `filmstrip`, `gallery`, `marquee`
-- <sg-icon name="arrow-up-down" size="16"></sg-icon> **Vertical orientation** — all variants support `orientation="vertical"`
-- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard navigation** — Arrow keys, Home, End; direction-aware
-- <sg-icon name="pointer" size="16"></sg-icon> **Touch/pointer swipe** — 48 px threshold, horizontal or vertical axis
-- <sg-icon name="repeat" size="16"></sg-icon> **Loop** — wraps last→first and first→last (default on); configurable per-variant
-- <sg-icon name="play" size="16"></sg-icon> **Autoplay** — opt-in; pauses on hover and focus; configurable interval
-- <sg-icon name="circle-dot" size="16"></sg-icon> **`sg-progress` indicators** — animated fill countdown during autoplay; `role="tablist"`
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — ARIA Carousel pattern; live-region announcements on every slide change
-- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — full theming via `--carousel-*` tokens
-
-## Source Code
-
-::: details View Source (sg-carousel)
-<<< @/../packages/sigil/src/content/carousel/carousel.ts
-:::
-
-::: details View Source (sg-carousel-slide)
-<<< @/../packages/sigil/src/content/carousel/carousel-slide.ts
-:::
-
 ## Basic Usage
 
-Give the carousel an explicit height and a descriptive `label`. The default variant translates slides in and out horizontally.
+Give the carousel an explicit height and a descriptive `label`. The default variant translates slides in and out horizontally. Always set a descriptive `label` — the default `"Carousel"` is not specific enough for pages with multiple carousels. Give the host an explicit height via `style` or CSS; the `--carousel-min-height` fallback (`240px`) is insufficient for `gallery` and `filmstrip` variants which distribute space flexibly.
 
 <ComponentPreview>
 
@@ -56,6 +33,8 @@ Autoplay is **off by default**. Add the `autoplay` attribute to enable timed sli
 
 Use `autoplay-interval` (in milliseconds, default `5000`) to control the delay. Changing `autoplay-interval` at runtime restarts the timer immediately.
 
+Use `autoplay` only for decorative or media carousels (image galleries, hero banners). Omit it for instructional or interactive content. Do not enable `autoplay` on carousels containing forms or interactive controls — the timed advance will move content away from a user mid-interaction.
+
 <ComponentPreview>
 
 ```html
@@ -79,7 +58,7 @@ Use `autoplay-interval` (in milliseconds, default `5000`) to control the delay. 
 
 ## No Loop
 
-By default the carousel wraps: advancing past the last slide returns to the first. Set `loop="false"` to stop at the boundaries — the prev/next buttons disable automatically at the edges.
+By default the carousel wraps: advancing past the last slide returns to the first. Set `loop="false"` to stop at the boundaries — the prev/next buttons disable automatically at the edges. Use `loop="false"` for wizard-style or sequential flows where step order matters.
 
 <ComponentPreview>
 
@@ -356,6 +335,12 @@ A continuously scrolling ticker. Slides are cloned internally to create a seamle
 
 Set `loop="false"` to run the animation once then stop. Controls and indicators are shown by default and work the same as other variants.
 
+Set an explicit `width` on each slide in `marquee` mode so the seamless loop transition point is predictable. Do not use the `marquee` variant for content that users need to read carefully; the continuous motion is unsuitable for anything requiring sustained attention.
+
+::: warning Marquee and motion sensitivity
+Even with `prefers-reduced-motion` support, the marquee variant still presents rapidly-changing content that can be distracting. Consider hiding the `marquee` variant entirely for users with motion sensitivity who may not have the OS preference set.
+:::
+
 <ComponentPreview>
 
 ```html
@@ -426,58 +411,9 @@ Add `orientation="vertical"` for a top-to-bottom ticker. Set an explicit `height
 
 Arrow key direction adjusts automatically for `orientation="vertical"`. When `loop="false"`, navigation stops at the boundaries.
 
-## Accessibility
-
-The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `role="region"` + `aria-roledescription="carousel"` on the host
-- `role="group"` + `aria-roledescription="slide"` on each `<sg-carousel-slide>`
-- `aria-hidden="true"` on all inactive slides; `aria-label` auto-set to `"Slide N of M"` if not provided
-- `aria-live="polite"` on the track; switches to `"off"` during autoplay to suppress timed announcements
-- Prev/next buttons carry `aria-label="Previous slide"` / `aria-label="Next slide"`; `disabled` set at boundaries when `loop="false"`
-- `role="tablist"` on the indicators container; each dot has `role="tab"` and `aria-selected`
-- Screen-reader announcement via the internal `announce()` helper on every slide change
-
-<sg-icon name="check" size="16"></sg-icon> **Autoplay**
-
-When `autoplay` is on, the track uses `aria-live="off"` so automatic advances don't trigger screen reader speech. The timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
-
-<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
-
-The carousel responds to `prefers-reduced-motion: reduce` automatically:
-
-- `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions.
-- The marquee CSS animation is disabled entirely.
-
-::: tip Always set `label`
-The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"` — too generic when a page has multiple carousels.
-:::
-
-::: warning Marquee and motion sensitivity
-Even with `prefers-reduced-motion` support, the marquee variant still presents rapidly-changing content that can be distracting. Consider hiding the `marquee` variant entirely for users with motion sensitivity who may not have the OS preference set.
-:::
-
-## Best Practices
-
-**Do:**
-
-- Always set a descriptive `label` — the default `"Carousel"` is not specific enough for pages with multiple carousels.
-- Give the host an explicit height via `style` or CSS. The `--carousel-min-height` fallback (`240px`) is insufficient for `gallery` and `filmstrip` variants which distribute space flexibly.
-- Use `autoplay` only for decorative or media carousels (image galleries, hero banners). Omit it for instructional or interactive content.
-- Use `loop="false"` for wizard-style or sequential flows where step order matters.
-- Set an explicit `width` on each slide in `marquee` mode so the seamless loop transition point is predictable.
-
-**Don't:**
-
-- Enable `autoplay` on carousels containing forms or interactive controls — the timed advance will move content away from a user mid-interaction.
-- Rely on `--carousel-min-height` for `filmstrip` or `gallery` — set an explicit height instead.
-- Use the `marquee` variant for content that users need to read carefully; the continuous motion is unsuitable for anything requiring sustained attention.
-
 ## API Reference
 
-### `sg-carousel` Attributes / Properties
+**`sg-carousel` Attributes / Properties**
 
 | Name                | Type                                                                      | Default        | Description                                                                                                                                                                                                     |
 | ------------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -493,13 +429,13 @@ Even with `prefers-reduced-motion` support, the marquee variant still presents r
 | `show-controls`     | `boolean`                                                                 | `true`         | Show prev/next navigation buttons                                                                                                                                                                               |
 | `show-indicators`   | `boolean`                                                                 | `true`         | Show indicator dot navigation                                                                                                                                                                                   |
 
-### `sg-carousel` Events
+**`sg-carousel` Events**
 
 | Event    | Detail              | Description                                            |
 | -------- | ------------------- | ------------------------------------------------------ |
 | `change` | `{ index: number }` | Fired on every slide change (user- or autoplay-driven) |
 
-### `sg-carousel` CSS Custom Properties
+**`sg-carousel` CSS Custom Properties**
 
 | Property                         | Default                     | Description                                                                                                                                      |
 | -------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -515,7 +451,7 @@ Even with `prefers-reduced-motion` support, the marquee variant still presents r
 | `--carousel-gallery-gap`         | `var(--size-2)`             | Gap between slides in `gallery` mode                                                                                                             |
 | `--carousel-marquee-gap`         | `var(--size-4)`             | Gap between slides in `marquee` mode                                                                                                             |
 
-### `sg-carousel` CSS Parts
+**`sg-carousel` CSS Parts**
 
 | Part         | Element       | Description                                   |
 | ------------ | ------------- | --------------------------------------------- |
@@ -525,7 +461,7 @@ Even with `prefers-reduced-motion` support, the marquee variant still presents r
 | `next-btn`   | `<sg-button>` | Next-slide button                             |
 | `indicators` | `<div>`       | Indicator `tablist` container                 |
 
-### `sg-carousel-slide`
+**`sg-carousel-slide`**
 
 A transparent wrapper. It carries `role="group"` and `aria-roledescription="slide"` automatically. No public attributes or properties — all attributes below are set by `sg-carousel` to drive CSS layout and should not be set manually.
 
@@ -537,3 +473,17 @@ A transparent wrapper. It carries `role="group"` and `aria-roledescription="slid
 | `data-before`          | `sg-carousel` | Present on slides before the active one (`default` / `fade` variants)      |
 | `data-after`           | `sg-carousel` | Present on slides after the active one (`default` / `fade` variants)       |
 | `data-gallery-visible` | `sg-carousel` | Present on the active slide and its immediate neighbours in `gallery` mode |
+
+## Accessibility
+
+The carousel follows the [ARIA Carousel pattern](https://www.w3.org/WAI/ARIA/apg/patterns/carousel/).
+
+The host carries `role="region"` and `aria-roledescription="carousel"`. Each `<sg-carousel-slide>` has `role="group"` and `aria-roledescription="slide"`. Inactive slides receive `aria-hidden="true"`; each slide's `aria-label` is auto-set to `"Slide N of M"` if not provided. The track uses `aria-live="polite"`, which switches to `"off"` during autoplay so timed advances don't trigger screen reader speech. Prev/next buttons carry `aria-label="Previous slide"` and `aria-label="Next slide"` respectively; `disabled` is set at boundaries when `loop="false"`. The indicators container has `role="tablist"` with each dot carrying `role="tab"` and `aria-selected`. An internal `announce()` helper fires a screen-reader announcement on every slide change.
+
+When `autoplay` is on, the timer stops on `focusin` or `pointerenter` so keyboard and pointer users can read slide content uninterrupted, and restarts on `focusout` or `pointerleave`.
+
+The carousel responds to `prefers-reduced-motion: reduce` automatically: `--carousel-transition-duration` is set to `0s`, eliminating slide translation and fade transitions, and the marquee CSS animation is disabled entirely.
+
+::: tip Always set `label`
+The `label` attribute becomes the `aria-label` of the `role="region"` landmark. Without it, the region is announced as `"Carousel"` — too generic when a page has multiple carousels.
+:::

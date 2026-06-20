@@ -2,32 +2,6 @@
 
 A versatile typography component with semantic variants for consistent text styling across your application. Provides complete control over typography with design system integration and accessibility built-in.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **6 Semantic Variants**: body, heading, label, caption, overline, code
-- <sg-icon name="ruler" size="16"></sg-icon> **6 Sizes**: xs, sm, md, lg, xl, 2xl (body scale) — heading variant uses the heading scale
-- <sg-icon name="scale" size="16"></sg-icon> **4 Font Weights**: normal, medium, semibold, bold
-- <sg-icon name="rainbow" size="16"></sg-icon> **12 Colors**: semantic (primary, secondary, info, success, warning, error) + text colors (heading, body, muted, tertiary, disabled, contrast)
-- <sg-icon name="triangle-right" size="16"></sg-icon> **4 Alignments**: left, center, right, justify
-- <sg-icon name="scissors" size="16"></sg-icon> **Truncate**: Single-line ellipsis truncation
-- <sg-icon name="clipboard" size="16"></sg-icon> **Line Clamp**: Multi-line truncation with ellipsis via `lines` prop
-- <sg-icon name="type" size="16"></sg-icon> **Semantic HTML**: Render as different HTML tags (span, p, div, h1-h6, label, code)
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `as="h1"–"h6"` sets `role="heading"` + `aria-level` automatically
-- <sg-icon name="theater" size="16"></sg-icon> **Italic Style**: Font style support
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties for full control
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/text/text.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-text>Regular paragraph text</sg-text>
-```
-
 ## Variants
 
 ### Body (Default)
@@ -52,6 +26,8 @@ Emphasized text for headings with tighter line height and semibold weight. Defau
 ::: info Heading scale vs body scale
 `variant="heading"` maps the `size` attribute to the **heading scale** (`--heading-xs` → `--heading-2xl`) rather than the body text scale. This gives a much wider range: from 0.875rem (xs) all the way to 4rem (2xl). See [Size Options](#size-options) for the full mapping.
 :::
+
+Always set an explicit `size` when using `variant="heading"` to select the correct step from the heading scale — `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem. Pair with `as="h1"`–`as="h6"` to get correct visual hierarchy and document semantics in one attribute set.
 
 <ComponentPreview center vertical>
 
@@ -83,7 +59,7 @@ Medium weight text for form labels and UI labels.
 
 ### Caption
 
-Smaller, secondary text for additional context or metadata.
+Smaller, secondary text for additional context or metadata. Use `variant="caption"` with `color="muted"` for helper text, timestamps, and metadata.
 
 <ComponentPreview center vertical>
 
@@ -97,7 +73,7 @@ Smaller, secondary text for additional context or metadata.
 
 ### Overline
 
-Uppercase text with letter spacing, ideal for categories or eyebrow text.
+Uppercase text with letter spacing, ideal for categories or eyebrow text. Pair `variant="overline"` with `size="xs"` for category labels and eyebrow headings.
 
 <ComponentPreview center vertical>
 
@@ -155,7 +131,7 @@ Choose from 6 size steps. The token scale resolved depends on the active variant
 
 ### Semantic Colors
 
-Use semantic colors to convey meaning and maintain consistency.
+Use semantic colors to convey meaning and maintain consistency. Do not rely on `color` alone to convey meaning — always pair with a descriptive text label.
 
 <ComponentPreview center vertical>
 
@@ -172,7 +148,7 @@ Use semantic colors to convey meaning and maintain consistency.
 
 ### Text Colors
 
-Automatic text colors that adapt to your theme. Each value maps to a semantic `--text-color-*` token from the theme.
+Automatic text colors that adapt to your theme. Each value maps to a semantic `--text-color-*` token from the theme. Note that `color="muted"` resolves to `--text-color-secondary` (contrast-600) and may not meet AAA for small heading sizes.
 
 | `color`    | Token                    | Contrast step          | WCAG                 |
 | ---------- | ------------------------ | ---------------------- | -------------------- |
@@ -245,7 +221,7 @@ Control text alignment for layout purposes.
 
 ### Truncate
 
-Enable single-line truncation with ellipsis for overflow text.
+Enable single-line truncation with ellipsis for overflow text. The `truncate` attribute is a boolean flag. Set a width constraint on the element or its container for truncation to apply.
 
 <ComponentPreview center vertical>
 
@@ -260,13 +236,9 @@ Enable single-line truncation with ellipsis for overflow text.
 
 </ComponentPreview>
 
-::: tip Usage
-The `truncate` attribute is a boolean flag. Set a width constraint on the element or its container for truncation to apply.
-:::
-
 ### Line Clamp
 
-Clamp text to a fixed number of lines with an ellipsis — ideal for card descriptions and teasers.
+Clamp text to a fixed number of lines with an ellipsis — ideal for card descriptions and teasers. Use `lines` for multi-line truncation and `truncate` for single-line. They are mutually exclusive — `lines` takes precedence if both are present.
 
 <ComponentPreview center vertical>
 
@@ -280,10 +252,6 @@ Clamp text to a fixed number of lines with an ellipsis — ideal for card descri
 ```
 
 </ComponentPreview>
-
-::: tip Usage
-Use `lines` for multi-line truncation and `truncate` for single-line. They are mutually exclusive — `lines` takes precedence if both are present.
-:::
 
 ### Italic Style
 
@@ -301,7 +269,7 @@ Apply italic styling to text.
 
 ### Semantic HTML Tags
 
-The `as` attribute controls document semantics. For `h1`–`h6`, the component automatically sets `role="heading"` and the correct `aria-level` on the host so screen readers announce the correct heading level — no extra ARIA needed.
+The `as` attribute controls document semantics. Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`) — especially inside forms, articles, and page headers. For `h1`–`h6`, the component automatically sets `role="heading"` and the correct `aria-level` on the host so screen readers announce the correct heading level without any extra markup. Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
 
 Block elements (`p`, `div`, `h1`–`h6`) render as `display: block`. Inline elements (`span`, `label`, `code`) render as `display: inline`.
 
@@ -448,45 +416,8 @@ Show file information with truncation using width constraints.
 
 ## Accessibility
 
-The text component follows WAI-ARIA best practices.
+The text component follows WAI-ARIA best practices. It uses `rem` units throughout to respect the user's browser font size preferences, maintains WCAG-compliant line height (1.5 default for body text), and text colors maintain accessible contrast ratios with backgrounds.
 
-### `sg-text`
+When using `as="h1"` through `as="h6"`, the component automatically sets `role="heading"` and the matching `aria-level` (1–6) on the host element. Screen readers announce the correct heading level without any extra markup. Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
 
-<sg-icon name="check" size="16"></sg-icon> **Automatic Heading ARIA**
-
-- `as="h1"` through `as="h6"` automatically sets `role="heading"` and the matching `aria-level` (1–6) on the host element. Screen readers announce the correct heading level without any extra markup.
-- Changing `as` dynamically (e.g. by removing the attribute) removes both attributes.
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Use the `as` attribute to give the element correct document semantics (`h1`–`h6`, `p`, `label`, etc.).
-- `as="span"`, `as="label"`, and `as="code"` render as `display: inline` matching their native HTML counterparts.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `rem` units to respect user's browser font size preferences.
-- Maintains WCAG-compliant line height (1.5 default for body text).
-- Text colors maintain accessible contrast ratios with backgrounds.
-
-::: tip Best Practice
-Always set `as` for headings and form labels. For page titles, pair `as="h1"` with `variant="heading"` and the appropriate `size` to get correct visual hierarchy and document semantics in one attribute set.
-:::
-
-## Best Practices
-
-**Do:**
-
-- Use the `as` attribute to render a semantically correct element (`h1`–`h6`, `p`, `label`, `code`) — especially inside forms, articles, and page headers.
-- Use `variant="caption"` with `color="muted"` for helper text, timestamps, and metadata.
-- Pair `variant="overline"` with `size="xs"` for category labels and eyebrow headings.
-- Use `truncate` (single-line) or `lines="N"` (multi-line) with a width constraint on the element or its container.
-- Prefer `lines` over `truncate` for card bodies and article previews where two or three lines are acceptable.
-- Set an explicit `size` when using `variant="heading"` to select the correct step from the heading scale.
-
-**Don't:**
-
-- Forget that `variant="heading"` uses the heading scale — `size="2xl"` on a heading renders at 4rem (64px), not 1.5rem.
-- Rely on `color` alone to convey meaning — always pair with a descriptive text label.
-- Use `sg-text` as a replacement for native block elements (`<p>`, `<h2>`, etc.) in long-form content — prefer the `as` attribute instead.
-- Set both `truncate` and `lines` on the same element; use one or the other.
-- Use `color="muted"` for headings — it resolves to `--text-color-secondary` (contrast-600) which may not meet AAA for small heading sizes.
+Use the `as` attribute to give the element correct document semantics (`h1`–`h6`, `p`, `label`, etc.). `as="span"`, `as="label"`, and `as="code"` render as `display: inline` matching their native HTML counterparts.

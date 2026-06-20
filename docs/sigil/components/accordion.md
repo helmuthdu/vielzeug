@@ -2,37 +2,7 @@
 
 A flexible accordion component for organizing collapsible content sections. Built with native `<details>` and `<summary>` elements for accessibility and progressive enhancement.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **8 Variants**: solid, flat, bordered, outline, ghost, text, glass, frost
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Selection Modes**: Single or multiple expansion
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg- <sg-icon name="clapperboard" size="16"></sg-icon> **Smooth Animation**: content height animates via CSS `grid-template-rows` — no layout thrashing- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Native HTML semantics, keyboard navigation, screen reader friendly
-- <sg-icon name="crosshair" size="16"></sg-icon> **Flexible Content**: Support for icons, subtitles, and custom content
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/disclosure/accordion/accordion.ts
-:::
-
-::: details View Source Code (Accordion Item)
-<<< @/../packages/sigil/src/disclosure/accordion-item/accordion-item.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-accordion>
-  <sg-accordion-item>
-    <span slot="title">First Section</span>
-    Content for the first section goes here.
-  </sg-accordion-item>
-</sg-accordion>
-```
-
-## Visual Options
-
-### Selection Modes
+## Selection Modes
 
 #### Multiple (Default)
 
@@ -57,7 +27,7 @@ Allow multiple items to be expanded simultaneously.
 
 #### Single
 
-Only one item can be expanded at a time.
+Only one item can be expanded at a time. Use `single` mode for mutually exclusive content.
 
 <ComponentPreview vertical>
 
@@ -76,7 +46,7 @@ Only one item can be expanded at a time.
 
 </ComponentPreview>
 
-### Variants
+## Variants
 
 Eight variants applied to all items via the parent accordion — six standard plus glass and frost for translucent effects.
 
@@ -178,7 +148,7 @@ Glass and frost variants work best when placed over colorful backgrounds or imag
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 Three sizes for different contexts.
 
@@ -211,7 +181,7 @@ Three sizes for different contexts.
 
 ### Icons & Subtitles
 
-Add icons or descriptive subtitles using slots.
+Add icons or descriptive subtitles using slots. Use clear, descriptive titles to help users understand section content at a glance.
 
 <ComponentPreview vertical>
 
@@ -265,7 +235,7 @@ Prevent interaction with specific items.
 
 ## API Reference
 
-### `sg-accordion` Attributes
+**`sg-accordion`** Attributes
 
 | Attribute        | Type                                                                                      | Default      | Description                                           |
 | ---------------- | ----------------------------------------------------------------------------------------- | ------------ | ----------------------------------------------------- |
@@ -273,7 +243,7 @@ Prevent interaction with specific items.
 | `variant`        | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'glass' \| 'frost'` | `'solid'`    | Visual variant applied to all items                   |
 | `size`           | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`       | Size applied to all items                             |
 
-### `sg-accordion-item` Attributes
+**`sg-accordion-item`** Attributes
 
 | Attribute  | Type                                                                                      | Default   | Description                             |
 | ---------- | ----------------------------------------------------------------------------------------- | --------- | --------------------------------------- |
@@ -284,7 +254,7 @@ Prevent interaction with specific items.
 
 ### Slots
 
-#### `sg-accordion-item`
+**`sg-accordion-item`**
 
 | Slot       | Description                                            |
 | ---------- | ------------------------------------------------------ |
@@ -296,13 +266,13 @@ Prevent interaction with specific items.
 
 ### Events
 
-#### `sg-accordion`
+**`sg-accordion`**
 
 | Event    | Detail                                  | Description                                       |
 | -------- | --------------------------------------- | ------------------------------------------------- |
 | `change` | `{ expandedItem: HTMLElement \| null }` | Emitted when selection changes (single mode only) |
 
-#### `sg-accordion-item`
+**`sg-accordion-item`**
 
 | Event      | Detail                                   | Description                        |
 | ---------- | ---------------------------------------- | ---------------------------------- |
@@ -323,34 +293,8 @@ Prevent interaction with specific items.
 
 ## Accessibility
 
-The accordion component follows WAI-ARIA Accordion Pattern best practices.
+The accordion component follows WAI-ARIA Accordion Pattern best practices. It is built with native `<details>` and `<summary>` elements, providing progressive enhancement — the component works without JavaScript. Keyboard navigation is fully supported: `Enter` and `Space` toggle expansion, and `Tab` moves focus between accordion items.
 
-### `sg-accordion`
+Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing. The transition respects `prefers-reduced-motion` and plays only when the user hasn't opted out of animations. The speed can be overridden with `--accordion-item-transition`.
 
-<sg-icon name="check" size="16"></sg-icon> **Native Semantics**
-
-- Built with native `<details>` and `<summary>` elements.
-- Progressive enhancement - works without JavaScript.
-
-<sg-icon name="check" size="16"></sg-icon> **Smooth Animation**
-
-- Content height transitions via `grid-template-rows: 0fr → 1fr` — no JavaScript height calculations and no layout thrashing.
-- Respects `prefers-reduced-motion`: the transition plays only when the user hasn’t opted out of animations.
-- Override the speed with `--accordion-item-transition`.
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Enter` and `Space` toggle expansion.
-- `Tab` moves focus between accordion items.
-
-## Best Practices
-
-**Do:**
-
-- Use clear, descriptive titles.
-- Use `single` mode for mutually exclusive content.
-
-**Don't:**
-
-- Nest accordions deeply (max 1-2 levels).
-- Hide critical information in a collapsed state.
+Avoid hiding critical information in a collapsed state, and avoid nesting accordions more than one or two levels deep.

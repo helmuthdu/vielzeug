@@ -2,36 +2,6 @@
 
 A foundational layout primitive with theming support. Box provides a simple, semantic container with color, elevation, and padding options — the perfect building block for layouts and compositions.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **4 Variants**: solid, flat, glass, frost
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
-- <sg-icon name="star" size="16"></sg-icon> **Animated Border**: Rainbow border effect via `effect="rainbow"`
-- <sg-icon name="ruler" size="16"></sg-icon> **5 Padding Sizes**: none, sm, md, lg, xl
-- <sg-icon name="theater" size="16"></sg-icon> **6 Elevation Levels**: Customizable shadow depths (0–5)
-- <sg-icon name="box" size="16"></sg-icon> **Foundation Component**: Designed to be the base for layouts and compositions
-- <sg-icon name="palette" size="16"></sg-icon> **Customizable**: CSS custom properties for complete control
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/layout/box/box.ts
-:::
-
-## Basic Usage
-
-Default box with canvas background and gentle border.
-
-<ComponentPreview>
-
-```html
-<sg-box>
-  <sg-text>Basic box container</sg-text>
-</sg-box>
-```
-
-</ComponentPreview>
-
 ## Variants
 
 Four variants cover the full range from solid to translucent.
@@ -80,7 +50,7 @@ Glass and frost look best over colorful backgrounds or images to make the blur a
 
 ## Colors
 
-Six semantic colors for different contexts. Hover state is included for `solid` and `flat` when a color is set.
+Six semantic colors for different contexts. Hover state is included for `solid` and `flat` when a color is set. Combine `color` and `elevation` to create visual hierarchy without custom CSS. Note that `color` alone does not convey meaning — box is a container, not a status indicator.
 
 <ComponentPreview>
 
@@ -100,7 +70,7 @@ Six semantic colors for different contexts. Hover state is included for `solid` 
 
 ## Elevation
 
-Control shadow depth with elevation levels from 0 to 5.
+Control shadow depth with elevation levels from 0 to 5. Elevation changes are purely visual and do not affect accessibility.
 
 <ComponentPreview>
 
@@ -204,7 +174,7 @@ Animated rainbow border effect — works on any variant.
 
 ### CSS Custom Properties
 
-CSS custom properties work regardless of whether a `color` attribute is set.
+CSS custom properties work regardless of whether a `color` attribute is set. Use `--box-*` custom properties on a parent for contextual theming instead of inline styles.
 
 | Property             | Default                     | Description   |
 | -------------------- | --------------------------- | ------------- |
@@ -218,29 +188,4 @@ CSS custom properties work regardless of whether a `color` attribute is set.
 
 ## Accessibility
 
-The box component follows WAI-ARIA best practices.
-
-### `sg-box`
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.).
-- Elevation changes are purely visual and do not affect accessibility.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Glass and frost variants maintain readable contrast ratios.
-
-## Best Practices
-
-**Do:**
-
-- Wrap `sg-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it.
-- Combine `color` and `elevation` to create visual hierarchy without custom CSS.
-- Use `glass` and `frost` variants only over rich backgrounds where the blur effect is visible.
-- Use `--box-*` custom properties on a parent for contextual theming instead of inline styles.
-
-**Don't:**
-
-- Rely only on `color` to convey meaning — box is a container, not a status indicator.
-- Nest too many `sg-box` elements — keep structural depth reasonable for maintainability.
+`sg-box` follows WAI-ARIA best practices. It supports all standard ARIA attributes (`aria-label`, `aria-describedby`, `role`, etc.), making it straightforward to integrate into accessible layouts. Wrap `sg-box` in a semantic HTML element (`<section>`, `<article>`, etc.) when the content warrants it. Glass and frost variants maintain readable contrast ratios against their typical backgrounds.

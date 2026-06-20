@@ -2,26 +2,6 @@
 
 An accessible, keyboard-navigable date picker with an inline calendar popup. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, and native form association.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — Enter, Space, Escape, Arrow keys on individual day cells
-- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA** — `role="combobox"` trigger, `role="dialog"` calendar, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today
-- <sg-icon name="calendar" size="16"></sg-icon> **Three views** — Day → Month → Year drill-down with animated header label cycling
-- <sg-icon name="globe" size="16"></sg-icon> **Internationalised** — Uses `Intl.DateTimeFormat`; pass any BCP 47 locale string
-- <sg-icon name="ban" size="16"></sg-icon> **Min / Max bounds** — ISO 8601 `min` / `max` attributes; out-of-range days are disabled
-- <sg-icon name="calendar-days" size="16"></sg-icon> **Weekend disabling** — `weekend-days="0,6"` disables Sundays and Saturdays
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission; value is the ISO date string
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline assistive text below the trigger
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/date-picker/date-picker.ts
-:::
-
 ## Basic Usage
 
 <ComponentPreview vertical height="400px">
@@ -226,15 +206,9 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 `sg-date-picker` follows the [ARIA Date Picker Dialog Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/).
 
-- The trigger has `role="combobox"` and `aria-haspopup="dialog"`.
-- The calendar panel has `role="dialog"` and `aria-modal="true"`.
-- The day grid has `role="grid"`; each day is a `role="gridcell"` with `aria-selected` and `aria-disabled`.
-- Today's date receives `aria-current="date"`.
-- Weekday column headers use `role="columnheader"`.
-- `Escape` closes the calendar from any focused element inside it.
-- Arrow keys navigate day cells: `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, `Home`/`End` move to the first/last day of the current row.
-- The trigger `aria-expanded` attribute reflects open/closed state.
-- Disabled days have `tabindex="-1"` and `pointer-events: none`.
+The trigger has `role="combobox"` and `aria-haspopup="dialog"`, with `aria-expanded` reflecting the open/closed state. The calendar panel has `role="dialog"` and `aria-modal="true"`. The day grid uses `role="grid"`, with each day rendered as a `role="gridcell"` carrying `aria-selected` and `aria-disabled` attributes. Weekday column headers use `role="columnheader"`. Today's date receives `aria-current="date"`. Disabled days have `tabindex="-1"` and `pointer-events: none`.
+
+Keyboard navigation is fully supported: `Escape` closes the calendar from any focused element inside it. Arrow keys navigate day cells — `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, and `Home`/`End` move to the first or last day of the current row.
 
 ## Related
 

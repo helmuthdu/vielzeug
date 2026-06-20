@@ -2,34 +2,6 @@
 
 An accessible, always-visible inline calendar. Supports day / month / year drill-down views, min/max bounds, disabled weekend days, theming, and native form association. Use this when you want the calendar rendered directly in the page — see [Date Picker](/sigil/components/date-picker) for the trigger + popup variant.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Full keyboard nav** — Arrow keys (including `ArrowUp`/`ArrowDown` for row jumping), `Home`/`End`, `Enter`/`Space`
-- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA** — `role="group"` host, `role="grid"` day grid, `role="gridcell"` day cells, `aria-selected`, `aria-current="date"` for today, `aria-disabled` on disabled cells
-- <sg-icon name="calendar" size="16"></sg-icon> **Three views** — Day → Month → Year cycling via the header label button
-- <sg-icon name="globe" size="16"></sg-icon> **Internationalised** — `Intl.DateTimeFormat`; pass any BCP 47 locale string
-- <sg-icon name="ban" size="16"></sg-icon> **Min / Max bounds** — ISO 8601 `min` / `max`; out-of-range days are disabled
-- <sg-icon name="calendar-days" size="16"></sg-icon> **Weekend disabling** — JSON array of day-of-week indices, e.g. `weekend-days="[0,6]"`
-- <sg-icon name="link" size="16"></sg-icon> **Form-associated** — participates in native `<form>` submission; value is the ISO date string
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 semantic colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — `--calendar-*` tokens for full theming control
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/calendar/calendar.ts
-:::
-
-## Basic Usage
-
-<ComponentPreview vertical height="340px">
-
-```html
-<sg-calendar></sg-calendar>
-```
-
-</ComponentPreview>
-
 ## With Pre-selected Value
 
 <ComponentPreview vertical height="340px">
@@ -242,6 +214,16 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 });
 ```
 
+## View Cycling
+
+The header label button cycles through three views on each click:
+
+1. **Day** — the standard month grid; Previous/Next navigate by month
+2. **Month** — a 4×3 grid of abbreviated month names; click a month to return to day view at that month
+3. **Year** — a 4×3 grid of year numbers; click a year to go to month view for that year
+
+The calendar panel maintains a stable size across all three views — day view reserves space for a maximum 6-week month, and month/year views fill the same width.
+
 ## API Reference
 
 ### Props
@@ -265,12 +247,12 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 ### CalendarEvent
 
-| Field   | Type     | Required                                   | Description                                                    |
-| ------- | -------- | ------------------------------------------ | -------------------------------------------------------------- |
-| `id`    | `string` | <sg-icon name="check" size="16"></sg-icon> | Unique identifier                                              |
-| `date`  | `string` | <sg-icon name="check" size="16"></sg-icon> | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
-| `label` | `string` | <sg-icon name="check" size="16"></sg-icon> | Short label shown in the cell (pill text in expanded mode)     |
-| `color` | `string` | —                                          | Any CSS color value. Falls back to the component's theme color |
+| Field   | Type     | Required | Description                                                    |
+| ------- | -------- | -------- | -------------------------------------------------------------- |
+| `id`    | `string` | Yes      | Unique identifier                                              |
+| `date`  | `string` | Yes      | ISO 8601 date the event falls on (`yyyy-MM-dd`)                |
+| `label` | `string` | Yes      | Short label shown in the cell (pill text in expanded mode)     |
+| `color` | `string` | —        | Any CSS color value. Falls back to the component's theme color |
 
 ### Events
 
@@ -302,13 +284,9 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 
 ## Accessibility
 
-`sg-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/).
+`sg-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The host element carries `role="group"` and `aria-label` set to the currently visible month/year. The day grid uses `role="grid"` with `role="columnheader"` for weekday headers and `role="gridcell"` on each day cell.
 
-- **Roles**: the host element carries `role="group"` and `aria-label` (the currently visible month/year). The day grid uses `role="grid"` with `role="columnheader"` for weekday headers and `role="gridcell"` on each day cell.
-- **Selection state**: selected days have `aria-selected="true"`; unselected have `aria-selected="false"`.
-- **Today**: today's cell has `aria-current="date"`.
-- **Disabled cells**: out-of-range and disabled-weekday cells have `aria-disabled="true"` and `tabindex="-1"`, removing them from tab order.
-- **Disabled host**: when `disabled` is set, the host gets `aria-disabled="true"`, all cells become `tabindex="-1"`, and no interaction is processed.
+Selected days have `aria-selected="true"`; unselected days have `aria-selected="false"`. Today's cell carries `aria-current="date"`. Out-of-range and disabled-weekday cells have `aria-disabled="true"` and `tabindex="-1"`, removing them from tab order. When the `disabled` attribute is set on the host, it receives `aria-disabled="true"`, all cells become `tabindex="-1"`, and no interaction is processed.
 
 ### Keyboard Navigation
 
@@ -336,16 +314,6 @@ document.querySelector('sg-calendar').addEventListener('change', (e) => {
 | --------------- | --------------------------------------------------- |
 | Click / `Enter` | Previous / Next button — navigate by month or year  |
 | Click / `Enter` | Label button — cycle view: Day → Month → Year → Day |
-
-## View Cycling
-
-The header label button cycles through three views on each click:
-
-1. **Day** — the standard month grid; Previous/Next navigate by month
-2. **Month** — a 4×3 grid of abbreviated month names; click a month to return to day view at that month
-3. **Year** — a 4×3 grid of year numbers; click a year to go to month view for that year
-
-The calendar panel maintains a stable size across all three views — day view reserves space for a maximum 6-week month, and month/year views fill the same width.
 
 ## Related Components
 

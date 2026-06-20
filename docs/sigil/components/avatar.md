@@ -2,27 +2,6 @@
 
 A circular (or shaped) user representation that renders an image, falls back to initials, and falls back again to a generic person icon. Supports online-presence status indicators, theme colors, and size variants.
 
-## Features
-
-- <sg-icon name="image" size="16"></sg-icon> **Three-tier fallback**: image → initials → generic person icon
-- <sg-icon name="circle" size="16"></sg-icon> **Status indicator**: online, offline, busy, away badge
-- <sg-icon name="palette" size="16"></sg-icon> **6 Theme Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="circle" size="16"></sg-icon> **Rounded variants**: sm, md, lg, full (default)
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable via CSS custom properties**
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/avatar/avatar.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-avatar src="https://i.pravatar.cc/150?img=1" alt="Jane Doe"></sg-avatar>
-```
-
 ## Fallback to Initials
 
 When no image is provided (or the image fails to load), the avatar displays initials derived from the `alt` attribute, or explicitly from `initials`.
@@ -84,7 +63,7 @@ Control the border-radius with `rounded`. Defaults to `full` (circular).
 
 ## Status Indicator
 
-Add a colored status dot with the `status` attribute.
+Add a colored status dot with the `status` attribute. Status indicator dots are visual only — pair them with a contextual label in the surrounding UI when the status is meaningful to assistive technology users.
 
 <ComponentPreview center>
 
@@ -114,15 +93,9 @@ Use `sg-avatar-group` to stack `sg-avatar` elements in an overlapping row with a
 
 </ComponentPreview>
 
-### Source Code
-
-::: details View Source (sg-avatar-group)
-<<< @/../packages/sigil/src/content/avatar/avatar.ts#AvatarGroup
-:::
-
 ## API Reference
 
-### `sg-avatar` Attributes
+**`sg-avatar` Attributes**
 
 | Attribute  | Type                                                                      | Default  | Description                                          |
 | ---------- | ------------------------------------------------------------------------- | -------- | ---------------------------------------------------- |
@@ -134,7 +107,7 @@ Use `sg-avatar-group` to stack `sg-avatar` elements in an overlapping row with a
 | `rounded`  | `'sm' \| 'md' \| 'lg' \| 'full'`                                          | `'full'` | Border radius                                        |
 | `status`   | `'online' \| 'offline' \| 'busy' \| 'away'`                               | —        | Online presence indicator dot                        |
 
-### `sg-avatar` CSS Custom Properties
+**`sg-avatar` CSS Custom Properties**
 
 | Property                | Description                              |
 | ----------------------- | ---------------------------------------- |
@@ -147,26 +120,26 @@ Use `sg-avatar-group` to stack `sg-avatar` elements in an overlapping row with a
 | `--avatar-font-size`    | Initials font size                       |
 | `--avatar-font-weight`  | Initials font weight                     |
 
-### `sg-avatar-group` Attributes
+**`sg-avatar-group` Attributes**
 
 | Attribute | Type     | Default | Description                                                               |
 | --------- | -------- | ------- | ------------------------------------------------------------------------- |
 | `max`     | `number` | `5`     | Maximum visible avatars. Excess avatars are hidden behind a `+N` badge    |
 | `total`   | `number` | —       | Override the count shown in the overflow badge (defaults to hidden count) |
 
-### `sg-avatar-group` Slots
+**`sg-avatar-group` Slots**
 
 | Slot      | Description                   |
 | --------- | ----------------------------- |
 | (default) | `sg-avatar` elements to group |
 
-### `sg-avatar-group` CSS Parts
+**`sg-avatar-group` CSS Parts**
 
 | Part       | Description                   |
 | ---------- | ----------------------------- |
 | `overflow` | The `+N` overflow count badge |
 
-### `sg-avatar-group` CSS Custom Properties
+**`sg-avatar-group` CSS Custom Properties**
 
 | Property                 | Description                                                |
 | ------------------------ | ---------------------------------------------------------- |
@@ -174,12 +147,4 @@ Use `sg-avatar-group` to stack `sg-avatar` elements in an overlapping row with a
 
 ## Accessibility
 
-The avatar component follows WAI-ARIA best practices.
-
-### `sg-avatar`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Provide a meaningful `alt` attribute — it serves as the accessible name and is also used to derive initials automatically.
-- Initials backgrounds are decorative; the `alt` text provides the accessible name.
-- Status indicator dots are visual only — pair them with a contextual label in the surrounding UI when the status is meaningful.
+The avatar component follows WAI-ARIA best practices. Provide a meaningful `alt` attribute on each `sg-avatar` — it serves as the accessible name and is also used to derive initials automatically. Initials backgrounds are decorative; the `alt` text provides the accessible name for screen readers.

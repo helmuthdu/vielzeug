@@ -2,43 +2,7 @@
 
 A versatile and feature-rich card container component with purposeful variants, color themes, elevation control, and interactive states. Perfect for grouping related content, creating structured layouts, and building modern UI patterns. Built with accessibility in mind and fully customizable through CSS custom properties.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **4 Variants**: solid, flat, glass, frost
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **5 Padding Sizes**: none, sm, md, lg, xl
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **6 Elevation Levels**: 0-5 for precise shadow control
-- <sg-icon name="image" size="16"></sg-icon> **5 Slots**: media, header, content, footer, actions
-- <sg-icon name="smartphone" size="16"></sg-icon> **Horizontal orientation** for side-by-side media layouts
-- <sg-icon name="crosshair" size="16"></sg-icon> **Interactive States**: interactive, disabled, loading
-- <sg-icon name="accessibility" size="16"></sg-icon> **Fully Accessible**: WCAG 2.1 Level AA compliant with keyboard navigation
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties for complete control
-- <sg-icon name="zap" size="16"></sg-icon> **Custom Events**: Emits `activate` with event details (`trigger`, `originalEvent`)
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/card/card.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-card>
-  <img slot="media" src="/hero.jpg" alt="Card hero image" />
-  <sg-text slot="header" variant="heading" size="md">Card Title</sg-text>
-  <sg-text>This is the card content. It can contain any HTML elements.</sg-text>
-  <sg-text slot="footer" size="sm" variant="caption">Additional information</sg-text>
-  <div slot="actions">
-    <sg-button size="sm">Primary</sg-button>
-    <sg-button size="sm" variant="ghost">Secondary</sg-button>
-  </div>
-</sg-card>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 Four named variants cover the full range from solid to translucent:
 
@@ -107,7 +71,7 @@ Frost variant works best when placed over colorful backgrounds or images to show
 
 </ComponentPreview>
 
-### Padding Sizes
+## Padding Sizes
 
 Control the internal spacing of the card.
 
@@ -142,7 +106,7 @@ Control the internal spacing of the card.
 
 </ComponentPreview>
 
-### Color Themes
+## Color Themes
 
 Apply semantic color themes to cards for different contexts.
 
@@ -182,7 +146,7 @@ Apply semantic color themes to cards for different contexts.
 
 </ComponentPreview>
 
-### Elevation Levels
+## Elevation Levels
 
 Control shadow depth with explicit elevation levels (0-5).
 
@@ -222,7 +186,7 @@ Control shadow depth with explicit elevation levels (0-5).
 
 </ComponentPreview>
 
-### Orientation
+## Orientation
 
 Set `orientation="horizontal"` for a side-by-side media + content layout. The vertical layout is the default and requires no attribute.
 
@@ -249,7 +213,7 @@ Set `orientation="horizontal"` for a side-by-side media + content layout. The ve
 
 ### Media Slot
 
-Add images, videos, or custom content at the top of the card (or left side in horizontal orientation).
+Add images, videos, or custom content at the top of the card (or left side in horizontal orientation). Always provide meaningful `alt` text for images placed in the `media` slot.
 
 <ComponentPreview center>
 
@@ -269,7 +233,7 @@ Add images, videos, or custom content at the top of the card (or left side in ho
 
 ### Actions Slot
 
-Separate slot for action buttons with automatic layout.
+Separate slot for action buttons with automatic layout. If the card needs inner actions, place buttons or links in the `actions` slot — nested interactive elements do not trigger card activation.
 
 <ComponentPreview center>
 
@@ -291,7 +255,7 @@ Separate slot for action buttons with automatic layout.
 
 ### Disabled State
 
-Prevent interaction and show visual feedback.
+Prevent interaction and show visual feedback. Use `disabled` instead of removing interactive cards from the DOM.
 
 <ComponentPreview center>
 
@@ -309,7 +273,7 @@ Prevent interaction and show visual feedback.
 
 ### Loading State
 
-Show an animated loading indicator while content is being fetched.
+Show an animated loading indicator while content is being fetched. Use the `loading` state to provide visual feedback during async operations.
 
 <ComponentPreview center>
 
@@ -324,7 +288,7 @@ Show an animated loading indicator while content is being fetched.
 
 ## Interactive Cards
 
-Set `interactive` to enable hover/active states, keyboard activation (Enter/Space), and typed `activate` events.
+Set `interactive` to enable hover/active states, keyboard activation (Enter/Space), and typed `activate` events. Make a card `interactive` only when the whole card acts as a single action.
 
 <ComponentPreview center>
 
@@ -554,35 +518,8 @@ Perfect for compact layouts and list views:
 </sg-card>
 ```
 
+Maintain color contrast requirements (WCAG 2.1 Level AA) when using custom `--card-bg` overrides.
+
 ## Accessibility
 
-The card component follows WCAG 2.1 Level AA standards.
-
-### `sg-card`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Enter` / `Space` activate the card when `interactive` is set.
-- `Tab` moves focus to the card.
-- Disabled cards have `tabindex="-1"` and cannot receive focus.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `role="button"` is applied when `interactive` is set; `aria-disabled` reflects the disabled state.
-- `aria-busy` reflects the loading state.
-- Proper content hierarchy with semantic slots for screen reader users.
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Uses semantic HTML for proper content organization.
-- Compliant with WCAG 2.1 Level AA color contrast requirements.
-
-## Best Practices
-
-1. Use semantic headings in the `header` slot to maintain proper document structure.
-2. Add meaningful `alt` text for images in the `media` slot.
-3. Make a card `interactive` only when the whole card acts as a single action.
-4. If you need inner actions, place buttons/links in the `actions` slot; nested interactive elements do not trigger card activation.
-5. Maintain color contrast when using custom `--card-bg` overrides.
-6. Use `disabled` instead of removing interactive cards from the DOM.
-7. Use the `loading` state to provide visual feedback during async operations.
+The card component follows WCAG 2.1 Level AA standards. When `interactive` is set, `role="button"` is applied and `aria-disabled` reflects the disabled state. The `aria-busy` attribute reflects the loading state. Disabled cards receive `tabindex="-1"` and cannot receive focus. `Tab` moves focus to the card; `Enter` or `Space` activates it. Content is organized using semantic HTML with named slots that screen readers can navigate in a logical hierarchy. Use semantic headings in the `header` slot to maintain proper document structure.

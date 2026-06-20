@@ -2,30 +2,7 @@
 
 A toggle switch component for binary on/off states. Perfect for settings, feature toggles, and preferences. Built with accessibility in mind and fully customizable through CSS custom properties.
 
-## Features
-
-- <sg-icon name="zap" size="16"></sg-icon> **Touch-Optimized** — 44 × 44 px minimum touch target for mobile
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, disabled
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for styling
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/switch/switch.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-switch>Enable notifications</sg-switch>
-```
-
-## Visual Options
-
-### Colors
+## Colors
 
 Six semantic colors for different contexts. Defaults to neutral when no color is specified.
 
@@ -43,7 +20,7 @@ Six semantic colors for different contexts. Defaults to neutral when no color is
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 Three sizes for different contexts.
 
@@ -87,7 +64,7 @@ Prevent interaction and reduce opacity for unavailable options.
 
 ### Form Integration
 
-Switches work seamlessly with forms using name and value attributes.
+Switches work seamlessly with forms using name and value attributes. Use switches for instant actions that take effect immediately — when changes require a save/submit action, use a checkbox instead.
 
 <ComponentPreview center>
 
@@ -132,74 +109,6 @@ Listen to change events for custom logic.
 ```
 
 </ComponentPreview>
-
-## API Reference
-
-### Attributes
-
-| Attribute  | Type                                                            | Default     | Description              |
-| ---------- | --------------------------------------------------------------- | ----------- | ------------------------ |
-| `checked`  | `boolean`                                                       | `false`     | Switch checked state     |
-| `disabled` | `boolean`                                                       | `false`     | Disable the switch       |
-| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color           |
-| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size              |
-| `name`     | `string`                                                        | -           | Form field name          |
-| `value`    | `string`                                                        | -           | Form field value when on |
-
-### Slots
-
-| Slot      | Description          |
-| --------- | -------------------- |
-| (default) | Switch label content |
-
-### Events
-
-| Event    | Detail                                                              | Description                        |
-| -------- | ------------------------------------------------------------------- | ---------------------------------- |
-| `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
-
-### CSS Custom Properties
-
-| Property              | Description                           | Default         |
-| --------------------- | ------------------------------------- | --------------- |
-| `--switch-width`      | Track width                           | Size-dependent  |
-| `--switch-height`     | Track height                          | Size-dependent  |
-| `--switch-track-bg`   | Inactive (unchecked) track background | Theme-dependent |
-| `--switch-checked-bg` | Active (checked) track background     | Color-dependent |
-| `--switch-thumb-bg`   | Thumb background color                | Theme-dependent |
-| `--switch-font-size`  | Label font size                       | Size-dependent  |
-
-## Accessibility
-
-The switch component follows WCAG 2.1 Level AA standards.
-
-### `sg-switch`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Space` / `Enter` toggle the switch.
-- `Tab` moves focus to and from the control.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`).
-- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
-- `aria-disabled` reflects the disabled state.
-- Minimum 44 × 44 px touch target for mobile.
-
-## Best Practices
-
-**Do:**
-
-- Use switches for instant actions that take effect immediately.
-- Use clear labels that describe what the switch controls.
-- Use appropriate colors (e.g., success for "enable", error for "disable critical feature").
-
-**Don't:**
-
-- Use switches when changes require a save/submit action (use checkbox instead).
-- Use switches for more than two options (use radio buttons or select).
-- Hide critical settings behind disabled switches without explanation.
 
 ## When to Use Switch vs Checkbox
 
@@ -263,3 +172,49 @@ const notifications = ref(true);
   Enable notifications
 </sg-switch>
 ```
+
+## API Reference
+
+**`sg-switch`**
+
+### Attributes
+
+| Attribute  | Type                                                            | Default     | Description              |
+| ---------- | --------------------------------------------------------------- | ----------- | ------------------------ |
+| `checked`  | `boolean`                                                       | `false`     | Switch checked state     |
+| `disabled` | `boolean`                                                       | `false`     | Disable the switch       |
+| `color`    | `'primary' \| 'secondary' \| 'success' \| 'warning' \| 'error'` | `'primary'` | Semantic color           |
+| `size`     | `'sm' \| 'md' \| 'lg'`                                          | `'md'`      | Switch size              |
+| `name`     | `string`                                                        | -           | Form field name          |
+| `value`    | `string`                                                        | -           | Form field value when on |
+
+### Slots
+
+| Slot      | Description          |
+| --------- | -------------------- |
+| (default) | Switch label content |
+
+### Events
+
+| Event    | Detail                                                              | Description                        |
+| -------- | ------------------------------------------------------------------- | ---------------------------------- |
+| `change` | `{ checked: boolean, value: string \| null, originalEvent: Event }` | Emitted when checked state changes |
+
+### CSS Custom Properties
+
+| Property              | Description                           | Default         |
+| --------------------- | ------------------------------------- | --------------- |
+| `--switch-width`      | Track width                           | Size-dependent  |
+| `--switch-height`     | Track height                          | Size-dependent  |
+| `--switch-track-bg`   | Inactive (unchecked) track background | Theme-dependent |
+| `--switch-checked-bg` | Active (checked) track background     | Color-dependent |
+| `--switch-thumb-bg`   | Thumb background color                | Theme-dependent |
+| `--switch-font-size`  | Label font size                       | Size-dependent  |
+
+## Accessibility
+
+The switch component follows WCAG 2.1 Level AA standards.
+
+The component uses `role="switch"` with `aria-checked` reflecting the on/off state (`"true"` or `"false"`). `aria-labelledby` links the label; `aria-describedby` links helper and error text. `aria-disabled` reflects the disabled state. A minimum 44 × 44 px touch target is enforced for mobile usability.
+
+Keyboard navigation is fully supported: `Space` and `Enter` toggle the switch, and `Tab` moves focus to and from the control. Always provide a visible text label — use clear labels that describe what the switch controls; if a switch must be icon-only, supply an `aria-label` so screen readers can announce the purpose.

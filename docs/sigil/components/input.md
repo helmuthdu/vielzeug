@@ -2,32 +2,7 @@
 
 A customizable text input component with multiple types, variants, and validation states. Built with accessibility in mind and fully customizable through CSS custom properties.
 
-## Features
-
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — Full keyboard support, ARIA attributes, screen reader friendly
-- <sg-icon name="rainbow" size="16"></sg-icon> **5 Semantic Colors** — primary, secondary, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **6 Variants** — solid, flat, bordered, outline, ghost, text
-- <sg-icon name="tag" size="16"></sg-icon> **Integrated Label** — Support for wide inset labels that span across slots
-- <sg-icon name="lightbulb" size="16"></sg-icon> **Helper Text** — Add descriptive text or complex content below the input
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="file-pen" size="16"></sg-icon> **7 Input Types** — text, email, password, search, url, tel, number
-- <sg-icon name="wrench" size="16"></sg-icon> **Prefix/Suffix Slots** — Add icons or buttons before/after input
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/input/input.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-input type="text" placeholder="Enter your name"></sg-input>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 Six visual variants for different UI contexts and levels of emphasis.
 
@@ -44,7 +19,7 @@ Six visual variants for different UI contexts and levels of emphasis.
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 Six semantic colors for different contexts and validation states. Defaults to neutral when no color is specified.
 
@@ -64,7 +39,7 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 
 </ComponentPreview>
 
-### Input Types
+## Input Types
 
 Different input types for various use cases.
 
@@ -81,7 +56,7 @@ Different input types for various use cases.
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 Three sizes for different contexts.
 
@@ -100,7 +75,7 @@ Three sizes for different contexts.
 
 </ComponentPreview>
 
-### Rounded (Custom Border Radius)
+## Rounded (Custom Border Radius)
 
 Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
 
@@ -152,7 +127,7 @@ Add prefix or suffix content like icons or clear buttons using slots.
 
 ### Integrated Label
 
-Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect.
+Use the `label` attribute to render an inset label inside the input field, creating a modern Material Design-style floating label effect. Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element — do not rely on placeholder text as a label replacement, as placeholders disappear on input.
 
 <ComponentPreview center>
 
@@ -245,6 +220,34 @@ Prevent interaction or modification of the input.
 
 </ComponentPreview>
 
+For first-run forms, combine a visible label, helper text, and progressive validation feedback.
+
+<ComponentPreview center>
+
+```html
+<div style="display: grid; gap: 0.75rem; max-width: 26rem; width: 100%;">
+  <sg-input
+    label="Workspace name"
+    placeholder="Acme Marketing"
+    helper="This appears in invites and email notifications."
+    clearable></sg-input>
+
+  <sg-input
+    type="email"
+    label="Owner email"
+    placeholder="you@company.com"
+    helper="We will send setup instructions to this address."></sg-input>
+
+  <sg-input
+    type="text"
+    label="Project key"
+    value="acme space"
+    error="Use lowercase letters, numbers, and dashes only."></sg-input>
+</div>
+```
+
+</ComponentPreview>
+
 ## API Reference
 
 ### Attributes
@@ -301,63 +304,4 @@ Prevent interaction or modification of the input.
 
 ## Accessibility
 
-The input component follows WCAG 2.1 Level AA standards.
-
-### `sg-input`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` focuses the input.
-- Native input behavior (Enter to commit, etc.).
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Proper ARIA states (disabled, required, readonly).
-- Associated labels via `aria-label` or `<label>`.
-
-## Best Practices
-
-### Onboard with Clear Microcopy
-
-For first-run forms, combine a visible label, helper text, and progressive validation feedback.
-
-<ComponentPreview center>
-
-```html
-<div style="display: grid; gap: 0.75rem; max-width: 26rem; width: 100%;">
-  <sg-input
-    label="Workspace name"
-    placeholder="Acme Marketing"
-    helper="This appears in invites and email notifications."
-    clearable></sg-input>
-
-  <sg-input
-    type="email"
-    label="Owner email"
-    placeholder="you@company.com"
-    helper="We will send setup instructions to this address."></sg-input>
-
-  <sg-input
-    type="text"
-    label="Project key"
-    value="acme space"
-    error="Use lowercase letters, numbers, and dashes only."></sg-input>
-</div>
-```
-
-</ComponentPreview>
-
-**Do:**
-
-- Use the `label` attribute for integrated labels with a modern floating effect.
-- Use external `<label>` elements when the label needs to be positioned outside the input.
-- Always provide a label via the `label` attribute, `aria-label`, or an associated `<label>` element.
-- Use the appropriate `type` for better mobile keyboards and validation.
-- Use semantic colors (`success`, `error`, `warning`) to indicate validation states.
-- Combine labels with prefix/suffix slots for enhanced UX (e.g., currency symbols, icons).
-
-**Don't:**
-
-- Use placeholder text as a label replacement (placeholders disappear on input).
-- Over-customize colors to the point of breaking contrast.
-- Use labels for inputs that should remain visually minimal (ghost, text variants).
+The input component follows WCAG 2.1 Level AA standards. Pressing `Tab` moves focus to the input, and native input behavior applies (e.g., Enter to commit). Proper ARIA states are reflected for disabled, required, and readonly conditions. Labels are associated via `aria-label` or `<label>` elements — always provide one through the `label` attribute, an explicit `aria-label`, or an associated `<label>` element. Use semantic colors (`success`, `error`, `warning`) to convey validation states alongside text, not color alone.

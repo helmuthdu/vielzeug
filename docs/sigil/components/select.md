@@ -2,44 +2,7 @@
 
 A fully-featured, form-associated select widget that reads native `<option>` and `<optgroup>` children, supports single and multiple selection, keyboard navigation, grouped options, and ARIA combobox semantics.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — Arrow keys, Enter, Space, Escape, Home, End, Tab
-- <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a loading indicator while options are being fetched
-- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA Combobox** — `role="combobox"`, `role="listbox"`, `role="option"` with live attributes
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (floating) or outside
-- <sg-icon name="clipboard" size="16"></sg-icon> **Native Options** — use standard `<option>` and `<optgroup>` children; no custom syntax
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline helper or error message below the control
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
-- <sg-icon name="square" size="16"></sg-icon> **Multiple Selection** — chip-based multi-select via `multiple` attribute
-- <sg-icon name="puzzle" size="16"></sg-icon> **Grouped Options** — `<optgroup label="...">` renders as section headers
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/select/select.ts
-:::
-
-## Basic Usage
-
-Place `<option>` children directly inside `sg-select`.
-
-```html
-<sg-select label="Country">
-  <option value="">Pick a country…</option>
-  <option value="us">United States</option>
-  <option value="uk">United Kingdom</option>
-  <option value="de">Germany</option>
-  <option value="jp">Japan</option>
-</sg-select>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 Six visual variants for different UI contexts and levels of emphasis.
 
@@ -70,7 +33,7 @@ Six visual variants for different UI contexts and levels of emphasis.
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 Six semantic colors for different contexts and validation states. Defaults to neutral when no color is specified.
 
@@ -141,7 +104,7 @@ Six semantic colors for different contexts and validation states. Defaults to ne
 
 ## Grouped Options
 
-Use native `<optgroup>` elements to create labelled groups.
+Use native `<optgroup>` elements to create labelled groups. For lists longer than ~8 options, grouping improves scanability.
 
 <ComponentPreview vertical>
 
@@ -163,7 +126,7 @@ Use native `<optgroup>` elements to create labelled groups.
 
 ## Multiple Selection
 
-Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `sg-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown.
+Add `multiple` to allow selecting more than one option. Each selected value is displayed as a removable `sg-chip` tag inside the trigger field — clicking the × on a chip deselects that value without closing the dropdown. Only use `multiple` for selections where more than one value logically makes sense.
 
 <ComponentPreview vertical>
 
@@ -189,6 +152,8 @@ document.querySelector('sg-select').addEventListener('change', (e) => {
 ```
 
 ## Helper & Error Text
+
+Combine `required` with `error` text to give users clear validation feedback.
 
 <ComponentPreview vertical>
 
@@ -263,7 +228,7 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 ## In a Form
 
-`sg-select` is form-associated. Read the value via `FormData` or a `change` event.
+`sg-select` is form-associated. Read the value via `FormData` or a `change` event. Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.
 
 ```html
 <sg-form id="myForm">
@@ -355,30 +320,6 @@ Assigning a new array to `options` at any time updates the dropdown immediately.
 
 The select component follows WCAG 2.1 Level AA standards.
 
-### `sg-select`
+The trigger uses `role="combobox"` with `aria-haspopup="listbox"`, `aria-expanded`, and `aria-activedescendant`. The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected`; `aria-multiselectable` is set when `multiple` is active. `aria-labelledby` links the label; `aria-describedby` links helper and error text. `aria-disabled` reflects the disabled state.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` focuses the trigger; `Enter` / `Space` open the dropdown.
-- Arrow keys navigate options; `Home` / `End` jump to first / last; `Escape` closes; `Tab` closes and moves focus out.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The trigger uses `role="combobox"` with `aria-haspopup="listbox"`, `aria-expanded`, and `aria-activedescendant`.
-- The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected`; `aria-multiselectable` is set when `multiple` is active.
-- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
-- `aria-disabled` reflects the disabled state.
-
-## Best Practices
-
-**Do:**
-
-- Supply a placeholder `<option value="">…</option>` when the field is not pre-selected.
-- Use `<optgroup>` for lists longer than ~8 options to improve scanability.
-- Combine `required` with `error` text to give users clear validation feedback.
-- For long single-select lists, consider a searchable implementation instead.
-
-**Don't:**
-
-- Use `multiple` for selections where only one makes logical sense.
-- Put more than ~20 ungrouped options in one select — consider a multi-level pattern.
+Keyboard navigation is fully supported: `Tab` focuses the trigger; `Enter` or `Space` opens the dropdown. Arrow keys navigate options; `Home` and `End` jump to the first and last option; `Escape` closes the dropdown; `Tab` closes and moves focus out.

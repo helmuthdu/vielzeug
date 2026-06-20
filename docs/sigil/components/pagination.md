@@ -2,22 +2,7 @@
 
 A page-navigation control for splitting content across multiple pages. Renders numbered page buttons with optional ellipsis, first/last shortcuts, and previous/next arrows.
 
-## Features
-
-- <sg-icon name="hash" size="16"></sg-icon> **Numbered pages** with automatic ellipsis when the range is large
-- <sg-icon name="skip-back" size="16"></sg-icon>️ **First / Last navigation** buttons (opt-in)
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Theme Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **8 Variants**: solid, flat, bordered, outline, ghost, text, frost, glass
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `aria-current="page"` on active button, configurable `aria-label`
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/pagination/pagination.ts
-:::
-
-## Basic Usage
+## Usage
 
 ```html
 <sg-pagination page="1" total-pages="10"></sg-pagination>
@@ -141,7 +126,7 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 
 ## API Reference
 
-### Attributes
+**Attributes**
 
 | Attribute         | Type                                                                                      | Default        | Description                                           |
 | ----------------- | ----------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------- |
@@ -155,13 +140,13 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 | `size`            | `'sm' \| 'md' \| 'lg'`                                                                    | `'md'`         | Component size                                        |
 | `label`           | `string`                                                                                  | `'Pagination'` | `aria-label` for the nav landmark                     |
 
-### Events
+**Events**
 
 | Event    | Detail             | Description                        |
 | -------- | ------------------ | ---------------------------------- |
 | `change` | `{ page: number }` | Fired when the user selects a page |
 
-### CSS Custom Properties
+**CSS Custom Properties**
 
 | Property                 | Description                          |
 | ------------------------ | ------------------------------------ |
@@ -171,18 +156,8 @@ Use `siblings` to control how many page numbers appear on each side of the curre
 
 ## Accessibility
 
-The pagination component follows WAI-ARIA best practices.
+The pagination component follows WAI-ARIA best practices. The component renders a `<nav>` element as a navigation landmark, with an `aria-label` configurable via the `label` attribute (defaults to `"Pagination"`).
 
-### `sg-pagination`
+`Tab` moves focus between page buttons, and `Enter` or `Space` activates the focused button. Previous and next navigation buttons are individually focusable.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` moves focus between page buttons; `Enter` / `Space` activate the focused button.
-- Previous and next navigation buttons are individually focusable.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The component renders a `<nav>` element as a navigation landmark.
-- Each page button's accessible name includes the page number.
-- The active page has `aria-current="page"`.
-- Ellipsis items are decorative and marked `aria-hidden="true"`.
+Each page button's accessible name includes the page number. The active page has `aria-current="page"`. Ellipsis items are decorative and marked `aria-hidden="true"`.

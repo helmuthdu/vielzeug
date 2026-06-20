@@ -2,39 +2,6 @@
 
 A flexible CSS Grid layout component with element-width responsive columns, named grid areas, and fine-grained item placement. Perfect for dashboards, card grids, photo galleries, and complex page layouts.
 
-## Features
-
-- <sg-icon name="triangle-right" size="16"></sg-icon> **12-Column System**: Fixed 1–12 column layouts plus auto-fit mode
-- <sg-icon name="smartphone" size="16"></sg-icon> **Element-Width Responsive**: Breakpoints respond to the element's own width via ResizeObserver — works correctly inside sidebars, modals, and nested layouts
-- <sg-icon name="crosshair" size="16"></sg-icon> **Explicit Breakpoint Control**: Set columns at sm, md, lg, and xl widths with dedicated attributes
-- <sg-icon name="ruler" size="16"></sg-icon> **Row Support**: Define explicit row layouts for dashboard grids
-- <sg-icon name="map" size="16"></sg-icon>️ **Named Grid Areas**: Use `areas` to define named regions directly on the grid
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Flow Control**: Row, column, and dense packing modes
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **7 Gap Sizes**: From `none` to `2xl` with separate row/column gap support
-- <sg-icon name="magnet" size="16"></sg-icon> **Alignment Control**: Align and justify items with CSS Grid properties
-- <sg-icon name="palette" size="16"></sg-icon> **Grid Item Component**: Precise placement with `sg-grid-item` using named areas, spans, or raw CSS grid shorthand
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties available as fallbacks
-
-## Source Code
-
-::: details View Source Code (Grid)
-<<< @/../packages/sigil/src/layout/grid/grid.ts
-:::
-
-::: details View Source Code (Grid Item)
-<<< @/../packages/sigil/src/layout/grid-item/grid-item.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-grid cols="3" gap="md">
-  <sg-card>Item 1</sg-card>
-  <sg-card>Item 2</sg-card>
-  <sg-card>Item 3</sg-card>
-</sg-grid>
-```
-
 ## Column Layouts
 
 ### Fixed Columns
@@ -204,7 +171,7 @@ Control how items flow into the grid.
 
 ### Dense Packing
 
-Automatically fill gaps with smaller items that come later.
+Automatically fill gaps with smaller items that come later. Avoid `flow="row-dense"` or `flow="column-dense"` when reading order matters — items may appear in a different visual order than they exist in the DOM, which can confuse screen reader users and keyboard navigators.
 
 <ComponentPreview center vertical>
 
@@ -226,6 +193,10 @@ Automatically fill gaps with smaller items that come later.
 
 ::: tip Dense Packing
 With `flow="row-dense"`, item B fills the gap after the first wide item, rather than leaving it empty. This creates a more compact layout but may change visual order.
+:::
+
+::: warning Dense Packing & Accessibility
+When using `flow="row-dense"` or `flow="column-dense"`, items may appear in a different visual order than they exist in the DOM. This can confuse screen reader users and keyboard navigators. Use dense packing only when layout aesthetics outweigh reading order, or restore meaningful order with `tabindex`.
 :::
 
 ## Alignment
@@ -439,7 +410,7 @@ Provide different area templates at each breakpoint. The grid switches between t
 
 ## Responsive Auto-fit Mode
 
-Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `250px`).
+Use `responsive` to let the grid fit as many columns as possible based on a minimum column width. Set `min-col-width` to control the threshold (default: `250px`). Do not mix `responsive` with a fixed `cols` attribute; they target different layout modes.
 
 <ComponentPreview center vertical>
 
@@ -462,7 +433,7 @@ Use `responsive` for fluid layouts where column count depends on available space
 
 ## API Reference
 
-### Grid Attributes
+**`sg-grid`**
 
 | Attribute       | Type                                                      | Default | Description                                       |
 | --------------- | --------------------------------------------------------- | ------- | ------------------------------------------------- |
@@ -487,7 +458,7 @@ Use `responsive` for fluid layouts where column count depends on available space
 | `areas-xl`      | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1280px |
 | `areas-2xl`     | `string`                                                  | -       | `grid-template-areas` when element width ≥ 1536px |
 
-### Grid Item Attributes
+**`sg-grid-item`**
 
 | Attribute  | Type                                        | Default | Description                                    |
 | ---------- | ------------------------------------------- | ------- | ---------------------------------------------- |
@@ -593,34 +564,6 @@ These are fallback values — attributes take precedence when set.
 
 ## Accessibility
 
-The grid component follows WAI-ARIA best practices.
+The grid component follows WAI-ARIA best practices. It maintains semantic HTML structure and document reading order by default — grid layout is purely visual, and keyboard navigation follows DOM order. The component is compatible with screen readers.
 
-### `sg-grid`
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Maintains semantic HTML structure and document reading order by default.
-- Grid layout is purely visual — keyboard navigation follows DOM order.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Compatible with screen readers.
-- Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement.
-
-::: warning Dense Packing & Accessibility
-When using `flow="row-dense"` or `flow="column-dense"`, items may appear in a different visual order than they exist in the DOM. This can confuse screen reader users and keyboard navigators. Use dense packing only when layout aesthetics outweigh reading order, or restore meaningful order with `tabindex`.
-:::
-
-## Best Practices
-
-**Do:**
-
-- Start mobile-first: set `cols="1"` as the base and scale up with `cols-sm`, `cols-md`, etc.
-- Use `responsive` mode for content-driven layouts where column count should adjust automatically to available space.
-- Use `sg-grid-item` with `col-span` for featured items that need to span multiple columns.
-- Use `areas` with named regions for complex or asymmetric page layouts.
-
-**Don't:**
-
-- Use `flow="dense"` when reading order matters — it visually reorders items relative to the DOM.
-- Mix `responsive` with a fixed `cols` attribute; they target different layout modes.
+Be mindful of visual vs. DOM order when using `flow="dense"` or explicit item placement. When using dense packing modes, items may appear in a different visual order than their DOM position, which can confuse screen reader users and keyboard navigators.

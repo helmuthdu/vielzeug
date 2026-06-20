@@ -2,49 +2,6 @@
 
 A smart `<form>` wrapper that propagates `disabled`, `size`, `variant`, and `validateOn` context to all child `sg-*` form fields. Intercepts native submit/reset events and assembles `FormData` so you never wire up individual field listeners.
 
-## Features
-
-- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Layout Orientation** — `vertical` (default) or `horizontal` with automatic wrapping
-- <sg-icon name="check" size="16"></sg-icon> **Validation Strategy** — configure when validation runs: on `submit`, on `blur`, or on every `change`
-- <sg-icon name="palette" size="16"></sg-icon> **Uniform Styling** — set `variant` and `size` once instead of on every individual field
-- <sg-icon name="radio-tower" size="16"></sg-icon> **Context Propagation** — `disabled`, `size`, `variant`, and `validateOn` automatically apply to all child form fields
-- <sg-icon name="upload" size="16"></sg-icon> **Submit / Reset Events** — intercepts native events and emits `submit` with `FormData` and `reset`
-- <sg-icon name="lock" size="16"></sg-icon> **Bulk Disable** — set `disabled` once to freeze every field while a submit request is in flight
-- <sg-icon name="link" size="16"></sg-icon> **Native `<form>`** — renders a real `<form>` in the shadow DOM so submit buttons and `FormData` work correctly
-- <sg-icon name="ban" size="16"></sg-icon> **No-Validate Mode** — suppress native browser validation popups with `novalidate`
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/form/form.ts
-:::
-
-## Basic Usage
-
-Wrap your form fields in `sg-form`. A `sg-button type="submit"` triggers the form submit event.
-
-```html
-<sg-form id="my-form">
-  <sg-input name="email" label="Email" type="email" required></sg-input>
-  <sg-select name="role" label="Role">
-    <option value="admin">Admin</option>
-    <option value="editor">Editor</option>
-  </sg-select>
-  <sg-button type="submit">Submit</sg-button>
-</sg-form>
-
-<script type="module">
-  import '@vielzeug/sigil/form';
-  import '@vielzeug/sigil/input';
-  import '@vielzeug/sigil/select';
-  import '@vielzeug/sigil/button';
-
-  document.getElementById('my-form').addEventListener('submit', (e) => {
-    console.log([...e.detail.formData.entries()]);
-  });
-</script>
-```
-
 ## Uniform Styling
 
 Set `size` and `variant` once on `sg-form` to propagate them to all child fields.
@@ -101,7 +58,7 @@ form.addEventListener('submit', async (e) => {
 
 ## Validation Strategy
 
-Use `validate-on` to control when field-level validation feedback appears.
+Use `validate-on` to control when field-level validation feedback appears. For long forms, `validate-on="blur"` gives users early feedback without interrupting them as they type.
 
 | Value              | Behaviour                                             |
 | ------------------ | ----------------------------------------------------- |
@@ -139,7 +96,7 @@ Set `orientation="horizontal"` to arrange fields in a flex row with wrapping.
 
 ## Handling Submit
 
-The `submit` event exposes `formData` and the original `SubmitEvent`.
+The `submit` event exposes `formData` and the original `SubmitEvent`. Always listen to the custom `submit` event emitted by `sg-form` rather than the native submit event directly — `formData` is already assembled for you.
 
 ```js
 document.querySelector('sg-form').addEventListener('submit', (e) => {
@@ -214,32 +171,4 @@ Add `novalidate` to suppress native browser validation popups. Pair with `error`
 
 ## Accessibility
 
-The form component follows WCAG 2.1 Level AA standards.
-
-### `sg-form`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` navigates between child form fields.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Renders a native `<form>` in the shadow root, preserving semantic form behaviour.
-- `aria-disabled` reflects the disabled state on the `<form>`.
-- Each child field manages its own `aria-labelledby`, `aria-describedby`, and `aria-errormessage` independently.
-- Use `novalidate` with explicit `error` attributes on fields to avoid conflicting browser validation popups.
-
-## Best Practices
-
-**Do:**
-
-- Use `sg-form` whenever multiple fields share the same `size` or `variant`.
-- Toggle `disabled` during async operations to prevent double-submission.
-- Listen to the `submit` event on `sg-form` — `formData` is already assembled for you.
-- Use `validate-on="blur"` for long forms to give users early feedback without interrupting them as they type.
-
-**Don't:**
-
-- Nest `sg-form` elements inside each other.
-- Rely on the native `submit` event directly — always use the custom `submit` event emitted by `sg-form`.
-- Use `sg-form` for single-field scenarios — a standalone field with its own listener is simpler.
+`sg-form` follows WCAG 2.1 Level AA standards. It renders a native `<form>` in the shadow root, preserving semantic form behaviour. `Tab` navigates between child form fields. `aria-disabled` reflects the disabled state on the `<form>`. Each child field manages its own `aria-labelledby`, `aria-describedby`, and `aria-errormessage` independently. Use `novalidate` with explicit `error` attributes on fields to avoid conflicting browser validation popups.

@@ -2,32 +2,7 @@
 
 A multi-line text input with integrated label, helper text, character counter, and auto-resize. Form-associated and fully keyboard accessible.
 
-## Features
-
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (floating-style) or outside
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="triangle-right" size="16"></sg-icon> **Auto Resize** — grows vertically with content; no scrollbar
-- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — descriptive text or validation errors below the field
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
-- <sg-icon name="hash" size="16"></sg-icon> **Character Counter** — live counter with near-limit and at-limit colour feedback
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/textarea/textarea.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-textarea label="Message" placeholder="Write something..."></sg-textarea>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 <ComponentPreview center>
 
@@ -41,7 +16,7 @@ A multi-line text input with integrated label, helper text, character counter, a
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 <ComponentPreview center>
 
@@ -55,7 +30,7 @@ A multi-line text input with integrated label, helper text, character counter, a
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 <ComponentPreview center>
 
@@ -106,7 +81,7 @@ The label is placed above the field.
 
 ## Character Counter
 
-Set `maxlength` to enable a live character counter. The counter turns amber near the limit and red at the limit.
+Set `maxlength` to enable a live character counter. The counter turns amber near the limit and red at the limit. Set `maxlength` whenever a backend constraint exists — the counter provides live feedback to users.
 
 <ComponentPreview center>
 
@@ -118,7 +93,7 @@ Set `maxlength` to enable a live character counter. The counter turns amber near
 
 ## Auto Resize
 
-Set `auto-resize` to let the textarea grow vertically with its content. Manual resize is automatically disabled.
+Set `auto-resize` to let the textarea grow vertically with its content. Manual resize is automatically disabled. This is useful for comment or note fields where content length is unpredictable. Note that `rows` still sets the minimum starting height when used alongside `auto-resize`.
 
 <ComponentPreview center>
 
@@ -130,7 +105,7 @@ Set `auto-resize` to let the textarea grow vertically with its content. Manual r
 
 ## Resize Control
 
-Control the resize handle with the `resize` attribute.
+Control the resize handle with the `resize` attribute. Avoid `resize="horizontal"` on full-width layouts as it breaks layout flow.
 
 <ComponentPreview center>
 
@@ -217,29 +192,6 @@ Control the resize handle with the `resize` attribute.
 
 The textarea component follows WCAG 2.1 Level AA standards.
 
-### `sg-textarea`
+Keyboard navigation uses `Tab` to focus the field and `Shift+Tab` to blur it. Native textarea keyboard behaviour applies within the field.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` focuses the field; `Shift+Tab` blurs it.
-- Native textarea keyboard behaviour applies within the field.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
-- `aria-invalid` is set when `error` is provided; `aria-required` reflects the `required` attribute.
-- `aria-disabled` reflects the disabled state.
-
-## Best Practices
-
-**Do:**
-
-- Use `auto-resize` for comment or note fields where content length is unpredictable.
-- Always provide a `label`; don't rely solely on `placeholder`.
-- Set `maxlength` when a backend constraint exists — the counter gives live feedback.
-- Use `error` to surface server-side validation messages after submit.
-
-**Don't:**
-
-- Set `rows` and `auto-resize` at the same time — `auto-resize` overrides the resize handle anyway; `rows` still sets the minimum starting height.
-- Use `resize="horizontal"` on full-width layouts (it breaks layout flow).
+`aria-labelledby` links the label to the field and `aria-describedby` links helper and error text. `aria-invalid` is set when `error` is provided, `aria-required` reflects the `required` attribute, and `aria-disabled` reflects the disabled state. Always provide a `label` — do not rely solely on `placeholder`, as placeholder text is not exposed as an accessible label. Use `error` to surface server-side validation messages after submit.

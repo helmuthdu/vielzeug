@@ -2,29 +2,6 @@
 
 A loading placeholder component for representing content that has not loaded yet. Use it to reduce layout shift and provide immediate visual structure while data is fetched.
 
-## Features
-
-- <sg-icon name="theater" size="16"></sg-icon> **3 Variants** — rect, circle, text
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="wrench" size="16"></sg-icon> **Dimension overrides** — first-class `width`, `height`, and `radius` attributes
-- <sg-icon name="file-pen" size="16"></sg-icon> **Multi-line text skeletons** via `lines`
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Animation toggle** — disable shimmer with `animated="false"`
-- <sg-icon name="scan-line" size="16"></sg-icon> **Striped pattern** via `striped` for design-mode placeholders
-- <sg-icon name="palette" size="16"></sg-icon> **Fully themeable** through CSS custom properties
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — reduced-motion and forced-colors support
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/skeleton/skeleton.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-skeleton></sg-skeleton> <sg-skeleton width="12rem" height="1rem"></sg-skeleton>
-```
-
 ## Variants
 
 ### Rectangle (Default)
@@ -158,7 +135,7 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 
 ## API Reference
 
-### Attributes
+**Attributes**
 
 | Attribute  | Type                           | Default  | Description                                            |
 | ---------- | ------------------------------ | -------- | ------------------------------------------------------ |
@@ -171,18 +148,18 @@ The spacing between lines is adjustable via the `--skeleton-stripe-size` CSS cus
 | `lines`    | `number`                       | `1`      | Number of text lines (`variant="text"`)                |
 | `striped`  | `boolean`                      | `false`  | Diagonal stripe pattern instead of shimmer             |
 
-### Parts
+**Parts**
 
 | Part    | Description                        |
 | ------- | ---------------------------------- |
 | `stack` | Outer container wrapping all bones |
 | `bone`  | Individual skeleton bone element   |
 
-### Events
+**Events**
 
 This component does not emit custom events.
 
-### CSS Custom Properties
+**CSS Custom Properties**
 
 | Property                     | Description                                                   | Default                     |
 | ---------------------------- | ------------------------------------------------------------- | --------------------------- |
@@ -206,23 +183,7 @@ Animation can also be disabled entirely with `animated="false"` — useful for s
 
 ## Accessibility
 
-The skeleton component follows WAI-ARIA best practices.
-
-### `sg-skeleton`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Skeleton placeholders are decorative and non-interactive.
-- Each bone is marked with `aria-hidden="true"`; no content is announced.
-- No focusable roles or tab stops are exposed.
-
-<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
-
-- Shimmer animation respects `prefers-reduced-motion: reduce`.
-
-<sg-icon name="check" size="16"></sg-icon> **Forced Colors**
-
-- In `forced-colors` environments the bone renders with `ButtonFace` background and `ButtonText` border for high-contrast visibility.
+Skeleton placeholders are decorative and non-interactive. Each bone is marked with `aria-hidden="true"` so screen readers skip over them entirely; no content is announced and no focusable roles or tab stops are exposed. The shimmer animation respects `prefers-reduced-motion: reduce` and is suppressed automatically when the user has requested reduced motion. In `forced-colors` environments the bone renders with `ButtonFace` background and `ButtonText` border for high-contrast visibility.
 
 ## Related Components
 

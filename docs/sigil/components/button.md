@@ -1,60 +1,10 @@
 # Button
 
-A versatile button component with multiple variants, colors, sizes, and states. Includes both standalone buttons and button groups for organizing related actions. Built with accessibility in mind and fully customizable through CSS custom properties.
+Button and button group components with seven variants, six semantic colors, three sizes, icon slots, link mode, and animated border effects.
 
-## Features
+## Variants
 
-**Button**
-
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Full keyboard support, ARIA attributes, screen reader friendly
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **7 Variants**: solid, flat, bordered, outline, ghost, text, frost
-- <sg-icon name="theater" size="16"></sg-icon> **States**: loading, disabled
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="sparkles" size="16"></sg-icon> **Border Effects**: animated border via `effect="shine"` (neon sweep) or `effect="rainbow"` (color cycle)
-- <sg-icon name="link" size="16"></sg-icon> **Link Mode**: renders as an accessible `<a role="button">` when `href` is set
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable**: CSS custom properties for styling
-
-**Button Group**
-
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **2 Orientations**: horizontal, vertical
-- <sg-icon name="link" size="16"></sg-icon> **Attached Mode**: Connect buttons with shared borders
-- <sg-icon name="triangle-right" size="16"></sg-icon> **Full Width**: Buttons expand to fill container
-- <sg-icon name="ruler" size="16"></sg-icon> **Attribute Propagation**: Automatically apply size, variant, and color to all children
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/button/button.ts
-:::
-
-::: details View Source Code (Button Group)
-<<< @/../packages/sigil/src/inputs/button-group/button-group.ts
-:::
-
-## Basic Usage
-
-### Standalone Button
-
-```html
-<sg-button variant="solid" color="primary">Click me</sg-button>
-```
-
-### Button Group
-
-```html
-<sg-button-group>
-  <sg-button>First</sg-button>
-  <sg-button>Second</sg-button>
-  <sg-button>Third</sg-button>
-</sg-button-group>
-```
-
-## Visual Options
-
-### Variants
-
-The button comes with seven visual variants to match different levels of emphasis.
+Seven variants cover the full range of visual emphasis.
 
 <ComponentPreview center>
 
@@ -65,20 +15,12 @@ The button comes with seven visual variants to match different levels of emphasi
 <sg-button variant="outline">Outline</sg-button>
 <sg-button variant="ghost">Ghost</sg-button>
 <sg-button variant="text">Text</sg-button>
+<sg-button variant="frost">Frost</sg-button>
 ```
 
 </ComponentPreview>
 
-### Frost Variant
-
-Modern frost effect with backdrop blur that adapts based on color:
-
-- **Without color**: Subtle canvas-based frost overlay
-- **With color**: Frosted glass effect with colored tint
-
-::: tip Best Used With
-Frost variant works best when placed over colorful backgrounds or images to showcase the blur and transparency effects.
-:::
+The `frost` variant adds a backdrop blur with a subtle tinted overlay. It reads best when placed over a colorful background or image.
 
 <ComponentPreview center>
 
@@ -94,48 +36,9 @@ Frost variant works best when placed over colorful backgrounds or images to show
 
 </ComponentPreview>
 
-### Animated Border Effects
+## Colors
 
-Use the `effect` attribute to add an animated border effect.
-
-#### Rainbow
-
-An Okabe-Ito colorblind-safe rainbow sweep — great for highlighting call-to-action buttons.
-
-<ComponentPreview center>
-
-```html
-<sg-button effect="rainbow" variant="frost">Frost + Rainbow</sg-button>
-```
-
-</ComponentPreview>
-
-#### Shine
-
-A neon comet shimmer that follows the `color` attribute — two arcs sweep the border using the button's own theme color.
-
-<ComponentPreview center>
-
-```html
-<sg-button effect="shine" color="primary">Primary</sg-button>
-<sg-button effect="shine" color="secondary">Secondary</sg-button>
-<sg-button effect="shine" color="success">Success</sg-button>
-<sg-button effect="shine" color="warning">Warning</sg-button>
-<sg-button effect="shine" color="error">Error</sg-button>
-<sg-button effect="shine" variant="outline" color="primary" rounded>Outline</sg-button>
-<sg-button effect="shine" variant="bordered" color="secondary">Bordered</sg-button>
-<sg-button effect="shine" variant="frost" color="info">Frost</sg-button>
-```
-
-</ComponentPreview>
-
-::: tip Accessibility
-Both effects automatically pause their animation when the user has **reduced motion** enabled (`prefers-reduced-motion: reduce`).
-:::
-
-### Colors
-
-Six semantic colors for different contexts.
+Six semantic colors communicate intent.
 
 <ComponentPreview center>
 
@@ -151,9 +54,7 @@ Six semantic colors for different contexts.
 
 </ComponentPreview>
 
-### Sizes
-
-Three sizes for different contexts.
+## Sizes
 
 <ComponentPreview center>
 
@@ -169,7 +70,7 @@ Three sizes for different contexts.
 
 ### Loading
 
-Show a loading spinner and prevent interaction during async operations.
+Renders a spinner and blocks interaction during async operations.
 
 <ComponentPreview center>
 
@@ -181,8 +82,6 @@ Show a loading spinner and prevent interaction during async operations.
 
 ### Disabled
 
-Prevent interaction and reduce opacity for unavailable actions.
-
 <ComponentPreview center>
 
 ```html
@@ -191,11 +90,9 @@ Prevent interaction and reduce opacity for unavailable actions.
 
 </ComponentPreview>
 
-## Icons & Extras
+## Icons
 
-### With Icons
-
-Add prefix or suffix icons using slots.
+Use `prefix` and `suffix` slots to add icons alongside text. For icon-only buttons, use `icon-only` with a `label` attribute — the label is set as `aria-label` and is required for accessibility.
 
 <ComponentPreview center>
 
@@ -215,26 +112,17 @@ Add prefix or suffix icons using slots.
 
 </ComponentPreview>
 
-### Rounded (Custom Border Radius)
+## Rounded
 
-Use the `rounded` attribute to apply border radius from the theme. Use it without a value (or `rounded="full"`) for pill shape, or specify a theme value like `"lg"`, `"xl"`, etc.
+The `rounded` attribute sets the border radius from the theme scale. Used without a value (or with `"full"`) it produces a pill shape.
 
 <ComponentPreview center>
 
 ```html
-<!-- Default/Full: Pill shape (9999px) -->
-<sg-button rounded>Pill Shape</sg-button>
-
-<!-- Large: 0.5rem / 8px -->
-<sg-button rounded="lg">Large Radius</sg-button>
-
-<!-- Extra Large: 0.75rem / 12px -->
-<sg-button rounded="xl">XL Radius</sg-button>
-
-<!-- 2XL: 1rem / 16px -->
-<sg-button rounded="2xl">2XL Radius</sg-button>
-
-<!-- Icon-only always uses perfect circle -->
+<sg-button rounded>Pill</sg-button>
+<sg-button rounded="lg">Large</sg-button>
+<sg-button rounded="xl">XL</sg-button>
+<sg-button rounded="2xl">2XL</sg-button>
 <sg-button rounded icon-only label="Check">
   <sg-icon name="check" size="18"></sg-icon>
 </sg-button>
@@ -242,22 +130,20 @@ Use the `rounded` attribute to apply border radius from the theme. Use it withou
 
 </ComponentPreview>
 
-### Full Width
-
-Button expands to fill the full width of its container.
+## Full Width
 
 <ComponentPreview center vertical>
 
 ```html
-<sg-button fullwidth>Full Width Button</sg-button>
+<sg-button fullwidth>Full Width</sg-button>
 <sg-button fullwidth variant="bordered" color="success">Full Width Bordered</sg-button>
 ```
 
 </ComponentPreview>
 
-## Link Buttons
+## Link Mode
 
-When `href` is provided, `sg-button` renders as an `<a role="button">` element instead of `<button>`. All visual variants, sizes, states, and slots behave exactly the same.
+Set `href` to render an `<a role="button">` instead of `<button>`. All variants, sizes, states, and slots behave identically.
 
 <ComponentPreview center>
 
@@ -272,17 +158,48 @@ When `href` is provided, `sg-button` renders as an `<a role="button">` element i
 
 </ComponentPreview>
 
-::: info Security
-Always set `rel="noopener noreferrer"` when using `target="_blank"` to prevent tabnapping attacks.
+::: warning Security
+Always set `rel="noopener noreferrer"` when using `target="_blank"` to prevent tabnapping.
 :::
+
+## Animated Border Effects
+
+The `effect` attribute adds an animated border. Both effects pause automatically when the user has `prefers-reduced-motion` enabled.
+
+### Rainbow
+
+An Okabe-Ito colorblind-safe color sweep — good for highlighting a primary call-to-action.
+
+<ComponentPreview center>
+
+```html
+<sg-button effect="rainbow" variant="frost">Frost + Rainbow</sg-button>
+```
+
+</ComponentPreview>
+
+### Shine
+
+A neon comet that sweeps the border using the button's own `color` token.
+
+<ComponentPreview center>
+
+```html
+<sg-button effect="shine" color="primary">Primary</sg-button>
+<sg-button effect="shine" color="secondary">Secondary</sg-button>
+<sg-button effect="shine" color="success">Success</sg-button>
+<sg-button effect="shine" color="warning">Warning</sg-button>
+<sg-button effect="shine" color="error">Error</sg-button>
+<sg-button effect="shine" variant="outline" color="primary" rounded>Outline</sg-button>
+<sg-button effect="shine" variant="bordered" color="secondary">Bordered</sg-button>
+<sg-button effect="shine" variant="frost" color="info">Frost</sg-button>
+```
+
+</ComponentPreview>
 
 ## Button Groups
 
-### Orientation
-
-Group buttons in horizontal or vertical layouts.
-
-#### Horizontal (Default)
+### Basic
 
 <ComponentPreview center>
 
@@ -296,7 +213,7 @@ Group buttons in horizontal or vertical layouts.
 
 </ComponentPreview>
 
-#### Vertical
+### Vertical
 
 <ComponentPreview center>
 
@@ -310,9 +227,9 @@ Group buttons in horizontal or vertical layouts.
 
 </ComponentPreview>
 
-### Attached Mode
+### Attached
 
-Remove spacing and connect buttons with shared borders for segmented controls.
+Removes spacing and connects buttons with shared borders — use for segmented controls.
 
 <ComponentPreview center>
 
@@ -328,7 +245,7 @@ Remove spacing and connect buttons with shared borders for segmented controls.
 
 ### Attribute Propagation
 
-Apply `size`, `variant`, or `color` to all child buttons automatically via the parent group.
+`size`, `variant`, and `color` set on the group apply to all child buttons automatically.
 
 <ComponentPreview vertical>
 
@@ -343,8 +260,6 @@ Apply `size`, `variant`, or `color` to all child buttons automatically via the p
 </ComponentPreview>
 
 ### Full Width
-
-Buttons expand to fill the container equally.
 
 <ComponentPreview center>
 
@@ -361,162 +276,105 @@ Buttons expand to fill the container equally.
 
 ### `sg-button` Attributes
 
-| Attribute   | Type                                                                           | Default    | Description                                                                |
-| ----------- | ------------------------------------------------------------------------------ | ---------- | -------------------------------------------------------------------------- |
-| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style variant                                                       |
-| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —          | Semantic color (uncolored default when omitted)                            |
-| `size`      | `'sm' \| 'md' \| 'lg'`                                                         | `'md'`     | Button size                                                                |
-| `type`      | `'button' \| 'submit' \| 'reset'`                                              | `'button'` | HTML button type for form association                                      |
-| `disabled`  | `boolean`                                                                      | `false`    | Disable the button                                                         |
-| `loading`   | `boolean`                                                                      | `false`    | Show loading spinner; also disables interaction                            |
-| `effect`    | `'shine' \| 'rainbow'`                                                         | —          | Animated border effect: neon comet (`shine`) or colorful sweep (`rainbow`) |
-| `icon-only` | `boolean`                                                                      | `false`    | Square aspect ratio, no padding — use with `label` for accessibility       |
-| `label`     | `string`                                                                       | —          | Accessible label set as `aria-label` on the host — required for icon-only  |
-| `fullwidth` | `boolean`                                                                      | `false`    | Expand to full container width                                             |
-| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`           | —          | Border radius size; omit value (or use `'full'`) for pill shape            |
-| `href`      | `string`                                                                       | —          | URL — renders as `<a role="button">` instead of `<button>`                 |
-| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —          | Link target (requires `href`)                                              |
-| `rel`       | `string`                                                                       | —          | Link `rel` attribute (requires `href`)                                     |
+| Attribute   | Type                                                                            | Default    | Description                                                                 |
+| ----------- | ------------------------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------- |
+| `variant`   | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | `'solid'`  | Visual style                                                                |
+| `color`     | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —          | Semantic color; uncolored neutral when omitted                              |
+| `size`      | `'sm' \| 'md' \| 'lg'`                                                          | `'md'`     | Button size                                                                 |
+| `type`      | `'button' \| 'submit' \| 'reset'`                                               | `'button'` | HTML button type for form association                                       |
+| `disabled`  | `boolean`                                                                       | `false`    | Disables the button                                                         |
+| `loading`   | `boolean`                                                                       | `false`    | Shows spinner; also disables interaction                                    |
+| `effect`    | `'shine' \| 'rainbow'`                                                          | —          | Animated border effect                                                      |
+| `icon-only` | `boolean`                                                                       | `false`    | Square aspect ratio, no padding — pair with `label`                         |
+| `label`     | `string`                                                                        | —          | Sets `aria-label` on the host — required for icon-only buttons              |
+| `fullwidth` | `boolean`                                                                       | `false`    | Expands to full container width                                             |
+| `rounded`   | `'none' \| 'sm' \| 'md' \| 'lg' \| 'xl' \| '2xl' \| '3xl' \| 'full'`          | —          | Border radius; omit value or use `'full'` for pill shape                    |
+| `href`      | `string`                                                                        | —          | Renders as `<a role="button">` when set                                     |
+| `target`    | `'_blank' \| '_self' \| '_parent' \| '_top'`                                   | —          | Link target (requires `href`)                                               |
+| `rel`       | `string`                                                                        | —          | Link `rel` attribute (requires `href`)                                      |
 
 ### `sg-button-group` Attributes
 
-| Attribute     | Type                                                                           | Default        | Description                                     |
-| ------------- | ------------------------------------------------------------------------------ | -------------- | ----------------------------------------------- |
-| `orientation` | `'horizontal' \| 'vertical'`                                                   | `'horizontal'` | Group layout direction                          |
-| `attached`    | `boolean`                                                                      | `false`        | Remove spacing and connect buttons with borders |
-| `fullwidth`   | `boolean`                                                                      | `false`        | Buttons expand equally to fill container        |
-| `label`       | `string`                                                                       | —              | Accessible `aria-label` for the group container |
-| `size`        | `'sm' \| 'md' \| 'lg'`                                                         | —              | Apply size to all child buttons                 |
-| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | —              | Apply variant to all child buttons              |
-| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —              | Apply color to all child buttons                |
+| Attribute     | Type                                                                            | Default        | Description                                      |
+| ------------- | ------------------------------------------------------------------------------- | -------------- | ------------------------------------------------ |
+| `orientation` | `'horizontal' \| 'vertical'`                                                    | `'horizontal'` | Layout direction                                 |
+| `attached`    | `boolean`                                                                       | `false`        | Removes spacing and connects buttons with borders|
+| `fullwidth`   | `boolean`                                                                       | `false`        | Buttons expand equally to fill container         |
+| `label`       | `string`                                                                        | —              | `aria-label` for the group container             |
+| `size`        | `'sm' \| 'md' \| 'lg'`                                                          | —              | Propagated to all child buttons                  |
+| `variant`     | `'solid' \| 'flat' \| 'bordered' \| 'outline' \| 'ghost' \| 'text' \| 'frost'` | —              | Propagated to all child buttons                  |
+| `color`       | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'`      | —              | Propagated to all child buttons                  |
 
 ### Slots
 
-#### `sg-button`
+**`sg-button`**
 
-| Slot      | Description                        |
-| --------- | ---------------------------------- |
-| (default) | Button content (text, icons, etc.) |
-| `prefix`  | Content before the main content    |
-| `suffix`  | Content after the main content     |
+| Slot        | Description                        |
+| ----------- | ---------------------------------- |
+| *(default)* | Button label, text, or content     |
+| `prefix`    | Content before the label           |
+| `suffix`    | Content after the label            |
 
-#### `sg-button-group`
+**`sg-button-group`**
 
-| Slot      | Description           |
-| --------- | --------------------- |
-| (default) | Child button elements |
+| Slot        | Description           |
+| ----------- | --------------------- |
+| *(default)* | Child button elements |
 
 ### Events
 
-#### `sg-button`
+`sg-button` fires the native `click` (`MouseEvent`) event. No custom events.
 
-| Event   | Detail       | Description                                                |
-| ------- | ------------ | ---------------------------------------------------------- |
-| `click` | `MouseEvent` | Native click event — standard `MouseEvent`, not suppressed |
+`sg-button-group` fires no events.
 
-#### `sg-button-group`
+### CSS Parts
 
-No events.
+**`sg-button`**
 
-### Parts
+| Part      | Element                               |
+| --------- | ------------------------------------- |
+| `button`  | The inner `<button>` or `<a>` element |
+| `loader`  | The loading spinner                   |
+| `content` | The text/content wrapper              |
 
-#### `sg-button`
+**`sg-button-group`**
 
-| Part      | Description                                |
-| --------- | ------------------------------------------ |
-| `button`  | The inner `<button>` or `<a>` element      |
-| `loader`  | The loading spinner                        |
-| `content` | The text/content wrapper inside the button |
-
-#### `sg-button-group`
-
-| Part    | Description     |
+| Part    | Element         |
 | ------- | --------------- |
 | `group` | Group container |
 
 ### CSS Custom Properties
 
-#### `sg-button`
+**`sg-button`**
 
-| Property                             | Description                                                 | Default             |
-| ------------------------------------ | ----------------------------------------------------------- | ------------------- |
-| `--button-bg`                        | Background color override                                   | Variant-dependent   |
-| `--button-color`                     | Text color override                                         | Variant-dependent   |
-| `--button-border`                    | Border width override                                       | `var(--border)`     |
-| `--button-border-color`              | Border color override                                       | Variant-dependent   |
-| `--button-border-top`                | Top border width override (used by attached group)          | —                   |
-| `--button-border-start`              | Inline-start border width override (used by attached group) | —                   |
-| `--button-radius`                    | Border radius override                                      | `var(--rounded-lg)` |
-| `--button-padding`                   | Inner padding override                                      | Size-dependent      |
-| `--button-gap`                       | Gap between icon and text override                          | Size-dependent      |
-| `--button-font-size`                 | Font size override                                          | Size-dependent      |
-| `--button-frost-active-bg`           | Background when hovered/pressed in frost variant            | Variant-dependent   |
-| `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant          | Variant-dependent   |
+| Property                             | Description                                                  | Default             |
+| ------------------------------------ | ------------------------------------------------------------ | ------------------- |
+| `--button-bg`                        | Background color                                             | Variant-dependent   |
+| `--button-color`                     | Text color                                                   | Variant-dependent   |
+| `--button-border`                    | Border width                                                 | `var(--border)`     |
+| `--button-border-color`              | Border color                                                 | Variant-dependent   |
+| `--button-border-top`                | Top border width (used by attached groups)                   | —                   |
+| `--button-border-start`              | Inline-start border width (used by attached groups)          | —                   |
+| `--button-radius`                    | Border radius                                                | `var(--rounded-lg)` |
+| `--button-padding`                   | Inner padding                                                | Size-dependent      |
+| `--button-gap`                       | Gap between icon and text                                    | Size-dependent      |
+| `--button-font-size`                 | Font size                                                    | Size-dependent      |
+| `--button-frost-active-bg`           | Background when hovered/pressed in frost variant             | Variant-dependent   |
+| `--button-frost-active-border-color` | Border color when hovered/pressed in frost variant           | Variant-dependent   |
 
-#### `sg-button-group`
+**`sg-button-group`**
 
-| Property         | Description                                                  | Default             |
-| ---------------- | ------------------------------------------------------------ | ------------------- |
-| `--group-gap`    | Spacing between buttons (non-attached mode)                  | `var(--size-2)`     |
-| `--group-radius` | Border radius applied to first/last buttons in attached mode | `var(--rounded-lg)` |
+| Property         | Description                                                   | Default             |
+| ---------------- | ------------------------------------------------------------- | ------------------- |
+| `--group-gap`    | Spacing between buttons (non-attached)                        | `var(--size-2)`     |
+| `--group-radius` | Border radius on first/last buttons in attached mode          | `var(--rounded-lg)` |
 
 ## Accessibility
 
-Both components follow WAI-ARIA best practices.
+**Keyboard:** `Enter` and `Space` activate the button. `Tab` moves focus in and out.
 
-### `sg-button`
+**Screen readers:** The button role and label are announced automatically. `aria-disabled` is set when disabled; `aria-busy` when loading.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
+**Icon-only buttons:** The `label` attribute is required — it becomes the `aria-label`. Without it, screen readers have nothing to announce.
 
-- `Enter` and `Space` activate the button.
-- `Tab` moves focus to/from the button.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Announces button role and label.
-- `aria-disabled` when disabled.
-- `aria-busy` when loading.
-- Icon-only buttons **must** have the `label` attribute — it is set as `aria-label` on the host element.
-
-### `sg-button-group`
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Automatically includes `role="group"` on the container.
-- Use the `label` attribute to provide context for screen readers (e.g., `label="Text alignment"`).
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` moves focus between buttons.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Buttons within a group are announced in context.
-
-## Best Practices
-
-### `sg-button`
-
-**Do:**
-
-- Use semantic colors to communicate intent.
-- Always set the `label` attribute on icon-only buttons so screen readers announce the action.
-- Use loading state for async operations.
-
-**Don't:**
-
-- Use multiple primary buttons in the same context.
-- Nest interactive elements inside buttons.
-
-### `sg-button-group`
-
-**Do:**
-
-- Use `attached` mode for related segmented controls.
-- Use `fullwidth` for mobile-optimized layouts or primary actions.
-- Provide an `aria-label` when the group's purpose isn't clear from the content.
-
-**Don't:**
-
-- Mix too many variants or colors within a single group.
-- Use `vertical` orientation for more than 4-5 buttons if possible.
+**Button groups:** The container gets `role="group"` automatically. Set the `label` attribute on the group when the purpose isn't clear from the button labels alone (e.g., `label="Text alignment"`).

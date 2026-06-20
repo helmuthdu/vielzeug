@@ -2,27 +2,9 @@
 
 A modal dialog that blocks page interaction, traps focus, and dismisses on `Escape`. Built on the native `<dialog>` element for correct top-layer stacking and browser-managed accessibility semantics — no extra JS focus trapping or `z-index` juggling required.
 
-## Features
+## Opening and Closing
 
-- <sg-icon name="lock" size="16"></sg-icon> **Native `<dialog>`** — correct top-layer stacking, built-in backdrop, browser focus trapping
-- <sg-icon name="keyboard" size="16"></sg-icon> **`Escape` to close** — handled by the browser natively
-- <sg-icon name="crosshair" size="16"></sg-icon> **Controlled open state** — toggle with the `open` attribute or property
-- <sg-icon name="circle-dot" size="16"></sg-icon> **Dismissible** — optional close (×) button in the header
-- <sg-icon name="shield" size="16"></sg-icon>️ **Persistent mode** — prevent accidental close via backdrop click
-- <sg-icon name="puzzle" size="16"></sg-icon> **Flexible slots** — `header`, default body, and `footer`
-- <sg-icon name="triangle-right" size="16"></sg-icon> **5 Sizes**: sm, md, lg, xl, full
-- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: default, plain, bordered
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"`, `aria-modal="true"`, `aria-label` from `label` prop, labelled close button
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/overlay/dialog/dialog.ts
-:::
-
-## Basic Usage
-
-Use the `open` attribute to show the dialog and remove it (or set it to `false`) to close it.
+Use the `open` attribute to show the dialog and remove it (or set it to `false`) to close it. Always include a clearly labelled cancel or close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`.
 
 ```html
 <sg-button id="open-btn">Open dialog</sg-button>
@@ -96,9 +78,11 @@ Use the `open` attribute to show the dialog and remove it (or set it to `false`)
 
 </ComponentPreview>
 
+Keep dialog content focused — if a dialog requires scrolling, it is usually a sign the content should live on its own page.
+
 ## Dismissible
 
-Add `dismissible` to show a close (×) button in the top-right corner of the header.
+Add `dismissible` to show a close (×) button in the top-right corner of the header. The close button carries `aria-label="Close dialog"` so screen readers announce it correctly.
 
 <ComponentPreview center>
 
@@ -271,7 +255,7 @@ Use the `header` slot to replace the default title + close-button layout entirel
 
 ## Persistent (No Backdrop Close)
 
-Set `persistent` to prevent the dialog from closing when the user clicks outside the panel. Useful for forms where accidental dismissal would lose data.
+Set `persistent` to prevent the dialog from closing when the user clicks outside the panel. Useful for forms where accidental dismissal would lose data. When using `persistent`, always include an accessible way to dismiss — either `dismissible` or a clearly labelled cancel button in the `footer`. A dialog with no dismissal mechanism traps keyboard users indefinitely. Do not nest dialogs; stack them in a queue instead.
 
 <ComponentPreview center>
 
@@ -295,6 +279,8 @@ Set `persistent` to prevent the dialog from closing when the user clicks outside
 </ComponentPreview>
 
 ## Listening to Events
+
+Do not open dialogs without user intent (e.g. on page load) — this is disorienting for screen reader users. Do not use dialogs for non-blocking notifications; use `sg-alert` or a toast component instead.
 
 ```javascript
 const dialog = document.querySelector('sg-dialog');
@@ -365,48 +351,6 @@ dialog.addEventListener('close-request', (e) => {
 
 The dialog component follows the [WAI-ARIA Dialog (Modal) Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) and is built on the native `<dialog>` element for WCAG 2.1 Level AA compliance.
 
-### `sg-dialog`
+The inner `<dialog>` element carries `role="dialog"` implicitly, so no extra ARIA role is needed. `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open. When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open — always set a `label` (or provide a custom `header` slot), because a missing label creates a disorienting "unlabelled dialog" announcement when focus moves into the panel.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-| Key           | Action                                                                    |
-| ------------- | ------------------------------------------------------------------------- |
-| `Tab`         | Move focus to the next focusable element inside the dialog (wraps around) |
-| `Shift + Tab` | Move focus to the previous focusable element (wraps around)               |
-| `Escape`      | Close the dialog (handled natively by the browser)                        |
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The inner `<dialog>` element carries `role="dialog"` implicitly — no extra ARIA role is needed.
-- `aria-modal="true"` signals to assistive technologies that content outside the dialog is inert while it is open.
-- When `label` is set, it becomes the `aria-label` of the dialog, giving screen readers a concise title to announce on open.
-- When `dismissible` is set, the close button has a descriptive `aria-label="Close dialog"`.
-
-<sg-icon name="check" size="16"></sg-icon> **Focus Management**
-
-- On open, the browser moves focus into the dialog panel automatically — no manual `focus()` call required.
-- Focus is trapped inside the dialog while it is open; pressing `Tab` cycles only through interactive elements within the panel.
-- On close, focus returns to the element that triggered the dialog — standard browser behavior for the native `<dialog>`.
-
-::: tip Label every dialog
-Always set a `label` (or provide a custom `header` slot). Screen readers announce the dialog title immediately when focus moves into the panel, so a missing label creates a disorienting "unlabelled dialog" announcement.
-:::
-
-::: warning Persistent dialogs
-When using `persistent`, always include an accessible way to dismiss — either `dismissible` or a clearly labelled cancel button in the `footer`. A dialog with no dismissal mechanism traps keyboard users indefinitely.
-:::
-
-## Best Practices
-
-**Do:**
-
-- Provide a descriptive `label` — it becomes the accessible dialog title.
-- Include a clearly labelled cancel/close action in the `footer` slot so keyboard and pointer users can dismiss without relying solely on `Escape`.
-- Use `persistent` only when data would be lost otherwise (e.g. multi-step forms). Always still provide a way to intentionally dismiss (use `dismissible` or a footer cancel button).
-- Keep dialog content focused — if a dialog requires scrolling, it's usually a sign the content should live on its own page.
-
-**Don't:**
-
-- Nest dialogs; stack them in a queue instead.
-- Use dialogs for non-blocking notifications — use `sg-alert` or a toast component instead.
-- Open dialogs without user intent (e.g. on page load) — this is disorienting for screen reader users.
+Keyboard navigation is handled natively by the browser. `Tab` moves focus to the next focusable element inside the dialog and wraps around; `Shift + Tab` moves to the previous focusable element; `Escape` closes the dialog. On open, the browser moves focus into the dialog panel automatically — no manual `focus()` call is required. Focus is trapped inside the dialog while it is open, and on close the browser returns focus to the element that triggered the dialog.

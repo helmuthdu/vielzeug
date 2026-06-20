@@ -2,29 +2,6 @@
 
 A lightweight icon wrapper around a synchronous icon registry for consistent rendering, sizing, and accessibility.
 
-## Features
-
-- <sg-icon name="puzzle" size="16"></sg-icon> **Single API** — consistent `name`, `size`, and a11y behavior
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible by default** — decorative when unlabeled, semantic when `label` is set
-- <sg-icon name="palette" size="16"></sg-icon> **Theme-friendly** — uses `currentColor` so color is controlled with CSS
-- <sg-icon name="ruler" size="16"></sg-icon> **Flexible sizing** — number (px) or CSS length values
-- <sg-icon name="box" size="16"></sg-icon> **Solid mode** — enable `solid` for filled icon rendering
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/icon/icon.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-icon name="search"></sg-icon>
-<sg-icon name="chevron-right" size="18"></sg-icon>
-<sg-icon name="trash-2" label="Delete"></sg-icon>
-<sg-icon name="star" solid></sg-icon>
-```
-
 ## Registry (Option A)
 
 `sg-icon` reads from a synchronous icon registry. The default registry is seeded from Lucide at module load.
@@ -63,11 +40,6 @@ registerIcons({
 
 </ComponentPreview>
 
-## Accessibility
-
-- If `label` is omitted, the icon is treated as decorative (`aria-hidden="true"`).
-- If `label` is provided, the host gets `role="img"` and `aria-label`.
-
 ## API Reference
 
 ### Attributes
@@ -77,7 +49,7 @@ registerIcons({
 - `stroke-width`: `number`, default `2` — SVG stroke width
 - `absolute-stroke-width`: `boolean`, default `false` — Keeps stroke width visually consistent on scale
 - `solid`: `boolean`, default `false` — Renders icon as a filled shape
-- `label`: `string`, default `undefined` — Accessible label; omit for decorative icons
+- `label`: `string`, default `undefined` — Accessible label; omit for decorative icons, required when the icon is the sole means of conveying information
 
 ## Notes
 
@@ -89,3 +61,7 @@ registerIcons({
 | Part  | Description          |
 | ----- | -------------------- |
 | `svg` | Internal SVG element |
+
+## Accessibility
+
+When `label` is omitted, the icon is treated as decorative and receives `aria-hidden="true"`. When `label` is provided, the host element receives `role="img"` and `aria-label` set to that value. Always set `label` when an icon conveys meaning without accompanying visible text.

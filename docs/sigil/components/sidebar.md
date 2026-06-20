@@ -2,40 +2,9 @@
 
 A collapsible navigation sidebar with labelled groups and individual items. It uses the same frosted panel surface treatment as the drawer, while still supporting icon-only collapse mode, keyboard navigation, and full ARIA compliance.
 
-## Features
-
-- <sg-icon name="folder-open" size="16"></sg-icon> **3 Sub-components**: `sg-sidebar`, `sg-sidebar-group`, `sg-sidebar-item`
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Collapsible**: smooth icon-only mode with animated width transition
-- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: default (drawer-style panel), floating (rounded elevated panel), inset (subtle background)
-- <sg-icon name="link" size="16"></sg-icon> **Link or button**: `sg-sidebar-item` renders an `<a>` when `href` is set, otherwise a `<button>`
-- <sg-icon name="map-pin" size="16"></sg-icon> **Active indicator**: visual pill indicator for the current page item
-- <sg-icon name="circle-dot" size="16"></sg-icon> **Collapsible groups**: native `<details>/<summary>` interaction with optional toggle event
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="navigation"`, `aria-current="page"`, `aria-expanded`, keyboard navigation
-- <sg-icon name="keyboard" size="16"></sg-icon> **Imperative API**: `setCollapsed(next)`, `toggle()` methods on the element
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/layout/sidebar/sidebar.ts
-:::
-
-## Basic Usage
-
-Wrap groups and items inside `sg-sidebar`. Mark the current page with `active`.
-
-```html
-<sg-sidebar label="App navigation">
-  <sg-sidebar-group label="Main">
-    <sg-sidebar-item href="/dashboard" active>Dashboard</sg-sidebar-item>
-    <sg-sidebar-item href="/projects">Projects</sg-sidebar-item>
-    <sg-sidebar-item href="/settings">Settings</sg-sidebar-item>
-  </sg-sidebar-group>
-</sg-sidebar>
-```
-
 ## Collapsible Sidebar
 
-Add the `collapsible` attribute to show the collapse toggle button. Items will animate to icon-only mode when collapsed.
+Add the `collapsible` attribute to show the collapse toggle button. Items will animate to icon-only mode when collapsed. When collapsed to icon-only mode, text labels are visually hidden (opacity 0, width 0) but the structural DOM remains accessible, and items remain keyboard reachable. Pair icon-only collapsed items with tooltips using `sg-tooltip` to surface the label for sighted keyboard and pointer users.
 
 <ComponentPreview>
 
@@ -189,9 +158,11 @@ Use two breakpoints to get the full three-state behavior:
 
 Use `sg-sidebar-group` to organize items into labelled sections. Add the `collapsible` attribute to allow toggling the group open/closed.
 
-`sg-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior.
+`sg-sidebar-group` now uses native `details/summary` semantics internally for simpler keyboard and accessibility behavior. Collapsible group headers receive `role="button"`, `tabindex="0"`, and `aria-expanded` so they can be activated via keyboard (`Enter` or `Space`). The item list is hidden with the `hidden` attribute when closed.
 
 Set `default-open="false"` for uncontrolled groups that start collapsed, or pass `open` to control the group state externally.
+
+Use `sg-sidebar-group` to group semantically related items — it adds a visible label and an implicit `role="list"` on the items container. Avoid setting `active` on more than one item simultaneously, as it breaks `aria-current` semantics.
 
 <ComponentPreview>
 
@@ -327,7 +298,7 @@ A subtle variant with a slightly tinted background and no visible border or elev
 
 ## Header and Footer Slots
 
-Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or branding text. Use `slot="footer"` for user profile or secondary actions.
+Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or branding text. Use `slot="footer"` for user profile or secondary actions. When collapsed, only the logo/icon is shown above the toggle button.
 
 <ComponentPreview>
 
@@ -367,11 +338,9 @@ Use `slot="logo"` for the logo/icon and `slot="header"` for the app name or bran
 
 </ComponentPreview>
 
-> **Note:** The sidebar header now supports a dedicated `logo` slot for the logo/icon, and a `header` slot for the app name or branding text. When collapsed, only the logo/icon is shown above the toggle button.
-
 ## Disabled Items
 
-Set `disabled` on a `sg-sidebar-item` to prevent interaction.
+Set `disabled` on a `sg-sidebar-item` to prevent interaction. Avoid using `disabled` as a teaching mechanism — if an item is permanently unavailable, remove it from the sidebar instead.
 
 <ComponentPreview>
 
@@ -477,7 +446,7 @@ sg-sidebar-item {
 
 ## API Reference
 
-### `sg-sidebar` Attributes
+**`sg-sidebar` Attributes**
 
 | Attribute           | Type      | Default                | Description                                                  |
 | ------------------- | --------- | ---------------------- | ------------------------------------------------------------ |
@@ -489,7 +458,7 @@ sg-sidebar-item {
 | `variant`           | `string`  | —                      | Visual variant: `'floating'` \| `'inset'`                    |
 | `label`             | `string`  | `'Sidebar navigation'` | `aria-label` for the `<nav>` landmark                        |
 
-### `sg-sidebar` Slots
+**`sg-sidebar` Slots**
 
 | Slot      | Description                                      |
 | --------- | ------------------------------------------------ |
@@ -498,14 +467,14 @@ sg-sidebar-item {
 | (default) | `sg-sidebar-group` or `sg-sidebar-item` elements |
 | `footer`  | User info, theme toggles, or secondary actions   |
 
-### `sg-sidebar` Events
+**`sg-sidebar` Events**
 
 | Event                | Detail                                                              | Description                                         |
 | -------------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
 | `collapsed-change`   | `{ collapsed: boolean; source: 'toggle' \| 'responsive' \| 'api' }` | Fired when a collapse state change is requested     |
 | `mobile-open-change` | `{ open: boolean; source: 'toggle' \| 'responsive' \| 'api' }`      | Fired when the bottom-nav drawer open state changes |
 
-### `sg-sidebar` Methods
+**`sg-sidebar` Methods**
 
 | Method               | Description                         |
 | -------------------- | ----------------------------------- |
@@ -515,7 +484,7 @@ sg-sidebar-item {
 | `closeMobile()`      | Close the bottom-nav drawer         |
 | `toggleMobile()`     | Toggle the bottom-nav drawer        |
 
-### `sg-sidebar` CSS Custom Properties
+**`sg-sidebar` CSS Custom Properties**
 
 | Property                    | Description                 | Default  |
 | --------------------------- | --------------------------- | -------- |
@@ -526,7 +495,7 @@ sg-sidebar-item {
 
 ---
 
-### `sg-sidebar-group` Attributes
+**`sg-sidebar-group` Attributes**
 
 | Attribute      | Type      | Default | Description                                               |
 | -------------- | --------- | ------- | --------------------------------------------------------- |
@@ -535,14 +504,14 @@ sg-sidebar-item {
 | `default-open` | `boolean` | `true`  | Initial open state for uncontrolled collapsible groups    |
 | `open`         | `boolean` | —       | Controlled group open state                               |
 
-### `sg-sidebar-group` Slots
+**`sg-sidebar-group` Slots**
 
 | Slot      | Description                                 |
 | --------- | ------------------------------------------- |
 | `icon`    | Optional icon displayed in the group header |
 | (default) | `sg-sidebar-item` elements                  |
 
-### `sg-sidebar-group` Events
+**`sg-sidebar-group` Events**
 
 | Event    | Detail              | Description                               |
 | -------- | ------------------- | ----------------------------------------- |
@@ -550,7 +519,7 @@ sg-sidebar-item {
 
 ---
 
-### `sg-sidebar-item` Attributes
+**`sg-sidebar-item` Attributes**
 
 | Attribute  | Type      | Default | Description                                                |
 | ---------- | --------- | ------- | ---------------------------------------------------------- |
@@ -560,7 +529,7 @@ sg-sidebar-item {
 | `rel`      | `string`  | —       | `rel` attribute on the inner `<a>` (link items only)       |
 | `target`   | `string`  | —       | `target` attribute on the inner `<a>` (link items only)    |
 
-### `sg-sidebar-item` Slots
+**`sg-sidebar-item` Slots**
 
 | Slot      | Description                                          |
 | --------- | ---------------------------------------------------- |
@@ -568,7 +537,7 @@ sg-sidebar-item {
 | (default) | Item label text                                      |
 | `end`     | Trailing content: badge, shortcut key, chevron, etc. |
 
-### `sg-sidebar-item` Parts
+**`sg-sidebar-item` Parts**
 
 | Part         | Description                           |
 | ------------ | ------------------------------------- |
@@ -577,7 +546,7 @@ sg-sidebar-item {
 | `item-label` | The label text wrapper                |
 | `item-end`   | The trailing content wrapper          |
 
-### `sg-sidebar-item` CSS Custom Properties
+**`sg-sidebar-item` CSS Custom Properties**
 
 | Property                      | Description                      |
 | ----------------------------- | -------------------------------- |
@@ -592,31 +561,15 @@ sg-sidebar-item {
 
 The sidebar follows WAI-ARIA navigation patterns and WCAG 2.2 guidelines.
 
-### Navigation Landmark
-
 The `sg-sidebar` element renders a `<nav>` landmark with an `aria-label`. When a page has multiple navigation regions, ensure each has a unique descriptive label:
 
 ```html
 <sg-sidebar label="Main navigation">…</sg-sidebar> <sg-sidebar label="Documentation sidebar">…</sg-sidebar>
 ```
 
-### Current Page
+`sg-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location. Set `active` on the item matching the current URL on every page load, and avoid setting it on more than one item simultaneously.
 
-`sg-sidebar-item` sets `aria-current="page"` on the inner `<a>` or `<button>` when `active` is applied. Screen readers announce the item as the current location.
-
-### Collapsed State
-
-When the sidebar is collapsed to icon-only mode:
-
-- Text labels are visually hidden (opacity 0, width 0) but the structural DOM remains accessible.
-- The toggle button updates `aria-label` and `aria-expanded` to reflect the current state.
-- Items remain keyboard reachable; only the visual label is hidden.
-
-**Best practice:** pair icon-only collapsed items with tooltips using `sg-tooltip` to surface the label for sighted keyboard and pointer users.
-
-### Collapsible Groups
-
-Collapsible group headers receive `role="button"`, `tabindex="0"`, and `aria-expanded` so they can be activated via keyboard (`Enter` or `Space`). The item list is hidden with the `hidden` attribute when closed.
+When the sidebar is collapsed to icon-only mode, the toggle button updates `aria-label` and `aria-expanded` to reflect the current state. Navigation within the sidebar uses native DOM focus order — no roving tabindex — keeping behaviour predictable and compatible with all screen readers.
 
 ### Keyboard Navigation
 
@@ -625,20 +578,3 @@ Collapsible group headers receive `role="button"`, `tabindex="0"`, and `aria-exp
 | `Tab`   | Moves focus to the next focusable item in DOM order      |
 | `Enter` | Activates a focused item or toggles a collapsible header |
 | `Space` | Same as `Enter` on collapsible group headers             |
-
-Navigation within the sidebar uses native DOM focus order — no roving tabindex. This keeps behaviour predictable and compatible with all screen readers.
-
-## Best Practices
-
-**Do:**
-
-- Provide a descriptive `label` on `sg-sidebar` when the page has other `<nav>` elements.
-- Set `active` on the item matching the current URL on every page load.
-- Use `sg-sidebar-group` to group semantically related items — it adds a visible label and an implicit `role="list"` on the items container.
-- Add tooltips to icon-only items when the sidebar can collapse.
-
-**Don't:**
-
-- Nest `sg-sidebar` inside another `sg-sidebar`.
-- Set `active` on more than one item simultaneously — it breaks `aria-current` semantics.
-- Use `disabled` as a teaching mechanism. If an item is permanently unavailable, remove it from the sidebar.

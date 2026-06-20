@@ -2,33 +2,13 @@
 
 A segmented one-time password input that renders individual cells for each digit. Auto-advances focus between cells, supports paste, Backspace navigation, and fires completion events.
 
-## Features
-
-- ⌫ **Backspace Navigation** — moves focus backward and clears the cell
-- <sg-icon name="skip-forward" size="16"></sg-icon>️ **Auto-Advance** — focus moves to the next cell automatically on input
-- <sg-icon name="divide" size="16"></sg-icon> **Optional Separator** — visual divider between cells
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="clipboard" size="16"></sg-icon> **Paste Support** — pastes fill all cells at once
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="lock" size="16"></sg-icon> **Masked Mode** — renders `•` characters instead of input values
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
-- <sg-icon name="hash" size="16"></sg-icon> **Configurable Length** — any number of cells (default 6)
-- <sg-icon name="type" size="16"></sg-icon> **Two Input Types** — `numeric` (digits only) or `alphanumeric`
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/otp-input/otp-input.ts
-:::
-
 ## Basic Usage
 
 ```html
 <sg-otp-input label="Verification code" color="primary"></sg-otp-input>
 ```
 
-Listen for completion:
+Listen for completion — use the `complete` event (not `change`) to trigger auto-submission after the last cell is filled. Always provide a `label` attribute to give context (e.g. `"Verification code"`).
 
 ```html
 <sg-otp-input id="otp" label="Enter OTP" color="primary"></sg-otp-input>
@@ -44,6 +24,8 @@ Listen for completion:
 
 ## Length
 
+Keep `length` at 4–8 cells — more cells increase cognitive load.
+
 <ComponentPreview vertical>
 
 ```html
@@ -56,6 +38,8 @@ Listen for completion:
 
 ## Types
 
+Avoid using `alphanumeric` for numeric-only codes (e.g. SMS OTPs) — `numeric` triggers the numeric keyboard on mobile.
+
 <ComponentPreview vertical>
 
 ```html
@@ -67,7 +51,7 @@ Listen for completion:
 
 ## Masked Input
 
-Use `masked` to hide the entered values (useful for PINs).
+Use `masked` to hide the entered values. Always use `masked` for PINs and security codes to prevent shoulder-surfing.
 
 <ComponentPreview center>
 
@@ -183,34 +167,11 @@ Use `separator` to add a visual divider between cells.
 
 ## Accessibility
 
-The OTP input component follows WCAG 2.1 Level AA standards.
+The OTP input component follows WCAG 2.1 Level AA standards. It renders as a `<fieldset>` with a `<legend>` derived from the `label` attribute, so always provide a `label` to ensure screen readers announce the group correctly. Each cell input has `autocomplete="one-time-code"` set automatically, and `aria-disabled` reflects the disabled state.
 
-### `sg-otp-input`
+Keyboard navigation is fully supported: focus auto-advances to the next cell on valid input, `Backspace` moves back and clears the cell, `Tab` moves focus out of the group, and paste fills all cells at once.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- Focus auto-advances to the next cell on valid input; `Backspace` moves back and clears the cell.
-- `Tab` moves focus out of the group; paste fills all cells at once.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
-- `autocomplete="one-time-code"` is set automatically on each cell input.
-- `aria-disabled` reflects the disabled state.
-
-## Best Practices
-
-**Do:**
-
-- Always provide a `label` attribute to give context (e.g. `"Verification code"`).
-- Use `masked` for PINs and security codes to prevent shoulder-surfing.
-- Listen to `complete` (not `change`) to trigger auto-submission after the last cell is filled.
-- Keep `length` at 4–8 cells — more cells increase cognitive load.
-
-**Don't:**
-
-- Auto-submit without giving users a chance to review — show a confirmation step before sending.
-- Use `alphanumeric` for numeric-only codes (e.g. SMS OTPs) — numerics trigger the numeric keyboard on mobile.
+Do not auto-submit without giving users a chance to review — show a confirmation step before sending.
 
 ## Related Components
 

@@ -5,32 +5,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 - **Single mode** (default) — one thumb; use `value` and `name` for form integration.
 - **Range mode** (`range` attribute) — two independent thumbs; use `from` and `to` to set bounds.
 
-## Features
-
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Range Mode** — two-thumb selection with `from`/`to` bounds
-- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — Arrow keys step the value; Home/End jump to min/max
-- <sg-icon name="pointer" size="16"></sg-icon> **Touch Support** — Smooth pointer-event dragging on mobile
-- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA Slider** — `role="slider"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **Flexible Bounds** — Configurable `min`, `max`, and `step`
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for track, fill, and thumb colors
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/slider/slider.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-slider value="50">Volume</sg-slider>
-```
-
-## Visual Options
-
-### Colors
+## Colors
 
 <ComponentPreview center vertical>
 
@@ -46,7 +21,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 <ComponentPreview center vertical>
 
@@ -71,6 +46,8 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 </ComponentPreview>
 
+Keep `min`, `max`, and `step` values consistent and predictable. For a small, discrete set of options, prefer `sg-select` or `sg-radio-group` over a slider. When using fractional step values, always provide `value-text` — screen readers announce the raw float verbatim otherwise.
+
 ## States
 
 ### Disabled
@@ -86,7 +63,7 @@ A single-thumb or dual-thumb slider for selecting a numeric value or a numeric r
 
 ## Range Mode
 
-Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` to set the initial lower and upper bounds.
+Add the boolean `range` attribute to enable two-thumb mode. Use `from` and `to` to set the initial lower and upper bounds. Range mode is suited for "between X and Y" inputs like price ranges or date spans.
 
 ```html
 <sg-slider range from="20" to="80">Price range</sg-slider>
@@ -133,7 +110,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ## Form Integration
 
-`sg-slider` is form-associated in single mode. The `name` attribute is submitted as part of `FormData`.
+`sg-slider` is form-associated in single mode. The `name` attribute is submitted as part of `FormData`. Always provide a visible label via the default slot to describe what the slider controls.
 
 ```html
 <form id="settings-form">
@@ -212,39 +189,8 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 
 ## Accessibility
 
-The slider component follows WAI-ARIA best practices.
+The slider follows WAI-ARIA best practices. Each thumb carries `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`. In range mode, each thumb has its own accessible label and independent ARIA attributes. `aria-disabled` is set when `disabled` is active.
 
-### `sg-slider`
+Keyboard navigation is fully supported: `Arrow Right` / `Arrow Up` increases the value by one step, `Arrow Left` / `Arrow Down` decreases it, `Home` jumps to the minimum, and `End` jumps to the maximum. `Tab` focuses the slider; `Shift+Tab` blurs it.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Arrow Right` / `Arrow Up` — increase value by one step
-- `Arrow Left` / `Arrow Down` — decrease value by one step
-- `Home` — jump to minimum value
-- `End` — jump to maximum value
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The thumb has `role="slider"` with `aria-valuenow`, `aria-valuemin`, and `aria-valuemax`.
-- Provide `value-text` or `from-value-text` / `to-value-text` when the raw number needs a unit (e.g. `"$80"`, `"75%"`).
-- In range mode, each thumb has its own accessible label and independent ARIA attributes.
-- `aria-disabled` is set when `disabled` is active.
-
-<sg-icon name="check" size="16"></sg-icon> **Touch & Focus**
-
-- Touch-friendly draggable thumb with a minimum 44 × 44 px hit area.
-- `Tab` focuses the slider; `Shift+Tab` blurs it.
-
-## Best Practices
-
-**Do:**
-
-- Always provide a visible label via the default slot to describe what the slider controls.
-- Use `value-text` / `from-value-text` / `to-value-text` when the value needs a unit or currency symbol.
-- Keep `min`, `max`, and `step` values consistent and predictable for users.
-- Use range mode for "between X and Y" inputs like price ranges or date spans.
-
-**Don't:**
-
-- Use a slider for a small, discrete set of options — a `sg-select` or `sg-radio-group` is clearer.
-- Omit `value-text` when using fractional step values — screen readers announce the raw float verbatim.
+The thumb has a touch-friendly minimum 44 × 44 px hit area for pointer-event dragging on mobile.

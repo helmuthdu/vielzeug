@@ -2,30 +2,6 @@
 
 An autocomplete input that combines a text field with a filterable dropdown listbox. Users can type to narrow the displayed options or use arrow keys to browse, making it ideal for long option lists.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav** — ArrowDown/Up, Enter, Escape, Home, End, Tab
-- <sg-icon name="hourglass" size="16"></sg-icon> **Loading State** — `loading` attribute shows a spinner while options are being fetched
-- <sg-icon name="sparkles" size="16"></sg-icon> **Creatable** — allow users to create new options when no match is found
-- <sg-icon name="x" size="16"></sg-icon> **Clearable** — optional clear button to reset the value
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="tag" size="16"></sg-icon> **Label Placement** — inset (default) or outside
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** — inline helper or error message below the field
-- <sg-icon name="search" size="16"></sg-icon> **Live Filtering** — options narrow as the user types
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission
-- <sg-icon name="square" size="16"></sg-icon> **Multiselect** — `multiple` mode shows selected values as removable chips
-- <sg-icon name="image" size="16"></sg-icon> **Option Icons** — each option supports a leading `icon` named slot
-- <sg-icon name="ban" size="16"></sg-icon> **No-Filter Mode** — keeps all options visible for server-side search
-- <sg-icon name="puzzle" size="16"></sg-icon> **Component Options** — place `<sg-combobox-option>` children for rich, slot-based option content
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/combobox/combobox.ts
-:::
-
 ## Basic Usage
 
 Place `<sg-combobox-option>` elements inside `<sg-combobox>`. The `value` attribute is what gets submitted; the text content is the label used for display and filtering.
@@ -164,7 +140,7 @@ Add an `icon` named slot inside any `<sg-combobox-option>` for a leading icon. T
 
 ## Label Placement
 
-The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border).
+The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border). Always provide a visible label so the purpose is clear when the list is hidden.
 
 <ComponentPreview vertical>
 
@@ -183,7 +159,7 @@ The label can be placed **inset** (inside the field, above the input — default
 
 ## Clearable
 
-Add `clearable` to show a clear (×) button whenever a value is selected.
+Add `clearable` to show a clear (×) button whenever a value is selected. Use this when the field is optional and users might want to reset their choice.
 
 <ComponentPreview vertical>
 
@@ -230,6 +206,8 @@ document.querySelector('sg-combobox').addEventListener('change', (e) => {
 ```
 
 ## Helper & Error Text
+
+Pair `error` text with `color="error"` for form validation feedback.
 
 <ComponentPreview vertical>
 
@@ -279,7 +257,7 @@ Add the `disabled` attribute on a `<sg-combobox-option>` to prevent selection of
 
 ## No-Filter Mode (Server-Side Search)
 
-Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<sg-combobox-option>` children based on the `search` event.
+Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<sg-combobox-option>` children based on the `search` event. For short lists (fewer than 6 items) consider a plain `sg-select` instead.
 
 <ComponentPreview vertical>
 
@@ -311,7 +289,7 @@ cb.addEventListener('search', async (e) => {
 
 ## Creatable Options
 
-Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create “X”** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `sg-change` event like any normal selection.
+Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create "X"** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `sg-change` event like any normal selection.
 
 <ComponentPreview vertical>
 
@@ -433,7 +411,7 @@ cb.addEventListener('close', (e) => {
 
 ## API Reference
 
-### `sg-combobox` Attributes
+**`sg-combobox` Attributes**
 
 | Attribute         | Type                                                                      | Default   | Description                                                 |
 | ----------------- | ------------------------------------------------------------------------- | --------- | ----------------------------------------------------------- |
@@ -456,13 +434,13 @@ cb.addEventListener('close', (e) => {
 | `fullwidth`       | `boolean`                                                                 | `false`   | Expand to fill the container width                          |
 | `disabled`        | `boolean`                                                                 | `false`   | Disable the control                                         |
 
-### `sg-combobox` Slots
+**`sg-combobox` Slots**
 
 | Slot      | Description                                            |
 | --------- | ------------------------------------------------------ |
 | (default) | `sg-combobox-option` elements defining the option list |
 
-### `sg-combobox-option` Attributes
+**`sg-combobox-option` Attributes**
 
 | Attribute  | Type      | Default | Description                                                                             |
 | ---------- | --------- | ------- | --------------------------------------------------------------------------------------- |
@@ -470,14 +448,14 @@ cb.addEventListener('close', (e) => {
 | `label`    | `string`  | —       | Explicit text used for display and filtering; falls back to the element's `textContent` |
 | `disabled` | `boolean` | `false` | Prevent this option from being selected                                                 |
 
-### `sg-combobox-option` Slots
+**`sg-combobox-option` Slots**
 
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
 | `icon`    | Optional leading icon or decoration |
 | (default) | Label text for the option           |
 
-### Events
+**Events**
 
 | Event    | Detail                                                                         | Description                                  |
 | -------- | ------------------------------------------------------------------------------ | -------------------------------------------- |
@@ -486,7 +464,7 @@ cb.addEventListener('close', (e) => {
 | `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' }`                    | Emitted when the dropdown closes             |
 | `search` | `{ query: string }`                                                            | Emitted on every keystroke in the text input |
 
-### CSS Custom Properties
+**CSS Custom Properties**
 
 | Property                              | Description                                       | Default           |
 | ------------------------------------- | ------------------------------------------------- | ----------------- |
@@ -501,33 +479,6 @@ cb.addEventListener('close', (e) => {
 
 ## Accessibility
 
-The combobox component follows WCAG 2.1 Level AA standards.
+The combobox component follows WCAG 2.1 Level AA standards. Keyboard navigation is fully supported: `Tab` focuses the input, `ArrowDown` / `ArrowUp` navigate the option list, `Enter` confirms selection, and `Escape` closes the dropdown.
 
-### `sg-combobox`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` focuses the input; `ArrowDown` / `ArrowUp` navigate the option list.
-- `Enter` confirms selection; `Escape` closes the dropdown.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `role="combobox"` with `aria-expanded`, `aria-controls`, `aria-activedescendant`, and `aria-autocomplete="list"`.
-- The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected` and `aria-disabled`.
-- `aria-live="polite"` on the helper / error region announces validation messages.
-- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
-- `aria-disabled` reflects the disabled state.
-
-## Best Practices
-
-**Do:**
-
-- Use `placeholder` to hint at the expected input (e.g. _"Search countries…"_).
-- Use `clearable` when the field is optional and users might want to reset their choice.
-- Use `no-filter` + `sg-input` for server-side search with large datasets.
-- Pair with `error` text and `color="error"` for form validation feedback.
-
-**Don't:**
-
-- Use combobox for short lists (< 6 items) — a plain `sg-select` is simpler.
-- Rely on the dropdown alone: always provide a visible label so the purpose is clear when the list is hidden.
+The component uses `role="combobox"` with `aria-expanded`, `aria-controls`, `aria-activedescendant`, and `aria-autocomplete="list"`. The dropdown uses `role="listbox"`; each option uses `role="option"` with `aria-selected` and `aria-disabled`. An `aria-live="polite"` region on the helper / error area announces validation messages. `aria-labelledby` links the label; `aria-describedby` links helper and error text. `aria-disabled` reflects the disabled state.

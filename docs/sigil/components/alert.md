@@ -2,31 +2,6 @@
 
 A feedback banner for surface-level status messages — errors, warnings, successes, and informational notices. Supports an optional heading, icon, metadata, action buttons, and a dismiss button.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **3 Variants**: `flat` (default), `solid`, `bordered`
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: `primary`, `secondary`, `info`, `success`, `warning`, `error`
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: `sm`, `md`, `lg`
-- <sg-icon name="x" size="16"></sg-icon>️ **Dismissible**: animated close button — plays a smooth fade+collapse animation before hiding
-- <sg-icon name="image" size="16"></sg-icon> **Icon Slot**: prepend any SVG or icon font glyph
-- <sg-icon name="tag" size="16"></sg-icon> **Heading**: optional bold heading above the message
-- <sg-icon name="clock" size="16"></sg-icon> **Meta Slot**: timestamp or secondary info alongside the heading
-- <sg-icon name="circle-dot" size="16"></sg-icon> **Actions Slot**: call-to-action buttons below the message (or horizontal)
-- <sg-icon name="crosshair" size="16"></sg-icon> **Accented**: left accent border for flat and bordered variants
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="alert"` + smart `aria-live`, labelled close button
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/alert/alert.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-alert color="success">Your changes have been saved.</sg-alert>
-```
-
 ## Variants
 
 Three visual styles are available via the `variant` attribute. `flat` is the default.
@@ -89,7 +64,7 @@ Use `heading` to add a bold heading above the message body.
 
 ## Dismissible
 
-Add `dismissible` to show a close (×) button. When clicked, the component plays a `sg-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. Listen to the `dismiss` event to remove it from the DOM or restore it later.
+Add `dismissible` to show a close (×) button. When clicked, the component plays a `sg-alert-exit` animation (opacity fade + height collapse) before applying `[dismissed]` which sets `display: none`. Listen to the `dismiss` event to remove it from the DOM or restore it later. Always supply a `color` to convey semantic intent (`color="error"` for failures, `color="success"` for confirmations, etc.).
 
 <ComponentPreview center vertical>
 
@@ -153,7 +128,7 @@ Use the `meta` slot to add secondary information (e.g. a timestamp) displayed al
 
 ## Actions
 
-Use the `actions` slot to add call-to-action buttons below the message.
+Use the `actions` slot to add call-to-action buttons below the message. Avoid nesting complex interactive controls in the default slot; keep alerts primarily informational.
 
 <ComponentPreview center vertical>
 
@@ -281,36 +256,10 @@ Add `accented` to add a thick left border for extra visual emphasis. Only applie
 
 ## Accessibility
 
-The alert component follows WAI-ARIA best practices.
+The alert component follows WAI-ARIA best practices. It uses `role="alert"` with `aria-live="polite"` so screen readers announce the alert on insertion. When `color="error"`, `aria-live` is set to `assertive` so urgent errors interrupt immediately; all other severities use `polite`. When dismissed, `[dismissed]` applies `display: none`, removing the element from the accessibility tree entirely.
 
-### `sg-alert`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `role="alert"` with `aria-live="polite"` — screen readers announce the alert on insertion.
-- `aria-live` is `assertive` when `color="error"` so urgent errors interrupt immediately; all other severities use `polite`.
-- `[dismissed]` uses `display: none`, removing the element from the accessibility tree entirely.
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- The close button is keyboard-reachable and has `aria-label="Dismiss alert"`.
-- `[dismissing]` disables `pointer-events` during the exit animation to prevent double-activation.
+The close button is keyboard-reachable and has `aria-label="Dismiss alert"`. The `[dismissing]` state disables `pointer-events` during the exit animation to prevent double-activation.
 
 ::: tip Dynamic insertion
 Alerts injected into the DOM are announced automatically via `role="alert"`. Avoid toggling `color` after insertion as it may trigger an unwanted re-announcement.
 :::
-
-## Best Practices
-
-**Do:**
-
-- Always supply a `color` to convey semantic intent (`color="error"` for failures, `color="success"` for confirmations, etc.).
-- Use `heading` when you need to distinguish a short title from a longer explanation.
-- Use `accented` to draw extra attention to a critical flat or bordered alert.
-- Listen to `dismiss` and call `e.target.remove()` when you want the alert gone from the DOM, not just hidden.
-
-**Don't:**
-
-- Use `sg-alert` for short, transient notifications — use a toast/notification system instead.
-- Combine `horizontal` with `heading` — the layout becomes cramped.
-- Nest complex interactive controls in the default slot; keep alerts primarily informational.

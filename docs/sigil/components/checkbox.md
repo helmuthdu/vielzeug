@@ -5,42 +5,7 @@ A customizable boolean form control with indeterminate state support, plus a gro
 - **`sg-checkbox`** — standalone checkbox for a single boolean value.
 - **`sg-checkbox-group`** — form-associated `<fieldset>` wrapper that manages a set of checkboxes, propagates `color`, `size`, and `disabled` to all children, and tracks checked values as a comma-separated `values` string.
 
-## Features
-
-**Checkbox**
-
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — `aria-checked` including `"mixed"` for indeterminate; keyboard toggle
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="sliders-horizontal" size="16"></sg-icon> **Indeterminate State** — partial selection indicator for "select all" patterns
-- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, indeterminate, disabled
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — CSS custom properties for size, radius, and colors
-
-**Checkbox Group**
-
-- <sg-icon name="arrow-up-down" size="16"></sg-icon> **2 Orientations** — vertical & horizontal
-- <sg-icon name="message-circle" size="16"></sg-icon> **Validation Feedback** — `helper` and `error` text with ARIA wiring
-- <sg-icon name="file-pen" size="16"></sg-icon> **Form Integration** — comma-separated `values` submit through the group's `name` with any `<form>` or `sg-form`
-- <sg-icon name="radio-tower" size="16"></sg-icon> **Context Propagation** — `color`, `size`, and `disabled` propagate to all child checkboxes
-- <sg-icon name="folder-open" size="16"></sg-icon> **Semantic Markup** — renders as `<fieldset>` + `<legend>` for proper screen reader grouping
-
-## Source Code
-
-::: details View Checkbox Source
-<<< @/../packages/sigil/src/inputs/checkbox/checkbox.ts
-:::
-
-::: details View Checkbox Group Source
-<<< @/../packages/sigil/src/inputs/checkbox-group/checkbox-group.ts
-:::
-
 ## Checkbox
-
-### Basic Usage
-
-```html
-<sg-checkbox>Accept terms and conditions</sg-checkbox>
-```
 
 ### Colors
 
@@ -124,17 +89,7 @@ checkbox.addEventListener('change', (e) => {
 
 ## Checkbox Group
 
-`sg-checkbox-group` wraps `sg-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form.
-
-### Basic Usage
-
-```html
-<sg-checkbox-group label="Interests" values="sport,music">
-  <sg-checkbox value="sport">Sport</sg-checkbox>
-  <sg-checkbox value="music">Music</sg-checkbox>
-  <sg-checkbox value="travel">Travel</sg-checkbox>
-</sg-checkbox-group>
-```
+`sg-checkbox-group` wraps `sg-checkbox` elements in a `<fieldset>`. Set `values` to a comma-separated string to pre-select options, and set `name` when you want the group to submit with a form. Always provide a meaningful `label` on the group — it is the accessible name read before each option. Do not use `sg-checkbox-group` for mutually exclusive choices — use [`sg-radio-group`](./radio) instead.
 
 ### Orientation
 
@@ -157,6 +112,8 @@ checkbox.addEventListener('change', (e) => {
 ```
 
 </ComponentPreview>
+
+Use `orientation="horizontal"` only for short option labels that comfortably fit on one line.
 
 ### Colors & Sizes
 
@@ -182,6 +139,8 @@ checkbox.addEventListener('change', (e) => {
 </ComponentPreview>
 
 ### Validation Feedback
+
+Pair `error` with `color="error"` to reinforce validation failures visually.
 
 <ComponentPreview vertical>
 
@@ -218,7 +177,7 @@ Disabling the group propagates to all child checkboxes.
 
 ### Form Integration
 
-The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `sg-form`.
+The group's checked values are stored in the `values` attribute and submitted under the group's `name` as a comma-separated string with any `<form>` or `sg-form`. Prefer `name` on the group (not individual checkboxes) when submitting with a form.
 
 <ComponentPreview vertical>
 
@@ -252,7 +211,7 @@ The group's checked values are stored in the `values` attribute and submitted un
 
 ### Select All Pattern
 
-Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to build a "select all" control.
+Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to build a "select all" control. Use `indeterminate` on a "select all" checkbox to represent partial selection.
 
 <ComponentPreview vertical>
 
@@ -304,7 +263,7 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 
 ## API Reference
 
-### `sg-checkbox` Attributes
+**`sg-checkbox` Attributes**
 
 | Attribute       | Type                                                                      | Default | Description                             |
 | --------------- | ------------------------------------------------------------------------- | ------- | --------------------------------------- |
@@ -318,13 +277,13 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 | `helper`        | `string`                                                                  | `''`    | Helper text displayed below             |
 | `error`         | `string`                                                                  | `''`    | Error message (marks field invalid)     |
 
-### `sg-checkbox` Slots
+**`sg-checkbox` Slots**
 
 | Slot      | Description         |
 | --------- | ------------------- |
 | (default) | Checkbox label text |
 
-### `sg-checkbox` Parts
+**`sg-checkbox` Parts**
 
 | Part       | Description                  |
 | ---------- | ---------------------------- |
@@ -332,13 +291,13 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 | `box`      | The visual checkbox square   |
 | `label`    | The label text element       |
 
-### `sg-checkbox` Events
+**`sg-checkbox` Events**
 
 | Event    | Detail                                | Description                            |
 | -------- | ------------------------------------- | -------------------------------------- |
 | `change` | `{ checked: boolean, value: string }` | Emitted when the checked state changes |
 
-### `sg-checkbox` CSS Custom Properties
+**`sg-checkbox` CSS Custom Properties**
 
 | Property                  | Description                        |
 | ------------------------- | ---------------------------------- |
@@ -352,7 +311,7 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 
 ---
 
-### `sg-checkbox-group` Attributes
+**`sg-checkbox-group` Attributes**
 
 | Attribute     | Type                                                                      | Default      | Description                                                  |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------ |
@@ -367,13 +326,13 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 | `error`       | `string`                                                                  | `''`         | Error message shown below the group (also sets ARIA invalid) |
 | `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)                     |
 
-### `sg-checkbox-group` Slots
+**`sg-checkbox-group` Slots**
 
 | Slot      | Description                       |
 | --------- | --------------------------------- |
 | (default) | Place `sg-checkbox` elements here |
 
-### `sg-checkbox-group` Events
+**`sg-checkbox-group` Events**
 
 | Event    | Detail                 | Description                                             |
 | -------- | ---------------------- | ------------------------------------------------------- |
@@ -383,44 +342,6 @@ Combine indeterminate state on a parent checkbox with a `sg-checkbox-group` to b
 
 The checkbox components follow WCAG 2.1 Level AA standards.
 
-### `sg-checkbox`
+`sg-checkbox` uses `role="checkbox"` with `aria-checked` set to `"true"`, `"false"`, or `"mixed"` for the indeterminate state. `aria-labelledby` links the label; `aria-describedby` links helper text; `aria-errormessage` links error text. `aria-disabled` reflects the disabled state. Keyboard interaction uses `Space` or `Enter` to toggle the focused checkbox, and `Tab` to move focus in and out.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Space` / `Enter` toggle the focused checkbox; `Tab` moves focus in and out.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `role="checkbox"` with `aria-checked` set to `"true"`, `"false"`, or `"mixed"` for indeterminate.
-- `aria-labelledby` links the label; `aria-describedby` links helper text; `aria-errormessage` links error text.
-- `aria-disabled` reflects the disabled state.
-
-### `sg-checkbox-group`
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` moves to the next checkbox within the group.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `aria-required` and `aria-invalid` reflect the group validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
-
-## Best Practices
-
-**Do:**
-
-- Always provide a meaningful `label` on the group — it is the accessible name read before each option.
-- Use `indeterminate` on a "select all" checkbox to represent partial selection.
-- Use `orientation="horizontal"` only for short option labels that comfortably fit on one line.
-- Pair `error` with `color="error"` to reinforce validation failures visually.
-- Prefer `name` on the group (not individual checkboxes) when submitting with a form.
-
-**Don't:**
-
-- Use `sg-checkbox-group` for mutually exclusive choices — use [`sg-radio-group`](./radio) instead.
-- Omit the `label` attribute on the group; without it the fieldset has no accessible name.
-- Place non-`sg-checkbox` elements as direct children of `sg-checkbox-group`.
+`sg-checkbox-group` renders as a `<fieldset>` with a `<legend>` for the `label` attribute, providing proper screen reader grouping. `Tab` moves to the next checkbox within the group. `aria-required` and `aria-invalid` reflect the group validation state; `aria-errormessage` and `aria-describedby` link the text nodes.

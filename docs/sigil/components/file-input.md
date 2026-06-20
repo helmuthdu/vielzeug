@@ -2,33 +2,7 @@
 
 A modern file upload component with drag-and-drop support, file list management, constraint filtering, and full form integration. Shares the same visual theme system as `sg-input`.
 
-## Features
-
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="paperclip" size="16"></sg-icon> **Click to Browse** — opens the native file picker on click or keyboard activation
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="lock" size="16"></sg-icon> **Constraints** — `accept`, `max-size`, `max-files` filtering built-in
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — participates in native form submission via `FormData`
-- <sg-icon name="square" size="16"></sg-icon> **Multiple Selection** — toggle via `multiple` attribute
-- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Drag & Drop** — drop files directly onto the dropzone
-- <sg-icon name="folder-open" size="16"></sg-icon> **File List** — displays selected files with name, size, and individual remove buttons
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/file-input/file-input.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-file-input label="Upload files"></sg-file-input>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 Six visual variants for different UI contexts and levels of emphasis.
 
@@ -44,7 +18,7 @@ Six visual variants for different UI contexts and levels of emphasis.
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 Six semantic colors for different contexts and validation states.
 
@@ -64,7 +38,7 @@ Six semantic colors for different contexts and validation states.
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 Three sizes for different contexts.
 
@@ -78,7 +52,7 @@ Three sizes for different contexts.
 
 </ComponentPreview>
 
-### Rounded (Custom Border Radius)
+## Rounded (Custom Border Radius)
 
 Use the `rounded` attribute to apply a border radius from the theme.
 
@@ -97,7 +71,7 @@ Use the `rounded` attribute to apply a border radius from the theme.
 
 ### Multiple Files
 
-Enable multi-file selection with the `multiple` attribute.
+Enable multi-file selection with the `multiple` attribute. Use `multiple` only when your backend truly supports multiple files per field.
 
 <ComponentPreview center>
 
@@ -116,7 +90,7 @@ Enable multi-file selection with the `multiple` attribute.
 
 ### Accept Filter
 
-Restrict accepted file types using MIME types or file extensions. The accepted types are shown in the dropzone hint automatically.
+Restrict accepted file types using MIME types or file extensions. The accepted types are shown in the dropzone hint automatically. Always pair with `helper` text to document accepted types so users know what is expected.
 
 <ComponentPreview center>
 
@@ -140,7 +114,7 @@ Restrict accepted file types using MIME types or file extensions. The accepted t
 
 ### File Size & Count Limits
 
-Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't meet the criteria are silently filtered out. The limits appear in the dropzone hint.
+Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't meet the criteria are silently filtered out. The limits appear in the dropzone hint. Always validate these constraints on the server as well — client-side filtering alone is not sufficient.
 
 <ComponentPreview center>
 
@@ -171,7 +145,7 @@ Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't 
 
 ### With Helper Text
 
-Provide context below the dropzone using the `helper` attribute.
+Provide context below the dropzone using the `helper` attribute. Always provide a `label` to clearly communicate what files are expected.
 
 <ComponentPreview center>
 
@@ -217,7 +191,7 @@ Prevents all interaction — click, drag-and-drop, and keyboard activation are a
 
 ### Error State
 
-Display a validation error with the `error` attribute. The error message replaces the helper text.
+Display a validation error with the `error` attribute. The error message replaces the helper text. Use semantic `color` values (`success`, `error`) to communicate validation state.
 
 <ComponentPreview center>
 
@@ -235,7 +209,7 @@ Display a validation error with the `error` attribute. The error message replace
 
 ## Form Integration
 
-`sg-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key — identical to how a native `<input type="file">` behaves.
+`sg-file-input` is a form-associated custom element. It serializes its selected files as `FormData` under the given `name` key — identical to how a native `<input type="file">` behaves. Always include a `name` attribute when using the component inside a `<form>` — it is required for form submission.
 
 ```html
 <form id="upload-form" method="post" enctype="multipart/form-data">
@@ -315,34 +289,4 @@ fileInput.addEventListener('remove', ({ detail }) => {
 
 ## Accessibility
 
-The file input component follows WCAG 2.1 Level AA standards.
-
-### `sg-file-input`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker.
-- Remove buttons inside the file list are individually focusable.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text.
-- Each remove button has a descriptive `aria-label` (e.g. `"Remove report.pdf"`).
-- Error messages use `role="alert"` for live-region announcements.
-- `aria-disabled` reflects the disabled state.
-
-## Best Practices
-
-**Do:**
-
-- Always provide a `label` to clearly communicate what files are expected.
-- Use `accept` to guide users toward valid file types and avoid upload errors.
-- Set `max-size` and `max-files` to prevent oversized or unexpected uploads.
-- Use `multiple` only when your backend truly supports multiple files per field.
-- Pair with `helper` text to document accepted types and size limits.
-- Use semantic `color` values (`success`, `error`) to communicate validation state.
-
-**Don't:**
-
-- Rely solely on client-side `max-size` / `accept` filtering — always validate on the server.
-- Omit a `name` attribute when using the component inside a `<form>` — it is required for form submission.
+The file input component follows WCAG 2.1 Level AA standards. The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text. `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker. Remove buttons inside the file list are individually focusable, each with a descriptive `aria-label` (e.g. `"Remove report.pdf"`). Error messages use `role="alert"` for live-region announcements. `aria-disabled` reflects the disabled state.

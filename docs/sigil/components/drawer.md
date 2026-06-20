@@ -2,53 +2,9 @@
 
 A slide-in panel that overlays page content from any edge of the screen. Built on the native `<dialog>` element for correct top-layer stacking, focus trapping, and `Escape`-to-close behavior.
 
-## Features
-
-- <sg-icon name="lock" size="16"></sg-icon> **Native `<dialog>`** — top-layer stacking, built-in focus trap, browser `Escape` handling
-- <sg-icon name="arrow-left-right" size="16"></sg-icon> **4 Placements**: left, right (default), top, bottom
-- <sg-icon name="triangle-right" size="16"></sg-icon> **4 Sizes**: sm, md, lg, full
-- <sg-icon name="circle-dot" size="16"></sg-icon> **Dismissible** — optional close (×) button in the header
-- <sg-icon name="cloud-fog" size="16"></sg-icon>️ **Backdrop Styles** — `opaque` (default), `blur`, or `transparent`
-- <sg-icon name="puzzle" size="16"></sg-icon> **Flexible slots** — `header`, default body, and `footer`
-- <sg-icon name="film" size="16"></sg-icon>️ **Smooth animations** — slide-in/out transitions with backdrop fade
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"`, `aria-modal`, `aria-labelledby` from `label` prop
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/overlay/drawer/drawer.ts
-:::
-
-## Basic Usage
-
-Toggle the `open` attribute to show and hide the drawer.
-
-```html
-<sg-button id="open-drawer-btn">Open drawer</sg-button>
-
-<sg-drawer id="drawer" label="Settings" dismissible>
-  <p>Drawer body content goes here.</p>
-  <div slot="footer">
-    <sg-button variant="ghost" id="cancel-btn">Cancel</sg-button>
-    <sg-button color="primary" id="save-btn">Save changes</sg-button>
-  </div>
-</sg-drawer>
-
-<script type="module">
-  import '@vielzeug/sigil';
-
-  const drawer = document.getElementById('drawer');
-
-  document.getElementById('open-drawer-btn').addEventListener('click', () => {
-    drawer.setAttribute('open', '');
-  });
-  document.getElementById('cancel-btn').addEventListener('click', () => {
-    drawer.removeAttribute('open');
-  });
-</script>
-```
-
 ## Placements
+
+Toggle the `open` attribute to show and hide the drawer. Use the `placement` attribute to control which edge the drawer slides in from: `left`, `right` (default), `top`, or `bottom`.
 
 <ComponentPreview center>
 
@@ -302,22 +258,9 @@ Use `backdrop` to match dialog behavior:
 
 The drawer component follows the WAI-ARIA Dialog Pattern best practices.
 
-### `sg-drawer`
+The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert. Always provide a `label` attribute to give screen readers a descriptive panel title. When `dismissible` is set, the close button carries `aria-label="Close"` automatically.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Tab` / `Shift+Tab` move focus between focusable elements inside the panel.
-- `Escape` closes the drawer (when `dismissible` is set).
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The panel uses `role="dialog"` with `aria-modal="true"` to signal that content outside is inert.
-- Provide a `label` attribute to give screen readers a descriptive panel title.
-- The close button has `aria-label="Close"` when `dismissible` is set.
-
-<sg-icon name="check" size="16"></sg-icon> **Focus Management**
-
-- Focus moves into the panel on open and returns to the trigger element on close.
+`Tab` and `Shift+Tab` move focus between focusable elements inside the panel. `Escape` closes the drawer when `dismissible` is set. Focus moves into the panel on open and returns to the trigger element on close.
 
 ## Related Components
 

@@ -4,31 +4,6 @@ A progress indicator for conveying operation completion. Supports a classic line
 
 For loading placeholders before progress can be determined, see [Skeleton](./skeleton.md).
 
-## Features
-
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **2 Types**: `linear` (default) and `circular`
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Color Themes**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Indeterminate Mode**: animated sliding bar or spinning circle when progress is unknown
-- <sg-icon name="tag" size="16"></sg-icon> **Label**: visible trailing text (linear) or large text centered inside the ring (circular); moves to a header row when combined with `title` on linear
-- <sg-icon name="map-pin" size="16"></sg-icon> **Title**: header text above the bar (linear) or smaller text below the label inside the ring (circular)
-- <sg-icon name="message-circle" size="16"></sg-icon> **Floating Label**: chip anchored above the fill endpoint — moves as value changes (linear only)
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, and `aria-label`
-- <sg-icon name="palette" size="16"></sg-icon> **Customizable**: CSS custom properties for colors, size, and border radius
-- <sg-icon name="theater" size="16"></sg-icon> **Reduced Motion**: animations are disabled automatically for users who prefer reduced motion
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/progress/progress.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-progress value="45"></sg-progress>
-```
-
 ## Linear Bar
 
 ### Determinate
@@ -69,6 +44,8 @@ The `label` attribute renders visible text and doubles as the accessible `aria-l
 
 **Circular:** renders as large, bold text **centered inside the ring**.
 
+Always set `label` (or `title`) to a meaningful description like `"Uploading file — 45%"` so screen readers have a useful accessible name. When neither is set, `aria-label` falls back to `"Progress"`.
+
 <ComponentPreview vertical>
 
 ```html
@@ -86,6 +63,8 @@ The `title` attribute provides contextual text.
 **Linear:** displayed as a header row above the bar. When both `title` and `label` are set, the label moves into the header row right-aligned next to the title.
 
 **Circular:** displayed as smaller text **below the label** inside the ring.
+
+Use `title` + `label` together to build a self-contained progress widget — the title names the operation and the label shows the current value.
 
 <ComponentPreview vertical>
 
@@ -114,7 +93,7 @@ The `floating-label` attribute renders a chip **above the fill endpoint**, cente
 
 ## Circular
 
-Set `type="circular"` to render a circular progress ring. The default diameter is `6rem` (sm: `4rem`, lg: `9rem`) — large enough to display content inside.
+Set `type="circular"` to render a circular progress ring. The default diameter is `6rem` (sm: `4rem`, lg: `9rem`) — large enough to display content inside. Use `circular` for dashboard metrics, profile completions, or storage indicators where the ring itself communicates the proportion. For circular, combine `label` (value like `"75%"`) with `title` (context like `"Storage"`) for a self-contained widget.
 
 ### Determinate
 
@@ -161,6 +140,8 @@ Use `label` for the primary value text centered inside the ring, and `title` for
 </ComponentPreview>
 
 ## Colors
+
+Use semantic `color` to reinforce state: `color="success"` when complete, `color="error"` on failure.
 
 <ComponentPreview center>
 
@@ -268,33 +249,4 @@ const interval = setInterval(() => {
 
 ## Accessibility
 
-The progress component follows WAI-ARIA best practices.
-
-### `sg-progress`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `role="progressbar"` is applied to the track element.
-- `aria-valuenow` reflects the current `value` (omitted when `indeterminate`).
-- `aria-valuemin` is always `0`; `aria-valuemax` reflects `max`.
-- `aria-label` resolves in priority order: `label` → `title` → `"Progress"`. Set `label` to a meaningful description like `"Uploading file — 45%"`.
-- `aria-valuetext` can be set via `value-text` for a human-readable override (e.g. `"Step 3 of 10"`).
-- The inner `.circular-inner` overlay (label + title) is positioned with `position: absolute; inset: 0` so the SVG ring renders independently; text never spins even when `indeterminate` is active.
-- Animations respect `prefers-reduced-motion`: the sliding/spinning animation is disabled and a static representation is shown.
-
-## Best Practices
-
-**Do:**
-
-- Use `title` + `label` together to build a self-contained progress widget — the title names the operation and the label shows the current value.
-- Use `floating-label` to surface the exact value visually without breaking layout (linear only).
-- For circular, combine `label` (value like `"75%"`) with `title` (context like `"Storage"`) for a self-contained widget.
-- Use `circular` for dashboard metrics, profile completions, or storage indicators where the ring itself communicates the proportion.
-- Use semantic `color` to reinforce state: `color="success"` when complete, `color="error"` on failure.
-
-**Don't:**
-
-- Omit `label` or `title` when context is not clear from surrounding text — screen readers need a meaningful `aria-label`.
-- Use `floating-label` with `indeterminate` — the chip is hidden in that state since there is no defined endpoint to pin it to.
-- Use progress bars for step-based flows — use a stepper component instead.
-- Animate the progress bar too quickly or too slowly — aim for real-time updates that reflect actual operation state.
+The progress component follows WAI-ARIA best practices. `role="progressbar"` is applied to the track element. `aria-valuenow` reflects the current `value` and is omitted when `indeterminate`. `aria-valuemin` is always `0`; `aria-valuemax` reflects `max`. `aria-label` resolves in priority order: `label` → `title` → `"Progress"`. Use `value-text` via the `value-text` attribute to provide a human-readable override for screen readers (e.g. `"Step 3 of 10"`), which sets `aria-valuetext`. The inner `.circular-inner` overlay (label + title) is positioned with `position: absolute; inset: 0` so the SVG ring renders independently; text never spins even when `indeterminate` is active. Animations respect `prefers-reduced-motion`: the sliding/spinning animation is disabled and a static representation is shown.

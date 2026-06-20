@@ -2,45 +2,6 @@
 
 A responsive navigation bar with desktop and mobile layouts, plus sticky and floating modes. It includes a dedicated mobile menu slot and supports a floating-to-full-width transition when `floating` and `sticky` are used together.
 
-## Features
-
-- <sg-icon name="smartphone" size="16"></sg-icon> **Responsive by default**: desktop and mobile layouts with configurable media query breakpoint
-- <sg-icon name="map-pin" size="16"></sg-icon> **Sticky mode**: pins the navbar to the top of the viewport
-- <sg-icon name="cloud-fog" size="16"></sg-icon> **Floating mode**: detached navbar with rounded panel styling and fixed positioning
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Floating + Sticky transition**: starts floating, becomes full-width sticky when scrolling past `scroll-threshold`
-- <sg-icon name="sliders-horizontal" size="16"></sg-icon> **Imperative API**: open/close/toggle mobile menu from code
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible semantics**: nav landmark label, expanded state, keyboard-close on Escape
-- <sg-icon name="puzzle" size="16"></sg-icon> **Composable slots**: `logo`, `start`, default, `end`, and `mobile-menu`
-
-## Source Code
-
-::: details View Source Code (Navbar)
-<<< @/../packages/sigil/src/layout/navbar/navbar.ts
-:::
-
-## Basic Usage
-
-<ComponentPreview>
-
-```html
-<sg-navbar label="Main navigation" sticky>
-  <sg-navbar-item slot="start" href="#">Docs</sg-navbar-item>
-  <sg-navbar-item href="#">Pricing</sg-navbar-item>
-  <sg-navbar-item href="#">Blog</sg-navbar-item>
-  <sg-navbar-item slot="end" href="#">Sign in</sg-navbar-item>
-  <sg-navbar-item slot="end" href="#" active>Get started</sg-navbar-item>
-
-  <div slot="mobile-menu">
-    <sg-navbar-item href="#" active>Home</sg-navbar-item>
-    <sg-navbar-item href="#">Docs</sg-navbar-item>
-    <sg-navbar-item href="#">Pricing</sg-navbar-item>
-    <sg-navbar-item href="#">Blog</sg-navbar-item>
-  </div>
-</sg-navbar>
-```
-
-</ComponentPreview>
-
 ## Position Modes
 
 ### Sticky
@@ -334,7 +295,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 
 ## API Reference
 
-### `sg-navbar` Attributes
+**`sg-navbar` Attributes**
 
 | Attribute               | Type                                                                 | Default                | Description                                                                    |
 | ----------------------- | -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------ |
@@ -349,7 +310,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `rounded`               | `RoundedSize`                                                        | —                      | Border radius token                                                            |
 | `elevation`             | `'0' \| '1' \| '2' \| '3' \| '4' \| '5'`                             | —                      | Elevation shadow level                                                         |
 
-### `sg-navbar` Parts
+**`sg-navbar` Parts**
 
 | Part            | Description                    |
 | --------------- | ------------------------------ |
@@ -362,7 +323,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `mobile-toggle` | Mobile menu toggle button      |
 | `mobile-menu`   | Mobile overflow panel          |
 
-### `sg-navbar` Slots
+**`sg-navbar` Slots**
 
 | Slot          | Description                          |
 | ------------- | ------------------------------------ |
@@ -372,13 +333,13 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `end`         | Right-aligned desktop content        |
 | `mobile-menu` | Mobile-only expandable content panel |
 
-### `sg-navbar` Events
+**`sg-navbar` Events**
 
 | Event                | Detail              | Description                               |
 | -------------------- | ------------------- | ----------------------------------------- |
 | `mobile-menu-change` | `{ open: boolean }` | Fired when mobile menu open state changes |
 
-### `sg-navbar` CSS Custom Properties
+**`sg-navbar` CSS Custom Properties**
 
 | Property                     | Description                                       | Default         |
 | ---------------------------- | ------------------------------------------------- | --------------- |
@@ -397,7 +358,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `--navbar-item-active-color` | Nav item active/current text color                | Theme-dependent |
 | `--navbar-item-active-bg`    | Nav item active/current background                | Theme-dependent |
 
-### `sg-navbar-item` Attributes
+**`sg-navbar-item` Attributes**
 
 | Attribute  | Type      | Default | Description                                        |
 | ---------- | --------- | ------- | -------------------------------------------------- |
@@ -407,7 +368,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `rel`      | `string`  | —       | Link relationship when `href` is set               |
 | `target`   | `string`  | —       | Link target when `href` is set                     |
 
-### `sg-navbar-item` Slots
+**`sg-navbar-item` Slots**
 
 | Slot      | Description               |
 | --------- | ------------------------- |
@@ -415,7 +376,7 @@ navbar.addEventListener('mobile-menu-change', (e) => {
 | `icon`    | Optional leading icon     |
 | `end`     | Optional trailing content |
 
-### `sg-navbar-item` Parts
+**`sg-navbar-item` Parts**
 
 | Part         | Description                               |
 | ------------ | ----------------------------------------- |

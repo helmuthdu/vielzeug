@@ -2,35 +2,11 @@
 title: Checkbox Group
 ---
 
-`sg-checkbox-group` is a form-associated fieldset wrapper for `sg-checkbox` items. It owns the selection state for all child checkboxes, mirrors that state into the `values` attribute as a comma-separated string, and submits that string under the group's `name` in native forms and `sg-form`.
-
-## Features
-
-- Form-associated group submission through `name`
-- Comma-separated `values` state for preselection and controlled updates
-- Propagation of `color`, `size`, and `disabled` to child `sg-checkbox` elements
-- `fieldset` and `legend` semantics with helper and error text wiring
-- Vertical and horizontal layouts
-
-## Source Code
-
-::: details View Checkbox Group Source
-<<< @/../packages/sigil/src/inputs/checkbox-group/checkbox-group.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-checkbox-group label="Interests" values="sport,music">
-  <sg-checkbox value="sport">Sport</sg-checkbox>
-  <sg-checkbox value="music">Music</sg-checkbox>
-  <sg-checkbox value="travel">Travel</sg-checkbox>
-</sg-checkbox-group>
-```
+`sg-checkbox-group` is a form-associated fieldset wrapper for `sg-checkbox` items. It owns the selection state for all child checkboxes, mirrors that state into the `values` attribute as a comma-separated string, and submits that string under the group's `name` in native forms and `sg-form`. Use `sg-radio-group` instead when the user must pick exactly one option.
 
 ## Form Submission
 
-Set `name` on the group when you want its selected values to submit with a form. The submitted value is a comma-separated string such as `email,sms`.
+Set `name` on the group — not on individual child checkboxes — when you want its selected values to submit with a form. The submitted value is a comma-separated string such as `email,sms`.
 
 ```html
 <sg-form id="prefs-form" novalidate>
@@ -90,7 +66,7 @@ Set `name` on the group when you want its selected values to submit with a form.
 ## API Reference
 
 - `label`: `string`, default `''`. Legend text used as the group's accessible name.
-- `values`: `string`, default `''`. Comma-separated currently checked values.
+- `values`: `string`, default `''`. Comma-separated currently checked values. Update `values`, not child `checked` attributes, when controlling the group from outside.
 - `name`: `string`, default `''`. Form field name used during submission.
 - `orientation`: `'vertical' | 'horizontal'`, default `'vertical'`. Layout direction of options.
 - `color`: `'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'`. Propagated to child checkboxes.
@@ -105,9 +81,3 @@ Set `name` on the group when you want its selected values to submit with a form.
 | Event    | Detail                 | Description                                             |
 | -------- | ---------------------- | ------------------------------------------------------- |
 | `change` | `{ values: string[] }` | Full array of currently checked values after any toggle |
-
-## Best Practices
-
-- Put `name` on the group instead of individual child checkboxes when you want one submitted field.
-- Update `values`, not child `checked` attributes, when you want to control the group from outside.
-- Use `sg-radio-group` instead when the user must pick exactly one option.

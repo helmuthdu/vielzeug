@@ -5,28 +5,7 @@ A radio button and a group wrapper for mutually exclusive selections.
 - **`sg-radio`** — standalone radio button for a single boolean choice within a named group.
 - **`sg-radio-group`** — `<fieldset>` wrapper that manages a set of radios, propagates `color`, `size`, `name`, and `disabled` to all children, and handles roving keyboard navigation.
 
-## Features
-
-- <sg-icon name="arrow-up-down" size="16"></sg-icon> **2 Orientations** (group) — vertical & horizontal
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — ARIA roles, roving tabindex, arrow key nav
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="theater" size="16"></sg-icon> **States** — checked, unchecked, disabled
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="file-pen" size="16"></sg-icon> **Helper & Error Text** (group) — inline validation feedback
-
-## Source Code
-
-::: details View Radio Source
-<<< @/../packages/sigil/src/inputs/radio/radio.ts
-:::
-
-::: details View Radio Group Source
-<<< @/../packages/sigil/src/inputs/radio-group/radio-group.ts
-:::
-
 ## Standalone Radio
-
-### Basic Usage
 
 ```html
 <sg-radio name="choice" value="option1" checked>Option 1</sg-radio>
@@ -84,7 +63,7 @@ Prevent interaction and reduce opacity for unavailable options.
 
 ## Radio Group
 
-`sg-radio-group` wraps `sg-radio` elements in a semantic `<fieldset>`. Set `value` to the default selected option and `name` to share the field name across all children.
+`sg-radio-group` wraps `sg-radio` elements in a semantic `<fieldset>`. Set `value` to the default selected option and `name` to share the field name across all children. Always provide a meaningful `label` on the group — it is read before each option by screen readers. For non-mutually exclusive choices, use [`sg-checkbox-group`](./checkbox) instead.
 
 ### Basic Usage
 
@@ -173,7 +152,7 @@ Color and size set on the group are automatically propagated to all child radios
 
 ### In a Form
 
-The selected `value` attribute is submitted with the form under the `name` field name.
+The selected `value` attribute is submitted with the form under the `name` field name. Provide a default `value` when a sensible default exists.
 
 ```html
 <form id="survey">
@@ -201,7 +180,7 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 ## API Reference
 
-### `sg-radio` Attributes
+**`sg-radio` Attributes**
 
 | Attribute  | Type                                                                      | Default     | Description                             |
 | ---------- | ------------------------------------------------------------------------- | ----------- | --------------------------------------- |
@@ -212,19 +191,19 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `name`     | `string`                                                                  | —           | Form field name (required for grouping) |
 | `value`    | `string`                                                                  | —           | Form field value when checked           |
 
-### `sg-radio` Slots
+**`sg-radio` Slots**
 
 | Slot      | Description                |
 | --------- | -------------------------- |
 | (default) | Radio button label content |
 
-### `sg-radio` Events
+**`sg-radio` Events**
 
 | Event    | Detail                                                      | Description                                                     |
 | -------- | ----------------------------------------------------------- | --------------------------------------------------------------- |
 | `change` | `{ checked: boolean, value: string, originalEvent: Event }` | Emitted when checked state changes (only when becoming checked) |
 
-### `sg-radio` CSS Custom Properties
+**`sg-radio` CSS Custom Properties**
 
 | Property               | Description                         | Default         |
 | ---------------------- | ----------------------------------- | --------------- |
@@ -235,7 +214,7 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `--radio-color`        | Selected indicator dot color        | Theme-dependent |
 | `--radio-font-size`    | Label font size                     | Size-dependent  |
 
-### `sg-radio-group` Attributes
+**`sg-radio-group` Attributes**
 
 | Attribute     | Type                                                                      | Default      | Description                                      |
 | ------------- | ------------------------------------------------------------------------- | ------------ | ------------------------------------------------ |
@@ -250,19 +229,19 @@ The selected `value` attribute is submitted with the form under the `name` field
 | `helper`      | `string`                                                                  | `''`         | Helper text (hidden when `error` is set)         |
 | `required`    | `boolean`                                                                 | `false`      | Mark the group as required                       |
 
-### `sg-radio-group` Slots
+**`sg-radio-group` Slots**
 
 | Slot      | Description                    |
 | --------- | ------------------------------ |
 | (default) | Place `sg-radio` elements here |
 
-### `sg-radio-group` Events
+**`sg-radio-group` Events**
 
 | Event    | Detail              | Description                      |
 | -------- | ------------------- | -------------------------------- |
 | `change` | `{ value: string }` | Emitted when a radio is selected |
 
-### `sg-radio-group` CSS Custom Properties
+**`sg-radio-group` CSS Custom Properties**
 
 | Property                  | Description                     | Default         |
 | ------------------------- | ------------------------------- | --------------- |
@@ -273,31 +252,6 @@ The selected `value` attribute is submitted with the form under the `name` field
 
 The radio components follow WCAG 2.1 Level AA standards.
 
-### `sg-radio`
+`sg-radio` uses `role="radio"` with `aria-checked` reflecting the current state, and `aria-disabled` reflecting the disabled state. Keyboard navigation uses `Space` or `Enter` to select a radio and `Tab` to move focus in and out of the group. Arrow keys navigate between radios within a group using a roving tabindex.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Space` / `Enter` select a radio; `Tab` moves focus in and out of the group.
-- Arrow keys navigate between radios within a group using a roving tabindex.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Uses `role="radio"` with `aria-checked` reflecting the current state.
-- `aria-disabled` reflects the disabled state.
-
-### `sg-radio-group`
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- Renders as a `<fieldset>` with a `<legend>` for the `label` attribute.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.
-
-## Best Practices
-
-- Always provide a meaningful `label` on the group — it is read before each option by screen readers.
-- Always use the `name` attribute (or set it once on the group) so radios are mutually exclusive.
-- Provide a default `value` when a sensible default exists.
-- For non-mutually exclusive choices, use [`sg-checkbox-group`](./checkbox) instead.
+`sg-radio-group` renders as a `<fieldset>` with a `<legend>` for the `label` attribute, ensuring screen readers announce the group label before each option. `aria-required` and `aria-invalid` reflect the validation state; `aria-errormessage` and `aria-describedby` link the text nodes.

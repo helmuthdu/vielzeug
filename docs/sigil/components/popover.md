@@ -2,33 +2,6 @@
 
 A floating interactive panel anchored to a trigger element. Unlike a tooltip, a popover can contain any interactive content (forms, menus, rich text) via slots.
 
-## Features
-
-- <sg-icon name="map-pin" size="16"></sg-icon> **12 Placements** — top/bottom/left/right with start/end/center variants; auto-flips near viewport edges
-- <sg-icon name="zap" size="16"></sg-icon> **3 Trigger modes**: click (default), hover, focus — comma-separated for combinations
-- <sg-icon name="crosshair" size="16"></sg-icon> **Controlled open state** — use the `open` attribute for programmatic control
-- <sg-icon name="wrench" size="16"></sg-icon> **Powered by [orbit](../../orbit/index)** — efficient auto-updating position via `@vielzeug/orbit`
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: `role="dialog"` on panel, configurable `aria-label`
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/overlay/popover/popover.ts
-:::
-
-## Basic Usage
-
-Wrap the trigger element in the default slot and place panel content in the `content` slot.
-
-```html
-<sg-popover>
-  <sg-button>Open popover</sg-button>
-  <div slot="content" style="padding: 1rem;">
-    <p>This is the popover content.</p>
-  </div>
-</sg-popover>
-```
-
 ## Placement
 
 <ComponentPreview center>
@@ -198,25 +171,11 @@ Use the `open` attribute to programmatically show or hide the popover.
 
 ## Accessibility
 
-The popover component follows WAI-ARIA best practices.
+The popover component follows WAI-ARIA best practices. Pressing `Escape` closes the popover and returns focus to the trigger. `Tab` moves focus through interactive elements inside the panel.
 
-### `sg-popover`
+The panel uses `role="dialog"` when the `label` attribute is set, giving screen readers a concise title on open. The trigger element receives `aria-expanded` and `aria-controls` reflecting the current open state. Always provide a `label` attribute to give the panel an accessible name.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `Escape` closes the popover and returns focus to the trigger.
-- `Tab` moves focus through interactive elements inside the panel.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The panel uses `role="dialog"` when `label` is set, giving screen readers a concise title on open.
-- The trigger element receives `aria-expanded` and `aria-controls` reflecting the open state.
-- Provide a `label` attribute to give the panel an accessible name.
-
-<sg-icon name="check" size="16"></sg-icon> **Focus Management**
-
-- Focus moves into the panel on open (when `trigger` includes `click` or `focus`).
-- Focus returns to the trigger element on close.
+When the trigger mode includes `click` or `focus`, focus moves into the panel on open and returns to the trigger element on close.
 
 ## Related Components
 

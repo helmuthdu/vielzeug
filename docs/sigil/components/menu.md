@@ -2,39 +2,6 @@
 
 An action dropdown triggered by any slotted element. Presents a list of `sg-menu-item` actions in a floating panel using viewport-aware positioning. Supports full keyboard navigation and accessibility semantics.
 
-## Features
-
-- <sg-icon name="crosshair" size="16"></sg-icon> **Any trigger**: use any element in the `trigger` slot — button, icon, link
-- <sg-icon name="keyboard" size="16"></sg-icon> **Full Keyboard Nav**: ArrowDown/Up, Enter/Space, Escape, Tab, Home/End
-- <sg-icon name="map-pin" size="16"></sg-icon> **Auto-positioning**: uses `@vielzeug/orbit` to flip when near viewport edges
-- <sg-icon name="bell-off" size="16"></sg-icon> **Outside-click close**: dismiss by clicking anywhere outside
-- <sg-icon name="minus" size="16"></sg-icon> **Separator**: `sg-menu-separator` renders a visual divider between groups of items
-- <sg-icon name="check" size="16"></sg-icon> **Checkable Items**: `sg-menu-item` supports `type="checkbox"` and `type="radio"` for toggleable selections
-- <sg-icon name="hand" size="16"></sg-icon> **Disabled items**: individual `sg-menu-item` items can be disabled
-- <sg-icon name="puzzle" size="16"></sg-icon> **Icon slot**: each item supports a leading `icon` slot
-- <sg-icon name="palette" size="16"></sg-icon> **Color Themes**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="accessibility" size="16"></sg-icon> **ARIA**: `role="menu"`, `role="menuitem"`, `aria-expanded`, `aria-haspopup="menu"`, `aria-controls`
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/overlay/menu/menu.ts
-:::
-
-## Basic Usage
-
-Place your trigger element in the `trigger` slot and add `sg-menu-item` children.
-
-```html
-<sg-menu>
-  <sg-button slot="trigger">Actions</sg-button>
-  <sg-menu-item value="edit">Edit</sg-menu-item>
-  <sg-menu-item value="duplicate">Duplicate</sg-menu-item>
-  <sg-menu-item value="delete">Delete</sg-menu-item>
-</sg-menu>
-```
-
 ## Placement
 
 Control which side of the trigger the panel opens on. The menu automatically flips to avoid viewport clipping.
@@ -105,7 +72,7 @@ These examples use inline SVG slot content so they stay framework and icon-libra
 
 ## Disabled Items
 
-Set `disabled` on a `sg-menu-item` to prevent selection. The item is still visible but non-interactive.
+Set `disabled` on a `sg-menu-item` to prevent selection. The item is still visible but non-interactive. Use `disabled` for permissions that might change rather than removing the item entirely, to signal that the action exists but is unavailable.
 
 <ComponentPreview vertical>
 
@@ -180,9 +147,11 @@ Set `disabled` on the `sg-menu` element to prevent the panel from opening at all
 </script>
 ```
 
+Use `value` on each item to handle selection in a single `select` listener rather than per-item click handlers. Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
+
 ## Trigger with an Icon Button
 
-Any element works as the trigger — including icon-only buttons.
+Any element works as the trigger — including icon-only buttons. Always provide a visible label or `aria-label` on an icon-only trigger button so the purpose is clear to screen reader users.
 
 <ComponentPreview center>
 
@@ -264,7 +233,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 ## API Reference
 
-### `sg-menu` Attributes
+**`sg-menu`** Attributes
 
 | Attribute   | Type                                                                              | Default          | Description                                                |
 | ----------- | --------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------- |
@@ -273,14 +242,14 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `size`      | `'sm' \| 'md' \| 'lg'`                                                            | `'md'`           | Size theme                                                 |
 | `disabled`  | `boolean`                                                                         | `false`          | Prevent the menu from opening                              |
 
-### `sg-menu` Slots
+**`sg-menu`** Slots
 
 | Slot      | Description                                        |
 | --------- | -------------------------------------------------- |
 | `trigger` | The element that opens/closes the menu panel       |
 | (default) | `sg-menu-item` elements to display as menu options |
 
-### `sg-menu-item` Attributes
+**`sg-menu-item`** Attributes
 
 | Attribute  | Type                    | Default | Description                                                  |
 | ---------- | ----------------------- | ------- | ------------------------------------------------------------ |
@@ -289,14 +258,14 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `checked`  | `boolean`               | `false` | Whether a checkable item is currently checked                |
 | `disabled` | `boolean`               | `false` | Prevent the item from being selected                         |
 
-### `sg-menu-item` Slots
+**`sg-menu-item`** Slots
 
 | Slot      | Description                         |
 | --------- | ----------------------------------- |
 | `icon`    | Optional leading icon or decoration |
 | (default) | Item label text                     |
 
-### Events
+**Events**
 
 | Event    | Detail                                                                   | Description                                                                                               |
 | -------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -304,7 +273,7 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 | `open`   | `{ reason: 'programmatic' \| 'trigger' }`                                | Emitted when the panel opens.                                                                             |
 | `close`  | `{ reason: 'escape' \| 'outside-click' \| 'programmatic' \| 'trigger' }` | Emitted when the panel closes.                                                                            |
 
-### CSS Custom Properties (`sg-menu`)
+**CSS Custom Properties (`sg-menu`)**
 
 | Property                    | Description                                      | Default             |
 | --------------------------- | ------------------------------------------------ | ------------------- |
@@ -325,40 +294,6 @@ Set `type="radio"` to create a group where only one item can be checked at a tim
 
 The menu component follows WAI-ARIA Menu Button Pattern best practices.
 
-### `sg-menu`
+Arrow keys move focus between items; `Enter` / `Space` activates the focused item; `Escape` closes the panel and returns focus to the trigger. `Home` / `End` jump to the first or last item. Outside clicks and `Tab` also close the menu and restore focus to the trigger.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- Arrow keys move focus between items; `Enter` / `Space` activates; `Escape` closes and returns focus to the trigger.
-- `Home` / `End` jump to the first or last item.
-- Outside clicks and `Tab` close the menu and restore focus to the trigger.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The panel has `role="menu"` and `aria-orientation="vertical"`.
-- The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel.
-
-### `sg-menu-item`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Each item has `role="menuitem"` and `aria-disabled` when disabled.
-- Checkable items automatically switch to `role="menuitemcheckbox"` or `role="menuitemradio"` with the appropriate `aria-checked` value.
-
-::: tip
-Always provide a visible label or `aria-label` on an icon-only trigger button so the purpose is clear to screen reader users.
-:::
-
-## Best Practices
-
-**Do:**
-
-- Keep menu items short and action-oriented (verb + noun: "Edit post", "Delete file").
-- Use `value` on each item to handle selection in a single `sg-select` listener rather than per-item click handlers.
-- Use `disabled` on items for permissions that might change, rather than removing the item, to signal that the action exists but is unavailable.
-
-**Don't:**
-
-- Nest menus inside other menus — this creates complex keyboard interactions and poor UX.
-- Place form controls (inputs, checkboxes) inside a menu — use a popover or dialog instead.
-- Use a menu when only one action is available — a plain button is always clearer.
+The panel has `role="menu"` and `aria-orientation="vertical"`. The trigger element receives `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls` pointing to the menu panel. Each item has `role="menuitem"` and `aria-disabled` when disabled. Checkable items automatically switch to `role="menuitemcheckbox"` or `role="menuitemradio"` with the appropriate `aria-checked` value.

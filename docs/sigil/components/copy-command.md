@@ -2,29 +2,6 @@
 
 A styled, copy-to-clipboard command display component. Shows a command string in a monospace code block with a copy button. Clicking it copies the value to the clipboard, shows a transient check-mark confirmation, and emits a `copy` event. Optionally accepts extra controls in a `suffix` slot — useful for pairing a "next package" cycle button alongside the command.
 
-## Features
-
-- <sg-icon name="copy" size="16"></sg-icon> **One-click copy** — writes the `value` to the clipboard and provides visual confirmation
-- <sg-icon name="check" size="16"></sg-icon> **Transient feedback** — switches to a check icon for 2 seconds, then resets
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible** — `aria-label` updates on copy; `role="status"` live region announces to screen readers
-- <sg-icon name="layout-panel-right" size="16"></sg-icon> **Suffix slot** — attach extra controls (cycle button, link, etc.) without breaking the visual group
-- <sg-icon name="palette" size="16"></sg-icon> **3 Visual variants** — flat (default), bordered, ghost
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md (default), lg
-- <sg-icon name="circle" size="16"></sg-icon> **Rounded control** — matches every `--rounded-*` token step
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** — 8 CSS custom properties for full style control
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/copy-command/copy-command.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-copy-command value="npm install @vielzeug/ripple"></sg-copy-command>
-```
-
 ## Variants
 
 ### Flat (Default)
@@ -65,6 +42,8 @@ No background or border until hovered. Minimal visual footprint — good inside 
 
 ## Sizes
 
+Use `size="sm"` inside dense UI or inside other components (cards, sidebars).
+
 <ComponentPreview center vertical>
 
 ```html
@@ -97,11 +76,13 @@ Use the `rounded` attribute to match your surrounding UI radius:
 
 </ComponentPreview>
 
+Do not mix `--copy-command-radius` and `rounded` — the CSS property takes precedence over the attribute.
+
 ## With a Suffix Slot
 
 Add any element to the `suffix` slot. It is separated by a divider that inherits the component's border color.
 
-The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position.
+The most common use is a "cycle" button that switches between multiple commands without losing the copy button's position. Keep suffix slot controls lightweight — the slot is visually grouped with the copy button and should feel like a single unit. Suffix slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
 
 <ComponentPreview center vertical>
 
@@ -122,7 +103,7 @@ The most common use is a "cycle" button that switches between multiple commands 
 
 ## Handling the Copy Event
 
-Listen for the `copy` event to react when the command is successfully copied.
+Listen for the `copy` event to react when the command is successfully copied. The event only fires on success; clipboard failures are silently ignored.
 
 ```html
 <sg-copy-command value="npm install @vielzeug/ripple" id="install-cmd"></sg-copy-command>
@@ -222,22 +203,4 @@ sg-copy-command::part(copy-icon) {
 
 ## Accessibility
 
-- The inner `<button>` carries an `aria-label` that includes the command value (`Copy: <value>`). After a successful copy the label updates to `"Copied!"` for 2 seconds.
-- A `role="status"` live region inside the shadow DOM announces `"Copied to clipboard."` to screen readers immediately after a successful copy, so assistive technology does not miss the state change even when focus remains on the button.
-- The copy icon is marked `aria-hidden="true"` and is supplementary to the button label — the label alone is the accessible name.
-- The `suffix` slot content is part of the light DOM and must carry its own accessible labels (e.g. `aria-label="Show next package"`).
-
-## Best Practices
-
-**Do:**
-
-- Set a descriptive `value` — the attribute is also used as the button's accessible name.
-- Use `size="sm"` inside dense UI or inside other components (cards, sidebars).
-- Keep `suffix` slot controls lightweight — the slot is visually grouped with the copy button and should feel like a single unit.
-- Listen to the `copy` event when you need to confirm or log the copy action upstream.
-
-**Don't:**
-
-- Place a long, multi-line command in `value` — the command text is single-line and will truncate; use a `<sg-code-window>` instead for multi-line content.
-- Mix `--copy-command-radius` and `rounded` — the CSS property takes precedence over the attribute.
-- Rely on `copy` event firing for error states — the event only fires on success; clipboard failures are silently ignored.
+The inner `<button>` carries an `aria-label` that includes the command value (`Copy: <value>`). After a successful copy the label updates to `"Copied!"` for 2 seconds. A `role="status"` live region inside the shadow DOM announces `"Copied to clipboard."` to screen readers immediately after a successful copy, so assistive technology does not miss the state change even when focus remains on the button. The copy icon is marked `aria-hidden="true"` and is supplementary to the button label — the label alone is the accessible name. Set a descriptive `value` — the attribute is also used as the button's accessible name. Avoid placing a long, multi-line command in `value` — the command text is single-line and will truncate; use a `<sg-code-window>` instead for multi-line content.

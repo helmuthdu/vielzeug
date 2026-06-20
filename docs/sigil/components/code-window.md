@@ -2,30 +2,9 @@
 
 A presentational window chrome for code blocks and AI/MCP conversation flows.
 
-- <sg-icon name="code" size="16"></sg-icon> **`variant="code"`** — language badge + optional filename header
-- <sg-icon name="message-circle" size="16"></sg-icon> **`variant="chat"`** — traffic-light dots + title header
-- <sg-icon name="panel-top" size="16"></sg-icon> **`header-end` slot** — pin a copy button or badge to the right of the header
-- <sg-icon name="palette" size="16"></sg-icon> **Customizable** via six CSS custom properties
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/code-window/code-window.ts
-:::
-
-## Basic Usage
-
-Import the component and wrap any content in the chrome:
-
 ```ts
 import '@vielzeug/sigil/styles';
 import '@vielzeug/sigil/code-window';
-```
-
-```html
-<sg-code-window lang="ts" filename="app.ts">
-  <pre><code>const x = 1;</code></pre>
-</sg-code-window>
 ```
 
 ## Code Variant
@@ -158,8 +137,4 @@ Override `--code-window-body-padding` for a more compact look:
 
 ## Accessibility
 
-`sg-code-window` is a presentational container with no interactive role.
-
-- The traffic-light dots in `variant="chat"` carry `aria-hidden="true"` and have no semantic meaning.
-- Use semantic `<pre><code>` markup for code content in the default slot.
-- For conversation flows, ensure each speaker label is readable by screen readers — use visually hidden text or `aria-label` rather than relying solely on color or position.
+`sg-code-window` is a presentational container with no interactive role. The traffic-light dots in `variant="chat"` carry `aria-hidden="true"` and have no semantic meaning. Use semantic `<pre><code>` markup for code content in the default slot. For conversation flows, ensure each speaker label is readable by screen readers — use visually hidden text or `aria-label` rather than relying solely on color or position.

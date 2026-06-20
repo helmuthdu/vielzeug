@@ -2,37 +2,6 @@
 
 A compact, styled label for tags, filters, and selected values. Supports a leading icon, interaction modes (static, removable, selectable), all color themes, five variants, and three sizes. Used internally by `sg-select` and `sg-combobox` in multiselect mode.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants**: solid, flat, bordered, outline, ghost
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="x" size="16"></sg-icon> **Removable**: optional × button that fires `remove`
-- <sg-icon name="check" size="16"></sg-icon> **Selectable**: toggle chip state with `mode="selectable"` and the `change` event
-- <sg-icon name="zap" size="16"></sg-icon> **Action**: stateless button-like chip that fires a `click` event
-- <sg-icon name="image" size="16"></sg-icon> **Icon Slot**: prepend an icon or decoration
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: remove button has a contextual `aria-label` including the chip value
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/chip/chip.ts
-:::
-
-## Basic Usage
-
-<ComponentPreview center>
-
-```html
-<sg-chip>Design</sg-chip>
-<sg-chip color="primary">TypeScript</sg-chip>
-<sg-chip color="success">Approved</sg-chip>
-<sg-chip color="warning">Pending</sg-chip>
-<sg-chip color="error">Rejected</sg-chip>
-```
-
-</ComponentPreview>
-
 ## Variants
 
 Five visual variants for different levels of emphasis.
@@ -123,7 +92,7 @@ document.querySelectorAll('sg-chip[mode="selectable"]').forEach((chip) => {
 
 ## Action
 
-Set `mode="action"` to make the chip behave like a button — it fires a `click` event but holds no internal state. Use it for quick actions, command triggers, or suggestion pills.
+Set `mode="action"` to make the chip behave like a button — it fires a `click` event but holds no internal state. Use it for quick actions, command triggers, or suggestion pills. Supply `aria-label` for icon-only action chips.
 
 <ComponentPreview center>
 
@@ -273,18 +242,6 @@ document.getElementById('tag-wrap').addEventListener('remove', (e) => {
 
 ## Accessibility
 
-The chip component follows WAI-ARIA best practices.
+The chip component follows WAI-ARIA best practices. The remove button is keyboard-accessible and carries a contextual `aria-label`: `"Remove {value}"` when `value` is set, or `"Remove"` otherwise. When `disabled`, the remove button has the `disabled` attribute preventing activation.
 
-### `sg-chip`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- The remove button is keyboard-accessible.
-- When `disabled`, the remove button has the `disabled` attribute preventing activation.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The remove button has a contextual `aria-label`: `"Remove {value}"` when `value` is set, `"Remove"` otherwise.
-- Selectable chips use `role="checkbox"` and `aria-checked` while preserving the visible label as the accessible name.
-- Action chips render as a `<button>` element; supply `aria-label` for icon-only chips.
-- Use `value` to identify which chip triggered an event in a list.
+Selectable chips use `role="checkbox"` and `aria-checked` while preserving the visible label as the accessible name. Action chips render as a `<button>` element; supply `aria-label` for icon-only action chips. Use `value` to identify which chip triggered an event in a list.

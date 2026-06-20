@@ -4,28 +4,6 @@ A segmented password strength meter that provides real-time feedback during acco
 
 For entropy-aware scoring with advanced dictionaries and pattern detection, compute a score externally (e.g. with [zxcvbn](https://github.com/dropbox/zxcvbn)) and pass it through the `score` attribute.
 
-## Features
-
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **4-segment progress bar** with semantic levels (weak → fair → good → strong)
-- <sg-icon name="wrench" size="16"></sg-icon> **Built-in heuristic scoring** — length + character variety
-- <sg-icon name="zap" size="16"></sg-icon> **External score override** via `score` attribute (`0..4`)
-- <sg-icon name="tag" size="16"></sg-icon> **Custom level labels** via `labels` attribute
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible meter semantics** — `role="meter"`, `aria-valuenow`, `aria-valuetext`
-- <sg-icon name="bell" size="16"></sg-icon> **Live label updates** via `aria-live="polite"`
-- <sg-icon name="palette" size="16"></sg-icon> **Themeable** through CSS custom properties
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/password-strength/password-strength.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-password-strength value="Tr0ub4dor&3"></sg-password-strength>
-```
-
 ## Common Registration Flow
 
 Bind the meter to a password input by forwarding the `input` event's value.
@@ -132,23 +110,9 @@ For production use, prefer an external scorer like zxcvbn and pass the result vi
 
 ## Accessibility
 
-<sg-icon name="check" size="16"></sg-icon> **Meter Role**
+The component uses `role="meter"` with `aria-valuemin="0"`, `aria-valuemax="4"`, and a dynamic `aria-valuenow`. It provides human-readable state through `aria-valuetext` (`Weak`, `Fair`, `Good`, `Strong`). When `score` is `0` (empty), `aria-valuetext` is omitted to avoid announcing "empty".
 
-- Uses `role="meter"` with `aria-valuemin="0"`, `aria-valuemax="4"`, and dynamic `aria-valuenow`.
-- Provides human-readable state through `aria-valuetext` (`Weak`, `Fair`, `Good`, `Strong`).
-- When `score` is `0` (empty), `aria-valuetext` is omitted to avoid announcing "empty".
-
-<sg-icon name="check" size="16"></sg-icon> **Live Updates**
-
-- The visible label uses `aria-live="polite"` and `aria-atomic="true"` to announce level transitions.
-
-<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
-
-- The shimmer transition respects `prefers-reduced-motion: reduce`.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Decorative segments are hidden from the accessibility tree via `aria-hidden="true"`.
+The visible label uses `aria-live="polite"` and `aria-atomic="true"` to announce level transitions to screen readers. Decorative segments are hidden from the accessibility tree via `aria-hidden="true"`. The shimmer transition respects `prefers-reduced-motion: reduce`.
 
 ## Related Components
 

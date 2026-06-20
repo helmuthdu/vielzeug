@@ -2,34 +2,6 @@
 
 An accessible, keyboard-navigable data grid with built-in column sorting, row-level pagination, single/multi row selection, search & filters, column resizing, and row expansion. All state is reactive — pass any array of objects and a column definition, no wrapper needed.
 
-## Features
-
-- <sg-icon name="bar-chart-2" size="16"></sg-icon> **Declarative column API** — define `key`, `label`, `sortable`, `resizable`, `width`, and optional `cell` / `renderExpanded` renderers per column
-- <sg-icon name="file-pen" size="16"></sg-icon> **Declarative HTML API** — use `<sg-column>` child elements instead of the `columns` JS property
-- <sg-icon name="arrow-up-down" size="16"></sg-icon> **Column sorting** — click/Enter cycles `none → asc → desc`; emits `sort-change`; `sort-mode="server"` passes sorting responsibility to the consumer
-- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Column resizing** — set `resizable: true` on a column for a drag handle; widths persist across re-renders
-- <sg-icon name="check" size="16"></sg-icon> **Single & multi selection** — `selection-mode="single"` or `"multi"` with a dedicated checkbox column; emits `selection-change`; `selected-keys` prop for controlled/programmatic selection
-- <sg-icon name="file-text" size="16"></sg-icon> **Built-in pagination** — configurable `page-size` (reactive after mount); prev/next controls with `aria-live` info text; emits `page-change`
-- <sg-icon name="chevron-down" size="16"></sg-icon> **Row expansion** — `expandable` + `renderExpanded` per column renders an inline detail panel; emits `row-expand`
-- <sg-icon name="search" size="16"></sg-icon> **Search & filters** — `searchable` for full-text search; `filters` prop for multi-select column filters via `sg-combobox`; stale filters are pruned automatically when columns change
-- <sg-icon name="scan-line" size="16"></sg-icon> **Striped rows** — `striped` attribute for alternate-row backgrounds
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Loading state** — `loading` attribute reduces opacity and sets `aria-busy`
-- <sg-icon name="ban" size="16"></sg-icon> **Disabled state** — `disabled` blocks all interaction and sets `aria-disabled`
-- <sg-icon name="tag" size="16"></sg-icon> **Empty state** — configurable `empty-text` when no rows are present
-- <sg-icon name="accessibility" size="16"></sg-icon> **Fully accessible** — `role="grid"`, `role="columnheader"`, `role="gridcell"`, `aria-sort`, `aria-selected`, `aria-expanded`, `aria-live` pagination info; roving tabindex cell navigation
-- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard navigation** — ARIA Grid pattern; Arrow keys move between cells; Enter/Space on sort buttons and selectable rows
-- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** — full theming via `--datagrid-*` tokens
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/datagrid/datagrid.ts
-:::
-
-::: details View Column Source
-<<< @/../packages/sigil/src/inputs/datagrid/datagrid-column.ts
-:::
-
 ## Basic Usage
 
 <ComponentPreview>
@@ -205,9 +177,7 @@ Supply a `cell` function on a column to format the displayed value without modif
 
 </ComponentPreview>
 
-## Visual Options
-
-### Striped Rows
+## Striped Rows
 
 <ComponentPreview>
 
@@ -230,7 +200,7 @@ Supply a `cell` function on a column to format the displayed value without modif
 
 </ComponentPreview>
 
-### Full Width
+## Full Width
 
 Add `fullwidth` to stretch the grid to fill its container.
 
@@ -255,7 +225,7 @@ Add `fullwidth` to stretch the grid to fill its container.
 
 </ComponentPreview>
 
-### Density
+## Density
 
 Use the `density` attribute to control cell padding. Font size is unaffected.
 
@@ -286,7 +256,7 @@ Use the `density` attribute to control cell padding. Font size is unaffected.
 
 </ComponentPreview>
 
-### Loading State
+## Loading State
 
 <ComponentPreview>
 
@@ -307,7 +277,7 @@ Use the `density` attribute to control cell padding. Font size is unaffected.
 
 </ComponentPreview>
 
-### Empty State
+## Empty State
 
 <ComponentPreview>
 
@@ -376,11 +346,7 @@ Set `resizable: true` on any column to add a drag handle on its right edge. Drag
 
 ## Row Expansion
 
-Add `expandable` to the grid and supply a `renderExpanded` function on one or more columns. Each row gets a toggle button (<sg-icon name="play" size="16"></sg-icon>) that shows an inline detail panel spanning all columns.
-
-- Multiple rows can be expanded simultaneously.
-- The `row-expand` event fires with `{ key, expanded }` on each toggle.
-- `aria-expanded` is set on the row element.
+Add `expandable` to the grid and supply a `renderExpanded` function on one or more columns. Each row gets a toggle button that shows an inline detail panel spanning all columns. Multiple rows can be expanded simultaneously. The `row-expand` event fires with `{ key, expanded }` on each toggle.
 
 <ComponentPreview>
 
@@ -556,27 +522,9 @@ Set `selected-keys` to programmatically control which rows are selected. Any cha
 
 </ComponentPreview>
 
-## Accessibility
-
-The datagrid implements the [ARIA Grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/):
-
-- **`role="grid"`** on the `<table>` element
-- **`role="columnheader"`** + **`scope="col"`** on every `<th>`
-- **`aria-sort="ascending|descending|none"`** on sortable `<th>` elements — updated on each sort cycle
-- Sortable columns render a native **`<button>`** inside the `<th>` — natively focusable, announced correctly by all screen readers, and keyboard-operable via Enter/Space
-- **`role="gridcell"`** on every `<td>`
-- **`aria-selected="true|false"`** on body rows when `selection-mode` is `"single"` or `"multi"`
-- **`aria-expanded="true|false"`** on body rows when `expandable` is set; the expand toggle button is placed at the trailing edge of each row
-- **`aria-disabled="true"`** on the table when `disabled`
-- **`aria-busy="true"`** on the table when `loading`
-- **`aria-live="polite"` `aria-atomic="true"`** on the pagination info text
-- **`aria-label="Previous page|Next page"`** on pagination buttons
-- **`aria-label="Select all rows on this page"`** on the select-all checkbox
-- **Roving tabindex** — Arrow keys move focus between header and body cells; Home/End jump to row edges
-
-Always provide a meaningful `label` attribute so screen readers can announce the grid's purpose.
-
 ## API Reference
+
+**`sg-datagrid`**
 
 ### Attributes / Properties
 
@@ -615,7 +563,7 @@ Always provide a meaningful `label` attribute so screen readers can announce the
 | `renderExpanded` | `(item) => string` | Renders the expanded detail panel for a row as an HTML string. Requires `expandable` on the grid |
 | `width`          | `string?`          | Column width (any CSS value, e.g. `'12rem'`)                                                     |
 
-### sg-column Attributes
+**`sg-column`**
 
 When using the declarative `<sg-column>` API, the following attributes map directly to `DataGridColumn` fields:
 
@@ -665,3 +613,13 @@ When using the declarative `<sg-column>` API, the following attributes map direc
 | `row`    | `<tr>`    | A body row                |
 | `cell`   | `<td>`    | A body cell               |
 | `footer` | `<div>`   | The pagination footer bar |
+
+## Accessibility
+
+The datagrid implements the [ARIA Grid pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The `<table>` element carries `role="grid"`, every `<th>` has `role="columnheader"` and `scope="col"`, and every `<td>` has `role="gridcell"`. Always provide a meaningful `label` attribute so screen readers can announce the grid's purpose.
+
+Sortable columns render a native `<button>` inside the `<th>` — natively focusable, announced correctly by all screen readers, and keyboard-operable via Enter/Space. The `aria-sort="ascending|descending|none"` attribute is updated on each sort cycle.
+
+When `selection-mode` is `"single"` or `"multi"`, body rows carry `aria-selected="true|false"`. When `expandable` is set, body rows carry `aria-expanded="true|false"` and the expand toggle button is placed at the trailing edge of each row. `aria-disabled="true"` is set on the table when `disabled` and `aria-busy="true"` when `loading`. Pagination controls use `aria-live="polite"` with `aria-atomic="true"` on the info text, and the prev/next buttons carry `aria-label="Previous page"` / `aria-label="Next page"`. The select-all checkbox is labelled `aria-label="Select all rows on this page"`.
+
+Focus management follows the roving tabindex pattern — Arrow keys move focus between header and body cells; Home/End jump to row edges.

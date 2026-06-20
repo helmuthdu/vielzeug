@@ -2,28 +2,6 @@
 
 A simple visual divider for separating sections of content. Supports horizontal and vertical orientation, an optional centered label, and semantic vs. decorative modes.
 
-## Features
-
-- <sg-icon name="arrow-left-right" size="16"></sg-icon> **Horizontal** (default) and <sg-icon name="arrow-up-down" size="16"></sg-icon> **Vertical** orientations
-- <sg-icon name="tag" size="16"></sg-icon> **Optional label** — centered text on the divider line
-- <sg-icon name="palette" size="16"></sg-icon> **6 Theme Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: decorative mode sets `aria-hidden`; semantic mode uses `role="separator"`
-- <sg-icon name="wrench" size="16"></sg-icon> **Customizable** line thickness, color, and spacing via CSS custom properties
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/separator/separator.ts
-:::
-
-## Basic Usage
-
-```html
-<p>Section one content.</p>
-<sg-separator></sg-separator>
-<p>Section two content.</p>
-```
-
 ## Horizontal (Default)
 
 <ComponentPreview vertical>
@@ -96,7 +74,7 @@ Add a centered label to split the line into two segments.
 
 ## Semantic Separator
 
-By default the separator is decorative (`aria-hidden="true"`). Set `decorative="false"` for sections where the separator carries structural meaning.
+By default the separator is decorative (`aria-hidden="true"`). Set `decorative="false"` for sections where the separator carries structural meaning. When using a semantic separator, pair it with `aria-label` to describe the separation.
 
 ```html
 <sg-separator decorative="false" aria-label="End of navigation"></sg-separator>
@@ -123,11 +101,4 @@ By default the separator is decorative (`aria-hidden="true"`). Set `decorative="
 
 ## Accessibility
 
-The separator component follows WAI-ARIA best practices.
-
-### `sg-separator`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- By default, the separator is decorative and has `aria-hidden="true"`.
-- Set `decorative="false"` for separators that carry structural meaning and pair with `aria-label` to describe the separation.
+By default, `sg-separator` is decorative and rendered with `aria-hidden="true"`, so screen readers skip it entirely. When the separator carries structural meaning — for example, dividing distinct regions of a page — set `decorative="false"` and provide an `aria-label` to describe the separation. This switches the element to `role="separator"`, making it visible to assistive technology.

@@ -2,57 +2,9 @@
 
 A semantic, accessible data table component with striped rows, borders, sticky header, and responsive horizontal scrolling. Use `<sg-tr head>` for header rows, `<sg-tr foot>` for footer rows, plain `<sg-tr>` for body rows, with `<sg-th>` and `<sg-td>` for cells.
 
-## Features
+## Striped Rows
 
-- <sg-icon name="clipboard" size="16"></sg-icon> **Flat row API**: Compose with `<sg-tr head>`, `<sg-tr>`, `<sg-tr foot>`, `<sg-th>`, `<sg-td>` — no wrapper elements needed
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Density Variants**: `compact` · `cozy` (default) · `comfortable`
-- <sg-icon name="scan-line" size="16"></sg-icon> **Striped rows** for easier scanning of dense data
-- <sg-icon name="square" size="16"></sg-icon> **Bordered** variant with rounded outline
-- <sg-icon name="map-pin" size="16"></sg-icon> **Sticky header** that stays visible while the body scrolls
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Loading / busy state** with reduced opacity and `aria-busy`
-- <sg-icon name="smartphone" size="16"></sg-icon> **Responsive**: horizontal scroll container prevents layout overflow
-- <sg-icon name="tag" size="16"></sg-icon> **Visible caption** rendered above the table, also used as `aria-label`
-- <sg-icon name="accessibility" size="16"></sg-icon> **Fully Accessible**: WCAG 2.1 Level AA compliant
-- <sg-icon name="palette" size="16"></sg-icon> **CSS custom properties** for complete styling control
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/content/table/table.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-table caption="Team Members">
-  <sg-tr head>
-    <sg-th>Name</sg-th>
-    <sg-th>Role</sg-th>
-    <sg-th>Status</sg-th>
-  </sg-tr>
-  <sg-tr>
-    <sg-td>Alice</sg-td>
-    <sg-td>Admin</sg-td>
-    <sg-td>Active</sg-td>
-  </sg-tr>
-  <sg-tr>
-    <sg-td>Bob</sg-td>
-    <sg-td>Editor</sg-td>
-    <sg-td>Active</sg-td>
-  </sg-tr>
-  <sg-tr>
-    <sg-td>Carol</sg-td>
-    <sg-td>Viewer</sg-td>
-    <sg-td>Inactive</sg-td>
-  </sg-tr>
-</sg-table>
-```
-
-## Visual Options
-
-### Striped Rows
-
-The `striped` attribute applies alternating row backgrounds, making it easier to track across wide tables.
+The `striped` attribute applies alternating row backgrounds, making it easier to track across wide tables. Prefer `striped` for tables with many rows and few columns to aid row tracking.
 
 <ComponentPreview>
 
@@ -79,7 +31,7 @@ The `striped` attribute applies alternating row backgrounds, making it easier to
 
 </ComponentPreview>
 
-### Bordered
+## Bordered
 
 The `bordered` attribute adds an outer border and radius around the whole table.
 
@@ -108,7 +60,7 @@ The `bordered` attribute adds an outer border and radius around the whole table.
 
 </ComponentPreview>
 
-### Fullwidth
+## Fullwidth
 
 The `fullwidth` attribute expands the table to fill 100% of its container width.
 
@@ -136,9 +88,9 @@ The `fullwidth` attribute expands the table to fill 100% of its container width.
 
 </ComponentPreview>
 
-### Density
+## Density
 
-Control cell padding with the `density` attribute. Font size is unaffected.
+Control cell padding with the `density` attribute. Font size is unaffected. Use `density="compact"` for dense dashboard tables; `density="comfortable"` when more breathing room is needed. The default `density="cozy"` suits most cases.
 
 <ComponentPreview>
 
@@ -176,9 +128,9 @@ Control cell padding with the `density` attribute. Font size is unaffected.
 
 </ComponentPreview>
 
-### Sticky Header
+## Sticky Header
 
-Set `sticky` to keep the header row visible when the table body scrolls. Set `--table-sticky-max-height` to control the scroll viewport height (default `24rem`).
+Set `sticky` to keep the header row visible when the table body scrolls. Set `--table-sticky-max-height` to control the scroll viewport height (default `24rem`). Only use `sticky` when the table has enough rows to require scrolling; pair it with `--table-sticky-max-height`.
 
 <ComponentPreview>
 
@@ -204,9 +156,9 @@ Set `sticky` to keep the header row visible when the table body scrolls. Set `--
 
 </ComponentPreview>
 
-### Loading State
+## Loading State
 
-The `loading` attribute dims the table and sets `aria-busy="true"` while data is being fetched.
+The `loading` attribute dims the table and sets `aria-busy="true"` while data is being fetched. Use `loading` to indicate async data fetching instead of hiding or removing the table.
 
 <ComponentPreview>
 
@@ -225,9 +177,9 @@ The `loading` attribute dims the table and sets `aria-busy="true"` while data is
 
 </ComponentPreview>
 
-### Caption
+## Caption
 
-The `caption` attribute renders a visible label above the table and also serves as the accessible `aria-label`.
+The `caption` attribute renders a visible label above the table and also serves as the accessible `aria-label`. Always use the `caption` attribute on every data table to give it an accessible label.
 
 <ComponentPreview>
 
@@ -258,7 +210,7 @@ The `caption` attribute renders a visible label above the table and also serves 
 
 </ComponentPreview>
 
-### Combining Options
+## Combining Options
 
 Mix attributes for a fully styled, accessible table.
 
@@ -316,7 +268,7 @@ Mix attributes for a fully styled, accessible table.
 
 ### Child Elements
 
-`sg-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`.
+`sg-table` reads light-DOM marker elements and projects them into a native shadow `<table>`. There are no slots — child elements are observed via `MutationObserver`. Always use `<sg-th>` (not `<sg-td>`) for header cells — `scope` is inferred automatically.
 
 | Element        | Description                                                                  |
 | -------------- | ---------------------------------------------------------------------------- |
@@ -404,30 +356,8 @@ Attributes on `<sg-th>` and `<sg-td>` are forwarded to the generated native `<th
 
 The table component follows WCAG 2.1 Level AA standards.
 
-### `sg-table`
+When `loading` is active, `aria-busy` is set to `"true"` so screen readers can announce that the table content is being updated. When a `caption` is provided, it is used as the `aria-label` for the table, giving assistive technologies a clear label for the data.
 
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
+The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `sg-table`'s shadow DOM, preserving all table semantics for assistive technologies. `<sg-th>` elements in a `<sg-tr head>` row automatically receive `scope="col"` on the generated native `<th>`, while `<sg-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override either default.
 
-- `aria-busy` is set to `"true"` when `loading` is active.
-- `aria-label` is set to the `caption` value when provided.
-- The native `<table>`, `<thead>`, `<tbody>`, and `<tfoot>` elements are owned by `sg-table`'s shadow DOM, preserving all table semantics for assistive technologies.
-
-<sg-icon name="check" size="16"></sg-icon> **Semantic Structure**
-
-- `<sg-th>` in a `<sg-tr head>` row automatically gets `scope="col"` on the native `<th>`.
-- `<sg-th>` in a body row automatically gets `scope="row"`. Provide an explicit `scope` attribute to override.
-- Use the `caption` attribute on `sg-table` to label the table for assistive technologies.
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- Standard browser table keyboard navigation applies (Tab, arrow keys with screen readers).
-
-## Best Practices
-
-1. Always use `<sg-th>` (not `<sg-td>`) for header cells — `scope` is inferred automatically.
-2. Use the `caption` attribute on every data table to give it an accessible label.
-3. Prefer `striped` for tables with many rows and few columns to aid row tracking.
-4. Set `sticky` only when the table has enough rows to require scrolling; pair with `--table-sticky-max-height`.
-5. Use `loading` to indicate async data fetching instead of hiding or removing the table.
-6. Use `density="compact"` for dense dashboard tables; `density="comfortable"` when more breathing room is needed. The default `density="cozy"` suits most cases.
-7. Avoid placing interactive elements (buttons, inputs) inside cells without ensuring their keyboard accessibility.
+Standard browser table keyboard navigation applies, including Tab and arrow key navigation with screen readers. Avoid placing interactive elements such as buttons or inputs inside cells without ensuring their keyboard accessibility.

@@ -9,43 +9,6 @@ A zero-boilerplate wrapper that drives the right UI for every stage of an async 
 
 `status` defaults to `success`, so default slotted content is visible unless you explicitly set another state.
 
-## Features
-
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **5 statuses**: `idle`, `loading`, `empty`, `error`, `success`
-- <sg-icon name="skull" size="16"></sg-icon> **Default skeleton** loading state — no setup needed
-- <sg-icon name="mail-open" size="16"></sg-icon> **Built-in empty state** with configurable label and description
-- <sg-icon name="triangle-alert" size="16"></sg-icon> **Built-in error state** with optional retry button
-- <sg-icon name="shuffle" size="16"></sg-icon> **Fully slottable** — replace any built-in view with your own content
-- <sg-icon name="accessibility" size="16"></sg-icon> **Automatic ARIA** — `aria-busy`, `aria-live`, `role="alert"` managed for you
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/async/async.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-async status="loading"></sg-async>
-```
-
-Switch `status` from your data layer:
-
-```js
-const el = document.querySelector('sg-async');
-
-async function loadData() {
-  el.status = 'loading';
-  try {
-    const data = await fetch('/api/items').then((r) => r.json());
-    el.status = data.length ? 'success' : 'empty';
-  } catch {
-    el.status = 'error';
-  }
-}
-```
-
 ## Status: Loading
 
 The default loading view renders a skeleton stack automatically. No slot required.
@@ -316,11 +279,6 @@ Use the `loading` slot to render a table-shaped skeleton that matches the real t
 
 ## Accessibility
 
-`sg-async` manages ARIA on the host element automatically:
+`sg-async` manages ARIA on the host element automatically. While `status` is `loading`, `aria-busy="true"` is set so screen readers announce the busy region. In the `error` state, `aria-live="assertive"` ensures error messages interrupt the user immediately. All other states use `aria-live="polite"` so updates are announced after the current action completes.
 
-- **`aria-busy="true"`** while status is `loading` — screen readers announce the busy region.
-- **`aria-live="assertive"`** in the `error` state — error messages interrupt immediately.
-- **`aria-live="polite"`** in all other states — updates are announced after the current action.
-- The built-in error region uses `role="alert"` for immediate screen reader pickup.
-- The built-in loading and empty regions use `role="status"` for polite announcements.
-- The retry button is typed `type="button"` to prevent accidental form submission.
+The built-in error region uses `role="alert"` for immediate screen reader pickup, while the built-in loading and empty regions use `role="status"` for polite announcements. The retry button is typed `type="button"` to prevent accidental form submission.

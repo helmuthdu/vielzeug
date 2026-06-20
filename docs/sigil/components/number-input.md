@@ -2,29 +2,6 @@
 
 A numeric text field with increment (＋) and decrement (−) spin-buttons. Enforces `min`/`max` bounds, supports configurable step sizes, and integrates with HTML forms.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — `↑`/`↓` arrows step by `step`; `Page Up`/`Page Down` step by `large-step`
-- <sg-icon name="plus" size="16"></sg-icon><sg-icon name="minus" size="16"></sg-icon> **Spin Buttons** — click or hold to increment / decrement
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants** — solid, flat, bordered, outline, ghost
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
-- <sg-icon name="circle-dot" size="16"></sg-icon> **Nullable Mode** — allows an empty / null state
-- <sg-icon name="hash" size="16"></sg-icon> **Min / Max Clamping** — values are automatically clamped to the configured range
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/number-input/number-input.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-number-input label="Quantity" value="1" min="0" max="100"></sg-number-input>
-```
-
 ## Min / Max / Step
 
 <ComponentPreview center>
@@ -186,19 +163,9 @@ Add the `fullwidth` attribute to stretch the control to its container width.
 
 The number input component follows WCAG 2.1 Level AA standards.
 
-### `sg-number-input`
+Keyboard navigation uses `↑` / `↓` to step the value by `step`, and `Page Up` / `Page Down` to step by `large-step`. `Tab` moves focus in and out of the control.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `↑` / `↓` step the value by `step`; `Page Up` / `Page Down` step by `large-step`.
-- `Tab` moves focus in and out.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `aria-labelledby` links the label; `aria-describedby` links helper and error text.
-- Spin buttons use `aria-label` ("Increment" / "Decrement") and `aria-disabled` when the value is at `min` / `max`.
-- `aria-invalid` reflects the error state.
-- `aria-disabled` and `aria-readonly` reflect the disabled and readonly states.
+The label is linked via `aria-labelledby`, and helper or error text is linked via `aria-describedby`. Spin buttons carry `aria-label` values ("Increment" / "Decrement") and set `aria-disabled` when the value reaches `min` or `max`. The `aria-invalid` attribute reflects the error state, while `aria-disabled` and `aria-readonly` reflect the disabled and readonly states respectively.
 
 ## Related Components
 

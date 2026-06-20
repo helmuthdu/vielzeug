@@ -2,22 +2,6 @@
 
 A star-based rating input that lets users select a score. Supports hover preview, keyboard navigation, readonly and disabled modes, and HTML form integration.
 
-## Features
-
-- <sg-icon name="keyboard" size="16"></sg-icon> **Keyboard Navigation** — `←`/`→` arrows adjust value; `Home`/`End` jump to extremes
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors** — primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes** — sm, md, lg
-- <sg-icon name="lock" size="16"></sg-icon> **Readonly & Disabled** — readonly shows a non-interactive score; disabled removes from tab order
-- <sg-icon name="box" size="16"></sg-icon> **Solid Fill Mode** — selected stars can render as solid-filled via `solid`
-- <sg-icon name="link" size="16"></sg-icon> **Form-Associated** — `name` attribute & native form `reset` support
-- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Hover Preview** — stars fill on hover before selection is committed
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/inputs/rating/rating.ts
-:::
-
 ## Basic Usage
 
 ```html
@@ -77,7 +61,7 @@ Listen for changes:
 
 ## Readonly
 
-Use `readonly` to display a rating without allowing user interaction — useful for showing review scores.
+Use `readonly` to display a rating without allowing user interaction — useful for showing review scores. Prefer `readonly` over `disabled` when showing an existing score the user cannot change, as `readonly` keeps the element in the reading order.
 
 <ComponentPreview center>
 
@@ -111,6 +95,10 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 </ComponentPreview>
 
+## Sparkle Effect
+
+When a user selects a star, a burst of particle sparks radiates from the chosen star. The animation uses the current filled color and respects `prefers-reduced-motion` — particles are hidden entirely when the user has requested reduced motion.
+
 ## API Reference
 
 ### Attributes
@@ -122,7 +110,7 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 | `readonly` | `boolean`                                                                 | `false`    | Prevents user interaction; shows value only  |
 | `solid`    | `boolean`                                                                 | `false`    | Fills selected stars instead of outline-only |
 | `disabled` | `boolean`                                                                 | `false`    | Disables the rating input                    |
-| `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group        |
+| `label`    | `string`                                                                  | `'Rating'` | Accessible label for the rating group. Always provide a meaningful value (e.g. `"Product rating"`) so screen readers announce the context. |
 | `name`     | `string`                                                                  | —          | Form field name                              |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Star highlight color                         |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                    |
@@ -153,44 +141,11 @@ Use `solid` to render selected stars as filled shapes instead of outline-only.
 
 The rating component follows WCAG 2.1 Level AA standards.
 
-### `sg-rating`
+The group uses `role="radiogroup"` and each star uses `role="radio"` with `aria-checked` reflecting the current selection. The group `aria-label` is set from the `label` attribute (default: `'Rating'`). `aria-disabled` reflects the disabled state and `aria-readonly` reflects the readonly state. Hover previews stars visually without committing the value.
 
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
+Keyboard navigation is fully supported: `←` / `→` arrow keys move and commit the selection; `Home` / `End` jump to 1 / max; `Tab` moves focus in and out.
 
-- `←` / `→` arrow keys move and commit the selection.
-- `Home` / `End` jump to 1 / max; `Tab` moves focus in and out.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The group uses `role="radiogroup"`; each star uses `role="radio"` with `aria-checked` reflecting the current selection.
-- The group `aria-label` comes from the `label` attribute (default: `'Rating'`).
-- `aria-disabled` reflects the disabled state; `aria-readonly` reflects the readonly state.
-- Hover previews stars visually without committing the value.
-
-<sg-icon name="check" size="16"></sg-icon> **Forced Colors**
-
-- In `forced-colors` environments unfilled stars use `ButtonText` and filled stars use `Highlight`, ensuring visible distinction without relying on color alone.
-
-<sg-icon name="check" size="16"></sg-icon> **Reduced Motion**
-
-- The sparkle particle animation is suppressed when `prefers-reduced-motion: reduce` is active.
-
-## Sparkle Effect
-
-When a user selects a star, a burst of particle sparks radiates from the chosen star. The animation uses the current filled color and respects `prefers-reduced-motion` — particles are hidden entirely when the user has requested reduced motion.
-
-## Best Practices
-
-**Do:**
-
-- Always provide a `label` attribute so screen readers announce the context (e.g. `"Product rating"`).
-- Use `readonly` rather than `disabled` when showing an existing score that the user cannot change — `readonly` keeps the element accessible in the reading order.
-- Use colour together with label text to reinforce meaning (e.g. `color="warning"` for a gold star aesthetic).
-
-**Don't:**
-
-- Use rating for non-numeric preference input — a `sg-select` or `sg-radio-group` conveys options more clearly.
-- Omit the `label` attribute — an unlabelled rating group is inaccessible.
+In `forced-colors` environments unfilled stars use `ButtonText` and filled stars use `Highlight`, ensuring visible distinction without relying on color alone. The sparkle particle animation is suppressed when `prefers-reduced-motion: reduce` is active.
 
 ## Related Components
 

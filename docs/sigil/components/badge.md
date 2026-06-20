@@ -2,29 +2,7 @@
 
 A compact label for counts, statuses, and short metadata. Supports numeric overflow capping, a dot-only indicator, an optional icon slot, and all color themes.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **5 Variants**: solid, flat, bordered, outline, frost
-- <sg-icon name="rainbow" size="16"></sg-icon> **6 Semantic Colors**: primary, secondary, info, success, warning, error
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="hash" size="16"></sg-icon> **Count Mode**: display numeric counts with an optional max cap (e.g. `99+`)
-- <sg-icon name="circle" size="16"></sg-icon> **Dot Mode**: minimal dot indicator when no label needed- <sg-icon name="map-pin" size="16"></sg-icon> **Overlay Mode**: `anchor` prop pins the badge to a corner of any slotted content- <sg-icon name="wrench" size="16"></sg-icon> **Icon Slot**: prepend an icon inside the badge
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/badge/badge.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-badge color="primary">New</sg-badge>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 The badge comes with five visual variants to match different levels of emphasis.
 
@@ -64,7 +42,7 @@ Frost variant works best when placed over colorful backgrounds or images to show
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 Six semantic colors for different contexts.
 
@@ -82,7 +60,7 @@ Six semantic colors for different contexts.
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 Three sizes for different contexts.
 
@@ -98,7 +76,7 @@ Three sizes for different contexts.
 
 ## Count Badge
 
-Use `count` and `max` for numeric notification badges. When `count` exceeds `max` the label renders as `{max}+`.
+Use `count` and `max` for numeric notification badges. When `count` exceeds `max` the label renders as `{max}+`. Use `color="error"` for notification counts to draw immediate attention.
 
 <ComponentPreview center>
 
@@ -113,7 +91,7 @@ Use `count` and `max` for numeric notification badges. When `count` exceeds `max
 
 ## Dot Indicator
 
-Use `dot` for a minimal presence indicator with no label.
+Use `dot` for a minimal presence indicator with no label — for example, online status or unread indicators where presence alone is enough.
 
 <ComponentPreview center>
 
@@ -309,27 +287,6 @@ Stack multiple badges to show different types of information.
 
 ## Accessibility
 
-The badge component follows WAI-ARIA best practices.
+Badge text content is read by screen readers as inline text. Count badges expose the full value (or `{max}+`) as visible text that is read aloud. Dot indicator badges and count-only badges convey meaning through color and shape alone — use the `aria-label` attribute directly on `sg-badge` to provide a text description for assistive technology. When multiple badges are present, each should have a distinct `aria-label` to distinguish them.
 
-### `sg-badge`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- Badge text content is read by screen readers as inline text.
-- Count badges expose the full value (or `{max}+`) as visible text that is read aloud.
-- Dot indicator badges and count-only badges convey meaning through color and shape alone — use the `aria-label` attribute directly on `sg-badge` to provide a text description for assistive technology.
-- When multiple badges are present, each should have a distinct `aria-label` to distinguish them.
-
-## Best Practices
-
-**Do:**
-
-- Use count badges near buttons, nav items, or avatars to show notification totals.
-- Keep badge labels very short (1–3 words). For longer status text use `sg-alert`.
-- Use `dot` when presence alone is enough (e.g., online indicator, unread indicator).
-- Use `color="error"` for notification counts to draw immediate attention.
-
-**Don't:**
-
-- Use badges as the primary call-to-action; use `sg-button` for that.
-- Display lengthy sentences inside a badge.
+Keep badge labels very short (1–3 words). For longer status text use `sg-alert`. Badges should not be used as the primary call-to-action; use `sg-button` for that.

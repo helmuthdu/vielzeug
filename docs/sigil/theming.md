@@ -213,6 +213,10 @@ Refer to each component's documentation for its full variable list.
 
 ## Token Reference
 
+### Color Palette
+
+<ColorPalette />
+
 ### Contrast Scale
 
 Sigil uses an 11-step contrast scale driven by `light-dark()`. Values flip automatically between light and dark poles — no `@media` query needed.

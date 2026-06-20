@@ -2,26 +2,6 @@
 
 A fixed toast notification container with Time Machine-style stacking animation. Stacks toasts with a 3D effect when collapsed; expands the full list on hover or focus. Built on top of `sg-alert`.
 
-## Features
-
-- <sg-icon name="book-open" size="16"></sg-icon> **Time Machine Stacking**: 3D stacking with a 3-tier perspective effect
-- <sg-icon name="mouse-pointer" size="16"></sg-icon> **Hover & Focus Expand**: expand to list on mouse hover or keyboard focus
-- <sg-icon name="pause" size="16"></sg-icon> **Pause on Hover/Focus**: auto-dismiss timers pause on both hover and `focusin` (WCAG 2.1)
-- <sg-icon name="map-pin" size="16"></sg-icon> **6 Positions**: `top-left`, `top-center`, `top-right`, `bottom-left`, `bottom-center`, `bottom-right`
-- <sg-icon name="timer" size="16"></sg-icon> **Auto-dismiss**: configurable per-toast duration (default 5 s)
-- <sg-icon name="refresh-cw" size="16"></sg-icon> **Live Updates**: update a toast's content or duration in-place
-- <sg-icon name="link" size="16"></sg-icon> **Promise Integration**: `toast.promise()` ties a toast to an async operation
-- <sg-icon name="bell" size="16"></sg-icon> **`onDismiss` Callback**: per-toast callback fired after removal completes
-- <sg-icon name="volume-2" size="16"></sg-icon> **Smart Urgency**: `error` toasts automatically use `assertive` live region; all others use `polite`
-- <sg-icon name="crosshair" size="16"></sg-icon> **Singleton Service**: `toast.add()` — no DOM queries required
-- <sg-icon name="hash" size="16"></sg-icon> **Max Limit**: configurable maximum number of toasts in the DOM
-
-## Source Code
-
-::: details View Source Code
-<<< @/../packages/sigil/src/feedback/toast/toast.ts
-:::
-
 ## Basic Usage
 
 The recommended approach is the `toast` singleton service — no element reference needed.
@@ -197,7 +177,7 @@ toast.add({
 // Moving away resumes from exactly where it left off.
 ```
 
-Set `duration: 0` for persistent toasts that require manual dismissal.
+Set `duration: 0` for persistent toasts that require manual dismissal. Use `duration: 0` for errors and confirmations that require user action.
 
 ## Updating Toasts In-Place
 
@@ -224,7 +204,7 @@ Passing a new `duration` also reschedules (or cancels) the auto-dismiss timer.
 
 ## Promise Helper
 
-`toast.promise()` manages the full lifecycle of an async operation — loading, success, and error — from a single call.
+`toast.promise()` manages the full lifecycle of an async operation — loading, success, and error — from a single call. Prefer `toast.promise()` over manually managing loading/success/error toasts.
 
 ```javascript
 import { toast } from '@vielzeug/sigil/toast';
@@ -274,6 +254,8 @@ When more than one toast is present, they stack with a 3D perspective. Only the 
 - Entry animation uses a reactive `.entering` class — no JS timing hacks
 - Exit animation uses a CSS opacity fade on `.toast-inner` — the wrapper stays in-flow until the fade completes
 - Multiple toasts can exit in parallel (no serial dismiss queue)
+
+Use `max` to prevent overwhelming users during high-frequency events.
 
 ## `toast` Singleton Service
 
@@ -328,7 +310,9 @@ toaster.dismiss(id); // animated exit
 toaster.clear(); // dismiss all (animated)
 ```
 
-## ToastItem Properties
+## API Reference
+
+**`ToastItem` Properties**
 
 | Property      | Type                              | Default     | Description                                                                         |
 | ------------- | --------------------------------- | ----------- | ----------------------------------------------------------------------------------- |
@@ -347,7 +331,7 @@ toaster.clear(); // dismiss all (animated)
 | `actions`     | `ActionItem[]`                    | —           | Array of action buttons (each auto-dismisses the toast on click)                    |
 | `onDismiss`   | `() => void`                      | —           | Callback fired after the exit animation completes                                   |
 
-### ActionItem Properties
+**`ActionItem` Properties**
 
 | Property  | Type         | Default              | Description                               |
 | --------- | ------------ | -------------------- | ----------------------------------------- |
@@ -355,14 +339,14 @@ toaster.clear(); // dismiss all (animated)
 | `color`   | `ThemeColor` | inherits toast color | Button color                              |
 | `onClick` | `() => void` | —                    | Click handler; toast auto-dismissed after |
 
-## Attributes
+**Attributes**
 
 | Attribute  | Type     | Default          | Description                   |
 | ---------- | -------- | ---------------- | ----------------------------- |
 | `position` | `string` | `'bottom-right'` | Screen position               |
 | `max`      | `number` | `5`              | Max toasts in the DOM at once |
 
-## Events
+**Events**
 
 | Event     | Detail   | Description                   |
 | --------- | -------- | ----------------------------- |
@@ -375,7 +359,7 @@ document.querySelector('sg-toast').addEventListener('dismiss', (e) => {
 });
 ```
 
-## CSS Custom Properties
+**CSS Custom Properties**
 
 | Property               | Default  | Description                      |
 | ---------------------- | -------- | -------------------------------- |
@@ -390,24 +374,6 @@ document.querySelector('sg-toast').addEventListener('dismiss', (e) => {
 
 ## Accessibility
 
-The toast component follows WAI-ARIA best practices.
+The toast component follows WAI-ARIA best practices. Each `sg-alert` carries `role="alert"` with `aria-live="polite"`, or `aria-live="assertive"` for `error`-colored toasts, so screen readers announce new toasts automatically without requiring any additional markup.
 
-### `sg-toast`
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- `sg-alert` carries `role="alert"` with `aria-live="polite"` (`assertive` for `error` color) — screen readers announce new toasts automatically.
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- Auto-dismiss timers pause on both `mouseenter` and `focusin`, satisfying WCAG 2.1 SC 2.2.3.
-- The `dismissible` prop is forwarded to `sg-alert`'s built-in close button — correctly positioned within the alert grid, themed to match the alert color, and labelled `"Dismiss alert"`.
-
-::: tip Best Practices
-
-- Match `color` to message severity: `success`, `error`, `warning`, `info`
-- Keep messages short and actionable — one idea per toast
-- Use `duration: 0` for errors and confirmations that require user action
-- Use `toast.promise()` instead of manually managing loading/success/error toasts
-- Use `max` to prevent overwhelming users during high-frequency events
-  :::
+Auto-dismiss timers pause on both `mouseenter` and `focusin`, satisfying WCAG 2.1 SC 2.2.3. This means keyboard and pointer users alike have full control over how long a toast remains visible. The `dismissible` prop is forwarded to `sg-alert`'s built-in close button, which is correctly positioned within the alert grid, themed to match the alert color, and labelled `"Dismiss alert"`.

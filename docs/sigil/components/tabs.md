@@ -2,46 +2,7 @@
 
 A flexible tabs component for organizing content into switchable panels. Keyboard accessible, animation-ready, and available in six visual styles.
 
-## Features
-
-- <sg-icon name="palette" size="16"></sg-icon> **6 Variants**: solid, flat, bordered, ghost, glass, frost
-- <sg-icon name="rainbow" size="16"></sg-icon> **7 Colors**: primary, secondary, info, success, warning, error (+ neutral default)
-- <sg-icon name="ruler" size="16"></sg-icon> **3 Sizes**: sm, md, lg
-- <sg-icon name="accessibility" size="16"></sg-icon> **Accessible**: Full ARIA roles (`tablist`, `tab`, `tabpanel`), keyboard navigation
-- <sg-icon name="shuffle" size="16"></sg-icon> **Panel Transitions**: Fade + slide-up animation on panel reveal
-- <sg-icon name="puzzle" size="16"></sg-icon> **Composable**: Three separate elements — `sg-tabs`, `sg-tab-item`, `sg-tab-panel`
-
-## Source Code
-
-::: details View Source Code (sg-tabs)
-<<< @/../packages/sigil/src/disclosure/tabs/tabs.ts
-:::
-
-::: details View Source Code (sg-tab-item)
-<<< @/../packages/sigil/src/disclosure/tab-item/tab-item.ts
-:::
-
-::: details View Source Code (sg-tab-panel)
-<<< @/../packages/sigil/src/disclosure/tab-panel/tab-panel.ts
-:::
-
-## Basic Usage
-
-```html
-<sg-tabs value="overview">
-  <sg-tab-item slot="tabs" value="overview">Overview</sg-tab-item>
-  <sg-tab-item slot="tabs" value="settings">Settings</sg-tab-item>
-  <sg-tab-item slot="tabs" value="billing">Billing</sg-tab-item>
-
-  <sg-tab-panel value="overview"><p>Overview content.</p></sg-tab-panel>
-  <sg-tab-panel value="settings"><p>Settings content.</p></sg-tab-panel>
-  <sg-tab-panel value="billing"><p>Billing content.</p></sg-tab-panel>
-</sg-tabs>
-```
-
-## Visual Options
-
-### Variants
+## Variants
 
 #### Solid (Default)
 
@@ -64,7 +25,7 @@ Pill-style tabs in a rounded container — clean and contained.
 
 #### Flat
 
-Tabs and panel share a single container background — they read as one unified block.
+Tabs and panel share a single container background — they read as one unified block. Use `variant="flat"` when tabs need to feel visually connected to the panel content below them.
 
 <ComponentPreview>
 
@@ -83,7 +44,7 @@ Tabs and panel share a single container background — they read as one unified 
 
 #### Bordered
 
-Tabs that visually connect to their panel with a shared border.
+Tabs that visually connect to their panel with a shared border. Use `variant="bordered"` when tabs need to feel visually connected to the panel content below them.
 
 <ComponentPreview>
 
@@ -150,7 +111,7 @@ Glass and frost variants look best over colorful backgrounds or images to showca
 
 </ComponentPreview>
 
-### Colors
+## Colors
 
 Set `color` on `sg-tabs` to apply a theme color — it propagates automatically to all tab items. The color drives the active pill fill on `ghost`, the focus ring on all variants, and the indicator line on future `underline`-style usage.
 
@@ -214,7 +175,7 @@ Set `color` on `sg-tabs` to apply a theme color — it propagates automatically 
 
 </ComponentPreview>
 
-### Sizes
+## Sizes
 
 <ComponentPreview vertical>
 
@@ -243,7 +204,7 @@ Set `color` on `sg-tabs` to apply a theme color — it propagates automatically 
 
 </ComponentPreview>
 
-### Vertical Tabs
+## Vertical Tabs
 
 Use `orientation="vertical"` to place the tab list on the side. This works well for settings pages, account sections, or docs-style navigation.
 
@@ -265,7 +226,7 @@ Use `orientation="vertical"` to place the tab list on the side. This works well 
 
 </ComponentPreview>
 
-### Vertical + Manual Activation
+## Vertical + Manual Activation
 
 For keyboard-heavy interfaces, pair vertical tabs with `activation="manual"` so arrow keys move focus and Enter/Space commits selection.
 
@@ -295,7 +256,7 @@ For keyboard-heavy interfaces, pair vertical tabs with `activation="manual"` so 
 
 ### Icons & Badges
 
-Use the `prefix` and `suffix` slots on `sg-tab-item` to add icons or notification badges.
+Use the `prefix` and `suffix` slots on `sg-tab-item` to add icons or notification badges. Keep tab labels short and descriptive (ideally 1–3 words).
 
 <ComponentPreview>
 
@@ -344,7 +305,7 @@ Add `lazy` to a `sg-tab-panel` to defer rendering its slot content until the tab
 
 ### Disabled Tabs
 
-Prevent specific tabs from being selected.
+Prevent specific tabs from being selected. Disabled tabs are skipped during keyboard navigation and have `aria-disabled="true"`.
 
 <ComponentPreview>
 
@@ -375,7 +336,7 @@ Disabled tabs are skipped during keyboard navigation.
 
 ## API Reference
 
-### `sg-tabs` Attributes
+**`sg-tabs` Attributes**
 
 | Attribute     | Type                                                                      | Default        | Description                                                           |
 | ------------- | ------------------------------------------------------------------------- | -------------- | --------------------------------------------------------------------- |
@@ -386,20 +347,20 @@ Disabled tabs are skipped during keyboard navigation.
 | `orientation` | `'horizontal' \| 'vertical'`                                              | `'horizontal'` | Tab list layout direction                                             |
 | `activation`  | `'auto' \| 'manual'`                                                      | `'auto'`       | `auto`: arrow keys select immediately; `manual`: Enter/Space confirms |
 
-### `sg-tabs` Events
+**`sg-tabs` Events**
 
 | Event    | Detail              | Description                       |
 | -------- | ------------------- | --------------------------------- |
 | `change` | `{ value: string }` | Fired when the active tab changes |
 
-### `sg-tabs` Slots
+**`sg-tabs` Slots**
 
 | Slot      | Description                        |
 | --------- | ---------------------------------- |
 | `tabs`    | Place `sg-tab-item` elements here  |
 | (default) | Place `sg-tab-panel` elements here |
 
-### `sg-tab-item` Attributes
+**`sg-tab-item` Attributes**
 
 | Attribute  | Type                                                                      | Default   | Description                                                     |
 | ---------- | ------------------------------------------------------------------------- | --------- | --------------------------------------------------------------- |
@@ -410,7 +371,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `variant`  | `string`                                                                  | inherited | Inherited from parent `sg-tabs`                                 |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | inherited | Inherited from parent `sg-tabs`                                 |
 
-### `sg-tab-item` Slots
+**`sg-tab-item` Slots**
 
 | Slot      | Description                      |
 | --------- | -------------------------------- |
@@ -418,7 +379,7 @@ Disabled tabs are skipped during keyboard navigation.
 | (default) | Tab label text                   |
 | `suffix`  | Badge or count after the label   |
 
-### `sg-tab-panel` Attributes
+**`sg-tab-panel` Attributes**
 
 | Attribute | Type      | Default | Description                                                     |
 | --------- | --------- | ------- | --------------------------------------------------------------- |
@@ -426,7 +387,7 @@ Disabled tabs are skipped during keyboard navigation.
 | `active`  | `boolean` | `false` | Whether this panel is visible (managed by `sg-tabs`)            |
 | `lazy`    | `boolean` | `false` | Defer rendering slot content until the panel is first activated |
 
-### CSS Custom Properties
+**CSS Custom Properties**
 
 | Property                      | Default                    | Description                                               |
 | ----------------------------- | -------------------------- | --------------------------------------------------------- |
@@ -446,33 +407,6 @@ Disabled tabs are skipped during keyboard navigation.
 
 ## Accessibility
 
-The tabs component follows the WAI-ARIA Tabs Pattern best practices.
+The tabs component follows the WAI-ARIA Tabs Pattern best practices. The tab list has `role="tablist"`. Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel. Each panel has `role="tabpanel"` with `aria-labelledby` pointing to its tab. Disabled tabs have `aria-disabled="true"`.
 
-### `sg-tabs`
-
-<sg-icon name="check" size="16"></sg-icon> **Keyboard Navigation**
-
-- `ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last.
-- Disabled tabs are skipped during keyboard navigation.
-
-<sg-icon name="check" size="16"></sg-icon> **Screen Readers**
-
-- The tab list has `role="tablist"`.
-- Each tab has `role="tab"` with `aria-selected` and `aria-controls` pointing to its panel.
-- Each panel has `role="tabpanel"` with `aria-labelledby` pointing to its tab.
-- Disabled tabs have `aria-disabled="true"`.
-
-## Best Practices
-
-**Do:**
-
-- Keep tab labels short and descriptive (ideally 1–3 words).
-- Always set a default `value` on `sg-tabs` so a tab is active on first render.
-- Use the `prefix` and `suffix` slots on `sg-tab-item` to add icons or notification counts.
-- Use `variant="bordered"` or `variant="flat"` when tabs need to feel visually connected to the panel content below them.
-
-**Don't:**
-
-- Use more than 5–7 tabs — consider a sidebar navigation for larger sets of sections.
-- Use tabs to represent sequential steps; use a stepper component for linear flows.
-- Nest tabs inside tabs — it creates confusing navigation hierarchies.
+`ArrowRight` / `ArrowLeft` navigate between tabs; `Home` / `End` jump to first / last. Disabled tabs are skipped during keyboard navigation. Avoid nesting tabs inside tabs as it creates confusing navigation hierarchies. Do not use tabs to represent sequential steps; use a stepper component for linear flows. Limit to 5–7 tabs at most — consider a sidebar navigation for larger sets of sections.
