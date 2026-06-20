@@ -25,7 +25,7 @@ Set attributes directly on the custom element:
 
 ### Event Handling
 
-Components emit DOM events. Many use familiar event names like `click`, `input`, `change`, `open`, and `close`. A few intentionally use namespaced custom events where collision avoidance matters, such as `sg-select` on `sg-menu`.
+Components emit standard DOM events. Common names: `click`, `input`, `change`, `open`, `close`, `select`.
 
 ```javascript
 const button = document.querySelector('sg-button');

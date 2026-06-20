@@ -5,28 +5,35 @@ description: Using Sigil web components with React, Vue 3, Svelte, and Angular.
 
 # Framework Integration
 
-::: tip Getting started?
-Make sure you have completed the [Installation](./index.md#installation) step and imported the global styles. This guide shows framework-specific wiring only.
-:::
-
 [[toc]]
 
-Sigil is built on native Web Components standards and works in every framework that can render HTML. The components behave like regular HTML elements: set attributes, listen to events, use slots for content projection.
+Sigil components are native Web Components — they are HTML elements. You set attributes, listen to DOM events, and project content through slots. Every framework that renders HTML works the same way, with minor wiring differences per framework.
+
+::: tip Before you start
+Complete [installation](./index.md#installation) and import the global styles first. This guide covers framework-specific wiring only.
+:::
 
 ## React
 
-React 18 and earlier do not forward custom events dispatched by web components through JSX props. Use a `ref` and `addEventListener` for `sg-*` events, or use the native DOM `onClick` (which maps to the browser's `click` event) for simple click actions.
+### React 19
 
-### Basic Usage
+React 19 has first-class support for web components. Custom events bind with camelCase props, boolean attributes work without `[attr.*]`, and properties set correctly without a `ref`.
 
 ```tsx
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/input';
 
 function ContactForm() {
+  const [email, setEmail] = useState('');
+
   return (
     <form>
-      <sg-input label="Email" type="email" required />
+      <sg-input
+        label="Email"
+        type="email"
+        value={email}
+        onChange={(e: CustomEvent<{ value: string }>) => setEmail(e.detail.value)}
+      />
       <sg-button variant="solid" color="primary" type="submit">
         Send
       </sg-button>
@@ -35,37 +42,37 @@ function ContactForm() {
 }
 ```
 
-### Custom Event Handling
+### React 18 and Earlier
 
-Custom events (like `sg-change`) are not forwarded through JSX props. Use a `ref` and `addEventListener`:
+React 18 does not forward custom events through JSX props. Use a `ref` and `addEventListener` for any event that carries `event.detail`.
 
 ```tsx
 import { useEffect, useRef } from 'react';
 import '@vielzeug/sigil/input';
 
 function SearchBox() {
-  const inputRef = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    const el = inputRef.current;
+    const el = ref.current;
     if (!el) return;
-
-    const handleChange = (e: Event) => {
+    const handler = (e: Event) => {
       const value = (e as CustomEvent<{ value: string }>).detail.value;
       console.log('Search:', value);
     };
-
-    el.addEventListener('sg-change', handleChange);
-    return () => el.removeEventListener('sg-change', handleChange);
+    el.addEventListener('change', handler);
+    return () => el.removeEventListener('change', handler);
   }, []);
 
-  return <sg-input ref={inputRef} label="Search" />;
+  return <sg-input ref={ref} label="Search" />;
 }
 ```
 
-### TypeScript Support
+Native browser events (`click`, `focus`, `blur`) work through JSX props as normal in both React versions.
 
-Register custom elements in a global type declaration so TypeScript recognises them in JSX:
+### TypeScript
+
+Create a global declaration file so TypeScript recognises `sg-*` tags in JSX:
 
 ```typescript
 // src/custom-elements.d.ts
@@ -74,7 +81,7 @@ declare namespace React {
     interface IntrinsicElements {
       'sg-button': React.HTMLAttributes<HTMLElement> & {
         variant?: 'solid' | 'outline' | 'ghost';
-        color?: 'primary' | 'secondary' | 'success' | 'warning' | 'error';
+        color?: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error';
         size?: 'sm' | 'md' | 'lg';
         loading?: boolean;
         disabled?: boolean;
@@ -82,18 +89,19 @@ declare namespace React {
       'sg-input': React.HTMLAttributes<HTMLElement> & {
         label?: string;
         type?: string;
+        value?: string;
         required?: boolean;
         disabled?: boolean;
       };
-      // add more as needed
+      // extend for each component you use
     }
   }
 }
 ```
 
-### Vite + React Setup
+### Vite Setup
 
-In Vite projects, tell the React plugin to treat `sg-*` tags as custom elements so it doesn't warn about unknown elements:
+Tell the React plugin to treat `sg-*` tags as custom elements so it doesn't warn about unknown JSX elements:
 
 ```typescript
 // vite.config.ts
@@ -109,20 +117,22 @@ export default defineConfig({
 });
 ```
 
-::: tip React 19+
-React 19 added first-class support for web component custom events via JSX props. If you are on React 19, `on-sg-change` style props work without `addEventListener`.
-:::
-
 ## Vue 3
 
-Vue 3 has excellent native support for Web Components. No extra configuration is needed for basic usage.
-
-### Basic Usage
+Vue 3 supports web components natively. Custom events bind with `@event-name`, attributes bind with `:attr`, and no extra configuration is needed for basic usage.
 
 ```vue
 <template>
-  <sg-input label="Email" type="email" :disabled="isLoading" @sg-change="handleChange" />
-  <sg-button variant="solid" color="primary" :loading="isLoading" @click="submit"> Submit </sg-button>
+  <sg-input
+    label="Email"
+    type="email"
+    :value="email"
+    :disabled="isLoading"
+    @change="email = ($event as CustomEvent<{ value: string }>).detail.value"
+  />
+  <sg-button variant="solid" color="primary" :loading="isLoading" @click="submit">
+    Submit
+  </sg-button>
 </template>
 
 <script setup lang="ts">
@@ -130,11 +140,8 @@ import { ref } from 'vue';
 import '@vielzeug/sigil/button';
 import '@vielzeug/sigil/input';
 
+const email = ref('');
 const isLoading = ref(false);
-
-function handleChange(e: CustomEvent<{ value: string }>) {
-  console.log(e.detail.value);
-}
 
 function submit() {
   isLoading.value = true;
@@ -142,9 +149,9 @@ function submit() {
 </script>
 ```
 
-### Vite + Vue Setup
+### Vite Setup
 
-Tell the Vue compiler to treat `sg-*` tags as custom elements to suppress template warnings:
+Tell the Vue compiler to treat `sg-*` as custom elements so it skips component resolution for them:
 
 ```typescript
 // vite.config.ts
@@ -166,17 +173,19 @@ export default defineConfig({
 
 ### Two-Way Binding
 
-Vue's `v-model` doesn't work directly on web components. Bind `:value` and `@sg-change` manually:
+`v-model` does not work on web components. Bind `:value` and `@change` explicitly:
 
 ```vue
-<sg-input :value="email" @sg-change="email = $event.detail.value" label="Email" />
+<sg-input
+  :value="email"
+  @change="email = ($event as CustomEvent<{ value: string }>).detail.value"
+  label="Email"
+/>
 ```
 
 ## Svelte
 
-Svelte handles Web Components natively without any extra configuration.
-
-### Basic Usage (Svelte 5)
+Svelte handles web components natively — no configuration needed.
 
 ```svelte
 <script>
@@ -189,64 +198,58 @@ Svelte handles Web Components natively without any extra configuration.
 <sg-input
   label="Email"
   value={email}
-  onsg-change={(e) => (email = e.detail.value)}
+  onchange={(e) => (email = e.detail.value)}
 />
 <sg-button variant="solid" color="primary" onclick={() => console.log(email)}>
   Submit
 </sg-button>
 ```
 
-### Svelte 4
-
+::: tip Svelte 4
+In Svelte 4, use `on:eventname` syntax instead of `oneventname`:
 ```svelte
-<script>
-  import '@vielzeug/sigil/button';
-  let count = 0;
-</script>
-
-<sg-button on:click={() => count++}>
-  Clicked {count} times
-</sg-button>
+<sg-input on:change={(e) => (email = e.detail.value)} label="Email" />
 ```
+:::
 
 ## Angular
 
 ### Standalone Components (Angular 17+)
 
-Import `CUSTOM_ELEMENTS_SCHEMA` in the component decorator:
+Add `CUSTOM_ELEMENTS_SCHEMA` to the component decorator and import the side-effect registrations:
 
 ```typescript
 import { Component, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import '@vielzeug/sigil/button';
+import '@vielzeug/sigil/input';
 
 @Component({
-  selector: 'app-root',
+  selector: 'app-contact',
   standalone: true,
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   template: `
-    <sg-input label="Email" [attr.value]="email" (sg-change)="onEmailChange($event)"></sg-input>
-    <sg-button [attr.loading]="isLoading || null" (click)="submit()">Submit</sg-button>
+    <sg-input
+      label="Email"
+      [attr.value]="email"
+      (change)="email = $event.detail.value">
+    </sg-input>
+    <sg-button
+      variant="solid"
+      color="primary"
+      [attr.loading]="isLoading || null"
+      (click)="submit()">
+      Submit
+    </sg-button>
   `,
 })
-export class AppComponent {
+export class ContactComponent {
   email = '';
   isLoading = false;
-
-  onEmailChange(e: CustomEvent<{ value: string }>) {
-    this.email = e.detail.value;
-  }
 
   submit() {
     this.isLoading = true;
   }
 }
-```
-
-Register the side-effect import in your `main.ts` or the component file:
-
-```typescript
-// main.ts or component file
-import '@vielzeug/sigil/button';
-import '@vielzeug/sigil/input';
 ```
 
 ### NgModule (Angular 14–16)
@@ -262,35 +265,53 @@ import { NgModule, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 export class AppModule {}
 ```
 
-::: tip Boolean attributes in Angular
-Angular's `[attr.*]` binding sets attributes as strings. Use `[attr.disabled]="condition || null"` to properly remove boolean attributes when they are false.
+::: tip Boolean attributes
+Angular's `[attr.*]` binding sets string values. Pass `null` to remove the attribute entirely:
+```html
+<sg-button [attr.disabled]="isDisabled || null">Save</sg-button>
+```
 :::
 
-## SSR Considerations
+## SSR
 
-Web Components rely on browser APIs (`customElements`, `document`, `window`) and are not available in server-side rendering environments. Wrap component imports in client-side guards:
+Web Components use browser APIs (`customElements`, `document`, `window`) that do not exist in Node.js. Import Sigil components only on the client.
 
-### Next.js / Nuxt
+### Next.js
 
-```ts
-// Only import on the client
-if (typeof window !== 'undefined') {
-  import('/sigil/button');
-}
-```
-
-In Next.js, prefer dynamic imports with `ssr: false`:
+Use `dynamic` with `ssr: false` to ensure the import never runs on the server:
 
 ```tsx
 import dynamic from 'next/dynamic';
 
-// Ensure the import runs client-side only
-const ClientComponent = dynamic(
-  () =>
-    import('./MyComponent').then((mod) => {
-      import('@vielzeug/sigil');
-      return mod;
-    }),
-  { ssr: false },
-);
+const MyForm = dynamic(() => import('./MyForm'), { ssr: false });
+```
+
+Inside `MyForm`, import Sigil components normally — they will only ever load in the browser.
+
+### Nuxt
+
+Use `<ClientOnly>` to wrap components that depend on Sigil:
+
+```vue
+<ClientOnly>
+  <sg-button variant="solid" color="primary">Save</sg-button>
+</ClientOnly>
+```
+
+Import Sigil in a client-side plugin:
+
+```typescript
+// plugins/sigil.client.ts
+import '@vielzeug/sigil/button';
+import '@vielzeug/sigil/input';
+```
+
+### Generic guard
+
+For any other environment:
+
+```typescript
+if (typeof window !== 'undefined') {
+  import('@vielzeug/sigil/button');
+}
 ```
