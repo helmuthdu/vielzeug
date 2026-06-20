@@ -5,7 +5,7 @@
   "files": [
     "dist"
   ],
-  "description": "Tiny reactive state with direct singleton primitives",
+  "description": "Fine-grained reactive state — signals, computed values, effects, stores, and reactive scopes",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",

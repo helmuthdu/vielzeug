@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/sigil",
   "version": "0.0.1",
-  "description": "Accessible, themeable web components built on Craft custom element primitives.",
+  "description": "Accessible, themeable web components built on Craft custom element primitives",
   "keywords": [
     "web-components",
     "custom-elements",

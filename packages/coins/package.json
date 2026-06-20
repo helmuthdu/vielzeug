@@ -1,7 +1,7 @@
 {
   "name": "@vielzeug/coins",
   "version": "0.0.1",
-  "description": "Currency formatting and exchange utilities for precise monetary arithmetic",
+  "description": "Bigint-based monetary arithmetic with currency formatting, exchange rates, and rounding policies",
   "type": "module",
   "files": [
     "dist"

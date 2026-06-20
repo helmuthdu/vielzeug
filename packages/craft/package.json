@@ -1,6 +1,7 @@
 {
   "name": "@vielzeug/craft",
   "version": "0.0.1",
+  "description": "Custom element authoring primitives — reactive templates, signals, slots, and automatic lifecycle management",
   "type": "module",
   "files": [
     "dist"

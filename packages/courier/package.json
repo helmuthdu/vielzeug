@@ -1,6 +1,7 @@
 {
   "name": "@vielzeug/courier",
   "version": "0.0.1",
+  "description": "HTTP client with caching, request deduplication, typed mutations, SSE streaming, and interceptors",
   "type": "module",
   "files": [
     "dist"
