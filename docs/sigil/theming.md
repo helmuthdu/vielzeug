@@ -15,17 +15,23 @@ Read the [Usage Guide](./usage.md) first. This page covers customization only.
 
 ## Quick Start
 
-**Change the primary color:**
+**Change the primary color — and secondary adapts automatically:**
 
 ```css
 :root {
-  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
-  --color-primary-focus: light-dark(oklch(61% 0.18 220deg), oklch(68% 0.18 220deg));
-  --color-primary-backdrop: light-dark(oklch(93% 0.05 220deg), oklch(28% 0.08 220deg / 40%));
-  --color-primary-content: light-dark(oklch(22% 0.08 220deg), oklch(95% 0.02 220deg));
-  --color-primary-contrast: light-dark(oklch(98% 0.01 220deg), oklch(14% 0.05 220deg));
-  --color-primary-border: light-dark(oklch(61% 0.18 220deg / 60%), oklch(68% 0.18 220deg / 60%));
-  --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
+  --color-primary-hue: 220deg; /* e.g. 160deg → teal, 35deg → amber, 0deg → red */
+}
+```
+
+That single variable shifts every primary token (base, focus, backdrop, border…) and simultaneously derives the `secondary` family as a near-black / near-white tone with a matching hue tint. No other overrides are needed for a full rebrand.
+
+Need finer control? Override individual sub-tokens after setting the hue:
+
+```css
+:root {
+  --color-primary-hue: 220deg;
+  /* Optional — adjust lightness/chroma only for the primary base */
+  --color-primary: light-dark(oklch(52% 0.2 var(--color-primary-hue)), oklch(65% 0.18 var(--color-primary-hue)));
 }
 ```
 
@@ -74,6 +80,10 @@ Each semantic color ships with **7 coordinated sub-tokens**. Always define all s
 | `--color-{name}-focus-shadow`   | Focus ring `box-shadow`                                        |
 
 Available families: **neutral**, **primary**, **secondary**, **info**, **success**, **warning**, **error**.
+
+::: tip Secondary is auto-derived
+`secondary` tokens are computed from `--color-primary-hue` — you never need to define them manually. Changing `--color-primary-hue` updates both the primary and secondary families at once. Override individual `--color-secondary-*` tokens only when you need the secondary color to diverge from the primary hue.
+:::
 
 ### Overriding the Neutral Palette
 
@@ -125,18 +135,13 @@ OKLCH is recommended for custom colors: lightness steps are perceptually uniform
 
 ### Scoped Theme Class
 
-Create a theme by defining a full color family on a scoped selector:
+Create a theme with a single hue variable — primary and secondary both adapt:
 
 ```css
-.theme-ocean {
-  --color-primary: light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg));
-  --color-primary-focus: light-dark(oklch(61% 0.18 220deg), oklch(68% 0.18 220deg));
-  --color-primary-backdrop: light-dark(oklch(93% 0.05 220deg), oklch(28% 0.08 220deg / 40%));
-  --color-primary-content: light-dark(oklch(22% 0.08 220deg), oklch(95% 0.02 220deg));
-  --color-primary-contrast: light-dark(oklch(98% 0.01 220deg), oklch(14% 0.05 220deg));
-  --color-primary-border: light-dark(oklch(61% 0.18 220deg / 60%), oklch(68% 0.18 220deg / 60%));
-  --color-primary-focus-shadow: 0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm);
-}
+.theme-ocean  { --color-primary-hue: 220deg; }
+.theme-sunset { --color-primary-hue: 35deg;  }
+.theme-forest { --color-primary-hue: 160deg; }
+.theme-rose   { --color-primary-hue: 0deg;   }
 ```
 
 Apply it anywhere in the DOM:
@@ -144,22 +149,29 @@ Apply it anywhere in the DOM:
 ```html
 <div class="theme-ocean">
   <sg-button color="primary">Save</sg-button>
+  <sg-button color="secondary">Cancel</sg-button>
 </div>
+```
+
+Need to override more than just the hue? Add sub-token overrides after `--color-primary-hue`:
+
+```css
+.theme-ocean {
+  --color-primary-hue: 220deg;
+  --color-primary: light-dark(oklch(52% 0.2 var(--color-primary-hue)), oklch(65% 0.18 var(--color-primary-hue)));
+}
 ```
 
 ### Dynamic Theme Switching
 
+Because the entire palette derives from a single hue, switching themes at runtime is a one-liner:
+
 ```typescript
 const THEMES = {
-  ocean: {
-    '--color-primary': 'light-dark(oklch(55% 0.18 220deg), oklch(62% 0.18 220deg))',
-    '--color-primary-focus': 'light-dark(oklch(61% 0.18 220deg), oklch(68% 0.18 220deg))',
-    '--color-primary-backdrop': 'light-dark(oklch(93% 0.05 220deg), oklch(28% 0.08 220deg / 40%))',
-    '--color-primary-content': 'light-dark(oklch(22% 0.08 220deg), oklch(95% 0.02 220deg))',
-    '--color-primary-contrast': 'light-dark(oklch(98% 0.01 220deg), oklch(14% 0.05 220deg))',
-    '--color-primary-border': 'light-dark(oklch(61% 0.18 220deg / 60%), oklch(68% 0.18 220deg / 60%))',
-    '--color-primary-focus-shadow': '0 0 0 4px color-mix(in oklch, var(--color-primary) 40%, transparent), var(--shadow-sm)',
-  },
+  ocean:  { '--color-primary-hue': '220deg' },
+  sunset: { '--color-primary-hue': '35deg'  },
+  forest: { '--color-primary-hue': '160deg' },
+  rose:   { '--color-primary-hue': '0deg'   },
 } as const;
 
 function applyTheme(name: keyof typeof THEMES) {
@@ -169,6 +181,8 @@ function applyTheme(name: keyof typeof THEMES) {
   });
 }
 ```
+
+The browser recomputes every `var(--color-primary-hue)` reference — including the derived `secondary` tokens — in a single style recalc.
 
 ## Component-Level Overrides
 

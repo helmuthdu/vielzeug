@@ -110,7 +110,7 @@
     font: inherit;
     font-size: var(--_font-size);
     line-height: var(--leading-relaxed);
-    color: var(--_theme-content);
+    color: var(--textarea-color, var(--text-color-body));
     resize: vertical; /* Default resize, can be overridden by inline style */
     outline: none;
     background: transparent;
@@ -231,18 +231,10 @@
   }
 
   :host([variant='bordered']) textarea {
-    color: var(--_theme-content);
-  }
-
-  :host([variant='bordered'][color='secondary']) textarea {
     color: var(--_theme-base);
   }
 
   :host([variant='bordered']) textarea::placeholder {
-    color: var(--textarea-placeholder-color, color-mix(in oklch, var(--_theme-content) 45%, transparent));
-  }
-
-  :host([variant='bordered'][color='secondary']) textarea::placeholder {
     color: var(--textarea-placeholder-color, color-mix(in oklch, var(--_theme-base) 45%, transparent));
   }
 

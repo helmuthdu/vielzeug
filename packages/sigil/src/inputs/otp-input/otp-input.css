@@ -106,11 +106,6 @@
   }
 
   :host([variant='bordered']) .cell {
-    color: var(--_theme-content, var(--color-contrast-900));
-    caret-color: var(--_theme-content, var(--_cell-focus-border));
-  }
-
-  :host([variant='bordered'][color='secondary']) .cell {
     color: var(--_theme-base);
     caret-color: var(--_theme-base);
   }
