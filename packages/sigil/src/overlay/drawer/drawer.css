@@ -60,6 +60,11 @@
   dialog.closing::backdrop {
     opacity: 0;
     backdrop-filter: blur(0);
+    transition:
+      opacity 300ms var(--ease-in-out),
+      backdrop-filter 300ms var(--ease-in-out),
+      overlay 300ms allow-discrete,
+      display 300ms allow-discrete;
   }
 
   .panel {

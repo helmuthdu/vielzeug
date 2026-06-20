@@ -116,9 +116,12 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     dialog.classList.add('closing');
 
     const finish = () => {
-      dialog.classList.remove('closing');
-      isClosing = false;
       dialog.close();
+      // Do NOT remove 'closing' here — removing it while the native ::backdrop is
+      // still held in the top layer by the 'overlay allow-discrete' transition
+      // would revert its opacity to 1 and cause a visible flash. The class is
+      // cleaned up at the start of the next open cycle (see setOpen below).
+      isClosing = false;
     };
 
     const panel = options.getPanelEl();
@@ -158,6 +161,9 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
       if (next) {
         if (dialog.open) return;
 
+        // Clean up any leftover 'closing' class from the previous close animation
+        // before opening so the entry @starting-style and transition work correctly.
+        dialog.classList.remove('closing');
         focus.captureReturnFocus();
         options.beforeOpen?.(dialog);
         dialog.showModal();

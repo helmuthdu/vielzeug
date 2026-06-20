@@ -75,6 +75,10 @@
 
   dialog.closing::backdrop {
     opacity: 0;
+    transition:
+      opacity 150ms var(--ease-in-out),
+      overlay 150ms allow-discrete,
+      display 150ms allow-discrete;
   }
 
   /* =====================
