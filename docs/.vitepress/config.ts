@@ -519,7 +519,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/coins/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/coins/api#api-overview', text: 'Overview' },
             { link: '/coins/api#package-entry-point', text: 'Entry Point' },
             { link: '/coins/api#factories', text: 'Factories' },
             { link: '/coins/api#arithmetic', text: 'Arithmetic' },
@@ -529,6 +529,7 @@ export default defineConfig({
             { link: '/coins/api#serialization', text: 'Serialization' },
             { link: '/coins/api#formatting', text: 'Formatting' },
             { link: '/coins/api#currency-exchange', text: 'Exchange' },
+            { link: '/coins/api#utilities', text: 'Utilities' },
             { link: '/coins/api#rounding', text: 'Rounding' },
             { link: '/coins/api#rounding-modes', text: 'Rounding Modes' },
             { link: '/coins/api#error-types', text: 'Error Types' },
@@ -579,7 +580,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/conduit/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/conduit/api#api-overview', text: 'API Overview' },
             { link: '/conduit/api#package-entry-point', text: 'Entry Point' },
             { link: '/conduit/api#core-functions', text: 'Core Functions' },
             { link: '/conduit/api#container', text: 'Container' },
@@ -726,7 +727,7 @@ export default defineConfig({
             { link: '/craft/api#form-associated-api', text: 'Forms' },
             { link: '/craft/api#observer-apis', text: 'Observers' },
             { link: '/craft/api#testing-apis', text: 'Testing' },
-            { link: '/craft/api#ripple-re-exports', text: 'Ripple Re-exports' },
+            { link: '/craft/api#ripple-primitives', text: 'Ripple Primitives' },
             { link: '/craft/api#lifecycle-events', text: 'Lifecycle Events' },
             { link: '/craft/api#types', text: 'Types' },
             { link: '/craft/api#errors', text: 'Errors' },

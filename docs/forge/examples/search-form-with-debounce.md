@@ -26,7 +26,7 @@ const queryConn = form.connect('query', {
 });
 
 // Register an async "validator" that runs the search and updates results
-form.setValidator('query', async (value, signal) => {
+form.fields.setValidator('query', async (value, signal) => {
   if (!value || String(value).length < 2) {
     updateResultsUI([]);
     return undefined;

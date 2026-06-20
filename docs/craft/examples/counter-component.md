@@ -14,7 +14,8 @@ You want to understand the minimal Craft component before adding routing, direct
 Use `define()` with a `setup()` that returns `html` directly.
 
 ```ts
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('simple-counter', {
   setup() {

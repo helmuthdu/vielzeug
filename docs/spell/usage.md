@@ -65,7 +65,7 @@ const Todo = s.object({
 
 Object schemas reject unknown keys by default. Call `.relaxed()` when you need to preserve extra properties.
 
-Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `ValidationError` is thrown.
+Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `ValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults — fields without a default are silently omitted instead of throwing.
 
 ```ts
 const Config = s.object({
@@ -74,6 +74,9 @@ const Config = s.object({
 });
 
 Config.defaults(); // { host: 'localhost', port: 3000 }
+
+const Form = s.object({ name: s.string(), role: s.string().default('viewer') });
+Form.partialDefaults(); // { role: 'viewer' }
 ```
 
 ## Wrapper Modes, Defaults, and Fallbacks

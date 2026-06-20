@@ -157,10 +157,10 @@ worker.dispose();
 
 Large `ArrayBuffer`, `MessagePort`, or `OffscreenCanvas` values can be moved to the Worker thread instead of copied. This avoids the structured-clone overhead on large payloads.
 
-Use `transfer(value)` to mark a value for transfer — no separate `transferables` array needed:
+Pass the transferable list via `RunOptions.transferables`:
 
 ```ts
-import { createWorker, task, transfer } from '@vielzeug/familiar';
+import { createWorker, task } from '@vielzeug/familiar';
 
 type ImageTask = { pixels: Uint8ClampedArray; width: number; height: number };
 type ImageResult = { pixels: Uint8ClampedArray };
@@ -180,19 +180,11 @@ const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
 // Transfer the buffer — zero-copy move to the worker
 const { pixels } = await worker.run(
-  transfer({ pixels: imageData.data, width: imageData.width, height: imageData.height }),
-);
-
-worker.dispose();
-```
-
-Alternatively, pass the transferable list explicitly via `RunOptions.transferables`:
-
-```ts
-const { pixels } = await worker.run(
   { pixels: imageData.data, width: imageData.width, height: imageData.height },
   { transferables: [imageData.data.buffer] },
 );
+
+worker.dispose();
 ```
 
 ::: warning
@@ -235,7 +227,7 @@ Use lightweight counters for visibility and load monitoring:
 - `failed`: tasks rejected with a task / timeout / worker error (aborts and terminations excluded)
 - `active`: number of slots currently executing a task
 - `queued`: tasks currently waiting in the queue
-- `utilization`: active slot ratio from `0` to `1`
+- `groupCount`: active task groups (decrements when `drain()` is called or all tasks settle)
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -247,9 +239,9 @@ const pool = createWorker(
 
 console.log(pool.completed); // 0
 console.log(pool.failed); // 0
-console.log(pool.utilization); // 0
 console.log(pool.active); // 0
 console.log(pool.queued); // 0
+console.log(pool.groupCount); // 0
 
 await pool.run(1);
 await pool.run(-1).catch(() => {}); // throws inside worker
@@ -454,9 +446,9 @@ Use `dispose()` for immediate forceful termination.
 
 ## Heartbeat Monitoring
 
-Set `heartbeatTimeout` on `WorkerOptions` to kill tasks that stop responding (e.g., blocked CPU work). If the worker does not send a heartbeat within `heartbeatTimeout` ms, every task in the pool is rejected with `WorkerTimeoutError`.
+Set `heartbeatWindow` on `WorkerOptions` to kill tasks that stop responding (e.g., blocked CPU work). If the worker does not send a heartbeat within `heartbeatWindow` ms, the task is rejected with `WorkerTimeoutError`.
 
-**Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatTimeout / 2` intervals — no worker-side code needed:
+**Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatWindow / 2` intervals — no worker-side code needed:
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -464,19 +456,19 @@ import { createWorker, task } from '@vielzeug/familiar';
 const heavy = task<void, void>(() => new Promise((r) => setTimeout(r, 5000)));
 
 // 60s watchdog — auto-heartbeats keep it alive throughout
-const worker = createWorker(heavy, { heartbeatTimeout: 60_000 });
+const worker = createWorker(heavy, { heartbeatWindow: 60_000 });
 await worker.run(undefined);
 worker.dispose();
 ```
 
-**Module workers** (`createModuleWorker`) must send heartbeats manually at `heartbeatTimeout / 2` intervals:
+**Module workers** (`createModuleWorker`) must send heartbeats manually at `heartbeatWindow / 2` intervals. Note: passing `heartbeatWindow` to `createModuleWorker` emits a dev warning — it has no automatic effect on module workers:
 
 ```ts
 // my-worker.ts
 self.onmessage = async (event) => {
   const { id, input } = event.data;
 
-  // Heartbeat interval is heartbeatTimeout / 2 — set this in your pool config
+  // Send heartbeat at heartbeatWindow / 2 intervals (e.g. every 30s for a 60s window)
   const hb = setInterval(() => self.postMessage({ id, heartbeat: true }), 30_000);
 
   try {
@@ -486,10 +478,8 @@ self.onmessage = async (event) => {
   }
 };
 
-// main.ts
-const pool = createModuleWorker(new URL('./my-worker.ts', import.meta.url), {
-  heartbeatTimeout: 60_000, // kill if no heartbeat for 60s
-});
+// main.ts — heartbeatWindow is informational; the worker must implement heartbeats itself
+const pool = createModuleWorker(new URL('./my-worker.ts', import.meta.url));
 ```
 
 ## Slot Error Handling (`onSlotError`)
@@ -716,6 +706,7 @@ describe('add worker', () => {
 ```ts
 type TestWorkerOptions = {
   concurrency?: number; // default: 1
+  errorWrapping?: boolean; // default: false
   maxQueue?: number;
   onFull?: 'reject' | 'wait';
 };
@@ -763,10 +754,9 @@ Worker handles are plain objects — wrap them in a hook or composable to integr
 
 ```tsx [React]
 import { useEffect, useRef } from 'react';
-import { createWorker, task, type WorkerHandle } from '@vielzeug/familiar';
-import type { SelfContained } from '@vielzeug/familiar';
+import { createWorker, task, type WorkerHandle, type TaskFn } from '@vielzeug/familiar';
 
-function useWorker<TInput, TOutput>(fn: SelfContained<TInput, TOutput>, concurrency = 2) {
+function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2) {
   const ref = useRef<WorkerHandle<TInput, TOutput> | null>(null);
 
   useEffect(() => {

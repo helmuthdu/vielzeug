@@ -286,7 +286,7 @@ Expired records are skipped automatically. Each call opens a fresh readonly IDB 
 
 ### `observe`
 
-`observe(table, listener)` subscribes to table changes. **It always fires immediately with the current table state on registration**, then fires again on every mutation. There is no deferred-first-call mode.
+`observe(table, listener)` subscribes to table changes. **It fires immediately with the current table state on registration** by default, then fires again on every mutation.
 
 ```ts
 // Always fires immediately, then on every change
@@ -308,6 +308,17 @@ db.observe('users', (rows) => render(rows), { signal: controller.signal });
 
 // later:
 controller.abort(); // stops the observer
+```
+
+Pass `{ immediate: false }` to skip the initial snapshot — useful when you already hold the current table state and only need change notifications:
+
+```ts
+const rows = await db.getAll('users');
+
+// immediate: false — no snapshot on registration, only subsequent mutations
+db.observe('users', (updated) => render(updated), { immediate: false });
+
+render(rows); // render the initial state yourself
 ```
 
 Always unsubscribe on teardown to prevent memory leaks.
@@ -370,12 +381,19 @@ The same `mode` and `signal` options as `watch()` apply.
 
 `observeMany(tables, listener)` subscribes to multiple tables at once and delivers a single combined snapshot `{ [tableName]: RecordOf<S, T>[] }` whenever any observed table changes.
 
-All per-table observers fire immediately on registration. The combined listener fires once all tables have reported their initial snapshot, ensuring the combined view is always complete.
+By default, the combined listener fires once all tables have reported their initial snapshot, ensuring the combined view is always complete. Pass `{ eager: true }` to fire as soon as any table delivers its first snapshot, using empty arrays for tables not yet resolved:
 
 ```ts
 const stop = db.observeMany(['users', 'posts'], ({ users, posts }) => {
   renderDashboard(users, posts);
 });
+
+// eager: true — fires as soon as any table delivers its snapshot
+const stopEager = db.observeMany(
+  ['users', 'posts'],
+  ({ users, posts }) => renderDashboard(users, posts),
+  { eager: true },
+);
 ```
 
 Writes to multiple tables inside a single `batch()` call coalesce into one callback — the listener fires exactly once per microtask, not once per dirty table.

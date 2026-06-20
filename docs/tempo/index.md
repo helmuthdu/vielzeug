@@ -9,14 +9,14 @@ exports:
   [
     now,
     nowInstant,
+    parse,
     parsePlainDate,
     parsePlainDateTime,
     parseInstant,
     parseZoned,
-    parseDate,
     isValid,
     toInstant,
-    toZoned,
+    inTz,
     shift,
     difference,
     within,
@@ -36,11 +36,12 @@ exports:
     parseDuration,
     formatDuration,
     expires,
-    classify,
     timeDiff,
     humanize,
     dateRange,
     recurrence,
+    TempoError,
+    TempoErrorCode,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -99,7 +100,7 @@ yarn add @vielzeug/tempo
 ## Quick Start
 
 ```ts
-import { format, formatInstant, parsePlainDateTime, shift, toInstant, toZoned } from '@vielzeug/tempo';
+import { format, formatInstant, inTz, parsePlainDateTime, shift, toInstant } from '@vielzeug/tempo';
 
 // Parse a wall-clock string (no timezone attached)
 const localMeeting = parsePlainDateTime('2026-03-21T10:30:00');
@@ -108,7 +109,7 @@ const localMeeting = parsePlainDateTime('2026-03-21T10:30:00');
 const meetingInstant = toInstant(localMeeting, { tz: 'America/New_York' });
 
 // Project to a zoned view and subtract 15 minutes (DST-safe)
-const meetingNY = toZoned(meetingInstant, { tz: 'America/New_York' });
+const meetingNY = inTz(meetingInstant, 'America/New_York');
 const reminder = shift(meetingNY, { minutes: -15 });
 
 // Format for display
@@ -118,7 +119,7 @@ const text = format(reminder, { pattern: 'short', locale: 'en-US', tz: 'America/
 const stable = formatInstant(reminder);
 ```
 
-> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor.
+> **No `Temporal.*` imports needed.** Tempo re-exports `Temporal` and provides `parseInstant`, `parseZoned`, `parsePlainDateTime`, `parsePlainDate`, `nowInstant`, and `now` as drop-in replacements for every common Temporal constructor. Use `parse(input, as?)` for flexible input detection.
 
 ## Features
 
@@ -126,13 +127,13 @@ const stable = formatInstant(reminder);
 
 - **Zero Temporal imports** — `parseInstant()`, `parseZoned()`, `parsePlainDateTime()`, `parsePlainDate()`, `nowInstant()`, `now()` replace every common `Temporal.*` constructor; import only from `@vielzeug/tempo`
 - **DST-safe arithmetic** — `shift()` handles transitions correctly; always returns `ZonedDateTime` (call `.toInstant()` if needed)
-- **Timezone conversion** — `toZoned()`, `toInstant()` with full timezone support; invalid timezone strings produce descriptive `[tempo]` errors
+- **Timezone conversion** — `inTz()` to project any input into a timezone, `toInstant()` to normalize to UTC; invalid timezone strings throw `TempoError`
 - **Formatting split by intent** — `format()` for UI (with presets and `intl` escape hatch), `formatInstant()` for UTC strings, `formatZoned()` for zoned strings
 - **Relative and range formatting** — `formatRelative()` for UX copy, `formatRange()` / `formatRangeParts()` for localized time spans, `formatParts()` for custom rendering
 - **Range + comparison helpers** — `within()`, `clamp()`, `isBefore()`, `isAfter()`, `isSame()` with calendar-unit and week-start support
 - **Boundary helpers** — `startOf()` and `endOf()` for day/week/month/year-style snapping
 - **Duration tools** — `difference()`, `parseDuration()`, `formatDuration()`
-- **Expiry classification** — `expires()` for flexible threshold-based TTL bucketing; `classify()` for combined bucket + diff in one call; `timeDiff()` for structured time differences; `humanize()` for human-readable output
+- **Expiry classification** — `expires()` for flexible threshold-based TTL bucketing; `timeDiff()` for structured time differences; `humanize()` for human-readable output
 - **Recurrence generation** — `recurrence()` for lazily generating repeating dates (daily/weekly/monthly/yearly); `dateRange()` for step-based date sequences; timezone inferred from `ZonedDateTime` inputs
 - **Intl integration** — formatting respects locale and calendar systems
 - **Polyfilled Temporal** — works in runtimes without native support via `@js-temporal/polyfill`

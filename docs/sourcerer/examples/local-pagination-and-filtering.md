@@ -38,25 +38,26 @@ console.log(source.current);
 console.log(source.meta.totalItems); // 2 (only items matching the filter)
 ```
 
-### Apply filter and sort without double recompute
+### Apply filter and sort atomically
 
-Call `setFilter()` and `setSort()` in sequence — the second call runs after the first has already committed. For a single atomic recompute, apply both directly in the `LocalConfig` when constructing the source:
+Use `patch()` to apply both in one recompute — a single computation pass and a single subscriber notification:
+
+```ts
+await source.patch({
+  filter: (p) => p.name.toLowerCase().includes('ap'),
+  sort: (a, b) => a.price - b.price,
+});
+```
+
+Calling `setFilter()` and `setSort()` in sequence triggers two separate recomputes. `patch()` is the preferred approach whenever multiple query fields change together.
+
+You can also set both as initial config if the values are known up front:
 
 ```ts
 const source = createLocalSource(products, {
   limit: 2,
   filter: (p) => p.name.toLowerCase().includes('ap'),
   sort: (a, b) => a.price - b.price,
-});
-```
-
-Or use the async config hook pattern with `filterAsync` if your predicates are expensive:
-
-```ts
-const source = createLocalSource(products, {
-  limit: 2,
-  filterAsync: async (items, signal) => items.filter((p) => p.name.toLowerCase().includes('ap')),
-  sortAsync: async (items, signal) => [...items].sort((a, b) => a.price - b.price),
 });
 ```
 

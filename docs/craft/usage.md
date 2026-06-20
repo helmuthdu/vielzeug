@@ -7,12 +7,13 @@ description: Practical Craft usage patterns for components, props, templates, sl
 
 ## Basic Usage
 
-`define(tag, definition)` registers a custom element and returns the tag name.
+`define(tag, definition)` registers a custom element.
 
 Your `setup()` function receives typed prop signals and a context bag, then returns an `HTMLResult` directly.
 
 ```ts
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('status-chip', {
   setup() {
@@ -41,10 +42,10 @@ define('my-widget', {
 
 ## signals and effects
 
-Craft re-exports signal primitives from `@vielzeug/ripple`.
+Craft does not re-export ripple primitives — import them directly from `@vielzeug/ripple`.
 
 ```ts
-import { batch, computed, effect, signal, watch } from '@vielzeug/craft';
+import { batch, computed, effect, signal, watch } from '@vielzeug/ripple';
 
 const count = signal(0);
 const doubled = computed(() => count.value * 2);
@@ -68,7 +69,8 @@ batch(() => {
 Use `ctx.onMounted()` for DOM-dependent initialization that must run after the template is mounted. Use `ctx.onElement(ref, cb)` for work tied to a specific DOM node. `ctx.onEvent()` attaches a listener that is automatically removed on disconnect.
 
 ```ts
-import { define, html, ref, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, ref } from '@vielzeug/craft';
 
 define('deferred-init', {
   setup(_props, { slots, onMounted, onElement, onEvent }) {
@@ -120,7 +122,8 @@ define('x-button', {
 `html` supports text, attributes, booleans, properties, events, refs, and nested templates.
 
 ```ts
-import { computed, define, html, ref, signal } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
+import { define, html, ref } from '@vielzeug/craft';
 
 define('profile-name', {
   setup() {
@@ -147,7 +150,8 @@ define('profile-name', {
 Craft includes `each`, `classMap`, `styleMap`, `when`, `live`, and `raw`.
 
 ```ts
-import { classMap, define, each, html, signal, styleMap, when } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { classMap, define, each, html, styleMap, when } from '@vielzeug/craft';
 
 define('task-list', {
   setup() {
@@ -197,7 +201,8 @@ each(
 Use `live(signal)` for inputs that should preserve in-progress user edits instead of overwriting the DOM on stale writes.
 
 ```ts
-import { define, html, live, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, live } from '@vielzeug/craft';
 
 define('live-search', {
   setup() {
@@ -215,7 +220,8 @@ define('live-search', {
 The setup context provides `bind` for wiring the host element.
 
 ```ts
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('x-toggle', {
   setup(_props, { bind }) {
@@ -239,8 +245,7 @@ The `bind` config supports `attr`, `class`, `style`, `prop`, and `on` sections. 
 ```ts
 import { define, html, when } from '@vielzeug/craft';
 
-define('card-with-footer', {
-  slots: ['header', 'footer'] as const,
+define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('card-with-footer', {
   setup(_props, { slots, emit }) {
     return html`
       <div class="card">
@@ -254,12 +259,13 @@ define('card-with-footer', {
 });
 ```
 
-When `slots` is declared as a `const` array, TypeScript narrows `slots.has()` and `slots.elements()` to only accept declared names.
+Pass `SlotNames` as a type parameter to `define()` to get typed `slots.has()` and `slots.elements()` calls.
 
 ## context provide/inject
 
 ```ts
-import { createContext, define, html, injectStrict, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { createContext, define, html, injectStrict } from '@vielzeug/craft';
 
 const COUNT_CTX = createContext<ReturnType<typeof signal<number>>>('count');
 
@@ -284,7 +290,8 @@ define('count-consumer', {
 ## form-associated elements
 
 ```ts
-import { define, html, prop, signal, useField } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, prop, useField } from '@vielzeug/craft';
 
 define('rating-input', {
   formAssociated: true,
@@ -327,7 +334,8 @@ define('user-profile', {
 Observer helpers from `@vielzeug/craft/observers` require real DOM nodes, so call them inside `ctx.onMounted()`.
 
 ```ts
-import { define, html, ref, watch } from '@vielzeug/craft';
+import { watch } from '@vielzeug/ripple';
+import { define, html, ref } from '@vielzeug/craft';
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/craft/observers';
 
 define('x-observed', {
@@ -358,7 +366,8 @@ Import from `@vielzeug/craft/testing`.
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { html } from '@vielzeug/craft';
 import { cleanup, fire, flush, mount, waitFor } from '@vielzeug/craft/testing';
 
 describe('my-counter', () => {
@@ -426,7 +435,7 @@ const open = ref(false);
 
 ### With Ripple
 
-Craft re-exports core ripple primitives, but you can import ripple directly for standalone reactive state outside components.
+Import ripple primitives directly from `@vielzeug/ripple` for standalone reactive state outside components.
 
 ```ts
 import { signal, computed } from '@vielzeug/ripple';

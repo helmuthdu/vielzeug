@@ -62,7 +62,7 @@ await reqI18n.extend('settings', (locale) => import(`./locales/${locale}/setting
 - Do not call `t()` or `tp()` before `await reqI18n.setLocale(locale)` completes. Until then the instance is on the default locale and will return English strings regardless of the requested locale.
 - `t()` returns a raw, unsanitized string. If any translation key value originates from user-generated content or an external CMS, sanitize it before inserting into the HTML to prevent XSS.
 - `i18n.locale` is a plain string — use it directly in the `lang` attribute rather than reading it from the snapshot.
-- Prefer `fork()` over `createI18n()` per request — `fork()` reuses the parent's already-resolved catalog snapshots and avoids re-running all loaders on every request.
+- Prefer `fork()` over `createI18n()` per request — `fork()` shares the parent's already-compiled catalog entries by reference (no template re-compilation) and avoids re-running all loaders.
 
 ### Related
 

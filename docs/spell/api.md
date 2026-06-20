@@ -13,7 +13,8 @@ description: Complete API reference for spell schema builders, helpers, validato
 | `Schema.parse()` / `safeParse()`                    | Validate synchronously; `parse()` throws, `safeParse()` returns tagged result | Sync                | See `Schema` class section below.                                   |
 | `s.coerce.*`                                        | Coerce string-like input before validation                                    | Sync setup          | Coercion changes the accepted input type, not only the output type. |
 | `Schema.parseAsync()` / `safeParseAsync()`          | Validate including async `validate()` callbacks                               | Async               | Required when any nested rule uses an async `validate()` callback.  |
-| `descriptorToJsonSchema()`                          | Convert descriptors to JSON Schema                                            | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
+| `descriptorToJsonSchema()`                          | Convert a `SchemaDescriptor` to JSON Schema                                   | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
+| `schemaToJsonSchema()`                              | Convert a `Schema` instance directly to JSON Schema                           | Sync setup          | Calls `toDescriptor()` internally; same limitations apply.          |
 | `setMessages()` / `setLogger()` / `resetMessages()` | Override validation messages and warning logger                               | Sync setup          | `setMessages()` replaces the active message set each call.          |
 | `ValidationError`                                   | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
 | `prependIssuePath()`                                | Prefix a path segment to an array of issues                                   | Sync                | Use inside custom parsers that delegate to inner schemas.           |
@@ -32,7 +33,7 @@ Use this table to scan every runtime export.
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Classes                   | `Schema`, `PipeSchema`, `ValidationError`                                                                                                                                                                                                                                                                                        |
 | Message and error helpers | `ErrorCode`, `errorsAt`, `fail`, `prependIssuePath`, `setMessages`, `setLogger`, `resetMessages`                                                                                                                                                                                                                                 |
-| Descriptor helpers        | `descriptorToJsonSchema`                                                                                                                                                                                                                                                                                                         |
+| Descriptor helpers        | `descriptorToJsonSchema`, `schemaToJsonSchema`                                                                                                                                                                                                                                                                                   |
 | Pure validators           | `hasMaxLength`, `hasMinLength`, `isArray`, `isBoolean`, `isDate`, `isInteger`, `isMultipleOf`, `isNegative`, `isNonNegative`, `isNullOrUndefined`, `isNumber`, `isPositive`, `isString`, `isInRange`                                                                                                                             |
 | String format validators  | `isBase64`, `isBase64url`, `isCuid`, `isCuid2`, `isDuration`, `isEmail`, `isEmoji`, `isHex`, `isHexColor`, `isIp`, `isIsoDate`, `isIsoDateTime`, `isJwt`, `isNanoid`, `isNumeric`, `isSemver`, `isSlug`, `isTime`, `isUlid`, `isUrl`, `isUuid`                                                                                   |
 | Namespace                 | `s`                                                                                                                                                                                                                                                                                                                              |
@@ -187,7 +188,7 @@ class Schema<Output = unknown, Input = Output> {
   toDescriptor(): SchemaDescriptor;
   toJsonSchema(): JsonSchema;
   assert(value: unknown, label?: string): asserts value is Output;
-  walk<R>(visitor: SchemaWalker<R>): R;
+  walk<R>(visitor: SchemaWalker<R>): R | null;
   equals(other: AnySchema): boolean;
   get description(): string | undefined;
   get isOptional(): boolean;
@@ -225,7 +226,7 @@ Use this table to decide which methods to call most often.
 | `is(value)`                                         | Type-predicate guard. Returns `true` if `value` passes `safeParse()`.                                                                                                              |
 | `kind`                                              | Read-only string identifier for this schema's type (e.g. `'string'`, `'object'`).                                                                                                  |
 | `equals(other)`                                     | Structural equality check comparing shape, constraints, and annotations (not pre/postprocessors).                                                                                  |
-| `toDescriptor` / `toJsonSchema` / `walk` / `equals` | Supports tooling and schema introspection. `toDescriptor()` emits a dev warning if the schema has preprocessors (e.g. `trim()`, `coerce`), since they cannot survive a round-trip. |
+| `toDescriptor` / `toJsonSchema` / `walk` / `equals` | Supports tooling and schema introspection. `toDescriptor()` emits a dev warning if the schema has preprocessors (e.g. `trim()`, `coerce`), since they cannot survive a round-trip. `walk()` returns `null` if no visitor handler matches and no `unknown` fallback is defined. |
 
 ### `Schema.validate()`
 
@@ -377,6 +378,69 @@ schema.defaults(); // {}
 
 ---
 
+### `ObjectSchema.partialDefaults()`
+
+Returns a partial object containing only the fields that have a default value set. Fields without a `.default()` or `.catch()` are silently omitted rather than throwing.
+
+```ts
+partialDefaults(): Partial<InferObject<T>>
+```
+
+**Returns:** A partial object with only the defaulted fields filled in.
+
+Use `partialDefaults()` for pre-filling forms where only some fields have defaults.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const Form = s.object({
+  name: s.string(),
+  role: s.string().default('viewer'),
+});
+
+Form.partialDefaults(); // { role: 'viewer' } — name is omitted
+```
+
+---
+
+### `ObjectSchema.requiredFields()`
+
+Returns the keys of fields that are required (not optional and not nullish).
+
+```ts
+requiredFields(): (keyof T & string)[]
+```
+
+**Returns:** An array of field key strings that do not accept `undefined`.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const User = s.object({ id: s.number(), name: s.string().optional() });
+User.requiredFields(); // ['id']
+```
+
+---
+
+### `ObjectSchema.optionalFields()`
+
+Returns the keys of fields that are optional (accept `undefined`).
+
+```ts
+optionalFields(): (keyof T & string)[]
+```
+
+**Returns:** An array of field key strings that accept `undefined`.
+
+```ts
+import { s } from '@vielzeug/spell';
+
+const User = s.object({ id: s.number(), name: s.string().optional() });
+User.optionalFields(); // ['name']
+```
+
+---
+
 ### `PipeSchema<Output, Input = unknown>`
 
 Use `pipe()` when one schema should feed another schema instead of a custom transform.
@@ -428,6 +492,38 @@ const schema = s.object({
 });
 
 const jsonSchema = descriptorToJsonSchema(schema.toDescriptor());
+```
+
+---
+
+### `schemaToJsonSchema()`
+
+Use `schemaToJsonSchema()` as a shorthand when you have a schema instance and want JSON Schema without calling `toDescriptor()` explicitly.
+
+```ts
+schemaToJsonSchema(schema: AnySchema): JsonSchema
+```
+
+**Parameters**
+
+| Name     | Type        | Notes                                         |
+| -------- | ----------- | --------------------------------------------- |
+| `schema` | `AnySchema` | Any schema instance from `s.*` or `new XxxSchema(...)`. |
+
+**Returns:** `JsonSchema`
+
+Internally calls `schema.toDescriptor()` then `descriptorToJsonSchema()`. The same limitations apply: schemas with preprocessors (`trim()`, `coerce.*`) emit a dev warning and may not round-trip exactly.
+
+```ts
+import { schemaToJsonSchema, s } from '@vielzeug/spell';
+
+const Product = s.object({
+  id: s.string().uuid(),
+  name: s.string().min(1),
+}).label('Product');
+
+const jsonSchema = schemaToJsonSchema(Product);
+console.log(jsonSchema.title); // 'Product'
 ```
 
 ---

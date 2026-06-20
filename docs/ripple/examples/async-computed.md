@@ -13,7 +13,7 @@ You need to fetch data reactively — re-running the fetch whenever a reactive d
 
 Use `resource()` to wrap an async factory. Dependencies read synchronously before the first `await` are tracked. The factory receives an `AbortSignal` that fires when it is superseded or disposed.
 
-The returned `ResourceSignal<T>` emits a single `ResourceState<T>` discriminated union:
+The returned `Computed<ResourceState<T>>` emits a single discriminated union:
 
 | `status`    | Fields present                          |
 | ----------- | --------------------------------------- |

@@ -362,7 +362,7 @@ Import from `@vielzeug/craft/testing`.
 | ------------------------ | ------------------------------------------------------------------------------------------ |
 | `mount(setup, options?)` | Mount a component and return a test fixture                                                |
 | `cleanup()`              | Remove all mounted elements and reset test state                                           |
-| `install(afterEach)`     | _(removed)_ Use `cleanup()` manually in `afterEach`                                        |
+| `install(afterEach)`     | Register auto-cleanup; pass `afterEach` from your test framework                           |
 | `flush(options?)`        | Drain reactive updates and animation frames                                                |
 | `FLUSH_DEEP`             | Pre-built options for deep async chains (`maxTurns: 12`)                                   |
 | `mock(tag, template?)`   | Register a no-op stub custom element                                                       |
@@ -413,12 +413,15 @@ const { result } = await renderHook({ label: prop.string('hello'), count: prop.n
 expect(result.value).toBe('hello');
 ```
 
-## Ripple Re-exports
+## Ripple Primitives
 
-Craft re-exports these from `@vielzeug/ripple`:
+Craft does **not** re-export reactive primitives. Import them directly from `@vielzeug/ripple`:
 
-- `signal`, `computed`, `batch`, `untrack`, `watch`, `isSignal`, `scope`
-- `type Signal`, `type Reactive`, `type Scope`, `type WatchOptions`
+```ts
+import { batch, computed, signal, watch } from '@vielzeug/ripple';
+```
+
+See the [Ripple documentation](/ripple/) for the full API.
 
 ## Lifecycle Events
 

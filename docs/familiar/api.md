@@ -683,14 +683,14 @@ try {
 
 ## Testing Utilities
 
-Import from the `/test` subpath — not included in the main bundle:
+Import from the `/testing` subpath — not included in the main bundle:
 
 ```ts
 import { createTestWorker } from '@vielzeug/familiar/testing';
 import type { TestWorkerHandle, TestWorkerOptions } from '@vielzeug/familiar/testing';
 ```
 
-Error classes are also re-exported from the test subpath so test files need only one import.
+Error classes are also re-exported from the `/testing` subpath so test files need only one import.
 
 ---
 

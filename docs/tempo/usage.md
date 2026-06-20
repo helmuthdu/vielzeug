@@ -10,7 +10,7 @@ description: Parsing, timezone conversion, arithmetic, boundaries, and formattin
 Use named imports from `@vielzeug/tempo` for tree-shaking.
 
 ```ts
-import { format, now, parsePlainDateTime, shift, toInstant, toZoned } from '@vielzeug/tempo';
+import { format, inTz, now, parsePlainDateTime, shift, toInstant } from '@vielzeug/tempo';
 
 // Current time in a timezone
 const berlin = now('Europe/Berlin');
@@ -18,6 +18,9 @@ const berlin = now('Europe/Berlin');
 // Parse a wall-clock string, then pin it to a timezone
 const local = parsePlainDateTime('2026-03-21T10:15:30');
 const instant = toInstant(local, { tz: 'America/New_York' });
+
+// Project to a different timezone
+const tokyo = inTz(instant, 'Asia/Tokyo');
 
 // Format for display
 format(instant, { pattern: 'short', locale: 'en-US', tz: 'America/New_York' });
@@ -35,19 +38,19 @@ All common Temporal constructors have a tempo equivalent — import only from `@
 | `Temporal.ZonedDateTime.from(str)`                          | `parseZoned(str)`                 |
 | `Temporal.PlainDateTime.from(str)`                          | `parsePlainDateTime(str)`         |
 | `Temporal.PlainDate.from(str)`                              | `parsePlainDate(str)`             |
-| `Temporal.ZonedDateTime.from` / `Temporal.Instant.from` / … | `parseDate(str)` (unknown format) |
+| `Temporal.ZonedDateTime.from` / `Temporal.Instant.from` / … | `parse(str)` (unknown format)     |
 
 ```ts
 import {
+  inTz,
   isValid,
   nowInstant,
-  parseDate,
+  parse,
   parseInstant,
   parsePlainDateTime,
   parsePlainDate,
   parseZoned,
   toInstant,
-  toZoned,
 } from '@vielzeug/tempo';
 
 // Current instant
@@ -56,7 +59,7 @@ const t = nowInstant();
 // Wall-clock string from user input or database
 const local = parsePlainDateTime('2026-03-21T10:15:30');
 const instant = toInstant(local, { tz: 'Europe/Berlin' });
-const tokyo = toZoned(instant, { tz: 'Asia/Tokyo' });
+const tokyo = inTz(instant, 'Asia/Tokyo');
 
 // UTC ISO string from an API response
 const ts = parseInstant('2026-03-21T10:15:30Z');
@@ -68,10 +71,10 @@ const meeting = parseZoned('2026-03-21T11:00:00+01:00[Europe/Berlin]');
 const date = parsePlainDate('2026-03-21');
 
 // Unknown ISO format — picks the most specific type automatically
-parseDate('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
-parseDate('2026-03-21T10:00:00Z'); // Instant
-parseDate('2026-03-21T10:00:00'); // PlainDateTime
-parseDate('2026-03-21'); // PlainDate
+parse('2026-03-21T11:00:00+01:00[Europe/Berlin]'); // ZonedDateTime
+parse('2026-03-21T10:00:00Z'); // Instant
+parse('2026-03-21T10:00:00'); // PlainDateTime
+parse('2026-03-21'); // PlainDate
 
 // Type guard — validate before passing to Tempo functions
 if (isValid(externalValue)) {
@@ -229,7 +232,7 @@ const text = formatDuration(duration, { locale: 'en-US', style: 'short' });
 Use `expires()` to classify a date into a named threshold bucket of your choosing.
 
 ```ts
-import { classify, expires, humanize, now, parseInstant, parseZoned, shift, timeDiff } from '@vielzeug/tempo';
+import { expires, humanize, now, parseInstant, shift, timeDiff } from '@vielzeug/tempo';
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days past
@@ -243,11 +246,6 @@ const THRESHOLDS = {
 expires(shift(now('UTC'), { days: -60 }).toInstant(), THRESHOLDS); // 'longExpired'
 expires(shift(now('UTC'), { hours: 48 }).toInstant(), THRESHOLDS); // 'critical'
 expires(shift(now('UTC'), { years: 200 }).toInstant(), THRESHOLDS); // null (no match)
-
-// classify() = expires() + timeDiff() in one call
-const { key, diff } = classify(certificateExpiry, THRESHOLDS);
-// key: 'critical' | 'expired' | 'warning' | 'safe' | 'longExpired' | null
-// diff: { unit: 'hour' | 'day' | ..., value: number }
 
 // Pin the reference time for deterministic behavior in tests
 const pinnedNow = parseInstant('2026-06-01T00:00:00Z');
@@ -383,7 +381,7 @@ await db.put('sessions', { id: '1', token: 'abc' }, ttl.ms(expiresIn));
 ## Best Practices
 
 - Store `Temporal.Instant` values in databases and APIs — never store offset-aware strings.
-- Use `parsePlainDateTime()` at the system boundary when receiving wall-clock strings from external sources; use `parseInstant()` for UTC ISO strings; use `parseDate()` when the format is unknown.
+- Use `parsePlainDateTime()` at the system boundary when receiving wall-clock strings from external sources; use `parseInstant()` for UTC ISO strings; use `parse()` when the format is unknown.
 - Use `isValid()` as a type guard when accepting `TimeInput` from external data.
 - Convert to `ZonedDateTime` only when rendering to users; keep instants everywhere else.
 - Always pass `tz` when calling `toInstant()`, `shift()`, or `difference()` with plain inputs.

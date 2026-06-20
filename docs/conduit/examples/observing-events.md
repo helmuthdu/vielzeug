@@ -81,8 +81,9 @@ console.log(resolveCounts.get('Config')); // 2
 Events propagate up the container hierarchy. A listener on the root container observes events from all child and scope containers.
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, scope, token } from '@vielzeug/conduit';
 
+const RequestScope = scope('request');
 const Session = token<{ id: string }>('Session');
 
 const root = createContainer({ name: 'root' });
@@ -92,10 +93,10 @@ root.on((e) => {
   if (e.type === 'resolve') events.push(e.description);
 });
 
-root.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: 'scoped' });
+root.factory(Session, () => ({ id: crypto.randomUUID() }), { lifetime: RequestScope });
 
-const child = root.createChild({ name: 'request-1' });
-await child.resolve(Session);
+const requestContainer = root.createScope(RequestScope, { name: 'request-1' });
+await requestContainer.resolve(Session);
 
 console.log(events); // ['Session'] — observed from the root listener
 ```

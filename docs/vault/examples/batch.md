@@ -98,6 +98,7 @@ await db.batch(['users'], async (tx) => {
 
 - `batch()` is table-scoped. Accessing a table inside the callback that was not declared in the first argument throws `VaultScopeError` at runtime and is a type error at compile time.
 - On **non-IDB adapters**, if the callback throws after some writes have already executed, those writes are not rolled back — only the observer notifications are suppressed. On **IndexedDB**, the whole transaction aborts.
+- `batch()` on Memory and WebStorage adapters is **not atomic** — a dev-mode console warning fires on the first call to remind you. Use `createIndexedDB` when atomicity is required.
 - Do not include long-running async work unrelated to storage inside the `batch()` callback. IDB transactions time out if no new IDB requests are made within a microtask tick. Keep the callback focused on storage operations.
 - The `tables` array must not be empty. Passing an empty array throws `VaultScopeError`.
 

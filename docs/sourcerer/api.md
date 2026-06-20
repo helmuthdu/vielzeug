@@ -36,6 +36,7 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `decodeQuery()`                        | Deserialize URL params (or `URLSearchParams`) to a source query                               | Sync           | Malformed JSON is silently dropped by default                                     |
 | `FetchEvent<TQuery>`                   | Type for `onFetch` telemetry callbacks                                                        | Type           | —                                                                                 |
 | `SearchOptions`                        | Options bag for `search()` — only field is `immediate?: boolean`                              | Type           | `search()` always returns `Promise<void>`; debounced unless `{ immediate: true }` |
+| `DecodeQueryOptions`                   | Options for `decodeQuery()` — `defaultLimit` and `strict`                                     | Type           | `strict: true` throws on malformed JSON; default silently drops it                |
 
 ## Package Entry Point
 
@@ -356,6 +357,21 @@ applyLocalQuery<T>(
 ```
 
 Typed wrapper for `applyQuery` — applies a `LocalSourceQuery<T>` (including optional `filter` and `sort`) to a `LocalSource` via `source.patch()`. Triggers a single recompute for any combination of changed fields.
+
+**Example:**
+
+```ts
+import { applyLocalQuery, createLocalSource } from '@vielzeug/sourcerer';
+
+const source = createLocalSource(users, { limit: 20 });
+
+// Apply filter + sort + search atomically — one recompute, one subscriber notification
+await applyLocalQuery(source, {
+  filter: (u) => u.active,
+  search: 'ada',
+  sort: (a, b) => a.name.localeCompare(b.name),
+});
+```
 
 ---
 
@@ -738,8 +754,19 @@ type SourceState<T> =
   | { readonly error: SourceError; readonly status: 'error' }
   | { readonly items: readonly T[]; readonly status: 'success' };
 
+// Opaque context bag on SourceError — safe to log, do not rely on specific field names
+type SourceErrorContext = Readonly<Record<string, unknown>>;
+
+// Returned by deriveSource() — identical contract to ReactiveSource
+type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
+
 type QueryParams = Record<string, string>;
 type QueryParamsInput = Record<string, string | string[] | undefined>;
+
+type DecodeQueryOptions = Readonly<{
+  defaultLimit?: number; // default: 20
+  strict?: boolean; // when true, throws on malformed filter/sort JSON; default: false
+}>;
 
 type SourceSnapshot<T> = Readonly<{
   items: readonly T[];
@@ -752,6 +779,31 @@ type RetryConfig = {
   attempts?: number; // default: 0 (no retries)
   delay?: (attempt: number) => number; // default: exponential backoff
 };
+
+// PageNavigator — shared navigation interface for page-based sources (local and remote)
+type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
+  goTo(page: number): Promise<void>;
+  goToLast(): Promise<void>;
+  next(): Promise<void>;
+  patch(changes: Partial<SourceQuery>): Promise<void>;
+  prev(): Promise<void>;
+  ready(timeout?: number): Promise<void>;
+  reset(): Promise<void>;
+  search(query: string, opts?: SearchOptions): Promise<void>;
+  setLimit(limit: number): Promise<void>;
+};
+
+// LocalSourceConfig — config passed to createLocalSource()
+type LocalSourceConfig<T> = Readonly<{
+  debounceMs?: number;           // default: 300
+  filter?: Predicate<T>;
+  filterAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
+  initialData?: readonly T[];    // alternative to positional first arg
+  limit?: number;                // default: 20
+  searchFn?: (items: readonly T[], query: string) => readonly T[];
+  sort?: Sorter<T>;
+  sortAsync?: (items: readonly T[], signal: AbortSignal) => Promise<readonly T[]>;
+}>;
 
 type FetchEvent<TQuery = unknown> = Readonly<{
   durationMs: number;

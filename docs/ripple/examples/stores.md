@@ -43,7 +43,7 @@ cart.reset();
 
 #### Slice Watch via Lens + `watch()`
 
-`watch()` accepts a `Reactive`. Use `store.lens(path)` for a named property or `computed()` for an arbitrary derived slice:
+`watch()` accepts a `Readable`. Use `store.lens(path)` for a named property or `computed()` for an arbitrary derived slice:
 
 ```ts
 import { store, watch, computed } from '@vielzeug/ripple';

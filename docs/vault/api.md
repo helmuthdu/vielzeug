@@ -5,12 +5,6 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 
 [[toc]]
 
-## Package Entry Point
-
-| Import            | Purpose                |
-| ----------------- | ---------------------- |
-| `@vielzeug/vault` | Main exports and types |
-
 ## API Overview
 
 | Symbol                                | Purpose                                                        | Execution mode   | Common gotcha                                                                       |
@@ -43,11 +37,11 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `db.disposed`                         | `true` after `dispose()` is called                             | Sync getter      | —                                                                                   |
 | `db[Symbol.asyncDispose]()`           | Delegates to `dispose()`                                       | Async            | Enables `await using` declarations                                                  |
 
-## Exports
+## Package Entry Point
 
-**Values:** `createLocalStorage`, `createSessionStorage`, `createIndexedDB`, `createMemory`, `createVersionedCodec`, `table`, `ttl`, `defaultCodec`, `isExpired`, `toReadableStream`, `scheduleExpiredPrune`, `defineMigration`, `VaultError`, `VaultDisposedError`, `VaultMigrationError`, `VaultQuotaError`, `VaultScopeError`
-
-**Types:** `Adapter`, `AnySchema`, `BaseAdapterOptions`, `CodecVersion`, `DebugInfo`, `DebugStats`, `IndexedDbAdapter`, `KeyOf`, `MemoryAdapter`, `MetricsEvent`, `MigrationContext`, `MigrationFn`, `MigrationStep`, `Observer`, `QueryBuilder`, `ReactiveSignal`, `RecordOf`, `RecordValidator`, `SchemaEntry`, `TableBuilder`, `TableSignals`, `TableValidators`, `TransactionContext`, `TtlMs`, `Unsubscribe`, `VaultCodec`, `VaultLogger`
+| Import            | Purpose                |
+| ----------------- | ---------------------- |
+| `@vielzeug/vault` | Main exports and types |
 
 ## Schema Helper
 

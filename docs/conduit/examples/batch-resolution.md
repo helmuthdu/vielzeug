@@ -47,7 +47,7 @@ const [logger, config, metrics] = await container.resolveMany([Logger, Config, M
 Use `Promise.all` when you need per-token error handling or conditional resolution.
 
 ```ts
-import { createContainer, token } from '@vielzeug/conduit';
+import { createContainer, token, tryResolve } from '@vielzeug/conduit';
 
 interface Cache {
   get(key: string): unknown;
@@ -61,7 +61,7 @@ container.value(Logger, console);
 container.factory(Cache, async () => connectCache());
 
 // Wrap individual calls when partial failure is acceptable
-const [logger, cacheResult] = await Promise.all([container.resolve(Logger), container.tryResolve(Cache)]);
+const [logger, cacheResult] = await Promise.all([container.resolve(Logger), tryResolve(container, Cache)]);
 
 if (cacheResult.ok) {
   logger.log(`Cache connected`);

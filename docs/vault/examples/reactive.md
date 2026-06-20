@@ -11,11 +11,11 @@ You need UI components or effects to re-run whenever a table's contents change. 
 
 ### Solution
 
-Use `db.observe(table, fn)` for callback-based subscriptions, `db.watch(table)` for `for await` loops, `db.watchStream(table)` for ReadableStream pipelines, and `db.observeMany(tables, fn)` for combined multi-table snapshots. For deep integration with a reactive library, pass a `signals` map at construction time.
+Use `db.observe(table, fn)` for callback-based subscriptions, `db.watch(table)` for `for await` loops, `toReadableStream(db.watch(table))` for ReadableStream pipelines, and `db.observeMany(tables, fn)` for combined multi-table snapshots. For deep integration with a reactive library, pass a `signals` map at construction time.
 
 #### `observe` — callback subscription
 
-`observe` **always fires immediately** with the current table state on registration, then fires again on every mutation. There is no deferred-first-call mode.
+`observe` **fires immediately** with the current table state on registration by default, then fires again on every mutation.
 
 ```ts
 import { createMemory, table, type Unsubscribe } from '@vielzeug/vault';
@@ -33,6 +33,17 @@ const stop: Unsubscribe = db.observe('users', (rows) => {
 await db.put('users', { id: 1, name: 'Alice' }); // triggers the callback again
 
 stop();
+```
+
+Pass `{ immediate: false }` to skip the initial snapshot — useful when you already hold the current state and only want change notifications:
+
+```ts
+const rows = await db.getAll('users'); // already have current state
+
+// immediate: false — no snapshot on registration, only subsequent mutations
+db.observe('users', (updated) => render(updated), { immediate: false });
+
+render(rows); // render initial state yourself
 ```
 
 Pass `{ signal }` to cancel via an `AbortController`:
@@ -78,23 +89,28 @@ for await (const users of db.watch('users', { mode: 'all' })) {
 }
 ```
 
-#### `watchStream` — ReadableStream
+#### `toReadableStream` — ReadableStream
 
-`watchStream` returns a Web Standard `ReadableStream`. Use it with WHATWG stream pipelines or any consumer that accepts a `ReadableStream`.
+Wrap `db.watch()` with `toReadableStream()` to get a Web Standard `ReadableStream`. Use it with WHATWG stream pipelines or any consumer that accepts a `ReadableStream`.
 
 ```ts
-db.watchStream('users').pipeTo(new WritableStream({ write: (users) => renderList(users) }));
+import { toReadableStream } from '@vielzeug/vault';
+
+toReadableStream(db.watch('users')).pipeTo(
+  new WritableStream({ write: (users) => renderList(users) }),
+);
 ```
 
 Always cancel the stream when done to stop the underlying observer:
 
 ```ts
-const reader = db.watchStream('users').getReader();
+const controller = new AbortController();
+const reader = toReadableStream(db.watch('users', { signal: controller.signal })).getReader();
 
 const { value } = await reader.read(); // receives immediate snapshot
 renderList(value);
 
-await reader.cancel(); // unsubscribes the observer
+controller.abort(); // unsubscribes the observer
 ```
 
 The same `mode` and `signal` options as `watch()` apply.
@@ -125,6 +141,19 @@ await db.batch(['users', 'posts'], async (tx) => {
 stop();
 ```
 
+Pass `{ eager: true }` to fire the listener as soon as any table delivers its first snapshot, using empty arrays for tables not yet resolved. This is useful when some tables are large and you want to render partial data immediately:
+
+```ts
+const stop = db.observeMany(
+  ['users', 'posts'],
+  ({ users, posts }) => {
+    // users may have data while posts is still [] on first call
+    renderDashboard(users, posts);
+  },
+  { eager: true },
+);
+```
+
 #### `signals` plugin — zero-boilerplate reactivity
 
 Wire a `@vielzeug/ripple` signal at construction time. Vault keeps it in sync automatically — no `observe()` call needed.
@@ -152,11 +181,11 @@ await db.put('users', { id: 1, name: 'Alice' }); // → effect re-runs
 
 ### Pitfalls
 
-- `observe()` always fires immediately on registration — there is no deferred-first-call mode. If you need to skip the initial state, check a flag in your callback on the first invocation.
-- `observe()` returns an `Unsubscribe` function — forgetting to call it on teardown leaks listeners. Use `watch()` or `watchStream()` for loops where cleanup needs to be automatic.
+- `observe()` fires immediately on registration by default. Pass `{ immediate: false }` to skip the initial snapshot when you already hold the current state.
+- `observe()` returns an `Unsubscribe` function — forgetting to call it on teardown leaks listeners. Use `watch()` or `toReadableStream(db.watch(...))` for loops where cleanup is automatic.
 - `observeMany()` throws `VaultScopeError` when passed an empty `tables` array. Always provide at least one table name.
 - Writes to multiple tables inside a single `batch()` call trigger `observeMany` exactly once, not once per dirty table. Writes outside a `batch()` trigger separate callbacks per table.
-- For `watch()` and `watchStream()`, the default `mode: 'latest'` silently drops intermediate snapshots when the consumer lags. Use `mode: 'all'` if every intermediate state matters.
+- For `watch()` and `toReadableStream(db.watch(...))`, the default `mode: 'latest'` silently drops intermediate snapshots when the consumer lags. Pass `mode: 'all'` if every intermediate state matters.
 - The `signals` plugin calls `signal.update(() => snapshot)` synchronously inside the observer. If the signal triggers further writes to the same table (e.g., via a computed effect), this can cause a cycle. Structure your data flow so signals are downstream-only from storage.
 
 ### Related

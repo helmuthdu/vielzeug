@@ -42,8 +42,8 @@ auth.has('login'); // i18n.has('auth.login')
 
 ### Pitfalls
 
-- `scope()` returns a new object on every call — store the result in a variable rather than calling `i18n.scope('auth')` inline on each render.
-- The `ScopedI18n` object does not cache — it delegates to the parent `i18n` instance on every call, so locale changes are reflected automatically.
+- `scope()` is memoized per prefix — `i18n.scope('auth')` always returns the same object reference, so it is safe to call inline. Store it in a variable for convenience, not for performance reasons.
+- The `ScopedI18n` object does not cache translation results — it delegates to the parent `i18n` instance on every `t()` / `tp()` call, so locale changes are reflected automatically.
 - Keys inside a scope can include additional dots for deeper paths: `auth.t('menu.settings')` resolves to `'auth.menu.settings'`.
 
 ### Related

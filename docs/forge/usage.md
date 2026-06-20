@@ -56,9 +56,9 @@ dynamicForm.set('custom.field', 'value');
 ## Validation
 
 ```ts
-await form.validateField('password');
+await form.validate('password');
 await form.validate();
-await form.validateFields(['email', 'password']);
+await form.validate(['email', 'password']);
 
 const controller = new AbortController();
 await form.validate(controller.signal);
@@ -68,7 +68,7 @@ controller.abort();
 Validation result:
 
 ```ts
-const result = await form.validateFields(['email']);
+const result = await form.validate(['email']);
 
 console.log(result.valid); // true only if no errors exist after this run
 console.log(result.errors); // full current error map after the run
@@ -156,7 +156,7 @@ form.subscribe((state) => {
 
 ## Connect (Field Binding)
 
-`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure. Each binding owns its own independent debounce timer; call `disconnect()` when the field unmounts to cancel it.
+`connect()` returns a live binding object with DOM event handlers and live getters. Call once per field and store the result — do not destructure. Each binding owns its own independent debounce timer; call `dispose()` when the field unmounts to cancel it.
 
 ```ts
 const emailConn = form.connect('email');
@@ -168,7 +168,7 @@ input.addEventListener('blur', () => emailConn.onBlur());
 console.log(emailConn.value, emailConn.error, emailConn.touched, emailConn.dirty);
 
 // On unmount: cancel any pending debounce timer
-emailConn.disconnect();
+emailConn.dispose();
 ```
 
 ### Validation Modes
@@ -226,8 +226,8 @@ await address.submit((vals) => vals); // validates and submits only address.* fi
 **Key characteristics:**
 
 - `dispose()` on a scoped form is a no-op — call `parentForm.dispose()` to tear down.
-- `scope.state` returns the **full** form state. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results contain relative keys and a scoped `valid` flag.
-- `touchedFields` in `state` contains full-prefixed paths. Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` to avoid double-prefixing.
+- `scope.state` returns a **scoped projection**: `errors`, `touchedFields`, `validatingFields`, `isDirty`, `isValid`, `isTouched`, and `isValidating` reflect only fields within the scope's prefix. `isSubmitting`, `isLoading`, and `submitCount` reflect the full form. Use `scope.validate()` or `scope.submit()` for scoped validity checks; their results contain relative keys and a scoped `valid` flag.
+- `touchedFields` in `state` contains full-prefixed paths. Prefer `scope.validate()` over `scope.validate([...state.touchedFields])` to avoid double-prefixing.
 
 ### Scoped Subscriptions
 
@@ -329,7 +329,7 @@ form.reset(); // restore all values to baseline; clear errors/touched/dirty/subm
 form.replace({ email: '', name: '' }); // replace values and baseline; also resets submitCount
 form.patch({ name: 'Alice' }); // merge specific fields into store and baseline (marks them clean)
 form.resetField('email'); // restore single field to baseline
-form.removeField('coupon'); // drop field entirely (value, touched, error, validator)
+form.fields.remove('coupon'); // drop field entirely (value, touched, error, validator)
 ```
 
 `patch()` accepts a `DeepPartial` object — nested paths are flattened automatically. Useful for applying a server response without dirtying the form.
@@ -471,9 +471,9 @@ const formWithSchema = createForm({
 
 ## Best Practices
 
-- Call `connect()` once per field and store the result — never call it inside a render or update loop. Call `binding.disconnect()` when the field unmounts to cancel any pending debounce timer.
+- Call `connect()` once per field and store the result — never call it inside a render or update loop. Call `binding.dispose()` when the field unmounts to cancel any pending debounce timer.
 - `scope()` is memoized — repeated calls with the same prefix return the same object. Store the result for clarity, but it is safe to call multiple times.
-- Prefer `scope.validate()` over `scope.validateFields([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
+- Prefer `scope.validate()` over `scope.validate([...state.touchedFields])` on scoped forms to avoid double-prefixed paths.
 - Wrap multi-field mutations in `batch()` to emit a single subscriber notification.
 - Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
 - Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.

@@ -56,7 +56,8 @@ container.value(Logger, console);
 
 container.factory(
   Db,
-  async (logger) => {
+  async (r) => {
+    const logger = await r.resolve(Logger);
     logger.log('connecting to database…');
     const pool = await createPool(process.env.DATABASE_URL!);
     logger.log('connected');

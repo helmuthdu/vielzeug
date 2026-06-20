@@ -83,7 +83,7 @@ nav.has('logout'); // checks 'nav.logout'
 nav.fmt.number(1234); // same as i18n.fmt.number(1234)
 ```
 
-`scope()` returns a new object on each call — do not compare references.
+`scope()` is memoized per prefix — repeated calls with the same prefix string return the same object reference.
 
 ## Formatting
 

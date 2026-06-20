@@ -15,6 +15,7 @@ exports:
     errorsAt,
     fail,
     descriptorToJsonSchema,
+    schemaToJsonSchema,
     setMessages,
     setLogger,
     resetMessages,

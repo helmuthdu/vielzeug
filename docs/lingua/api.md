@@ -762,7 +762,7 @@ try {
 | `E.INVALID_COUNT`     | `'lingua/E002'` | `tp()` — `count` is non-finite                                |
 | `E.COUNT_IN_VARS`     | `'lingua/E003'` | `tp()` — `vars.count` was passed explicitly                   |
 | `E.INVALID_LOCALE`    | `'lingua/E004'` | Any API receiving an invalid BCP 47 tag                       |
-| `E.NAMESPACE_MISSING` | `'lingua/E005'` | `extend()` — namespace not registered (internal guard)        |
+| `E.NAMESPACE_MISSING` | `'lingua/E005'` | Reserved internal guard — not thrown under normal usage       |
 | `E.RESTORE_NO_LOCALE` | `'lingua/E006'` | `hydrateI18n()` — `state.locale` absent from `state.catalogs` |
 | `E.DISPOSED`          | `'lingua/E007'` | Any mutating API called on a disposed instance                |
 
@@ -774,7 +774,7 @@ try {
 | `[lingua/E002]` | `tp()` receives a non-finite `count`.                                                                                                                                                                        |
 | `[lingua/E003]` | `tp()` receives `options.vars.count` (injected automatically).                                                                                                                                               |
 | `[lingua/E004]` | Any API receives a string that is not a valid BCP 47 tag (`createI18n`, `setLocale`, `register`).                                                                                                            |
-| `[lingua/E005]` | Internal extend guard when a namespace is not registered (should not occur under normal usage).                                                                                                              |
+| `[lingua/E005]` | Reserved internal guard — not thrown under normal usage. Reserved for future defensive checks.                                                                                                               |
 | `[lingua/E006]` | `hydrateI18n()` is called with a `state.locale` that has no corresponding entry in `state.catalogs`.                                                                                                         |
 | `[lingua/E007]` | Mutating API (`setLocale()`, `preload()`, `register()`, `subscribe()`, `extend()`) called on a disposed instance.                                                                                            |
 

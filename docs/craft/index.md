@@ -5,7 +5,7 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports: [define, html, prop, ref, css, createContext, inject, useField]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, useField, createFormContext, FORM_CONTEXT_KEY, syncAria, createId, createStableId, resetIdCounter, setRawSanitizer, CraftError]
 environments: [browser]
 ---
 
@@ -36,7 +36,8 @@ class MyCounter extends HTMLElement {
 customElements.define('my-counter', MyCounter);
 
 // After — Craft
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('my-counter', {
   setup() {
@@ -85,7 +86,8 @@ yarn add @vielzeug/craft
 ## Quick Start
 
 ```ts
-import { computed, css, define, html, prop, signal } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
+import { css, define, html, prop } from '@vielzeug/craft';
 
 define('my-counter', {
   props: {
@@ -120,7 +122,7 @@ define('my-counter', {
 
 <div class="features-grid">
 
-- Signal-first runtime with `signal`, `computed`, `watch`, `batch`, and related ripple APIs
+- Signal-first runtime with `signal`, `computed`, `watch`, `batch` from `@vielzeug/ripple` — import them directly
 - Functional component authoring via `define(tag, { props, setup, styles, formAssociated })`
 - Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
 - Setup returns an `HTMLResult` directly: `return html\`...\``
@@ -138,7 +140,7 @@ define('my-counter', {
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/craft`           | Core component API, directives, utilities, ripple re-exports                  |
+| `@vielzeug/craft`           | Core component API, directives, and utilities                                 |
 | `@vielzeug/craft/devtools`  | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
 | `@vielzeug/craft/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
 | `@vielzeug/craft/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |

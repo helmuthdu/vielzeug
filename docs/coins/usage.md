@@ -434,6 +434,45 @@ displayPrice(null); // throws
 isMoney({ amount: 100n, currency: 'FAKE' }); // true — shape matches but code is unvalidated
 ```
 
+### `validateCurrencyCode(code)`
+
+Pre-validates a currency code against `Intl.NumberFormat` without constructing a `Money` value. Returns the code unchanged on success or throws `InvalidCurrencyError`. Use this when you need to surface a validation error before any arithmetic.
+
+```ts
+import { InvalidCurrencyError, validateCurrencyCode, money } from '@vielzeug/coins';
+
+// Validate once, then reuse — the result is cached
+const code = validateCurrencyCode(userInput);
+const price = money('0', code); // no re-validation cost
+
+try {
+  validateCurrencyCode('FAKE');
+} catch (e) {
+  if (e instanceof InvalidCurrencyError) {
+    console.log('Unknown code:', e.code); // 'FAKE'
+  }
+}
+```
+
+### `getCurrencyDecimals(currencyCode)`
+
+Returns the number of minor-unit decimal places for a currency. Use this when building custom formatters or lookup tables that need to know a currency's precision independently of constructing a `Money` value.
+
+```ts
+import { getCurrencyDecimals } from '@vielzeug/coins';
+
+getCurrencyDecimals('USD'); // 2
+getCurrencyDecimals('JPY'); // 0
+getCurrencyDecimals('KWD'); // 3
+
+// Build a precision-aware formatter
+function formatAmount(amount: bigint, currency: string): string {
+  const decimals = getCurrencyDecimals(currency);
+  const divisor = 10 ** decimals;
+  return (Number(amount) / divisor).toFixed(decimals);
+}
+```
+
 ## Typed Error Handling
 
 All currency mismatch errors are `CurrencyMismatchError` (extends `TypeError`) and all invalid currency code errors are `InvalidCurrencyError` (extends `RangeError`). Use `instanceof` for structured error handling:

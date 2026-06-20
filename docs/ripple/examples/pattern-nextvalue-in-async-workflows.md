@@ -13,13 +13,13 @@ Implement an async workflow that waits for a reactive value to reach a specific 
 
 Use `watch` with a `Promise` wrapper to bridge reactive state into async code.
 
-`watch()` accepts a `Reactive` — pass the signal directly or wrap a derived expression in `computed()`:
+`watch()` accepts a `Readable` — pass the signal directly or wrap a derived expression in `computed()`:
 
 ```ts
 import { store, computed, watch } from '@vielzeug/ripple';
-import type { Reactive } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
-function waitFor<T>(source: Reactive<T>, predicate: (v: T) => boolean): Promise<T> {
+function waitFor<T>(source: Readable<T>, predicate: (v: T) => boolean): Promise<T> {
   return new Promise((resolve) => {
     const current = source.peek();
 

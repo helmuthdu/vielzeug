@@ -53,16 +53,17 @@ const router = createRouter({
 });
 ```
 
-| Option           | Type                                                                            | Default                  | Description                                                                                                                                      |
-| ---------------- | ------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `base`           | `string`                                                                        | `'/'`                    | Base path prefix for all routes                                                                                                                  |
-| `history`        | `HistoryDriver`                                                                 | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                |
-| `middleware`     | `Middleware[]`                                                                  | `[]`                     | Global middleware prepended to every route                                                                                                       |
-| `notFound`       | `Pick<ContentRouteDefinition, 'component' \| 'data' \| 'meta' \| 'middleware'>` | —                        | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`.                         |
-| `onError`        | `(error, context) => void`                                                      | —                        | Optional sink for non-awaited/background router errors                                                                                           |
-| `routes`         | `RouteTable`                                                                    | required                 | Declarative route table. Object key order defines match precedence.                                                                              |
-| `scroll`         | `(to, from) => ScrollDecision`                                                  | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position. |
-| `viewTransition` | `boolean`                                                                       | `false`                  | Wrap navigations in the View Transition API when available                                                                                       |
+| Option           | Type                                                                          | Default                  | Description                                                                                                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `base`           | `string`                                                                      | `'/'`                    | Base path prefix for all routes                                                                                                                                                    |
+| `coerceSearch`   | `CoerceSearchFn`                                                              | —                        | Global search-param coercion applied to every route that does not define its own `coerceSearch`. Throwing falls back to raw strings and is reported via `onError`.                 |
+| `history`        | `HistoryDriver`                                                               | `createBrowserHistory()` | History source used for reading locations and writing navigations                                                                                                                  |
+| `middleware`     | `Middleware[]`                                                                | `[]`                     | Global middleware prepended to every route                                                                                                                                         |
+| `notFound`       | `{ component?, data?, meta?, middleware? }`                                   | —                        | Synthetic route used when no path matches. Global middleware runs first, then `notFound.middleware` and `notFound.data`. `ctx.pathname` is the unmatched path.                     |
+| `onError`        | `(error, context: RouterErrorContext) => void`                                | —                        | Optional sink for non-awaited/background router errors                                                                                                                             |
+| `routes`         | `RouteTable`                                                                  | required                 | Declarative route table. Object key order defines match precedence.                                                                                                                |
+| `scroll`         | `(to, from) => ScrollDecision`                                                | —                        | Called after each navigation. Return `'top'` to scroll to top, `'preserve'` to keep the current position, or `{ x, y }` for a specific position.                                 |
+| `viewTransition` | `boolean`                                                                     | `false`                  | Wrap navigations in the View Transition API when available                                                                                                                         |
 
 **Returns:** `Router`
 
@@ -319,7 +320,7 @@ In-flight preloads are aborted automatically via the router's disposal signal wh
 
 ---
 
-#### `router.beforeLeave(blocker)`
+#### `router.beforeLeave(blocker, options?)`
 
 ```ts
 // Guard unsaved-changes forms
@@ -334,13 +335,13 @@ remove();
 
 Register a global leave guard called before user-triggered navigation attempts. Return `true` to allow, `false` to cancel. Multiple guards can be registered; navigation is blocked if any guard returns `false`.
 
-Scope a guard to fire only when navigating away from a specific route:
+Scope a guard to fire only when leaving specific routes using the `routes` option:
 
 ```ts
 router.beforeLeave(async () => confirm('Discard changes?'), { routes: ['editor'] });
 ```
 
-Declarative `redirect` routes bypass all leave guards.
+The guard fires when the router is leaving any route whose name appears in the `routes` array (any node in the active branch, not just the leaf). Declarative `redirect` routes bypass all leave guards.
 
 **Returns:** `() => void`
 
@@ -626,6 +627,27 @@ const guard: RouteMiddleware<'/users/:id'> = (ctx, next) => {
 };
 ```
 
+### `CoerceSearchFn<Q>`
+
+```ts
+type CoerceSearchFn<Q extends ResolvedQueryParams = ResolvedQueryParams> = (
+  raw: QueryParams,
+) => Q;
+```
+
+Function signature for both the per-route `coerceSearch` field and the global `RouterOptions.coerceSearch` option. Receives raw URL strings and returns typed values. Throwing inside the function falls back to the original raw query.
+
+### `BeforeLeaveOptions<TRoutes>`
+
+```ts
+type BeforeLeaveOptions<TRoutes extends RouteTable = RouteTable> = {
+  /** Route names that trigger this guard. Omit for a global guard. */
+  routes?: RouteName<TRoutes>[];
+};
+```
+
+Passed as the second argument to `router.beforeLeave()`. When `routes` is provided, the guard only fires when the router leaves a route whose name is in the array.
+
 ### `BeforeLeaveBlocker`
 
 ```ts
@@ -697,6 +719,38 @@ interface HistoryDriver {
    */
   onPopstate(listener: () => void): () => void;
 }
+```
+
+### `RouteDefinition<Path>`
+
+```ts
+type RouteDefinition<Path extends string = string> =
+  | ContentRouteDefinition<Path> // path + data/component/meta/middleware/coerceSearch/lazy/onError
+  | RedirectRouteDefinition<Path>; // path + redirect
+```
+
+The union type for a single entry in the route table. Use this to type externally-defined route objects:
+
+```ts
+import type { RouteDefinition } from '@vielzeug/wayfinder';
+
+const userDetail: RouteDefinition<'/users/:id'> = {
+  path: '/users/:id',
+  data: async ({ params }) => fetchUser(params.id),
+};
+```
+
+### `RouterOptions<TRoutes>`
+
+The options object accepted by `createRouter()`. See the [`createRouter(options)`](#createrouter-options) options table above for the full field reference.
+
+```ts
+import type { RouterOptions } from '@vielzeug/wayfinder';
+
+const options: RouterOptions<typeof routes> = {
+  routes,
+  base: '/app',
+};
 ```
 
 ### `Unsubscribe`

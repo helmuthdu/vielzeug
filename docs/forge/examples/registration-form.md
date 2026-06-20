@@ -15,6 +15,7 @@ Use `createForm()` with async field validators for uniqueness checks and a form-
 
 ```typescript
 import { createForm } from '@vielzeug/forge';
+import { composeValidators } from '@vielzeug/forge/validators';
 
 const registrationForm = createForm({
   defaultValues: {
@@ -24,7 +25,7 @@ const registrationForm = createForm({
     confirmPassword: '',
   },
   validators: {
-    username: [
+    username: composeValidators(
       (v) => (!v ? 'Username is required' : undefined),
       (v) => (v && String(v).length < 3 ? 'Username must be at least 3 characters' : undefined),
       async (v) => {
@@ -33,17 +34,17 @@ const registrationForm = createForm({
         const { exists } = await response.json();
         if (exists) return 'Username is already taken';
       },
-    ],
-    email: [
+    ),
+    email: composeValidators(
       (v) => (!v ? 'Email is required' : undefined),
       (v) => (v && !String(v).includes('@') ? 'Invalid email format' : undefined),
-    ],
-    password: [
+    ),
+    password: composeValidators(
       (v) => (!v ? 'Password is required' : undefined),
       (v) => (v && String(v).length < 8 ? 'Min 8 characters' : undefined),
       (v) => (v && !/[A-Z]/.test(String(v)) ? 'Must contain uppercase letter' : undefined),
       (v) => (v && !/[0-9]/.test(String(v)) ? 'Must contain a number' : undefined),
-    ],
+    ),
   },
   validator: (values) => {
     const errors: Record<string, string> = {};
@@ -74,13 +75,13 @@ async function handleRegistration() {
 
 ### Pitfalls
 
-- Async validators run on every `validateField()` call, including on every blur. Debounce them to avoid an API request on each keystroke.
-- The password-confirmation validator must re-run when the original password field changes, not only when confirmation changes. Read `form.values.password` inside the confirmation validator.
+- Async validators run on every `validate()` call, including on every blur. Debounce them to avoid an API request on each keystroke.
+- The password-confirmation validator must re-run when the original password field changes, not only when confirmation changes. Read `form.get('password')` inside the confirmation validator.
 - `form.state.isSubmitting` stays `true` until the submit handler resolves or rejects. Unhandled rejections inside the handler leave the form stuck in the submitting state.
 
 ### Related
 
-- [Schema Validation with Sieve](/spell/)
+- [Schema Validation with Spell](/spell/)
 
 - [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)

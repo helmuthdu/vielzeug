@@ -37,12 +37,17 @@ description: Complete API reference for @vielzeug/conduit.
 
 ## Package Entry Point
 
+| Import            | Purpose                                    |
+| ----------------- | ------------------------------------------ |
+| `@vielzeug/conduit` | All exports — functions, types, and errors |
+
 ```ts
 import { token, scope, createContainer, loadModules } from '@vielzeug/conduit';
 import {
   resolveOptional,
   resolveOrDefault,
   tryResolve,
+  trySyncResolve,
   resolveSyncOptional,
   resolveSyncOrDefault,
 } from '@vielzeug/conduit';
@@ -207,6 +212,20 @@ If a singleton factory rejects, the rejection is cached and rethrown on every su
 
 ---
 
+### `container.has()`
+
+```ts
+has<T>(tok: Token<T>): boolean;
+```
+
+Returns `true` if the token has a registered provider (walks the parent chain). Does not execute the factory.
+
+**Returns:** `boolean`
+
+**Throws:** `ContainerDisposedError`
+
+---
+
 ### `loadModules()` (free function)
 
 ```ts
@@ -228,20 +247,6 @@ const loggingModule: ContainerModule = (c) => {
 
 const container = await loadModules(createContainer(), loggingModule);
 ```
-
----
-
-### `container.has()`
-
-```ts
-has<T>(tok: Token<T>): boolean;
-```
-
-Returns `true` if the token has a registered provider (walks the parent chain). Does not execute the factory.
-
-**Returns:** `boolean`
-
-**Throws:** `ContainerDisposedError`
 
 ---
 

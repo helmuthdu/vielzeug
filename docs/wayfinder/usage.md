@@ -310,6 +310,15 @@ const routes = {
 };
 ```
 
+To apply the same coercion to every route, set `coerceSearch` on the router options instead. Per-route `coerceSearch` takes precedence over the global one.
+
+```ts
+const router = createRouter({
+  coerceSearch: (raw) => ({ page: Number(raw.page ?? 1) }),
+  routes,
+});
+```
+
 ### Error Boundaries
 
 Wrap `await next()` in middleware for route-wide error handling. The thrown error is also stored on `router.getSnapshot().error`.

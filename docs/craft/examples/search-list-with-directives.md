@@ -14,7 +14,8 @@ You have a list that should filter as the user types into an input — binding t
 Use `each()` with positional arguments and `when()` for the empty-state fallback.
 
 ```ts
-import { computed, define, each, html, signal, when } from '@vielzeug/craft';
+import { computed, signal } from '@vielzeug/ripple';
+import { define, each, html, when } from '@vielzeug/craft';
 
 define('search-list', {
   setup() {

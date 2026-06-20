@@ -336,25 +336,6 @@ define('my-component', {
 });
 ```
 
-## `asyncScope` _(deprecated)_
-
-::: warning Deprecated
-`asyncScope()` is deprecated. Use `scope()` with an explicit `run()` call instead:
-
-```ts
-const s = scope();
-await s.run(async () => {
-  onCleanup(() => stream.close()); // captured synchronously
-  const db = await openDatabase();
-});
-```
-
-:::
-
-`asyncScope(setup)` accepts an async setup function and captures `onCleanup()` registrations from the synchronous preamble before the first `await`.
-
-`onCleanup()` must be called **synchronously** — before the first `await`. Calls after an `await` throw `StateError('INVALID_CLEANUP')`.
-
 ## `debugEffect`
 
 `debugEffect(fn, options?)` is identical to `effect()` but logs the reactive sources that changed before each re-run. Use it as a drop-in replacement for debugging unexpected re-renders.
@@ -371,9 +352,9 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 
 ## Async Computed
 
-`resource(factory, options?)` (preferred) or `asyncComputed()` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
+`resource(factory, options?)` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
 
-The returned `ResourceSignal<T>` emits a single `ResourceState<T>` discriminated union:
+The returned `Computed<ResourceState<T>>` emits a single discriminated union:
 
 - `{ status: 'loading', data: T | undefined }` — initial state or while re-running
 - `{ status: 'ready', data: T }` — last successful result
@@ -415,20 +396,20 @@ import { storeWithHistory } from '@vielzeug/ripple';
 
 const editor = storeWithHistory({ text: '', cursor: 0 }, { maxHistory: 100 });
 
-editor.store.patch({ text: 'hello', cursor: 5 });
+editor.patch({ text: 'hello', cursor: 5 });
 editor.push(); // checkpoint 1
 
-editor.store.patch({ text: 'hello world', cursor: 11 });
+editor.patch({ text: 'hello world', cursor: 11 });
 editor.push(); // checkpoint 2
 
 console.log(editor.historyLength); // 3  (initial + 2 explicit pushes)
 console.log(editor.historyAt(0).state); // { text: '', cursor: 0 }
 
 editor.undo();
-console.log(editor.store.peek().text); // 'hello'
+console.log(editor.peek().text); // 'hello'
 
 editor.redo();
-console.log(editor.store.peek().text); // 'hello world'
+console.log(editor.peek().text); // 'hello world'
 ```
 
 `canUndo` and `canRedo` are reactive boolean properties — read them inside `effect()` or `computed()` and they will re-run automatically when the history cursor moves:
@@ -440,7 +421,7 @@ effect(() => {
 });
 ```
 
-All `Store<T>` methods (`patch`, `replace`, `reset`, `lens`) are accessible via `editor.store` on a `StoreWithHistory<T>`.
+`StoreWithHistory<T>` extends `Store<T>` directly — all methods (`patch`, `replace`, `reset`, `lens`) are available on the adapter itself. The `.store` accessor is an escape hatch for adapters that need direct `Store<T>` access.
 
 Call `dispose()` when the store is no longer needed to release the internal reactive cursor signal:
 
@@ -599,7 +580,7 @@ To auto-stop after the first change, dispose manually inside the callback:
 ```ts
 const stop = watch(s, (curr) => {
   console.log('first change:', curr);
-  stop();
+  stop.dispose();
 });
 ```
 
@@ -646,10 +627,10 @@ To expose a store at API boundaries where consumers should observe but not mutat
 
 ```ts
 import { readonly, store } from '@vielzeug/ripple';
-import type { Reactive } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 type CounterService = {
-  state: Reactive<{ count: number }>;
+  state: Readable<{ count: number }>;
   increment(): void;
   decrement(): void;
 };
@@ -803,10 +784,10 @@ All hook methods are optional. The hook is stored in a module-level variable (no
 
 ```tsx [React]
 import { useSyncExternalStore } from 'react';
-import { signal, computed, effect, type Reactive } from '@vielzeug/ripple';
+import { signal, computed, effect, type Readable } from '@vielzeug/ripple';
 
 // Generic hook — works with any signal or computed
-function useSignalValue<T>(source: Reactive<T>): T {
+function useSignalValue<T>(source: Readable<T>): T {
   return useSyncExternalStore(source.subscribe, () => source.value);
 }
 
@@ -831,7 +812,7 @@ function Counter() {
 
 ```ts [Vue 3]
 import { customRef, onScopeDispose } from 'vue';
-import { signal, computed, watch, type Reactive, type Signal } from '@vielzeug/ripple';
+import { signal, computed, watch, type Readable, type Signal } from '@vielzeug/ripple';
 
 // Composable for read/write signals
 function useSignal<T>(source: Signal<T>) {
@@ -848,7 +829,7 @@ function useSignal<T>(source: Signal<T>) {
 }
 
 // Composable for read-only signals and computeds
-function useSignalValue<T>(source: Reactive<T>) {
+function useSignalValue<T>(source: Readable<T>) {
   const stop = watch(source, () => {}, { immediate: true });
   onScopeDispose(() => stop.dispose());
   return customRef<T>((track) => ({
@@ -866,10 +847,10 @@ function useSignalValue<T>(source: Reactive<T>) {
 ```svelte [Svelte]
 <script lang="ts">
   import { signal, computed } from '@vielzeug/ripple';
-  import type { Reactive } from '@vielzeug/ripple';
+  import type { Readable } from '@vielzeug/ripple';
 
   // Manual Svelte store adapter — calls run() immediately, then on each change
-  function toSvelteStore<T>(source: Reactive<T>) {
+  function toSvelteStore<T>(source: Readable<T>) {
     return {
       subscribe(run: (value: T) => void) {
         run(source.value); // Svelte contract: fire immediately with current value

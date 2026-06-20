@@ -22,7 +22,7 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 | `shift(input, duration, options?)`       | DST-safe add/subtract                                | `options.tz` required for plain/instant inputs                                            |
 | `difference(start, end, options?)`       | Duration between two values                          | Requires `tz` only for calendar units or plain inputs                                     |
 | `within(value, start, end, options?)`    | Inclusive range check                                | Bounds auto-normalized; use `unit` for calendar checks                                    |
-| `clamp(value, start, end, options?)`     | Clamp to range; returns `Temporal.Instant`           | With `unit`, returns the **floor** of the boundary unit of `value`, not `value` itself    |
+| `clamp(value, start, end, options?)`     | Clamp to `[start, end]`; see notes for return type   | With `unit` + `ZonedDateTime` input, returns `ZonedDateTime`; otherwise `Instant`        |
 | `isBefore(a, b, options?)`               | Returns `true` when `a` is earlier than `b`          | Omit `unit` for raw timeline comparison                                                   |
 | `isAfter(a, b, options?)`                | Returns `true` when `a` is later than `b`            | Omit `unit` for raw timeline comparison                                                   |
 | `isSame(a, b, options?)`                 | Returns `true` when `a` and `b` are equal            | Set `unit` for calendar-unit equality                                                     |
@@ -419,9 +419,7 @@ within(parseInstant('2026-03-22T05:00:00Z'), lo, hi, { unit: 'day', tz: 'UTC' })
 clamp(value: TimeInput, start: TimeInput, end: TimeInput, options?: CompareOptions): Temporal.Instant;
 ```
 
-Returns `value` clamped to `[start, end]`. Returns a `Temporal.Instant` for non-zoned inputs. When `value` is a `ZonedDateTime` and `options.unit` is set, returns a `Temporal.ZonedDateTime` floored to the start of the clamped unit.
-
-With `options.unit`, the clamp operates on unit-aligned boundaries and the returned instant is the start of the clamped unit.
+Returns `value` clamped to `[start, end]`. Returns a `Temporal.Instant` for non-zoned inputs. When `value` is a `ZonedDateTime` and `options.unit` is set, returns a `Temporal.ZonedDateTime` floored to the start of the clamped unit. Bounds are automatically normalized when `start > end`.
 
 **Example:**
 

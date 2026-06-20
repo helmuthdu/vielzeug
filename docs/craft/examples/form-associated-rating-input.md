@@ -14,7 +14,8 @@ You need a custom form control that participates in native form submission, vali
 Use `useField()` with `formAssociated: true` to wire a signal to the element's form internals.
 
 ```ts
-import { define, html, signal, useField } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, useField } from '@vielzeug/craft';
 
 define('rating-input', {
   formAssociated: true,
@@ -36,7 +37,8 @@ define('rating-input', {
 #### With custom serialisation
 
 ```ts
-import { define, html, prop, signal, useField } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, prop, useField } from '@vielzeug/craft';
 
 define<{ disabled?: boolean }>('rating-input-v2', {
   formAssociated: true,

@@ -10,7 +10,6 @@ exports:
     createWorker,
     createModuleWorker,
     task,
-    transfer,
     createTestWorker,
     WorkerError,
     WorkerTimeoutError,
@@ -128,14 +127,14 @@ try {
 - **Pool support** — create N workers via the `concurrency` option with built-in queuing
 - **Priority queue** — pass `priority` per-run; higher values run first with FIFO tiebreaking
 - **Timeout support** — pool-level or per-run `timeout` rejects with `WorkerTimeoutError`
-- **Heartbeat monitoring** — `heartbeatTimeout` kills tasks that stop responding, with auto-heartbeats for inline workers
+- **Heartbeat monitoring** — `heartbeatWindow` kills tasks that stop responding, with auto-heartbeats for inline workers
 - **AbortSignal** — cancel queued tasks with the standard `AbortController` API
 - **Streaming** — `runStream()` for tasks that yield multiple partial results
 - **Batch** — `batch()` runs inputs through the pool and yields results ordered or as-completed
 - **Task groups** — `group()` ties related tasks to a shared abort and drain lifecycle
 - **Transferables** — move large buffers to the Worker without a structured-clone copy
 - **Prime** — pre-initialize worker slots to eliminate first-task latency
-- **Metrics** — `active`, `queued`, `utilization`, `completed`, `failed` counters for observability
+- **Metrics** — `active`, `queued`, `completed`, `failed`, `groupCount` counters for observability
 - **Typed error hierarchy** — `WorkerTimeoutError`, `WorkerTaskError`, `WorkerQueueFullError`, and more
 - **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
 - **Module workers** — `createModuleWorker` loads a real `.js/.ts` module file as the Worker

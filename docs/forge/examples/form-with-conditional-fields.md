@@ -97,9 +97,9 @@ async function submitProfile() {
 
 ### Pitfalls
 
-- A hidden field's value is still included in `form.values` and submitted unless you call `removeField(name)`. Hide the UI element but also remove the field if it should not be submitted.
+- A hidden field's value is still included in `form.values()` and submitted unless you call `form.fields.remove(name)`. Hide the UI element but also remove the field if it should not be submitted.
 - Validators on conditional fields still run even when the field is hidden if you did not remove it. This can surface validation errors that the user cannot see or act on.
-- Setting up a `subscribeField` listener for a field that does not yet exist is a no-op. Register subscriptions after `addField()`, not before.
+- Setting up a `subscribeField` listener for a field that does not yet exist is a no-op. Register subscriptions after `fields.register()`, not before.
 
 ### Related
 

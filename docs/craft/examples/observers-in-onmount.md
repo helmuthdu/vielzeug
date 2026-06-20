@@ -14,11 +14,11 @@ You need to observe element size, intersection, or media queries, but the observ
 Call observer helpers inside `onMounted()` after refs have resolved.
 
 ```ts
-import { define, effect, html, onMounted, ref } from '@vielzeug/craft';
+import { define, html, ref } from '@vielzeug/craft';
 import { mediaObserver, resizeObserver } from '@vielzeug/craft/observers';
 
 define('observed-panel', {
-  setup() {
+  setup(_props, { onMounted, effect }) {
     const panel = ref<HTMLDivElement>();
 
     onMounted(() => {

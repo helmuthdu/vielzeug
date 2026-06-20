@@ -27,13 +27,14 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `toFormData()`                                                              | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                              |
 | `ValidationModes`                                                           | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                                       |
 | `FORM_ERROR`                                                                | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                                 |
+| `form[Symbol.asyncIterator]()`                                              | Iterate form state changes with `for await...of`               | Async (iterator)                               | Iterator completes when `dispose()` is called                                                                         |
 
 ## Package Entry Points
 
 | Entry                        | Purpose                                                                                            |
 | ---------------------------- | -------------------------------------------------------------------------------------------------- |
 | `@vielzeug/forge`            | `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`, and all types                         |
-| `@vielzeug/forge/react`      | `createForgeHooks`, `ForgeHooks`, `UseSyncExternalStoreFn`                                         |
+| `@vielzeug/forge/react`      | `createForgeHooks`, `ForgeHooks`, `UseSyncExternalStoreFn`, `UseEffectFn`, `UseRefFn`              |
 | `@vielzeug/forge/vue`        | `createForgeComposables`, `ForgeComposables`, `ShallowRefFn`, `OnScopeDisposeFn`, `VueReadonlyRef` |
 | `@vielzeug/forge/svelte`     | `formState`, `fieldStore`, `formValues`, `SvelteReadable`                                          |
 | `@vielzeug/forge/validators` | `fieldValidator`, `composeValidators` — schema and validator composition helpers                   |
@@ -70,6 +71,9 @@ type FormOptions<TValues> = {
    *   ValidationModes.onTouched — blur first, then change once touched
    */
   connect?: ConnectOptions;
+
+  /** Called when the async defaultValues factory rejects. Useful for surfacing load errors. */
+  onLoadError?: (error: unknown) => void;
 };
 ```
 
@@ -487,9 +491,30 @@ const unsub = address.fields.register('zip', { defaultValue: '' });
 ```ts
 dispose(): void
 readonly disposed: boolean
+readonly disposalSignal: AbortSignal
 ```
 
 After `dispose()`, all mutating APIs throw. In-flight validation is aborted. Subscriptions are cleared.
+
+`disposalSignal` is aborted when `dispose()` is called. Pass it to validators or other async work that should be cancelled when the form tears down.
+
+## Async Iteration
+
+```ts
+[Symbol.asyncIterator](): AsyncIterableIterator<FormState>
+```
+
+Makes the form directly iterable with `for await...of`. Each iteration yields the current `FormState` snapshot whenever the form changes. The iterator completes when `dispose()` is called.
+
+```ts
+for await (const state of form) {
+  renderUI(state);
+  if (state.submitCount > 0 && state.isValid) break;
+}
+// Iterator completes automatically when form.dispose() is called
+```
+
+> Each `for await...of` loop creates an independent iterator — multiple concurrent loops are supported.
 
 ## batch()
 
@@ -628,6 +653,8 @@ type ScopedValues<TValues, P>
 // React adapter
 type ForgeHooks
 type UseSyncExternalStoreFn
+type UseEffectFn
+type UseRefFn
 
 // Vue adapter
 type ForgeComposables

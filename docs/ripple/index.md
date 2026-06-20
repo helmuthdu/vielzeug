@@ -21,7 +21,6 @@ exports:
     scope,
     onCleanup,
     readonly,
-    derive,
     isSignal,
     isComputed,
     isStore,
@@ -68,7 +67,7 @@ count.value = 1; // notifies automatically
 | Framework-agnostic           | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | React-first                                        | <sg-icon name="check" size="16"></sg-icon>        |
 | Fine-grained reactivity      | <sg-icon name="check" size="16"></sg-icon> (per-property)         | <sg-icon name="x" size="16"></sg-icon> (whole store) | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon> (atom) |
 | Structured object stores     | <sg-icon name="check" size="16"></sg-icon> (`store`, `lens`)      | <sg-icon name="check" size="16"></sg-icon>           | Manual atoms                                       | <sg-icon name="x" size="16"></sg-icon>            |
-| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`asyncComputed`)      | Manual                                               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
+| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`resource`)           | Manual                                               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
 | Undo / redo history          | <sg-icon name="check" size="16"></sg-icon> (`storeWithHistory`)   | Manual                                               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
 | Computed signals             | <sg-icon name="check" size="16"></sg-icon> (lazy, glitch-free)    | Selectors                                            | <sg-icon name="check" size="16"></sg-icon> (atoms) | <sg-icon name="check" size="16"></sg-icon>        |
 | Batched writes               | <sg-icon name="check" size="16"></sg-icon> (`batch`)              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>        |
@@ -191,7 +190,7 @@ label.dispose();
 - **`storeWithHistory(storeOrInit, options?)`** — store with explicit snapshot history; accepts an existing `Store<T>` (not owned) or a plain object; call `.push()` / `.pushNamed(label)` to save checkpoints; `undo()`, `redo()`, `historyAt(i)` returns `HistoryEntry<T>`; reactive `canUndo` / `canRedo`
 - **`getDevToolsHook()`** — returns the currently installed DevTools hook, or `null`; install via `@vielzeug/ripple/devtools`
 - **Glitch-free propagation** — computed signals propagate in dependency order; effects always observe a consistent snapshot
-- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default, configurable per effect)
+- **Infinite loop detection** — built-in guard against effect re-entry cycles (100 iterations default)
 - **Automatic computed disposal** — `computed()` created inside `effect()` auto-disposes with the effect
 
 </div>

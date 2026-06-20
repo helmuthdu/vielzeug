@@ -13,14 +13,12 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `computed()`         | Derive memoized values from dependencies                              | Sync           | Avoid side effects inside computed callbacks                                      |
 | `effect()`           | Run and re-run sync side effects                                      | Sync           | Dispose when no longer needed to prevent memory leaks                             |
 | `effectAsync()`      | Run async side effects with AbortSignal                               | Async          | Read reactive deps synchronously before the first `await`                         |
-| `resource()`         | Preferred alias for `asyncComputed()`                                 | Async          | `status` starts `'loading'`; read `resource.value.status` for the discriminated union |
-| `asyncComputed()`    | Async computed with lifecycle state (legacy name)                     | Async          | Use `resource()` instead; kept for compatibility                                  |
+| `resource()`         | Reactive async data source; emits a `ResourceState<T>` discriminated union   | Async          | `status` starts `'loading'`; read `resource.value.status` for the discriminated union |
 | `watch()`            | Subscribe to value changes                                            | Sync           | Does not fire immediately unlike `effect()`                                       |
 | `batch()`            | Coalesce multiple writes                                              | Sync           | Nested batches merge into the outermost                                           |
 | `untrack()`          | Read without subscribing                                              | Sync           | Only suppresses dependency registration, value is still read                      |
 | `readonly()`         | Wrap any signal as a read-only view                                  | Sync           | Returns `Readable<T>` — no `dispose()` method; the caller retains ownership of the source |
 | `scope()`            | Isolated cleanup context                                              | Sync           | Must call `scope.run()` to activate; `dispose()` is LIFO                          |
-| ~~`asyncScope()`~~   | **Deprecated** — use `const s = scope(); await s.run(...)`            | Async          | `onCleanup()` only works before the first `await`                                 |
 | `debugEffect()`      | Effect that logs changed sources before re-run                        | Sync           | Sub-path only: `@vielzeug/ripple/devtools`; tree-shaken from production           |
 | `store()`            | Create object-like state container                                    | Sync           | Store is a branded signal; use `.patch()`, `.replace()`, `.reset()`               |
 | `storeWithHistory()` | Store with snapshot-based undo/redo history                           | Sync           | Call `.push()` / `.pushNamed()` explicitly to record a checkpoint; `maxHistory` caps the buffer |
@@ -130,7 +128,6 @@ const sub = effect(() => {
 
 count.value = 5; // effect re-runs (cleanup called first)
 sub.dispose(); // cleanup called, effect removed
-// or: sub() — direct call also disposes
 // or: using sub = effect(...) — TC39 using declaration
 ```
 
@@ -209,7 +206,7 @@ See also: [`EffectAsyncOptions`](#effectasyncoptions), [`AsyncEffectCallback`](#
 
 ```ts
 function watch<T>(
-  source: Reactive<T>,
+  source: Readable<T>,
   cb: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
 ): Subscription;
@@ -236,7 +233,7 @@ watch(nameSig, (name) => console.log('name:', name));
 
 | Parameter           | Type                                                    | Description                                               |
 | ------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
-| `source`            | `Reactive<T>`                                     | Any signal, computed, store, or lens to watch             |
+| `source`            | `Readable<T>`                                     | Any signal, computed, store, or lens to watch             |
 | `cb`                | `(value: T, prev: T \| undefined) => CleanupFn \| void` | Called on each change; may return a cleanup function      |
 | `options.immediate` | `boolean`                                               | Fire once immediately on subscription. Default `false`    |
 | `options.equals`    | `EqualityFn<T>`                                         | Custom equality for change detection. Default `Object.is` |
@@ -427,7 +424,7 @@ s.dispose(); // or: using s = scope(...)
 
 **Returns** — `Scope`
 
-See also: [`Scope`](#scope-1), [`asyncScope`](#asyncscope)
+See also: [`Scope`](#scope-1)
 
 ---
 
@@ -437,12 +434,12 @@ See also: [`Scope`](#scope-1), [`asyncScope`](#asyncscope)
 function resource<T>(
   factory: (abortSignal: AbortSignal) => Promise<T>,
   options?: ResourceOptions<T>,
-): ResourceSignal<T>;
+): Computed<ResourceState<T>>;
 ```
 
-Preferred alias for `asyncComputed()`. Creates a reactive async resource. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
+Creates a reactive async resource. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
 
-The returned `ResourceSignal<T>` is a `Reactive<ResourceState<T>>` — a single discriminated union signal:
+The returned `Computed<ResourceState<T>>` is a read-only disposable signal emitting a single discriminated union:
 
 ```ts
 type ResourceState<T> =
@@ -479,26 +476,9 @@ console.log(user.disposed); // true
 | `options.initialValue` | `T`                                        | Populates `data` in the initial `loading` state before the first result |
 | `options.name`         | `string`                                   | Debug name propagated to the internal signal and effect              |
 
-**Returns** — `ResourceSignal<T>`
+**Returns** — `Computed<ResourceState<T>>`
 
-See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions), [`ResourceState<T>`](#resourcestate)
-
----
-
-### `asyncComputed`
-
-```ts
-function asyncComputed<T>(
-  factory: (abortSignal: AbortSignal) => Promise<T>,
-  options?: ResourceOptions<T>,
-): ResourceSignal<T>;
-```
-
-Legacy name for `resource()`. The two functions are identical at runtime — `asyncComputed` is exported as `resource` from the main entry point. Prefer `resource()` for new code.
-
-See [`resource`](#resource) for full documentation.
-
-See also: [`ResourceSignal<T>`](#resourcesignal), [`ResourceOptions<T>`](#resourceoptions)
+See also: [`ResourceOptions<T>`](#resourceoptions), [`ResourceState<T>`](#resourcestate)
 
 ---
 
@@ -525,47 +505,6 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 ```
 
 **Returns** — `EffectHandle`
-
----
-
-### `asyncScope` _(deprecated)_
-
-::: warning Deprecated
-`asyncScope()` is deprecated. Use `scope()` with an explicit `run()` call instead:
-
-```ts
-// Before
-const s = await asyncScope(async () => { ... });
-
-// After
-const s = scope();
-await s.run(async () => { ... });
-```
-
-:::
-
-```ts
-function asyncScope(setup: () => Promise<void>): Promise<Scope>;
-```
-
-Like `scope()`, but accepts an async setup function. Captures `onCleanup()` registrations from the synchronous preamble of `setup` (before the first `await`), awaits the rest of setup, then returns the ready scope.
-
-::: warning
-`onCleanup()` can only be called synchronously — before the first `await` in `setup`. Calls after an `await` throw `StateError('INVALID_CLEANUP')`.
-:::
-
-```ts
-const s = await asyncScope(async () => {
-  onCleanup(() => resourceA.close()); // <sg-icon name="check" size="16"></sg-icon> captured — before any await
-  const db = await openDB(); // reactive tracking ends here
-  // onCleanup() here would throw INVALID_CLEANUP
-});
-
-// later:
-s.dispose();
-```
-
-**Returns** — `Promise<Scope>`
 
 ## Store Functions
 
@@ -598,7 +537,7 @@ function storeWithHistory<T extends object>(
 ): StoreWithHistory<T>;
 ```
 
-Wraps a store (or creates one from an initial value) with snapshot-based undo/redo history. Mutations through `.store.patch()`, `.store.replace()`, `.store.reset()`, or lens writes do **not** automatically push snapshots. Call `.push()` (or `.pushNamed(label)`) explicitly to record a checkpoint. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
+Wraps a store (or creates one from an initial value) with snapshot-based undo/redo history. `StoreWithHistory<T>` extends `Store<T>` — call `.patch()`, `.replace()`, `.reset()`, or `.lens()` directly. Mutations do **not** automatically push snapshots. Call `.push()` (or `.pushNamed(label)`) explicitly to record a checkpoint. `undo()` and `redo()` navigate the snapshot buffer without re-running any logic.
 
 The initial state is saved as the first snapshot automatically. Snapshots are deep-frozen clones (`structuredClone`). `maxHistory` caps the ring buffer (default: `50`); the oldest entries are evicted when the limit is reached.
 
@@ -607,19 +546,19 @@ The initial state is saved as the first snapshot automatically. Snapshots are de
 ```ts
 const editor = storeWithHistory({ text: '' }, { maxHistory: 100 });
 
-editor.store.patch({ text: 'hello' });
+editor.patch({ text: 'hello' }); // direct — StoreWithHistory extends Store<T>
 editor.push(); // checkpoint 1
 
-editor.store.patch({ text: 'hello world' });
+editor.patch({ text: 'hello world' });
 editor.push(); // checkpoint 2
 
 console.log(editor.historyLength); // 3 (initial + 2 explicit pushes)
 
 editor.undo();
-console.log(editor.store.peek().text); // 'hello'
+console.log(editor.peek().text); // 'hello'
 
 editor.redo();
-console.log(editor.store.peek().text); // 'hello world'
+console.log(editor.peek().text); // 'hello world'
 
 console.log(editor.historyAt(0).state); // { text: '' }
 
@@ -694,7 +633,7 @@ const doubled = computed(() => count.value * 2);
 doubled.value; // 10
 ```
 
-All projection options (`equals`, `name`, `fallback`) are available on `computed()` directly via [`ComputedOptions`](#computedoptions).
+All projection options (`equals`, `name`) are available on `computed()` directly via [`ComputedOptions`](#computedoptions).
 
 ## Errors
 
@@ -729,7 +668,7 @@ try {
 | `COMPUTED_CYCLE`  | A computed function reads another computed that depends on it                                                                                                                                                                                                                                                            |
 | `DISPOSED_READ`   | `.subscribe()` is called on a disposed computed. Note: `.value` and `.peek()` on a disposed computed return the last known value silently (inert node behaviour, consistent with `signal`)                                                                                                                               |
 | `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                                                                                                                                                                                                          |
-| `INFINITE_LOOP`   | Flush or effect loop exceeds `maxIterations` (default 100)                                                                                                                                                                                                                                                               |
+| `INFINITE_LOOP`   | Flush or effect loop exceeds the built-in guard limit (default 100 iterations)                                                                                                                                                                                                                                            |
 | `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
 | `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
 
@@ -740,7 +679,7 @@ Errors from multiple subscribers or cleanup functions in the same flush are aggr
 ### `Signal<T>`
 
 ```ts
-interface Signal<T> extends Readable<T> {
+interface Signal<T> extends Computed<T> {
   dispose(): void;
   readonly disposed: boolean;
   value: T; // notifying setter — write triggers downstream notifications
@@ -754,6 +693,7 @@ interface Signal<T> extends Readable<T> {
 
 ```ts
 interface Readable<T> {
+  readonly disposed: boolean;
   readonly name?: string; // debug name assigned at creation, or undefined
   peek(): T;
   subscribe(onStoreChange: () => void): Subscription;
@@ -775,7 +715,6 @@ interface Readable<T> {
 ```ts
 interface Computed<T> extends Readable<T> {
   dispose(): void;
-  readonly disposed: boolean;
   [Symbol.dispose](): void;
 }
 ```
@@ -831,7 +770,7 @@ interface Scope {
 }
 ```
 
-Returned by `scope()` and `asyncScope()`. `run(fn)` activates the scope for `onCleanup()` calls. `add(fn)` explicitly registers a cleanup into the scope regardless of the current tracking context — use it to direct cleanups from inside an effect body into the scope rather than the effect. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called.
+Returned by `scope()`. `run(fn)` activates the scope for `onCleanup()` calls. `add(fn)` explicitly registers a cleanup into the scope regardless of the current tracking context — use it to direct cleanups from inside an effect body into the scope rather than the effect. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called.
 
 ---
 
@@ -859,17 +798,18 @@ sub.dispose(); // dispose
 
 ```ts
 interface AsyncSubscription extends Subscription {
-  /** @deprecated Use [Symbol.asyncDispose] with `await using` instead. */
-  disposeAsync(): Promise<void>; // awaits the in-flight async run before resolving
+  run(): Promise<void>;
   [Symbol.asyncDispose](): Promise<void>; // ES2024 await using compatible
 }
 ```
 
-Returned by `effectAsync()`. Supports both `disposeAsync()` (legacy) and `[Symbol.asyncDispose]` (ES2024 `await using` declarations).
+Returned by `effectAsync()`. `run()` awaits the current in-flight async run without disposing. Use `[Symbol.asyncDispose]` for structured teardown with `await using`.
 
 ```ts
+// Await the current run without disposing:
 const stop = effectAsync(async (signal) => { ... });
-await stop.disposeAsync(); // legacy — works
+await stop.run(); // waits for the in-flight run to finish
+stop.dispose();
 
 // ES2024: await using declaration
 await using stop2 = effectAsync(async (signal) => { ... });
@@ -892,13 +832,10 @@ The callback passed to `effectAsync()`. Receives an `AbortSignal` that fires whe
 
 ```ts
 type SignalOptions<T> = {
-  batched?: boolean; // default: false
   equals?: EqualityFn<T>;
   name?: string;
 };
 ```
-
-Extends the base signal options with `batched`. When `true`, rapid synchronous writes coalesce into a single microtask notification — useful for scroll positions, pointer events, and other high-frequency sources.
 
 ---
 
@@ -907,12 +844,9 @@ Extends the base signal options with `batched`. When `true`, rapid synchronous w
 ```ts
 type ComputedOptions<T> = {
   equals?: EqualityFn<T>; // default: Object.is
-  fallback?: (error: unknown, lastValue: T | undefined) => T;
   name?: string;
 };
 ```
-
-`fallback` is only relevant for `computed()`. When the compute function throws, `fallback` receives the error and the last successfully computed value. Its return value is used instead of propagating the error.
 
 ---
 
@@ -925,32 +859,22 @@ type EffectOptions = {
 };
 ```
 
-All fields are optional. `name` is used in `StateError` messages and in the `INFINITE_LOOP` error when the built-in loop guard fires. For debugging, use `debugEffect()` instead. `scheduler` accepts either a built-in string or a custom function.
+All fields are optional. `name` is used in `StateError` messages and in the `INFINITE_LOOP` error when the built-in loop guard fires. For debugging, use `debugEffect()` instead.
 
 ---
 
 ### `EffectScheduler`
 
 ```ts
-type EffectScheduler = ((run: () => void) => void) | 'microtask' | 'sync';
+type EffectScheduler = 'microtask' | 'sync';
 ```
 
 | Value         | Description                                                            |
 | ------------- | ---------------------------------------------------------------------- |
 | `'sync'`      | (default) Re-run synchronously as part of the signal write propagation |
 | `'microtask'` | Re-run queued via `queueMicrotask()` — deferred but before next paint  |
-| `function`    | Custom scheduler — receives `run` callback and calls it when ready     |
 
 For `'microtask'`, rapid signal writes within the same task coalesce into one re-run.
-
-A **custom scheduler function** replaces any built-in variant:
-
-```ts
-effect(fn, { scheduler: (run) => setTimeout(run, 100) }); // debounce 100 ms
-effect(fn, { scheduler: (run) => requestIdleCallback(run) }); // idle time
-```
-
-The custom function receives a `run` callback and must call it exactly once when it decides to execute the effect.
 
 ---
 
@@ -984,103 +908,88 @@ type CityType = PathValue<Settings, 'user.address.city'>; // string
 
 ---
 
-### `AsyncOwnedReactive`
+### `ResourceOptions<T>`
 
 ```ts
-interface AsyncOwnedReactive<T> {
-  readonly data: Reactive<T | undefined>;
-  readonly disposed: boolean;
-  readonly error: Reactive<unknown | undefined>;
-  readonly isLoading: Reactive<boolean>;
-  dispose(): void;
-  [Symbol.dispose](): void;
-}
-```
-
-Returned by `asyncComputed()`. Exposes three flat reactive projections instead of a single discriminated-union signal.
-
----
-
-### `AsyncComputedOptions`
-
-```ts
-type AsyncComputedOptions<T> = {
+type ResourceOptions<T> = {
   initialValue?: T;
   name?: string;
 };
 ```
 
----
-
-### `Accessor<T>`
-
-```ts
-type Accessor<T> = Reactive<T>;
-```
-
-Alias for `Reactive<T>`. Prefer `Accessor<T>` in new code — the name communicates "you can read this" rather than implying the underlying value never changes.
-
----
-
-### `ResourceSignal<T>`
-
-```ts
-type ResourceSignal<T> = AsyncOwnedReactive<T>;
-```
-
-Alias for `AsyncOwnedReactive<T>`. Returned by `resource()`.
-
----
-
-### `ResourceOptions<T>`
-
-```ts
-type ResourceOptions<T> = AsyncComputedOptions<T>;
-```
-
-Alias for `AsyncComputedOptions<T>`. Use with `resource()`.
-
----
-
-### `AsyncScopeSetup`
-
-```ts
-type AsyncScopeSetup = () => Promise<void>;
-```
-
-Describes the setup function accepted by `asyncScope()`. `onCleanup()` calls within this function must occur before the first `await`.
+Options for `resource()`. `initialValue` populates the `data` field in the initial `loading` state before the first result. `name` is a debug identifier passed to the internal signal and effect.
 
 ---
 
 ### `StoreWithHistory`
 
 ```ts
-interface StoreWithHistory<T extends object> {
-  readonly store: Store<T>;
+interface StoreWithHistory<T extends object> extends Store<T> {
   readonly canUndo: boolean;
   readonly canRedo: boolean;
-  historyAt(index: number): Readonly<T> | undefined;
+  historyAt(index: number): HistoryEntry<T> | undefined;
   readonly historyLength: number;
+  push(): void;
+  pushNamed(label: string): void;
   undo(): void;
   redo(): void;
-  dispose(): void;
-  [Symbol.dispose](): void;
+  /** The underlying store — escape hatch for adapters that need direct store access. */
+  readonly store: Store<T>;
 }
 ```
 
-Returned by `storeWithHistory()`. Wraps a `Store<T>` with snapshot navigation. Access the underlying store via `.store` for reads and mutations.
+Returned by `storeWithHistory()`. Extends `Store<T>` directly — all store methods (`patch`, `replace`, `reset`, `lens`) are available without `.store` indirection.
 
 | Member               | Description                                                                                                                                  |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `store`              | The underlying `Store<T>` — use for `.patch()`, `.lens()`, `.replace()`, `.reset()`                                                          |
+| `push()`             | Save the current state as an explicit undo checkpoint                                                                                        |
+| `pushNamed(label)`   | Save the current state as an annotated checkpoint with a descriptive label                                                                   |
 | `canUndo`            | `true` when there is at least one snapshot to undo to. **Reactive** — participates in the reactive graph                                     |
 | `canRedo`            | `true` when there is at least one snapshot ahead to redo. **Reactive** — participates in the reactive graph                                  |
-| `historyAt(i)`       | Snapshot at index `i` (0 = oldest); returns `undefined` if out of range. After `maxHistory` eviction, index 0 is the oldest remaining entry  |
+| `historyAt(i)`       | `HistoryEntry<T>` at index `i` (0 = oldest); `undefined` if out of range. After `maxHistory` eviction, index 0 is the oldest remaining entry |
 | `historyLength`      | Number of snapshots currently in the buffer (≤ `maxHistory`)                                                                                 |
 | `undo()`             | Move cursor back one step; no-op at the oldest state                                                                                         |
 | `redo()`             | Move cursor forward one step; no-op at the newest state                                                                                      |
 | `dispose()`          | Disposes the history adapter and cursor signal. Also disposes the underlying store only when the adapter created it (ownership). Idempotent. |
 | `[Symbol.dispose]()` | Same as `dispose()` — enables `using h = storeWithHistory(...)` declarations                                                                 |
+| `store`              | The underlying `Store<T>` — escape hatch for adapters; prefer calling mutations directly on `h`                                             |
+
+---
+
+### `EffectHandle`
+
+```ts
+interface EffectHandle extends Subscription {
+  getDependencies(): ReadonlyArray<DepInfo>;
+}
+
+type DepInfo = {
+  readonly kind: 'computed' | 'signal';
+  readonly name?: string;
+};
+```
+
+Returned by `effect()` and `debugEffect()`. `getDependencies()` returns the reactive sources the effect is currently subscribed to, as collected during the last completed run. Returns an empty array after `dispose()`.
+
+```ts
+const count = signal(0, { name: 'count' });
+const handle = effect(() => { console.log(count.value); });
+console.log(handle.getDependencies()); // [{ kind: 'signal', name: 'count' }]
+handle.dispose();
+```
+
+---
+
+### `HistoryEntry<T>`
+
+```ts
+type HistoryEntry<T> = {
+  readonly label?: string;
+  readonly state: Readonly<T>;
+};
+```
+
+A single snapshot entry returned by `StoreWithHistory.historyAt()`. `state` is a deep-frozen clone of the store state at that point. `label` is the string passed to `.pushNamed(label)`, or `undefined` for anonymous checkpoints created by `.push()`.
 
 ---
 

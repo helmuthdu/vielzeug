@@ -371,6 +371,8 @@ exchange(money('100.00', 'USD'), { from: 'USD', rate: '0.92', to: 'EUR' }, 'floo
 // { amount: 9200n, currency: 'EUR' }  (same here — exact result)
 ```
 
+## Utilities
+
 ### `withAmount(m, amount)`
 
 ```ts
@@ -404,6 +406,8 @@ isMoney(null); // false
 isMoney(Object.create({ amount: 100n, currency: 'USD' })); // false (prototype only)
 ```
 
+---
+
 ### `validateCurrencyCode(code)`
 
 ```ts
@@ -422,6 +426,8 @@ validateCurrencyCode('FAKE'); // throws InvalidCurrencyError: Invalid ISO 4217 c
 const code = validateCurrencyCode(userInput);
 const m = money(0n, code); // no re-validation cost — cached
 ```
+
+---
 
 ### `getCurrencyDecimals(currencyCode)`
 

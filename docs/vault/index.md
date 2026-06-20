@@ -119,15 +119,15 @@ void adults;
 - **`update(table, key, changes)`** — shallow-merge partial fields; **`upsert`** for read-modify-write; **`getOrDefault`** for read-or-insert
 - **`delete`** / **`deleteMany`** / **`clear`** — single, bulk, or full-table deletion
 - **`query(table)`** — lazy `QueryBuilder` with `.filter()`, `.equals()`, `.between()`, `.startsWith()`, `.orderBy()`, `.limit()`, `.offset()`; terminal `.toArray()` / `.first()` / `.delete()`
-- **`observe(table, fn)`** — subscribe to table changes; fires immediately with current snapshot then on every mutation; returns unsubscribe function
-- **`observeMany(tables, fn)`** — combined snapshot across multiple tables; coalesces batch writes into one callback
+- **`observe(table, fn, opts?)`** — subscribe to table changes; fires immediately by default (`{ immediate: false }` to skip); returns unsubscribe function
+- **`observeMany(tables, fn, opts?)`** — combined snapshot across multiple tables; `{ eager: true }` fires on first partial snapshot; coalesces batch writes
 - **`watch(table)`** — `AsyncIterable` of fresh snapshots; `mode: 'latest'` drops intermediates; `signal` stops from outside
 - **`batch(tables, tx => ...)`** — deferred observer notifications on all adapters; atomic IDB transaction on IndexedDB
 - **`ttl.ms / .seconds / .minutes / .hours / .days`** — branded duration helpers; raw numbers are rejected by the type system
 - **`pruneExpired`** / **`scheduleExpiredPrune`** — sweep expired records manually or on an interval; pass `signal` to auto-stop on abort
 - **`keys(table, filter?)`** — return primary keys; pass a predicate to filter without loading records into userland first
 - **`createVersionedCodec`** — versioned codec for safe upgrades; old records decode with their original codec as long as it is still registered
-- **`iterate(table)`** — cursor-based `AsyncIterable` over live records (memory adapter only); avoids loading the full table into memory
+- **`iterate(table)`** — cursor-based `AsyncIterable` over live records (IndexedDB only); avoids loading the full table into memory
 - Ripple signals plugin, Rune logger plugin, and Spell validators plugin — pass any compatible object; structural, not coupled
 
 </div>
