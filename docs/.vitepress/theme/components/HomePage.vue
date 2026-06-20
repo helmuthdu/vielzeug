@@ -218,16 +218,22 @@ onUnmounted(() => {
             <span class="hero-title-sub">Many Tools. Zero Weight.</span>
           </h1>
           <p class="hero-description">
-            State with <em>Ripple</em>, forms via <em>Forge</em>, validation by <em>Spell</em>. TypeScript tools with zero external dependencies. Pick one or compose them all.
+            From signals with <em>Ripple</em> to forms via <em>Forge</em>, explore our full range of zero-dependency
+            TypeScript tools. Pick one or compose them all.
           </p>
           <div class="hero-values">
             <sg-tooltip
-              content="No external npm dependencies — only other vielzeug packages where needed"
+              content="Built with TypeScript from the ground up, with strict types and no 'any'"
               placement="top">
-              <span class="value-item"><sg-icon name="ban" size="16"></sg-icon> Zero external deps</span>
+              <span class="value-item"><sg-icon name="shield-check" size="16"></sg-icon> Type-safe</span>
             </sg-tooltip>
             <sg-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
               <span class="value-item"><sg-icon name="scissors" size="16"></sg-icon> Tree-shakeable</span>
+            </sg-tooltip>
+            <sg-tooltip
+              content="No external npm dependencies — only other vielzeug packages where needed"
+              placement="top">
+              <span class="value-item"><sg-icon name="package" size="16"></sg-icon> Zero External Deps</span>
             </sg-tooltip>
             <sg-tooltip content="Free to use in any project, commercial or open-source" placement="top">
               <span class="value-item"><sg-icon name="scale" size="16"></sg-icon> MIT</span>
