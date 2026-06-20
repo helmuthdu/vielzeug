@@ -845,7 +845,6 @@ onMounted(() => {
   padding: 0.375rem 0;
   scrollbar-width: thin;
   scrollbar-color: var(--color-contrast-300) transparent;
-  border-bottom: var(--border) solid var(--color-contrast-300);
 }
 
 .sidebar-item {
