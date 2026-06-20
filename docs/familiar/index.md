@@ -20,7 +20,7 @@ exports:
     WorkerRuntimeError,
     WorkerInvalidOptionsError,
   ]
-environments: [browser, node, ssr, deno]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->

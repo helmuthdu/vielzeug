@@ -86,16 +86,23 @@ const categoryLabel = computed(() => {
           description
         }}</sg-text>
         <div class="pkg-meta-row">
-          <sg-badge v-if="packageInfo.version" color="primary" size="xs" rounded="full">
-            v{{ packageInfo.version }}
-          </sg-badge>
-          <sg-badge v-if="packageInfo.size && packageInfo.size !== 'N/A'" color="primary" size="xs" rounded="full">
-            {{ packageInfo.size }} gzip
-          </sg-badge>
-          <sg-badge v-if="packageInfo.dependencies === 0" color="primary" size="xs" rounded="full">0 deps</sg-badge>
-          <sg-badge v-if="environments.length" color="primary" size="xs" rounded="full">
-            {{ environments.map((e) => envLabel[e] ?? e).join(' · ') }}
-          </sg-badge>
+          <sg-tooltip v-if="packageInfo.version" content="Published npm version" placement="top">
+            <sg-badge color="primary" size="xs" rounded="full">v{{ packageInfo.version }}</sg-badge>
+          </sg-tooltip>
+          <sg-tooltip
+            v-if="packageInfo.size && packageInfo.size !== 'N/A'"
+            content="Minified and gzipped bundle size"
+            placement="top">
+            <sg-badge color="primary" size="xs" rounded="full">{{ packageInfo.size }} gzip</sg-badge>
+          </sg-tooltip>
+          <sg-tooltip v-if="packageInfo.dependencies === 0" content="No external npm dependencies" placement="top">
+            <sg-badge color="primary" size="xs" rounded="full">0 deps</sg-badge>
+          </sg-tooltip>
+          <sg-tooltip v-if="environments.length" content="Supported runtime environments" placement="top">
+            <sg-badge color="primary" size="xs" rounded="full">
+              {{ environments.map((e) => envLabel[e] ?? e).join(' · ') }}
+            </sg-badge>
+          </sg-tooltip>
         </div>
         <div v-if="exports.length" class="pkg-exports-row">
           <sg-badge

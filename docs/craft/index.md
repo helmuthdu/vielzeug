@@ -5,37 +5,8 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports:
-  [
-    define,
-    html,
-    css,
-    prop,
-    ref,
-    each,
-    when,
-    classMap,
-    styleMap,
-    model,
-    live,
-    raw,
-    setRawSanitizer,
-    inject,
-    injectStrict,
-    createContext,
-    useField,
-    createFormContext,
-    syncAria,
-    createStableId,
-    createId,
-    resetIdCounter,
-    CraftError,
-    intersectionObserver,
-    mediaObserver,
-    mutationObserver,
-    resizeObserver,
-  ]
-environments: [browser, node, ssr, deno]
+exports: [define, html, prop, ref, css, createContext, inject, useField]
+environments: [browser]
 ---
 
 <!-- markdownlint-disable MD025 MD033 MD060 -->
