@@ -18,6 +18,7 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `withBearerAuth()`      | Interceptor preset for Bearer token injection          | Sync           | Accepts static string or async token factory                         |
 | `withRequestId()`       | Interceptor preset adding a unique request ID header   | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`                |
 | `withLogging()`         | Interceptor preset logging method/URL/status/ms        | Sync           | Defaults to `console.debug`; override with `logger` option           |
+| `toSyncStore()`         | Convert any `peek()`/`subscribe()` source to `SyncStore` | Sync          | Useful for framework adapters that accept a `SyncStore` directly     |
 | `persistQueryCache()`   | Subscribe to cache and write successful entries        | Sync           | Eagerly persists existing successful entries on setup                |
 | `hydrateQueryCache()`   | Read persisted entries and seed the cache              | Async          | Runs all keys in parallel; restores original `updatedAt`             |
 | `CourierError`          | Base class for all courier errors                      | —              | `CourierError.is(e)` catches any courier error; narrow further after |
@@ -116,12 +117,11 @@ Creates a query client with caching, deduplication, prefix invalidation, and rea
 | `get`              | `<T>(key) => T \| undefined`                                            | Read cached data                                                                     |
 | `set`              | `<T>(key, data \| updater, opts?) => void`                              | Set or update cached data; `opts.updatedAt` restores a historical timestamp          |
 | `getState`         | `<T>(key) => QueryState<T> \| null`                                     | Full state snapshot                                                                  |
-| `watchKey`         | `<T>(key: QueryKey) => SyncStore<QueryState<T>>`                        | Read-through store for one key; no fetch triggered                                   |
 | `observeMany`      | `<T>(keys: QueryKey[]) => SyncStore<QueryState<T>[]>`                   | Observe multiple keys as one combined store; updates on any key change               |
 | `invalidate`       | `(key) => void`                                                         | Evict or background-revalidate a key/prefix                                          |
 | `remove`           | `(key: QueryKey) => void`                                               | Evict a single entry; aborts any in-flight fetch; resets observers to idle if active |
-| `cancel`           | `(key) => void`                                                         | Cancel an in-flight fetch; state rolls back to `'idle'` or previous success          |
-| `clear`            | `() => void`                                                            | Clear all entries; active subscribers see `'idle'`                                   |
+| `cancel`           | `(key) => void`                                                         | Cancel an in-flight fetch; entry returns to `'loading'` or retains prior success data |
+| `clear`            | `() => void`                                                            | Clear all entries; active subscribers see `'loading'`                                |
 | `refetchStale`     | `() => void`                                                            | Manually revalidate all stale observed entries                                       |
 | `keys`             | `() => QueryKey[]`                                                      | Returns all currently cached keys — useful for SSR serialization                     |
 | `size`             | `number` (getter)                                                       | Number of entries currently held in the cache                                        |
@@ -167,8 +167,9 @@ Creates a standalone, observable mutation handle.
 | `shouldRetry`     | `(error, attempt) => boolean`                                         | —           | Return `false` to skip retrying; `attempt` is **zero-based**                                                    |
 | `onSuccess`       | `(data: TData, variables: TVariables) => void \| Promise<void>`       | —           | Called after a successful run                                                                                   |
 | `onError`         | `(error: Error, variables: TVariables) => void \| Promise<void>`      | —           | Called after a failed run; **not** called on abort                                                              |
+| `onFinally`       | `(variables: TVariables) => void \| Promise<void>`                    | —           | Called after every run (success, error, abort) before `onSettled`; use for cleanup that does not need the result |
 | `onSettled`       | `(result: SettledResult<TData, TVariables>) => void \| Promise<void>` | —           | Called after every run; switch on `result.status` (`'success'`, `'error'`, `'aborted'`) for exhaustive handling |
-| `onCallbackError` | `(error: Error) => void`                                              | —           | Called when `onSuccess`/`onError`/`onSettled` throws; does not affect `mutate()` result                         |
+| `onCallbackError` | `(error: Error) => void`                                              | —           | Called when any lifecycle callback throws; does not affect `mutate()` result                                     |
 
 **Mutation methods:**
 
@@ -176,7 +177,8 @@ Creates a standalone, observable mutation handle.
 | ------------------ | -------------------------------------------- | ------------------------------------------------------- |
 | `mutate`           | `(variables, opts?) => Promise<TData>`       | Execute a run                                           |
 | `cancel`           | `() => Promise<void>`                        | Abort the active run and wait for it to settle          |
-| `getState`         | `() => MutationState<TData>`                 | Read current state                                      |
+| `peek`             | `() => MutationState<TData>`                 | Read current state snapshot                             |
+| `subscribe`        | `(cb: () => void) => () => void`             | Subscribe to state changes; returns unsubscribe fn      |
 | `store`            | `SyncStore<MutationState<TData>>` (property) | Framework-friendly external store; stable reference     |
 | `reset`            | `() => void`                                 | Reset back to the idle state                            |
 | `dispose`          | `() => void`                                 | Abort active run, clear observers, and mark as disposed |
@@ -522,14 +524,17 @@ type QueryOptions<T> = {
 ### `ObserveOptions<T, S = T>`
 
 ```ts
-type ObserveOptions<T, S = T> = QueryOptions<T> & {
-  fetch?: boolean;
+type ObserveOptions<T, S = T> =
+  | ({ fetch?: true } & QueryOptions<T> & ObserveExtras<T, S>)
+  | ({ fetch: false; key: QueryKey } & Partial<QueryOptions<T>> & ObserveExtras<T, S>);
+
+type ObserveExtras<T, S> = {
   placeholderData?: S | (() => S | undefined);
   select?: (data: T | undefined) => S | undefined;
 };
 ```
 
-Extends `QueryOptions` with view-layer options consumed exclusively by `observe()`. `fetch: false` skips the background network call — the store only reflects the current cache. `placeholderData` and `select` do not affect the underlying cache or `fetch()` behaviour. `S` defaults to `T`; provide a second generic when using `select` (e.g. `ObserveOptions<User, string>` with `select: (u) => u?.name`).
+Two forms: `fetch?: true` (default) triggers a background fetch and requires `fn`; `fetch: false` is a read-only store — `fn` is not required or called. `placeholderData` and `select` do not affect the underlying cache or `fetch()` behaviour. `S` defaults to `T`; provide a second generic when using `select` (e.g. `ObserveOptions<User, string>` with `select: (u) => u?.name`).
 
 ### `QueryClientOptions`
 
@@ -552,12 +557,13 @@ type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSig
 type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
   onCallbackError?: (error: Error) => void;
   onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+  onFinally?: (variables: TVariables) => void | Promise<void>;
   onSettled?: (result: SettledResult<TData, TVariables>) => void | Promise<void>;
   onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
 };
 ```
 
-`onError` is not called when the mutation is aborted. `onSettled` is always called — switch on `result.status` for exhaustive handling of `'success'`, `'error'`, and `'aborted'`.
+`onError` is not called when the mutation is aborted. `onFinally` runs after `onSuccess`/`onError` and before `onSettled`. `onSettled` is always called — switch on `result.status` for exhaustive handling of `'success'`, `'error'`, and `'aborted'`.
 
 ### `CourierMutationOptions<TData, TVariables>`
 
@@ -633,7 +639,13 @@ interface SyncStore<T> {
 }
 ```
 
-Returned by `mutation.store` (property), `query.watchKey()`, `query.observe()`, and `query.observeMany()`.
+Returned by `mutation.store` (property), `query.observe()`, and `query.observeMany()`.
+
+### `QueryFn<T>`
+
+```ts
+type QueryFn<T> = (ctx: QueryFnContext) => Promise<T>;
+```
 
 ### `QueryKey`
 
@@ -641,6 +653,8 @@ Returned by `mutation.store` (property), `query.watchKey()`, `query.observe()`, 
 type QueryKeyAtom = string | number | boolean | null | { readonly [k: string]: string | number | boolean | null };
 type QueryKey = readonly [QueryKeyAtom, ...QueryKeyAtom[]];
 ```
+
+`QueryKeyAtom` is exported separately for use in factory helpers and key-building utilities.
 
 A non-empty tuple of JSON-safe atoms. Object atoms are allowed and serialized stably — no `Date`, `Map`, `Set`, or `bigint`. This prevents silent serialization bugs when keys are used in persistence.
 
@@ -653,39 +667,30 @@ type QueryFnContext = {
 };
 ```
 
+### `AsyncStatus`
+
+```ts
+type AsyncStatus = 'loading' | 'success' | 'error';
+```
+
+- `'loading'` — no data yet; a fetch may or may not be in-flight
+- `'success'` — data available; `isFetching` may be `true` during background revalidation
+- `'error'` — last operation failed; stale `data` from a prior success may still be present
+
 ### `AsyncState<T>`
 
 ```ts
-type AsyncState<T = unknown> =
-  | {
-      readonly data: undefined;
-      readonly error: null;
-      readonly isFetching: false;
-      readonly status: 'idle';
-      readonly updatedAt: undefined;
-    }
-  | {
-      readonly data: undefined;
-      readonly error: null;
-      readonly isFetching: true;
-      readonly status: 'pending';
-      readonly updatedAt: number | undefined;
-    }
-  | {
-      readonly data: T;
-      readonly error: null;
-      readonly isFetching: boolean;
-      readonly status: 'success';
-      readonly updatedAt: number;
-    }
-  | {
-      readonly data: T | undefined;
-      readonly error: Error;
-      readonly isFetching: boolean;
-      readonly status: 'error';
-      readonly updatedAt: number;
-    };
+type AsyncState<T = unknown> = {
+  readonly isFetching: boolean;
+  readonly isLoading: boolean; // shorthand for status === 'loading'
+} & (
+  | { readonly data: undefined; readonly error: null; readonly status: 'loading'; readonly updatedAt: undefined }
+  | { readonly data: T; readonly error: null; readonly status: 'success'; readonly updatedAt: number }
+  | { readonly data: T | undefined; readonly error: Error; readonly status: 'error'; readonly updatedAt: number }
+);
 ```
+
+`isLoading` is a convenience shorthand for `status === 'loading'`. Use it as a loading-spinner predicate.
 
 ### `QueryState<T>`
 
@@ -790,6 +795,31 @@ const unbind = bindRefetch(qc);
 
 // On cleanup:
 unbind();
+```
+
+---
+
+### `toSyncStore()`
+
+```ts
+toSyncStore<T>(source: { peek(): T; subscribe(cb: () => void): Unsubscribe }): SyncStore<T>;
+```
+
+Converts any object with `peek()` and `subscribe()` to a plain `SyncStore<T>`. Use when a framework adapter accepts a `SyncStore` directly rather than consuming `peek`/`subscribe` separately.
+
+**Example:**
+
+```ts
+import { createMutation, toSyncStore } from '@vielzeug/courier';
+
+const mutation = createMutation(async (input: NewUser) => api.post<User>('/users', { body: input }));
+
+// React
+const state = useSyncExternalStore(mutation.store.subscribe, mutation.store.peek);
+
+// Or use toSyncStore to wrap a custom peek/subscribe object
+const store = toSyncStore(mutation);
+const state2 = useSyncExternalStore(store.subscribe, store.peek);
 ```
 
 ---

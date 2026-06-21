@@ -12,8 +12,6 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   cfg: RemoteConfig<T, TFilter, TSort>,
 ): RemoteSource<T, TFilter, TSort> {
   const keyOf = cfg.queryKey ?? defaultKeyOf;
-  const base = createAsyncSource<RemoteSourceQuery<TFilter, TSort>>(cfg, keyOf);
-  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Config defaults ─────────────────────────────────────────────────────────
   const staleTimeMs = cfg.staleTime ?? 0;
@@ -66,26 +64,25 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     cachedMeta = createMeta({
       error,
       isLoading: base.pendingCount() > 0,
-      isSearchPending: base.isScheduled(),
+      isSearchPending: base.core.isScheduled,
       pageNumber: safePage,
       pageSize: limit,
       totalItems: total,
     });
   };
 
+  // onBeforeNotify ensures refreshMeta() runs before any subscriber observes the new state,
+  // eliminating the need for a parallel listeners Set.
+  const base = createAsyncSource<RemoteSourceQuery<TFilter, TSort>>(cfg, keyOf, refreshMeta);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
+
   // Initialise cache before first fetch.
   refreshMeta();
-
-  // Own listener set — notifications are driven by fetchManager's onPendingChange callback.
-  const listeners = new Set<() => void>();
 
   const notifyListeners = () => {
     if (base.disposed) return;
 
-    refreshMeta();
-    base.notify();
-
-    for (const l of listeners) l();
+    base.core.notify();
   };
 
   // ── Assign result ───────────────────────────────────────────────────────────
@@ -325,6 +322,16 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       return doUpdate();
     },
 
+    get query() {
+      return {
+        ...(filter !== undefined && { filter }),
+        ...(sort !== undefined && { sort }),
+        ...(search && { search }),
+        limit,
+        page,
+      };
+    },
+
     ready(timeout) {
       return base.ready(timeout);
     },
@@ -334,7 +341,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
     },
 
     reset() {
-      base.cancelTimer();
+      base.core.cancelTimer();
       resolvePendingSearch();
       search = '';
       page = 1;
@@ -348,7 +355,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       if (opts?.immediate) {
         if (q === search) return Promise.resolve();
 
-        base.cancelTimer();
+        base.core.cancelTimer();
         resolvePendingSearch();
         search = q;
         page = 1;
@@ -370,64 +377,17 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
       pendingSearch = { promise, resolve: resolveSearch };
 
-      base.schedule(() => void doUpdate(), debounceMs);
+      base.core.schedule(() => void doUpdate(), debounceMs);
       notifyListeners();
 
       return promise;
     },
 
-    setFilter(f) {
-      if (f === filter) return Promise.resolve();
-
-      filter = f;
-      page = 1;
-
-      return doUpdate();
-    },
-
-    setLimit(n) {
-      const next = Math.max(1, Math.trunc(n));
-
-      if (next === limit) return Promise.resolve();
-
-      limit = next;
-      page = 1;
-
-      return doUpdate();
-    },
-
-    setSort(s) {
-      if (s === sort) return Promise.resolve();
-
-      sort = s;
-      page = 1;
-
-      return doUpdate();
-    },
-
-    subscribe: (listener) => {
-      if (base.disposed) return () => {};
-
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
       resolvePendingSearch();
       base.dispose();
-    },
-
-    toQuery() {
-      return {
-        ...(filter !== undefined && { filter }),
-        ...(sort !== undefined && { sort }),
-        ...(search && { search }),
-        limit,
-        page,
-      };
     },
   };
 }

@@ -34,22 +34,28 @@ export interface SyncStore<T> {
   subscribe(onStoreChange: () => void): Unsubscribe;
 }
 
-export type AsyncStatus = 'idle' | 'pending' | 'success' | 'error';
+/**
+ * Lifecycle status for an async operation.
+ *
+ * - `'loading'` — no data yet; a fetch may or may not be in-flight.
+ * - `'success'` — data is available; `isFetching` may be `true` during background revalidation.
+ * - `'error'` — the last operation failed; stale `data` from a prior success may still be present.
+ */
+export type AsyncStatus = 'loading' | 'success' | 'error';
 
 export type AsyncState<T = unknown> = {
-  /** `true` while a fetch is in-flight (including background revalidation). Orthogonal to `status`. */
+  /**
+   * `true` while a fetch is in-flight (including background revalidation).
+   * Orthogonal to `status` — a `'success'` entry can have `isFetching: true`.
+   */
   readonly isFetching: boolean;
+  /** Shorthand for `status === 'loading'`. Useful as a loading-spinner predicate. */
+  readonly isLoading: boolean;
 } & (
   | {
       readonly data: undefined;
       readonly error: null;
-      readonly status: 'idle';
-      readonly updatedAt: undefined;
-    }
-  | {
-      readonly data: undefined;
-      readonly error: null;
-      readonly status: 'pending';
+      readonly status: 'loading';
       readonly updatedAt: undefined;
     }
   | {

@@ -9,16 +9,16 @@ description: Complete API reference for @vielzeug/pulse.
 
 | Symbol               | Purpose                                       | Execution mode | Common gotcha                                                             |
 | -------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------------------- |
-| `createPulse()`      | Create a typed WebSocket client instance      | Sync           | Connection opens immediately; use `disconnect()` to defer until needed    |
+| `createPulse()`      | Create a typed WebSocket client instance      | Sync           | Connects immediately by default; pass `lazy: true` to defer              |
 | `pulse.on()`         | Subscribe to a typed server event             | Sync           | Returns an `Unsubscribe`; always call it on component teardown            |
 | `pulse.once()`       | One-shot server event subscription            | Sync           | Listener auto-removes after first fire                                    |
-| `pulse.send()`       | Send a typed client event                     | Sync           | No-op when not open; messages are not buffered                            |
+| `pulse.send()`       | Send a typed client event                     | Sync           | Buffered when `buffer: true`; dropped (dev warn) otherwise                |
 | `pulse.wait()`       | Await the next server event                   | Async          | Rejects with `AbortError` on disposal; use `timeout` for a deadline       |
-| `pulse.connect()`    | Open the connection explicitly                | Async          | Resolves immediately if already open                                      |
+| `pulse.connect()`    | Open the connection explicitly                | Async          | Required when `lazy: true`; otherwise called automatically on creation    |
 | `pulse.disconnect()` | Close without triggering reconnect            | Sync           | Pass code `1000` for a clean close                                        |
 | `pulse.join()`       | Join a room; resolves on server confirmation  | Async          | Rejects with `AbortError` if pulse is disposed before server replies      |
 | `pulse.leave()`      | Leave a room; resolves on server confirmation | Async          | Room is removed from `pulse.rooms` only after server confirms             |
-| `pulse.channel()`    | Create an isolated channel namespace          | Sync           | Each call returns a new independent object; dispose channels individually |
+| `pulse.channel()`    | Create an isolated channel namespace          | Sync           | Same name returns the **same** object; `dispose()` sends unsubscribe      |
 | `pulse.presence()`   | Reactive presence channel for a room          | Sync           | Implicitly joins the room; `dispose()` to stop tracking                   |
 | `pulse.dispose()`    | Permanently close and release all resources   | Sync           | Idempotent; also aborts `disposalSignal`                                  |
 
@@ -48,17 +48,19 @@ Creates and returns a new `Pulse<TServer, TClient>` instance. The WebSocket conn
 
 **Parameters — `PulseOptions`:**
 
-| Option        | Type                                     | Default | Description                                                                          |
-| ------------- | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| `heartbeat`   | `boolean \| HeartbeatOptions`            | `false` | `true` uses defaults; `false` disables; object for custom interval/timeout           |
-| `middleware`  | `readonly Middleware[]`                  | `[]`    | Functions run on every outgoing `send()` before the message is written to the socket |
-| `onClose`     | `(code: number, reason: string) => void` | —       | Called when the connection is closed by either side                                  |
-| `onError`     | `(error: Error) => void`                 | —       | Called on a WebSocket error event; errors almost always precede a close              |
-| `onMessage`   | `(event: MessageEvent) => void`          | —       | Called with every raw `MessageEvent` before parsing; useful for low-level debugging  |
-| `onOpen`      | `() => void`                             | —       | Called when the connection is established or re-established                          |
-| `onReconnect` | `(attempt: number) => void`              | —       | Called at the start of each reconnect attempt; `attempt` is 1-based                  |
-| `protocols`   | `string \| string[]`                     | —       | Sub-protocols passed to the `WebSocket` constructor                                  |
-| `reconnect`   | `boolean \| ReconnectOptions`            | `false` | `true` uses defaults; `false` disables; object for custom delay/maxAttempts          |
+| Option        | Type                                     | Default | Description                                                                                            |
+| ------------- | ---------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------ |
+| `buffer`      | `boolean \| BufferOptions`               | `false` | `true` uses defaults (`maxSize: 50`); buffers outgoing frames while disconnected, flushes on reconnect |
+| `heartbeat`   | `boolean \| HeartbeatOptions`            | `false` | `true` uses defaults; `false` disables; object for custom interval/timeout                             |
+| `lazy`        | `boolean`                                | `false` | `true` defers the initial connection until `connect()` is called explicitly                            |
+| `middleware`  | `readonly Middleware[]`                  | `[]`    | Functions run on every outgoing `send()` before the message is written to the socket                   |
+| `onClose`     | `(code: number, reason: string) => void` | —       | Called when the connection is closed by either side                                                    |
+| `onError`     | `(error: Error) => void`                 | —       | Called on a WebSocket error event; errors almost always precede a close                                |
+| `onMessage`   | `(event: MessageEvent) => void`          | —       | Called with every raw `MessageEvent` before parsing; useful for low-level debugging                    |
+| `onOpen`      | `() => void`                             | —       | Called when the connection is established or re-established                                            |
+| `onReconnect` | `(attempt: number) => void`              | —       | Called at the start of each reconnect attempt; `attempt` is 1-based                                   |
+| `protocols`   | `string \| string[]`                     | —       | Sub-protocols passed to the `WebSocket` constructor                                                    |
+| `reconnect`   | `boolean \| ReconnectOptions`            | `false` | `true` uses defaults; `false` disables; object for custom delay/maxAttempts                            |
 
 **Returns:** `Pulse<TServer, TClient>`
 
@@ -82,7 +84,7 @@ const pulse = createPulse<ServerEvents, ClientEvents>('wss://api.example.com/ws'
 
 ### `pulse.status`
 
-Type: `Reactive<PulseStatus>`
+Type: `Readable<PulseStatus>`
 
 Reactive connection status. Subscribe with ripple `effect()` to react to status changes.
 
@@ -99,7 +101,7 @@ console.log(pulse.status.value); // 'connecting' | 'open' | 'reconnecting' | 'cl
 
 ### `pulse.rooms`
 
-Type: `Reactive<ReadonlySet<string>>`
+Type: `Readable<ReadonlySet<string>>`
 
 Reactive set of rooms the client is currently a confirmed member of.
 
@@ -174,7 +176,10 @@ pulse.once('user:joined', ({ userId }) => showWelcome(userId));
 send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void
 ```
 
-Send a typed event to the server. No-op if the connection is not open — messages are not buffered.
+Send a typed event to the server. When the connection is not open:
+
+- If `buffer: true` is set, the message is queued and flushed on the next successful open.
+- Otherwise the message is dropped and a dev warning is emitted.
 
 ```ts
 pulse.send('chat:send', { text: 'Hello!' });
@@ -216,7 +221,7 @@ connect(): Promise<void>
 
 Opens the WebSocket connection. Resolves when the connection is open. Returns immediately if already open.
 
-> **Note:** The connection is opened automatically on construction. Call `connect()` explicitly only when reconnecting after `disconnect()`, or to await the initial open in code that runs before the first `onopen` fires.
+> **Note:** When `lazy: false` (default) the connection opens automatically on construction. Use `lazy: true` to defer and call `connect()` explicitly.
 
 **Rejects when:**
 
@@ -252,24 +257,26 @@ pulse.disconnect(1000, 'user signed out');
 ### `pulse.join()`
 
 ```ts
-join(room: string, opts?: { signal?: AbortSignal }): Promise<void>
+join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>
 ```
 
 Requests to join a room. Resolves when the server confirms with a `joined` frame. The room is added to `pulse.rooms` on confirmation.
 
-| Parameter     | Type          | Description                                 |
-| ------------- | ------------- | ------------------------------------------- |
-| `room`        | `string`      | Room name                                   |
-| `opts.signal` | `AbortSignal` | Optional; rejects with `AbortError` on fire |
+| Parameter      | Type          | Description                                       |
+| -------------- | ------------- | ------------------------------------------------- |
+| `room`         | `string`      | Room name                                         |
+| `opts.signal`  | `AbortSignal` | Optional; rejects with `AbortError` on fire       |
+| `opts.timeout` | `number`      | Optional; rejects with `TimeoutError` after ms    |
 
 **Rejects when:**
 
 - Already disposed — `DisposedError`
 - The signal fires — `AbortError`
+- `opts.timeout` elapses — `TimeoutError`
 - The pulse is disposed before confirmation — `AbortError`
 
 ```ts
-await pulse.join('lobby');
+await pulse.join('lobby', { timeout: 5_000 });
 ```
 
 ---
@@ -277,7 +284,7 @@ await pulse.join('lobby');
 ### `pulse.leave()`
 
 ```ts
-leave(room: string, opts?: { signal?: AbortSignal }): Promise<void>
+leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>
 ```
 
 Requests to leave a room. Resolves when the server confirms with a `left` frame. The room is removed from `pulse.rooms` on confirmation.
@@ -288,6 +295,7 @@ If the socket is not open, `leave()` connects first (mirroring `join()` behaviou
 
 - Already disposed — `DisposedError`
 - The signal fires — `AbortError`
+- `opts.timeout` elapses — `TimeoutError`
 - Connection fails — `ConnectionError`
 
 ```ts
@@ -304,12 +312,12 @@ channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = T
 ): PulseChannel<TChServer, TChClient>
 ```
 
-Returns a new `PulseChannel` scoped to `name`. Each call returns an independent object with its own listener set. Multiple calls with the same name create independent channels.
-
-The channel is automatically re-subscribed on reconnect. Calling `channel.dispose()` sends an `unsubscribe` frame to the server only when the last channel with that name is disposed.
+Returns a `PulseChannel` scoped to `name`. Multiple calls with the **same name return the same object** — the channel is memoized. The subscription is automatically re-sent on reconnect. Disposing the channel sends an `unsubscribe` frame and evicts it from the cache.
 
 ```ts
 const chat = pulse.channel<ChatServer, ChatClient>('chat');
+const same = pulse.channel<ChatServer, ChatClient>('chat');
+console.log(chat === same); // true
 ```
 
 ---
@@ -415,7 +423,7 @@ Resolves on the next emission of the given event within this channel. Rejects wh
 dispose(): void
 ```
 
-Removes all channel listeners. The underlying connection is unaffected.
+Removes all channel listeners, sends an `unsubscribe` frame, and evicts the channel from the memoization cache. The underlying connection is unaffected.
 
 ---
 
@@ -424,6 +432,18 @@ Removes all channel listeners. The underlying connection is unaffected.
 Type: `readonly boolean`
 
 `true` after `dispose()` has been called.
+
+---
+
+### `channel.disposalSignal`
+
+Type: `readonly AbortSignal`
+
+An `AbortSignal` that aborts when `dispose()` is called.
+
+```ts
+fetch('/api', { signal: channel.disposalSignal });
+```
 
 ---
 
@@ -445,7 +465,7 @@ Obtain via `pulse.presence(room)`.
 
 ### `presence.state`
 
-Type: `Reactive<ReadonlyMap<string, T>>`
+Type: `Readable<ReadonlyMap<string, T>>`
 
 Reactive map of `memberId → state`. Updates whenever any member joins, leaves, or changes state.
 
@@ -513,7 +533,15 @@ Type: `readonly boolean`
 dispose(): void
 ```
 
-Stops tracking the room and removes all join/leave callbacks.
+Stops tracking the room, removes all join/leave callbacks, and sends a `leave` frame to the server.
+
+---
+
+### `presence.disposalSignal`
+
+Type: `readonly AbortSignal`
+
+An `AbortSignal` that aborts when `dispose()` is called.
 
 ---
 
@@ -570,8 +598,17 @@ type Middleware = (event: string, payload: unknown, next: () => void) => void;
 ```
 
 ```ts
+type BufferOptions = {
+  /** Maximum number of frames to buffer. Oldest evicted when full. Default: 50. */
+  maxSize?: number;
+};
+```
+
+```ts
 type PulseOptions = {
+  buffer?: boolean | BufferOptions;
   heartbeat?: boolean | HeartbeatOptions;
+  lazy?: boolean;
   middleware?: readonly Middleware[];
   onClose?: (code: number, reason: string) => void;
   onError?: (error: Error) => void;

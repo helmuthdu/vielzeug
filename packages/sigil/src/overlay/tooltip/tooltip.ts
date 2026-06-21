@@ -1,6 +1,6 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop, syncAria } from '@vielzeug/craft';
+import { createStableId, define, html, prop } from '@vielzeug/craft';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -113,7 +113,7 @@ define<SgTooltipProps>(TOOLTIP_TAG, {
     trigger: prop.string('hover,focus'),
     variant: prop.string<'dark' | 'light'>(),
   },
-  setup(props, { el, onCleanup, onMounted, slots }) {
+  setup(props, { aria, el, onCleanup, onMounted, slots }) {
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);
@@ -138,7 +138,7 @@ define<SgTooltipProps>(TOOLTIP_TAG, {
     };
 
     const floating = useFloatingTrigger({
-      bindTriggerAria: (triggerEl) => syncAria(triggerEl, { describedby: () => tooltipId }, { autoCleanup: false }),
+      bindTriggerAria: (triggerEl) => aria(triggerEl, { describedby: () => tooltipId }),
       disabled: isDisabled,
       getPanel: () => tooltipEl,
       offset: 8,

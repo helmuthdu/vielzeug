@@ -14,14 +14,7 @@ const mountBranch = (
   parent: ParentNode,
   insertBefore: Node,
   registerCleanup: RegisterCleanup,
-): Node[] => {
-  const nodes = Array.from(result.fragment.childNodes);
-
-  parent.insertBefore(result.fragment, insertBefore);
-  result.apply(registerCleanup);
-
-  return nodes;
-};
+): Node[] => result.mount(parent, insertBefore, registerCleanup);
 
 /**
  * Conditionally renders one of two branches as a `DirectiveResult`.

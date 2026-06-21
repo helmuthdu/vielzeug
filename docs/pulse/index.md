@@ -12,6 +12,7 @@ exports:
     PulseChannel,
     PresenceChannel,
     PulseOptions,
+    BufferOptions,
     PulseError,
     ConnectionError,
     TimeoutError,
@@ -136,16 +137,18 @@ using _ = pulse;
 
 - **Typed event maps** — `TServer` and `TClient` generics enforce payload types on both sides of the wire
 - **`on()` / `once()` / `wait()`** — persistent, one-shot, and async-await event subscriptions
-- **`channel()`** — isolated namespaces multiplexed over the shared connection; auto-resubscribed on reconnect; `dispose()` sends an `unsubscribe` frame
-- **`join()` / `leave()`** — room membership with server-confirmation promises
+- **`channel()`** — isolated namespaces multiplexed over the shared connection; **same name returns the same object** (memoized); auto-resubscribed on reconnect; `dispose()` sends an `unsubscribe` frame
+- **`join()` / `leave()`** — room membership with server-confirmation promises; optional `timeout` and `AbortSignal` support
 - **`presence()`** — reactive `Signal<Map<memberId, T>>` state, with `onJoin`/`onLeave` callbacks and `update()` for broadcasting state
 - **Middleware pipeline** — intercept every outgoing `send()` call; omit `next()` to suppress
 - **Auto-reconnect** — exponential backoff (full-jitter by default), configurable `maxAttempts`, custom `delay` function, and `onReconnect` callback
 - **Heartbeat** — configurable ping/pong keep-alive with dead-connection detection and automatic reconnect trigger
-- **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `Reactive`
-- **Reactive `rooms` signal** — current room membership as a `Reactive<ReadonlySet<string>>`
+- **Reactive `status` signal** — `'connecting' | 'open' | 'reconnecting' | 'closed'` exposed as a ripple `Readable`
+- **Reactive `rooms` signal** — current room membership as a `Readable<ReadonlySet<string>>`
 - **`disposalSignal`** — `AbortSignal` that fires on `dispose()`; ties external cleanup to the connection lifetime
 - **`dispose()` and `[Symbol.dispose]`** — deterministic teardown; closes the socket, clears all listeners, aborts pending `wait()` calls
+- **Message buffering** — `buffer: true` queues outgoing frames while disconnected and flushes on reconnect; configurable `maxSize`
+- **Lazy connection** — `lazy: true` defers the initial connection until `connect()` is called explicitly
 - **Protocol-agnostic** — works with any WebSocket server that speaks the Pulse JSON frame format
 - **Single dependency** — only requires `@vielzeug/ripple` for reactive state
 

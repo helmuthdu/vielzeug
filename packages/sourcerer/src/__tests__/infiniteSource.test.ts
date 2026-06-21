@@ -1,4 +1,3 @@
-import { applyInfiniteQuery } from '../applyQuery';
 import { createInfiniteSource } from '../infiniteSource';
 
 describe('createInfiniteSource', () => {
@@ -283,7 +282,7 @@ describe('createInfiniteSource', () => {
     });
   });
 
-  describe('setLimit()', () => {
+  describe('patch({ limit })', () => {
     it('changes page size and re-fetches from page 1', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 5 }));
       const source = createInfiniteSource({ autoFetch: false, fetch, limit: 2 });
@@ -291,9 +290,9 @@ describe('createInfiniteSource', () => {
       await source.reset();
       expect(fetch).toHaveBeenCalledTimes(1);
 
-      await source.setLimit(5);
+      await source.patch({ limit: 5 });
 
-      expect(source.toQuery().limit).toBe(5);
+      expect(source.query.limit).toBe(5);
       expect(fetch).toHaveBeenCalledTimes(2);
     });
 
@@ -305,7 +304,7 @@ describe('createInfiniteSource', () => {
 
       const callsBefore = fetch.mock.calls.length;
 
-      await source.setLimit(10);
+      await source.patch({ limit: 10 });
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
@@ -463,17 +462,17 @@ describe('createInfiniteSource', () => {
     });
   });
 
-  describe('setLimit and search', () => {
-    it('setLimit is a no-op when limit does not change', async () => {
+  describe('patch({ limit }) and search', () => {
+    it('patch({ limit }) is a no-op when limit does not change', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
       const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await source.setLimit(10);
+      await source.patch({ limit: 10 });
 
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('setLimit resets and refetches when limit changes', async () => {
+    it('patch({ limit }) resets and refetches when limit changes', async () => {
       const pages = [
         ['a', 'b'],
         ['c', 'd'],
@@ -488,10 +487,10 @@ describe('createInfiniteSource', () => {
       await source.loadMore();
       expect(source.current).toEqual(['a', 'b', 'c', 'd']);
 
-      await source.setLimit(2); // same — no-op
+      await source.patch({ limit: 2 }); // same — no-op
       expect(fetch).toHaveBeenCalledTimes(2);
 
-      await source.setLimit(5); // changed
+      await source.patch({ limit: 5 }); // changed
       expect(source.current).toEqual(['a', 'b']); // reset to page 1 result
       expect(source.meta.loadedPages).toBe(1);
     });
@@ -620,40 +619,6 @@ describe('createInfiniteSource', () => {
   });
 });
 
-describe('applyInfiniteQuery', () => {
-  it('applies limit to infinite source', async () => {
-    const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], total: 3 }));
-    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 5 });
-
-    await applyInfiniteQuery(source, { limit: 3 });
-
-    expect(source.toQuery().limit).toBe(3);
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('applies search to infinite source', async () => {
-    const fetch = vi.fn(async ({ search }: { search?: string }) => ({
-      items: search ? [`found-${search}`] : ['all'],
-      total: 1,
-    }));
-    const source = createInfiniteSource({ autoFetch: false, fetch });
-
-    await applyInfiniteQuery(source, { search: 'x' });
-
-    expect(source.toQuery().search).toBe('x');
-    expect(source.current).toEqual(['found-x']);
-  });
-
-  it('no-op when patch is empty', async () => {
-    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
-    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 10 });
-
-    await applyInfiniteQuery(source, {});
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-});
-
 describe('createInfiniteSource — patch()', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.restoreAllMocks());
@@ -691,8 +656,8 @@ describe('createInfiniteSource — patch()', () => {
     await source.patch({ search: 'q' });
 
     expect(source.meta.loadedPages).toBe(1);
-    expect(source.toQuery().search).toBe('q');
-    expect(source.toQuery().page).toBe(1);
+    expect(source.query.search).toBe('q');
+    expect(source.query.page).toBe(1);
     expect(source.current).toEqual(['found']);
   });
 

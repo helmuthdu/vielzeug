@@ -1,4 +1,5 @@
 export type {
+  BufferOptions,
   EventKey,
   HeartbeatOptions,
   MessageMap,

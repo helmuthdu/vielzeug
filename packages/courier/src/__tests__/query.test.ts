@@ -210,25 +210,25 @@ describe('Query Client', () => {
       expect(qc.getState(['users', 1])!.updatedAt).toBeGreaterThan(0);
     });
 
-    it('watchKey() tracks isFetching through fetching → success', async () => {
+    it('observe({fetch:false}) tracks isFetching through fetching → success', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
-      const store = qc.watchKey<{ id: number }>(['users', 1]);
+      const store = qc.observe<{ id: number }>({ fetch: false, key: ['users', 1] });
 
       const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['users', 1] });
       unsub();
 
-      expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
+      expect(states.map((s) => s.status)).toEqual(['loading', 'success']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
     });
 
-    it('watchKey() tracks isFetching through fetching → error', async () => {
+    it('observe({fetch:false}) tracks isFetching through fetching → error', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
-      const store = qc.watchKey(['fail']);
+      const store = qc.observe({ fetch: false, key: ['fail'] });
 
       store.subscribe(() => states.push({ ...store.peek() }));
       await qc
@@ -240,18 +240,18 @@ describe('Query Client', () => {
         })
         .catch(() => {});
 
-      expect(states.map((s) => s.status)).toEqual(['pending', 'error']);
+      expect(states.map((s) => s.status)).toEqual(['loading', 'error']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].error?.message).toBe('boom');
     });
 
-    it('watchKey().subscribe() cancels a pending GC timer to keep entry alive', async () => {
+    it('observe({fetch:false}).subscribe() cancels a pending GC timer to keep entry alive', async () => {
       vi.useFakeTimers();
 
       const qc = createQuery({ gcTime: 1_000 });
 
       await qc.fetch({ fn: async () => ({ id: 1 }), key: ['x'] });
-      qc.watchKey(['x']).subscribe(() => {});
+      qc.observe({ fetch: false, key: ['x'] }).subscribe(() => {});
       vi.advanceTimersByTime(2_000);
 
       expect(qc.get(['x'])).toEqual({ id: 1 });
@@ -262,7 +262,7 @@ describe('Query Client', () => {
       vi.useFakeTimers();
 
       const qc = createQuery({ gcTime: 1_000 });
-      const unsub = qc.watchKey(['x']).subscribe(() => {});
+      const unsub = qc.observe({ fetch: false, key: ['x'] }).subscribe(() => {});
 
       unsub();
 
@@ -321,18 +321,18 @@ describe('Query Client', () => {
       expect(shapes[shapes.length - 1]).toEqual({ id: 1 });
     });
 
-    it('invalidate() resets observed set()-only entries to idle when no fn is stored', async () => {
+    it('invalidate() resets observed set()-only entries to loading when no fn is stored', async () => {
       const qc = createQuery();
       const states: QueryState[] = [];
 
       qc.set(['manual', 1], { id: 1 });
 
-      const store = qc.watchKey(['manual', 1]);
+      const store = qc.observe({ fetch: false, key: ['manual', 1] });
       const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       qc.invalidate(['manual', 1]);
 
-      expect(states[states.length - 1]?.status).toBe('idle');
+      expect(states[states.length - 1]?.status).toBe('loading');
       expect(states[states.length - 1]?.data).toBeUndefined();
       // Entry still exists while observer holds it alive
       expect(qc.getState(['manual', 1])).not.toBeNull();
@@ -348,7 +348,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn, key: ['users', 1], staleTime: 10_000 });
 
       const states: QueryState[] = [];
-      const store = qc.watchKey<{ id: number }>(['users', 1]);
+      const store = qc.observe<{ id: number }>({ fetch: false, key: ['users', 1] });
       const unsub = store.subscribe(() => states.push({ ...store.peek() }));
 
       qc.invalidate(['users', 1]);
@@ -374,7 +374,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate triggers background revalidation, not eviction.
-      const unsub2 = qc.watchKey(['users', 1]).subscribe(() => {});
+      const unsub2 = qc.observe({ fetch: false, key: ['users', 1] }).subscribe(() => {});
 
       qc.invalidate(['users', 1]);
 
@@ -412,7 +412,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn: blockingFn, key: ['users', 1], staleTime: 60_000 });
 
       // Subscribe so invalidate does background revalidation.
-      const unsub3 = qc.watchKey(['users', 1]).subscribe(() => {});
+      const unsub3 = qc.observe({ fetch: false, key: ['users', 1] }).subscribe(() => {});
 
       qc.invalidate(['users', 1]); // Kicks off blockingFn via startFetch.
       qc.cancel(['users', 1]); // Abort before it resolves.
@@ -434,7 +434,7 @@ describe('Query Client', () => {
 
       const qc = createQuery();
       let calls = 0;
-      const unsub = qc.watchKey(['err-recovery']).subscribe(() => {});
+      const unsub = qc.observe({ fetch: false, key: ['err-recovery'] }).subscribe(() => {});
 
       // Seed with successful data then fail a refetch to arrive at error + stale data
       await qc.fetch({
@@ -484,7 +484,7 @@ describe('Query Client', () => {
       vi.useFakeTimers();
 
       const qc = createQuery();
-      const unsub = qc.watchKey(['key']).subscribe(() => {});
+      const unsub = qc.observe({ fetch: false, key: ['key'] }).subscribe(() => {});
       let attempt = 0;
 
       const fn = vi.fn(async () => {
@@ -591,7 +591,7 @@ describe('Query Client', () => {
   });
 
   describe('Execution Controls', () => {
-    it('enabled:false skips the fetch and keeps entry idle', async () => {
+    it('enabled:false skips the fetch and keeps entry loading', async () => {
       const qc = createQuery();
       let calls = 0;
 
@@ -599,7 +599,7 @@ describe('Query Client', () => {
 
       expect(calls).toBe(0);
       expect(result).toBeUndefined();
-      expect(qc.getState(['x'])?.status).toBe('idle');
+      expect(qc.getState(['x'])).toBeNull(); // No entry created — enabled:false with no prior data
     });
 
     it('enabled:false returns existing cached data without refetching', async () => {
@@ -690,7 +690,7 @@ describe('Query Client', () => {
 
       // Fetching state should expose placeholder with isFetching:true
       await vi.waitFor(() => expect(states.length).toBeGreaterThan(0));
-      expect(states.at(-1)).toMatchObject({ data: { id: 0 }, status: 'pending' });
+      expect(states.at(-1)).toMatchObject({ data: { id: 0 }, status: 'loading' });
       expect(states.at(-1)?.isFetching).toBe(true);
 
       resolveQuery({ id: 7 });
@@ -701,14 +701,14 @@ describe('Query Client', () => {
       unsub();
     });
 
-    it('fetch() with enabled:false makes no network request and leaves entry idle', async () => {
+    it('fetch() with enabled:false makes no network request and leaves no entry', async () => {
       const qc = createQuery();
       let calls = 0;
 
       await qc.fetch({ enabled: false, fn: async () => ({ id: ++calls }), key: ['prefetch-disabled'] });
 
       expect(calls).toBe(0);
-      expect(qc.getState(['prefetch-disabled'])?.status).toBe('idle');
+      expect(qc.getState(['prefetch-disabled'])).toBeNull(); // No entry created — enabled:false with no prior data
       expect(qc.get(['prefetch-disabled'])).toBeUndefined();
     });
   });
@@ -782,23 +782,23 @@ describe('Query Client', () => {
     });
   });
 
-  describe('External Store (watchKey)', () => {
-    it('peek() returns idle state for unknown keys before subscribe()', () => {
+  describe('External Store (observe fetch:false)', () => {
+    it('peek() returns loading state for unknown keys before subscribe()', () => {
       const qc = createQuery();
-      const store = qc.watchKey(['unknown']);
+      const store = qc.observe({ fetch: false, key: ['unknown'] });
 
-      expect(store.peek()).toEqual({
+      expect(store.peek()).toMatchObject({
         data: undefined,
         error: null,
         isFetching: false,
-        status: 'idle',
+        status: 'loading',
         updatedAt: undefined,
       });
     });
 
     it('subscribe() + peek() reflect query state updates', async () => {
       const qc = createQuery();
-      const store = qc.watchKey<{ id: number }>(['users', 1]);
+      const store = qc.observe<{ id: number }>({ fetch: false, key: ['users', 1] });
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -810,7 +810,7 @@ describe('Query Client', () => {
         key: ['users', 1],
       });
 
-      expect(store.peek().status).toBe('pending');
+      expect(store.peek().status).toBe('loading');
       expect(store.peek().isFetching).toBe(true);
 
       await pending;
@@ -860,7 +860,7 @@ describe('Query Client', () => {
 
     it('subscribe() does not notify immediately on setup', () => {
       const qc = createQuery();
-      const store = qc.watchKey(['users', 1]);
+      const store = qc.observe({ fetch: false, key: ['users', 1] });
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -873,7 +873,7 @@ describe('Query Client', () => {
 
     it('unsubscribe() stops further notifications', async () => {
       const qc = createQuery();
-      const store = qc.watchKey(['users', 1]);
+      const store = qc.observe({ fetch: false, key: ['users', 1] });
       let notifications = 0;
 
       const unsub = store.subscribe(() => {
@@ -968,7 +968,7 @@ describe('Query Client', () => {
   });
 
   describe('observe() with select + placeholderData', () => {
-    it('peek() returns placeholderData while pending when select returns undefined', async () => {
+    it('peek() returns placeholderData while loading when select returns undefined', async () => {
       const qc = createQuery();
       const store = qc.observe<{ id: number; name: string }, string>({
         fn: () => new Promise(() => {}),
@@ -981,7 +981,7 @@ describe('Query Client', () => {
 
       const snap = store.peek();
 
-      expect(snap.status).toBe('pending');
+      expect(snap.status).toBe('loading');
       expect(snap.data).toBe('Loading…');
 
       unsub();
@@ -1016,7 +1016,7 @@ describe('Query Client', () => {
       await qc.fetch({ fn: fnObserved, key: ['observed'], staleTime: 60_000 });
       await qc.fetch({ fn: fnUnobserved, key: ['unobserved'], staleTime: 60_000 });
 
-      const unsub = qc.watchKey(['observed']).subscribe(() => {});
+      const unsub = qc.observe({ fetch: false, key: ['observed'] }).subscribe(() => {});
 
       qc.invalidate(['observed']);
       qc.invalidate(['unobserved']);
@@ -1079,7 +1079,7 @@ describe('Query Client', () => {
     it('set() with gcTime:0 — active observer — notified then entry retained while subscribed', () => {
       const qc = createQuery();
       const notifiedData: unknown[] = [];
-      const store = qc.watchKey(['key']);
+      const store = qc.observe({ fetch: false, key: ['key'] });
 
       const unsub = store.subscribe(() => {
         notifiedData.push(store.peek().data);
@@ -1123,7 +1123,7 @@ describe('Query Client', () => {
         target: string,
       ): Promise<void> {
         return new Promise((resolve) => {
-          const store = qc.watchKey(key);
+          const store = qc.observe({ fetch: false, key });
           const unsub = store.subscribe(() => {
             if (store.peek().status === target) {
               unsub();
@@ -1138,8 +1138,8 @@ describe('Query Client', () => {
         const fn = vi.fn(async () => 42);
         const store = qc.observe({ fn, key: ['obs', 1] });
 
-        // observe() triggers the fetch immediately — status is pending or already populated
-        expect(['idle', 'pending']).toContain(store.peek().status);
+        // observe() triggers the fetch immediately — status is loading or already populated
+        expect(['loading', 'success']).toContain(store.peek().status);
 
         await waitForStatus(qc, ['obs', 1], 'success');
 
@@ -1256,15 +1256,15 @@ describe('Query Client', () => {
         expect(notifications.length).toBeGreaterThan(0);
       });
 
-      it('returns idle states for keys that have never been fetched', () => {
+      it('returns loading states for keys that have never been fetched', () => {
         const qc = createQuery();
 
         const store = qc.observeMany([['missing1'], ['missing2']]);
         const snap = store.peek();
 
         expect(snap).toHaveLength(2);
-        expect(snap[0].status).toBe('idle');
-        expect(snap[1].status).toBe('idle');
+        expect(snap[0].status).toBe('loading');
+        expect(snap[1].status).toBe('loading');
       });
     });
 
@@ -1286,14 +1286,14 @@ describe('Query Client', () => {
         await qc.fetch({ fn: async () => ({ id: 1 }), key: ['remove-observed'] });
 
         const states: string[] = [];
-        const store = qc.watchKey(['remove-observed']);
+        const store = qc.observe({ fetch: false, key: ['remove-observed'] });
         const unsub = store.subscribe(() => states.push(store.peek().status));
 
         qc.remove(['remove-observed']);
 
         unsub();
-        expect(states).toContain('idle');
-        expect(store.peek().status).toBe('idle');
+        expect(states).toContain('loading');
+        expect(store.peek().status).toBe('loading');
         expect(store.peek().data).toBeUndefined();
       });
 

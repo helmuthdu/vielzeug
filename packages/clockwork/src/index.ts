@@ -1,5 +1,5 @@
 export { MachineError, MachineErrorCode } from './errors.js';
-export { define, machine, resolveTransition } from './interpret.js';
+export { createMachine } from './interpret.js';
 export type {
   ActionArgs,
   ActionFn,
@@ -17,11 +17,18 @@ export type {
   InvokeDef,
   LifecycleEvent,
   LifecycleFn,
+  MachineAction,
   MachineConfig,
   MachineDefinition,
   MachineEvent,
+  MachineGuard,
   MachineInstance,
+  MachineSchema,
   MachineSnapshot,
+  MachineTypeConfig,
+  MachineTypeDefinition,
+  MachineTypeInstance,
+  MachineTypeOptions,
   PersistenceAdapter,
   SendResult,
   StateNode,

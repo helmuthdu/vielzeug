@@ -35,14 +35,14 @@ All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `re
 await i18n.preload('de');
 await i18n.setLocale('de');
 
-i18n.register('fr', () => import('./locales/fr.json').then((m) => m.default));
+await i18n.register('fr', () => import('./locales/fr.json').then((m) => m.default));
 
 const locales = i18n.getSupportedLocales();
 ```
 
 - `preload(locale)` loads the catalog without switching the active locale. Use it to warm up a locale before the user requests it.
 - `setLocale(locale)` loads if needed, then atomically switches and bumps the version.
-- `register(locale, source)` replaces the full catalog for a locale at runtime. Existing subscribers are notified.
+- `register(locale, source)` returns `Promise<void>`. For async loaders it resolves when the catalog is loaded. For static objects it resolves immediately. Subscribers are notified after the catalog is available.
 
 Locale lookup expands subtags automatically — `en-US` checks `en-US` then `en` before moving to explicit fallbacks.
 
@@ -87,10 +87,10 @@ nav.fmt.number(1234); // same as i18n.fmt.number(1234)
 
 ## Formatting
 
-Import `createFormatter` from the separate `@vielzeug/lingua/format` entry point:
+Import `createFormatter` from the main entry:
 
 ```ts
-import { createFormatter } from '@vielzeug/lingua/format';
+import { createFormatter } from '@vielzeug/lingua';
 
 // Pass a getter so the formatter follows locale changes
 const fmt = createFormatter(() => i18n.locale);
@@ -110,7 +110,9 @@ const price = i18n.fmt.currency(49.95, 'USD');
 
 ## Namespace-based Lazy Loading
 
-`extend(ns, factory, locale?)` registers a namespace factory and immediately loads it for `locale` (defaults to the active locale). Namespaces let you add per-route or per-feature keys without replacing the full catalog.
+There are two ways to load namespaces. Use `extend()` as a one-call convenience, or split the steps with `registerNamespace()` + `loadNamespace()` when you want to defer loading.
+
+**`extend(ns, factory, locale?)`** — register and load in one call:
 
 ```ts
 // Load when entering the settings route
@@ -123,11 +125,26 @@ async function onEnterSettings() {
 await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
 ```
 
+**`registerNamespace()` + `loadNamespace()`** — register eagerly, load on demand:
+
+```ts
+const settingsFactory = (locale: string) =>
+  import(`./locales/${locale}/settings.json`).then((m) => m.default);
+
+// Register at startup — no network request yet
+i18n.registerNamespace('settings', settingsFactory);
+
+// Load lazily when the route is activated
+async function onEnterSettings() {
+  await i18n.loadNamespace('settings'); // deduplicates concurrent calls
+}
+```
+
 Key characteristics:
 
-- Defaults to the active locale when no `locale` argument is provided.
-- Concurrent calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
-- Subsequent calls after a successful load are no-ops.
+- All three methods (`extend`, `registerNamespace`, `loadNamespace`) deduplicate per `ns + locale` — the factory runs at most once.
+- `isNamespaceRegistered(ns)` returns `true` after `registerNamespace()` or `extend()`.
+- `isNamespaceLoaded(ns, locale?)` returns `true` only after a successful load for that locale.
 
 ## Missing Handling
 
@@ -187,31 +204,31 @@ Key characteristics:
 
 ## SSR Hydration
 
-Use `serializeI18n()` on the server and `hydrateI18n()` on the client to avoid re-fetching catalogs:
+Prefer the instance methods `getState()` and `restoreState()` — they are equivalent to `serializeI18n` / `hydrateI18n` but require no extra imports:
 
 ```ts
-import { createI18n, serializeI18n, hydrateI18n } from '@vielzeug/lingua';
+import { createI18n } from '@vielzeug/lingua';
 
 // Server (Node.js / Deno)
 const i18n = createI18n({ catalogs: { de: deMessages, en: enMessages }, locale: 'de' });
-const state = serializeI18n(i18n);
+const state = i18n.getState();
 // Embed state in the HTML response:
 // <script>window.__I18N__ = ${JSON.stringify(state)}</script>
 
 // Client
-const i18n = createI18n({ catalogs: { en: enMessages, de: () => import('./de.json').then((m) => m.default) } });
-hydrateI18n(i18n, window.__I18N__);
+const i18n = createI18n();
+i18n.restoreState(window.__I18N__);
 // Catalogs from state are immediately available; no network request needed.
 ```
 
-`hydrateI18n()` replaces all catalogs and switches the active locale, notifying subscribers once.
+`restoreState()` replaces all catalogs, switches the active locale, clears namespace loaded-markers, and notifies subscribers once. The free functions `serializeI18n()` and `hydrateI18n()` are equivalent alternatives.
 
-**Warning:** `serializeI18n()` silently omits locales that were registered as async loaders but not yet preloaded. Use `isLoaded()` to guard:
+**Warning:** `getState()` silently omits locales registered as async loaders but not yet preloaded. Use `isLoaded()` to guard:
 
 ```ts
 const locales = i18n.getSupportedLocales();
 await Promise.all(locales.filter((l) => !i18n.isLoaded(l)).map((l) => i18n.preload(l)));
-const state = serializeI18n(i18n); // all locales guaranteed to be present
+const state = i18n.getState(); // all locales guaranteed to be present
 ```
 
 ## Subscriptions
@@ -353,8 +370,8 @@ router.subscribe(() => {
 - Use lazy catalog functions (`() => import('./locales/de.json')`) for locales not needed at startup.
 - Keep translation keys flat or one level deep — deeply nested keys are harder to refactor.
 - Set `fallback` to a locale with 100% coverage so missing keys degrade gracefully.
-- Use `extend(ns, factory, locale?)` for per-route or per-feature key sets to add keys without replacing the full catalog.
-- Use `isLoaded(locale)` before `serializeI18n()` in SSR to avoid silently omitting async-loader locales.
+- Use `extend(ns, factory, locale?)` or `registerNamespace()` + `loadNamespace()` for per-route or per-feature key sets.
+- Use `isLoaded(locale)` before `getState()` / `serializeI18n()` in SSR to avoid silently omitting async-loader locales.
 - Use `isRegistered(locale)` to check if a locale is configured; use `isLoaded(locale)` to check if it is ready.
 - Call `dispose()` on route-level or request-scoped `fork()` instances when they are no longer needed.
 - Use `{ signal }` in `subscribe()` for lifecycle-safe subscriptions; use the returned `Unsubscribe` otherwise.

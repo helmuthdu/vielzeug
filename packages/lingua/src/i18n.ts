@@ -1,6 +1,8 @@
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
+import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore } from './_catalog-store';
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
-import { E, LinguaError, checkDisposed, checkDisposedAsync, disposedError } from './_errors';
+import { E, LinguaError, checkDisposed, disposedError } from './_errors';
+import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import { issue } from './_warn';
 import { type Formatter, createFormatter } from './format';
 import { type CompiledTemplate, renderTemplate } from './template';
@@ -14,24 +16,21 @@ export type Locale = string;
 export type Unsubscribe = () => void;
 
 export type { Messages } from './_catalog';
+export type { Loader, LocaleSource } from './_catalog-store';
+export type { NamespaceFactory } from './_namespace-store';
 
 export type TranslateVars = Record<string, unknown>;
-export type Loader<M extends Messages = Messages> = () => Promise<M>;
-export type LocaleSource<M extends Messages = Messages> = M | Loader<M>;
 
 /**
- * Factory function that returns translations for a given locale within a namespace.
- * Must return a `Promise<M>` — use `async () => import(...)` or `() => fetch(...).then(...)`.
- *
- * @example
- * i18n.extend('settings', (locale) =>
- *   import(`./locales/${locale}/settings.json`).then((m) => m.default),
- * );
+ * A snapshot of the i18n instance state at a point in time.
+ * Object identity changes on every observable change (locale switch, catalog load).
+ * `t` and `tp` are bound to the locale captured in this snapshot.
  */
-export type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
-
 export type I18nSnapshot = {
   readonly locale: Locale;
+  /** @security Returns raw, unsanitized strings. Sanitize before `innerHTML` insertion. */
+  readonly t: (key: string, vars?: TranslateVars) => string;
+  readonly tp: (key: string, count: number, options?: TpOptions) => string;
 };
 
 /** Shape of the serialised state produced by `serializeI18n()`. Pass to `hydrateI18n()` on the client. */
@@ -133,10 +132,8 @@ export type I18n<M extends Messages = Messages> = {
    * (defaults to the active locale). Deduplicates concurrent and repeated calls.
    *
    * @remarks
-   * Passing a new factory after the namespace is already loaded updates the registry for
-   * future reloads (e.g. after `register()` replaces the catalog) but does **not** reload
-   * the namespace immediately. The new factory takes effect the next time the namespace
-   * marker is cleared (by a `register()` or `hydrateI18n()` call).
+   * Call `registerNamespace()` first if you only want to register without loading.
+   * `extend()` is a convenience that does both in one call.
    *
    * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
    *
@@ -164,6 +161,18 @@ export type I18n<M extends Messages = Messages> = {
   /** Returns the current snapshot. Object identity changes on every observable change. */
   getSnapshot(): I18nSnapshot;
   /**
+   * Extracts a serializable snapshot of all loaded catalogs and the active locale.
+   * Pass the result to `hydrateI18n()` on the client.
+   *
+   * **Warning:** Only fully resolved catalogs are included. Loader-only locales not yet
+   * preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
+   *
+   * **Warning:** The namespace registry is **not** serialized — factory functions cannot
+   * be converted to JSON. After `hydrateI18n()`, call `extend()` again for each namespace
+   * before relying on namespace-patched keys.
+   */
+  getState(): I18nState;
+  /**
    * Returns all registered locales.
    * - Default (no argument): locales in registration order.
    * - `getSupportedLocales(true)`: sorted in ascending code-point order.
@@ -184,15 +193,64 @@ export type I18n<M extends Messages = Messages> = {
    */
   isLoaded(locale: Locale): boolean;
   /**
+   * Returns `true` if the namespace has been fully loaded for the given locale.
+   * Returns `false` if it is not registered or not yet loaded for this locale.
+   */
+  isNamespaceLoaded(ns: string, locale?: Locale): boolean;
+  /**
+   * Returns `true` if a namespace factory is registered under the given name.
+   */
+  isNamespaceRegistered(ns: string): boolean;
+  /**
    * Returns `true` if `locale` is in the known locale registry — either resolved or pending loader.
    * Returns `false` for locales that have never been registered.
    */
   isRegistered(locale: Locale): boolean;
+  /**
+   * Loads a previously registered namespace for the given locale (defaults to the active locale).
+   * Deduplicates concurrent and repeated calls.
+   *
+   * @throws an error if the namespace has not been registered with `registerNamespace()` first.
+   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   */
+  loadNamespace(ns: string, locale?: Locale): Promise<void>;
   readonly locale: Locale;
   preload(locale: Locale): Promise<void>;
-  register(locale: Locale, source: LocaleSource<M>): void;
+  /**
+   * Registers (or replaces) a locale source. If the source is an async loader, it is loaded
+   * immediately and this method returns a Promise that resolves when the load is complete.
+   * If the source is a static message object, it is synchronously registered and the returned
+   * Promise resolves immediately.
+   *
+   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   */
+  register(locale: Locale, source: LocaleSource<M>): Promise<void>;
+  /**
+   * Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading,
+   * or use `extend()` to register and load in one call.
+   *
+   * @remarks
+   * Re-registering a namespace updates the factory for future loads but does **not** reload
+   * the namespace if it is already loaded. The new factory takes effect the next time the
+   * namespace marker is cleared (by a `register()` or `restoreState()` call).
+   *
+   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   */
+  registerNamespace(ns: string, factory: NamespaceFactory<M>): void;
+  /**
+   * Hydrates this instance with pre-loaded state (e.g. from a server-rendered payload).
+   *
+   * @remarks The namespace registry is **not** included in `I18nState`. After restoring,
+   * call `extend()` for each namespace before relying on namespace-patched keys.
+   *
+   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaError(E.RESTORE_NO_LOCALE)` if the state's locale has no catalog.
+   */
+  restoreState(state: I18nState): void;
   /**
    * Returns a scoped translator. All `t()` / `tp()` calls are automatically prefixed with `${prefix}.`.
+   * The returned object is memoized — calling `scope(prefix)` with the same string always returns the
+   * same reference.
    *
    * @example
    * const nav = i18n.scope('nav');
@@ -239,15 +297,12 @@ type LocaleState = {
 };
 
 function buildState(locale: Locale, fallback: Locale[], caches: LocaleCaches): LocaleState {
-  const { chain, set } = buildLocaleChain(locale, fallback);
-
-  void caches; // caches used at call-site; passed for future use
+  const { chain, set } = buildLocaleChain(locale, fallback, caches);
 
   return { chain, chainSet: set, locale };
 }
 
 // ─── Plural key priority ──────────────────────────────────────────────────────
-// R10: Explicit, readable plural key resolution order.
 // Cardinal zero: try .zero override first, then CLDR form, then .other as final fallback.
 // Ordinal / non-zero: try CLDR form, then .other as final fallback.
 function pluralKeyPriority(base: string, form: string, count: number, ordinal: boolean): string[] {
@@ -262,17 +317,6 @@ function pluralKeyPriority(base: string, form: string, count: number, ordinal: b
   return keys;
 }
 
-// ─── Symbol keys for internal SSR bridge ─────────────────────────────────────
-// Defined before _createI18nImpl so the object literal can reference them.
-
-const _GET_STATE = Symbol('lingua.getState');
-const _RESTORE_STATE = Symbol('lingua.restoreState');
-
-type I18nWithSsr<M extends Messages = Messages> = I18n<M> & {
-  [_GET_STATE](): I18nState;
-  [_RESTORE_STATE](state: I18nState): void;
-};
-
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 /** Overload: explicit type parameter (strict typing) */
@@ -286,46 +330,30 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 // ─── Internal seed shape ──────────────────────────────────────────────────────
 
 type I18nSeed<M extends Messages> = {
-  catalogSeed?: Map<Locale, CatalogEntry>;
-  loadedNamespaces?: Map<string, Set<string>>;
-  namespaceRegistry?: Map<string, NamespaceFactory<M>>;
+  catalogStore?: CatalogStore<M>;
+  nsStore?: NamespaceStore<M>;
 };
 
-function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>, _seed?: I18nSeed<M>): I18nWithSsr<M> {
+function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>, _seed?: I18nSeed<M>): I18n<M> {
   const cfg: I18nOptions<M> = config ?? {};
 
-  // ─── Per-instance caches (R8: no shared module-level state) ───────────────
+  // ─── Per-instance caches (no shared module-level state) ───────────────────
   const caches: LocaleCaches = createLocaleCaches();
 
   const canonL = (loc: string) => canon(loc, caches);
 
   const fallback = Array.isArray(cfg.fallback) ? cfg.fallback.map(canonL) : cfg.fallback ? [canonL(cfg.fallback)] : [];
 
-  // ─── Locale state ─────────────────────────────────────────────────────────
-  let state: LocaleState = buildState(canonL(cfg.locale ?? 'en'), fallback, caches);
-
-  // ─── Catalog state ────────────────────────────────────────────────────────
-  const catalogs = new Map<Locale, CatalogEntry>();
-  const loaders = new Map<Locale, Loader<M>>();
-  const loadingTasks = new Map<Locale, Promise<void>>();
-  const knownLocales = new Set<Locale>();
-
-  // ─── Namespace state ──────────────────────────────────────────────────────
-  // Two-level Map<namespace, Set<locale>> — no encoded composite keys.
-  // Seeded from parent on fork so already-loaded namespaces are not re-fetched.
-  const namespaceRegistry = new Map<string, NamespaceFactory<M>>(_seed?.namespaceRegistry);
-  const loadedNamespaces = new Map<string, Set<string>>();
-  const namespaceTasks = new Map<string, Map<string, Promise<void>>>();
-
-  if (_seed?.loadedNamespaces) {
-    for (const [ns, localeSet] of _seed.loadedNamespaces) {
-      loadedNamespaces.set(ns, new Set(localeSet));
-    }
-  }
-
   // ─── Disposal ─────────────────────────────────────────────────────────────
   let disposed = false;
   const disposeController = new AbortController();
+
+  // ─── Bounded stores ───────────────────────────────────────────────────────
+  const catalogStore: CatalogStore<M> = createCatalogStore(() => disposed);
+  const nsStore: NamespaceStore<M> = createNamespaceStore(() => disposed);
+
+  // ─── Locale state ─────────────────────────────────────────────────────────
+  let state: LocaleState = buildState(canonL(cfg.locale ?? 'en'), fallback, caches);
 
   // ─── Subscribers ──────────────────────────────────────────────────────────
   const subscribers = new Set<(snapshot: I18nSnapshot) => void>();
@@ -334,12 +362,10 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   const onMissingVar = cfg.onMissingVar ?? ((varName: string) => `{${varName}}`);
   const onSubscriberError = cfg.onSubscriberError ?? ((error: unknown) => issue('subscriber error', error));
 
-  let snapshot: I18nSnapshot = { locale: state.locale };
-
-  // Lazy formatter — avoids Intl overhead for SSR forks that only need t().
+  // ─── Lazy formatter — avoids Intl overhead for SSR forks that only need t(). ──
   let _fmt: Formatter | undefined;
 
-  // Scope cache — stable object references per prefix for reactive framework renders.
+  // ─── Scope cache — stable object references per prefix for reactive framework renders. ──
   const scopeCache = new Map<string, ScopedI18n>();
 
   const getFormatter = (): Formatter => {
@@ -348,37 +374,12 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     return _fmt;
   };
 
-  // ─── Internal helpers ──────────────────────────────────────────────────────
-
-  const _registerRaw = (normalized: Locale, flat: Map<string, string>): void => {
-    let entry = catalogs.get(normalized);
-
-    if (!entry) {
-      entry = new CatalogEntry();
-      catalogs.set(normalized, entry);
-    }
-
-    entry.setAll(flat);
-  };
-
-  const bump = (): void => {
-    snapshot = { locale: state.locale };
-
-    const listeners = [...subscribers];
-
-    for (const listener of listeners) {
-      try {
-        listener(snapshot);
-      } catch (error) {
-        onSubscriberError(error);
-      }
-    }
-  };
+  // ─── Translate helpers ────────────────────────────────────────────────────
 
   // Single-pass entry lookup across the active fallback chain.
   const findEntry = (key: string): { compiled: CompiledTemplate; message: string } | undefined => {
     for (const candidate of state.chain) {
-      const found = catalogs.get(candidate)?.get(key);
+      const found = catalogStore.resolve(candidate)?.get(key);
 
       if (found !== undefined) return found;
     }
@@ -392,112 +393,6 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     vars: TranslateVars | undefined,
   ): string => renderTemplate(found.compiled, vars, key, state.locale, onMissingVar);
 
-  const registerInternal = (loc: Locale, source: LocaleSource<M>): void => {
-    checkDisposed(disposed);
-
-    const normalized = canonL(loc);
-
-    loadingTasks.delete(normalized);
-    knownLocales.add(normalized);
-
-    // Clear namespace loaded-markers for this locale so namespaces can be re-applied
-    // after catalog replacement.
-    for (const localeSet of loadedNamespaces.values()) {
-      localeSet.delete(normalized);
-    }
-
-    if (typeof source === 'function') {
-      loaders.set(normalized, source as Loader<M>);
-      catalogs.delete(normalized);
-    } else {
-      loaders.delete(normalized);
-      catalogs.delete(normalized);
-      _registerRaw(normalized, flattenStrings(source as M));
-    }
-
-    if (state.chainSet.has(normalized)) bump();
-  };
-
-  if (_seed?.catalogSeed) {
-    for (const [loc, entry] of _seed.catalogSeed) {
-      catalogs.set(loc, entry.clone());
-      knownLocales.add(loc);
-    }
-  }
-
-  if (cfg.catalogs) {
-    for (const [loc, source] of Object.entries(cfg.catalogs)) {
-      const normalized = canonL(loc);
-
-      knownLocales.add(normalized);
-
-      if (typeof source === 'function') {
-        loaders.set(normalized, source as Loader<M>);
-      } else {
-        _registerRaw(normalized, flattenStrings(source as M));
-      }
-    }
-  }
-
-  const preload = (loc: Locale): Promise<void> => {
-    const early = checkDisposedAsync(disposed);
-
-    if (early) return early;
-
-    const normalized = canonL(loc);
-
-    if (catalogs.has(normalized)) return Promise.resolve();
-
-    const loader = loaders.get(normalized);
-
-    if (!loader) return Promise.reject(new LinguaError(E.MISSING_LOCALE, `Missing locale source for "${normalized}".`));
-
-    const existing = loadingTasks.get(normalized);
-
-    if (existing) return existing;
-
-    const task = loader().then(
-      (messages) => {
-        if (loaders.get(normalized) !== loader) return;
-
-        loaders.delete(normalized);
-        _registerRaw(normalized, flattenStrings(messages));
-        loadingTasks.delete(normalized);
-
-        if (state.chainSet.has(normalized)) bump();
-      },
-      (error: unknown) => {
-        if (loaders.get(normalized) === loader) loadingTasks.delete(normalized);
-
-        throw error;
-      },
-    );
-
-    loadingTasks.set(normalized, task);
-
-    return task;
-  };
-
-  // patchInternal is used by extend() only.
-  const patchInternal = async (loc: Locale, messages: Messages): Promise<void> => {
-    const early = checkDisposedAsync(disposed);
-
-    if (early) return early;
-
-    const normalized = canonL(loc);
-
-    if (loaders.has(normalized)) {
-      await preload(normalized);
-
-      if (disposed) return;
-    }
-
-    _registerRaw(normalized, flattenStrings(messages));
-    knownLocales.add(normalized);
-
-    if (state.chainSet.has(normalized)) bump();
-  };
-
   const translate = (key: MessageLeafKeys<M> | (string & {}), vars?: TranslateVars): string => {
     const base = String(key);
     const found = findEntry(base);
@@ -507,11 +402,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     return interpolate(base, found, vars);
   };
 
-  const translatePlural: I18n<M>['tp'] = (
-    key: MessageBranchKeys<M> | (string & {}),
-    count: number,
-    options?: TpOptions,
-  ): string => {
+  const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string => {
     if (!Number.isFinite(count)) {
       throw new LinguaError(E.INVALID_COUNT, '`count` must be a finite number.');
     }
@@ -529,7 +420,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     // Walk the fallback chain locale-by-locale, selecting CLDR plural form using each
     // locale's own rules. This ensures cross-locale fallbacks produce grammatically correct forms.
     for (const candidate of state.chain) {
-      const catalog = catalogs.get(candidate);
+      const catalog = catalogStore.resolve(candidate);
 
       if (!catalog) continue;
 
@@ -548,9 +439,73 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     return onMissingKey(base, state.locale);
   };
 
-  // R9: switchGen replaces pendingSwitch + stateAtCall pattern.
-  // Monotonically-increasing integer — "last writer wins" for concurrent setLocale() calls.
+  // ─── bump() ───────────────────────────────────────────────────────────────
+  // Rebuilds the snapshot and notifies all current subscribers.
+
+  let snapshot: I18nSnapshot = {
+    locale: state.locale,
+    t: translate,
+    tp: translatePlural,
+  };
+
+  const bump = (): void => {
+    snapshot = { locale: state.locale, t: translate, tp: translatePlural };
+
+    const listeners = [...subscribers];
+
+    for (const listener of listeners) {
+      try {
+        listener(snapshot);
+      } catch (error) {
+        onSubscriberError(error);
+      }
+    }
+  };
+
+  // ─── Wire catalog store onChange → bump ───────────────────────────────────
+  catalogStore.onChange = (loc: Locale) => {
+    if (state.chainSet.has(loc)) bump();
+  };
+
+  // ─── Seed from parent fork ─────────────────────────────────────────────────
+  if (_seed?.catalogStore) {
+    catalogStore.seedFrom(_seed.catalogStore.catalogs, _seed.catalogStore.pendingLoaders);
+  }
+
+  if (_seed?.nsStore) {
+    nsStore.seedFrom(_seed.nsStore);
+  }
+
+  // ─── Initial catalogs from config ─────────────────────────────────────────
+  if (cfg.catalogs) {
+    const staticEntries = new Map<Locale, CatalogEntry>();
+    const loaderEntries = new Map<Locale, Loader<M>>();
+
+    for (const [loc, source] of Object.entries(cfg.catalogs)) {
+      const normalized = canonL(loc);
+
+      if (typeof source === 'function') {
+        loaderEntries.set(normalized, source as Loader<M>);
+      } else {
+        const entry = new CatalogEntry();
+
+        entry.setAll(flattenStrings(source as M));
+        staticEntries.set(normalized, entry);
+      }
+    }
+
+    // Use seedFrom for zero-overhead init (no bump, no notifications during setup)
+    catalogStore.seedFrom(staticEntries, loaderEntries);
+  }
+
+  // ─── Preload helper ───────────────────────────────────────────────────────
+
+  const preload = (loc: Locale): Promise<void> => catalogStore.preload(canonL(loc));
+
+  // ─── Monotonic generation counter — last writer wins for concurrent setLocale() ──
   let switchGen = 0;
+
+  // ─── Subscribe helper ─────────────────────────────────────────────────────
 
   const subscribeInternal = (callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe => {
     const unsubscribe = (): void => {
@@ -580,48 +535,6 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
   // ─── Public object ─────────────────────────────────────────────────────────
 
   return {
-    // Symbol-keyed SSR methods — not on the I18n interface, consumed by serializeI18n/hydrateI18n.
-    [_GET_STATE](): I18nState {
-      const catalogsOut: Record<Locale, Record<string, string>> = {};
-
-      for (const [loc, entry] of catalogs) {
-        catalogsOut[loc] = Object.fromEntries([...entry.entries.entries()].map(([k, { message }]) => [k, message]));
-      }
-
-      return { catalogs: catalogsOut, locale: state.locale };
-    },
-
-    [_RESTORE_STATE](st: I18nState): void {
-      checkDisposed(disposed);
-
-      if (!Object.hasOwn(st.catalogs, st.locale)) {
-        throw new LinguaError(
-          E.RESTORE_NO_LOCALE,
-          `restoreState: locale "${st.locale}" has no catalog in the provided state.`,
-        );
-      }
-
-      for (const [loc, flatCatalog] of Object.entries(st.catalogs)) {
-        const normalized = canonL(loc);
-        const entry = new CatalogEntry();
-
-        entry.setAll(Object.entries(flatCatalog));
-        knownLocales.add(normalized);
-        catalogs.set(normalized, entry);
-
-        for (const localeSet of loadedNamespaces.values()) {
-          localeSet.delete(normalized);
-        }
-      }
-
-      const normalized = canonL(st.locale);
-
-      state = buildState(normalized, fallback, caches);
-      knownLocales.add(normalized);
-      _fmt?.clear();
-      bump();
-    },
-
     get disposalSignal(): AbortSignal {
       return disposeController.signal;
     },
@@ -632,13 +545,8 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       disposed = true;
       disposeController.abort();
       subscribers.clear();
-      catalogs.clear();
-      loaders.clear();
-      loadingTasks.clear();
-      knownLocales.clear();
-      namespaceRegistry.clear();
-      loadedNamespaces.clear();
-      namespaceTasks.clear();
+      catalogStore.dispose();
+      nsStore.dispose();
       scopeCache.clear();
     },
 
@@ -649,42 +557,11 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     extend(ns: string, factory: NamespaceFactory<M>, loc?: Locale): Promise<void> {
       checkDisposed(disposed);
 
-      namespaceRegistry.set(ns, factory);
+      nsStore.registerNamespace(ns, factory);
 
       const normalized = loc ? canonL(loc) : state.locale;
 
-      if (loadedNamespaces.get(ns)?.has(normalized)) return Promise.resolve();
-
-      const nsTasks = namespaceTasks.get(ns);
-      const existing = nsTasks?.get(normalized);
-
-      if (existing) return existing;
-
-      const task = factory(normalized)
-        .then((messages) => patchInternal(normalized, messages as Messages))
-        .then(
-          () => {
-            let localeSet = loadedNamespaces.get(ns);
-
-            if (!localeSet) {
-              localeSet = new Set();
-              loadedNamespaces.set(ns, localeSet);
-            }
-
-            localeSet.add(normalized);
-            namespaceTasks.get(ns)?.delete(normalized);
-          },
-          (err: unknown) => {
-            namespaceTasks.get(ns)?.delete(normalized);
-            throw err;
-          },
-        );
-
-      if (!namespaceTasks.has(ns)) namespaceTasks.set(ns, new Map());
-
-      namespaceTasks.get(ns)!.set(normalized, task);
-
-      return task;
+      return nsStore.loadNamespace(ns, normalized, (l, messages) => catalogStore.patch(l, messages));
     },
 
     get fmt(): Formatter {
@@ -692,15 +569,8 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     },
 
     fork(overrides?: Omit<I18nOptions<M>, 'catalogs'>): I18n<M> {
-      const loaderCatalogs: Record<Locale, LocaleSource<M>> = {};
-
-      for (const [loc, loader] of loaders) {
-        loaderCatalogs[loc] = loader;
-      }
-
       return _createI18nImpl(
         {
-          catalogs: loaderCatalogs,
           fallback: overrides?.fallback ?? (fallback.length > 0 ? fallback : undefined),
           locale: overrides?.locale ?? state.locale,
           onMissingKey: overrides?.onMissingKey ?? cfg.onMissingKey,
@@ -708,9 +578,8 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
           onSubscriberError: overrides?.onSubscriberError ?? cfg.onSubscriberError,
         },
         {
-          catalogSeed: new Map(catalogs),
-          loadedNamespaces: new Map([...loadedNamespaces.entries()].map(([ns, set]) => [ns, new Set(set)])),
-          namespaceRegistry: new Map(namespaceRegistry),
+          catalogStore: catalogStore as CatalogStore<M>,
+          nsStore: nsStore as NamespaceStore<M>,
         },
       );
     },
@@ -719,8 +588,18 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       return snapshot;
     },
 
+    getState(): I18nState {
+      const catalogsOut: Record<Locale, Record<string, string>> = {};
+
+      for (const [loc, entry] of catalogStore.catalogs) {
+        catalogsOut[loc] = Object.fromEntries([...entry.entries.entries()].map(([k, { message }]) => [k, message]));
+      }
+
+      return { catalogs: catalogsOut, locale: state.locale };
+    },
+
     getSupportedLocales(sorted?: boolean): Locale[] {
-      const locales = [...knownLocales];
+      const locales = [...catalogStore.knownLocales()];
 
       return sorted === true ? locales.sort() : locales;
     },
@@ -731,7 +610,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       if (findEntry(base) !== undefined) return true;
 
       for (const candidate of state.chain) {
-        const catalog = catalogs.get(candidate);
+        const catalog = catalogStore.resolve(candidate);
 
         if (!catalog) continue;
 
@@ -743,18 +622,32 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     isLoaded(loc: Locale): boolean {
       try {
-        return catalogs.has(canonL(loc));
+        return catalogStore.isLoaded(canonL(loc));
       } catch {
         return false;
       }
     },
 
+    isNamespaceLoaded(ns: string, loc?: Locale): boolean {
+      return nsStore.isLoaded(ns, loc ? canonL(loc) : state.locale);
+    },
+
+    isNamespaceRegistered(ns: string): boolean {
+      return nsStore.isRegistered(ns);
+    },
+
     isRegistered(loc: Locale): boolean {
       try {
-        return knownLocales.has(canonL(loc));
+        return catalogStore.isRegistered(canonL(loc));
       } catch {
         return false;
       }
+    },
+
+    loadNamespace(ns: string, loc?: Locale): Promise<void> {
+      const normalized = loc ? canonL(loc) : state.locale;
+
+      return nsStore.loadNamespace(ns, normalized, (l, messages) => catalogStore.patch(l, messages));
     },
 
     get locale(): Locale {
@@ -763,7 +656,51 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
     preload,
 
-    register: registerInternal,
+    register(loc: Locale, source: LocaleSource<M>): Promise<void> {
+      const normalized = canonL(loc);
+
+      return catalogStore.register(normalized, source, nsStore);
+    },
+
+    registerNamespace(ns: string, factory: NamespaceFactory<M>): void {
+      nsStore.registerNamespace(ns, factory);
+    },
+
+    restoreState(st: I18nState): void {
+      checkDisposed(disposed);
+
+      if (!Object.hasOwn(st.catalogs, st.locale)) {
+        throw new LinguaError(
+          E.RESTORE_NO_LOCALE,
+          `restoreState: locale "${st.locale}" has no catalog in the provided state.`,
+        );
+      }
+
+      const freshEntries = new Map<Locale, CatalogEntry>();
+
+      for (const [loc, flatCatalog] of Object.entries(st.catalogs)) {
+        const normalized = canonL(loc);
+        const entry = new CatalogEntry();
+
+        entry.setAll(Object.entries(flatCatalog));
+        freshEntries.set(normalized, entry);
+        nsStore.clearLocale(normalized);
+      }
+
+      // Dispose and re-seed the catalog store with the restored entries.
+      // onChange is re-wired immediately after dispose.
+      catalogStore.dispose();
+      catalogStore.onChange = (loc: Locale) => {
+        if (state.chainSet.has(loc)) bump();
+      };
+      catalogStore.seedFrom(freshEntries, new Map());
+
+      const normalized = canonL(st.locale);
+
+      state = buildState(normalized, fallback, caches);
+      _fmt?.clear();
+      bump();
+    },
 
     scope(prefix: MessageBranchKeys<M> | (string & {})): ScopedI18n {
       const pre = String(prefix);
@@ -781,7 +718,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
           if (findEntry(fullKey) !== undefined) return true;
 
           for (const candidate of state.chain) {
-            const catalog = catalogs.get(candidate);
+            const catalog = catalogStore.resolve(candidate);
 
             if (!catalog) continue;
 
@@ -806,7 +743,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
       if (state.locale === normalized) return;
 
-      // R9: monotonic generation counter — last writer wins.
+      // Monotonic generation counter — last writer wins.
       const gen = ++switchGen;
 
       await preload(normalized);
@@ -819,6 +756,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     },
 
     subscribe: subscribeInternal,
+
     [Symbol.dispose](): void {
       this.dispose();
     },
@@ -835,6 +773,9 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
  * Serialises the currently loaded catalogs and active locale into a plain object.
  * Pass the result to `hydrateI18n()` on the client.
  *
+ * Prefer calling `i18n.getState()` directly — these standalone functions are provided
+ * for convenience when you receive a plain `I18n` reference without the full type.
+ *
  * **Warning:** Only fully resolved catalogs are included. Loader-only locales not yet
  * preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
  *
@@ -843,11 +784,14 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
  * before relying on namespace-patched keys.
  */
 export function serializeI18n(i18n: I18n): I18nState {
-  return (i18n as I18nWithSsr)[_GET_STATE]();
+  return i18n.getState();
 }
 
 /**
  * Hydrates an i18n instance with pre-loaded state (e.g. from a server-rendered payload).
+ *
+ * Prefer calling `i18n.restoreState(state)` directly — these standalone functions are
+ * provided for convenience.
  *
  * @remarks The namespace registry is **not** included in `I18nState`. After hydrating,
  * call `extend()` for each namespace before relying on namespace-patched keys.
@@ -856,5 +800,5 @@ export function serializeI18n(i18n: I18n): I18nState {
  * @throws `LinguaError(E.RESTORE_NO_LOCALE)` if the state's locale has no catalog.
  */
 export function hydrateI18n(i18n: I18n, state: I18nState): void {
-  (i18n as I18nWithSsr)[_RESTORE_STATE](state);
+  i18n.restoreState(state);
 }

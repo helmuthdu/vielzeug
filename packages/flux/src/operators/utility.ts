@@ -1,121 +1,98 @@
-import type { Flux, Operator, Unsubscribe } from '../types';
+import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
 
+import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
-import { FluxBufferOverflowError, FluxTimeoutError } from '../errors';
+import { FluxTimeoutError } from '../errors';
 
-export type ShareOptions = {
-  bufferSize?: number;
-  overflow?: 'drop-newest' | 'drop-oldest' | 'error';
-};
+type SharedEntry<T> = { complete?: () => void; error?: (e: unknown) => void; next: (v: T) => void };
 
-/**
- * Multicast a cold `Flux` to multiple subscribers. The first subscriber starts
- * the source; the last unsubscribe stops it.
- *
- * Pass `bufferSize` to replay buffered values to late subscribers.
- */
-export function share<T>(opts?: ShareOptions): Operator<T, T> {
-  return (source) => {
-    const subscribers = new Set<{ complete?: () => void; error?: (e: unknown) => void; next: (v: T) => void }>();
-    const buffer: T[] = [];
-    let sourceUnsub: Unsubscribe | undefined;
-    let sourceDone = false;
-    let sourceError: unknown;
-    let hasError = false;
+function makeMulticast<T>(source: Flux<T>, maxBuffer: number): Flux<T> {
+  const subscribers = new Set<SharedEntry<T>>();
+  const buffer: T[] = [];
+  let sourceUnsub: Unsubscribe | undefined;
+  let sourceDone = false;
+  let sourceError: unknown;
+  let hasError = false;
 
-    return flux<T>((observer) => {
-      if (hasError) {
-        observer.error?.(sourceError);
+  return flux<T>((observer) => {
+    if (hasError) {
+      observer.error?.(sourceError);
 
-        return;
+      return;
+    }
+
+    for (const v of buffer) observer.next(v);
+
+    if (sourceDone) {
+      observer.complete?.();
+
+      return;
+    }
+
+    const entry: SharedEntry<T> = {
+      complete: observer.complete,
+      error: observer.error,
+      next: observer.next,
+    };
+
+    subscribers.add(entry);
+
+    if (subscribers.size === 1) {
+      sourceUnsub = source.subscribe({
+        complete() {
+          sourceDone = true;
+          for (const s of [...subscribers]) s.complete?.();
+          subscribers.clear();
+        },
+        error(err) {
+          hasError = true;
+          sourceError = err;
+          for (const s of [...subscribers]) s.error?.(err);
+          subscribers.clear();
+        },
+        next(v) {
+          if (maxBuffer > 0) {
+            if (buffer.length >= maxBuffer) buffer.shift();
+
+            buffer.push(v);
+          }
+
+          for (const s of [...subscribers]) s.next(v);
+        },
+      });
+    }
+
+    return () => {
+      subscribers.delete(entry);
+
+      if (subscribers.size === 0) {
+        sourceUnsub?.();
+        sourceUnsub = undefined;
       }
-
-      if (sourceDone) {
-        for (const v of buffer) observer.next(v);
-
-        observer.complete?.();
-
-        return;
-      }
-
-      for (const v of buffer) observer.next(v);
-
-      const entry = {
-        complete: observer.complete,
-        error: observer.error,
-        next: observer.next,
-      };
-
-      subscribers.add(entry);
-
-      if (subscribers.size === 1) {
-        sourceUnsub = source.subscribe({
-          complete() {
-            sourceDone = true;
-
-            for (const s of [...subscribers]) s.complete?.();
-
-            subscribers.clear();
-          },
-          error(err) {
-            hasError = true;
-            sourceError = err;
-
-            for (const s of [...subscribers]) s.error?.(err);
-
-            subscribers.clear();
-          },
-          next(v) {
-            const bufSize = opts?.bufferSize;
-
-            if (bufSize) {
-              if (buffer.length >= bufSize) {
-                const strategy = opts?.overflow ?? 'drop-oldest';
-
-                if (strategy === 'drop-oldest') {
-                  buffer.shift();
-                } else if (strategy === 'drop-newest') {
-                  return;
-                } else {
-                  const err = new FluxBufferOverflowError(strategy);
-
-                  for (const s of [...subscribers]) s.error?.(err);
-
-                  subscribers.clear();
-                  sourceUnsub?.();
-
-                  return;
-                }
-              }
-
-              buffer.push(v);
-            }
-
-            for (const s of [...subscribers]) s.next(v);
-          },
-        });
-      }
-
-      return () => {
-        subscribers.delete(entry);
-
-        if (subscribers.size === 0) {
-          sourceUnsub?.();
-          sourceUnsub = undefined;
-        }
-      };
-    });
-  };
+    };
+  });
 }
 
 /**
- * Like `share()` but always replays the last `bufferSize` values to new subscribers.
+ * Multicast a cold `Flux` to multiple subscribers. The first subscriber starts
+ * the source; the last to unsubscribe stops it.
+ *
+ * @example
+ * const hot$ = cold$.pipe(share()); // one source, many subscribers
+ */
+export function share<T>(): Operator<T, T> {
+  return (source) => makeMulticast(source, 0);
+}
+
+/**
+ * Multicast a cold `Flux` and replay the last `bufferSize` values (default: 1)
+ * to any new subscriber.
  *
  * @example
  * const hot$ = cold$.pipe(shareReplay(1)); // last value replayed to late subs
  */
-export function shareReplay<T>(bufferSize: number): Operator<T, T> {
-  return share({ bufferSize, overflow: 'drop-oldest' });
+export function shareReplay<T>(bufferSize = 1): Operator<T, T> {
+  return (source) => makeMulticast(source, Math.max(1, Math.floor(bufferSize)));
 }
 
 /** Run a side effect on each emission without modifying the value. */
@@ -133,34 +110,25 @@ export function tap<T>(fn: (value: T) => void): Operator<T, T> {
     );
 }
 
-/** Delay each emission by `ms` milliseconds. */
-export function delay<T>(ms: number): Operator<T, T> {
+/** Delay each emission by `ms` milliseconds. Pass a custom `scheduler` to control time in tests. */
+export function delay<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
   return (source) =>
     flux<T>((observer) => {
-      const timers: ReturnType<typeof setTimeout>[] = [];
+      const cancels: Array<() => void> = [];
 
       const unsub = source.subscribe({
         complete() {
-          const id = setTimeout(() => {
-            observer.complete?.();
-          }, ms);
-
-          timers.push(id);
+          cancels.push(scheduler.delay(() => observer.complete?.(), ms));
         },
         error: observer.error,
         next(v) {
-          const id = setTimeout(() => {
-            observer.next(v);
-          }, ms);
-
-          timers.push(id);
+          cancels.push(scheduler.delay(() => observer.next(v), ms));
         },
       });
 
       return () => {
         unsub();
-
-        for (const id of timers) clearTimeout(id);
+        for (const cancel of cancels) cancel();
       };
     });
 }
@@ -169,43 +137,42 @@ export function delay<T>(ms: number): Operator<T, T> {
  * Error if no value is emitted within `ms` milliseconds since the last emission
  * (or since subscription, for the first value). The timer resets on each emission —
  * this is an inactivity timeout, not a time-to-first-value or total-duration timeout.
+ * Pass a custom `scheduler` to control time in tests.
  *
  * @example
  * source$.pipe(timeout(5000)); // throws FluxTimeoutError after 5s of silence
  */
-export function timeout<T>(ms: number): Operator<T, T> {
+export function timeout<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
   return (source) =>
     flux<T>((observer) => {
-      let timerId = setTimeout(() => {
-        observer.error?.(new FluxTimeoutError(ms));
-        unsub();
-      }, ms);
+      let cancelTimer!: () => void;
 
-      const reset = (): void => {
-        clearTimeout(timerId);
-        timerId = setTimeout(() => {
+      const startTimer = (): void => {
+        cancelTimer = scheduler.delay(() => {
           observer.error?.(new FluxTimeoutError(ms));
-          unsub();
         }, ms);
       };
 
+      startTimer();
+
       const unsub = source.subscribe({
         complete() {
-          clearTimeout(timerId);
+          cancelTimer();
           observer.complete?.();
         },
         error(err) {
-          clearTimeout(timerId);
+          cancelTimer();
           observer.error?.(err);
         },
         next(v) {
-          reset();
+          cancelTimer();
+          startTimer();
           observer.next(v);
         },
       });
 
       return () => {
-        clearTimeout(timerId);
+        cancelTimer();
         unsub();
       };
     });
@@ -243,23 +210,38 @@ export function catchError<T>(handler: (err: unknown) => Flux<T>): Operator<T, T
 
 /**
  * Re-subscribe to the source up to `count` times on error.
+ * Pass `delayMs` as a fixed number or `(attempt) => number` function for backoff.
+ * Pass a custom `scheduler` to control time in tests.
  *
  * @example
- * fetchStream$.pipe(retry(3)); // retry up to 3 times on error
+ * fetchStream$.pipe(retry(3));
+ * fetchStream$.pipe(retry(3, (n) => Math.min(1000 * 2 ** n, 30_000))); // exponential backoff
  */
-export function retry<T>(count: number): Operator<T, T> {
+export function retry<T>(
+  count: number,
+  delayMs?: number | ((attempt: number) => number),
+  scheduler: Scheduler = DEFAULT_SCHEDULER,
+): Operator<T, T> {
   return (source) =>
     flux<T>((observer) => {
       let attempts = 0;
       let currentUnsub: Unsubscribe | undefined;
+      let cancelDelay: (() => void) | undefined;
 
       function attempt(): void {
         currentUnsub = source.subscribe({
           complete: observer.complete,
           error(err) {
             if (attempts < count) {
-              attempts++;
-              attempt();
+              const n = attempts++;
+
+              if (delayMs !== undefined) {
+                const ms = typeof delayMs === 'function' ? delayMs(n) : delayMs;
+
+                cancelDelay = scheduler.delay(attempt, Math.max(0, ms));
+              } else {
+                attempt();
+              }
             } else {
               observer.error?.(err);
             }
@@ -270,7 +252,10 @@ export function retry<T>(count: number): Operator<T, T> {
 
       attempt();
 
-      return () => currentUnsub?.();
+      return () => {
+        cancelDelay?.();
+        currentUnsub?.();
+      };
     });
 }
 
@@ -354,4 +339,64 @@ export function toArray<T>(source: Flux<T>): Promise<T[]> {
       },
     });
   });
+}
+
+/**
+ * Compose multiple operators into a single reusable operator.
+ * Provides full type safety at any pipeline depth — use instead of
+ * `pipe()` overloads when chaining more than 4 operators.
+ *
+ * @example
+ * const pipeline = flow(
+ *   filter((n) => n % 2 === 0),
+ *   map((n) => n * 10),
+ *   take(5),
+ * );
+ * source$.pipe(pipeline).subscribe(console.log);
+ */
+export function flow<A, B>(op1: Operator<A, B>): Operator<A, B>;
+export function flow<A, B, C>(op1: Operator<A, B>, op2: Operator<B, C>): Operator<A, C>;
+export function flow<A, B, C, D>(op1: Operator<A, B>, op2: Operator<B, C>, op3: Operator<C, D>): Operator<A, D>;
+export function flow<A, B, C, D, E>(
+  op1: Operator<A, B>,
+  op2: Operator<B, C>,
+  op3: Operator<C, D>,
+  op4: Operator<D, E>,
+): Operator<A, E>;
+export function flow<A, B, C, D, E, F>(
+  op1: Operator<A, B>,
+  op2: Operator<B, C>,
+  op3: Operator<C, D>,
+  op4: Operator<D, E>,
+  op5: Operator<E, F>,
+): Operator<A, F>;
+export function flow<A, B, C, D, E, F, G>(
+  op1: Operator<A, B>,
+  op2: Operator<B, C>,
+  op3: Operator<C, D>,
+  op4: Operator<D, E>,
+  op5: Operator<E, F>,
+  op6: Operator<F, G>,
+): Operator<A, G>;
+export function flow<A, B, C, D, E, F, G, H>(
+  op1: Operator<A, B>,
+  op2: Operator<B, C>,
+  op3: Operator<C, D>,
+  op4: Operator<D, E>,
+  op5: Operator<E, F>,
+  op6: Operator<F, G>,
+  op7: Operator<G, H>,
+): Operator<A, H>;
+export function flow<A, B, C, D, E, F, G, H, I>(
+  op1: Operator<A, B>,
+  op2: Operator<B, C>,
+  op3: Operator<C, D>,
+  op4: Operator<D, E>,
+  op5: Operator<E, F>,
+  op6: Operator<F, G>,
+  op7: Operator<G, H>,
+  op8: Operator<H, I>,
+): Operator<A, I>;
+export function flow(...ops: Operator[]): Operator {
+  return (source: Flux<unknown>) => ops.reduce((f: Flux<unknown>, op) => op(f), source);
 }

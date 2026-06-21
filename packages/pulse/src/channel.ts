@@ -25,6 +25,10 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
   disposalSignal.addEventListener('abort', () => ctrl.abort(disposalSignal.reason), { once: true });
 
   const channel: PulseChannel<TServer, TClient> = {
+    get disposalSignal() {
+      return ctrl.signal;
+    },
+
     dispose() {
       if (disposed) return;
 

@@ -8,7 +8,7 @@ import type { CleanupFn, EffectCallback, Readable } from '@vielzeug/ripple';
 import type { AriaConfig } from './aria';
 import type { InjectionKey } from './context';
 import type { CraftError } from './errors';
-import type { HostBindConfig, HostBindingValue } from './host-bind';
+import type { BindOptions, HostBindConfig } from './host-bind';
 import type { InferProps, PropsDef } from './props';
 import type { OnMountedCallback } from './runtime';
 import type { ComponentSlots } from './slots';
@@ -31,12 +31,11 @@ export type SetupContextBag<
    */
   aria: (target: Element, config: AriaConfig) => () => void;
   /**
-   * Shorthand for applying a single reactive or static attribute to the host element.
-   * Equivalent to `bind({ attr: { [name]: value } })`.
+   * Apply reactive or static bindings to an element's attributes, classes, styles, and events.
+   * Defaults to the host element. Pass `options.target` to bind to any other element
+   * (e.g. a slotted trigger, an internally-referenced child).
    */
-  attr: (name: string, value: HostBindingValue) => () => void;
-  /** Apply reactive or static bindings to the host element's attributes, classes, styles, and events. */
-  bind: (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
+  bind: (config: HostBindConfig, options?: BindOptions) => () => void;
   /** The component's host element. */
   el: HTMLElement;
   /** Dispatch a typed custom event from the host element. */

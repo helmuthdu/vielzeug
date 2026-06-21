@@ -52,14 +52,35 @@ export type HeartbeatOptions = {
  */
 export type Middleware = (event: string, payload: unknown, next: () => void) => void;
 
+// ─── Buffer ────────────────────────────────────────────────────────────────────
+
+export type BufferOptions = {
+  /**
+   * Maximum number of outgoing frames to buffer while disconnected.
+   * Oldest frames are evicted when the buffer is full. Default: 50.
+   */
+  maxSize?: number;
+};
+
 // ─── Options ───────────────────────────────────────────────────────────────────
 
 export type PulseOptions = {
+  /**
+   * Buffer outgoing messages while the connection is not open, then flush on
+   * reconnect. `true` uses defaults (`maxSize: 50`). `false` disables (default).
+   * Dropped messages are discarded with a dev warning when buffering is off.
+   */
+  buffer?: boolean | BufferOptions;
   /**
    * Heartbeat ping/pong keep-alive.
    * `true` uses defaults. `false` disables. Default: `false`.
    */
   heartbeat?: boolean | HeartbeatOptions;
+  /**
+   * Defer the initial WebSocket connection until `connect()` is called explicitly.
+   * Default: `false` (connects immediately on creation).
+   */
+  lazy?: boolean;
   /**
    * Middleware functions run on every outgoing `send()`, before the message is
    * written to the socket. Call `next()` to proceed or omit to suppress.
@@ -97,7 +118,8 @@ export type PulseOptions = {
 
 /**
  * An isolated message namespace multiplexed over the shared WebSocket connection.
- * Obtain one via `pulse.channel(name)`.
+ * Obtain one via `pulse.channel(name)`. Multiple calls with the same name return
+ * the **same** channel object — dispose it once to fully remove the subscription.
  *
  * @example
  * const notif = pulse.channel<{ alert: string }>('notifications');
@@ -107,6 +129,8 @@ export type PulseOptions = {
 export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extends MessageMap = MessageMap> = {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
+  /** `AbortSignal` aborted when `dispose()` is called. */
+  readonly disposalSignal: AbortSignal;
   /** Permanently unsubscribes all listeners and prevents future sends. */
   dispose(): void;
   /** Whether this channel has been disposed. */
@@ -122,7 +146,7 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
   once<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe;
   /**
    * Send a typed message to the server, scoped to this channel.
-   * No-op if the pulse connection is not open.
+   * No-op if the pulse connection is not open and buffering is disabled.
    */
   send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
   /**
@@ -146,7 +170,9 @@ export type PulseChannel<TServer extends MessageMap = MessageMap, TClient extend
 export type PresenceChannel<T = unknown> = {
   /** Delegates to `dispose()`. Enables `using` declarations. */
   [Symbol.dispose](): void;
-  /** Permanently stops tracking. Removes own presence from the room. */
+  /** `AbortSignal` aborted when `dispose()` is called. */
+  readonly disposalSignal: AbortSignal;
+  /** Permanently stops tracking. Sends a leave frame to the server. */
   dispose(): void;
   /** Whether this presence channel has been disposed. */
   readonly disposed: boolean;
@@ -181,8 +207,8 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
 
   /**
    * Return an isolated message namespace over the shared connection.
-   * Multiple calls with the same name return independent channel objects
-   * (each with its own listener set and lifecycle).
+   * Multiple calls with the same name return the **same** channel object —
+   * dispose it once to remove the subscription.
    */
   channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = TClient>(
     name: string,
@@ -191,8 +217,8 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
   // ── Connection ─────────────────────────────────────────────────────────────
 
   /**
-   * Explicitly open the connection. Called automatically on first `send()` or
-   * listener registration if not already open. Resolves when `'open'` fires.
+   * Explicitly open the connection. Resolves when `'open'` fires.
+   * Required when `lazy: true`; otherwise called automatically on creation.
    * Rejects if the connection closes before opening.
    */
   connect(): Promise<void>;
@@ -216,13 +242,14 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
 
   /**
    * Request to join a room. Resolves when the server confirms with a `joined` frame.
-   * Rejects if the pulse is disposed or the signal aborts.
+   * Rejects if the pulse is disposed, the signal aborts, or the timeout elapses.
    */
-  join(room: string, opts?: { signal?: AbortSignal }): Promise<void>;
+  join(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
   /**
    * Request to leave a room. Resolves when the server confirms with a `left` frame.
+   * Rejects if the pulse is disposed, the signal aborts, or the timeout elapses.
    */
-  leave(room: string, opts?: { signal?: AbortSignal }): Promise<void>;
+  leave(room: string, opts?: { signal?: AbortSignal; timeout?: number }): Promise<void>;
 
   // ── Messaging ──────────────────────────────────────────────────────────────
 
@@ -244,8 +271,8 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
   /** Reactive set of rooms the client is currently a member of. */
   readonly rooms: Readable<ReadonlySet<string>>;
   /**
-   * Send a typed event to the server.
-   * No-op if the connection is not open — messages are not buffered.
+   * Send a typed event to the server. If buffering is enabled, the message is
+   * queued when the connection is not open and flushed on reconnect.
    */
   send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void;
   /** Reactive connection status. */

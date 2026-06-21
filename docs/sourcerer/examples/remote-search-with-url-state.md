@@ -11,10 +11,10 @@ A list page should be bookmarkable and shareable. Search query, active filters, 
 
 ### Solution
 
-Use `encodeQuery()` to serialize source state into URL-safe params after each interaction, and `decodeQuery()` + `applyRemoteQuery()` to restore state from params on page load.
+Use `encodeQuery()` to serialize source state into URL-safe params after each interaction, and `decodeQuery()` + `applyQuery()` to restore state from params on page load.
 
 ```ts
-import { applyRemoteQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
+import { applyQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 
 type Item = { id: number; name: string };
 type Filter = { status?: 'open' | 'closed' };
@@ -36,14 +36,14 @@ const source = createRemoteSource<Item, Filter, Sort>({
 
 // On load: restore state from current URL
 // decodeQuery accepts URLSearchParams directly
-await applyRemoteQuery(source, decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 }));
+await applyQuery(source, decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 }));
 await source.ready();
 
 // User interaction: apply a search
 await source.search('error', { immediate: true });
 
 // After each interaction: push updated state back to the URL
-const nextParams = new URLSearchParams(encodeQuery(source.toQuery()));
+const nextParams = new URLSearchParams(encodeQuery(source.query));
 history.replaceState(null, '', `?${nextParams.toString()}`);
 ```
 
@@ -52,7 +52,7 @@ history.replaceState(null, '', `?${nextParams.toString()}`);
 `encodeQuery()` and `decodeQuery()` are inverses — any query round-trips without loss:
 
 ```ts
-const original = source.toQuery();
+const original = source.query;
 const params = encodeQuery(original);
 const restored = decodeQuery(params, { defaultLimit: 20 });
 // restored deeply equals original
@@ -68,7 +68,7 @@ const query = decodeQuery(urlParams, { strict: true });
 
 ### Pitfalls
 
-- `decodeQuery` returns a `Partial<RemoteSourceQuery>`. Pass it directly to `applyRemoteQuery()` — no manual field mapping needed.
+- `decodeQuery` returns a `Partial<RemoteSourceQuery>`. Pass it directly to `applyQuery()` — no manual field mapping needed.
 - Calling `history.pushState` (instead of `replaceState`) on every interaction floods the browser history. Always use `replaceState` when syncing list state to the URL.
 - Subscribe to source changes and compare the serialized params before writing to the URL to avoid redundant history pushes when only `isLoading` changed.
 

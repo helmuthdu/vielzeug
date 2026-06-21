@@ -1,4 +1,4 @@
-import { prefetchSource } from '../prefetch';
+import { prefetchSource, prefetchSourceAndKeep } from '../prefetch';
 import { createRemoteSource } from '../remoteSource';
 
 describe('prefetchSource', () => {
@@ -68,7 +68,7 @@ describe('prefetchSource', () => {
   });
 });
 
-describe('prefetchSource with keepSource: true', () => {
+describe('prefetchSourceAndKeep', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -79,7 +79,7 @@ describe('prefetchSource with keepSource: true', () => {
 
   it('returns both snapshot and live source', async () => {
     const fetch = vi.fn(async () => ({ items: ['a', 'b'], total: 2 }));
-    const { snapshot, source } = await prefetchSource({ fetch, limit: 10 }, { keepSource: true });
+    const { snapshot, source } = await prefetchSourceAndKeep({ fetch, limit: 10 });
 
     expect(snapshot.items).toEqual(['a', 'b']);
     expect(snapshot.total).toBe(2);
@@ -90,7 +90,7 @@ describe('prefetchSource with keepSource: true', () => {
 
   it('returned source is live and not disposed', async () => {
     const fetch = vi.fn(async () => ({ items: ['x'], total: 1 }));
-    const { source } = await prefetchSource({ fetch }, { keepSource: true });
+    const { source } = await prefetchSourceAndKeep({ fetch });
 
     fetch.mockResolvedValueOnce({ items: ['y'], total: 1 });
     await source.refresh();
@@ -101,7 +101,7 @@ describe('prefetchSource with keepSource: true', () => {
 
   it('caller must dispose the source manually', async () => {
     const fetch = vi.fn(async () => ({ items: [], total: 0 }));
-    const { source } = await prefetchSource({ fetch }, { keepSource: true });
+    const { source } = await prefetchSourceAndKeep({ fetch });
 
     expect(() => source.dispose()).not.toThrow();
   });
@@ -111,6 +111,6 @@ describe('prefetchSource with keepSource: true', () => {
       throw new Error('upstream error');
     });
 
-    await expect(prefetchSource({ fetch }, { keepSource: true })).rejects.toThrow('upstream error');
+    await expect(prefetchSourceAndKeep({ fetch })).rejects.toThrow('upstream error');
   });
 });

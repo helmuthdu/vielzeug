@@ -18,7 +18,7 @@ exports: [createServer]
 
 **Package:** `@vielzeug/codex` &nbsp;·&nbsp; **Category:** AI Tooling
 
-**Key exports:** `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData`
+**Key exports:** `createServer`, `createServerFromDisk`, `loadData`, `packageMeta`, `validateBundledData`, `startHttpServer`
 
 **When to use:** You want AI clients to query Vielzeug docs and package metadata through a compact MCP tool set.
 
@@ -61,21 +61,13 @@ npx -y @vielzeug/codex --version
 
 | Tool              | Input                  | Description                                                          |
 | ----------------- | ---------------------- | -------------------------------------------------------------------- |
-| `list-packages`   | `packageSlug?`         | All packages with metadata; pass `packageSlug` to filter to one      |
+| `list-packages`   | —                      | All packages with metadata                                           |
+| `get-package`     | `packageSlug`          | Single package metadata by slug                                      |
 | `get-docs`        | `packageSlug`, `page?` | Docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
 | `get-source`      | `packageSlug`          | Bundled `src/index.ts` text                                          |
 | `search-packages` | `query`                | Ranked search across metadata, keywords, docs, and source            |
 | `list-components` | —                      | Sigil component tags from bundled CEM metadata                       |
 | `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                          |
-
-## Resources
-
-The server also exposes MCP Resources readable by URI:
-
-| URI pattern                     | MIME type           | Content               |
-| ------------------------------- | ------------------- | --------------------- |
-| `vielzeug://docs/<slug>/<page>` | `text/markdown`     | Documentation page    |
-| `vielzeug://source/<slug>`      | `text/x-typescript` | `src/index.ts` source |
 
 ## HTTP mode
 
@@ -93,7 +85,14 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 await createServerFromDisk().connect(new StdioServerTransport());
 ```
 
-For explicit control, use `createServer(loadData())`.
+For explicit control over data loading:
+
+```ts
+import { createServer, loadData } from '@vielzeug/codex';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+
+await createServer(loadData()).connect(new StdioServerTransport());
+```
 
 ## Documentation
 

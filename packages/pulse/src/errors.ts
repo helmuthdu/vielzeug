@@ -4,7 +4,7 @@
  */
 export class PulseError extends Error {
   constructor(message: string, opts?: ErrorOptions) {
-    super(`[@vielzeug/pulse] ${message}`, opts);
+    super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }

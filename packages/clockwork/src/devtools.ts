@@ -3,16 +3,16 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { debugInterpret } from '@vielzeug/clockwork/devtools';
+ * import { debugMachine } from '@vielzeug/clockwork/devtools';
  * ```
  */
 
 import type { InterpretOptions, MachineConfig, MachineEvent, MachineInstance } from './types.js';
 
-import { machine } from './interpret.js';
+import { createMachine } from './interpret.js';
 
 /**
- * Wraps {@link machine} and attaches a `console.group`-based debug logger
+ * Wraps {@link createMachine} and attaches a `console.group`-based debug logger
  * that traces every guard evaluation, transition, invoke lifecycle event, and
  * skipped transition to the browser/Node console.
  *
@@ -22,18 +22,18 @@ import { machine } from './interpret.js';
  *
  * @example
  * ```ts
- * import { debugInterpret } from '@vielzeug/clockwork/devtools';
+ * import { debugMachine } from '@vielzeug/clockwork/devtools';
  *
- * const m = debugInterpret(trafficLight);
+ * const m = debugMachine(trafficLight);
  * m.send({ type: 'NEXT' });
  * // [clockwork:transition] NEXT: idle → running
  * ```
  */
-export function debugInterpret<State extends string, Ctx extends object, Ev extends MachineEvent>(
+export function debugMachine<State extends string, Ctx extends object, Ev extends MachineEvent>(
   definition: MachineConfig<State, Ctx, Ev>,
   options: Omit<InterpretOptions<State, Ctx, Ev>, 'onDebug'> = {},
 ): MachineInstance<State, Ctx, Ev> {
-  return machine(definition, {
+  return createMachine(definition).start({
     ...options,
     onDebug(event) {
       switch (event.type) {
@@ -62,5 +62,5 @@ export function debugInterpret<State extends string, Ctx extends object, Ev exte
           break;
       }
     },
-  });
+  } as InterpretOptions<State, Ctx, Ev>);
 }

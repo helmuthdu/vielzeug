@@ -1,6 +1,6 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop, syncAria } from '@vielzeug/craft';
+import { createStableId, define, html, prop } from '@vielzeug/craft';
 import { computed, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -209,7 +209,7 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       'bottom-start',
     ),
   },
-  setup(props, { bind, el, emit, onCleanup, onMounted, slots, watch }) {
+  setup(props, { aria, bind, el, emit, onCleanup, onMounted, slots, watch }) {
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const abortSignal = lifecycleSignal(onCleanup);
@@ -371,16 +371,12 @@ define<SgMenuProps, SgMenuEvents>(MENU_TAG, {
       if (!triggerEl) return;
 
       const cleanups: Array<() => void> = [];
-      const removeAria = syncAria(
-        triggerEl,
-        {
-          controls: () => menuId,
-          disabled: () => isDisabled.value,
-          expanded: () => String(isOpenSignal.value),
-          haspopup: 'menu',
-        },
-        { autoCleanup: false },
-      );
+      const removeAria = aria(triggerEl, {
+        controls: () => menuId,
+        disabled: () => isDisabled.value,
+        expanded: () => String(isOpenSignal.value),
+        haspopup: 'menu',
+      });
 
       const onTriggerClick = (event: MouseEvent) => {
         event.stopPropagation();

@@ -181,7 +181,7 @@ Three sizes for different contexts.
 
 ### Icons & Subtitles
 
-Add icons or descriptive subtitles using slots. Use clear, descriptive titles to help users understand section content at a glance.
+Add icons or descriptive subtitles using slots. Use clear, descriptive titles to help users understand section content Overview.
 
 <ComponentPreview vertical>
 

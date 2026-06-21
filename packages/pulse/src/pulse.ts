@@ -15,10 +15,17 @@ import type {
 import { createWaitPromise } from './_wait';
 import { warn } from './_warn';
 import { createChannel } from './channel';
-import { AbortError, ConnectionError, DisposedError } from './errors';
+import { AbortError, ConnectionError, DisposedError, TimeoutError } from './errors';
 import { createHeartbeat } from './heartbeat';
 import { createPresence } from './presence';
-import { type InFrame, decode, encode } from './protocol';
+import {
+  type InFrame,
+  type InPresenceJoinFrame,
+  type InPresenceLeaveFrame,
+  type InPresenceStateFrame,
+  decode,
+  encode,
+} from './protocol';
 import { createReconnect } from './reconnect';
 import { combineSignals } from './utils';
 
@@ -98,7 +105,6 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
   const listeners = new ListenerMap();
   const middleware: readonly Middleware[] = opts.middleware ?? [];
 
-  // Private one-shot resolver sets for room join/leave confirmations.
   const pendingJoins = new Map<string, Set<() => void>>();
   const pendingLeaves = new Map<string, Set<() => void>>();
 
@@ -107,7 +113,14 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
   let intentionalClose = false;
 
   const pendingOpens: Array<{ reject: (e: Error) => void; resolve: () => void }> = [];
-  const activeChannels = new Map<string, number>();
+
+  // Memoized channel cache — same name returns the same object
+  const channelCache = new Map<string, PulseChannel<MessageMap, MessageMap>>();
+
+  // Message buffer (null = disabled)
+  const bufferCfg = opts.buffer;
+  const buffer: string[] | null = bufferCfg ? [] : null;
+  const bufferMaxSize: number = typeof bufferCfg === 'object' && bufferCfg !== null ? (bufferCfg.maxSize ?? 50) : 50;
 
   // ── Reconnect / Heartbeat ──────────────────────────────────────────────────
 
@@ -129,6 +142,10 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
   function rawSend(frame: string): void {
     if (ws?.readyState === WebSocket.OPEN) {
       ws.send(frame);
+    } else if (buffer !== null) {
+      if (buffer.length >= bufferMaxSize) buffer.shift();
+
+      buffer.push(frame);
     } else {
       warn(`send() called while connection is ${status.value} — message dropped`);
     }
@@ -172,7 +189,13 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       for (const p of pending) p.resolve();
 
-      for (const name of activeChannels.keys()) {
+      if (buffer && buffer.length > 0) {
+        const queued = buffer.splice(0);
+
+        for (const f of queued) ws!.send(f);
+      }
+
+      for (const name of channelCache.keys()) {
         ws!.send(encode({ channel: name, type: 'subscribe' }));
       }
     };
@@ -312,13 +335,103 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     }
   }
 
+  // ── Shared room confirmation helper ───────────────────────────────────────
+
+  function awaitRoomConfirmation(
+    pending: Map<string, Set<() => void>>,
+    room: string,
+    frameType: 'join' | 'leave',
+    roomOpts?: { signal?: AbortSignal; timeout?: number },
+  ): Promise<void> {
+    if (disposed) return Promise.reject(new DisposedError());
+
+    return new Promise((resolve, reject) => {
+      const extraSignals: AbortSignal[] = [];
+
+      if (roomOpts?.signal) extraSignals.push(roomOpts.signal);
+
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+      if (roomOpts?.timeout !== undefined) {
+        const tc = new AbortController();
+
+        timeoutId = setTimeout(() => tc.abort(new TimeoutError(frameType)), roomOpts.timeout);
+        extraSignals.push(tc.signal);
+      }
+
+      const sig =
+        extraSignals.length === 0 ? disposalCtrl.signal : combineSignals(disposalCtrl.signal, ...extraSignals);
+
+      if (sig.aborted) {
+        clearTimeout(timeoutId);
+        reject(sig.reason instanceof TimeoutError ? sig.reason : new AbortError());
+
+        return;
+      }
+
+      let onAbort: () => void = () => {};
+
+      const onConfirm = (): void => {
+        clearTimeout(timeoutId);
+        sig.removeEventListener('abort', onAbort);
+        resolve();
+      };
+
+      onAbort = (): void => {
+        clearTimeout(timeoutId);
+
+        const set = pending.get(room);
+
+        set?.delete(onConfirm);
+
+        if (set?.size === 0) pending.delete(room);
+
+        reject(sig.reason instanceof TimeoutError ? sig.reason : new AbortError());
+      };
+
+      let pendingSet = pending.get(room);
+
+      if (!pendingSet) {
+        pendingSet = new Set();
+        pending.set(room, pendingSet);
+      }
+
+      pendingSet.add(onConfirm);
+      sig.addEventListener('abort', onAbort, { once: true });
+
+      const sendFrame = (): void => rawSend(encode({ room, type: frameType }));
+
+      if (ws?.readyState === WebSocket.OPEN) {
+        sendFrame();
+      } else {
+        pulse
+          .connect()
+          .then(sendFrame)
+          .catch((err: unknown) => {
+            clearTimeout(timeoutId);
+            sig.removeEventListener('abort', onAbort);
+
+            const set = pending.get(room);
+
+            set?.delete(onConfirm);
+
+            if (set?.size === 0) pending.delete(room);
+
+            reject(err);
+          });
+      }
+    });
+  }
+
   // ── Public API ─────────────────────────────────────────────────────────────
 
   const pulse: Pulse<TServer, TClient> = {
     channel<TChServer extends MessageMap = TServer, TChClient extends MessageMap = TClient>(
       name: string,
     ): PulseChannel<TChServer, TChClient> {
-      activeChannels.set(name, (activeChannels.get(name) ?? 0) + 1);
+      const cached = channelCache.get(name);
+
+      if (cached) return cached as PulseChannel<TChServer, TChClient>;
 
       const ch = createChannel<TChServer, TChClient>(
         name,
@@ -330,16 +443,12 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         (chan, event, handler) => listeners.add(chan, event, handler),
         disposalCtrl.signal,
         () => {
-          const count = (activeChannels.get(name) ?? 1) - 1;
-
-          if (count <= 0) {
-            activeChannels.delete(name);
-            rawSend(encode({ channel: name, type: 'unsubscribe' }));
-          } else {
-            activeChannels.set(name, count);
-          }
+          channelCache.delete(name);
+          rawSend(encode({ channel: name, type: 'unsubscribe' }));
         },
       );
+
+      channelCache.set(name, ch as PulseChannel<MessageMap, MessageMap>);
 
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(encode({ channel: name, type: 'subscribe' }));
@@ -382,7 +491,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       for (const p of pending) p.reject(new DisposedError());
 
-      activeChannels.clear();
+      channelCache.clear();
       pendingJoins.clear();
       pendingLeaves.clear();
       status.dispose();
@@ -395,136 +504,12 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       return disposed;
     },
 
-    join(room: string, roomOpts?: { signal?: AbortSignal }): Promise<void> {
-      if (disposed) return Promise.reject(new DisposedError());
-
-      return new Promise((resolve, reject) => {
-        const sig = roomOpts?.signal ? combineSignals(disposalCtrl.signal, roomOpts.signal) : disposalCtrl.signal;
-
-        if (sig.aborted) {
-          reject(new AbortError());
-
-          return;
-        }
-
-        let registered = false;
-        let onAbort: () => void = () => {};
-
-        const onConfirm = (): void => {
-          sig.removeEventListener('abort', onAbort);
-          resolve();
-        };
-
-        onAbort = (): void => {
-          if (registered) {
-            const set = pendingJoins.get(room);
-
-            set?.delete(onConfirm);
-
-            if (set?.size === 0) pendingJoins.delete(room);
-          }
-
-          reject(new AbortError());
-        };
-
-        let joinSet = pendingJoins.get(room);
-
-        if (!joinSet) {
-          joinSet = new Set();
-          pendingJoins.set(room, joinSet);
-        }
-
-        joinSet.add(onConfirm);
-        registered = true;
-        sig.addEventListener('abort', onAbort, { once: true });
-
-        if (ws?.readyState === WebSocket.OPEN) {
-          rawSend(encode({ room, type: 'join' }));
-        } else {
-          pulse
-            .connect()
-            .then(() => rawSend(encode({ room, type: 'join' })))
-            .catch((err: unknown) => {
-              sig.removeEventListener('abort', onAbort);
-
-              if (registered) {
-                const set = pendingJoins.get(room);
-
-                set?.delete(onConfirm);
-
-                if (set?.size === 0) pendingJoins.delete(room);
-              }
-
-              reject(err);
-            });
-        }
-      });
+    join(room: string, roomOpts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
+      return awaitRoomConfirmation(pendingJoins, room, 'join', roomOpts);
     },
 
-    leave(room: string, roomOpts?: { signal?: AbortSignal }): Promise<void> {
-      if (disposed) return Promise.reject(new DisposedError());
-
-      return new Promise((resolve, reject) => {
-        const sig = roomOpts?.signal ? combineSignals(disposalCtrl.signal, roomOpts.signal) : disposalCtrl.signal;
-
-        if (sig.aborted) {
-          reject(new AbortError());
-
-          return;
-        }
-
-        let registered = false;
-        let onAbort: () => void = () => {};
-
-        const onConfirm = (): void => {
-          sig.removeEventListener('abort', onAbort);
-          resolve();
-        };
-
-        onAbort = (): void => {
-          if (registered) {
-            const set = pendingLeaves.get(room);
-
-            set?.delete(onConfirm);
-
-            if (set?.size === 0) pendingLeaves.delete(room);
-          }
-
-          reject(new AbortError());
-        };
-
-        let leaveSet = pendingLeaves.get(room);
-
-        if (!leaveSet) {
-          leaveSet = new Set();
-          pendingLeaves.set(room, leaveSet);
-        }
-
-        leaveSet.add(onConfirm);
-        registered = true;
-        sig.addEventListener('abort', onAbort, { once: true });
-
-        if (ws?.readyState === WebSocket.OPEN) {
-          rawSend(encode({ room, type: 'leave' }));
-        } else {
-          pulse
-            .connect()
-            .then(() => rawSend(encode({ room, type: 'leave' })))
-            .catch((err: unknown) => {
-              sig.removeEventListener('abort', onAbort);
-
-              if (registered) {
-                const set = pendingLeaves.get(room);
-
-                set?.delete(onConfirm);
-
-                if (set?.size === 0) pendingLeaves.delete(room);
-              }
-
-              reject(err);
-            });
-        }
-      });
+    leave(room: string, roomOpts?: { signal?: AbortSignal; timeout?: number }): Promise<void> {
+      return awaitRoomConfirmation(pendingLeaves, room, 'leave', roomOpts);
     },
 
     on<K extends EventKey<TServer>>(event: K, handler: (payload: TServer[K]) => void): Unsubscribe {
@@ -560,7 +545,11 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       const ch = createPresence<T>(
         room,
         rawSend,
-        (chan, event, handler) => listeners.add(chan, event, handler),
+        {
+          onJoin: (handler) => listeners.add(null, 'presence_join', (p) => handler(p as InPresenceJoinFrame)),
+          onLeave: (handler) => listeners.add(null, 'presence_leave', (p) => handler(p as InPresenceLeaveFrame)),
+          onState: (handler) => listeners.add(null, 'presence_state', (p) => handler(p as InPresenceStateFrame)),
+        },
         disposalCtrl.signal,
       );
 
@@ -601,7 +590,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     },
   };
 
-  openSocket();
+  if (!opts.lazy) openSocket();
 
   return pulse;
 }

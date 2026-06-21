@@ -1,6 +1,8 @@
-import type { Flux, FluxOptions, Observer, Operator, Producer, Unsubscribe } from './types';
+import type { Flux, Observer, Operator, Producer, Unsubscribe } from './types';
 
-import { FluxDisposedError } from './errors';
+import { makeAsyncIterator } from './_iterator';
+
+const NOOP: Unsubscribe = () => {};
 
 /**
  * Creates a cold `Flux<T>` stream from a producer function.
@@ -16,29 +18,16 @@ import { FluxDisposedError } from './errors';
  *   return () => clearInterval(id);
  * });
  */
-export function flux<T>(producer: Producer<T>, _options?: FluxOptions): Flux<T> {
+export function flux<T>(producer: Producer<T>): Flux<T> {
   const ac = new AbortController();
-  const activeCleanups = new Set<() => void>();
 
-  const instance: Flux<T> = {
+  const instance = {
     get disposalSignal(): AbortSignal {
       return ac.signal;
     },
 
     dispose(): void {
-      if (ac.signal.aborted) return;
-
       ac.abort();
-
-      for (const cleanup of activeCleanups) {
-        try {
-          cleanup();
-        } catch {
-          // swallow cleanup errors
-        }
-      }
-
-      activeCleanups.clear();
     },
 
     get disposed(): boolean {
@@ -46,23 +35,56 @@ export function flux<T>(producer: Producer<T>, _options?: FluxOptions): Flux<T> 
     },
 
     pipe(...operators: Operator[]): Flux<unknown> {
-      return operators.reduce((f: Flux<unknown>, op) => op(f), this as Flux<unknown>);
+      return operators.reduce((f: Flux<unknown>, op) => op(f), instance as Flux<unknown>);
     },
 
-    subscribe(observerOrNext: Observer<T> | ((value: T) => void)): Unsubscribe {
-      if (ac.signal.aborted) throw new FluxDisposedError();
-
+    subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe {
       const observer: Observer<T> = typeof observerOrNext === 'function' ? { next: observerOrNext } : observerOrNext;
+
+      if (ac.signal.aborted || signal?.aborted) {
+        try {
+          observer.complete?.();
+        } catch {
+          /* empty */
+        }
+
+        return NOOP;
+      }
 
       let active = true;
       let producerCleanup: Unsubscribe | void;
+
+      const deregister = (): void => {
+        ac.signal.removeEventListener('abort', notifyComplete);
+
+        if (signal) signal.removeEventListener('abort', unsubscribe);
+      };
+
+      const notifyComplete = (): void => {
+        if (!active) return;
+
+        active = false;
+        deregister();
+
+        try {
+          observer.complete?.();
+        } catch {
+          /* empty */
+        }
+
+        try {
+          producerCleanup?.();
+        } catch {
+          /* empty */
+        }
+      };
 
       const safeObserver: Observer<T> = {
         complete(): void {
           if (!active) return;
 
           active = false;
-          activeCleanups.delete(unsubscribe);
+          deregister();
 
           try {
             observer.complete?.();
@@ -75,7 +97,7 @@ export function flux<T>(producer: Producer<T>, _options?: FluxOptions): Flux<T> 
           if (!active) return;
 
           active = false;
-          activeCleanups.delete(unsubscribe);
+          deregister();
 
           try {
             observer.error?.(err);
@@ -95,41 +117,42 @@ export function flux<T>(producer: Producer<T>, _options?: FluxOptions): Flux<T> 
         active = false;
         observer.error?.(err);
 
-        return () => {};
+        return NOOP;
+      }
+
+      if (!active) {
+        producerCleanup?.();
+
+        return NOOP;
       }
 
       function unsubscribe(): void {
         if (!active) return;
 
         active = false;
-        activeCleanups.delete(unsubscribe);
+        deregister();
         producerCleanup?.();
       }
 
-      if (!active) {
-        producerCleanup?.();
+      ac.signal.addEventListener('abort', notifyComplete, { once: true });
 
-        return () => {};
+      if (signal) {
+        signal.addEventListener('abort', unsubscribe, { once: true });
       }
-
-      activeCleanups.add(unsubscribe);
-
-      const abortUnsub = (): void => {
-        unsubscribe();
-      };
-
-      ac.signal.addEventListener('abort', abortUnsub, { once: true });
 
       return (): void => {
-        ac.signal.removeEventListener('abort', abortUnsub);
         unsubscribe();
       };
+    },
+
+    [Symbol.asyncIterator](): AsyncIterator<T> {
+      return makeAsyncIterator<T>((obs) => instance.subscribe(obs));
     },
 
     [Symbol.dispose](): void {
-      this.dispose();
+      instance.dispose();
     },
   };
 
-  return instance;
+  return instance as unknown as Flux<T>;
 }

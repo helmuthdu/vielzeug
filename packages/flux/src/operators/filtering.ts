@@ -1,5 +1,6 @@
-import type { Flux, Operator, Unsubscribe } from '../types';
+import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
 
+import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
 
 /**
@@ -153,28 +154,28 @@ export function takeWhile<T>(predicate: (value: T) => boolean): Operator<T, T> {
  * @example
  * fromEvent(input, 'input').pipe(debounce(300)); // wait 300ms after last keystroke
  */
-export function debounce<T>(ms: number): Operator<T, T> {
+export function debounce<T>(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Operator<T, T> {
   return (source) =>
     flux<T>((observer) => {
-      let timerId: ReturnType<typeof setTimeout> | undefined;
+      let cancelTimer: (() => void) | undefined;
 
       const unsub = source.subscribe({
         complete() {
-          clearTimeout(timerId);
+          cancelTimer?.();
           observer.complete?.();
         },
         error(err) {
-          clearTimeout(timerId);
+          cancelTimer?.();
           observer.error?.(err);
         },
         next(v) {
-          clearTimeout(timerId);
-          timerId = setTimeout(() => observer.next(v), ms);
+          cancelTimer?.();
+          cancelTimer = scheduler.delay(() => observer.next(v), ms);
         },
       });
 
       return () => {
-        clearTimeout(timerId);
+        cancelTimer?.();
         unsub();
       };
     });
@@ -182,11 +183,12 @@ export function debounce<T>(ms: number): Operator<T, T> {
 
 /**
  * Emit at most once per `ms` milliseconds. Leading edge by default.
+ * Pass a custom `clock` function (default: `Date.now`) to control time in tests.
  *
  * @example
  * fromEvent(window, 'scroll').pipe(throttle(100));
  */
-export function throttle<T>(ms: number): Operator<T, T> {
+export function throttle<T>(ms: number, clock: () => number = Date.now): Operator<T, T> {
   return (source) =>
     flux<T>((observer) => {
       let lastEmit = -Infinity;
@@ -195,7 +197,7 @@ export function throttle<T>(ms: number): Operator<T, T> {
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          const now = Date.now();
+          const now = clock();
 
           if (now - lastEmit >= ms) {
             lastEmit = now;

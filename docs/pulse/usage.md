@@ -51,11 +51,14 @@ effect(() => {
 
 ### Explicit connect and disconnect
 
-The connection opens automatically when `createPulse` is called. To open it explicitly — for example, after a user action — call `connect()`.
+By default the connection opens as soon as `createPulse` is called. Pass `lazy: true` to defer it until you call `connect()` explicitly — useful when the connection should not open until after a user gesture or auth check.
 
 ```ts
+// Default — connects immediately
 const pulse = createPulse('wss://api.example.com/ws');
 
+// Lazy — deferred until connect() is called
+const pulse = createPulse('wss://api.example.com/ws', { lazy: true });
 await pulse.connect(); // resolves when the socket is open
 
 pulse.disconnect(1000, 'user logged out'); // clean close, no reconnect
@@ -124,11 +127,11 @@ chat.on('message', ({ user, text }) => appendToLog(user, text));
 chat.send('send', { text: 'hi' });
 ```
 
-Each call to `pulse.channel()` returns a new, independent object with its own listener set and lifecycle.
+Multiple calls with the same name return the **same channel object** — the channel is memoized. Dispose it once to fully remove the subscription and send an `unsubscribe` frame. After disposal, calling `pulse.channel()` with the same name creates a fresh channel.
 
 ### Channel disposal
 
-Disposing a channel removes all its listeners and prevents future sends. The underlying connection is unaffected.
+Disposing a channel removes all its listeners, sends an `unsubscribe` frame to the server, and evicts it from the cache. The underlying connection is unaffected.
 
 ```ts
 using chat = pulse.channel<ChatServer, ChatClient>('chat');
@@ -136,6 +139,7 @@ using chat = pulse.channel<ChatServer, ChatClient>('chat');
 // — or manually:
 chat.dispose();
 chat.disposed; // true
+// pulse.channel('chat') now returns a fresh channel
 ```
 
 ## Rooms
@@ -150,16 +154,19 @@ await pulse.leave('lobby');
 console.log(pulse.rooms.value.has('lobby')); // false
 ```
 
-Pass an `AbortSignal` to cancel the join request:
+Pass a `timeout` or `AbortSignal` to bound the wait:
 
 ```ts
-const ctrl = new AbortController();
+// Reject with TimeoutError if server doesn't confirm within 5 s
+await pulse.join('lobby', { timeout: 5_000 });
 
+// Or cancel with an AbortSignal
+const ctrl = new AbortController();
 const joinP = pulse.join('arena', { signal: ctrl.signal });
 ctrl.abort(); // rejects joinP with AbortError
 ```
 
-`pulse.rooms` is a `Reactive<ReadonlySet<string>>`. Derive computed views with ripple:
+`pulse.rooms` is a `Readable<ReadonlySet<string>>`. Derive computed views with ripple:
 
 ```ts
 import { computed } from '@vielzeug/ripple';
@@ -194,12 +201,12 @@ lobby.update({ name: 'Alice', status: 'online' });
 
 ### Presence disposal
 
-Disposing a presence channel stops tracking and removes all join/leave callbacks.
+Disposing a presence channel stops tracking, removes all join/leave callbacks, and sends a `leave` frame to the server.
 
 ```ts
 using _ = lobby;
 // — or —
-lobby.dispose();
+lobby.dispose(); // also sends 'leave' frame
 ```
 
 ## Middleware
@@ -395,6 +402,23 @@ effect(() => {
 });
 ```
 
+## Message Buffering
+
+Enable `buffer: true` to queue outgoing frames while the connection is not open. The queue is flushed automatically on the next successful open.
+
+```ts
+const pulse = createPulse('wss://api.example.com/ws', {
+  reconnect: true,
+  buffer: true, // queue up to 50 frames (default)
+  // buffer: { maxSize: 20 }, // or a custom limit
+});
+
+// Messages sent during reconnect are queued, not dropped
+pulse.send('chat:send', { text: 'Queued while offline' });
+```
+
+When the buffer is full, the **oldest** frame is evicted to make room for the new one. With buffering disabled (default), a `send()` while disconnected is a no-op and emits a dev-mode warning.
+
 ## Best Practices
 
 - **Define message maps upfront.** Separate `ServerEvents` and `ClientEvents` types make protocol changes a compile error, not a runtime surprise.
@@ -403,4 +427,4 @@ effect(() => {
 - **Use `disposalSignal` to chain cleanups.** Pass `pulse.disposalSignal` to any external subscription or fetch so teardown is automatic.
 - **Enable reconnect for production.** `reconnect: true` uses sensible defaults; override `maxAttempts` and `delay` only when you have measured the right values.
 - **Scope messages with channels.** Use `channel()` when building features that own a domain namespace — it keeps listener cleanup isolated.
-- **Do not buffer messages.** `send()` is a no-op when the connection is not open. Queue outgoing messages in application logic if delivery during reconnects matters.
+- **Enable buffering when ordering matters.** Use `buffer: true` with reconnect so messages sent during brief disconnects are not silently dropped.

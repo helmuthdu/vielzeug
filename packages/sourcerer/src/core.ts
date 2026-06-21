@@ -29,8 +29,12 @@ export type SourceCore = {
   /** Whether a debounce timer is currently scheduled (drives `meta.isSearchPending`). */
   readonly isScheduled: boolean;
 
-  /** Fire all registered listeners. */
-  notify(): void;
+  /**
+   * Fire all registered listeners and wake any `ready()` waiters.
+   * When provided, `onBefore` runs once before listeners are called — use it to
+   * refresh cached meta/current before subscribers observe the new state.
+   */
+  notify(onBefore?: () => void): void;
 
   /**
    * Returns a Promise that resolves when `isIdle()` returns true.
@@ -49,7 +53,7 @@ export type SourceCore = {
   subscribe(listener: () => void): () => void;
 };
 
-export function createSourceCore(): SourceCore {
+export function createSourceCore(opts?: { onBeforeNotify?: () => void }): SourceCore {
   const listeners = new Set<() => void>();
   const readyWaiters = new Set<{
     check: () => void;
@@ -107,8 +111,10 @@ export function createSourceCore(): SourceCore {
       return timer !== undefined;
     },
 
-    notify() {
+    notify(onBefore?: () => void) {
       if (disposed) return;
+
+      (onBefore ?? opts?.onBeforeNotify)?.();
 
       for (const listener of listeners) {
         listener();

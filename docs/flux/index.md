@@ -10,6 +10,7 @@ exports:
     flux,
     createSubject,
     createBehaviorSubject,
+    createReplaySubject,
     of,
     from,
     fromEvent,
@@ -44,6 +45,7 @@ exports:
     race,
     zip,
     forkJoin,
+    flow,
     share,
     shareReplay,
     tap,
@@ -56,17 +58,16 @@ exports:
     toArray,
     fromSignal,
     toSignal,
+    SignalBinding,
     fromBus,
     toBus,
     fromPulse,
     fromPresence,
     fromSse,
-    fromReadable,
     fromQuery,
     FluxError,
-    FluxDisposedError,
     FluxTimeoutError,
-    FluxBufferOverflowError,
+    DEFAULT_SCHEDULER,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -168,8 +169,9 @@ const unsub = integers$.pipe(take(3)).subscribe({
 <div class="features-grid">
 
 - `flux()` — Cold stream factory; producer runs once per subscriber
-- `createSubject()` — Hot multicasting subject with `emit()` / `complete()` / `error()`
+- `createSubject()` — Hot multicasting subject with `emit()` / `complete()` / `fail()`
 - `createBehaviorSubject()` — Subject that replays the latest value to new subscribers
+- `createReplaySubject()` — Subject that replays the last N values to new subscribers
 - **40+ operators** — Creation, transformation, filtering, combination, utility
 - `pipe()` — Chainable, type-safe operator composition
 - `dispose()` — First-class lifecycle; shuts down the stream and all subscriptions
@@ -177,7 +179,7 @@ const unsub = integers$.pipe(take(3)).subscribe({
 - **Ripple adapters** — `fromSignal()` / `toSignal()` bridge signals and streams
 - **Herald adapters** — `fromBus()` / `toBus()` bridge typed event buses
 - **Pulse adapters** — `fromPulse()` / `fromPresence()` for real-time channels
-- **Courier adapters** — `fromSse()` / `fromReadable()` / `fromQuery()` for HTTP sources
+- **Courier adapters** — `fromSse()` / `fromQuery()` for HTTP sources; use `from()` for `AsyncIterable`
 - `toPromise()` / `toArray()` — Collect stream output into standard async primitives
 
 </div>
@@ -199,7 +201,7 @@ const unsub = integers$.pipe(take(3)).subscribe({
 - [Ripple](/ripple/) — Reactive signals and effects; `fromSignal()`/`toSignal()` connect Flux streams to Ripple's signal graph
 - [Herald](/herald/) — Typed event bus; `fromBus()`/`toBus()` wrap bus events as Flux streams
 - [Pulse](/pulse/) — Real-time WebSocket channels; `fromPulse()`/`fromPresence()` expose channel data as streams
-- [Courier](/courier/) — HTTP client; `fromSse()`/`fromReadable()`/`fromQuery()` wrap Courier sources as streams
+- [Courier](/courier/) — HTTP client; `fromSse()`/`fromQuery()` wrap Courier sources as streams
 
 </div>
 

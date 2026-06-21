@@ -396,21 +396,6 @@ describe('SetupContextBag lifecycle aliases (R9)', () => {
   });
 });
 
-describe('bind() outside setup context warning (R4)', () => {
-  it('warns when bind() is called outside setup', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const { createBind } = await import('../host-bind');
-
-    const el = document.createElement('div');
-    const bind = createBind(el);
-
-    bind({ attr: { id: 'test' } });
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('outside component setup'));
-    warnSpy.mockRestore();
-  });
-});
-
 describe('html template: dynamic tag-name guard (R5)', () => {
   it('warns and skips replacement for an invalid dynamic tag name', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});

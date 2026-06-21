@@ -68,15 +68,17 @@ export interface CemDeclaration {
 // ---------------------------------------------------------------------------
 
 /**
- * Lightweight metadata for a package — what list-packages and search-packages expose.
- * Does not include heavy content (docs text, source, CEM declarations).
+ * Full stored package — canonical shape. Metadata plus heavy content payload.
+ * Tools project down to PackageMeta for responses.
  */
-export interface PackageMeta {
+export interface BundledPackage {
+  apiSource: string | null;
   availableDocPages: DocPage[];
   category: string;
+  components: CemDeclaration[];
   description: string;
+  docs: Partial<Record<DocPage, string>>;
   exports: string[];
-  hasSource: boolean;
   keywords: string[];
   name: string;
   related: string[];
@@ -85,14 +87,12 @@ export interface PackageMeta {
 }
 
 /**
- * Full stored package — metadata plus heavy content payload.
- * Only used internally; tools project down to PackageMeta for responses.
+ * Lightweight metadata for a package — what list-packages and get-package expose.
+ * Derived from BundledPackage: heavy fields stripped, hasSource computed.
  */
-export interface BundledPackage extends Omit<PackageMeta, 'hasSource'> {
-  apiSource: string | null;
-  components: CemDeclaration[];
-  docs: Partial<Record<DocPage, string>>;
-}
+export type PackageMeta = Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> & {
+  hasSource: boolean;
+};
 
 export interface BundledData {
   packages: BundledPackage[];

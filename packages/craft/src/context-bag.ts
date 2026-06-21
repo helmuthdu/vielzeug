@@ -8,7 +8,7 @@ import type { InjectionKey } from './context';
 
 import { createAriaFn } from './aria';
 import { inject, provideOnElement } from './context';
-import { createBind, type HostBindingValue } from './host-bind';
+import { createBind } from './host-bind';
 import { effect, onCleanup, onElement, onEvent, onMounted, type OnMountedCallback } from './runtime';
 import { type ComponentSlots, createSlots } from './slots';
 import { createEmitFn } from './utils/emit';
@@ -22,11 +22,9 @@ export const createContextBag = (el: HTMLElement): SetupContextBag<Record<string
   const slots = createSlots(el) as ComponentSlots<string>;
 
   const bind = createBind(el);
-  const registerCleanup = onCleanup;
 
   return {
-    aria: createAriaFn(registerCleanup),
-    attr: (name: string, value: unknown) => bind({ attr: { [name]: value as HostBindingValue } }),
+    aria: createAriaFn(),
     bind,
     el,
     emit: createEmitFn(el),

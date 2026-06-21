@@ -1,11 +1,10 @@
 /**
  * Host element binding API — reactive attr, class, style, and event bindings
- * applied directly to the component's host element.
+ * applied directly to the component's host element or any target element.
  */
 
 import { isSignal, type Readable } from '@vielzeug/ripple';
 
-import { isDev, warn } from './_warn';
 import { effect, tryRegisterCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
 import { listen, setAttr, toKebab } from './utils/dom';
@@ -38,10 +37,22 @@ export type HostBindConfig = {
   style?: Record<string, HostBindingValue>;
 };
 
-export type HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions) => () => void;
+export type BindOptions = AddEventListenerOptions & {
+  /**
+   * Target element to bind to. Defaults to the host element when called
+   * via `ctx.bind()`. Pass an explicit element to bind to any other element
+   * (e.g. a slotted trigger or an internally-referenced child element).
+   * When a target is provided, cleanup is always auto-registered with the
+   * component scope if one is active.
+   */
+  target?: Element;
+};
 
-export const createBind = (el: HTMLElement): HostBindFn => {
-  const bind: HostBindFn = (config: HostBindConfig, options?: AddEventListenerOptions): (() => void) => {
+export type HostBindFn = (config: HostBindConfig, options?: BindOptions) => () => void;
+
+export const createBind = (host: HTMLElement): HostBindFn => {
+  const bind: HostBindFn = (config: HostBindConfig, options?: BindOptions): (() => void) => {
+    const el = (options?.target as HTMLElement | undefined) ?? host;
     const disposers: Array<() => void> = [];
 
     if (config.attr) {
@@ -66,12 +77,14 @@ export const createBind = (el: HTMLElement): HostBindFn => {
     }
 
     if (config.on) {
+      const { target: _t, ...listenerOptions } = options ?? {};
+
       for (const event of Object.keys(config.on) as Array<keyof typeof config.on>) {
         const listener = config.on[event];
 
         if (!listener) continue;
 
-        disposers.push(listen(el, event as string, listener as EventListener, options));
+        disposers.push(listen(el, event as string, listener as EventListener, listenerOptions));
       }
     }
 
@@ -79,13 +92,7 @@ export const createBind = (el: HTMLElement): HostBindFn => {
       for (const dispose of disposers) dispose();
     };
 
-    const registered = tryRegisterCleanup(cleanup);
-
-    if (!registered && isDev) {
-      warn(
-        'bind() called outside component setup context — cleanup will not be registered. Effects and event listeners will leak.',
-      );
-    }
+    tryRegisterCleanup(cleanup);
 
     return cleanup;
   };

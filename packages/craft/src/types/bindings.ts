@@ -155,9 +155,6 @@ export const isSpreadObject = spreadBrand.is;
 /**
  * The output of an `html` tagged template call.
  *
- * Contains a pre-cloned `DocumentFragment` ready to insert and an `apply` method
- * that wires up all reactive effects to the fragment's nodes.
- *
  * Each `html` call produces an independent fragment — there is no shared mutable
  * state between instances, so the same template can be safely rendered multiple
  * times (e.g. inside `each()`).
@@ -167,6 +164,15 @@ export interface HTMLResult {
   readonly fragment: DocumentFragment;
   /** Wire up reactive effects to the fragment's nodes. Call after insertion. */
   apply(registerCleanup: (fn: () => void) => void): void;
+  /**
+   * Insert the fragment before `anchor` (or append to `parent` when no anchor)
+   * and immediately wire up all reactive effects.
+   *
+   * This is the preferred single-step API — it is impossible to forget calling
+   * `apply` separately. Use the lower-level `fragment` + `apply` only when you
+   * need precise control over insertion (e.g. inside directive implementations).
+   */
+  mount(parent: ParentNode, anchor: Node | null, registerCleanup: (fn: () => void) => void): Node[];
 }
 
 const htmlResultBrand = makeBrand<HTMLResult>('craft:html-result');
@@ -177,5 +183,14 @@ export function createHtmlResult(
   fragment: DocumentFragment,
   applyFn: (registerCleanup: (fn: () => void) => void) => void,
 ): HTMLResult {
-  return htmlResultBrand.stamp({ apply: applyFn, fragment });
+  const mount = (parent: ParentNode, anchor: Node | null, registerCleanup: (fn: () => void) => void): Node[] => {
+    const nodes = Array.from(fragment.childNodes);
+
+    parent.insertBefore(fragment, anchor);
+    applyFn(registerCleanup);
+
+    return nodes;
+  };
+
+  return htmlResultBrand.stamp({ apply: applyFn, fragment, mount });
 }

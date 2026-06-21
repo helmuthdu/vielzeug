@@ -84,7 +84,7 @@ await source.ready();
 console.log(source.current, source.meta.totalItems);
 ```
 
-## Sources at a Glance
+## Sources Overview
 
 | Factory                  | Data model         | Navigation                |
 | ------------------------ | ------------------ | ------------------------- |

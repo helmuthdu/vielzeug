@@ -21,7 +21,7 @@ Hardcoding permission logic in the state machine makes it inflexible and hard to
 Use Ward as the source of truth for authorization, and call Ward predicates in Clockwork guards. The machine enforces the happy path, while Ward ensures users can only take allowed actions.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 import { createRBAC } from '@vielzeug/ward';
 
 type ApprovalEvent =
@@ -39,7 +39,7 @@ const rbac = createRBAC({
   },
 });
 
-const approvalMachine = machine({
+const approvalMachine = createMachine({
   initial: 'draft',
   context: {
     userId: 'user123',
@@ -108,7 +108,7 @@ const approvalMachine = machine({
     },
     cancelled: { type: 'final' },
   },
-});
+}).start();
 
 const canSubmit = ({ context }: any) => {
   return rbac.can(context.userRole, 'submit');
@@ -169,11 +169,12 @@ export function rejectSubmission(reason: string) {
 }
 
 // Check what actions are allowed in current state
-export function allowedActions(state: string): string[] {
-  const role = machine.context.value.userRole;
+export function allowedActions(): string[] {
+  const ctx = m.context.value;
+  const state = m.state.value;
   const actions: Record<string, string[]> = {
     draft: ['submit'],
-    submitted: ['review', canCancel({ context: machine.context.value }) ? 'cancel' : ''],
+    submitted: ['review', canCancel({ context: ctx }) ? 'cancel' : ''],
     reviewing: ['approve', 'reject'],
   };
   return (actions[state] || []).filter(Boolean);
@@ -188,7 +189,7 @@ export function allowedActions(state: string): string[] {
 
 3. **Role changes mid-workflow** - If user role changes (e.g., admin promotes to reviewer), the machine doesn't know. Pass role as part of events or use effect() to sync role changes to machine.
 
-4. **No audit trail** - Permission checks happen silently. Add logging to record who tried what action and whether it succeeded. Use debug hooks: `{ debug: { onTransition: (info) => log(info) } }`.
+4. **No audit trail** - Permission checks happen silently. Add logging to record who tried what action and whether it succeeded. Pass `onDebug: (event) => log(event)` to `createMachine().start()`.
 
 ### Related
 

@@ -41,14 +41,13 @@ export const provideOnElement = <T>(el: HTMLElement, key: InjectionKey<T>, value
   contextRegistry.get(el)!.set(key, value);
 };
 
-export function inject<T>(key: InjectionKey<T>): T | undefined;
-export function inject<T>(key: InjectionKey<T>, fallback: T): T;
-export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
-  const ctx = getSetupContext();
+const NOT_FOUND_SENTINEL = Symbol('inject.not_found');
 
-  if (!ctx) throw new Error(CRAFT_ERRORS.lifecycleOutsideSetup);
+/** Per-setup-context cache: avoids repeated ancestor walks for the same key. */
+const resolvedCache = new WeakMap<object, Map<InjectionKey<unknown>, unknown>>();
 
-  const chain = buildAncestorChain(ctx.element);
+const walkAndFind = <T>(element: HTMLElement, key: InjectionKey<T>): T | typeof NOT_FOUND_SENTINEL => {
+  const chain = buildAncestorChain(element);
 
   for (const node of chain) {
     const map = contextRegistry.get(node);
@@ -56,15 +55,46 @@ export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
     if (map?.has(key)) return map.get(key) as T;
   }
 
-  return rest.length > 0 ? rest[0] : undefined;
+  return NOT_FOUND_SENTINEL;
+};
+
+export function inject<T>(key: InjectionKey<T>): T | undefined;
+export function inject<T>(key: InjectionKey<T>, fallback: T): T;
+export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
+  const ctx = getSetupContext();
+
+  if (!ctx) throw new Error(CRAFT_ERRORS.lifecycleOutsideSetup);
+
+  let cache = resolvedCache.get(ctx);
+
+  if (!cache) {
+    cache = new Map();
+    resolvedCache.set(ctx, cache);
+  }
+
+  const cacheKey = key as InjectionKey<unknown>;
+
+  if (cache.has(cacheKey)) {
+    const cached = cache.get(cacheKey);
+
+    if (cached === NOT_FOUND_SENTINEL) return rest.length > 0 ? rest[0] : undefined;
+
+    return cached as T;
+  }
+
+  const found = walkAndFind(ctx.element, key);
+
+  cache.set(cacheKey, found);
+
+  if (found === NOT_FOUND_SENTINEL) return rest.length > 0 ? rest[0] : undefined;
+
+  return found;
 }
 
-const NOT_FOUND = Symbol('inject.not_found');
-
 export const injectStrict = <T>(key: InjectionKey<T>): T => {
-  const resolved = inject<T>(key, NOT_FOUND as unknown as T);
+  const resolved = inject<T>(key, NOT_FOUND_SENTINEL as unknown as T);
 
-  if (resolved !== (NOT_FOUND as unknown)) return resolved;
+  if (resolved !== (NOT_FOUND_SENTINEL as unknown)) return resolved;
 
   const host = getCurrentElement();
 

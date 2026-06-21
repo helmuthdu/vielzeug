@@ -8,10 +8,9 @@ keywords:
 related: [ripple, herald, ward]
 exports:
   [
-    machine,
-    define,
-    resolveTransition,
+    createMachine,
     MachineError,
+    MachineErrorCode,
     SendResult,
     InterceptorFn,
     InvokeArgs,
@@ -41,10 +40,10 @@ type LoaderState = {
 // Multiple invalid state combinations are possible.
 
 // After — FSM enforces valid state combinations
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 type Event = { type: 'FETCH' } | { type: 'DONE'; data: string } | { type: 'FAIL'; error: Error };
 
-const loader = machine({
+const loader = createMachine({
   context: { data: '' as string, error: undefined as Error | undefined },
   initial: 'idle',
   states: {
@@ -53,7 +52,7 @@ const loader = machine({
     loading: { on: { DONE: { target: 'success' }, FAIL: { target: 'error' } } },
     success: { on: { FETCH: { target: 'loading' } } },
   },
-});
+}).start();
 // Now success && error is impossible. State is always valid.
 ```
 
@@ -97,11 +96,11 @@ yarn add @vielzeug/clockwork
 ## Quick Start
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'START' } | { type: 'COMPLETE'; result: string };
 
-const m = machine({
+const m = createMachine({
   context: { count: 0 },
   initial: 'idle',
   states: {
@@ -121,7 +120,7 @@ const m = machine({
       on: { START: { target: 'active' } },
     },
   },
-});
+}).start();
 
 console.log(m.state.value); // 'idle'
 console.log(m.context.value.count); // 0
@@ -137,11 +136,12 @@ console.log(m.context.value.count); // 5
 
 <div class="features-grid">
 
-- `machine()` — Validate config and start an instance in one call
-- `define()` — Validate once, call `.start()` to spawn independent instances
+- **`createMachine()`** — Validate config; returns a reusable `MachineDefinition` handle
+- **`.start(options?)`** — Spawn independent running instances from a definition
+- **`.resolve(input, options?)`** — Pure transition resolver for testing (no side effects)
 - **Shorthand transitions** — Single transition or array, your choice
 - **Typed events** — Discriminated unions with TypeScript inference
-- **`SendResult`** — `send()` returns `{ ok, queued, status }` where `status` is `'transitioned'` | `'queued'` | `'rejected'`
+- **`SendResult`** — `send()` returns `{ status }` where `status` is `'transitioned'` | `'queued'` | `'rejected'`
 - **Reactive state** — State and context are `@vielzeug/ripple` signals
 - **Async invokes** — Native Promise support; `onDone`/`onError` receive `(result, context)`
 - **Delayed transitions** — Timer-based `after` with guards and actions
@@ -149,11 +149,10 @@ console.log(m.context.value.count); // 5
 - **Interceptors** — Pure event interceptors — return event or `null` to block
 - **Persistence** — Snapshot save/load adapter
 - **Tracing** — Ring buffer; auto-enabled (50 entries) when `onDebug` is set
-- **Debug events** — Discriminated union callback with zero overhead when omitted; use `debugInterpret()` from `@vielzeug/clockwork/devtools` for pre-wired console logging
+- **Debug events** — Unified discriminated union `onDebug` callback; use `debugMachine()` from `@vielzeug/clockwork/devtools` for pre-wired console logging
 - **Event queue** — FIFO processing with configurable infinite-loop guard
 - **Context isolation** — Cloned draft before every commit; machine is unchanged on validation failure
 - **Subscribe** — Change-detection subscription without direct ripple dependency
-- **Pure resolver** — Test transition logic independently with `resolveTransition()`
 
 </div>
 
@@ -162,7 +161,7 @@ console.log(m.context.value.count); // 5
 | Import                         | Purpose                                                 |
 | ------------------------------ | ------------------------------------------------------- |
 | `@vielzeug/clockwork`          | All exports and types                                   |
-| `@vielzeug/clockwork/devtools` | `debugInterpret` — pre-wired console logging (dev only) |
+| `@vielzeug/clockwork/devtools` | `debugMachine` — pre-wired console logging (dev only) |
 
 ## Documentation
 

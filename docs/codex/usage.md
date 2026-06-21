@@ -95,7 +95,7 @@ Typical AI-agent pattern from discovery to code generation:
 ```
 list-packages                                   → scan catalog, note availableDocPages
 search-packages { query: "form validation" }   → multi-word AND search across all fields
-list-packages { packageSlug: "forge" }  → structured metadata for one package
+get-package { packageSlug: "forge" }            → structured metadata for one package
 get-docs { packageSlug: "forge", page: "usage" }     → how-to guide
 get-docs { packageSlug: "forge", page: "api" }       → full API reference
 get-source { packageSlug: "forge" }                  → exact exported signatures
@@ -167,23 +167,24 @@ If `list-components` returns an error about missing Sigil metadata, build `@viel
 - **HTTP mode binds with `Access-Control-Allow-Origin: *`** — any local web page can make cross-origin requests to the server. Do not expose the HTTP port on a publicly accessible interface. Use stdio mode for production/shared environments.
 - **Never expose the HTTP port through a firewall or proxy** — the MCP endpoint has no authentication. Treat it as a local-only service.
 
-## Framework Integration
+## Embedding in a Node.js Process
 
-Codex is an MCP server, not a browser library. There is no direct framework integration — connect it from your AI client configuration. For server-side usage, embed the server programmatically:
+When you need the MCP server as part of a larger Node.js process rather than a standalone binary, import and wire it directly:
 
 ```ts
 import { createServerFromDisk } from '@vielzeug/codex';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 
-// Start the MCP server as part of a larger Node.js process:
 const server = createServerFromDisk();
 await server.connect(new StdioServerTransport());
 ```
 
-For HTTP-based agents running in CI or a container:
+For HTTP transport in CI or a container, use the binary directly:
 
 ```sh
-node -e "require('@vielzeug/codex/dist/cli.js')" -- --port 3100
+codex --port 3100
+# or without installing:
+npx -y @vielzeug/codex --port 3100
 ```
 
 ## Working with Other Vielzeug Libraries
@@ -216,7 +217,7 @@ This returns the complete `spell` API reference, letting an agent write correct 
 
 ## Best Practices
 
-- Call `list-packages` first to discover `availableDocPages` before calling `get-docs` — not every package has every page.
+- Call `list-packages` first to discover `availableDocPages`, then `get-package` with `packageSlug` for a focused view before calling `get-docs` — not every package has every page.
 - Prefer `search-packages` over iterating `list-packages` manually when looking for a capability. Multi-word queries are supported — all words must match.
 - Use `get-source` for the exact public API surface; do not infer exports from docs alone.
 - In HTTP mode, check `/health` before routing traffic to verify the server is up.

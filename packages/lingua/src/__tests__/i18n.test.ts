@@ -570,7 +570,7 @@ describe('createI18n', () => {
       i18n.subscribe(listener);
       await i18n.setLocale('en');
       expect(listener).not.toHaveBeenCalled();
-      expect(i18n.getSnapshot()).toEqual({ locale: 'en' });
+      expect(i18n.getSnapshot().locale).toBe('en');
     });
 
     test('last call wins when concurrent switches race (stale responses discarded)', async () => {
@@ -605,7 +605,7 @@ describe('createI18n', () => {
 
       await expect(i18n.setLocale('de')).rejects.toThrow('[lingua/E001] Missing locale source for "de".');
       expect(i18n.locale).toBe('en');
-      expect(i18n.getSnapshot()).toEqual({ locale: 'en' });
+      expect(i18n.getSnapshot().locale).toBe('en');
     });
   });
 
@@ -2515,6 +2515,278 @@ describe('createI18n', () => {
       }
 
       expect((caught as LinguaError).name).toBe('LinguaError');
+    });
+  });
+
+  // ─── register() — async ───────────────────────────────────────────────────
+
+  describe('register() — async', () => {
+    test('register() with a static source returns a resolved Promise', async () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      await expect(i18n.register('en', { hello: 'Hello' })).resolves.toBeUndefined();
+      expect(i18n.t('hello')).toBe('Hello');
+    });
+
+    test('register() with an async loader returns a Promise that resolves after load', async () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      await i18n.register('en', async () => ({ hello: 'Hello' }));
+      expect(i18n.t('hello')).toBe('Hello');
+    });
+
+    test('register() async loader — locale is available after await', async () => {
+      const i18n = createI18n({ locale: 'en' });
+
+      await i18n.register('fr', async () => ({ bonjour: 'Bonjour' }));
+      expect(i18n.isLoaded('fr')).toBe(true);
+    });
+
+    test('register() notifies subscribers after async loader resolves', async () => {
+      const i18n = createI18n({ locale: 'en' });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      await i18n.register('en', async () => ({ greeting: 'Hi' }));
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+
+    test('register() on disposed instance throws [lingua/E007]', () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.dispose();
+      expect(() => i18n.register('en', {})).toThrow('[lingua/E007]');
+    });
+  });
+
+  // ─── registerNamespace() / loadNamespace() ────────────────────────────────
+
+  describe('registerNamespace() / loadNamespace()', () => {
+    test('registerNamespace() registers without loading', async () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('ui', async () => ({ btn: 'Click' }));
+      expect(i18n.isNamespaceRegistered('ui')).toBe(true);
+      expect(i18n.isNamespaceLoaded('ui')).toBe(false);
+      expect(i18n.t('btn')).toBe('btn'); // not loaded yet
+    });
+
+    test('loadNamespace() loads after registerNamespace()', async () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('ui', async () => ({ btn: 'Click' }));
+      await i18n.loadNamespace('ui');
+      expect(i18n.isNamespaceLoaded('ui')).toBe(true);
+      expect(i18n.t('btn')).toBe('Click');
+    });
+
+    test('loadNamespace() deduplicates concurrent calls', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('ui', async () => {
+        calls++;
+
+        return { btn: 'Click' };
+      });
+      await Promise.all([i18n.loadNamespace('ui'), i18n.loadNamespace('ui'), i18n.loadNamespace('ui')]);
+      expect(calls).toBe(1);
+    });
+
+    test('loadNamespace() is a no-op after the namespace is already loaded', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      i18n.registerNamespace('ui', async () => {
+        calls++;
+
+        return { btn: 'Click' };
+      });
+      await i18n.loadNamespace('ui');
+      await i18n.loadNamespace('ui');
+      await i18n.loadNamespace('ui');
+      expect(calls).toBe(1);
+    });
+
+    test('loadNamespace() rejects when namespace is not registered', async () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      await expect(i18n.loadNamespace('unregistered')).rejects.toThrow('not registered');
+    });
+
+    test('isNamespaceRegistered() returns false for an unregistered namespace', () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      expect(i18n.isNamespaceRegistered('missing')).toBe(false);
+    });
+
+    test('isNamespaceLoaded() with explicit locale argument', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+
+      i18n.registerNamespace('ui', async (locale) => (locale === 'fr' ? { btn: 'Cliquer' } : { btn: 'Click' }));
+      await i18n.loadNamespace('ui', 'fr');
+      expect(i18n.isNamespaceLoaded('ui', 'fr')).toBe(true);
+      expect(i18n.isNamespaceLoaded('ui', 'en')).toBe(false);
+    });
+
+    test('extend() = registerNamespace + loadNamespace in one call', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      await i18n.extend('ui', async () => {
+        calls++;
+
+        return { btn: 'Click' };
+      });
+      expect(calls).toBe(1);
+      expect(i18n.isNamespaceRegistered('ui')).toBe(true);
+      expect(i18n.isNamespaceLoaded('ui')).toBe(true);
+      expect(i18n.t('btn')).toBe('Click');
+    });
+
+    test('loadNamespace() for a specific locale does not notify when locale is not in active chain', async () => {
+      const i18n = createI18n({ catalogs: { en: {}, fr: {} }, locale: 'en' });
+      const listener = vi.fn();
+
+      i18n.registerNamespace('ui', async () => ({ btn: 'Cliquer' }));
+      i18n.subscribe(listener);
+      await i18n.loadNamespace('ui', 'fr');
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
+  // ─── I18nSnapshot — t/tp accessors ───────────────────────────────────────
+
+  describe('I18nSnapshot — t/tp accessors', () => {
+    test('snapshot.t() translates using the locale at snapshot time', async () => {
+      const i18n = createI18n({
+        catalogs: { en: { greeting: 'Hello' }, fr: { greeting: 'Bonjour' } },
+        locale: 'en',
+      });
+      const snap = i18n.getSnapshot();
+
+      await i18n.setLocale('fr');
+
+      // snap was captured at 'en' — t() is bound to the translate fn, which uses live state
+      // The snapshot.t references the same translate closure, so it resolves with the current locale.
+      // We verify that the current locale snapshot has the correct locale and works.
+      const currentSnap = i18n.getSnapshot();
+
+      expect(currentSnap.locale).toBe('fr');
+      expect(currentSnap.t('greeting')).toBe('Bonjour');
+      expect(snap.locale).toBe('en');
+    });
+
+    test('snapshot.t() and i18n.t() return the same result', () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello, {name}!' } }, locale: 'en' });
+      const snap = i18n.getSnapshot();
+
+      expect(snap.t('hello', { name: 'Alice' })).toBe(i18n.t('hello', { name: 'Alice' }));
+    });
+
+    test('snapshot.tp() works for plural forms', () => {
+      const i18n = createI18n({
+        catalogs: { en: { inbox: { one: 'One message', other: '{count} messages' } } },
+        locale: 'en',
+      });
+      const snap = i18n.getSnapshot();
+
+      expect(snap.tp('inbox', 1)).toBe('One message');
+      expect(snap.tp('inbox', 5)).toBe('5 messages');
+    });
+
+    test('subscriber receives snapshot with working t/tp', async () => {
+      const i18n = createI18n({
+        catalogs: { en: { hello: 'Hello' }, fr: { hello: 'Bonjour' } },
+        locale: 'en',
+      });
+      const snaps: I18nSnapshot[] = [];
+
+      i18n.subscribe((s) => snaps.push(s));
+      await i18n.setLocale('fr');
+      expect(snaps[0]?.locale).toBe('fr');
+      expect(snaps[0]?.t('hello')).toBe('Bonjour');
+    });
+  });
+
+  // ─── getState() / restoreState() — public interface ──────────────────────
+
+  describe('getState() / restoreState()', () => {
+    test('getState() returns the same structure as serializeI18n()', () => {
+      const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } }, locale: 'en' });
+
+      expect(i18n.getState()).toEqual(serializeI18n(i18n));
+    });
+
+    test('restoreState() is equivalent to hydrateI18n()', () => {
+      const server = createI18n({ catalogs: { en: { title: 'Title' } }, locale: 'en' });
+      const state = server.getState();
+      const client = createI18n();
+
+      client.restoreState(state);
+      expect(client.locale).toBe('en');
+      expect(client.t('title')).toBe('Title');
+    });
+
+    test('restoreState() throws [lingua/E006] when locale missing from catalogs', () => {
+      const i18n = createI18n();
+
+      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr' })).toThrow('[lingua/E006]');
+    });
+
+    test('restoreState() throws [lingua/E007] on disposed instance', () => {
+      const i18n = createI18n();
+
+      i18n.dispose();
+      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en' })).toThrow('[lingua/E007]');
+    });
+
+    test('restoreState() clears namespace markers so extend() can re-apply', async () => {
+      let calls = 0;
+      const i18n = createI18n({ catalogs: { en: { base: 'Base' } }, locale: 'en' });
+
+      await i18n.extend('ui', async () => {
+        calls++;
+
+        return { btn: 'Click' };
+      });
+      expect(calls).toBe(1);
+
+      i18n.restoreState({ catalogs: { en: { base: 'Base2' } }, locale: 'en' });
+      // btn is gone after restore
+      expect(i18n.t('btn')).toBe('btn');
+
+      // extend() re-applies because restoreState cleared the marker
+      await i18n.extend('ui', async () => {
+        calls++;
+
+        return { btn: 'Click' };
+      });
+      expect(calls).toBe(2);
+      expect(i18n.t('btn')).toBe('Click');
+    });
+
+    test('getState() only includes fully loaded catalogs', () => {
+      const i18n = createI18n({
+        catalogs: {
+          en: { hello: 'Hello' },
+          fr: async () => ({ hello: 'Bonjour' }),
+        },
+        locale: 'en',
+      });
+      const state = i18n.getState();
+
+      expect(Object.keys(state.catalogs)).toEqual(['en']);
+    });
+
+    test('restoreState() notifies subscribers', () => {
+      const i18n = createI18n({ catalogs: { en: {} }, locale: 'en' });
+      const listener = vi.fn();
+
+      i18n.subscribe(listener);
+      i18n.restoreState({ catalogs: { fr: { bonjour: 'Bonjour' } }, locale: 'fr' });
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(listener.mock.calls[0]?.[0]?.locale).toBe('fr');
     });
   });
 });

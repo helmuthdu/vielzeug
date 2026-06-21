@@ -1,4 +1,3 @@
-import { applyLocalQuery } from '../applyQuery';
 import { decodeQuery, encodeQuery } from '../codecs';
 import { createLocalSource } from '../localSource';
 import { itemRange } from '../pagination';
@@ -60,11 +59,11 @@ describe('createLocalSource', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
-    it('setLimit changes page size and resets to page 1', async () => {
+    it('patch({ limit }) changes page size and resets to page 1', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
 
       await source.goTo(2);
-      await source.setLimit(3);
+      await source.patch({ limit: 3 });
 
       expect(source.meta.pageNumber).toBe(1);
       expect(source.meta.totalItems).toBe(5);
@@ -100,29 +99,29 @@ describe('createLocalSource', () => {
       expect(source.current[0]).toBe(1);
     });
 
-    it('setFilter replaces the active filter', async () => {
+    it('patch({ filter }) replaces the active filter', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
 
-      await source.setFilter((x) => x % 2 === 0);
+      await source.patch({ filter: (x) => x % 2 === 0 });
 
       expect(source.current).toEqual([2, 4]);
     });
 
-    it('setFilter with undefined clears the filter', async () => {
+    it('patch({ filter: undefined }) clears the filter', async () => {
       const source = createLocalSource([1, 2, 3], {
         filter: (x) => x > 1,
         limit: 10,
       });
 
-      await source.setFilter(undefined);
+      await source.patch({ filter: undefined });
 
       expect(source.current).toEqual([1, 2, 3]);
     });
 
-    it('setSort replaces the active sort', async () => {
+    it('patch({ sort }) replaces the active sort', async () => {
       const source = createLocalSource([3, 1, 2], { limit: 10 });
 
-      await source.setSort((a, b) => a - b);
+      await source.patch({ sort: (a, b) => a - b });
 
       expect(source.current).toEqual([1, 2, 3]);
     });
@@ -138,7 +137,7 @@ describe('createLocalSource', () => {
       await source.goTo(2);
       await source.reset();
 
-      expect(source.toQuery()).toEqual({ limit: 2, page: 1 });
+      expect(source.query).toEqual({ limit: 2, page: 1 });
       expect(source.current).toEqual([4, 3]);
     });
   });
@@ -207,20 +206,18 @@ describe('createLocalSource', () => {
   });
 
   describe('serialization (codec round-trip)', () => {
-    it('roundtrips through encodeQuery + applyLocalQuery', async () => {
+    it('roundtrips through encodeQuery + decodeQuery + patch()', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 2 });
 
       await source.search('2', { immediate: true });
 
-      const serialized = encodeQuery(source.toQuery());
+      const serialized = encodeQuery(source.query);
       const restored = createLocalSource([1, 2, 3, 4, 5, 6], { limit: 10 });
-      const q = decodeQuery(serialized, { defaultLimit: 10 });
+      const q = decodeQuery(serialized, { defaultLimit: 2 });
 
-      if (q.limit !== undefined) await restored.setLimit(q.limit);
+      await restored.patch(q);
 
-      if (q.search !== undefined) await restored.search(q.search, { immediate: true });
-
-      expect(restored.toQuery()).toEqual({ limit: 2, page: 1, search: '2' });
+      expect(restored.query).toEqual({ limit: 2, page: 1, search: '2' });
     });
   });
 
@@ -245,19 +242,19 @@ describe('createLocalSource', () => {
       expect(range.end).toBe(0);
     });
 
-    it('toQuery omits search key when no search is active', () => {
+    it('query omits search key when no search is active', () => {
       const source = createLocalSource([1, 2, 3], { limit: 10 });
 
-      expect(source.toQuery()).toEqual({ limit: 10, page: 1 });
-      expect('search' in source.toQuery()).toBe(false);
+      expect(source.query).toEqual({ limit: 10, page: 1 });
+      expect('search' in source.query).toBe(false);
     });
 
-    it('toQuery includes search when active', async () => {
+    it('query includes search when active', async () => {
       const source = createLocalSource([1, 2, 3], { limit: 10 });
 
       await source.search('hello', { immediate: true });
 
-      expect(source.toQuery()).toEqual({ limit: 10, page: 1, search: 'hello' });
+      expect(source.query).toEqual({ limit: 10, page: 1, search: 'hello' });
     });
   });
 
@@ -280,7 +277,7 @@ describe('createLocalSource', () => {
       await source.reset();
 
       expect(source.meta.isSearchPending).toBe(false);
-      expect(source.toQuery().search).toBeUndefined();
+      expect(source.query.search).toBeUndefined();
       expect(source.current).toEqual([1, 2, 3, 4, 5]);
     });
   });
@@ -340,11 +337,10 @@ describe('createLocalSource', () => {
       source.dispose();
     });
 
-    it('applies filter and sort from applyLocalQuery equivalent', async () => {
+    it('applies filter and sort atomically via patch()', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
 
-      await source.setFilter((x: number) => x > 3);
-      await source.setSort((a: number, b: number) => b - a);
+      await source.patch({ filter: (x: number) => x > 3, sort: (a: number, b: number) => b - a });
 
       expect(source.current).toEqual([5, 4]);
     });
@@ -463,42 +459,6 @@ describe('createLocalSource', () => {
 
       expect(listener).not.toHaveBeenCalled();
     });
-  });
-});
-
-describe('applyLocalQuery', () => {
-  it('applies limit, search, and page in order — page reflects new limit context', async () => {
-    const source = createLocalSource(
-      Array.from({ length: 30 }, (_, i) => i + 1),
-      { limit: 10 },
-    );
-
-    await applyLocalQuery(source, { limit: 5, page: 3, search: '' });
-
-    const q = source.toQuery();
-
-    expect(q.limit).toBe(5);
-    expect(q.page).toBe(3);
-  });
-
-  it('no-op when patch is empty and force is not set', async () => {
-    const source = createLocalSource([1, 2, 3], { limit: 10 });
-    const listener = vi.fn();
-
-    source.subscribe(listener);
-
-    await applyLocalQuery(source, {});
-
-    expect(listener).not.toHaveBeenCalled();
-  });
-
-  it('applies only limit when only limit is in patch', async () => {
-    const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
-
-    await applyLocalQuery(source, { limit: 2 });
-
-    expect(source.toQuery().limit).toBe(2);
-    expect(source.meta.pageCount).toBe(3);
   });
 });
 

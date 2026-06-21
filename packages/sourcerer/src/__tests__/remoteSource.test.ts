@@ -1,4 +1,3 @@
-import { applyRemoteQuery } from '../applyQuery';
 import { decodeQuery, encodeQuery } from '../codecs';
 import { itemRange } from '../pagination';
 import { createRemoteSource } from '../remoteSource';
@@ -99,30 +98,30 @@ describe('createRemoteSource', () => {
   });
 
   describe('query updates and navigation', () => {
-    it('applyRemoteQuery applies multiple fields and performs fetches', async () => {
+    it('patch() applies multiple fields and performs fetches', async () => {
       const fetch = vi.fn(async ({ limit, page, search }: { limit: number; page: number; search?: string }) => ({
         items: [`${limit}-${page}-${search ?? ''}`],
         total: 50,
       }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
 
-      await applyRemoteQuery(source, { limit: 5, search: 'x' });
+      await source.patch({ limit: 5, search: 'x' });
       await source.goTo(3);
 
-      expect(source.toQuery().limit).toBe(5);
-      expect(source.toQuery().page).toBe(3);
+      expect(source.query.limit).toBe(5);
+      expect(source.query.page).toBe(3);
       expect(source.current).toEqual(['5-3-x']);
     });
 
-    it('setLimit recalculates page against new total', async () => {
+    it('goTo() recalculates page against new total', async () => {
       const fetch = vi.fn(async () => ({ items: ['a'], total: 20 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 5 });
 
       await source.refresh();
       await source.goTo(3);
 
-      expect(source.toQuery().page).toBe(3);
-      expect(source.toQuery().limit).toBe(5);
+      expect(source.query.page).toBe(3);
+      expect(source.query.limit).toBe(5);
     });
 
     it('goToLast navigates using current total pages', async () => {
@@ -281,7 +280,7 @@ describe('createRemoteSource', () => {
   });
 
   describe('serialization and hydration', () => {
-    it('roundtrips snapshot through encodeQuery + applyRemoteQuery', async () => {
+    it('roundtrips snapshot through encodeQuery + patch()', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 20 }));
       const source = createRemoteSource({
         autoFetch: false,
@@ -294,40 +293,40 @@ describe('createRemoteSource', () => {
       await source.refresh();
       await source.goTo(2);
 
-      const params = encodeQuery(source.toQuery());
+      const params = encodeQuery(source.query);
       const restored = createRemoteSource({ autoFetch: false, fetch, limit: 10 });
       const q = decodeQuery(params, { defaultLimit: 10 });
 
-      await applyRemoteQuery(restored, q);
+      await restored.patch(q);
 
-      expect(restored.toQuery()).toMatchObject({
+      expect(restored.query).toMatchObject({
         limit: 2,
         page: 2,
       });
     });
 
-    it('applyRemoteQuery with no changes does not fetch', async () => {
+    it('patch({}) with no changes does not fetch', async () => {
       const fetch = vi.fn(async () => ({ items: ['ok'], total: 1 }));
       const source = createRemoteSource({ autoFetch: false, fetch, limit: 2 });
 
-      await applyRemoteQuery(source, {});
+      await source.patch({});
       await Promise.resolve();
 
       expect(fetch).not.toHaveBeenCalled();
     });
 
-    it('applyRemoteQuery applies filter and sort fields in a single fetch', async () => {
+    it('patch() applies filter and sort fields in a single fetch', async () => {
       const fetchFn = vi.fn(async (q: { filter?: { active: boolean }; sort?: { by: string } }) => ({
         items: [`filter=${String(q.filter?.active)}-sort=${q.sort?.by ?? 'none'}`],
         total: 1,
       }));
       const source = createRemoteSource({ autoFetch: false, fetch: fetchFn, limit: 10 });
 
-      await applyRemoteQuery(source, { filter: { active: true }, sort: { by: 'name' } });
+      await source.patch({ filter: { active: true }, sort: { by: 'name' } });
 
       expect(fetchFn).toHaveBeenCalledTimes(1);
       expect(source.current).toEqual(['filter=true-sort=name']);
-      expect(source.toQuery()).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
+      expect(source.query).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
     });
 
     it('snapshot initialises source with pre-loaded data', async () => {
@@ -466,11 +465,10 @@ describe('createRemoteSource', () => {
         sort: { by: 'name' },
       });
 
-      await source.setFilter({ active: false });
-      await source.setSort({ by: 'age' });
+      await source.patch({ filter: { active: false }, sort: { by: 'age' } });
       await source.reset();
 
-      expect(source.toQuery()).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
+      expect(source.query).toMatchObject({ filter: { active: true }, sort: { by: 'name' } });
     });
 
     it('reset() resets search and page to defaults', async () => {
@@ -482,8 +480,8 @@ describe('createRemoteSource', () => {
       await source.search('hello', { immediate: true });
       await source.reset();
 
-      expect(source.toQuery()).toMatchObject({ page: 1 });
-      expect(source.toQuery().search).toBeUndefined();
+      expect(source.query).toMatchObject({ page: 1 });
+      expect(source.query.search).toBeUndefined();
     });
   });
 
@@ -496,7 +494,7 @@ describe('createRemoteSource', () => {
 
       await source.goTo(999);
 
-      expect(source.toQuery().page).toBe(3);
+      expect(source.query.page).toBe(3);
     });
 
     it('clamps goTo() to page 1 minimum', async () => {
@@ -506,7 +504,7 @@ describe('createRemoteSource', () => {
       await source.refresh();
       await source.goTo(-5);
 
-      expect(source.toQuery().page).toBe(1);
+      expect(source.query.page).toBe(1);
     });
   });
 
@@ -519,7 +517,7 @@ describe('createRemoteSource', () => {
 
       await source.goTo(999);
 
-      expect(source.toQuery().page).toBe(3);
+      expect(source.query.page).toBe(3);
     });
 
     it('passes arbitrary page to fetch before total is known', async () => {

@@ -20,15 +20,62 @@ export interface SearchHit {
   slug: string;
 }
 
+/**
+ * Pre-normalised version of a package's searchable fields — computed once in
+ * buildToolContext and reused across all queries. Avoids repeated toLowerCase/replace
+ * per query per package.
+ */
+interface NormalisedPackage {
+  availableDocPages: DocPage[];
+  category: string;
+  description: string;
+  docs: Partial<Record<DocPage, string>>;
+  exports: string;
+  keywords: string;
+  name: string;
+  related: string;
+  slug: string;
+  source: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Normalisation
+// ---------------------------------------------------------------------------
+
+function normalise(s: string): string {
+  return s.toLowerCase().replace(/-/g, ' ');
+}
+
+export function normalisePackage(pkg: BundledPackage): NormalisedPackage {
+  const docs: Partial<Record<DocPage, string>> = {};
+
+  for (const page of pkg.availableDocPages) {
+    const content = pkg.docs[page];
+
+    if (typeof content === 'string') docs[page] = normalise(content);
+  }
+
+  return {
+    availableDocPages: pkg.availableDocPages,
+    category: normalise(pkg.category),
+    description: normalise(pkg.description),
+    docs,
+    exports: pkg.exports.map(normalise).join(' '),
+    keywords: pkg.keywords.map(normalise).join(' '),
+    name: pkg.name,
+    related: pkg.related.map(normalise).join(' '),
+    slug: pkg.slug,
+    source: pkg.apiSource ? normalise(pkg.apiSource) : null,
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Scoring
 // ---------------------------------------------------------------------------
 
-/** Returns true if every term in `terms` appears in `haystack` (case-insensitive, hyphens normalized to spaces). */
+/** Returns true if every term appears in the already-normalised haystack. */
 function allTermsMatch(haystack: string, terms: string[]): boolean {
-  const lower = haystack.toLowerCase().replace(/-/g, ' ');
-
-  return terms.every((t) => lower.includes(t));
+  return terms.every((t) => haystack.includes(t));
 }
 
 /** Weighted scores — higher = stronger signal within tier. */
@@ -43,49 +90,46 @@ const W = {
   source: 0.9,
 } as const;
 
-export function scorePackage(pkg: BundledPackage, query: string): SearchHit | null {
-  const terms = query
-    .toLowerCase()
-    .replace(/-/g, ' ')
+/** Score a pre-normalised package against a query. The query is normalised here; fields are pre-normalised. */
+export function scorePackage(pkg: NormalisedPackage, query: string): SearchHit | null {
+  const terms = normalise(query)
     .split(/\s+/)
     .filter((t) => t.length > 0);
 
   if (terms.length === 0) return null;
 
   let score = 0;
-  const matchedIn: SearchHit['matchedIn'] = [];
+  const matched = new Set<SearchHit['matchedIn'][number]>();
   const matchedPages: DocPage[] = [];
 
-  if (allTermsMatch(pkg.name, terms)) {
+  if (allTermsMatch(normalise(pkg.name), terms)) {
     score = Math.max(score, W.name);
-    matchedIn.push('metadata');
+    matched.add('metadata');
   }
 
   if (allTermsMatch(pkg.category, terms)) {
     score = Math.max(score, W.category);
-
-    if (!matchedIn.includes('metadata')) matchedIn.push('metadata');
+    matched.add('metadata');
   }
 
   if (allTermsMatch(pkg.description, terms)) {
     score = Math.max(score, W.description);
-
-    if (!matchedIn.includes('metadata')) matchedIn.push('metadata');
+    matched.add('metadata');
   }
 
-  if (pkg.keywords.some((kw) => allTermsMatch(kw, terms))) {
+  if (pkg.keywords && allTermsMatch(pkg.keywords, terms)) {
     score = Math.max(score, W.keywords);
-    matchedIn.push('keywords');
+    matched.add('keywords');
   }
 
-  if (pkg.exports.some((ex) => allTermsMatch(ex, terms))) {
+  if (pkg.exports && allTermsMatch(pkg.exports, terms)) {
     score = Math.max(score, W.exports);
-    matchedIn.push('exports');
+    matched.add('exports');
   }
 
-  if (pkg.related.some((rel) => allTermsMatch(rel, terms))) {
+  if (pkg.related && allTermsMatch(pkg.related, terms)) {
     score = Math.max(score, W.related);
-    matchedIn.push('related');
+    matched.add('related');
   }
 
   for (const page of pkg.availableDocPages) {
@@ -93,22 +137,20 @@ export function scorePackage(pkg: BundledPackage, query: string): SearchHit | nu
 
     if (typeof content === 'string' && allTermsMatch(content, terms)) {
       score = Math.max(score, W.docs);
-
-      if (!matchedIn.includes('docs')) matchedIn.push('docs');
-
+      matched.add('docs');
       matchedPages.push(page);
     }
   }
 
-  if (pkg.apiSource && allTermsMatch(pkg.apiSource, terms)) {
+  if (pkg.source && allTermsMatch(pkg.source, terms)) {
     score = Math.max(score, W.source);
-    matchedIn.push('source');
+    matched.add('source');
   }
 
   if (score === 0) return null;
 
   return {
-    matchedIn,
+    matchedIn: [...matched] as SearchHit['matchedIn'],
     ...(matchedPages.length > 0 && { matchedPages }),
     name: pkg.name,
     score,

@@ -31,13 +31,8 @@ const createItem = <T>(
   const indexSignal: Signal<number> = signal(index);
 
   const result = render(dataSignal, indexSignal);
-  const nodes = Array.from(result.fragment.childNodes);
-
-  parent.insertBefore(result.fragment, insertBefore);
-
   const cleanups: (() => void)[] = [];
-
-  result.apply((fn) => cleanups.push(fn));
+  const nodes = result.mount(parent, insertBefore, (fn) => cleanups.push(fn));
 
   return { cleanups, data: dataSignal, index: indexSignal, key: '', nodes };
 };
@@ -132,57 +127,25 @@ const reconcileItems = <T>(
  * Each item is rendered by the provided render function.
  * Items are reused by key when the list changes; only stale items are destroyed.
  *
- * **Reactive (default):** render receives `Reactive<T>` and `Reactive<number>`.
- * In-place updates (reorder, value change) avoid DOM teardown.
+ * The render function receives a `Readable<T>` signal and a `Readable<number>` index
+ * signal. Use `item.value` to read the current item inside reactive expressions:
  *
- * **Snapshot:** render receives plain `T` and `number`. Items are destroyed and
- * recreated on every list change that affects them — simpler but less optimal.
- * Use when the render function is cheap and granular reactivity is not needed.
- *
- * **Plain array note:** when a plain `T[]` is passed (not a signal or getter),
- * it is treated as a static snapshot — mutations to the original array after
- * the directive is created are not tracked. Pass a `Signal<T[]>` or `() => T[]`
- * for reactive lists.
- *
- * @example Reactive (default)
  * ```ts
  * html`${each(items, (item) => item.id, (item) => html`<li>${() => item.value.name}</li>`)}`
  * ```
  *
- * @example Snapshot
- * ```ts
- * html`${each(items, (item) => item.id, (item, index) => html`<li>${item.name} #${index}</li>`, { snapshot: true })}`
- * ```
+ * **Plain array:** when a plain `T[]` is passed (not a signal or getter), it is
+ * treated as a one-time static render. Mutations to the original array are not
+ * tracked. Pass a `Signal<T[]>` or `() => T[]` for reactive lists.
+ *
+ * **Optional fallback:** the fourth argument renders when the list is empty.
  */
 export function each<T>(
   list: MaybeReactiveArray<T>,
   keyFn: (item: T, index: number) => string | number,
   render: (item: Readable<T>, index: Readable<number>) => HTMLResult,
   fallback?: () => HTMLResult,
-): DirectiveResult;
-export function each<T>(
-  list: MaybeReactiveArray<T>,
-  keyFn: (item: T, index: number) => string | number,
-  render: (item: T, index: number) => HTMLResult,
-  options: { fallback?: () => HTMLResult; snapshot: true },
-): DirectiveResult;
-export function each<T>(
-  list: MaybeReactiveArray<T>,
-  keyFn: (item: T, index: number) => string | number,
-  render: ((item: Readable<T>, index: Readable<number>) => HTMLResult) | ((item: T, index: number) => HTMLResult),
-  fallbackOrOptions?: (() => HTMLResult) | { fallback?: () => HTMLResult; snapshot: true },
 ): DirectiveResult {
-  const isSnapshot =
-    typeof fallbackOrOptions === 'object' && fallbackOrOptions !== null && fallbackOrOptions.snapshot === true;
-  const fallback = isSnapshot
-    ? (fallbackOrOptions as { fallback?: () => HTMLResult }).fallback
-    : (fallbackOrOptions as (() => HTMLResult) | undefined);
-
-  // Wrap snapshot render as a signal-based render
-  const signalRender = isSnapshot
-    ? (item: Readable<T>, index: Readable<number>): HTMLResult =>
-        (render as (item: T, index: number) => HTMLResult)(item.value, index.value)
-    : (render as (item: Readable<T>, index: Readable<number>) => HTMLResult);
   const listSignal = Array.isArray(list)
     ? signal(list as T[])
     : typeof list === 'function'
@@ -219,11 +182,8 @@ export function each<T>(
       if (!fallback) return;
 
       const result = fallback();
-      const nodes = Array.from(result.fragment.childNodes);
 
-      parent.insertBefore(result.fragment, endMarker);
-      result.apply((fn) => fallbackCleanups.push(fn));
-      fallbackNodes = nodes;
+      fallbackNodes = result.mount(parent, endMarker, (fn) => fallbackCleanups.push(fn));
     };
 
     const clearFallback = (): void => {
@@ -251,7 +211,7 @@ export function each<T>(
       clearFallback();
 
       try {
-        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, signalRender, parent, endMarker));
+        itemsOrdered = untrack(() => reconcileItems(itemsMap, nextList, keyFn, render, parent, endMarker));
       } catch (err) {
         if (isDev) warn(`each() reconciliation error: ${err instanceof Error ? err.message : String(err)}`);
 

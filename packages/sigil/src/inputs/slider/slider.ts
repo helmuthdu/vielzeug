@@ -1,4 +1,4 @@
-import { createStableId, define, useField, html, inject, prop, ref, syncAria } from '@vielzeug/craft';
+import { createStableId, define, useField, html, inject, prop, ref } from '@vielzeug/craft';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -114,7 +114,7 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
     value: prop.number(0),
     'value-text': prop.string(),
   },
-  setup(props, { bind, el, emit, onEvent, onMounted, slots }) {
+  setup(props, { aria, bind, el, emit, onCleanup, onEvent, onMounted, slots }) {
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -339,13 +339,15 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
             },
           ),
         );
-        syncAria(thumbStartEl, {
-          label: 'Range start',
-          valuemax: () => endVal.value,
-          valuemin: () => sliderControl.min(),
-          valuenow: () => startVal.value,
-          valuetext: () => props['from-value-text'].value ?? null,
-        });
+        onCleanup(
+          aria(thumbStartEl, {
+            label: 'Range start',
+            valuemax: () => endVal.value,
+            valuemin: () => sliderControl.min(),
+            valuenow: () => startVal.value,
+            valuetext: () => props['from-value-text'].value ?? null,
+          }),
+        );
       }
 
       if (thumbEndEl) {
@@ -359,13 +361,15 @@ define<SgSliderProps, SgSliderEvents>(SLIDER_TAG, {
             },
           ),
         );
-        syncAria(thumbEndEl, {
-          label: 'Range end',
-          valuemax: () => sliderControl.max(),
-          valuemin: () => startVal.value,
-          valuenow: () => endVal.value,
-          valuetext: () => props['to-value-text'].value ?? null,
-        });
+        onCleanup(
+          aria(thumbEndEl, {
+            label: 'Range end',
+            valuemax: () => sliderControl.max(),
+            valuemin: () => startVal.value,
+            valuenow: () => endVal.value,
+            valuetext: () => props['to-value-text'].value ?? null,
+          }),
+        );
       }
     };
     // ── Single-value mode setup ───────────────────────────────────

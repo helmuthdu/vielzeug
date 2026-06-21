@@ -14,7 +14,7 @@ Network requests fail unpredictably. Retrying manually in every component leads 
 Track retry count in context, use guard conditions to allow retries only if count < limit, and transition to error state when retries are exhausted.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type FetchContext = {
   data: string;
@@ -29,7 +29,7 @@ type FetchEvent =
   | { type: 'RETRY' }
   | { type: 'GIVE_UP' };
 
-const fetchMachine = machine({
+const fetchMachine = createMachine({
   initial: 'idle',
   context: { data: '', error: '', retries: 0 },
   states: {
@@ -126,7 +126,7 @@ const fetchMachine = machine({
       },
     },
   },
-});
+}).start();
 
 const fetcher = fetchMachine;
 

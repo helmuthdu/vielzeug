@@ -10,19 +10,19 @@ description: Common patterns, best practices, and recipes for building state mac
 ### Minimal Example
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'TOGGLE' };
 
-const m = machine({
+const m = createMachine({
   initial: 'on',
   states: {
     off: { on: { TOGGLE: { target: 'on' } } },
     on: { on: { TOGGLE: { target: 'off' } } },
   },
-});
+}).start();
 
-console.log(m.send({ type: 'TOGGLE' })); // 'transitioned' — state changes to 'off'
+console.log(m.send({ type: 'TOGGLE' }).status); // 'transitioned' — state changes to 'off'
 ```
 
 ### With Context
@@ -30,11 +30,11 @@ console.log(m.send({ type: 'TOGGLE' })); // 'transitioned' — state changes to 
 Context holds data that changes during transitions. Mutate it directly inside action functions:
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DEC' } | { type: 'INC' };
 
-const m = machine({
+const m = createMachine({
   context: { count: 0 },
   initial: 'idle',
   states: {
@@ -59,7 +59,7 @@ const m = machine({
       },
     },
   },
-});
+}).start();
 ```
 
 ::: tip Context is required when non-empty
@@ -281,9 +281,9 @@ Compound states contain nested substates. A compound state must have an `initial
 ### Basic hierarchy
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
-const m = machine({
+const m = createMachine({
   context: { mode: '' },
   initial: 'active',
   states: {
@@ -296,7 +296,7 @@ const m = machine({
       },
     },
   },
-});
+}).start();
 
 // Entering 'active' automatically resolves to 'active.editing'
 console.log(m.state.value); // 'active.editing'
@@ -329,14 +329,14 @@ m.matches('active.editing'); // true only when in 'active.editing'
 Validate context at initialization and on every transition:
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
-const m = machine({
+const m = createMachine({
   context: { count: 0, name: 'app' },
   initial: 'idle',
   validateContext: (ctx) => typeof ctx.count === 'number' && typeof ctx.name === 'string',
   states: { idle: {} },
-});
+}).start();
 ```
 
 When validation fails, a `MachineError` with code `MACHINE_INVALID_VALIDATE_CONTEXT` is thrown. The machine state and context are **unchanged** — the transition is rolled back before any signals are updated.
@@ -348,9 +348,9 @@ Save and restore machine state across sessions using a persistence adapter.
 ### Local Storage
 
 ```ts
-import { machine, type MachineSnapshot } from '@vielzeug/clockwork';
+import { createMachine, type MachineSnapshot } from '@vielzeug/clockwork';
 
-const m = machine(config, {
+const m = createMachine(config).start({
   persistence: {
     load: () => {
       const raw = localStorage.getItem('clockwork:state');
@@ -365,7 +365,7 @@ const m = machine(config, {
 
 ### Hydration behavior
 
-On startup, `machine()` checks `options.snapshot` first, then `persistence.load()`. If a persisted snapshot exists, the machine hydrates from it — entry hooks run, invokes start, and after-timers schedule.
+On startup, `createMachine().start()` checks `options.snapshot` first, then `persistence.load()`. If a persisted snapshot exists, the machine hydrates from it — entry hooks run, invokes start, and after-timers schedule.
 
 ::: warning Disposal does not clear persistence
 `m[Symbol.dispose]()` does **not** clear persisted state. The machine may be recreated (e.g. after HMR or component remount) and should resume from the last saved state. To reset persistence, call your adapter's storage API directly.
@@ -380,7 +380,7 @@ If context is loaded from untrusted sources (e.g. `localStorage`), run your `val
 Interceptors are pure functions that run before event processing. Return the event (optionally transformed) to allow it, or `null` to block it. They run left-to-right — the first `null` stops the chain:
 
 ```ts
-import { machine, type InterceptorFn } from '@vielzeug/clockwork';
+import { createMachine, type InterceptorFn } from '@vielzeug/clockwork';
 
 const logger: InterceptorFn<State, Context, Event> = (event, snapshot) => {
   console.log(`[${snapshot.state}] ${event.type}`);
@@ -392,7 +392,7 @@ const blocker: InterceptorFn<State, Context, Event> = (event, _snapshot) => {
   return event;
 };
 
-const m = machine(config, { interceptors: [logger, blocker] });
+const m = createMachine(config).start({ interceptors: [logger, blocker] });
 ```
 
 ::: tip
@@ -401,19 +401,19 @@ Interceptors can also transform events — return a modified event object to cha
 
 ## send() and SendResult
 
-`send()` returns a `SendResult` string, not a boolean:
+`send()` returns a `SendResult` object. Check `.status` for the outcome:
 
 ```ts
 const result = m.send({ type: 'GO' });
-// 'transitioned' — a transition occurred
-// 'queued'       — called re-entrantly from inside an action
-// 'rejected'     — no match, guard failed, interceptor blocked, or machine disposed
+// result.status === 'transitioned' — a transition occurred
+// result.status === 'queued'       — called re-entrantly from inside an action
+// result.status === 'rejected'     — no match, guard failed, interceptor blocked, or disposed
 ```
 
 Use this for conditional feedback or analytics:
 
 ```ts
-if (m.send({ type: 'SUBMIT' }) === 'rejected') {
+if (m.send({ type: 'SUBMIT' }).status === 'rejected') {
   showError('Action not allowed in current state');
 }
 ```
@@ -455,76 +455,63 @@ The callback fires only when `state` or `context` reference changes — not on e
 
 ## Debugging and Tracing
 
-For quick console-based debugging, use `debugInterpret` from the dedicated sub-path. It pre-wires `onDebug` and `onTransition` to `console.debug`/`console.group` and is tree-shaken from production bundles.
+For quick console-based debugging, use `debugMachine` from the dedicated sub-path. It pre-wires `onDebug` to `console.debug`/`console.group` and is tree-shaken from production bundles.
 
 ::: warning Development only
-`debugInterpret` writes event payloads — including full event objects and context — to the console. Do not use it in production if events or context contain PII.
+`debugMachine` writes event payloads — including full event objects and context — to the console. Do not use it in production if events or context contain PII.
 :::
 
 ```ts
-import { debugInterpret } from '@vielzeug/clockwork/devtools';
+import { debugMachine } from '@vielzeug/clockwork/devtools';
 
-const m = debugInterpret(machine);
+const m = debugMachine(config);
 m.send({ type: 'START' });
 // [clockwork:transition] START: idle → active
 // [clockwork:guard] START: idle → active — passed
 ```
 
-For custom handling, pass `debug` options directly to `machine()` or `define().start()`.
+For custom handling, pass `onDebug` directly to `createMachine().start()`.
 
 ### Debug events
 
 The `onDebug` callback receives a discriminated union of debug events:
 
 ```ts
-const m = machine(config, {
-  debug: {
-    onDebug: (event) => {
-      switch (event.type) {
-        case 'guard':
-          console.log(`Guard: ${event.from} → ${event.target} = ${event.passed}`);
-          break;
-        case 'transition-skipped':
-          console.log(`${event.event.type} in ${event.from}: no matching transition`);
-          break;
-        case 'invoke-start':
-          console.log(`invoke #${event.invokeId} started in ${event.state}`);
-          break;
-        case 'invoke-done':
-          console.log(`invoke #${event.invokeId} done:`, event.result);
-          break;
-        case 'invoke-error':
-          console.error(`invoke #${event.invokeId} failed:`, event.error);
-          break;
-        case 'invoke-abort':
-          console.log(`invoke #${event.invokeId} aborted`);
-          break;
-      }
-    },
-  },
-});
-```
-
-### `onTransition` callback
-
-For lightweight observation without full debug events:
-
-```ts
-const m = machine(config, {
-  debug: {
-    onTransition: ({ from, to, event }) => {
-      analytics.track('state_change', { from, to, event: event.type });
-    },
+const m = createMachine(config).start({
+  onDebug: (event) => {
+    switch (event.type) {
+      case 'guard':
+        console.log(`Guard: ${event.from} → ${event.target} = ${event.passed}`);
+        break;
+      case 'transition':
+        console.log(`${event.event.type}: ${event.from} → ${event.to}`);
+        break;
+      case 'transition-skipped':
+        console.log(`${event.event.type} in ${event.from}: no matching transition`);
+        break;
+      case 'invoke-start':
+        console.log(`invoke #${event.invokeId} started in ${event.state}`);
+        break;
+      case 'invoke-done':
+        console.log(`invoke #${event.invokeId} done:`, event.result);
+        break;
+      case 'invoke-error':
+        console.error(`invoke #${event.invokeId} failed:`, event.error);
+        break;
+      case 'invoke-abort':
+        console.log(`invoke #${event.invokeId} aborted`);
+        break;
+    }
   },
 });
 ```
 
 ### Transition trace buffer
 
-When `onDebug` or `onTransition` is set, a 50-entry trace buffer is enabled automatically. Set `traceLimit` to control size (`0` disables):
+When `onDebug` is set, a 50-entry trace buffer is enabled automatically. Set `traceLimit` to control size (`0` disables):
 
 ```ts
-const m = machine(config, { debug: { onTransition: () => {}, traceLimit: 200 } });
+const m = createMachine(config).start({ onDebug: () => {}, traceLimit: 200 });
 
 m.send({ type: 'GO' });
 m.send({ type: 'BACK' });
@@ -542,23 +529,24 @@ When the buffer is full, the oldest entry is overwritten. The array returned by 
 
 ### Pure transition resolution
 
-`resolveTransition()` is a pure function — it resolves which `TransitionDef` would apply without running any actions, entry/exit handlers, or invokes. Pass the config object directly:
+`.resolve()` is a pure method on `MachineDefinition` — it resolves which `TransitionDef` would apply without running any actions, entry/exit handlers, or invokes:
 
 ```ts
-import { resolveTransition } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 const config = {
   /* machine config */
 };
+const def = createMachine(config);
 
-const transition = resolveTransition(config, {
+const transition = def.resolve({
   context: { authorized: false },
   event: { type: 'LOGIN' },
   state: 'idle',
 });
 expect(transition).toBeUndefined(); // guard failed
 
-const passing = resolveTransition(config, {
+const passing = def.resolve({
   context: { authorized: true },
   event: { type: 'LOGIN' },
   state: 'idle',
@@ -569,7 +557,7 @@ expect(passing?.target).toBe('dashboard');
 ### Snapshot testing
 
 ```ts
-const m = machine(config);
+const m = createMachine(config).start();
 
 const before = m.getSnapshot();
 m.send({ type: 'UPDATE', value: 10 });
@@ -584,13 +572,13 @@ expect(after.context.value).toBe(10);
 Always dispose machines to clean up signals, abort in-flight invokes, and clear after-timers.
 
 ```ts
-const m = machine(config);
+const m = createMachine(config).start();
 
 m.dispose(); // aborts invokes, clears timers, disposes reactive signals
 
 // With the explicit resource management proposal (ES2024+):
 {
-  using m = machine(config);
+  using m = createMachine(config).start();
   m.send({ type: 'GO' });
 } // dispose() called automatically via [Symbol.dispose]
 ```
@@ -604,28 +592,28 @@ Disposal does **not** clear persisted state. The machine may resume from the las
 ### Traffic Light
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'EMERGENCY' } | { type: 'NEXT' };
 
-const trafficLight = machine({
+const trafficLight = createMachine({
   initial: 'red',
   states: {
     green: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'yellow' } } },
     red: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'green' } } },
     yellow: { on: { EMERGENCY: { target: 'red' }, NEXT: { target: 'red' } } },
   },
-});
+}).start();
 ```
 
 ### Auto-dismiss notification
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DISMISS' } | { type: 'SHOW'; message: string };
 
-const notification = machine({
+const notification = createMachine({
   context: { message: '' },
   initial: 'hidden',
   states: {
@@ -646,13 +634,13 @@ const notification = machine({
       on: { DISMISS: { target: 'hidden' } },
     },
   },
-});
+}).start();
 ```
 
 ### Auth flow with async login
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Context = { attempts: number; user?: { id: string; token: string } };
 type Event =
@@ -661,7 +649,7 @@ type Event =
   | { type: 'AUTH_SUCCESS'; user: { id: string; token: string } }
   | { type: 'AUTH_FAILED' };
 
-const auth = machine({
+const auth = createMachine({
   context: { attempts: 0 },
   initial: 'unauthenticated',
   states: {
@@ -719,7 +707,7 @@ const auth = machine({
       },
     },
   },
-});
+}).start();
 ```
 
 ## Framework Integration
@@ -728,15 +716,15 @@ const auth = machine({
 
 ```tsx [React]
 import { useEffect, useRef, useState } from 'react';
-import { machine } from '@vielzeug/clockwork';
+import { createMachine, type MachineInstance } from '@vielzeug/clockwork';
 import { trafficConfig } from './machine';
 
 function TrafficLight() {
-  const machineRef = useRef<ReturnType<typeof machine> | null>(null);
+  const machineRef = useRef<MachineInstance<any, any, any> | null>(null);
   const [state, setState] = useState('red');
 
   useEffect(() => {
-    const m = machine(trafficConfig);
+    const m = createMachine(trafficConfig).start();
     machineRef.current = m;
     const unsub = m.subscribe(({ state }) => setState(state));
     return () => {
@@ -757,7 +745,7 @@ function TrafficLight() {
 ```ts [Vue 3]
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
-import { machine, type MachineInstance } from '@vielzeug/clockwork';
+import { createMachine, type MachineInstance } from '@vielzeug/clockwork';
 import { trafficConfig } from './machine';
 
 const state = ref('red');
@@ -765,7 +753,7 @@ let m: MachineInstance<string, Record<string, never>, { type: string }>;
 let unsub: (() => void) | undefined;
 
 onMounted(() => {
-  m = machine(trafficConfig);
+  m = createMachine(trafficConfig).start();
   unsub = m.subscribe(({ state: s }) => { state.value = s; });
 });
 
@@ -790,9 +778,9 @@ onUnmounted(() => { unsub?.(); m?.dispose(); });
 
 ```ts
 import { effect } from '@vielzeug/ripple';
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
-const m = machine(playerConfig);
+const m = createMachine(playerConfig).start();
 
 effect(() => {
   document.getElementById('play-btn')!.textContent = m.state.value === 'playing' ? 'Pause' : 'Play';
@@ -807,15 +795,13 @@ Bridge Clockwork transitions to a shared event bus for cross-machine coordinatio
 
 ```ts
 import { createBus } from '@vielzeug/herald';
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 const bus = createBus<{ 'auth:login': { userId: string }; 'auth:logout': void }>();
 
-const m = machine(authConfig, {
-  debug: {
-    onTransition: ({ to }) => {
-      if (to === 'anonymous') bus.emit('auth:logout', undefined);
-    },
+const m = createMachine(authConfig).start({
+  onDebug: ({ type, ...ev }) => {
+    if (type === 'transition' && ev.to === 'anonymous') bus.emit('auth:logout', undefined);
   },
 });
 ```
@@ -826,7 +812,7 @@ const m = machine(authConfig, {
 - **Keep guards pure.** Guards must not produce side effects. All mutation belongs in `actions`.
 - **Mutate context directly in actions.** Actions receive a cloned draft — mutate it in place.
 - **Prefer shorthand transition syntax** (`on: { GO: { target: 'active' } }`) for single transitions. Use arrays only when you need multiple guarded alternatives.
-- **Dispose machines when done.** Always call `m.dispose()` (or `using m = machine(...)`) to prevent memory leaks and abort dangling invokes.
-- **Test with `resolveTransition()`.** Unit-test guard logic in isolation without spinning up a full machine instance.
+- **Dispose machines when done.** Always call `m.dispose()` (or `using m = createMachine(...).start()`) to prevent memory leaks and abort dangling invokes.
+- **Test with `.resolve()`.** Unit-test guard logic in isolation without spinning up a full machine instance.
 - **Keep machines focused.** A machine with more than 10–15 states is usually a sign it should be split.
 - **Use after for timeouts.** Prefer `after` over manual setTimeout in entry hooks — timers are automatically cleaned up on state exit.

@@ -5,8 +5,13 @@ import type { PresenceChannel, Unsubscribe } from './types';
 import { warn } from './_warn';
 import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame, encode } from './protocol';
 
-type RawSubscribeFn = (channel: string | null, event: string, handler: (payload: unknown) => void) => () => void;
 type RawSendFn = (frame: string) => void;
+
+export type PresenceEvents = {
+  onJoin(handler: (frame: InPresenceJoinFrame) => void): Unsubscribe;
+  onLeave(handler: (frame: InPresenceLeaveFrame) => void): Unsubscribe;
+  onState(handler: (frame: InPresenceStateFrame) => void): Unsubscribe;
+};
 
 /**
  * Create a presence channel that reactively tracks room member states.
@@ -15,7 +20,7 @@ type RawSendFn = (frame: string) => void;
 export function createPresence<T>(
   room: string,
   rawSend: RawSendFn,
-  rawSubscribe: RawSubscribeFn,
+  events: PresenceEvents,
   disposalSignal: AbortSignal,
 ): PresenceChannel<T> {
   let disposed = false;
@@ -28,12 +33,8 @@ export function createPresence<T>(
   const joinHandlers = new Set<(memberId: string, state: T) => void>();
   const leaveHandlers = new Set<(memberId: string) => void>();
 
-  const unsubs: Array<() => void> = [];
-
-  unsubs.push(
-    rawSubscribe(null, 'presence_state', (payload) => {
-      const frame = payload as InPresenceStateFrame;
-
+  const unsubs: Array<() => void> = [
+    events.onState((frame) => {
       if (frame.room !== room) return;
 
       const next = new Map<string, T>();
@@ -44,12 +45,7 @@ export function createPresence<T>(
 
       members.value = next;
     }),
-  );
-
-  unsubs.push(
-    rawSubscribe(null, 'presence_join', (payload) => {
-      const frame = payload as InPresenceJoinFrame;
-
+    events.onJoin((frame) => {
       if (frame.room !== room) return;
 
       const next = new Map(members.value);
@@ -61,12 +57,7 @@ export function createPresence<T>(
         handler(frame.id, frame.state as T);
       }
     }),
-  );
-
-  unsubs.push(
-    rawSubscribe(null, 'presence_leave', (payload) => {
-      const frame = payload as InPresenceLeaveFrame;
-
+    events.onLeave((frame) => {
       if (frame.room !== room) return;
 
       const next = new Map(members.value);
@@ -78,13 +69,18 @@ export function createPresence<T>(
         handler(frame.id);
       }
     }),
-  );
+  ];
 
   const presence: PresenceChannel<T> = {
+    get disposalSignal() {
+      return ctrl.signal;
+    },
+
     dispose() {
       if (disposed) return;
 
       disposed = true;
+      rawSend(encode({ room, type: 'leave' }));
       ctrl.abort();
 
       for (const unsub of unsubs) unsub();

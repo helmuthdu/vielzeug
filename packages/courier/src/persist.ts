@@ -68,7 +68,7 @@ export function persistQueryCache(
   qc: {
     getState(key: QueryKey): QueryState | null;
     keys(): QueryKey[];
-    watchKey(key: QueryKey): { peek(): QueryState; subscribe(listener: () => void): () => void };
+    observe(opts: { fetch: false; key: QueryKey }): { peek(): QueryState; subscribe(listener: () => void): () => void };
   },
   opts: PersistOptions,
 ): () => void {
@@ -102,7 +102,7 @@ export function persistQueryCache(
 
     if (current) persistState(key, current);
 
-    const store = qc.watchKey(key);
+    const store = qc.observe({ fetch: false, key });
     const unsub = store.subscribe(() => persistState(key, store.peek()));
 
     unsubs.push(unsub);

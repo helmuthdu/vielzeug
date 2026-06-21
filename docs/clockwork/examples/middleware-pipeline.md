@@ -11,10 +11,10 @@ You need to intercept machine events for cross-cutting concerns — logging, ana
 
 ### Solution
 
-Pass an `interceptors` array to `machine()`. Each interceptor is a pure function `(event, snapshot) => Ev | null`. Return the event (or a transformed event) to allow it; return `null` to block the chain:
+Pass an `interceptors` array to `createMachine().start()`. Each interceptor is a pure function `(event, snapshot) => Ev | null`. Return the event (or a transformed event) to allow it; return `null` to block the chain:
 
 ```ts
-import { machine, type InterceptorFn } from '@vielzeug/clockwork';
+import { createMachine, type InterceptorFn } from '@vielzeug/clockwork';
 
 type Event = { type: 'ADMIN_ACTION' } | { type: 'GO' } | { type: 'STOP' };
 type Context = { isAdmin: boolean };
@@ -50,10 +50,10 @@ const config = {
 };
 
 // Interceptors run left-to-right: logger runs first, then authGuard
-const m = machine(config, { interceptors: [logger, authGuard] });
+const m = createMachine(config).start({ interceptors: [logger, authGuard] });
 
-console.log(m.send({ type: 'ADMIN_ACTION' })); // 'rejected' — blocked by authGuard
-console.log(m.send({ type: 'GO' })); // 'transitioned'
+console.log(m.send({ type: 'ADMIN_ACTION' }).status); // 'rejected' — blocked by authGuard
+console.log(m.send({ type: 'GO' }).status); // 'transitioned'
 
 m[Symbol.dispose]();
 ```
@@ -61,7 +61,7 @@ m[Symbol.dispose]();
 ### Pitfalls
 
 - **Interceptors run left-to-right.** The first `null` in the chain stops all subsequent interceptors.
-- **Returning `null` swallows the event silently.** `send()` returns `'rejected'`. Log or emit a signal if you need UI feedback.
+- **Returning `null` swallows the event silently.** `send().status` is `'rejected'`. Log or emit a signal if you need UI feedback.
 - **Interceptors are synchronous.** Do not `await` inside interceptors; use entry/exit actions for async side effects.
 - **Interceptors can transform events.** Return a new event object to change its type or payload before it reaches the machine.
 

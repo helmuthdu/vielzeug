@@ -838,7 +838,7 @@ await retryingQc.fetch({
 
 - `times: 1` means one try and no retries.
 - Use `dedupe: false` when method + URL + response type are the same but you explicitly want separate requests.
-- `watchKey()` and `observe()` do **not** emit immediately; call `peek()` for the initial snapshot.
+- `observe()` does **not** emit immediately; call `peek()` for the initial snapshot.
 - `observe()` returns a **new object on every call** — memoize it in framework hooks (e.g. React `useMemo`) to avoid re-subscribing on every render.
 - Long-lived streams default to `Infinity` timeout per connection.
 
@@ -986,8 +986,8 @@ effect(() => console.log('user:', userStore.value.user?.name));
 - Use the `invalidates` and `sets` shorthands on `client.mutation()` to keep the cache in sync without boilerplate in `onSuccess`.
 - Always pass the `signal` from query and mutation functions to the underlying request.
 - Use `dedupe: false` when you intentionally want separate in-flight requests for the same method + URL + response type.
-- Use `observe()` for components — it triggers a background fetch and supports `select` and `placeholderData`. Use `watchKey()` when the cache is populated by another path and you only need the store.
-- Use `mutation.store` for framework bindings; subscribe via `store.subscribe()` for reactive updates.
+- Use `observe()` for components — it triggers a background fetch and supports `select` and `placeholderData`. Use `observe({ fetch: false })` when the cache is populated by another path and you only need the store.
+- Use `mutation.store`, `mutation.peek()`, or `mutation.subscribe()` for framework bindings; `mutation.store` is a stable `SyncStore` reference suitable for `useSyncExternalStore`.
 - Use `bindRefetch(qc)` instead of `refetchOnFocus`/`refetchOnReconnect` options — it is fully opt-in and the returned unbind function gives you explicit control.
 - Remember the timeout split: REST requests default to 30s, SSE and readable streams default to `Infinity` per connection.
 - When using `persistQueryCache`, call it **after** `hydrateQueryCache` resolves. Already-successful entries are eagerly persisted on setup.

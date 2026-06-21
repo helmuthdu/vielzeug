@@ -22,7 +22,7 @@ Managing all these states together leads to spaghetti code with race conditions 
 Use Clockwork for overall state machine (idle → loading → success/error), and Sourcerer for data source management with pagination and filtering. The machine orchestrates the state, while sourcerer handles fetching and caching.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 import { createSource } from '@vielzeug/sourcerer';
 import { signal, readonly } from '@vielzeug/ripple';
 
@@ -35,7 +35,7 @@ type DataEvent =
   | { type: 'DONE'; items: unknown[]; total: number }
   | { type: 'FAILED'; error: Error };
 
-const dataMachine = machine({
+const dataMachine = createMachine({
   initial: 'idle',
   context: {
     page: 1,
@@ -102,7 +102,7 @@ const dataMachine = machine({
       },
     },
   },
-});
+}).start();
 
 const incrementAttempts = ({ context }: any) => {
   context.attempts += 1;
@@ -148,26 +148,11 @@ const userSource = createSource({
   },
 });
 
-// The machine is already running — context can be set via initial config
 const m = dataMachine;
-/*
-const m = machine(dataMachineConfig, {
-  context: {
-    page: 1,
-    pageSize: 20,
-    search: '',
-    sortField: 'createdAt',
-    sortOrder: 'desc',
-    items: [],
-    total: 0,
-    error: null,
-    attempts: 0,
-  },
-});
 
 // Sync machine context to data source
 async function fetchData() {
-  const ctx = machine.context.value;
+  const ctx = m.context.value;
   try {
     const result = await userSource.query({
       page: ctx.page,
@@ -176,40 +161,40 @@ async function fetchData() {
       sortField: ctx.sortField,
       sortOrder: ctx.sortOrder,
     });
-    machine.send({ type: 'DONE', items: result.items, total: result.total });
+    m.send({ type: 'DONE', items: result.items, total: result.total });
   } catch (err) {
-    machine.send({ type: 'FAILED', error: err as Error });
+    m.send({ type: 'FAILED', error: err as Error });
   }
 }
 
 // Reactive state for UI bindings
-export const isLoading = machine.state.pipe((s) => s === 'loading');
-export const hasError = machine.state.pipe((s) => s === 'error' || s === 'failed');
-export const errorMessage = machine.context.pipe((c) => c.error?.message || '');
-export const items = machine.context.pipe((c) => c.items);
-export const currentPage = machine.context.pipe((c) => c.page);
-export const pageCount = machine.context.pipe((c) => Math.ceil(c.total / c.pageSize));
-export const searchQuery = machine.context.pipe((c) => c.search);
+export const isLoading = m.state.pipe((s) => s === 'loading');
+export const hasError = m.state.pipe((s) => s === 'error' || s === 'failed');
+export const errorMessage = m.context.pipe((c) => c.error?.message || '');
+export const items = m.context.pipe((c) => c.items);
+export const currentPage = m.context.pipe((c) => c.page);
+export const pageCount = m.context.pipe((c) => Math.ceil(c.total / c.pageSize));
+export const searchQuery = m.context.pipe((c) => c.search);
 
 // API for UI components
 export function loadData() {
-  machine.send({ type: 'FETCH' });
+  m.send({ type: 'FETCH' });
 }
 
 export function goToPage(page: number) {
-  machine.send({ type: 'SET_PAGE', page });
+  m.send({ type: 'SET_PAGE', page });
 }
 
 export function search(query: string) {
-  machine.send({ type: 'SET_SEARCH', query });
+  m.send({ type: 'SET_SEARCH', query });
 }
 
 export function sort(field: string, order: 'asc' | 'desc') {
-  machine.send({ type: 'SET_SORT', field, order });
+  m.send({ type: 'SET_SORT', field, order });
 }
 
 export function retry() {
-  machine.send({ type: 'RETRY' });
+  m.send({ type: 'RETRY' });
 }
 ```
 

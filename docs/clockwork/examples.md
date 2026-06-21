@@ -18,7 +18,7 @@ description: Practical examples and recipes for Clockwork.
 - [Media Player](./examples/media-player.md)
 - [Interceptor Pipeline](./examples/middleware-pipeline.md)
 - [Debugging Transitions](./examples/debugging-transitions.md)
-- [Unit Testing with `resolveTransition()`](./examples/unit-testing.md)
+- [Unit Testing with `.resolve()`](./examples/unit-testing.md)
 - [Permission-Based Access Control](./examples/permission-based-access.md)
 - [Paginated Data Loading with Search](./examples/paginated-data-loading.md)
 - [Multi-Machine Coordination](./examples/multi-machine-coordination.md)

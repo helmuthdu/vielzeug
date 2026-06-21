@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import type { Flux } from '../types';
+import type { Scheduler } from '../types';
 
+import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
+import { FluxError, FluxTimeoutError } from '../errors';
 import { combineLatest, concat, forkJoin, merge, race, withLatestFrom, zip } from '../operators/combination';
 import { empty, from, fromEvent, interval, never, of, throwError, timer } from '../operators/creation';
 import { debounce, first, last, sample, skip, take, takeUntil, takeWhile, throttle } from '../operators/filtering';
@@ -22,6 +25,7 @@ import {
   catchError,
   delay,
   finalize,
+  flow,
   retry,
   share,
   shareReplay,
@@ -137,6 +141,34 @@ describe('from()', () => {
     await Promise.resolve();
     expect(onErr).toHaveBeenCalledWith(expect.any(Error));
   });
+
+  it('calls iter.return() on AsyncIterable when unsubscribed', async () => {
+    const returned = vi.fn();
+
+    async function* gen(): AsyncGenerator<number> {
+      try {
+        yield 1;
+        yield 2;
+        yield 3;
+      } finally {
+        returned();
+      }
+    }
+
+    const received: number[] = [];
+    const unsub = from(gen()).subscribe((n) => received.push(n as number));
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    unsub();
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(returned).toHaveBeenCalledOnce();
+    expect(received.length).toBeLessThan(3);
+  });
 });
 
 describe('empty()', () => {
@@ -164,6 +196,16 @@ describe('never()', () => {
     expect(received).toEqual([]);
     expect(completed).toBe(false);
     f.dispose();
+  });
+});
+
+describe('FluxError', () => {
+  it('has name FluxError', () => {
+    const err = new FluxError('msg');
+
+    expect(err.name).toBe('FluxError');
+    expect(err.message).toBe('msg');
+    expect(err).toBeInstanceOf(Error);
   });
 });
 
@@ -315,6 +357,22 @@ describe('concatMap()', () => {
 
     expect(result).toEqual(['a1', 'a2', 'b1', 'b2']);
   });
+
+  it('drops queued items that exceed maxBuffer', async () => {
+    const subject = createSubject<number>();
+    const inner = createSubject<number>();
+    const received: number[] = [];
+
+    subject.pipe(concatMap((_v) => inner, 1)).subscribe((n) => received.push(n as number));
+
+    subject.emit(1);
+    subject.emit(2);
+    subject.emit(3);
+    inner.emit(10);
+    inner.complete();
+    subject.dispose();
+    expect(received).toEqual([10]);
+  });
 });
 
 describe('distinctUntilChanged()', () => {
@@ -462,6 +520,26 @@ describe('throttle()', () => {
       .pipe(throttle(100))
       .subscribe((n) => received.push(n as number));
     expect(received).toEqual([1]);
+  });
+
+  it('accepts a custom clock for deterministic testing', () => {
+    let t = 0;
+    const received: number[] = [];
+    const subject = createSubject<number>();
+
+    subject.pipe(throttle(100, () => t)).subscribe((n) => received.push(n as number));
+
+    t = 0;
+    subject.emit(1);
+    t = 50;
+    subject.emit(2);
+    t = 100;
+    subject.emit(3);
+    t = 150;
+    subject.emit(4);
+    subject.dispose();
+
+    expect(received).toEqual([1, 3]);
   });
 });
 
@@ -667,6 +745,31 @@ describe('retry()', () => {
     expect(attempts).toBe(3);
     expect(onErr).toHaveBeenCalledOnce();
   });
+
+  it('retry with delayMs delays re-subscription', () =>
+    new Promise<void>((resolve) => {
+      let attempts = 0;
+      const start = Date.now();
+      const source = flux<number>((obs) => {
+        attempts++;
+
+        if (attempts < 3) {
+          obs.error?.(new Error('fail'));
+        } else {
+          obs.next(42);
+          obs.complete?.();
+        }
+      });
+
+      source.pipe(retry(2, 20)).subscribe({
+        complete() {
+          expect(Date.now() - start).toBeGreaterThanOrEqual(30);
+          expect(attempts).toBe(3);
+          resolve();
+        },
+        next: () => {},
+      });
+    }));
 });
 
 describe('finalize()', () => {
@@ -719,4 +822,318 @@ describe('timeout()', () => {
           next: () => {},
         });
     }));
+
+  it('FluxTimeoutError exposes .ms property', () =>
+    new Promise<void>((resolve) => {
+      never()
+        .pipe(timeout(25))
+        .subscribe({
+          error(err) {
+            expect(err).toBeInstanceOf(FluxTimeoutError);
+            expect((err as FluxTimeoutError).ms).toBe(25);
+            resolve();
+          },
+          next: () => {},
+        });
+    }));
+});
+
+// ── flow() ────────────────────────────────────────────────────────────────────
+
+describe('flow()', () => {
+  it('composes multiple operators into a single reusable operator', async () => {
+    const pipeline = flow(
+      filter((n: number) => n % 2 === 0),
+      map((n: number) => n * 10),
+      take(3),
+    );
+    const result = await collect<number>(of(1, 2, 3, 4, 5, 6, 7).pipe(pipeline));
+
+    expect(result).toEqual([20, 40, 60]);
+  });
+
+  it('single operator passthrough', async () => {
+    const result = await collect<number>(of(1, 2, 3).pipe(flow(map((n: number) => n + 1))));
+
+    expect(result).toEqual([2, 3, 4]);
+  });
+});
+
+// ── flatMap memory-leak fix ───────────────────────────────────────────────────
+
+describe('flatMap() memory-leak fix', () => {
+  it('completed inner subscriptions are removed from the tracking set', () => {
+    const inners = [createSubject<number>(), createSubject<number>()];
+    const outer = createSubject<number>();
+    const received: number[] = [];
+    let i = 0;
+
+    outer.pipe(flatMap(() => inners[i++]!)).subscribe((n) => received.push(n as number));
+
+    outer.emit(1);
+    inners[0]!.emit(10);
+    inners[0]!.complete();
+
+    outer.emit(2);
+    inners[1]!.emit(20);
+
+    expect(received).toEqual([10, 20]);
+    outer.dispose();
+  });
+});
+
+// ── bufferCount overlapping window ───────────────────────────────────────────
+
+describe('bufferCount() overlapping windows', () => {
+  it('emits full windows and flushes partial windows on complete', async () => {
+    const result = await collect<number[]>(of(1, 2, 3, 4).pipe(bufferCount(3, 1)));
+
+    expect(result).toEqual([[1, 2, 3], [2, 3, 4], [3, 4], [4]]);
+  });
+});
+
+// ── retry() backoff fn ────────────────────────────────────────────────────────
+
+describe('retry() backoff function', () => {
+  it('passes attempt index to backoff function', async () => {
+    const attempts: number[] = [];
+    let calls = 0;
+
+    await toPromise(
+      flux<number>((obs) => {
+        const n = calls++;
+
+        if (n < 3) {
+          obs.error?.(new Error('fail'));
+        } else {
+          obs.next(n);
+          obs.complete?.();
+        }
+      }).pipe(
+        retry(3, (n) => {
+          attempts.push(n);
+
+          return 0;
+        }),
+      ),
+    );
+
+    expect(attempts).toEqual([0, 1, 2]);
+  });
+});
+
+// ── throwError() factory overload ────────────────────────────────────────────
+
+describe('throwError() factory', () => {
+  it('accepts an error factory function', async () => {
+    const err = await toPromise(
+      flux<never>((obs) => {
+        obs.error?.(new Error('factory'));
+      }).pipe(catchError(() => throwError(() => new Error('from-factory')))),
+    ).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(Error);
+    expect((err as Error).message).toBe('from-factory');
+  });
+});
+
+// ── Custom Scheduler ──────────────────────────────────────────────────────────
+
+function makeTestScheduler(): Scheduler & { flush(): void } {
+  const queue: Array<{ fn: () => void; ms: number; repeat: boolean }> = [];
+
+  function advance(ms: number): void {
+    for (const entry of [...queue]) {
+      if (entry.ms <= ms) {
+        entry.fn();
+
+        if (!entry.repeat) queue.splice(queue.indexOf(entry), 1);
+      }
+    }
+  }
+
+  return {
+    delay(fn, ms) {
+      const entry = { fn, ms, repeat: false };
+
+      queue.push(entry);
+
+      return () => queue.splice(queue.indexOf(entry), 1);
+    },
+    flush() {
+      advance(Infinity);
+    },
+    repeat(fn, ms) {
+      const entry = { fn, ms, repeat: true };
+
+      queue.push(entry);
+
+      return () => queue.splice(queue.indexOf(entry), 1);
+    },
+  };
+}
+
+describe('custom Scheduler', () => {
+  it('debounce() uses custom scheduler', () => {
+    const sched = makeTestScheduler();
+    const subject = createSubject<number>();
+    const received: number[] = [];
+
+    subject.pipe(debounce(100, sched)).subscribe((n) => received.push(n as number));
+    subject.emit(1);
+    subject.emit(2);
+    subject.emit(3);
+
+    expect(received).toEqual([]);
+    sched.flush();
+    expect(received).toEqual([3]);
+    subject.dispose();
+  });
+
+  it('timeout() uses custom scheduler', () => {
+    const sched = makeTestScheduler();
+    const error = vi.fn();
+
+    never()
+      .pipe(timeout(100, sched))
+      .subscribe({ error, next: () => {} });
+    sched.flush();
+    expect(error).toHaveBeenCalledOnce();
+  });
+
+  it('delay() uses custom scheduler', () => {
+    const sched = makeTestScheduler();
+    const received: number[] = [];
+
+    of(1, 2, 3)
+      .pipe(delay(100, sched))
+      .subscribe((n) => received.push(n as number));
+    expect(received).toEqual([]);
+    sched.flush();
+    expect(received).toEqual([1, 2, 3]);
+  });
+
+  it('interval() uses custom scheduler', () => {
+    const sched = makeTestScheduler();
+    const received: number[] = [];
+    const unsub = interval(100, sched).subscribe((n) => received.push(n as number));
+
+    expect(received).toEqual([]);
+    sched.flush();
+    sched.flush();
+    expect(received).toEqual([0, 1]);
+    unsub();
+  });
+
+  it('timer() uses custom scheduler for one-shot delay', () => {
+    const sched = makeTestScheduler();
+    const received: number[] = [];
+
+    timer(100, undefined, sched).subscribe((n) => received.push(n as number));
+    expect(received).toEqual([]);
+    sched.flush();
+    expect(received).toEqual([0]);
+  });
+
+  it('DEFAULT_SCHEDULER is a valid Scheduler', () => {
+    const received: number[] = [];
+    const unsub = interval(0, DEFAULT_SCHEDULER).subscribe((n) => received.push(n as number));
+
+    unsub();
+    expect(DEFAULT_SCHEDULER).toHaveProperty('delay');
+    expect(DEFAULT_SCHEDULER).toHaveProperty('repeat');
+  });
+
+  it('retry() uses custom scheduler for backoff delay', () => {
+    const sched = makeTestScheduler();
+    let calls = 0;
+    const received: number[] = [];
+
+    flux<number>((obs) => {
+      calls++;
+
+      if (calls < 3) {
+        obs.error?.(new Error('fail'));
+      } else {
+        obs.next(42);
+        obs.complete?.();
+      }
+    })
+      .pipe(retry(3, 100, sched))
+      .subscribe((n) => received.push(n as number));
+
+    expect(calls).toBe(1);
+    sched.flush();
+    sched.flush();
+    expect(received).toEqual([42]);
+  });
+});
+
+// ── Zero-sources edge cases ───────────────────────────────────────────────────
+
+describe('merge() — zero sources', () => {
+  it('completes immediately', async () => {
+    const result = await toArray(merge());
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('race() — zero sources', () => {
+  it('completes immediately', async () => {
+    const result = await toArray(race());
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('zip() — zero sources', () => {
+  it('completes immediately', async () => {
+    const result = await toArray(zip());
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('forkJoin() — zero sources', () => {
+  it('completes immediately', async () => {
+    const result = await toArray(forkJoin());
+
+    expect(result).toEqual([]);
+  });
+});
+
+describe('combineLatest() — zero sources', () => {
+  it('completes immediately', async () => {
+    const result = await toArray(combineLatest());
+
+    expect(result).toEqual([]);
+  });
+});
+
+// ── share() refcount reconnect ────────────────────────────────────────────────
+
+describe('share() — refcount reconnect', () => {
+  it('reconnects the source when a new subscriber arrives after all left', () => {
+    let starts = 0;
+    const source = flux<number>((obs) => {
+      starts++;
+      obs.next(starts * 10);
+    });
+    const shared = source.pipe(share<number>());
+
+    const a: number[] = [];
+    const ua = shared.subscribe((n) => a.push(n as number));
+
+    expect(starts).toBe(1);
+    ua();
+
+    const b: number[] = [];
+
+    shared.subscribe((n) => b.push(n as number));
+
+    expect(starts).toBe(2);
+    expect(a).toEqual([10]);
+    expect(b).toEqual([20]);
+  });
 });

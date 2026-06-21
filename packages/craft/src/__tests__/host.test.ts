@@ -192,6 +192,142 @@ describe('core/host.ts', () => {
 
       expect(element.getAttribute('style') ?? '').toBe('');
     });
+
+    it('bind() with target option binds attrs reactively to an off-host element', async () => {
+      const visible = signal(false);
+      const externalEl = document.createElement('button');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { bind, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        bind({ attr: { 'aria-pressed': () => String(visible.value) } }, { target: externalEl });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-pressed')).toBe('false');
+
+      visible.value = true;
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(externalEl.getAttribute('aria-pressed')).toBe('true');
+    });
+  });
+
+  describe('ctx.aria()', () => {
+    it('applies static ARIA attributes to a target element', async () => {
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        aria(externalEl, { label: 'Close dialog', role: 'dialog' });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-label')).toBe('Close dialog');
+      expect(externalEl.getAttribute('role')).toBe('dialog');
+    });
+
+    it('applies reactive ARIA attributes and updates on signal change', async () => {
+      const expanded = signal<string>('false');
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        aria(externalEl, { expanded: () => expanded.value });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-expanded')).toBe('false');
+
+      expanded.value = 'true';
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(externalEl.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('removes ARIA attribute when reactive value becomes null', async () => {
+      const label = signal<string | null>('Open');
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        aria(externalEl, { label: () => label.value });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.hasAttribute('aria-label')).toBe(true);
+
+      label.value = null;
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(externalEl.hasAttribute('aria-label')).toBe(false);
+    });
+
+    it('normalizes shorthand keys: "expanded" → "aria-expanded"', async () => {
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        aria(externalEl, { expanded: 'true' });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-expanded')).toBe('true');
+    });
+
+    it('accepts fully-qualified keys: "aria-label" passes through unchanged', async () => {
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        aria(externalEl, { 'aria-label': 'Fully qualified' });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-label')).toBe('Fully qualified');
+    });
+
+    it('cleanup from returned fn stops reactive ARIA updates', async () => {
+      const expanded = signal<string>('false');
+      const externalEl = document.createElement('div');
+
+      document.body.appendChild(externalEl);
+
+      let cleanup!: () => void;
+
+      await mount((_props, { aria, onCleanup }) => {
+        onCleanup(() => externalEl.remove());
+        cleanup = aria(externalEl, { expanded: () => expanded.value });
+
+        return html`<div></div>`;
+      });
+
+      expect(externalEl.getAttribute('aria-expanded')).toBe('false');
+
+      cleanup();
+
+      expanded.value = 'true';
+      await new Promise<void>((r) => setTimeout(r, 0));
+
+      expect(externalEl.getAttribute('aria-expanded')).toBe('false');
+    });
   });
 
   describe('Context API', () => {

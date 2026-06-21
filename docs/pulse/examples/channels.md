@@ -84,9 +84,9 @@ async function runPriceWidget(symbols: string[]) {
 
 ### Pitfalls
 
-- **Each `pulse.channel()` call returns an independent object.** Two calls with the same name do not share listeners. Reuse the returned object for the lifetime of the feature.
+- **`pulse.channel()` is memoized by name.** Two calls with the same name return the **same object**. Dispose it once to remove all listeners and send the `unsubscribe` frame — then a fresh call will return a new channel.
 - **Disposing a channel does not close the WebSocket.** Only `pulse.dispose()` does that.
-- **Channel `send()` is a no-op when the underlying pulse is not open.** The channel does not buffer outgoing messages.
+- **Channel `send()` respects the pulse-level buffer setting.** With `buffer: false` (default), `send()` is a no-op when the underlying pulse is not open. Enable `buffer: true` on the pulse to queue frames during reconnects.
 
 ### Related
 

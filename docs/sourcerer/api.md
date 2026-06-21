@@ -16,18 +16,13 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `deriveSource()`                       | Create a reactive projection of another source                                                | Sync           | Derived source disposes automatically when parent disposes                        |
 | `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                           | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
 | `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                    | Async          | Delegates directly to `source.patch(changes)`                                     |
-| `applyLocalQuery()`                    | Typed wrapper: apply `LocalSourceQuery<T>` (including `filter` and `sort`) to a `LocalSource` | Async          | Delegates to `source.patch()`                                                     |
-| `applyRemoteQuery()`                   | Typed wrapper: apply `Partial<RemoteSourceQuery>` to a `RemoteSource`                         | Async          | Delegates to `source.patch()`                                                     |
-| `applyCursorQuery()`                   | Typed wrapper: apply limit/search patch to a `CursorSource`                                   | Async          | Delegates to `source.patch()`                                                     |
-| `applyInfiniteQuery()`                 | Typed wrapper: apply limit/search patch to an `InfiniteSource`                                | Async          | Delegates to `source.patch()`                                                     |
 | `SourceError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt`   | Class          | Extends `Error`; access context via getters, not object spread                    |
 | `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourceError`; also caught by `instanceof SourceError`                    |
 | `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourceError`; catch separately from `SourceTimeoutError` if needed       |
 | `sourceState()`                        | Derive a discriminated union (`loading`/`error`/`success`) from any source                    | Sync           | Returns `'loading'` when `isSearchPending` is true too                            |
 | `itemRange()`                          | Compute 1-based display range from `SourceMeta`                                               | Sync           | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                            |
-| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot                                           | Async          | **Throws `SourceError`** if fetch fails                                           |
-| `prefetchSource({ keepSource: true })` | SSR: fetch first page, return both snapshot and live source                                   | Async          | Caller must call `source.dispose()` on the returned source                        |
-| `composeFetch()`                       | Layer middleware around a `fetch`-shaped function                                             | Sync           | Middlewares execute left-to-right (first = outermost)                             |
+| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot; source is disposed immediately           | Async          | **Throws `SourceError`** if fetch fails                                           |
+| `prefetchSourceAndKeep()`              | SSR: fetch first page, return both snapshot and live source (no double-fetch)                 | Async          | Caller must call `source.dispose()` on the returned source                        |
 | `filterContains()`                     | Preset predicate: case-insensitive substring match                                            | Sync           | Matches against a getter's string value                                           |
 | `filterEquals()`                       | Preset predicate: strict equality match                                                       | Sync           | Uses `Object.is` semantics                                                        |
 | `filterRange()`                        | Preset predicate: inclusive min/max range                                                     | Sync           | Works with numbers and Dates                                                      |
@@ -239,15 +234,12 @@ All methods return `Promise<void>` unless noted.
 | `next()`               | Navigate to the next page (no-op at last page)                                                                                                                                        |
 | `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                                                    |
 | `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                                                   |
+| `query`                | Current state as a `LocalSourceQuery` — read-only snapshot; stable between changes                                                                                                   |
 | `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
 | `reset()`              | Restore initial config and return to page 1                                                                                                                                           |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                                             |
 | `setData(data)`        | Replace the dataset and reset to page 1                                                                                                                                               |
-| `setFilter(filter?)`   | Set or clear the filter predicate and reset to page 1                                                                                                                                 |
-| `setLimit(limit)`      | Set items per page and reset to page 1                                                                                                                                                |
-| `setSort(sort?)`       | Set or clear the sorter and reset to page 1                                                                                                                                           |
 | `subscribe(listener)`  | Subscribe to state changes; returns unsubscribe function                                                                                                                              |
-| `toQuery()`            | Return the current state as a `SourceQuery`                                                                                                                                           |
 
 ## `RemoteSource<T, TFilter, TSort>` Methods
 
@@ -264,15 +256,12 @@ All methods return `Promise<void>` except `optimisticUpdate` and `subscribe`.
 | `optimisticUpdate(mutator, options?)` | Apply instant UI update; returns rollback function                                                                                               |
 | `patch(changes)`                      | Apply one or more query changes atomically — a single fetch for any combination of `limit`, `page`, `search`, `filter`, `sort`                   |
 | `prev()`                              | Previous page (no-op at first page)                                                                                                              |
+| `query`                               | Current state as a `RemoteSourceQuery` — read-only snapshot; stable between changes                                                             |
 | `ready(timeout?)`                     | Resolve when no requests are pending; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
 | `refresh()`                           | Re-fetch the current query                                                                                                                       |
 | `reset()`                             | Restore initial config and refetch                                                                                                               |
 | `search(query, opts?)`                | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                        |
-| `setFilter(filter?)`                  | Set or clear the filter and fetch                                                                                                                |
-| `setLimit(limit)`                     | Set page size and fetch                                                                                                                          |
-| `setSort(sort?)`                      | Set or clear the sort and fetch                                                                                                                  |
 | `subscribe(listener)`                 | Subscribe to state changes; returns unsubscribe function                                                                                         |
-| `toQuery()`                           | Return the current state as a `RemoteSourceQuery`                                                                                                |
 
 ### `optimisticUpdate`
 
@@ -297,15 +286,14 @@ optimisticUpdate(
 | `disposed`             | `true` after `dispose()` has been called                                                                                               |
 | `disposalSignal`       | `AbortSignal` aborted when `dispose()` is called                                                                                       |
 | `next()`               | Advance using `nextCursor` (no-op if none)                                                                                             |
-| `patch(changes)`       | Apply `limit` and/or `search` atomically — a single fetch                                                                              |
+| `patch(changes)`       | Apply `limit` and/or `search` atomically — a single fetch; resets cursor position                                                    |
 | `prev()`               | Go back using `prevCursor` (no-op if none)                                                                                             |
+| `query`                | Current state as a `CursorSourceQuery` — read-only snapshot; stable between changes                                                   |
 | `ready(timeout?)`      | Resolve when idle; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError`          |
 | `refresh()`            | Re-fetch current cursor position                                                                                                       |
 | `reset()`              | Clear cursors and fetch from the start                                                                                                 |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await. Resets cursor position. |
-| `setLimit(limit)`      | Set page size (resets cursor position)                                                                                                 |
 | `subscribe(listener)`  | Subscribe; returns unsubscribe                                                                                                         |
-| `toQuery()`            | Return the current state as a `CursorSourceQuery`                                                                                      |
 
 ## `InfiniteSource<T>` Methods
 
@@ -316,12 +304,11 @@ optimisticUpdate(
 | `disposalSignal`       | `AbortSignal` aborted when `dispose()` is called                                                                                                                |
 | `loadMore()`           | Fetch the next page and append to `current` (no-op when `meta.hasMore === false`)                                                                               |
 | `patch(changes)`       | Apply `limit` and/or `search` atomically — **clears items immediately** and fetches from page 1                                                                 |
+| `query`                | Current state as an `InfiniteSourceQuery` — read-only snapshot; stable between changes                                                                         |
 | `ready(timeout?)`      | Resolve when idle; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError`                                   |
 | `reset()`              | Clear accumulated items **immediately** and fetch from page 1                                                                                                   |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default — **clears items immediately**; fetch fires after debounce. Pass `{ immediate: true }` to skip the window. |
-| `setLimit(limit)`      | Set page size — **clears items immediately** and restarts from page 1                                                                                           |
 | `subscribe(listener)`  | Subscribe; returns unsubscribe                                                                                                                                  |
-| `toQuery()`            | Return the current state as an `InfiniteSourceQuery`                                                                                                            |
 
 ## Query Utilities
 
@@ -344,82 +331,6 @@ import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 const q = decodeQuery(new URLSearchParams(location.search));
 await applyQuery(source, q);
 ```
-
----
-
-### `applyLocalQuery`
-
-```ts
-applyLocalQuery<T>(
-  source: LocalSource<T>,
-  changes: LocalSourceQuery<T>,
-): Promise<void>
-```
-
-Typed wrapper for `applyQuery` — applies a `LocalSourceQuery<T>` (including optional `filter` and `sort`) to a `LocalSource` via `source.patch()`. Triggers a single recompute for any combination of changed fields.
-
-**Example:**
-
-```ts
-import { applyLocalQuery, createLocalSource } from '@vielzeug/sourcerer';
-
-const source = createLocalSource(users, { limit: 20 });
-
-// Apply filter + sort + search atomically — one recompute, one subscriber notification
-await applyLocalQuery(source, {
-  filter: (u) => u.active,
-  search: 'ada',
-  sort: (a, b) => a.name.localeCompare(b.name),
-});
-```
-
----
-
-### `applyRemoteQuery`
-
-```ts
-applyRemoteQuery<T, TFilter, TSort>(
-  source: RemoteSource<T, TFilter, TSort>,
-  changes: Partial<RemoteSourceQuery<TFilter, TSort>>,
-): Promise<void>
-```
-
-Typed wrapper for `applyQuery` — applies `Partial<RemoteSourceQuery>` to a `RemoteSource` via `source.patch()`. Fires a single fetch covering all changed fields.
-
-**Example:**
-
-```ts
-import { applyRemoteQuery, decodeQuery } from '@vielzeug/sourcerer';
-
-const q = decodeQuery<MyFilter, MySort>(new URLSearchParams(location.search));
-await applyRemoteQuery(source, q);
-```
-
----
-
-### `applyCursorQuery`
-
-```ts
-applyCursorQuery<TCursor>(
-  source: { patch(changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>): Promise<void> },
-  changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>,
-): Promise<void>
-```
-
-Typed wrapper for `applyQuery` — applies `limit` and/or `search` to a `CursorSource` via `source.patch()`.
-
----
-
-### `applyInfiniteQuery`
-
-```ts
-applyInfiniteQuery(
-  source: { patch(changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void> },
-  changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>,
-): Promise<void>
-```
-
-Typed wrapper for `applyQuery` — applies `limit` and/or `search` to an `InfiniteSource` via `source.patch()`. Clears accumulated items and restarts from page 1.
 
 ---
 
@@ -542,20 +453,12 @@ console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
 ### `prefetchSource`
 
 ```ts
-// Snapshot only:
 prefetchSource<T, TFilter = unknown, TSort = unknown>(
   cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval'>,
-  opts?: { keepSource?: false },
 ): Promise<SourceSnapshot<T>>
-
-// Snapshot + live source (no double-fetch):
-prefetchSource<T, TFilter = unknown, TSort = unknown>(
-  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval'>,
-  opts: { keepSource: true },
-): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }>
 ```
 
-Fetches the first page server-side and returns a serialisable `SourceSnapshot`. **Throws `SourceError`** if the fetch fails. Pass `{ keepSource: true }` to also get back the still-live source — useful when you need the snapshot for SSR serialisation **and** the live source for subsequent client-side updates without a double-fetch. The caller is responsible for calling `source.dispose()` when using `keepSource: true`.
+Fetches the first page server-side, then **disposes the internal source immediately** and returns a serialisable `SourceSnapshot`. **Throws `SourceError`** if the fetch fails.
 
 ```ts
 type SourceSnapshot<T> = Readonly<{
@@ -569,60 +472,36 @@ type SourceSnapshot<T> = Readonly<{
 **Example:**
 
 ```ts
-import { prefetchSource } from '@vielzeug/sourcerer';
+import { createRemoteSource, prefetchSource } from '@vielzeug/sourcerer';
 
-// Snapshot only (server.ts):
+// server.ts — fetch and discard the source:
 const snapshot = await prefetchSource({ fetch: fetchUsers, limit: 20 });
 
 // client.ts — start populated, no loading flash:
 const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
 ```
 
-```ts
-// Snapshot + live source (no double-fetch):
-const { snapshot, source } = await prefetchSource({ fetch: fetchUsers, limit: 20 }, { keepSource: true });
-// caller must dispose when done:
-source.dispose();
-```
+---
 
-## Fetch Middleware
-
-### `composeFetch`
+### `prefetchSourceAndKeep`
 
 ```ts
-composeFetch<TQuery, TResult>(
-  base: (q: TQuery, signal: AbortSignal) => Promise<TResult>,
-  ...middlewares: FetchMiddleware<TQuery, TResult>[],
-): (q: TQuery, signal: AbortSignal) => Promise<TResult>
+prefetchSourceAndKeep<T, TFilter = unknown, TSort = unknown>(
+  cfg: Omit<RemoteConfig<T, TFilter, TSort>, 'autoFetch' | 'refreshInterval'>,
+): Promise<{ snapshot: SourceSnapshot<T>; source: RemoteSource<T, TFilter, TSort> }>
 ```
 
-```ts
-type FetchMiddleware<TQuery = unknown, TResult = unknown> = (
-  q: TQuery,
-  signal: AbortSignal,
-  next: (q: TQuery, signal: AbortSignal) => Promise<TResult>,
-) => Promise<TResult>;
-```
-
-Middlewares execute left-to-right (first = outermost wrapper).
+Fetches the first page and returns both a serialisable `SourceSnapshot` and the **still-live** `RemoteSource`. Use when you need the snapshot for SSR HTML serialisation **and** the live source for subsequent client-side updates — avoiding a double-fetch. **The caller is responsible for calling `source.dispose()`.**
 
 **Example:**
 
 ```ts
-import { composeFetch } from '@vielzeug/sourcerer';
-import type { FetchMiddleware } from '@vielzeug/sourcerer';
+import { prefetchSourceAndKeep } from '@vielzeug/sourcerer';
 
-const logging: FetchMiddleware = async (q, signal, next) => {
-  console.log('fetch', q);
-  const result = await next(q, signal);
-  console.log('done', q);
-  return result;
-};
-
-const source = createRemoteSource({
-  fetch: composeFetch(baseFetch, logging),
-  limit: 20,
-});
+const { snapshot, source } = await prefetchSourceAndKeep({ fetch: fetchUsers, limit: 20 });
+// embed snapshot in SSR HTML; hand source to client
+// caller must dispose when done:
+source.dispose();
 ```
 
 ## Codec Utilities
@@ -673,11 +552,11 @@ Accepts either a `Record<string, string | string[] | undefined>` or a `URLSearch
 **Example:**
 
 ```ts
-import { applyRemoteQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 // Pass URLSearchParams directly
 const query = decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 });
-await applyRemoteQuery(source, query);
+await applyQuery(source, query);
 ```
 
 ## Types
@@ -787,10 +666,10 @@ type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   next(): Promise<void>;
   patch(changes: Partial<SourceQuery>): Promise<void>;
   prev(): Promise<void>;
+  readonly query: SourceQuery;
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
   search(query: string, opts?: SearchOptions): Promise<void>;
-  setLimit(limit: number): Promise<void>;
 };
 
 // LocalSourceConfig — config passed to createLocalSource()

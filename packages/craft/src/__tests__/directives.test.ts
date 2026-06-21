@@ -454,7 +454,7 @@ describe('Directive: each()', () => {
           ${each(
             staticItems,
             (n) => n,
-            (n) => html`<li class="item">${n}</li>`,
+            (n) => html`<li class="item">${() => n.value}</li>`,
           )}
         </ul>`,
     );

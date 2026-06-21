@@ -1,4 +1,4 @@
-import type { Readable, Signal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 import { signal } from '@vielzeug/ripple';
 
@@ -32,47 +32,82 @@ export type ToSignalOptions<T> = {
   /** Initial value before the first emission. */
   initial: T;
   /**
-   * Optional `AbortSignal` that stops the flux subscription independently
-   * of signal disposal. Useful when you do not own the signal's lifetime.
+   * Optional `AbortSignal` that stops tracking independently of disposal.
+   * Useful when the caller does not own the flux's lifetime.
    */
   signal?: AbortSignal;
 };
 
 /**
- * Create a ripple `Signal` whose value is updated by each emission from a `Flux`.
- * The signal starts with `opts.initial` and is automatically updated as the flux emits.
+ * A handle returned by `toSignal()` that wraps a ripple signal updated by a `Flux`.
+ * Exposes `value` (reactive — usable in ripple `effect()` calls) and `dispose()` to
+ * stop tracking. The underlying signal retains its last value after disposal.
+ */
+export type SignalBinding<T> = {
+  /** ES2026 `using` compatible disposal. */
+  [Symbol.dispose](): void;
+  /** AbortSignal that aborts when `dispose()` is called. */
+  readonly disposalSignal: AbortSignal;
+  /** Stop tracking the source `Flux` and freeze the signal value. */
+  dispose(): void;
+  /** `true` after `dispose()` is called. */
+  readonly disposed: boolean;
+  /** The underlying ripple `Readable<T>` for use with ripple operators. */
+  readonly signal: Readable<T>;
+  /** The current tracked value (reactive — reads track in ripple effects). */
+  readonly value: T;
+};
+
+/**
+ * Create a `SignalBinding<T>` whose value is updated by each emission from a `Flux`.
+ * The binding starts with `opts.initial` and updates reactively as the flux emits.
  *
- * The returned signal is owned by the caller — call `dispose()` to stop tracking.
+ * Call `dispose()` to stop tracking; the last value remains readable after disposal.
  *
  * @example
  * const latest = toSignal(count$, { initial: 0 });
- * effect(() => console.log(latest.value));
+ * effect(() => console.log(latest.value)); // reactive — re-runs on flux emissions
+ * latest.dispose(); // stop tracking
  */
-export function toSignal<T>(source: Flux<T>, opts: ToSignalOptions<T>): Signal<T> {
+export function toSignal<T>(source: Flux<T>, opts: ToSignalOptions<T>): SignalBinding<T> {
   const sig = signal<T>(opts.initial);
-  const unsub = source.subscribe({
-    error(err) {
-      issue('toSignal: source errored — signal value may be stale', err);
+  const ac = new AbortController();
+
+  const unsub = source.subscribe(
+    {
+      error(err) {
+        issue('toSignal: source errored — signal value may be stale', err);
+      },
+      next(v) {
+        sig.value = v;
+      },
     },
-    next(v) {
-      if (!sig.disposed) sig.value = v;
-    },
-  });
+    opts.signal,
+  );
 
-  if (opts.signal) {
-    if (opts.signal.aborted) {
-      unsub();
-    } else {
-      opts.signal.addEventListener('abort', unsub, { once: true });
-    }
-  }
+  const dispose = (): void => {
+    if (ac.signal.aborted) return;
 
-  const originalDispose = sig.dispose.bind(sig);
-
-  sig.dispose = (): void => {
+    ac.abort();
     unsub();
-    originalDispose();
   };
 
-  return sig;
+  return {
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
+    dispose,
+    get disposed(): boolean {
+      return ac.signal.aborted;
+    },
+    get signal(): Readable<T> {
+      return sig;
+    },
+    [Symbol.dispose](): void {
+      dispose();
+    },
+    get value(): T {
+      return sig.value;
+    },
+  };
 }

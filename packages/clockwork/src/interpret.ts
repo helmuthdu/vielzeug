@@ -17,6 +17,8 @@ import type {
   TransitionTraceEntry,
 } from './types.js';
 
+import { createTraceBuffer } from './_trace.js';
+import { warn } from './_warn.js';
 import { getAncestorPaths, getNodeAtPath, resolveLeaf, validateDefinition } from './definition.js';
 import { MachineError } from './errors.js';
 
@@ -33,7 +35,7 @@ const HYDRATE_EVENT = { type: '$hydrate' } as const;
  *
  * Optionally calls `onGuard` for each guard evaluation.
  */
-export const resolveTransition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+const resolveTransition = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   definition: Readonly<MachineConfig<State, Ctx, Ev>>,
   input: {
     context: Readonly<Ctx>;
@@ -70,9 +72,9 @@ export const resolveTransition = <State extends string, Ctx extends object, Ev e
 
 // ── SendResult helpers ─────────────────────────────────────────────────────────
 
-const RESULT_TRANSITIONED: SendResult = Object.freeze({ ok: true, queued: false, status: 'transitioned' });
-const RESULT_QUEUED: SendResult = Object.freeze({ ok: true, queued: true, status: 'queued' });
-const RESULT_REJECTED: SendResult = Object.freeze({ ok: false, queued: false, status: 'rejected' });
+const RESULT_TRANSITIONED: SendResult = Object.freeze({ status: 'transitioned' });
+const RESULT_QUEUED: SendResult = Object.freeze({ status: 'queued' });
+const RESULT_REJECTED: SendResult = Object.freeze({ status: 'rejected' });
 
 // ── Core interpreter ──────────────────────────────────────────────────────────
 
@@ -150,21 +152,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
   // ── Section: Trace ring buffer ─────────────────────────────────────────────
 
-  const traceBuffer: TransitionTraceEntry<State, Ev>[] | null = traceLimit > 0 ? [] : null;
-  let traceHead = 0;
-  let traceCount = 0;
-
-  const pushTrace = (entry: TransitionTraceEntry<State, Ev>): void => {
-    if (!traceBuffer) return;
-
-    if (traceCount < traceLimit) {
-      traceBuffer.push(entry);
-      traceCount++;
-    } else {
-      traceBuffer[traceHead] = entry;
-      traceHead = (traceHead + 1) % traceLimit;
-    }
-  };
+  const trace = createTraceBuffer<State, Ev>(traceLimit);
 
   // ── Section: Lifecycle ─────────────────────────────────────────────────────
 
@@ -212,7 +200,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     options.persistence?.save({ context: clone(context_.value), state: state_.value });
   };
 
-  // ── Section: Subscribe (R5 — plain Set, not effect()) ─────────────────────
+  // ── Section: Subscribe ─────────────────────────────────────────────────────
 
   const subscribers = new Set<(snapshot: MachineSnapshot<State, Ctx>) => void>();
 
@@ -226,15 +214,16 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
   // ── Section: Event queue (hoisted so executeTransition closures can reference) ──
 
+  type EventQueueItem = { readonly event: Ev; readonly tag: 'event' };
   type AfterQueueItem = {
-    actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>;
-    afterEvent: { readonly delay: number; readonly type: '$after' };
-    from: State;
-    isAfter: true;
-    target: State;
+    readonly actions: Array<(args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void>;
+    readonly afterEvent: { readonly delay: number; readonly type: '$after' };
+    readonly from: State;
+    readonly tag: 'after';
+    readonly target: State;
   };
 
-  type QueueItem = { event: Ev } | AfterQueueItem;
+  type QueueItem = AfterQueueItem | EventQueueItem;
 
   const queue: QueueItem[] = [];
   let draining = false;
@@ -303,7 +292,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
     // R8: emit unified 'transition' debug event (replaces onTransition callback)
     onDebug?.({ event, from, to: resolvedTarget, type: 'transition' } as DebugEvent<State, Ctx, Ev>);
-    pushTrace({ event, from, timestamp: Date.now(), to: resolvedTarget });
+    trace?.push({ event, from, timestamp: Date.now(), to: resolvedTarget });
     notifySubscribers();
     saveSnapshot();
     runInvokes(event);
@@ -351,7 +340,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
               type: 'invoke-done',
             });
 
-            queue.push({ event: invokeDef.onDone(result, capturedContext) });
+            queue.push({ event: invokeDef.onDone(result, capturedContext), tag: 'event' });
 
             if (!draining) drainQueue();
           })
@@ -369,7 +358,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
               type: 'invoke-error',
             });
 
-            queue.push({ event: invokeDef.onError(error, capturedContext) });
+            queue.push({ event: invokeDef.onError(error, capturedContext), tag: 'event' });
 
             if (!draining) drainQueue();
           });
@@ -406,7 +395,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
             >,
             afterEvent,
             from: currentState,
-            isAfter: true,
+            tag: 'after',
             target: resolvedTarget,
           });
           drainQueue();
@@ -422,7 +411,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   const processEvent = (item: QueueItem): boolean => {
     if (disposed) return false;
 
-    if ('isAfter' in item) {
+    if (item.tag === 'after') {
       executeTransition(item.from, item.target, item.actions, item.afterEvent);
 
       return true;
@@ -490,7 +479,11 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   };
 
   const send = (event: Ev): SendResult => {
-    if (disposed) return RESULT_REJECTED;
+    if (disposed) {
+      warn('send() called on a disposed machine — event ignored');
+
+      return RESULT_REJECTED;
+    }
 
     // Run interceptors left-to-right — first null wins
     let intercepted: Ev | null = event;
@@ -504,7 +497,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     const interceptedEvent = intercepted;
 
     if (draining) {
-      queue.push({ event: interceptedEvent });
+      queue.push({ event: interceptedEvent, tag: 'event' });
 
       return RESULT_QUEUED;
     }
@@ -512,7 +505,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     draining = true;
 
     try {
-      const transitioned = processEvent({ event: interceptedEvent });
+      const transitioned = processEvent({ event: interceptedEvent, tag: 'event' });
 
       drainQueueInner();
 
@@ -528,16 +521,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   const getSnapshot = (): MachineSnapshot<State, Ctx> =>
     Object.freeze({ context: clone(context_.value), state: state_.value });
 
-  const getTrace = (): readonly TransitionTraceEntry<State, Ev>[] => {
-    if (!traceBuffer || traceCount === 0) return [];
-
-    const entries =
-      traceCount < traceLimit
-        ? traceBuffer.slice(0, traceCount)
-        : [...traceBuffer.slice(traceHead), ...traceBuffer.slice(0, traceHead)];
-
-    return entries.map((e) => ({ ...e }));
-  };
+  const getTrace = (): readonly TransitionTraceEntry<State, Ev>[] => trace?.get() ?? [];
 
   const matches = (...stateArgs: string[]): boolean => {
     if (disposed) return false;
@@ -611,42 +595,16 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   };
 };
 
-// ── Public entry points ───────────────────────────────────────────────────────
-
-/**
- * Defines, validates, and immediately starts a state machine.
- *
- * The most common entry point — validation and interpretation in a single call.
- * Use {@link define} if you need a reusable definition (e.g. multiple instances with different options).
- *
- * @example
- * const m = machine({
- *   context: { count: 0 },
- *   initial: 'idle',
- *   states: {
- *     idle: { on: { INC: { actions: [({ context }) => { context.count += 1 }], target: 'idle' } } },
- *   },
- * });
- *
- * m.send({ type: 'INC' });
- * console.log(m.context.value.count); // 1
- */
-export const machine = <State extends string, Ctx extends object, Ev extends MachineEvent>(
-  config: MachineConfig<State, Ctx, Ev>,
-  options?: InterpretOptions<State, Ctx, Ev>,
-): MachineInstance<State, Ctx, Ev> => {
-  validateDefinition(config);
-
-  return _interpret(config, options);
-};
+// ── Public entry point ────────────────────────────────────────────────────────
 
 /**
  * Validates a machine configuration and returns a reusable definition handle.
+ *
  * Call `.start(options?)` to create a running instance.
- * Call `.resolve(input)` to inspect transitions without starting a machine.
+ * Call `.resolve(input, options?)` to inspect transitions without starting a machine.
  *
  * @example
- * const counterDef = define({
+ * const counterDef = createMachine({
  *   context: { count: 0 },
  *   initial: 'idle',
  *   states: { idle: { on: { INC: { actions: [({ context }) => { context.count += 1 }], target: 'idle' } } } },
@@ -657,16 +615,18 @@ export const machine = <State extends string, Ctx extends object, Ev extends Mac
  *
  * // Test transitions without a running machine:
  * counterDef.resolve({ context: { count: 0 }, event: { type: 'INC' }, state: 'idle' });
+ *
+ * // Or start immediately (one-shot):
+ * const m3 = createMachine(config).start();
  */
-export const define = <State extends string, Ctx extends object, Ev extends MachineEvent>(
+export const createMachine = <State extends string, Ctx extends object, Ev extends MachineEvent>(
   config: MachineConfig<State, Ctx, Ev>,
 ): MachineDefinition<State, Ctx, Ev> => {
   validateDefinition(config);
 
   return {
-    // R3: no .config exposure — .resolve() replaces resolveTransition(def.config, ...)
-    resolve(input) {
-      return resolveTransition(config, input);
+    resolve(input, options?) {
+      return resolveTransition(config, input, options?.onGuard);
     },
     start(options?) {
       return _interpret(config, options);

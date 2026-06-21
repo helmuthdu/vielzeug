@@ -3,12 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// NOTE: These imports intentionally use .ts extensions (unlike other src/ files).
-// This file is loaded transitively by scripts/generate-bundled-data.ts under Node's
-// --experimental-strip-types, which resolves literal import specifiers — .ts is required
-// to locate the source files at runtime. tsc rewrites these to .js in dist/ via
-// rewriteRelativeImportExtensions in tsconfig.json.
-import { parseFrontmatter } from './frontmatter.ts';
+// .ts extensions required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
 import {
   type BundledData,
   type BundledPackage,
@@ -16,7 +11,9 @@ import {
   DOC_PAGES,
   type DocPage,
   SCHEMA_VERSION,
-} from './types.ts';
+} from '../src/types.ts';
+import { log } from './_log.ts';
+import { parseFrontmatter } from './frontmatter.ts';
 
 // Resolves to dist/ in the compiled build, src/ when loaded directly under --experimental-strip-types.
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,7 +57,7 @@ function readSigilDeclarations(repoRoot: string): CemDeclaration[] {
 }
 
 // ---------------------------------------------------------------------------
-// Incremental hashing
+// Incremental hashing — content-only (no path in hash input)
 // ---------------------------------------------------------------------------
 
 function hashPackageFiles(repoRoot: string, folder: string, slug: string): string {
@@ -81,7 +78,7 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
 
   for (const p of paths) {
     if (existsSync(p)) {
-      hash.update(p);
+      // FI2: hash only file content, not path — renames/moves don't invalidate the cache
       hash.update(readFileSync(p));
     }
   }
@@ -90,7 +87,7 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
 }
 
 // ---------------------------------------------------------------------------
-// Package processor
+// Package processor helpers
 // ---------------------------------------------------------------------------
 
 interface RushProject {
@@ -100,12 +97,11 @@ interface RushProject {
 
 function toStringArray(value: unknown, key?: string): string[] {
   if (Array.isArray(value)) {
-    // parseFrontmatter always returns string[], but guard defensively for future callers.
     const nonStrings = value.filter((v) => typeof v !== 'string');
 
     if (nonStrings.length > 0) {
-      process.stderr.write(
-        `codex generator warning: frontmatter field "${key ?? 'unknown'}" contains non-string items (${nonStrings.map(String).join(', ')}) — coercing to string.\n`,
+      log(
+        `generator: frontmatter field "${key ?? 'unknown'}" contains non-string items (${nonStrings.map(String).join(', ')}) — coercing to string`,
       );
     }
 
@@ -113,6 +109,19 @@ function toStringArray(value: unknown, key?: string): string[] {
   }
 
   return value ? [String(value)] : [];
+}
+
+/** Resolves a string value from frontmatter, falling back to a pkgJson value with an optional warning. */
+function resolveStr(primary: unknown, fallback: unknown, field: string, slug: string): string {
+  if (typeof primary === 'string' && primary.length > 0) return primary;
+
+  if (typeof fallback === 'string' && fallback.length > 0) {
+    log(`generator: "${slug}" has no "${field}" in frontmatter — falling back to package.json`);
+
+    return fallback;
+  }
+
+  return '';
 }
 
 function processPackage(repoRoot: string, project: RushProject, sigilComponents: CemDeclaration[]): BundledPackage {
@@ -134,17 +143,17 @@ function processPackage(repoRoot: string, project: RushProject, sigilComponents:
 
   const availableDocPages = DOC_PAGES.filter((page) => docs[page] !== undefined);
 
+  // FI4: warn when a package has no doc pages — it will produce useless get-docs responses
+  if (availableDocPages.length === 0) {
+    log(`generator: "${slug}" has no doc pages — get-docs will always error for this package`);
+  }
+
   return {
     apiSource: typeof apiSource === 'string' && apiSource.length > 0 ? apiSource : null,
     availableDocPages,
     category: typeof frontmatter['category'] === 'string' ? frontmatter['category'] : '',
     components: slug === 'sigil' ? sigilComponents : [],
-    description:
-      typeof frontmatter['description'] === 'string' && frontmatter['description'].length > 0
-        ? frontmatter['description']
-        : typeof pkgJson['description'] === 'string'
-          ? pkgJson['description']
-          : '',
+    description: resolveStr(frontmatter['description'], pkgJson['description'], 'description', slug),
     docs,
     exports: toStringArray(frontmatter['exports'], 'exports'),
     keywords: toStringArray(frontmatter['keywords'], 'keywords'),
@@ -156,12 +165,108 @@ function processPackage(repoRoot: string, project: RushProject, sigilComponents:
 }
 
 // ---------------------------------------------------------------------------
+// Incremental cache loader
+// ---------------------------------------------------------------------------
+
+interface CacheState {
+  existingPackages: Map<string, BundledPackage>;
+  hashCache: Record<string, string>;
+}
+
+function loadIncrementalCache(packageRoot: string): CacheState {
+  const dataFile = resolve(packageRoot, 'data/vielzeug-data.json');
+  const cacheFile = resolve(packageRoot, 'data/.cache.json');
+
+  if (!existsSync(dataFile) || !existsSync(cacheFile)) {
+    return { existingPackages: new Map(), hashCache: {} };
+  }
+
+  try {
+    const hashCache = JSON.parse(readFileSync(cacheFile, 'utf8')) as Record<string, string>;
+    const existingRaw = JSON.parse(readFileSync(dataFile, 'utf8')) as Record<string, unknown>;
+
+    if (existingRaw['schemaVersion'] !== SCHEMA_VERSION) {
+      log(
+        `generator: schema version mismatch (found ${String(existingRaw['schemaVersion'])}, expected ${SCHEMA_VERSION}) — discarding cache`,
+      );
+
+      return { existingPackages: new Map(), hashCache: {} };
+    }
+
+    const existing = existingRaw as unknown as BundledData;
+
+    return { existingPackages: new Map(existing.packages.map((p) => [p.slug, p])), hashCache };
+  } catch (err) {
+    log(
+      `generator: incremental cache read failed, falling back to full regeneration: ${err instanceof Error ? err.message : String(err)}`,
+    );
+
+    return { existingPackages: new Map(), hashCache: {} };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Package builder
+// ---------------------------------------------------------------------------
+
+interface BuildPackagesResult {
+  cacheHits: number;
+  newHashes: Record<string, string>;
+  packages: BundledPackage[];
+}
+
+function buildPackages(
+  projects: RushProject[],
+  opts: {
+    existingPackages: Map<string, BundledPackage>;
+    hashCache: Record<string, string>;
+    incremental: boolean;
+    repoRoot: string;
+    sigilComponents: CemDeclaration[];
+  },
+): BuildPackagesResult {
+  let cacheHits = 0;
+  const newHashes: Record<string, string> = {};
+
+  const packages: BundledPackage[] = projects
+    .map((project) => {
+      const slug = project.projectFolder.replace('packages/', '');
+
+      if (opts.incremental) {
+        const currentHash = hashPackageFiles(opts.repoRoot, project.projectFolder, slug);
+
+        newHashes[slug] = currentHash;
+
+        if (opts.hashCache[slug] === currentHash) {
+          const cached = opts.existingPackages.get(slug);
+
+          if (cached) {
+            cacheHits++;
+
+            return cached;
+          }
+        }
+      }
+
+      return processPackage(opts.repoRoot, project, opts.sigilComponents);
+    })
+    .sort((a, b) => a.slug.localeCompare(b.slug));
+
+  return { cacheHits, newHashes, packages };
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 export interface GeneratorOptions {
   /** Enable hash-based incremental generation. Default: false. */
   incremental?: boolean;
+  /**
+   * Explicit package list to process. When provided, Rush discovery (rush.json) is skipped entirely.
+   * Useful for non-Rush setups and for isolated testing without touching the filesystem.
+   */
+  projects?: RushProject[];
   /** Monorepo root. Defaults to auto-detected from this module's location. */
   repoRoot?: string;
 }
@@ -184,76 +289,25 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
   const repoRoot = options.repoRoot ?? resolve(packageRoot, '../..');
   const incremental = options.incremental ?? false;
 
-  const existingDataFile = resolve(packageRoot, 'data/vielzeug-data.json');
   const mcpPackageJson = readJson(resolve(packageRoot, 'package.json'));
-  const rushJson = readJson(resolve(repoRoot, 'rush.json')) as unknown as RushJson;
+  const projects: RushProject[] =
+    options.projects ?? (readJson(resolve(repoRoot, 'rush.json')) as unknown as RushJson).projects;
   const sigilComponents = readSigilDeclarations(repoRoot);
 
-  // Load incremental cache
-  let hashCache: Record<string, string> = {};
-  let existingPackages = new Map<string, BundledPackage>();
+  const { existingPackages, hashCache } = incremental
+    ? loadIncrementalCache(packageRoot)
+    : { existingPackages: new Map<string, BundledPackage>(), hashCache: {} };
 
-  if (incremental) {
-    const cacheFile = resolve(packageRoot, 'data/.cache.json');
-
-    if (existsSync(existingDataFile) && existsSync(cacheFile)) {
-      try {
-        hashCache = JSON.parse(readFileSync(cacheFile, 'utf8')) as Record<string, string>;
-
-        const existingRaw = JSON.parse(readFileSync(existingDataFile, 'utf8')) as Record<string, unknown>;
-
-        if (existingRaw['schemaVersion'] !== SCHEMA_VERSION) {
-          process.stderr.write(
-            `codex: schema version mismatch (found ${String(existingRaw['schemaVersion'])}, expected ${SCHEMA_VERSION}) — discarding cache.\n`,
-          );
-          hashCache = {};
-        } else {
-          const existing = existingRaw as unknown as BundledData;
-
-          existingPackages = new Map(existing.packages.map((p) => [p.slug, p]));
-        }
-      } catch (err) {
-        process.stderr.write(
-          `codex: incremental cache read failed, falling back to full regeneration: ${err instanceof Error ? err.message : String(err)}\n`,
-        );
-        hashCache = {};
-        existingPackages = new Map();
-      }
-    }
-  }
-
-  let cacheHits = 0;
-  const newHashes: Record<string, string> = {};
-
-  const packages: BundledPackage[] = (rushJson.projects as RushProject[])
-    .map((project) => {
-      const slug = project.projectFolder.replace('packages/', '');
-
-      if (incremental) {
-        const currentHash = hashPackageFiles(repoRoot, project.projectFolder, slug);
-
-        newHashes[slug] = currentHash;
-
-        if (hashCache[slug] === currentHash) {
-          const cached = existingPackages.get(slug);
-
-          if (cached) {
-            cacheHits++;
-
-            // Always refresh sigil components — they come from dist/, not source files
-            if (slug === 'sigil') return { ...cached, components: sigilComponents };
-
-            return cached;
-          }
-        }
-      }
-
-      return processPackage(repoRoot, project, sigilComponents);
-    })
-    .sort((a, b) => a.slug.localeCompare(b.slug));
+  const { cacheHits, newHashes, packages } = buildPackages(projects, {
+    existingPackages,
+    hashCache,
+    incremental,
+    repoRoot,
+    sigilComponents,
+  });
 
   if (incremental && cacheHits > 0) {
-    process.stderr.write(`Incremental: reused ${cacheHits}/${packages.length} packages from cache.\n`);
+    log(`Incremental: reused ${cacheHits}/${packages.length} packages from cache`);
   }
 
   return {

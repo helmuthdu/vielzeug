@@ -1,17 +1,16 @@
 import { effect } from '@vielzeug/ripple';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { debugInterpret } from '../devtools.js';
+import { debugMachine } from '../devtools.js';
 import {
-  define,
-  machine,
+  createMachine,
   type InterceptorFn,
   type MachineConfig,
   MachineError,
   MachineErrorCode,
   type MachineEvent,
   type MachineSnapshot,
-  resolveTransition,
+  type SendResult,
 } from '../index.js';
 
 type TrafficEvent = { type: 'NEXT' };
@@ -25,7 +24,7 @@ const trafficConfig: MachineConfig<'green' | 'red' | 'yellow', Record<string, ne
   },
 };
 
-const trafficDef = define(trafficConfig);
+const trafficDef = createMachine(trafficConfig);
 
 const flush = async (): Promise<void> => {
   await Promise.resolve();
@@ -83,7 +82,7 @@ describe('core runtime', () => {
   it('processes multiple transitions from queued events', () => {
     type Event = { type: 'INC' };
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -140,7 +139,7 @@ describe('core runtime', () => {
     const exitSpy = vi.fn();
     const entrySpy = vi.fn();
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -179,7 +178,7 @@ describe('core runtime', () => {
 
     const order: string[] = [];
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -226,7 +225,7 @@ describe('core runtime', () => {
   it('context validation failure rolls back', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { count: number }, Event>({
+    const def = createMachine<'a' | 'b', { count: number }, Event>({
       context: { count: 0 },
       initial: 'a',
       states: {
@@ -261,7 +260,7 @@ describe('shorthand transition syntax', () => {
   it('single object (non-array) works like array syntax', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -278,7 +277,7 @@ describe('shorthand transition syntax', () => {
   it('can() works with shorthand transitions', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { ok: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -303,7 +302,7 @@ describe('shorthand transition syntax', () => {
       },
     };
 
-    const result = resolveTransition(config, { context: {}, event: { type: 'GO' }, state: 'a' });
+    const result = createMachine(config).resolve({ context: {}, event: { type: 'GO' }, state: 'a' });
 
     expect(result?.target).toBe('b');
   });
@@ -313,7 +312,7 @@ describe('snapshot and hydration', () => {
   it('snapshot context is deep-cloned', () => {
     type Event = { type: 'SET'; value: number };
 
-    const def = define<'idle', { nested: { value: number } }, Event>({
+    const def = createMachine<'idle', { nested: { value: number } }, Event>({
       context: { nested: { value: 1 } },
       initial: 'idle',
       states: {
@@ -346,7 +345,7 @@ describe('snapshot and hydration', () => {
 
     const entrySpy = vi.fn();
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: { idle: { entry: entrySpy, on: { NOOP: [{ target: 'idle' }] } } },
@@ -361,7 +360,7 @@ describe('snapshot and hydration', () => {
   it('invokes run after hydration', async () => {
     type Event = { type: 'LOADED' };
 
-    const def = define<'done' | 'loading', { loaded: boolean }, Event>({
+    const def = createMachine<'done' | 'loading', { loaded: boolean }, Event>({
       context: { loaded: false },
       initial: 'loading',
       states: {
@@ -397,7 +396,7 @@ describe('typed events', () => {
   it('enforces event payload types via discriminated union', () => {
     type Event = { type: 'INC' } | { type: 'SET'; value: number };
 
-    const def = define<'idle', { value: number }, Event>({
+    const def = createMachine<'idle', { value: number }, Event>({
       context: { value: 0 },
       initial: 'idle',
       states: {
@@ -448,7 +447,7 @@ describe('typed events', () => {
       },
     };
 
-    const result = resolveTransition(config, { context: { ok: true }, event: { type: 'GO' }, state: 'a' });
+    const result = createMachine(config).resolve({ context: { ok: true }, event: { type: 'GO' }, state: 'a' });
 
     expect(result?.target).toBe('b');
   });
@@ -458,7 +457,7 @@ describe('invokes', () => {
   it('maps onDone result to event and transitions', async () => {
     type Event = { type: 'RESOLVE'; value: number };
 
-    const def = define<'done' | 'loading', { value: number }, Event>({
+    const def = createMachine<'done' | 'loading', { value: number }, Event>({
       context: { value: 0 },
       initial: 'loading',
       states: {
@@ -492,7 +491,7 @@ describe('invokes', () => {
   it('maps onError to event', async () => {
     type Event = { reason: string; type: 'FAIL' };
 
-    const def = define<'failed' | 'loading', { reason: string }, Event>({
+    const def = createMachine<'failed' | 'loading', { reason: string }, Event>({
       context: { reason: '' },
       initial: 'loading',
       states: {
@@ -535,7 +534,7 @@ describe('invokes', () => {
 
     let resolveWork: (() => void) | undefined;
 
-    const def = define<'idle' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -574,7 +573,7 @@ describe('invokes', () => {
   it('does not transition after dispose', async () => {
     type Event = { type: 'DONE' };
 
-    const def = define<'done' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'done' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         done: {},
@@ -598,7 +597,7 @@ describe('invokes', () => {
 
     const customClone = vi.fn((v: unknown) => JSON.parse(JSON.stringify(v)));
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -634,7 +633,7 @@ describe('debug options', () => {
 
     const onDebug = vi.fn();
 
-    const def = define<'a' | 'b', { ok: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -681,7 +680,7 @@ describe('debug options', () => {
 
     const onDebugFn = vi.fn();
 
-    const def = define<'a' | 'b', { ok: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: false },
       initial: 'a',
       states: {
@@ -720,7 +719,7 @@ describe('persistence', () => {
 
     const snapshot: MachineSnapshot<'a' | 'b', { n: number }> = { context: { n: 2 }, state: 'a' };
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -756,7 +755,7 @@ describe('persistence', () => {
 
     const save = vi.fn();
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -827,7 +826,7 @@ describe('interceptors', () => {
       return event;
     };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -848,7 +847,7 @@ describe('interceptors', () => {
 
     const blocker: InterceptorFn<'a' | 'b', Record<string, never>, Event> = () => null;
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -879,7 +878,7 @@ describe('interceptors', () => {
       return event;
     };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -909,7 +908,7 @@ describe('interceptors', () => {
       return event;
     };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -929,7 +928,7 @@ describe('hierarchical states', () => {
   it('resolves initial state to leaf substate', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const def = define<'idle' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -954,7 +953,7 @@ describe('hierarchical states', () => {
   it('events bubble up to parent state', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const def = define<'idle' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -979,7 +978,7 @@ describe('hierarchical states', () => {
   it('transitions between sibling substates', () => {
     type Event = { type: 'DONE' } | { type: 'RETRY' };
 
-    const def = define<'idle' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: {},
@@ -1008,7 +1007,7 @@ describe('hierarchical states', () => {
 
     const order: string[] = [];
 
-    const def = define<'idle' | 'loading', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'loading', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         idle: { entry: () => order.push('idle:entry') },
@@ -1041,7 +1040,7 @@ describe('hierarchical states', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'a', Record<string, never>, Event>({
+      createMachine<'a', Record<string, never>, Event>({
         initial: 'a',
         states: { a: { states: { sub: {} } } },
       });
@@ -1059,7 +1058,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'RESET' };
 
-    const def = define<'idle' | 'timeout', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'timeout', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         idle: {
@@ -1086,7 +1085,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b' | 'c', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b' | 'c', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: {
@@ -1111,7 +1110,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const def = define<'a' | 'b', { ready: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { ready: boolean }, Event>({
       context: { ready: false },
       initial: 'a',
       states: {
@@ -1133,7 +1132,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const def = define<'a' | 'b', { count: number }, Event>({
+    const def = createMachine<'a' | 'b', { count: number }, Event>({
       context: { count: 0 },
       initial: 'a',
       states: {
@@ -1167,7 +1166,7 @@ describe('after transitions', () => {
 
     type Event = { type: 'NOOP' };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { after: [{ delay: 100, target: 'b' }] },
@@ -1187,7 +1186,7 @@ describe('after transitions', () => {
 describe('validation', () => {
   it('throws for unknown initial state', () => {
     expect(() => {
-      define({
+      createMachine({
         initial: 'missing',
         states: { idle: {} },
       } as unknown as MachineConfig<string, object, MachineEvent>);
@@ -1198,7 +1197,7 @@ describe('validation', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'idle', Record<string, never>, Event>({
+      createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'missing' as 'idle' }] } } },
       });
@@ -1209,7 +1208,7 @@ describe('validation', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'idle', Record<string, never>, Event>({
+      createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [] } } },
       });
@@ -1220,7 +1219,7 @@ describe('validation', () => {
     type Event = { type: 'NOOP' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: -100, target: 'b' }] },
@@ -1240,7 +1239,7 @@ describe('after + invoke interaction', () => {
     const afterAction = vi.fn();
     let resolveInvoke: (value: string) => void;
 
-    const def = define<'loading' | 'success' | 'timeout', Record<string, never>, Event>({
+    const def = createMachine<'loading' | 'success' | 'timeout', Record<string, never>, Event>({
       initial: 'loading',
       states: {
         loading: {
@@ -1279,7 +1278,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { on: { GO: [{ target: 'b.nonexistent' as 'a' | 'b' }] } },
@@ -1293,7 +1292,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'NOOP' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: 100, target: 'b.ghost' as 'a' | 'b' }] },
@@ -1307,7 +1306,7 @@ describe('validation — nested target paths', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { on: { GO: [{ target: 'b.sub' as 'a' | 'b' }] } },
@@ -1322,7 +1321,7 @@ describe('can()', () => {
   it('returns true when guard passes', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { ok: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { ok: boolean }, Event>({
       context: { ok: true },
       initial: 'a',
       states: {
@@ -1348,7 +1347,7 @@ describe('getSnapshot()', () => {
   it('returns deep-cloned snapshot independent of live context', () => {
     type Event = { type: 'SET'; value: number };
 
-    const def = define<'idle', { n: number }, Event>({
+    const def = createMachine<'idle', { n: number }, Event>({
       context: { n: 1 },
       initial: 'idle',
       states: {
@@ -1395,7 +1394,7 @@ describe('validateContext at init', () => {
   it('throws when initial context fails validateContext', () => {
     type Event = { type: 'NOOP' };
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: -1 },
       initial: 'idle',
       states: { idle: {} },
@@ -1430,7 +1429,7 @@ describe('multiple after defs', () => {
 
     type Event = { type: 'NOOP' };
 
-    const def = define<'a' | 'b' | 'c', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b' | 'c', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: {
@@ -1457,7 +1456,7 @@ describe('persistence', () => {
 
     const save = vi.fn();
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -1503,7 +1502,7 @@ describe('getTrace immutability', () => {
   it('returns cloned trace entries', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { GO: [{ target: 'b' }] } },
@@ -1523,11 +1522,11 @@ describe('getTrace immutability', () => {
   });
 });
 
-describe('debugInterpret', () => {
+describe('debugMachine', () => {
   it('transitions correctly and logs to console.debug', () => {
     const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
 
-    const m = debugInterpret(trafficConfig);
+    const m = debugMachine(trafficConfig);
 
     expect(m.state.value).toBe('green');
     m.send({ type: 'NEXT' });
@@ -1540,7 +1539,7 @@ describe('debugInterpret', () => {
   });
 
   it('returns a MachineInstance with the same API as machine', () => {
-    const m = debugInterpret(trafficConfig);
+    const m = debugMachine(trafficConfig);
 
     expect(typeof m.send).toBe('function');
     expect(typeof m.can).toBe('function');
@@ -1556,7 +1555,7 @@ describe('debugInterpret', () => {
     vi.spyOn(console, 'group').mockImplementation(() => {});
     vi.spyOn(console, 'groupEnd').mockImplementation(() => {});
 
-    const m = debugInterpret(trafficConfig);
+    const m = debugMachine(trafficConfig);
 
     // @ts-expect-error unknown event
     m.send({ type: 'UNKNOWN' });
@@ -1571,7 +1570,7 @@ describe('snapshot hierarchical state validation', () => {
   it('accepts a valid nested snapshot state', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'idle' | 'active', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1591,7 +1590,7 @@ describe('snapshot hierarchical state validation', () => {
   it('rejects a snapshot with a non-existent nested state', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'idle' | 'active', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1614,7 +1613,7 @@ describe('re-entrant send', () => {
   it('queues events sent inside an action and processes them after the current transition', () => {
     type Event = { type: 'A' } | { type: 'B' };
 
-    const def = define<'start' | 'middle' | 'end', Record<string, never>, Event>({
+    const def = createMachine<'start' | 'middle' | 'end', Record<string, never>, Event>({
       initial: 'start',
       states: {
         end: {},
@@ -1660,7 +1659,7 @@ describe('matches() edge cases', () => {
   it('returns true for a parent state when in a child state', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'idle' | 'active', Record<string, never>, Event>({
+    const def = createMachine<'idle' | 'active', Record<string, never>, Event>({
       initial: 'idle',
       states: {
         active: {
@@ -1684,7 +1683,7 @@ describe('matches() edge cases', () => {
   });
 });
 
-describe('resolveTransition — onGuard callback', () => {
+describe('createMachine — resolve onGuard callback', () => {
   it('calls onGuard for every guard evaluated (passed and failed)', () => {
     type Event = { type: 'GO' };
 
@@ -1704,10 +1703,9 @@ describe('resolveTransition — onGuard callback', () => {
 
     const guardCalls: Array<{ passed: boolean; target: string }> = [];
 
-    const result = resolveTransition(
-      config,
+    const result = createMachine(config).resolve(
       { context: { ok: false }, event: { type: 'GO' }, state: 'a' },
-      ({ passed, target }) => guardCalls.push({ passed, target }),
+      { onGuard: ({ passed, target }) => guardCalls.push({ passed, target }) },
     );
 
     expect(result?.target).toBe('c');
@@ -1731,8 +1729,11 @@ describe('resolveTransition — onGuard callback', () => {
 
     const guardCalls: Array<{ passed: boolean }> = [];
 
-    resolveTransition(config, { context: { ok: true }, event: { type: 'GO' }, state: 'a' }, ({ passed }) =>
-      guardCalls.push({ passed }),
+    createMachine(config).resolve(
+      { context: { ok: true }, event: { type: 'GO' }, state: 'a' },
+      {
+        onGuard: ({ passed }) => guardCalls.push({ passed }),
+      },
     );
 
     expect(guardCalls[0]?.passed).toBe(true);
@@ -1744,7 +1745,7 @@ describe('MachineError properties', () => {
     expect.assertions(4);
 
     try {
-      define({
+      createMachine({
         initial: 'missing',
         states: { idle: {} },
       } as unknown as import('../index.js').MachineConfig<string, object, import('../index.js').MachineEvent>);
@@ -1765,7 +1766,7 @@ describe('MachineError properties', () => {
     type Event = { type: 'GO' };
 
     try {
-      define<'idle', Record<string, never>, Event>({
+      createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'ghost' as 'idle' }] } } },
       });
@@ -1780,7 +1781,7 @@ describe('MachineError properties', () => {
   });
 });
 
-describe('debugInterpret — invoke lifecycle events', () => {
+describe('debugMachine — invoke lifecycle events', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
@@ -1804,7 +1805,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
       },
     };
 
-    const m = debugInterpret(config);
+    const m = debugMachine(config);
 
     await flush();
 
@@ -1839,7 +1840,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
       },
     };
 
-    const m = debugInterpret(config);
+    const m = debugMachine(config);
 
     await flush();
 
@@ -1866,7 +1867,7 @@ describe('debugInterpret — invoke lifecycle events', () => {
       },
     };
 
-    const m = debugInterpret(config);
+    const m = debugMachine(config);
 
     m.send({ type: 'CANCEL' });
 
@@ -1884,7 +1885,7 @@ describe('after transitions in hierarchical states', () => {
 
     type Event = { type: 'GO' };
 
-    const def = define<'done' | 'working', Record<string, never>, Event>({
+    const def = createMachine<'done' | 'working', Record<string, never>, Event>({
       initial: 'working',
       states: {
         done: {},
@@ -1913,7 +1914,7 @@ describe('after transitions in hierarchical states', () => {
 
     type Event = { type: 'ABORT' };
 
-    const def = define<'cancelled' | 'done' | 'working', Record<string, never>, Event>({
+    const def = createMachine<'cancelled' | 'done' | 'working', Record<string, never>, Event>({
       initial: 'working',
       states: {
         cancelled: {},
@@ -1955,7 +1956,11 @@ describe('subscribe after dispose', () => {
 describe('MachineError.is()', () => {
   it('returns true for MachineError instances', () => {
     try {
-      define({ initial: 'missing', states: { idle: {} } } as unknown as MachineConfig<string, object, MachineEvent>);
+      createMachine({ initial: 'missing', states: { idle: {} } } as unknown as MachineConfig<
+        string,
+        object,
+        MachineEvent
+      >);
     } catch (err) {
       expect(MachineError.is(err)).toBe(true);
     }
@@ -1992,9 +1997,9 @@ describe('send — re-entrant returns false', () => {
   it("returns 'queued' when called re-entrantly inside an action", () => {
     type Event = { type: 'A' } | { type: 'B' };
 
-    let reentrantResult: string | undefined;
+    let reentrantResult: SendResult | undefined;
 
-    const def = define<'end' | 'middle' | 'start', Record<string, never>, Event>({
+    const def = createMachine<'end' | 'middle' | 'start', Record<string, never>, Event>({
       initial: 'start',
       states: {
         end: {},
@@ -2027,7 +2032,7 @@ describe('subscribe — context-only change', () => {
   it('fires when only context changes (self-transition)', () => {
     type Event = { type: 'INC' };
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -2064,7 +2069,7 @@ describe('persistence — load returning undefined', () => {
 
     const save = vi.fn();
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -2086,7 +2091,7 @@ describe('validation — empty invoke array', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'idle', Record<string, never>, Event>({
+      createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { invoke: [] } },
       });
@@ -2119,7 +2124,7 @@ describe('after guard returning false', () => {
 
     type Event = { type: 'NOOP' };
 
-    const def = define<'a' | 'b', { skip: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { skip: boolean }, Event>({
       context: { skip: true },
       initial: 'a',
       states: {
@@ -2149,7 +2154,7 @@ describe('getTrace ring-buffer wrap-around', () => {
   it('returns only the most recent traceLimit entries when capacity exceeded', () => {
     type Event = { type: 'NEXT' };
 
-    const def = define<'a' | 'b', Record<string, never>, Event>({
+    const def = createMachine<'a' | 'b', Record<string, never>, Event>({
       initial: 'a',
       states: {
         a: { on: { NEXT: { target: 'b' } } },
@@ -2176,7 +2181,7 @@ describe('validateContext — skip on hydration', () => {
   it('does not throw when persisted context fails validateContext', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: 0 },
       initial: 'a',
       states: {
@@ -2202,7 +2207,7 @@ describe('validation — after delay NaN/Infinity', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: NaN, target: 'b' }] },
@@ -2216,7 +2221,7 @@ describe('validation — after delay NaN/Infinity', () => {
     type Event = { type: 'GO' };
 
     expect(() => {
-      define<'a' | 'b', Record<string, never>, Event>({
+      createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
           a: { after: [{ delay: Infinity, target: 'b' }] },
@@ -2233,7 +2238,7 @@ describe('queue cleared on validateContext throw', () => {
 
     let calls = 0;
 
-    const def = define<'end' | 'middle' | 'start', { valid: boolean }, Event>({
+    const def = createMachine<'end' | 'middle' | 'start', { valid: boolean }, Event>({
       context: { valid: true },
       initial: 'start',
       states: {
@@ -2278,8 +2283,8 @@ describe('TransitionInput export', () => {
   it('is exported from the package index', async () => {
     const mod = await import('../index.js');
 
-    expect(typeof (mod as Record<string, unknown>).machine).toBe('function');
-    expect('machine' in mod).toBe(true);
+    expect(typeof (mod as Record<string, unknown>).createMachine).toBe('function');
+    expect('createMachine' in mod).toBe(true);
   });
 });
 
@@ -2296,7 +2301,7 @@ describe('AfterEvent shape', () => {
 
     let captured: import('../index.js').AfterEvent | null = null;
 
-    const def = define<'a' | 'b', Ctx, Event>({
+    const def = createMachine<'a' | 'b', Ctx, Event>({
       context: { receivedEvent: null },
       initial: 'a',
       states: {
@@ -2334,7 +2339,7 @@ describe('R4 — GuardFn receives Readonly<Ctx>', () => {
 
     let seenCount: number | undefined;
 
-    const def = define<'a' | 'b', { count: number }, Event>({
+    const def = createMachine<'a' | 'b', { count: number }, Event>({
       context: { count: 42 },
       initial: 'a',
       states: {
@@ -2367,7 +2372,7 @@ describe('R4 — GuardFn receives Readonly<Ctx>', () => {
     type Event = { type: 'GO' };
     type Ctx = { count: number };
 
-    define<'a' | 'b', Ctx, Event>({
+    createMachine<'a' | 'b', Ctx, Event>({
       context: { count: 0 },
       initial: 'a',
       states: {
@@ -2447,7 +2452,7 @@ describe('R7 — SendResult object', () => {
 
     let innerResult: ReturnType<typeof m.send> | undefined;
 
-    const def = define<'end' | 'middle' | 'start', Record<string, never>, Event>({
+    const def = createMachine<'end' | 'middle' | 'start', Record<string, never>, Event>({
       initial: 'start',
       states: {
         end: {},
@@ -2489,7 +2494,7 @@ describe('R9 — validateContext returns true | string', () => {
   it('does not throw when validateContext returns true', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: 5 },
       initial: 'a',
       states: {
@@ -2507,7 +2512,7 @@ describe('R9 — validateContext returns true | string', () => {
 
     let errorDetails: unknown;
 
-    const def = define<'a' | 'b', { n: number }, Event>({
+    const def = createMachine<'a' | 'b', { n: number }, Event>({
       context: { n: -1 },
       initial: 'a',
       states: {
@@ -2531,7 +2536,7 @@ describe('R9 — validateContext returns true | string', () => {
 
     const calls: number[] = [];
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -2569,7 +2574,7 @@ describe('C1 — can() evaluates guards without onDebug side effects', () => {
   it('evaluates guard and returns false when guard blocks', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { allowed: boolean }, Event>({
       context: { allowed: false },
       initial: 'a',
       states: {
@@ -2587,7 +2592,7 @@ describe('C1 — can() evaluates guards without onDebug side effects', () => {
   it('returns true when guard passes', () => {
     type Event = { type: 'GO' };
 
-    const def = define<'a' | 'b', { allowed: boolean }, Event>({
+    const def = createMachine<'a' | 'b', { allowed: boolean }, Event>({
       context: { allowed: true },
       initial: 'a',
       states: {
@@ -2604,7 +2609,7 @@ describe('C1 — can() evaluates guards without onDebug side effects', () => {
   it('does NOT fire onDebug when can() is called', () => {
     const debugCalls: string[] = [];
 
-    const def = define<'a' | 'b', Record<string, never>, { type: 'GO' }>({
+    const def = createMachine<'a' | 'b', Record<string, never>, { type: 'GO' }>({
       initial: 'a',
       states: {
         a: { on: { GO: { target: 'b' } } },
@@ -2650,7 +2655,7 @@ describe('C3 — getSnapshot() independence from machine state', () => {
   it('mutating the returned snapshot does not affect machine.context.value', () => {
     type Event = { type: 'INC' };
 
-    const def = define<'idle', { count: number }, Event>({
+    const def = createMachine<'idle', { count: number }, Event>({
       context: { count: 0 },
       initial: 'idle',
       states: {
@@ -2691,7 +2696,7 @@ describe('C3 — getSnapshot() independence from machine state', () => {
   });
 });
 
-describe('C4 — resolveTransition ancestor chain bubbling', () => {
+describe('C4 — resolve() ancestor chain bubbling', () => {
   it('finds transition defined on parent when child has no handler', () => {
     type Event = { type: 'CANCEL' } | { type: 'GO' };
 
@@ -2709,7 +2714,7 @@ describe('C4 — resolveTransition ancestor chain bubbling', () => {
       },
     };
 
-    const result = resolveTransition(config, {
+    const result = createMachine(config).resolve({
       context: {},
       event: { type: 'CANCEL' },
       state: 'work.active' as 'done' | 'work',
@@ -2733,7 +2738,7 @@ describe('C4 — resolveTransition ancestor chain bubbling', () => {
       },
     };
 
-    const result = resolveTransition(config, {
+    const result = createMachine(config).resolve({
       context: {},
       event: { type: 'GO' },
       state: 'work.active' as 'done' | 'work',
@@ -2760,7 +2765,7 @@ describe('D1 — MachineErrorCode const object', () => {
 
   it('MachineError.code matches MachineErrorCode constant', () => {
     try {
-      define({ initial: 'NOPE', states: {} as never });
+      createMachine({ initial: 'NOPE', states: {} as never });
     } catch (err) {
       expect(MachineError.is(err)).toBe(true);
 

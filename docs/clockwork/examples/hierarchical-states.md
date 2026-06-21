@@ -14,13 +14,13 @@ Related states share common transitions and data but differ in their sub-behavio
 Use compound states to group related substates. Entering a compound state automatically resolves to its `initial` child. Shared transitions on the parent apply to all substates:
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'CANCEL' } | { type: 'EDIT' } | { type: 'SAVE' } | { type: 'SAVED' };
 
 type Context = { draft: string };
 
-const editor = machine({
+const editor = createMachine({
   context: { draft: '' },
   initial: 'idle',
   states: {
@@ -54,7 +54,7 @@ const editor = machine({
       },
     },
   },
-});
+}).start();
 
 const m = editor;
 
@@ -77,4 +77,4 @@ m[Symbol.dispose]();
 ### Related
 
 - [Clockwork Examples](/clockwork/examples.md)
-- [Unit Testing with resolveTransition](./unit-testing.md)
+- [Unit Testing with `.resolve()`](./unit-testing.md)

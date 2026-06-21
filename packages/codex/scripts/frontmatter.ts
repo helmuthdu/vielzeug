@@ -40,19 +40,69 @@ export function parseFrontmatter(markdown: string): Record<string, string | stri
     const rest = line.slice(colonIdx + 1).trim();
 
     // Inline array: keywords: [mcp, ai-agent, claude]
-    if (rest.startsWith('[') && rest.endsWith(']')) {
-      result[key] = rest
-        .slice(1, -1)
+    // Also handles multi-line bracket arrays:
+    //   exports:
+    //     [
+    //       createServer,
+    //       createServerFromDisk,
+    //     ]
+    if (rest.startsWith('[')) {
+      let raw = rest;
+
+      if (!rest.endsWith(']')) {
+        i++;
+
+        while (i < lines.length) {
+          const next = lines[i]?.trim() ?? '';
+
+          raw += ',' + next;
+          i++;
+
+          if (next.endsWith(']')) break;
+        }
+      } else {
+        i++;
+      }
+
+      result[key] = raw
+        .slice(raw.indexOf('[') + 1, raw.lastIndexOf(']'))
         .split(',')
         .map((s) => s.trim().replace(/^['"`]|['"`]$/g, ''))
         .filter(Boolean);
-      i++;
+
       continue;
     }
 
-    // Empty value → look ahead for block sequence items (- item)
+    // Empty value → look ahead for block sequence items (- item) or a multi-line bracket array
     if (rest === '') {
       i++;
+
+      // Multi-line bracket array:
+      //   exports:
+      //     [
+      //       createServer,
+      //       createServerFromDisk,
+      //     ]
+      if (lines[i]?.trim().startsWith('[')) {
+        let raw = '';
+
+        while (i < lines.length) {
+          const next = lines[i]?.trim() ?? '';
+
+          raw += ',' + next;
+          i++;
+
+          if (next.endsWith(']')) break;
+        }
+
+        result[key] = raw
+          .slice(raw.indexOf('[') + 1, raw.lastIndexOf(']'))
+          .split(',')
+          .map((s) => s.trim().replace(/^['"`]|['"`]$/g, ''))
+          .filter(Boolean);
+
+        continue;
+      }
 
       const items: string[] = [];
 

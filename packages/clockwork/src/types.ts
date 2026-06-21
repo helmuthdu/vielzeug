@@ -81,12 +81,12 @@ export type InvokeArgs<Ctx extends object, Ev extends MachineEvent> = {
   readonly signal: AbortSignal;
 };
 
-export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
+export type InvokeDef<Ctx extends object, Ev extends MachineEvent, Result = unknown> = {
   /** Optional label surfaced in DebugEvent for traceability. Defaults to an auto-incremented id. */
   id?: string;
-  onDone?: (result: unknown, context: Readonly<Ctx>) => Ev;
+  onDone?: (result: Result, context: Readonly<Ctx>) => Ev;
   onError?: (error: unknown, context: Readonly<Ctx>) => Ev;
-  src: (args: InvokeArgs<Ctx, Ev>) => Promise<unknown>;
+  src: (args: InvokeArgs<Ctx, Ev>) => Promise<Result>;
 };
 
 // ── State nodes ──────────────────────────────────────────────────────────────
@@ -97,7 +97,7 @@ export type StateNode<State extends string, Ctx extends object, Ev extends Machi
   exit?: LifecycleFn<Ctx, Ev>;
   /** Initial substate for compound states. */
   initial?: string;
-  invoke?: Array<InvokeDef<Ctx, Ev>>;
+  invoke?: Array<InvokeDef<Ctx, Ev, any>>;
   on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
   /** Nested substates — makes this a compound state. */
   states?: Record<string, StateNode<string, Ctx, Ev>>;
@@ -182,12 +182,11 @@ export type TransitionTraceEntry<State extends string, Ev extends MachineEvent> 
 /**
  * Result of `send()`.
  * - `status` — `'transitioned'` | `'queued'` | `'rejected'`
- * - `ok` — `true` when status is not `'rejected'`
- * - `queued` — `true` when the call was re-entrant (action called `send` during a transition)
+ *
+ * Use `result.status !== 'rejected'` to check for success,
+ * and `result.status === 'queued'` to detect re-entrant sends inside actions.
  */
 export type SendResult = {
-  readonly ok: boolean;
-  readonly queued: boolean;
   readonly status: 'queued' | 'rejected' | 'transitioned';
 };
 
@@ -221,8 +220,15 @@ export interface MachineDefinition<State extends string, Ctx extends object, Ev 
   /**
    * Resolves the transition that would be taken for a given state, context, and event.
    * Pure — no side effects, no debug events.
+   *
+   * @param options.onGuard — called for every guard evaluation (passed and failed).
    */
-  resolve(input: { context: Readonly<Ctx>; event: Ev; state: State }): TransitionDef<State, Ctx, Ev> | undefined;
+  resolve(
+    input: { context: Readonly<Ctx>; event: Ev; state: State },
+    options?: {
+      onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void;
+    },
+  ): TransitionDef<State, Ctx, Ev> | undefined;
   /** Creates a running machine instance from this definition. */
   start(options?: InterpretOptions<State, Ctx, Ev>): MachineInstance<State, Ctx, Ev>;
 }
@@ -253,8 +259,8 @@ export interface MachineInstance<State extends string, Ctx extends object, Ev ex
    */
   matches(...states: string[]): boolean;
   /**
-   * Dispatches the event.
-   * Returns a `SendResult` with `.ok` (`true` unless rejected) and `.status`.
+   * Dispatches the event and returns a `SendResult`.
+   * Check `.status` for `'transitioned'`, `'queued'`, or `'rejected'`.
    */
   send(event: Ev): SendResult;
   /**
@@ -265,3 +271,36 @@ export interface MachineInstance<State extends string, Ctx extends object, Ev ex
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;
 }
+
+// ── Machine schema helpers ────────────────────────────────────────────────────
+
+/**
+ * Opaque schema bundle. Captures the three generics in a single type for
+ * ergonomic machine typing.
+ *
+ * @example
+ * ```ts
+ * type Auth = MachineSchema<'idle' | 'loading', { user: User | null }, AuthEvent>;
+ *
+ * const guard: MachineGuard<Auth> = ({ context }) => !!context.user;
+ * const action: MachineAction<Auth, { type: 'DONE'; user: User }> = ({ context, event }) => {
+ *   context.user = event.user;
+ * };
+ * ```
+ */
+export type MachineSchema<S extends string, C extends object, E extends MachineEvent> = {
+  readonly _c: C;
+  readonly _e: E;
+  readonly _s: S;
+};
+
+export type MachineTypeConfig<T extends MachineSchema<any, any, any>> = MachineConfig<T['_s'], T['_c'], T['_e']>;
+export type MachineTypeDefinition<T extends MachineSchema<any, any, any>> = MachineDefinition<
+  T['_s'],
+  T['_c'],
+  T['_e']
+>;
+export type MachineTypeInstance<T extends MachineSchema<any, any, any>> = MachineInstance<T['_s'], T['_c'], T['_e']>;
+export type MachineTypeOptions<T extends MachineSchema<any, any, any>> = InterpretOptions<T['_s'], T['_c'], T['_e']>;
+export type MachineAction<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = ActionFn<T['_c'], E>;
+export type MachineGuard<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = GuardFn<T['_c'], E>;

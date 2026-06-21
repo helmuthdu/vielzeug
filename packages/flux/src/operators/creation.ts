@@ -1,5 +1,6 @@
-import type { Flux } from '../types';
+import type { Flux, Scheduler } from '../types';
 
+import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
 
 /**
@@ -52,13 +53,16 @@ export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): Fl
 
     return flux<T>((observer) => {
       let cancelled = false;
+      const iter = asyncSrc[Symbol.asyncIterator]();
 
       (async () => {
         try {
-          for await (const v of asyncSrc) {
-            if (cancelled) break;
+          while (true) {
+            const { done, value } = await iter.next();
 
-            observer.next(v);
+            if (cancelled || done) break;
+
+            observer.next(value);
           }
 
           if (!cancelled) observer.complete?.();
@@ -69,6 +73,7 @@ export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): Fl
 
       return () => {
         cancelled = true;
+        iter.return?.();
       };
     });
   }
@@ -94,12 +99,11 @@ export function from<T>(source: AsyncIterable<T> | Iterable<T> | Promise<T>): Fl
  * @example
  * const ticks = interval(1000); // 0, 1, 2, ... every second
  */
-export function interval(ms: number): Flux<number> {
+export function interval(ms: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Flux<number> {
   return flux<number>((observer) => {
     let i = 0;
-    const id = setInterval(() => observer.next(i++), ms);
 
-    return () => clearInterval(id);
+    return scheduler.repeat(() => observer.next(i++), ms);
   });
 }
 
@@ -111,25 +115,24 @@ export function interval(ms: number): Flux<number> {
  * timer(1000).subscribe(console.log);          // emits 0 after 1s, then completes
  * timer(1000, 500).subscribe(console.log);     // emits 0 after 1s, then 1, 2, 3... every 500ms
  */
-export function timer(delay: number, intervalMs?: number): Flux<number> {
+export function timer(delay: number, intervalMs?: number, scheduler: Scheduler = DEFAULT_SCHEDULER): Flux<number> {
   return flux<number>((observer) => {
     let count = 0;
-    let intervalId: ReturnType<typeof setInterval> | undefined;
+    let cancelRepeat: (() => void) | undefined;
 
-    const timeoutId = setTimeout(() => {
+    const cancelDelay = scheduler.delay(() => {
       observer.next(count++);
 
       if (intervalMs !== undefined) {
-        intervalId = setInterval(() => observer.next(count++), intervalMs);
+        cancelRepeat = scheduler.repeat(() => observer.next(count++), intervalMs);
       } else {
         observer.complete?.();
       }
     }, delay);
 
     return () => {
-      clearTimeout(timeoutId);
-
-      if (intervalId !== undefined) clearInterval(intervalId);
+      cancelDelay();
+      cancelRepeat?.();
     };
   });
 }

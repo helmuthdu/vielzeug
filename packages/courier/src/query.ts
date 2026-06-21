@@ -1,26 +1,26 @@
-import { isAbortError, retry } from '@vielzeug/arsenal';
-
 import type { RetryOptions } from './retry';
-import type { AsyncStatus, QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
+import type { QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
-import { DEFAULT_TIMES, resolveRetryDelay } from './retry';
-import { hash } from './serialize';
+import {
+  buildCacheContext,
+  ensureEntry,
+  evictEntry,
+  hashAtom,
+  hashKey,
+  isKeyOrPrefix,
+  makeFetchConfig,
+  resolveValue,
+  scheduleGc,
+  startFetch,
+  type CacheContext,
+  type CacheEntry,
+  type FetchConfig,
+  type QueryFn,
+  type QueryFnContext,
+} from './query-cache';
+import { notify, toBaseState, watchInternal } from './query-observe';
 
-const DEFAULT_GC = 5 * 60_000;
-const IDLE_STATE: QueryState<unknown> = Object.freeze({
-  data: undefined,
-  error: null,
-  isFetching: false,
-  status: 'idle',
-  updatedAt: undefined,
-});
-
-type EntryStatus = AsyncStatus;
-
-export type QueryFnContext = {
-  key: QueryKey;
-  signal: AbortSignal;
-};
+export type { QueryFn, QueryFnContext };
 
 /**
  * Options for `qc.fetch()`. Always throws on error and returns `T`.
@@ -29,12 +29,12 @@ export type QueryFnContext = {
 export type QueryOptions<T> = {
   /**
    * When `false` the fetch is skipped and the current cached value is returned.
-   * If no cached data exists yet, the return value is `undefined` even though the
-   * return type is `Promise<T>` — use `getState()` to inspect entry status in that case.
+   * If no cached data exists yet, the return value is `undefined` — use `getState()`
+   * to inspect entry status in that case.
    * Defaults to `true`.
    */
   enabled?: boolean;
-  fn: (ctx: QueryFnContext) => Promise<T>;
+  fn: QueryFn<T>;
   gcTime?: number;
   /** Pre-seed the cache as a successful entry when no data exists. Subject to normal staleTime checks. */
   initialData?: T | (() => T | undefined);
@@ -43,16 +43,9 @@ export type QueryOptions<T> = {
 } & RetryOptions;
 
 /**
- * Options for `qc.observe()`. Extends `QueryOptions` with reactive-only fields.
- * Pass `fetch: false` for a read-through store that does not trigger a network call.
+ * Shared reactive fields for `observe()`.
  */
-export type ObserveOptions<T, S = T> = QueryOptions<T> & {
-  /**
-   * When `false`, no background fetch is triggered. The store reflects whatever is
-   * already in the cache. Useful when another path is responsible for populating the entry.
-   * Defaults to `true`.
-   */
-  fetch?: boolean;
+type ObserveExtras<T, S> = {
   /**
    * Temporary value shown while a fetch is in-flight and no cached data exists.
    * Does not affect cache state — only the value returned by `store.peek()`.
@@ -62,340 +55,65 @@ export type ObserveOptions<T, S = T> = QueryOptions<T> & {
   select?: (data: T | undefined) => S | undefined;
 };
 
+/**
+ * Options for `qc.observe()`. Two forms:
+ *
+ * - `fetch?: true` (default) — triggers a background fetch; `fn` is required.
+ * - `fetch: false` — read-only store; `fn` is not required or called.
+ *
+ * Errors surface via `store.peek().status === 'error'`, not via Promise rejection.
+ */
+export type ObserveOptions<T, S = T> =
+  | ({ fetch?: true } & QueryOptions<T> & ObserveExtras<T, S>)
+  | ({ fetch: false; key: QueryKey } & Partial<QueryOptions<T>> & ObserveExtras<T, S>);
+
 export type QueryClientOptions = {
+  /**
+   * Optional fetch implementation injected by `createCourier` so that
+   * query fetches flow through the shared interceptor pipeline (auth, logging, etc.).
+   * When omitted `globalThis.fetch` is used directly.
+   */
+  fetch?: typeof globalThis.fetch;
   gcTime?: number;
   staleTime?: number;
 } & RetryOptions;
 
-type QueryObserver<T, S> = {
-  listener: () => void;
-  placeholderData?: S | (() => S | undefined);
-  previous?: QueryState<S>;
-  select?: (data: T | undefined) => S | undefined;
-};
-
-// Fetch configuration stored separately from cache state so entry data fields
-// are never mutated by late-arriving fetchQuery calls from different callers.
-type FetchConfig<T = unknown> = {
-  delay: RetryOptions['delay'];
-  fn: (ctx: QueryFnContext) => Promise<T>;
-  gcTime: number;
-  shouldRetry: RetryOptions['shouldRetry'];
-  staleTime: number;
-  times: number;
-};
-
-type CacheEntry<T = unknown> = {
-  data: T | undefined;
-  error: Error | null;
-  hash: string;
-  inflight: { controller: AbortController; promise: Promise<T> } | null;
-  isFetching: boolean;
-  key: QueryKey;
-  // Last config used to successfully start a fetch — used for background revalidation.
-  lastConfig: FetchConfig<T> | undefined;
-  observers: Set<QueryObserver<T, unknown>>;
-  // Pre-computed per-segment hashes for O(1) prefix matching in invalidate().
-  segmentHashes: readonly string[];
-  status: EntryStatus;
-  updatedAt: number | undefined;
-};
-
-type EntrySnapshot<T> = {
-  data: T | undefined;
-  error: Error | null;
-  status: EntryStatus;
-  updatedAt: number | undefined;
-};
-
-function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefined {
-  return typeof v === 'function' ? (v as () => T | undefined)() : v;
-}
-
 export function createQuery(opts?: QueryClientOptions) {
-  const staleTimeDefault = opts?.staleTime ?? 0;
-  const gcTimeDefault = opts?.gcTime ?? DEFAULT_GC;
-  const timesDefault = opts?.times ?? DEFAULT_TIMES;
-  const delayDefault = opts?.delay;
-  const shouldRetryDefault = opts?.shouldRetry;
-
   let disposed = false;
   const disposeController = new AbortController();
-
   const entries = new Map<string, CacheEntry>();
   const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
-  function toBaseState<T>(entry: CacheEntry<T>): QueryState<T> {
-    if (entry.status === 'pending') {
-      return {
-        data: undefined,
-        error: null,
-        isFetching: true,
-        status: 'pending',
-        updatedAt: undefined,
-      } as QueryState<T>;
-    }
-
-    if (entry.status === 'success') {
-      return {
-        data: entry.data as T,
-        error: null,
-        isFetching: entry.isFetching,
-        status: 'success',
-        updatedAt: entry.updatedAt as number,
-      };
-    }
-
-    if (entry.status === 'error') {
-      return {
-        data: entry.data,
-        error: entry.error as Error,
-        isFetching: entry.isFetching,
-        status: 'error',
-        updatedAt: entry.updatedAt as number,
-      };
-    }
-
-    return IDLE_STATE as QueryState<T>;
-  }
-
-  function toObserverState<T, S>(entry: CacheEntry<T>, observer: QueryObserver<T, S>): QueryState<S> {
-    const base = toBaseState(entry);
-
-    if (base.status === 'pending') {
-      const placeholder = resolveValue(observer.placeholderData as S | (() => S | undefined) | undefined);
-
-      return { ...base, data: placeholder } as QueryState<S>;
-    }
-
-    const selected = observer.select ? observer.select(base.data as T | undefined) : (base.data as S | undefined);
-
-    return { ...base, data: selected } as QueryState<S>;
-  }
-
-  function notify<T>(entry: CacheEntry<T>) {
-    for (const observer of entry.observers) {
-      const typed = observer as QueryObserver<T, unknown>;
-      const next = toObserverState(entry, typed);
-      const prev = typed.previous;
-
-      const dataUnchanged = Object.is(prev?.data, next.data);
-      const metaUnchanged =
-        !!prev &&
-        prev.status === next.status &&
-        prev.isFetching === next.isFetching &&
-        Object.is(prev.error, next.error);
-
-      // When a select transform is present, data deduplication is based solely on
-      // the projected value — updatedAt changes on every raw write but should not
-      // trigger a notification when the selected result is identical.
-      const shouldSkip = typed.select
-        ? metaUnchanged && dataUnchanged
-        : metaUnchanged && prev?.updatedAt === next.updatedAt && dataUnchanged;
-
-      if (shouldSkip) {
-        continue;
-      }
-
-      typed.previous = next;
-      typed.listener();
-    }
-  }
-
-  function cancelGc(hash: string) {
-    const timer = gcTimers.get(hash);
-
-    if (!timer) return;
-
-    clearTimeout(timer);
-    gcTimers.delete(hash);
-  }
-
-  function scheduleGc<T>(entry: CacheEntry<T>, gcTime: number) {
-    if (disposed) return;
-
-    cancelGc(entry.hash);
-
-    if (entry.observers.size > 0) {
-      return;
-    }
-
-    if (gcTime === 0) {
-      entries.delete(entry.hash);
-
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const current = entries.get(entry.hash);
-
-      if (!current || current.observers.size > 0 || current.isFetching) {
-        return;
-      }
-
-      entries.delete(entry.hash);
-      gcTimers.delete(entry.hash);
-    }, gcTime);
-
-    gcTimers.set(entry.hash, timer);
-  }
-
-  function ensureEntry<T>(key: QueryKey): CacheEntry<T> {
-    const entryHash = hash(key);
-    let entry = entries.get(entryHash) as CacheEntry<T> | undefined;
-
-    if (!entry) {
-      entry = {
-        data: undefined,
-        error: null,
-        hash: entryHash,
-        inflight: null,
-        isFetching: false,
-        key,
-        lastConfig: undefined,
-        observers: new Set(),
-        segmentHashes: key.map((k) => hash(k)),
-        status: 'idle',
-        updatedAt: undefined,
-      };
-      entries.set(entryHash, entry as CacheEntry<unknown>);
-    }
-
-    return entry;
-  }
-
-  function deleteEntry<T>(entry: CacheEntry<T>) {
-    entry.inflight?.controller.abort();
-    cancelGc(entry.hash);
-    entries.delete(entry.hash);
-  }
-
-  function isKeyOrPrefix(entry: CacheEntry, prefixHash: readonly string[]): boolean {
-    if (prefixHash.length > entry.segmentHashes.length) return false;
-
-    return prefixHash.every((seg, i) => seg === entry.segmentHashes[i]);
-  }
-
-  function markFetching<T>(entry: CacheEntry<T>) {
-    entry.isFetching = true;
-
-    if (entry.status === 'idle') {
-      entry.status = 'pending';
-      entry.error = null;
-    }
-
-    notify(entry);
-  }
-
-  function commitSuccess<T>(entry: CacheEntry<T>, data: T, gcTime: number) {
-    entry.data = data;
-    entry.error = null;
-    entry.status = 'success';
-    entry.updatedAt = Date.now();
-    entry.isFetching = false;
-    entry.inflight = null;
-    scheduleGc(entry, gcTime);
-    notify(entry);
-  }
-
-  function rollback<T>(entry: CacheEntry<T>, previous: EntrySnapshot<T>, gcTime: number) {
-    entry.data = previous.data;
-    entry.error = previous.error;
-    entry.status = previous.status;
-    entry.updatedAt = previous.updatedAt;
-    entry.isFetching = false;
-    entry.inflight = null;
-
-    if (entry.observers.size === 0 && entry.status === 'idle' && entry.data === undefined) {
-      deleteEntry(entry);
-
-      return;
-    }
-
-    scheduleGc(entry, gcTime);
-    notify(entry);
-  }
-
-  function commitError<T>(entry: CacheEntry<T>, error: Error, gcTime: number) {
-    entry.error = error;
-    entry.status = 'error';
-    entry.updatedAt = Date.now();
-    entry.isFetching = false;
-    entry.inflight = null;
-    scheduleGc(entry, gcTime);
-    notify(entry);
-  }
-
-  // Internal: starts the network fetch for an entry using the given FetchConfig.
-  // Safe to call from background revalidation paths without corrupting cache state.
-  // Callers are responsible for updating entry.lastConfig before invoking this.
-  function startFetch<T>(entry: CacheEntry<T>, config: FetchConfig<T>): Promise<T> {
-    if (entry.inflight) return entry.inflight.promise;
-
-    const { delay, fn, gcTime, shouldRetry, times } = config;
-    const controller = new AbortController();
-    const prev: EntrySnapshot<T> = {
-      data: entry.data,
-      error: entry.error,
-      status: entry.status,
-      updatedAt: entry.updatedAt,
-    };
-
-    // Create the promise and assign it to inflight BEFORE calling markFetching.
-    // markFetching notifies observers synchronously; assigning inflight first closes
-    // the re-entrancy window — any qc.fetch() for the same key triggered during the
-    // notification round returns this promise instead of spawning a second fetch.
-    const promise = (async () => {
-      try {
-        const data = await retry(() => fn({ key: entry.key, signal: controller.signal }), {
-          delay: (attempt) => resolveRetryDelay(attempt, delay),
-          shouldRetry,
-          signal: controller.signal,
-          times,
-        });
-
-        commitSuccess(entry, data, gcTime);
-
-        return data;
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        const isAborted = controller.signal.aborted || isAbortError(error);
-
-        if (isAborted) {
-          rollback(entry, prev, gcTime);
-        } else {
-          commitError(entry, error, gcTime);
-        }
-
-        throw error;
-      }
-    })();
-
-    entry.inflight = { controller, promise };
-    markFetching(entry);
-
-    return promise;
-  }
+  const ctx: CacheContext = buildCacheContext(
+    {
+      delay: opts?.delay,
+      gcTime: opts?.gcTime,
+      shouldRetry: opts?.shouldRetry,
+      staleTime: opts?.staleTime,
+      times: opts?.times,
+    },
+    entries,
+    gcTimers,
+    notify,
+  );
 
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
     if (disposed) throw new Error('[courier] QueryClient has been disposed');
 
-    const {
-      delay = delayDefault,
-      enabled = true,
-      fn,
-      gcTime = gcTimeDefault,
-      initialData,
-      key,
-      shouldRetry = shouldRetryDefault,
-      staleTime = staleTimeDefault,
-      times = timesDefault,
-    } = options;
+    const { enabled = true, fn, gcTime, initialData, key, staleTime, ...retryOpts } = options;
 
-    const entry = ensureEntry<T>(key);
-    const config: FetchConfig<T> = { delay, fn, gcTime, shouldRetry, staleTime, times };
+    // When disabled and no existing entry, return undefined without creating a cache entry.
+    if (!enabled) {
+      const h = hashKey(key);
+      const existing = entries.get(h);
 
-    if (initialData !== undefined && (entry.status === 'idle' || entry.data === undefined)) {
+      return (existing?.data as T | undefined) ?? (undefined as unknown as T);
+    }
+
+    const entry = ensureEntry<T>(ctx, key);
+    const config = makeFetchConfig<T>(ctx, { fn, gcTime, staleTime, ...retryOpts });
+
+    if (initialData !== undefined && entry.status === 'loading' && entry.data === undefined) {
       const initVal = resolveValue(initialData);
 
       if (initVal !== undefined) {
@@ -406,66 +124,38 @@ export function createQuery(opts?: QueryClientOptions) {
       }
     }
 
-    if (!enabled) {
-      return entry.data as T;
-    }
-
     if (
       entry.status === 'success' &&
       entry.updatedAt !== undefined &&
-      Date.now() - entry.updatedAt < staleTime &&
+      Date.now() - entry.updatedAt < config.staleTime &&
       !entry.isFetching
     ) {
-      // Store config for future background revalidation even on a cache hit.
       entry.lastConfig = config;
 
       return entry.data as T;
     }
 
-    // Keep config for background revalidation even when joining an in-flight
-    // request — so the most recent fn / staleTime / retry options take effect
-    // when the next invalidation or background refetch fires.
     entry.lastConfig = config;
 
     if (entry.inflight) return entry.inflight.promise;
 
-    return startFetch(entry, config);
+    return startFetch(ctx, entry, config);
   }
 
-  function evictEntry<T>(entry: CacheEntry<T>) {
-    entry.inflight?.controller.abort();
-
-    if (entry.observers.size > 0) {
-      entry.inflight = null;
-      entry.isFetching = false;
-      entry.status = 'idle';
-      entry.data = undefined;
-      entry.error = null;
-      entry.updatedAt = undefined;
-      notify(entry);
-
-      return;
-    }
-
-    deleteEntry(entry);
-  }
-
-  function revalidateObservedEntry<T>(entry: CacheEntry<T>) {
+  function revalidateObservedEntry<T>(entry: CacheEntry<T>): void {
     if (!entry.lastConfig) {
-      // No stored config means this entry was seeded via set() alone. Fall back to
-      // explicit eviction so the entry resets to idle and subscribers are notified.
-      evictEntry(entry);
+      evictEntry(ctx, entry);
 
       return;
     }
 
     if (entry.isFetching) return;
 
-    startFetch(entry, entry.lastConfig as FetchConfig<T>).catch(() => {});
+    startFetch(ctx, entry, entry.lastConfig as FetchConfig<T>).catch(() => {});
   }
 
-  function invalidate(key: QueryKey) {
-    const prefixHash = key.map((k) => hash(k));
+  function invalidate(key: QueryKey): void {
+    const prefixHash = key.map((k) => hashAtom(k));
 
     for (const entry of [...entries.values()]) {
       if (isKeyOrPrefix(entry, prefixHash)) {
@@ -474,14 +164,8 @@ export function createQuery(opts?: QueryClientOptions) {
           continue;
         }
 
-        evictEntry(entry);
+        evictEntry(ctx, entry);
       }
-    }
-  }
-
-  function clearCache() {
-    for (const entry of [...entries.values()]) {
-      evictEntry(entry);
     }
   }
 
@@ -495,124 +179,28 @@ export function createQuery(opts?: QueryClientOptions) {
     key: QueryKey,
     dataOrUpdater: T | ((old: T | undefined) => T),
     opts?: { gcTime?: number; updatedAt?: number },
-  ) {
-    const entry = ensureEntry<T>(key);
-    const gcTime = opts?.gcTime ?? entry.lastConfig?.gcTime ?? gcTimeDefault;
+  ): void {
+    const entry = ensureEntry<T>(ctx, key);
+    const gcTime = opts?.gcTime ?? entry.lastConfig?.gcTime ?? ctx.gcTimeDefault;
 
     entry.data =
       typeof dataOrUpdater === 'function' ? (dataOrUpdater as (old: T | undefined) => T)(entry.data) : dataOrUpdater;
     entry.error = null;
     entry.status = 'success';
     entry.updatedAt = opts?.updatedAt ?? Date.now();
+    entry.isFetching = false;
+    entry.inflight = null;
     notify(entry);
-    scheduleGc(entry, gcTime);
-  }
-
-  function get<T>(key: QueryKey): T | undefined {
-    const entry = entries.get(hash(key));
-
-    return entry ? (entry.data as T | undefined) : undefined;
-  }
-
-  function getState<T>(key: QueryKey): QueryState<T> | null {
-    const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
-
-    if (!entry) return null;
-
-    return toBaseState(entry);
-  }
-
-  function watchInternal<T = unknown, S = T>(
-    key: QueryKey,
-    opts?: { placeholderData?: S | (() => S | undefined); select?: (data: T | undefined) => S | undefined },
-  ): SyncStore<QueryState<S>> {
-    // Stable observer used by peek() — hoisted to avoid a new object allocation
-    // on every getSnapshot call (React's useSyncExternalStore calls this on every render).
-    const peekObserver: QueryObserver<T, S> = { listener: () => {}, ...opts };
-
-    return {
-      peek(): QueryState<S> {
-        const entry = entries.get(hash(key)) as CacheEntry<T> | undefined;
-
-        if (!entry) return IDLE_STATE as QueryState<S>;
-
-        return toObserverState(entry, peekObserver);
-      },
-
-      subscribe(onStoreChange: () => void): Unsubscribe {
-        const entry = ensureEntry<T>(key);
-
-        cancelGc(entry.hash);
-
-        // Single observer per subscription — peek() provides the initial snapshot
-        // so onStoreChange is only fired on subsequent state changes.
-        // This satisfies the useSyncExternalStore contract (and equivalents in Vue/Svelte).
-        const observer: QueryObserver<T, S> = {
-          ...opts,
-          listener: onStoreChange,
-          previous: toObserverState(entry, peekObserver),
-        };
-
-        entry.observers.add(observer as QueryObserver<T, unknown>);
-
-        return () => {
-          entry.observers.delete(observer as QueryObserver<T, unknown>);
-
-          if (entry.observers.size === 0) {
-            scheduleGc(entry, entry.lastConfig?.gcTime ?? gcTimeDefault);
-          }
-        };
-      },
-    };
-  }
-
-  function cancel(key: QueryKey) {
-    const entry = entries.get(hash(key));
-
-    if (!entry?.inflight) return;
-
-    entry.inflight.controller.abort();
-  }
-
-  async function fetchMany<T = unknown>(queries: QueryOptions<T>[]): Promise<T[]> {
-    return Promise.all(queries.map((q) => fetchQuery(q)));
-  }
-
-  /**
-   * Returns a `SyncStore` for `key` and optionally triggers a background fetch.
-   * This is the primary single-call pattern for components: subscribe to
-   * `store.subscribe`, snapshot via `store.peek()`, and let the fetch populate
-   * the cache automatically.
-   *
-   * Pass `fetch: false` for a pure read-through store that does not trigger a
-   * network call — useful when another path is responsible for populating the entry.
-   *
-   * Errors surface via `store.peek().status === 'error'`, not via Promise rejection.
-   */
-  function observe<T = unknown, S = T>(options: ObserveOptions<T, S>): SyncStore<QueryState<S>> {
-    const { fetch: shouldFetch = true, placeholderData, select, ...fetchOpts } = options;
-
-    const store = watchInternal<T, S>(options.key, { placeholderData, select });
-
-    if (shouldFetch) {
-      // Trigger a fetch without surfacing errors — the store's status field carries them.
-      fetchQuery({ ...fetchOpts }).catch(() => {});
-    }
-
-    return store;
+    scheduleGc(ctx, entry, gcTime);
   }
 
   function isStaleAndRevalidatable(entry: CacheEntry): boolean {
     if (entry.observers.size === 0 || !entry.lastConfig || entry.isFetching) return false;
 
-    // A success entry is stale when its data is older than staleTime.
     if (entry.status === 'success' && entry.updatedAt !== undefined) {
       return Date.now() - entry.updatedAt >= entry.lastConfig.staleTime;
     }
 
-    // An error entry that still holds stale data (from a previous successful fetch) is also
-    // eligible for revalidation, but respects the same staleTime guard to prevent hammering
-    // the server on repeated focus/reconnect events.
     if (entry.status === 'error' && entry.data !== undefined && entry.updatedAt !== undefined) {
       return Date.now() - entry.updatedAt >= entry.lastConfig.staleTime;
     }
@@ -620,24 +208,68 @@ export function createQuery(opts?: QueryClientOptions) {
     return false;
   }
 
-  function refetchStale() {
-    for (const entry of [...entries.values()]) {
-      if (isStaleAndRevalidatable(entry)) {
-        startFetch(entry, entry.lastConfig as FetchConfig<unknown>).catch(() => {});
-      }
+  /**
+   * Returns a `SyncStore` for `key` and optionally triggers a background fetch.
+   *
+   * **With fetch (default):** pass `fn` and the store triggers a background fetch on creation.
+   * Errors surface via `store.peek().status === 'error'`, not via Promise rejection.
+   *
+   * **Without fetch:** pass `fetch: false` — `fn` is not required. The store reflects
+   * whatever is in the cache. Useful when another path is responsible for populating the entry.
+   *
+   * @example
+   * ```ts
+   * // Fetch form
+   * const store = qc.observe({ key: ['users', 1], fn: ({ signal }) => fetchUser(1, signal) });
+   *
+   * // Read-only form — no fn required
+   * const store = qc.observe({ key: ['users', 1], fetch: false });
+   * ```
+   */
+  function observe<T = unknown, S = T>(options: ObserveOptions<T, S>): SyncStore<QueryState<S>> {
+    const {
+      fetch: shouldFetch = true,
+      key,
+      placeholderData,
+      select,
+    } = options as {
+      fetch?: boolean;
+      key: QueryKey;
+      placeholderData?: S | (() => S | undefined);
+      select?: (data: T | undefined) => S | undefined;
+    };
+
+    const store = watchInternal<T, S>(ctx, key, { placeholderData, select });
+
+    if (shouldFetch && (options as { fn?: QueryFn<T> }).fn) {
+      fetchQuery({ ...(options as QueryOptions<T>) }).catch(() => {});
     }
+
+    return store;
   }
 
   return {
-    cancel,
+    cancel(key: QueryKey): void {
+      const entry = entries.get(hashKey(key));
+
+      if (!entry?.inflight) return;
+
+      entry.inflight.controller.abort();
+    },
+
     cancelAll(): void {
       for (const entry of entries.values()) {
         entry.inflight?.controller.abort();
       }
     },
-    clear: clearCache,
-    /** `AbortSignal` aborted when the query client is disposed. Use to tie external lifecycles to this client. */
-    get disposalSignal() {
+
+    clear(): void {
+      for (const entry of [...entries.values()]) {
+        evictEntry(ctx, entry);
+      }
+    },
+
+    get disposalSignal(): AbortSignal {
       return disposeController.signal;
     },
 
@@ -645,11 +277,10 @@ export function createQuery(opts?: QueryClientOptions) {
       if (disposed) return;
 
       disposed = true;
+      ctx.disposed = true;
       disposeController.abort();
 
       for (const [, entry] of entries) {
-        // Clear observers first so in-flight rollbacks triggered by abort cannot
-        // fire notifications to already-disposed subscribers.
         entry.observers.clear();
         entry.inflight?.controller.abort();
       }
@@ -661,26 +292,41 @@ export function createQuery(opts?: QueryClientOptions) {
       gcTimers.clear();
       entries.clear();
     },
-    get disposed() {
+
+    get disposed(): boolean {
       return disposed;
     },
+
     fetch: fetchQuery,
-    fetchMany,
-    get,
-    getState,
+
+    fetchMany<T = unknown>(queries: QueryOptions<T>[]): Promise<T[]> {
+      return Promise.all(queries.map((q) => fetchQuery(q)));
+    },
+
+    get<T>(key: QueryKey): T | undefined {
+      const entry = entries.get(hashKey(key));
+
+      return entry ? (entry.data as T | undefined) : undefined;
+    },
+
+    getState<T>(key: QueryKey): QueryState<T> | null {
+      const entry = entries.get(hashKey(key)) as CacheEntry<T> | undefined;
+
+      if (!entry) return null;
+
+      return toBaseState(entry);
+    },
+
     invalidate,
-    /** Returns all currently cached query keys as an array. Useful for SSR serialization and cache debugging. */
+
     keys(): QueryKey[] {
       return [...entries.values()].map((e) => e.key);
     },
+
     observe,
-    /**
-     * Observe multiple keys as a single combined store.
-     * Returns a `SyncStore<QueryState[]>` whose value updates whenever any of
-     * the observed keys change. Useful for parallel query status aggregation.
-     */
+
     observeMany<T = unknown>(keys: QueryKey[]): SyncStore<QueryState<T>[]> {
-      const stores = keys.map((k) => watchInternal<T>(k));
+      const stores = keys.map((k) => watchInternal<T>(ctx, k));
 
       return {
         peek(): QueryState<T>[] {
@@ -696,35 +342,29 @@ export function createQuery(opts?: QueryClientOptions) {
         },
       };
     },
-    refetchStale,
-    /**
-     * Evict a single cache entry by key.
-     * If the entry has active observers, it is reset to idle and observers are notified.
-     * If it has no observers, it is deleted immediately.
-     * Any in-flight fetch for this key is aborted.
-     */
-    remove(key: QueryKey): void {
-      const entry = entries.get(hash(key));
 
-      if (entry) evictEntry(entry);
+    refetchStale(): void {
+      for (const entry of [...entries.values()]) {
+        if (isStaleAndRevalidatable(entry)) {
+          startFetch(ctx, entry, entry.lastConfig as FetchConfig<unknown>).catch(() => {});
+        }
+      }
     },
+
+    remove(key: QueryKey): void {
+      const entry = entries.get(hashKey(key));
+
+      if (entry) evictEntry(ctx, entry);
+    },
+
     set,
-    /** Number of entries currently held in the cache. */
+
     get size(): number {
       return entries.size;
     },
+
     [Symbol.dispose](): void {
       this.dispose();
-    },
-    /**
-     * Returns a read-through `SyncStore` for a key without triggering any fetch.
-     * The store reflects whatever is currently in the cache and updates when other
-     * code (e.g. `fetch()`, `set()`, `invalidate()`) changes the entry.
-     *
-     * Use `observe({ ..., fetch: false })` for the same behaviour with `select` / `placeholderData`.
-     */
-    watchKey<T = unknown>(key: QueryKey): SyncStore<QueryState<T>> {
-      return watchInternal<T>(key);
     },
   };
 }

@@ -10,11 +10,12 @@ export type Locale = string;
 
 export type LocaleCaches = {
   canon: Map<string, string>;
+  chain: Map<string, { chain: Locale[]; set: Set<Locale> }>;
   plural: Map<string, Intl.PluralRules>;
 };
 
 export function createLocaleCaches(): LocaleCaches {
-  return { canon: new Map(), plural: new Map() };
+  return { canon: new Map(), chain: new Map(), plural: new Map() };
 }
 
 // ─── Canon ────────────────────────────────────────────────────────────────────
@@ -55,7 +56,7 @@ export function selectPluralForm(locale: Locale, count: number, ordinal: boolean
 
 // ─── Locale chain ─────────────────────────────────────────────────────────────
 
-export function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: Locale[]; set: Set<Locale> } {
+function buildLocaleChainRaw(locale: Locale, fallback: Locale[]): { chain: Locale[]; set: Set<Locale> } {
   const set = new Set<Locale>();
 
   for (const value of [locale, ...fallback]) {
@@ -69,4 +70,25 @@ export function buildLocaleChain(locale: Locale, fallback: Locale[]): { chain: L
   }
 
   return { chain: [...set], set };
+}
+
+/**
+ * Build a locale fallback chain, memoized per `(locale, fallback)` key using a provided cache.
+ * The cache is per-instance (lives on LocaleCaches) — no shared module-level state.
+ */
+export function buildLocaleChain(
+  locale: Locale,
+  fallback: Locale[],
+  cache: LocaleCaches,
+): { chain: Locale[]; set: Set<Locale> } {
+  const key = fallback.length === 0 ? locale : `${locale}|${fallback.join(',')}`;
+  const cached = cache.chain.get(key);
+
+  if (cached) return cached;
+
+  const result = buildLocaleChainRaw(locale, fallback);
+
+  cache.chain.set(key, result);
+
+  return result;
 }

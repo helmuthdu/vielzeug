@@ -7,24 +7,27 @@ description: Complete API reference for @vielzeug/flux.
 
 ## API Overview
 
-| Symbol                    | Purpose                                    | Mode  | Gotcha                                    |
-| ------------------------- | ------------------------------------------ | ----- | ----------------------------------------- |
-| `flux()`                  | Cold stream factory                        | Sync  | Producer runs once per subscriber         |
-| `createSubject()`         | Hot multicasting subject                   | Sync  | No replay; late subscribers miss values   |
-| `createBehaviorSubject()` | Subject replaying latest value             | Sync  | Initial value required                    |
-| `of()`                    | Emit static values synchronously           | Sync  | Completes immediately                     |
-| `from()`                  | Iterable / Promise / AsyncIterable         | Mixed | Error path must be handled                |
-| `fromEvent()`             | DOM / EventTarget events                   | Async | Call `unsub()` to remove listener         |
-| `interval()`              | Periodic counter                           | Async | Does not auto-complete                    |
-| `timer()`                 | Delayed single emission                    | Async | Completes after emission                  |
-| `switchMap()`             | Map to inner flux, cancel on new emission  | Mixed | Cancels in-flight inner subscriptions     |
-| `debounce()`              | Emit after silence period                  | Async | Pending value dropped on source complete  |
-| `timeout()`               | Error on inactivity                        | Async | Timer resets on each emission             |
-| `shareReplay()`           | Replay latest N to late subscribers        | Sync  | Holds strong reference to buffer          |
-| `toPromise()`             | Resolve with last value                    | Async | Rejects if source errors                  |
-| `toArray()`               | Collect all values to array                | Async | Rejects if source errors                  |
-| `fromSignal()`            | Ripple signal → Flux (emits immediately)   | Sync  | Emits current value on subscribe          |
-| `toSignal()`              | Flux → Ripple signal                       | Async | Call `sig.dispose()` to stop tracking     |
+| Symbol                     | Purpose                                    | Mode  | Gotcha                                    |
+| -------------------------- | ------------------------------------------ | ----- | ----------------------------------------- |
+| `flux()`                   | Cold stream factory                        | Sync  | Producer runs once per subscriber         |
+| `createSubject()`          | Hot multicasting subject                   | Sync  | No replay; late subscribers miss values   |
+| `createBehaviorSubject()`  | Subject replaying latest value             | Sync  | Initial value required                    |
+| `createReplaySubject()`    | Subject replaying last N values            | Sync  | `bufferSize` must be ≥ 1                  |
+| `flow()`                   | Compose multiple operators into one        | —     | Fully typed up to 8 operators             |
+| `DEFAULT_SCHEDULER`        | Built-in scheduler using real timers       | —     | Default for all timer-based operators     |
+| `of()`                     | Emit static values synchronously           | Sync  | Completes immediately                     |
+| `from()`                   | Iterable / Promise / AsyncIterable         | Mixed | Error path must be handled                |
+| `fromEvent()`              | DOM / EventTarget events                   | Async | Call `unsub()` to remove listener         |
+| `interval()`               | Periodic counter                           | Async | Does not auto-complete                    |
+| `timer()`                  | Delayed single emission                    | Async | Completes after emission                  |
+| `switchMap()`              | Map to inner flux, cancel on new emission  | Mixed | Cancels in-flight inner subscriptions     |
+| `debounce()`               | Emit after silence period                  | Async | Pending value dropped on source complete  |
+| `timeout()`                | Error on inactivity                        | Async | Timer resets on each emission             |
+| `shareReplay()`            | Replay latest N to late subscribers        | Sync  | Holds strong reference to buffer          |
+| `toPromise()`              | Resolve with last value                    | Async | Rejects if source errors                  |
+| `toArray()`                | Collect all values to array                | Async | Rejects if source errors                  |
+| `fromSignal()`             | Ripple signal → Flux (emits immediately)   | Sync  | Emits current value on subscribe          |
+| `toSignal()`               | Flux → Ripple `SignalBinding`              | Async | Call `binding.dispose()` to stop tracking |
 
 ---
 
@@ -41,17 +44,16 @@ description: Complete API reference for @vielzeug/flux.
 ### `flux()`
 
 ```ts
-flux<T>(producer: Producer<T>, options?: FluxOptions): Flux<T>;
+flux<T>(producer: Producer<T>): Flux<T>;
 ```
 
 Creates a cold `Flux`. The `producer` runs once per subscriber and returns a cleanup function.
 
 **Parameters:**
 
-| Parameter  | Type                | Description                                           |
-| ---------- | ------------------- | ----------------------------------------------------- |
-| `producer` | `Producer<T>`       | Called on each `subscribe()`; returns cleanup or void |
-| `options`  | `FluxOptions`       | Optional configuration (currently reserved)           |
+| Parameter  | Type          | Description                                           |
+| ---------- | ------------- | ----------------------------------------------------- |
+| `producer` | `Producer<T>` | Called on each `subscribe()`; returns cleanup or void |
 
 **Returns:** `Flux<T>`
 
@@ -87,10 +89,10 @@ Returns a hot multicasting `Subject`. Emits to all current subscribers; late sub
 
 | Method       | Signature                    | Description                          |
 | ------------ | ---------------------------- | ------------------------------------ |
-| `emit()`     | `(value: T) => void`         | Push a value to all subscribers      |
-| `complete()` | `() => void`                 | Complete all subscriptions           |
-| `error()`    | `(err: unknown) => void`     | Error all subscriptions              |
-| `dispose()`  | `() => void`                 | Permanently shut down the subject    |
+| `emit()`     | `(value: T) => void`         | Push a value to all subscribers                 |
+| `complete()` | `() => void`                 | Complete all subscriptions and dispose          |
+| `fail()`     | `(err: unknown) => void`     | Error all subscriptions and dispose             |
+| `dispose()`  | `() => void`                 | Complete all subscriptions and permanently shut down |
 
 **Example:**
 
@@ -106,17 +108,16 @@ button.addEventListener('click', (e) => click$.emit(e));
 ### `createBehaviorSubject()`
 
 ```ts
-createBehaviorSubject<T>(initial: T, options?: BehaviorSubjectOptions<T>): BehaviorSubject<T>;
+createBehaviorSubject<T>(initial: T): BehaviorSubject<T>;
 ```
 
 Like `createSubject`, but replays the most recent value to every new subscriber.
 
 **Parameters:**
 
-| Parameter | Type                        | Description                          |
-| --------- | --------------------------- | ------------------------------------ |
-| `initial` | `T`                         | Value emitted immediately on subscribe|
-| `options` | `BehaviorSubjectOptions<T>` | Optional `equals` comparator         |
+| Parameter | Type | Description                           |
+| --------- | ---- | ------------------------------------- |
+| `initial` | `T`  | Value emitted immediately on subscribe |
 
 **Returns:** `BehaviorSubject<T>`
 
@@ -134,6 +135,41 @@ import { createBehaviorSubject } from '@vielzeug/flux';
 const theme$ = createBehaviorSubject<'light' | 'dark'>('light');
 theme$.subscribe((t) => document.body.dataset.theme = t);
 theme$.emit('dark');
+```
+
+---
+
+### `createReplaySubject()`
+
+```ts
+createReplaySubject<T>(bufferSize: number): ReplaySubject<T>;
+```
+
+Creates a `ReplaySubject` that buffers up to `bufferSize` values and replays them to every new subscriber immediately on subscription.
+
+**Parameters:**
+
+| Parameter    | Type     | Description                              |
+| ------------ | -------- | ---------------------------------------- |
+| `bufferSize` | `number` | Maximum values to keep in the buffer (min 1) |
+
+**Returns:** `ReplaySubject<T>`
+
+**Additional members:**
+
+| Member    | Type         | Description                               |
+| --------- | ------------ | ----------------------------------------- |
+| `buffer`  | `readonly T[]` | Snapshot of the current replay buffer   |
+
+**Example:**
+
+```ts
+import { createReplaySubject } from '@vielzeug/flux';
+
+const log$ = createReplaySubject<string>(3);
+log$.emit('a');
+log$.emit('b');
+log$.subscribe(console.log); // logs 'a', 'b' immediately
 ```
 
 ---
@@ -173,20 +209,20 @@ Emits every time `target` fires `eventName`. Removes the listener when unsubscri
 ### `interval()`
 
 ```ts
-interval(ms: number): Flux<number>;
+interval(ms: number, scheduler?: Scheduler): Flux<number>;
 ```
 
-Emits an incrementing integer (starting at `0`) every `ms` milliseconds. Does not complete; must be unsubscribed or combined with `take()`.
+Emits an incrementing integer (starting at `0`) every `ms` milliseconds. Does not complete; must be unsubscribed or combined with `take()`. Pass a custom `scheduler` to control timer execution (useful in tests).
 
 ---
 
 ### `timer()`
 
 ```ts
-timer(delay: number, intervalMs?: number): Flux<number>;
+timer(delay: number, intervalMs?: number, scheduler?: Scheduler): Flux<number>;
 ```
 
-Emits `0` after `delay` ms, then (if `intervalMs` given) emits incrementing values every `intervalMs` ms.
+Emits `0` after `delay` ms, then (if `intervalMs` given) emits incrementing values every `intervalMs` ms. Pass a custom `scheduler` to control timer execution.
 
 ---
 
@@ -213,10 +249,10 @@ Never emits, never completes, never errors.
 ### `throwError()`
 
 ```ts
-throwError<T>(error: unknown): Flux<T>;
+throwError<T>(error: unknown | (() => unknown)): Flux<T>;
 ```
 
-Errors immediately with the given `error`.
+Errors immediately. Accepts a value or a factory function — the factory is called on each subscribe.
 
 ---
 
@@ -275,10 +311,10 @@ Maps to inner fluxes and merges them concurrently.
 ### `concatMap()`
 
 ```ts
-concatMap<T, U>(fn: (value: T) => Flux<U>): Operator<T, U>;
+concatMap<T, U>(fn: (value: T) => Flux<U>, maxBuffer?: number): Operator<T, U>;
 ```
 
-Maps to inner fluxes and subscribes to them sequentially, waiting for each to complete.
+Maps to inner fluxes and subscribes to them sequentially, waiting for each to complete. When `maxBuffer` is set, queue items beyond that limit are dropped silently.
 
 ---
 
@@ -387,20 +423,20 @@ Completes when `notifier` aborts (if `AbortSignal`) or emits (if `Flux`).
 ### `debounce()`
 
 ```ts
-debounce<T>(ms: number): Operator<T, T>;
+debounce<T>(ms: number, scheduler?: Scheduler): Operator<T, T>;
 ```
 
-Emits the last value after `ms` ms of silence. The timer resets on every emission. **Note:** a pending value is dropped if the source completes before the timer fires.
+Emits the last value after `ms` ms of silence. The timer resets on every emission. **Note:** a pending value is dropped if the source completes before the timer fires. Pass a custom `scheduler` to control the timer.
 
 ---
 
 ### `throttle()`
 
 ```ts
-throttle<T>(ms: number): Operator<T, T>;
+throttle<T>(ms: number, clock?: () => number): Operator<T, T>;
 ```
 
-Emits the first value in each `ms`-millisecond window; subsequent values in the window are dropped.
+Emits the first value in each `ms`-millisecond window; subsequent values in the window are dropped. Pass a custom `clock` function (returns a timestamp in ms) to control time in tests.
 
 ---
 
@@ -501,20 +537,20 @@ Runs a side effect on each value without modifying it.
 ### `delay()`
 
 ```ts
-delay<T>(ms: number): Operator<T, T>;
+delay<T>(ms: number, scheduler?: Scheduler): Operator<T, T>;
 ```
 
-Delays each emission by `ms` milliseconds.
+Delays each emission by `ms` milliseconds. Pass a custom `scheduler` to control the timer.
 
 ---
 
 ### `timeout()`
 
 ```ts
-timeout<T>(ms: number): Operator<T, T>;
+timeout<T>(ms: number, scheduler?: Scheduler): Operator<T, T>;
 ```
 
-Errors with `FluxTimeoutError` if no value arrives within `ms` ms since the last emission (or subscription). The timer resets on each emission — this is an inactivity timeout, not a total-duration timeout.
+Errors with `FluxTimeoutError` if no value arrives within `ms` ms since the last emission (or subscription). The timer resets on each emission — this is an inactivity timeout, not a total-duration timeout. Pass a custom `scheduler` to control the timer.
 
 ---
 
@@ -531,10 +567,14 @@ Intercepts errors and replaces the failed stream with the `Flux` returned by `fn
 ### `retry()`
 
 ```ts
-retry<T>(count: number): Operator<T, T>;
+retry<T>(
+  count: number,
+  delayMs?: number | ((attempt: number) => number),
+  scheduler?: Scheduler,
+): Operator<T, T>;
 ```
 
-On error, re-subscribes to the source up to `count` times. Propagates the error after all retries are exhausted.
+On error, re-subscribes to the source up to `count` times. Propagates the error after all retries are exhausted. `delayMs` can be a fixed number or a backoff function `(attempt) => ms`. Pass a custom `scheduler` to control the delay timer.
 
 ---
 
@@ -548,20 +588,47 @@ Calls `fn` when the stream completes, errors, or is unsubscribed — whichever c
 
 ---
 
+### `flow()`
+
+```ts
+flow<A, B>(op1: Operator<A, B>): Operator<A, B>;
+flow<A, B, C>(op1: Operator<A, B>, op2: Operator<B, C>): Operator<A, C>;
+// ...up to 8 operators
+flow(...operators: Operator[]): Operator;
+```
+
+Composes multiple operators into a single reusable operator. Equivalent to chaining `.pipe()` calls but extractable as a named pipeline.
+
+**Example:**
+
+```ts
+import { flow, filter, map, take } from '@vielzeug/flux';
+
+const evenTenx = flow(
+  filter((n: number) => n % 2 === 0),
+  map((n: number) => n * 10),
+  take(5),
+);
+
+source$.pipe(evenTenx).subscribe(console.log);
+```
+
+---
+
 ### `share()`
 
 ```ts
-share<T>(options?: ShareOptions): Operator<T, T>;
+share<T>(): Operator<T, T>;
 ```
 
-Multicasts one source execution to all subscribers. Re-subscribes to the source when the first subscriber arrives after a previous complete.
+Multicasts one source execution to all subscribers. Re-subscribes to the source when the first new subscriber arrives after all previous subscribers have left.
 
 ---
 
 ### `shareReplay()`
 
 ```ts
-shareReplay<T>(bufferSize: number, options?: ShareOptions): Operator<T, T>;
+shareReplay<T>(bufferSize: number): Operator<T, T>;
 ```
 
 Like `share`, but replays the last `bufferSize` emissions to late subscribers.
@@ -593,7 +660,7 @@ Returns a `Promise` that resolves with all emitted values when the source comple
 ### `fromSignal()` (Ripple)
 
 ```ts
-fromSignal<T>(source: Reactive<T>): Flux<T>;
+fromSignal<T>(source: Readable<T>): Flux<T>;
 ```
 
 Emits the signal's current value immediately on subscribe, then emits on every change. Requires `@vielzeug/ripple`.
@@ -603,10 +670,10 @@ Emits the signal's current value immediately on subscribe, then emits on every c
 ### `toSignal()` (Ripple)
 
 ```ts
-toSignal<T>(source: Flux<T>, opts: ToSignalOptions<T>): Signal<T>;
+toSignal<T>(source: Flux<T>, opts: ToSignalOptions<T>): SignalBinding<T>;
 ```
 
-Creates a `Signal` whose value tracks each emission from `source`. Call `sig.dispose()` to stop tracking.
+Creates a `SignalBinding<T>` whose `value` tracks each emission from `source`. Call `binding.dispose()` to stop tracking; the last value remains readable after disposal.
 
 **Parameters — `ToSignalOptions<T>`:**
 
@@ -639,15 +706,14 @@ Wrap Pulse channel events as streams. Requires `@vielzeug/pulse`.
 
 ---
 
-### `fromSse()` / `fromReadable()` / `fromQuery()` (Courier)
+### `fromSse()` / `fromQuery()` (Courier)
 
 ```ts
 fromSse<E, K extends keyof E>(source: SseSource<E>, event: K): Flux<E[K]>;
-fromReadable<T>(source: AsyncIterable<T>): Flux<T>;
 fromQuery<T>(store: { peek(): T; subscribe(fn: () => void): () => void }): Flux<T>;
 ```
 
-Wrap Courier sources as streams. Requires `@vielzeug/courier`.
+Wrap Courier sources as streams. Requires `@vielzeug/courier`. To consume an `AsyncIterable` or `ReadableStream`, use the generic `from()` operator.
 
 ---
 
@@ -656,11 +722,18 @@ Wrap Courier sources as streams. Requires `@vielzeug/courier`.
 ```ts
 // Core stream type
 interface Flux<T> {
-  subscribe(observerOrNext: Observer<T> | ((value: T) => void)): Unsubscribe;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  subscribe(
+    observerOrNext: Observer<T> | ((value: T) => void),
+    signal?: AbortSignal,
+  ): Unsubscribe;
   pipe<A>(op1: Operator<T, A>): Flux<A>;
   pipe<A, B>(op1: Operator<T, A>, op2: Operator<A, B>): Flux<B>;
   // ...up to 9 operators
   dispose(): void;
+  [Symbol.dispose](): void;
+  [Symbol.asyncIterator](): AsyncIterableIterator<T>;
 }
 
 // Observer passed to subscribe()
@@ -679,20 +752,44 @@ type Producer<T> = (observer: Observer<T>) => (() => void) | void;
 // Cleanup handle
 type Unsubscribe = () => void;
 
-// BehaviorSubject constructor options
-interface BehaviorSubjectOptions<T> {
-  equals?: (a: T, b: T) => boolean;
+// Timer scheduling abstraction (inject in tests to control time)
+type Scheduler = {
+  delay(fn: () => void, ms: number): () => void;
+  repeat(fn: () => void, ms: number): () => void;
+};
+
+// Built-in scheduler backed by real timers
+const DEFAULT_SCHEDULER: Scheduler;
+
+// Hot subject types
+interface Subject<T> extends Flux<T> {
+  emit(value: T): void;
+  complete(): void;
+  fail(err: unknown): void;
 }
 
-// share() / shareReplay() options
-interface ShareOptions {
-  // Currently reserved — pass no options
+interface BehaviorSubject<T> extends Subject<T> {
+  readonly value: T;
+}
+
+interface ReplaySubject<T> extends Subject<T> {
+  readonly buffer: readonly T[];
 }
 
 // toSignal() options
 interface ToSignalOptions<T> {
   initial: T;
   signal?: AbortSignal;
+}
+
+// Handle returned by toSignal()
+interface SignalBinding<T> {
+  readonly value: T;             // reactive — reads track in ripple effects
+  readonly signal: Readable<T>; // underlying ripple Readable
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
+  [Symbol.dispose](): void;
 }
 ```
 
@@ -704,16 +801,8 @@ interface ToSignalOptions<T> {
 
 Base class for all Flux errors. `instanceof FluxError` matches any Flux-specific error.
 
-### `FluxDisposedError`
-
-Thrown when `emit()` or `subscribe()` is called on a disposed subject.
-
 ### `FluxTimeoutError`
 
 Thrown by `timeout(ms)` when no emission arrives within `ms` milliseconds of the last emission.
 
 **Properties:** `ms: number` — the configured timeout duration.
-
-### `FluxBufferOverflowError`
-
-Thrown by `shareReplay` or internal buffer operators when the buffer capacity is exceeded.

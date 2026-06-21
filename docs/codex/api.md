@@ -18,17 +18,18 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 | `get-component`          | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                    |
 | `createServer()`         | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first     |
 | `createServerFromDisk()` | One-call convenience factory                  | Sync           | Calls `loadData()` internally — throws the same errors          |
+| `startHttpServer()`      | Start HTTP server (Streamable + SSE)          | Async          | Used by CLI; import for embedding in a larger process           |
+| `createRequestHandler()` | Build the HTTP handler without binding a port | Sync           | Exposed for integration testing; prefer `startHttpServer()` in prod |
 | `loadData()`             | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data  |
 | `packageMeta()`          | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
 | `validateBundledData()`  | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                        |
+| `SCHEMA_VERSION`         | Current snapshot schema version constant      | —              | Used by `validateBundledData` to reject stale snapshots         |
 
 ## Package Entry Points
 
-| Import                      | Purpose                                                                                   |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| `@vielzeug/codex`           | `createServer`, `loadData`, `packageMeta`, `validateBundledData`, all types including CEM |
-| `@vielzeug/codex/data`      | `loadData`, `packageMeta`, `validateBundledData` (subpath import)                         |
-| `@vielzeug/codex/generator` | `generateBundledData`, `GeneratorOptions`, `GeneratorResult` (build-time use only)        |
+| Import            | Purpose                                                                                                                     |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `@vielzeug/codex` | `createServer`, `createServerFromDisk`, `createRequestHandler`, `loadData`, `packageMeta`, `validateBundledData`, `startHttpServer`, all CEM types |
 
 The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
 
@@ -136,7 +137,7 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
 
 `score` is a floating-point number — the highest weight across all matched fields. Results sorted by `score` descending, then `slug` ascending as tiebreaker. Multiple categories can match simultaneously.
 
-**Multi-word queries:** all words must appear in the same field for a category to score. `"reactive signal"` matches a description that contains both words; a package where `"reactive"` is in `name` and `"signal"` only appears in docs scores only on `"docs"` (score 1), not `"metadata"` (score 3).
+**Multi-word queries:** all words must appear within the same field's normalised haystack for that category to score. For `keywords`, `exports`, and `related`, the individual array entries are joined into a single string before matching — so `"reactive signal"` matches a package with `keywords: ["reactive", "signal"]`. For `name`, `category`, and `description`, all terms must appear in the single field value. Search terms are normalised — lowercase, hyphens replaced with spaces — before matching. `"my-pkg"` matches a package named `"@vielzeug/my-pkg"`.
 
 **Result shape:**
 
@@ -215,21 +216,6 @@ Returns one full CEM declaration for a Sigil component.
 
 **Error cases:** unknown tag (lists available tags) or missing Sigil CEM → `isError: true`.
 
-## Resources
-
-Resources follow the MCP `resources/list` and `resources/read` protocol.
-
-### URI format
-
-| Pattern                         | Name                 | MIME type           | Description                                                     |
-| ------------------------------- | -------------------- | ------------------- | --------------------------------------------------------------- |
-| `vielzeug://docs/<slug>/<page>` | `docs/<slug>/<page>` | `text/markdown`     | Documentation page — one of `index`, `api`, `usage`, `examples` |
-| `vielzeug://source/<slug>`      | `source/<slug>`      | `text/x-typescript` | Bundled `src/index.ts`; present only for packages with source   |
-
-The `name` field mirrors the URI path (without the `vielzeug://` prefix), making it straightforward to derive the URI from the name.
-
-**Error cases:** unknown URI → `McpError` with `InvalidParams` code.
-
 ## Programmatic API
 
 ### `createServerFromDisk()`
@@ -293,7 +279,7 @@ Reads and validates the bundled snapshot from disk. Throws synchronously with an
 
 **Returns:** `BundledData`
 
-**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed. All fields per entry are validated against a schema map: `slug` (non-empty string), `name` (non-empty string), `version` (string), `category` (string), `description` (string), `exports` (array), `keywords` (array), `availableDocPages` (array), `related` (array), `docs` (object), `components` (array), `apiSource` (string or null).
+**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed. Per-entry validation checks that every package entry has a non-empty `slug` string and a `name` string; a missing or empty value throws immediately with an actionable message.
 
 ---
 
@@ -315,16 +301,58 @@ Strips `docs`, `apiSource`, and `components` from a `BundledPackage` and adds `h
 
 ---
 
+### `startHttpServer()`
+
+```ts
+startHttpServer(
+  mcpServer: Server,
+  port: number,
+  createSseServer: () => Server,
+): Promise<HttpServerHandle>;
+```
+
+Starts an HTTP server that exposes both the Streamable HTTP transport (spec-compliant clients) and the legacy SSE transport (older clients). The CLI calls this when `--port` is provided; import it when embedding codex into a larger Node.js HTTP process.
+
+**Parameters:**
+
+| Parameter       | Type            | Description                                                            |
+| --------------- | --------------- | ---------------------------------------------------------------------- |
+| `mcpServer`     | `Server`        | The MCP server instance to connect to the Streamable HTTP transport    |
+| `port`          | `number`        | Port to bind the HTTP server on                                        |
+| `createSseServer` | `() => Server` | Factory called per legacy SSE connection; returns a fresh server instance |
+
+**Returns:** `Promise<HttpServerHandle>`
+
+**Throws:** rejects if the port is already in use (`EADDRINUSE`).
+
+---
+
 ### `HttpServerHandle`
 
 ```ts
 interface HttpServerHandle {
-  dispose(): void;
-  [Symbol.dispose](): void;
+  dispose(): Promise<void>;
+  [Symbol.asyncDispose](): Promise<void>;
 }
 ```
 
-Returned by `startHttpServer()`. Call `dispose()` (or use a `using` declaration) to close the HTTP server. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
+Returned by `startHttpServer()`. Call `dispose()` (or use an `await using` declaration) to close the HTTP server and all open connections. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
+
+---
+
+### `createRequestHandler()`
+
+```ts
+createRequestHandler(
+  streamableTransport: StreamableHTTPServerTransport,
+  sseSessions: Map<string, SSEServerTransport>,
+  createSseServer: () => Server,
+): (req: IncomingMessage, res: ServerResponse) => void;
+```
+
+Builds the raw Node.js HTTP request handler without binding a port. Exposed primarily for integration testing — `startHttpServer()` calls this internally. Use `startHttpServer()` for production wiring.
+
+**Returns:** A `(req, res) => void` handler suitable for `node:http`'s `createServer()`.
 
 ---
 
@@ -334,7 +362,7 @@ Returned by `startHttpServer()`. Call `dispose()` (or use a `using` declaration)
 validateBundledData(raw: unknown): BundledData;
 ```
 
-Validates that `raw` conforms to the full `BundledData` shape (checks `version: string`, `packages: array`, and all fields per entry via a `satisfies`-constrained schema map). Use when loading data from a custom path instead of `loadData()`.
+Validates that `raw` conforms to the `BundledData` shape: checks `schemaVersion` (must match `SCHEMA_VERSION`), `version` (string), `packages` (array), and that each entry has a non-empty `slug` and a `name`. Use when loading data from a custom path instead of `loadData()`.
 
 **Parameters:**
 
@@ -344,7 +372,7 @@ Validates that `raw` conforms to the full `BundledData` shape (checks `version: 
 
 **Returns:** `BundledData` (cast after validation)
 
-**Throws:** `Error` with a descriptive message on schema failure.
+**Throws:** `Error` with a descriptive message on schema failure. Per-entry `slug`/`name` validation is also applied — see `loadData()` for the same contract.
 
 **Example:**
 
@@ -365,6 +393,7 @@ The validated snapshot loaded at startup.
 ```ts
 interface BundledData {
   packages: BundledPackage[];
+  schemaVersion: number;
   version: string;
 }
 ```
@@ -392,21 +421,12 @@ interface BundledPackage {
 
 ### `PackageMeta`
 
-Lightweight metadata returned by tools — extends `BundledPackage` without the heavy content fields.
+Lightweight metadata returned by tools. Derived from `BundledPackage` — heavy content fields (`docs`, `apiSource`, `components`) are omitted, and `hasSource` is computed.
 
 ```ts
-interface PackageMeta {
-  availableDocPages: DocPage[];
-  category: string;
-  description: string;
-  exports: string[];
+type PackageMeta = Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> & {
   hasSource: boolean;
-  keywords: string[];
-  name: string;
-  related: string[];
-  slug: string;
-  version: string;
-}
+};
 ```
 
 ### `SearchHit`
@@ -490,21 +510,13 @@ interface CemDeclaration {
 }
 ```
 
-### `GeneratorOptions` / `GeneratorResult`
-
-Available from `@vielzeug/codex/generator` (build-time subpath only).
+### `SCHEMA_VERSION`
 
 ```ts
-interface GeneratorOptions {
-  incremental?: boolean;
-  repoRoot?: string;
-}
-
-interface GeneratorResult {
-  data: BundledData;
-  hashes?: Record<string, string>;
-}
+const SCHEMA_VERSION: number;
 ```
+
+The snapshot schema version. `validateBundledData` rejects data whose `schemaVersion` does not match this value. Useful as a guard when loading data from a custom snapshot file.
 
 ## Errors
 
@@ -514,10 +526,9 @@ All tool-level failures return a text content item with `isError: true`. The err
 
 ### Protocol errors (`McpError`)
 
-| Situation            | Error code       |
-| -------------------- | ---------------- |
-| Unknown tool name    | `MethodNotFound` |
-| Unknown resource URI | `InvalidParams`  |
+| Situation         | Error code       |
+| ----------------- | ---------------- |
+| Unknown tool name | `MethodNotFound` |
 
 ### Startup errors
 
@@ -526,15 +537,17 @@ All tool-level failures return a text content item with `isError: true`. The err
 - The bundled data file is missing (`ENOENT`): includes the regen command
 - The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
 - The file is malformed JSON: includes the regen command
-- The parsed data fails schema validation: includes the regen command and the specific field that failed. All fields per entry validated — see `loadData()` throws list above
+- The parsed data fails schema validation: includes the regen command
+- A package entry is missing a non-empty `slug` or `name`: includes the regen command
 
 ## Runtime Behavior
 
 - Default transport: stdio
-- HTTP mode: `--port <number>` using Streamable HTTP
+- HTTP mode: `--port <number>` using Streamable HTTP (spec-compliant) + legacy SSE at `GET /sse`
 - Health endpoint: `GET /health` → `{ "status": "ok" }`
 - Bundled data validated at startup — missing or malformed data aborts with an actionable error
-- CLI flags: `--help` (stderr), `--version` (stdout — prints bundled data version, not npm package version)
+- CLI flags: `--help` (stderr), `--version` (stdout — prints the npm package version from `package.json`; does not require bundled data)
 - Unknown flags print a usage hint and exit with code 1
-- EADDRINUSE prints `error: port N is already in use.` and exits with code 1
+- `EADDRINUSE` prints `error: port N is already in use.` and exits with code 1
 - HTTP mode registers `SIGTERM` and `SIGINT` handlers; both call `handle.dispose()` and `process.exit(0)`
+- Argument validation failures (`requireStr`) return `isError: true` with a descriptive message — they do not throw an MCP protocol error

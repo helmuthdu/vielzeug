@@ -260,6 +260,14 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       return this.goTo(page - 1);
     },
 
+    get query(): SourceQuery {
+      return {
+        limit,
+        page,
+        ...(search && { search }),
+      };
+    },
+
     ready(timeout?: number) {
       return core.ready(() => !isLoading && !core.isScheduled, timeout);
     },
@@ -321,49 +329,12 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       return flushInternal();
     },
 
-    setFilter(f) {
-      if (f === filter) return Promise.resolve();
-
-      filter = f;
-      page = 1;
-
-      return flushInternal();
-    },
-
-    setLimit(n) {
-      const next = Math.max(1, Math.trunc(n));
-
-      if (next === limit) return Promise.resolve();
-
-      limit = next;
-      page = 1;
-
-      return flushInternal();
-    },
-
-    setSort(s) {
-      if (s === sort) return Promise.resolve();
-
-      sort = s;
-      page = 1;
-
-      return flushInternal();
-    },
-
     subscribe(listener) {
       return core.subscribe(listener);
     },
 
     [Symbol.dispose]() {
       this.dispose();
-    },
-
-    toQuery(): SourceQuery {
-      return {
-        limit,
-        page,
-        ...(search && { search }),
-      };
     },
   };
 }

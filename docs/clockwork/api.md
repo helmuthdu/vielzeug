@@ -7,30 +7,31 @@ description: Complete API reference for Clockwork.
 
 ## API Overview
 
-| Symbol                | Purpose                                      | Execution mode | Common gotcha                                               |
-| --------------------- | -------------------------------------------- | -------------- | ----------------------------------------------------------- |
-| `machine()`           | Validate config and start a machine instance | Sync           | Throws `MachineError` on invalid config — check at startup  |
-| `define()`            | Validate config for reuse; call `.start()`   | Sync           | Returns a definition handle, not an instance                |
-| `resolveTransition()` | Pure transition resolver for testing         | Sync           | Does not fire debug hooks; returns `TransitionDef` directly |
-| `MachineError`        | Typed error for all validation failures      | —              | Check `.code`, not `.message`                               |
-| `MachineErrorCode`    | Const object of all error code strings       | —              | Same identifier used as both type and const object          |
+| Symbol             | Purpose                                              | Execution mode | Common gotcha                                                    |
+| ------------------ | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------- |
+| `createMachine()`  | Validate config; returns definition handle           | Sync           | Throws `MachineError` on invalid config — check at startup       |
+| `.start()`         | Start a running machine instance from a definition   | Sync           | Call `.start(options?)` on the returned `MachineDefinition`      |
+| `.resolve()`       | Pure transition resolver for testing (no side effects) | Sync         | Does not fire debug hooks; pass `onGuard` via `options` object   |
+| `MachineError`     | Typed error for all validation failures              | —              | Check `.code`, not `.message`                                    |
+| `MachineErrorCode` | Const object of all error code strings               | —              | Same identifier used as both type and const object               |
 
 ## Package Entry Points
 
-| Import                         | Purpose                                     |
-| ------------------------------ | ------------------------------------------- |
-| `@vielzeug/clockwork`          | All exports and types                       |
-| `@vielzeug/clockwork/devtools` | `debugInterpret` — debug wrapper (dev only) |
+| Import                         | Purpose                                  |
+| ------------------------------ | ---------------------------------------- |
+| `@vielzeug/clockwork`          | All exports and types                    |
+| `@vielzeug/clockwork/devtools` | `debugMachine` — debug wrapper (dev only) |
 
-## `machine()`
+## `createMachine()`
 
-Validates the config and immediately starts a running machine instance. The primary entry point.
+Validates a machine configuration and returns a reusable `MachineDefinition` handle. Throws `MachineError` synchronously if validation fails.
+
+Use `createMachine(config).start()` for the common one-shot case, or hold the definition to start multiple instances or call `.resolve()` in tests.
 
 ```ts
-function machine<State extends string, Ctx extends object, Ev extends MachineEvent>(
+function createMachine<State extends string, Ctx extends object, Ev extends MachineEvent>(
   config: MachineConfig<State, Ctx, Ev>,
-  options?: InterpretOptions<State, Ctx, Ev>,
-): MachineInstance<State, Ctx, Ev>;
+): MachineDefinition<State, Ctx, Ev>;
 ```
 
 **Validates at call time:**
@@ -42,74 +43,28 @@ function machine<State extends string, Ctx extends object, Ev extends MachineEve
 - `after` delays are finite numbers (`>= 0`; `NaN` and `Infinity` are rejected)
 - `invoke` arrays are non-empty
 
-Throws `MachineError` if validation fails.
-
-**Parameters:**
-
-| Parameter                        | Type                      | Description                                                        |
-| -------------------------------- | ------------------------- | ------------------------------------------------------------------ |
-| `config`                         | `MachineConfig<...>`      | Machine configuration                                              |
-| `options.clone`                  | `<T>(v: T) => T`          | Custom clone function. Default: `structuredClone`                  |
-| `options.debug`                  | `DebugOptions<...>`       | Optional debug hooks. Auto-enables trace buffer (50) when set.     |
-| `options.interceptors`           | `InterceptorFn[]`         | Pure event interceptors, run left-to-right                         |
-| `options.maxTransitionsPerFlush` | `number`                  | Loop guard ceiling. Default: `1000`                                |
-| `options.persistence`            | `PersistenceAdapter<...>` | Save/load adapter for snapshot persistence                         |
-| `options.snapshot`               | `MachineSnapshot<...>`    | Initial snapshot to hydrate from (takes priority over persistence) |
-
-**Returns:** `MachineInstance<State, Ctx, Ev>` — see [MachineInstance](#machineinstance).
+**Returns:** `MachineDefinition<State, Ctx, Ev>` — see [MachineDefinition](#machinedefinition).
 
 **Example:**
 
 ```ts
-const m = machine(
-  {
-    context: { count: 0 },
-    initial: 'idle',
-    states: {
-      active: { on: { STOP: { target: 'idle' } } },
-      idle: { on: { GO: { target: 'active' } } },
-    },
-  },
-  {
-    onDebug: ({ type, ...rest }) => console.log(type, rest),
-  },
-);
-```
-
-## `define()`
-
-Validates a configuration and returns a reusable definition handle. Call `.start(options?)` to create instances.
-
-Use this when the same config is started multiple times, or when you need to separate validation from instantiation.
-
-```ts
-function define<State extends string, Ctx extends object, Ev extends MachineEvent>(
-  config: MachineConfig<State, Ctx, Ev>,
-): MachineDefinition<State, Ctx, Ev>;
-```
-
-See [MachineDefinition](#machinedefinition) for the full interface.
-
-**Example:**
-
-```ts
-const counterDef = define({
+// One-shot — validate + start immediately:
+const m = createMachine({
   context: { count: 0 },
   initial: 'idle',
   states: {
-    idle: {
-      on: {
-        INC: {
-          actions: [
-            ({ context }) => {
-              context.count++;
-            },
-          ],
-          target: 'idle',
-        },
-      },
-    },
+    active: { on: { STOP: { target: 'idle' } } },
+    idle: { on: { GO: { target: 'active' } } },
   },
+}).start({
+  onDebug: ({ type, ...rest }) => console.log(type, rest),
+});
+
+// Reusable definition — start multiple instances:
+const counterDef = createMachine({
+  context: { count: 0 },
+  initial: 'idle',
+  states: { idle: { on: { INC: { actions: [({ context }) => { context.count++ }], target: 'idle' } } } },
 });
 
 const m1 = counterDef.start();
@@ -117,48 +72,6 @@ const m2 = counterDef.start({ snapshot: { context: { count: 10 }, state: 'idle' 
 
 // Test transitions without a running machine:
 counterDef.resolve({ context: { count: 0 }, event: { type: 'INC' }, state: 'idle' });
-```
-
-## `resolveTransition()`
-
-Pure function that resolves which transition (if any) would be taken for a given state, context, and event. Does not run actions, entry/exit handlers, invokes, or fire debug events.
-
-```ts
-function resolveTransition<State extends string, Ctx extends object, Ev extends MachineEvent>(
-  definition: Readonly<MachineConfig<State, Ctx, Ev>>,
-  input: {
-    context: Readonly<Ctx>;
-    event: Ev;
-    state: State;
-  },
-  onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void,
-): TransitionDef<State, Ctx, Ev> | undefined;
-```
-
-**Returns:** The matching `TransitionDef` object if a transition is found, `undefined` otherwise.
-
-The optional `onGuard` callback is invoked for each guard evaluation — useful for debugging guard logic in tests.
-
-**Example:**
-
-```ts
-const authDef = define(authConfig);
-const transition = authDef.resolve({
-  context: { authorized: true },
-  event: { type: 'LOGIN' },
-  state: 'idle',
-});
-
-if (transition) {
-  console.log('Would transition to:', transition.target);
-}
-
-// or use resolveTransition with a raw config:
-const transition2 = resolveTransition(authConfig, {
-  context: { authorized: true },
-  event: { type: 'LOGIN' },
-  state: 'idle',
-});
 ```
 
 ## Types
@@ -486,23 +399,15 @@ Result object returned by `send()`.
 
 ```ts
 type SendResult = {
-  readonly ok: boolean;
-  readonly queued: boolean;
   readonly status: 'queued' | 'rejected' | 'transitioned';
 };
 ```
 
-| Field    | Description                                                                             |
-| -------- | --------------------------------------------------------------------------------------- |
-| `ok`     | `true` when status is `'transitioned'` or `'queued'`; `false` when `'rejected'`         |
-| `queued` | `true` when called re-entrantly (from inside an action); event is queued for next drain |
-| `status` | `'transitioned'` on success; `'queued'` when re-entrant; `'rejected'` otherwise         |
-
-| `status` value | Meaning                                                                                       |
-| -------------- | --------------------------------------------------------------------------------------------- |
-| `transitioned` | A transition occurred synchronously                                                           |
-| `queued`       | Called re-entrantly (e.g. from inside an action); the event is queued for the next drain      |
-| `rejected`     | No matching transition, a guard failed, an interceptor blocked it, or the machine is disposed |
+| `status` value | Meaning                                                                                                     |
+| -------------- | ----------------------------------------------------------------------------------------------------------- |
+| `transitioned` | A transition occurred synchronously                                                                         |
+| `queued`       | Called re-entrantly (e.g. from inside an action); the event is queued for the next drain                    |
+| `rejected`     | No matching transition, a guard failed, an interceptor blocked it, or the machine is disposed (dev warning) |
 
 ---
 
@@ -525,27 +430,27 @@ const rateLimiter: InterceptorFn<State, Ctx, Ev> = (event, snap) => {
   return event; // allow
 };
 
-const m = machine(config, { interceptors: [rateLimiter] });
+const m = createMachine(config).start({ interceptors: [rateLimiter] });
 ```
 
 ---
 
 ### `MachineInstance<State, Ctx, Ev>`
 
-The live machine object returned by `machine()` or `define().start()`.
+The live machine object returned by `createMachine().start()`.
 
 ```ts
 interface MachineInstance<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  readonly context: Reactive<Ctx>;
+  readonly context: Readable<Ctx>;
   readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
-  readonly state: Reactive<State>;
+  readonly state: Readable<State>;
   can(event: Ev): boolean;
   dispose(): void;
   getSnapshot(): MachineSnapshot<State, Ctx>;
   getTrace(): readonly TransitionTraceEntry<State, Ev>[];
   matches(...states: string[]): boolean;
-  send(event: Ev): SendResult; // returns { ok, queued, status }
+  send(event: Ev): SendResult;
   subscribe(fn: (snapshot: MachineSnapshot<State, Ctx>) => void): () => void;
   [Symbol.dispose](): void;
 }
@@ -555,8 +460,8 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 
 | Property         | Type                    | Description                                                                        |
 | ---------------- | ----------------------- | ---------------------------------------------------------------------------------- |
-| `state`          | `Reactive<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
-| `context`        | `Reactive<Ctx>`   | Current context — reactive                                                         |
+| `state`          | `Readable<State>` | Current state — reactive; read inside `effect()` to subscribe                      |
+| `context`        | `Readable<Ctx>`   | Current context — reactive                                                         |
 | `disposed`       | `boolean`               | `true` after `dispose()` has been called                                           |
 | `disposalSignal` | `AbortSignal`           | Aborted when the machine is disposed. Use to tie external lifetimes to the machine |
 
@@ -568,8 +473,8 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 | `getSnapshot()`      | `MachineSnapshot<...>`   | Deep-cloned, frozen snapshot of current state and context. The outer snapshot object is frozen — reassigning `snap.state` throws in strict mode.                                                          |
 | `getTrace()`         | `TransitionTraceEntry[]` | Recent transitions in chronological order (oldest to newest). Returns cloned entries. Empty array when tracing is disabled.                                                                               |
 | `matches(...states)` | `boolean`                | `true` if the current state is one of the given values or a descendant of any (e.g. `matches('loading')` matches `'loading.pending'`). Returns `false` when disposed.                                     |
-| `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = machine(...)`.                                        |
-| `send(event)`        | `SendResult`             | Dispatches the event. Returns a `SendResult` object. Check `.ok` for a quick pass/fail, or `.status` for the full detail (`'transitioned'` \| `'queued'` \| `'rejected'`).                                |
+| `dispose()`          | `void`                   | Aborts active invokes, clears after-timers, and disposes reactive signals. Idempotent. Does **not** clear persisted state. Equivalent to `using m = createMachine(config).start()`.                       |
+| `send(event)`        | `SendResult`             | Dispatches the event. Returns a `SendResult` with `.status`: `'transitioned'`, `'queued'`, or `'rejected'` (also when the machine is already disposed).                                                     |
 | `subscribe(fn)`      | `() => void`             | Subscribes to state/context changes. Returns an unsubscribe function. Fires only when state or context changes — **not** on the initial value. Use `getSnapshot()` to read the current state immediately. |
 | `[Symbol.dispose]()` | `void`                   | Delegates to `dispose()`. Enables `using` declarations.                                                                                                                                                   |
 
@@ -577,19 +482,24 @@ interface MachineInstance<State extends string, Ctx extends object, Ev extends M
 
 ### `MachineDefinition<State, Ctx, Ev>`
 
-Handle returned by `define()`. Holds the validated config and exposes two methods.
+Handle returned by `createMachine()`. Holds the validated config and exposes two methods.
 
 ```ts
 interface MachineDefinition<State extends string, Ctx extends object, Ev extends MachineEvent> {
-  resolve(input: { context: Readonly<Ctx>; event: Ev; state: State }): TransitionDef<State, Ctx, Ev> | undefined;
+  resolve(
+    input: { context: Readonly<Ctx>; event: Ev; state: State },
+    options?: {
+      onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void;
+    },
+  ): TransitionDef<State, Ctx, Ev> | undefined;
   start(options?: InterpretOptions<State, Ctx, Ev>): MachineInstance<State, Ctx, Ev>;
 }
 ```
 
-| Method      | Description                                                                                                                                                                                    |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `start()`   | Creates a new running machine instance. Pass `options` to customise debug, snapshot, etc.                                                                                                      |
-| `resolve()` | Pure — resolves which transition would be taken for a given state, context, and event. Runs guards but fires no side effects or debug hooks. Equivalent to `resolveTransition(config, input)`. |
+| Method      | Description                                                                                                                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start()`   | Creates a new running machine instance. Pass `options` to customise debug, snapshot, etc.                                                                                                                            |
+| `resolve()` | Pure — resolves which transition would be taken for a given state, context, and event. Runs guards but fires no side effects or debug hooks. Pass `options.onGuard` to observe each guard evaluation (pass or fail). |
 
 ---
 
@@ -642,11 +552,11 @@ type InvokeArgs<Ctx extends object, Ev extends MachineEvent> = {
 Configuration for an async task in a state.
 
 ```ts
-type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
+type InvokeDef<Ctx extends object, Ev extends MachineEvent, Result = unknown> = {
   id?: string;
-  onDone?: (result: unknown, context: Readonly<Ctx>) => Ev;
+  onDone?: (result: Result, context: Readonly<Ctx>) => Ev;
   onError?: (error: unknown, context: Readonly<Ctx>) => Ev;
-  src: (args: InvokeArgs<Ctx, Ev>) => Promise<unknown>;
+  src: (args: InvokeArgs<Ctx, Ev>) => Promise<Result>;
 };
 ```
 
@@ -671,6 +581,96 @@ type TransitionTraceEntry<State extends string, Ev extends MachineEvent> = {
   readonly to: State;
 };
 ```
+
+## Schema Helpers
+
+These utilities bundle the three generics (`State`, `Ctx`, `Ev`) into a single opaque type so you can annotate actions, guards, and options without repeating the full signature everywhere.
+
+### `MachineSchema<State, Ctx, Ev>`
+
+Opaque bundle that captures all three generics. Pass it to the `MachineType*` aliases below.
+
+```ts
+type MachineSchema<S extends string, C extends object, E extends MachineEvent> = {
+  readonly _s: S;
+  readonly _c: C;
+  readonly _e: E;
+};
+```
+
+```ts
+type Auth = MachineSchema<'idle' | 'loading', { user: User | null }, AuthEvent>;
+```
+
+---
+
+### `MachineAction<T, E?>`
+
+Convenience alias for `ActionFn` parameterised by a schema.
+
+```ts
+type MachineAction<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = ActionFn<T['_c'], E>;
+```
+
+```ts
+type Auth = MachineSchema<'idle' | 'loading', { user: User | null }, AuthEvent>;
+
+const setUser: MachineAction<Auth, { type: 'DONE'; user: User }> = ({ context, event }) => {
+  context.user = event.user;
+};
+```
+
+---
+
+### `MachineGuard<T, E?>`
+
+Convenience alias for `GuardFn` parameterised by a schema.
+
+```ts
+type MachineGuard<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = GuardFn<T['_c'], E>;
+```
+
+---
+
+### `MachineTypeConfig<T>`
+
+Resolves to `MachineConfig<State, Ctx, Ev>` for a given schema. Use for typed config objects.
+
+```ts
+type MachineTypeConfig<T extends MachineSchema<any, any, any>> = MachineConfig<T['_s'], T['_c'], T['_e']>;
+```
+
+---
+
+### `MachineTypeDefinition<T>`
+
+Resolves to `MachineDefinition<State, Ctx, Ev>` for a given schema.
+
+```ts
+type MachineTypeDefinition<T extends MachineSchema<any, any, any>> = MachineDefinition<T['_s'], T['_c'], T['_e']>;
+```
+
+---
+
+### `MachineTypeInstance<T>`
+
+Resolves to `MachineInstance<State, Ctx, Ev>` for a given schema.
+
+```ts
+type MachineTypeInstance<T extends MachineSchema<any, any, any>> = MachineInstance<T['_s'], T['_c'], T['_e']>;
+```
+
+---
+
+### `MachineTypeOptions<T>`
+
+Resolves to `InterpretOptions<State, Ctx, Ev>` for a given schema.
+
+```ts
+type MachineTypeOptions<T extends MachineSchema<any, any, any>> = InterpretOptions<T['_s'], T['_c'], T['_e']>;
+```
+
+---
 
 ## Errors
 
@@ -749,7 +749,7 @@ function handleCode(code: MachineErrorCode) {
 import { MachineError, MachineErrorCode } from '@vielzeug/clockwork';
 
 try {
-  const m = machine(config, { snapshot: corruptedSnapshot });
+  const m = createMachine(config).start({ snapshot: corruptedSnapshot });
 } catch (err) {
   if (MachineError.is(err) && err.code === MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE) {
     // discard snapshot and start fresh
@@ -763,9 +763,9 @@ try {
 
 ```ts
 import { effect } from '@vielzeug/ripple';
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
-const m = machine(config);
+const m = createMachine(config).start();
 
 effect(() => {
   document.title = `Status: ${m.state.value}`;

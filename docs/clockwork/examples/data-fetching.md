@@ -14,7 +14,7 @@ You need to fetch remote data, show loading state while the request is in flight
 Use an `invoke` array in the `loading` state. The runtime passes an `AbortSignal` to `src` and cancels it when the state is exited, preventing stale responses from updating context.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type State = 'error' | 'idle' | 'loading';
 type Context = { data: string[]; error: string };
@@ -24,7 +24,7 @@ type Event =
   | { items: string[]; type: 'SUCCESS' }
   | { message: string; type: 'FAILURE' };
 
-const fetcher = machine({
+const fetcher = createMachine({
   context: { data: [], error: '' },
   initial: 'idle',
   states: {
@@ -67,9 +67,9 @@ const fetcher = machine({
       },
     },
   },
-});
+}).start();
 
-m.send({ type: 'FETCH' }); // enters loading, invoke starts
+fetcher.send({ type: 'FETCH' }); // enters loading, invoke starts
 // The AbortSignal is cancelled automatically if the state exits before the response arrives
 ```
 

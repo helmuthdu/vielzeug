@@ -4,9 +4,7 @@
   "type": "module",
   "description": "MCP server that exposes the vielzeug ecosystem to AI assistants — run locally over stdio or remotely over HTTP",
   "exports": {
-    ".": "./dist/index.js",
-    "./data": "./dist/data.js",
-    "./generator": "./dist/generator.js"
+    ".": "./dist/index.js"
   },
   "bin": {
     "codex": "./dist/cli.js"
@@ -20,7 +18,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "pnpm run prepare:data && tsc --watch",
+    "dev": "node --experimental-strip-types ./scripts/dev.ts",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",

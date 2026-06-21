@@ -9,8 +9,6 @@ type PendingSearch = { promise: Promise<void>; resolve: () => void };
 /** Creates a cursor-based (keyset-pagination) source that fetches data from a network endpoint. */
 export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCursor>): CursorSource<T, TCursor> {
   const keyOf = cfg.queryKey ?? defaultKeyOf;
-  const base = createAsyncSource<CursorSourceQuery<TCursor>>(cfg, keyOf);
-  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
   let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
@@ -36,8 +34,6 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     totalItems: 0,
   };
 
-  const listeners = new Set<() => void>();
-
   const refreshMeta = () => {
     cachedCurrent = items;
     cachedMeta = {
@@ -45,21 +41,23 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       hasNextPage: nextCursor !== undefined,
       hasPrevPage: prevCursor !== undefined,
       isLoading: base.pendingCount() > 0,
-      isSearchPending: base.isScheduled(),
+      isSearchPending: base.core.isScheduled,
       pageSize: limit,
       totalItems: total,
     };
   };
+
+  // onBeforeNotify ensures refreshMeta() runs before any subscriber observes the new state,
+  // eliminating the need for a parallel listeners Set.
+  const base = createAsyncSource<CursorSourceQuery<TCursor>>(cfg, keyOf, refreshMeta);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   refreshMeta();
 
   const notifyListeners = () => {
     if (base.disposed) return;
 
-    refreshMeta();
-    base.notify();
-
-    for (const l of listeners) l();
+    base.core.notify();
   };
 
   const resolvePendingSearch = () => {
@@ -198,6 +196,15 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       return doUpdate();
     },
 
+    get query() {
+      return {
+        ...(afterCursor !== undefined && { after: afterCursor }),
+        ...(beforeCursor !== undefined && { before: beforeCursor }),
+        ...(search && { search }),
+        limit,
+      };
+    },
+
     ready(timeout) {
       return base.ready(timeout);
     },
@@ -207,7 +214,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
     },
 
     reset() {
-      base.cancelTimer();
+      base.core.cancelTimer();
       resolvePendingSearch();
       search = '';
       afterCursor = undefined;
@@ -220,7 +227,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
       if (opts?.immediate) {
         if (q === search) return Promise.resolve();
 
-        base.cancelTimer();
+        base.core.cancelTimer();
         resolvePendingSearch();
         search = q;
         afterCursor = undefined;
@@ -244,46 +251,17 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
 
       pendingSearch = { promise, resolve: resolveSearch };
 
-      base.schedule(() => void doUpdate(), debounceMs);
+      base.core.schedule(() => void doUpdate(), debounceMs);
       notifyListeners();
 
       return promise;
     },
 
-    setLimit(n) {
-      const next = Math.max(1, Math.trunc(n));
-
-      if (next === limit) return Promise.resolve();
-
-      limit = next;
-      afterCursor = undefined;
-      beforeCursor = undefined;
-
-      return doUpdate();
-    },
-
-    subscribe: (listener) => {
-      if (base.disposed) return () => {};
-
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
       resolvePendingSearch();
       base.dispose();
-    },
-
-    toQuery() {
-      return {
-        ...(afterCursor !== undefined && { after: afterCursor }),
-        ...(beforeCursor !== undefined && { before: beforeCursor }),
-        ...(search && { search }),
-        limit,
-      };
     },
   };
 }

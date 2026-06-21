@@ -1,6 +1,8 @@
 // ─── Template helpers ─────────────────────────────────────────────────────────
 // Shared by i18n.ts — extracted for navigability. Not part of the public API.
 
+import { warn } from './_warn';
+
 type Locale = string;
 type TranslateVars = Record<string, unknown>;
 
@@ -30,7 +32,13 @@ export function parsePipePlural(value: string): Messages | null {
   const parts = value.split('|');
   const forms = PIPE_FORM_MAPS[parts.length];
 
-  if (!forms) return null;
+  if (!forms) {
+    warn(
+      `Pipe-plural shorthand with ${parts.length} parts is not recognized (valid counts: 2, 3, 6). Treating as a plain string: "${value.slice(0, 60)}${value.length > 60 ? '…' : ''}"`,
+    );
+
+    return null;
+  }
 
   // An empty part is almost certainly a catalog authoring error.
   // Treat the whole value as a plain string rather than silently producing an empty form.

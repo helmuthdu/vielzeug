@@ -14,11 +14,11 @@ You need a counter that tracks a numeric value and can be incremented, decrement
 Use a single `idle` state with self-transitions that apply actions to mutate context. Self-transitions re-enter the same state, fire actions, and update context atomically.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DEC' } | { type: 'INC' } | { type: 'RESET' };
 
-const m = machine({
+const m = createMachine({
   context: { count: 0 },
   initial: 'idle',
   states: {
@@ -51,10 +51,10 @@ const m = machine({
       },
     },
   },
-});
+}).start();
 
-console.log(m.send({ type: 'INC' })); // 'transitioned'
-console.log(m.send({ type: 'INC' })); // 'transitioned'
+console.log(m.send({ type: 'INC' }).status); // 'transitioned'
+console.log(m.send({ type: 'INC' }).status); // 'transitioned'
 console.log(m.context.value.count); // 2
 m.send({ type: 'RESET' });
 console.log(m.context.value.count); // 0

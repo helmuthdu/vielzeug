@@ -4,7 +4,7 @@ import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 
 import { packageMeta } from './data.js';
-import { scorePackage } from './search.js';
+import { normalisePackage, scorePackage } from './search.js';
 import { type BundledData, type BundledPackage, type CemDeclaration, DOC_PAGES } from './types.js';
 
 // ---------------------------------------------------------------------------
@@ -25,42 +25,67 @@ function error(message: string): CallToolResult {
 
 const MAX_ARG_LENGTH = 500;
 
-type ArgResult = { ok: true; value: string } | { ok: false; reason: 'empty' | 'missing' | 'too-long' };
+class ToolArgError extends Error {}
 
-/** Reads a string arg: trims, validates presence and max length. Returns a tagged result. */
-function readStr(args: Record<string, unknown>, key: string): ArgResult {
+/** Validates and returns an optional enum arg, falling back to the provided default. Throws ToolArgError on invalid value. */
+function optionalEnum<T extends string>(
+  args: Record<string, unknown>,
+  key: string,
+  values: readonly T[],
+  fallback: T,
+): T {
+  const raw = args[key];
+
+  if (raw === undefined || raw === '') return fallback;
+
+  if (typeof raw !== 'string' || !(values as readonly string[]).includes(raw))
+    throw new ToolArgError(`${key}: must be one of ${values.join(', ')}.`);
+
+  return raw as T;
+}
+
+/** Validates a string arg: trims, checks presence and max length. Throws ToolArgError on failure. */
+function requireStr(args: Record<string, unknown>, key: string): string {
   const value = args[key];
 
-  if (typeof value !== 'string') return { ok: false, reason: 'missing' };
+  if (typeof value !== 'string' || value.trim().length === 0)
+    throw new ToolArgError(`${key}: required non-empty string.`);
 
   const trimmed = value.trim();
 
-  if (trimmed.length === 0) return { ok: false, reason: 'empty' };
+  if (trimmed.length > MAX_ARG_LENGTH)
+    throw new ToolArgError(`${key}: exceeds ${MAX_ARG_LENGTH} character limit. Shorten the value.`);
 
-  if (trimmed.length > MAX_ARG_LENGTH) return { ok: false, reason: 'too-long' };
-
-  return { ok: true, value: trimmed };
-}
-
-function argError(param: string, reason: 'empty' | 'missing' | 'too-long'): string {
-  if (reason === 'too-long') return `${param}: exceeds ${MAX_ARG_LENGTH} character limit. Shorten the value.`;
-
-  return `${param}: required non-empty string.`;
+  return trimmed;
 }
 
 // ---------------------------------------------------------------------------
-// Context
+// Context — pre-computed once from BundledData, shared across all server instances
 // ---------------------------------------------------------------------------
 
-interface ToolContext {
+export interface ToolContext {
   bySlug: Map<string, BundledPackage>;
   /** Null when /sigil was not built before data generation. */
   components: CemDeclaration[] | null;
-  packages: BundledPackage[];
+  /** Pre-filtered tag names from components, or null when components unavailable. */
+  componentTags: string[] | null;
+  normalisedPackages: ReturnType<typeof normalisePackage>[];
+}
+
+export function buildToolContext(data: BundledData): ToolContext {
+  const sigilPkg = data.packages.find((p) => p.slug === 'sigil');
+  const components = sigilPkg && sigilPkg.components.length > 0 ? sigilPkg.components : null;
+
+  return {
+    bySlug: new Map(data.packages.map((pkg) => [pkg.slug, pkg])),
+    components,
+    componentTags: components?.filter((d) => d.tagName).map((d) => d.tagName as string) ?? null,
+    normalisedPackages: data.packages.map(normalisePackage),
+  };
 }
 
 function knownSlugs(context: ToolContext): string {
-  return context.packages.map((p) => p.slug).join(', ');
+  return [...context.bySlug.keys()].join(', ');
 }
 
 // ---------------------------------------------------------------------------
@@ -86,7 +111,7 @@ const listPackagesTool: ToolDefinition = {
   inputSchema: { properties: {}, type: 'object' },
   name: 'list-packages',
   run(_args, context) {
-    return text(JSON.stringify(context.packages.map(packageMeta), null, 2));
+    return text(JSON.stringify([...context.bySlug.values()].map(packageMeta), null, 2));
   },
 };
 
@@ -104,13 +129,10 @@ const getPackageTool: ToolDefinition = {
   },
   name: 'get-package',
   run(args, context) {
-    const result = readStr(args, 'packageSlug');
+    const slug = requireStr(args, 'packageSlug');
+    const pkg = context.bySlug.get(slug);
 
-    if (!result.ok) return error(argError('packageSlug', result.reason));
-
-    const pkg = context.bySlug.get(result.value);
-
-    if (!pkg) return error(`Package "${result.value}" not found. Available slugs: ${knownSlugs(context)}`);
+    if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${knownSlugs(context)}`);
 
     return text(JSON.stringify(packageMeta(pkg), null, 2));
   },
@@ -131,25 +153,16 @@ const getDocsTool: ToolDefinition = {
   },
   name: 'get-docs',
   run(args, context) {
-    const slugResult = readStr(args, 'packageSlug');
+    const slug = requireStr(args, 'packageSlug');
+    const pkg = context.bySlug.get(slug);
 
-    if (!slugResult.ok) return error(argError('packageSlug', slugResult.reason));
+    if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${knownSlugs(context)}`);
 
-    const pkg = context.bySlug.get(slugResult.value);
-
-    if (!pkg) return error(`Package "${slugResult.value}" not found. Available slugs: ${knownSlugs(context)}`);
-
-    const pageResult = readStr(args, 'page');
-    const page = (pageResult.ok ? pageResult.value : 'index') as (typeof DOC_PAGES)[number];
-
-    if (!DOC_PAGES.includes(page)) return error(`page: must be one of ${DOC_PAGES.join(', ')}.`);
-
+    const page = optionalEnum(args, 'page', DOC_PAGES, 'index');
     const content = pkg.docs[page];
 
     if (!content) {
-      return error(
-        `No "${page}" page for "${slugResult.value}". Available: ${pkg.availableDocPages.join(', ') || 'none'}.`,
-      );
+      return error(`No "${page}" page for "${slug}". Available: ${pkg.availableDocPages.join(', ') || 'none'}.`);
     }
 
     return text(content);
@@ -170,15 +183,12 @@ const getSourceTool: ToolDefinition = {
   },
   name: 'get-source',
   run(args, context) {
-    const result = readStr(args, 'packageSlug');
+    const slug = requireStr(args, 'packageSlug');
+    const pkg = context.bySlug.get(slug);
 
-    if (!result.ok) return error(argError('packageSlug', result.reason));
+    if (!pkg) return error(`Package "${slug}" not found. Available slugs: ${knownSlugs(context)}`);
 
-    const pkg = context.bySlug.get(result.value);
-
-    if (!pkg) return error(`Package "${result.value}" not found. Available slugs: ${knownSlugs(context)}`);
-
-    if (!pkg.apiSource) return error(`Package "${result.value}" has no src/index.ts source in bundled data.`);
+    if (!pkg.apiSource) return error(`Package "${slug}" has no src/index.ts source in bundled data.`);
 
     return text(pkg.apiSource);
   },
@@ -188,7 +198,7 @@ const getSourceTool: ToolDefinition = {
 
 const searchPackagesTool: ToolDefinition = {
   description:
-    'Search vielzeug packages by keyword across name, description, category, keywords, exports, related, docs, and source. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: 3=metadata, 2=keywords/exports/related, 1=docs/source. Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
+    'Search vielzeug packages by keyword across name, description, category, keywords, exports, related, docs, and source. Supports multi-word queries (all words must match). Returns a JSON array of SearchHit objects sorted by score descending. score: name(3.9) > category(3.5) > description(3.1) > keywords(2.5) > exports(2.2) > related(2.0) > docs(1.0) > source(0.9). Returns empty array (not an error) when nothing matches. Prefer this over list-packages when you know what you are looking for.',
   inputSchema: {
     properties: { query: { description: 'Non-empty search term', minLength: 1, type: 'string' } },
     required: ['query'],
@@ -196,12 +206,9 @@ const searchPackagesTool: ToolDefinition = {
   },
   name: 'search-packages',
   run(args, context) {
-    const result = readStr(args, 'query');
-
-    if (!result.ok) return error(argError('query', result.reason));
-
-    const results = context.packages
-      .map((pkg) => scorePackage(pkg, result.value))
+    const query = requireStr(args, 'query');
+    const results = context.normalisedPackages
+      .map((pkg) => scorePackage(pkg, query))
       .filter((hit) => hit !== null)
       .sort((a, b) => b.score - a.score || a.slug.localeCompare(b.slug));
 
@@ -220,7 +227,7 @@ const listComponentsTool: ToolDefinition = {
   inputSchema: { properties: {}, type: 'object' },
   name: 'list-components',
   run(_args, context) {
-    if (!context.components) return error(SIGIL_UNAVAILABLE);
+    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
 
     const tags = context.components
       .filter((d) => d.tagName)
@@ -252,21 +259,14 @@ const getComponentTool: ToolDefinition = {
   },
   name: 'get-component',
   run(args, context) {
-    const result = readStr(args, 'tagName');
+    const tagName = requireStr(args, 'tagName');
 
-    if (!result.ok) return error(argError('tagName', result.reason));
+    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
 
-    if (!context.components) return error(SIGIL_UNAVAILABLE);
-
-    const declaration = context.components.find((d) => d.tagName === result.value);
+    const declaration = context.components.find((d) => d.tagName === tagName);
 
     if (!declaration) {
-      const available = context.components
-        .filter((d) => d.tagName)
-        .map((d) => d.tagName)
-        .join(', ');
-
-      return error(`Component "${result.value}" not found. Available tags: ${available}`);
+      return error(`Component "${tagName}" not found. Available tags: ${context.componentTags.join(', ')}`);
     }
 
     return text(JSON.stringify(declaration, null, 2));
@@ -289,15 +289,7 @@ const TOOLS: ToolDefinition[] = [
 
 const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));
 
-export function registerTools(server: Server, data: BundledData): void {
-  const sigilPkg = data.packages.find((p) => p.slug === 'sigil');
-
-  const context: ToolContext = {
-    bySlug: new Map(data.packages.map((pkg) => [pkg.slug, pkg])),
-    components: sigilPkg && sigilPkg.components.length > 0 ? sigilPkg.components : null,
-    packages: data.packages,
-  };
-
+export function registerTools(server: Server, context: ToolContext): void {
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: TOOLS.map((tool) => ({ description: tool.description, inputSchema: tool.inputSchema, name: tool.name })),
   }));
@@ -309,6 +301,12 @@ export function registerTools(server: Server, data: BundledData): void {
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
     }
 
-    return tool.run(request.params.arguments ?? {}, context);
+    try {
+      return tool.run(request.params.arguments ?? {}, context);
+    } catch (err) {
+      if (err instanceof ToolArgError) return error(err.message);
+
+      throw err;
+    }
   });
 }

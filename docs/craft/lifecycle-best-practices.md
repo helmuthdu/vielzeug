@@ -9,16 +9,17 @@ description: Practical lifecycle patterns for setup, cleanup, refs, and host wir
 
 ## Prefer Setup-Scope Reactivity
 
-Most component logic should live directly in `setup()` using signals and `effect()`.
+Most component logic should live directly in `setup()` using signals and `watch()`.
 
 ```ts
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('counter-title', {
-  setup(_props, { effect }) {
+  setup(_props, { watch }) {
     const count = signal(0);
 
-    effect(() => {
+    watch(() => {
       document.title = 'Count: ' + count.value;
     });
 
@@ -32,7 +33,8 @@ define('counter-title', {
 Use `onMounted(fn)` for DOM-dependent initialization. Multiple `onMounted()` calls are supported and run in registration order. Each callback is error-isolated.
 
 ```ts
-import { define, html, ref, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html, ref } from '@vielzeug/craft';
 
 define('my-tabs', {
   setup(_props, { onMounted, slots }) {
@@ -89,7 +91,8 @@ define('focus-input', {
 Use `bind()` from the setup context for host bindings.
 
 ```ts
-import { define, html, signal } from '@vielzeug/craft';
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
 
 define('toggle-host', {
   setup(_props, { bind, onEvent }) {

@@ -8,7 +8,13 @@ export { createContext, inject, injectStrict, type InjectionKey } from './contex
 
 export { type ComponentSlots } from './slots';
 
-export { type HostBindConfig, type HostBindFn, type HostBindingValue, type ReflectConfig } from './host-bind';
+export {
+  type BindOptions,
+  type HostBindConfig,
+  type HostBindFn,
+  type HostBindingValue,
+  type ReflectConfig,
+} from './host-bind';
 
 export { html } from './template';
 
@@ -16,14 +22,7 @@ export { css, type CSSResult } from './utils/css';
 
 export { useField } from './form-field';
 export { createFormContext, FORM_CONTEXT_KEY, type FormController, type FormFieldContext } from './form-context';
-export { syncAria, type AriaConfig } from './aria';
+export type { AriaConfig } from './aria';
 export { createId, createStableId, resetIdCounter } from './utils/id';
 
-export {
-  ref,
-  type DirectiveResult,
-  type HTMLResult,
-  type Ref,
-  type RefCallback,
-  type SpreadObject,
-} from './types/bindings';
+export { ref, type DirectiveResult, type HTMLResult, type Ref, type RefCallback } from './types/bindings';

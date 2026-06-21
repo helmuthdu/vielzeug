@@ -73,7 +73,8 @@ events$.subscribe((v) => console.log('A:', v));
 events$.subscribe((v) => console.log('B:', v));
 
 events$.emit('hello'); // A: hello  B: hello
-events$.complete();    // ends all subscriptions
+events$.fail(new Error('oops')); // errors all subscribers and disposes
+// events$.complete() ends all subscriptions cleanly and disposes
 ```
 
 `createBehaviorSubject` replays the latest value to every new subscriber:
@@ -102,6 +103,11 @@ const unsub = source$.subscribe({
   complete() { /* ... */ },
   error(err) { /* ... */ },
 });
+
+// Tie the subscription to an AbortSignal — aborted = auto-unsubscribe
+const ac = new AbortController();
+const unsub = source$.subscribe((v) => console.log(v), ac.signal);
+ac.abort(); // unsubscribes immediately
 
 // Cancel at any time
 unsub();
@@ -207,6 +213,9 @@ source$.pipe(catchError(() => of('fallback')));
 
 // Retry up to 3 times before propagating
 source$.pipe(retry(3));
+
+// Retry with 500ms delay between attempts
+source$.pipe(retry(3, 500));
 ```
 
 ## Multicasting
@@ -232,15 +241,15 @@ const all  = await toArray(of(1, 2, 3));    // [1, 2, 3]
 
 ## Disposal
 
-`dispose()` terminates a `Flux` permanently and completes all active subscriptions:
+`dispose()` terminates a stream permanently. All active subscribers receive a `complete` notification, then no further values are accepted:
 
 ```ts
 const subject = createSubject<number>();
-subject.emit(1);
-subject.dispose(); // all subscriptions complete; no further values accepted
+subject.subscribe({ next: console.log, complete: () => console.log('done') });
+subject.dispose(); // logs 'done'; no further values accepted
 ```
 
-For the `flux()` factory, each subscription is cancelled by calling the unsubscribe function returned by `subscribe()`. The stream itself does not need to be explicitly disposed.
+For the `flux()` factory, each subscription is cancelled by the `Unsubscribe` function returned by `subscribe()`. The stream itself does not need to be explicitly disposed.
 
 ## Framework Integration
 
@@ -305,9 +314,10 @@ const count = signal(0);
 const count$ = fromSignal(count);
 count$.subscribe(console.log); // 0, then on every change
 
-// Flux stream → Ripple signal
+// Flux stream → Ripple signal binding
 const latest = toSignal(count$, { initial: 0 });
-// latest.value stays in sync; latest.dispose() ends tracking
+// latest.value is reactive (reads track in ripple effects)
+// latest.dispose() ends tracking; value freezes at last received
 ```
 
 ### Herald event bus
@@ -329,8 +339,9 @@ source$.pipe(toBus(bus, 'user:login')).subscribe();
 ## Best Practices
 
 - Unsubscribe or dispose when a stream is no longer needed to avoid memory leaks
+- Pass an `AbortSignal` as the second arg to `subscribe()` for automatic cleanup tied to component lifecycles
 - Prefer `switchMap` over `flatMap` for request–response patterns where only the latest matters
 - Use `shareReplay(1)` when multiple components need the same latest value
 - Use `createBehaviorSubject` rather than `createSubject` when late subscribers need the current state
-- Use `takeUntil(signal)` with an `AbortController` for component-scoped stream lifetimes
+- Use `fail()` instead of `complete()` on a `Subject` when the stream terminates due to an error
 - Use `toArray()` or `toPromise()` in tests — they wrap the stream in a `Promise` that resolves when the stream completes

@@ -15,7 +15,7 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `ctx.provide/inject`       | Context API for parent-to-descendant sharing         | Setup only     | Must be called synchronously during `setup()`                          |
 | `ref()`                    | Reactive reference to a DOM element                  | Sync           | Value is null until after first mount                                  |
 | `createContext()`          | Create a typed injection key                         | Sync           | Context is scoped to the component tree                                |
-| `each()`                   | Keyed list rendering with DOM diffing                | Sync           | Duplicate keys warn in dev; use `{ snapshot: true }` for plain render  |
+| `each()`                   | Keyed list rendering with DOM diffing                | Sync           | Duplicate keys warn in dev; plain `T[]` treated as one-time static render |
 | `when()`                   | Conditional branch rendering                         | Sync           | Getter-fn computed disposed on cleanup; static bool skips subscription |
 | `model(signal)`            | Two-way binding for input/select/textarea            | Sync           | `<select multiple>` uses `Signal<string[]>`; `select` uses `change`    |
 | `live(signal)`             | One-way binding that skips stale writes during input | Sync           | Use for controlled inputs alongside a manual `@input` handler          |
@@ -23,16 +23,17 @@ description: Complete API reference for @vielzeug/craft, @vielzeug/craft/observe
 | `ctx.onCleanup(fn)`        | Register teardown                                    | Setup only     | Called on component disconnect                                         |
 | `ctx.onEvent(target, …)`   | Scoped event listener with auto-cleanup              | Setup only     | No-ops on null target; removed on disconnect                           |
 | `useField(options)`        | Wire signal to form `ElementInternals`               | Setup only     | Requires `formAssociated: true` on the component definition            |
-| `syncAria(target, config)` | Reactively sync ARIA attributes to an element        | Setup only     | Static values applied once; getter functions tracked as effects        |
+| `ctx.aria(target, config)` | Reactively sync ARIA attributes to any element       | Setup only     | Static values applied once; getter functions tracked as effects; auto-cleanup on disconnect |
 
 ## Package Entry Points
 
-| Import                      | Purpose                                             |
-| --------------------------- | --------------------------------------------------- |
-| `@vielzeug/craft`           | Core authoring/runtime API plus ripple re-exports   |
-| `@vielzeug/craft/devtools`  | `debugFlush` — verbose flush for timing diagnostics |
-| `@vielzeug/craft/observers` | Resize, intersection, mutation, and media observers |
-| `@vielzeug/craft/testing`   | DOM-oriented test helpers                           |
+| Import                       | Purpose                                                            |
+| ---------------------------- | ------------------------------------------------------------------ |
+| `@vielzeug/craft`            | Core authoring/runtime API                                         |
+| `@vielzeug/craft/devtools`   | `debugFlush` — verbose flush for timing diagnostics                |
+| `@vielzeug/craft/directives` | Standalone directive imports (`each`, `when`, `classMap`, …)       |
+| `@vielzeug/craft/observers`  | Resize, intersection, mutation, and media observers                |
+| `@vielzeug/craft/testing`    | DOM-oriented test helpers                                          |
 
 ## Core Component API
 
@@ -46,20 +47,22 @@ The `setup()` function receives typed prop signals and a context bag:
 
 ```ts
 type SetupContextBag<Emits, SlotNames> = {
-  bind: HostBindFn; // Apply reactive bindings to the host element
-  effect: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
+  aria: (target: Element, config: AriaConfig) => () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
+  bind: HostBindFn; // Apply reactive bindings to the host or any target element
   el: HTMLElement; // The host element
   emit: EmitFn<Emits>; // Dispatch typed custom events
-  inject: typeof inject; // Resolve context from nearest ancestor
+  inject: <T>(key: InjectionKey<T>, fallback?: T) => T | undefined; // Resolve context from nearest ancestor
   onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
   onElement: <T extends HTMLElement>(ref, cb) => void; // Run callback when a ref resolves to an element
   onEvent: (target, event, listener, options?) => void; // Scoped event listener; auto-removed on disconnect
   onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback
+  provide: <T>(key: InjectionKey<T>, value: T) => void; // Register context on the host element
   slots: ComponentSlots<SlotNames>; // Reactive slot signals
+  watch: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
 };
 ```
 
-Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `effect`) are accessed exclusively through the setup context bag. They must be called synchronously during `setup()`.
+Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`) are accessed exclusively through the setup context bag. They must be called synchronously during `setup()`.
 
 `setup()` returns an `HTMLResult` directly (not a function):
 
@@ -115,10 +118,10 @@ define('user-profile', {
 
 ## Runtime Helpers
 
-`onMounted`, `onCleanup`, `onEvent`, `onElement`, and `effect` are available on the setup context bag. Destructure them from the second argument to `setup()`.
+`onMounted`, `onCleanup`, `onEvent`, `onElement`, and `watch` are available on the setup context bag. Destructure them from the second argument to `setup()`.
 
 ```ts
-setup(props, { onMounted, onCleanup, onEvent, onElement, effect }) {
+setup(props, { onMounted, onCleanup, onEvent, onElement, watch }) {
   onMounted(() => {
     // DOM is ready; return a function for mount-scoped cleanup
     return () => { /* cleanup on unmount */ };
@@ -202,15 +205,15 @@ Tagged template literal that returns a `CSSResult` for use in `styles`.
 
 ### Directives
 
-| Directive                                       | Purpose                                                                                              |
-| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `each(source, key, render, fallback?)`          | Keyed reactive list; render receives `Reactive<T>` and `Reactive<number>`                |
-| `each(source, key, render, { snapshot: true })` | Snapshot list; render receives plain `T` and `number`; simpler, recreates items on change            |
-| `when(condition, truthy, falsy?)`               | Conditional rendering                                                                                |
-| `classMap(record)`                              | Reactive class string from object map                                                                |
-| `styleMap(record)`                              | Reactive inline style string from object map                                                         |
-| `model(signal)`                                 | Two-way value binding for `input`, `select`, `textarea`; `<select multiple>` uses `Signal<string[]>` |
-| `raw(value)`                                    | Trusted HTML rendering (XSS risk without sanitizer)                                                  |
+| Directive                              | Purpose                                                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `each(source, key, render, fallback?)` | Keyed reactive list; render receives `Readable<T>` and `Readable<number>`; plain `T[]` is a one-time static snapshot |
+| `when(condition, truthy, falsy?)`      | Conditional rendering                                                                                 |
+| `classMap(record)`                     | Reactive class string from object map                                                                 |
+| `styleMap(record)`                     | Reactive inline style string from object map                                                          |
+| `live(signal)`                         | One-way binding that skips stale writes during active user input; use with `@input` handler           |
+| `model(signal)`                        | Two-way value binding for `input`, `select`, `textarea`; `<select multiple>` uses `Signal<string[]>`; `select` uses `change` event |
+| `raw(value)`                           | Trusted HTML rendering (XSS risk without sanitizer)                                                   |
 
 ### Event Modifiers
 
@@ -240,17 +243,37 @@ bind({
 
 `bind()` auto-registers cleanup with the component scope — no manual `onCleanup` needed. Returns a cleanup function for early teardown.
 
-To sync ARIA attributes reactively, use `bind()` with `attr` keys directly:
+### Off-host bindings
+
+Pass `{ target: el }` as a second argument to bind to any element other than the host:
 
 ```ts
-bind({
-  attr: {
-    role: 'button',
-    'aria-expanded': () => String(isOpen.value),
-    'aria-disabled': () => (isDisabled.value ? 'true' : null),
-  },
-});
+bind(
+  { attr: { 'aria-expanded': () => String(isOpen.value) } },
+  { target: triggerEl },
+);
 ```
+
+Event listener options (`once`, `capture`, `passive`) are also accepted in the second argument. Cleanup is auto-registered with the component scope when called during setup.
+
+### ctx.aria()
+
+For reactive ARIA attribute syncing, use `ctx.aria(target, config)`. Shorthand keys are normalised to `aria-*` automatically (`expanded` → `aria-expanded`; `role` is passed verbatim):
+
+```ts
+// Inside setup — cleanup auto-registered
+aria(triggerEl, {
+  expanded: () => isOpen.value,
+  controls: panelId,
+  haspopup: 'listbox',
+});
+
+// Manage cleanup manually — aria() always returns a cleanup fn
+const stopAria = aria(triggerEl, { expanded: () => isOpen.value });
+// Call stopAria() when the trigger is swapped out
+```
+
+Static values (strings, numbers, booleans) are applied once. Getter functions and signals create reactive effects. Setting a value to `null`, `undefined`, or `false` removes the attribute.
 
 ## Slots
 
@@ -275,26 +298,6 @@ Slot signals update reactively when assigned content changes, including when slo
 - `createId()` — Generate a unique incremental string ID (e.g. `'craft-1'`).
 - `createStableId(key)` — Return the same ID for the same string key within a component's lifetime; useful for stable ARIA label associations.
 - `resetIdCounter()` — Reset the ID counter to 0. Call in test `beforeEach` for deterministic IDs.
-
-### `syncAria(target, config, options?)`
-
-Import from `@vielzeug/craft`. Reactively syncs ARIA attributes to any element — most useful for shadow DOM children, slotted triggers, or any non-host element:
-
-```ts
-import { syncAria } from '@vielzeug/craft';
-
-// Inside onMounted — autoCleanup:true (default) registers cleanup with the active setup context
-const cleanup = syncAria(triggerEl, {
-  expanded: () => isOpen.value,
-  controls: panelId,
-});
-```
-
-Static values are applied once; getter functions and signal values are tracked as reactive effects.
-
-When called synchronously inside `setup()` or within a lifecycle hook bound to a setup context, `autoCleanup: true` (the default) registers the cleanup automatically. Pass `{ autoCleanup: false }` when managing the element lifetime manually (e.g. slotted trigger elements that can be swapped out).
-
-> **Note:** `syncAria` uses `aria-` shorthand keys — `{ expanded: () => isOpen.value }` sets `aria-expanded`. The `role` key is set verbatim (no prefix).
 
 ## Form-Associated API
 
@@ -452,13 +455,16 @@ type SetupContextBag<
   Emits extends Record<string, unknown> = Record<string, never>,
   SlotNames extends string = string,
 > = {
-  bind: HostBindFn; // Apply reactive bindings to the host element
-  effect: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
+  aria: (target: Element, config: AriaConfig) => () => void; // Reactive ARIA attr sync; auto-cleanup on disconnect
+  bind: (config: HostBindConfig, options?: BindOptions) => () => void; // Bindings for host or any target element
   el: HTMLElement; // The host element
   emit: EmitFn<Emits>; // Dispatch typed custom events
-  inject: <T>(key: InjectionKey<T>, fallback?: T) => T | undefined; // Resolve context from nearest ancestor
+  inject: {
+    <T>(key: InjectionKey<T>): T | undefined;
+    <T>(key: InjectionKey<T>, fallback: T): T;
+  };
   onCleanup: (fn: CleanupFn) => void; // Register teardown; called on disconnect
-  onElement: <T extends HTMLElement>(ref: Reactive<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
+  onElement: <T extends HTMLElement>(ref: Readable<T | null>, cb: (el: T) => CleanupFn | void) => () => void;
   onEvent: {
     <K extends keyof HTMLElementEventMap>(
       target: EventTarget | null | undefined,
@@ -476,6 +482,7 @@ type SetupContextBag<
   onMounted: (fn: OnMountedCallback) => void; // DOM-ready callback; runs after first render
   provide: <T>(key: InjectionKey<T>, value: T) => void; // Register a context value on the host element
   slots: ComponentSlots<SlotNames>; // Reactive slot signals
+  watch: (fn: EffectCallback) => () => void; // Scoped reactive effect; auto-cleaned on disconnect
 };
 
 type ComponentDefinition<Props, Emits, SlotNames extends string> = {

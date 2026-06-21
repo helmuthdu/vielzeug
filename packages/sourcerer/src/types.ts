@@ -44,11 +44,20 @@ export type InfiniteSourceQuery = Readonly<{
 }>;
 
 /**
- * Opaque context bag carried by `SourceError`.
- * Contains safe-to-log fields identifying the query that failed.
- * Use `error.context` for logging/telemetry — do not rely on specific field names.
+ * Structured context carried by `SourceError`.
+ * Discriminated on `kind` — narrow with `error.context?.kind` to access typed fields.
+ *
+ * @example
+ * ```ts
+ * if (source.meta.error?.context?.kind === 'remote') {
+ *   console.log('Failed page', source.meta.error.context.page);
+ * }
+ * ```
  */
-export type SourceErrorContext = Readonly<Record<string, unknown>>;
+export type SourceErrorContext =
+  | Readonly<{ kind: 'cursor'; limit: number; search?: string }>
+  | Readonly<{ kind: 'infinite'; limit: number; page: number; search?: string }>
+  | Readonly<{ kind: 'remote'; limit: number; page: number; search?: string }>;
 
 /**
  * Base class for all sourcerer errors. Catch with `instanceof SourceError` to handle any
@@ -230,6 +239,11 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
   patch(changes: Partial<SourceQuery>): Promise<void>;
   prev(): Promise<void>;
   /**
+   * The current query state — limit, page, and optional search string.
+   * Use `encodeQuery(source.query)` to serialize to URL params.
+   */
+  readonly query: SourceQuery;
+  /**
    * Resolves when the source is idle (no pending async computation).
    * Rejects with `SourceTimeoutError` after `timeout` ms if still busy.
    */
@@ -241,7 +255,6 @@ export type PageNavigator<T> = ReactiveSource<T, SourceMeta> & {
    * Pass `{ immediate: true }` to skip the debounce window.
    */
   search(query: string, opts?: SearchOptions): Promise<void>;
-  setLimit(limit: number): Promise<void>;
 };
 
 /** Full set of fields patchable in one atomic recompute on a local source. */
@@ -271,16 +284,13 @@ export type LocalSource<T> = Omit<PageNavigator<T>, 'patch'> & {
    */
   patch(changes: LocalSourceQuery<T>): Promise<void>;
   setData(data: readonly T[]): Promise<void>;
-  setFilter(filter?: Predicate<T>): Promise<void>;
-  setSort(sort?: Sorter<T>): Promise<void>;
-  toQuery(): SourceQuery;
 };
 
 /**
  * Full interface for remote page-based sources.
  * `optimisticUpdate(mutator)` throws if a concurrent update is already pending.
  */
-export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<T> & {
+export type RemoteSource<T, TFilter = unknown, TSort = unknown> = Omit<PageNavigator<T>, 'patch' | 'query'> & {
   /**
    * Applies an optimistic update immediately before a fetch settles.
    * Returns a rollback function. The optimistic state is automatically cleared
@@ -294,11 +304,12 @@ export type RemoteSource<T, TFilter = unknown, TSort = unknown> = PageNavigator<
    * of limit, page, search, filter, and sort updates.
    */
   patch(changes: Partial<RemoteSourceQuery<TFilter, TSort>>): Promise<void>;
+  /**
+   * The current query state. Use `encodeQuery(source.query)` to serialize to URL params.
+   */
+  readonly query: RemoteSourceQuery<TFilter, TSort>;
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
-  setFilter(filter?: TFilter): Promise<void>;
-  setSort(sort?: TSort): Promise<void>;
-  toQuery(): RemoteSourceQuery<TFilter, TSort>;
 };
 
 // ── Config types ──────────────────────────────────────────────────────────────
@@ -387,12 +398,12 @@ export type CursorSource<T, TCursor = string> = ReactiveSource<T, CursorMeta> & 
    */
   patch(changes: Partial<Pick<CursorSourceQuery<TCursor>, 'limit' | 'search'>>): Promise<void>;
   prev(): Promise<void>;
+  /** The current query state. Use `encodeQuery(source.query)` to serialize to URL params. */
+  readonly query: CursorSourceQuery<TCursor>;
   ready(timeout?: number): Promise<void>;
   refresh(): Promise<void>;
   reset(): Promise<void>;
   search(query: string, opts?: SearchOptions): Promise<void>;
-  setLimit(limit: number): Promise<void>;
-  toQuery(): CursorSourceQuery<TCursor>;
 };
 
 export type CursorConfig<T, TCursor = string> = Readonly<{
@@ -434,6 +445,8 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
    * of limit and search updates. Resets accumulated pages.
    */
   patch(changes: Partial<Pick<InfiniteSourceQuery, 'limit' | 'search'>>): Promise<void>;
+  /** The current query state. Use `encodeQuery(source.query)` to serialize to URL params. */
+  readonly query: InfiniteSourceQuery;
   /**
    * Resolves when no fetch is in progress (including `loadMore` fetches).
    * Rejects after `timeout` ms if still loading.
@@ -441,8 +454,6 @@ export type InfiniteSource<T> = ReactiveSource<T, InfiniteMeta> & {
   ready(timeout?: number): Promise<void>;
   reset(): Promise<void>;
   search(query: string, opts?: SearchOptions): Promise<void>;
-  setLimit(limit: number): Promise<void>;
-  toQuery(): InfiniteSourceQuery;
 };
 
 export type InfiniteConfig<T> = Readonly<{

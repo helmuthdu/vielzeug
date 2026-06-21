@@ -14,7 +14,7 @@ Shopping carts need to survive page reloads and guide users through shipping →
 Use the persistence adapter to save snapshots on every state change. Replay snapshots on app init to resume interrupted checkouts. Machine definition stays deterministic; persistence is pluggable.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type CartContext = {
   items: Array<{ id: string; name: string; price: number; qty: number }>;
@@ -33,7 +33,7 @@ type CartEvent =
   | { type: 'ORDER_SUCCESS' }
   | { type: 'ORDER_FAILED'; error: string };
 
-const checkoutMachine = machine({
+const checkoutMachine = createMachine({
   initial: 'shopping',
   context: { items: [], total: 0 },
   states: {
@@ -135,12 +135,12 @@ const checkoutMachine = machine({
       },
     },
   },
-});
+}).start();
 
 const checkout = checkoutMachine; // already has persistence via options
-// To add persistence, pass via machine() options:
+// To add persistence, pass via createMachine().start() options:
 /*
-const checkout = machine({  initial: 'shopping', context: { items: [], total: 0 }, states: { /* ... */ } }, {
+const checkout = createMachine({ initial: 'shopping', context: { items: [], total: 0 }, states: { /* ... */ } }).start({
   persistence: {
     load: () => {
       try {
@@ -164,7 +164,7 @@ checkout.send({ type: 'ADD_ITEM', id: 'mug-1', name: 'Coffee Mug', price: 12.99 
 // Proceed to checkout
 checkout.send({ type: 'CHECKOUT' }); // state: 'shipping'
 
-// If page reloads here, machine() with persistence will restore:
+// If page reloads here, createMachine().start({ persistence }) will restore:
 // state: 'shipping', items and total intact
 
 // Enter shipping

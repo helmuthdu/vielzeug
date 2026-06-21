@@ -4,7 +4,7 @@ export function resolvePort(raw: string | undefined): number | null {
 
   const n = Number.parseInt(raw, 10);
 
-  if (!Number.isFinite(n) || n < 1 || n > 65535) {
+  if (!Number.isFinite(n) || n < 1 || n > 65535 || n !== Number(raw)) {
     throw new Error(`Invalid --port value: "${raw}". Expected an integer between 1 and 65535.`);
   }
 

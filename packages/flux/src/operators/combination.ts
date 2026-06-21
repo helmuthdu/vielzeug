@@ -10,6 +10,12 @@ import { flux } from '../core';
  */
 export function merge<T>(...sources: Flux<T>[]): Flux<T> {
   return flux<T>((observer) => {
+    if (sources.length === 0) {
+      observer.complete?.();
+
+      return;
+    }
+
     let completedCount = 0;
     const unsubs: Unsubscribe[] = [];
 
@@ -81,6 +87,12 @@ export function combineLatest<T extends Flux<unknown>[]>(
   type Out = { [K in keyof T]: T[K] extends Flux<infer V> ? V : never };
 
   return flux<Out>((observer) => {
+    if (sources.length === 0) {
+      observer.complete?.();
+
+      return;
+    }
+
     const latests = new Array(sources.length) as Out;
     const hasValue = new Array<boolean>(sources.length).fill(false);
     let completedCount = 0;
@@ -168,6 +180,12 @@ export function withLatestFrom<T, U extends Flux<unknown>[]>(
  */
 export function race<T>(...sources: Flux<T>[]): Flux<T> {
   return flux<T>((observer) => {
+    if (sources.length === 0) {
+      observer.complete?.();
+
+      return;
+    }
+
     let winner = false;
     const unsubs: Unsubscribe[] = [];
 
@@ -221,6 +239,12 @@ export function zip<T extends Flux<unknown>[]>(
   type Out = { [K in keyof T]: T[K] extends Flux<infer V> ? V : never };
 
   return flux<Out>((observer) => {
+    if (sources.length === 0) {
+      observer.complete?.();
+
+      return;
+    }
+
     const buffers = sources.map(() => [] as unknown[]);
     const completed = new Array<boolean>(sources.length).fill(false);
     const unsubs: Unsubscribe[] = [];
@@ -283,6 +307,12 @@ export function forkJoin<T extends Flux<unknown>[]>(
   type Out = { [K in keyof T]: T[K] extends Flux<infer V> ? V : never };
 
   return flux<Out>((observer) => {
+    if (sources.length === 0) {
+      observer.complete?.();
+
+      return;
+    }
+
     const results = new Array(sources.length) as Out;
     const completed = new Array<boolean>(sources.length).fill(false);
     const unsubs: Unsubscribe[] = [];

@@ -26,13 +26,13 @@ define('status-chip', {
 });
 ```
 
-The setup context bag provides `el`, `bind`, `emit`, `slots`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, and `effect`:
+The setup context bag provides `el`, `aria`, `bind`, `emit`, `slots`, `onMounted`, `onCleanup`, `onEvent`, `onElement`, and `watch`:
 
 ```ts
 define('my-widget', {
   setup(_props, { el, bind, emit, slots }) {
     // el — the host HTMLElement
-    // bind — host binding helper (attr, class, style, prop, on)
+    // bind — host binding helper (attr, class, style, on)
     // emit — typed event emitter
     // slots — reactive slot observation
     return html`<slot></slot>`;
@@ -238,7 +238,87 @@ define('x-toggle', {
 });
 ```
 
-The `bind` config supports `attr`, `class`, `style`, `prop`, and `on` sections. You can also call `createBind(el)` directly for advanced use cases outside setup context.
+The `bind` config supports `attr`, `class`, `style`, and `on` sections.
+
+## ARIA bindings
+
+Use `ctx.aria(target, config)` to reactively sync ARIA attributes to any element. Shorthand keys are normalised to `aria-*` automatically — `expanded` becomes `aria-expanded`, `role` is set verbatim.
+
+```ts
+import { signal } from '@vielzeug/ripple';
+import { define, html } from '@vielzeug/craft';
+
+define('x-disclosure', {
+  setup(_props, { aria, bind, onMounted }) {
+    const open = signal(false);
+    const panelId = 'disclosure-panel';
+
+    bind({
+      attr: { role: 'button', tabindex: 0 },
+      on: { click: () => (open.value = !open.value) },
+    });
+
+    onMounted(() => {
+      const trigger = document.querySelector('#trigger') as HTMLElement;
+      if (trigger) {
+        // aria() registers cleanup automatically when called inside setup
+        aria(trigger, {
+          controls: panelId,
+          expanded: () => String(open.value),
+          haspopup: 'region',
+        });
+      }
+    });
+
+    return html`<slot></slot>`;
+  },
+});
+```
+
+Static values are applied once. Getter functions create reactive effects. Setting a value to `null`, `undefined`, or `false` removes the attribute.
+
+`aria()` always returns a cleanup function. Use it to stop syncing early when a trigger element can be swapped out:
+
+```ts
+onMounted(() => {
+  const trigger = document.querySelector('#trigger') as HTMLElement;
+  const stopAria = aria(trigger, { expanded: () => String(open.value) });
+
+  // Stop syncing when the trigger is replaced
+  onCleanup(stopAria);
+});
+```
+
+### Binding a non-host element with `bind()`
+
+Pass `{ target: el }` as a second argument to bind attributes, classes, styles, or events to any element:
+
+```ts
+import { signal } from '@vielzeug/ripple';
+import { define, html, ref } from '@vielzeug/craft';
+
+define('button-wrapper', {
+  setup(_props, { bind, onMounted }) {
+    const visible = signal(false);
+    const btnRef = ref<HTMLButtonElement>();
+
+    onMounted(() => {
+      const btn = btnRef.value;
+      if (!btn) return;
+
+      bind(
+        {
+          attr: { 'aria-pressed': () => String(visible.value) },
+          on: { click: () => (visible.value = !visible.value) },
+        },
+        { target: btn },
+      );
+    });
+
+    return html`<button ref=${btnRef}>Toggle</button>`;
+  },
+});
+```
 
 ## slots and emits
 
@@ -489,7 +569,7 @@ define('signup-form', {
 ## Best Practices
 
 - Setup returns `html\`...\`` directly — not a function wrapping the template.
-- Use `ctx.effect()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
+- Use `ctx.watch()` for reactive subscriptions tied to component lifetime — it auto-registers cleanup on disconnect.
 - Use `ctx.onElement(ref, cb)` instead of `ctx.onMounted` when the work is tied to a single DOM node.
 - Bind host attributes and classes via `ctx.bind()` rather than mutating the element directly.
 - Provide context at the nearest ancestor — avoid global context singletons.

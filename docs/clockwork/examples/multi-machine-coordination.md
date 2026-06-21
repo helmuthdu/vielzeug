@@ -20,7 +20,7 @@ Hard-coding dependencies between machines creates tight coupling and race condit
 Use Herald as a message bus to decouple machines. Each machine publishes events about state changes, and other machines subscribe and react accordingly. This creates a pub/sub pattern where machines are independent but coordinated.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 import { createEventBus } from '@vielzeug/herald';
 
 // Shared event types
@@ -41,7 +41,7 @@ const events = createEventBus<
 >();
 
 // User machine
-const userMachine = machine({
+const userMachine = createMachine({
   initial: 'logged_out',
   context: {
     userId: '',
@@ -76,10 +76,10 @@ const userMachine = machine({
       },
     },
   },
-});
+}).start();
 
 // Session machine
-const sessionMachine = machine({
+const sessionMachine = createMachine({
   initial: 'idle',
   context: {
     inactiveSeconds: 0,
@@ -124,10 +124,10 @@ const sessionMachine = machine({
       type: 'final',
     },
   },
-});
+}).start();
 
 // Notification machine
-const notificationMachine = machine({
+const notificationMachine = createMachine({
   initial: 'idle',
   context: {
     message: '',
@@ -158,7 +158,7 @@ const notificationMachine = machine({
       },
     },
   },
-});
+}).start();
 
 // Action functions — mutate context directly
 const recordLogin = ({ context, event }: any) => {
@@ -241,7 +241,7 @@ const scheduleAutoDismiss = ({ context }: any) => {
   // Auto-dismiss after specified duration
 };
 
-// Initialize machines
+// Usage
 const user = userMachine;
 const session = sessionMachine;
 const notification = notificationMachine;
@@ -306,7 +306,7 @@ export function logout() {
 
 4. **Tight timing assumptions** - One machine assumes another has completed before reacting. If async operations are involved, use explicit completion events instead of state checks (check for 'expired' state vs listen for 'SESSION_EXPIRED' event).
 
-5. **Hard to debug multi-machine state** - When machines coordinate, debugging requires tracking all states simultaneously. Enable debug hooks on each machine and log to a central registry: `debug: { onTransition: (info) => log({ clockwork: 'session', ...info }) }`.
+5. **Hard to debug multi-machine state** - When machines coordinate, debugging requires tracking all states simultaneously. Enable `onDebug` on each machine and log to a central registry: `onDebug: (event) => log({ machine: 'session', ...event })`.
 
 ### Related
 

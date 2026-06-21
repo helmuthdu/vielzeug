@@ -1,7 +1,7 @@
 import { signal } from '@vielzeug/ripple';
 import { describe, expect, it } from 'vitest';
 
-import { fromQuery, fromReadable, fromSse } from '../adapters/courier';
+import { fromQuery, fromSse } from '../adapters/courier';
 import { fromBus, toBus } from '../adapters/herald';
 import { fromPresence, fromPulse } from '../adapters/pulse';
 import { fromSignal, toSignal } from '../adapters/ripple';
@@ -87,6 +87,47 @@ describe('toSignal()', () => {
     expect(sig.value).toBe(42);
     source.dispose();
     sig.dispose();
+  });
+
+  it('exposes disposed and disposalSignal properties', () => {
+    const source = createSubject<number>();
+    const sig = toSignal(source, { initial: 0 });
+
+    expect(sig.disposed).toBe(false);
+    expect(sig.disposalSignal.aborted).toBe(false);
+    sig.dispose();
+    expect(sig.disposed).toBe(true);
+    expect(sig.disposalSignal.aborted).toBe(true);
+    source.dispose();
+  });
+
+  it('dispose() is idempotent', () => {
+    const source = createSubject<number>();
+    const sig = toSignal(source, { initial: 0 });
+
+    sig.dispose();
+    sig.dispose();
+    expect(sig.disposed).toBe(true);
+    source.dispose();
+  });
+
+  it('[Symbol.dispose] delegates to dispose()', () => {
+    const source = createSubject<number>();
+    const sig = toSignal(source, { initial: 0 });
+
+    sig[Symbol.dispose]();
+    expect(sig.disposed).toBe(true);
+    source.dispose();
+  });
+
+  it('exposes underlying signal via .signal property', () => {
+    const source = createSubject<number>();
+    const binding = toSignal(source, { initial: 0 });
+
+    source.emit(5);
+    expect(binding.signal.value).toBe(5);
+    binding.dispose();
+    source.dispose();
   });
 });
 
@@ -267,20 +308,6 @@ describe('fromSse()', () => {
     listeners.get('message')?.forEach((fn) => fn('event-3'));
 
     expect(received).toEqual(['event-1', 'event-2']);
-  });
-});
-
-describe('fromReadable()', () => {
-  it('collects chunks from AsyncIterable', async () => {
-    async function* chunks(): AsyncGenerator<string> {
-      yield 'a';
-      yield 'b';
-      yield 'c';
-    }
-
-    const result = await toArray(fromReadable(chunks()));
-
-    expect(result).toEqual(['a', 'b', 'c']);
   });
 });
 

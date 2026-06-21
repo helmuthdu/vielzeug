@@ -8,11 +8,19 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { BundledData } from '../types.js';
 
 import { loadData } from '../data.js';
-import { createServer } from '../index.js';
-import { SCHEMA_VERSION } from '../types.js';
+import { createServer } from '../server.js';
+import { SYNTHETIC_DATA } from './_fixtures.js';
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
 
 type TextContent = { text: string; type: 'text' };
 type ToolCallResult = { content: TextContent[]; isError?: boolean };
+
+// ---------------------------------------------------------------------------
+// Setup — load real bundled data once, share across all tests
+// ---------------------------------------------------------------------------
 
 let data: BundledData;
 const activeClients: Client[] = [];
@@ -20,7 +28,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataFile = resolve(__dirname, '../../data/vielzeug-data.json');
 
 beforeAll(async () => {
-  // Regenerate if missing or if loadData throws (e.g. schema version mismatch from stale file)
   const needsRegen =
     !existsSync(dataFile) ||
     (() => {
@@ -34,8 +41,7 @@ beforeAll(async () => {
     })();
 
   if (needsRegen) {
-    // Import the generator function directly — faster than spawning a subprocess
-    const { generateBundledData } = await import('../generator.js');
+    const { generateBundledData } = await import('../../scripts/generator.ts');
     const { data: generated } = generateBundledData({ incremental: false });
 
     mkdirSync(dirname(dataFile), { recursive: true });
@@ -53,32 +59,42 @@ afterEach(async () => {
   }
 });
 
-async function createTestPair() {
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+async function createTestPair(bundledData = data) {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const server = createServer(data);
+  const server = createServer(bundledData);
 
   await server.connect(serverTransport);
 
   const client = new Client({ name: 'test-client', version: '1.0.0' });
 
   await client.connect(clientTransport);
-
   activeClients.push(client);
 
-  return { client, server };
+  return { client };
 }
 
-function readText(result: ToolCallResult): string {
+function text(result: ToolCallResult): string {
   return result.content[0]?.text ?? '';
 }
 
-describe('vielzeug MCP server', () => {
-  it('registers seven tools', async () => {
+async function call(client: Client, name: string, args: Record<string, unknown> = {}): Promise<ToolCallResult> {
+  return (await client.callTool({ arguments: args, name })) as ToolCallResult;
+}
+
+// ---------------------------------------------------------------------------
+// Tool registration
+// ---------------------------------------------------------------------------
+
+describe('tool registration', () => {
+  it('exposes exactly seven named tools', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
-    const names = tools.map((t) => t.name).sort();
 
-    expect(names).toEqual([
+    expect(tools.map((t) => t.name).sort()).toEqual([
       'get-component',
       'get-docs',
       'get-package',
@@ -89,361 +105,270 @@ describe('vielzeug MCP server', () => {
     ]);
   });
 
-  it('get-docs page enum only includes doc pages, not source', async () => {
+  it('unknown tool name rejects with MethodNotFound', async () => {
+    const { client } = await createTestPair();
+
+    await expect(client.callTool({ arguments: {}, name: 'no-such-tool' })).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// list-packages
+// ---------------------------------------------------------------------------
+
+describe('list-packages', () => {
+  it('returns all packages as PackageMeta objects (no docs or apiSource)', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'list-packages');
+    const items = JSON.parse(text(result)) as Array<Record<string, unknown>>;
+
+    expect(result.isError).not.toBe(true);
+    expect(items.length).toBeGreaterThan(0);
+    expect(items[0]).toHaveProperty('name');
+    expect(items[0]).toHaveProperty('slug');
+    expect(items[0]).toHaveProperty('hasSource');
+    expect(items[0]).toHaveProperty('availableDocPages');
+    expect(items[0]).not.toHaveProperty('docs');
+    expect(items[0]).not.toHaveProperty('apiSource');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// get-package
+// ---------------------------------------------------------------------------
+
+describe('get-package', () => {
+  it('returns PackageMeta for a known slug', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'get-package', { packageSlug: 'spell' });
+    const pkg = JSON.parse(text(result)) as Record<string, unknown>;
+
+    expect(result.isError).not.toBe(true);
+    expect(pkg['slug']).toBe('spell');
+    expect(pkg).toHaveProperty('hasSource');
+    expect(pkg).not.toHaveProperty('docs');
+  });
+
+  it('returns isError for an unknown slug', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'get-package', { packageSlug: 'does-not-exist' });
+
+    expect(result.isError).toBe(true);
+  });
+
+  it('returns isError when packageSlug is missing', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'get-package');
+
+    expect(result.isError).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// get-docs
+// ---------------------------------------------------------------------------
+
+describe('get-docs', () => {
+  it('returns doc page content for a valid package and page', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'get-docs', { packageSlug: 'spell', page: 'api' });
+
+    expect(result.isError).not.toBe(true);
+    expect(text(result).length).toBeGreaterThan(0);
+  });
+
+  it('defaults to the index page when page is omitted', async () => {
+    const { client } = await createTestPair();
+    const withPage = await call(client, 'get-docs', { packageSlug: 'spell', page: 'index' });
+    const withoutPage = await call(client, 'get-docs', { packageSlug: 'spell' });
+
+    expect(withPage.isError).not.toBe(true);
+    expect(text(withoutPage)).toBe(text(withPage));
+  });
+
+  it('page enum is [index, api, usage, examples] — no "source"', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
-    const tool = tools.find((t) => t.name === 'get-docs');
-
-    expect(tool).toBeDefined();
-
-    const schema = tool?.inputSchema as unknown as {
+    const schema = tools.find((t) => t.name === 'get-docs')?.inputSchema as unknown as {
       properties: { page: { enum: string[] } };
       required: string[];
     };
 
     expect(schema.properties['page'].enum).toEqual(['index', 'api', 'usage', 'examples']);
-    expect(schema.properties['page'].enum).not.toContain('source');
     expect(schema.required).toContain('packageSlug');
   });
 
-  it('list-packages returns all packages without internal docs payload', async () => {
+  it('returns isError when "source" is passed as page (not a valid enum)', async () => {
     const { client } = await createTestPair();
-    const result = (await client.callTool({ arguments: {}, name: 'list-packages' })) as ToolCallResult;
-    const parsed = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
+    const result = await call(client, 'get-docs', { packageSlug: 'spell', page: 'source' });
 
-    expect(Array.isArray(parsed)).toBe(true);
-    expect(parsed.length).toBeGreaterThan(0);
-    expect(parsed[0]).toHaveProperty('name');
-    expect(parsed[0]).toHaveProperty('availableDocPages');
-    expect(parsed[0]).toHaveProperty('hasSource');
-    expect(parsed[0]).not.toHaveProperty('docs');
-    expect(parsed[0]).not.toHaveProperty('apiSource');
+    expect(result.isError).toBe(true);
+    expect(text(result)).toMatch(/index|api|usage|examples/);
   });
 
-  it('get-package returns a single PackageMeta object', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'spell' },
-      name: 'get-package',
-    })) as ToolCallResult;
-    const parsed = JSON.parse(readText(result)) as Record<string, unknown>;
+  it('returns isError with available pages listed when the package lacks the requested page', async () => {
+    const { client } = await createTestPair(SYNTHETIC_DATA);
+    const result = await call(client, 'get-docs', { packageSlug: 'synthetic', page: 'examples' });
 
-    expect(result.isError).not.toBe(true);
-    expect(parsed['slug']).toBe('spell');
-    expect(parsed).toHaveProperty('hasSource');
-    expect(parsed).not.toHaveProperty('docs');
+    expect(result.isError).toBe(true);
+    expect(text(result)).toMatch(/Available/);
   });
 
-  it('get-package with unknown slug returns an error', async () => {
+  it('returns isError for an unknown packageSlug', async () => {
     const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'does-not-exist' },
-      name: 'get-package',
-    })) as ToolCallResult;
+    const result = await call(client, 'get-docs', { packageSlug: 'does-not-exist' });
 
     expect(result.isError).toBe(true);
   });
+});
 
-  it('get-docs reads a doc page', async () => {
+// ---------------------------------------------------------------------------
+// get-source
+// ---------------------------------------------------------------------------
+
+describe('get-source', () => {
+  it('returns src/index.ts content for a package that has source', async () => {
     const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'spell', page: 'api' },
-      name: 'get-docs',
-    })) as ToolCallResult;
+    const result = await call(client, 'get-source', { packageSlug: 'spell' });
 
     expect(result.isError).not.toBe(true);
-    expect(readText(result).length).toBeGreaterThan(0);
+    expect(text(result)).toContain('export');
   });
 
-  it('get-source returns the src/index.ts content', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'spell' },
-      name: 'get-source',
-    })) as ToolCallResult;
+  it('returns isError for a package with no source', async () => {
+    const { client } = await createTestPair(SYNTHETIC_DATA);
+    const result = await call(client, 'get-source', { packageSlug: 'synthetic' });
 
-    expect(result.isError).not.toBe(true);
-    expect(readText(result)).toContain('export');
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain('no src/index.ts source');
   });
 
-  it('get-docs rejects source as a page value', async () => {
+  it('returns isError for an unknown packageSlug', async () => {
     const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'spell', page: 'source' },
-      name: 'get-docs',
-    })) as ToolCallResult;
+    const result = await call(client, 'get-source', { packageSlug: 'does-not-exist' });
 
     expect(result.isError).toBe(true);
   });
+});
 
-  it('get-source returns isError for a package with no source', async () => {
-    // codex has no apiSource bundled (it's the MCP server itself, not a browser-accessible lib)
+// ---------------------------------------------------------------------------
+// search-packages
+// ---------------------------------------------------------------------------
+
+describe('search-packages', () => {
+  it('returns hits with name, slug, score, and matchedIn for a matching query', async () => {
     const { client } = await createTestPair();
-    const pkgMetas = JSON.parse(
-      readText((await client.callTool({ arguments: {}, name: 'list-packages' })) as ToolCallResult),
-    ) as Array<{ hasSource: boolean; slug: string }>;
-
-    const noSourceSlug = pkgMetas.find((p) => !p.hasSource)?.slug;
-
-    if (!noSourceSlug) return; // all packages have source — skip
-
-    const result = (await client.callTool({
-      arguments: { packageSlug: noSourceSlug },
-      name: 'get-source',
-    })) as ToolCallResult;
-
-    expect(result.isError).toBe(true);
-    expect(readText(result)).toContain('no src/index.ts source');
-  });
-
-  it('search-packages results include a name field on each hit', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { query: 'signal' },
-      name: 'search-packages',
-    })) as ToolCallResult;
+    const result = await call(client, 'search-packages', { query: 'signal' });
+    const hits = JSON.parse(text(result)) as Array<Record<string, unknown>>;
 
     expect(result.isError).not.toBe(true);
-
-    const hits = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
-
     expect(hits.length).toBeGreaterThan(0);
     expect(typeof hits[0]?.['name']).toBe('string');
-    expect((hits[0]?.['name'] as string).length).toBeGreaterThan(0);
-  });
-
-  it('search-packages returns source in matchedIn when query matches apiSource', async () => {
-    const { client } = await createTestPair();
-    // 'createServer' is only in codex apiSource — a reliable source-only match
-    const result = (await client.callTool({
-      arguments: { query: 'createServer' },
-      name: 'search-packages',
-    })) as ToolCallResult;
-
-    expect(result.isError).not.toBe(true);
-
-    const hits = JSON.parse(readText(result)) as Array<{ matchedIn: string[]; slug: string }>;
-    const codexHit = hits.find((h) => h.slug === 'codex');
-
-    // codex may or may not have apiSource in the snapshot — test defensively
-    if (codexHit) {
-      expect(codexHit.matchedIn).toContain('source');
-    }
-  });
-
-  it('search-packages returns empty array for no matches', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { query: 'zzz_no_match_xyz_' },
-      name: 'search-packages',
-    })) as ToolCallResult;
-
-    expect(result.isError).not.toBe(true);
-    expect(JSON.parse(readText(result))).toEqual([]);
-  });
-
-  it('search-packages results have matchedIn as an array and a numeric score', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { query: 'signal' },
-      name: 'search-packages',
-    })) as ToolCallResult;
-
-    expect(result.isError).not.toBe(true);
-
-    const hits = JSON.parse(readText(result)) as Array<Record<string, unknown>>;
-
-    expect(hits.length).toBeGreaterThan(0);
-    expect(Array.isArray(hits[0]?.['matchedIn'])).toBe(true);
     expect(typeof hits[0]?.['score']).toBe('number');
-    expect(hits[0]?.['score'] as number).toBeGreaterThan(0);
+    expect(Array.isArray(hits[0]?.['matchedIn'])).toBe(true);
   });
 
-  it('search-packages scores name matches higher than description matches', async () => {
-    // ripple matches by name — should score higher than a package that only matches in description
+  it('name match scores at the top of results (>= 3.9)', async () => {
     const { client } = await createTestPair();
-    const result = (await client.callTool({
-      arguments: { query: 'ripple' },
-      name: 'search-packages',
-    })) as ToolCallResult;
-
-    expect(result.isError).not.toBe(true);
-
-    const hits = JSON.parse(readText(result)) as Array<{ matchedIn: string[]; score: number; slug: string }>;
+    const result = await call(client, 'search-packages', { query: 'ripple' });
+    const hits = JSON.parse(text(result)) as Array<{ score: number; slug: string }>;
     const rippleHit = hits.find((h) => h.slug === 'ripple');
 
-    if (rippleHit) {
-      // name match weight (3.9) is highest in metadata tier
-      expect(rippleHit.score).toBeGreaterThanOrEqual(3.9);
-    }
+    expect(rippleHit).toBeDefined();
+    expect(rippleHit!.score).toBeGreaterThanOrEqual(3.9);
   });
 
-  it('list-components and get-component work when sigil metadata is available', async () => {
+  it('returns empty array when nothing matches', async () => {
     const { client } = await createTestPair();
-    const listResult = (await client.callTool({ arguments: {}, name: 'list-components' })) as ToolCallResult;
+    const result = await call(client, 'search-packages', { query: 'zzz_no_match_xyz_' });
 
-    if (listResult.isError) {
-      expect(readText(listResult)).toContain('Sigil component metadata is unavailable');
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(text(result))).toEqual([]);
+  });
+
+  it('returns isError when query exceeds 500 characters', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'search-packages', { query: 'a'.repeat(501) });
+
+    expect(result.isError).toBe(true);
+    expect(text(result)).toContain('500');
+  });
+
+  it('returns isError when query is missing', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'search-packages');
+
+    expect(result.isError).toBe(true);
+  });
+
+  it('includes "source" in matchedIn when query matches apiSource', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'search-packages', { query: 'createServer' });
+    const hits = JSON.parse(text(result)) as Array<{ matchedIn: string[]; slug: string }>;
+    const codexHit = hits.find((h) => h.slug === 'codex');
+
+    expect(codexHit).toBeDefined();
+    expect(codexHit!.matchedIn).toContain('source');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// list-components + get-component
+// ---------------------------------------------------------------------------
+
+describe('list-components + get-component', () => {
+  it('list-components returns an array of tags or a graceful unavailable error', async () => {
+    const { client } = await createTestPair();
+    const result = await call(client, 'list-components');
+
+    if (result.isError) {
+      expect(text(result)).toContain('unavailable');
 
       return;
     }
 
-    const tags = JSON.parse(readText(listResult)) as Array<{ tagName?: string }>;
+    const tags = JSON.parse(text(result)) as Array<{ tagName?: string }>;
 
     expect(Array.isArray(tags)).toBe(true);
     expect(tags.length).toBeGreaterThan(0);
-
-    const firstTag = tags[0]?.tagName;
-
-    expect(typeof firstTag).toBe('string');
-
-    const componentResult = (await client.callTool({
-      arguments: { tagName: firstTag },
-      name: 'get-component',
-    })) as ToolCallResult;
-
-    expect(componentResult.isError).not.toBe(true);
-    expect(readText(componentResult)).toContain(firstTag as string);
+    expect(typeof tags[0]?.tagName).toBe('string');
   });
 
-  it('get-docs defaults to index page when page is omitted', async () => {
+  it('get-component returns details for a known tag when CEM is available', async () => {
     const { client } = await createTestPair();
-    const withPage = (await client.callTool({
-      arguments: { packageSlug: 'spell', page: 'index' },
-      name: 'get-docs',
-    })) as ToolCallResult;
-    const withoutPage = (await client.callTool({
-      arguments: { packageSlug: 'spell' },
-      name: 'get-docs',
-    })) as ToolCallResult;
+    const listResult = await call(client, 'list-components');
 
-    expect(withPage.isError).not.toBe(true);
-    expect(withoutPage.isError).not.toBe(true);
-    expect(readText(withoutPage)).toBe(readText(withPage));
+    if (listResult.isError) return; // sigil not built — skip
+
+    const tags = JSON.parse(text(listResult)) as Array<{ tagName: string }>;
+    const firstTag = tags[0]!.tagName;
+    const result = await call(client, 'get-component', { tagName: firstTag });
+
+    expect(result.isError).not.toBe(true);
+    expect(text(result)).toContain(firstTag);
   });
 
-  it('get-docs error lists available pages when requested page is missing', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({
-      // 'source' is not a valid page enum value — triggers the enum-validation error
-      arguments: { packageSlug: 'spell', page: 'source' },
-      name: 'get-docs',
-    })) as ToolCallResult;
-
-    expect(result.isError).toBe(true);
-    expect(readText(result)).toMatch(/index|api|usage|examples/);
-  });
-
-  it('unknown tool returns MethodNotFound error', async () => {
-    const { client } = await createTestPair();
-
-    await expect(client.callTool({ arguments: {}, name: 'no-such-tool' })).rejects.toThrow();
-  });
-
-  it('get-docs returns error when page enum is valid but package lacks that page', async () => {
-    // Use a synthetic data fixture with only index page — guarantees the missing-page path always runs
-    const syntheticData: BundledData = {
-      packages: [
-        {
-          apiSource: null,
-          availableDocPages: ['index'],
-          category: '',
-          components: [],
-          description: 'test',
-          docs: { index: '# Test' },
-          exports: [],
-          keywords: [],
-          name: '@vielzeug/synthetic',
-          related: [],
-          slug: 'synthetic',
-          version: '1.0.0',
-        },
-      ],
-      schemaVersion: SCHEMA_VERSION,
-      version: '0.0.0',
-    };
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    const srv = createServer(syntheticData);
-
-    await srv.connect(serverTransport);
-
-    const client = new Client({ name: 'test-missing-page', version: '1.0.0' });
-
-    await client.connect(clientTransport);
-    activeClients.push(client);
-
-    const result = (await client.callTool({
-      arguments: { packageSlug: 'synthetic', page: 'examples' },
-      name: 'get-docs',
-    })) as ToolCallResult;
-
-    expect(result.isError).toBe(true);
-    expect(readText(result)).toMatch(/Available/);
-  });
-
-  it('list-components returns error when Sigil CEM is absent', async () => {
-    const dataWithNoSigil: BundledData = {
+  it('list-components returns isError when Sigil CEM is absent', async () => {
+    const noSigil: BundledData = {
       ...data,
       packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
     };
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    const srv = createServer(dataWithNoSigil);
-
-    await srv.connect(serverTransport);
-
-    const client = new Client({ name: 'test-no-sigil-list', version: '1.0.0' });
-
-    await client.connect(clientTransport);
-    activeClients.push(client);
-
-    const result = (await client.callTool({ arguments: {}, name: 'list-components' })) as ToolCallResult;
+    const { client } = await createTestPair(noSigil);
+    const result = await call(client, 'list-components');
 
     expect(result.isError).toBe(true);
-    expect(readText(result)).toContain('unavailable');
+    expect(text(result)).toContain('unavailable');
   });
 
-  it('get-component returns error when Sigil CEM is absent', async () => {
-    // components: [] causes ToolContext.components to be null (tools.ts checks length > 0)
-    const dataWithNoSigil: BundledData = {
+  it('get-component returns isError when Sigil CEM is absent', async () => {
+    const noSigil: BundledData = {
       ...data,
       packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
     };
-    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-    const srv = createServer(dataWithNoSigil);
-
-    await srv.connect(serverTransport);
-
-    const client = new Client({ name: 'test-no-sigil', version: '1.0.0' });
-
-    await client.connect(clientTransport);
-    activeClients.push(client);
-
-    const result = (await client.callTool({
-      arguments: { tagName: 'sg-button' },
-      name: 'get-component',
-    })) as ToolCallResult;
+    const { client } = await createTestPair(noSigil);
+    const result = await call(client, 'get-component', { tagName: 'sg-button' });
 
     expect(result.isError).toBe(true);
-    expect(readText(result)).toContain('unavailable');
-  });
-
-  it('search-packages returns error when query exceeds 500 chars', async () => {
-    const { client } = await createTestPair();
-    const longQuery = 'a'.repeat(501);
-
-    const result = (await client.callTool({
-      arguments: { query: longQuery },
-      name: 'search-packages',
-    })) as ToolCallResult;
-
-    expect(result.isError).toBe(true);
-    expect(readText(result)).toContain('500');
-  });
-
-  it('get-package requires packageSlug', async () => {
-    const { client } = await createTestPair();
-    const result = (await client.callTool({ arguments: {}, name: 'get-package' })) as ToolCallResult;
-
-    expect(result.isError).toBe(true);
+    expect(text(result)).toContain('unavailable');
   });
 });

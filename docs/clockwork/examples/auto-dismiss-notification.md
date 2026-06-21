@@ -14,12 +14,12 @@ Notifications that stay on screen indefinitely create visual clutter. You need a
 Use `after` on the `visible` state to schedule a delayed transition. Clockwork automatically cancels the timer when the state is exited:
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type Event = { type: 'DISMISS' } | { type: 'SHOW'; message: string };
 type Context = { message: string };
 
-const notification = machine({
+const notification = createMachine({
   context: { message: '' },
   initial: 'hidden',
   states: {
@@ -40,7 +40,7 @@ const notification = machine({
       on: { DISMISS: { target: 'hidden' } },
     },
   },
-});
+}).start();
 
 const m = notification;
 

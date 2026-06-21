@@ -71,7 +71,20 @@ export function createCourier(opts?: CourierOptions) {
 
   const api = createApi({ transport });
   const stream = createStream({ transport });
-  const queryClient = createQuery(queryOpts);
+
+  // Wire transport.dispatch into the query client so query fetches flow through
+  // the same interceptor pipeline as api/stream requests (auth, logging, etc.).
+  // The adapter converts the query fetch (url + AbortSignal) to a full dispatch call,
+  // merging global headers so interceptors that add per-request headers work correctly.
+  const transportFetch: typeof globalThis.fetch = (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    const { signal, ...restInit } = init ?? {};
+    const headers = Object.fromEntries(new Headers({ ...transport.getHeaders(), ...(init?.headers ?? {}) }).entries());
+
+    return transport.dispatch({ headers, init: { ...restInit, signal }, url });
+  };
+
+  const queryClient = createQuery({ ...queryOpts, fetch: transportFetch });
 
   return {
     api,
@@ -87,14 +100,17 @@ export function createCourier(opts?: CourierOptions) {
       return transport.disposalSignal;
     },
 
-    /** Permanently dispose the client. All in-flight requests are aborted. Idempotent. */
+    /**
+     * Permanently dispose the client. All in-flight requests, SSE connections,
+     * and query cache fetches are aborted. Idempotent.
+     */
     dispose(): void {
       transport.dispose();
       queryClient.dispose();
     },
 
     /** `true` after `dispose()` is called. */
-    get disposed() {
+    get disposed(): boolean {
       return transport.disposed;
     },
 

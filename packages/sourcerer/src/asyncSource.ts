@@ -1,3 +1,5 @@
+import type { SourceCore } from './core';
+
 import { createSourceCore } from './core';
 import { createFetchManager } from './fetchManager';
 import { defaultKeyOf, defaultRetryDelay } from './utils';
@@ -14,14 +16,14 @@ export type AsyncSourceConfig<TQuery> = Readonly<{
   retry?: { attempts?: number; delay?: (attempt: number) => number };
 }>;
 
-type FetchExecutor<TQuery> = (q: TQuery, signal: AbortSignal, isLatest: () => boolean) => Promise<void>;
+export type FetchExecutor<TQuery> = (q: TQuery, signal: AbortSignal, isLatest: () => boolean) => Promise<void>;
 
-type AsyncSourceInfra<TQuery> = {
+export type AsyncSourceInfra<TQuery> = {
   [Symbol.dispose](): void;
   /** `true` when `autoFetch !== false`. */
   readonly autoFetch: boolean;
-  /** Cancel any pending debounce timer. */
-  cancelTimer(): void;
+  /** The underlying SourceCore — use directly for subscribe, schedule, cancelTimer, flush, isScheduled. */
+  readonly core: SourceCore;
   /** Debounce delay in ms. */
   readonly debounceMs: number;
   /** `AbortSignal` aborted when `dispose()` is called. */
@@ -35,12 +37,6 @@ type AsyncSourceInfra<TQuery> = {
    * Calls `onCommit()` whenever pending count changes (for subscriber notification).
    */
   fetch(q: TQuery, execute: FetchExecutor<TQuery>, onCommit: () => void): Promise<void>;
-  /** Flush any pending debounce timer, immediately invoking `doUpdate`. */
-  flush(doUpdate: () => Promise<void>): Promise<void>;
-  /** `true` when a debounce timer is scheduled. */
-  isScheduled(): boolean;
-  /** Trigger the core notify, unblocking any ready() waiters. */
-  notify(): void;
   /** Number of currently in-flight requests. */
   pendingCount(): number;
   /** Resolves when idle (no in-flight requests, no pending debounce). */
@@ -49,16 +45,12 @@ type AsyncSourceInfra<TQuery> = {
   readonly retryAttempts: number;
   /** Returns the delay in ms before the nth retry. */
   readonly retryDelay: (attempt: number) => number;
-  /** Schedule `fn` to run after `delayMs` ms, cancelling any prior scheduled call. */
-  schedule(fn: () => void, delayMs: number): void;
   /**
    * Wire the refresh interval. Must be called once after construction, passing
    * the source-level `doUpdate` callback. Does nothing when `refreshInterval`
    * is unset or ≤ 0.
    */
   startRefreshInterval(doUpdate: () => void): void;
-  /** Subscribe to change notifications. Returns an unsubscribe function. */
-  subscribe(listener: () => void): () => void;
 };
 
 /**
@@ -67,13 +59,16 @@ type AsyncSourceInfra<TQuery> = {
  * fetch-manager setup, dispose, ready, flush, and refresh-interval logic.
  *
  * Each source factory composes this and adds its own query state, meta shape, and
- * source-specific methods.
+ * source-specific methods. Pass `onBeforeNotify` to run `refreshMeta()` before
+ * subscribers observe each notification — this eliminates the need for a parallel
+ * listeners Set in each source factory.
  */
 export function createAsyncSource<TQuery>(
   cfg: AsyncSourceConfig<TQuery>,
   keyOf: (q: TQuery) => string = defaultKeyOf as (q: TQuery) => string,
+  onBeforeNotify?: () => void,
 ): AsyncSourceInfra<TQuery> {
-  const core = createSourceCore();
+  const core = createSourceCore({ onBeforeNotify });
   const fm = createFetchManager<TQuery>(keyOf);
   const debounceMs = cfg.debounceMs ?? 300;
   const retryAttempts = cfg.retry?.attempts ?? 0;
@@ -96,7 +91,7 @@ export function createAsyncSource<TQuery>(
 
   return {
     autoFetch,
-    cancelTimer: () => core.cancelTimer(),
+    core,
     debounceMs,
     get disposalSignal() {
       return core.disposalSignal;
@@ -112,14 +107,6 @@ export function createAsyncSource<TQuery>(
       return fm.run(q, execute, onCommit);
     },
 
-    flush(doUpdate) {
-      return core.flush(doUpdate);
-    },
-
-    isScheduled: () => core.isScheduled,
-
-    notify: () => core.notify(),
-
     pendingCount: () => fm.pendingCount,
 
     ready(timeout) {
@@ -129,8 +116,6 @@ export function createAsyncSource<TQuery>(
 
     retryDelay,
 
-    schedule: (fn, delayMs) => core.schedule(fn, delayMs),
-
     startRefreshInterval(doUpdate) {
       if (cfg.refreshInterval !== undefined && cfg.refreshInterval > 0) {
         refreshTimer = setInterval(() => {
@@ -138,8 +123,6 @@ export function createAsyncSource<TQuery>(
         }, cfg.refreshInterval);
       }
     },
-
-    subscribe: (listener) => core.subscribe(listener),
 
     [Symbol.dispose]: dispose,
   };

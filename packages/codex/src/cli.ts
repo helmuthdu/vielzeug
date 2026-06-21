@@ -1,22 +1,28 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
+import { log } from './_log.js';
 import { loadData } from './data.js';
 import { startHttpServer } from './http.js';
-import { createServer } from './index.js';
 import { resolvePort } from './port.js';
+import { createServer } from './server.js';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function printUsage(): void {
-  process.stderr.write(
+  log(
     [
       'Usage: codex [--port <number>]',
       '',
       'Options:',
       '  --port <number>   Run streamable HTTP transport on the specified port.',
       '  -h, --help        Show this help message.',
-      '  -v, --version     Print bundled data version.',
-    ].join('\n') + '\n',
+      '  -v, --version     Print package version.',
+    ].join('\n'),
   );
 }
 
@@ -29,10 +35,12 @@ async function main(): Promise<void> {
     return;
   }
 
-  const data = loadData();
-
   if (argv.includes('--version') || argv.includes('-v')) {
-    process.stdout.write(`${data.version}\n`);
+    const pkgJson = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8')) as {
+      version: string;
+    };
+
+    process.stdout.write(`${pkgJson.version}\n`);
 
     return;
   }
@@ -42,11 +50,12 @@ async function main(): Promise<void> {
   try {
     ({ values } = parseArgs({ args: argv, options: { port: { type: 'string' } }, strict: true }));
   } catch (err) {
-    process.stderr.write(`error: ${err instanceof Error ? err.message : String(err)}\n`);
+    log(`error: ${err instanceof Error ? err.message : String(err)}`);
     printUsage();
     process.exit(1);
   }
 
+  const data = loadData();
   const port = resolvePort(values.port);
   const mcpServer = createServer(data);
 
@@ -54,12 +63,12 @@ async function main(): Promise<void> {
     let handle;
 
     try {
-      handle = await startHttpServer(mcpServer, port);
+      handle = await startHttpServer(mcpServer, port, () => createServer(data));
     } catch (err) {
       const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
       const detail = code === 'EADDRINUSE' ? `port ${port} is already in use.` : String(err);
 
-      process.stderr.write(`error: ${detail}\n`);
+      log(`error: ${detail}`);
       process.exit(1);
     }
 
@@ -78,7 +87,12 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
 
-  await mcpServer.connect(transport);
+  try {
+    await mcpServer.connect(transport);
+  } catch (err) {
+    log(`error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+  }
 }
 
 await main();

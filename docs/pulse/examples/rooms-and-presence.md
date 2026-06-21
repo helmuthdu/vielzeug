@@ -96,7 +96,7 @@ const [, , lobby] = await Promise.all([
 
 - **`presence()` implicitly joins the room.** You do not need to call `pulse.join()` separately for a room you are tracking with presence.
 - **`update()` sends the full state, not a patch.** Always include all fields on every update.
-- **Disposing the presence channel does not leave the server-side room.** The server receives a `leave` frame only if you call `pulse.leave(room)` directly.
+- **Disposing the presence channel sends a `leave` frame.** Calling `lobby.dispose()` tells the server you are leaving the room. If you want to stop client-side tracking without leaving the room, call `pulse.leave()` separately and let the server-side membership persist.
 - **`pulse.rooms` reflects server-confirmed membership.** The set is not updated until the server replies with a `joined` or `left` frame.
 
 ### Related

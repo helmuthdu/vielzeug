@@ -56,15 +56,14 @@ describe('persistQueryCache', () => {
     // No set() call — entry stays idle
     expect(Object.keys(storage.store)).toHaveLength(0);
 
-    // Trigger a fetch that will stay in-flight (pending state)
+    // Trigger a fetch that will stay in-flight (loading state)
     let resolveIt!: (v: unknown) => void;
     const fetchPromise = qc.fetch({
       fn: () => new Promise((r) => (resolveIt = r)),
       key: ['users', 1],
-      throwOnError: false,
     });
 
-    // Entry is now pending — must NOT be written to storage
+    // Entry is now loading — must NOT be written to storage
     expect(Object.keys(storage.store)).toHaveLength(0);
 
     resolveIt({ id: 1 });

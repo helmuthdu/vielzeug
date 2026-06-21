@@ -9,8 +9,6 @@ type PendingSearch = { promise: Promise<void>; resolve: () => void };
 /** Creates an infinite-scroll source that appends pages on `loadMore()`. */
 export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<T> {
   const keyOf = cfg.queryKey ?? defaultKeyOf;
-  const base = createAsyncSource<InfiniteSourceQuery>(cfg, keyOf);
-  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
 
   // ── Mutable state ───────────────────────────────────────────────────────────
   let limit = Math.max(1, Math.trunc(cfg.limit ?? 20));
@@ -36,8 +34,6 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
     totalItems: 0,
   };
 
-  const listeners = new Set<() => void>();
-
   const refreshMeta = () => {
     cachedCurrent = items;
     cachedMeta = {
@@ -45,22 +41,24 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       hasMore: items.length < total,
       isLoading: base.pendingCount() > 0 && !isLoadingMore,
       isLoadingMore,
-      isSearchPending: base.isScheduled(),
+      isSearchPending: base.core.isScheduled,
       loadedPages,
       pageSize: limit,
       totalItems: total,
     };
   };
 
+  // onBeforeNotify ensures refreshMeta() runs before any subscriber observes the new state,
+  // eliminating the need for a parallel listeners Set.
+  const base = createAsyncSource<InfiniteSourceQuery>(cfg, keyOf, refreshMeta);
+  const { autoFetch, debounceMs, retryAttempts, retryDelay } = base;
+
   refreshMeta();
 
   const notifyListeners = () => {
     if (base.disposed) return;
 
-    refreshMeta();
-    base.notify();
-
-    for (const l of listeners) l();
+    base.core.notify();
   };
 
   const resolvePendingSearch = () => {
@@ -196,12 +194,20 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       return doFetch();
     },
 
+    get query() {
+      return {
+        ...(search && { search }),
+        limit,
+        page: currentPage,
+      };
+    },
+
     ready(timeout) {
       return base.ready(timeout);
     },
 
     reset() {
-      base.cancelTimer();
+      base.core.cancelTimer();
       resolvePendingSearch();
       currentPage = 1;
       loadedPages = 0;
@@ -216,7 +222,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
       if (opts?.immediate) {
         if (q === search) return Promise.resolve();
 
-        base.cancelTimer();
+        base.core.cancelTimer();
         resolvePendingSearch();
         search = q;
         items = [];
@@ -244,47 +250,17 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
       pendingSearch = { promise, resolve: resolveSearch };
 
-      base.schedule(() => void doFetch(), debounceMs);
+      base.core.schedule(() => void doFetch(), debounceMs);
       notifyListeners();
 
       return promise;
     },
 
-    setLimit(n) {
-      const next = Math.max(1, Math.trunc(n));
-
-      if (next === limit) return Promise.resolve();
-
-      limit = next;
-      items = [];
-      total = 0;
-      currentPage = 1;
-      loadedPages = 0;
-
-      return doFetch();
-    },
-
-    subscribe: (listener) => {
-      if (base.disposed) return () => {};
-
-      listeners.add(listener);
-
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener) => base.core.subscribe(listener),
 
     [Symbol.dispose]: () => {
       resolvePendingSearch();
       base.dispose();
-    },
-
-    toQuery() {
-      return {
-        ...(search && { search }),
-        limit,
-        page: currentPage,
-      };
     },
   };
 }

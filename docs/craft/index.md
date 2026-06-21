@@ -5,7 +5,7 @@ package: craft
 category: ui-primitives
 keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
 related: [ripple, sigil, orbit]
-exports: [define, prop, html, css, ref, createContext, inject, injectStrict, useField, createFormContext, FORM_CONTEXT_KEY, syncAria, createId, createStableId, resetIdCounter, setRawSanitizer, CraftError]
+exports: [define, prop, html, css, ref, createContext, inject, injectStrict, useField, createFormContext, FORM_CONTEXT_KEY, createId, createStableId, resetIdCounter, setRawSanitizer, CraftError, BindOptions]
 environments: [browser]
 ---
 
@@ -127,9 +127,10 @@ define('my-counter', {
 - Props via `prop.*` helpers (`prop.string`, `prop.number`, `prop.bool`, `prop.oneOf`, `prop.json`, `prop.data`) or raw `PropDef` objects
 - Setup returns an `HTMLResult` directly: `return html\`...\``
 - Lifecycle hooks — `onMounted`, `onCleanup`, `onEvent`, `onElement`, `effect` — accessed through the setup context bag (`ctx`)
-- Directives: `each` (keyed + snapshot modes), `classMap`, `styleMap`, `when`, `model`, `raw`
-- Host bindings via `bind({ attr, class, style, on })` from setup context bag
-- Form-associated helpers: `useField()`, `createFormContext()`, and `syncAria()` — first-class public APIs for form-aware components
+- Directives: `each` (keyed reactive list rendering), `classMap`, `styleMap`, `when`, `model`, `raw`
+- Host bindings via `ctx.bind({ attr, class, style, on })` — pass `{ target: el }` to bind any off-host element
+- Reactive ARIA sync via `ctx.aria(target, config)` — applies `aria-*` attributes reactively to any element, auto-cleanup on disconnect
+- Form-associated helpers: `useField()`, `createFormContext()` — first-class public APIs for form-aware components
 - Observers (`@vielzeug/craft/observers`)
 - Testing utilities (`@vielzeug/craft/testing`) — `mount`, `renderHook`, `fire`, `user`, `waitFor`, `cleanup`
 - Debug utilities (`@vielzeug/craft/devtools`) — `debugFlush()` for diagnosing update timing

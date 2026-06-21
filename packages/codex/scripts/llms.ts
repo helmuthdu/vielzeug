@@ -1,4 +1,5 @@
-import type { BundledData, BundledPackage, DocPage } from './types.js';
+// .ts extension required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+import type { BundledData, BundledPackage, DocPage } from '../src/types.ts';
 
 // ---------------------------------------------------------------------------
 // Markup stripping

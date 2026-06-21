@@ -14,7 +14,7 @@ You need an authentication flow that limits brute-force attempts, performs an as
 Use guards to block the `LOGIN` transition after three failed attempts, and `invoke` in `loading` to perform the async login call. The attempt counter accumulates in context so the guard has access on every retry.
 
 ```ts
-import { machine, resolveTransition } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type State = 'authenticated' | 'error' | 'loading' | 'unauthenticated';
 type Context = { attempts: number; token: string };
@@ -24,7 +24,7 @@ type Event =
   | { token: string; type: 'AUTH_SUCCESS' }
   | { type: 'AUTH_FAILED' };
 
-const authConfig = {
+const authDef = createMachine({
   context: { attempts: 0, token: '' },
   initial: 'unauthenticated',
   states: {
@@ -103,18 +103,18 @@ const authConfig = {
       },
     },
   },
-};
+});
 
-const m = machine(authConfig);
+const m = authDef.start();
 ```
 
-### Testing guards with `resolveTransition`
+### Testing guards with `.resolve()`
 
 ```ts
 import { expect, test } from 'vitest';
 
 test('allows login with fewer than 3 attempts', () => {
-  const result = resolveTransition(authConfig, {
+  const result = authDef.resolve({
     context: { attempts: 2, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -123,7 +123,7 @@ test('allows login with fewer than 3 attempts', () => {
 });
 
 test('blocks login after 3 attempts', () => {
-  const result = resolveTransition(authConfig, {
+  const result = authDef.resolve({
     context: { attempts: 3, token: '' },
     event: { email: 'a@b.com', password: 'x', type: 'LOGIN' },
     state: 'unauthenticated',
@@ -141,5 +141,5 @@ test('blocks login after 3 attempts', () => {
 ### Related
 
 - [Data Fetching with Error Recovery](./data-fetching.md) — Simpler invoke pattern
-- [Unit Testing with `resolveTransition()`](./unit-testing.md) — Pure guard testing
+- [Unit Testing with `.resolve()`](./unit-testing.md) — Pure guard testing
 - [API Reference — `GuardFn`](/clockwork/api#guardfnctx-ev)

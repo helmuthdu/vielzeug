@@ -57,6 +57,21 @@ await reqI18n.setLocale(req.locale);
 await reqI18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default)); // loads for req.locale only; no-op if already loaded
 ```
 
+To pass the server-rendered locale state to the client, use `getState()` and `restoreState()`:
+
+```ts
+import { createI18n } from '@vielzeug/lingua';
+
+// Server
+const state = sharedI18n.getState();
+// Embed in the HTML response:
+// <script>window.__I18N__ = ${JSON.stringify(state)}</script>
+
+// Client
+const clientI18n = createI18n();
+clientI18n.restoreState(window.__I18N__);
+```
+
 ### Pitfalls
 
 - Do not call `t()` or `tp()` before `await reqI18n.setLocale(locale)` completes. Until then the instance is on the default locale and will return English strings regardless of the requested locale.

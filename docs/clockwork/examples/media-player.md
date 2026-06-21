@@ -14,7 +14,7 @@ A media player needs to handle loading audio, playing, pausing, seeking, and vol
 Use entry/exit actions for side effects (log playback state), `invoke` for async loading with onDone/onError handlers, and guard-free transitions for simple control changes like seeking.
 
 ```ts
-import { machine } from '@vielzeug/clockwork';
+import { createMachine } from '@vielzeug/clockwork';
 
 type PlayerContext = {
   url: string;
@@ -32,7 +32,7 @@ type PlayerEvent =
   | { type: 'LOADED'; duration: number }
   | { type: 'ERROR'; error: string };
 
-const playerMachine = machine({
+const playerMachine = createMachine({
   initial: 'idle',
   context: { url: '', currentTime: 0, duration: 0, volume: 100 },
   states: {
@@ -152,7 +152,7 @@ const playerMachine = machine({
       },
     },
   },
-});
+}).start();
 
 const player = playerMachine;
 

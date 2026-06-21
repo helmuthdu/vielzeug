@@ -14,7 +14,7 @@ You need a multi-step form wizard that survives page refreshes — the user shou
 Use `PersistenceAdapter` with `sessionStorage` (or `localStorage` for longer-lived persistence). The machine auto-hydrates from the stored snapshot on startup, then saves after each transition.
 
 ```ts
-import { define, type MachineSnapshot } from '@vielzeug/clockwork';
+import { createMachine, type MachineSnapshot } from '@vielzeug/clockwork';
 
 type State = 'confirm' | 'details' | 'info' | 'success';
 type Context = { details: string; email: string; name: string };
@@ -24,7 +24,7 @@ type Event =
   | { email: string; name: string; type: 'SUBMIT_INFO' }
   | { type: 'CONFIRM' };
 
-const wizardDef = define({
+const wizardDef = createMachine({
   context: { details: '', email: '', name: '' },
   initial: 'info',
   states: {

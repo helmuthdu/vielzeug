@@ -11,7 +11,7 @@ You need to discover which Vielzeug packages are available, what documentation p
 
 ### Solution
 
-Call `list-packages` without arguments to get the full catalog, or pass `packageSlug` to retrieve a single package as a one-item array.
+Call `list-packages` without arguments to get the full catalog. To fetch a single entry, use `get-package` with `packageSlug`.
 
 ```json
 { "name": "list-packages", "arguments": {} }
@@ -34,18 +34,18 @@ Result excerpt:
 ]
 ```
 
-#### Filter to one package
+#### Fetch a single package
 
-Pass `packageSlug` to get a single-item array. The return type is always an array.
+Use `get-package` with `packageSlug` to fetch one entry by slug. Returns a `PackageMeta` object (not an array).
 
 ```json
-{ "name": "list-packages", "arguments": { "packageSlug": "ripple" } }
+{ "name": "get-package", "arguments": { "packageSlug": "ripple" } }
 ```
 
 ### Pitfalls
 
 - The result never includes `docs` content or `apiSource` — call `get-docs` or `get-source` separately.
-- An unknown `packageSlug` returns `isError: true`, not an empty array. Check the available slugs listed in the error before retrying.
+- For `get-package`, an unknown `packageSlug` returns `isError: true` with available slugs listed. Check before retrying.
 - `availableDocPages` varies per package; always check it before calling `get-docs` with a specific page.
 
 ### Related
@@ -53,3 +53,4 @@ Pass `packageSlug` to get a single-item array. The return type is always an arra
 - [Searching Packages](./searching-packages.md)
 - [Reading Docs](./reading-docs.md)
 - [API Reference — list-packages](../api.md#list-packages)
+- [API Reference — get-package](../api.md#get-package)

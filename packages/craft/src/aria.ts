@@ -1,13 +1,12 @@
 /**
- * Reactive ARIA attribute sync utility.
+ * Reactive ARIA attribute sync — internal implementation.
  *
- * `syncAria(target, config, options?)` — reactively syncs ARIA attributes to a target element.
- * Static values are applied once; getter functions are tracked as reactive effects.
+ * Public surface: `ctx.aria(target, config)` on the SetupContextBag.
+ * For off-component usage (e.g. floating trigger callbacks), use `ctx.bind({ attr: {...} }, { target: el })`.
  */
 
 import { effect as rawEffect, isSignal, type Readable } from '@vielzeug/ripple';
 
-import { isDev, warn } from './_warn';
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
 
@@ -15,10 +14,6 @@ type AriaScalar = string | number | boolean | null | undefined;
 type AriaValue = AriaScalar | (() => AriaScalar) | Readable<AriaScalar>;
 
 export type AriaConfig = Record<string, AriaValue>;
-
-export type SyncAriaOptions = {
-  autoCleanup?: boolean;
-};
 
 const setA11yAttr = (target: Element, key: string, value: string | number | boolean | null | undefined): void => {
   if (value == null || value === false) {
@@ -30,21 +25,8 @@ const setA11yAttr = (target: Element, key: string, value: string | number | bool
   target.setAttribute(key, value === true ? 'true' : String(value));
 };
 
-/**
- * Reactively syncs ARIA attributes to a target element.
- * Static values are set immediately; getter functions are tracked as effects.
- * Returns a cleanup function that removes all reactive bindings.
- *
- * This is the low-level utility. Inside a component setup, prefer `ctx.aria(element, config)`
- * which auto-registers cleanup with `onCleanup`.
- *
- * @example
- * // Outside setup context (e.g. floating trigger callbacks):
- * const cleanup = syncAria(element, { expanded: () => isOpen.value }, { autoCleanup: false });
- * onCleanup(cleanup);
- */
-export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaOptions = {}): (() => void) => {
-  const { autoCleanup = true } = options;
+/** @internal Apply aria config to a target element, returning a cleanup fn. */
+const applyAriaConfig = (target: Element, config: AriaConfig): (() => void) => {
   const disposers: Array<() => void> = [];
 
   for (const [rawKey, rawValue] of Object.entries(config)) {
@@ -69,35 +51,22 @@ export const syncAria = (target: Element, config: AriaConfig, options: SyncAriaO
     setA11yAttr(target, key, rawValue);
   }
 
-  const cleanup = () => {
+  return () => {
     while (disposers.length > 0) disposers.pop()?.();
   };
-
-  if (autoCleanup) {
-    const registered = tryRegisterCleanup(cleanup);
-
-    if (!registered && isDev) {
-      warn(
-        'syncAria() called with autoCleanup:true but no active setup context. ' +
-          'Effects will leak unless you call the returned cleanup function manually.',
-      );
-    }
-  }
-
-  return cleanup;
 };
 
 /**
- * Create an `aria()` function bound to a specific `onCleanup` registration.
- * Used by `context-bag.ts` to produce `ctx.aria(element, config)`.
- * @internal
+ * Create an `aria()` function scoped to a component's lifecycle.
+ * Cleanup is auto-registered with `onCleanup` when inside a setup context.
+ * @internal — consumed by context-bag.ts to produce `ctx.aria(target, config)`.
  */
 export const createAriaFn =
-  (registerCleanup: (fn: () => void) => void) =>
+  () =>
   (target: Element, config: AriaConfig): (() => void) => {
-    const cleanup = syncAria(target, config, { autoCleanup: false });
+    const cleanup = applyAriaConfig(target, config);
 
-    registerCleanup(cleanup);
+    tryRegisterCleanup(cleanup);
 
     return cleanup;
   };

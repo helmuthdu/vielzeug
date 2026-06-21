@@ -1,4 +1,4 @@
-export { applyCursorQuery, applyInfiniteQuery, applyLocalQuery, applyQuery, applyRemoteQuery } from './applyQuery';
+export { applyQuery } from './applyQuery';
 export { decodeQuery, encodeQuery } from './codecs';
 export type { DecodeQueryOptions } from './codecs';
 export { createCursorSource } from './cursorSource';
@@ -6,10 +6,8 @@ export { deriveSource } from './derive';
 export { createInfiniteSource } from './infiniteSource';
 export { createLocalSource } from './localSource';
 export { mergeSource } from './merge';
-export { composeFetch } from './middleware';
-export type { FetchMiddleware } from './middleware';
 export { itemRange } from './pagination';
-export { prefetchSource } from './prefetch';
+export { prefetchSource, prefetchSourceAndKeep } from './prefetch';
 export { filterContains, filterEquals, filterRange, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { sourceState } from './state';

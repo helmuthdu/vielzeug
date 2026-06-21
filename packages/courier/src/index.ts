@@ -29,7 +29,10 @@ export type { PersistOptions, PersistStorage } from './persist';
 
 // Query client
 export { createQuery } from './query';
-export type { ObserveOptions, QueryClient, QueryClientOptions, QueryFnContext, QueryOptions } from './query';
+export type { ObserveOptions, QueryClient, QueryClientOptions, QueryFn, QueryFnContext, QueryOptions } from './query';
+
+// SyncStore adapter utility — convert a Mutation or QueryClient store to a plain SyncStore
+export { toSyncStore } from './sync-store';
 
 // Response parsing
 export type { ResponseType } from './response';

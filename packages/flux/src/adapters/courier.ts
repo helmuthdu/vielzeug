@@ -36,38 +36,6 @@ export function fromSse<TEvents extends Record<string, unknown>, K extends keyof
 }
 
 /**
- * Create a `Flux` from an `AsyncIterable<string>` — e.g. from `streamClient.readable()`.
- * Completes when the iterable is exhausted; errors on rejection.
- *
- * @example
- * const chunks$ = fromReadable(stream.readable('/completions'));
- * chunks$.subscribe((chunk) => process.stdout.write(chunk));
- */
-export function fromReadable<T = string>(source: AsyncIterable<T>): Flux<T> {
-  return flux<T>((observer) => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        for await (const chunk of source) {
-          if (cancelled) break;
-
-          observer.next(chunk);
-        }
-
-        if (!cancelled) observer.complete?.();
-      } catch (err) {
-        if (!cancelled) observer.error?.(err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  });
-}
-
-/**
  * Create a `Flux` from a courier `SyncStore` (returned by `qc.observe()`).
  * Emits the current state immediately, then on every state change.
  *

@@ -38,13 +38,13 @@ describe('Mutation', () => {
       const addUser = createMutation(async () => ({ id: 1 }));
 
       const states: MutationState[] = [];
-      const unsub = addUser.store.subscribe(() => states.push({ ...addUser.store.peek() }));
+      const unsub = addUser.subscribe(() => states.push({ ...addUser.peek() }));
 
       await addUser.mutate(undefined);
       unsub();
 
-      // store.subscribe() fires on each state change — first notification is 'pending'
-      expect(states.map((s) => s.status)).toEqual(['pending', 'success']);
+      // subscribe() fires on each state change — first notification is 'loading'
+      expect(states.map((s) => s.status)).toEqual(['loading', 'success']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
       expect(states[1].data).toEqual({ id: 1 });
@@ -57,12 +57,12 @@ describe('Mutation', () => {
 
       const states: MutationState[] = [];
 
-      fail.store.subscribe(() => states.push({ ...fail.store.peek() }));
+      fail.subscribe(() => states.push({ ...fail.peek() }));
 
       await expect(fail.mutate(undefined)).rejects.toThrow('Server error');
 
-      // store.subscribe() fires on each state change — first notification is 'pending'
-      expect(states.map((s) => s.status)).toEqual(['pending', 'error']);
+      // subscribe() fires on each state change — first notification is 'loading'
+      expect(states.map((s) => s.status)).toEqual(['loading', 'error']);
       expect(states[0].isFetching).toBe(true);
       expect(states[1].isFetching).toBe(false);
       expect(states[1].error?.message).toContain('Server error');
@@ -88,7 +88,7 @@ describe('Mutation', () => {
 
       ac.abort();
       await expect(promise).rejects.toThrow('Aborted');
-      expect(slow.getState().status).toBe('idle');
+      expect(slow.peek().status).toBe('loading');
     });
 
     it('supports cancellation via mutation.cancel()', async () => {
@@ -108,7 +108,7 @@ describe('Mutation', () => {
 
       await slow.cancel();
       await expect(promise).rejects.toThrow('Aborted');
-      expect(slow.getState().status).toBe('idle');
+      expect(slow.peek().status).toBe('loading');
     });
 
     it('allows concurrent calls and keeps state from the latest run', async () => {
@@ -130,12 +130,12 @@ describe('Mutation', () => {
 
       resolveFirst('first-result');
       await expect(first).resolves.toBe('first-result');
-      expect(mutation.getState().status).toBe('pending');
-      expect(mutation.getState().isFetching).toBe(true);
+      expect(mutation.peek().status).toBe('loading');
+      expect(mutation.peek().isFetching).toBe(true);
 
       resolveSecond('second-result');
       await expect(second).resolves.toBe('second-result');
-      expect(mutation.getState()).toMatchObject({ data: 'second-result', status: 'success' });
+      expect(mutation.peek()).toMatchObject({ data: 'second-result', status: 'success' });
     });
 
     it('reset() returns state to idle with no data or error', async () => {
@@ -144,7 +144,7 @@ describe('Mutation', () => {
       await mutation.mutate(undefined);
 
       mutation.reset();
-      expect(mutation.getState()).toMatchObject({ data: undefined, error: null, isFetching: false, status: 'idle' });
+      expect(mutation.peek()).toMatchObject({ data: undefined, error: null, isFetching: false, status: 'loading' });
     });
   });
 
@@ -291,15 +291,16 @@ describe('Mutation', () => {
     });
   });
 
-  describe('External Store (store property)', () => {
-    it('peek() returns idle state before any mutate()', () => {
+  describe('External Store (peek / subscribe)', () => {
+    it('peek() returns loading state before any mutate()', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
 
-      expect(mutation.store.peek()).toEqual({
+      expect(mutation.peek()).toEqual({
         data: undefined,
         error: null,
         isFetching: false,
-        status: 'idle',
+        isLoading: false,
+        status: 'loading',
         updatedAt: undefined,
       });
     });
@@ -314,16 +315,16 @@ describe('Mutation', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
       const snapshots: MutationState[] = [];
 
-      const unsub = mutation.store.subscribe(() => {
-        snapshots.push({ ...mutation.store.peek() });
+      const unsub = mutation.subscribe(() => {
+        snapshots.push({ ...mutation.peek() });
       });
 
       await mutation.mutate(undefined);
 
-      expect(snapshots.map((s) => s.status)).toEqual(['pending', 'success']);
+      expect(snapshots.map((s) => s.status)).toEqual(['loading', 'success']);
       expect(snapshots[0].isFetching).toBe(true);
       expect(snapshots[1].isFetching).toBe(false);
-      expect(mutation.store.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
+      expect(mutation.peek()).toMatchObject({ data: { id: 1 }, status: 'success' });
 
       unsub();
     });
@@ -332,7 +333,7 @@ describe('Mutation', () => {
       const mutation = createMutation(async () => ({ id: 1 }));
       let notifications = 0;
 
-      const unsub = mutation.store.subscribe(() => {
+      const unsub = mutation.subscribe(() => {
         notifications++;
       });
 
@@ -406,10 +407,10 @@ describe('Mutation', () => {
       // If activeRun is stale, cancel() would abort a finished controller —
       // this test verifies the promise settles without hanging.
       await expect(mutation.cancel()).resolves.toBeUndefined();
-      expect(mutation.getState().status).toBe('success');
+      expect(mutation.peek().status).toBe('success');
     });
 
-    it('getState() is idle after cancel() clears an in-flight mutation', async () => {
+    it('peek() is loading after cancel() clears an in-flight mutation', async () => {
       const mutation = createMutation(
         (_: void, signal: AbortSignal) =>
           new Promise<string>((_resolve, reject) => {
@@ -423,7 +424,7 @@ describe('Mutation', () => {
 
       await running.catch(() => {});
 
-      expect(mutation.getState().status).toBe('idle');
+      expect(mutation.peek().status).toBe('loading');
     });
   });
 

@@ -1,3 +1,4 @@
+import { TimeoutError } from '../errors';
 import { createPulse } from '../pulse';
 
 // ─── MockWebSocket ─────────────────────────────────────────────────────────────
@@ -1265,23 +1266,45 @@ describe('createPulse — D1: channel re-subscription on reconnect', () => {
     pulse.dispose();
   });
 
-  it('does not send unsubscribe when a second same-name channel is still alive', () => {
+  it('channel() returns the same object for the same name (memoized)', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const ch1 = pulse.channel('shared');
+    const ch2 = pulse.channel('shared');
+
+    expect(ch1).toBe(ch2);
+
+    pulse.dispose();
+  });
+
+  it('channel() returns a new object after the previous one is disposed', () => {
     const { pulse, ws } = setup();
 
     ws.open();
 
     const ch1 = pulse.channel('shared');
 
-    pulse.channel('shared');
     ch1.dispose();
 
-    const unsub = ws.sentMessages.find((m) => {
-      const parsed = JSON.parse(m) as { channel?: string; type: string };
+    const ch2 = pulse.channel('shared');
 
-      return parsed.type === 'unsubscribe' && parsed.channel === 'shared';
-    });
+    expect(ch1).not.toBe(ch2);
 
-    expect(unsub).toBeUndefined();
+    pulse.dispose();
+  });
+
+  it('channel() exposes disposalSignal aborted when disposed', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const ch = pulse.channel('events');
+
+    expect(ch.disposalSignal.aborted).toBe(false);
+    ch.dispose();
+    expect(ch.disposalSignal.aborted).toBe(true);
 
     pulse.dispose();
   });
@@ -1369,6 +1392,161 @@ describe('createPulse — C1: presence disposed warnings', () => {
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('onLeave()'));
 
     warnSpy.mockRestore();
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — lazy option', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('does not open a WebSocket until connect() is called when lazy: true', () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', { lazy: true });
+
+    expect(MockWebSocket.instances).toHaveLength(0);
+
+    pulse.dispose();
+  });
+
+  it('connect() opens the socket when lazy: true', async () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', { lazy: true });
+    const connectPromise = pulse.connect();
+
+    const ws = MockWebSocket.instances[0]!;
+
+    ws.open();
+    await connectPromise;
+
+    expect(pulse.status.value).toBe('open');
+
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — buffer option', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('queues send() calls while disconnected and flushes them on open', async () => {
+    MockWebSocket.instances = [];
+
+    const pulse = createPulse('ws://test', { buffer: true, lazy: true });
+
+    pulse.send('hello', 'world');
+    pulse.send('hello', 'again');
+
+    const connectPromise = pulse.connect();
+    const ws = MockWebSocket.instances[0]!;
+
+    ws.open();
+    await connectPromise;
+
+    const hellos = ws.sentMessages.filter((m) => {
+      const parsed = JSON.parse(m) as { event?: string };
+
+      return parsed.event === 'hello';
+    });
+
+    expect(hellos).toHaveLength(2);
+
+    pulse.dispose();
+  });
+
+  it('drops messages when buffer is disabled (default)', () => {
+    MockWebSocket.instances = [];
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pulse = createPulse('ws://test', { lazy: true });
+
+    pulse.send('hello', 'dropped');
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('message dropped'));
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — join() timeout', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it('rejects with TimeoutError when timeout elapses before server confirms', async () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const joinPromise = pulse.join('room', { timeout: 100 });
+    const assertion = expect(joinPromise).rejects.toBeInstanceOf(TimeoutError);
+
+    await vi.advanceTimersByTimeAsync(150);
+    await assertion;
+
+    pulse.dispose();
+  });
+});
+
+describe('createPulse — presence dispose', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockWebSocket);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('presence.dispose() sends a leave frame to the server', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const pres = pulse.presence('lobby');
+
+    pres.dispose();
+
+    const leaveFrame = ws.sentMessages.find((m) => {
+      const parsed = JSON.parse(m) as { room?: string; type: string };
+
+      return parsed.type === 'leave' && parsed.room === 'lobby';
+    });
+
+    expect(leaveFrame).toBeDefined();
+
+    pulse.dispose();
+  });
+
+  it('presence.disposalSignal aborts when presence is disposed', () => {
+    const { pulse, ws } = setup();
+
+    ws.open();
+
+    const pres = pulse.presence('lobby');
+
+    expect(pres.disposalSignal.aborted).toBe(false);
+    pres.dispose();
+    expect(pres.disposalSignal.aborted).toBe(true);
+
     pulse.dispose();
   });
 });

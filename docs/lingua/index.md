@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, serializeI18n, hydrateI18n, createFormatter, LinguaError, E, validateCatalog]
+exports: [createI18n, serializeI18n, hydrateI18n, createFormatter, LinguaError, E, validateCatalog, registerNamespace, loadNamespace, getState, restoreState]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -28,7 +28,7 @@ const i18n = createI18n({ locale: 'de', fallback: 'en', catalogs: messages });
 const greeting = i18n.t('greeting', { name: 'Alice' });
 ```
 
-- Minimal API: `t`, `tp`, `extend`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `subscribe`, `has`, `isLoaded`, `isRegistered`, `dispose`, `getSupportedLocales`
+- Minimal API: `t`, `tp`, `extend`, `registerNamespace`, `loadNamespace`, `preload`, `setLocale`, `register`, `scope`, `fork`, `getSnapshot`, `getState`, `restoreState`, `subscribe`, `has`, `isLoaded`, `isRegistered`, `isNamespaceLoaded`, `isNamespaceRegistered`, `dispose`, `getSupportedLocales`
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
@@ -44,7 +44,7 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 | Async locale preload              | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 | Namespace lazy loading            | <sg-icon name="check" size="16"></sg-icon> (`extend()`)                | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
 | Runtime snapshots + subscriptions | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| External formatter bridge         | <sg-icon name="check" size="16"></sg-icon> (`@vielzeug/lingua/format`) | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
+| External formatter bridge         | <sg-icon name="check" size="16"></sg-icon> (`createFormatter` in main entry) | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
 | Framework agnostic                | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
 | Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
 
@@ -77,8 +77,7 @@ yarn add @vielzeug/lingua
 ## Quick Start
 
 ```ts
-import { createI18n } from '@vielzeug/lingua';
-import { createFormatter } from '@vielzeug/lingua/format';
+import { createFormatter, createI18n } from '@vielzeug/lingua';
 
 const i18n = createI18n({
   locale: 'en',
@@ -96,7 +95,6 @@ const i18n = createI18n({
   },
 });
 
-await i18n.preload('fr');
 await i18n.setLocale('fr');
 
 const greeting = i18n.t('greeting', { name: 'Alice' });
@@ -132,7 +130,7 @@ i18n.getSupportedLocales();
 - One runtime primitive: `createI18n(options)`
 - Explicit translation methods: `t(leafKey, vars?)` and `tp(branchKey, count, options?)`
 - Explicit locale lifecycle: `register`, `preload`, `setLocale`
-- Namespace lazy loading: `extend(ns, factory, locale?)` registers and immediately loads a partial catalog — deduplicates per `ns + locale`; use for per-route or per-feature keys
+- Namespace lazy loading: `registerNamespace(ns, factory)` + `loadNamespace(ns, locale?)` — or use `extend(ns, factory, locale?)` as a convenience that does both; deduplicates per `ns + locale`; use for per-route or per-feature keys
 - Scoped translation helpers: `scope(prefix)` returns a `{ fmt, t, tp, has }` helper bound to a key prefix
 - Unified key existence check: `has(key)` returns `true` for leaf keys, branch keys, and pipe-plural base keys in the active fallback chain
 - Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `serializeI18n()` guards
@@ -143,7 +141,7 @@ i18n.getSupportedLocales();
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales
 - Separate missing handlers: `onMissingKey(key, locale)` and `onMissingVar(varName, key, locale)`
-- Formatting kept separate via `createFormatter(source)` from `@vielzeug/lingua/format`
+- Formatting via `createFormatter(source)` — exported from the main entry alongside `createI18n`
 
 </div>
 

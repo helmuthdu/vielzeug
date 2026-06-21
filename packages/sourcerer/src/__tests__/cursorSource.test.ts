@@ -1,4 +1,3 @@
-import { applyCursorQuery } from '../applyQuery';
 import { createCursorSource } from '../cursorSource';
 
 describe('createCursorSource', () => {
@@ -192,7 +191,7 @@ describe('createCursorSource', () => {
     });
   });
 
-  describe('setLimit()', () => {
+  describe('patch({ limit })', () => {
     it('changes page size and re-fetches, resetting cursors', async () => {
       const fetch = vi.fn(async () => ({ items: ['a', 'b'], nextCursor: 'n1', total: 10 }));
       const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
@@ -200,9 +199,9 @@ describe('createCursorSource', () => {
       await source.refresh();
       expect(fetch).toHaveBeenCalledTimes(1);
 
-      await source.setLimit(10);
+      await source.patch({ limit: 10 });
 
-      expect(source.toQuery().limit).toBe(10);
+      expect(source.query.limit).toBe(10);
       expect(fetch).toHaveBeenCalledTimes(2);
     });
 
@@ -214,20 +213,18 @@ describe('createCursorSource', () => {
 
       const callsBefore = fetch.mock.calls.length;
 
-      await source.setLimit(10);
+      await source.patch({ limit: 10 });
 
       expect(fetch.mock.calls.length).toBe(callsBefore);
     });
-  });
 
-  describe('setLimit / search via applyCursorQuery', () => {
-    it('setLimit fetches with new limit', async () => {
+    it('fetches with new limit', async () => {
       const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], nextCursor: 'n1', total: 6 }));
       const source = createCursorSource({ autoFetch: false, fetch, limit: 2 });
 
-      await source.setLimit(3);
+      await source.patch({ limit: 3 });
 
-      expect(source.toQuery().limit).toBe(3);
+      expect(source.query.limit).toBe(3);
       expect(fetch).toHaveBeenCalledTimes(1);
     });
 
@@ -241,17 +238,8 @@ describe('createCursorSource', () => {
 
       await source.search('hello', { immediate: true });
 
-      expect(source.toQuery().search).toBe('hello');
+      expect(source.query.search).toBe('hello');
       expect(source.current).toEqual(['found-hello']);
-    });
-
-    it('setLimit is a no-op when limit does not change', async () => {
-      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
-      const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
-
-      await source.setLimit(10);
-
-      expect(fetch).not.toHaveBeenCalled();
     });
   });
 
@@ -383,41 +371,6 @@ describe('createCursorSource', () => {
   });
 });
 
-describe('applyCursorQuery', () => {
-  it('applies limit to cursor source', async () => {
-    const fetch = vi.fn(async () => ({ items: ['a', 'b', 'c'], nextCursor: 'n1', total: 3 }));
-    const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
-
-    await applyCursorQuery(source, { limit: 3 });
-
-    expect(source.toQuery().limit).toBe(3);
-    expect(fetch).toHaveBeenCalledTimes(1);
-  });
-
-  it('applies search to cursor source', async () => {
-    const fetch = vi.fn(async ({ search }: { search?: string }) => ({
-      items: search ? [`found-${search}`] : ['all'],
-      nextCursor: undefined,
-      total: 1,
-    }));
-    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
-
-    await applyCursorQuery(source, { search: 'hello' });
-
-    expect(source.toQuery().search).toBe('hello');
-    expect(source.current).toEqual(['found-hello']);
-  });
-
-  it('no-op when patch is empty', async () => {
-    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
-    const source = createCursorSource({ autoFetch: false, fetch, limit: 10 });
-
-    await applyCursorQuery(source, {});
-
-    expect(fetch).not.toHaveBeenCalled();
-  });
-});
-
 describe('createCursorSource — patch()', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.restoreAllMocks());
@@ -444,7 +397,7 @@ describe('createCursorSource — patch()', () => {
 
     await source.patch({ limit: 2 });
 
-    expect(source.toQuery()).not.toHaveProperty('after');
+    expect(source.query).not.toHaveProperty('after');
   });
 
   it('patch({ search }) resets cursors and triggers fetch', async () => {
@@ -458,8 +411,8 @@ describe('createCursorSource — patch()', () => {
     await source.next();
     await source.patch({ search: 'q' });
 
-    expect(source.toQuery()).not.toHaveProperty('after');
-    expect(source.toQuery().search).toBe('q');
+    expect(source.query).not.toHaveProperty('after');
+    expect(source.query.search).toBe('q');
   });
 
   it('patch({ limit }) no-op when same value', async () => {

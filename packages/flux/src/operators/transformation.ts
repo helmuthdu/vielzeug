@@ -101,7 +101,7 @@ export function flatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
     flux<B>((observer) => {
       let outerDone = false;
       let activeInner = 0;
-      const innerUnsubs: Unsubscribe[] = [];
+      const innerUnsubs = new Set<Unsubscribe>();
 
       const checkDone = (): void => {
         if (outerDone && activeInner === 0) observer.complete?.();
@@ -116,22 +116,29 @@ export function flatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
         next(v) {
           activeInner++;
 
-          const unsub = fn(v).subscribe({
+          let syncDone = false;
+          // Init to NOOP to avoid TDZ if complete fires synchronously during subscribe().
+          let unsub: Unsubscribe = () => {};
+
+          const sub = fn(v).subscribe({
             complete() {
+              syncDone = true;
               activeInner--;
+              innerUnsubs.delete(unsub);
               checkDone();
             },
             error: observer.error,
             next: observer.next,
           });
 
-          innerUnsubs.push(unsub);
+          unsub = sub;
+
+          if (!syncDone) innerUnsubs.add(unsub);
         },
       });
 
       return () => {
         outerUnsub();
-
         for (const u of innerUnsubs) u();
       };
     });
@@ -140,8 +147,9 @@ export function flatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
 /**
  * Map each source value to an inner `Flux`, subscribing to each one only after
  * the previous inner completes (sequential, queued).
+ * Pass `maxBuffer` to cap queued items; excess items are dropped silently.
  */
-export function concatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
+export function concatMap<A, B>(fn: (value: A) => Flux<B>, maxBuffer = Infinity): Operator<A, B> {
   return (source) =>
     flux<B>((observer) => {
       let outerDone = false;
@@ -181,9 +189,11 @@ export function concatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
         },
         error: observer.error,
         next(v) {
-          queue.push(v);
+          if (queue.length < maxBuffer) {
+            queue.push(v);
 
-          if (!processing) processNext();
+            if (!processing) processNext();
+          }
         },
       });
 
@@ -273,11 +283,15 @@ export function bufferCount<T>(size: number, every?: number): Operator<T, T[]> {
 
           for (const buf of buffers) buf.push(v);
 
-          const full = buffers.filter((b) => b.length === safeSize);
+          let i = 0;
 
-          for (const buf of full) {
-            observer.next(buf);
-            buffers.splice(buffers.indexOf(buf), 1);
+          while (i < buffers.length) {
+            if (buffers[i]!.length >= safeSize) {
+              observer.next(buffers[i]!);
+              buffers.splice(i, 1);
+            } else {
+              i++;
+            }
           }
 
           count++;

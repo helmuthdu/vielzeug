@@ -20,6 +20,10 @@ export default defineConfig(
           external: ['@vielzeug/ripple', '@vielzeug/herald', '@vielzeug/pulse', '@vielzeug/courier'],
         },
       },
+      define: {
+        // Set to true in production builds so _warn.ts dev-only warnings are stripped.
+        __FLUX_PROD__: 'import.meta.env.PROD',
+      },
     },
   ),
 );

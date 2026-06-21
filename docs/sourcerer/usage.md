@@ -59,10 +59,9 @@ createLocalSource(data, {
 ### Mutations
 
 ```ts
-await source.setFilter((user) => user.role === 'admin');
-await source.setSort((a, b) => a.name.localeCompare(b.name));
 await source.search('ada', { immediate: true }); // cancels debounce and awaits the result
 void source.search('ada'); // debounced — resolves after debounceMs + recompute
+await source.patch({ filter: (u) => u.role === 'admin', sort: (a, b) => a.name.localeCompare(b.name) });
 await source.patch({ search: 'ada', limit: 5 }); // apply multiple changes in one recompute
 await source.goTo(2);
 await source.setData(newUsers); // replace entire dataset
@@ -71,13 +70,13 @@ await source.reset(); // restore initial filter/sort, reset to page 1
 
 ### Restoring from URL state
 
-Use `applyLocalQuery()` to restore URL-decoded state — it applies each field sequentially so limit resets happen before page navigation.
+Use `applyQuery()` + `decodeQuery()` to restore URL-decoded state in a single atomic recompute.
 
 ```ts
-import { applyLocalQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 10 });
-await applyLocalQuery(source, query);
+await applyQuery(source, query);
 ```
 
 ## Remote Source
@@ -146,8 +145,6 @@ fetch: async ({ filter, limit, page, search, sort }, signal) => {
 ### Mutations
 
 ```ts
-await source.setFilter({ role: 'admin' });
-await source.setSort({ by: 'name', dir: 'asc' });
 await source.search('ada', { immediate: true });
 void source.search('ada'); // debounced — resolves after debounceMs + fetch
 await source.patch({ search: 'ada', filter: { role: 'admin' }, limit: 25 }); // atomic — one fetch
@@ -161,14 +158,14 @@ await source.refresh(); // re-fetch current query
 
 ### Restoring from URL state
 
+`applyQuery()` is a no-op when `changes` is empty — safe to call on every page load.
+
 ```ts
-import { applyRemoteQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await applyRemoteQuery(source, query);
+await applyQuery(source, query);
 ```
-
-`applyRemoteQuery()` is a no-op when `patch` is empty — safe to call on every page load.
 
 ### Optimistic updates
 
@@ -270,13 +267,13 @@ await source.reset(); // clear all, restart from page 1
 
 ### Restoring from URL state
 
-Use `applyInfiniteQuery()` to restore `limit` and `search` from URL params. It clears accumulated items and refetches from page 1 if any value changed.
+Use `applyQuery()` + `decodeQuery()` to restore `limit` and `search`. `patch()` clears accumulated items and refetches from page 1 if any value changed.
 
 ```ts
-import { applyInfiniteQuery, decodeQuery } from '@vielzeug/sourcerer';
+import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
-await applyInfiniteQuery(source, { limit: query.limit, search: query.search });
+await applyQuery(source, { limit: query.limit, search: query.search });
 ```
 
 ## Error Handling
@@ -404,17 +401,17 @@ All sources implement `[Symbol.dispose]()`. Use the TC39 `using` declaration to 
 import { decodeQuery, encodeQuery } from '@vielzeug/sourcerer';
 
 // Serialize current state
-const params = encodeQuery(source.toQuery());
+const params = encodeQuery(source.query);
 // -> { page: '2', limit: '25', search: 'ada', filter: '{"role":"admin"}' }
 
 // Restore from URLSearchParams directly
 const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 25 });
-await applyRemoteQuery(source, query);
+await applyQuery(source, query);
 ```
 
 `decodeQuery` is fault-tolerant by default — malformed `filter`/`sort` JSON is silently dropped. Pass `{ strict: true }` to throw instead.
 
-`search` is omitted from both `toQuery()` and `decodeQuery()` output when no search is active (no `search: ''` noise in URLs).
+`search` is omitted from both `source.query` and `decodeQuery()` output when no search is active (no `search: ''` noise in URLs).
 
 ## SSR Prefetch
 
@@ -436,42 +433,15 @@ const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
 
 `prefetchSource()` throws a `SourceError` if the fetch fails. Handle it server-side before embedding the snapshot.
 
-To get both the snapshot and a live source without a double-fetch, pass `{ keepSource: true }`:
+To get both the snapshot and a live source without a double-fetch, use `prefetchSourceAndKeep()`:
 
 ```ts
-import { prefetchSource } from '@vielzeug/sourcerer';
+import { prefetchSourceAndKeep } from '@vielzeug/sourcerer';
 
-const { snapshot, source } = await prefetchSource({ fetch: fetchUsers, limit: 20 }, { keepSource: true });
+const { snapshot, source } = await prefetchSourceAndKeep({ fetch: fetchUsers, limit: 20 });
 // Use snapshot for SSR HTML embedding, source for subsequent client-side updates
 // Caller is responsible for calling source.dispose()
 source.dispose();
-```
-
-## Fetch Middleware
-
-`composeFetch()` layers middleware around any `fetch`-shaped function. Middlewares execute left-to-right (first = outermost).
-
-```ts
-import { composeFetch } from '@vielzeug/sourcerer';
-
-const fetchWithMiddleware = composeFetch(
-  baseApiFetch,
-  loggingMiddleware, // runs first
-  retryMiddleware, // runs second
-);
-```
-
-Each middleware has the signature `(q, signal, next) => Promise<TResult>`:
-
-```ts
-import type { FetchMiddleware } from '@vielzeug/sourcerer';
-
-const loggingMiddleware: FetchMiddleware = async (q, signal, next) => {
-  console.log('fetch', q);
-  const result = await next(q, signal);
-  console.log('done', q);
-  return result;
-};
 ```
 
 ## Framework Integration
@@ -602,8 +572,8 @@ effect(() => {
 - Pass the `AbortSignal` from the `fetch` callback to your HTTP client so superseded requests are cancelled.
 - Call `ready()` in server-side rendering or test setup — not in every render cycle.
 - Always call the unsubscribe function returned by `subscribe()` when the component is torn down.
-- For URL sync, use `decodeQuery()` + `apply*Query()` rather than reconstructing source state from params manually.
+- For URL sync, use `decodeQuery()` + `applyQuery()` rather than reconstructing source state from params manually.
 - Use `staleTime` with `refreshInterval` for stale-while-revalidate patterns on dashboards.
 - Only one `optimisticUpdate()` can be active at a time — always handle the thrown error or check before calling.
 - When using `decodeQuery()`, validate the parsed `filter` and `sort` with a type guard before passing to the server — they are returned as-is without runtime validation.
-- For infinite sources, use `applyInfiniteQuery({ limit, search })` for URL state sync — `page` is not restorable since items accumulate across pages.
+- For infinite sources, pass `{ limit: query.limit, search: query.search }` to `applyQuery()` for URL state sync — `page` is not restorable since items accumulate across pages.

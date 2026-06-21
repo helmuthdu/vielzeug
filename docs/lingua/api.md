@@ -15,7 +15,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.extend()`          | Register and immediately load a namespace                                          | Async          | Deduplicates per `ns + locale`; new factory updates registry but does not reload; throws synchronously if disposed |
 | `i18n.setLocale()`       | Switch the active locale                                                           | Async          | Await before rendering; throws if locale is not registered                                                         |
 | `i18n.preload()`         | Pre-load a locale catalog without switching                                        | Async          | Locale must be registered first                                                                                    |
-| `i18n.register()`        | Replace a locale's full catalog at runtime                                         | Sync           | Replaces entirely — use `extend()` to add keys without replacing                                                   |
+| `i18n.register()`              | Register or replace a locale source; loads it immediately                          | Async          | Returns `Promise<void>`; awaiting ensures the catalog is ready before rendering                                    |
 | `i18n.scope()`           | Return a prefix-bound `{ fmt, t, tp, has }` helper                                 | Sync           | Memoized per prefix — same object returned for same prefix string                                                  |
 | `i18n.fork()`            | Create an isolated child instance from current state                               | Sync           | Catalog snapshot is copied; post-fork extend() calls are independent                                               |
 | `i18n.has()`             | Check if a leaf or branch key exists in the active chain                           | Sync           | Returns `true` for branch keys and pipe-plural base keys                                                           |
@@ -25,20 +25,24 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.dispose()`         | Release all subscribers and catalog state                                          | Sync           | After disposal, `t()` falls back to `onMissingKey` for every key                                                   |
 | `i18n.disposed`          | `true` after `dispose()` is called                                                 | Sync getter    | —                                                                                                                  |
 | `i18n[Symbol.dispose]()` | Delegates to `dispose()`                                                           | Sync           | Enables `using` declarations                                                                                       |
-| `serializeI18n()`        | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
-| `hydrateI18n()`          | Hydrate a client instance from server-serialised state                             | Sync           | Throws `[lingua/E006]` if `state.locale` has no catalog                                                            |
-| `LinguaError` / `E`      | Typed error class and error-code constants                                         | —              | All runtime errors are `instanceof LinguaError`; use `E.*` for stable codes                                        |
-| `createFormatter()`      | Create a standalone Intl formatter                                                 | Sync           | Pass a getter `() => i18n.locale` to follow locale changes                                                         |
-| `validateCatalog()`      | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
+| `i18n.registerNamespace()` | Register a namespace factory without loading                                       | Sync           | Call `loadNamespace()` when ready to load, or use `extend()` for register+load in one call                         |
+| `i18n.loadNamespace()`    | Load a registered namespace for a locale                                           | Async          | Deduplicates concurrent and repeated calls; throws if namespace not registered                                      |
+| `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
+| `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
+| `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Equivalent to `serializeI18n(i18n)` — preferred for public API access                                              |
+| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(state, i18n)` — preferred for public API access; throws `[lingua/E006]` if locale missing |
+| `serializeI18n()`         | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
+| `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `[lingua/E006]` if `state.locale` has no catalog                                                            |
+| `LinguaError` / `E`       | Typed error class and error-code constants                                         | —              | All runtime errors are `instanceof LinguaError`; use `E.*` for stable codes                                        |
+| `createFormatter()`       | Create a standalone Intl formatter                                                 | Sync           | Exported from main entry — pass a getter `() => i18n.locale` to follow locale changes                              |
+| `validateCatalog()`       | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
 
 ## Package Entry Points
 
-| Import                      | Purpose                                                       |
-| --------------------------- | ------------------------------------------------------------- |
-| `@vielzeug/lingua`          | Main exports and types                                        |
-| `@vielzeug/lingua/format`   | `createFormatter` and related types                           |
-| `@vielzeug/lingua/validate` | `validateCatalog` — dev/CI only, exclude from prod            |
-| `@vielzeug/lingua/testing`  | `clearCaches` — test isolation only, never import in app code |
+| Import                      | Purpose                                                    |
+| --------------------------- | ---------------------------------------------------------- |
+| `@vielzeug/lingua`          | Main exports and types, includes `createFormatter`         |
+| `@vielzeug/lingua/validate` | `validateCatalog` — dev/CI only, exclude from prod         |
 
 ## createI18n
 
@@ -92,18 +96,24 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | `extend(ns, factory, locale?)`  | `(ns: string, factory: NamespaceFactory<M>, locale?: Locale) => Promise<void>`            | Register a namespace factory and immediately load it for `locale` (defaults to active locale). Deduplicates per `ns + locale`. |
 | `preload(locale)`               | `(locale: Locale) => Promise<void>`                                                       | Load a catalog without switching the active locale.                                                                            |
 | `setLocale(locale)`             | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and notify subscribers. On load failure, locale is unchanged.                                      |
-| `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => void`                                       | Replace the full catalog for a locale. Use `extend()` to add keys without replacing.                                           |
+| `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                              | Register or replace a locale source. Returns a Promise that resolves when loading is complete. Async loaders start immediately. |
+| `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory<M>) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger, or `extend()` to do both.                     |
+| `loadNamespace(ns, locale?)`    | `(ns: string, locale?: Locale) => Promise<void>`                                          | Load a registered namespace for `locale` (defaults to active locale). Deduplicates concurrent and repeated calls.             |
 | `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Memoized per prefix — same object reference for the same prefix string.    |
 | `fork(overrides?)`              | `(overrides?: Omit<I18nOptions<M>, 'catalogs'>) => I18n<M>`                               | Create an isolated child instance from the current catalog snapshot.                                                           |
+| `getState()`                    | `() => I18nState`                                                                         | Extract a serializable snapshot of loaded catalogs and the active locale.                                                      |
+| `restoreState(state)`           | `(state: I18nState) => void`                                                              | Hydrate this instance from serialized state. Clears namespace markers. Notifies subscribers.                                   |
 | `has(key)`                      | `(key: MessageLeafKeys<M> \| MessageBranchKeys<M> \| string) => boolean`                  | Check if a leaf or branch key exists in the active fallback chain.                                                             |
 | `isLoaded(locale)`              | `(locale: Locale) => boolean`                                                             | Return `true` if the catalog for `locale` is fully resolved. Never throws.                                                     |
 | `isRegistered(locale)`          | `(locale: Locale) => boolean`                                                             | Return `true` if `locale` is in the known registry (resolved **or** pending loader). Never throws.                             |
+| `isNamespaceLoaded(ns, locale?)` | `(ns: string, locale?: Locale) => boolean`                                               | Return `true` if the namespace is loaded for `locale` (defaults to active locale). Never throws.                               |
+| `isNamespaceRegistered(ns)`     | `(ns: string) => boolean`                                                                 | Return `true` if a namespace factory is registered under `ns`. Never throws.                                                   |
 | `disposalSignal`                | `AbortSignal`                                                                             | Aborted when `dispose()` is called.                                                                                            |
 | `dispose()`                     | `() => void`                                                                              | Release all subscribers, catalogs, loaders, and namespace state. Idempotent.                                                   |
 | `disposed`                      | `boolean`                                                                                 | `true` after `dispose()` has been called.                                                                                      |
 | `[Symbol.dispose]()`            | `() => void`                                                                              | Delegates to `dispose()`. Enables `using` declarations.                                                                        |
 | `getSupportedLocales(sorted?)`  | `(sorted?: boolean) => Locale[]`                                                          | Return all registered locales.                                                                                                 |
-| `getSnapshot()`                 | `() => I18nSnapshot`                                                                      | Return the current `{ locale }` snapshot. Object identity changes on each observable change.                                   |
+| `getSnapshot()`                 | `() => I18nSnapshot`                                                                      | Return the current `{ locale, t, tp }` snapshot. Object identity changes on each observable change.                           |
 | `subscribe(callback, options?)` | `(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions) => Unsubscribe` | Subscribe to changes. Supports `{ immediate, signal }`. Already-aborted signal skips registration.                             |
 
 **Properties:**
@@ -167,6 +177,92 @@ await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.j
 ```
 
 Throws `LinguaError(E.DISPOSED)` synchronously if called on a disposed instance.
+
+### `registerNamespace()`
+
+```ts
+registerNamespace(ns: string, factory: NamespaceFactory<M>): void
+```
+
+Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading when needed, or use `extend()` to register and load in one call.
+
+Re-registering a namespace updates the factory for future loads but does **not** reload if the namespace is already loaded. The new factory takes effect the next time the namespace marker is cleared (by a `register()` or `restoreState()` call).
+
+Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+
+### `loadNamespace()`
+
+```ts
+loadNamespace(ns: string, locale?: Locale): Promise<void>
+```
+
+Loads a registered namespace for `locale` (defaults to the active locale). Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
+
+Throws if the namespace has not been registered with `registerNamespace()` first.
+Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+
+```ts
+i18n.registerNamespace('settings', (locale) =>
+  import(`./locales/${locale}/settings.json`).then((m) => m.default),
+);
+
+// Load on demand (e.g. when the settings route is activated)
+await i18n.loadNamespace('settings');
+```
+
+### `isNamespaceLoaded()`
+
+```ts
+isNamespaceLoaded(ns: string, locale?: Locale): boolean
+```
+
+Returns `true` if the namespace `ns` has been fully loaded for `locale` (defaults to active locale). Returns `false` if not registered, not yet loaded for this locale, or if the instance is disposed. Never throws.
+
+### `isNamespaceRegistered()`
+
+```ts
+isNamespaceRegistered(ns: string): boolean
+```
+
+Returns `true` if a namespace factory has been registered under `ns` via `registerNamespace()` or `extend()`. Returns `false` otherwise. Never throws.
+
+### `getState()`
+
+```ts
+getState(): I18nState
+```
+
+Extracts a serializable snapshot of all **fully loaded** catalogs and the active locale. Equivalent to `serializeI18n(i18n)` but preferred because it is called directly on the instance without requiring an import.
+
+**Warning:** Only fully resolved catalogs are included. Loader-only locales not yet preloaded are omitted. Use `i18n.isLoaded(locale)` to verify before calling.
+
+```ts
+const state = i18n.getState();
+// JSON.stringify(state) and send to client
+```
+
+### `restoreState()`
+
+```ts
+restoreState(state: I18nState): void
+```
+
+Hydrates this instance from an `I18nState` produced by `getState()` or `serializeI18n()`. Equivalent to `hydrateI18n(state, i18n)` but preferred because it is called directly on the instance.
+
+- Replaces all catalogs with those from `state`.
+- Sets the active locale to `state.locale`.
+- Clears all namespace loaded-markers so that `extend()` / `loadNamespace()` can re-apply namespaces.
+- Notifies subscribers.
+
+Throws `LinguaError(E.RESTORE_NO_LOCALE)` if `state.locale` has no catalog in `state.catalogs`.
+Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+
+```ts
+// Client — restore server-rendered state
+const i18n = createI18n();
+
+i18n.restoreState(window.__I18N_STATE__);
+```
 
 ### `scope()`
 
@@ -427,7 +523,7 @@ if (warnings.length > 0) throw new Error(`Missing plural forms:\n${JSON.stringif
 ## createFormatter
 
 ```ts
-import { createFormatter } from '@vielzeug/lingua/format';
+import { createFormatter } from '@vielzeug/lingua';
 
 createFormatter(source: string | (() => string)): Formatter
 ```
@@ -445,7 +541,7 @@ Creates an Intl formatter. Pass a static locale string or a getter that reads th
 **Example:**
 
 ```ts
-import { createFormatter } from '@vielzeug/lingua/format';
+import { createFormatter } from '@vielzeug/lingua';
 
 // Follows locale changes automatically
 const fmt = createFormatter(() => i18n.locale);
@@ -496,10 +592,12 @@ type I18nOptions<M extends Messages = Messages> = {
 ```ts
 type I18nSnapshot = {
   readonly locale: Locale;
+  readonly t: (key: string, vars?: TranslateVars) => string;
+  readonly tp: (key: string, count: number, options?: TpOptions) => string;
 };
 ```
 
-Object identity changes on every observable change — use as a change-detection sentinel.
+Object identity changes on every observable change — use as a change-detection sentinel. The `t` and `tp` accessors are bound to the same translation functions as the instance, making the snapshot a self-contained translation unit suitable for passing to framework components.
 
 ### `I18nState`
 
@@ -510,7 +608,7 @@ type I18nState = {
 };
 ```
 
-Produced by `serializeI18n()` and consumed by `hydrateI18n()`. Catalogs are stored as flat dot-notation maps.
+Produced by `getState()` / `serializeI18n()` and consumed by `restoreState()` / `hydrateI18n()`. Catalogs are stored as flat dot-notation maps.
 
 ### `NamespaceFactory<M>`
 
@@ -518,7 +616,7 @@ Produced by `serializeI18n()` and consumed by `hydrateI18n()`. Catalogs are stor
 type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
 ```
 
-Factory passed to `extend()`. Receives the target locale and must return a `Promise<M>` with the namespace messages for that locale.
+Factory passed to `registerNamespace()` / `extend()`. Receives the target locale and must return a `Promise<M>` with the namespace messages for that locale.
 
 ### `TpOptions`
 

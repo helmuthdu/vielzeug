@@ -2,6 +2,25 @@
 export type Unsubscribe = () => void;
 
 /**
+ * Minimal time-scheduling abstraction for operators that depend on timers.
+ * Inject a custom implementation in tests to control time without relying on
+ * global fake-timer mechanisms (`vi.useFakeTimers()`).
+ *
+ * @example
+ * const testScheduler: Scheduler = {
+ *   delay(fn, ms) { ... },
+ *   repeat(fn, ms) { ... },
+ * };
+ * debounce(300, testScheduler);
+ */
+export type Scheduler = {
+  /** Schedule `fn` to run once after `ms` milliseconds. Returns a cancel function. */
+  delay(fn: () => void, ms: number): () => void;
+  /** Schedule `fn` to run repeatedly every `ms` milliseconds. Returns a cancel function. */
+  repeat(fn: () => void, ms: number): () => void;
+};
+
+/**
  * Observer passed to a producer or `subscribe()`.
  * `error` and `complete` are optional — omit them to ignore those signals.
  */
@@ -27,19 +46,16 @@ export type Producer<T> = (observer: Observer<T>) => Unsubscribe | void;
  */
 export type Operator<A = unknown, B = unknown> = (source: Flux<A>) => Flux<B>;
 
-/** Options accepted by the `flux()` factory. Reserved for future use. */
-export type FluxOptions = Record<never, never>;
-
 /**
  * The core stream primitive. Lazy (cold) by default — each `subscribe()` invocation
  * starts its own producer. Use `.pipe(share())` to multicast to many subscribers.
  */
 export interface Flux<T> {
-  /** `true` after `dispose()` is called. New subscriptions are no-ops after disposal. */
+  /** `true` after `dispose()` is called. New subscriptions receive an immediate `complete` notification. */
   readonly disposed: boolean;
   /** AbortSignal that aborts when `dispose()` is called. */
   readonly disposalSignal: AbortSignal;
-  /** Permanently terminates this stream and cancels all active subscriptions. */
+  /** Permanently terminates this stream. All active subscribers receive a `complete` notification. */
   dispose(): void;
   /**
    * Apply one or more operators in sequence. Each operator receives the output
@@ -54,8 +70,21 @@ export interface Flux<T> {
    * Subscribe to values emitted by this stream.
    * Accepts either a full `Observer<T>` object or a plain `next` function.
    * Returns an unsubscribe function — call it to stop receiving values.
+   * Pass an optional `AbortSignal` to unsubscribe automatically when the signal aborts.
+   * If the stream is already disposed, the observer receives an immediate `complete` notification.
    */
-  subscribe(observerOrNext: Observer<T> | ((value: T) => void)): Unsubscribe;
+  subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe;
+  /**
+   * Consume the stream as an async iterator.
+   * Buffers incoming values until consumed.
+   * Calling `return()` on the iterator (or exiting a `for await` loop early) unsubscribes from the source.
+   *
+   * @example
+   * for await (const value of source$) {
+   *   console.log(value);
+   * }
+   */
+  [Symbol.asyncIterator](): AsyncIterableIterator<T>;
   /** ES2026 `using` compatible disposal. Delegates to `dispose()`. */
   [Symbol.dispose](): void;
 }

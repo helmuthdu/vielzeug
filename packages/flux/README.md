@@ -42,7 +42,7 @@ const messages = toSignal(
 import { fromSignal, toSignal } from '@vielzeug/flux';   // ripple
 import { fromBus, toBus } from '@vielzeug/flux';          // herald
 import { fromPulse, fromPresence } from '@vielzeug/flux'; // pulse
-import { fromSse, fromReadable, fromQuery } from '@vielzeug/flux'; // courier
+import { fromSse, fromQuery } from '@vielzeug/flux'; // courier
 ```
 
 ## License

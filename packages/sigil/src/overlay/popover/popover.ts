@@ -1,4 +1,4 @@
-import { createStableId, define, html, prop, syncAria } from '@vielzeug/craft';
+import { createStableId, define, html, prop } from '@vielzeug/craft';
 import { type Placement } from '@vielzeug/orbit';
 import { computed } from '@vielzeug/ripple';
 
@@ -92,7 +92,7 @@ define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { el, emit, onCleanup, onMounted, slots }) {
+  setup(props, { aria, el, emit, onCleanup, onMounted, slots }) {
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const panelId = createStableId('popover');
@@ -101,16 +101,12 @@ define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
 
     const floating = useFloatingTrigger({
       bindTriggerAria: (triggerEl) =>
-        syncAria(
-          triggerEl,
-          {
-            controls: () => panelId,
-            disabled: () => String(isDisabled.value),
-            expanded: () => String(floating.visible.value),
-            haspopup: 'dialog',
-          },
-          { autoCleanup: false },
-        ),
+        aria(triggerEl, {
+          controls: () => panelId,
+          disabled: () => String(isDisabled.value),
+          expanded: () => String(floating.visible.value),
+          haspopup: 'dialog',
+        }),
       disabled: isDisabled,
       getPanel: () => panelEl,
       offset: props.offset,

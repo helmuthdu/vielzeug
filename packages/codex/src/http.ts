@@ -1,8 +1,11 @@
 import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createServer as createHttpServer } from 'node:http';
+
+import { log } from './_log.js';
 
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader('access-control-allow-headers', 'content-type, mcp-session-id');
@@ -10,48 +13,22 @@ function setCorsHeaders(res: ServerResponse): void {
   res.setHeader('access-control-allow-origin', '*');
 }
 
-function handleError(err: unknown, res: ServerResponse): void {
+function handleError(err: unknown, res: ServerResponse, req?: IncomingMessage): void {
   const message = err instanceof Error ? err.message : String(err);
 
-  if (!res.headersSent) {
-    res.statusCode = 500;
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-  }
+  if (res.headersSent) {
+    const ctx = req ? ` [${req.method} ${req.url}]` : '';
 
-  if (!res.writableEnded) {
-    res.end(JSON.stringify({ error: message }));
-  } else {
-    process.stderr.write(`MCP HTTP error (unwritten to client): ${message}\n`);
-  }
-}
+    log(`MCP HTTP error (mid-stream${ctx}): ${message}`);
 
-async function handleRequest(
-  transport: StreamableHTTPServerTransport,
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> {
-  setCorsHeaders(res);
-
-  if (req.method === 'OPTIONS') {
-    res.statusCode = 204;
-    res.end();
+    if (!res.writableEnded) res.end();
 
     return;
   }
 
-  if (req.method === 'GET' && req.url === '/health') {
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-    res.end(JSON.stringify({ status: 'ok' }));
-
-    return;
-  }
-
-  try {
-    await transport.handleRequest(req, res);
-  } catch (err) {
-    handleError(err, res);
-  }
+  res.statusCode = 500;
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify({ error: message }));
 }
 
 export interface HttpServerHandle {
@@ -59,15 +36,88 @@ export interface HttpServerHandle {
   [Symbol.asyncDispose](): Promise<void>;
 }
 
-export async function startHttpServer(mcpServer: Server, port: number): Promise<HttpServerHandle> {
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  const httpServer = createHttpServer();
+/**
+ * Builds the HTTP request handler as a pure function — testable without binding a port.
+ * Exported for use in integration tests.
+ */
+export function createRequestHandler(
+  streamableTransport: StreamableHTTPServerTransport,
+  sseSessions: Map<string, SSEServerTransport>,
+  createSseServer: () => Server,
+): (req: IncomingMessage, res: ServerResponse) => void {
+  return (req, res) => {
+    setCorsHeaders(res);
 
-  await mcpServer.connect(transport);
+    const url = req.url ?? '/';
 
-  httpServer.on('request', (req, res) => {
-    void handleRequest(transport, req, res);
-  });
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+
+      return;
+    }
+
+    if (req.method === 'GET' && url === '/health') {
+      res.statusCode = 200;
+      res.setHeader('content-type', 'application/json; charset=utf-8');
+      res.end(JSON.stringify({ status: 'ok' }));
+
+      return;
+    }
+
+    // Legacy SSE: open a new SSE stream (each connection gets its own Server instance).
+    if (req.method === 'GET' && url === '/sse') {
+      const transport = new SSEServerTransport('/message', res);
+      const sseServer = createSseServer();
+
+      const cleanup = (): void => {
+        sseSessions.delete(transport.sessionId);
+      };
+
+      sseSessions.set(transport.sessionId, transport);
+      transport.onclose = cleanup;
+
+      void sseServer.connect(transport);
+
+      return;
+    }
+
+    // Legacy SSE: receive a client message.
+    if (req.method === 'POST' && url.startsWith('/message')) {
+      const sessionId = new URL(url, 'http://localhost').searchParams.get('sessionId') ?? '';
+      const session = sseSessions.get(sessionId);
+
+      if (!session) {
+        res.statusCode = 404;
+        res.end(JSON.stringify({ error: 'Session not found' }));
+
+        return;
+      }
+
+      void session.handlePostMessage(req, res).catch((err) => handleError(err, res, req));
+
+      return;
+    }
+
+    // Streamable HTTP (spec-compliant clients).
+    void streamableTransport.handleRequest(req, res).catch((err) => handleError(err, res, req));
+  };
+}
+
+export async function startHttpServer(
+  mcpServer: Server,
+  port: number,
+  createSseServer: () => Server,
+): Promise<HttpServerHandle> {
+  // Legacy SSE sessions keyed by sessionId (for older MCP clients like Windsurf).
+  const sseSessions = new Map<string, SSEServerTransport>();
+
+  // Streamable HTTP transport (spec-compliant, newer clients).
+  const streamableTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+  await mcpServer.connect(streamableTransport);
+
+  const httpServer = createHttpServer(createRequestHandler(streamableTransport, sseSessions, createSseServer));
 
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error): void => reject(err);
@@ -75,7 +125,9 @@ export async function startHttpServer(mcpServer: Server, port: number): Promise<
     httpServer.once('error', onError);
     httpServer.listen(port, () => {
       httpServer.off('error', onError);
-      process.stderr.write(`codex MCP server listening on http://localhost:${port}/\n`);
+      log(`codex MCP server listening on http://localhost:${port}/`);
+      log(`  SSE (legacy):       GET  http://localhost:${port}/sse`);
+      log(`  Streamable HTTP:    POST http://localhost:${port}/`);
       resolve();
     });
   });
@@ -84,9 +136,7 @@ export async function startHttpServer(mcpServer: Server, port: number): Promise<
     dispose(): Promise<void> {
       return new Promise<void>((resolve) => {
         httpServer.closeAllConnections?.();
-        httpServer.close(() => {
-          resolve();
-        });
+        httpServer.close(() => resolve());
       });
     },
     [Symbol.asyncDispose](): Promise<void> {
