@@ -2,7 +2,7 @@
 
 ## Project
 
-**Vielzeug** is monorepo of **25 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
+**Vielzeug** is monorepo of **26 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
 
 ## Key conventions
 
@@ -120,6 +120,7 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/pulse`     | WebSockets | Typed WebSocket client with channels, rooms, presence, reconnect   |
 | `@vielzeug/ripple`    | State      | Reactive signals, computed, effects, stores                        |
 | `@vielzeug/rune`      | Logging    | Structured scoped logger with remote transport                     |
+| `@vielzeug/scout`     | Utilities  | Trigram fuzzy-search index with highlighting and reactive layer    |
 | `@vielzeug/scroll`    | UI         | Virtual list engine for large datasets                             |
 | `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
 | `@vielzeug/sourcerer` | Data       | Reactive data sources with pagination and search                   |
@@ -143,6 +144,7 @@ forge      → arsenal, ripple
 orbit      → arsenal, ripple
 prism      → orbit, ripple
 pulse      → ripple
+scout      → ripple
 scroll     → ripple
 sigil      → arsenal, craft, dnd, orbit, ripple, scroll, tempo
 sourcerer  → arsenal, ripple

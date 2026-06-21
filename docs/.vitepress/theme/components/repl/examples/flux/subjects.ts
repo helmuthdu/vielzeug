@@ -1,5 +1,5 @@
 export const subjectsExample = {
-  code: `import { createSubject, createBehaviorSubject } from '@vielzeug/flux'
+  code: `import { createSubject, createBehaviorSubject, createReplaySubject } from '@vielzeug/flux'
 
 // Subject — hot multicast, no replay
 const events = createSubject()
@@ -19,11 +19,23 @@ count.emit(1)
 count.emit(2)
 
 // Late subscriber immediately receives 2
-count.subscribe((v) => console.log('late:', v))  // late: 2
+count.subscribe((v) => console.log('count late:', v))  // count late: 2
+count.emit(3)  // count late: 3
 
-count.emit(3)  // late: 3
+// ReplaySubject — replays last N values to every new subscriber
+const log = createReplaySubject(3)
+
+log.emit('msg1')
+log.emit('msg2')
+log.emit('msg3')
+log.emit('msg4')  // buffer is [msg2, msg3, msg4]
+
+// Late subscriber receives the last 3 buffered values
+log.subscribe((v) => console.log('log late:', v))
+// log late: msg2  msg3  msg4
 
 count.dispose()
-events.dispose()`,
+events.dispose()
+log.dispose()`,
   name: 'Subjects',
 };

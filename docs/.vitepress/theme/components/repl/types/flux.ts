@@ -14,49 +14,60 @@ declare module '@vielzeug/flux' {
 
   export type Producer<T> = (observer: Observer<T>) => Unsubscribe | void;
 
-  export type FluxOptions = Record<string, never>;
-
   export interface Flux<T> {
-    subscribe(observerOrNext: Observer<T> | ((value: T) => void)): Unsubscribe;
+    readonly disposed: boolean;
+    readonly disposalSignal: AbortSignal;
+    subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe;
     pipe(): Flux<T>;
     pipe<A>(op1: Operator<T, A>): Flux<A>;
     pipe<A, B>(op1: Operator<T, A>, op2: Operator<A, B>): Flux<B>;
     pipe<A, B, C>(op1: Operator<T, A>, op2: Operator<A, B>, op3: Operator<B, C>): Flux<C>;
     pipe<A, B, C, D>(op1: Operator<T, A>, op2: Operator<A, B>, op3: Operator<B, C>, op4: Operator<C, D>): Flux<D>;
     dispose(): void;
+    [Symbol.dispose](): void;
   }
 
   export interface Subject<T> extends Flux<T> {
     emit(value: T): void;
     complete(): void;
-    error(err: unknown): void;
+    fail(err: unknown): void;
   }
 
   export interface BehaviorSubject<T> extends Subject<T> {
     readonly value: T;
   }
 
-  export type BehaviorSubjectOptions<T> = {
-    equals?: (a: T, b: T) => boolean;
+  export interface ReplaySubject<T> extends Subject<T> {
+    readonly buffer: readonly T[];
+  }
+
+  export type ToSignalOptions<T> = {
+    initial: T;
+    signal?: AbortSignal;
   };
 
-  export type ShareOptions = Record<string, never>;
+  export interface SignalBinding<T> {
+    readonly value: T;
+    readonly disposed: boolean;
+    readonly disposalSignal: AbortSignal;
+    dispose(): void;
+    [Symbol.dispose](): void;
+  }
 
   // ── Errors ────────────────────────────────────────────────────────────────
 
   export class FluxError extends Error {}
-  export class FluxDisposedError extends FluxError {}
   export class FluxTimeoutError extends FluxError { ms: number; }
-  export class FluxBufferOverflowError extends FluxError {}
 
   // ── Core factory ─────────────────────────────────────────────────────────
 
-  export function flux<T>(producer: Producer<T>, options?: FluxOptions): Flux<T>;
+  export function flux<T>(producer: Producer<T>): Flux<T>;
 
   // ── Subjects ─────────────────────────────────────────────────────────────
 
   export function createSubject<T>(): Subject<T>;
-  export function createBehaviorSubject<T>(initial: T, options?: BehaviorSubjectOptions<T>): BehaviorSubject<T>;
+  export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T>;
+  export function createReplaySubject<T>(bufferSize: number): ReplaySubject<T>;
 
   // ── Creation operators ────────────────────────────────────────────────────
 
@@ -76,7 +87,7 @@ declare module '@vielzeug/flux' {
   export function scan<T, U>(accumulator: (acc: U, value: T) => U, seed: U): Operator<T, U>;
   export function switchMap<T, U>(fn: (value: T) => Flux<U>): Operator<T, U>;
   export function flatMap<T, U>(fn: (value: T) => Flux<U>): Operator<T, U>;
-  export function concatMap<T, U>(fn: (value: T) => Flux<U>): Operator<T, U>;
+  export function concatMap<T, U>(fn: (value: T) => Flux<U>, maxBuffer?: number): Operator<T, U>;
   export function distinctUntilChanged<T>(comparator?: (a: T, b: T) => boolean): Operator<T, T>;
   export function startWith<T>(...values: T[]): Operator<T, T>;
   export function bufferCount<T>(size: number, every?: number): Operator<T, T[]>;
@@ -91,7 +102,7 @@ declare module '@vielzeug/flux' {
   export function takeWhile<T>(predicate: (value: T) => boolean): Operator<T, T>;
   export function takeUntil<T>(notifier: AbortSignal | Flux<unknown>): Operator<T, T>;
   export function debounce<T>(ms: number): Operator<T, T>;
-  export function throttle<T>(ms: number): Operator<T, T>;
+  export function throttle<T>(ms: number, clock?: () => number): Operator<T, T>;
   export function sample<T>(notifier: Flux<unknown>): Operator<T, T>;
 
   // ── Combination operators ─────────────────────────────────────────────────
@@ -112,10 +123,14 @@ declare module '@vielzeug/flux' {
   export function delay<T>(ms: number): Operator<T, T>;
   export function timeout<T>(ms: number): Operator<T, T>;
   export function catchError<T>(fn: (error: unknown) => Flux<T>): Operator<T, T>;
-  export function retry<T>(count: number): Operator<T, T>;
+  export function retry<T>(count: number, delayMs?: number): Operator<T, T>;
   export function finalize<T>(fn: () => void): Operator<T, T>;
-  export function share<T>(options?: ShareOptions): Operator<T, T>;
-  export function shareReplay<T>(bufferSize: number, options?: ShareOptions): Operator<T, T>;
+  export function share<T>(): Operator<T, T>;
+  export function shareReplay<T>(bufferSize: number): Operator<T, T>;
+
+  export function flow<A, B>(op1: Operator<A, B>): Operator<A, B>;
+  export function flow<A, B, C>(op1: Operator<A, B>, op2: Operator<B, C>): Operator<A, C>;
+  export function flow<A, B, C, D>(op1: Operator<A, B>, op2: Operator<B, C>, op3: Operator<C, D>): Operator<A, D>;
 
   export function toPromise<T>(source: Flux<T>): Promise<T>;
   export function toArray<T>(source: Flux<T>): Promise<T[]>;

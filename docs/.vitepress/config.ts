@@ -149,6 +149,7 @@ export default defineConfig({
               { link: '/coins/', text: 'Coins' },
               { link: '/lingua/', text: 'Lingua' },
               { link: '/rune/', text: 'Rune' },
+              { link: '/scout/', text: 'Scout' },
               { link: '/tempo/', text: 'Tempo' },
             ],
             text: 'Utilities & Tools',
@@ -180,7 +181,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/arsenal/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/arsenal/api#api-overview', text: 'Overview' },
             { link: '/arsenal/api#package-entry-points', text: 'Entry Points' },
             { link: '/arsenal/api#array', text: 'Array' },
             { link: '/arsenal/api#async', text: 'Async' },
@@ -413,12 +414,13 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/clockwork/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/clockwork/api#api-overview', text: 'Overview' },
             { link: '/clockwork/api#package-entry-points', text: 'Entry Points' },
-            { link: '/clockwork/api#machine', text: 'machine()' },
-            { link: '/clockwork/api#define', text: 'define()' },
-            { link: '/clockwork/api#resolvetransition', text: 'resolveTransition()' },
+            { link: '/clockwork/api#createmachine', text: 'createMachine()' },
+            { link: '/clockwork/api#machinedefinitionstate-ctx-ev', text: 'MachineDefinition' },
+            { link: '/clockwork/api#machineinstancestate-ctx-ev', text: 'MachineInstance' },
             { link: '/clockwork/api#types', text: 'Types' },
+            { link: '/clockwork/api#schema-helpers', text: 'Schema Helpers' },
             { link: '/clockwork/api#errors', text: 'Errors' },
             { link: '/clockwork/api#signals-and-reactivity', text: 'Signals & Reactivity' },
           ],
@@ -461,7 +463,7 @@ export default defineConfig({
             { link: '/codex/usage#programmatic-usage', text: 'Programmatic Usage' },
             { link: '/codex/usage#monorepo-development', text: 'Monorepo Development' },
             { link: '/codex/usage#security-notes', text: 'Security Notes' },
-            { link: '/codex/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/codex/usage#embedding-in-a-nodejs-process', text: 'Embedding' },
             { link: '/codex/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
             { link: '/codex/usage#best-practices', text: 'Best Practices' },
           ],
@@ -470,10 +472,9 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/codex/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/codex/api#api-overview', text: 'Overview' },
             { link: '/codex/api#package-entry-points', text: 'Entry Points' },
             { link: '/codex/api#tools', text: 'Tools' },
-            { link: '/codex/api#resources', text: 'Resources' },
             { link: '/codex/api#programmatic-api', text: 'Programmatic API' },
             { link: '/codex/api#types', text: 'Types' },
             { link: '/codex/api#errors', text: 'Errors' },
@@ -631,7 +632,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/courier/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/courier/api#api-overview', text: 'Overview' },
             { link: '/courier/api#package-entry-point', text: 'Entry Point' },
             { link: '/courier/api#core-functions', text: 'Core Functions' },
             { link: '/courier/api#errors', text: 'Errors' },
@@ -674,6 +675,7 @@ export default defineConfig({
             { link: '/craft/usage#directives', text: 'Directives' },
             { link: '/craft/usage#live-form-bindings', text: 'Form Bindings' },
             { link: '/craft/usage#host-bindings', text: 'Host Bindings' },
+            { link: '/craft/usage#aria-bindings', text: 'ARIA Bindings' },
             { link: '/craft/usage#slots-and-emits', text: 'Slots & Emits' },
             { link: '/craft/usage#context-provideinject', text: 'Context / DI' },
             { link: '/craft/usage#form-associated-elements', text: 'Forms' },
@@ -714,7 +716,7 @@ export default defineConfig({
         {
           collapsed: true,
           items: [
-            { link: '/craft/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/craft/api#api-overview', text: 'Overview' },
             { link: '/craft/api#package-entry-points', text: 'Entry Points' },
             { link: '/craft/api#core-component-api', text: 'Core API' },
             { link: '/craft/api#runtime-helpers', text: 'Runtime' },
@@ -775,7 +777,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/dnd/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/dnd/api#api-overview', text: 'Overview' },
             { link: '/dnd/api#package-entry-point', text: 'Entry Point' },
             { link: '/dnd/api#types', text: 'Types' },
             { link: '/dnd/api#createdropzone', text: 'createDropZone()' },
@@ -846,7 +848,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/familiar/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/familiar/api#api-overview', text: 'Overview' },
             { link: '/familiar/api#package-entry-point', text: 'Entry Point' },
             { link: '/familiar/api#package-exports', text: 'Package Exports' },
             { link: '/familiar/api#types', text: 'Types' },
@@ -899,7 +901,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/flux/api#api-overview', text: 'At a Glance' },
+            { link: '/flux/api#api-overview', text: 'Overview' },
             { link: '/flux/api#package-entry-point', text: 'Entry Point' },
             { link: '/flux/api#core', text: 'Core' },
             { link: '/flux/api#subjects', text: 'Subjects' },
@@ -952,7 +954,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/forge/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/forge/api#api-overview', text: 'Overview' },
             { link: '/forge/api#package-entry-points', text: 'Entry Points' },
             { link: '/forge/api#createform', text: 'createForm()' },
             { link: '/forge/api#values', text: 'Values' },
@@ -1017,7 +1019,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/herald/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/herald/api#api-overview', text: 'Overview' },
             { link: '/herald/api#package-entry-points', text: 'Entry Points' },
             { link: '/herald/api#types', text: 'Types' },
             { link: '/herald/api#createbus', text: 'createBus()' },
@@ -1075,7 +1077,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/lingua/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/lingua/api#api-overview', text: 'Overview' },
             { link: '/lingua/api#package-entry-points', text: 'Entry Points' },
             { link: '/lingua/api#createi18n', text: 'createI18n()' },
             { link: '/lingua/api#i18n-interface', text: 'I18n Interface' },
@@ -1131,7 +1133,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/orbit/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/orbit/api#api-overview', text: 'Overview' },
             { link: '/orbit/api#package-entry-points', text: 'Entry Points' },
             { link: '/orbit/api#core-functions', text: 'Core Functions' },
             { link: '/orbit/api#middleware', text: 'Middleware' },
@@ -1192,7 +1194,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/prism/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/prism/api#api-overview', text: 'Overview' },
             { link: '/prism/api#package-entry-points', text: 'Entry Points' },
             { link: '/prism/api#chart-factories', text: 'Chart Factories' },
             { link: '/prism/api#scale-factories', text: 'Scale Factories' },
@@ -1257,7 +1259,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/pulse/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/pulse/api#api-overview', text: 'Overview' },
             { link: '/pulse/api#package-entry-point', text: 'Entry Point' },
             { link: '/pulse/api#createpulse', text: 'createPulse()' },
             { link: '/pulse/api#pulse-interface', text: 'Pulse Interface' },
@@ -1310,7 +1312,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/ripple/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/ripple/api#api-overview', text: 'Overview' },
             { link: '/ripple/api#package-entry-point', text: 'Entry Point' },
             { link: '/ripple/api#signal-primitives', text: 'Signal Primitives' },
             { link: '/ripple/api#store-functions', text: 'Store Functions' },
@@ -1367,7 +1369,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/rune/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/rune/api#api-overview', text: 'Overview' },
             { link: '/rune/api#package-entry-point', text: 'Entry Point' },
             { link: '/rune/api#createloggerinitial-options', text: 'createLogger()' },
             { link: '/rune/api#rune', text: 'Rune' },
@@ -1391,6 +1393,49 @@ export default defineConfig({
             { link: '/rune/examples/timing-and-grouping', text: 'Timing and Grouping' },
           ],
           link: '/rune/examples',
+          text: 'Examples',
+        },
+      ],
+      '/scout/': [
+        { link: '/scout/', text: 'Overview' },
+        {
+          items: [
+            { link: '/scout/usage#basic-usage', text: 'Basic Usage' },
+            { link: '/scout/usage#reactive-search', text: 'Reactive Search' },
+            { link: '/scout/usage#incremental-updates', text: 'Incremental Updates' },
+            { link: '/scout/usage#match-highlighting', text: 'Match Highlighting' },
+            { link: '/scout/usage#framework-integration', text: 'Framework Integration' },
+            { link: '/scout/usage#working-with-other-vielzeug-libraries', text: 'Vielzeug Integration' },
+            { link: '/scout/usage#best-practices', text: 'Best Practices' },
+          ],
+          link: '/scout/usage',
+          text: 'Usage Guide',
+        },
+        {
+          items: [
+            { link: '/scout/api#api-overview', text: 'Overview' },
+            { link: '/scout/api#package-entry-point', text: 'Entry Point' },
+            { link: '/scout/api#createindexitems-options', text: 'createIndex()' },
+            { link: '/scout/api#scoutindext', text: 'ScoutIndex<T>' },
+            { link: '/scout/api#createsearchindex-options', text: 'createSearch()' },
+            { link: '/scout/api#createreactivesearchitems-options', text: 'createReactiveSearch()' },
+            { link: '/scout/api#findmatchrangestext-query', text: 'findMatchRanges()' },
+            { link: '/scout/api#highlighttext-ranges', text: 'highlight()' },
+            { link: '/scout/api#highlightfieldresult-field-text', text: 'highlightField()' },
+            { link: '/scout/api#tosearchfnindex-options', text: 'toSearchFn()' },
+            { link: '/scout/api#tofilterpredicateindex-query-options', text: 'toFilterPredicate()' },
+            { link: '/scout/api#types', text: 'Types' },
+          ],
+          link: '/scout/api',
+          text: 'API Reference',
+        },
+        {
+          items: [
+            { link: '/scout/examples/basic-search', text: 'Basic Search' },
+            { link: '/scout/examples/reactive-combobox', text: 'Reactive Combobox' },
+            { link: '/scout/examples/sourcerer-integration', text: 'Sourcerer Integration' },
+          ],
+          link: '/scout/examples',
           text: 'Examples',
         },
       ],
@@ -1424,7 +1469,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/scroll/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/scroll/api#api-overview', text: 'Overview' },
             { link: '/scroll/api#package-entry-point', text: 'Entry Point' },
             { link: '/scroll/api#createvirtualizer-target-options', text: 'createVirtualizer()' },
             { link: '/scroll/api#createdomvirtuallist-options', text: 'createDomVirtualList()' },
@@ -1635,7 +1680,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/sourcerer/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/sourcerer/api#api-overview', text: 'Overview' },
             { link: '/sourcerer/api#package-entry-point', text: 'Entry Point' },
             { link: '/sourcerer/api#core-factories', text: 'Core Factories' },
             { link: '/sourcerer/api#localsourcet-methods', text: 'LocalSource Methods' },
@@ -1689,7 +1734,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/spell/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/spell/api#api-overview', text: 'Overview' },
             { link: '/spell/api#package-entry-point', text: 'Entry Point' },
             { link: '/spell/api#export-inventory', text: 'Export Inventory' },
             { link: '/spell/api#factories-and-namespace', text: 'Factories & Namespace' },
@@ -1738,7 +1783,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/tempo/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/tempo/api#api-overview', text: 'Overview' },
             { link: '/tempo/api#package-entry-point', text: 'Entry Point' },
             { link: '/tempo/api#core-functions', text: 'Core Functions' },
             { link: '/tempo/api#query-and-comparison', text: 'Query & Comparison' },
@@ -1794,7 +1839,7 @@ export default defineConfig({
         {
           items: [
             { link: '/vault/api#package-entry-point', text: 'Entry Point' },
-            { link: '/vault/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/vault/api#api-overview', text: 'Overview' },
             { link: '/vault/api#exports', text: 'Exports' },
             { link: '/vault/api#schema-helper', text: 'Schema Helper' },
             { link: '/vault/api#ttl-helper', text: 'TTL Helper' },
@@ -1861,7 +1906,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/ward/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/ward/api#api-overview', text: 'Overview' },
             { link: '/ward/api#package-entry-points', text: 'Entry Points' },
             { link: '/ward/api#constants', text: 'Constants' },
             { link: '/ward/api#wardrule-fields', text: 'WardRule Fields' },
@@ -1920,7 +1965,7 @@ export default defineConfig({
         },
         {
           items: [
-            { link: '/wayfinder/api#api-at-a-glance', text: 'At a Glance' },
+            { link: '/wayfinder/api#api-overview', text: 'Overview' },
             { link: '/wayfinder/api#package-entry-points', text: 'Entry Points' },
             { link: '/wayfinder/api#createrouter-options', text: 'createRouter()' },
             { link: '/wayfinder/api#route-table', text: 'Route Table' },
@@ -1989,6 +2034,7 @@ export default defineConfig({
         '@vielzeug/pulse': resolve(__dirname, '../../packages/pulse/src'),
         '@vielzeug/ripple': resolve(__dirname, '../../packages/ripple/src'),
         '@vielzeug/rune': resolve(__dirname, '../../packages/rune/src'),
+        '@vielzeug/scout': resolve(__dirname, '../../packages/scout/src'),
         '@vielzeug/scroll': resolve(__dirname, '../../packages/scroll/src'),
         '@vielzeug/sigil': resolve(__dirname, '../../packages/sigil/src'),
         '@vielzeug/sourcerer': resolve(__dirname, '../../packages/sourcerer/src'),

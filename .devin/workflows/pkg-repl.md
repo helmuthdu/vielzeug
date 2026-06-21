@@ -166,10 +166,16 @@ Before creating the folder, read an existing package as a structural reference (
 1. Create `docs/.vitepress/theme/components/repl/examples/<name>/` with at least one example module and an `index.ts` that exports a `Record<string, ExampleModule>`.
 2. Create `docs/.vitepress/theme/components/repl/types/<name>.ts` with the Monaco type declarations for the package's public API.
 3. Register the package in the root `docs/.vitepress/theme/components/repl/examples/index.ts` and `docs/.vitepress/theme/components/repl/types/index.ts` — follow the exact pattern used by the reference package.
-4. Register the package in `docs/.vitepress/theme/components/REPL.vue` — **three additions required**, all sorted alphabetically among the existing entries:
-   - `LIBRARY_DESCRIPTIONS` — add `<name>: '<one-line description>'`
-   - `LIBRARY_LOADERS` — add `<name>: () => import('@vielzeug/<name>')`
-   - `LIBRARY_EXPORTS` — add `<name>: [list of every runtime-value export from `src/index.ts`]` (omit type-only exports; they are not present on the module object at runtime)
+4. Create `docs/.vitepress/theme/components/repl/libraries/<name>.ts` with three named exports (see existing files for reference):
+   - `description` — one-line string describing the package
+   - `loader` — `() => import('@vielzeug/<name>')` (or a custom async function if multiple sub-paths are needed, like `orbit`)
+   - `apiExports` — `as const` array of every **runtime-value** export from `src/index.ts` (omit type-only exports — they are not present on the module object at runtime)
+
+   Then register the package in `docs/.vitepress/theme/components/repl/libraries/index.ts` — **two additions required**, sorted alphabetically:
+   - Add `import * as <name> from './<name>';` with the other imports
+   - Add `<name>,` to the `ALL` object
+
+   **Do not edit `REPL.vue`** — it imports everything from `repl/libraries/index.ts` and never needs touching when adding a package.
 5. Add the source alias to `scripts/vitest.repl.config.ts` so `pnpm validate:repl` can resolve the package **without a prior build**. In the `vielzeugAliases` object, add (sorted alphabetically):
    ```ts
    '@vielzeug/<name>': path.resolve(ROOT, 'packages/<name>/src/index.ts'),

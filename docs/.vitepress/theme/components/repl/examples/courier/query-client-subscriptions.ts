@@ -1,17 +1,17 @@
 export const queryClientSubscriptionsExample = {
   code: `import { createQuery, createApi } from '@vielzeug/courier'
 
-// watchKey() gives a read-through store; observe() also triggers a background fetch.
+// observe({ fetch: false }) gives a read-through store; observe() also triggers a background fetch.
 const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
 const qc = createQuery({ staleTime: 5_000 })
 
-// watchKey() — passive store for one key; no fetch triggered
-const keyStore = qc.watchKey(['posts', 1])
-console.log('watchKey initial status:', keyStore.peek().status)
+// observe({ fetch: false }) — passive store for one key; no fetch triggered
+const keyStore = qc.observe({ fetch: false, key: ['posts', 1] })
+console.log('read-only store initial status:', keyStore.peek().status)
 
 const unsub1 = keyStore.subscribe(() => {
   const snap = keyStore.peek()
-  console.log('watchKey →', snap.status)
+  console.log('read-only store →', snap.status)
 })
 
 // observe() — store + background fetch if stale/missing; accepts select + placeholderData
@@ -36,5 +36,5 @@ await new Promise((resolve) => setTimeout(resolve, 1500))
 unsub1()
 unsub2()
 console.log('✓ Both stores unsubscribed')`,
-  name: 'Query Client - watchKey & observe',
+  name: 'Query Client - observe() with and without fetch',
 };

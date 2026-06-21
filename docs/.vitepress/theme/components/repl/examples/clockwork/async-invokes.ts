@@ -1,7 +1,7 @@
 export const asyncInvokesExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
-const m = machine({
+const m = createMachine({
   initial: 'idle',
   context: {
     userId: 0,
@@ -48,7 +48,7 @@ const m = machine({
       },
     },
   },
-})
+}).start()
 
 console.log('Initial:', m.state.value)   // 'idle'
 m.send({ type: 'FETCH', id: 1 })

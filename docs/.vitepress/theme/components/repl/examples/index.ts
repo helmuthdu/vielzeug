@@ -13,6 +13,7 @@ import { orbitExamples } from './orbit';
 import { pulseExamples } from './pulse';
 import { rippleExamples } from './ripple';
 import { runeExamples } from './rune';
+import { scoutExamples } from './scout';
 import { scrollExamples } from './scroll';
 import { sourcererExamples } from './sourcerer';
 import { spellExamples } from './spell';
@@ -37,6 +38,7 @@ export const examples = {
   pulse: pulseExamples,
   ripple: rippleExamples,
   rune: runeExamples,
+  scout: scoutExamples,
   scroll: scrollExamples,
   sourcerer: sourcererExamples,
   spell: spellExamples,

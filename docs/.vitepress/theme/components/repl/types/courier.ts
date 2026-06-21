@@ -78,11 +78,17 @@ declare module '/courier' {
     signal: AbortSignal;
   };
 
-  export type AsyncState<T = unknown> =
-    | { readonly data: undefined; readonly error: null; readonly isFetching: false; readonly status: 'idle'; readonly updatedAt: undefined }
-    | { readonly data: undefined; readonly error: null; readonly isFetching: true; readonly status: 'pending'; readonly updatedAt: number | undefined }
-    | { readonly data: T; readonly error: null; readonly isFetching: boolean; readonly status: 'success'; readonly updatedAt: number }
-    | { readonly data: T | undefined; readonly error: Error; readonly isFetching: boolean; readonly status: 'error'; readonly updatedAt: number };
+  export type AsyncStatus = 'loading' | 'success' | 'error';
+
+  export type AsyncState<T = unknown> = {
+    readonly isFetching: boolean;
+    /** Shorthand for \`status === 'loading'\`. */
+    readonly isLoading: boolean;
+  } & (
+    | { readonly data: undefined; readonly error: null; readonly status: 'loading'; readonly updatedAt: undefined }
+    | { readonly data: T; readonly error: null; readonly status: 'success'; readonly updatedAt: number }
+    | { readonly data: T | undefined; readonly error: Error; readonly status: 'error'; readonly updatedAt: number }
+  );
 
   export type QueryState<T = unknown> = AsyncState<T>;
   export type MutationState<TData = unknown> = AsyncState<TData>;
@@ -102,14 +108,16 @@ declare module '/courier' {
     staleTime?: number;
   };
 
-  export type ObserveOptions<T, S = T> = QueryOptions<T> & {
-    /** When \`false\`, no background fetch is triggered. Defaults to \`true\`. */
-    fetch?: boolean;
+  type ObserveExtras<T, S> = {
     /** Temporary value shown while a fetch is in-flight; does not affect cache state. */
     placeholderData?: S | (() => S | undefined);
     /** Transform cached data before delivery to store subscribers. \`S\` defaults to \`T\`. */
     select?: (data: T | undefined) => S | undefined;
   };
+
+  export type ObserveOptions<T, S = T> =
+    | ({ fetch?: true } & QueryOptions<T> & ObserveExtras<T, S>)
+    | ({ fetch: false; key: QueryKey } & Partial<QueryOptions<T>> & ObserveExtras<T, S>);
 
   export interface QueryClient {
     [Symbol.dispose](): void;
@@ -136,8 +144,6 @@ declare module '/courier' {
     set<T>(key: QueryKey, data: T, opts?: { gcTime?: number; updatedAt?: number }): void;
     set<T>(key: QueryKey, updater: (old: T | undefined) => T, opts?: { gcTime?: number; updatedAt?: number }): void;
     readonly size: number;
-    /** Read-through store for one key; no fetch triggered. */
-    watchKey<T = unknown>(key: QueryKey): SyncStore<QueryState<T>>;
   }
 
   export function createQuery(opts?: QueryClientOptions): QueryClient;
@@ -152,6 +158,8 @@ declare module '/courier' {
   export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions & {
     onCallbackError?: (error: Error) => void;
     onError?: (error: Error, variables: TVariables) => void | Promise<void>;
+    /** Called after every run (success, error, abort) before \`onSettled\`. Use for cleanup that does not need to inspect the result. */
+    onFinally?: (variables: TVariables) => void | Promise<void>;
     /** Called after every run (success, error, abort). Switch on \`result.status\` for exhaustive handling. */
     onSettled?: (result: SettledResult<TData, TVariables>) => void | Promise<void>;
     onSuccess?: (data: TData, variables: TVariables) => void | Promise<void>;
@@ -169,11 +177,13 @@ declare module '/courier' {
     cancel(): Promise<void>;
     dispose(): void;
     readonly disposed: boolean;
-    getState(): MutationState<TData>;
     mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData>;
+    /** Read the current state snapshot without subscribing. */
+    peek(): MutationState<TData>;
     reset(): void;
     /** Stable \`SyncStore\` for framework integrations. Use \`mutation.store.subscribe\` + \`mutation.store.peek()\`. */
     readonly store: SyncStore<MutationState<TData>>;
+    subscribe(onStoreChange: () => void): Unsubscribe;
   }
 
   export function createMutation<TData, TVariables = void>(
@@ -266,6 +276,9 @@ declare module '/courier' {
     stream: StreamClient;
     use(interceptor: Interceptor): () => void;
   }
+
+  /** Converts any object with \`peek()\` and \`subscribe()\` to a plain \`SyncStore<T>\` for framework integration adapters. */
+  export function toSyncStore<T>(source: { peek(): T; subscribe(cb: () => void): Unsubscribe }): SyncStore<T>;
 
   export function createCourier(opts?: CourierOptions): Courier;
 

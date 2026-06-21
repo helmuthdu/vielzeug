@@ -1,7 +1,7 @@
 export const basicMachineExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
-const m = machine({
+const m = createMachine({
   initial: 'red',
   context: { cycles: 0 },
   states: {
@@ -16,7 +16,7 @@ const m = machine({
       },
     },
   },
-})
+}).start()
 
 console.log('State:', m.state.value)                        // 'red'
 console.log(m.send({ type: 'NEXT' }).status)                // 'transitioned'

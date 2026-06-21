@@ -24,6 +24,8 @@ declare module '/lingua' {
 
   export type I18nSnapshot = {
     readonly locale: Locale;
+    readonly t: (key: string, vars?: TranslateVars) => string;
+    readonly tp: (key: string, count: number, options?: TpOptions) => string;
   };
 
   export type I18nState = {
@@ -55,8 +57,34 @@ declare module '/lingua' {
         }[string & keyof T]
       : never;
 
+  export type DurationValue = Partial<
+    Record<'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'months' | 'nanoseconds' | 'seconds' | 'weeks' | 'years', number>
+  >;
+
+  export type DurationFormatOptions = {
+    hours?: '2-digit' | 'numeric';
+    minutes?: '2-digit' | 'numeric';
+    seconds?: '2-digit' | 'numeric';
+    style?: 'digital' | 'long' | 'narrow' | 'short';
+  };
+
+  export type ListFormatOptions = {
+    style?: 'long' | 'narrow' | 'short';
+    type?: 'and' | 'or';
+  };
+
+  export type Formatter = {
+    clear(): void;
+    currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
+    date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
+    duration(value: DurationValue, options?: DurationFormatOptions): string;
+    list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
+    number(value: number, options?: Intl.NumberFormatOptions): string;
+    relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
+  };
+
   export type ScopedI18n = {
-    readonly fmt: import('/lingua/format').Formatter;
+    readonly fmt: Formatter;
     has(key: string): boolean;
     t(key: string, vars?: TranslateVars): string;
     tp(key: string, count: number, options?: TpOptions): string;
@@ -77,16 +105,22 @@ declare module '/lingua' {
     dispose(): void;
     readonly disposed: boolean;
     extend(ns: string, factory: NamespaceFactory<M>, locale?: Locale): Promise<void>;
-    readonly fmt: import('/lingua/format').Formatter;
+    readonly fmt: Formatter;
     fork(overrides?: Omit<I18nOptions<M>, 'catalogs'>): I18n<M>;
     getSnapshot(): I18nSnapshot;
+    getState(): I18nState;
     getSupportedLocales(sorted?: boolean): Locale[];
     has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | AnyKey): boolean;
     isLoaded(locale: Locale): boolean;
+    isNamespaceLoaded(ns: string, locale?: Locale): boolean;
+    isNamespaceRegistered(ns: string): boolean;
     isRegistered(locale: Locale): boolean;
     readonly locale: Locale;
+    loadNamespace(ns: string, locale?: Locale): Promise<void>;
     preload(locale: Locale): Promise<void>;
-    register(locale: Locale, source: LocaleSource<M>): void;
+    register(locale: Locale, source: LocaleSource<M>): Promise<void>;
+    registerNamespace(ns: string, factory: NamespaceFactory<M>): void;
+    restoreState(state: I18nState): void;
     scope(prefix: MessageBranchKeys<M> | AnyKey): ScopedI18n;
     setLocale(locale: Locale): Promise<void>;
     subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe;
@@ -115,37 +149,8 @@ declare module '/lingua' {
   export function createI18n<M extends Messages>(options: I18nOptions<M>): I18n<M>;
   export function createI18n(options?: I18nOptions<Messages>): I18n<Messages>;
 
+  export function createFormatter(source: string | (() => string)): Formatter;
   export function serializeI18n(i18n: I18n): I18nState;
   export function hydrateI18n(i18n: I18n, state: I18nState): void;
-}
-
-declare module '/lingua/format' {
-  export type DurationValue = Partial<
-    Record<'days' | 'hours' | 'microseconds' | 'milliseconds' | 'minutes' | 'months' | 'nanoseconds' | 'seconds' | 'weeks' | 'years', number>
-  >;
-
-  export type DurationFormatOptions = {
-    hours?: '2-digit' | 'numeric';
-    minutes?: '2-digit' | 'numeric';
-    seconds?: '2-digit' | 'numeric';
-    style?: 'digital' | 'long' | 'narrow' | 'short';
-  };
-
-  export type ListFormatOptions = {
-    style?: 'long' | 'narrow' | 'short';
-    type?: 'and' | 'or';
-  };
-
-  export type Formatter = {
-    clear(): void;
-    currency(value: number, currency: string, options?: Omit<Intl.NumberFormatOptions, 'currency' | 'style'>): string;
-    date(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
-    duration(value: DurationValue, options?: DurationFormatOptions): string;
-    list(value: Array<string | number | boolean>, options?: ListFormatOptions): string;
-    number(value: number, options?: Intl.NumberFormatOptions): string;
-    relative(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
-  };
-
-  export function createFormatter(source: string | (() => string)): Formatter;
 }
 `;

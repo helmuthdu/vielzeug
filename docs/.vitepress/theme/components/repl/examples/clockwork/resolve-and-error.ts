@@ -1,7 +1,7 @@
 export const resolveAndErrorExample = {
-  code: `import { machine, resolveTransition, MachineError, MachineErrorCode } from '@vielzeug/clockwork'
+  code: `import { createMachine, MachineError, MachineErrorCode } from '@vielzeug/clockwork'
 
-// resolveTransition is a pure function — no side effects, no state change.
+// .resolve() is a pure function on a MachineDefinition — no side effects, no state change.
 // Use it to inspect transition logic in tests or decision UIs.
 
 const lockConfig = {
@@ -30,11 +30,12 @@ const lockConfig = {
 // --- Pure resolution with onGuard tracing ---
 const guardLog = []
 
-const result = resolveTransition(
-  lockConfig,
+const result = createMachine(lockConfig).resolve(
   { context: { role: 'guest' }, event: { type: 'UNLOCK' }, state: 'locked' },
-  ({ passed, target }) => {
-    guardLog.push(\`guard → \${target}: \${passed ? 'passed' : 'blocked'}\`)
+  {
+    onGuard: ({ passed, target }) => {
+      guardLog.push(\`guard → \${target}: \${passed ? 'passed' : 'blocked'}\`)
+    },
   },
 )
 
@@ -44,10 +45,10 @@ console.log('Guard log:', guardLog)
 
 // --- MachineError.is() + MachineErrorCode for safe error handling ---
 try {
-  machine({
+  createMachine({
     initial: 'missing',
     states: { idle: {} },
-  })
+  }).start()
 } catch (err) {
   if (MachineError.is(err)) {
     console.log('Error code:', err.code)     // 'MACHINE_INVALID_INITIAL_STATE'
@@ -64,9 +65,9 @@ try {
 
 // --- using declaration — auto-dispose on scope exit ---
 {
-  using m = machine(lockConfig, { snapshot: { context: { role: 'admin' }, state: 'locked' } })
+  using m = createMachine(lockConfig).start({ snapshot: { context: { role: 'admin' }, state: 'locked' } })
   m.send({ type: 'UNLOCK' })
   console.log('Admin unlocked:', m.state.value)  // 'unlocked'
 } // m.dispose() called automatically`,
-  name: 'resolveTransition + MachineError.is()',
+  name: 'resolve() + MachineError.is()',
 };

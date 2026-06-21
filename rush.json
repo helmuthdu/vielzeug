@@ -167,6 +167,12 @@
       "projectFolder": "packages/flux",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/scout",
+      "projectFolder": "packages/scout",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

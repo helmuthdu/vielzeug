@@ -1,5 +1,5 @@
 export const interceptorsExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 // Interceptors are pure functions: return the event to allow, null to block.
 // They run left-to-right; the first null wins.
@@ -19,17 +19,14 @@ const authGuard = (event, _snapshot) => {
   return event
 }
 
-const m = machine(
-  {
-    initial: 'idle',
-    context: { requests: 0, blocked: 0 },
-    states: {
-      idle:    { on: { START: { target: 'active' } } },
-      active:  { on: { STOP:  { target: 'idle'   }, RESET: { target: 'idle' } } },
-    },
+const m = createMachine({
+  initial: 'idle',
+  context: { requests: 0, blocked: 0 },
+  states: {
+    idle:    { on: { START: { target: 'active' } } },
+    active:  { on: { STOP:  { target: 'idle'   }, RESET: { target: 'idle' } } },
   },
-  { interceptors: [logger, authGuard] },
-)
+}).start({ interceptors: [logger, authGuard] })
 
 console.log(m.send({ type: 'START' }))     // 'transitioned'
 // [log] START in idle

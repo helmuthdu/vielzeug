@@ -97,6 +97,20 @@ Use consistent markers for agent-parseable output:
 - **Read the DOX chain first** — root `AGENTS.md` → `docs/AGENTS.md` (template/REPL ownership) → `packages/<name>/AGENTS.md` (sub-path exports, exceptions).
 - **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file — it reflects the current public API. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
 
+### Package archetypes
+
+Not every package is a consumed library. Before applying the template, identify the archetype and apply the adaptations below. A package can belong to more than one row.
+
+| Archetype | Indicators | Adaptations |
+| --------- | ---------- | ----------- |
+| **Library** (default) | `src/index.ts` exports functions/classes; imported by userland | No adaptations — use the full template as written |
+| **CLI / executable tool** | `bin` field in `package.json`; primary interaction is a terminal command, not an import | Quick Start in `index.md` leads with the shell command, not a TypeScript snippet; `## Framework Integration` in `usage.md` is replaced with `## Embedding in a <Runtime> Process` showing programmatic use as a secondary option; comparison table compares deployment/invocation modes, not API surfaces |
+| **DOM-output / headless UI** | Package renders DOM directly (e.g. `sigil`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; `## Framework Integration` shows web-component usage in HTML/JS, not React/Vue/Svelte unless the package ships framework adapters |
+| **Build / dev tool** | `devDependencies`-only; runs at build time, not runtime | Quick Start shows CLI invocation or config file; `## Basic Usage` in `usage.md` starts with config, not code; API reference may be a config schema, not function signatures |
+| **Pure type package** | Exports only `type` and `interface`; no runtime code | Skip `## Quick Start` code block; `api.md` is types-only; no examples needed unless the types encode a non-obvious pattern |
+
+**When in doubt:** read `package.json` (`bin`, `main`, `exports`, `engines`, `type`) and `src/cli.ts` or equivalent entry points before writing a single line of docs.
+
 ## 2. Tone and Language (global rules)
 
 Apply these rules to **all** docs you edit:
@@ -256,6 +270,37 @@ or
 ```
 
 When updating files, enforce the specific template rules below.
+
+#### 4.0 Archetype check (required before editing any page)
+
+Before applying §4.1–4.5, answer these two questions:
+
+**Q1: What is the primary user interaction?**
+
+- Importing a function/class → **Library** archetype. Apply §4.1–4.5 as written.
+- Running a CLI command → **CLI / executable** archetype. Apply adaptations:
+  - `index.md` Quick Start: shell command first, TypeScript import second (in a collapsed section or a separate `## Programmatic API` in `usage.md`).
+  - `usage.md`: rename `## Framework Integration` → `## Embedding in a <Runtime> Process`; the section shows programmatic embedding, not React/Vue/Svelte hooks.
+  - Comparison table: rows should compare the CLI's capabilities vs alternatives (other tools, manual approaches), not API surfaces or bundle sizes.
+- Rendering DOM / custom elements → **DOM-output** archetype. Apply adaptations:
+  - No REPL examples or Monaco types.
+  - `## Framework Integration` shows HTML/JS consumption; only add React/Vue/Svelte tabs if the package ships framework adapters.
+- Running at build time → **Build tool** archetype. Apply adaptations:
+  - Quick Start is a config snippet, not a runtime snippet.
+  - `api.md` documents config schema entries, not function call signatures, when the public surface is a config file.
+
+**Q2: Does the package have known template exceptions from its `AGENTS.md`?**
+
+Read `packages/<name>/AGENTS.md` for declared exceptions before assuming the default template applies. Record any exceptions found as `[FINDING] Archetype exception: <description>` and carry them through Steps 3–4.
+
+**Output at this gate:**
+
+```
+[ACTION] Archetype: <Library | CLI | DOM-output | Build tool | mixed>
+[ACTION] Adaptations: <list of §4.1–4.5 overrides, or "none">
+```
+
+---
 
 #### 4.1 `index.md` — Overview
 

@@ -1,5 +1,5 @@
 export const debugTracingExample = {
-  code: `import { machine, resolveTransition } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 const orderConfig = {
   initial: 'pending',
@@ -14,7 +14,7 @@ const orderConfig = {
   },
 }
 
-const m = machine(orderConfig, {
+const m = createMachine(orderConfig).start({
   traceLimit: 50,
   onDebug: (ev) => {
     if (ev.type === 'transition-skipped')
@@ -36,8 +36,8 @@ trace.forEach(({ from, to, event }) => {
   console.log('  ' + from + ' -> ' + to + '  (on ' + event.type + ')')
 })
 
-// resolveTransition is a pure function — no side effects, useful for tests
-const resolution = resolveTransition(orderConfig, {
+// resolve() is a pure function — no side effects, useful for tests
+const resolution = createMachine(orderConfig).resolve({
   state:   'pending',
   context: { cancelledAt: null },
   event:   { type: 'SUBMIT' },

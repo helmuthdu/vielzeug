@@ -1,5 +1,5 @@
 export const contextValidationExample = {
-  code: `import { machine, MachineError } from '@vielzeug/clockwork'
+  code: `import { createMachine, MachineError } from '@vielzeug/clockwork'
 
 // Context validator — return true if valid, or a string error message if not
 function isValidProfile(ctx) {
@@ -36,7 +36,7 @@ const profileConfig = {
   },
 }
 
-const m = machine(profileConfig)
+const m = createMachine(profileConfig).start()
 console.log('Initial:', m.state.value, JSON.stringify(m.context.value))
 
 // Valid update
@@ -44,14 +44,14 @@ m.send({ type: 'UPDATE', username: 'alice', age: 30, tags: ['admin'] })
 console.log('After UPDATE:', JSON.stringify(m.context.value))
 
 // Guard blocks ACTIVATE for guest user
-const guest = machine(profileConfig)
+const guest = createMachine(profileConfig).start()
 const activated = guest.send({ type: 'ACTIVATE' })
 console.log('Guest activated?', activated.status)   // 'rejected' — guard blocked it
 console.log('State still:', guest.state.value)      // 'idle'
 
 // validateContext also runs when restoring a snapshot — bad context throws
 try {
-  machine(profileConfig, {
+  createMachine(profileConfig).start({
     snapshot: { state: 'idle', context: { username: 123, age: -1, tags: null } },
   })
 } catch (err) {

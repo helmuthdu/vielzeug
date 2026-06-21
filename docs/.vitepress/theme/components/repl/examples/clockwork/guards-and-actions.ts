@@ -1,9 +1,9 @@
 export const guardsAndActionsExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 const SECRET_KEY = 'vielzeug'
 
-const door = machine({
+const door = createMachine({
   initial: 'closed',
   context: { accessAttempts: 0 },
   states: {
@@ -37,7 +37,7 @@ const door = machine({
       },
     },
   },
-})
+}).start()
 
 door.send({ type: 'LOCK' })
 console.log('State:', door.state.value)          // 'locked'

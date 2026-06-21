@@ -135,6 +135,10 @@ docs/.vitepress/.temp/
 # Codex generated bundled data
 packages/codex/data/
 
+# Codex scripts/ compiled artifacts (scripts run under --experimental-strip-types, never compiled by tsc)
+packages/codex/scripts/*.js
+packages/codex/scripts/*.js.map
+
 # Workflow run artifacts (DOX) — keep the AGENTS.md contract tracked
 .devin/workflows/runs/*/
 

@@ -65,12 +65,12 @@ declare module '/clockwork' {
     readonly signal: AbortSignal;
   };
 
-  export type InvokeDef<Ctx extends object, Ev extends MachineEvent> = {
+  export type InvokeDef<Ctx extends object, Ev extends MachineEvent, Result = unknown> = {
     /** Optional label surfaced in DebugEvent for traceability. Defaults to an auto-incremented id. */
     id?: string;
-    onDone?: (result: unknown, context: Readonly<Ctx>) => Ev;
+    onDone?: (result: Result, context: Readonly<Ctx>) => Ev;
     onError?: (error: unknown, context: Readonly<Ctx>) => Ev;
-    src: (args: InvokeArgs<Ctx, Ev>) => Promise<unknown>;
+    src: (args: InvokeArgs<Ctx, Ev>) => Promise<Result>;
   };
 
   export type StateNode<State extends string, Ctx extends object, Ev extends MachineEvent> = {
@@ -78,7 +78,7 @@ declare module '/clockwork' {
     entry?: LifecycleFn<Ctx, Ev>;
     exit?: LifecycleFn<Ctx, Ev>;
     initial?: string;
-    invoke?: Array<InvokeDef<Ctx, Ev>>;
+    invoke?: Array<InvokeDef<Ctx, Ev, any>>;
     on?: Partial<{ [Type in EventType<Ev>]: TransitionInput<State, Ctx, Ev, Type> }>;
     states?: Record<string, StateNode<string, Ctx, Ev>>;
   };
@@ -139,8 +139,6 @@ declare module '/clockwork' {
   };
 
   export type SendResult = {
-    readonly ok: boolean;
-    readonly queued: boolean;
     readonly status: 'queued' | 'rejected' | 'transitioned';
   };
 
@@ -180,35 +178,34 @@ declare module '/clockwork' {
   }
 
   export interface MachineDefinition<State extends string, Ctx extends object, Ev extends MachineEvent> {
-    resolve(input: { context: Readonly<Ctx>; event: Ev; state: State }): TransitionDef<State, Ctx, Ev> | undefined;
+    resolve(
+      input: { context: Readonly<Ctx>; event: Ev; state: State },
+      options?: {
+        onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void;
+      },
+    ): TransitionDef<State, Ctx, Ev> | undefined;
     start(options?: InterpretOptions<State, Ctx, Ev>): MachineInstance<State, Ctx, Ev>;
   }
 
   /**
-   * Defines, validates, and immediately starts a state machine.
-   * The most common entry point.
+   * Validates a machine configuration and returns a reusable definition handle.
+   * Call .start(options) to create a running instance.
+   * Call .resolve(input, options) to inspect transitions without starting a machine.
    */
-  export function machine<State extends string, Ctx extends object, Ev extends MachineEvent>(
-    config: MachineConfig<State, Ctx, Ev>,
-    options?: InterpretOptions<State, Ctx, Ev>,
-  ): MachineInstance<State, Ctx, Ev>;
-
-  /**
-   * Validates the config and returns a reusable definition handle.
-   * Call .start(options?) to create a running instance.
-   */
-  export function define<State extends string, Ctx extends object, Ev extends MachineEvent>(
+  export function createMachine<State extends string, Ctx extends object, Ev extends MachineEvent>(
     config: MachineConfig<State, Ctx, Ev>,
   ): MachineDefinition<State, Ctx, Ev>;
 
-  export function resolveTransition<State extends string, Ctx extends object, Ev extends MachineEvent>(
-    definition: Readonly<MachineConfig<State, Ctx, Ev>>,
-    input: {
-      context: Readonly<Ctx>;
-      event: Ev;
-      state: State;
-    },
-    onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void,
-  ): TransitionDef<State, Ctx, Ev> | undefined;
+  export type MachineSchema<S extends string, C extends object, E extends MachineEvent> = {
+    readonly _c: C;
+    readonly _e: E;
+    readonly _s: S;
+  };
+  export type MachineTypeConfig<T extends MachineSchema<any, any, any>> = MachineConfig<T['_s'], T['_c'], T['_e']>;
+  export type MachineTypeDefinition<T extends MachineSchema<any, any, any>> = MachineDefinition<T['_s'], T['_c'], T['_e']>;
+  export type MachineTypeInstance<T extends MachineSchema<any, any, any>> = MachineInstance<T['_s'], T['_c'], T['_e']>;
+  export type MachineTypeOptions<T extends MachineSchema<any, any, any>> = InterpretOptions<T['_s'], T['_c'], T['_e']>;
+  export type MachineAction<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = ActionFn<T['_c'], E>;
+  export type MachineGuard<T extends MachineSchema<any, any, any>, E extends T['_e'] = T['_e']> = GuardFn<T['_c'], E>;
 }
 `;

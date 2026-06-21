@@ -1,8 +1,8 @@
 export const hierarchicalStatesExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 // Compound states: a parent state with nested substates
-const m = machine({
+const m = createMachine({
   initial: 'idle',
   context: { trackTitle: '' },
   states: {
@@ -29,7 +29,7 @@ const m = machine({
       },
     },
   },
-})
+}).start()
 
 console.log('State:', m.state.value)          // 'idle'
 

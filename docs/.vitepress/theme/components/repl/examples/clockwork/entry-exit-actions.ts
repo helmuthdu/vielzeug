@@ -1,10 +1,10 @@
 export const entryExitActionsExample = {
-  code: `import { machine } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 // Track side effects with entry/exit actions
 const log = (msg) => console.log(msg)
 
-const conn = machine({
+const conn = createMachine({
   initial: 'disconnected',
   context: { reconnects: 0, lastError: '' },
   states: {
@@ -42,7 +42,7 @@ const conn = machine({
       },
     },
   },
-})
+}).start()
 
 console.log('State:', conn.state.value)  // 'disconnected'
 conn.send({ type: 'CONNECT' })

@@ -1,5 +1,5 @@
 export const persistenceExample = {
-  code: `import { define } from '@vielzeug/clockwork'
+  code: `import { createMachine } from '@vielzeug/clockwork'
 
 // In-memory persistence adapter (swap load/save for localStorage in production)
 let storedSnapshot = null
@@ -8,7 +8,7 @@ const adapter = {
   save: (snap) => { storedSnapshot = snap },
 }
 
-const cartDef = define({
+const cartDef = createMachine({
   initial: 'shopping',
   context: { items: [], total: 0 },
   states: {

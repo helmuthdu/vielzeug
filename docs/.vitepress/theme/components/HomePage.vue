@@ -93,6 +93,17 @@ const monoVersion = computed(() => {
 
 const categories = [
   {
+    name: 'App Infrastructure',
+    icon: 'building-2',
+    packages: [
+      { id: 'conduit', tagline: 'Dependency injection' },
+      { id: 'familiar', tagline: 'Web Worker pool' },
+      { id: 'herald', tagline: 'Typed event bus' },
+      { id: 'ward', tagline: 'RBAC & permissions' },
+      { id: 'wayfinder', tagline: 'Client-side routing' },
+    ],
+  },
+  {
     name: 'Core Primitives',
     icon: 'atom',
     packages: [
@@ -112,6 +123,14 @@ const categories = [
     ],
   },
   {
+    name: 'Forms & Validation',
+    icon: 'check-square',
+    packages: [
+      { id: 'forge', tagline: 'Form state & validation' },
+      { id: 'spell', tagline: 'Schema validation' },
+    ],
+  },
+  {
     name: 'UI Components',
     icon: 'layout',
     packages: [
@@ -124,25 +143,6 @@ const categories = [
     ],
   },
   {
-    name: 'Forms & Validation',
-    icon: 'check-square',
-    packages: [
-      { id: 'forge', tagline: 'Form state & validation' },
-      { id: 'spell', tagline: 'Schema validation' },
-    ],
-  },
-  {
-    name: 'App Infrastructure',
-    icon: 'building-2',
-    packages: [
-      { id: 'conduit', tagline: 'Dependency injection' },
-      { id: 'familiar', tagline: 'Web Worker pool' },
-      { id: 'herald', tagline: 'Typed event bus' },
-      { id: 'ward', tagline: 'RBAC & permissions' },
-      { id: 'wayfinder', tagline: 'Client-side routing' },
-    ],
-  },
-  {
     name: 'Utilities & Tools',
     icon: 'wrench',
     packages: [
@@ -151,6 +151,7 @@ const categories = [
       { id: 'coins', tagline: 'Monetary arithmetic' },
       { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },
+      { id: 'scout', tagline: 'Trigram fuzzy search' },
       { id: 'tempo', tagline: 'Date & time' },
     ],
   },
