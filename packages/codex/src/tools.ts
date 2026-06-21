@@ -3,6 +3,7 @@ import type { CallToolResult, Tool } from '@modelcontextprotocol/sdk/types.js';
 
 import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 
+import { log } from './_log.js';
 import { packageMeta } from './data.js';
 import { normalisePackage, scorePackage } from './search.js';
 import { type BundledData, type BundledPackage, type CemDeclaration, DOC_PAGES } from './types.js';
@@ -289,6 +290,19 @@ const TOOLS: ToolDefinition[] = [
 
 const TOOL_MAP = new Map(TOOLS.map((t) => [t.name, t]));
 
+const DEBUG = process.env['CODEX_DEBUG'] === '1';
+
+function debugArgs(args: Record<string, unknown>): string {
+  const entries = Object.entries(args)
+    .map(
+      ([k, v]) =>
+        `${k}=${typeof v === 'string' ? JSON.stringify(v.length > 40 ? `${v.slice(0, 40)}…` : v) : String(v)}`,
+    )
+    .join(', ');
+
+  return entries ? `(${entries})` : '()';
+}
+
 export function registerTools(server: Server, context: ToolContext): void {
   server.setRequestHandler(ListToolsRequestSchema, () => ({
     tools: TOOLS.map((tool) => ({ description: tool.description, inputSchema: tool.inputSchema, name: tool.name })),
@@ -298,13 +312,31 @@ export function registerTools(server: Server, context: ToolContext): void {
     const tool = TOOL_MAP.get(request.params.name);
 
     if (!tool) {
+      if (DEBUG) log(`[codex] tool not found: ${request.params.name}`);
+
       throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
     }
 
+    const args = request.params.arguments ?? {};
+
+    if (DEBUG) log(`[codex] → ${tool.name}${debugArgs(args)}`);
+
+    const t0 = DEBUG ? Date.now() : 0;
+
     try {
-      return tool.run(request.params.arguments ?? {}, context);
+      const result = tool.run(args, context);
+
+      if (DEBUG) log(`[codex] ✓ ${tool.name} (${Date.now() - t0}ms)`);
+
+      return result;
     } catch (err) {
-      if (err instanceof ToolArgError) return error(err.message);
+      if (err instanceof ToolArgError) {
+        if (DEBUG) log(`[codex] ✗ ${tool.name} arg error: ${err.message}`);
+
+        return error(err.message);
+      }
+
+      if (DEBUG) log(`[codex] ✗ ${tool.name} threw: ${err instanceof Error ? err.message : String(err)}`);
 
       throw err;
     }
