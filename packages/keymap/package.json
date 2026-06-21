@@ -1,0 +1,39 @@
+{
+  "name": "@vielzeug/keymap",
+  "version": "0.0.1",
+  "description": "Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:types": "tsc -p tsconfig.declarations.json",
+    "fix": "eslint --fix src",
+    "lint": "eslint src",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

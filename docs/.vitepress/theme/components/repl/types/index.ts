@@ -8,6 +8,8 @@ import { familiarTypes } from './familiar';
 import { fluxTypes } from './flux';
 import { forgeTypes } from './forge';
 import { heraldTypes } from './herald';
+import { keymapTypes } from './keymap';
+import { ledgerTypes } from './ledger';
 import { linguaTypes } from './lingua';
 import { orbitTypes } from './orbit';
 import { pulseTypes } from './pulse';
@@ -32,6 +34,8 @@ export const libraryTypes = {
   flux: fluxTypes,
   forge: forgeTypes,
   herald: heraldTypes,
+  keymap: keymapTypes,
+  ledger: ledgerTypes,
   lingua: linguaTypes,
   orbit: orbitTypes,
   pulse: pulseTypes,

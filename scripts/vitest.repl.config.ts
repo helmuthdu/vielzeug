@@ -21,6 +21,8 @@ const vielzeugAliases: Record<string, string> = {
   '@vielzeug/flux': path.resolve(ROOT, 'packages/flux/src/index.ts'),
   '@vielzeug/forge': path.resolve(ROOT, 'packages/forge/src/index.ts'),
   '@vielzeug/herald': path.resolve(ROOT, 'packages/herald/src/index.ts'),
+  '@vielzeug/keymap': path.resolve(ROOT, 'packages/keymap/src/index.ts'),
+  '@vielzeug/ledger': path.resolve(ROOT, 'packages/ledger/src/index.ts'),
   '@vielzeug/lingua': path.resolve(ROOT, 'packages/lingua/src/index.ts'),
   '@vielzeug/orbit/presets': path.resolve(ROOT, 'packages/orbit/src/presets.ts'),
   '@vielzeug/orbit': path.resolve(ROOT, 'packages/orbit/src/index.ts'),

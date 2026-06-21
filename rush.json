@@ -173,6 +173,18 @@
       "projectFolder": "packages/scout",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/keymap",
+      "projectFolder": "packages/keymap",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/ledger",
+      "projectFolder": "packages/ledger",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

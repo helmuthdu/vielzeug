@@ -2,7 +2,7 @@
 
 ## Project
 
-**Vielzeug** is monorepo of **26 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
+**Vielzeug** is monorepo of **28 independent, zero-dependency TypeScript packages** published under the `@vielzeug/` npm scope. Each package ships ESM + CJS (Vite library mode), targets ES2022, and has strict TypeScript throughout.
 
 ## Key conventions
 
@@ -114,6 +114,8 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/familiar`  | Workers    | Web Worker pool with tasks, timeouts, cancellation                 |
 | `@vielzeug/forge`     | Forms      | Typed form state, validation, submission                           |
 | `@vielzeug/herald`    | Events     | Typed event bus, pub/sub, async streams                            |
+| `@vielzeug/keymap`    | Input      | Headless keyboard shortcut manager with chord sequences            |
+| `@vielzeug/ledger`    | State      | Async undo/redo command history with Ripple reactive state         |
 | `@vielzeug/lingua`    | i18n       | Typed i18n with pluralization and async loading                    |
 | `@vielzeug/orbit`     | UI         | Floating element positioning (tooltip, popover)                    |
 | `@vielzeug/prism`     | Charts     | Reactive SVG charting library — line, bar, area, pie, sparkline    |
@@ -144,6 +146,7 @@ forge      → arsenal, ripple
 orbit      → arsenal, ripple
 prism      → orbit, ripple
 pulse      → ripple
+ledger     → ripple
 scout      → ripple
 scroll     → ripple
 sigil      → arsenal, craft, dnd, orbit, ripple, scroll, tempo
@@ -151,7 +154,7 @@ sourcerer  → arsenal, ripple
 spell      → arsenal
 ```
 
-Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `lingua`, `ripple`, `rune`, `tempo`, `vault`, `ward`, `wayfinder`.
+Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `tempo`, `vault`, `ward`, `wayfinder`.
 
 ## AI integration
 

@@ -99,6 +99,7 @@ const categories = [
       { id: 'conduit', tagline: 'Dependency injection' },
       { id: 'familiar', tagline: 'Web Worker pool' },
       { id: 'herald', tagline: 'Typed event bus' },
+      { id: 'keymap', tagline: 'Keyboard shortcuts & chords' },
       { id: 'ward', tagline: 'RBAC & permissions' },
       { id: 'wayfinder', tagline: 'Client-side routing' },
     ],
@@ -149,6 +150,7 @@ const categories = [
       { id: 'arsenal', tagline: '75+ utility functions' },
       { id: 'codex', tagline: 'AI / MCP server' },
       { id: 'coins', tagline: 'Monetary arithmetic' },
+      { id: 'ledger', tagline: 'Async undo / redo history' },
       { id: 'lingua', tagline: 'i18n & pluralization' },
       { id: 'rune', tagline: 'Structured logging' },
       { id: 'scout', tagline: 'Trigram fuzzy search' },
@@ -255,7 +257,7 @@ onUnmounted(() => {
           </div>
           <div class="hero-actions">
             <a href="/guide/">
-              <sg-button variant="solid" color="primary" size="md">
+              <sg-button variant="solid" color="primary" size="md" effect="shine">
                 <sg-icon slot="prefix" name="book-open" size="16"></sg-icon>
                 Get Started
               </sg-button>

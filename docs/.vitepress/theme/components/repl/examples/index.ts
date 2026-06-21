@@ -8,6 +8,8 @@ import { familiarExamples } from './familiar';
 import { fluxExamples } from './flux';
 import { forgeExamples } from './forge';
 import { heraldExamples } from './herald';
+import { keymapExamples } from './keymap';
+import { ledgerExamples } from './ledger';
 import { linguaExamples } from './lingua';
 import { orbitExamples } from './orbit';
 import { pulseExamples } from './pulse';
@@ -33,6 +35,8 @@ export const examples = {
   flux: fluxExamples,
   forge: forgeExamples,
   herald: heraldExamples,
+  keymap: keymapExamples,
+  ledger: ledgerExamples,
   lingua: linguaExamples,
   orbit: orbitExamples,
   pulse: pulseExamples,

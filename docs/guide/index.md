@@ -6,7 +6,7 @@ sidebar: false
 
 # Getting Started
 
-**Vielzeug** — a German-inspired name meaning roughly "many things" — is a collection of focused TypeScript packages. Each one solves a single problem. None of them require the others. You pick what you need, import only what you use, and the rest never ships.
+**Vielzeug** — a German-inspired name meaning roughly "many things" — is a collection of focused TypeScript packages. Each one solves a single problem. You pick what you need, import only what you use, and the rest never ships.
 
 Zero external dependencies. Full tree-shaking. TypeScript-first throughout.
 
@@ -26,6 +26,9 @@ Jump to the packages most relevant to your work.
 | A full SPA                           | [Wayfinder](#wayfinder) → [Courier](#courier) → [Ripple](#ripple)            |
 | Complex async or event-driven logic  | [Flux](#flux) → [Clockwork](#clockwork) → [Ripple](#ripple)                  |
 | Just utility functions               | [Arsenal](#arsenal)                                                          |
+| Real-time search UI (combobox, command palette) | [Scout](/scout/) → [Sourcerer](#sourcerer)                    |
+| App with undo/redo (editor, design tool)         | [Ledger](/ledger/) → [Ripple](#ripple)                        |
+| Global keyboard shortcuts or command palette    | [Keymap](/keymap/) → [Ledger](/ledger/)                       |
 
 ## Core
 
@@ -299,10 +302,13 @@ const api = await container.resolve(ApiToken);
 | **[Orbit](/orbit/)**             | Floating element positioning for tooltips, dropdowns, menus, and popovers                          |
 | **[Scroll](/scroll/)**           | Virtual list engine with variable-height rows, smooth scrolling, and zero layout thrash            |
 | **[Dnd](/dnd/)**                 | Framework-agnostic drag-and-drop with sortable lists, file-drop zones, and MIME filtering          |
+| **[Scout](/scout/)**             | Trigram fuzzy search with per-field weights, reactive query state, and match highlighting          |
 | **[Sourcerer](/sourcerer/)**     | Typed data-source adapter for pagination, filtering, sorting, search, and infinite scroll          |
 | **[Pulse](/pulse/)**             | Typed WebSocket client with channel multiplexing, presence tracking, and auto-reconnect            |
 | **[Lingua](/lingua/)**           | I18n with typed translations, pluralization, namespace lazy-loading, and SSR support               |
 | **[Herald](/herald/)**           | Typed event bus — pub/sub with namespaces, wildcards, and once-listeners                           |
+| **[Keymap](/keymap/)**           | Headless keyboard shortcut manager with chord sequences, modifier aliases, and context guards      |
+| **[Ledger](/ledger/)**           | Async undo/redo command history with Ripple signals for reactive `canUndo`/`canRedo` state         |
 | **[Rune](/rune/)**               | Structured logging with scoped loggers, pluggable transports, and log levels                       |
 | **[Familiar](/familiar/)**       | Typed Web Worker pool with task queuing, streaming, and AbortSignal cancellation                   |
 | **[Tempo](/tempo/)**             | Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting            |
@@ -329,6 +335,11 @@ const api = await container.resolve(ApiToken);
 | **Flux + Herald**           | `fromBus()` / `toBus()` turn a Herald bus into a Flux stream and back                                       |
 | **Flux + Courier**          | `fromSse()` / `fromQuery()` wrap Courier SSE and query responses as cancellable stream pipelines            |
 | **Flux + Pulse**            | `fromPulse()` / `fromPresence()` convert Pulse WebSocket channels into composable Flux streams              |
+| **Scout + Ripple**          | `createReactiveSearch()` wraps the index in Ripple signals — query and results are reactive computed values  |
+| **Scout + Sourcerer**       | `toSearchFn()` wires a Scout index directly into `createLocalSource` as the search function                 |
+| **Keymap + Ledger**         | Wire `ctrl+z` / `ctrl+shift+z` to `ledger.undo()` / `ledger.redo()` with no boilerplate                    |
+| **Keymap + Herald**         | Publish shortcut events to a bus instead of calling handlers directly — decouples keyboard from logic       |
+| **Ledger + Ripple**         | `canUndo`, `canRedo`, and `isProcessing` are Ripple `Computed` values — bind directly to UI templates       |
 
 ## Philosophy
 

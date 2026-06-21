@@ -8,6 +8,8 @@ import * as familiar from './familiar';
 import * as flux from './flux';
 import * as forge from './forge';
 import * as herald from './herald';
+import * as keymap from './keymap';
+import * as ledger from './ledger';
 import * as lingua from './lingua';
 import * as orbit from './orbit';
 import * as pulse from './pulse';
@@ -33,6 +35,8 @@ const ALL = {
   flux,
   forge,
   herald,
+  keymap,
+  ledger,
   lingua,
   orbit,
   pulse,
