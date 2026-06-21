@@ -61,19 +61,22 @@ const client = createCourier({ baseUrl: 'https://api.example.com' });
 const user = await client.api.get<User>('/users/{id}', { params: { id: userId } });
 ```
 
-| Feature               | Courier                                       | axios                                  | ky                                     |
-| --------------------- | --------------------------------------------- | -------------------------------------- | -------------------------------------- |
-| Bundle size           | <PackageInfo package="courier" type="size" /> | ~26 kB                                 | ~5 kB                                  |
-| Built on              | fetch                                         | XMLHttpRequest                         | fetch                                  |
-| Type-safe path params | <sg-icon name="check" size="16"></sg-icon>    | Manual                                 | Manual                                 |
-| Query cache           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
-| SSE + streaming       | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
-| Standalone mutations  | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
-| Zero dependencies     | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Feature               | Courier                                       | TanStack Query v5                                                                         | axios                                  | ky                                     |
+| --------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------- | -------------------------------------- |
+| Bundle size           | <PackageInfo package="courier" type="size" /> | ~14 kB (core) + framework adapter                                                         | ~26 kB                                 | ~5 kB                                  |
+| Built on              | fetch                                         | Bring your own fetch                                                                      | XMLHttpRequest                         | fetch                                  |
+| Type-safe path params | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>                                                   | Manual                                 | Manual                                 |
+| Query cache           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                                                | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Built-in HTTP client  | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>                                                   | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| SSE + streaming       | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>                                                   | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Standalone mutations  | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                                                | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
+| Zero dependencies     | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="triangle-alert" size="16"></sg-icon> Framework adapter peer dep required   | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
 
 <div class="decision-callout">
 
 **Use Courier when** your app needs typed HTTP, a query cache, tracked mutations, or SSE — especially when you want all of these sharing one interceptor pipeline and zero extra dependencies.
+
+**Consider TanStack Query when** you already have a separate HTTP client you are happy with, need deep React/Vue/Svelte DevTools integration, or need advanced features like infinite scroll queries out of the box.
 
 **Consider axios when** you need to support IE11 or other XMLHttpRequest-based environments, or you already have a large axios-specific codebase.
 
