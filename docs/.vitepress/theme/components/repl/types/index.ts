@@ -15,6 +15,7 @@ import { orbitTypes } from './orbit';
 import { pulseTypes } from './pulse';
 import { rippleTypes } from './ripple';
 import { runeTypes } from './rune';
+import { sandboxTypes } from './sandbox';
 import { scoutTypes } from './scout';
 import { scrollTypes } from './scroll';
 import { sourcererTypes } from './sourcerer';
@@ -41,6 +42,7 @@ export const libraryTypes = {
   pulse: pulseTypes,
   ripple: rippleTypes,
   rune: runeTypes,
+  sandbox: sandboxTypes,
   scout: scoutTypes,
   scroll: scrollTypes,
   sourcerer: sourcererTypes,

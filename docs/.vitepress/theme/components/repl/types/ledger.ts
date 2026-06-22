@@ -10,10 +10,12 @@ declare module '@vielzeug/ledger' {
   }
 
   export interface CommandMeta {
+    data:  unknown;
     label: string | undefined;
   }
 
   export interface Command {
+    data?:    unknown;
     execute(): Promise<void> | void;
     rollback?(): Promise<void> | void;
     label?: string;
@@ -30,8 +32,9 @@ declare module '@vielzeug/ledger' {
     readonly historySize:     Computed<number>;
     readonly historySnapshot: Computed<readonly CommandMeta[]>;
     readonly isProcessing:    Computed<boolean>;
+    readonly pendingCount:    Computed<number>;
 
-    clear(): void;
+    clear(): Promise<void>;
     dispose(): void;
     do(command: Command): Promise<void>;
     redo(): Promise<void>;
