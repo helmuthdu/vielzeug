@@ -108,6 +108,7 @@ define<SgPopoverProps, SgPopoverEvents>(POPOVER_TAG, {
           haspopup: 'dialog',
         }),
       disabled: isDisabled,
+      getHost: () => el,
       getPanel: () => panelEl,
       offset: props.offset,
       onCleanup,

@@ -34,6 +34,15 @@ When facing ambiguity, apply this priority order:
 4. **Minimal scope creep** — a plan item must be actionable by `/pkg-implement`. Avoid "investigate X" items; convert them to concrete findings or defer.
 5. **When uncertain, read more** — use MCP tools or read source files before guessing at behaviour.
 
+### Conflict Resolution
+
+When multiple approaches or conflicting suggestions exist for a single problem:
+
+1. **Evaluate against the "Best Version" criteria** — prioritize the option that minimizes cyclomatic complexity, maximizes readability for a mid-level developer, and adheres strictly to the greenfield mindset in §1.
+2. **Apply the Rule of Least Surprise** — if two suggestions are equally valid but conflict, choose the pattern most idiomatic to modern TypeScript/JavaScript: the one that requires the least "mental map" to understand and that a reader fluent in the ecosystem would reach for first.
+3. **Avoid "Design by Committee"** — do not implement multiple alternatives or leave "choose your own adventure" patterns in the plan. Make a single definitive architectural decision. When hesitant, choose the path that results in the thinnest possible implementation — the code that does the most with the fewest moving parts.
+4. **Document the "Why"** — for every significant architectural choice surfaced during planning, note in the plan item's **Why** field the rationale for the chosen pattern. When that choice lands in source during `/pkg-implement`, a brief high-level comment should accompany the affected module.
+
 ### Anti-Patterns to Avoid
 
 - ❌ **Do not** invent issues not grounded in actual source code.
@@ -313,7 +322,7 @@ Document:
 
 After the three passes and synthesis, write `plan.md` with **exactly these sections** in order:
 
-```md
+````md
 # <name> — Improvement Plan
 
 ## Baseline
@@ -330,11 +339,11 @@ documentation alignment, TypeScript strictness, architectural clarity.>
 
 ## Identified Gaps & Issues
 
-| ID | Category | Title | Location | Impact |
-|----|----------|-------|----------|--------|
-| B1 | 🔴 Bug | <title> | `file.ts:~L100` | High |
-| D1 | 🟠 Design | <title> | `file.ts:~L200` | Medium |
-| ... | | | | |
+| ID  | Category  | Title   | Location        | Impact |
+| --- | --------- | ------- | --------------- | ------ |
+| B1  | 🔴 Bug    | <title> | `file.ts:~L100` | High   |
+| D1  | 🟠 Design | <title> | `file.ts:~L200` | Medium |
+| ... |           |         |                 |        |
 
 ## Improvement Plan
 
@@ -352,8 +361,10 @@ documentation alignment, TypeScript strictness, architectural clarity.>
   // After
   ...
   ```
+````
 
 ### D1 — <Title> 🟠
+
 ...
 
 ## Future Improvements
@@ -369,6 +380,7 @@ documentation alignment, TypeScript strictness, architectural clarity.>
 
 <Downstream breakage, migration considerations, cross-package implications.
 Reference `.devin/rules/conventions.md` for the dependency graph — do not restate it.>
+
 ```
 
 Be specific — reference file paths, function names, and type signatures wherever possible. Do **not** start implementing anything yet.
@@ -384,15 +396,17 @@ Write the final plan to `.devin/workflows/runs/<name>/plan.md` so `/pkg-implemen
 ## 6. Quick Reference — Execution Flow
 
 ```
-Pass 1: Architecture review  → raw [ISSUE] list       → Checkpoint
-    ↓
-Pass 2: DX deep-dive         → [CANDIDATE] list       → Checkpoint
-    ↓
-Pass 3: Synthesis & ranking  → spot-check paths       → Checkpoint
-    ↓
-Write plan.md                → structured artifact
-    ↓
-Ask user                     → A/B/C prompt
+
+Pass 1: Architecture review → raw [ISSUE] list → Checkpoint
+↓
+Pass 2: DX deep-dive → [CANDIDATE] list → Checkpoint
+↓
+Pass 3: Synthesis & ranking → spot-check paths → Checkpoint
+↓
+Write plan.md → structured artifact
+↓
+Ask user → A/B/C prompt
+
 ```
 
 ## 7. Next step — implementation scope
@@ -427,3 +441,4 @@ After presenting the full plan, fill in the template below with concrete numbers
 > - **C — Promote all Future items** — all N Future items move into the implementation plan and will be implemented in this cycle. Effort and risk will increase accordingly.
 >
 > Reply with A, B (+ item IDs or names), or C — or any other instructions before we proceed.
+```

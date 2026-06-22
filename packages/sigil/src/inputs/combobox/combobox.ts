@@ -649,7 +649,13 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
     watch(() => {
       ensureListboxListeners();
 
-      if (isOpen.value) updatePosition();
+      if (isOpen.value) {
+        if (dropdownEl && 'showPopover' in dropdownEl && !dropdownEl.matches(':popover-open')) dropdownEl.showPopover();
+
+        updatePosition();
+      } else {
+        if (dropdownEl && 'hidePopover' in dropdownEl && dropdownEl.matches(':popover-open')) dropdownEl.hidePopover();
+      }
     });
 
     // Once sg-input is in the DOM, grab its inner <input> from its shadow root
@@ -818,6 +824,7 @@ define<SgComboboxProps, SgComboboxEvents>(COMBOBOX_TAG, {
         class="dropdown"
         part="dropdown"
         id="${() => `${comboId}-dropdown`}"
+        popover="manual"
         ?data-open=${() => isOpen.value}
         ref=${(el: HTMLElement | null) => {
           dropdownEl = el;

@@ -12,5 +12,10 @@ export default {
     // are mutually exclusive and can never apply to the same element simultaneously,
     // making the no-descending-specificity rule produce false positives here.
     'no-descending-specificity': null,
+    // Allow BEM modifier syntax (e.g. .dg-tab--active) in addition to plain kebab-case.
+    'selector-class-pattern': [
+      '^[a-z][a-z0-9]*(-[a-z0-9]+)*(--[a-z0-9]+(-[a-z0-9]+)*)?$',
+      { message: (s: string) => `Expected "${s}" to be kebab-case (BEM -- modifier allowed)` },
+    ],
   },
 };

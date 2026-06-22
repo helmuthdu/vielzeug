@@ -176,6 +176,7 @@ Before creating the folder, read an existing package as a structural reference (
    - Add `<name>,` to the `ALL` object
 
    **Do not edit `REPL.vue`** — it imports everything from `repl/libraries/index.ts` and never needs touching when adding a package.
+
 5. Add the source alias to `scripts/vitest.repl.config.ts` so `pnpm validate:repl` can resolve the package **without a prior build**. In the `vielzeugAliases` object, add (sorted alphabetically):
    ```ts
    '@vielzeug/<name>': path.resolve(ROOT, 'packages/<name>/src/index.ts'),

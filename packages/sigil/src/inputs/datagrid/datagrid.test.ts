@@ -767,43 +767,46 @@ describe('sg-datagrid', () => {
     });
   });
 
-  // ── Searchable ────────────────────────────────────────────────────────────────
+  // ── Search ────────────────────────────────────────────────────────────────
 
-  describe('Searchable', () => {
-    it('does not render a toolbar when searchable is not set and no filters', async () => {
+  describe('Search', () => {
+    it('renders a search toggle button always', async () => {
       fixture = await mountGrid({});
 
-      expect(fixture.query('.dg-toolbar')).toBeNull();
+      expect(fixture.query('[aria-label="Search"]')).toBeTruthy();
     });
 
-    it('renders a toolbar with search input when searchable is set', async () => {
-      fixture = await mountGrid({ searchable: true });
+    it('expands search input when toggle button is clicked', async () => {
+      fixture = await mountGrid({});
 
-      expect(fixture.query('.dg-toolbar')).toBeTruthy();
-      expect(fixture.query('.dg-search')).toBeTruthy();
+      expect(fixture.query('.dg-search-input')).toBeNull();
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+      expect(fixture.query('.dg-search-input')).toBeTruthy();
     });
 
-    it('renders a toolbar with filters but no search input when only filters are set', async () => {
+    it('renders filter comboboxes in filter popover when filterOptions are set', async () => {
       fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
       ];
       await Promise.resolve();
 
-      expect(fixture.query('.dg-toolbar')).toBeTruthy();
-      expect(fixture.query('.dg-search')).toBeNull();
       expect(fixture.query('.dg-filter')).toBeTruthy();
     });
 
     it('filters rows matching the search query', async () => {
-      fixture = await mountGrid({ searchable: true });
+      fixture = await mountGrid({});
 
-      const search = fixture.query('.dg-search') as HTMLElement;
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+
+      const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
       await Promise.resolve();
@@ -815,7 +818,7 @@ describe('sg-datagrid', () => {
     });
 
     it('resets to page 0 when the search query changes', async () => {
-      fixture = await mountGrid({ 'page-size': 2, searchable: true });
+      fixture = await mountGrid({ 'page-size': 2 });
 
       const paginationLabel = fixture.query('.dg-page-label');
 
@@ -825,7 +828,10 @@ describe('sg-datagrid', () => {
       await Promise.resolve();
       expect(paginationLabel?.textContent?.trim()).toBe('2 / 2');
 
-      const search = fixture.query('.dg-search') as HTMLElement;
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+
+      const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'a' } }));
       await Promise.resolve();
@@ -834,9 +840,12 @@ describe('sg-datagrid', () => {
     });
 
     it('shows all rows again when query is cleared', async () => {
-      fixture = await mountGrid({ searchable: true });
+      fixture = await mountGrid({});
 
-      const search = fixture.query('.dg-search') as HTMLElement;
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+
+      const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
       await Promise.resolve();
@@ -844,6 +853,24 @@ describe('sg-datagrid', () => {
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: '' } }));
       await Promise.resolve();
+      expect(getBodyRows(fixture).length).toBe(ROWS.length);
+    });
+
+    it('Escape key closes search and restores all rows', async () => {
+      fixture = await mountGrid({});
+
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+
+      const search = fixture.query('.dg-search-input') as HTMLElement;
+
+      search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      await Promise.resolve();
+      expect(getBodyRows(fixture).length).toBe(1);
+
+      search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await Promise.resolve();
+      expect(fixture.query('.dg-search-input')).toBeNull();
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
     });
   });
@@ -911,6 +938,129 @@ describe('sg-datagrid', () => {
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
       expect(fixture.query('.dg-page-label')?.textContent?.trim()).toBe('1 / 1');
+    });
+  });
+
+  // ── Views (controlled tabs) ───────────────────────────────────────────────
+
+  describe('Views (controlled tabs)', () => {
+    it('renders an empty tabs container when views prop is not set', async () => {
+      fixture = await mountGrid({});
+
+      expect(fixture.query('.dg-tab')).toBeNull();
+    });
+
+    it('renders a tab for each view', async () => {
+      fixture = await mountGrid({});
+
+      const el = fixture.element as GridElement;
+
+      (el as unknown as { views: unknown[] }).views = [
+        { id: 'all', label: 'All' },
+        { id: 'open', label: 'Open' },
+      ];
+      await Promise.resolve();
+
+      const tabs = Array.from(fixture.queryAll('.dg-tab'));
+
+      expect(tabs.length).toBe(2);
+      expect(tabs[0].textContent?.trim()).toBe('All');
+      expect(tabs[1].textContent?.trim()).toBe('Open');
+    });
+
+    it('active-view marks the matching tab as active', async () => {
+      fixture = await mountGrid({});
+
+      const el = fixture.element as GridElement;
+
+      (el as unknown as { views: unknown[] }).views = [
+        { id: 'all', label: 'All' },
+        { id: 'open', label: 'Open' },
+      ];
+      (el as unknown as { 'active-view': string })['active-view'] = 'open';
+      await Promise.resolve();
+
+      const tabs = Array.from(fixture.queryAll('.dg-tab'));
+
+      expect(tabs[0].classList.contains('dg-tab--active')).toBe(false);
+      expect(tabs[1].classList.contains('dg-tab--active')).toBe(true);
+    });
+
+    it('clicking a view tab fires view-change with id and label', async () => {
+      fixture = await mountGrid({});
+
+      const el = fixture.element as GridElement;
+
+      (el as unknown as { views: unknown[] }).views = [
+        { id: 'all', label: 'All' },
+        { id: 'open', label: 'Open' },
+      ];
+      await Promise.resolve();
+
+      let detail: { id: string; label: string } | null = null;
+
+      fixture.element.addEventListener('view-change', (e: Event) => {
+        detail = (e as CustomEvent<{ id: string; label: string }>).detail;
+      });
+
+      fire.click(fixture.queryAll('.dg-tab')[1] as HTMLElement);
+      await Promise.resolve();
+
+      expect(detail).toEqual({ id: 'open', label: 'Open' });
+    });
+
+    it('tabs have role="tab" and aria-selected', async () => {
+      fixture = await mountGrid({});
+
+      const el = fixture.element as GridElement;
+
+      (el as unknown as { views: unknown[] }).views = [{ id: 'all', label: 'All' }];
+      await Promise.resolve();
+      (el as unknown as { 'active-view': string })['active-view'] = 'all';
+      await Promise.resolve();
+
+      const tab = fixture.query('.dg-tab') as HTMLElement;
+
+      expect(tab.getAttribute('role')).toBe('tab');
+      expect(tab.getAttribute('aria-selected')).toBe('true');
+    });
+  });
+
+  // ── actions slot ──────────────────────────────────────────────────────────
+
+  describe('actions slot', () => {
+    it('divider is hidden when no actions slot content is provided', async () => {
+      fixture = await mountGrid({});
+
+      expect(fixture.query('.dg-action-divider')?.getAttribute('hidden')).not.toBeNull();
+    });
+
+    it('renders slotted actions content', async () => {
+      fixture = await mount('sg-datagrid', {});
+
+      const el = fixture.element;
+      const btn = document.createElement('button');
+
+      btn.slot = 'actions';
+      btn.textContent = 'Export';
+      el.appendChild(btn);
+      await Promise.resolve();
+
+      expect(fixture.query('slot[name="actions"]')).toBeTruthy();
+    });
+
+    it('divider is visible when actions slot has content', async () => {
+      fixture = await mount('sg-datagrid', {});
+
+      const el = fixture.element;
+      const btn = document.createElement('button');
+
+      btn.slot = 'actions';
+      btn.textContent = 'Export';
+      el.appendChild(btn);
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(fixture.query('.dg-action-divider')?.getAttribute('hidden')).toBeNull();
     });
   });
 
@@ -1197,18 +1347,21 @@ describe('sg-datagrid', () => {
 
   describe('B2: searchedRows and filteredRows composition', () => {
     it('search and filter are composed — filter operates on searched result', async () => {
-      fixture = await mount('sg-datagrid', { props: { searchable: true } });
+      fixture = await mount('sg-datagrid', {});
 
       const el = fixture.element as GridElement;
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
       ];
       await Promise.resolve();
 
-      const search = fixture.query('.dg-search') as HTMLElement;
+      fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
+      await Promise.resolve();
+
+      const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
       await Promise.resolve();
@@ -1227,7 +1380,7 @@ describe('sg-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
       ];
       await Promise.resolve();
@@ -1255,7 +1408,7 @@ describe('sg-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
       ];
       await Promise.resolve();
@@ -1278,18 +1431,20 @@ describe('sg-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
       ];
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
 
       filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: ['Admin'] } }));
-      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
 
-      filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));
-      await Promise.resolve();
+      const filterSelectAfter = fixture.query('.dg-filter') as HTMLElement;
+
+      filterSelectAfter.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));
+      await new Promise((r) => setTimeout(r, 0));
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
     });
@@ -1522,7 +1677,7 @@ describe('sg-datagrid', () => {
         { key: 'role', label: 'Role' },
       ];
       el.rows = ROWS;
-      (el as unknown as { filters: unknown[] }).filters = [
+      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
         { key: 'role', label: 'Role', options: [{ value: 'Admin' }] },
       ];
       await new Promise((r) => setTimeout(r, 0));
@@ -1535,9 +1690,10 @@ describe('sg-datagrid', () => {
 
       expect(getBodyRows(fixture).length).toBe(1);
 
-      // Clear the filter UI and remove the role column simultaneously.
-      // The filterValues pruning watch should clear the stale 'role' key.
-      filterSelect.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));
+      // Clear the filter — re-query the element as it may have been re-rendered.
+      const filterSelectAfter = fixture.query('.dg-filter') as HTMLElement;
+
+      filterSelectAfter.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: [] } }));
       await new Promise((r) => setTimeout(r, 0));
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);

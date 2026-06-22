@@ -262,12 +262,12 @@ End with an **Audit Summary** section using **exactly this format**:
 
 **Rating rules:**
 
-| Condition | Rating |
-|-----------|--------|
-| Any unfixed Critical | � High |
-| Unfixed High, no Critical | 🟡 Medium |
-| Only Medium/Low concerns, no Critical/High | 🟢 Low |
-| No attack surface; no meaningful risks | 🔵 N/A |
+| Condition                                  | Rating    |
+| ------------------------------------------ | --------- |
+| Any unfixed Critical                       | � High    |
+| Unfixed High, no Critical                  | 🟡 Medium |
+| Only Medium/Low concerns, no Critical/High | 🟢 Low    |
+| No attack surface; no meaningful risks     | 🔵 N/A    |
 
 ## 8. Quick Reference — Execution Flow
 

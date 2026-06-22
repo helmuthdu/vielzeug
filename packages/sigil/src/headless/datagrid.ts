@@ -130,6 +130,8 @@ export type DataGridControl<T = Record<string, unknown>> = {
   sortBy(key: string): void;
   /** Current sort state. Reactive signal. */
   readonly sortState: Readable<SortState>;
+  /** Set sort to an explicit key and direction. Passing `'none'` clears the sort. */
+  sortTo(key: string, direction: SortDirection): void;
   /** Toggle selection for a single row. */
   toggleRow(key: string): void;
   /** Total item count across all pages. Reactive signal. */
@@ -198,6 +200,11 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     pagination.reset();
   };
 
+  const _sortToAndReset = (key: string, direction: SortDirection): void => {
+    sort.sortTo(key, direction);
+    pagination.reset();
+  };
+
   // ── Selection ─────────────────────────────────────────────────────────────
   const selection = createSelectionControl<T>({
     getRowKey: options.getRowKey,
@@ -232,6 +239,7 @@ export const createDataGridControl = <T = Record<string, unknown>>(
     setSelection: selection.setSelection,
     sortBy: _sortByAndReset,
     sortState: sort.sortState,
+    sortTo: _sortToAndReset,
     toggleRow: selection.toggleRow,
     totalItems,
   };

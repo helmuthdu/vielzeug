@@ -1,6 +1,6 @@
 # Data Grid
 
-An accessible, keyboard-navigable data grid with built-in column sorting, row-level pagination, single/multi row selection, search & filters, column resizing, and row expansion. All state is reactive — pass any array of objects and a column definition, no wrapper needed.
+An accessible, keyboard-navigable data grid with built-in column sorting, row-level pagination, single/multi row selection, inline search, filter, column resizing, and row expansion. The controls bar above the table provides named views (tabs), inline search, sort, filter, column visibility, and a row-add action — all reactive, no wrapper needed.
 
 ## Basic Usage
 
@@ -381,25 +381,37 @@ Add `expandable` to the grid and supply a `renderExpanded` function on one or mo
 
 </ComponentPreview>
 
-## Search & Filters
+## Controls Bar
 
-Add `searchable` to render a search input above the table. It filters rows across all column values client-side and resets pagination to page 1 on each keystroke. Customise the placeholder with `search-placeholder`.
+Every datagrid renders a controls bar above the table with two regions:
 
-Set `filters` (JS property) to an array of column filter definitions. Each entry renders a multi-select `sg-combobox` in the toolbar. The toolbar renders whenever `searchable` is set **or** `filters` is non-empty — the two are independent. Filter state is automatically pruned when a column is removed.
+- **Left — Named views (tabs):** When `views` is set, tabs appear here. Clicking a tab fires `view-change`; your application is responsible for updating `active-view` and any relevant filter/sort state. When search is active, the expanded search input replaces this region.
+- **Right — Action bar:** Search icon, Sort, Filter by, Column visibility, a divider, and an Add row button — in that order.
+
+### Inline Search
+
+Click the search icon in the action bar to expand an inline input that replaces the left region. It filters rows client-side across all column values and resets pagination on each keystroke. Click the icon again (now an ✕) or press Escape to close and clear the query. Customise the placeholder with `search-placeholder`.
+
+### Sort Popover
+
+Click **Sort** to open a panel where you can choose a column and direction (A→Z / Z→A). The selected column and direction are applied immediately and kept in sync with any header-cell sort clicks.
+
+### Filter Popover
+
+Click **Filter by** to open a field picker. Click any column name to add a multi-select filter rule for it — options are auto-derived from the current row data. Each active rule shows a combobox below the field picker. Individual rules or all filters can be cleared with the trash icon.
+
+Pre-define filter options via the `filterOptions` JS property. When provided, those options replace the auto-derived ones for matching column keys. The type is `FilterOption[]` — each entry has `key`, `label`, and `options`.
+
+### Column Visibility
+
+The columns icon (directly right of the Filter button) opens a menu listing every column with an eye toggle. Click any row to show or hide that column. Hidden columns are excluded from search and filter results.
 
 <ComponentPreview>
 
 ```html
-<sg-datagrid id="dg-search" label="Users" searchable search-placeholder="Search users…" fullwidth></sg-datagrid>
+<sg-datagrid id="dg-controls" label="Users" search-placeholder="Search…" fullwidth></sg-datagrid>
 <script>
-  const grid = document.getElementById('dg-search');
-  grid.columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'role', label: 'Role' },
-    { key: 'department', label: 'Department' },
-    { key: 'email', label: 'Email' },
-  ];
-  grid.rows = [
+  const ALL_ROWS = [
     { id: '1', name: 'Alice', role: 'Admin', department: 'Engineering', email: 'alice@example.com' },
     { id: '2', name: 'Bob', role: 'Editor', department: 'Marketing', email: 'bob@example.com' },
     { id: '3', name: 'Carol', role: 'Viewer', department: 'Engineering', email: 'carol@example.com' },
@@ -407,18 +419,87 @@ Set `filters` (JS property) to an array of column filter definitions. Each entry
     { id: '5', name: 'Eve', role: 'Editor', department: 'Marketing', email: 'eve@example.com' },
     { id: '6', name: 'Frank', role: 'Admin', department: 'Design', email: 'frank@example.com' },
   ];
-  grid.filters = [
-    {
-      key: 'role',
-      label: 'Role',
-      options: [{ value: 'Admin' }, { value: 'Editor' }, { value: 'Viewer' }],
-    },
-    {
-      key: 'department',
-      label: 'Department',
-      options: [{ value: 'Engineering' }, { value: 'Marketing' }, { value: 'Design' }],
-    },
+  const grid = document.getElementById('dg-controls');
+  grid.columns = [
+    { key: 'name', label: 'Name', sortable: true },
+    { key: 'role', label: 'Role', sortable: true },
+    { key: 'department', label: 'Department' },
+    { key: 'email', label: 'Email' },
   ];
+  grid.views = [
+    { id: 'all', label: 'All' },
+    { id: 'admin', label: 'Admins' },
+    { id: 'engineering', label: 'Engineering' },
+  ];
+  grid['active-view'] = 'all';
+  grid.rows = ALL_ROWS;
+
+  grid.addEventListener('view-change', (e) => {
+    grid['active-view'] = e.detail.id;
+    if (e.detail.id === 'admin') {
+      grid.rows = ALL_ROWS.filter((r) => r.role === 'Admin');
+    } else if (e.detail.id === 'engineering') {
+      grid.rows = ALL_ROWS.filter((r) => r.department === 'Engineering');
+    } else {
+      grid.rows = ALL_ROWS;
+    }
+    /* Reset search and filters when switching views:
+       resetSearch() clears the search query + active state.
+       resetFilters() clears active filter rules. Column
+       visibility is a persistent user preference — never reset. */
+  });
+
+  /* Slot an "Add row" button into the actions slot */
+  // <sg-button slot="actions" size="sm">Add row</sg-button>
+</script>
+```
+
+</ComponentPreview>
+
+### Named Views (Controlled Tabs)
+
+Supply a `views` array and keep `active-view` in sync with `view-change` events. Your application controls which view is active and what data/filters to show for each view.
+
+::: tip Controlled pattern
+`views` and `active-view` are intentionally controlled — the grid never mutates `active-view` on its own. This keeps your application as the single source of truth for view state.
+:::
+
+<ComponentPreview>
+
+```html
+<sg-datagrid id="dg-tabs" label="Issues" fullwidth></sg-datagrid>
+<script>
+  const VIEWS = [
+    { id: 'all', label: 'All' },
+    { id: 'open', label: 'Open' },
+    { id: 'closed', label: 'Closed' },
+  ];
+  const ALL_ROWS = [
+    { id: '1', title: 'Fix login bug', status: 'Open', assignee: 'Alice' },
+    { id: '2', title: 'Dark mode', status: 'In Progress', assignee: 'Bob' },
+    { id: '3', title: 'API docs', status: 'Closed', assignee: 'Carol' },
+    { id: '4', title: 'Performance', status: 'Open', assignee: 'Alice' },
+  ];
+  const grid = document.getElementById('dg-tabs');
+  grid.columns = [
+    { key: 'title', label: 'Title', sortable: true },
+    { key: 'status', label: 'Status' },
+    { key: 'assignee', label: 'Assignee' },
+  ];
+  grid.views = VIEWS;
+  grid['active-view'] = 'all';
+  grid.rows = ALL_ROWS;
+
+  grid.addEventListener('view-change', (e) => {
+    grid['active-view'] = e.detail.id;
+    if (e.detail.id === 'open') {
+      grid.rows = ALL_ROWS.filter((r) => r.status === 'Open');
+    } else if (e.detail.id === 'closed') {
+      grid.rows = ALL_ROWS.filter((r) => r.status === 'Closed');
+    } else {
+      grid.rows = ALL_ROWS;
+    }
+  });
 </script>
 ```
 
@@ -533,6 +614,8 @@ Set `selected-keys` to programmatically control which rows are selected. Any cha
 | `columns`            | `DataGridColumn[]`                     | —                         | Column definitions (JS property). Takes precedence over `<sg-column>` children; omit to use the declarative API                          |
 | `rows`               | `object[]`                             | `[]`                      | Row data (JS property only)                                                                                                              |
 | `getRowKey`          | `(row) => string`                      | `(row) => String(row.id)` | Returns a unique key per row. Required when rows lack an `id` field (JS property only)                                                   |
+| `views`              | `{ id: string, label: string }[]`      | —                         | Named view tab definitions. When set, tabs appear in the left controls region (JS property)                                               |
+| `active-view`        | `string`                               | —                         | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                             |
 | `label`              | `string`                               | —                         | Accessible label for the grid (`aria-label`)                                                                                             |
 | `selected-keys`      | `string[]`                             | `[]`                      | Controlled selection — set externally to override the internal selection state (JS property)                                             |
 | `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                  |
@@ -543,9 +626,8 @@ Set `selected-keys` to programmatically control which rows are selected. Any cha
 | `density`            | `'compact' \| 'cozy' \| 'comfortable'` | `'cozy'`                  | Cell padding; `compact` = tight, `cozy` = default, `comfortable` = spacious                                                              |
 | `striped`            | `boolean`                              | `false`                   | Alternating row backgrounds                                                                                                              |
 | `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                           |
-| `searchable`         | `boolean`                              | `false`                   | Show a search input above the table (client-side filter across all columns)                                                              |
-| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the search input                                                                                                    |
-| `filters`            | `{ key, label, options }[]`            | —                         | Column filter definitions; renders a `sg-combobox` per entry in the toolbar (JS property). Toolbar renders independently of `searchable` |
+| `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                         |
+| `filterOptions`      | `FilterOption[]`                       | —                         | Pre-defined filter option definitions per column key. When set, those options replace auto-derived ones in the Filter by popover (JS property) |
 | `page-size-options`  | `number[]`                             | —                         | When set, renders a page-size `sg-select` in the footer (JS property)                                                                    |
 | `loading`            | `boolean`                              | `false`                   | Show busy/loading state                                                                                                                  |
 | `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |
@@ -563,6 +645,16 @@ Set `selected-keys` to programmatically control which rows are selected. Any cha
 | `renderExpanded` | `(item) => string` | Renders the expanded detail panel for a row as an HTML string. Requires `expandable` on the grid |
 | `width`          | `string?`          | Column width (any CSS value, e.g. `'12rem'`)                                                     |
 
+### FilterOption
+
+Used with the `filterOptions` JS property to pre-define the choices available in the Filter by popover for a given column.
+
+| Property  | Type                                 | Description                                              |
+| --------- | ------------------------------------ | -------------------------------------------------------- |
+| `key`     | `string`                             | Column key this filter option definition applies to      |
+| `label`   | `string`                             | Display label shown as the rule header                   |
+| `options` | `{ label?: string; value: string }[]`| Selectable values; `label` is optional (falls back to `value`) |
+
 **`sg-column`**
 
 When using the declarative `<sg-column>` API, the following attributes map directly to `DataGridColumn` fields:
@@ -578,12 +670,19 @@ When using the declarative `<sg-column>` API, the following attributes map direc
 
 ### Events
 
-| Event              | Detail                                                  | Description                               |
-| ------------------ | ------------------------------------------------------- | ----------------------------------------- |
-| `sort-change`      | `{ key: string, direction: 'asc' \| 'desc' \| 'none' }` | Fired when sort state changes             |
-| `selection-change` | `{ keys: string[], rows: object[] }`                    | Fired when row selection changes          |
-| `page-change`      | `{ pageIndex: number, pageSize: number }`               | Fired when the active page changes        |
-| `row-expand`       | `{ key: string, expanded: boolean }`                    | Fired when a row is expanded or collapsed |
+| Event              | Detail                                                   | Description                                                                 |
+| ------------------ | -------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `sort-change`      | `{ key: string, direction: 'asc' \| 'desc' \| 'none' }` | Fired when sort state changes                                               |
+| `selection-change` | `{ keys: string[], rows: object[] }`                     | Fired when row selection changes                                            |
+| `page-change`      | `{ pageIndex: number, pageSize: number }`                | Fired when the active page changes                                          |
+| `row-expand`       | `{ key: string, expanded: boolean }`                     | Fired when a row is expanded or collapsed                                   |
+| `view-change`      | `{ id: string, label: string }`                          | Fired when the user clicks a view tab; consumer must update `active-view`   |
+
+### Slots
+
+| Slot      | Description                                                                                                    |
+| --------- | -------------------------------------------------------------------------------------------------------------- |
+| `actions` | Content rendered at the right end of the controls bar, after the built-in icon buttons. A divider is automatically shown when this slot has content and hidden when it is empty. Typical use: an "Add row" button, an export trigger, or any toolbar action. |
 
 ### CSS Custom Properties
 
@@ -605,14 +704,15 @@ When using the declarative `<sg-column>` API, the following attributes map direc
 
 ### CSS Parts
 
-| Part     | Element   | Description               |
-| -------- | --------- | ------------------------- |
-| `table`  | `<table>` | The table element         |
-| `thead`  | `<thead>` | The header row group      |
-| `tbody`  | `<tbody>` | The body row group        |
-| `row`    | `<tr>`    | A body row                |
-| `cell`   | `<td>`    | A body cell               |
-| `footer` | `<div>`   | The pagination footer bar |
+| Part       | Element   | Description                                    |
+| ---------- | --------- | ---------------------------------------------- |
+| `controls` | `<div>`   | The controls bar (search, tabs, action buttons) |
+| `table`    | `<table>` | The table element                              |
+| `thead`    | `<thead>` | The header row group                           |
+| `tbody`    | `<tbody>` | The body row group                             |
+| `row`      | `<tr>`    | A body row                                     |
+| `cell`     | `<td>`    | A body cell                                    |
+| `footer`   | `<div>`   | The pagination footer bar                      |
 
 ## Accessibility
 

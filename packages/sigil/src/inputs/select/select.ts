@@ -1,5 +1,5 @@
 import { define, useField, html, inject, prop } from '@vielzeug/craft';
-import { computed, signal, watch } from '@vielzeug/ripple';
+import { computed, effect, signal, watch } from '@vielzeug/ripple';
 
 import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
 import type { SelectableFieldProps } from '../../shared';
@@ -415,6 +415,16 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
 
     watch(slots.elements(), () => readOptions(), { immediate: true });
 
+    const stopPopoverSync = effect(() => {
+      if (isOpen.value) {
+        if (dropdownEl && 'showPopover' in dropdownEl && !dropdownEl.matches(':popover-open')) dropdownEl.showPopover();
+      } else {
+        if (dropdownEl && 'hidePopover' in dropdownEl && dropdownEl.matches(':popover-open')) dropdownEl.hidePopover();
+      }
+    });
+
+    onCleanup(() => stopPopoverSync.dispose());
+
     onMounted(() => {
       let onTriggerClick: ((event: MouseEvent) => void) | null = null;
       let onTriggerKeydown: ((event: KeyboardEvent) => void) | null = null;
@@ -498,6 +508,7 @@ define<SgSelectProps, SgSelectEvents>(SELECT_TAG, {
       <div
         class="dropdown"
         part="dropdown"
+        popover="manual"
         ?data-open="${isOpen}"
         role="listbox"
         id="${listboxId}"

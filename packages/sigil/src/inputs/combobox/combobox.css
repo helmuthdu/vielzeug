@@ -159,8 +159,7 @@
 
   .dropdown {
     position: fixed;
-    inset-inline-start: 0;
-    top: 0;
+    inset: 0 auto auto 0;
     z-index: calc(var(--z-popover, 1000) + 1);
     box-sizing: border-box;
     max-height: min(16rem, 50dvh);

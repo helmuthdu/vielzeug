@@ -6,11 +6,11 @@ description: Master orchestrator for the full Vielzeug package workflow. Support
 
 You are orchestrating the complete workflow for a **Vielzeug** package. This workflow supports three modes:
 
-| Mode | Use when |
-|------|----------|
-| `improve` | Analysing an existing package to find bugs, design issues, and enhancements (default) |
-| `feature` | Adding a specific new feature to an existing package |
-| `new-package` | Creating a new package from scratch |
+| Mode          | Use when                                                                              |
+| ------------- | ------------------------------------------------------------------------------------- |
+| `improve`     | Analysing an existing package to find bugs, design issues, and enhancements (default) |
+| `feature`     | Adding a specific new feature to an existing package                                  |
+| `new-package` | Creating a new package from scratch                                                   |
 
 The mode is declared at invocation (e.g. `/pkg-workflow mode:feature`) or established in §3. It determines which planning workflow is used in Phase 1. **Phases 2–7 are identical across all modes.**
 
@@ -179,6 +179,7 @@ Emit `[PHASE 2]` before starting.
 
 > **`new-package` mode only — Round 0 — Scaffold** `[PASS 0/3]`:
 > Before the three implementation rounds, create the package skeleton:
+>
 > 1. Create `packages/<name>/` with all standard files (follow the scaffolding reference in `/pkg-spec` §5).
 > 2. Register the package in `rush.json` (add to `projects` array).
 > 3. Add a `resolve.alias` entry in `docs/.vitepress/config.ts` following the existing pattern.

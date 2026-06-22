@@ -101,13 +101,13 @@ Use consistent markers for agent-parseable output:
 
 Not every package is a consumed library. Before applying the template, identify the archetype and apply the adaptations below. A package can belong to more than one row.
 
-| Archetype | Indicators | Adaptations |
-| --------- | ---------- | ----------- |
-| **Library** (default) | `src/index.ts` exports functions/classes; imported by userland | No adaptations — use the full template as written |
-| **CLI / executable tool** | `bin` field in `package.json`; primary interaction is a terminal command, not an import | Quick Start in `index.md` leads with the shell command, not a TypeScript snippet; `## Framework Integration` in `usage.md` is replaced with `## Embedding in a <Runtime> Process` showing programmatic use as a secondary option; comparison table compares deployment/invocation modes, not API surfaces |
-| **DOM-output / headless UI** | Package renders DOM directly (e.g. `sigil`, `prism`); no REPL examples by convention | No REPL examples or Monaco types; `## Framework Integration` shows web-component usage in HTML/JS, not React/Vue/Svelte unless the package ships framework adapters |
-| **Build / dev tool** | `devDependencies`-only; runs at build time, not runtime | Quick Start shows CLI invocation or config file; `## Basic Usage` in `usage.md` starts with config, not code; API reference may be a config schema, not function signatures |
-| **Pure type package** | Exports only `type` and `interface`; no runtime code | Skip `## Quick Start` code block; `api.md` is types-only; no examples needed unless the types encode a non-obvious pattern |
+| Archetype                    | Indicators                                                                              | Adaptations                                                                                                                                                                                                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland                          | No adaptations — use the full template as written                                                                                                                                                                                                                                                         |
+| **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command, not an import | Quick Start in `index.md` leads with the shell command, not a TypeScript snippet; `## Framework Integration` in `usage.md` is replaced with `## Embedding in a <Runtime> Process` showing programmatic use as a secondary option; comparison table compares deployment/invocation modes, not API surfaces |
+| **DOM-output / headless UI** | Package renders DOM directly (e.g. `sigil`, `prism`); no REPL examples by convention    | No REPL examples or Monaco types; `## Framework Integration` shows web-component usage in HTML/JS, not React/Vue/Svelte unless the package ships framework adapters                                                                                                                                       |
+| **Build / dev tool**         | `devDependencies`-only; runs at build time, not runtime                                 | Quick Start shows CLI invocation or config file; `## Basic Usage` in `usage.md` starts with config, not code; API reference may be a config schema, not function signatures                                                                                                                               |
+| **Pure type package**        | Exports only `type` and `interface`; no runtime code                                    | Skip `## Quick Start` code block; `api.md` is types-only; no examples needed unless the types encode a non-obvious pattern                                                                                                                                                                                |
 
 **When in doubt:** read `package.json` (`bin`, `main`, `exports`, `engines`, `type`) and `src/cli.ts` or equivalent entry points before writing a single line of docs.
 
@@ -167,14 +167,14 @@ Prioritize **clarity and developer usability** over exhaustive verbosity.
 1. **Read all doc files** — `docs/<name>/index.md`, `usage.md`, `api.md`, `examples.md`, and every `examples/*.md`.
 2. **For each export from Step 1**, check:
 
-   | Check | Pass | Fail action |
-   |-------|------|-------------|
-   | Documented in `api.md`? | ✅ | `[FINDING] Missing: <symbol>` |
-   | Signature correct? | ✅ | `[FINDING] Stale signature: <symbol>` |
-   | Behaviour accurate? | ✅ | `[FINDING] Wrong behaviour: <symbol>` |
-   | In `usage.md` if applicable? | ✅ | `[FINDING] Missing usage: <symbol>` |
-   | Has example if warranted? | ✅ | `[FINDING] Missing example: <symbol>` |
-   | Deprecated marked? | ✅ | `[FINDING] Unmarked deprecation: <symbol>` |
+   | Check                        | Pass | Fail action                                |
+   | ---------------------------- | ---- | ------------------------------------------ |
+   | Documented in `api.md`?      | ✅   | `[FINDING] Missing: <symbol>`              |
+   | Signature correct?           | ✅   | `[FINDING] Stale signature: <symbol>`      |
+   | Behaviour accurate?          | ✅   | `[FINDING] Wrong behaviour: <symbol>`      |
+   | In `usage.md` if applicable? | ✅   | `[FINDING] Missing usage: <symbol>`        |
+   | Has example if warranted?    | ✅   | `[FINDING] Missing example: <symbol>`      |
+   | Deprecated marked?           | ✅   | `[FINDING] Unmarked deprecation: <symbol>` |
 
 3. **Scan docs for obsolete content** — any symbol referenced in docs but NOT in Step 1 inventory:
    - `[FINDING] Obsolete: <symbol> (removed from API)`
@@ -254,7 +254,7 @@ Prioritize **clarity and developer usability** over exhaustive verbosity.
 1. `api.md` — source of truth for signatures; other pages reference it
 2. `usage.md` — may link to api.md sections
 3. `index.md` — exports frontmatter must match api.md
-4. `examples.md` — must match examples/*.md files
+4. `examples.md` — must match examples/\*.md files
 5. `examples/*.md` — already handled in Step 3, but verify links
 
 **For each page**, output:
@@ -655,12 +655,12 @@ import { relevantExport } from '@vielzeug/<pkg>';
 
 Run through this checklist mentally for each page:
 
-| Page | Correct quadrant? | Anti-pattern to reject |
-|------|-------------------|------------------------|
-| `index.md` | Explanation | Tutorial steps, option tables |
-| `usage.md` | How-to | Exhaustive option tables, conceptual essays |
-| `api.md` | Reference | Opinionated guidance, "you should" prose |
-| `examples/*.md` | How-to | Conceptual detours, incomplete code |
+| Page            | Correct quadrant? | Anti-pattern to reject                      |
+| --------------- | ----------------- | ------------------------------------------- |
+| `index.md`      | Explanation       | Tutorial steps, option tables               |
+| `usage.md`      | How-to            | Exhaustive option tables, conceptual essays |
+| `api.md`        | Reference         | Opinionated guidance, "you should" prose    |
+| `examples/*.md` | How-to            | Conceptual detours, incomplete code         |
 
 ### 5.2 Technical Accuracy Verification
 
@@ -699,6 +699,7 @@ pnpm docs:build
 ```
 
 **If build fails:** Fix the error before proceeding. Common issues:
+
 - Invalid frontmatter YAML
 - Dead links (404s logged)
 - Markdown syntax errors

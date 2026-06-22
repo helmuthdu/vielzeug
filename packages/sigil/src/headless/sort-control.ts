@@ -20,6 +20,8 @@ export type SortControl<T> = {
   readonly sortedItems: Readable<T[]>;
   /** Current sort state. Reactive signal. */
   readonly sortState: Readable<SortState>;
+  /** Set sort to an explicit key and direction. Passing `'none'` clears the sort. */
+  sortTo(key: string, direction: SortDirection): void;
 };
 
 export const createSortControl = <T>(options: SortControlOptions<T>): SortControl<T> => {
@@ -62,5 +64,17 @@ export const createSortControl = <T>(options: SortControlOptions<T>): SortContro
     options.onSortChange?.({ direction: _sortDir.value, key: _sortKey.value });
   };
 
-  return { sortBy, sortedItems, sortState };
+  const sortTo = (key: string, direction: SortDirection): void => {
+    if (direction === 'none') {
+      _sortKey.value = '';
+      _sortDir.value = 'none';
+    } else {
+      _sortKey.value = key;
+      _sortDir.value = direction;
+    }
+
+    options.onSortChange?.({ direction: _sortDir.value, key: _sortKey.value });
+  };
+
+  return { sortBy, sortedItems, sortState, sortTo };
 };

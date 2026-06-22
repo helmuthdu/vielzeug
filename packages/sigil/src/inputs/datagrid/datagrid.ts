@@ -5,8 +5,8 @@ import { warn } from '../../_warn';
 import '../../content/icon/icon';
 import '../../inputs/checkbox/checkbox';
 import '../../inputs/combobox/combobox';
-import '../../inputs/input/input';
 import '../../inputs/select/select';
+import '../../overlay/popover/popover';
 import {
   lifecycleSignal,
   createDataGridControl,
@@ -19,12 +19,14 @@ import {
 import { disablableBundle, loadableBundle } from '../../shared';
 import { tableBaseMixin } from '../../styles';
 import { COLUMN_OBSERVED_ATTRS, parseColumnChildren } from './datagrid-column';
+import { createDataGridControls, type FilterOption, type DataGridView } from './datagrid-controls';
 import { type GridNavHandle, createGridNav } from './datagrid-nav';
 import componentStyles from './datagrid.css?inline';
 
 type SortMode = 'client' | 'server';
 
 export { COLUMN_TAG } from './datagrid-column';
+export type { DataGridView, FilterOption } from './datagrid-controls';
 
 // ── Pure module-level helpers ─────────────────────────────────────────────────
 
@@ -50,8 +52,6 @@ export function ariaSortValue(state: SortState, key: string): 'ascending' | 'des
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type FilterDef = { key: string; label: string; options: { label?: string; value: string }[] };
-
 export type SgDataGridEvents<T = Record<string, unknown>> = {
   /** Fired when the active page changes. */
   'page-change': { pageIndex: number; pageSize: number };
@@ -61,9 +61,17 @@ export type SgDataGridEvents<T = Record<string, unknown>> = {
   'selection-change': { keys: string[]; rows: T[] };
   /** Fired when the sort column or direction changes. */
   'sort-change': { direction: SortDirection; key: string };
+  /** Fired when the active view tab changes. detail: { id, label } */
+  'view-change': { id: string; label: string };
 };
 
 export type SgDataGridProps<T = Record<string, unknown>> = {
+  /**
+   * The ID of the currently active view. Must match an `id` in `views`.
+   * When omitted, no view is active (all data shown).
+   * @example `grid['active-view'] = 'open'`
+   */
+  'active-view'?: string;
   /**
    * Column definitions (imperative API). Takes precedence over `<sg-column>` children.
    * Passing `[]` explicitly clears declarative children.
@@ -86,19 +94,23 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
   /**
    * Enable row expansion. When set, each row gets a toggle button.
    * Requires at least one column to have a `renderExpanded` function.
+   *
+   * @security The `renderExpanded` callback returns an HTML string inserted via `innerHTML`.
+   * If data originates from untrusted user input, sanitize it before returning
+   * (e.g. with DOMPurify or your CSP-compliant sanitizer).
    */
   expandable?: boolean;
   /**
-   * Column filter definitions. Each entry renders a `sg-combobox` (multi-select) in the toolbar.
-   * The toolbar renders automatically when filters are set, independent of the `searchable` prop.
+   * Pre-defined filter option definitions per column key.
+   * When provided, these options replace the auto-derived ones in the Filter popover.
    * @example
    * ```js
-   * grid.filters = [
+   * grid.filterOptions = [
    *   { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
    * ];
    * ```
    */
-  filters?: FilterDef[];
+  filterOptions?: FilterOption[];
   /** Stretch the grid to fill its container's width. */
   fullwidth?: boolean;
   /**
@@ -126,10 +138,8 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
    * ```
    */
   rows?: T[];
-  /** Placeholder text for the search input. */
+  /** Placeholder text for the inline search input in the controls bar. */
   'search-placeholder'?: string;
-  /** Show a search input above the table to filter rows by any column value. */
-  searchable?: boolean;
   /**
    * Pre-selected row keys. Setting this from outside will update the internal selection.
    * @example `grid['selected-keys'] = ['1', '3']`
@@ -144,11 +154,26 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
   'sort-mode'?: SortMode;
   /** Apply alternating row backgrounds. */
   striped?: boolean;
+  /**
+   * Named view definitions for the controls bar tab strip.
+   * Each view is a label displayed as a tab; switching tabs fires `view-change`.
+   * The consumer is responsible for restoring filter/sort state per view.
+   * @example
+   * ```js
+   * grid.views = [
+   *   { id: 'all', label: 'All' },
+   *   { id: 'open', label: 'Open' },
+   *   { id: 'mine', label: 'Mine' },
+   * ];
+   * grid['active-view'] = 'all';
+   * ```
+   */
+  views?: DataGridView[];
 };
 
 /**
  * An accessible, keyboard-navigable data grid with sorting, pagination,
- * and single/multi row selection.
+ * single/multi row selection, inline search, filter, and named views.
  *
  * @element sg-datagrid
  * @element sg-column - Optional declarative column definition child
@@ -157,19 +182,21 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
  * @attr {boolean} loading - Show busy/loading state
  * @attr {boolean} striped - Apply alternating row backgrounds
  * @attr {boolean} fullwidth - Stretch the grid to fill its container's width
- * @attr {boolean} searchable - Show a search input above the table
- * @attr {string} search-placeholder - Placeholder for the search input
+ * @attr {string} search-placeholder - Placeholder for the inline search input
+ * @attr {data} filterOptions - Pre-defined filter option definitions per column key
  * @attr {number} page-size - Rows per page (0 = no pagination, default 10)
  * @attr {string} selection-mode - Row selection: 'none' | 'single' | 'multi'
  * @attr {string} sort-mode - Sorting: 'client' (default) | 'server'
  * @attr {string} density - Cell density: compact | cozy (default) | comfortable
  * @attr {string} empty-text - Text shown when there are no rows
  * @attr {string} label - Accessible label for the grid
+ * @attr {string} active-view - ID of the currently active view tab
  *
  * @fires selection-change - Fired when row selection changes. detail: { keys: string[], rows: T[] }
  * @fires sort-change - Fired when sort state changes. detail: { key: string, direction: SortDirection }
  * @fires page-change - Fired when page changes. detail: { pageIndex: number, pageSize: number }
  * @fires row-expand - Fired when a row is expanded or collapsed. detail: { expanded: boolean; key: string }
+ * @fires view-change - Fired when the active view tab changes. detail: { id: string, label: string }
  *
  * @cssprop --datagrid-bg - Grid background color
  * @cssprop --datagrid-border-color - Grid and cell border color
@@ -185,6 +212,7 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
  * @cssprop --datagrid-max-height - Max scrollable height of the table area
  * @cssprop --datagrid-font-size - Base font size for cells
  *
+ * @part controls - The controls bar (tabs + action row)
  * @part table - The `<table>` element
  * @part thead - The `<thead>` element
  * @part tbody - The `<tbody>` element
@@ -205,6 +233,8 @@ export type SgDataGridProps<T = Record<string, unknown>> = {
  *     { id: '1', name: 'Alice', role: 'Admin' },
  *     { id: '2', name: 'Bob',   role: 'Viewer' },
  *   ];
+ *   grid.views = [{ id: 'all', label: 'All' }, { id: 'open', label: 'Open' }];
+ *   grid['active-view'] = 'all';
  * </script>
  * ```
  */
@@ -212,13 +242,14 @@ export const DATAGRID_TAG = 'sg-datagrid' as const;
 
 define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
   props: {
+    'active-view': prop.string(),
     density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
     ...disablableBundle,
     ...loadableBundle,
     columns: prop.data<DataGridColumn[]>(),
     'empty-text': prop.string('No data'),
     expandable: prop.bool(false),
-    filters: prop.data<FilterDef[]>(),
+    filterOptions: prop.data<FilterOption[]>(),
     fullwidth: prop.bool(false),
     getRowKey: prop.data<(row: Record<string, unknown>) => string>(),
     label: prop.string(),
@@ -226,14 +257,14 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     'page-size-options': prop.data<number[]>(),
     rows: prop.data<Record<string, unknown>[]>(),
     'search-placeholder': prop.string('Search…'),
-    searchable: prop.bool(false),
     'selected-keys': prop.data<string[]>(),
     'selection-mode': prop.string<SelectionMode>('none'),
     'sort-mode': prop.string<SortMode>('client'),
     striped: prop.bool(false),
+    views: prop.data<DataGridView[]>(),
   },
 
-  setup(props, { el, emit, onCleanup, onMounted }) {
+  setup(props, { el, emit, onCleanup, onMounted, slots }) {
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props['selection-mode'].value ?? 'none');
 
@@ -309,64 +340,14 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
       return String(id);
     };
 
-    // ── Search & filters ─────────────────────────────────────────────────────────
+    // ── Controls (search, filter, column visibility) ──────────────────────────
+    // Extracted into a dedicated headless module so this scope stays focused
+    // on table rendering machinery.
 
-    const searchQuery = signal('');
-    const filterValues = signal(new Map<string, Set<string>>());
-    const filterDefs = computed(() => props.filters.value ?? []);
-
-    // Prune stale filter state when columns are removed so ghost filters don't re-activate.
-    const columnKeys = computed(() => resolvedColumns.value.map((c) => c.key));
-
-    watch(
-      columnKeys,
-      (activeKeys) => {
-        const keySet = new Set(activeKeys);
-        const current = filterValues.value;
-        const pruned = new Map([...current].filter(([k]) => keySet.has(k)));
-
-        if (pruned.size !== current.size) filterValues.value = pruned;
-      },
-      { immediate: false },
-    );
-
-    // encapsulated mutation — one copy-on-write path, no inline Map copies in handlers.
-    const setFilter = (key: string, values: string[]): void => {
-      const next = new Map(filterValues.value);
-
-      next.set(key, new Set(values));
-      filterValues.value = next;
-    };
-
-    // B2: search and filter as separate composed computeds for independent testability.
-    const searchedRows = computed(() => {
-      const rows = props.rows.value ?? [];
-      const q = searchQuery.value.trim().toLowerCase();
-
-      if (!q) return rows;
-
-      return rows.filter((row) => Object.values(row).some((v) => v != null && String(v).toLowerCase().includes(q)));
-    });
-
-    const filteredRows = computed(() => {
-      const rows = searchedRows.value;
-      const fv = filterValues.value;
-
-      if (!fv.size) return rows;
-
-      const currentKeys = new Set(resolvedColumns.value.map((c) => c.key));
-
-      return rows.filter((row) => {
-        for (const [key, selected] of fv) {
-          if (!selected.size || !currentKeys.has(key)) continue;
-
-          const cell = row[key];
-
-          if (!selected.has(cell == null ? '' : String(cell))) return false;
-        }
-
-        return true;
-      });
+    const controls = createDataGridControls({
+      columns: resolvedColumns,
+      filterOptions: props.filterOptions,
+      rows: computed(() => props.rows.value ?? []),
     });
 
     // ── Headless control ──────────────────────────────────────────────────────
@@ -374,7 +355,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     const ctrl: DataGridControl = createDataGridControl({
       columns: () => resolvedColumns.value,
       getRowKey: resolveKey,
-      items: filteredRows,
+      items: controls.filteredRows,
       onSelectionChange: (keys: Set<string>) => {
         emit('selection-change', { keys: [...keys], rows: ctrl.selectedRows.value as Record<string, unknown>[] });
       },
@@ -425,6 +406,12 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
         window.addEventListener('pointerup', () => ac.abort(), { signal: sig });
       };
 
+    // ── Visible columns (respects hide/show from column menu) ────────────────
+
+    const visibleColumns = computed<DataGridColumn[]>(() =>
+      resolvedColumns.value.filter((c) => !controls.hiddenColumns.value.has(c.key)),
+    );
+
     // ── Cell value helper ────────────────────────────────────────────────────
 
     const getCellValue = (col: DataGridColumn, item: Record<string, unknown>): string => {
@@ -437,7 +424,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
 
     // B4: reactive page reset — any change to the filtered result set resets to page 0.
     // Removes the need to call ctrl.goToPage(0) manually in every event handler.
-    watch(filteredRows, () => ctrl.goToPage(0), { immediate: false });
+    watch(controls.filteredRows, () => ctrl.goToPage(0), { immediate: false });
 
     // ── Pagination handlers ───────────────────────────────────────────────────
 
@@ -460,7 +447,7 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     // ── Column count (used in keyboard nav + empty colspan) ───────────────────
 
     const effectiveColCount = computed(
-      () => resolvedColumns.value.length + (selectionMode.value === 'multi' ? 1 : 0) + (hasExpander.value ? 1 : 0),
+      () => visibleColumns.value.length + (selectionMode.value === 'multi' ? 1 : 0) + (hasExpander.value ? 1 : 0),
     );
 
     // ── Pagination info text ──────────────────────────────────────────────────
@@ -517,46 +504,242 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
     (el as HTMLElement & { focusCell: (pos: { col: number; row: number }) => void }).focusCell = (pos) =>
       navHandle.focusCell(pos);
 
+    // ── Render helpers ────────────────────────────────────────────────────────
+    // Each helper renders one self-contained region, closing only over the
+    // signals it actually needs. This keeps the root template readable.
+
+    const renderViewTabs = (): unknown => {
+      const views = props.views.value ?? [];
+      const activeId = props['active-view'].value;
+
+      return html`<div class="dg-tabs" role="tablist" aria-label="Views">
+        ${views.map(
+          (view) =>
+            html`<button
+              class="${() => `dg-tab${activeId === view.id ? ' dg-tab--active' : ''}`}"
+              role="tab"
+              type="button"
+              :aria-selected="${() => String(activeId === view.id)}"
+              @click="${() => {
+                emit('view-change', { id: view.id, label: view.label });
+              }}">
+              ${view.label}
+            </button>`,
+        )}
+      </div>`;
+    };
+
+    const renderSortPopover = (): unknown =>
+      html`<sg-popover class="dg-action-popover" placement="bottom-end" label="Sort" style="--popover-min-width:18rem">
+        <button class="dg-icon-btn" type="button" aria-label="Sort">
+          <sg-icon name="arrow-up-down" size="15" stroke-width="1.75" aria-hidden="true"></sg-icon>
+        </button>
+        <div slot="content" class="dg-pop-sort">
+          <div class="dg-pop-header">
+            <span class="dg-pop-title">Sort by</span>
+            <button class="dg-icon-btn" type="button" aria-label="Clear sort" @click="${() => ctrl.sortTo('', 'none')}">
+              <sg-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></sg-icon>
+            </button>
+          </div>
+          <div class="dg-pop-sort-row">
+            <sg-select
+              class="dg-pop-select"
+              variant="flat"
+              size="sm"
+              rounded="lg"
+              placeholder="Property"
+              fullwidth
+              :value="${() => ctrl.sortState.value.key}"
+              :options="${() => resolvedColumns.value.map((c) => ({ label: c.label, value: c.key }))}"
+              @change="${(e: CustomEvent<{ values: string[] }>) => {
+                const key = e.detail.values[0] ?? '';
+                const dir = ctrl.sortState.value.direction === 'none' ? 'asc' : ctrl.sortState.value.direction;
+
+                ctrl.sortTo(key, dir);
+              }}"></sg-select>
+            <sg-select
+              class="dg-pop-dir-select"
+              variant="flat"
+              size="sm"
+              rounded="lg"
+              :value="${() => (ctrl.sortState.value.direction === 'none' ? 'asc' : ctrl.sortState.value.direction)}"
+              :options="${() => [
+                { label: 'A → Z', value: 'asc' },
+                { label: 'Z → A', value: 'desc' },
+              ]}"
+              @change="${(e: CustomEvent<{ values: string[] }>) => {
+                if (ctrl.sortState.value.key) {
+                  ctrl.sortTo(ctrl.sortState.value.key, (e.detail.values[0] ?? 'asc') as 'asc' | 'desc');
+                }
+              }}"></sg-select>
+          </div>
+        </div>
+      </sg-popover>`;
+
+    const renderFilterPopover = (): unknown =>
+      html`<sg-popover
+        class="dg-action-popover"
+        placement="bottom-end"
+        label="Filter"
+        style="--popover-min-width:16rem">
+        <button class="dg-icon-btn" type="button" aria-label="Filter">
+          <sg-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></sg-icon>
+        </button>
+        <div slot="content" class="dg-pop-filter">
+          <div class="dg-pop-header">
+            <span class="dg-pop-title">Filter by</span>
+            ${() =>
+              controls.filterDefs.value.length
+                ? html`<button
+                    class="dg-icon-btn"
+                    type="button"
+                    aria-label="Clear all filters"
+                    @click="${() => controls.clearAllFilters()}">
+                    <sg-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></sg-icon>
+                  </button>`
+                : html``}
+          </div>
+
+          <!-- Always-visible field picker: click a column name to add a filter rule -->
+          <div class="dg-pop-filter-fields">
+            ${() =>
+              resolvedColumns.value.map(
+                (col) =>
+                  html`<button
+                    class="dg-pop-field-row"
+                    type="button"
+                    @click="${() => controls.activateFilterKey(col.key)}">
+                    <sg-icon
+                      name="list-filter"
+                      size="14"
+                      stroke-width="1.75"
+                      class="dg-pop-field-icon"
+                      aria-hidden="true"></sg-icon>
+                    <span class="dg-pop-field-label">${col.label}</span>
+                  </button>`,
+              )}
+          </div>
+
+          <!-- Active filter rules (appear below the field picker as rules are added) -->
+          ${() =>
+            controls.filterDefs.value.length
+              ? html`<div class="dg-pop-filter-rules">
+                  ${controls.filterDefs.value.map(
+                    (f) => html`
+                      <div class="dg-pop-filter-rule">
+                        <div class="dg-pop-filter-rule-header">
+                          <span class="dg-pop-filter-field">${f.label}</span>
+                          <span class="dg-pop-filter-op">contains</span>
+                          <button
+                            class="dg-icon-btn"
+                            type="button"
+                            aria-label="Remove filter"
+                            @click="${() => controls.removeFilter(f.key)}">
+                            <sg-icon name="trash-2" size="13" stroke-width="1.75" aria-hidden="true"></sg-icon>
+                          </button>
+                        </div>
+                        <sg-combobox
+                          class="dg-filter"
+                          :placeholder="${() => f.label}"
+                          :options="${() => f.options}"
+                          :disabled="${() => isDisabled.value || undefined}"
+                          multiple
+                          fullwidth
+                          @change="${(e: CustomEvent<{ values: string[] }>) => {
+                            controls.setFilter(f.key, e.detail.values);
+                          }}"></sg-combobox>
+                      </div>
+                    `,
+                  )}
+                </div>`
+              : html``}
+        </div>
+      </sg-popover>`;
+
+    const renderColumnMenu = (): unknown =>
+      html`<sg-popover
+        class="dg-action-popover"
+        placement="bottom-end"
+        label="Column options"
+        style="--popover-min-width:13rem">
+        <button class="dg-icon-btn" type="button" aria-label="Column options">
+          <sg-icon name="columns-3" size="15" stroke-width="1.75" aria-hidden="true"></sg-icon>
+        </button>
+        <div slot="content" class="dg-pop-col-menu">
+          <div class="dg-pop-col-divider" role="separator"></div>
+          ${() =>
+            resolvedColumns.value.map(
+              (col) =>
+                html`<button
+                  class="dg-pop-col-item"
+                  role="menuitemcheckbox"
+                  type="button"
+                  :aria-checked="${() => String(!controls.hiddenColumns.value.has(col.key))}"
+                  @click="${() => controls.toggleColumnVisibility(col.key)}">
+                  <sg-icon
+                    :name="${() => (controls.hiddenColumns.value.has(col.key) ? 'eye-off' : 'eye')}"
+                    size="13"
+                    stroke-width="2"
+                    aria-hidden="true"></sg-icon>
+                  ${col.label}
+                </button>`,
+            )}
+        </div>
+      </sg-popover>`;
+
     // ── Template ──────────────────────────────────────────────────────────────
 
     return html`
-      ${() =>
-        props.searchable.value || filterDefs.value.length
-          ? html`<div class="dg-toolbar" part="toolbar">
-              ${() =>
-                props.searchable.value
-                  ? html`<div class="dg-toolbar-start">
-                      <sg-input
-                        class="dg-search"
-                        type="search"
-                        :placeholder="${() => props['search-placeholder'].value ?? 'Search…'}"
-                        :disabled="${() => isDisabled.value || undefined}"
-                        clearable
-                        @input="${(e: CustomEvent<{ value: string }>) => {
-                          searchQuery.value = e.detail.value;
-                        }}"></sg-input>
-                    </div>`
-                  : html``}
-              ${() => {
-                if (!filterDefs.value.length) return html``;
+      <!-- ── Controls Bar ────────────────────────────────────────────────── -->
+      <div class="dg-controls" part="controls">
+        <!-- Left: view tabs -->
+        ${() => renderViewTabs()}
 
-                return html`<div class="dg-toolbar-filters">
-                  ${filterDefs.value.map(
-                    (f) =>
-                      html`<sg-combobox
-                        class="dg-filter"
-                        :placeholder="${() => f.label}"
-                        :options="${() => f.options}"
-                        :disabled="${() => isDisabled.value || undefined}"
-                        multiple
-                        @change="${(e: CustomEvent<{ values: string[] }>) => {
-                          setFilter(f.key, e.detail.values);
-                        }}"></sg-combobox>`,
-                  )}
-                </div>`;
-              }}
-            </div>`
-          : html``}
+        <!-- Right: Action bar -->
+        <div class="dg-actions">
+          ${() => renderSortPopover()} ${() => renderFilterPopover()} ${() => renderColumnMenu()}
+
+          <span class="dg-action-divider" aria-hidden="true" ?hidden="${() => !slots.has('actions').value}"></span>
+
+          <slot name="actions"></slot>
+
+          <!-- Search toggle: rightmost, expands in-place -->
+          <div class="${() => `dg-search${controls.searchActive.value ? ' dg-search--open' : ''}`}">
+            ${() =>
+              controls.searchActive.value
+                ? html`<sg-input
+                    class="dg-search-input"
+                    type="search"
+                    variant="flat"
+                    size="sm"
+                    rounded="full"
+                    :placeholder="${() => props['search-placeholder'].value ?? 'Search…'}"
+                    :disabled="${() => isDisabled.value || undefined}"
+                    autofocus
+                    @input="${(e: CustomEvent<{ value: string }>) => {
+                      controls.setSearchQuery(e.detail.value);
+                    }}"
+                    @keydown="${(e: KeyboardEvent) => {
+                      if (e.key === 'Escape') controls.toggleSearch();
+                    }}">
+                    <sg-icon slot="prefix" name="search" size="13" stroke-width="1.75" aria-hidden="true"></sg-icon>
+                  </sg-input>`
+                : html``}
+            <button
+              class="${() => `dg-icon-btn${controls.searchActive.value ? ' dg-icon-btn--active' : ''}`}"
+              type="button"
+              :aria-label="${() => (controls.searchActive.value ? 'Close search' : 'Search')}"
+              @click="${() => controls.toggleSearch()}">
+              <sg-icon
+                :name="${() => (controls.searchActive.value ? 'x' : 'search')}"
+                size="15"
+                stroke-width="1.75"
+                aria-hidden="true"></sg-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="dg-scroll" role="presentation">
         <table
           class="dg-table"
@@ -592,8 +775,8 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
                     </th>`
                   : html``}
               ${() =>
-                resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
-                  const isLast = colIdx === resolvedColumns.value.length - 1;
+                visibleColumns.value.map((col: DataGridColumn, colIdx: number) => {
+                  const isLast = colIdx === visibleColumns.value.length - 1;
 
                   return html`<th
                     class="${`dg-th${isLast && hasExpander.value ? ' dg-th-last' : ''}`}"
@@ -707,10 +890,10 @@ define<SgDataGridProps, SgDataGridEvents>(DATAGRID_TAG, {
                                   }}"></sg-checkbox>
                               </td>`
                             : html``}
-                        ${resolvedColumns.value.map((col: DataGridColumn, colIdx: number) => {
+                        ${visibleColumns.value.map((col: DataGridColumn, colIdx: number) => {
                           const value = getCellValue(col, item as Record<string, unknown>);
 
-                          const isLastCol = colIdx === resolvedColumns.value.length - 1;
+                          const isLastCol = colIdx === visibleColumns.value.length - 1;
 
                           return html`<td
                             class="${`dg-td${isLastCol && hasExpander.value ? ' dg-td-last' : ''}`}"

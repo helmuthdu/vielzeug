@@ -259,11 +259,11 @@ End the review with a structured `Summary` section using **exactly this format**
 
 **Verdict rules:**
 
-| Condition | Verdict |
-|-----------|--------|
-| 0 unfixed CRITICAL or MAJOR | ✅ Ready |
+| Condition                       | Verdict       |
+| ------------------------------- | ------------- |
+| 0 unfixed CRITICAL or MAJOR     | ✅ Ready      |
 | 1–2 unfixed MAJOR (no CRITICAL) | ⚠️ Needs work |
-| Any unfixed CRITICAL | ❌ Block |
+| Any unfixed CRITICAL            | ❌ Block      |
 
 ## 6. Quick Reference — Execution Flow
 

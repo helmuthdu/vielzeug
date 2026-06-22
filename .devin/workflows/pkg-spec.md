@@ -33,6 +33,15 @@ When facing ambiguity, apply this priority order:
 4. **API compatibility first (`feature` mode)** — new exports must not silently break existing consumers. Use `[BREAKING]` for anything that changes existing behavior; escalate before proceeding.
 5. **When uncertain, read more** — use MCP tools or read source files rather than guessing at behavior.
 
+### Conflict Resolution
+
+When multiple approaches or conflicting API designs exist for a single problem:
+
+1. **Evaluate against the "Best Version" criteria** — prioritize the option that minimizes cyclomatic complexity, maximizes readability for a mid-level developer, and adheres strictly to the design priorities in §2.
+2. **Apply the Rule of Least Surprise** — if two proposals are equally valid but conflict, choose the pattern most idiomatic to modern TypeScript/JavaScript: the one that requires the least "mental map" to understand and that a reader fluent in the ecosystem would reach for first.
+3. **Avoid "Design by Committee"** — do not spec multiple alternatives or leave "choose your own adventure" API shapes in the plan. Make a single definitive design decision. When hesitant, choose the path that results in the thinnest possible surface — the API that enables the most use cases with the fewest exports.
+4. **Document the "Why"** — for every significant API or architectural choice made during spec, note the rationale in the plan items **Why** field. When that choice lands in source during `/pkg-implement`, a brief high-level comment should accompany the affected module.
+
 ### Anti-Patterns to Avoid
 
 - ❌ **Do not** design APIs without reading existing package conventions first.
@@ -60,6 +69,7 @@ Use consistent markers throughout your analysis:
 ## 1. Context
 
 Use this workflow when:
+
 - **`feature` mode** — adding a new capability to an existing `packages/<name>` package
 - **`new-package` mode** — creating a new `packages/<name>` package from scratch
 
@@ -76,10 +86,12 @@ This workflow produces a `plan.md` in `.devin/workflows/runs/<name>/` that is **
 **Before Pass 1:**
 
 - `feature` mode: gather existing package context via MCP before reading files:
+
   ```
   mcp0_get-source(packageSlug: "<name>")
   mcp0_get-docs(packageSlug: "<name>", page: "api")
   ```
+
   Then read `src/index.ts` to confirm the current public surface.
 
 - `new-package` mode: read:
@@ -220,6 +232,7 @@ Apply these design checks for each `[API]` proposal:
    - **Done-when** acceptance criteria (one or two concrete, verifiable conditions)
 
 2. **For `new-package` mode:** the first item is always the scaffold:
+
    ```
    D1 — Scaffold package structure 🟠 (S)
    What: Create packages/<name>/ with all standard files
@@ -258,10 +271,10 @@ Write `plan.md` to `.devin/workflows/runs/<name>/plan.md` using **exactly this f
 
 ## Baseline
 
-- Tests: <N> passing, <F> files   ← write 0 / 0 for new-package
-- Exports: <N> symbols in `src/index.ts`   ← write 0 for new-package
-- Lint: clean   ← write N/A for new-package
-- Build: clean   ← write N/A for new-package
+- Tests: <N> passing, <F> files ← write 0 / 0 for new-package
+- Exports: <N> symbols in `src/index.ts` ← write 0 for new-package
+- Lint: clean ← write N/A for new-package
+- Build: clean ← write N/A for new-package
 
 ## Spec Summary
 
@@ -269,11 +282,11 @@ Write `plan.md` to `.devin/workflows/runs/<name>/plan.md` using **exactly this f
 
 ## Requirements
 
-| ID | Description | Status |
-|----|-------------|--------|
-| R1 | <requirement> | [REQ] |
-| — | <item> | [CONSTRAINT] |
-| — | <item> | [OUT-OF-SCOPE] |
+| ID  | Description   | Status         |
+| --- | ------------- | -------------- |
+| R1  | <requirement> | [REQ]          |
+| —   | <item>        | [CONSTRAINT]   |
+| —   | <item>        | [OUT-OF-SCOPE] |
 
 ## Proposed API
 
@@ -281,7 +294,7 @@ Write `plan.md` to `.devin/workflows/runs/<name>/plan.md` using **exactly this f
 
 ## Implementation Plan
 
-### D1 — Scaffold package structure 🟠   ← new-package only; omit for feature mode
+### D1 — Scaffold package structure 🟠 ← new-package only; omit for feature mode
 
 - **What:** Create `packages/<name>/` with all standard files
 - **Why:** Bootstrap the package in the monorepo
@@ -374,18 +387,20 @@ After presenting the full spec plan, fill in the template below with concrete nu
 > **Ready to move on to implementation?**
 >
 > The spec plan contains **N items**:
-> - 🟠 Design: N *(API/type definitions; scaffold for new-package)*
-> - 🟢 Feature: N *(new functionality to implement)*
-> - 🟡 Coverage: N *(tests to write)*
-> - 🔴 Bug: N *(correctness requirements, if any)*
+>
+> - 🟠 Design: N _(API/type definitions; scaffold for new-package)_
+> - 🟢 Feature: N _(new functionality to implement)_
+> - 🟡 Coverage: N _(tests to write)_
+> - 🔴 Bug: N _(correctness requirements, if any)_
 >
 > ---
 >
 > The **Future improvements** section contains N ideas intentionally kept out of immediate scope:
-> - F1 — \<title\> (\<effort S/M/L\>)
-> - *(list all Future items with their IDs and one-line descriptions)*
 >
-> *(If empty: "The **Future improvements** section is empty — nothing to promote.")*
+> - F1 — \<title\> (\<effort S/M/L\>)
+> - _(list all Future items with their IDs and one-line descriptions)_
+>
+> _(If empty: "The **Future improvements** section is empty — nothing to promote.")_
 >
 > ---
 >

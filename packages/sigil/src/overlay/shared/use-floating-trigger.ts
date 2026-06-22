@@ -16,6 +16,8 @@ export type FloatingTriggerOptions = {
   bindTriggerAria: AriaBindFn;
   /** If true, disable all trigger interactions and close if open. */
   disabled: Readable<boolean>;
+  /** Returns the host element (e.g. sg-popover) so slotted content clicks aren't treated as outside clicks. */
+  getHost?: () => Element | null;
   /** Returns the panel element, if mounted. */
   getPanel: () => HTMLElement | null;
   /** Gap from reference to floating panel in px. Default: 8. Accepts a signal for runtime reactivity. */
@@ -184,8 +186,14 @@ export const useFloatingTrigger = (options: FloatingTriggerOptions): FloatingTri
 
     const path = e.composedPath();
     const panel = getPanel();
+    const host = options.getHost?.();
 
-    if ((currentTrigger && path.includes(currentTrigger)) || (panel && path.includes(panel))) return;
+    if (
+      (currentTrigger && path.includes(currentTrigger)) ||
+      (panel && path.includes(panel)) ||
+      (host && path.includes(host))
+    )
+      return;
 
     close('outsideClick');
   }
