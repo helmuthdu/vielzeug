@@ -376,14 +376,28 @@ describe('createKeymap', () => {
       unmount();
     });
 
-    it('unbind() on unknown shortcut does not throw and emits a dev warning', () => {
+    it('unbind() on unknown shortcut does not throw and emits a dev warning with exact message', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const map = createKeymap({});
 
       expect(() => map.unbind('ctrl+z')).not.toThrow();
       expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy).toHaveBeenCalledWith('[@vielzeug/keymap] unbind() called for unknown shortcut: "ctrl+z"');
 
       warnSpy.mockRestore();
+    });
+
+    it('bind() unbind closure removes the correct canonical slot (alias)', () => {
+      const handler = vi.fn();
+      const map = createKeymap({});
+      const unmount = map.mount(target);
+      const unbind = map.bind('cmd+k', handler);
+
+      unbind();
+      target.dispatch(makeEvent('k', { metaKey: true }));
+      expect(handler).not.toHaveBeenCalled();
+
+      unmount();
     });
 
     it('unbind() via alias resolves to the same canonical binding', () => {
@@ -478,6 +492,94 @@ describe('createKeymap', () => {
       expect(handler).toHaveBeenCalledOnce();
 
       unmount();
+    });
+  });
+
+  describe('dispose + remount lifecycle', () => {
+    it('handler fires after dispose() then mount() again', () => {
+      const handler = vi.fn();
+      const map = createKeymap({ 'ctrl+k': handler });
+      const unmount = map.mount(target);
+
+      unmount();
+      map.dispose();
+
+      const unmount2 = map.mount(target);
+
+      target.dispatch(makeEvent('k', { ctrlKey: true }));
+      expect(handler).toHaveBeenCalledOnce();
+
+      unmount2();
+    });
+
+    it('dispose() removes all mounts; further events do not fire', () => {
+      const handler = vi.fn();
+      const map = createKeymap({ 'ctrl+k': handler });
+
+      map.mount(target);
+      map.dispose();
+      target.dispatch(makeEvent('k', { ctrlKey: true }));
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listBindings()', () => {
+    it('returns empty array when no bindings', () => {
+      const map = createKeymap({});
+
+      expect(map.listBindings()).toEqual([]);
+    });
+
+    it('returns one entry per registered binding', () => {
+      const map = createKeymap({ 'ctrl+k': vi.fn(), 'ctrl+s': vi.fn() });
+
+      expect(map.listBindings()).toHaveLength(2);
+    });
+
+    it('entry contains shortcut, trigger, and priority', () => {
+      const map = createKeymap({
+        'ctrl+k': { handler: vi.fn(), priority: 5, trigger: 'keyup' },
+      });
+      const [entry] = map.listBindings();
+
+      expect(entry.trigger).toBe('keyup');
+      expect(entry.priority).toBe(5);
+      expect(entry.shortcut).toHaveLength(1);
+      expect(entry.shortcut[0]).toEqual({ key: 'k', modifiers: new Set(['ctrl']) });
+    });
+
+    it('defaults trigger to keydown and priority to 0', () => {
+      const map = createKeymap({ 'ctrl+k': vi.fn() });
+      const [entry] = map.listBindings();
+
+      expect(entry.trigger).toBe('keydown');
+      expect(entry.priority).toBe(0);
+    });
+
+    it('reflects bind() and unbind() changes', () => {
+      const map = createKeymap({});
+
+      map.bind('ctrl+k', vi.fn());
+      expect(map.listBindings()).toHaveLength(1);
+
+      map.unbind('ctrl+k');
+      expect(map.listBindings()).toHaveLength(0);
+    });
+
+    it('aliases resolve to one entry (not duplicates)', () => {
+      const map = createKeymap({ 'cmd+k': vi.fn() });
+
+      map.bind('meta+k', vi.fn());
+      expect(map.listBindings()).toHaveLength(1);
+    });
+
+    it('bind() unbind closure also removes the entry from listBindings', () => {
+      const map = createKeymap({});
+      const unbind = map.bind('ctrl+k', vi.fn());
+
+      expect(map.listBindings()).toHaveLength(1);
+      unbind();
+      expect(map.listBindings()).toHaveLength(0);
     });
   });
 });

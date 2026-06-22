@@ -161,6 +161,22 @@ describe('createKeymapLayer', () => {
     expect(layer.parent).toBe(base);
   });
 
+  it('listBindings() returns layer bindings only (not parent bindings)', () => {
+    const base = createKeymap({ 'ctrl+s': vi.fn() });
+    const layer = createKeymapLayer(base, { 'ctrl+k': vi.fn() });
+
+    expect(layer.listBindings()).toHaveLength(1);
+    expect(layer.listBindings()[0].shortcut[0]).toEqual({ key: 'k', modifiers: new Set(['ctrl']) });
+  });
+
+  it('listBindings() reflects bind() calls on the layer', () => {
+    const layer = createKeymapLayer(createKeymap({}), {});
+
+    expect(layer.listBindings()).toHaveLength(0);
+    layer.bind('ctrl+k', vi.fn());
+    expect(layer.listBindings()).toHaveLength(1);
+  });
+
   it('mounting parent separately fires it exactly once (no double-listener from layer)', () => {
     const baseHandler = vi.fn();
     const base = createKeymap({ 'ctrl+k': baseHandler });

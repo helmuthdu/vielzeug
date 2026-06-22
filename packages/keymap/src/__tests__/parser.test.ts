@@ -181,11 +181,29 @@ describe('matchStep', () => {
   });
 });
 
+describe('parseStep standalone', () => {
+  it('parses a multi-modifier step correctly', () => {
+    const step = parseStep('ctrl+shift+k', 'ctrl');
+
+    expect(step).not.toBeNull();
+    expect(step!.key).toBe('k');
+    expect(step!.modifiers).toEqual(new Set(['ctrl', 'shift']));
+  });
+
+  it('returns null for an empty string', () => {
+    expect(parseStep('', 'ctrl')).toBeNull();
+  });
+});
+
 describe('detectModKey', () => {
   it('returns a valid modifier key', () => {
     const key = detectModKey();
 
     expect(['ctrl', 'meta']).toContain(key);
+  });
+
+  it('returns the same value on repeated calls (deterministic per environment)', () => {
+    expect(detectModKey()).toBe(detectModKey());
   });
 });
 

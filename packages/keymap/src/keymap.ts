@@ -1,5 +1,5 @@
 import type { Shortcut } from './parser';
-import type { BindingOptions, BindingValue, Handler, Keymap, KeymapOptions } from './types';
+import type { BindingEntry, BindingOptions, BindingValue, Handler, Keymap, KeymapOptions } from './types';
 
 import { warn } from './_warn';
 import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
@@ -127,17 +127,17 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     }
   }
 
-  function addBinding(shortcutStr: string, value: BindingValue): void {
+  function addBinding(shortcutStr: string, value: BindingValue): string {
     const shortcut = parseShortcut(shortcutStr, modKey);
     const key = canonicalizeShortcut(shortcut);
 
     bindings.set(key, { shortcut, ...resolveBinding(value) });
     rebuildTriggerCaches();
+
+    return key;
   }
 
-  function removeBinding(shortcutStr: string): boolean {
-    const shortcut = parseShortcut(shortcutStr, modKey);
-    const key = canonicalizeShortcut(shortcut);
+  function removeByKey(key: string): boolean {
     const existed = bindings.delete(key);
 
     if (existed) rebuildTriggerCaches();
@@ -145,9 +145,21 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
     return existed;
   }
 
-  for (const [shortcutStr, value] of Object.entries(initialBindings)) {
-    addBinding(shortcutStr, value);
+  function removeBinding(shortcutStr: string): boolean {
+    const shortcut = parseShortcut(shortcutStr, modKey);
+    const key = canonicalizeShortcut(shortcut);
+
+    return removeByKey(key);
   }
+
+  for (const [shortcutStr, value] of Object.entries(initialBindings)) {
+    const shortcut = parseShortcut(shortcutStr, modKey);
+    const key = canonicalizeShortcut(shortcut);
+
+    bindings.set(key, { shortcut, ...resolveBinding(value) });
+  }
+
+  rebuildTriggerCaches();
 
   const chordDown = createChordTracker(() => bindingsDown, chordTimeout);
   const chordUp = createChordTracker(() => bindingsUp, chordTimeout);
@@ -176,10 +188,10 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
 
   return {
     bind(shortcutStr: string, value: BindingValue): () => void {
-      addBinding(shortcutStr, value);
+      const key = addBinding(shortcutStr, value);
 
       return () => {
-        removeBinding(shortcutStr);
+        removeByKey(key);
       };
     },
 
@@ -188,6 +200,14 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       unmounts.clear();
       chordDown.reset();
       chordUp.reset();
+    },
+
+    listBindings(): readonly BindingEntry[] {
+      return [...bindings.values()].map((b) => ({
+        priority: b.priority,
+        shortcut: b.shortcut,
+        trigger: b.trigger,
+      }));
     },
 
     mount(target: EventTarget): () => void {

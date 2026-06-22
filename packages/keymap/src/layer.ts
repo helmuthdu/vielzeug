@@ -64,6 +64,10 @@ export function createKeymapLayer(
       layer.dispose();
     },
 
+    listBindings() {
+      return layer.listBindings();
+    },
+
     mount(target: EventTarget): () => void {
       return layer.mount(target);
     },

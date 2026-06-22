@@ -19,17 +19,25 @@ description: Full API reference for @vielzeug/keymap — createKeymap, createKey
 | `BindingValue` | type | `Handler \| BindingOptions` — accepted wherever a handler is bound |
 | `Handler` | type | `(event: KeyboardEvent) => void` |
 | `parseShortcut` | function | Parses a shortcut string into `ShortcutStep[]` |
+| `parseStep` | function | Parses a single chord step into `ShortcutStep \| null` |
 | `matchStep` | function | Tests whether a `KeyboardEvent` matches a `ShortcutStep` |
+| `canonicalizeShortcut` | function | Converts `ShortcutStep[]` into a stable canonical string |
+| `detectModKey` | function | Detects the platform modifier key (`'ctrl'` or `'meta'`) |
 | `ShortcutStep` | type | `{ key: string; modifiers: Set<ModifierKey> }` — one parsed step |
+| `Shortcut` | type | `ShortcutStep[]` — the result of `parseShortcut` |
 | `ModifierKey` | type | `'alt' \| 'ctrl' \| 'meta' \| 'shift'` |
+| `BindingEntry` | type | Snapshot of a registered binding: `{ shortcut, trigger, priority }` |
 
 ## Package Entry Points
 
 ```ts
-import { createKeymap, createKeymapLayer, formatShortcut, matchStep, parseShortcut } from '@vielzeug/keymap';
+import {
+  canonicalizeShortcut, createKeymap, createKeymapLayer,
+  detectModKey, formatShortcut, matchStep, parseShortcut, parseStep,
+} from '@vielzeug/keymap';
 import type {
-  BindingOptions, BindingValue, Handler, Keymap, KeymapLayer,
-  KeymapOptions, ModifierKey, ShortcutStep,
+  BindingEntry, BindingOptions, BindingValue, Handler, Keymap,
+  KeymapLayer, KeymapOptions, ModifierKey, Shortcut, ShortcutStep,
 } from '@vielzeug/keymap';
 ```
 
@@ -71,6 +79,7 @@ const unmount = map.mount(document);
 interface Keymap {
   bind(shortcut: string, value: BindingValue): () => void;
   dispose(): void;
+  listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
   unbind(shortcut: string): void;
   [Symbol.dispose](): void;
@@ -116,6 +125,19 @@ map.dispose();
 // or:
 using map = createKeymap({ ... });
 ```
+
+### `listBindings()`
+
+Returns a snapshot of all currently registered bindings. Does not include `handler` or `when` — only the shortcut shape, trigger, and priority.
+
+```ts
+const entries = map.listBindings();
+// [
+//   { shortcut: [{ key: 'k', modifiers: Set { 'ctrl' } }], trigger: 'keydown', priority: 0 },
+// ]
+```
+
+Useful for building shortcut palette UIs, conflict detection, and accessibility overlays.
 
 ## `KeymapOptions`
 
@@ -187,6 +209,7 @@ interface KeymapLayer extends Keymap {
 | `deactivate()` | Suspends the layer; the parent keymap continues to fire normally |
 | `active` | `true` when the layer is currently active |
 | `parent` | Returns the parent `Keymap` passed to `createKeymapLayer` |
+| `listBindings()` | Returns the layer's own bindings (not the parent's) |
 
 ## `formatShortcut(shortcut, modKey?)`
 
@@ -263,11 +286,37 @@ type ShortcutStep = {
 };
 ```
 
+### `Shortcut`
+
+An alias for `ShortcutStep[]` — the direct return type of `parseShortcut`.
+
+```ts
+type Shortcut = ShortcutStep[];
+```
+
 ### `ModifierKey`
 
 ```ts
 type ModifierKey = 'alt' | 'ctrl' | 'meta' | 'shift';
 ```
+
+### `BindingEntry`
+
+A read-only snapshot of a registered binding, returned by `listBindings()`. The `handler` and `when` guard are intentionally omitted.
+
+```ts
+type BindingEntry = {
+  readonly priority: number;
+  readonly shortcut: readonly ShortcutStep[];
+  readonly trigger:  'keydown' | 'keyup';
+};
+```
+
+| Field | Description |
+| ----- | ----------- |
+| `priority` | The binding's priority value |
+| `shortcut` | The parsed shortcut steps |
+| `trigger` | Which event phase fires the handler |
 
 ---
 
@@ -281,7 +330,7 @@ Parses a shortcut string into an array of `ShortcutStep` objects. Useful for bui
 function parseShortcut(
   raw: string,
   modKey?: 'ctrl' | 'meta',  // default: auto-detected
-): ShortcutStep[]
+): Shortcut
 ```
 
 Throws if any non-empty step is invalid (modifier-only with no key, or ambiguous multi-key step like `ctrl+k+j`). Extra whitespace between steps is silently ignored.
@@ -294,12 +343,60 @@ parseShortcut('ctrl+k ctrl+s', 'ctrl')
 // ]
 ```
 
+### `parseStep(raw, modKey?)`
+
+Parses a **single** chord step (one keypress) into a `ShortcutStep`, or returns `null` if the step is empty or invalid. Does not throw.
+
+```ts
+function parseStep(
+  raw: string,
+  modKey?: 'ctrl' | 'meta',
+): ShortcutStep | null
+```
+
+Unlike `parseShortcut`, `parseStep` returns `null` instead of throwing on invalid input — useful for "try" patterns when parsing user-typed shortcut strings one step at a time.
+
+```ts
+parseStep('ctrl+k', 'ctrl')  // { key: 'k', modifiers: Set { 'ctrl' } }
+parseStep('', 'ctrl')         // null
+```
+
 ### `matchStep(event, step)`
 
 Tests whether a `KeyboardEvent` matches a `ShortcutStep`. Zero allocations — pure boolean comparisons.
 
 ```ts
 function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean
+```
+
+### `canonicalizeShortcut(steps)`
+
+Converts a `ShortcutStep[]` (i.e. the result of `parseShortcut`) into a stable canonical string. Modifiers are sorted alphabetically, steps are space-separated. Useful for conflict detection: two shortcuts resolve to the same canonical string if and only if they match the same key events.
+
+```ts
+function canonicalizeShortcut(steps: ShortcutStep[]): string
+```
+
+```ts
+canonicalize(parseShortcut('cmd+k', 'ctrl'))    // 'meta+k'
+canonicalize(parseShortcut('meta+k', 'ctrl'))   // 'meta+k'
+canonicalize(parseShortcut('ctrl+k ctrl+s', 'ctrl')) // 'ctrl+k ctrl+s'
+```
+
+### `detectModKey()`
+
+Detects the platform modifier key. Returns `'meta'` on macOS, `'ctrl'` elsewhere.
+
+```ts
+function detectModKey(): 'ctrl' | 'meta'
+```
+
+Useful when you need a consistent `modKey` across multiple calls to `createKeymap`, `formatShortcut`, and `parseShortcut` without threading it manually.
+
+```ts
+const modKey = detectModKey();
+const map = createKeymap(bindings, { modKey });
+const label = formatShortcut('mod+k', modKey);
 ```
 
 ---

@@ -1,3 +1,11 @@
+import type { ShortcutStep } from './parser';
+
+export type BindingEntry = {
+  readonly priority: number;
+  readonly shortcut: readonly ShortcutStep[];
+  readonly trigger: 'keydown' | 'keyup';
+};
+
 export type Handler = (event: KeyboardEvent) => void;
 
 export type BindingOptions = {
@@ -20,6 +28,7 @@ export interface KeymapOptions {
 export interface Keymap {
   bind(shortcut: string, value: BindingValue): () => void;
   dispose(): void;
+  listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
   unbind(shortcut: string): void;
   [Symbol.dispose](): void;
