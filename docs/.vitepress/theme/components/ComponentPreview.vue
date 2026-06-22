@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, ref, useSlots } from 'vue';
+import { createSandbox } from '@vielzeug/sandbox';
+import sigilCss from 'sigil-preview:css';
+import sigilDeps from 'sigil-preview:deps';
+import sigilJs from 'sigil-preview:js';
+import { useData } from 'vitepress';
+import { computed, nextTick, onMounted, onUnmounted, ref, useSlots, watch } from 'vue';
 
 const props = defineProps<{
   title?: string;
@@ -17,11 +22,14 @@ const extractedCode = ref('');
 const processedCodeBlock = ref<any>(null);
 const isMaximized = ref(false);
 const viewportSize = ref<ViewportSize>('full');
-const scriptCode = ref('');
-const previewContainerRef = ref<HTMLDivElement | null>(null);
+const sandboxContainerRef = ref<HTMLDivElement | null>(null);
 const savedBodyOverflow = ref('');
 const isCopied = ref(false);
 const isRtl = ref(false);
+const { isDark } = useData();
+
+// ── Sandbox instance ──────────────────────────────────────────────────────────
+let sandbox: ReturnType<typeof createSandbox> | null = null;
 
 const copyCode = async () => {
   try {
@@ -52,7 +60,6 @@ const toggleMaximize = () => {
 };
 
 const setViewportSize = (size: ViewportSize) => {
-  // Toggle behavior: if clicking the active size, return to full
   if (viewportSize.value === size) {
     viewportSize.value = 'full';
     return;
@@ -82,58 +89,13 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-// Extract code from slot content
-onMounted(async () => {
-  // Add keyboard listener
-  document.addEventListener('keydown', handleKeydown);
-
-  if (slots.default) {
-    const slotContent = slots.default();
-    if (slotContent && slotContent.length > 0) {
-      // Find the VitePress processed code block
-      const codeBlockVNode = findCodeBlock(slotContent);
-
-      if (codeBlockVNode) {
-        // Store the processed VNode for rendering
-        processedCodeBlock.value = codeBlockVNode;
-
-        // Extract plain text for the preview and copy functionality
-        const codeText = extractCodeText(codeBlockVNode);
-        if (codeText) {
-          extractedCode.value = codeText;
-
-          // Extract and store script block content for iframe execution
-          const scriptMatch = codeText.match(/<script\b[^>]*>([\s\S]*?)<\/script>/i);
-          if (scriptMatch) {
-            scriptCode.value = scriptMatch[1]
-              .replace(/^import\s[^;]+;?\n?/gm, '')
-              .replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"]\s*;?\n?/gm, '')
-              .trim();
-          }
-        }
-      }
-    }
-  }
-
-  // Render preview after mounting
-  await nextTick();
-  renderPreview();
-});
-
-onUnmounted(() => {
-  if (isMaximized.value) document.body.style.overflow = savedBodyOverflow.value;
-  document.removeEventListener('keydown', handleKeydown);
-});
-
 // Find the code block VNode (VitePress already processed it)
 function findCodeBlock(vnodes: any[]): any {
   for (const vnode of vnodes) {
-    // VitePress wraps code blocks in div.language-*
     if (vnode.type === 'div' && vnode.props?.class?.includes('language-')) {
       return vnode;
     }
 
-    // Recursively search
     if (vnode.children && Array.isArray(vnode.children)) {
       const result = findCodeBlock(vnode.children);
       if (result) return result;
@@ -147,7 +109,6 @@ function findCodeBlock(vnodes: any[]): any {
 function extractCodeText(vnode: any): string {
   if (!vnode) return '';
 
-  // Navigate: div > pre > code > text
   if (vnode.children && Array.isArray(vnode.children)) {
     for (const child of vnode.children) {
       if (child.type === 'pre' && child.children) {
@@ -165,46 +126,82 @@ function extractCodeText(vnode: any): string {
 
 // Extract text recursively
 function extractText(children: any): string {
-  if (typeof children === 'string') {
-    return children;
-  }
+  if (typeof children === 'string') return children;
 
   if (Array.isArray(children)) {
     return children.map((child) => extractText(child)).join('');
   }
 
-  if (children && typeof children === 'object') {
-    if (children.children) {
-      return extractText(children.children);
-    }
+  if (children && typeof children === 'object' && children.children) {
+    return extractText(children.children);
   }
 
   return '';
 }
 
-const displayCode = computed(() => {
-  // Strip <script> blocks — they won't execute via v-html anyway, and we run them separately
-  return extractedCode.value
+// Build the full sandbox document for the extracted preview HTML.
+// Note: closing tags are split to prevent Vue's parser treating them as block boundaries.
+const SCRIPT_OPEN = '<' + 'script>';
+const SCRIPT_CLOSE = '</' + 'script>';
+const RESIZE_SCRIPT = `new ResizeObserver(()=>{const r=document.body.getBoundingClientRect();parent.postMessage({type:'resize',height:Math.ceil(r.height)+32},'*')}).observe(document.body);`;
+
+function buildPreviewDoc(html: string, dir: 'ltr' | 'rtl', dark: boolean, center: boolean): string {
+  return `<!DOCTYPE html>
+<html lang="en" dir="${dir}"${dark ? ' class="dark"' : ''}>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>${sigilCss}</style>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--color-canvas, transparent); font-family: var(--font-sans, system-ui, sans-serif); }
+    body {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding: 2rem;
+      align-items: ${center ? 'center' : 'flex-start'};
+      justify-content: ${center ? 'center' : 'flex-start'};
+    }
+  </style>
+</head>
+<body>
+${html}
+${SCRIPT_OPEN}${sigilDeps}${SCRIPT_CLOSE}
+${SCRIPT_OPEN}${sigilJs}${SCRIPT_CLOSE}
+${SCRIPT_OPEN}${RESIZE_SCRIPT}${SCRIPT_CLOSE}
+</body>
+</html>`;
+}
+
+const displayCode = computed(() =>
+  extractedCode.value
     .trim()
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
-    .trim();
-});
+    .trim(),
+);
 
-// Render content in preview container with CSS reset
-const renderPreview = () => {
-  if (!previewContainerRef.value) return;
+// Render / re-render via sandbox
+const renderSandbox = () => {
+  if (!sandboxContainerRef.value || !displayCode.value) return;
 
-  // Set the HTML content
-  previewContainerRef.value.innerHTML = displayCode.value;
+  if (!sandbox) {
+    sandbox = createSandbox(sandboxContainerRef.value);
+  }
 
-  // Execute script if present
-  if (scriptCode.value) {
-    try {
-      // Create a new function scope for the script
-      new Function(scriptCode.value)();
-    } catch (e) {
-      console.warn('[ComponentPreview] Script execution error:', e);
-    }
+  sandbox.render(buildPreviewDoc(displayCode.value, isRtl.value ? 'rtl' : 'ltr', isDark.value, !!props.center));
+};
+
+// Re-render when RTL or dark mode changes
+watch([isRtl, isDark], () => renderSandbox());
+
+// Auto-resize iframe to fit its content via postMessage from the sandbox
+const onSandboxMessage = (event: MessageEvent) => {
+  if (!sandboxContainerRef.value) return;
+  const iframe = sandboxContainerRef.value.querySelector('iframe');
+  if (!iframe || event.source !== iframe.contentWindow) return;
+  if (event.data?.type === 'resize' && typeof event.data.height === 'number') {
+    iframe.style.height = `${event.data.height}px`;
   }
 };
 
@@ -218,6 +215,39 @@ const backgroundStyle = computed(() => {
   }
 
   return {};
+});
+
+// Extract code from slot content
+onMounted(async () => {
+  document.addEventListener('keydown', handleKeydown);
+  window.addEventListener('message', onSandboxMessage);
+
+  if (slots.default) {
+    const slotContent = slots.default();
+    if (slotContent && slotContent.length > 0) {
+      const codeBlockVNode = findCodeBlock(slotContent);
+
+      if (codeBlockVNode) {
+        processedCodeBlock.value = codeBlockVNode;
+
+        const codeText = extractCodeText(codeBlockVNode);
+        if (codeText) {
+          extractedCode.value = codeText;
+        }
+      }
+    }
+  }
+
+  await nextTick();
+  renderSandbox();
+});
+
+onUnmounted(() => {
+  if (isMaximized.value) document.body.style.overflow = savedBodyOverflow.value;
+  window.removeEventListener('message', onSandboxMessage);
+  document.removeEventListener('keydown', handleKeydown);
+  sandbox?.dispose();
+  sandbox = null;
 });
 </script>
 
@@ -397,7 +427,7 @@ const backgroundStyle = computed(() => {
                 }"
                 :style="backgroundStyle">
                 <ClientOnly>
-                  <div ref="previewContainerRef" class="preview-demo" :dir="isRtl ? 'rtl' : 'ltr'"></div>
+                  <div ref="sandboxContainerRef" class="preview-sandbox"></div>
                 </ClientOnly>
               </div>
             </div>
@@ -531,7 +561,7 @@ const backgroundStyle = computed(() => {
 }
 
 .preview-container {
-  padding: var(--size-4);
+  padding: 0;
   background: transparent;
   min-height: var(--size-24);
   display: flex;
@@ -567,57 +597,16 @@ const backgroundStyle = computed(() => {
   animation: colorful-shift 25s ease-in-out infinite;
 }
 
-.preview-demo {
-  /* Provide a clean context for components */
+.preview-sandbox {
+  width: 100%;
   display: contents;
-
-  /* Reset common inherited properties that might interfere */
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  color: inherit;
 }
 
-/* Isolate preview content from VitePress documentation styles */
-.preview-demo > * {
-  /* Reset margin/padding that docs might add */
-  margin: 0;
-  padding: 0;
-}
-
-/* Override VitePress paragraph styles inside preview */
-.preview-demo :deep(p),
-.preview-demo p {
-  margin: 0;
-  line-height: var(--leading-normal);
-}
-
-/* Ensure @vielzeug/sigil components render properly within preview */
-.preview-demo
-  :where(
-    sg-button,
-    sg-input,
-    sg-card,
-    sg-dialog,
-    sg-select,
-    sg-checkbox,
-    sg-radio,
-    sg-switch,
-    sg-slider,
-    sg-textarea,
-    sg-alert,
-    sg-dialog,
-    sg-tooltip,
-    sg-accordion,
-    sg-tabs,
-    sg-tab-item,
-    sg-tab-panel,
-    sg-file-input,
-    sg-button-group,
-    sg-grid
-  ) {
-  /* Ensure components don't inherit problematic doc styles */
-  all: revert-layer;
+.preview-sandbox :deep(iframe) {
+  width: 100%;
+  height: 0;
+  border: none;
+  background: transparent;
 }
 
 /* Actions bar in tabs slot */
