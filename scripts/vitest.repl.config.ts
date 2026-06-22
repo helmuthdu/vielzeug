@@ -29,6 +29,7 @@ const vielzeugAliases: Record<string, string> = {
   '@vielzeug/pulse': path.resolve(ROOT, 'packages/pulse/src/index.ts'),
   '@vielzeug/ripple': path.resolve(ROOT, 'packages/ripple/src/index.ts'),
   '@vielzeug/rune': path.resolve(ROOT, 'packages/rune/src/index.ts'),
+  '@vielzeug/sandbox': path.resolve(ROOT, 'packages/sandbox/src/index.ts'),
   '@vielzeug/scroll': path.resolve(ROOT, 'packages/scroll/src/index.ts'),
   '@vielzeug/sourcerer': path.resolve(ROOT, 'packages/sourcerer/src/index.ts'),
   '@vielzeug/spell': path.resolve(ROOT, 'packages/spell/src/index.ts'),

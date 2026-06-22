@@ -185,6 +185,12 @@
       "projectFolder": "packages/ledger",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
+    },
+    {
+      "packageName": "@vielzeug/sandbox",
+      "projectFolder": "packages/sandbox",
+      "shouldPublish": true,
+      "versionPolicyName": "vielzeug-packages"
     }
   ],
   "repository": {

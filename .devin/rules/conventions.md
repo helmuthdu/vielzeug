@@ -124,6 +124,7 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/rune`      | Logging    | Structured scoped logger with remote transport                     |
 | `@vielzeug/scout`     | Utilities  | Trigram fuzzy-search index with highlighting and reactive layer    |
 | `@vielzeug/scroll`    | UI         | Virtual list engine for large datasets                             |
+| `@vielzeug/sandbox`   | AI         | Sandboxed iframe runtime with typed postMessage state bridge       |
 | `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
 | `@vielzeug/sourcerer` | Data       | Reactive data sources with pagination and search                   |
 | `@vielzeug/spell`     | Validation | Zero-dep schema validation (Zod-like)                              |
@@ -154,7 +155,7 @@ sourcerer  → arsenal, ripple
 spell      → arsenal
 ```
 
-Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `tempo`, `vault`, `ward`, `wayfinder`.
+Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
 
 ## AI integration
 
@@ -171,7 +172,7 @@ node packages/codex/dist/index.js
 node packages/codex/dist/cli.js --port 3100
 ```
 
-Available MCP tools: `list-packages`, `search-packages`, `get-docs`, `get-source`, `list-components`, `get-component`.
+Available MCP tools: `list-packages`, `search-packages`, `get-docs`, `get-source`, `get-package`, `list-components`, `get-component`, `generate-template`, `get-tokens`, `validate-component-usage`, `get-sandbox-context`, `get-state-bridge-spec`, `generate-sandbox-document`, `list-directives`, `list-validators`, `get-type-signature`.
 
 ## Common patterns
 
