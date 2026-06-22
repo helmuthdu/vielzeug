@@ -7,28 +7,37 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 
 ## API Overview
 
-| Symbol                   | Purpose                                       | Execution mode | Common gotcha                                                   |
-| ------------------------ | --------------------------------------------- | -------------- | --------------------------------------------------------------- |
-| `list-packages`          | All packages (no filter)                      | Sync           | Use `get-package` to fetch a single package by slug             |
-| `get-package`            | Single package metadata by slug               | Sync           | `isError: true` when slug is unknown                            |
-| `get-docs`               | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                |
-| `get-source`             | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source              |
-| `search-packages`        | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches              |
-| `list-components`        | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                    |
-| `get-component`          | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                    |
-| `createServer()`         | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first     |
-| `createServerFromDisk()` | One-call convenience factory                  | Sync           | Calls `loadData()` internally — throws the same errors          |
-| `startHttpServer()`      | Start HTTP server (Streamable + SSE)          | Async          | Used by CLI; import for embedding in a larger process           |
-| `createRequestHandler()` | Build the HTTP handler without binding a port | Sync           | Exposed for integration testing; prefer `startHttpServer()` in prod |
-| `loadData()`             | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data  |
-| `packageMeta()`          | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components` |
-| `validateBundledData()`  | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                        |
-| `SCHEMA_VERSION`         | Current snapshot schema version constant      | —              | Used by `validateBundledData` to reject stale snapshots         |
+| Symbol                      | Purpose                                       | Execution mode | Common gotcha                                                       |
+| --------------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------------- |
+| `list-packages`             | All packages (no filter)                      | Sync           | Use `get-package` to fetch a single package by slug                 |
+| `get-package`               | Single package metadata by slug               | Sync           | `isError: true` when slug is unknown                                |
+| `get-docs`                  | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                    |
+| `get-source`                | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source                  |
+| `search-packages`           | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches                  |
+| `list-components`           | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                        |
+| `get-component`             | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                        |
+| `generate-template`         | Scaffolded HTML snippet for a Sigil component | Sync           | Required attrs filled; optional attrs in comment block              |
+| `get-tokens`                | All Sigil CSS custom properties               | Sync           | Optional `filter` prefix; returns `[]` when nothing matches         |
+| `validate-component-usage`  | Validate AI-generated HTML against CEM spec   | Sync           | Returns `[]` when valid; `isError: true` on bad input               |
+| `get-sandbox-context`       | Execution constraints of the sandbox runtime  | Sync           | Static — no data dependency; always succeeds                        |
+| `get-state-bridge-spec`     | Typed postMessage protocol for the sandbox    | Sync           | Static — no data dependency; always succeeds                        |
+| `generate-sandbox-document` | Complete srcdoc-ready HTML document           | Sync           | `isError: true` when `html` is empty or exceeds 20 000 chars        |
+| `list-directives`           | All craft directives with signatures          | Sync           | Static — always succeeds; sorted alphabetically                     |
+| `list-validators`           | All spell validator functions with signatures | Sync           | `isError: true` when package slug is absent from bundled data       |
+| `get-type-signature`        | TypeScript export declaration from source     | Sync           | `isError: true` when symbol not found or no bundled source          |
+| `createServer()`            | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first         |
+| `createServerFromDisk()`    | One-call convenience factory                  | Sync           | Calls `loadData()` internally — throws the same errors              |
+| `startHttpServer()`         | Start HTTP server (Streamable + SSE)          | Async          | Used by CLI; import for embedding in a larger process               |
+| `createRequestHandler()`    | Build the HTTP handler without binding a port | Sync           | Exposed for integration testing; prefer `startHttpServer()` in prod |
+| `loadData()`                | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data      |
+| `packageMeta()`             | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components`     |
+| `validateBundledData()`     | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                            |
+| `SCHEMA_VERSION`            | Current snapshot schema version constant      | —              | Used by `validateBundledData` to reject stale snapshots             |
 
 ## Package Entry Points
 
-| Import            | Purpose                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Import            | Purpose                                                                                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@vielzeug/codex` | `createServer`, `createServerFromDisk`, `createRequestHandler`, `loadData`, `packageMeta`, `validateBundledData`, `startHttpServer`, all CEM types |
 
 The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
@@ -216,6 +225,257 @@ Returns one full CEM declaration for a Sigil component.
 
 **Error cases:** unknown tag (lists available tags) or missing Sigil CEM → `isError: true`.
 
+---
+
+### `generate-template`
+
+Generates a ready-to-use HTML snippet for a Sigil component, derived entirely from bundled CEM metadata. Use this as the AI's starting point for declarative UI generation — it eliminates hallucinated attribute names before they reach the DOM.
+
+**Input:**
+
+| Field      | Type     | Required | Description                                                                        |
+| ---------- | -------- | -------- | ---------------------------------------------------------------------------------- |
+| `tagName`  | `string` | Yes      | HTML custom element tag, e.g. `"sg-button"`                                        |
+| `scenario` | `string` | No       | Usage context prepended as an HTML comment, e.g. `"primary call-to-action button"` |
+
+**Result:** An HTML string with:
+
+- Required attributes filled with type-appropriate placeholders (first literal for union types, bare name for booleans, `""` for plain strings)
+- Optional attributes (those with defaults) in a `<!-- Optional attributes: -->` comment block
+- Named slots scaffolded as `<span slot="name">…</span>` children
+- Event names listed in a `<!-- Events: -->` comment
+
+**Example output:**
+
+```html
+<!-- primary action -->
+<sg-button variant="primary">
+  <!-- Optional attributes:
+    disabled  (default: false)
+  -->
+  <!-- Events: sg-click -->
+  Content goes here
+</sg-button>
+```
+
+**Error cases:** unknown `tagName` (lists available tags) or missing Sigil CEM → `isError: true`.
+
+---
+
+### `get-tokens`
+
+Returns all CSS custom properties (design tokens) exposed by Sigil components. Use when generating dynamic themes or inline styles in AI-driven UI — avoids guessing variable names.
+
+**Input:**
+
+| Field    | Type     | Required | Description                                                    |
+| -------- | -------- | -------- | -------------------------------------------------------------- |
+| `filter` | `string` | No       | Case-insensitive prefix to narrow results, e.g. `"--sg-color"` |
+
+**Result shape:**
+
+```json
+[
+  {
+    "name": "--sg-card-bg",
+    "description": "Card background colour",
+    "default": "#1e1e2e",
+    "component": "sg-card"
+  },
+  {
+    "name": "--sg-card-radius",
+    "component": "sg-card"
+  }
+]
+```
+
+Results are sorted by `name` ascending. `description` and `default` are omitted when absent. Tokens that appear on multiple components are deduplicated — only the first occurrence is included.
+
+Returns `[]` (not an error) when `filter` matches nothing.
+
+**Error cases:** missing Sigil CEM → `isError: true`.
+
+---
+
+### `validate-component-usage`
+
+Validates AI-generated HTML against a Sigil component's CEM spec. Use this to close the **generate → validate → fix** loop before passing HTML to the renderer.
+
+**Input:**
+
+| Field     | Type     | Required | Description                                     |
+| --------- | -------- | -------- | ----------------------------------------------- |
+| `tagName` | `string` | Yes      | HTML custom element tag to validate against     |
+| `html`    | `string` | Yes      | HTML fragment to validate (max 5000 characters) |
+
+**Result shape:** A JSON array of issue objects. An empty array means the usage is valid.
+
+```json
+[
+  {
+    "type": "error",
+    "message": "Unknown attribute \"colour\" on <sg-button>. Known: variant, disabled."
+  },
+  {
+    "type": "error",
+    "message": "Unknown slot \"icon\" on <sg-button>. Known slots: prefix."
+  }
+]
+```
+
+**Checks performed:**
+
+- Unknown attributes (after excluding `class`, `id`, `style`, `aria-*`, `data-*`, `on*`, `tabindex`, `part`, `slot`, and other safe globals)
+- Unknown slot names (only when the component defines at least one named slot)
+
+**Error cases:** unknown `tagName`, missing `<tagName>` opening tag in HTML, `html` exceeding 5000 characters, or missing Sigil CEM → `isError: true`.
+
+### `get-sandbox-context`
+
+```ts
+get - sandbox - context();
+```
+
+Returns a JSON object describing the execution environment inside the `@vielzeug/sandbox` iframe. Use this once per session to understand what is and is not available before generating code.
+
+**Returns (JSON):**
+
+```json
+{
+  "iframeAttributes": { "sandbox": "allow-scripts", "referrerpolicy": "no-referrer" },
+  "cspPolicy": {
+    "default-src": "'none'",
+    "script-src": "'unsafe-inline'",
+    "style-src": "'unsafe-inline'",
+    "img-src": "data:",
+    "connect-src": "'none'",
+    "form-action": "'none'"
+  },
+  "windowGlobals": ["window", "document", "customElements", "setTimeout", "…"],
+  "notAvailable": ["fetch (blocked by connect-src)", "localStorage (blocked by sandbox)", "…"],
+  "restrictions": ["No network requests", "No form submissions", "…"]
+}
+```
+
+**Error cases:** none — this is a static tool.
+
+---
+
+### `get-state-bridge-spec`
+
+```ts
+get - state - bridge - spec();
+```
+
+Returns the full typed postMessage state bridge protocol for `@vielzeug/sandbox` as a TypeScript source string with inline usage comments.
+
+**Output includes:**
+
+- `HostMessage` union type — messages the host sends into the iframe (`render`, `state-update`, `dispose`)
+- `SandboxMessage` union type — messages the sandbox sends back (`ready`, `event`, `error`, `resize`)
+- Code examples for listening to `state-update` and dispatching `event` back to the host
+
+**Error cases:** none — this is a static tool.
+
+---
+
+### `generate-sandbox-document`
+
+```ts
+generate-sandbox-document(html: string, styles?: string)
+```
+
+Wraps an HTML fragment in a complete `srcdoc`-ready document for direct use with `@vielzeug/sandbox`. The output can be passed to `sandboxHandle.render()` or set as `iframe.srcdoc`.
+
+**Inputs:**
+
+| Parameter | Type     | Required | Description                                        |
+| --------- | -------- | -------- | -------------------------------------------------- |
+| `html`    | `string` | Yes      | HTML body content to embed (max 20 000 chars)      |
+| `styles`  | `string` | No       | CSS to inject as a `<style>` block in the `<head>` |
+
+**Output:** a complete `<!doctype html>` document with:
+
+- `Content-Security-Policy` meta tag (same policy as the sandbox runtime)
+- Optional `<style>` block
+- User HTML in `<body>`
+- Injected bridge bootstrap `<script>` (handles `state-update`, reports errors, fires `ready`)
+
+**Error cases:** empty `html` or `html` exceeding 20 000 characters → `isError: true`.
+
+---
+
+### `list-directives`
+
+```ts
+list - directives();
+```
+
+Returns a JSON array of all reactive directives exported by `@vielzeug/craft/directives`, sorted alphabetically by name. Each entry includes the directive name, its TypeScript call signature, a description, and the import path.
+
+**Output shape (per entry):**
+
+| Field         | Type     | Description                                |
+| ------------- | -------- | ------------------------------------------ |
+| `name`        | `string` | Directive name, e.g. `"each"`              |
+| `signature`   | `string` | Full TypeScript call signature             |
+| `description` | `string` | What the directive does and when to use it |
+| `import`      | `string` | Always `"@vielzeug/craft/directives"`      |
+
+**Directives included:** `classMap`, `each`, `live`, `model`, `raw`, `styleMap`, `when`
+
+**Error cases:** none — this is a static tool.
+
+---
+
+### `list-validators`
+
+```ts
+list-validators(slug?: string)
+```
+
+Returns a JSON array of all standalone validator functions exported by a `@vielzeug` package. Currently only `slug: "spell"` is supported.
+
+**Inputs:**
+
+| Parameter | Type     | Required | Default   | Description                            |
+| --------- | -------- | -------- | --------- | -------------------------------------- |
+| `slug`    | `string` | No       | `"spell"` | Package slug; only `"spell"` supported |
+
+**Output shape (per entry):**
+
+| Field         | Type     | Description                                         |
+| ------------- | -------- | --------------------------------------------------- |
+| `name`        | `string` | Validator function name, e.g. `"isEmail"`           |
+| `signature`   | `string` | Full TypeScript signature including return type     |
+| `description` | `string` | What the validator checks                           |
+| `category`    | `string` | One of `"type"`, `"number"`, `"length"`, `"format"` |
+
+**Error cases:** `"spell"` package not present in bundled data → `isError: true`.
+
+---
+
+### `get-type-signature`
+
+```ts
+get-type-signature(slug: string, symbol: string)
+```
+
+Extracts the TypeScript export declaration(s) for a named symbol from a package's bundled `src/index.ts`. Works for functions, constants, type aliases, interfaces, and re-exports.
+
+**Inputs:**
+
+| Parameter | Type     | Required | Description                                 |
+| --------- | -------- | -------- | ------------------------------------------- |
+| `slug`    | `string` | Yes      | Package slug, e.g. `"arsenal"`              |
+| `symbol`  | `string` | Yes      | Exported name to look up, e.g. `"debounce"` |
+
+**Output:** raw declaration lines — the exact text as it appears in `src/index.ts`. Multi-line blocks (interfaces, function bodies) are returned in full.
+
+**Error cases:** unknown `slug`, package has no bundled source, or `symbol` not found in `src/index.ts` → `isError: true`.
+
+---
+
 ## Programmatic API
 
 ### `createServerFromDisk()`
@@ -315,10 +575,10 @@ Starts an HTTP server that exposes both the Streamable HTTP transport (spec-comp
 
 **Parameters:**
 
-| Parameter       | Type            | Description                                                            |
-| --------------- | --------------- | ---------------------------------------------------------------------- |
-| `mcpServer`     | `Server`        | The MCP server instance to connect to the Streamable HTTP transport    |
-| `port`          | `number`        | Port to bind the HTTP server on                                        |
+| Parameter         | Type           | Description                                                               |
+| ----------------- | -------------- | ------------------------------------------------------------------------- |
+| `mcpServer`       | `Server`       | The MCP server instance to connect to the Streamable HTTP transport       |
+| `port`            | `number`       | Port to bind the HTTP server on                                           |
 | `createSseServer` | `() => Server` | Factory called per legacy SSE connection; returns a fresh server instance |
 
 **Returns:** `Promise<HttpServerHandle>`

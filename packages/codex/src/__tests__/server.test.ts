@@ -90,18 +90,27 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
 // ---------------------------------------------------------------------------
 
 describe('tool registration', () => {
-  it('exposes exactly seven named tools', async () => {
+  it('exposes exactly sixteen named tools', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
 
     expect(tools.map((t) => t.name).sort()).toEqual([
+      'generate-sandbox-document',
+      'generate-template',
       'get-component',
       'get-docs',
       'get-package',
+      'get-sandbox-context',
       'get-source',
+      'get-state-bridge-spec',
+      'get-tokens',
+      'get-type-signature',
       'list-components',
+      'list-directives',
       'list-packages',
+      'list-validators',
       'search-packages',
+      'validate-component-usage',
     ]);
   });
 

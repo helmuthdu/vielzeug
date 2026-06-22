@@ -66,8 +66,17 @@ npx -y @vielzeug/codex --version
 | `get-docs`        | `packageSlug`, `page?` | Docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
 | `get-source`      | `packageSlug`          | Bundled `src/index.ts` text                                          |
 | `search-packages` | `query`                | Ranked search across metadata, keywords, docs, and source            |
-| `list-components` | —                      | Sigil component tags from bundled CEM metadata                       |
-| `get-component`   | `tagName`              | Full Sigil component CEM declaration by tag                          |
+| `list-components`          | —                              | Sigil component tags from bundled CEM metadata                       |
+| `get-component`            | `tagName`                      | Full Sigil component CEM declaration by tag                          |
+| `generate-template`        | `tagName`, `scenario?`         | Scaffolded HTML snippet for a Sigil component                        |
+| `get-tokens`               | `filter?`                      | All Sigil CSS custom properties, optionally filtered by prefix       |
+| `validate-component-usage` | `tagName`, `html`              | Validate AI-generated HTML against CEM spec                          |
+| `get-sandbox-context`      | —                              | Execution constraints of the sandbox iframe runtime                  |
+| `get-state-bridge-spec`    | —                              | Typed postMessage bridge protocol (HostMessage / SandboxMessage)     |
+| `generate-sandbox-document` | `html`, `styles?`             | Complete srcdoc-ready HTML document with CSP and bridge script       |
+| `list-directives`           | —                              | All @vielzeug/craft/directives with signatures and descriptions      |
+| `list-validators`           | `slug?`                        | All standalone validator functions in a package (default: spell)     |
+| `get-type-signature`        | `slug`, `symbol`               | TypeScript export declaration for a named symbol from src/index.ts   |
 
 ## HTTP mode
 
