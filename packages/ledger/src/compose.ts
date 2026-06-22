@@ -40,9 +40,21 @@ export function compose(commands: Command[], label?: string): Command {
     label,
     rollback: anyHasRollback
       ? async () => {
+          let firstError: unknown;
+          let hasError = false;
+
           for (const c of [...commands].reverse()) {
-            await c.rollback?.();
+            try {
+              await c.rollback?.();
+            } catch (err) {
+              if (!hasError) {
+                firstError = err;
+                hasError = true;
+              }
+            }
           }
+
+          if (hasError) throw firstError;
         }
       : undefined,
   };

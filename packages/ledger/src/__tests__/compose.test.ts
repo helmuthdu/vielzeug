@@ -144,6 +144,13 @@ describe('compose()', () => {
     ledger.dispose();
   });
 
+  it('compose([]) produces no-op execute and undefined rollback', async () => {
+    const cmd = compose([]);
+
+    await expect(cmd.execute()).resolves.toBeUndefined();
+    expect(cmd.rollback).toBeUndefined();
+  });
+
   it('produces undefined rollback when no sub-commands have rollback', () => {
     const cmd = compose([{ execute: vi.fn() }, { execute: vi.fn() }]);
 
@@ -154,6 +161,31 @@ describe('compose()', () => {
     const cmd = compose([{ execute: vi.fn() }, { execute: vi.fn(), rollback: vi.fn() }]);
 
     expect(cmd.rollback).toBeDefined();
+  });
+
+  it('compose sub-rollback error reaches onRollbackError', async () => {
+    const onRollbackError = vi.fn();
+    const ledger = createLedger({ onRollbackError });
+    const err = new Error('sub-rollback failed');
+
+    await ledger.do(
+      compose([
+        { execute: vi.fn(), rollback: vi.fn() },
+        {
+          execute: vi.fn(),
+          rollback: async () => {
+            throw err;
+          },
+        },
+      ]),
+    );
+
+    await ledger.undo();
+    expect(onRollbackError).toHaveBeenCalledWith(err, expect.objectContaining({ label: undefined }));
+    expect(ledger.canUndo.value).toBe(true);
+    expect(ledger.canRedo.value).toBe(false);
+
+    ledger.dispose();
   });
 
   it('rolls back already-executed sub-commands when a later execute fails', async () => {

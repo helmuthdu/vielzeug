@@ -1,7 +1,7 @@
 /** @internal */
 export const isDev = !(globalThis as { __LEDGER_PROD__?: boolean }).__LEDGER_PROD__;
 
-/** @internal */
+/** @internal @security Messages may include user data. */
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/ledger] ${msg}`);
 }

@@ -82,7 +82,7 @@ ledger.do(cmd3);
 // cmd1 → cmd2 → cmd3 execute in order
 ```
 
-`isProcessing.value` is `true` while the queue is draining.
+`isProcessing.value` is `true` while a command's `execute` or `rollback` is actively running. Use `pendingCount.value > 0` to check whether there are any operations in the queue (including those waiting to start).
 
 ## History Cap
 
@@ -93,6 +93,28 @@ const ledger = createLedger({ maxHistory: 30 });
 ```
 
 When the limit is reached, the oldest undo entry is silently evicted. The redo stack is always cleared when a new `do()` is performed.
+
+## Custom Command Data
+
+Attach arbitrary metadata to a command with the `data` field. Use `createLedger<TData>()` to type it:
+
+```ts
+type EditData = { before: string; after: string };
+
+const ledger = createLedger<EditData>();
+
+await ledger.do({
+  data: { before: item.name, after: newName },
+  execute: () => { item.name = newName; },
+  rollback: () => { item.name = item.name; }, // captured in closure
+  label: 'Rename item',
+});
+
+const [latest] = ledger.historySnapshot.value;
+console.log(latest.data?.before); // string | undefined — fully typed
+```
+
+`data` is stored as-is and does not affect `execute` or `rollback` behaviour.
 
 ## Error Handling
 
@@ -219,5 +241,7 @@ effect(() => {
 
 - **Capture state before mutation**: close over `prev` / `next` values at `do()` call time, not inside `execute`/`rollback`.
 - **Label meaningful operations**: `historySnapshot.value` exposes labels for undo history lists.
+- **Use `data` for rich history UIs**: store before/after snapshots or affected IDs in `Command.data`; retrieve them via `historySnapshot.value[n].data`.
+- **Await `clear()` when order matters**: `ledger.clear()` is serialised — it returns a `Promise` that resolves after any in-flight operation finishes.
 - **Dispose when done**: call `ledger.dispose()` when the owner component unmounts — it clears both stacks and disposes all signals.
 - **Avoid reading `.value` after `dispose()`**: the computed nodes are disposed; `.value` returns `undefined`.

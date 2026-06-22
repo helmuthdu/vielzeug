@@ -4,16 +4,16 @@ import type { Command, CommandMeta, Ledger, LedgerOptions } from './types';
 
 import { warn } from './_warn';
 
-type StackEntry = {
+type StackEntry<TData = unknown> = {
   execute: () => Promise<void>;
-  meta: CommandMeta;
+  meta: CommandMeta<TData>;
   rollback?: () => Promise<void>;
 };
 
-function entryFromCommand(command: Command): StackEntry {
+function entryFromCommand<TData>(command: Command): StackEntry<TData> {
   return {
     execute: async () => command.execute(),
-    meta: { label: command.label },
+    meta: { data: command.data as TData | undefined, label: command.label },
     rollback: command.rollback != null ? async () => command.rollback!() : undefined,
   };
 }
@@ -33,30 +33,48 @@ function entryFromCommand(command: Command): StackEntry {
  * await ledger.redo();
  * using ledger = createLedger();
  */
-export function createLedger(options: LedgerOptions = {}): Ledger {
+export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}): Ledger<TData> {
   const { maxHistory = 100, onRollbackError } = options;
 
   if (maxHistory < 1) warn('maxHistory must be >= 1; history tracking is disabled for this ledger.');
 
-  const undoStack = signal<StackEntry[]>([], { name: 'ledger:undoStack' });
-  const redoStack = signal<StackEntry[]>([], { name: 'ledger:redoStack' });
+  const undoStack = signal<StackEntry<TData>[]>([], { name: 'ledger:undoStack' });
+  const redoStack = signal<StackEntry<TData>[]>([], { name: 'ledger:redoStack' });
+  const pending = signal(0, { name: 'ledger:pending' });
   const processing = signal(false, { name: 'ledger:processing' });
 
   const canUndo = computed(() => undoStack.value.length > 0, { name: 'ledger:canUndo' });
   const canRedo = computed(() => redoStack.value.length > 0, { name: 'ledger:canRedo' });
   const historySize = computed(() => undoStack.value.length, { name: 'ledger:historySize' });
   const isProcessing = computed(() => processing.value, { name: 'ledger:isProcessing' });
-  const historySnapshot = computed(() => [...undoStack.value].reverse().map((e) => e.meta) as readonly CommandMeta[], {
-    name: 'ledger:historySnapshot',
-  });
+  const pendingCount = computed(() => pending.value, { name: 'ledger:pendingCount' });
+  const historySnapshot = computed(
+    () => [...undoStack.value].reverse().map((e) => e.meta) as readonly CommandMeta<TData>[],
+    { name: 'ledger:historySnapshot' },
+  );
 
-  const disposables = [undoStack, redoStack, processing, canUndo, canRedo, historySize, isProcessing, historySnapshot];
+  const disposables = [
+    undoStack,
+    redoStack,
+    pending,
+    processing,
+    canUndo,
+    canRedo,
+    historySize,
+    isProcessing,
+    pendingCount,
+    historySnapshot,
+  ];
 
   let isDisposed = false;
   let queue = Promise.resolve();
 
   function enqueue(task: () => Promise<void>): Promise<void> {
-    const current = queue.then(task);
+    if (!isDisposed) pending.value++;
+
+    const current = queue.then(task).finally(() => {
+      if (!isDisposed) pending.value--;
+    });
 
     queue = current.catch(() => {});
 
@@ -73,7 +91,7 @@ export function createLedger(options: LedgerOptions = {}): Ledger {
     }
   }
 
-  async function runDo(entry: StackEntry): Promise<void> {
+  async function runDo(entry: StackEntry<TData>): Promise<void> {
     await withProcessing(async () => {
       await entry.execute();
 
@@ -131,15 +149,20 @@ export function createLedger(options: LedgerOptions = {}): Ledger {
     });
   }
 
-  function clear(): void {
-    undoStack.value = [];
-    redoStack.value = [];
+  function clear(): Promise<void> {
+    return enqueue(async () => {
+      if (isDisposed) return;
+
+      undoStack.value = [];
+      redoStack.value = [];
+    });
   }
 
   function dispose(): void {
     isDisposed = true;
 
-    clear();
+    undoStack.value = [];
+    redoStack.value = [];
 
     for (const d of disposables) d.dispose();
   }
@@ -153,12 +176,13 @@ export function createLedger(options: LedgerOptions = {}): Ledger {
     dispose,
 
     do(command: Command): Promise<void> {
-      return enqueue(() => runDo(entryFromCommand(command)));
+      return enqueue(() => runDo(entryFromCommand<TData>(command)));
     },
 
     historySize,
     historySnapshot,
     isProcessing,
+    pendingCount,
 
     redo(): Promise<void> {
       return enqueue(runRedo);

@@ -77,11 +77,12 @@ ledger.dispose(); // or: using ledger = createLedger()
 
 <div class="features-grid">
 
-- `createLedger()` — Creates an async command stack; operations are serialised to prevent races
-- Reactive state — `canUndo`, `canRedo`, `historySize`, `isProcessing`, `historySnapshot` are Ripple `Computed` values
-- `compose()` — Group multiple commands into one atomic undo step; partial failure rolls back already-executed sub-commands
+- `createLedger<TData>()` — Creates an async command stack; operations are serialised to prevent races
+- Reactive state — `canUndo`, `canRedo`, `historySize`, `isProcessing`, `pendingCount`, `historySnapshot` are Ripple `Computed` values
+- `compose()` — Group multiple commands into one atomic undo step; partial failure rolls back already-executed sub-commands; sub-rollback errors reach `onRollbackError`
 - `maxHistory` — Cap the undo stack; oldest entries evicted automatically
-- Async-safe — `execute()` and `rollback()` return `Promise<void>`; concurrent calls queue behind each other
+- Async-safe — `execute()`, `rollback()`, and `clear()` are fully serialised through the queue
+- Typed history — `Command.data` stores custom metadata; `historySnapshot.value[n].data` is typed to `TData`
 - Error-safe rollback — failed `rollback()` warns via dev console; optional `onRollbackError` callback for UI integration
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 

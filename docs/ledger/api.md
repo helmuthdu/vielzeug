@@ -28,7 +28,7 @@ import type { Command, CommandMeta, Ledger, LedgerOptions } from '@vielzeug/ledg
 Creates an async undo/redo command history.
 
 ```ts
-function createLedger(options?: LedgerOptions): Ledger
+function createLedger<TData = unknown>(options?: LedgerOptions<TData>): Ledger<TData>
 ```
 
 **Parameters**
@@ -45,14 +45,15 @@ const ledger = createLedger({ maxHistory: 50 });
 ## `Ledger`
 
 ```ts
-interface Ledger {
+interface Ledger<TData = unknown> {
   readonly canRedo:         Computed<boolean>;
   readonly canUndo:         Computed<boolean>;
   readonly historySize:     Computed<number>;
-  readonly historySnapshot: Computed<readonly CommandMeta[]>;
+  readonly historySnapshot: Computed<readonly CommandMeta<TData>[]>;
   readonly isProcessing:    Computed<boolean>;
+  readonly pendingCount:    Computed<number>;
 
-  clear(): void;
+  clear(): Promise<void>;
   dispose(): void;
   do(command: Command): Promise<void>;
   redo(): Promise<void>;
@@ -70,8 +71,9 @@ All signals are Ripple `Computed<T>` — read `.value` or call `.subscribe()`.
 | `canUndo` | `Computed<boolean>` | `true` when the undo stack is non-empty |
 | `canRedo` | `Computed<boolean>` | `true` when the redo stack is non-empty |
 | `historySize` | `Computed<number>` | Number of undo steps available |
-| `historySnapshot` | `Computed<readonly CommandMeta[]>` | Metadata for each undo entry, newest first |
-| `isProcessing` | `Computed<boolean>` | `true` while an operation is executing or rolling back |
+| `historySnapshot` | `Computed<readonly CommandMeta<TData>[]>` | Metadata for each undo entry, newest first |
+| `isProcessing` | `Computed<boolean>` | `true` while a command's `execute` or `rollback` is running; `false` during a queued `clear()` |
+| `pendingCount` | `Computed<number>` | Number of operations currently in the queue (executing + waiting) |
 
 ### `do(command)`
 
@@ -105,11 +107,13 @@ No-op when `canRedo.value === false`.
 
 ### `clear()`
 
-Empties both the undo and redo stacks synchronously.
+Enqueues a reset of both the undo and redo stacks. Returns a `Promise` that resolves once the reset has run (after any already-queued operations complete).
 
 ```ts
-ledger.clear()
+await ledger.clear()
 ```
+
+Safe to call while operations are in flight — the clear is serialised in the queue and runs after the current operation finishes.
 
 ### `dispose()`
 
@@ -125,6 +129,7 @@ using ledger = createLedger();
 
 ```ts
 interface Command {
+  data?:     unknown;
   execute:   () => Promise<void> | void;
   rollback?: () => Promise<void> | void;
   label?:    string;
@@ -137,12 +142,14 @@ Both `execute` and `rollback` accept sync and async functions.
 
 `label` is optional — it surfaces in `historySnapshot.value` for building undo history UI.
 
+`data` is an optional custom metadata payload. It is stored in `historySnapshot.value[n].data` with the type parameter of `createLedger<TData>`. Use it to attach context needed by undo-history UIs (e.g. before/after snapshots, affected IDs). The type is not enforced at the `do()` call site — see `CommandMeta<TData>` below.
+
 ## `LedgerOptions`
 
 ```ts
-interface LedgerOptions {
-  maxHistory?:      number;                               // default: 100
-  onRollbackError?: (err: unknown, meta: CommandMeta) => void;
+interface LedgerOptions<TData = unknown> {
+  maxHistory?:      number;                                        // default: 100
+  onRollbackError?: (err: unknown, meta: CommandMeta<TData>) => void;
 }
 ```
 
@@ -159,7 +166,7 @@ Combines multiple commands into a single reversible command that counts as one u
 function compose(commands: Command[], label?: string): Command
 ```
 
-`execute` runs all sub-commands in order. **If any sub-command fails, already-executed sub-commands are rolled back automatically (best-effort) before the error is re-thrown** — making `compose()` atomic. `rollback` runs sub-commands in reverse, skipping any without a defined `rollback`. `rollback` is `undefined` when no sub-command defines one. Pass the result directly to `ledger.do()`:
+`execute` runs all sub-commands in order. **If any sub-command fails, already-executed sub-commands are rolled back automatically (best-effort) before the error is re-thrown** — making `compose()` atomic. `rollback` runs sub-commands in reverse, skipping any without a defined `rollback`. If a sub-command's `rollback` throws during `undo()`, the error is propagated to the ledger's `onRollbackError` callback (if configured). `rollback` is `undefined` when no sub-command defines one. Pass the result directly to `ledger.do()`:
 
 ```ts
 await ledger.do(compose([
@@ -173,7 +180,10 @@ await ledger.do(compose([
 Shape of entries in `historySnapshot.value`:
 
 ```ts
-interface CommandMeta {
+interface CommandMeta<TData = unknown> {
+  data:  TData | undefined;
   label: string | undefined;
 }
 ```
+
+`data` holds the value from `Command.data`, cast to `TData`. The type parameter is inferred from `createLedger<TData>()`; it defaults to `unknown` when no type argument is supplied.

@@ -71,15 +71,46 @@ describe('createLedger', () => {
     ledger.dispose();
   });
 
+  it('maxHistory: 1 keeps only the latest command', async () => {
+    const ledger = createLedger({ maxHistory: 1 });
+
+    await ledger.do({ execute: vi.fn(), rollback: vi.fn() });
+    await ledger.do({ execute: vi.fn(), rollback: vi.fn() });
+
+    expect(ledger.historySize.value).toBe(1);
+
+    ledger.dispose();
+  });
+
   it('clear() wipes both stacks', async () => {
     const ledger = createLedger();
 
     await ledger.do({ execute: vi.fn(), rollback: vi.fn() });
     await ledger.undo();
-    ledger.clear();
+    await ledger.clear();
     expect(ledger.canUndo.value).toBe(false);
     expect(ledger.canRedo.value).toBe(false);
     expect(ledger.historySize.value).toBe(0);
+
+    ledger.dispose();
+  });
+
+  it('clear() during in-flight operation \u2014 stack is empty after op completes', async () => {
+    const ledger = createLedger();
+    let resolver!: () => void;
+    const longOp = new Promise<void>((r) => {
+      resolver = r;
+    });
+
+    const doPromise = ledger.do({ execute: () => longOp, rollback: vi.fn() });
+    const clearPromise = ledger.clear();
+
+    resolver();
+    await doPromise;
+    await clearPromise;
+
+    expect(ledger.historySize.value).toBe(0);
+    expect(ledger.canRedo.value).toBe(false);
 
     ledger.dispose();
   });
@@ -193,6 +224,48 @@ describe('createLedger', () => {
     await expect(ledger.redo()).rejects.toThrow('re-execute failed');
     expect(ledger.canRedo.value).toBe(true);
     expect(ledger.canUndo.value).toBe(false);
+
+    ledger.dispose();
+  });
+
+  it('pendingCount tracks queued and in-flight operations', async () => {
+    const ledger = createLedger();
+    let resolver1!: () => void;
+    let resolver2!: () => void;
+    const op1 = new Promise<void>((r) => {
+      resolver1 = r;
+    });
+    const op2 = new Promise<void>((r) => {
+      resolver2 = r;
+    });
+
+    const p1 = ledger.do({ execute: () => op1, rollback: vi.fn() });
+    const p2 = ledger.do({ execute: () => op2, rollback: vi.fn() });
+
+    await Promise.resolve();
+    expect(ledger.pendingCount.value).toBe(2);
+
+    resolver1();
+    await p1;
+    expect(ledger.pendingCount.value).toBe(1);
+
+    resolver2();
+    await p2;
+    expect(ledger.pendingCount.value).toBe(0);
+
+    ledger.dispose();
+  });
+
+  it('data field is preserved in historySnapshot', async () => {
+    const ledger = createLedger<{ after: string; before: string }>();
+
+    await ledger.do({
+      data: { after: 'bar', before: 'foo' },
+      execute: vi.fn(),
+      rollback: vi.fn(),
+    });
+
+    expect(ledger.historySnapshot.value[0].data).toEqual({ after: 'bar', before: 'foo' });
 
     ledger.dispose();
   });
@@ -314,7 +387,7 @@ describe('createLedger', () => {
       });
 
       await ledger.undo();
-      expect(onRollbackError).toHaveBeenCalledWith(err, { label: 'my-command' });
+      expect(onRollbackError).toHaveBeenCalledWith(err, { data: undefined, label: 'my-command' });
 
       ledger.dispose();
     });
