@@ -4,7 +4,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 ## With Pre-selected Value
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar value="2025-06-15"></sg-calendar>
@@ -14,7 +14,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 ## Min / Max Bounds
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar value="2025-06-15" min="2025-06-01" max="2025-06-30"></sg-calendar>
@@ -26,7 +26,7 @@ An accessible, always-visible inline calendar. Supports day / month / year drill
 
 Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weekend-days`.
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar weekend-days="[0,6]"></sg-calendar>
@@ -36,7 +36,7 @@ Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weeke
 
 ## Colors
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
@@ -47,7 +47,7 @@ Pass a JSON array of day-of-week indices (0 = Sunday … 6 = Saturday) to `weeke
 
 </ComponentPreview>
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
@@ -67,7 +67,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 
 **Expanded mode** — up to 3 colored pills with labels; additional events appear as `+N more`.
 
-<ComponentPreview vertical height="380px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar id="cal-events" value="2025-06-15"></sg-calendar>
@@ -88,7 +88,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 
 ### Expanded with events
 
-<ComponentPreview vertical height="720px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar id="cal-exp-events" expanded value="2025-06-15"></sg-calendar>
@@ -109,7 +109,7 @@ Pass an array of `CalendarEvent` objects via the `events` JS property. Each entr
 
 When a day has more than 3 events, the first 3 are shown and the rest are summarised. This applies to both dots (normal mode) and pills (expanded mode).
 
-<ComponentPreview vertical height="380px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar id="cal-overflow" value="2025-06-15"></sg-calendar>
@@ -126,7 +126,7 @@ When a day has more than 3 events, the first 3 are shown and the rest are summar
 
 </ComponentPreview>
 
-<ComponentPreview vertical height="720px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar id="cal-overflow-exp" expanded value="2025-06-15"></sg-calendar>
@@ -147,7 +147,7 @@ When a day has more than 3 events, the first 3 are shown and the rest are summar
 
 Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes tall with the day number shown as a circle in the top-left corner, leaving the remaining space for event content. The minimum cell height defaults to `var(--size-28)` and can be overridden with `--calendar-expanded-cell-height`.
 
-<ComponentPreview vertical height="680px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar expanded value="2025-06-15"></sg-calendar>
@@ -155,7 +155,7 @@ Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes
 
 </ComponentPreview>
 
-<ComponentPreview vertical height="680px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar expanded value="2025-06-15" color="primary"></sg-calendar>
@@ -165,7 +165,7 @@ Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes
 
 ## Disabled
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <sg-calendar value="2025-06-15" disabled></sg-calendar>
@@ -175,7 +175,7 @@ Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes
 
 ## Localised
 
-<ComponentPreview vertical height="340px">
+<ComponentPreview vertical>
 
 ```html
 <div style="display:flex;gap:1rem;flex-wrap:wrap;">
@@ -188,7 +188,7 @@ Use `expanded` for a full-page, calendar-app style layout. Each day cell becomes
 
 ## Inside a Form
 
-<ComponentPreview vertical height="380px">
+<ComponentPreview vertical>
 
 ```html
 <form id="booking-form">

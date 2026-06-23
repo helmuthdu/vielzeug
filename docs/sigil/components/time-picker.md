@@ -4,7 +4,7 @@ An accessible, keyboard-navigable time picker with a scrollable clock dropdown. 
 
 ## Basic Usage
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Meeting time"></sg-time-picker>
@@ -24,7 +24,7 @@ document.querySelector('sg-time-picker').addEventListener('change', (e) => {
 
 Set `value` to an `HH:MM` (24-hour) string to initialise the selection.
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Start time" value="09:30"></sg-time-picker>
@@ -36,7 +36,7 @@ Set `value` to an `HH:MM` (24-hour) string to initialise the selection.
 
 Use `time-format="12"` to show an AM/PM period column. The `change` event still emits a 24-hour `HH:MM` value.
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Appointment" time-format="12" value="14:00"></sg-time-picker>
@@ -48,7 +48,7 @@ Use `time-format="12"` to show an AM/PM period column. The `change` event still 
 
 Control the minute increment with `minute-step`. Common values: `1`, `5`, `10`, `15`, `30`.
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Duration" minute-step="15"></sg-time-picker>
@@ -60,7 +60,7 @@ Control the minute increment with `minute-step`. Common values: `1`, `5`, `10`, 
 
 Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-range options are disabled.
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Office hours" min="09:00" max="17:00"> </sg-time-picker>
@@ -72,7 +72,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 `sg-time-picker` is form-associated. The submitted value is the 24-hour `HH:MM` string, or an empty string when nothing is selected.
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <form>
@@ -85,7 +85,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 ## Sizes
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker size="sm" label="Small"></sg-time-picker>
@@ -125,7 +125,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 ## Error and Helper Text
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Departure time" helper="Must be between 06:00 and 22:00"> </sg-time-picker>
@@ -137,7 +137,7 @@ Restrict the selectable range with `min` and `max` in `HH:MM` format. Out-of-ran
 
 ## Disabled
 
-<ComponentPreview height="400px">
+<ComponentPreview>
 
 ```html
 <sg-time-picker label="Read-only time" value="10:00" disabled></sg-time-picker>

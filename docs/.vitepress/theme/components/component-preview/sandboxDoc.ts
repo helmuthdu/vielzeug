@@ -41,14 +41,17 @@ const DEFAULT_SHADOW_BLEED = 32;
 function makeResizeScript(bleed: number): string {
   return `
 new ResizeObserver(() => {
-  const h = document.documentElement.scrollHeight;
-  parent.postMessage({ type: 'resize', height: Math.ceil(h) + ${bleed} }, '*');
+  parent.postMessage({ type: 'resize', height: 0 }, '*');
+  requestAnimationFrame(() => {
+    const h = document.documentElement.scrollHeight;
+    parent.postMessage({ type: 'resize', height: Math.ceil(h) + ${bleed} }, '*');
+  });
 }).observe(document.documentElement);
 `.trim();
 }
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
-  const { background, center, dark, dir, html, shadowBleed = DEFAULT_SHADOW_BLEED, vertical } = options;
+  const { background, center, dark, html, shadowBleed = DEFAULT_SHADOW_BLEED, vertical } = options;
 
   const bodyAlign = center ? 'center' : 'flex-start';
   const bodyDirection = vertical ? 'column' : 'row';
