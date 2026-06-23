@@ -1,14 +1,13 @@
-import type { Plugin } from 'vite';
-
 import browserslist from 'browserslist';
 import { browserslistToTargets } from 'lightningcss';
-import { copyFileSync, existsSync, readFileSync } from 'node:fs';
+import { copyFileSync, existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
 
 import type { ThemeConfig } from './theme/types';
 
+import { componentPreviewPlugin } from './plugins/component-preview/index';
 import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -52,80 +51,6 @@ function copyLlmsTxt(siteConfig: { outDir: string }): void {
       copyFileSync(src, resolve(siteConfig.outDir, name));
     }
   }
-}
-
-// ---------------------------------------------------------------------------
-// Vite virtual-module plugin: serves sigil IIFE bundle and CSS as raw strings.
-// srcdoc iframes cannot load external resources, so we inline both assets.
-// ---------------------------------------------------------------------------
-
-function sigilPreviewPlugin(): Plugin {
-  const JS_ID = 'sigil-preview:js';
-  const CSS_ID = 'sigil-preview:css';
-  const DEPS_ID = 'sigil-preview:deps';
-
-  const pkgDir = resolve(__dirname, '../../packages');
-  const sigilDir = resolve(pkgDir, 'sigil/dist');
-
-  // Load order: dependencies before dependents.
-  // Temporal → Ripple → Arsenal → Craft(Ripple) → Orbit(Arsenal) → Tempo(Temporal) → Dnd → Lucide
-  const depPaths = [
-    resolve(
-      __dirname,
-      '../../node_modules/.pnpm/@js-temporal+polyfill@0.5.1/node_modules/@js-temporal/polyfill/dist/index.umd.js',
-    ),
-    resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
-    resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
-    resolve(pkgDir, 'craft/dist/craft.iife.js'),
-    resolve(pkgDir, 'orbit/dist/orbit.iife.js'),
-    resolve(pkgDir, 'tempo/dist/tempo.iife.js'),
-    resolve(pkgDir, 'dnd/dist/dnd.iife.js'),
-    resolve(__dirname, '../../node_modules/.pnpm/lucide@1.18.0/node_modules/lucide/dist/umd/lucide.js'),
-  ];
-
-  // Recursively resolve @import url(...) statements so the CSS is self-contained.
-  function inlineCss(filePath: string): string {
-    const dir = dirname(filePath);
-    const src = readFileSync(filePath, 'utf-8');
-
-    return src.replace(/@import\s+url\(['"]?([^'")\s]+)['"]?\)\s*;?/g, (_match, ref) => {
-      const abs = resolve(dir, ref);
-
-      try {
-        return inlineCss(abs);
-      } catch {
-        return '';
-      }
-    });
-  }
-
-  return {
-    load(id) {
-      if (id === '\0' + JS_ID) {
-        const code = readFileSync(resolve(sigilDir, 'sigil.iife.js'), 'utf-8');
-
-        return `export default ${JSON.stringify(code)}`;
-      }
-
-      if (id === '\0' + CSS_ID) {
-        const code = inlineCss(resolve(sigilDir, 'styles/styles.css'));
-
-        return `export default ${JSON.stringify(code)}`;
-      }
-
-      if (id === '\0' + DEPS_ID) {
-        const combined = depPaths.map((p) => readFileSync(p, 'utf-8')).join('\n;\n');
-        // Lucide UMD registers as window.lucide (lowercase); sigil.iife.js expects Lucide.
-        const shim = 'if(typeof Lucide==="undefined"&&typeof lucide!=="undefined"){var Lucide=lucide;}';
-
-        return `export default ${JSON.stringify(combined + '\n;\n' + shim)}`;
-      }
-    },
-    name: 'sigil-preview',
-    resolveId(id) {
-      if (id === JS_ID || id === CSS_ID || id === DEPS_ID) return '\0' + id;
-    },
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2223,7 +2148,7 @@ export default defineConfig({
       },
       transformer: 'lightningcss',
     },
-    plugins: [sigilPreviewPlugin()],
+    plugins: [componentPreviewPlugin()],
     resolve: {
       alias: {
         '@vielzeug/arsenal': resolve(__dirname, '../../packages/arsenal/src'),

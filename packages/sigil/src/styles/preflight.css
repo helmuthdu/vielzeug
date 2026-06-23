@@ -23,9 +23,9 @@
   :host {
     font-family: var(
       --default-font-family,
+      system-ui,
       sans-serif,
       ui-sans-serif,
-      system-ui,
       'Apple Color Emoji',
       'Segoe UI Emoji',
       'Segoe UI Symbol',
