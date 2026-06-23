@@ -36,13 +36,14 @@ const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../d
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
 // Load order: each entry must appear after its own dependencies.
-// Temporal → Ripple → Arsenal → Craft(Ripple) → Orbit(Arsenal) → Tempo(Temporal) → Dnd → Lucide
+// Temporal → Ripple → Arsenal → Craft(Ripple) → Orbit(Arsenal) → Prism(Ripple,Orbit) → Tempo(Temporal) → Dnd → Lucide
 const depPaths = [
   temporalUmd,
   resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
   resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
   resolve(pkgDir, 'craft/dist/craft.iife.js'),
   resolve(pkgDir, 'orbit/dist/orbit.iife.js'),
+  resolve(pkgDir, 'prism/dist/prism.iife.js'),
   resolve(pkgDir, 'tempo/dist/tempo.iife.js'),
   resolve(pkgDir, 'dnd/dist/dnd.iife.js'),
   lucideUmd,
@@ -85,9 +86,10 @@ export function componentPreviewPlugin(): Plugin {
       }
 
       if (id === '\0' + CSS_ID) {
-        const code = inlineCss(resolve(sigilDir, 'styles/styles.css'));
+        const sigil = inlineCss(resolve(sigilDir, 'styles/styles.css'));
+        const prism = readFileSync(resolve(pkgDir, 'prism/dist/theme/prism.css'), 'utf-8');
 
-        return `export default ${JSON.stringify(code)}`;
+        return `export default ${JSON.stringify(sigil + '\n' + prism)}`;
       }
 
       if (id === '\0' + DEPS_ID) {
