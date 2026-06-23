@@ -157,11 +157,13 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     const found = extractCodeFromSlot(slotVNodes);
 
     if (found) {
-      // Strip <script> tags at extraction time — the sandbox injects sigil's
-      // runtime separately, and arbitrary scripts would be a security risk.
+      // Strip only type="module" scripts — they contain ES module imports
+      // (e.g. import '@vielzeug/sigil/toast') that would fail in the sandbox
+      // since sigil is already loaded as a global IIFE. Plain inline scripts
+      // that define helper functions for onclick handlers must be preserved.
       const html = found.text
         .trim()
-        .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<script\b[^>]*\btype=["']module["'][^>]*>[\s\S]*?<\/script>/gi, '')
         .trim();
 
       codeBlock.value = { html, vnode: found.vnode };
