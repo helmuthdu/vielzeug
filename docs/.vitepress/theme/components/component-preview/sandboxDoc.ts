@@ -41,12 +41,9 @@ const DEFAULT_SHADOW_BLEED = 32;
 function makeResizeScript(bleed: number): string {
   return `
 new ResizeObserver(() => {
-  parent.postMessage({ type: 'resize', height: 0 }, '*');
-  requestAnimationFrame(() => {
-    const h = document.documentElement.scrollHeight;
-    parent.postMessage({ type: 'resize', height: Math.ceil(h) + ${bleed} }, '*');
-  });
-}).observe(document.documentElement);
+  const h = document.body.getBoundingClientRect().height;
+  parent.postMessage({ type: 'resize', height: Math.ceil(h) + ${bleed} }, '*');
+}).observe(document.body);
 `.trim();
 }
 
@@ -60,7 +57,7 @@ export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   // sigil CSS first, then overrides — order matters so our resets win.
   const overrideCss = [
     `*, *::before, *::after { box-sizing: border-box; }`,
-    `html { color-scheme: ${dark ? 'dark' : 'light'}; }`,
+    `html { color-scheme: ${dark ? 'dark' : 'light'}; height: fit-content; }`,
     `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); }`,
     `body { display: flex; flex-direction: ${bodyDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem 2rem 0; align-items: ${bodyAlign}; justify-content: ${bodyAlign}; background: ${bodyBackground}; }`,
   ].join(' ');
