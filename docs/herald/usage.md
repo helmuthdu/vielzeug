@@ -544,10 +544,10 @@ This is especially useful in test cases, request handlers, or any scope where yo
 
 ## Testing
 
-Import `createTestBus` from `@vielzeug/herald/test`. It wraps `createBus` and records every emitted payload by event key.
+Import `createTestBus` from `@vielzeug/herald/testing`. It wraps `createBus` and records every emitted payload by event key.
 
 ```ts
-import { createTestBus } from '@vielzeug/herald/test';
+import { createTestBus } from '@vielzeug/herald/testing';
 
 const bus = createTestBus<AppEvents>();
 
@@ -715,4 +715,4 @@ bus.on('user:logout', () => {
 - Use `pipeEvents()` to forward events between buses rather than re-emitting manually inside listeners.
 - Pass `bus.disposalSignal` to tie external subscriptions and fetch calls to the bus lifetime.
 - Prefer typed `EventMap` interfaces over generic string keys for full payload inference.
-- Use `createTestBus` from `@vielzeug/herald/test` in unit tests rather than mocking the bus.
+- Use `createTestBus` from `@vielzeug/herald/testing` in unit tests rather than mocking the bus.

@@ -1808,3 +1808,55 @@ describe('batch() non-atomic warning', () => {
     await db.dispose();
   });
 });
+
+/* -------------------- D1: scheduleExpiredPrune warn fallback -------------------- */
+
+describe('scheduleExpiredPrune — warn() when onError absent', () => {
+  test('emits [@vielzeug/vault] dev warning when error is swallowed and onError is not provided', async () => {
+    vi.useFakeTimers();
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const boom = new Error('silent failure');
+
+    scheduleExpiredPrune(
+      {
+        pruneExpired: async () => {
+          throw boom;
+        },
+      },
+      { interval: 500 },
+    );
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/vault]'));
+    expect(warnSpy.mock.calls[0]![0]).toContain('scheduleExpiredPrune');
+
+    warnSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
+  test('does NOT emit warn() when onError is provided (onError handles it)', async () => {
+    vi.useFakeTimers();
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errors: unknown[] = [];
+
+    scheduleExpiredPrune(
+      {
+        pruneExpired: async () => {
+          throw new Error('handled');
+        },
+      },
+      { interval: 500, onError: (e) => errors.push(e) },
+    );
+
+    await vi.advanceTimersByTimeAsync(600);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errors).toHaveLength(1);
+
+    warnSpy.mockRestore();
+    vi.useRealTimers();
+  });
+});

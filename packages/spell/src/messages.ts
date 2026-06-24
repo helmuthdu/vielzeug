@@ -1,4 +1,4 @@
-import { isDev } from './_warn';
+import { warn as _warnFn } from './_warn';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
 
 export type Messages = {
@@ -242,7 +242,7 @@ let _activeMessages: Messages = _builtinMessages;
 export type Logger = (message: string) => void;
 
 let _logger: Logger = (msg) => {
-  if (isDev) console.warn(`[@vielzeug/spell] ${msg}`);
+  _warnFn(msg);
 };
 
 /** @internal */

@@ -74,6 +74,12 @@ type ChainedQuery<T extends Record<string, unknown>, N extends T, Self extends C
    * ```
    */
   equals<K extends keyof T & string, V extends T[K]>(field: K, value: V): QueryBuilder<T & Record<K, V>>;
+  /**
+   * Returns `true` if at least one record matches all applied filter operations.
+   * Equivalent to `(await query.first()) !== undefined` but makes the intent explicit.
+   * Presentation-only ops (`limit`, `offset`, `orderBy`) are respected before checking.
+   */
+  exists(): Promise<boolean>;
   filter(fn: Predicate<N>): Self;
   first(): Promise<N | undefined>;
   limit(n: number): Self;
@@ -216,6 +222,11 @@ export function createQueryBuilder<T extends Record<string, unknown>, N extends 
         ...(ops as unknown as QueryOp<T & Record<K, V>>[]),
         { apply: (data) => data.filter((r) => r[field] === value) as (T & Record<K, V>)[] },
       ]);
+    },
+    async exists(): Promise<boolean> {
+      if (ops.length === 0) return ctx.source().then((r) => r.length > 0);
+
+      return applyOps(ctx, ops).then((r) => r.length > 0);
     },
     filter(fn) {
       return append({ apply: (data) => data.filter(fn as Predicate<T>) });

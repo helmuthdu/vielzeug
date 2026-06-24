@@ -643,3 +643,89 @@ describe('createGroupedVirtualizer – out-of-range navigation', () => {
     gv.dispose();
   });
 });
+
+// ─── update() with option overrides (D2) ─────────────────────────────────────
+
+describe('createGroupedVirtualizer – update() with option overrides', () => {
+  it('updates estimateItemSize on next update()', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 2)],
+    });
+
+    const initialTotal = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+
+    // 1 header (36 default) + 2 items × 30 = 96
+    expect(initialTotal).toBe(36 + 2 * 30);
+
+    // Change item estimate to 60
+    gv.update([makeSection('A', 2)], { estimateItemSize: 60 });
+
+    const newTotal = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+
+    // 1 header (36 default) + 2 items × 60 = 156
+    expect(newTotal).toBe(36 + 2 * 60);
+    gv.dispose();
+  });
+
+  it('updates estimateHeaderSize on next update()', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 2)],
+    });
+
+    // Change header estimate to 80
+    gv.update([makeSection('A', 2)], { estimateHeaderSize: 80 });
+
+    const total = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+
+    // 1 header × 80 + 2 items × 30 = 140
+    expect(total).toBe(80 + 2 * 30);
+    gv.dispose();
+  });
+
+  it('accepts a function estimateItemSize override', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 3)],
+    });
+
+    gv.update([makeSection('A', 3)], {
+      estimateItemSize: (_item, itemIndex) => (itemIndex === 0 ? 100 : 20),
+    });
+
+    const total = (onChange.mock.calls.at(-1)![0] as { totalSize: number }).totalSize;
+
+    // 1 header (36) + 1st item (100) + 2nd item (20) + 3rd item (20) = 176
+    expect(total).toBe(36 + 100 + 20 + 20);
+    gv.dispose();
+  });
+
+  it('update() with no opts still replaces sections normally', () => {
+    const el = makeContainer({ clientHeight: 1000 });
+    const onChange = vi.fn();
+    const gv = createGroupedVirtualizer<Item>(el, {
+      estimateItemSize: 30,
+      onChange,
+      sections: [makeSection('A', 2)],
+    });
+
+    gv.update([makeSection('B', 4)]);
+
+    const state = onChange.mock.calls.at(-1)![0] as { headers: Array<{ label: string }>; items: unknown[] };
+
+    expect(state.headers[0]!.label).toBe('B');
+    expect(state.items).toHaveLength(4);
+    gv.dispose();
+  });
+});

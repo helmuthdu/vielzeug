@@ -760,8 +760,8 @@ describe('createBus - maxListeners', () => {
 
     bus.on('count', vi.fn()); // exceeds limit
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.calls[0][0]).toContain('[herald:warn]');
-    expect(spy.mock.calls[0][0]).toContain('"count"');
+    expect(spy.mock.calls[0][0]).toContain('[@vielzeug/herald]');
+    expect(spy.mock.calls[0][0]).toContain('on("count")');
 
     spy.mockRestore();
     bus.dispose();
@@ -776,7 +776,7 @@ describe('createBus - maxListeners', () => {
 
     bus.onAny(vi.fn());
     expect(spy).toHaveBeenCalledOnce();
-    expect(spy.mock.calls[0][0]).toContain('[herald:warn]');
+    expect(spy.mock.calls[0][0]).toContain('[@vielzeug/herald]');
 
     spy.mockRestore();
     bus.dispose();
@@ -1439,7 +1439,8 @@ describe('createBus - name option', () => {
     bus.on('count', vi.fn());
     bus.on('count', vi.fn());
 
-    expect(warns[0]).toContain('[herald:warn:auth]');
+    expect(warns[0]).toContain('on("count")');
+    expect(warns[0]).toContain('(auth)');
 
     bus.dispose();
   });
@@ -1594,7 +1595,7 @@ describe('createBus - logger option', () => {
     bus.on('count', vi.fn());
 
     expect(logWarn).toHaveBeenCalledOnce();
-    expect(logWarn.mock.calls[0][0]).toContain('[herald:warn]');
+    expect(logWarn.mock.calls[0][0]).toContain('on("count")');
 
     bus.dispose();
   });

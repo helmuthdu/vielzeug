@@ -26,6 +26,7 @@ description: Complete API reference for @vielzeug/conduit.
 | `container.resolveMany()`  | Resolve multiple tokens in parallel, returning a typed tuple  | **Async**   | Rejects if any token fails                                                 |
 | `container.resolveAll()`   | Eagerly resolve all singleton factories (walks parent chain)  | **Async**   | Pass `{ includeScoped: true }` to also pre-warm named-scope factories      |
 | `container.inspect()`      | Return a serializable graph of registered tokens              | Sync        | Defaults to deep traversal of the full parent chain                        |
+| `container.validate()`     | Validate the graph without freezing                           | Sync        | Same checks as `freeze()` but does not lock the container                  |
 | `container.freeze()`       | Lock registrations; validate completeness                     | Sync        | Detects declared-dep cycles; lazy cycles caught at resolve time            |
 | `container.createScope()`  | Create a child container, optionally tagged with a scope      | Sync        | Pass a `ScopeToken` to activate named-scope lifecycle                      |
 | `container.on()`           | Subscribe to container events (register / resolve / dispose)  | Sync        | Events carry a `source` field; propagate up to parent listeners            |
@@ -524,6 +525,38 @@ for (const node of graph.nodes) {
   const depList = node.deps ? ` deps: [${node.deps.join(', ')}]` : '';
   console.log(`${node.description} (${node.kind}, ${node.lifetime ?? 'singleton'})${depList}`);
 }
+```
+
+---
+
+### `container.validate()`
+
+```ts
+validate(): this;
+```
+
+Runs the same static-dep validation as `freeze()` — checks that every token listed in `deps:` arrays is registered and that no `deps` cycle exists — **without** locking the container against further registrations.
+
+Useful in test setups or debug tooling where you want to catch wiring errors early but still need to add tokens afterward.
+
+**Returns:** `this` (chainable)
+
+**Throws:**
+
+- `ContainerDisposedError` — if the container has been disposed
+- `ProviderNotFoundError` — if a declared `deps` dep is missing
+- `CircularDependencyError` — if declared `deps` form a cycle
+
+**Example:**
+
+```ts
+const container = createContainer();
+
+container.factory(Service, (r) => new Service(r.resolve(Logger)), { deps: [Logger] });
+container.value(Logger, new ConsoleLogger());
+
+container.validate(); // verifies deps are registered — does not freeze
+container.factory(OptionalFeature, (_r) => new Feature()); // still allowed
 ```
 
 ---

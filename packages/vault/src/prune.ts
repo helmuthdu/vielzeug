@@ -1,5 +1,6 @@
 import type { Adapter, AnySchema } from './types';
 
+import { warn } from './_warn';
 import { VaultDisposedError, VaultError } from './errors';
 
 /**
@@ -55,8 +56,10 @@ export function scheduleExpiredPrune<S extends AnySchema>(
       if (err instanceof VaultDisposedError) {
         active = false;
         clearInterval(id);
+      } else if (options.onError) {
+        options.onError(err);
       } else {
-        options.onError?.(err);
+        warn(`scheduleExpiredPrune: pruneExpired() threw — pass onError to handle this. ${String(err)}`);
       }
     });
   }, options.interval);

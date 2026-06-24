@@ -157,7 +157,7 @@ try {
 - **Custom logger** via `createBus({ logger: { debug, warn } })` — route or suppress debug and warn output
 - **`onError` hook** for listener-error isolation and resilience
 - **`dispose` and `[Symbol.dispose]`** for deterministic cleanup
-- **Testing helper** via `@vielzeug/herald/test`
+- **Testing helper** via `@vielzeug/herald/testing`
 - **Zero dependencies** — <PackageInfo package="herald" type="size" /> gzipped, <PackageInfo package="herald" type="dependencies" /> dependencies
 
 </div>

@@ -280,7 +280,7 @@ describe('createBehaviorBus - BusOptions passthrough (logger / maxListeners)', (
     bus.on('count', vi.fn());
 
     expect(warns).toHaveLength(1);
-    expect(warns[0]).toContain('[herald:warn]');
+    expect(warns[0]).toContain('on("count")');
 
     bus.dispose();
   });

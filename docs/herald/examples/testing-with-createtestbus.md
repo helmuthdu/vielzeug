@@ -13,7 +13,7 @@ You want to write unit tests for code that uses an event bus — asserting that 
 
 ```ts
 import { describe, it, expect } from 'vitest';
-import { createTestBus } from '@vielzeug/herald/test';
+import { createTestBus } from '@vielzeug/herald/testing';
 
 type CartEvents = {
   'item:added': { id: string; qty: number };

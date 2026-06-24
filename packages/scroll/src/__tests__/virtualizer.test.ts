@@ -1005,6 +1005,22 @@ describe('exported constants', () => {
 // ─── estimateSize throw guard ───────────────────────────────────────────────
 
 describe('createVirtualizer – throwing estimateSize', () => {
+  it('emits a dev warning via _warn.ts when estimateSize throws', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = makeContainer({ clientHeight: 200 });
+
+    createVirtualizer(el, {
+      count: 1,
+      estimateSize: () => {
+        throw new Error('boom');
+      },
+    }).dispose();
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/scroll]'));
+
+    warnSpy.mockRestore();
+  });
+
   it('falls back to DEFAULT_ESTIMATE_SIZE when estimateSize throws', () => {
     const el = makeContainer({ clientHeight: 200 });
     const v = createVirtualizer(el, {

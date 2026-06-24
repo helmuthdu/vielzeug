@@ -22,7 +22,7 @@
       "import": "./dist/devtools.js",
       "require": "./dist/devtools.cjs"
     },
-    "./test": {
+    "./testing": {
       "source": "./src/testing/index.ts",
       "types": "./dist/testing.d.ts",
       "import": "./dist/testing.js",

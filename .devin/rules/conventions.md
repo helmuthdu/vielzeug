@@ -112,6 +112,7 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/craft`     | UI         | Functional web-component authoring on top of ripple                |
 | `@vielzeug/dnd`       | UI         | Drag-and-drop — drop zones and sortable lists                      |
 | `@vielzeug/familiar`  | Workers    | Web Worker pool with tasks, timeouts, cancellation                 |
+| `@vielzeug/flux`      | Streams    | Composable stream primitives with hot/cold semantics and operators |
 | `@vielzeug/forge`     | Forms      | Typed form state, validation, submission                           |
 | `@vielzeug/herald`    | Events     | Typed event bus, pub/sub, async streams                            |
 | `@vielzeug/keymap`    | Input      | Headless keyboard shortcut manager with chord sequences            |
@@ -143,6 +144,7 @@ coins      → arsenal
 courier    → arsenal
 craft      → arsenal, orbit, ripple
 familiar   → arsenal
+flux       → ripple
 forge      → arsenal, ripple
 orbit      → arsenal, ripple
 prism      → orbit, ripple
@@ -156,6 +158,8 @@ spell      → arsenal
 ```
 
 Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
+
+> **Note:** `flux` also declares optional peer dependencies on `courier`, `herald`, and `pulse` for its ecosystem adapters.
 
 ## AI integration
 

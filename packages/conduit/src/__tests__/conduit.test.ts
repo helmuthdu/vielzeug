@@ -26,7 +26,7 @@ import {
   token,
   tryResolve,
   trySyncResolve,
-} from './conduit';
+} from '../index';
 
 // ---------------------------------------------------------------------------
 // token()
@@ -1327,7 +1327,7 @@ describe('Container — disposal', () => {
   });
 
   it('runs all dispose hooks even if one throws, warning instead of rethrowing', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const A = token<object>('A');
     const B = token<object>('B');
     const c = createContainer();
@@ -1353,7 +1353,7 @@ describe('Container — disposal', () => {
   });
 
   it('marks the container as disposed even when a hook throws', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
 
     const T = token<object>('T');
     const c = createContainer();
@@ -1421,7 +1421,7 @@ describe('Container — disposal', () => {
   });
 
   it('value dispose failures warn instead of rethrowing', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const T = token<string>('T');
     const c = createContainer();
 
@@ -1884,6 +1884,70 @@ describe('Container — freeze() on disposed container', () => {
     await c.dispose();
 
     expect(() => c.freeze()).toThrow(ContainerDisposedError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validate() — public graph validation without freeze (E1)
+// ---------------------------------------------------------------------------
+
+describe('Container — validate()', () => {
+  it('returns this for chaining', () => {
+    const c = createContainer();
+
+    expect(c.validate()).toBe(c);
+  });
+
+  it('passes on a valid graph', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.factory(B, (r) => r.resolve(A), { deps: [A] });
+
+    expect(() => c.validate()).not.toThrow();
+  });
+
+  it('throws ProviderNotFoundError when a declared dep is missing', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.factory(B, (_r) => 'b', { deps: [A] });
+
+    expect(() => c.validate()).toThrow(ProviderNotFoundError);
+  });
+
+  it('throws CircularDependencyError when declared deps form a cycle', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.factory(A, (_r) => 'a', { deps: [B] });
+    c.factory(B, (_r) => 'b', { deps: [A] });
+
+    expect(() => c.validate()).toThrow(CircularDependencyError);
+  });
+
+  it('throws ContainerDisposedError when the container is disposed', async () => {
+    const c = createContainer();
+
+    await c.dispose();
+
+    expect(() => c.validate()).toThrow(ContainerDisposedError);
+  });
+
+  it('does not freeze the container — registrations still accepted after validate()', () => {
+    const A = token<string>('A');
+    const B = token<string>('B');
+    const c = createContainer();
+
+    c.value(A, 'a');
+    c.validate();
+    c.value(B, 'b');
+
+    expect(c.has(B)).toBe(true);
   });
 });
 

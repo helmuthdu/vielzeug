@@ -50,6 +50,20 @@
     flex: 1;
   }
 
+  :host([orientation='vertical']) .separator-wrapper {
+    flex-direction: column;
+    align-self: stretch;
+    height: 100%;
+  }
+
+  :host([orientation='vertical']) .separator-wrapper .separator {
+    flex: 1;
+    width: auto;
+    height: auto;
+    border-inline-start: var(--_size) solid var(--_color);
+    border-top: none;
+  }
+
   .separator-label {
     font-size: var(--text-xs);
     font-weight: var(--font-medium);

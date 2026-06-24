@@ -1,3 +1,5 @@
+import { warn } from './_warn';
+
 export type ScrollTarget = HTMLElement | Window;
 
 export type VirtualKey = number | string;
@@ -58,7 +60,9 @@ export function resolveEstimateFn(
     return (index: number) => {
       try {
         return toPositiveNumber(estimate(index), defaultSize);
-      } catch {
+      } catch (err) {
+        warn(`estimateSize threw for index ${index}: ${err}`);
+
         return defaultSize;
       }
     };

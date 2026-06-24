@@ -12,6 +12,7 @@ import type {
 } from './types';
 
 export { BusDisposedError } from './errors';
+import { warn as _internalWarn } from './_warn.js';
 import { BusDisposedError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
@@ -93,8 +94,16 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
   const rawDebug = options?.logger?.debug;
   const logDebug = rawDebug && busName ? (msg: string) => rawDebug(`${msg} (${busName})`) : rawDebug;
   const hasLogger = options?.logger !== undefined;
-  const logWarn = options?.logger?.warn ?? (hasLogger ? undefined : (msg: string) => console.warn(msg));
-  const warnPrefix = busName ? `[herald:warn:${busName}]` : '[herald:warn]';
+  const customLogWarn = options?.logger?.warn;
+  const busTag = busName ? ` (${busName})` : '';
+
+  function doWarn(msg: string): void {
+    if (customLogWarn) {
+      customLogWarn(msg);
+    } else if (!hasLogger) {
+      _internalWarn(msg);
+    }
+  }
 
   function mergeSignal(signal?: AbortSignal): AbortSignal {
     return signal ? combineSignals(disposeController.signal, signal) : disposeController.signal;
@@ -147,8 +156,8 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     logDebug?.(`[herald:sub] ${onLog} — ${container.size} listener(s)`);
 
     if (maxListeners !== undefined && container.size > maxListeners) {
-      logWarn?.(
-        `${warnPrefix} ${onLog} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.`,
+      doWarn(
+        `${onLog} has ${container.size} listeners, exceeding maxListeners (${maxListeners}). Possible memory leak.${busTag}`,
       );
     }
 

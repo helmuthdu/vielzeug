@@ -31,7 +31,7 @@ describe('debugBus', () => {
     bus.on('count', vi.fn());
 
     expect(customWarn).toHaveBeenCalledOnce();
-    expect(customWarn.mock.calls[0][0]).toContain('[herald:warn]');
+    expect(customWarn.mock.calls[0][0]).toContain('on("count")');
     expect(warnSpy).not.toHaveBeenCalled();
 
     bus.dispose();

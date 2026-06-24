@@ -166,4 +166,38 @@ describe('QueryBuilder (via query)', () => {
       expect(result).toBeDefined();
     });
   });
+
+  describe('exists()', () => {
+    test('returns true when at least one record matches', async () => {
+      expect(await db.query('rows').equals('city', 'Paris').exists()).toBe(true);
+    });
+
+    test('returns false when no records match', async () => {
+      expect(await db.query('rows').equals('city', 'Tokyo').exists()).toBe(false);
+    });
+
+    test('returns true for unfiltered non-empty table (short-circuit path)', async () => {
+      expect(await db.query('rows').exists()).toBe(true);
+    });
+
+    test('returns false for empty table', async () => {
+      const emptyDb = createMemory({ schema });
+
+      expect(await emptyDb.query('rows').exists()).toBe(false);
+    });
+
+    test('respects chained filter before exists()', async () => {
+      // filter keeps age > 25 → [Bob, Charlie]; exists() → true
+      expect(
+        await db
+          .query('rows')
+          .filter((r) => r.age > 25)
+          .exists(),
+      ).toBe(true);
+    });
+
+    test('exists() with limit(0) returns false', async () => {
+      expect(await db.query('rows').limit(0).exists()).toBe(false);
+    });
+  });
 });

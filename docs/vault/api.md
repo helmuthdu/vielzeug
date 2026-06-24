@@ -118,7 +118,7 @@ Calls `adapter.pruneExpired()` on a repeating interval. Returns a `stop` functio
 
 The schedule stops automatically if `pruneExpired()` throws `VaultDisposedError` — no cleanup needed after `dispose()` if the adapter is disposed before the timer fires.
 
-Without `onError`, other errors from `pruneExpired()` (e.g. IDB failures) are silently swallowed and the interval continues running. Pass `onError` to surface them:
+Without `onError`, other errors from `pruneExpired()` (e.g. IDB failures) emit a `[@vielzeug/vault]` dev warning and the interval continues running. Pass `onError` to handle them programmatically:
 
 ```ts
 import { scheduleExpiredPrune, ttl } from '@vielzeug/vault';
@@ -525,6 +525,7 @@ interface QueryBuilder<T extends Record<string, unknown>, N extends T = T> {
   offset(n: number): QueryBuilder<T, N>;
 
   // terminal methods
+  exists(): Promise<boolean>;
   toArray(): Promise<N[]>;
   /**
    * Number of matching records after all operations, including `limit` and `offset`.
@@ -541,6 +542,20 @@ interface QueryBuilder<T extends Record<string, unknown>, N extends T = T> {
   delete(): Promise<number>;
 }
 ```
+
+### `exists()`
+
+Returns `true` if at least one record matches all applied filter operations. Equivalent to `(await query.first()) !== undefined` but expresses the intent more clearly.
+
+```ts
+// check if any admin exists
+const hasAdmin = await db.query('users').equals('role', 'admin').exists();
+
+// check if table is non-empty
+const hasPosts = await db.query('posts').exists();
+```
+
+Presentation-only ops (`limit`, `offset`, `orderBy`) are respected before checking. An empty table always returns `false`.
 
 `delete()` returns the number of records removed. `between` and `orderBy` accept `number | string` fields.
 

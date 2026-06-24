@@ -448,7 +448,7 @@ interface GroupVirtualHeader extends VirtualItem {
 
 | Method / Property                  | Description                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------ |
-| `update(sections)`                 | Replace all sections; rebuilds flat index, preserves cached measurements |
+| `update(sections, opts?)`           | Replace all sections with optional config overrides; see `GroupVirtualizerUpdateOptions<T>` |
 | `scrollToSection(i, options?)`     | Scroll to section header at index `i`. Out-of-range is a no-op           |
 | `scrollToItem(s, i, options?)`     | Scroll to item `i` in section `s`. Out-of-range is a no-op               |
 | `scrollToIndex(i, options?)`       | Scroll to flat index `i` (from underlying virtualizer)                   |
@@ -467,6 +467,20 @@ interface GroupVirtualHeader extends VirtualItem {
 | `[Symbol.dispose]()`               | Delegates to `dispose()`                                                 |
 
 All scroll methods accept an optional `ScrollToIndexOptions` object (`{ align?, behavior?, onComplete? }`).
+
+### `GroupVirtualizerUpdateOptions<T>`
+
+Passed as the second argument to `groupVirtualizer.update()`. All fields are optional — omit any you don't want to change.
+
+| Option               | Type                                                          | Description                                              |
+| -------------------- | ------------------------------------------------------------- | -------------------------------------------------------- |
+| `estimateHeaderSize` | `number \| (section, sectionIndex) => number`                 | New header size estimate, applied on next rebuild        |
+| `estimateItemSize`   | `number \| (item, itemIndex, sectionIndex) => number`         | New item size estimate, applied on next rebuild          |
+| `getItemKey`         | `(item, itemIndex, sectionIndex) => VirtualKey`               | New item key function                                    |
+| `measurementCache`   | `MeasurementCache`                                            | Hot-swap the measurement cache                           |
+| `overscan`           | `number \| { start?, end? }`                                  | New overscan count                                       |
+
+> **Note:** `onChange`, `onScrollEnd`, `onScrollingChange`, and `horizontal` are fixed at construction and cannot be changed via `update()`.
 
 ## `createGridVirtualizer(target, options)`
 

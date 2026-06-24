@@ -9,6 +9,7 @@ import {
   type ScrollToIndexOptions,
   type VirtualItem,
   type VirtualizerState,
+  type VirtualizerUpdateOptions,
   type VirtualKey,
 } from './virtualizer';
 
@@ -37,6 +38,22 @@ export interface GroupVirtualizerState<T> {
   readonly items: Array<GroupVirtualItem<T>>;
   readonly stickyHeader: GroupVirtualHeader | null;
   readonly totalSize: number;
+}
+
+/**
+ * Options accepted by `GroupVirtualizer.update()`. Overrides are applied
+ * together with the new sections on the next render cycle.
+ *
+ * Intentionally excludes: `horizontal` (axis cannot change at runtime),
+ * `initialOffset` (one-time bootstrap), `onChange`/`onScrollEnd`/`onScrollingChange`
+ * (fixed at construction).
+ */
+export interface GroupVirtualizerUpdateOptions<T> {
+  estimateHeaderSize?: number | ((section: GroupSection<T>, sectionIndex: number) => number);
+  estimateItemSize?: number | ((item: T, itemIndex: number, sectionIndex: number) => number);
+  getItemKey?: (item: T, itemIndex: number, sectionIndex: number) => VirtualKey;
+  measurementCache?: MeasurementCache;
+  overscan?: Overscan;
 }
 
 export interface GroupVirtualizerOptions<T> {
@@ -89,7 +106,7 @@ export interface GroupVirtualizer<T> {
   scrollToOffset: (offset: number, options?: { behavior?: ScrollBehavior }) => void;
   scrollToSection: (sectionIndex: number, options?: ScrollToIndexOptions) => void;
   scrollToTop: (options?: { behavior?: ScrollBehavior }) => void;
-  update: (sections: Array<GroupSection<T>>) => void;
+  update: (sections: Array<GroupSection<T>>, opts?: GroupVirtualizerUpdateOptions<T>) => void;
   [Symbol.dispose]: () => void;
 }
 
@@ -124,40 +141,45 @@ export function createGroupedVirtualizer<T>(
   let sections = options.sections;
   let flat = buildFlatEntries(sections);
 
-  const estimateHeader =
-    typeof options.estimateHeaderSize === 'function'
+  function buildEstimateHeader(
+    estimateHeaderSize: GroupVirtualizerOptions<T>['estimateHeaderSize'],
+  ): (index: number) => number {
+    return typeof estimateHeaderSize === 'function'
       ? (index: number) => {
           const entry = flat[index]!;
 
-          return (options.estimateHeaderSize as (section: GroupSection<T>, sectionIndex: number) => number)(
+          return (estimateHeaderSize as (section: GroupSection<T>, sectionIndex: number) => number)(
             sections[entry.sectionIndex]!,
             entry.sectionIndex,
           );
         }
       : resolveEstimateFn(
-          typeof options.estimateHeaderSize === 'number' ? options.estimateHeaderSize : undefined,
+          typeof estimateHeaderSize === 'number' ? estimateHeaderSize : undefined,
           DEFAULT_ESTIMATE_SIZE,
         );
+  }
 
-  const estimateItemFn: ((item: T, itemIndex: number, sectionIndex: number) => number) | null =
+  let estimateHeaderFn = buildEstimateHeader(options.estimateHeaderSize);
+  let estimateItemUserFn: ((item: T, itemIndex: number, sectionIndex: number) => number) | null =
     typeof options.estimateItemSize === 'function' ? options.estimateItemSize : null;
-  const estimateItemFixed = estimateItemFn
+  let estimateItemFixedFn: ((index: number) => number) | null = estimateItemUserFn
     ? null
     : resolveEstimateFn(
         typeof options.estimateItemSize === 'number' ? options.estimateItemSize : undefined,
         DEFAULT_ESTIMATE_SIZE,
       );
+  let userGetItemKey = options.getItemKey;
 
   function estimateFn(globalIndex: number): number {
     const entry = flat[globalIndex];
 
     if (!entry) return DEFAULT_ESTIMATE_SIZE;
 
-    if (entry.isHeader) return estimateHeader(globalIndex);
+    if (entry.isHeader) return estimateHeaderFn(globalIndex);
 
-    if (estimateItemFn) return estimateItemFn(entry.item, entry.itemIndex, entry.sectionIndex);
+    if (estimateItemUserFn) return estimateItemUserFn(entry.item, entry.itemIndex, entry.sectionIndex);
 
-    return estimateItemFixed!(globalIndex);
+    return estimateItemFixedFn!(globalIndex);
   }
 
   function getItemKey(globalIndex: number): VirtualKey {
@@ -167,7 +189,7 @@ export function createGroupedVirtualizer<T>(
 
     if (entry.isHeader) return `__header_${entry.sectionIndex}`;
 
-    if (options.getItemKey) return options.getItemKey(entry.item, entry.itemIndex, entry.sectionIndex);
+    if (userGetItemKey) return userGetItemKey(entry.item, entry.itemIndex, entry.sectionIndex);
 
     return globalIndex;
   }
@@ -344,8 +366,27 @@ export function createGroupedVirtualizer<T>(
      * the underlying virtualizer to avoid discarding measured sizes on every
      * data refresh. `refresh()` rebuilds offsets while preserving the cache.
      */
-    update(nextSections) {
+    update(nextSections, opts?: GroupVirtualizerUpdateOptions<T>) {
       if (destroyed) return;
+
+      // Apply option overrides before rebuilding flat entries.
+      if (opts) {
+        if (opts.estimateHeaderSize !== undefined) {
+          estimateHeaderFn = buildEstimateHeader(opts.estimateHeaderSize);
+        }
+
+        if (opts.estimateItemSize !== undefined) {
+          estimateItemUserFn = typeof opts.estimateItemSize === 'function' ? opts.estimateItemSize : null;
+          estimateItemFixedFn = estimateItemUserFn
+            ? null
+            : resolveEstimateFn(
+                typeof opts.estimateItemSize === 'number' ? opts.estimateItemSize : undefined,
+                DEFAULT_ESTIMATE_SIZE,
+              );
+        }
+
+        if (opts.getItemKey !== undefined) userGetItemKey = opts.getItemKey;
+      }
 
       sections = nextSections;
 
@@ -353,11 +394,15 @@ export function createGroupedVirtualizer<T>(
 
       flat = buildFlatEntries(sections);
 
-      if (flat.length !== prevCount) {
-        // update() with a changed count triggers rebuild + re-emit internally.
-        virtualizer.update({ count: flat.length });
+      const virtUpdateOpts: VirtualizerUpdateOptions = { count: flat.length };
+
+      if (opts?.measurementCache !== undefined) virtUpdateOpts.measurementCache = opts.measurementCache;
+
+      if (opts?.overscan !== undefined) virtUpdateOpts.overscan = opts.overscan;
+
+      if (flat.length !== prevCount || opts?.measurementCache !== undefined || opts?.overscan !== undefined) {
+        virtualizer.update(virtUpdateOpts);
       } else {
-        // Count unchanged: closures already see new data, re-emit with refresh().
         virtualizer.refresh();
       }
     },

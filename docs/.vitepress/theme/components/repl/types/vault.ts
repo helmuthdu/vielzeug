@@ -37,6 +37,7 @@ declare module '@vielzeug/vault' {
     totalCount(): Promise<number>;
     delete(): Promise<number>;
     equals<K extends keyof T>(field: K, value: T[K]): QueryBuilder<T>;
+    exists(): Promise<boolean>;
     filter(fn: (value: T, index: number, array: T[]) => boolean): QueryBuilder<T>;
     first(): Promise<T | undefined>;
     limit(n: number): QueryBuilder<T>;

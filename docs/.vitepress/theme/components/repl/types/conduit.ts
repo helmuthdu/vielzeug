@@ -59,6 +59,7 @@ declare module '/conduit' {
     resolveAll(opts?: { includeScoped?: boolean }): Promise<void>;
 
     inspect(opts?: { deep?: boolean }): ContainerGraph;
+    validate(): this;
     freeze(): this;
 
     createScope(scopeToken?: ScopeToken, opts?: { name?: string }): Container;

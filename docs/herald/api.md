@@ -28,7 +28,7 @@ description: Complete API reference for @vielzeug/herald.
 | --------------------------- | ---------------------------------------------------------- |
 | `@vielzeug/herald`          | Main runtime API and types                                 |
 | `@vielzeug/herald/devtools` | `debugBus`, `debugBehaviorBus` — debug wrappers (dev only) |
-| `@vielzeug/herald/test`     | Test helpers (`createTestBus`, `TestBus<T>` type)          |
+| `@vielzeug/herald/testing`  | Test helpers (`createTestBus`, `TestBus<T>` type)          |
 
 ## Types
 
@@ -741,7 +741,7 @@ pipeEvents(authBus, targetBus, [
 
 ## Testing Utilities
 
-Import from `@vielzeug/herald/test`.
+Import from `@vielzeug/herald/testing`.
 
 ### `createTestBus()`
 
@@ -764,7 +764,7 @@ Behavior:
 **Returns:** `TestBus<T>`
 
 ```ts
-import { createTestBus } from '@vielzeug/herald/test';
+import { createTestBus } from '@vielzeug/herald/testing';
 
 type AppEvents = {
   'user:login': { userId: string };
