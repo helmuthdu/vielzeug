@@ -37,6 +37,9 @@ export type {
   TransitionConfig,
 } from './types';
 
+// Error classes
+export { PrismDisposedError, PrismError, PrismRenderError } from './errors';
+
 // Chart factories
 export { createAreaChart } from './charts/area';
 export { createBarChart } from './charts/bar';

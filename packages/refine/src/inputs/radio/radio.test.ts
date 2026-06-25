@@ -8,7 +8,7 @@ describe('ore-radio', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ──────────────────────────────────────────────────────────────
@@ -345,7 +345,7 @@ describe('ore-radio accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Semantic Structure ──────────────────────────────────────────────────────
@@ -514,8 +514,8 @@ describe('ore-radio accessibility', () => {
       expect(f2.element.hasAttribute('checked')).toBe(true);
       expect(f1.element.hasAttribute('checked')).toBe(false);
 
-      f1.destroy();
-      f2.destroy();
+      f1.dispose();
+      f2.dispose();
     });
 
     it('navigates to next radio with ArrowRight and selects it', async () => {
@@ -536,8 +536,8 @@ describe('ore-radio accessibility', () => {
       expect(f2.element.hasAttribute('checked')).toBe(true);
       expect(f1.element.hasAttribute('checked')).toBe(false);
 
-      f1.destroy();
-      f2.destroy();
+      f1.dispose();
+      f2.dispose();
     });
 
     it('navigates to previous radio with ArrowUp and selects it', async () => {
@@ -558,8 +558,8 @@ describe('ore-radio accessibility', () => {
       expect(f1.element.hasAttribute('checked')).toBe(true);
       expect(f2.element.hasAttribute('checked')).toBe(false);
 
-      f1.destroy();
-      f2.destroy();
+      f1.dispose();
+      f2.dispose();
     });
 
     it('does not respond to keyboard when disabled', async () => {
@@ -609,7 +609,7 @@ describe('ore-radio accessibility', () => {
 
       const results = await axeCheck(fix.element, { rules: { 'aria-required-parent': { enabled: false } } });
 
-      fix.destroy();
+      fix.dispose();
       expect(results.violations).toHaveLength(0);
     });
   });

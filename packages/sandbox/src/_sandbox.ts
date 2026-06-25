@@ -69,6 +69,8 @@ export type SandboxMessage =
 
 /** Handle for a running sandbox instance returned by createSandbox(). */
 export interface SandboxHandle {
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie async operations to this sandbox's lifetime. */
+  readonly disposalSignal: AbortSignal;
   /** True once dispose() has been called. */
   readonly disposed: boolean;
   /**
@@ -263,6 +265,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
   let iframe: HTMLIFrameElement | null = null;
   const listeners = new Set<(msg: SandboxMessage) => void>();
   let disposed = false;
+  const ac = new AbortController();
   // loaded: true once the bridge posts 'ready' for the current document; false until then.
   // Reset to false on each render() call. Used both as the public loaded property and as
   // the guard in setState() to warn when called before the bridge is initialized.
@@ -321,6 +324,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     if (disposed) return;
 
     disposed = true;
+    ac.abort();
 
     // Resolve ready and all pending nextReady() callers to unblock any awaiting code.
     // render() guards against post-dispose calls so callers won't accidentally re-render.
@@ -402,6 +406,9 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
   }
 
   return {
+    get disposalSignal() {
+      return ac.signal;
+    },
     dispose,
     get disposed() {
       return disposed;

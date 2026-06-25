@@ -1,5 +1,7 @@
 import type { ConnectionResult, ConnectOptions, FieldState, FlatKeyOf, Form, FormState, TypeAtPath } from '../index.js';
 
+import { ForgeError } from '../errors.js';
+
 /**
  * `useSyncExternalStore` signature — typed locally so this adapter has no hard
  * dependency on the `react` package.
@@ -91,8 +93,8 @@ function createHooks(
       options?: ConnectOptions,
     ): ConnectionResult<TypeAtPath<T, K>> {
       if (!useEffectFn || !useRefFn) {
-        throw new Error(
-          '[@vielzeug/forge] useConnect requires useEffect and useRef — pass them to createForgeHooks({ useEffect, useRef, useSyncExternalStore }).',
+        throw new ForgeError(
+          'useConnect requires useEffect and useRef — pass them to createForgeHooks({ useEffect, useRef, useSyncExternalStore }).',
         );
       }
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ArsenalError } from '../../errors';
 import { hash } from '../hash';
 
 describe('hash', () => {
@@ -117,7 +118,7 @@ describe('hash', () => {
     });
 
     it('throws TypeError for class instances when onClassInstance: throw', () => {
-      expect(() => hash(new MyClass(), { onClassInstance: 'throw' })).toThrow(TypeError);
+      expect(() => hash(new MyClass(), { onClassInstance: 'throw' })).toThrow(ArsenalError);
     });
   });
 });

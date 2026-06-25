@@ -1,42 +1,9 @@
-// ─── Error codes ──────────────────────────────────────────────────────────────
-
-/** Error code constants for {@link TempoError}. */
-export const TempoErrorCode = Object.freeze({
-  INVALID_INPUT: 'INVALID_INPUT',
-  INVALID_TZ: 'INVALID_TZ',
-  MISSING_TZ: 'MISSING_TZ',
-  UNSUPPORTED_INPUT: 'UNSUPPORTED_INPUT',
-} as const satisfies Record<string, string>);
-
-export type TempoErrorCode = (typeof TempoErrorCode)[keyof typeof TempoErrorCode];
-
-// ─── Error class ──────────────────────────────────────────────────────────────
-
-/**
- * Error thrown by tempo when input validation fails.
- * Use `instanceof TempoError` to catch any tempo-originated error.
- *
- * @example
- * ```ts
- * import { parse, TempoError } from '@vielzeug/tempo';
- *
- * try {
- *   parse('not-a-date');
- * } catch (e) {
- *   if (e instanceof TempoError) {
- *     console.log(e.code); // 'INVALID_INPUT'
- *   }
- * }
- * ```
- */
+/** Base class for all tempo errors. Use `instanceof TempoError` to catch any tempo-originated error. */
 export class TempoError extends Error {
-  readonly code: TempoErrorCode;
-
-  constructor(code: TempoErrorCode, message: string) {
-    super(message);
+  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+    super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
-    this.code = code;
   }
 
   static is(err: unknown): err is TempoError {
@@ -44,8 +11,22 @@ export class TempoError extends Error {
   }
 }
 
+/** Thrown when a date/time input string or value cannot be parsed. */
+export class TempoInvalidInputError extends TempoError {}
+
+/** Thrown when the provided timezone identifier is unknown or invalid. */
+export class TempoInvalidTzError extends TempoError {}
+
+/** Thrown when an operation requires a timezone but none was supplied. */
+export class TempoMissingTzError extends TempoError {}
+
+/** Thrown when an input type is not supported by the called operation. */
+export class TempoUnsupportedInputError extends TempoError {}
+
 // ─── Error helpers ────────────────────────────────────────────────────────────
 
-export function fail(message: string, code: TempoErrorCode = TempoErrorCode.INVALID_INPUT): never {
-  throw new TempoError(code, message);
+type TempoErrorCtor = new (message: string) => TempoError;
+
+export function fail(message: string, Class: TempoErrorCtor = TempoInvalidInputError): never {
+  throw new Class(message);
 }

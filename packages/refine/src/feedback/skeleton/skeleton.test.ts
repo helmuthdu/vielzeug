@@ -8,7 +8,7 @@ describe('ore-skeleton', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Core Functionality', () => {

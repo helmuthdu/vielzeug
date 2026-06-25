@@ -232,3 +232,24 @@ document.addEventListener('sandbox:state-update', (e) => {
 ::: warning Security
 Treat all `SandboxMessage` data as untrusted. The sandbox controls what `custom` event payloads contain — do not execute or evaluate any message field.
 :::
+
+---
+
+## Errors
+
+### `SandboxError`
+
+Base class for all sandbox errors. Use `instanceof SandboxError` or `SandboxError.is()` to catch any sandbox-originated error.
+
+```ts
+class SandboxError extends Error {
+  static is(err: unknown): err is SandboxError;
+}
+```
+
+**Named subclasses**
+
+| Class                  | Thrown when                                                                 |
+| ---------------------- | --------------------------------------------------------------------------- |
+| `SandboxDisposedError` | A method is called on a disposed sandbox instance                           |
+| `SandboxTimeoutError`  | The sandbox iframe fails to initialize or respond within the expected timeout |

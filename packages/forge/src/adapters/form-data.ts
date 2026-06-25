@@ -1,4 +1,4 @@
-import { flattenValues } from '../utils';
+import { flattenValues } from '../_utils';
 
 /**
  * Converts a form values object into a `FormData` instance.

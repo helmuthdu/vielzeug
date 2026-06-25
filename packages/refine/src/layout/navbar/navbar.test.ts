@@ -8,7 +8,7 @@ describe('ore-navbar', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders a nav landmark with default label', async () => {
@@ -390,7 +390,7 @@ describe('ore-navbar-item', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders an anchor when href is present', async () => {

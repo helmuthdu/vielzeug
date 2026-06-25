@@ -1,6 +1,6 @@
 import type { ExchangeRate } from '../types';
 
-import { CurrencyMismatchError, InvalidCurrencyError } from '../errors';
+import { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from '../errors';
 import { exchange } from '../exchange';
 import { money } from '../money';
 
@@ -148,19 +148,19 @@ describe('exchange', () => {
 
     it('throws RangeError for invalid rate string', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: 'not-a-number', to: 'EUR' })).toThrow(
-        RangeError,
+        CoinsError,
       );
     });
 
     it('throws RangeError for empty string rate', () => {
-      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(CoinsError);
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(
         'non-empty decimal string',
       );
     });
 
     it('throws RangeError for negative exchange rate', () => {
-      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(RangeError);
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(CoinsError);
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(
         'Exchange rate must be non-negative',
       );

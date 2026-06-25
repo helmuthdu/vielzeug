@@ -20,7 +20,7 @@ describe('ore-popover', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ describe('ore-popover accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Dialog Role', () => {

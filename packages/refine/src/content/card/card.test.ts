@@ -8,7 +8,7 @@ describe('ore-card', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders card element', async () => {
@@ -42,7 +42,7 @@ describe('ore-card', () => {
     fixture = await mount('ore-card', { attrs: { loading: '' } });
     expect(fixture.element.getAttribute('aria-busy')).toBe('true');
 
-    fixture.destroy();
+    fixture.dispose();
     fixture = await mount('ore-card');
     expect(fixture.element.getAttribute('aria-busy')).toBe('false');
   });
@@ -163,7 +163,7 @@ describe('ore-card', () => {
     expect(fixture.element.getAttribute('orientation')).toBe('vertical');
     expect(handler).toHaveBeenCalledTimes(1);
 
-    fixture.destroy();
+    fixture.dispose();
     fixture = await mount('ore-card', {
       attrs: {
         color: 'primary',

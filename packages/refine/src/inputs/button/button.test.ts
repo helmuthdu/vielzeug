@@ -9,7 +9,7 @@ describe('ore-button', () => {
   let fixture: Fixture<HTMLElement>;
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -315,7 +315,7 @@ describe('ore-button accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('ARIA', () => {

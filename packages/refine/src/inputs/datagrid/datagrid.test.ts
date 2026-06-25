@@ -126,7 +126,7 @@ describe('ore-datagrid', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ── Rendering ────────────────────────────────────────────────────────────────

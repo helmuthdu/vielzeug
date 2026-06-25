@@ -12,5 +12,13 @@
 
   svg {
     display: block;
+    width: 100%;
+    height: 100%;
   }
+}
+
+/* Unlayered: always wins over any @layer rule, including refine.overrides */
+:host {
+  width: var(--ore-icon-size, var(--_size-px));
+  height: var(--ore-icon-size, var(--_size-px));
 }

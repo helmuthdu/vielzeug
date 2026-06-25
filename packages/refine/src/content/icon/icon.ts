@@ -131,12 +131,19 @@ define<OreIconProps>(ICON_TAG, {
     solid: prop.bool(),
     strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
-  setup(props, { bind, el: _el }) {
+  setup(props, { bind }) {
     bind({
       attr: {
         'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),
         'aria-label': () => (props.label.value ?? '').trim() || null,
         role: () => ((props.label.value ?? '').trim() ? 'img' : null),
+      },
+      style: {
+        '--_size-px': () => {
+          const s = props.size.value;
+
+          return typeof s === 'number' ? `${s}px` : String(s);
+        },
       },
     });
 
@@ -154,7 +161,6 @@ define<OreIconProps>(ICON_TAG, {
       }
 
       const size = props.size.value;
-      const cssSize = typeof size === 'number' ? `${size}px` : String(size);
       const numericSize = typeof size === 'number' ? size : LUCIDE_VIEWBOX_SIZE;
 
       const strokeWidth =
@@ -182,7 +188,7 @@ define<OreIconProps>(ICON_TAG, {
         'stroke-linecap': 'round',
         'stroke-linejoin': 'round',
         'stroke-width': props.solid.value ? 0 : strokeWidth,
-        style: `height:${cssSize};width:${cssSize}`,
+        style: `width:100%;height:100%`,
         viewBox: '0 0 24 24',
         xmlns: 'http://www.w3.org/2000/svg',
       });

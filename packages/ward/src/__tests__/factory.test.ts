@@ -1788,7 +1788,7 @@ describe('ward: detectConflicts — strict and onConflict options', () => {
         ],
         { onConflict, strict: true },
       );
-    }).toThrow('[ward]');
+    }).toThrow('rule conflict');
 
     expect(onConflict).toHaveBeenCalledTimes(1);
     expect(onConflict.mock.calls[0][0]).toMatchObject({ kind: 'duplicate' });

@@ -1,7 +1,7 @@
 import { sourceState } from '../state';
-import { SourceError, SourceTimeoutError } from '../types';
+import { SourcererError, SourceTimeoutError } from '../types';
 
-const makeSource = (isLoading: boolean, error: SourceError | null, items: readonly number[]) => ({
+const makeSource = (isLoading: boolean, error: SourcererError | null, items: readonly number[]) => ({
   current: items,
   meta: { error, isLoading },
 });
@@ -15,7 +15,7 @@ describe('sourceState', () => {
   });
 
   it('returns error state when error is set', () => {
-    const err = new SourceError('Not found');
+    const err = new SourcererError('Not found');
     const source = makeSource(false, err, []);
     const state = sourceState(source);
 
@@ -42,7 +42,7 @@ describe('sourceState', () => {
   });
 
   it('loading takes priority over error', () => {
-    const err = new SourceError('Previous error');
+    const err = new SourcererError('Previous error');
     const source = makeSource(true, err, []);
     const state = sourceState(source);
 
@@ -58,9 +58,9 @@ describe('sourceState', () => {
     }
   });
 
-  it('SourceError carries message, cause, and context', () => {
+  it('SourcererError carries message, cause, and context', () => {
     const cause = new TypeError('network');
-    const err = new SourceError('Request failed', {
+    const err = new SourcererError('Request failed', {
       cause,
       context: { kind: 'remote', limit: 10, page: 1 },
     });
@@ -68,19 +68,19 @@ describe('sourceState', () => {
     expect(err.message).toBe('Request failed');
     expect(err.cause).toBe(cause);
     expect(err.context).toEqual({ kind: 'remote', limit: 10, page: 1 });
-    expect(err.name).toBe('SourceError');
+    expect(err.name).toBe('SourcererError');
     expect(err).toBeInstanceOf(Error);
-    expect(err).toBeInstanceOf(SourceError);
+    expect(err).toBeInstanceOf(SourcererError);
   });
 
-  it('SourceError defaults attempt to 0', () => {
-    const err = new SourceError('fail');
+  it('SourcererError defaults attempt to 0', () => {
+    const err = new SourcererError('fail');
 
     expect(err.attempt).toBe(0);
   });
 
-  it('SourceError stores attempt number', () => {
-    const err = new SourceError('fail', { attempt: 3 });
+  it('SourcererError stores attempt number', () => {
+    const err = new SourcererError('fail', { attempt: 3 });
 
     expect(err.attempt).toBe(3);
   });

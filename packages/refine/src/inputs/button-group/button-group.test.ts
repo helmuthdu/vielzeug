@@ -9,7 +9,7 @@ describe('ore-button-group', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -72,7 +72,7 @@ describe('ore-button-group', () => {
         fixture = await mount('ore-button-group', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -83,7 +83,7 @@ describe('ore-button-group', () => {
         fixture = await mount('ore-button-group', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -98,7 +98,7 @@ describe('ore-button-group accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {

@@ -2,8 +2,9 @@ import type { Refreshable } from './reactive-base';
 import type { DepEntry } from './tracking';
 import type { Computed, ComputedOptions, Subscription } from './types';
 
+import { ensureError } from './_error-utils';
 import { getDevToolsHook } from './devtools-hook';
-import { ensureError, StateError } from './errors';
+import { RippleComputedCycleError } from './errors';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';
@@ -90,7 +91,7 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
     if (this.computing_) {
       const label = this.name ? ` "${this.name}"` : '';
 
-      throw new StateError('COMPUTED_CYCLE', `computed cycle detected${label}`);
+      throw new RippleComputedCycleError(`computed cycle detected${label}`);
     }
 
     this.computing_ = true;

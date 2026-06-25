@@ -8,7 +8,7 @@ describe('ore-grid', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -69,7 +69,7 @@ describe('ore-grid', () => {
         fixture = await mount('ore-grid', { attrs: { cols } });
 
         expect(fixture.element.getAttribute('cols')).toBe(cols);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -80,7 +80,7 @@ describe('ore-grid', () => {
         fixture = await mount('ore-grid', { attrs: { gap } });
 
         expect(fixture.element.getAttribute('gap')).toBe(gap);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -94,7 +94,7 @@ describe('ore-grid accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {

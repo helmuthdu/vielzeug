@@ -1,4 +1,4 @@
-import type { SourceError } from '../types';
+import type { SourcererError } from '../types';
 
 import { clampPage, createMeta, itemRange, pageCount } from '../pagination';
 
@@ -64,8 +64,8 @@ describe('pagination helpers', () => {
     });
   });
 
-  it('stores a SourceError reference in meta.error', () => {
-    const err = { message: 'oops', name: 'SourceError' } as unknown as SourceError;
+  it('stores a SourcererError reference in meta.error', () => {
+    const err = { message: 'oops', name: 'SourcererError' } as unknown as SourcererError;
     const meta = createMeta({
       error: err,
       isLoading: false,

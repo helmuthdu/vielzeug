@@ -29,8 +29,10 @@ export interface ChartDimensions {
 }
 
 export interface ChartHandle {
-  readonly el: SVGSVGElement;
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
+  readonly el: SVGSVGElement;
   [Symbol.dispose](): void;
 }
 

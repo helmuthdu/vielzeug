@@ -234,22 +234,24 @@ export interface Store<T extends object> extends Computed<Readonly<T>> {
  * Effects and computeds created inside `scope.run()` auto-register their disposal.
  */
 export interface Scope {
-  /** `true` after `dispose()` has been called. */
-  readonly disposed: boolean;
   /**
    * Registers `fn` to run when this scope is disposed.
-   * Throws `DISPOSED_SCOPE` if called on an already-disposed scope.
+   * Throws `RippleDisposedScopeError` if called on an already-disposed scope.
    * Use this from within an effect body to explicitly direct a cleanup into the scope
    * rather than the effect's own cleanup queue.
    */
   add(fn: CleanupFn): void;
+  /** `AbortSignal` that is aborted when `dispose()` is called. Use to tie external lifetimes to this scope. */
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /**
    * Runs `fn` inside this scope's cleanup context.
    * `onCleanup()` calls and resource auto-disposals inside `fn` are registered
    * to this scope when there is no enclosing effect or computed context.
    * Reactive reads inside `fn` are tracked normally against any enclosing effect.
-   * Throws `DISPOSED_SCOPE` if the scope has already been disposed.
+   * Throws `RippleDisposedScopeError` if the scope has already been disposed.
    */
   run<T>(fn: () => T): T;
   [Symbol.dispose](): void;

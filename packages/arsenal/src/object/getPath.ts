@@ -1,6 +1,7 @@
 import type { Obj } from '../types';
 
 import { UNSAFE_PATH_SEGMENTS } from '../_internal/unsafePaths';
+import { ArsenalError } from '../errors';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T
@@ -63,7 +64,7 @@ export function getPath<T extends Obj, P extends string>(
 
   if (/[[\]]/.test(path)) {
     if (!bracketNotation) {
-      throw new TypeError(
+      throw new ArsenalError(
         `getPath: bracket notation is not supported. Use dot notation: '${path.replace(/\[(\d+)\]/g, '.$1').replace(/^\.|\.$/g, '')}' or pass { bracketNotation: true }.`,
       );
     }
@@ -78,7 +79,7 @@ export function getPath<T extends Obj, P extends string>(
     if (UNSAFE_PATH_SEGMENTS.has(fragment)) return defaultValue as PathValue<T, P>;
 
     if (current == null || typeof current !== 'object') {
-      if (strict) throw new Error(`Cannot read property '${fragment}' of ${current}`);
+      if (strict) throw new ArsenalError(`Cannot read property '${fragment}' of ${current}`);
 
       return defaultValue as PathValue<T, P>;
     }
@@ -86,7 +87,7 @@ export function getPath<T extends Obj, P extends string>(
     current = (current as Record<string, unknown>)[fragment];
 
     if (current === undefined) {
-      if (strict) throw new Error(`Property '${fragment}' does not exist`);
+      if (strict) throw new ArsenalError(`Property '${fragment}' does not exist`);
 
       return defaultValue as PathValue<T, P>;
     }

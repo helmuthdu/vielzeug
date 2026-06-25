@@ -8,7 +8,7 @@ describe('ore-pagination', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -263,7 +263,7 @@ describe('ore-pagination accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Nav Landmark', () => {

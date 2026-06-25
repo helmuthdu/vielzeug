@@ -8,7 +8,7 @@ describe('ore-switch', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────────
@@ -268,7 +268,7 @@ describe('ore-switch accessibility', () => {
       const fixture = await mount('ore-switch');
 
       expect(fixture.element.getAttribute('role')).toBe('switch');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('renders visual track and thumb accessible indicator elements', async () => {
@@ -276,7 +276,7 @@ describe('ore-switch accessibility', () => {
 
       expect(fixture.query('.switch-track')).toBeTruthy();
       expect(fixture.query('.switch-thumb')).toBeTruthy();
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -286,14 +286,14 @@ describe('ore-switch accessibility', () => {
       const fixture = await mount('ore-switch');
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('has aria-checked="true" when checked (on state)', async () => {
       const fixture = await mount('ore-switch', { attrs: { checked: true } });
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('updates aria-checked dynamically as the switch is toggled', async () => {
@@ -303,14 +303,14 @@ describe('ore-switch accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await user.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('sets aria-labelledby when label text is slotted', async () => {
       const fixture = await mount('ore-switch', { html: 'Enable dark mode' });
 
       expect(fixture.element.hasAttribute('aria-labelledby')).toBe(true);
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -320,14 +320,14 @@ describe('ore-switch accessibility', () => {
       const fixture = await mount('ore-switch');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('has no tabindex when disabled (excluded from tab order)', async () => {
       const fixture = await mount('ore-switch', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('toggles on Space keypress', async () => {
@@ -335,7 +335,7 @@ describe('ore-switch accessibility', () => {
 
       await user.press(fixture.element, ' ');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('toggles on Enter keypress', async () => {
@@ -343,7 +343,7 @@ describe('ore-switch accessibility', () => {
 
       await user.press(fixture.element, 'Enter');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('ignores keyboard interaction when disabled', async () => {
@@ -353,7 +353,7 @@ describe('ore-switch accessibility', () => {
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).not.toHaveBeenCalled();
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -364,7 +364,7 @@ describe('ore-switch accessibility', () => {
 
       await fixture.attr('disabled', false);
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -377,7 +377,7 @@ describe('ore-switch accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await fixture.attr('checked', false);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -387,7 +387,7 @@ describe('ore-switch accessibility', () => {
 
       const results = await axeCheck(fix.element);
 
-      fix.destroy();
+      fix.dispose();
       expect(results.violations).toHaveLength(0);
     });
   });

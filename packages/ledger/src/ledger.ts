@@ -158,8 +158,11 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     });
   }
 
+  const ac = new AbortController();
+
   function dispose(): void {
     isDisposed = true;
+    ac.abort();
 
     undoStack.value = [];
     redoStack.value = [];
@@ -173,7 +176,13 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
 
     clear,
 
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
     dispose,
+    get disposed(): boolean {
+      return isDisposed;
+    },
 
     do(command: Command): Promise<void> {
       return enqueue(() => runDo(entryFromCommand<TData>(command)));

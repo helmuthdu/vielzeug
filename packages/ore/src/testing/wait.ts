@@ -2,6 +2,8 @@
  * Async waiting utilities for test environments.
  */
 
+import { OreTimeoutError } from '../errors';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface WaitOptions {
@@ -62,7 +64,7 @@ export async function waitFor(
     throw lastError;
   }
 
-  throw new Error(lastError != null ? `${base}\nCause: ${lastError}` : base);
+  throw new OreTimeoutError(lastError != null ? `${base}\nCause: ${lastError}` : base);
 }
 
 /**
@@ -75,7 +77,10 @@ export async function waitFor(
  */
 export function waitForEvent<T extends Event = Event>(element: Element, name: string, timeout = 1000): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`waitForEvent: "${name}" timed out after ${timeout}ms`)), timeout);
+    const timer = setTimeout(
+      () => reject(new OreTimeoutError(`waitForEvent: "${name}" timed out after ${timeout}ms`)),
+      timeout,
+    );
 
     element.addEventListener(
       name,

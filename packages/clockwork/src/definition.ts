@@ -1,6 +1,12 @@
 import type { MachineConfig, MachineEvent, StateNode, TransitionDef } from './types.js';
 
-import { MachineError } from './errors.js';
+import {
+  ClockworkInvalidAfterDelayError,
+  ClockworkInvalidInitialStateError,
+  ClockworkInvalidTransitionArrayError,
+  ClockworkMissingCompoundInitialError,
+  ClockworkUnknownTargetError,
+} from './errors.js';
 
 // ── Hierarchy helpers (internal — not re-exported from index) ─────────────────
 
@@ -78,18 +84,14 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
   allTopLevel: Record<string, StateNode<State, Ctx, Ev>>,
 ): void => {
   if (node.states && !node.initial) {
-    throw new MachineError(
-      'MACHINE_MISSING_COMPOUND_INITIAL',
-      `compound state "${path}" must have an "initial" property`,
-      { path },
-    );
+    throw new ClockworkMissingCompoundInitialError(`compound state "${path}" must have an "initial" property`, path);
   }
 
   if (node.initial && node.states && !(node.initial in node.states)) {
-    throw new MachineError(
-      'MACHINE_INVALID_INITIAL_STATE',
+    throw new ClockworkInvalidInitialStateError(
       `compound state "${path}" initial "${node.initial}" not found in substates`,
-      { initial: node.initial, path },
+      path,
+      node.initial,
     );
   }
 
@@ -97,10 +99,10 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     const defs = Array.isArray(input) ? input : [input];
 
     if (defs.length === 0) {
-      throw new MachineError(
-        'MACHINE_INVALID_TRANSITION_ARRAY',
+      throw new ClockworkInvalidTransitionArrayError(
         `state "${path}" event "${eventType}" must be a non-empty transition or transition array`,
-        { eventType, path },
+        path,
+        eventType,
       );
     }
 
@@ -108,18 +110,20 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
       const targetRoot = tr.target.split('.')[0];
 
       if (!(targetRoot in allTopLevel)) {
-        throw new MachineError(
-          'MACHINE_UNKNOWN_TARGET',
+        throw new ClockworkUnknownTargetError(
           `state "${path}" event "${eventType}" targets unknown state "${tr.target}"`,
-          { eventType, path, target: tr.target },
+          path,
+          tr.target,
+          eventType,
         );
       }
 
       if (tr.target.includes('.') && !getNodeAtPath(allTopLevel, tr.target)) {
-        throw new MachineError(
-          'MACHINE_UNKNOWN_TARGET',
+        throw new ClockworkUnknownTargetError(
           `state "${path}" event "${eventType}" targets unknown nested state "${tr.target}"`,
-          { eventType, path, target: tr.target },
+          path,
+          tr.target,
+          eventType,
         );
       }
     }
@@ -127,36 +131,34 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
 
   // Validate empty invoke array (D1)
   if (node.invoke !== undefined && node.invoke.length === 0) {
-    throw new MachineError('MACHINE_INVALID_TRANSITION_ARRAY', `state "${path}" invoke must be a non-empty array`, {
-      path,
-    });
+    throw new ClockworkInvalidTransitionArrayError(`state "${path}" invoke must be a non-empty array`, path);
   }
 
   // Validate after targets and delays
   for (const afterDef of node.after ?? []) {
     if (!Number.isFinite(afterDef.delay) || afterDef.delay < 0) {
-      throw new MachineError(
-        'MACHINE_INVALID_AFTER_DELAY',
+      throw new ClockworkInvalidAfterDelayError(
         `state "${path}" after delay must be a finite number >= 0, got ${afterDef.delay}`,
-        { delay: afterDef.delay, path },
+        path,
+        afterDef.delay,
       );
     }
 
     const targetRoot = afterDef.target.split('.')[0];
 
     if (!(targetRoot in allTopLevel)) {
-      throw new MachineError(
-        'MACHINE_UNKNOWN_TARGET',
+      throw new ClockworkUnknownTargetError(
         `state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
-        { delay: afterDef.delay, path, target: afterDef.target },
+        path,
+        afterDef.target,
       );
     }
 
     if (afterDef.target.includes('.') && !getNodeAtPath(allTopLevel, afterDef.target)) {
-      throw new MachineError(
-        'MACHINE_UNKNOWN_TARGET',
+      throw new ClockworkUnknownTargetError(
         `state "${path}" after[${afterDef.delay}ms] targets unknown nested state "${afterDef.target}"`,
-        { delay: afterDef.delay, path, target: afterDef.target },
+        path,
+        afterDef.target,
       );
     }
   }
@@ -174,10 +176,10 @@ export const validateDefinition = <State extends string, Ctx extends object, Ev 
   const { states } = definition;
 
   if (!(definition.initial in states)) {
-    throw new MachineError(
-      'MACHINE_INVALID_INITIAL_STATE',
+    throw new ClockworkInvalidInitialStateError(
       `initial state "${definition.initial}" not found in states`,
-      { initial: definition.initial },
+      '',
+      definition.initial,
     );
   }
 

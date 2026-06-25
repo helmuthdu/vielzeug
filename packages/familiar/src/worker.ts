@@ -8,28 +8,27 @@ export type {
   WorkerHandle,
   WorkerOptions,
   WorkerStatus,
-} from './_types';
-export type { WorkerErrorCode } from './errors';
+} from './types';
 export {
-  WorkerError,
-  WorkerInvalidOptionsError,
-  WorkerQueueFullError,
-  WorkerRuntimeError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarError,
+  FamiliarInvalidOptionsError,
+  FamiliarQueueFullError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from './errors';
 
-import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './_types';
+import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './types';
 
 import { createPool } from './_pool';
 import { warn } from './_warn';
 import {
-  WorkerInvalidOptionsError,
-  WorkerRuntimeError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarInvalidOptionsError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from './errors';
 
 // ─── task() — optional validation helper ─────────────────────────────────────
@@ -44,7 +43,7 @@ import {
  * It **cannot** close over variables from the surrounding module — any outer reference resolves
  * to `undefined` inside the worker.
  *
- * @throws WorkerInvalidOptionsError if the function is bound or native.
+ * @throws FamiliarInvalidOptionsError if the function is bound or native.
  *
  * @example
  * // Without task() — works fine for plain arrow functions:
@@ -55,7 +54,7 @@ import {
  */
 export function task<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TaskFn<TInput, TOutput> {
   if (fn.toString().includes('[native code]')) {
-    throw new WorkerInvalidOptionsError('Task function cannot be a bound or native function');
+    throw new FamiliarInvalidOptionsError('Task function cannot be a bound or native function');
   }
 
   return fn;
@@ -71,7 +70,7 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
   }
 
   if (!Number.isInteger(value) || value < 1 || value > 512) {
-    throw new WorkerInvalidOptionsError('`concurrency` must be a positive integer ≤ 512 or "auto"');
+    throw new FamiliarInvalidOptionsError('`concurrency` must be a positive integer ≤ 512 or "auto"');
   }
 
   return value;
@@ -89,15 +88,15 @@ function resolveOptions(options: WorkerOptions = {}): {
   const { heartbeatWindow, maxQueue, onFull = 'reject', onSlotError, timeout } = options;
 
   if (timeout !== undefined && (!Number.isFinite(timeout) || timeout <= 0)) {
-    throw new WorkerInvalidOptionsError('`timeout` must be a finite number greater than 0');
+    throw new FamiliarInvalidOptionsError('`timeout` must be a finite number greater than 0');
   }
 
   if (maxQueue !== undefined && (!Number.isInteger(maxQueue) || maxQueue < 1)) {
-    throw new WorkerInvalidOptionsError('`maxQueue` must be a positive integer');
+    throw new FamiliarInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
   if (heartbeatWindow !== undefined && (!Number.isFinite(heartbeatWindow) || heartbeatWindow <= 0)) {
-    throw new WorkerInvalidOptionsError('`heartbeatWindow` must be a finite number greater than 0');
+    throw new FamiliarInvalidOptionsError('`heartbeatWindow` must be a finite number greater than 0');
   }
 
   return { concurrency, heartbeatWindow, maxQueue, onFull, onSlotError, timeout };
@@ -275,13 +274,13 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
     this.stopWorker();
     // Drain the stream finish closure so any pending .next() waiters resolve immediately
     // rather than leaking as permanently dangling Promises.
-    pending.finishStream?.(new WorkerTerminatedError('Stream was cancelled'));
+    pending.finishStream?.(new FamiliarTerminatedError('Stream was cancelled'));
   }
 
   terminate(): void {
     this.disposed = true;
     this.stopWorker();
-    this.failPending(new WorkerTerminatedError());
+    this.failPending(new FamiliarTerminatedError());
   }
 
   private dispatch(
@@ -292,7 +291,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
     emit?: (chunk: TOutput) => void,
   ): Promise<TOutput | void> {
     if (this.disposed) {
-      return Promise.reject(new WorkerTerminatedError());
+      return Promise.reject(new FamiliarTerminatedError());
     }
 
     let worker: Worker;
@@ -321,13 +320,13 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
 
       if (timeout !== undefined) {
         pending.timer = setTimeout(() => {
-          this.restart(new WorkerTimeoutError(timeout));
+          this.restart(new FamiliarTimeoutError(timeout));
         }, timeout);
       }
 
       if (watchdogMs !== undefined) {
         pending.heartbeatWatchdog = setTimeout(() => {
-          this.restart(new WorkerTimeoutError(watchdogMs));
+          this.restart(new FamiliarTimeoutError(watchdogMs));
         }, watchdogMs);
       }
 
@@ -336,7 +335,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
       try {
         worker.postMessage({ id, input, stream }, transferables);
       } catch (err) {
-        this.failPending(new WorkerRuntimeError(err instanceof Error ? err.message : String(err), err));
+        this.failPending(new FamiliarRuntimeError(err instanceof Error ? err.message : String(err), { cause: err }));
       }
     });
   }
@@ -345,7 +344,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
     if (this.worker) return this.worker;
 
     if (typeof globalThis.Worker !== 'function') {
-      throw new WorkerRuntimeError('Worker API is unavailable in this runtime');
+      throw new FamiliarRuntimeError('Worker API is unavailable in this runtime');
     }
 
     let worker: Worker;
@@ -354,7 +353,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
       try {
         worker = new Worker(this.config.url, { type: 'module' });
       } catch (error) {
-        throw new WorkerRuntimeError('Failed to create Worker', error);
+        throw new FamiliarRuntimeError('Failed to create Worker', { cause: error });
       }
     } else {
       try {
@@ -370,7 +369,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
           URL.revokeObjectURL(url);
         }
       } catch (error) {
-        throw new WorkerRuntimeError('Failed to create Worker', error);
+        throw new FamiliarRuntimeError('Failed to create Worker', { cause: error });
       }
     }
 
@@ -384,7 +383,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
         if (pending.watchdogMs !== undefined) {
           clearTimeout(pending.heartbeatWatchdog);
           pending.heartbeatWatchdog = setTimeout(() => {
-            this.restart(new WorkerTimeoutError(pending.watchdogMs!));
+            this.restart(new FamiliarTimeoutError(pending.watchdogMs!));
           }, pending.watchdogMs);
         }
 
@@ -404,14 +403,14 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
       if ('error' in event.data) {
         const cause = event.data.error instanceof Error ? event.data.error : new Error(String(event.data.error));
 
-        pending.reject(new WorkerTaskError(cause.message, cause));
+        pending.reject(new FamiliarTaskError(cause.message, { cause }));
       } else {
         pending.resolve(event.data.result);
       }
     };
 
     worker.onerror = (event: ErrorEvent) => {
-      const error = new WorkerRuntimeError(event.message);
+      const error = new FamiliarRuntimeError(event.message);
 
       // Stop and fail before calling the external callback so it sees a clean state.
       this.stopWorker();

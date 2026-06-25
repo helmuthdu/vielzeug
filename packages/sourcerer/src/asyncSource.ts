@@ -1,8 +1,8 @@
 import type { SourceCore } from './core';
 
+import { defaultKeyOf, defaultRetryDelay } from './_utils';
 import { createSourceCore } from './core';
 import { createFetchManager } from './fetchManager';
-import { defaultKeyOf, defaultRetryDelay } from './utils';
 
 /**
  * Configuration subset common to all async source types.

@@ -2,7 +2,7 @@
 // Locale chain building, canonicalization, and plural-rules selection.
 // All caches are per-instance — no shared module-level state.
 
-import { E, LinguaError } from './errors';
+import { LinguaInvalidLocaleError } from './errors';
 
 export type Locale = string;
 
@@ -33,7 +33,7 @@ export function canon(locale: string, cache: LocaleCaches): string {
     // Invalid BCP 47 tag — canonical stays undefined, guard below throws.
   }
 
-  if (!canonical) throw new LinguaError(E.INVALID_LOCALE, `Invalid BCP 47 locale tag: "${locale}".`);
+  if (!canonical) throw new LinguaInvalidLocaleError(`Invalid BCP 47 locale tag: "${locale}".`);
 
   cache.canon.set(locale, canonical);
 

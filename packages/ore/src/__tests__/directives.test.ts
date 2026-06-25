@@ -582,17 +582,17 @@ describe('Directive: raw()', () => {
     warnSpy.mockRestore();
   });
 
-  it('getter-fn: DOM stops updating after component destroy (computed disposed)', async () => {
+  it('getter-fn: DOM stops updating after component dispose (computed disposed)', async () => {
     setRawSanitizer((s) => s);
 
     const content = signal('<b>initial</b>');
-    const { destroy, flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
+    const { dispose, flush, query } = await mount(() => html`<div>${raw(() => content.value)}</div>`);
 
     expect(query('b')?.textContent).toBe('initial');
 
-    destroy();
+    dispose();
 
-    content.value = '<i>after-destroy</i>';
+    content.value = '<i>after-dispose</i>';
     await flush();
     expect(query('i')).toBeNull();
   });
@@ -776,9 +776,9 @@ describe('Directive: when()', () => {
     expect(query('.yes')).toBeNull();
   });
 
-  it('getter-fn: DOM stops reacting after component destroy (computed disposed)', async () => {
+  it('getter-fn: DOM stops reacting after component dispose (computed disposed)', async () => {
     const flag = signal(true);
-    const { destroy, element, flush, query } = await mount(
+    const { dispose, element, flush, query } = await mount(
       () =>
         html`<div>
           ${when(
@@ -791,7 +791,7 @@ describe('Directive: when()', () => {
 
     expect(query('.on')).not.toBeNull();
 
-    destroy();
+    dispose();
 
     const root = element.shadowRoot ?? element;
     const snapshotAfterDestroy = root.innerHTML;

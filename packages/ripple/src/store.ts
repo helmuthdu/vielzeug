@@ -2,7 +2,7 @@ import type { PathValue, Readable, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
-import { StateError } from './errors';
+import { RippleInvalidStoreError } from './errors';
 import { batch } from './scheduling';
 import { SignalImpl } from './signal';
 import { IS_SIGNAL, IS_STORE } from './symbols';
@@ -25,10 +25,7 @@ const setNestedValue = <T>(obj: T, parts: string[], value: unknown): T => {
   if (parts.length === 0) return value as T;
 
   if (obj === null || typeof obj !== 'object') {
-    throw new StateError(
-      'INVALID_STORE',
-      'Cannot write to a nested path through a null or non-object intermediate value.',
-    );
+    throw new RippleInvalidStoreError('Cannot write to a nested path through a null or non-object intermediate value.');
   }
 
   const [key, ...rest] = parts;
@@ -149,14 +146,12 @@ export class StoreImpl<T extends object> implements Store<T> {
     // bypass reactivity. Use store.lens('a.b') or store.replace() to update nested state.
     this.readonlyProxy_ = new Proxy(this.current_, {
       deleteProperty(_target, key): never {
-        throw new StateError(
-          'INVALID_STORE',
+        throw new RippleInvalidStoreError(
           `Direct deletion from store.value is not allowed. Use store.patch() or store.lens(). (key: "${String(key)}")`,
         );
       },
       set(_target, key): never {
-        throw new StateError(
-          'INVALID_STORE',
+        throw new RippleInvalidStoreError(
           `Direct mutation of store.value is not allowed. Use store.patch(), store.lens(), or store.replace(). (key: "${String(key)}")`,
         );
       },
@@ -194,7 +189,7 @@ export class StoreImpl<T extends object> implements Store<T> {
    */
   applyTopLevelChange_(key: string, newValue: unknown): void {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-      throw new StateError('INVALID_STORE', `Unsafe key "${key}" rejected to prevent prototype pollution.`);
+      throw new RippleInvalidStoreError(`Unsafe key "${key}" rejected to prevent prototype pollution.`);
     }
 
     const current = (this.current_ as Record<string, unknown>)[key];
@@ -233,7 +228,7 @@ export class StoreImpl<T extends object> implements Store<T> {
 
   patch(partial: Partial<T>): void {
     if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
-      throw new StateError('INVALID_STORE', 'store.patch() requires a plain object partial.');
+      throw new RippleInvalidStoreError('store.patch() requires a plain object partial.');
     }
 
     const keys = Object.keys(partial) as Array<keyof T & string>;
@@ -294,16 +289,16 @@ export class StoreImpl<T extends object> implements Store<T> {
     const parts = path.split('.');
 
     if (parts.length > 32) {
-      throw new StateError('INVALID_STORE', `Lens path exceeds maximum depth of 32 segments: "${path}".`);
+      throw new RippleInvalidStoreError(`Lens path exceeds maximum depth of 32 segments: "${path}".`);
     }
 
     for (const part of parts) {
       if (part === '') {
-        throw new StateError('INVALID_STORE', `Empty path segment in lens path "${path}". Check for consecutive dots.`);
+        throw new RippleInvalidStoreError(`Empty path segment in lens path "${path}". Check for consecutive dots.`);
       }
 
       if (part === '__proto__' || part === 'constructor' || part === 'prototype') {
-        throw new StateError('INVALID_STORE', `Unsafe path segment "${part}" in lens path "${path}".`);
+        throw new RippleInvalidStoreError(`Unsafe path segment "${part}" in lens path "${path}".`);
       }
     }
 
@@ -381,7 +376,7 @@ export class StoreImpl<T extends object> implements Store<T> {
 
 export const store = <T extends object>(initial: T, options?: { name?: string }): Store<T> => {
   if (typeof initial !== 'object' || initial === null || Array.isArray(initial)) {
-    throw new StateError('INVALID_STORE', 'store() requires a plain object initial state.');
+    throw new RippleInvalidStoreError('store() requires a plain object initial state.');
   }
 
   return new StoreImpl(initial, options?.name) as unknown as Store<T>;

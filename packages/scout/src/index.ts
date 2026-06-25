@@ -1,4 +1,5 @@
 export { toFilterPredicate, toSearchFn } from './adapters';
+export { ScoutDisposedError, ScoutError, ScoutIndexError } from './errors';
 export { findMatchRanges, highlight, highlightField } from './highlight';
 export { createReactiveSearch, createSearch } from './reactive';
 export type { ReactiveSearch } from './reactive';

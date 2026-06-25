@@ -1,8 +1,8 @@
 import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery, SearchOptions } from './types';
 
+import { defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSource } from './asyncSource';
-import { SourceError } from './types';
-import { defaultKeyOf, extractError, retry } from './utils';
+import { SourcererError } from './types';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
@@ -17,7 +17,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
   let loadedPages = 0;
   let items: readonly T[] = [];
   let total = 0;
-  let error: SourceError | null = null;
+  let error: SourcererError | null = null;
   let isLoadingMore = false;
   let pendingSearch: PendingSearch | null = null;
 
@@ -110,7 +110,7 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
             if (!append) items = [];
 
             total = append ? total : 0;
-            error = new SourceError(extractError(reason), {
+            error = new SourcererError(extractError(reason), {
               cause: reason,
               context: { kind: 'infinite', limit: q.limit, page: q.page, ...(q.search && { search: q.search }) },
             });

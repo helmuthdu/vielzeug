@@ -117,7 +117,7 @@ Ripple includes a built-in loop guard (100 iterations by default) to protect aga
 ```ts
 import { effect } from '@vielzeug/ripple';
 
-// Named effect — name appears in StateError messages for easier debugging
+// Named effect — name appears in RippleError messages for easier debugging
 const sub = effect(() => console.log('count:', count.value), { name: 'count-logger' });
 
 // Microtask scheduler — re-runs are deferred and coalesce within the same task
@@ -545,9 +545,9 @@ theme.value = theme.value === 'light' ? 'dark' : 'light';
 Lenses are cached: `settings.lens('theme')` called twice returns the same `Signal`. Disposing a lens removes it from the cache — the next call to `settings.lens('theme')` creates a fresh instance.
 
 ::: warning Path constraints
-Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `StateError('INVALID_STORE')` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.
+Every intermediate segment of the path must resolve to a non-null object. Writing through `settings.lens('user.address.city')` will throw `RippleInvalidStoreError` if `settings.value.user` or `settings.value.user.address` is `null` or not an object.
 
-Paths are also capped at **32 segments**. Paths exceeding this limit throw `StateError('INVALID_STORE')` with a descriptive message.
+Paths are also capped at **32 segments**. Paths exceeding this limit throw `RippleInvalidStoreError` with a descriptive message.
 :::
 
 ### Watching State

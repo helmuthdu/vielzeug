@@ -231,7 +231,7 @@ describe('middleware pipeline', () => {
 
     await settle();
 
-    await expect(router.navigate({ path: '/invalid' })).rejects.toThrow('[wayfinder] next() called multiple times');
+    await expect(router.navigate({ path: '/invalid' })).rejects.toThrow('next() called multiple times');
     router.dispose();
   });
 });

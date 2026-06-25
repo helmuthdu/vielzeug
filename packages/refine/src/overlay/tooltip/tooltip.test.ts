@@ -8,7 +8,7 @@ describe('ore-tooltip', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -81,7 +81,7 @@ describe('ore-tooltip', () => {
         fixture = await mount('ore-tooltip', { attrs: { content: 'tip', placement } });
 
         expect(fixture.element.getAttribute('placement')).toBe(placement);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -107,7 +107,7 @@ describe('ore-tooltip accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Trigger Relationship', () => {

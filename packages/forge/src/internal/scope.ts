@@ -19,8 +19,8 @@ import type {
   ValidateResult,
 } from '../types';
 
-import { ForgeValidationError } from '../errors';
-import { flattenValues, unflattenValues } from '../utils';
+import { flattenValues, unflattenValues } from '../_utils';
+import { ForgeSubmitError, ForgeValidationError } from '../errors';
 
 /**
  * R3: Slim ScopeContext — delegates simple operations through `root: Form<TValues>`.
@@ -302,7 +302,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
   ): Promise<SubmitResult<TResult>> {
     ctx.ensureNotDisposed();
 
-    if (ctx.isSubmitting()) throw new Error('submit() called while a submission is already in progress');
+    if (ctx.isSubmitting()) throw new ForgeSubmitError('submit() called while a submission is already in progress');
 
     ctx.root.batch(() => {
       ctx.incrementSubmitCount();
@@ -462,6 +462,9 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       ),
     subscribeScoped,
     [Symbol.asyncIterator]: () => ctx.root[Symbol.asyncIterator](),
+    [Symbol.dispose]() {
+      this.dispose();
+    },
     touch: (name) => ctx.root.touch(pre(name as string) as FlatKeyOf<TValues>),
     touchAll: scopedTouchAll,
     untouch: (name) => ctx.root.untouch(pre(name as string) as FlatKeyOf<TValues>),

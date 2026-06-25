@@ -11,9 +11,9 @@ import type {
   WaitAnyResult,
 } from './types';
 
-export { BusDisposedError } from './errors';
+export { BusDisposedError, HeraldConfigError } from './errors';
 import { warn as _internalWarn } from './_warn.js';
-import { BusDisposedError } from './errors';
+import { BusDisposedError, HeraldConfigError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
 // @internal — exported only for sibling internal modules; stripped from public declarations via stripInternal.
@@ -282,7 +282,7 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
   ): EventStream<T[K]> {
     const maxBuffer = opts?.maxBuffer ?? Infinity;
 
-    if (!(maxBuffer > 0)) throw new RangeError('maxBuffer must be a positive number');
+    if (!(maxBuffer > 0)) throw new HeraldConfigError('maxBuffer must be a positive number');
 
     const activeSignal = mergeSignal(opts?.signal);
 
@@ -448,7 +448,7 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     eventList: K,
     opts?: { signal?: AbortSignal },
   ): Promise<WaitAnyResult<T, K>> {
-    if (eventList.length < 2) throw new RangeError('waitAny() requires at least 2 event keys');
+    if (eventList.length < 2) throw new HeraldConfigError('waitAny() requires at least 2 event keys');
 
     const activeSignal = mergeSignal(opts?.signal);
 

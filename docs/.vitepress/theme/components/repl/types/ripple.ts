@@ -149,7 +149,7 @@ declare module '/ripple' {
 
   // ── Error ─────────────────────────────────────────────────────────────────
 
-  export class StateError extends Error {
+  export class RippleError extends Error {
     readonly code: StateErrorCode;
   }
 

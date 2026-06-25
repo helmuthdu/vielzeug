@@ -8,7 +8,7 @@ describe('ore-slider', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ──────────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ describe('ore-slider accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {
@@ -325,7 +325,7 @@ describe('ore-slider accessibility', () => {
         },
       });
 
-      fix.destroy();
+      fix.dispose();
       expect(results.violations).toHaveLength(0);
     });
   });

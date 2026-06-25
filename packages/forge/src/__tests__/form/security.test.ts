@@ -5,42 +5,42 @@ describe('prototype chain safety', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
     expect(() => form.set('__proto__' as never, 'x' as never)).toThrow(
-      "[forge] Unsafe key '__proto__': segments __proto__, constructor, and prototype are reserved.",
+      "Unsafe key '__proto__': segments __proto__, constructor, and prototype are reserved.",
     );
   });
 
   test('set() throws for __proto__ as an inner dot-notation segment', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('a.__proto__.b' as never, 'x' as never)).toThrow('[forge] Unsafe key');
+    expect(() => form.set('a.__proto__.b' as never, 'x' as never)).toThrow('Unsafe key');
   });
 
   test('set() throws for a top-level constructor key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('constructor' as never, 'x' as never)).toThrow('[forge] Unsafe key');
+    expect(() => form.set('constructor' as never, 'x' as never)).toThrow('Unsafe key');
   });
 
   test('set() throws for a top-level prototype key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.set('prototype' as never, 'x' as never)).toThrow('[forge] Unsafe key');
+    expect(() => form.set('prototype' as never, 'x' as never)).toThrow('Unsafe key');
   });
 
   test('setError() throws for an unsafe key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.setError('__proto__' as never, 'bad message')).toThrow('[forge] Unsafe key');
+    expect(() => form.setError('__proto__' as never, 'bad message')).toThrow('Unsafe key');
   });
 
   test('setValidator() throws for an unsafe key', () => {
     const form = createForm({ defaultValues: {} as Record<string, unknown> });
 
-    expect(() => form.fields.setValidator('__proto__' as never, () => undefined)).toThrow('[forge] Unsafe key');
+    expect(() => form.fields.setValidator('__proto__' as never, () => undefined)).toThrow('Unsafe key');
   });
 
   test('createForm throws when an initial validator uses an unsafe key', () => {
-    expect(() => createForm({ validators: { ['__proto__' as never]: () => undefined } })).toThrow('[forge] Unsafe key');
+    expect(() => createForm({ validators: { ['__proto__' as never]: () => undefined } })).toThrow('Unsafe key');
   });
 
   test('patch() silently drops __proto__ keys from JSON-parsed input and preserves safe keys', () => {

@@ -21,7 +21,7 @@ describe('ore-dialog', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -155,6 +155,49 @@ describe('ore-dialog', () => {
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
   });
+
+  describe('Invoker Commands API', () => {
+    const dispatchCommand = (target: EventTarget, command: string): void => {
+      target.dispatchEvent(Object.assign(new Event('command'), { command }));
+    };
+
+    it('opens dialog on show-modal command', async () => {
+      fixture = await mount('ore-dialog');
+
+      dispatchCommand(fixture.element, 'show-modal');
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
+    it('closes dialog on close command', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '' } });
+
+      dispatchCommand(fixture.element, 'close');
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeNull();
+    });
+
+    it('closes dialog on request-close command', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '' } });
+
+      dispatchCommand(fixture.element, 'request-close');
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeNull();
+    });
+
+    it('close command respects close-request prevention', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '' } });
+
+      fixture.element.addEventListener('close-request', (e) => e.preventDefault());
+      dispatchCommand(fixture.element, 'close');
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+  });
 });
 
 describe('ore-dialog accessibility', () => {
@@ -178,7 +221,7 @@ describe('ore-dialog accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Dialog Role', () => {

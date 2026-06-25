@@ -1,4 +1,4 @@
-import { combineSignals, defaultReconnectDelay, sleep } from '../utils';
+import { combineSignals, defaultReconnectDelay, sleep } from '../_utils';
 
 describe('combineSignals', () => {
   it('returns the same signal when given only one', () => {

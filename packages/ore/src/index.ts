@@ -1,4 +1,4 @@
-export { OreApiError, OreError, type OreErrorPhase, OreLifecycleError } from './errors';
+export { OreApiError, OreError, type OreErrorPhase, OreLifecycleError, OreTimeoutError } from './errors';
 
 export { define, prop } from './define';
 export type { ComponentDefinition, SetupContextBag } from './component-types';

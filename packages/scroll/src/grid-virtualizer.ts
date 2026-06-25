@@ -1,5 +1,4 @@
 import { createScrollAdapter } from './_adapter';
-import { createAxis1D, type VirtualItem } from './axis1d';
 import {
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
@@ -9,7 +8,8 @@ import {
   type ScrollTarget,
   toNonNegativeInt,
   toPositiveNumber,
-} from './utils';
+} from './_utils';
+import { createAxis1D, type VirtualItem } from './axis1d';
 
 export { type VirtualItem };
 
@@ -82,6 +82,7 @@ export interface GridVirtualizerUpdateOptions {
 
 export interface GridVirtualizer {
   readonly cols: VirtualItem[];
+  readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   readonly rows: VirtualItem[];
   readonly scrollLeft: number;
@@ -595,10 +596,13 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (rebuildRows || rebuildCols || needsCompute) computeVisible();
   }
 
+  const ac = new AbortController();
+
   function disposeImpl(): void {
     if (disposed) return;
 
     disposed = true;
+    ac.abort();
     adapter.detach();
   }
 
@@ -640,6 +644,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   return {
     get cols() {
       return cols;
+    },
+    get disposalSignal() {
+      return ac.signal;
     },
     dispose: disposeImpl,
     get disposed() {

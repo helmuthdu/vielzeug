@@ -639,43 +639,36 @@ const double = task<number, number>((n) => n * 2);
 
 ## Error Model
 
-All worker errors extend `WorkerError`. Use `instanceof` against the specific subclass for precise handling.
+All worker errors extend `FamiliarError`. Use `instanceof FamiliarError` to catch any familiar error, or the specific subclass for precise handling.
 
 ```ts
-class WorkerError extends Error {
-  readonly code: WorkerErrorCode;
-  toString(): string; // returns "[@vielzeug/familiar] ClassName: message"
-}
+class FamiliarError extends Error {}
 ```
-
-::: tip `.message` vs `.toString()`
-`err.message` contains the raw error message without any package prefix — safe for programmatic checks (`err.message.includes('timed out')`). `err.toString()` includes the `[@vielzeug/familiar]` prefix for human-readable output in logs.
-:::
 
 ### Error Hierarchy
 
-| Class                       | Code                | Extra fields         | When thrown                                           |
-| --------------------------- | ------------------- | -------------------- | ----------------------------------------------------- |
-| `WorkerTimeoutError`        | `'timeout'`         | `.timeoutMs: number` | Task exceeded timeout or heartbeat window             |
-| `WorkerTaskError`           | `'task'`            | `.cause: unknown`    | Task function threw                                   |
-| `WorkerQueueFullError`      | `'queue_full'`      | `.maxQueue: number`  | Queue at capacity (`onFull='reject'`)                 |
-| `WorkerTerminatedError`     | `'terminated'`      | —                    | `dispose()` called; task was in-flight or queued      |
-| `WorkerRuntimeError`        | `'worker'`          | `.cause?: unknown`   | Worker API unavailable or unhandled thread error      |
-| `WorkerInvalidOptionsError` | `'invalid_options'` | —                    | Invalid `createWorker` / `createModuleWorker` options |
+| Class                          | Extra fields         | When thrown                                           |
+| ------------------------------ | -------------------- | ----------------------------------------------------- |
+| `FamiliarTimeoutError`         | `.timeoutMs: number` | Task exceeded timeout or heartbeat window             |
+| `FamiliarTaskError`            | `.cause: unknown`    | Task function threw                                   |
+| `FamiliarQueueFullError`       | `.maxQueue: number`  | Queue at capacity (`onFull='reject'`)                 |
+| `FamiliarTerminatedError`      | —                    | `dispose()` called; task was in-flight or queued      |
+| `FamiliarRuntimeError`         | `.cause?: unknown`   | Worker API unavailable or unhandled thread error      |
+| `FamiliarInvalidOptionsError`  | —                    | Invalid `createWorker` / `createModuleWorker` options |
 
 ```ts
-import { WorkerQueueFullError, WorkerTaskError, WorkerTerminatedError, WorkerTimeoutError } from '@vielzeug/familiar';
+import { FamiliarQueueFullError, FamiliarTaskError, FamiliarTerminatedError, FamiliarTimeoutError } from '@vielzeug/familiar';
 
 try {
   await worker.run(input, { timeout: 500 });
 } catch (err) {
-  if (err instanceof WorkerTimeoutError) {
+  if (err instanceof FamiliarTimeoutError) {
     console.error(`Timed out after ${err.timeoutMs}ms`);
-  } else if (err instanceof WorkerTaskError) {
+  } else if (err instanceof FamiliarTaskError) {
     console.error('Task threw:', err.cause);
-  } else if (err instanceof WorkerQueueFullError) {
+  } else if (err instanceof FamiliarQueueFullError) {
     console.error(`Queue full (maxQueue=${err.maxQueue})`);
-  } else if (err instanceof WorkerTerminatedError) {
+  } else if (err instanceof FamiliarTerminatedError) {
     console.error('Worker was disposed');
   }
 }

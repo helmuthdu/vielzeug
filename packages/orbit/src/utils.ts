@@ -2,6 +2,8 @@ import { clamp } from '@vielzeug/arsenal';
 
 import type { Alignment, Middleware, Padding, Placement, Rect, Side, SideObject, TypedMiddleware } from './types';
 
+import { OrbitConfigError } from './errors';
+
 export { clamp };
 
 export const OPPOSITE: Record<Side, Side> = { bottom: 'top', left: 'right', right: 'left', top: 'bottom' };
@@ -75,15 +77,15 @@ export function validateMiddlewareNames(names: Array<string | null>): void {
     const precedeIdx = names.indexOf(mustPrecede);
 
     if (followIdx !== -1 && precedeIdx !== -1 && followIdx < precedeIdx) {
-      throw new Error(
-        `[orbit] "${mustFollow}" must come after "${mustPrecede}" in the middleware pipeline. ` +
+      throw new OrbitConfigError(
+        `"${mustFollow}" must come after "${mustPrecede}" in the middleware pipeline. ` +
           `Recommended order: inline → offset → flip/autoPlacement → shift → size → arrow.`,
       );
     }
   }
 
   if (names.includes('flip') && names.includes('autoPlacement')) {
-    throw new Error(`[orbit] use either flip() or autoPlacement() in the middleware pipeline, not both.`);
+    throw new OrbitConfigError('use either flip() or autoPlacement() in the middleware pipeline, not both.');
   }
 }
 

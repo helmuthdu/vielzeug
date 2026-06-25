@@ -8,7 +8,7 @@ describe('ore-otp-input', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ describe('ore-otp-input accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('WAI-ARIA Group Pattern', () => {

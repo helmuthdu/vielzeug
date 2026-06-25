@@ -10,7 +10,7 @@ describe('ore-async', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ── Status rendering ────────────────────────────────────────────────────────

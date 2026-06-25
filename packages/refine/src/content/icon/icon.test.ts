@@ -8,7 +8,7 @@ describe('ore-icon', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders an SVG element (not [object Object]) for a known icon', async () => {
@@ -74,14 +74,10 @@ describe('ore-icon', () => {
     expect(svg?.getAttribute('viewBox')).toBe('0 0 24 24');
   });
 
-  it('applies custom size as px style', async () => {
+  it('applies custom size as --_size-px custom property on the host element', async () => {
     fixture = await mount('ore-icon', { attrs: { name: 'search', size: '24' } });
 
-    const svg = fixture.element.shadowRoot?.querySelector('svg');
-    const style = svg?.getAttribute('style') ?? '';
-
-    expect(style).toContain('width:24px');
-    expect(style).toContain('height:24px');
+    expect(fixture.element.style.getPropertyValue('--_size-px')).toBe('24px');
   });
 
   describe('Accessibility', () => {

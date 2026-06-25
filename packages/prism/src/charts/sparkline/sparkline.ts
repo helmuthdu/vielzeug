@@ -287,13 +287,30 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     );
   });
 
+  const ac = new AbortController();
+  let isDisposed = false;
+
   return {
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
+
     dispose() {
+      if (isDisposed) return;
+
+      isDisposed = true;
+      ac.abort();
       cleanupInteraction?.();
       s.dispose();
       base.dispose();
     },
+
+    get disposed(): boolean {
+      return isDisposed;
+    },
+
     el: svg,
+
     [Symbol.dispose]() {
       this.dispose();
     },

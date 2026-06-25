@@ -5,6 +5,7 @@ import { CallToolRequestSchema, ErrorCode, ListToolsRequestSchema, McpError } fr
 
 import { log } from './_log.js';
 import { packageMeta } from './data.js';
+import { ToolArgError } from './errors.js';
 import { normalisePackage, scorePackage } from './search.js';
 import { type BundledData, type BundledPackage, type CemAttribute, type CemDeclaration, DOC_PAGES } from './types.js';
 
@@ -25,8 +26,6 @@ function error(message: string): CallToolResult {
 // ---------------------------------------------------------------------------
 
 const MAX_ARG_LENGTH = 500;
-
-class ToolArgError extends Error {}
 
 /** Validates and returns an optional enum arg, falling back to the provided default. Throws ToolArgError on invalid value. */
 function optionalEnum<T extends string>(

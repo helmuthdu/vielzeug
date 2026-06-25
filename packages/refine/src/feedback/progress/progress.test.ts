@@ -8,7 +8,7 @@ describe('ore-progress', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Core Functionality', () => {

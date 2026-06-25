@@ -143,7 +143,7 @@ declare module '/rune' {
   export function isLevelEnabled(threshold: LogLevel, level: LogType): boolean;
   export function createLogger(namespace: string, options?: Omit<RuneOptions, 'namespace'>): Logger;
   export function createLogger(options?: RuneOptions): Logger;
-  export const Rune: Logger;
+  export const defaultLogger: Logger;
   export const DEFAULT_THEME: ResolvedTheme;
   export function resolveTheme(override: ConsoleTheme | undefined): ResolvedTheme;
   export function consoleTransport(options?: ConsoleTransportOptions): Transport;

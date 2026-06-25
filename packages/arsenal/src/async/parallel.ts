@@ -1,3 +1,4 @@
+import { ArsenalError } from '../errors';
 import { abortError } from './abortError';
 
 /**
@@ -27,7 +28,7 @@ import { abortError } from './abortError';
  * @param [options.limit=Infinity] - Maximum number of concurrent operations. Defaults to unbounded.
  * @param [options.signal] - Optional AbortSignal to cancel processing
  * @returns Promise resolving to an ordered array of results
- * @throws {Error} If limit is less than 1
+ * @throws {ArsenalError} If limit is less than 1
  * @throws {DOMException} If aborted via signal
  */
 export async function parallel<T, R>(
@@ -38,7 +39,7 @@ export async function parallel<T, R>(
   const { limit = Infinity, signal } = options;
 
   if (limit < 1) {
-    throw new RangeError(`parallel: limit must be at least 1, got ${limit}`);
+    throw new ArsenalError(`parallel: limit must be at least 1, got ${limit}`);
   }
 
   if (signal?.aborted) {

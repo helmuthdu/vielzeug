@@ -8,7 +8,7 @@ describe('ore-file-input', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -193,7 +193,7 @@ describe('ore-file-input accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {

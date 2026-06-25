@@ -1,6 +1,6 @@
 import type { ExchangeRate, Money, RoundingMode } from './types';
 
-import { CurrencyMismatchError } from './errors';
+import { CoinsError, CurrencyMismatchError } from './errors';
 import { applyRounding, parseRational, validateCurrencyCode } from './utils';
 
 /**
@@ -31,11 +31,11 @@ export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'hal
     throw new CurrencyMismatchError(m.currency, rate.from);
   }
 
-  if (rate.rate === '') throw new RangeError('Exchange rate must be a non-empty decimal string');
+  if (rate.rate === '') throw new CoinsError('Exchange rate must be a non-empty decimal string');
 
   const { denominator, negative: rateNegative, numerator } = parseRational(rate.rate);
 
-  if (rateNegative) throw new RangeError('Exchange rate must be non-negative');
+  if (rateNegative) throw new CoinsError('Exchange rate must be non-negative');
 
   const negative = m.amount < 0n;
   const absAmount = m.amount < 0n ? -m.amount : m.amount;

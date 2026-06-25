@@ -12,7 +12,12 @@ import {
   resource,
   scope,
   signal,
-  StateError,
+  RippleComputedCycleError,
+  RippleDisposedScopeError,
+  RippleError,
+  RippleInfiniteLoopError,
+  RippleInvalidCleanupError,
+  RippleInvalidStoreError,
   store,
   storeWithHistory,
   untrack,
@@ -178,7 +183,7 @@ describe('ripple', () => {
       stop.dispose();
     });
 
-    it('throws StateError on circular computed dependency', () => {
+    it('throws RippleComputedCycleError on circular computed dependency', () => {
       const proxy = { fn: (): number => 0 };
       const a = computed(() => proxy.fn() + 1);
       const b = computed(() => a.value + 1);
@@ -193,8 +198,9 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('COMPUTED_CYCLE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleComputedCycleError);
+      expect((caught as RippleComputedCycleError).name).toBe('RippleComputedCycleError');
 
       a.dispose();
       b.dispose();
@@ -308,7 +314,7 @@ describe('ripple', () => {
       expect(cleanB).toHaveBeenCalledTimes(1);
     });
 
-    it('throws StateError when onCleanup is called outside an active context', () => {
+    it('throws RippleInvalidCleanupError when onCleanup is called outside an active context', () => {
       let caught: unknown;
 
       try {
@@ -317,8 +323,9 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidCleanupError);
+      expect((caught as RippleInvalidCleanupError).name).toBe('RippleInvalidCleanupError');
     });
 
     it('prevents subscription leakage across nested effects', () => {
@@ -352,7 +359,7 @@ describe('ripple', () => {
       stopOuter.dispose();
     });
 
-    it('throws after the loop guard limit for self-triggering effects', () => {
+    it('throws RippleInfiniteLoopError after the loop guard limit for self-triggering effects', () => {
       const n = signal(0);
 
       let caught: unknown;
@@ -365,8 +372,9 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INFINITE_LOOP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInfiniteLoopError);
+      expect((caught as RippleInfiniteLoopError).name).toBe('RippleInfiniteLoopError');
     });
 
     it('preserves the original effect error when cleanup registered in the failed run also throws', () => {
@@ -953,7 +961,7 @@ describe('ripple', () => {
       expect(isSignal(user)).toBe(true);
     });
 
-    it('throws StateError when created or patched with non-object values', () => {
+    it('throws RippleInvalidStoreError when created or patched with non-object values', () => {
       let caught: unknown;
 
       try {
@@ -962,8 +970,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
 
       const ok = store({ count: 0 });
 
@@ -975,8 +983,8 @@ describe('ripple', () => {
         patchCaught = e;
       }
 
-      expect(patchCaught).toBeInstanceOf(StateError);
-      expect((patchCaught as StateError).code).toBe('INVALID_STORE');
+      expect(patchCaught).toBeInstanceOf(RippleError);
+      expect(patchCaught).toBeInstanceOf(RippleInvalidStoreError);
     });
 
     it('replace() is a no-op when the callback returns the same reference', () => {
@@ -1171,8 +1179,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INFINITE_LOOP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInfiniteLoopError);
     });
 
     it('name appears in INFINITE_LOOP error message', () => {
@@ -1190,7 +1198,7 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).message).toContain('myEffect');
+      expect((caught as RippleError).message).toContain('myEffect');
     });
 
     it('trace logs changed sources on re-run without throwing', () => {
@@ -1239,19 +1247,19 @@ describe('ripple', () => {
     });
   });
 
-  describe('StateError', () => {
-    it('is instanceof Error with correct name and code', () => {
-      const err = new StateError('COMPUTED_CYCLE', 'test message');
+  describe('RippleError', () => {
+    it('is instanceof Error with correct name and message', () => {
+      const err = new RippleComputedCycleError('test message');
 
       expect(err).toBeInstanceOf(Error);
-      expect(err).toBeInstanceOf(StateError);
-      expect(err.name).toBe('StateError');
-      expect(err.code).toBe('COMPUTED_CYCLE');
+      expect(err).toBeInstanceOf(RippleError);
+      expect(err).toBeInstanceOf(RippleComputedCycleError);
+      expect(err.name).toBe('RippleComputedCycleError');
       expect(err.message).toBe('test message');
     });
 
-    it('is thrown for all documented error conditions', () => {
-      // COMPUTED_CYCLE
+    it('each error condition throws the correct named subclass', () => {
+      // RippleComputedCycleError
       const proxy = { fn: (): number => 0 };
       const a = computed(() => proxy.fn() + 1);
       const b = computed(() => a.value + 1);
@@ -1266,11 +1274,11 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).code).toBe('COMPUTED_CYCLE');
+      expect(caught).toBeInstanceOf(RippleComputedCycleError);
       a.dispose();
       b.dispose();
 
-      // DISPOSED_SCOPE
+      // RippleDisposedScopeError
       const s = scope();
 
       s.dispose();
@@ -1282,9 +1290,9 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).code).toBe('DISPOSED_SCOPE');
+      expect(caught).toBeInstanceOf(RippleDisposedScopeError);
 
-      // INVALID_CLEANUP
+      // RippleInvalidCleanupError
       caught = undefined;
 
       try {
@@ -1293,9 +1301,9 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+      expect(caught).toBeInstanceOf(RippleInvalidCleanupError);
 
-      // INVALID_STORE
+      // RippleInvalidStoreError
       caught = undefined;
 
       try {
@@ -1304,7 +1312,7 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
     });
   });
 
@@ -1345,7 +1353,7 @@ describe('ripple', () => {
       expect(log).toEqual([1]);
     });
 
-    it('run after dispose throws StateError', () => {
+    it('run after dispose throws RippleError', () => {
       const s = scope();
 
       s.dispose();
@@ -1358,8 +1366,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('DISPOSED_SCOPE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleDisposedScopeError);
     });
 
     it('scope.add() directs cleanup into scope, not enclosing effect', () => {
@@ -1384,18 +1392,18 @@ describe('ripple', () => {
       expect(scopeLog).toEqual([1, 1]);
     });
 
-    it('scope.add() throws DISPOSED_SCOPE on already-disposed scope', () => {
+    it('scope.add() throws RippleDisposedScopeError on already-disposed scope', () => {
       const s = scope();
 
       s.dispose();
 
-      expect(() => s.add(() => {})).toThrow(StateError);
+      expect(() => s.add(() => {})).toThrow(RippleDisposedScopeError);
 
       try {
         s.add(() => {});
       } catch (e) {
-        expect(e).toBeInstanceOf(StateError);
-        expect((e as StateError).code).toBe('DISPOSED_SCOPE');
+        expect(e).toBeInstanceOf(RippleDisposedScopeError);
+        expect((e as RippleDisposedScopeError).name).toBe('RippleDisposedScopeError');
       }
     });
 
@@ -1409,6 +1417,21 @@ describe('ripple', () => {
       }
 
       expect(log).toEqual(['done']);
+    });
+
+    it('disposalSignal aborts when scope is disposed', () => {
+      const s = scope();
+
+      expect(s.disposalSignal.aborted).toBe(false);
+      s.dispose();
+      expect(s.disposalSignal.aborted).toBe(true);
+    });
+
+    it('disposalSignal is already aborted on an already-disposed scope', () => {
+      const s = scope();
+
+      s.dispose();
+      expect(s.disposalSignal.aborted).toBe(true);
     });
   });
 
@@ -1571,7 +1594,7 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect((caught as StateError).message).toContain('myComputed');
+      expect((caught as RippleError).message).toContain('myComputed');
 
       a.dispose();
       b.dispose();
@@ -1579,7 +1602,7 @@ describe('ripple', () => {
   });
 
   describe('effect() throws on non-function returns', () => {
-    it('throws StateError when effect returns a number', () => {
+    it('throws RippleInvalidCleanupError when effect returns a number', () => {
       let caught: unknown;
 
       try {
@@ -1588,11 +1611,11 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidCleanupError);
     });
 
-    it('throws StateError when effect returns true', () => {
+    it('throws RippleInvalidCleanupError when effect returns true', () => {
       let caught: unknown;
 
       try {
@@ -1601,8 +1624,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidCleanupError);
     });
 
     it('does not throw when effect returns undefined', () => {
@@ -1798,7 +1821,7 @@ describe('ripple', () => {
       stop.dispose();
     });
 
-    it('throws StateError when writing through a null intermediate path segment', () => {
+    it('throws RippleError when writing through a null intermediate path segment', () => {
       const s = store({ user: null as unknown as { city: string } });
       const city = s.lens('user.city');
       let caught: unknown;
@@ -1809,8 +1832,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
     });
   });
 
@@ -1958,7 +1981,7 @@ describe('ripple', () => {
   });
 
   describe('R6 — watch() throws when callback returns non-function', () => {
-    it('throws StateError with INVALID_CLEANUP when returning a number', () => {
+    it('throws RippleError with INVALID_CLEANUP when returning a number', () => {
       const n = signal(1);
       let caught: unknown;
 
@@ -1972,8 +1995,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_CLEANUP');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidCleanupError);
 
       n.dispose();
     });
@@ -2819,15 +2842,15 @@ describe('ripple', () => {
   });
 
   describe('store.patch() — prototype pollution guard', () => {
-    it('throws StateError for __proto__ top-level key via JSON.parse input', () => {
+    it('throws RippleError for __proto__ top-level key via JSON.parse input', () => {
       const s = store({ count: 0 } as Record<string, unknown>);
 
       expect(() => {
         s.patch(JSON.parse('{"__proto__": {"evil": true}}') as Record<string, unknown>);
-      }).toThrow(StateError);
+      }).toThrow(RippleError);
     });
 
-    it('throws StateError for constructor top-level key', () => {
+    it('throws RippleError for constructor top-level key', () => {
       const s = store({ count: 0 } as Record<string, unknown>);
 
       expect(() => {
@@ -2835,12 +2858,12 @@ describe('ripple', () => {
 
         partial['constructor'] = 'hacked';
         s.patch(partial as { count: number });
-      }).toThrow(StateError);
+      }).toThrow(RippleError);
     });
   });
 
   describe('store.lens() — unsafe path guard', () => {
-    it('throws StateError for __proto__ path segment', () => {
+    it('throws RippleInvalidStoreError for __proto__ path segment', () => {
       const s = store({ x: 0 } as Record<string, unknown>);
       let caught: unknown;
 
@@ -2850,11 +2873,11 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
     });
 
-    it('throws StateError for constructor path segment', () => {
+    it('throws RippleInvalidStoreError for constructor path segment', () => {
       const s = store({ x: 0 } as Record<string, unknown>);
       let caught: unknown;
 
@@ -2864,11 +2887,11 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
     });
 
-    it('throws StateError for nested path with __proto__ segment', () => {
+    it('throws RippleInvalidStoreError for nested path with __proto__ segment', () => {
       const s = store({ a: { b: 0 } } as Record<string, unknown>);
       let caught: unknown;
 
@@ -2878,8 +2901,8 @@ describe('ripple', () => {
         caught = e;
       }
 
-      expect(caught).toBeInstanceOf(StateError);
-      expect((caught as StateError).code).toBe('INVALID_STORE');
+      expect(caught).toBeInstanceOf(RippleError);
+      expect(caught).toBeInstanceOf(RippleInvalidStoreError);
     });
   });
 
@@ -3294,13 +3317,13 @@ describe('ripple', () => {
     it('throws INVALID_STORE when passed an array', () => {
       const s = store({ x: 1 });
 
-      expect(() => s.patch([] as unknown as Partial<{ x: number }>)).toThrow(StateError);
+      expect(() => s.patch([] as unknown as Partial<{ x: number }>)).toThrow(RippleError);
     });
 
     it('throws INVALID_STORE when passed null', () => {
       const s = store({ x: 1 });
 
-      expect(() => s.patch(null as unknown as Partial<{ x: number }>)).toThrow(StateError);
+      expect(() => s.patch(null as unknown as Partial<{ x: number }>)).toThrow(RippleError);
     });
   });
 
@@ -3538,7 +3561,7 @@ describe('ripple', () => {
       const s = store({ a: { b: 1 } } as Record<string, unknown>);
       const deepPath = Array.from({ length: 33 }, (_, i) => `k${i}`).join('.');
 
-      expect(() => s.lens(deepPath as never)).toThrow(StateError);
+      expect(() => s.lens(deepPath as never)).toThrow(RippleError);
     });
 
     it('accepts a path with exactly 32 segments', () => {
@@ -3564,19 +3587,19 @@ describe('ripple', () => {
     it('throws INVALID_STORE for consecutive dots (empty segment)', () => {
       const s = store({ a: { b: 1 } } as Record<string, unknown>);
 
-      expect(() => s.lens('a..b' as never)).toThrow(StateError);
+      expect(() => s.lens('a..b' as never)).toThrow(RippleError);
     });
 
     it('throws INVALID_STORE for leading dot', () => {
       const s = store({ a: 1 } as Record<string, unknown>);
 
-      expect(() => s.lens('.a' as never)).toThrow(StateError);
+      expect(() => s.lens('.a' as never)).toThrow(RippleError);
     });
 
     it('throws INVALID_STORE for trailing dot', () => {
       const s = store({ a: 1 } as Record<string, unknown>);
 
-      expect(() => s.lens('a.' as never)).toThrow(StateError);
+      expect(() => s.lens('a.' as never)).toThrow(RippleError);
     });
   });
 
@@ -3866,20 +3889,35 @@ describe('ripple', () => {
     });
   });
 
-  describe('StateErrorCode — type-only error code discriminant', () => {
-    it('StateError.code is a string matching the code passed at construction', () => {
-      const err = new StateError('COMPUTED_CYCLE', 'test');
-
-      expect(err.code).toBe('COMPUTED_CYCLE');
+  describe('RippleError — named subclasses', () => {
+    it('each named subclass is an instanceof RippleError and Error', () => {
+      expect(new RippleComputedCycleError('cycle')).toBeInstanceOf(RippleError);
+      expect(new RippleComputedCycleError('cycle')).toBeInstanceOf(Error);
+      expect(new RippleDisposedScopeError('disposed')).toBeInstanceOf(RippleError);
+      expect(new RippleInfiniteLoopError('loop')).toBeInstanceOf(RippleError);
+      expect(new RippleInvalidCleanupError('cleanup')).toBeInstanceOf(RippleError);
+      expect(new RippleInvalidStoreError('store')).toBeInstanceOf(RippleError);
     });
 
-    it('StateError.code is a string — usable in switch/if without a const enum', () => {
-      const err = new StateError('INVALID_STORE', 'bad key');
-      let handled = false;
+    it('each subclass has a correct .name matching the constructor', () => {
+      expect(new RippleComputedCycleError('').name).toBe('RippleComputedCycleError');
+      expect(new RippleDisposedScopeError('').name).toBe('RippleDisposedScopeError');
+      expect(new RippleInfiniteLoopError('').name).toBe('RippleInfiniteLoopError');
+      expect(new RippleInvalidCleanupError('').name).toBe('RippleInvalidCleanupError');
+      expect(new RippleInvalidStoreError('').name).toBe('RippleInvalidStoreError');
+    });
 
-      if (err.code === 'INVALID_STORE') handled = true;
+    it('RippleError.is() returns true for any subclass', () => {
+      expect(RippleError.is(new RippleComputedCycleError(''))).toBe(true);
+      expect(RippleError.is(new RippleInvalidStoreError(''))).toBe(true);
+      expect(RippleError.is(new Error('not ripple'))).toBe(false);
+    });
 
-      expect(handled).toBe(true);
+    it('RippleError base accepts opts?.cause for chaining', () => {
+      const cause = new Error('original');
+      const err = new RippleInvalidStoreError('wrapped', { cause });
+
+      expect(err.cause).toBe(cause);
     });
   });
 

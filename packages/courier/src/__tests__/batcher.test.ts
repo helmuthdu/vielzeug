@@ -239,6 +239,29 @@ describe('createBatcher', () => {
     expect(batcher.disposed).toBe(true);
   });
 
+  it('disposalSignal is not aborted before dispose', () => {
+    const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
+
+    expect(batcher.disposalSignal.aborted).toBe(false);
+    batcher.dispose();
+  });
+
+  it('disposalSignal is aborted after dispose', () => {
+    const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
+
+    batcher.dispose();
+
+    expect(batcher.disposalSignal.aborted).toBe(true);
+  });
+
+  it('dispose is idempotent — calling twice does not throw', () => {
+    const batcher = createBatcher({ resolve: async (keys: number[]) => keys });
+
+    batcher.dispose();
+
+    expect(() => batcher.dispose()).not.toThrow();
+  });
+
   describe('resolveSettled', () => {
     it('fulfills individual promises based on their settled result', async () => {
       const batcher = createBatcher<number, number>({

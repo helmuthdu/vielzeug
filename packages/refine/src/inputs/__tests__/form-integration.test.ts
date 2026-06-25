@@ -17,7 +17,7 @@ describe('form integration', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── FormData submission ────────────────────────────────────────────────────

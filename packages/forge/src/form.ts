@@ -1,8 +1,9 @@
 import { isAbortError } from '@vielzeug/arsenal';
 import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
 
+import { anySignal, flattenValues, isSafeKey, unflattenValues } from './_utils';
 import { warn } from './_warn';
-import { ForgeValidationError } from './errors';
+import { ForgeConfigError, ForgeDisposedError, ForgeSubmitError, ForgeValidationError } from './errors';
 import { createArrayField } from './internal/array';
 import { createScopedForm, type ScopeContext } from './internal/scope';
 import {
@@ -30,14 +31,13 @@ import {
   type Unsubscribe,
   type ValidateResult,
 } from './types';
-import { anySignal, flattenValues, isSafeKey, unflattenValues } from './utils';
 
 /* -------------------- Private helpers -------------------- */
 
 /** R2: Single assertion helper — replaces 5 copy-pasted guard blocks. */
 function assertSafeKey(key: string): void {
   if (!isSafeKey(key))
-    throw new Error(`[forge] Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
+    throw new ForgeConfigError(`Unsafe key '${key}': segments __proto__, constructor, and prototype are reserved.`);
 }
 
 /**
@@ -288,7 +288,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   /* ======== Lifecycle guards ======== */
 
   function ensureNotDisposed(): void {
-    if (disposed) throw new Error('Cannot modify a disposed form');
+    if (disposed) throw new ForgeDisposedError();
   }
 
   /* ======== Batch ======== */
@@ -687,7 +687,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   ): Promise<SubmitResult<TResult>> {
     ensureNotDisposed();
 
-    if (isSubmittingState) throw new Error('submit() called while a submission is already in progress');
+    if (isSubmittingState) throw new ForgeSubmitError('submit() called while a submission is already in progress');
 
     batch(() => {
       submitCount++;
@@ -1312,6 +1312,9 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
     // On a root form, subscribeScoped behaves identically to subscribe — no prefix filtering.
     subscribeScoped: subscribe,
     [Symbol.asyncIterator]: createAsyncIterator,
+    [Symbol.dispose]() {
+      this.dispose();
+    },
     touch,
     touchAll,
     untouch,

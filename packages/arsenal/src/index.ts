@@ -1,3 +1,4 @@
+export { ArsenalError } from './errors';
 export * from './array/chunk';
 export * from './array/compact';
 export * from './array/compare';

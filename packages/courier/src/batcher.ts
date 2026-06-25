@@ -1,3 +1,5 @@
+import { CourierBatcherError, CourierDisposedError } from './errors';
+
 type BatcherBase = {
   /** Maximum batch size before a flush is forced. Defaults to `25`. */
   maxSize?: number;
@@ -64,6 +66,7 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
   const { maxSize = 25, resolve, resolveSettled, window: windowMs = 0 } = opts;
 
   const queue: PendingItem<K, V>[] = [];
+  const controller = new AbortController();
   let scheduled = false;
   let pendingTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
@@ -82,8 +85,8 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
       resolveSettled(keys)
         .then((results) => {
           if (results.length !== batch.length) {
-            const err = new Error(
-              `[courier] Batcher: resolveSettled() returned ${results.length} results for ${batch.length} keys`,
+            const err = new CourierBatcherError(
+              `Batcher: resolveSettled() returned ${results.length} results for ${batch.length} keys`,
             );
 
             for (const item of batch) item.reject(err);
@@ -108,8 +111,8 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
       resolve(keys)
         .then((results) => {
           if (results.length !== batch.length) {
-            const err = new Error(
-              `[courier] Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
+            const err = new CourierBatcherError(
+              `Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
             );
 
             for (const item of batch) item.reject(err);
@@ -145,11 +148,17 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
   }
 
   return {
+    get disposalSignal(): AbortSignal {
+      return controller.signal;
+    },
+
     /**
      * Cancels all pending `load()` promises with a disposal error and stops
      * any scheduled flushes. Safe to call multiple times.
      */
     dispose(): void {
+      if (disposed) return;
+
       disposed = true;
 
       if (pendingTimer !== null) {
@@ -157,11 +166,12 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
         pendingTimer = null;
       }
 
-      const err = new Error('[courier] Batcher disposed');
+      const err = new CourierDisposedError('Batcher');
 
       for (const item of queue.splice(0)) item.reject(err);
 
       scheduled = false;
+      controller.abort();
     },
 
     get disposed(): boolean {
@@ -169,7 +179,7 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
     },
 
     load(key: K): Promise<V> {
-      if (disposed) return Promise.reject(new Error('[courier] Batcher disposed'));
+      if (disposed) return Promise.reject(new CourierDisposedError('Batcher'));
 
       return new Promise<V>((res, rej) => {
         queue.push({ key, reject: rej, resolve: res });

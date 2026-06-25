@@ -3,12 +3,26 @@ import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore }
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import { issue } from './_warn';
-import { E, LinguaError, checkDisposed, disposedError } from './errors';
+import {
+  LinguaCountInVarsError,
+  LinguaDisposedError,
+  LinguaInvalidCountError,
+  LinguaRestoreError,
+  checkDisposed,
+} from './errors';
 import { type Formatter, createFormatter } from './format';
 import { type CompiledTemplate, renderTemplate } from './template';
 
-export { E, LinguaError } from './errors';
-export type { ErrorCode } from './errors';
+export {
+  LinguaCountInVarsError,
+  LinguaDisposedError,
+  LinguaError,
+  LinguaInvalidCountError,
+  LinguaInvalidLocaleError,
+  LinguaMissingLocaleError,
+  LinguaNamespaceMissingError,
+  LinguaRestoreError,
+} from './errors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -121,7 +135,7 @@ export type I18n<M extends Messages = Messages> = {
   readonly disposalSignal: AbortSignal;
   /**
    * Disposes this i18n instance: removes all subscribers and clears catalog, loader, and namespace state.
-   * After disposal, all mutation methods throw `LinguaError(E.DISPOSED)` and translation methods
+   * After disposal, all mutation methods throw `LinguaDisposedError` and translation methods
    * fall back to `onMissingKey` for every key. Idempotent.
    */
   dispose(): void;
@@ -135,7 +149,7 @@ export type I18n<M extends Messages = Messages> = {
    * Call `registerNamespace()` first if you only want to register without loading.
    * `extend()` is a convenience that does both in one call.
    *
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    *
    * @example
    * await i18n.extend('settings', (locale) =>
@@ -211,7 +225,7 @@ export type I18n<M extends Messages = Messages> = {
    * Deduplicates concurrent and repeated calls.
    *
    * @throws an error if the namespace has not been registered with `registerNamespace()` first.
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   loadNamespace(ns: string, locale?: Locale): Promise<void>;
   readonly locale: Locale;
@@ -222,7 +236,7 @@ export type I18n<M extends Messages = Messages> = {
    * If the source is a static message object, it is synchronously registered and the returned
    * Promise resolves immediately.
    *
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   register(locale: Locale, source: LocaleSource<M>): Promise<void>;
   /**
@@ -234,7 +248,7 @@ export type I18n<M extends Messages = Messages> = {
    * the namespace if it is already loaded. The new factory takes effect the next time the
    * namespace marker is cleared (by a `register()` or `restoreState()` call).
    *
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   registerNamespace(ns: string, factory: NamespaceFactory<M>): void;
   /**
@@ -243,8 +257,8 @@ export type I18n<M extends Messages = Messages> = {
    * @remarks The namespace registry is **not** included in `I18nState`. After restoring,
    * call `extend()` for each namespace before relying on namespace-patched keys.
    *
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
-   * @throws `LinguaError(E.RESTORE_NO_LOCALE)` if the state's locale has no catalog.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
+   * @throws `LinguaRestoreError` if the state's locale has no catalog.
    */
   restoreState(state: I18nState): void;
   /**
@@ -263,8 +277,8 @@ export type I18n<M extends Messages = Messages> = {
    * Last concurrent call wins; stale responses are discarded.
    * If loading fails, the active locale is unchanged.
    *
-   * @throws `LinguaError(E.MISSING_LOCALE)` if the locale is not registered.
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaMissingLocaleError` if the locale is not registered.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   setLocale(locale: Locale): Promise<void>;
   /**
@@ -272,7 +286,7 @@ export type I18n<M extends Messages = Messages> = {
    * - `{ immediate: true }`: fires immediately and on every change.
    * - `{ signal }`: unsubscribes when the AbortSignal fires.
    *
-   * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+   * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   subscribe(callback: (snapshot: I18nSnapshot) => void, options?: SubscribeOptions): Unsubscribe;
   /** @security Returns raw, unsanitized strings. Sanitize before `innerHTML` insertion. */
@@ -280,8 +294,8 @@ export type I18n<M extends Messages = Messages> = {
   /**
    * Translates a plural branch key. `count` is injected automatically.
    *
-   * @throws `LinguaError(E.INVALID_COUNT)` if `count` is not finite.
-   * @throws `LinguaError(E.COUNT_IN_VARS)` if `options.vars.count` is set.
+   * @throws `LinguaInvalidCountError` if `count` is not finite.
+   * @throws `LinguaCountInVarsError` if `options.vars.count` is set.
    * @security Returns raw, unsanitized strings.
    */
   tp(key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string;
@@ -404,14 +418,14 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
   const translatePlural = (key: MessageBranchKeys<M> | (string & {}), count: number, options?: TpOptions): string => {
     if (!Number.isFinite(count)) {
-      throw new LinguaError(E.INVALID_COUNT, '`count` must be a finite number.');
+      throw new LinguaInvalidCountError('`count` must be a finite number.');
     }
 
     const vars = options?.vars;
     const ordinal = options?.ordinal ?? false;
 
     if (vars && Object.hasOwn(vars, 'count')) {
-      throw new LinguaError(E.COUNT_IN_VARS, '`tp` does not allow `vars.count`; `count` is injected automatically.');
+      throw new LinguaCountInVarsError('`tp` does not allow `vars.count`; `count` is injected automatically.');
     }
 
     const base = String(key);
@@ -512,7 +526,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       subscribers.delete(callback);
     };
 
-    if (disposed) throw disposedError();
+    if (disposed) throw new LinguaDisposedError();
 
     if (options?.signal?.aborted) return unsubscribe;
 
@@ -670,10 +684,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       checkDisposed(disposed);
 
       if (!Object.hasOwn(st.catalogs, st.locale)) {
-        throw new LinguaError(
-          E.RESTORE_NO_LOCALE,
-          `restoreState: locale "${st.locale}" has no catalog in the provided state.`,
-        );
+        throw new LinguaRestoreError(`restoreState: locale "${st.locale}" has no catalog in the provided state.`);
       }
 
       const freshEntries = new Map<Locale, CatalogEntry>();
@@ -796,8 +807,8 @@ export function serializeI18n(i18n: I18n): I18nState {
  * @remarks The namespace registry is **not** included in `I18nState`. After hydrating,
  * call `extend()` for each namespace before relying on namespace-patched keys.
  *
- * @throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
- * @throws `LinguaError(E.RESTORE_NO_LOCALE)` if the state's locale has no catalog.
+ * @throws `LinguaDisposedError` if called on a disposed instance.
+ * @throws `LinguaRestoreError` if the state's locale has no catalog.
  */
 export function hydrateI18n(i18n: I18n, state: I18nState): void {
   i18n.restoreState(state);

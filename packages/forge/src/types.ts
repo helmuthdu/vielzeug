@@ -370,6 +370,8 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    * }
    */
   [Symbol.asyncIterator](): AsyncIterableIterator<FormState>;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
   /** Mark a field as touched. */
   touch(name: FlatKeyOf<TValues>): void;
   /** Mark all known fields (store + validators) as touched. */

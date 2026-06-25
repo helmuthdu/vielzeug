@@ -1,6 +1,6 @@
 import type { ReconnectOptions } from './types';
 
-import { defaultReconnectDelay, sleep } from './utils';
+import { defaultReconnectDelay, sleep } from './_utils';
 
 const DEFAULT_MAX_ATTEMPTS = 5;
 

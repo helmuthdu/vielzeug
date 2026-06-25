@@ -23,7 +23,7 @@ describe('ore-table', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Shadow structure ─────────────────────────────────────────────────────────
@@ -433,7 +433,7 @@ describe('ore-table', () => {
       expect(fixture.element.hasAttribute('bordered')).toBe(false);
       expect(f2.element.hasAttribute('bordered')).toBe(true);
 
-      f2.destroy();
+      f2.dispose();
     });
   });
 

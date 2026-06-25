@@ -1,5 +1,7 @@
 import type { QueryParams, ResolvedQueryParams, RouteLocation, RouteMatcher, RouteParams, RouteRecord } from './types';
 
+import { WayfinderRouteError } from './errors';
+
 /** Ensure leading slash, collapse duplicate slashes, preserve root. */
 export function normalizePath(path: string): string {
   const normalized = `/${path}`.replace(/\/+/g, '/');
@@ -36,7 +38,7 @@ export function compilePathMatcher(path: string): RouteMatcher {
 
     if (segment === '*') {
       if (i !== segments.length - 1) {
-        throw new Error(`[wayfinder] Wildcard "*" must be the final segment in path: ${path}`);
+        throw new WayfinderRouteError(`Wildcard "*" must be the final segment in path: ${path}`);
       }
 
       regexParts.push('(?:/.*)?');
@@ -45,14 +47,14 @@ export function compilePathMatcher(path: string): RouteMatcher {
 
     if (segment.startsWith(':') && segment.endsWith('*')) {
       if (i !== segments.length - 1) {
-        throw new Error(`[wayfinder] Wildcard param must be final segment in path: ${path}`);
+        throw new WayfinderRouteError(`Wildcard param must be final segment in path: ${path}`);
       }
 
       const name = segment.slice(1, -1);
 
       if (!/^\w+$/.test(name)) {
-        throw new Error(
-          `[wayfinder] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        throw new WayfinderRouteError(
+          `Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
         );
       }
 
@@ -66,8 +68,8 @@ export function compilePathMatcher(path: string): RouteMatcher {
       const name = segment.slice(1);
 
       if (!/^\w+$/.test(name)) {
-        throw new Error(
-          `[wayfinder] Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
+        throw new WayfinderRouteError(
+          `Invalid param name ":${name}" in path "${path}". Param names must only contain word characters (a–z, A–Z, 0–9, _).`,
         );
       }
 
@@ -165,7 +167,7 @@ export function buildUrl(base: string, pattern: string, params: RouteParams = {}
   let path = pattern.replace(/:(\w+)(\*)?/g, (_match, key: string, isWildcard: string) => {
     const value = params[key];
 
-    if (value == null) throw new Error(`[wayfinder] Missing path param: ${key}`);
+    if (value == null) throw new WayfinderRouteError(`Missing path param: ${key}`);
 
     if (isWildcard) {
       return value

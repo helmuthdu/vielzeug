@@ -46,7 +46,7 @@ describe('ore-time-picker', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────

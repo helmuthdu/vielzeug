@@ -1,6 +1,6 @@
 /** Base class for all ward errors. Use `instanceof WardError` to catch any ward-originated error. */
 export class WardError extends Error {
-  constructor(message: string, opts?: ErrorOptions) {
+  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
@@ -10,6 +10,9 @@ export class WardError extends Error {
     return err instanceof WardError;
   }
 }
+
+/** Thrown when a rule definition or principal is malformed. */
+export class WardConfigError extends WardError {}
 
 /**
  * Thrown when a `when` predicate in a ward rule throws an exception.

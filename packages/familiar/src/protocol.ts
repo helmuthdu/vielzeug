@@ -33,7 +33,7 @@ function serializeError(e: unknown): ErrorPayload {
  * Handles the `{ id, input }` → `{ id, result }` / `{ id, error }` protocol automatically.
  *
  * Errors from `fn` are caught and forwarded as structured `{ id, error }` messages so the
- * host can reconstruct them as `WorkerTaskError`. Non-Error throws are wrapped in an Error.
+ * host can reconstruct them as `FamiliarTaskError`. Non-Error throws are wrapped in an Error.
  *
  * @example
  * // my-worker.ts

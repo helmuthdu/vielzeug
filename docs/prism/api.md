@@ -914,3 +914,24 @@ import { warn } from '@vielzeug/prism/devtools';
 // In a plugin:
 if (!container.offsetParent) warn('Chart container appears to be detached from the DOM.');
 ```
+
+---
+
+## Errors
+
+### `PrismError`
+
+Base class for all prism errors. Use `instanceof PrismError` or `PrismError.is()` to catch any prism-originated error.
+
+```ts
+class PrismError extends Error {
+  static is(err: unknown): err is PrismError;
+}
+```
+
+**Named subclasses**
+
+| Class               | Thrown when                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `PrismDisposedError` | A method is called on a disposed chart instance                                |
+| `PrismRenderError`  | The chart fails to render due to an invalid configuration or missing data       |

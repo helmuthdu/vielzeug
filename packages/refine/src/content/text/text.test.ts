@@ -8,7 +8,7 @@ describe('ore-text', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -35,7 +35,7 @@ describe('ore-text', () => {
 
         expect(fixture.element.getAttribute('role')).toBe('heading');
         expect(fixture.element.getAttribute('aria-level')).toBe(String(level));
-        fixture.destroy();
+        fixture.dispose();
       },
     );
 
@@ -102,7 +102,7 @@ describe('ore-text', () => {
         fixture = await mount('ore-text', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -113,7 +113,7 @@ describe('ore-text', () => {
         fixture = await mount('ore-text', { attrs: { weight } });
 
         expect(fixture.element.getAttribute('weight')).toBe(weight);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -124,7 +124,7 @@ describe('ore-text', () => {
         fixture = await mount('ore-text', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -148,7 +148,7 @@ describe('ore-text', () => {
         fixture = await mount('ore-text', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -162,7 +162,7 @@ describe('ore-text accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Content Accessibility', () => {

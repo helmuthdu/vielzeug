@@ -1,5 +1,4 @@
-/** @internal */
-const isDev = !(globalThis as { __INGOT_PROD__?: boolean }).__INGOT_PROD__;
+const isDev = !(globalThis as { __REFINE_PROD__?: boolean }).__REFINE_PROD__;
 
 /**
  * Emits a `console.warn` in development builds only.

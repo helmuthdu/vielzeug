@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
+import { SandboxDisposedError, SandboxError, SandboxTimeoutError } from '../errors';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -966,5 +967,23 @@ describe('createSandbox — nonce option', () => {
     expect(iframe.srcdoc).toContain("'nonce-abc123'");
     expect(iframe.srcdoc).toContain('nonce="abc123"');
     sandbox.dispose();
+  });
+});
+
+describe('SandboxError — named subclasses', () => {
+  it('each subclass is instanceof SandboxError and Error', () => {
+    expect(new SandboxDisposedError('disposed')).toBeInstanceOf(SandboxError);
+    expect(new SandboxDisposedError('disposed')).toBeInstanceOf(Error);
+    expect(new SandboxTimeoutError('timeout')).toBeInstanceOf(SandboxError);
+  });
+
+  it('each subclass has the correct .name', () => {
+    expect(new SandboxDisposedError('').name).toBe('SandboxDisposedError');
+    expect(new SandboxTimeoutError('').name).toBe('SandboxTimeoutError');
+  });
+
+  it('SandboxError.is() returns true for any subclass', () => {
+    expect(SandboxError.is(new SandboxDisposedError(''))).toBe(true);
+    expect(SandboxError.is(new Error('plain'))).toBe(false);
   });
 });

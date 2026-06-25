@@ -1,4 +1,4 @@
-import type { SourceError, SourceState } from './types';
+import type { SourcererError, SourceState } from './types';
 
 /**
  * Derives a `SourceState<T>` discriminated union from a reactive source.
@@ -16,7 +16,7 @@ import type { SourceError, SourceState } from './types';
 export function sourceState<T>(source: {
   readonly current: readonly T[];
   readonly meta: {
-    readonly error: SourceError | null;
+    readonly error: SourcererError | null;
     readonly isLoading: boolean;
     readonly isSearchPending?: boolean;
   };

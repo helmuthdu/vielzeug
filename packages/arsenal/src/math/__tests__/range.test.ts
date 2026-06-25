@@ -22,7 +22,7 @@ describe('range', () => {
   });
 
   it('should throw an error if step is 0', () => {
-    expect(() => range(0, 10, 0)).toThrow('Step cannot be 0');
+    expect(() => range(0, 10, 0)).toThrow('range: step cannot be 0');
   });
 
   it('should handle fractional steps', () => {
@@ -34,7 +34,7 @@ describe('range', () => {
   });
   it('should throw an error if range is too large', () => {
     // 10,000,001 items
-    expect(() => range(0, 10_000_001, 1)).toThrow('Range exceeds maximum allowed size of 10,000,000');
+    expect(() => range(0, 10_000_001, 1)).toThrow('range: exceeds maximum allowed size of 10,000,000');
   });
 
   it('1-arg overload: range(stop) starts from 0 with step 1', () => {

@@ -1,4 +1,4 @@
-import { BusDisposedError, combineSignals, createBus } from '../index';
+import { BusDisposedError, HeraldConfigError, combineSignals, createBus } from '../index';
 import { pipeEvents } from '../pipe';
 
 type TestEvents = {
@@ -515,11 +515,11 @@ describe('createBus - events async generator', () => {
     await stream.return(undefined);
   });
 
-  it('throws RangeError synchronously when maxBuffer is not a positive number', () => {
+  it('throws HeraldConfigError synchronously when maxBuffer is not a positive number', () => {
     const bus = createBus<TestEvents>();
 
-    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(RangeError);
-    expect(() => bus.events('count', { maxBuffer: -1 })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(HeraldConfigError);
+    expect(() => bus.events('count', { maxBuffer: -1 })).toThrow(HeraldConfigError);
   });
 
   it('drops oldest values when maxBuffer is exceeded', async () => {
@@ -1627,10 +1627,10 @@ describe('createBus - logger option', () => {
 });
 
 describe('createBus - waitAny() guards', () => {
-  it('throws RangeError when called with fewer than 2 event keys', () => {
+  it('throws HeraldConfigError when called with fewer than 2 event keys', () => {
     const bus = createBus<TestEvents>();
 
-    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(RangeError);
+    expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(HeraldConfigError);
     expect(() => bus.waitAny(['count'] as unknown as ['count', 'greet'])).toThrow(
       'waitAny() requires at least 2 event keys',
     );
@@ -1640,19 +1640,19 @@ describe('createBus - waitAny() guards', () => {
 });
 
 describe('createBus - events() maxBuffer guards', () => {
-  it('throws RangeError when maxBuffer is NaN', () => {
+  it('throws HeraldConfigError when maxBuffer is NaN', () => {
     const bus = createBus<TestEvents>();
 
-    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: NaN })).toThrow(HeraldConfigError);
     expect(() => bus.events('count', { maxBuffer: NaN })).toThrow('maxBuffer must be a positive number');
 
     bus.dispose();
   });
 
-  it('throws RangeError when maxBuffer is 0', () => {
+  it('throws HeraldConfigError when maxBuffer is 0', () => {
     const bus = createBus<TestEvents>();
 
-    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(RangeError);
+    expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(HeraldConfigError);
 
     bus.dispose();
   });

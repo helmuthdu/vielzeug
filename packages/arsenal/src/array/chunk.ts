@@ -1,4 +1,4 @@
-import { assert } from '../function/assert';
+import { ArsenalError } from '../errors';
 import { isString } from '../guards/isString';
 
 /**
@@ -15,14 +15,14 @@ import { isString } from '../guards/isString';
  *
  * @returns An array of chunks.
  *
- * @throws {RangeError} If the chunk size is less than 1.
- * @throws {TypeError} If the input is not an array or string.
+ * @throws {ArsenalError} If the input is not an array or string, or if the chunk size is less than 1.
  */
 export function chunk(input: string, size?: number): string[];
 export function chunk<T>(input: T[], size?: number): T[][];
 export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
-  assert(Array.isArray(input as T[]) || isString(input), 'Argument must be an array or string.', { type: TypeError });
-  assert(size >= 1, 'Chunk size must be at least 1.', { type: RangeError });
+  if (!Array.isArray(input) && !isString(input)) throw new ArsenalError('chunk: argument must be an array or string');
+
+  if (size < 1) throw new ArsenalError('chunk: size must be at least 1');
 
   return Array.from({ length: Math.ceil(input.length / size) }, (_, i) => input.slice(i * size, i * size + size)) as
     | string[]

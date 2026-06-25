@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { CodexError } from './errors.js';
 import { type BundledData, type BundledPackage, type PackageMeta, SCHEMA_VERSION } from './types.js';
 
 const DEFAULT_DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../data/vielzeug-data.json');
@@ -18,7 +19,7 @@ export function validateBundledData(raw: unknown): BundledData {
     typeof r['version'] !== 'string' ||
     !Array.isArray(r['packages'])
   ) {
-    throw new Error(
+    throw new CodexError(
       `Bundled data is malformed or uses an outdated schema (expected v${SCHEMA_VERSION}). Regenerate with ${REGEN_CMD}.`,
     );
   }
@@ -27,7 +28,7 @@ export function validateBundledData(raw: unknown): BundledData {
     const p = entry as Record<string, unknown>;
 
     if (typeof p['slug'] !== 'string' || p['slug'].length === 0 || typeof p['name'] !== 'string') {
-      throw new Error(
+      throw new CodexError(
         `Bundled data has a malformed package entry (missing slug or name). Regenerate with ${REGEN_CMD}.`,
       );
     }
@@ -46,7 +47,7 @@ export function loadData(dataFile?: string): BundledData {
     const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
 
     if (code === 'ENOENT') {
-      throw new Error(
+      throw new CodexError(
         `Bundled MCP data not found at ${file}. In the monorepo run ${REGEN_CMD}; for standalone installs, reinstall @vielzeug/codex to restore packaged data.`,
         { cause: error },
       );
@@ -54,7 +55,7 @@ export function loadData(dataFile?: string): BundledData {
 
     const detail = error instanceof Error ? error.message : String(error);
 
-    throw new Error(`Failed to read bundled MCP data at ${file}: ${detail}.`, { cause: error });
+    throw new CodexError(`Failed to read bundled MCP data at ${file}: ${detail}.`, { cause: error });
   }
 
   let parsed: unknown;
@@ -62,7 +63,7 @@ export function loadData(dataFile?: string): BundledData {
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    throw new Error(`Bundled MCP data at ${file} is malformed JSON. Regenerate with ${REGEN_CMD}.`, {
+    throw new CodexError(`Bundled MCP data at ${file} is malformed JSON. Regenerate with ${REGEN_CMD}.`, {
       cause: error,
     });
   }

@@ -281,4 +281,4 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
   return logger;
 }
 
-export const Rune = createLogger();
+export const defaultLogger = createLogger();

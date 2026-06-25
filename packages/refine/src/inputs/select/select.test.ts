@@ -32,7 +32,7 @@ describe('ore-select', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ──────────────────────────────────────────────────────────────
@@ -576,7 +576,7 @@ describe('ore-select accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Semantic Structure ──────────────────────────────────────────────────────

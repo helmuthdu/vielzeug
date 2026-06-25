@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { compare } from '../compare';
 
 describe('compare', () => {
@@ -38,9 +39,9 @@ describe('compare', () => {
   });
 
   it('throws for objects', () => {
-    expect(() => compare({ a: 1 }, { a: 1 })).toThrow(TypeError);
-    expect(() => compare([1, 2], [1, 2])).toThrow(TypeError);
-    expect(() => compare({ a: 2 }, { a: 1 })).toThrow(TypeError);
+    expect(() => compare({ a: 1 }, { a: 1 })).toThrow(ArsenalError);
+    expect(() => compare([1, 2], [1, 2])).toThrow(ArsenalError);
+    expect(() => compare({ a: 2 }, { a: 1 })).toThrow(ArsenalError);
   });
 
   it('returns 1 if first value is undefined', () => {
@@ -54,7 +55,7 @@ describe('compare', () => {
   });
 
   it('throws for mixed types', () => {
-    expect(() => compare(1, '1')).toThrow(TypeError);
-    expect(() => compare(1, {})).toThrow(TypeError);
+    expect(() => compare(1, '1')).toThrow(ArsenalError);
+    expect(() => compare(1, {})).toThrow(ArsenalError);
   });
 });

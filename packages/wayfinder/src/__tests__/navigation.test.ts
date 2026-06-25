@@ -428,7 +428,7 @@ describe('Navigation', () => {
       });
 
       expect(() => router.url('missing' as never)).toThrow(
-        '[wayfinder] Unknown route name: missing. Available routes: about, home',
+        'Unknown route name: missing. Available routes: about, home',
       );
     });
   });

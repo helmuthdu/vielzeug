@@ -1,6 +1,7 @@
 import type { WardRule } from './types';
 
 import { WILDCARD } from './constants';
+import { WardConfigError } from './errors';
 
 // ---------------------------------------------------------------------------
 // Internal types (shared across modules)
@@ -41,39 +42,39 @@ export function validateRuleInput<TAction extends string, TData>(rule: WardRule<
   const roles = Array.isArray(rule.role) ? rule.role : [rule.role];
 
   if (roles.length === 0 || roles.some((r) => typeof r !== 'string' || !r.trim())) {
-    throw new Error(`[ward] ${at}.role must be a non-empty string or non-empty array of strings`);
+    throw new WardConfigError(`${at}.role must be a non-empty string or non-empty array of strings`);
   }
 
   if (typeof rule.resource !== 'string' || !rule.resource.trim()) {
-    throw new Error(`[ward] ${at}.resource must be a non-empty string`);
+    throw new WardConfigError(`${at}.resource must be a non-empty string`);
   }
 
   if ((rule.resource as string).endsWith(':')) {
-    throw new Error(
-      `[ward] ${at}.resource '${String(rule.resource)}' ends with ':' — did you mean '${String(rule.resource)}*'?`,
+    throw new WardConfigError(
+      `${at}.resource '${String(rule.resource)}' ends with ':' — did you mean '${String(rule.resource)}*'?`,
     );
   }
 
   if (typeof rule.action !== 'string' || !(rule.action as string).trim()) {
-    throw new Error(`[ward] ${at}.action must be a non-empty string`);
+    throw new WardConfigError(`${at}.action must be a non-empty string`);
   }
 
   if ((rule.action as string).endsWith(':')) {
-    throw new Error(
-      `[ward] ${at}.action '${String(rule.action)}' ends with ':' — did you mean '${String(rule.action)}*'?`,
+    throw new WardConfigError(
+      `${at}.action '${String(rule.action)}' ends with ':' — did you mean '${String(rule.action)}*'?`,
     );
   }
 
   if (rule.effect !== 'allow' && rule.effect !== 'deny') {
-    throw new Error(`[ward] ${at}.effect must be "allow" or "deny"`);
+    throw new WardConfigError(`${at}.effect must be "allow" or "deny"`);
   }
 
   if (rule.priority !== undefined && (typeof rule.priority !== 'number' || !Number.isFinite(rule.priority))) {
-    throw new Error(`[ward] ${at}.priority must be a finite number`);
+    throw new WardConfigError(`${at}.priority must be a finite number`);
   }
 
   if (rule.when !== undefined && typeof rule.when !== 'function') {
-    throw new Error(`[ward] ${at}.when must be a function`);
+    throw new WardConfigError(`${at}.when must be a function`);
   }
 }
 

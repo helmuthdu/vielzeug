@@ -9,7 +9,7 @@ describe('ore-accordion', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -81,7 +81,7 @@ describe('ore-accordion', () => {
         fixture = await mount('ore-accordion', { attrs: { size } });
 
         expect(fixture.element.getAttribute('size')).toBe(size);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -96,7 +96,7 @@ describe('ore-accordion accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {

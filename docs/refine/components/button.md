@@ -62,6 +62,15 @@ Six semantic colors communicate intent.
 <ore-button size="sm">Small</ore-button>
 <ore-button size="md">Medium</ore-button>
 <ore-button size="lg">Large</ore-button>
+<ore-button size="sm" icon-only label="Search">
+  <ore-icon name="search"></ore-icon>
+</ore-button>
+<ore-button size="md" icon-only label="Search">
+  <ore-icon name="search"></ore-icon>
+</ore-button>
+<ore-button size="lg" icon-only label="Search">
+  <ore-icon name="search"></ore-icon>
+</ore-button>
 ```
 
 </ComponentPreview>
@@ -98,15 +107,15 @@ Use `prefix` and `suffix` slots to add icons alongside text. For icon-only butto
 
 ```html
 <ore-button>
-  <ore-icon slot="prefix" name="arrow-left" size="18"></ore-icon>
+  <ore-icon slot="prefix" name="arrow-left"></ore-icon>
   Back
 </ore-button>
 <ore-button variant="outline" color="success">
   Save
-  <ore-icon slot="suffix" name="save" size="18"></ore-icon>
+  <ore-icon slot="suffix" name="save"></ore-icon>
 </ore-button>
 <ore-button icon-only label="Delete" color="error">
-  <ore-icon name="trash-2" size="18"></ore-icon>
+  <ore-icon name="trash-2"></ore-icon>
 </ore-button>
 ```
 
@@ -124,7 +133,7 @@ The `rounded` attribute sets the border radius from the theme scale. Used withou
 <ore-button rounded="xl">XL</ore-button>
 <ore-button rounded="2xl">2XL</ore-button>
 <ore-button rounded icon-only label="Check">
-  <ore-icon name="check" size="18"></ore-icon>
+  <ore-icon name="check"></ore-icon>
 </ore-button>
 ```
 
@@ -152,7 +161,7 @@ Set `href` to render an `<a role="button">` instead of `<button>`. All variants,
 <ore-button href="#" variant="outline">Outline Link</ore-button>
 <ore-button href="#" target="_blank" rel="noopener noreferrer" variant="ghost">
   Open in new tab
-  <ore-icon slot="suffix" name="external-link" size="18"></ore-icon>
+  <ore-icon slot="suffix" name="external-link"></ore-icon>
 </ore-button>
 ```
 

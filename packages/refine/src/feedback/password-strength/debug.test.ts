@@ -7,7 +7,7 @@ describe('attributeChangedCallback diagnostic', () => {
     await import('./password-strength');
   });
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
   it('diagnostic: setAttribute triggers update?', async () => {
     fixture = await mount('ore-password-strength', { attrs: { score: '1' } });

@@ -2,7 +2,13 @@
 export { Temporal } from '@js-temporal/polyfill';
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
-export { TempoError, TempoErrorCode } from './errors';
+export {
+  TempoError,
+  TempoInvalidInputError,
+  TempoInvalidTzError,
+  TempoMissingTzError,
+  TempoUnsupportedInputError,
+} from './errors';
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
 export {

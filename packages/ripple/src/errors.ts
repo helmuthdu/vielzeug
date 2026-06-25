@@ -1,80 +1,32 @@
-import type { CleanupFn } from './types';
+// ── RippleError ─────────────────────────────────────────────────────────────
 
-// ── StateError ────────────────────────────────────────────────────────────────
-
-export type StateErrorCode =
-  | 'COMPUTED_CYCLE'
-  | 'DISPOSED_SCOPE'
-  | 'INFINITE_LOOP'
-  | 'INVALID_CLEANUP'
-  | 'INVALID_STORE';
-
-export class StateError extends Error {
-  readonly code: StateErrorCode;
-
-  constructor(code: StateErrorCode, message: string) {
-    super(message);
+/** Base class for all ripple errors. Use `instanceof RippleError` to catch any ripple-originated error. */
+export class RippleError extends Error {
+  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+    super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
-    this.code = code;
   }
 
-  static is(err: unknown): err is StateError {
-    return err instanceof StateError;
+  static is(err: unknown): err is RippleError {
+    return err instanceof RippleError;
   }
 }
 
-// ── Error utilities ───────────────────────────────────────────────────────────
+/** Thrown when a computed value reads itself, creating a circular dependency. */
+export class RippleComputedCycleError extends RippleError {}
 
-/**
- * Coerces any thrown value to an `Error`.
- * Non-Error throws (strings, numbers, etc.) are wrapped in a plain `Error`
- * with a descriptive message — they are NOT mis-branded as `StateError`.
- */
-export const ensureError = (error: unknown): Error =>
-  error instanceof Error ? error : new Error(`Non-Error thrown: ${String(error)}`);
+/** Thrown when a method is called on a scope that has already been disposed. */
+export class RippleDisposedScopeError extends RippleError {}
 
-/**
- * Runs each fn in `fns`, collecting any thrown errors. Does NOT re-throw.
- */
-export const collectErrors = (fns: Iterable<CleanupFn>): Error[] => {
-  const errors: Error[] = [];
+/** Thrown when the current runtime environment does not support the requested feature (e.g. SSR APIs in the browser). */
+export class RippleEnvironmentError extends RippleError {}
 
-  for (const fn of fns) {
-    try {
-      fn();
-    } catch (e) {
-      errors.push(ensureError(e));
-    }
-  }
+/** Thrown when an effect or flush loop exceeds the maximum iteration count. */
+export class RippleInfiniteLoopError extends RippleError {}
 
-  return errors;
-};
+/** Thrown when `onCleanup()` is called outside an active effect or scope. */
+export class RippleInvalidCleanupError extends RippleError {}
 
-/**
- * Runs all `fns`, collecting errors.
- * - Single error: re-throws the original error directly (preserves type + stack).
- * - Multiple errors: wraps in AggregateError with the given context label.
- */
-export const runAll = (fns: Iterable<CleanupFn>, context: string): void => {
-  const errors = collectErrors(fns);
-
-  if (errors.length === 1) throw errors[0]!;
-
-  if (errors.length > 0) {
-    throw new AggregateError(errors, context);
-  }
-};
-
-/**
- * Re-throws `primary`, augmented with any extra errors as an AggregateError.
- * If `extras` is empty, throws `primary` directly (preserves original type + stack).
- * Otherwise, `primary` is set as the `.cause` so callers can identify the root failure.
- */
-export const rethrowWith = (primary: unknown, extras: Error[], context: string): never => {
-  if (extras.length === 0) throw primary;
-
-  throw new AggregateError([ensureError(primary), ...extras], context, {
-    cause: ensureError(primary),
-  });
-};
+/** Thrown when a store is created or mutated with an invalid value or path. */
+export class RippleInvalidStoreError extends RippleError {}

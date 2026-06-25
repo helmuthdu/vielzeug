@@ -38,7 +38,7 @@ import {
   executeMiddlewarePipeline,
   reportError,
 } from './context';
-import { WayfinderDisposedError } from './errors';
+import { WayfinderDisposedError, WayfinderRedirectLoopError, WayfinderRouteError } from './errors';
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
 import { createHydrationManager } from './hydration';
@@ -67,10 +67,8 @@ function getRouteByName<TMeta, TComponent>(
 
   const available = [...routesByName.keys()].join(', ');
 
-  throw new Error(
-    available
-      ? `[wayfinder] Unknown route name: ${name}. Available routes: ${available}`
-      : `[wayfinder] Unknown route name: ${name}`,
+  throw new WayfinderRouteError(
+    available ? `Unknown route name: ${name}. Available routes: ${available}` : `Unknown route name: ${name}`,
   );
 }
 
@@ -709,7 +707,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       destination = this.#resolveDestination(prepared.redirectTo);
     }
 
-    throw new Error('[wayfinder] Redirect loop detected');
+    throw new WayfinderRedirectLoopError();
   }
 
   // ─── Private: preload ─────────────────────────────────────────────────────
@@ -1071,7 +1069,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * R8: accepts `depth` to detect declarative redirect loops (mirrors #resolveUrl's 5-hop limit).
    */
   async #commitRedirect(path: string, replace = true, depth = 0): Promise<void> {
-    if (depth >= 5) throw new Error('[wayfinder] Redirect loop detected');
+    if (depth >= 5) throw new WayfinderRedirectLoopError();
 
     const destination = this.#resolveDestination(path);
 

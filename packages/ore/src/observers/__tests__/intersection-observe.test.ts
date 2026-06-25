@@ -69,7 +69,7 @@ describe('intersectionObserver()', () => {
     } as unknown as typeof IntersectionObserver;
 
     try {
-      const { destroy } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props, ctx) => {
         const divRef = ref<HTMLDivElement>();
 
         ctx.onMounted(() => {
@@ -80,7 +80,7 @@ describe('intersectionObserver()', () => {
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();
-      destroy();
+      dispose();
       expect(disconnectSpy).toHaveBeenCalledOnce();
     } finally {
       globalThis.IntersectionObserver = origIO;

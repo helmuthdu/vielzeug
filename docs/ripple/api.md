@@ -32,8 +32,8 @@ description: Complete type signatures, parameter docs, and return values for eve
 
 | Import                      | Purpose                                                                                                                                                           |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@vielzeug/ripple`          | All core exports and types (including `RippleDevToolsHook` and event types)                                                                                       |
-| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from prod                                                                                                |
+| `@vielzeug/ripple`          | All core exports and types                                                                                                                                        |
+| `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect`, and hook types (`RippleDevToolsHook`, `WriteEvent`, `NamedEvent`, `DisposeEvent`, `MutateEvent`) — dev-only, tree-shaken from prod |
 | `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
 
 ## Signal Primitives
@@ -192,7 +192,7 @@ stop.dispose(); // aborts current fetch, calls cleanup
 
 | Parameter         | Type                  | Description                                                         |
 | ----------------- | --------------------- | ------------------------------------------------------------------- |
-| `fn`              | `AsyncEffectCallback` | Async callback receiving an `AbortSignal`; may return async cleanup |
+| `fn`              | `AsyncEffectCallback` | Async callback receiving an `AbortSignal` and an owner `Scope`; may return async cleanup |
 | `options.name`    | `string`              | Name used to identify this async effect in DevTools                 |
 | `options.onError` | `(err) => void`       | Handler for non-aborted errors. Default: logs via `console.error`   |
 
@@ -212,7 +212,7 @@ function watch<T>(
 ): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, use `computed()` or `store.lens(path)` and pass the resulting signal. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `StateError` with code `INVALID_CLEANUP`.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, use `computed()` or `store.lens(path)` and pass the resulting signal. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `RippleInvalidCleanupError`.
 
 ```ts
 // Plain watch
@@ -328,7 +328,7 @@ count.dispose(); // disposes the source
 function onCleanup(fn: CleanupFn): void;
 ```
 
-Registers a cleanup function within the currently active `effect()` or `scope.run()` context. Throws `StateError('INVALID_CLEANUP', ...)` when called outside either context.
+Registers a cleanup function within the currently active `effect()` or `scope.run()` context. Throws `RippleInvalidCleanupError` when called outside either context.
 
 ```ts
 effect(() => {
@@ -443,9 +443,9 @@ The returned `Computed<ResourceState<T>>` is a read-only disposable signal emitt
 
 ```ts
 type ResourceState<T> =
-  | { status: 'loading'; data: T | undefined }
-  | { status: 'ready';   data: T }
-  | { status: 'error';   data: T | undefined; error: unknown };
+  | { readonly data?: T;  readonly status: 'loading' }
+  | { readonly data: T;   readonly status: 'ready' }
+  | { readonly data?: T;  readonly error: unknown; readonly status: 'error' };
 ```
 
 ```ts
@@ -516,7 +516,7 @@ function store<T extends object>(initial: T, options?: { name?: string }): Store
 
 Creates a reactive store for the given object state. Stores accept `effect()`, `computed()`, `watch()`, and other primitives via `.value` and `.subscribe()`. `initial` is deep-cloned; external mutations after construction do not affect the store or its `reset()` baseline.
 
-`store.value` returns a read-only proxy: direct top-level set or delete throws `StateError('INVALID_STORE')`. Use `.patch()`, `.replace()`, or `.lens()` to mutate.
+`store.value` returns a read-only proxy: direct top-level set or delete throws `RippleInvalidStoreError`. Use `.patch()`, `.replace()`, or `.lens()` to mutate.
 
 **Parameters**
 
@@ -588,7 +588,7 @@ See also: [`StoreWithHistory<T>`](#storewithhistory)
 store.lens<P extends string>(path: P): Signal<PathValue<T, P>>;
 ```
 
-Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `StateError('INVALID_STORE')` is thrown. Path segments `__proto__`, `constructor`, and `prototype` are forbidden and throw `StateError('INVALID_STORE')` immediately.
+Returns a writable `Signal` scoped to a specific property or nested dot-path within the store. The lens is cached — calling `.lens('a.b')` twice on the same store returns the same instance. Writes through the lens produce an immutable structural copy of the store state; intermediary objects must not be `null` or a primitive or a `RippleInvalidStoreError` is thrown. Path segments `__proto__`, `constructor`, and `prototype` are forbidden and throw `RippleInvalidStoreError` immediately.
 
 The lens `Signal` is disposed and evicted from the cache when `store.lens()` is called with that same path after the lens was disposed.
 
@@ -637,42 +637,61 @@ All projection options (`equals`, `name`) are available on `computed()` directly
 
 ## Errors
 
-### `StateError`
+### `RippleError`
 
-All errors thrown by ripple are instances of `StateError`, which extends `Error` with a machine-readable `code` field.
+Base class for all ripple errors. Use `instanceof RippleError` (or the static `RippleError.is()` helper) to catch any ripple-originated error in one branch.
 
 ```ts
-class StateError extends Error {
-  readonly code: StateErrorCode;
+class RippleError extends Error {
+  static is(err: unknown): err is RippleError;
 }
 ```
 
-This allows consumers to catch and distinguish specific error types programmatically:
+Each error condition has a dedicated named subclass — catch with `instanceof` for precise handling:
 
 ```ts
-import { StateError } from '@vielzeug/ripple';
+import { RippleError, RippleInvalidStoreError } from '@vielzeug/ripple';
 
 try {
-  computed.value;
+  s.value = 1; // direct mutation — throws RippleInvalidStoreError
 } catch (e) {
-  if (e instanceof StateError && e.code === 'DISPOSED_READ') {
-    // handle disposed computed
+  if (e instanceof RippleInvalidStoreError) {
+    // precise narrow
+  } else if (RippleError.is(e)) {
+    // catch any other ripple error
   }
 }
 ```
 
-**Error codes**
+**Named subclasses**
 
-| Code              | Thrown when                                                                                                                                                                                                                                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `COMPUTED_CYCLE`  | A computed function reads another computed that depends on it                                                                                                                                                                                                                                                            |
-| `DISPOSED_READ`   | `.subscribe()` is called on a disposed computed. Note: `.value` and `.peek()` on a disposed computed return the last known value silently (inert node behaviour, consistent with `signal`)                                                                                                                               |
-| `DISPOSED_SCOPE`  | `scope.run()` is called after `scope.dispose()`                                                                                                                                                                                                                                                                          |
-| `INFINITE_LOOP`   | Flush or effect loop exceeds the built-in guard limit (default 100 iterations)                                                                                                                                                                                                                                            |
-| `INVALID_CLEANUP` | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
-| `INVALID_STORE`   | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
+| Class                        | Thrown when                                                                                                                                                                                                                                                                                                              |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RippleComputedCycleError`   | A computed function reads another computed that depends on it                                                                                                                                                                                                                                                            |
+| `RippleDisposedScopeError`   | `scope.run()` or `scope.add()` is called after `scope.dispose()`                                                                                                                                                                                                                                                         |
+| `RippleEnvironmentError`     | An SSR API is used in a browser environment                                                                                                                                                                                                                                                                               |
+| `RippleInfiniteLoopError`    | Flush or effect loop exceeds the built-in guard limit (default 100 iterations)                                                                                                                                                                                                                                            |
+| `RippleInvalidCleanupError`  | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
+| `RippleInvalidStoreError`    | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
 
 Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
+
+### Named subclasses
+
+Each subclass extends `RippleError` with no additional members — they exist solely for `instanceof` narrowing.
+
+```ts
+class RippleComputedCycleError  extends RippleError {}
+class RippleDisposedScopeError  extends RippleError {}
+class RippleEnvironmentError    extends RippleError {}
+class RippleInfiniteLoopError   extends RippleError {}
+class RippleInvalidCleanupError extends RippleError {}
+class RippleInvalidStoreError   extends RippleError {}
+```
+
+All six classes are exported from `@vielzeug/ripple`. `RippleEnvironmentError` is also exported from `@vielzeug/ripple/ssr` for use in SSR entry points.
+
+---
 
 ## Types
 
@@ -680,12 +699,11 @@ Errors from multiple subscribers or cleanup functions in the same flush are aggr
 
 ```ts
 interface Signal<T> extends Computed<T> {
-  dispose(): void;
-  readonly disposed: boolean;
   value: T; // notifying setter — write triggers downstream notifications
-  [Symbol.dispose](): void;
 }
 ```
+
+Returned by `signal()` and `store.lens()`. Extends `Computed<T>` (which extends `Readable<T>`), so a `Signal` is usable wherever a `Readable` or `Computed` is expected. Writing `.value` notifies all dependents synchronously (or on the next microtask if `scheduler: 'microtask'` is set on an observing effect).
 
 ---
 
@@ -696,7 +714,7 @@ interface Readable<T> {
   readonly disposed: boolean;
   readonly name?: string; // debug name assigned at creation, or undefined
   peek(): T;
-  subscribe(onStoreChange: () => void): Subscription;
+  subscribe(listener: () => void): Subscription;
   readonly value: T;
 }
 ```
@@ -726,18 +744,13 @@ Returned by `computed()`. A read-only derived signal with an explicit dispose me
 ### `Store<T>`
 
 ```ts
-interface Store<T extends object> {
-  readonly disposed: boolean;
-  readonly name?: string;
-  dispose(): void;
-  [Symbol.dispose](): void;
+interface Store<T extends object> extends Computed<Readonly<T>> {
   lens<P extends string>(path: P): Signal<PathValue<T, P>>;
   patch(partial: Partial<T>): void;
   peek(): Readonly<T>;
   replace(fn: (state: Readonly<T>) => T): void;
   reset(): void;
-  subscribe(onStoreChange: () => void): Subscription;
-  readonly value: Readonly<T>;
+  subscribe(listener: () => void): Subscription;
 }
 ```
 
@@ -750,9 +763,12 @@ interface Store<T extends object> {
 | `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                                  |
 | `.replace(fn)`    | Receive a deep clone (`structuredClone`) of current state; return the new state; returning the same clone reference is a silent no-op |
 | `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                                                |
+| `.subscribe()`    | Fires on any mutation (`patch` / `replace` / `reset` / lens write) — use for external adapters; prefer `store.lens()` for reactive reads |
+
+`Store<T>` extends `Computed<Readonly<T>>` — `dispose()`, `disposed`, `name`, and `[Symbol.dispose]()` are all inherited.
 
 ::: tip store.value is a read-only proxy
-`store.value` returns a proxy that throws `StateError('INVALID_STORE')` on any direct top-level set or delete. Use `.patch()`, `.replace()`, or `.lens()` to mutate state.
+`store.value` returns a proxy that throws `RippleInvalidStoreError` on any direct top-level set or delete. Use `.patch()`, `.replace()`, or `.lens()` to mutate state.
 :::
 
 ---
@@ -761,16 +777,16 @@ interface Store<T extends object> {
 
 ```ts
 interface Scope {
-  readonly add: (fn: CleanupFn) => void;
-  readonly run: <T>(fn: () => T) => T;
-  readonly dispose: () => void;
-  /** `true` after `dispose()` has been called. */
+  add(fn: CleanupFn): void;
+  readonly disposalSignal: AbortSignal;
+  dispose(): void;
   readonly disposed: boolean;
-  readonly [Symbol.dispose]: () => void;
+  run<T>(fn: () => T): T;
+  [Symbol.dispose](): void;
 }
 ```
 
-Returned by `scope()`. `run(fn)` activates the scope for `onCleanup()` calls. `add(fn)` explicitly registers a cleanup into the scope regardless of the current tracking context — use it to direct cleanups from inside an effect body into the scope rather than the effect. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called.
+Returned by `scope()`. `run(fn)` activates the scope for `onCleanup()` calls. `add(fn)` explicitly registers a cleanup into the scope regardless of the current tracking context — use it to direct cleanups from inside an effect body into the scope rather than the effect. `dispose()` runs all registered cleanups in **LIFO order** and is idempotent. `disposed` is `true` after `dispose()` is called. `disposalSignal` is an `AbortSignal` that is aborted when `dispose()` is called — use it to tie external lifecycles to the scope.
 
 ---
 
@@ -778,9 +794,9 @@ Returned by `scope()`. `run(fn)` activates the scope for `onCleanup()` calls. `a
 
 ```ts
 interface Subscription {
-  dispose(): void; // dispose the subscription
-  readonly disposed: boolean; // true after dispose() is called
-  [Symbol.dispose](): void; // TC39 using declarations
+  dispose(): void;
+  readonly disposed: boolean;
+  [Symbol.dispose](): void;
 }
 ```
 
@@ -821,10 +837,10 @@ await using stop2 = effectAsync(async (signal) => { ... });
 ### `AsyncEffectCallback`
 
 ```ts
-type AsyncEffectCallback = (signal: AbortSignal) => Promise<CleanupFn | void>;
+type AsyncEffectCallback = (signal: AbortSignal, owner: Scope) => Promise<CleanupFn | void>;
 ```
 
-The callback passed to `effectAsync()`. Receives an `AbortSignal` that fires when the effect re-runs or is disposed. May return an async cleanup function.
+The callback passed to `effectAsync()`. Receives an `AbortSignal` that fires when the effect re-runs or is disposed, and a `Scope` (`owner`) for registering async cleanups after the first `await`. May return an async cleanup function.
 
 ---
 
@@ -859,7 +875,7 @@ type EffectOptions = {
 };
 ```
 
-All fields are optional. `name` is used in `StateError` messages and in the `INFINITE_LOOP` error when the built-in loop guard fires. For debugging, use `debugEffect()` instead.
+All fields are optional. `name` is used in `RippleError` messages and in `RippleInfiniteLoopError` when the built-in loop guard fires. For debugging, use `debugEffect()` instead.
 
 ---
 
@@ -905,6 +921,36 @@ type Settings = { user: { name: string; address: { city: string } }; theme: 'lig
 type ThemeType = PathValue<Settings, 'theme'>; // 'light' | 'dark'
 type CityType = PathValue<Settings, 'user.address.city'>; // string
 ```
+
+---
+
+### `ResourceState<T>`
+
+```ts
+type ResourceState<T> =
+  | { readonly data?: T;  readonly status: 'loading' }
+  | { readonly data: T;   readonly status: 'ready' }
+  | { readonly data?: T;  readonly error: unknown; readonly status: 'error' };
+```
+
+Discriminated-union state emitted by a `resource()` signal. Narrow on `status` to access typed fields:
+
+```ts
+const user = resource(async () => fetchUser(id.value));
+
+effect(() => {
+  const s = user.value;
+  if (s.status === 'loading') return showSpinner();
+  if (s.status === 'error')   return showError(s.error);
+  renderUser(s.data); // s.data is T here
+});
+```
+
+| Status      | Fields present                                   |
+| ----------- | ------------------------------------------------ |
+| `'loading'` | `data?: T` (carries last fulfilled value if any) |
+| `'ready'`   | `data: T`                                        |
+| `'error'`   | `data?: T`, `error: unknown`                     |
 
 ---
 

@@ -29,8 +29,15 @@ export type {
   WatchOptions,
 } from './types';
 
-export type { StateErrorCode } from './errors';
-export { StateError } from './errors';
+export {
+  RippleComputedCycleError,
+  RippleDisposedScopeError,
+  RippleEnvironmentError,
+  RippleError,
+  RippleInfiniteLoopError,
+  RippleInvalidCleanupError,
+  RippleInvalidStoreError,
+} from './errors';
 
 // Core primitives
 export { computed } from './computed';

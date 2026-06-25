@@ -1,7 +1,7 @@
 import type { RoundingMode } from './types';
 
 import { boundedCache } from './_cache';
-import { InvalidCurrencyError } from './errors';
+import { CoinsError, InvalidCurrencyError } from './errors';
 
 const currencyDecimalsCache = boundedCache<string, number>(512);
 
@@ -69,7 +69,7 @@ function expandScientific(s: string): string {
   const exp = parseInt(match[2]!, 10);
 
   if (Math.abs(exp) > MAX_SCIENTIFIC_EXP) {
-    throw new RangeError(`Scientific notation exponent too large: "${s}" (max ±${MAX_SCIENTIFIC_EXP})`);
+    throw new CoinsError(`Scientific notation exponent too large: "${s}" (max ±${MAX_SCIENTIFIC_EXP})`);
   }
 
   const isNeg = coeff.startsWith('-');
@@ -121,7 +121,7 @@ export function parseRational(str: string): { denominator: bigint; negative: boo
   const normalized = SCIENTIFIC_RE.test(str) ? expandScientific(str) : str;
 
   if (!DECIMAL_RE.test(normalized)) {
-    throw new RangeError(`Invalid decimal string: "${str}"`);
+    throw new CoinsError(`Invalid decimal string: "${str}"`);
   }
 
   const negative = normalized.startsWith('-');
@@ -193,6 +193,6 @@ export function applyRounding(
       return quotient + 1n;
 
     default:
-      throw new RangeError(`Unknown rounding mode: ${String(mode)}`);
+      throw new CoinsError(`Unknown rounding mode: ${String(mode)}`);
   }
 }

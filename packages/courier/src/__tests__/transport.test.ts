@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { CourierError } from '../errors';
 import { anySignal, buildTimeoutSignal, createTransportCore, validateTimeout } from '../transport';
 
 describe('validateTimeout', () => {
@@ -13,15 +14,15 @@ describe('validateTimeout', () => {
   });
 
   it('rejects zero', () => {
-    expect(() => validateTimeout(0)).toThrow(TypeError);
+    expect(() => validateTimeout(0)).toThrow(CourierError);
   });
 
   it('rejects negative values', () => {
-    expect(() => validateTimeout(-1)).toThrow(TypeError);
+    expect(() => validateTimeout(-1)).toThrow(CourierError);
   });
 
   it('rejects NaN', () => {
-    expect(() => validateTimeout(NaN)).toThrow(TypeError);
+    expect(() => validateTimeout(NaN)).toThrow(CourierError);
   });
 });
 
@@ -196,8 +197,8 @@ describe('createTransportCore', () => {
   });
 
   it('throws on invalid timeout', () => {
-    expect(() => createTransportCore({ timeout: 0 })).toThrow(TypeError);
-    expect(() => createTransportCore({ timeout: -100 })).toThrow(TypeError);
+    expect(() => createTransportCore({ timeout: 0 })).toThrow(CourierError);
+    expect(() => createTransportCore({ timeout: -100 })).toThrow(CourierError);
   });
 
   it('headers() sets and updates global headers', () => {

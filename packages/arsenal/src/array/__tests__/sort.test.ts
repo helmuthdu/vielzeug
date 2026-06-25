@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { sort } from '../sort';
 
 describe('sort', () => {
@@ -116,8 +117,8 @@ describe('sort', () => {
   });
 
   it('throws TypeError when first argument is not an array', () => {
-    expect(() => sort('not an array' as unknown as [], (x) => x)).toThrow(TypeError);
-    expect(() => sort(null as unknown as [], (x) => x)).toThrow(TypeError);
-    expect(() => sort(42 as unknown as [], (x) => x)).toThrow(TypeError);
+    expect(() => sort('not an array' as unknown as [], (x) => x)).toThrow(ArsenalError);
+    expect(() => sort(null as unknown as [], (x) => x)).toThrow(ArsenalError);
+    expect(() => sort(42 as unknown as [], (x) => x)).toThrow(ArsenalError);
   });
 });

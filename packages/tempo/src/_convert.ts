@@ -3,7 +3,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { DateTimeDisambiguation, TimeInput } from './types';
 
 import { validateTz } from './_tz';
-import { fail, TempoErrorCode } from './errors';
+import { TempoMissingTzError, TempoUnsupportedInputError, fail } from './errors';
 
 type WithPrefer = { prefer?: DateTimeDisambiguation };
 type TimeOptionsWithTz = { tz: string };
@@ -21,10 +21,7 @@ export function toInstant(input: TimeInput, options: WithPrefer & { tz?: string 
 
   if (input instanceof Temporal.PlainDateTime) {
     if (!options.tz)
-      fail(
-        'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
-        TempoErrorCode.MISSING_TZ,
-      );
+      fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.', TempoMissingTzError);
 
     return input
       .toZonedDateTime(validateTz(options.tz), {
@@ -35,15 +32,12 @@ export function toInstant(input: TimeInput, options: WithPrefer & { tz?: string 
 
   if (input instanceof Temporal.PlainDate) {
     if (!options.tz)
-      fail(
-        'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
-        TempoErrorCode.MISSING_TZ,
-      );
+      fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.', TempoMissingTzError);
 
     return input.toZonedDateTime({ timeZone: validateTz(options.tz) }).toInstant();
   }
 
-  fail(`Unsupported time input type: ${String(input)}`, TempoErrorCode.UNSUPPORTED_INPUT);
+  fail(`Unsupported time input type: ${String(input)}`, TempoUnsupportedInputError);
 }
 
 /**
@@ -80,7 +74,7 @@ export function toZoned(
 
   if (input instanceof Temporal.Instant) return input.toZonedDateTimeISO(tz);
 
-  fail(`Unsupported time input type: ${String(input)}`, TempoErrorCode.UNSUPPORTED_INPUT);
+  fail(`Unsupported time input type: ${String(input)}`, TempoUnsupportedInputError);
 }
 
 /**

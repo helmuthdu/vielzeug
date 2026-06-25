@@ -1,5 +1,5 @@
 import { boundedCache } from '../_cache';
-import { InvalidCurrencyError } from '../errors';
+import { CoinsError, InvalidCurrencyError } from '../errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from '../utils';
 
 describe('boundedCache', () => {
@@ -134,17 +134,17 @@ describe('parseRational', () => {
 
   describe('invalid inputs', () => {
     it('throws RangeError for empty string', () => {
-      expect(() => parseRational('')).toThrow(RangeError);
+      expect(() => parseRational('')).toThrow(CoinsError);
       expect(() => parseRational('')).toThrow('Invalid decimal string');
     });
 
     it('throws RangeError for exponent > 1000 (S1 security guard)', () => {
-      expect(() => parseRational('1e1001')).toThrow(RangeError);
+      expect(() => parseRational('1e1001')).toThrow(CoinsError);
       expect(() => parseRational('1e1001')).toThrow('exponent too large');
     });
 
     it('throws RangeError for negative exponent < -1000 (S1 security guard)', () => {
-      expect(() => parseRational('1e-1001')).toThrow(RangeError);
+      expect(() => parseRational('1e-1001')).toThrow(CoinsError);
       expect(() => parseRational('1e-1001')).toThrow('exponent too large');
     });
 
@@ -154,19 +154,19 @@ describe('parseRational', () => {
     });
 
     it('throws RangeError for non-numeric string', () => {
-      expect(() => parseRational('abc')).toThrow(RangeError);
+      expect(() => parseRational('abc')).toThrow(CoinsError);
     });
 
     it('throws RangeError for multiple dots', () => {
-      expect(() => parseRational('1.2.3')).toThrow(RangeError);
+      expect(() => parseRational('1.2.3')).toThrow(CoinsError);
     });
 
     it('throws RangeError for NaN string', () => {
-      expect(() => parseRational('NaN')).toThrow(RangeError);
+      expect(() => parseRational('NaN')).toThrow(CoinsError);
     });
 
     it('throws RangeError for Infinity string', () => {
-      expect(() => parseRational('Infinity')).toThrow(RangeError);
+      expect(() => parseRational('Infinity')).toThrow(CoinsError);
     });
   });
 });
@@ -257,7 +257,7 @@ describe('applyRounding', () => {
   });
 
   it('throws RangeError for unknown mode', () => {
-    expect(() => applyRounding(3n, 5n, 10n, 'unknown-mode' as never)).toThrow(RangeError);
+    expect(() => applyRounding(3n, 5n, 10n, 'unknown-mode' as never)).toThrow(CoinsError);
     expect(() => applyRounding(3n, 5n, 10n, 'unknown-mode' as never)).toThrow('Unknown rounding mode');
   });
 });

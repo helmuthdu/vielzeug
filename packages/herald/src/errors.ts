@@ -17,3 +17,10 @@ export class BusDisposedError extends HeraldError {
     super(busName ? `Bus "${busName}" is disposed` : 'Bus is disposed');
   }
 }
+
+/** Thrown when a herald API is called with invalid arguments or configuration. */
+export class HeraldConfigError extends HeraldError {
+  constructor(message: string) {
+    super(message);
+  }
+}

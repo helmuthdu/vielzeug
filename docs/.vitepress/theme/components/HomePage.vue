@@ -167,9 +167,34 @@ const featuredPackages = [
 ];
 
 const heroPackages = [
-  { id: 'ripple', name: 'ripple', cmd: 'pnpm add @vielzeug/ripple', tagline: 'Signals, computed, and reactive stores' },
-  { id: 'spell', name: 'spell', cmd: 'pnpm add @vielzeug/spell', tagline: 'Schema validation with fluent API' },
-  { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ tree-shakeable TS utilities' },
+  { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ utility functions' },
+  { id: 'clockwork', name: 'clockwork', cmd: 'pnpm add @vielzeug/clockwork', tagline: 'Finite state machines' },
+  { id: 'coins', name: 'coins', cmd: 'pnpm add @vielzeug/coins', tagline: 'Monetary arithmetic' },
+  { id: 'conduit', name: 'conduit', cmd: 'pnpm add @vielzeug/conduit', tagline: 'Dependency injection' },
+  { id: 'courier', name: 'courier', cmd: 'pnpm add @vielzeug/courier', tagline: 'HTTP client & caching' },
+  { id: 'dnd', name: 'dnd', cmd: 'pnpm add @vielzeug/dnd', tagline: 'Drag & drop' },
+  { id: 'familiar', name: 'familiar', cmd: 'pnpm add @vielzeug/familiar', tagline: 'Web Worker pool' },
+  { id: 'flux', name: 'flux', cmd: 'pnpm add @vielzeug/flux', tagline: 'Reactive streams & operators' },
+  { id: 'forge', name: 'forge', cmd: 'pnpm add @vielzeug/forge', tagline: 'Form state & validation' },
+  { id: 'herald', name: 'herald', cmd: 'pnpm add @vielzeug/herald', tagline: 'Typed event bus' },
+  { id: 'keymap', name: 'keymap', cmd: 'pnpm add @vielzeug/keymap', tagline: 'Keyboard shortcuts & chords' },
+  { id: 'ledger', name: 'ledger', cmd: 'pnpm add @vielzeug/ledger', tagline: 'Async undo / redo history' },
+  { id: 'lingua', name: 'lingua', cmd: 'pnpm add @vielzeug/lingua', tagline: 'i18n & pluralization' },
+  { id: 'orbit', name: 'orbit', cmd: 'pnpm add @vielzeug/orbit', tagline: 'Floating positioning' },
+  { id: 'ore', name: 'ore', cmd: 'pnpm add @vielzeug/ore', tagline: 'Web component primitives' },
+  { id: 'prism', name: 'prism', cmd: 'pnpm add @vielzeug/prism', tagline: 'SVG charts' },
+  { id: 'pulse', name: 'pulse', cmd: 'pnpm add @vielzeug/pulse', tagline: 'WebSocket client & presence' },
+  { id: 'refine', name: 'refine', cmd: 'pnpm add @vielzeug/refine', tagline: 'Accessible components' },
+  { id: 'ripple', name: 'ripple', cmd: 'pnpm add @vielzeug/ripple', tagline: 'Signals, computed, effects' },
+  { id: 'rune', name: 'rune', cmd: 'pnpm add @vielzeug/rune', tagline: 'Structured logging' },
+  { id: 'scout', name: 'scout', cmd: 'pnpm add @vielzeug/scout', tagline: 'Trigram fuzzy search' },
+  { id: 'scroll', name: 'scroll', cmd: 'pnpm add @vielzeug/scroll', tagline: 'Virtual lists' },
+  { id: 'sourcerer', name: 'sourcerer', cmd: 'pnpm add @vielzeug/sourcerer', tagline: 'Reactive data sources' },
+  { id: 'spell', name: 'spell', cmd: 'pnpm add @vielzeug/spell', tagline: 'Schema validation' },
+  { id: 'tempo', name: 'tempo', cmd: 'pnpm add @vielzeug/tempo', tagline: 'Date & time' },
+  { id: 'vault', name: 'vault', cmd: 'pnpm add @vielzeug/vault', tagline: 'Browser storage' },
+  { id: 'ward', name: 'ward', cmd: 'pnpm add @vielzeug/ward', tagline: 'RBAC & permissions' },
+  { id: 'wayfinder', name: 'wayfinder', cmd: 'pnpm add @vielzeug/wayfinder', tagline: 'Client-side routing' },
 ];
 const activeHeroIndex = ref(0);
 const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
@@ -182,9 +207,7 @@ const filteredCategories = computed(() => {
   return categories
     .map((cat) => {
       const matchedPackages = cat.packages.filter(
-        (pkg) =>
-          pkg.id.toLowerCase().includes(query) ||
-          pkg.tagline.toLowerCase().includes(query)
+        (pkg) => pkg.id.toLowerCase().includes(query) || pkg.tagline.toLowerCase().includes(query),
       );
       if (matchedPackages.length > 0 || cat.name.toLowerCase().includes(query)) {
         return {
@@ -198,12 +221,11 @@ const filteredCategories = computed(() => {
 });
 
 const coreEssentials = [
-  { id: 'ripple', tagline: 'Signals, computed, and effects', size: '1.2 kB' },
-  { id: 'spell', tagline: 'Schema validation with fluent API', size: '1.8 kB' },
-  { id: 'arsenal', tagline: '75+ zero-dependency utility functions', size: '2.5 kB' },
-  { id: 'courier', tagline: 'HTTP client & query cache / mutations', size: '2.0 kB' },
+  { id: 'ripple', category: 'Core Primitives', tagline: 'Signals, computed, and effects', size: '1.2 kB' },
+  { id: 'spell', category: 'Forms & Validation', tagline: 'Schema validation with fluent API', size: '1.8 kB' },
+  { id: 'arsenal', category: 'Utilities', tagline: '75+ zero-dependency utility functions', size: '2.5 kB' },
+  { id: 'courier', category: 'Data Layer', tagline: 'HTTP client & query cache / mutations', size: '2.0 kB' },
 ];
-
 
 function cycleHeroPkg() {
   activeHeroIndex.value = (activeHeroIndex.value + 1) % heroPackages.length;
@@ -254,11 +276,13 @@ onUnmounted(() => {
           </div>
           <h1 class="hero-title">
             <ore-text as="span" variant="heading" size="2xl" weight="bold" class="hero-title-main">Vielzeug</ore-text>
-            <ore-text as="span" variant="heading" size="lg" weight="medium" color="muted" class="hero-title-sub">Many Tools. Zero Weight.</ore-text>
+            <ore-text as="span" variant="heading" size="lg" weight="medium" color="muted" class="hero-title-sub"
+              >Many Tools. Zero Weight. Huge Impact.</ore-text
+            >
           </h1>
           <ore-text as="p" size="md" color="muted" class="hero-description">
-            Zero-dependency TypeScript packages — signals, forms, validation, routing, and more. Use one, combine
-            any, trust all of them.
+            Pick and compose the tools you need — from routing to charts. Shared conventions, unified architecture, and
+            zero dependencies.
           </ore-text>
           <div class="hero-values">
             <ore-tooltip
@@ -292,8 +316,10 @@ onUnmounted(() => {
             </ore-copy-command>
             <div class="hero-install-meta">
               <ore-text color="muted" size="sm">{{ activeHeroPkg.tagline }}</ore-text>
-              <ore-text color="muted" size="sm" style="opacity:0.5">•</ore-text>
-              <ore-text color="primary" size="sm" weight="semibold" family="mono"><PackageInfo :package="activeHeroPkg.id" type="size" /></ore-text>
+              <ore-text color="muted" size="sm" style="opacity: 0.5">•</ore-text>
+              <ore-text color="primary" size="sm" weight="semibold" family="mono"
+                ><PackageInfo :package="activeHeroPkg.id" type="size"
+              /></ore-text>
             </div>
           </div>
           <div class="hero-actions">
@@ -304,7 +330,7 @@ onUnmounted(() => {
               </ore-button>
             </a>
             <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">
-              <ore-button variant="outline" color="primary" size="md"> GitHub </ore-button>
+              <ore-button variant="outline" color="primary" size="md"> View on GitHub </ore-button>
             </a>
           </div>
         </div>
@@ -414,31 +440,70 @@ onUnmounted(() => {
       </div>
     </section>
 
+    <!-- Framework compatibility strip -->
+    <section class="compat">
+      <div class="compat-inner">
+        <ore-text size="xs" color="muted" variant="overline">Works with any framework — or none at all</ore-text>
+        <div class="compat-logos">
+          <span class="compat-logo" title="Vue"><img src="/logo-vue.svg" width="20" height="20" alt="Vue" /></span>
+          <span class="compat-logo" title="React"
+            ><img src="/logo-react.svg" width="20" height="20" alt="React"
+          /></span>
+          <span class="compat-logo" title="Svelte"
+            ><img src="/logo-svelte.svg" width="20" height="20" alt="Svelte"
+          /></span>
+          <span class="compat-logo" title="Solid"
+            ><img src="/logo-solidjs.svg" width="20" height="20" alt="Solid"
+          /></span>
+          <span class="compat-logo" title="Angular"
+            ><img src="/logo-angular.svg" width="20" height="20" alt="Angular"
+          /></span>
+          <span class="compat-logo compat-logo--text" title="Vanilla TS">TS</span>
+        </div>
+      </div>
+    </section>
+
     <!-- Why Vielzeug -->
     <section class="why">
       <div class="why-inner">
-
         <div class="why-header">
           <ore-text as="p" variant="overline" class="why-overline">A different kind of toolkit</ore-text>
-          <ore-text as="h2" variant="heading" size="xl" weight="bold" class="why-title">Everything fits. Nothing fights.</ore-text>
-          <ore-text as="p" color="muted" class="why-subtitle">{{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence — so you spend time on your product, not on integration.</ore-text>
+          <ore-text as="h2" variant="heading" size="xl" weight="bold" class="why-title"
+            >Everything fits. Nothing fights.</ore-text
+          >
+          <ore-text as="p" color="muted" class="why-subtitle"
+            >{{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence — so you
+            ship, not integrate.</ore-text
+          >
         </div>
 
         <!-- Stat strip -->
         <div class="why-stats">
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">0</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Transitive dependencies across all {{ packageCount }} packages</ore-text>
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value"
+              >0</ore-text
+            >
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label"
+              >Transitive dependencies across all {{ packageCount }} packages</ore-text
+            >
           </div>
           <div class="why-stat-divider"></div>
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">1</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Consistent API surface — one pattern to learn</ore-text>
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value"
+              >1</ore-text
+            >
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label"
+              >Shared API shape — learn once, use everywhere</ore-text
+            >
           </div>
           <div class="why-stat-divider"></div>
           <div class="why-stat">
-            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">{{ packageCount }}</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Independently installable packages</ore-text>
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">{{
+              packageCount
+            }}</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label"
+              >Independently installable packages</ore-text
+            >
           </div>
         </div>
 
@@ -447,28 +512,40 @@ onUnmounted(() => {
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="book-open" size="20"></ore-icon></div>
             <ore-text as="p" weight="semibold" class="why-card-title">One mental model</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Same <code>dispose()</code> contract. Same signal shape. Same error format. Learn the pattern once — every new package feels familiar from line one.</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc"
+              >Same <code>dispose()</code> contract. Same signal shape. Same error format. Learn the pattern once —
+              every new package feels familiar from line one.</ore-text
+            >
           </ore-card>
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="shield-check" size="20"></ore-icon></div>
             <ore-text as="p" weight="semibold" class="why-card-title">No hidden dependencies</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Every package you install is every package you own. No surprises in <code>node_modules</code>, no version conflicts six months from now.</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc"
+              >Every package you install is every package you own. No surprises in <code>node_modules</code>, no version
+              conflicts six months from now.</ore-text
+            >
           </ore-card>
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
-            <ore-text as="p" weight="semibold" class="why-card-title">Packages that compose</ore-text>
-            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Spell schemas slot into Forge fields. Ripple signals drive Ore templates. No glue code, no adapter layer — they were designed to work together.</ore-text>
+            <ore-text as="p" weight="semibold" class="why-card-title">Built to work together</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc"
+              >Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate —
+              just packages that know about each other.</ore-text
+            >
           </ore-card>
         </ore-grid>
-
       </div>
     </section>
 
     <!-- Code Showcase -->
     <section id="showcase" class="showcase">
       <div class="showcase-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" align="center" class="section-title">See how they fit together</ore-text>
-        <ore-text as="p" color="muted" align="center" class="section-subtitle">Each package is standalone. Combined, they eliminate entire categories of glue code.</ore-text>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" align="center" class="section-title"
+          >Eliminate entire categories of glue code.</ore-text
+        >
+        <ore-text as="p" color="muted" align="center" class="section-subtitle"
+          >Each package is standalone — combined, they compose naturally.</ore-text
+        >
         <CodeWindow lang="ts" filename="app.ts">
           <pre
             class="showcase-pre"><code><span class="hl-keyword">import</span> { <span class="hl-fn">createForm</span> } <span class="hl-keyword">from</span> <a href="/forge/" class="showcase-import-link"><span class="hl-string">'@vielzeug/forge'</span></a>;
@@ -500,39 +577,45 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     <!-- Package Explorer -->
     <section id="packages" class="explorer">
       <div class="explorer-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">One source of truth.</ore-text>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title"
+          >All {{ packageCount }} packages, one search.</ore-text
+        >
         <ore-text as="p" color="muted" class="section-subtitle">
-          Organized by domain. Every package is independently installable, zero transitive deps.
+          Organized by domain. Click any package to jump straight to its docs.
         </ore-text>
 
         <div class="explorer-toolbar">
           <ore-input
             type="search"
             :value="searchQuery"
-            placeholder="Search packages (e.g. ripple, debounce, state)..."
+            placeholder="Search packages (e.g. ripple, component, state)..."
             variant="outline"
             color="primary"
             rounded="full"
             clearable
             class="explorer-search"
-            @input="(e: CustomEvent<{value: string}>) => searchQuery = e.detail.value"
-            @change="(e: CustomEvent<{value: string}>) => searchQuery = e.detail.value"
-          ></ore-input>
+            @input="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"
+            @change="(e: CustomEvent<{ value: string }>) => (searchQuery = e.detail.value)"></ore-input>
         </div>
 
         <div v-if="!searchQuery" class="essentials-section">
-          <ore-text as="h3" variant="overline" class="essentials-title">Highlighted packages</ore-text>
+          <ore-text as="h3" variant="overline" class="essentials-title">Start here</ore-text>
           <ore-grid responsive min-col-width="240px" gap="md">
             <a v-for="pkg in coreEssentials" :key="pkg.id" :href="`/${pkg.id}/`" class="essential-card-link">
               <ore-card variant="flat" padding="md" class="essential-card">
                 <div class="essential-card-header">
                   <img :src="`/logo-${pkg.id}.svg`" alt="" class="essential-logo" />
-                  <ore-text weight="bold" family="mono" class="essential-name">{{ pkg.id }}</ore-text>
+                  <div class="essential-name-group">
+                    <ore-text weight="bold" family="mono" class="essential-name">{{ pkg.id }}</ore-text>
+                    <ore-text size="xs" color="muted" class="essential-category">{{ pkg.category }}</ore-text>
+                  </div>
                 </div>
                 <ore-text as="p" size="sm" color="muted" class="essential-desc">{{ pkg.tagline }}</ore-text>
                 <div slot="footer" class="essential-footer">
                   <PackageInfo :package="pkg.id" type="size" class="essential-size" />
-                  <ore-text size="xs" color="primary" weight="semibold" class="essential-link-label">View docs →</ore-text>
+                  <ore-text size="xs" color="primary" weight="semibold" class="essential-link-label"
+                    >View docs →</ore-text
+                  >
                 </div>
               </ore-card>
             </a>
@@ -564,9 +647,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
             </div>
           </div>
         </ore-grid>
-        <div v-else class="explorer-empty">
-          No packages found matching "{{ searchQuery }}"
-        </div>
+        <div v-else class="explorer-empty">No packages found matching "{{ searchQuery }}"</div>
       </div>
     </section>
 
@@ -575,7 +656,9 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
       <div class="codex-ai-inner">
         <ore-grid cols="1" cols-md="2" gap="2xl" align="start" class="codex-ai-content">
           <div class="codex-ai-copy">
-            <ore-text as="h2" variant="heading" size="xl" weight="bold" class="codex-ai-title">Your AI already knows Vielzeug</ore-text>
+            <ore-text as="h2" variant="heading" size="xl" weight="bold" class="codex-ai-title"
+              >Your AI already knows Vielzeug</ore-text
+            >
             <ore-text as="p" color="muted" class="codex-ai-desc">
               <code class="codex-inline-pkg">@vielzeug/codex</code> is an MCP server that bundles the entire
               documentation, package APIs, and Refine component metadata into a single offline snapshot. Wire it into
@@ -595,7 +678,8 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               <li class="codex-cap">
                 <ore-icon name="layers" size="14"></ore-icon>
                 <span
-                  ><strong>get-component</strong> — full Refine component CEM: attributes, slots, CSS parts, events</span
+                  ><strong>get-component</strong> — full Refine component CEM: attributes, slots, CSS parts,
+                  events</span
                 >
               </li>
             </ul>
@@ -646,8 +730,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     <!-- Community & Support -->
     <section id="community" class="community">
       <div class="community-inner">
-        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">Built in the open</ore-text>
-        <ore-text as="p" color="muted" class="section-subtitle">Questions, bug reports, and contributions all live on GitHub. Come find us.</ore-text>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title"
+          >Everything lives on GitHub.</ore-text
+        >
+        <ore-text as="p" color="muted" class="section-subtitle"
+          >Bug reports, questions, and contributions — all welcome. Open an issue or start a discussion.</ore-text
+        >
         <div class="community-links">
           <a
             href="https://github.com/helmuthdu/vielzeug/issues"
@@ -659,7 +747,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
                 <div class="community-card-icon"><ore-icon name="circle-alert" size="22"></ore-icon></div>
                 <div class="community-card-body">
                   <ore-text weight="semibold" class="community-card-title">GitHub Issues</ore-text>
-                  <ore-text color="muted" size="sm" class="community-card-desc">Report bugs or request features</ore-text>
+                  <ore-text color="muted" size="sm" class="community-card-desc"
+                    >Report bugs or request features</ore-text
+                  >
                 </div>
                 <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
               </div>
@@ -691,7 +781,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
                 <div class="community-card-icon"><ore-icon name="git-pull-request" size="22"></ore-icon></div>
                 <div class="community-card-body">
                   <ore-text weight="semibold" class="community-card-title">Contributing</ore-text>
-                  <ore-text color="muted" size="sm" class="community-card-desc">Learn how to contribute and join the project</ore-text>
+                  <ore-text color="muted" size="sm" class="community-card-desc"
+                    >Learn how to contribute and join the project</ore-text
+                  >
                 </div>
                 <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
               </div>
@@ -709,7 +801,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
             <img src="/logo-main.svg" alt="Vielzeug" class="footer-logo" />
             <span class="footer-brand-name">Vielzeug</span>
           </div>
-          <ore-text color="muted" size="sm" class="footer-tagline">Zero deps. Fully tree-shakeable.</ore-text>
+          <ore-text color="muted" size="sm" class="footer-tagline"
+            >Modular TypeScript utilities. MIT licensed.</ore-text
+          >
         </div>
         <ore-grid cols="1" cols-sm="3" gap="xl" class="footer-links-col">
           <div class="footer-link-group">
@@ -762,7 +856,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   --hp-text-muted: var(--text-color-secondary);
   --hp-border: var(--color-contrast-300);
   --hp-radius: var(--rounded-lg);
-  padding-top: var(--size-10);
+  padding-top: var(--size-8);
 }
 
 .dark .home-page {
@@ -958,6 +1052,50 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   z-index: 1;
 }
 
+/* ── Compatibility strip ──────────────────────────────────── */
+
+.compat {
+  padding: 1.5rem 1.5rem;
+  border-top: 1px solid var(--hp-border);
+  background: var(--hp-surface-alt);
+}
+
+.compat-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.compat-logos {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.compat-logo {
+  display: flex;
+  align-items: center;
+  opacity: 0.55;
+  transition: opacity 0.15s ease;
+}
+
+.compat-logo:hover {
+  opacity: 1;
+}
+
+.compat-logo--text {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--hp-text);
+  letter-spacing: 0.03em;
+}
+
 /* ── Why section ──────────────────────────────────────────── */
 
 .why {
@@ -1043,10 +1181,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .why-card {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--size-4);
 }
 
 .why-card-icon {
+  margin-bottom: var(--size-2);
   width: 40px;
   height: 40px;
   display: flex;
@@ -1575,7 +1714,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   --copy-command-font-size: 0.875rem;
 }
 
-
 .codex-learn-link {
   display: inline-flex;
   align-items: center;
@@ -1783,7 +1921,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   padding: 0 4px;
 }
 
-
 /* Why table icons */
 .table-icon-bad {
   color: var(--hp-text-muted);
@@ -1795,7 +1932,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   color: var(--hp-purple);
   margin-right: 6px;
 }
-
 
 .showcase-import-link {
   text-decoration: none;
@@ -1853,7 +1989,18 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .essential-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--size-4);
+  margin-bottom: var(--size-2);
+}
+
+.essential-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-0-5);
+}
+
+.essential-category {
+  margin: 0;
 }
 
 .essential-logo {
@@ -1901,5 +2048,4 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   padding: 2px 6px;
   border-radius: var(--rounded-sm);
 }
-
 </style>

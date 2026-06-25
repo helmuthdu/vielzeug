@@ -3,11 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { debugMachine } from '../devtools.js';
 import {
+  ClockworkError,
+  ClockworkInvalidInitialStateError,
+  ClockworkUnknownTargetError,
   createMachine,
   type InterceptorFn,
   type MachineConfig,
-  MachineError,
-  MachineErrorCode,
   type MachineEvent,
   type MachineSnapshot,
   type SendResult,
@@ -250,7 +251,7 @@ describe('core runtime', () => {
 
     const m = def.start();
 
-    expect(() => m.send({ type: 'GO' })).toThrow(MachineError);
+    expect(() => m.send({ type: 'GO' })).toThrow(ClockworkError);
     expect(m.state.value).toBe('a');
     expect(m.context.value.count).toBe(0);
   });
@@ -567,7 +568,7 @@ describe('invokes', () => {
   it('validates maxTransitionsPerFlush option', () => {
     expect(() => {
       trafficDef.start({ maxTransitionsPerFlush: 0 });
-    }).toThrowError(MachineError);
+    }).toThrowError(ClockworkError);
   });
 
   it('does not transition after dispose', async () => {
@@ -1044,7 +1045,7 @@ describe('hierarchical states', () => {
         initial: 'a',
         states: { a: { states: { sub: {} } } },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 });
 
@@ -1190,7 +1191,7 @@ describe('validation', () => {
         initial: 'missing',
         states: { idle: {} },
       } as unknown as MachineConfig<string, object, MachineEvent>);
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('throws for unknown transition target', () => {
@@ -1201,7 +1202,7 @@ describe('validation', () => {
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'missing' as 'idle' }] } } },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('throws for empty transition array', () => {
@@ -1212,7 +1213,7 @@ describe('validation', () => {
         initial: 'idle',
         states: { idle: { on: { GO: [] } } },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('throws for negative after delay', () => {
@@ -1226,7 +1227,7 @@ describe('validation', () => {
           b: {},
         },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 });
 
@@ -1285,7 +1286,7 @@ describe('validation — nested target paths', () => {
           b: { initial: 'sub', states: { sub: {} } },
         },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('throws for unknown nested after[] target', () => {
@@ -1299,7 +1300,7 @@ describe('validation — nested target paths', () => {
           b: { initial: 'sub', states: { sub: {} } },
         },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('accepts valid nested on[] target', () => {
@@ -1386,7 +1387,7 @@ describe('maxTransitionsPerFlush via interceptors path', () => {
         interceptors: [(event) => event],
         maxTransitionsPerFlush: 0,
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 });
 
@@ -1401,7 +1402,7 @@ describe('validateContext at init', () => {
       validateContext: (ctx) => ctx.count >= 0 || 'count must be >= 0',
     });
 
-    expect(() => def.start()).toThrow(MachineError);
+    expect(() => def.start()).toThrow(ClockworkError);
   });
 });
 
@@ -1604,7 +1605,7 @@ describe('snapshot hierarchical state validation', () => {
     });
 
     expect(() => def.start({ snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } })).toThrow(
-      MachineError,
+      ClockworkError,
     );
   });
 });
@@ -1740,8 +1741,8 @@ describe('createMachine — resolve onGuard callback', () => {
   });
 });
 
-describe('MachineError properties', () => {
-  it('sets .code and .details correctly', () => {
+describe('ClockworkError properties', () => {
+  it('invalid initial state throws ClockworkInvalidInitialStateError', () => {
     expect.assertions(4);
 
     try {
@@ -1750,17 +1751,17 @@ describe('MachineError properties', () => {
         states: { idle: {} },
       } as unknown as import('../index.js').MachineConfig<string, object, import('../index.js').MachineEvent>);
     } catch (err) {
-      expect(err).toBeInstanceOf(MachineError);
+      expect(err).toBeInstanceOf(ClockworkError);
+      expect(err).toBeInstanceOf(ClockworkInvalidInitialStateError);
 
-      const machineErr = err as MachineError;
+      const e = err as ClockworkInvalidInitialStateError;
 
-      expect(machineErr.code).toBe('MACHINE_INVALID_INITIAL_STATE');
-      expect(machineErr.details).toBeDefined();
-      expect(machineErr.name).toBe('MachineError');
+      expect(e.initial).toBeDefined();
+      expect(e.name).toBe('ClockworkInvalidInitialStateError');
     }
   });
 
-  it('sets .details with relevant context on MACHINE_UNKNOWN_TARGET', () => {
+  it('unknown target throws ClockworkUnknownTargetError with typed .target', () => {
     expect.assertions(3);
 
     type Event = { type: 'GO' };
@@ -1771,12 +1772,9 @@ describe('MachineError properties', () => {
         states: { idle: { on: { GO: [{ target: 'ghost' as 'idle' }] } } },
       });
     } catch (err) {
-      expect(err).toBeInstanceOf(MachineError);
-
-      const machineErr = err as MachineError;
-
-      expect(machineErr.code).toBe('MACHINE_UNKNOWN_TARGET');
-      expect(machineErr.details?.target).toBe('ghost');
+      expect(err).toBeInstanceOf(ClockworkError);
+      expect(err).toBeInstanceOf(ClockworkUnknownTargetError);
+      expect((err as ClockworkUnknownTargetError).target).toBe('ghost');
     }
   });
 });
@@ -1953,8 +1951,8 @@ describe('subscribe after dispose', () => {
   });
 });
 
-describe('MachineError.is()', () => {
-  it('returns true for MachineError instances', () => {
+describe('ClockworkError.is()', () => {
+  it('returns true for ClockworkError instances', () => {
     try {
       createMachine({ initial: 'missing', states: { idle: {} } } as unknown as MachineConfig<
         string,
@@ -1962,17 +1960,17 @@ describe('MachineError.is()', () => {
         MachineEvent
       >);
     } catch (err) {
-      expect(MachineError.is(err)).toBe(true);
+      expect(ClockworkError.is(err)).toBe(true);
     }
 
     expect.assertions(1);
   });
 
-  it('returns false for non-MachineError values', () => {
-    expect(MachineError.is(new Error('plain'))).toBe(false);
-    expect(MachineError.is(null)).toBe(false);
-    expect(MachineError.is('string')).toBe(false);
-    expect(MachineError.is(42)).toBe(false);
+  it('returns false for non-ClockworkError values', () => {
+    expect(ClockworkError.is(new Error('plain'))).toBe(false);
+    expect(ClockworkError.is(null)).toBe(false);
+    expect(ClockworkError.is('string')).toBe(false);
+    expect(ClockworkError.is(42)).toBe(false);
   });
 });
 
@@ -2095,7 +2093,7 @@ describe('validation — empty invoke array', () => {
         initial: 'idle',
         states: { idle: { invoke: [] } },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 });
 
@@ -2214,7 +2212,7 @@ describe('validation — after delay NaN/Infinity', () => {
           b: {},
         },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 
   it('throws for Infinity delay', () => {
@@ -2228,7 +2226,7 @@ describe('validation — after delay NaN/Infinity', () => {
           b: {},
         },
       });
-    }).toThrow(MachineError);
+    }).toThrow(ClockworkError);
   });
 });
 
@@ -2268,7 +2266,7 @@ describe('queue cleared on validateContext throw', () => {
 
     calls = 0;
 
-    expect(() => m.send({ type: 'A' })).toThrow(MachineError);
+    expect(() => m.send({ type: 'A' })).toThrow(ClockworkError);
 
     expect(m.state.value).toBe('start');
 
@@ -2507,7 +2505,7 @@ describe('R9 — validateContext returns true | string', () => {
     expect(() => def.start()).not.toThrow();
   });
 
-  it('throws MachineError with the string message when validateContext returns a string', () => {
+  it('throws ClockworkError with the string message when validateContext returns a string', () => {
     type Event = { type: 'GO' };
 
     let errorDetails: unknown;
@@ -2528,7 +2526,7 @@ describe('R9 — validateContext returns true | string', () => {
       errorDetails = err;
     }
 
-    expect(errorDetails).toBeInstanceOf(MachineError);
+    expect(errorDetails).toBeInstanceOf(ClockworkError);
   });
 
   it('validateContext receives the current context snapshot after each transition', () => {
@@ -2748,30 +2746,13 @@ describe('C4 — resolve() ancestor chain bubbling', () => {
   });
 });
 
-describe('D1 — MachineErrorCode const object', () => {
-  it('exports MachineErrorCode as a const object with all codes', () => {
-    expect(MachineErrorCode.MACHINE_INVALID_AFTER_DELAY).toBe('MACHINE_INVALID_AFTER_DELAY');
-    expect(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE).toBe('MACHINE_INVALID_INITIAL_STATE');
-    expect(MachineErrorCode.MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH).toBe(
-      'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH',
-    );
-    expect(MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE).toBe('MACHINE_INVALID_SNAPSHOT_STATE');
-    expect(MachineErrorCode.MACHINE_INVALID_TRANSITION_ARRAY).toBe('MACHINE_INVALID_TRANSITION_ARRAY');
-    expect(MachineErrorCode.MACHINE_INVALID_VALIDATE_CONTEXT).toBe('MACHINE_INVALID_VALIDATE_CONTEXT');
-    expect(MachineErrorCode.MACHINE_MISSING_COMPOUND_INITIAL).toBe('MACHINE_MISSING_COMPOUND_INITIAL');
-    expect(MachineErrorCode.MACHINE_TRANSITION_LOOP_GUARD).toBe('MACHINE_TRANSITION_LOOP_GUARD');
-    expect(MachineErrorCode.MACHINE_UNKNOWN_TARGET).toBe('MACHINE_UNKNOWN_TARGET');
-  });
-
-  it('MachineError.code matches MachineErrorCode constant', () => {
+describe('named error subclasses', () => {
+  it('ClockworkError.is() matches any subclass', () => {
     try {
       createMachine({ initial: 'NOPE', states: {} as never });
     } catch (err) {
-      expect(MachineError.is(err)).toBe(true);
-
-      if (MachineError.is(err)) {
-        expect(err.code).toBe(MachineErrorCode.MACHINE_INVALID_INITIAL_STATE);
-      }
+      expect(ClockworkError.is(err)).toBe(true);
+      expect(err).toBeInstanceOf(ClockworkInvalidInitialStateError);
     }
   });
 });

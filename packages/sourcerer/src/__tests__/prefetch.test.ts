@@ -59,7 +59,7 @@ describe('prefetchSource', () => {
     expect(deserialized.total).toBe(1);
   });
 
-  it('throws a SourceError when the fetch fails', async () => {
+  it('throws a SourcererError when the fetch fails', async () => {
     const fetch = vi.fn(async () => {
       throw new Error('network down');
     });
@@ -106,7 +106,7 @@ describe('prefetchSourceAndKeep', () => {
     expect(() => source.dispose()).not.toThrow();
   });
 
-  it('throws a SourceError and disposes source when the fetch fails', async () => {
+  it('throws a SourcererError and disposes source when the fetch fails', async () => {
     const fetch = vi.fn(async () => {
       throw new Error('upstream error');
     });

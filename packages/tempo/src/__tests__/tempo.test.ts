@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { RecurrenceRule } from '../index';
 
-import { TempoError, TempoErrorCode } from '../index';
+import { TempoError, TempoInvalidInputError, TempoInvalidTzError, TempoMissingTzError } from '../index';
 import {
   clamp,
   dateRange,
@@ -874,7 +874,7 @@ describe('dateRange', () => {
     const start = Temporal.ZonedDateTime.from('2022-01-01T00:00:00[UTC]');
     const end = Temporal.ZonedDateTime.from('2022-01-05T00:00:00[UTC]');
 
-    expect(() => [...dateRange(start, end, { days: 0 }, opts)]).toThrow(RangeError);
+    expect(() => [...dateRange(start, end, { days: 0 }, opts)]).toThrow(TempoInvalidInputError);
     expect(() => [...dateRange(start, end, { days: -1 }, opts)]).toThrow('step must advance the date forward');
   });
 
@@ -1176,48 +1176,29 @@ describe('parse', () => {
   });
 });
 
-describe('TempoError (E1)', () => {
+describe('TempoError', () => {
   it('errors thrown by tempo are instanceof TempoError', () => {
     expect(() => parse('not-a-date')).toThrow(TempoError);
   });
 
-  it('.name is "TempoError"', () => {
+  it('parse errors are instanceof TempoInvalidInputError', () => {
+    expect(() => parse('not-a-date')).toThrow(TempoInvalidInputError);
+  });
+
+  it('.name reflects the subclass name', () => {
     try {
       parse('not-a-date');
     } catch (e) {
-      expect((e as TempoError).name).toBe('TempoError');
+      expect((e as TempoError).name).toBe('TempoInvalidInputError');
     }
   });
 
-  it('.code is INVALID_INPUT for parse errors', () => {
-    try {
-      parse('not-a-date');
-    } catch (e) {
-      expect((e as TempoError).code).toBe(TempoErrorCode.INVALID_INPUT);
-    }
+  it('missing timezone errors are instanceof TempoMissingTzError', () => {
+    expect(() => toInstant(parsePlainDateTime('2026-03-21T10:00:00'))).toThrow(TempoMissingTzError);
   });
 
-  it('.code is MISSING_TZ for missing timezone errors', () => {
-    try {
-      toInstant(parsePlainDateTime('2026-03-21T10:00:00'));
-    } catch (e) {
-      expect((e as TempoError).code).toBe(TempoErrorCode.MISSING_TZ);
-    }
-  });
-
-  it('.code is INVALID_TZ for bad timezone errors', () => {
-    try {
-      inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Bad/Zone');
-    } catch (e) {
-      expect((e as TempoError).code).toBe(TempoErrorCode.INVALID_TZ);
-    }
-  });
-
-  it('TempoErrorCode constants match expected strings', () => {
-    expect(TempoErrorCode.INVALID_INPUT).toBe('INVALID_INPUT');
-    expect(TempoErrorCode.INVALID_TZ).toBe('INVALID_TZ');
-    expect(TempoErrorCode.MISSING_TZ).toBe('MISSING_TZ');
-    expect(TempoErrorCode.UNSUPPORTED_INPUT).toBe('UNSUPPORTED_INPUT');
+  it('bad timezone errors are instanceof TempoInvalidTzError', () => {
+    expect(() => inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Bad/Zone')).toThrow(TempoInvalidTzError);
   });
 });
 

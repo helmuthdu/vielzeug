@@ -10,7 +10,7 @@ describe('ore-breadcrumb', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Core Functionality', () => {
@@ -68,7 +68,7 @@ describe('ore-breadcrumb-item accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Accessibility', () => {

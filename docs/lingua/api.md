@@ -30,10 +30,10 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
 | `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
 | `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Equivalent to `serializeI18n(i18n)` — preferred for public API access                                              |
-| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(state, i18n)` — preferred for public API access; throws `[lingua/E006]` if locale missing |
+| `i18n.restoreState()`     | Hydrate instance from serialized state                                             | Sync           | Equivalent to `hydrateI18n(state, i18n)` — preferred for public API access; throws `LinguaRestoreError` if locale missing |
 | `serializeI18n()`         | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
-| `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `[lingua/E006]` if `state.locale` has no catalog                                                            |
-| `LinguaError` / `E`       | Typed error class and error-code constants                                         | —              | All runtime errors are `instanceof LinguaError`; use `E.*` for stable codes                                        |
+| `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                            |
+| Error classes             | Named error subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, …)      | —              | All runtime errors are `instanceof LinguaError`; use `instanceof` for specific handling                            |
 | `createFormatter()`       | Create a standalone Intl formatter                                                 | Sync           | Exported from main entry — pass a getter `() => i18n.locale` to follow locale changes                              |
 | `validateCatalog()`       | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
 
@@ -51,7 +51,7 @@ createI18n<M extends Messages>(options: I18nOptions<M>): I18n<M>
 createI18n(options?: I18nOptions<Messages>): I18n<Messages>
 ```
 
-Creates an i18n instance. All locale strings must be valid BCP 47 tags. Invalid tags throw `[lingua/E004]`.
+Creates an i18n instance. All locale strings must be valid BCP 47 tags. Invalid tags throw `LinguaInvalidLocaleError`.
 
 **Parameters — `I18nOptions<M>`:**
 
@@ -176,7 +176,7 @@ await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.j
 await i18n.extend('settings', (locale) => import(`./locales/${locale}/settings.json`).then((m) => m.default), 'de');
 ```
 
-Throws `LinguaError(E.DISPOSED)` synchronously if called on a disposed instance.
+Throws `LinguaDisposedError` synchronously if called on a disposed instance.
 
 ### `registerNamespace()`
 
@@ -188,7 +188,7 @@ Registers a namespace factory without loading it. Use `loadNamespace()` to trigg
 
 Re-registering a namespace updates the factory for future loads but does **not** reload if the namespace is already loaded. The new factory takes effect the next time the namespace marker is cleared (by a `register()` or `restoreState()` call).
 
-Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+Throws `LinguaDisposedError` if called on a disposed instance.
 
 ### `loadNamespace()`
 
@@ -199,7 +199,7 @@ loadNamespace(ns: string, locale?: Locale): Promise<void>
 Loads a registered namespace for `locale` (defaults to the active locale). Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
 
 Throws if the namespace has not been registered with `registerNamespace()` first.
-Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+Throws `LinguaDisposedError` if called on a disposed instance.
 
 ```ts
 i18n.registerNamespace('settings', (locale) =>
@@ -254,8 +254,8 @@ Hydrates this instance from an `I18nState` produced by `getState()` or `serializ
 - Clears all namespace loaded-markers so that `extend()` / `loadNamespace()` can re-apply namespaces.
 - Notifies subscribers.
 
-Throws `LinguaError(E.RESTORE_NO_LOCALE)` if `state.locale` has no catalog in `state.catalogs`.
-Throws `LinguaError(E.DISPOSED)` if called on a disposed instance.
+Throws `LinguaRestoreError` if `state.locale` has no catalog in `state.catalogs`.
+Throws `LinguaDisposedError` if called on a disposed instance.
 
 ```ts
 // Client — restore server-rendered state
@@ -463,10 +463,10 @@ After disposal:
 - `t()` / `tp()` fall back to `onMissingKey` for every key (returning the key string by default).
 - `isLoaded()` and `isRegistered()` return `false` for all locales.
 - No subscribers are notified of further changes.
-- `setLocale()` and `preload()` reject with `[lingua/E007]`.
-- `register()` throws `[lingua/E007]`.
-- `subscribe()` throws `[lingua/E007]`.
-- `extend()` throws `[lingua/E007]`.
+- `setLocale()` and `preload()` reject with `LinguaDisposedError`.
+- `register()` throws `LinguaDisposedError`.
+- `subscribe()` throws `LinguaDisposedError`.
+- `extend()` throws `LinguaDisposedError`.
 
 Primarily useful for long-lived SPA instances that are replaced at runtime (e.g. route-level i18n) to prevent subscriber and catalog memory from accumulating.
 
@@ -808,7 +808,7 @@ hydrateI18n(i18n: I18n, state: I18nState): void
 
 Hydrates a client-side instance from server-serialised state. Replaces all catalogs and switches the active locale. Notifies subscribers once after hydration.
 
-Throws `LinguaError(E.RESTORE_NO_LOCALE)` if `state.locale` has no corresponding entry in `state.catalogs`.
+Throws `LinguaRestoreError` if `state.locale` has no corresponding entry in `state.catalogs`.
 
 ```ts
 // Client
@@ -824,56 +824,31 @@ hydrateI18n(i18n, window.__I18N__);
 | `i18n`    | `I18n`      | The instance to hydrate.                   |
 | `state`   | `I18nState` | State object produced by `serializeI18n()` |
 
-## LinguaError
+## Error Classes
+
+All errors thrown by the `@vielzeug/lingua` runtime extend `LinguaError`. Use `instanceof LinguaError` to catch any lingua error, or `instanceof` the specific subclass for precise handling.
 
 ```ts
-import { E, LinguaError } from '@vielzeug/lingua';
-```
+import { LinguaDisposedError, LinguaError, LinguaMissingLocaleError } from '@vielzeug/lingua';
 
-All errors thrown by the `@vielzeug/lingua` runtime are instances of `LinguaError`. Use `instanceof LinguaError` to distinguish them from generic errors, and `.code` to branch on a specific error without fragile string matching.
-
-```ts
 try {
   await i18n.setLocale('de');
 } catch (err) {
-  if (err instanceof LinguaError && err.code === E.MISSING_LOCALE) {
+  if (err instanceof LinguaMissingLocaleError) {
     // locale not registered — handle gracefully
-  } else {
+  } else if (err instanceof LinguaError) {
     throw err;
   }
 }
 ```
 
-**`LinguaError` properties:**
-
-| Property  | Type     | Description                               |
-| --------- | -------- | ----------------------------------------- |
-| `code`    | `string` | Stable error code constant from `E`       |
-| `message` | `string` | Human-readable message including the code |
-| `name`    | `string` | Always `"LinguaError"`                    |
-
-**`E` constants:**
-
-| Constant              | Value           | When thrown                                                   |
-| --------------------- | --------------- | ------------------------------------------------------------- |
-| `E.MISSING_LOCALE`    | `'lingua/E001'` | `preload()` / `setLocale()` — locale has no registered source |
-| `E.INVALID_COUNT`     | `'lingua/E002'` | `tp()` — `count` is non-finite                                |
-| `E.COUNT_IN_VARS`     | `'lingua/E003'` | `tp()` — `vars.count` was passed explicitly                   |
-| `E.INVALID_LOCALE`    | `'lingua/E004'` | Any API receiving an invalid BCP 47 tag                       |
-| `E.NAMESPACE_MISSING` | `'lingua/E005'` | Reserved internal guard — not thrown under normal usage       |
-| `E.RESTORE_NO_LOCALE` | `'lingua/E006'` | `hydrateI18n()` — `state.locale` absent from `state.catalogs` |
-| `E.DISPOSED`          | `'lingua/E007'` | Any mutating API called on a disposed instance                |
-
-## Errors
-
-| Error code      | When thrown                                                                                                                                                                                                  |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `[lingua/E001]` | `preload()` is called with a locale that has no registered source (also thrown by `setLocale()` when the locale is unregistered and the instance is not disposed — a disposed instance throws `E007` first). |
-| `[lingua/E002]` | `tp()` receives a non-finite `count`.                                                                                                                                                                        |
-| `[lingua/E003]` | `tp()` receives `options.vars.count` (injected automatically).                                                                                                                                               |
-| `[lingua/E004]` | Any API receives a string that is not a valid BCP 47 tag (`createI18n`, `setLocale`, `register`).                                                                                                            |
-| `[lingua/E005]` | Reserved internal guard — not thrown under normal usage. Reserved for future defensive checks.                                                                                                               |
-| `[lingua/E006]` | `hydrateI18n()` is called with a `state.locale` that has no corresponding entry in `state.catalogs`.                                                                                                         |
-| `[lingua/E007]` | Mutating API (`setLocale()`, `preload()`, `register()`, `subscribe()`, `extend()`) called on a disposed instance.                                                                                            |
-
-> All errors are `instanceof LinguaError` and carry a `.code` property matching the `E` constants. See [`LinguaError`](#linguaerror).
+| Class                       | When thrown                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| `LinguaError`               | Base class — `instanceof LinguaError` catches all lingua errors                 |
+| `LinguaDisposedError`       | Any mutating API called on a disposed instance                                  |
+| `LinguaInvalidCountError`   | `tp()` — `count` is non-finite                                                  |
+| `LinguaCountInVarsError`    | `tp()` — `vars.count` was passed explicitly                                     |
+| `LinguaMissingLocaleError`  | `preload()` / `setLocale()` — locale has no registered source                   |
+| `LinguaInvalidLocaleError`  | Any API receiving an invalid BCP 47 tag                                         |
+| `LinguaNamespaceMissingError` | Namespace requested but not loaded for the current locale                     |
+| `LinguaRestoreError`        | `hydrateI18n()` / `restoreState()` — `state.locale` absent from `state.catalogs` |

@@ -1,3 +1,6 @@
+import { describe, expect, it } from 'vitest';
+
+import { ScoutDisposedError, ScoutError, ScoutIndexError } from '../errors';
 import { createIndex } from '../scout-index';
 
 type User = { age: number; email: string; name: string };
@@ -368,5 +371,23 @@ describe('tokenization — punctuation handling', () => {
 
     expect(results.length).toBeGreaterThan(0);
     expect(results[0].item.slug).toBe('foo_bar_baz');
+  });
+});
+
+describe('ScoutError — named subclasses', () => {
+  it('each subclass is instanceof ScoutError and Error', () => {
+    expect(new ScoutDisposedError('disposed')).toBeInstanceOf(ScoutError);
+    expect(new ScoutDisposedError('disposed')).toBeInstanceOf(Error);
+    expect(new ScoutIndexError('index')).toBeInstanceOf(ScoutError);
+  });
+
+  it('each subclass has the correct .name', () => {
+    expect(new ScoutDisposedError('').name).toBe('ScoutDisposedError');
+    expect(new ScoutIndexError('').name).toBe('ScoutIndexError');
+  });
+
+  it('ScoutError.is() returns true for any subclass', () => {
+    expect(ScoutError.is(new ScoutDisposedError(''))).toBe(true);
+    expect(ScoutError.is(new Error('plain'))).toBe(false);
   });
 });

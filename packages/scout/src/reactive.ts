@@ -97,7 +97,12 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     });
   }
 
+  let isDisposed = false;
+  const ac = new AbortController();
+
   function dispose(): void {
+    isDisposed = true;
+    ac.abort();
     cancelTimer();
     subscription.dispose();
     query.dispose();
@@ -108,7 +113,13 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
 
   return {
     clear,
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
     dispose,
+    get disposed(): boolean {
+      return isDisposed;
+    },
     isSearching,
     query,
     results,

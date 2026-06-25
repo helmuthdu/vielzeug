@@ -5,7 +5,7 @@ import type { NamespaceStore } from './_namespace-store';
 
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
 import { warn } from './_warn';
-import { E, LinguaError, checkDisposed, checkDisposedAsync } from './errors';
+import { LinguaMissingLocaleError, checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;
 export type Loader<M extends Messages = Messages> = () => Promise<M>;
@@ -66,7 +66,7 @@ export function createCatalogStore<M extends Messages = Messages>(disposed: () =
 
     const loader = loaders.get(loc);
 
-    if (!loader) return Promise.reject(new LinguaError(E.MISSING_LOCALE, `Missing locale source for "${loc}".`));
+    if (!loader) return Promise.reject(new LinguaMissingLocaleError(`Missing locale source for "${loc}".`));
 
     const existing = loadingTasks.get(loc);
 

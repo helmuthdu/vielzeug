@@ -17,5 +17,5 @@ export const apiExports = [
   'isStore',
   'onCleanup',
   'scope',
-  'StateError',
+  'RippleError',
 ] as const;

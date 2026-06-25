@@ -3,7 +3,7 @@ import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
 
 import { issue } from './_warn';
 import { ANONYMOUS, WILDCARD } from './constants';
-import { WardPredicateError } from './errors';
+import { WardConfigError, WardPredicateError } from './errors';
 import { matchesPattern } from './resource';
 
 // ---------------------------------------------------------------------------
@@ -13,17 +13,17 @@ import { matchesPattern } from './resource';
 /** Asserts that `input` is a valid `UserPrincipal`. Throws with a clear message otherwise. */
 export function assertUserPrincipal(input: unknown): asserts input is UserPrincipal {
   if (typeof input !== 'object' || !input) {
-    throw new Error('[ward] Invalid principal: expected { id: string, roles: string[] }');
+    throw new WardConfigError('Invalid principal: expected { id: string, roles: string[] }');
   }
 
   const p = input as Record<string, unknown>;
 
   if (typeof p.id !== 'string' || !p.id.trim()) {
-    throw new Error('[ward] Invalid principal: id must be a non-empty string');
+    throw new WardConfigError('Invalid principal: id must be a non-empty string');
   }
 
   if (!Array.isArray(p.roles) || p.roles.some((r) => typeof r !== 'string' || !(r as string).trim())) {
-    throw new Error('[ward] Invalid principal: roles must be an array of non-empty strings');
+    throw new WardConfigError('Invalid principal: roles must be an array of non-empty strings');
   }
 }
 

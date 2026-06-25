@@ -8,7 +8,7 @@ describe('ore-avatar', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -125,7 +125,7 @@ describe('ore-avatar', () => {
         fixture = await mount('ore-avatar', { attrs: { status } });
 
         expect(fixture.query('.status')?.getAttribute('data-status')).toBe(status);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -141,7 +141,7 @@ describe('ore-avatar accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Image Alt Text', () => {
@@ -216,7 +216,7 @@ describe('ore-avatar-group', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {

@@ -1,4 +1,4 @@
-import { createBehaviorBus, createBus } from '../index';
+import { HeraldConfigError, createBehaviorBus, createBus } from '../index';
 import { pipeEvents } from '../pipe';
 
 type Events = {
@@ -327,11 +327,11 @@ describe('pipeEvents - BehaviorBus as source', () => {
 });
 
 describe('pipeEvents - runtime guards', () => {
-  it('throws RangeError when entries array is empty (bypassed type system)', () => {
+  it('throws HeraldConfigError when entries array is empty (bypassed type system)', () => {
     const source = createBus<Events>();
     const target = createBus<Events>();
 
-    expect(() => pipeEvents(source, target, [] as any)).toThrow(RangeError);
+    expect(() => pipeEvents(source, target, [] as any)).toThrow(HeraldConfigError);
 
     source.dispose();
     target.dispose();

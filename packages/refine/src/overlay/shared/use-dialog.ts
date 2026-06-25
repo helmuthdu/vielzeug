@@ -11,6 +11,11 @@ import { createFocusManager } from '../../headless/focus';
 import { awaitExit } from './await-exit';
 import { createBackgroundLock } from './background-lock';
 
+// Invoker Commands API — not yet in lib.dom.d.ts
+interface CommandEvent extends Event {
+  command: string;
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type UseDialogOptions = {
@@ -197,6 +202,20 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
     overlay.close(reason, false);
   };
+
+  // Invoker Commands API — allows declarative open/close from outside the component:
+  //   <button commandfor="ore-dialog-id" command="show-modal">Open</button>
+  //   <button commandfor="ore-dialog-id" command="close">Close</button>
+  options.host.addEventListener(
+    'command',
+    (e: Event) => {
+      const cmd = (e as CommandEvent).command;
+
+      if (cmd === 'show-modal') overlay.open('trigger');
+      else if (cmd === 'close' || cmd === 'request-close') requestClose('trigger');
+    },
+    { signal: abortSignal },
+  );
 
   const handleKeydown = (e: KeyboardEvent): void => {
     if (e.key === 'Escape' && !options.isPersistent()) {

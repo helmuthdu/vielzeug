@@ -2,20 +2,20 @@ import type { Lifetime, ScopeToken, Token } from './types.js';
 
 export const tokenName = (t: Token<any>): string => t.description ?? 'anonymous';
 
-/** Base class for all conduit errors. Use `instanceof ContainerError` to catch any conduit-originated error. */
-export class ContainerError extends Error {
+/** Base class for all conduit errors. Use `instanceof ConduitError` to catch any conduit-originated error. */
+export class ConduitError extends Error {
   constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
 
-  static is(err: unknown): err is ContainerError {
-    return err instanceof ContainerError;
+  static is(err: unknown): err is ConduitError {
+    return err instanceof ConduitError;
   }
 }
 
-export class ContainerCircularDependencyError extends ContainerError {
+export class ConduitCircularDependencyError extends ConduitError {
   /** The token path that forms the cycle. */
   readonly cycle: Token<any>[];
 
@@ -25,7 +25,7 @@ export class ContainerCircularDependencyError extends ContainerError {
   }
 }
 
-export class ContainerProviderNotFoundError extends ContainerError {
+export class ConduitProviderNotFoundError extends ConduitError {
   /** The token that could not be found. */
   readonly token: Token<any>;
   /** The container name at the time of the lookup. */
@@ -38,7 +38,7 @@ export class ContainerProviderNotFoundError extends ContainerError {
   }
 }
 
-export class ContainerDuplicateRegistrationError extends ContainerError {
+export class ConduitDuplicateRegistrationError extends ConduitError {
   /** The token that was registered twice. */
   readonly token: Token<any>;
 
@@ -48,7 +48,7 @@ export class ContainerDuplicateRegistrationError extends ContainerError {
   }
 }
 
-export class ContainerSyncResolutionError extends ContainerError {
+export class ConduitSyncResolutionError extends ConduitError {
   /** The token that could not be resolved synchronously. */
   readonly token: Token<any>;
   /** The lifetime that prevented synchronous resolution. */
@@ -68,7 +68,7 @@ export class ContainerSyncResolutionError extends ContainerError {
   }
 }
 
-export class ContainerScopedResolutionError extends ContainerError {
+export class ConduitScopedResolutionError extends ConduitError {
   /** The token that required a scope container. */
   readonly token: Token<any>;
   /** The required scope token, if any. */
@@ -87,7 +87,7 @@ export class ContainerScopedResolutionError extends ContainerError {
   }
 }
 
-export class ContainerDisposedError extends ContainerError {
+export class ConduitDisposedError extends ConduitError {
   /** The name of the container that was already disposed. */
   readonly containerName: string;
 
@@ -97,7 +97,7 @@ export class ContainerDisposedError extends ContainerError {
   }
 }
 
-export class ContainerFrozenError extends ContainerError {
+export class ConduitFrozenError extends ConduitError {
   /** The name of the container that is frozen. */
   readonly containerName: string;
 

@@ -20,7 +20,12 @@ import type {
 import { createTraceBuffer } from './_trace.js';
 import { warn } from './_warn.js';
 import { getAncestorPaths, getNodeAtPath, resolveLeaf, validateDefinition } from './definition.js';
-import { MachineError } from './errors.js';
+import {
+  ClockworkInvalidMaxTransitionsError,
+  ClockworkInvalidSnapshotStateError,
+  ClockworkInvalidValidateContextError,
+  ClockworkTransitionLoopGuardError,
+} from './errors.js';
 
 // ── Internal constants ────────────────────────────────────────────────────────
 
@@ -88,10 +93,9 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   const traceLimit = options.traceLimit ?? (onDebug ? 50 : 0);
 
   if (options.maxTransitionsPerFlush !== undefined && options.maxTransitionsPerFlush < 1) {
-    throw new MachineError(
-      'MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH',
+    throw new ClockworkInvalidMaxTransitionsError(
       'maxTransitionsPerFlush must be greater than 0',
-      { maxTransitionsPerFlush: options.maxTransitionsPerFlush },
+      options.maxTransitionsPerFlush,
     );
   }
 
@@ -110,10 +114,9 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
         !!getNodeAtPath(definition.states as Record<string, StateNode<string, Ctx, Ev>>, persistedSnapshot.state));
 
     if (!snapshotValid) {
-      throw new MachineError(
-        'MACHINE_INVALID_SNAPSHOT_STATE',
+      throw new ClockworkInvalidSnapshotStateError(
         `snapshot state "${persistedSnapshot.state}" not found in states`,
-        { state: persistedSnapshot.state },
+        persistedSnapshot.state,
       );
     }
   }
@@ -127,10 +130,10 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     const result = validator(context);
 
     if (result !== true) {
-      throw new MachineError(
-        'MACHINE_INVALID_VALIDATE_CONTEXT',
+      throw new ClockworkInvalidValidateContextError(
         `context failed validation during ${phase}${result ? `: ${result}` : ''}`,
-        { phase, reason: result },
+        phase,
+        result,
       );
     }
   };
@@ -446,9 +449,10 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
     while (queue.length > 0) {
       if (++processed > maxTransitionsPerFlush) {
-        throw new MachineError('MACHINE_TRANSITION_LOOP_GUARD', 'transition queue exceeded maxTransitionsPerFlush', {
+        throw new ClockworkTransitionLoopGuardError(
+          'transition queue exceeded maxTransitionsPerFlush',
           maxTransitionsPerFlush,
-        });
+        );
       }
 
       processEvent(queue.shift()!);

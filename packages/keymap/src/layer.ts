@@ -60,8 +60,16 @@ export function createKeymapLayer(
       isActive = false;
     },
 
+    get disposalSignal(): AbortSignal {
+      return layer.disposalSignal;
+    },
+
     dispose(): void {
       layer.dispose();
+    },
+
+    get disposed(): boolean {
+      return layer.disposed;
     },
 
     listBindings() {

@@ -4,6 +4,7 @@ import type { RecurrenceRule, TimeInput, TimeOptions } from './types';
 
 import { toInstant, toZoned } from './_convert';
 import { inferTimeZone } from './_tz';
+import { TempoInvalidInputError } from './errors';
 
 /**
  * Lazily generates `ZonedDateTime` values between `start` and `end` (inclusive),
@@ -46,7 +47,7 @@ export function dateRange(
 
   // Eager validation — fires at call time, not on first iteration.
   if (Temporal.ZonedDateTime.compare(startZoned.add(step), startZoned) <= 0) {
-    throw new RangeError('dateRange: step must advance the date forward');
+    throw new TempoInvalidInputError('dateRange: step must advance the date forward');
   }
 
   return dateRangeGenerator(startZoned, endZoned, step);

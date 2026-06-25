@@ -69,7 +69,7 @@ describe('resizeObserver()', () => {
     } as unknown as typeof ResizeObserver;
 
     try {
-      const { destroy } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props, ctx) => {
         const divRef = ref<HTMLDivElement>();
 
         ctx.onMounted(() => {
@@ -80,7 +80,7 @@ describe('resizeObserver()', () => {
       });
 
       expect(disconnectSpy).not.toHaveBeenCalled();
-      destroy();
+      dispose();
       expect(disconnectSpy).toHaveBeenCalledOnce();
     } finally {
       globalThis.ResizeObserver = origRO;

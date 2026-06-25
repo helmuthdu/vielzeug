@@ -4,7 +4,7 @@ import type { BatchHandle, LogEntry, LogLevel, LogMiddleware, RuneOptions, Trans
 
 import { DEFAULT_THEME, consoleTransport } from '../console';
 import { lazy } from '../lazy';
-import { createLogger, Rune } from '../logger';
+import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
 import { isLevelEnabled, PRIORITY } from '../types';
 
@@ -55,18 +55,18 @@ describe('construction and config', () => {
     expect(log.middleware).toEqual([]);
   });
 
-  it('default Rune singleton exposes stable public API', () => {
-    expect(typeof Rune.debug).toBe('function');
-    expect(typeof Rune.info).toBe('function');
-    expect(typeof Rune.warn).toBe('function');
-    expect(typeof Rune.error).toBe('function');
-    expect(typeof Rune.fatal).toBe('function');
-    expect(typeof Rune.child).toBe('function');
-    expect(typeof Rune.withBindings).toBe('function');
-    expect(typeof Rune.time).toBe('function');
-    expect(typeof Rune.group).toBe('function');
-    expect(typeof Rune.groupCollapsed).toBe('function');
-    expect(typeof Rune.use).toBe('function');
+  it('defaultLogger singleton exposes stable public API', () => {
+    expect(typeof defaultLogger.debug).toBe('function');
+    expect(typeof defaultLogger.info).toBe('function');
+    expect(typeof defaultLogger.warn).toBe('function');
+    expect(typeof defaultLogger.error).toBe('function');
+    expect(typeof defaultLogger.fatal).toBe('function');
+    expect(typeof defaultLogger.child).toBe('function');
+    expect(typeof defaultLogger.withBindings).toBe('function');
+    expect(typeof defaultLogger.time).toBe('function');
+    expect(typeof defaultLogger.group).toBe('function');
+    expect(typeof defaultLogger.groupCollapsed).toBe('function');
+    expect(typeof defaultLogger.use).toBe('function');
   });
 
   it('individual getters return correct values', () => {
@@ -1964,6 +1964,32 @@ describe('batchTransport post-dispose no-ops', () => {
     expect(flushed).toHaveLength(1);
     expect(flushed[0]).toHaveLength(1);
     expect(flushed[0][0].message).toBe('before');
+  });
+});
+
+/* ─── BatchHandle.disposed ─── */
+
+describe('batchTransport disposed', () => {
+  it('disposed is false before dispose()', () => {
+    const batch = batchTransport({ onFlush: () => {} });
+
+    expect(batch.disposed).toBe(false);
+    batch.dispose();
+  });
+
+  it('disposed is true after dispose()', () => {
+    const batch = batchTransport({ onFlush: () => {} });
+
+    batch.dispose();
+    expect(batch.disposed).toBe(true);
+  });
+
+  it('disposed remains true after second dispose() call', () => {
+    const batch = batchTransport({ onFlush: () => {} });
+
+    batch.dispose();
+    batch.dispose();
+    expect(batch.disposed).toBe(true);
   });
 });
 

@@ -187,3 +187,25 @@ interface CommandMeta<TData = unknown> {
 ```
 
 `data` holds the value from `Command.data`, cast to `TData`. The type parameter is inferred from `createLedger<TData>()`; it defaults to `unknown` when no type argument is supplied.
+
+---
+
+## Errors
+
+### `LedgerError`
+
+Base class for all ledger errors. Use `instanceof LedgerError` or `LedgerError.is()` to catch any ledger-originated error.
+
+```ts
+class LedgerError extends Error {
+  static is(err: unknown): err is LedgerError;
+}
+```
+
+**Named subclasses**
+
+| Class                  | Thrown when                                                                    |
+| ---------------------- | ------------------------------------------------------------------------------ |
+| `LedgerDisposedError`  | A method is called on a disposed ledger instance                               |
+| `LedgerExecutionError` | A command's `execute()` function throws; original error available via `.cause` |
+| `LedgerRollbackError`  | A command's `rollback()` function throws during undo; original error via `.cause` |

@@ -60,7 +60,7 @@ describe('core/internal.ts', () => {
 
       const fixture = await mount(() => html`<div ref=${(el: HTMLDivElement | null) => calls.push(el)}>Test</div>`);
 
-      fixture.destroy();
+      fixture.dispose();
 
       expect(calls).toHaveLength(2);
       expect(calls[1]).toBeNull();

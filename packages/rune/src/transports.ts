@@ -204,6 +204,9 @@ export function batchTransport(options: BatchTransportOptions): BatchHandle {
 
       flush();
     },
+    get disposed(): boolean {
+      return batchDisposed;
+    },
     flush,
     [Symbol.dispose](): void {
       handle.dispose();

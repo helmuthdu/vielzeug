@@ -17,6 +17,7 @@ import type {
 import { compileEntry } from './_compile';
 import { computeConflicts } from './_conflict';
 import { assertUserPrincipal, isOverriddenBy, matchesRule, pickWinner, toDecision, validatePrincipal } from './_match';
+import { WardConfigError } from './errors';
 
 // ---------------------------------------------------------------------------
 // Shared loop cores (validation-free; used by both public API and forUser)
@@ -247,7 +248,7 @@ export function createWard<TAction extends string = string, TData = unknown>(
           )
           .join('; ');
 
-        throw new Error(`[ward] ${conflicts.length} rule conflict(s) detected: ${details}`);
+        throw new WardConfigError(`${conflicts.length} rule conflict(s) detected: ${details}`);
       }
     }
   }

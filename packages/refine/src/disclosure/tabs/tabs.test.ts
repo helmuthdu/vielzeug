@@ -10,7 +10,7 @@ describe('ore-tabs', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   const htmlTabs = `

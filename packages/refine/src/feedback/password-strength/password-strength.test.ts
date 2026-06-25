@@ -8,7 +8,7 @@ describe('ore-password-strength', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Core Functionality', () => {

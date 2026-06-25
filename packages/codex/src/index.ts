@@ -1,4 +1,5 @@
 export { loadData, packageMeta, validateBundledData } from './data.js';
+export { CodexError, ToolArgError } from './errors.js';
 export { createRequestHandler, startHttpServer } from './http.js';
 export type { HttpServerHandle } from './http.js';
 export type { SearchHit } from './search.js';

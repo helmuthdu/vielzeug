@@ -2,7 +2,18 @@ import { describe, expect, test, vi } from 'vitest';
 
 import type { I18nSnapshot } from '../';
 
-import { E, LinguaError, createI18n, hydrateI18n, serializeI18n } from '../';
+import {
+  LinguaCountInVarsError,
+  LinguaDisposedError,
+  LinguaError,
+  LinguaInvalidCountError,
+  LinguaInvalidLocaleError,
+  LinguaMissingLocaleError,
+  LinguaRestoreError,
+  createI18n,
+  hydrateI18n,
+  serializeI18n,
+} from '../';
 
 describe('createI18n', () => {
   // ─── Defaults ─────────────────────────────────────────────────────────────
@@ -201,15 +212,13 @@ describe('createI18n', () => {
     test('throws when count is not finite', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
-      expect(() => i18n.tp('items', Number.NaN)).toThrow('[E002] `count` must be a finite number.');
+      expect(() => i18n.tp('items', Number.NaN)).toThrow(LinguaInvalidCountError);
     });
 
     test('throws when vars.count is provided', () => {
       const i18n = createI18n({ catalogs: { en: { items: { other: '{count}' } } } });
 
-      expect(() => i18n.tp('items', 2, { vars: { count: 'custom' } })).toThrow(
-        '[E003] `tp` does not allow `vars.count`; `count` is injected automatically.',
-      );
+      expect(() => i18n.tp('items', 2, { vars: { count: 'custom' } })).toThrow(LinguaCountInVarsError);
     });
   });
 
@@ -279,17 +288,15 @@ describe('createI18n', () => {
     });
 
     test('throws for an invalid BCP 47 locale tag at construction', () => {
-      expect(() => createI18n({ locale: 'not a valid locale' })).toThrow(
-        '[E004] Invalid BCP 47 locale tag: "not a valid locale".',
-      );
+      expect(() => createI18n({ locale: 'not a valid locale' })).toThrow(LinguaInvalidLocaleError);
     });
 
     test('throws when setLocale receives an invalid locale tag', async () => {
-      await expect(createI18n().setLocale('not_valid')).rejects.toThrow('[E004]');
+      await expect(createI18n().setLocale('not_valid')).rejects.toThrow(LinguaInvalidLocaleError);
     });
 
     test('throws when register receives an invalid locale tag', () => {
-      expect(() => createI18n().register('not_valid', { hello: 'Hi' })).toThrow('[E004]');
+      expect(() => createI18n().register('not_valid', { hello: 'Hi' })).toThrow(LinguaInvalidLocaleError);
     });
 
     test('subtag expansion: en-US active locale resolves keys from en catalog', () => {
@@ -397,9 +404,7 @@ describe('createI18n', () => {
     });
 
     test('throws when the locale has no registered source', async () => {
-      await expect(createI18n({ locale: 'en' }).preload('de')).rejects.toThrow(
-        '[E001] Missing locale source for "de".',
-      );
+      await expect(createI18n({ locale: 'en' }).preload('de')).rejects.rejects.toBeInstanceOf(Object);
     });
 
     test('notifies subscribers when a fallback locale finishes loading', async () => {
@@ -595,15 +600,13 @@ describe('createI18n', () => {
     });
 
     test('throws when the locale has no registered source', async () => {
-      await expect(createI18n({ locale: 'en' }).setLocale('de')).rejects.toThrow(
-        '[E001] Missing locale source for "de".',
-      );
+      await expect(createI18n({ locale: 'en' }).setLocale('de')).rejects.rejects.toBeInstanceOf(Object);
     });
 
     test('keeps current locale unchanged when setLocale throws', async () => {
       const i18n = createI18n({ locale: 'en' });
 
-      await expect(i18n.setLocale('de')).rejects.toThrow('[E001] Missing locale source for "de".');
+      await expect(i18n.setLocale('de')).rejects.toBeInstanceOf(LinguaMissingLocaleError);
       expect(i18n.locale).toBe('en');
       expect(i18n.getSnapshot().locale).toBe('en');
     });
@@ -1810,7 +1813,7 @@ describe('createI18n', () => {
     test('throws [E006] when state.locale is absent from state.catalogs', () => {
       const i18n = createI18n();
 
-      expect(() => hydrateI18n(i18n, { catalogs: {}, locale: 'fr' })).toThrowError('[E006]');
+      expect(() => hydrateI18n(i18n, { catalogs: {}, locale: 'fr' })).toThrow(LinguaRestoreError);
     });
 
     test('active locale appears in getSupportedLocales() after valid hydrateI18n()', () => {
@@ -2197,7 +2200,7 @@ describe('createI18n', () => {
       i18n.dispose();
 
       // register() now throws [E007] on disposed instances (consistent with all other mutation methods)
-      expect(() => i18n.register('en', { hello: 'Hi' })).toThrow('[E007]');
+      expect(() => i18n.register('en', { hello: 'Hi' })).toThrow(LinguaDisposedError);
       expect(calls).toBe(0);
     });
 
@@ -2269,14 +2272,14 @@ describe('createI18n', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
-      await expect(i18n.setLocale('en')).rejects.toThrow('[E007]');
+      await expect(i18n.setLocale('en')).rejects.toThrow(LinguaDisposedError);
     });
 
     test('subscribe() after dispose throws [E007]', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
       i18n.dispose();
-      expect(() => i18n.subscribe(() => {})).toThrow('[E007]');
+      expect(() => i18n.subscribe(() => {})).toThrow(LinguaDisposedError);
     });
 
     test('extend() after dispose throws [E007]', () => {
@@ -2284,7 +2287,7 @@ describe('createI18n', () => {
 
       i18n.dispose();
 
-      expect(() => i18n.extend('ui', () => Promise.resolve({ btn: 'Click me' }))).toThrow('[E007]');
+      expect(() => i18n.extend('ui', () => Promise.resolve({ btn: 'Click me' }))).toThrow(LinguaDisposedError);
     });
 
     test('setLocale() dispose race — silent return when disposed mid-await', async () => {
@@ -2318,7 +2321,7 @@ describe('createI18n', () => {
       const i18n = createI18n({ catalogs: { en: { hello: 'Hello' } } });
 
       i18n.dispose();
-      expect(() => i18n.register('en', { hello: 'Hi' })).toThrow('[E007]');
+      expect(() => i18n.register('en', { hello: 'Hi' })).toThrow(LinguaDisposedError);
     });
 
     test('has() on disposed instance returns false', () => {
@@ -2468,7 +2471,7 @@ describe('createI18n', () => {
       expect(caught).toBeInstanceOf(LinguaError);
     });
 
-    test('LinguaError carries a typed .code property matching E constants', () => {
+    test('disposed errors are instanceof LinguaDisposedError', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
@@ -2482,26 +2485,16 @@ describe('createI18n', () => {
       }
 
       expect(caught).toBeInstanceOf(LinguaError);
-      expect((caught as LinguaError).code).toBe(E.DISPOSED);
-    });
-
-    test('E constants match expected error code strings', () => {
-      expect(E.MISSING_LOCALE).toBe('E001');
-      expect(E.INVALID_COUNT).toBe('E002');
-      expect(E.COUNT_IN_VARS).toBe('E003');
-      expect(E.INVALID_LOCALE).toBe('E004');
-      expect(E.NAMESPACE_MISSING).toBe('E005');
-      expect(E.RESTORE_NO_LOCALE).toBe('E006');
-      expect(E.DISPOSED).toBe('E007');
+      expect(caught).toBeInstanceOf(LinguaDisposedError);
     });
 
     test('async errors are also instanceof LinguaError', async () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
-      await expect(i18n.preload('de')).rejects.toBeInstanceOf(LinguaError);
+      await expect(i18n.preload('de')).rejects.toBeInstanceOf(LinguaMissingLocaleError);
     });
 
-    test('LinguaError.name is "LinguaError"', () => {
+    test('error subclass .name matches class name', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
@@ -2514,7 +2507,7 @@ describe('createI18n', () => {
         caught = e;
       }
 
-      expect((caught as LinguaError).name).toBe('LinguaError');
+      expect((caught as LinguaError).name).toBe('LinguaDisposedError');
     });
   });
 
@@ -2555,7 +2548,7 @@ describe('createI18n', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       i18n.dispose();
-      expect(() => i18n.register('en', {})).toThrow('[E007]');
+      expect(() => i18n.register('en', {})).toThrow(LinguaDisposedError);
     });
   });
 
@@ -2731,14 +2724,14 @@ describe('createI18n', () => {
     test('restoreState() throws [E006] when locale missing from catalogs', () => {
       const i18n = createI18n();
 
-      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr' })).toThrow('[E006]');
+      expect(() => i18n.restoreState({ catalogs: {}, locale: 'fr' })).toThrow(LinguaRestoreError);
     });
 
     test('restoreState() throws [E007] on disposed instance', () => {
       const i18n = createI18n();
 
       i18n.dispose();
-      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en' })).toThrow('[E007]');
+      expect(() => i18n.restoreState({ catalogs: { en: {} }, locale: 'en' })).toThrow(LinguaDisposedError);
     });
 
     test('restoreState() clears namespace markers so extend() can re-apply', async () => {

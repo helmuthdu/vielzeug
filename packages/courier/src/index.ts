@@ -13,6 +13,7 @@ export type { Courier, CourierMutationOptions, CourierOptions } from './courier'
 // Errors
 export {
   CourierAbortError,
+  CourierBatcherError,
   CourierDisposedError,
   CourierError,
   CourierHttpError,

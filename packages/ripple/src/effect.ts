@@ -16,8 +16,9 @@ import type {
   WatchOptions,
 } from './types';
 
+import { collectErrors, rethrowWith, runAll } from './_error-utils';
 import { getDevToolsHook } from './devtools-hook';
-import { collectErrors, rethrowWith, runAll, StateError } from './errors';
+import { RippleDisposedScopeError, RippleInfiniteLoopError, RippleInvalidCleanupError } from './errors';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
 import { IS_COMPUTED } from './symbols';
@@ -109,10 +110,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
         if (++iterations > DEFAULT_MAX_ITERATIONS) {
           const label = effectName ? ` in "${effectName}"` : '';
 
-          throw new StateError(
-            'INFINITE_LOOP',
-            `infinite effect loop (> ${DEFAULT_MAX_ITERATIONS} iterations)${label}`,
-          );
+          throw new RippleInfiniteLoopError(`infinite effect loop (> ${DEFAULT_MAX_ITERATIONS} iterations)${label}`);
         }
 
         isDirty = false;
@@ -136,8 +134,7 @@ export const effect = (fn: EffectCallback, options?: EffectOptions): EffectHandl
         }
 
         if (returnedCleanup !== undefined && typeof returnedCleanup !== 'function') {
-          throw new StateError(
-            'INVALID_CLEANUP',
+          throw new RippleInvalidCleanupError(
             `effect() returned ${typeof returnedCleanup} — expected a cleanup function or void.`,
           );
         }
@@ -291,7 +288,7 @@ export const onCleanup = (fn: CleanupFn): void => {
     return;
   }
 
-  throw new StateError('INVALID_CLEANUP', 'onCleanup() must be called from within an active effect or scope.');
+  throw new RippleInvalidCleanupError('onCleanup() must be called from within an active effect or scope.');
 };
 
 /**
@@ -324,16 +321,17 @@ export const onCleanup = (fn: CleanupFn): void => {
  */
 export const scope = (setup?: () => void): Scope => {
   const cleanups: CleanupFn[] = [];
+  const ac = new AbortController();
   let disposed = false;
 
   const scopeOnCleanup = (fn: CleanupFn): void => {
-    if (disposed) throw new StateError('DISPOSED_SCOPE', 'Cannot register cleanup on a disposed scope.');
+    if (disposed) throw new RippleDisposedScopeError('Cannot register cleanup on a disposed scope.');
 
     cleanups.push(fn);
   };
 
   const run = <T>(fn: () => T): T => {
-    if (disposed) throw new StateError('DISPOSED_SCOPE', 'Cannot run inside a disposed scope.');
+    if (disposed) throw new RippleDisposedScopeError('Cannot run inside a disposed scope.');
 
     return withScopeCleanups(cleanups, fn);
   };
@@ -342,13 +340,16 @@ export const scope = (setup?: () => void): Scope => {
     if (disposed) return;
 
     disposed = true;
-
+    ac.abort();
     runAll([...cleanups].reverse(), 'scope cleanup errors');
     cleanups.length = 0;
   };
 
   const api: Scope = {
     add: scopeOnCleanup,
+    get disposalSignal() {
+      return ac.signal;
+    },
     dispose,
     get disposed() {
       return disposed;
@@ -405,8 +406,7 @@ export function watch<T>(
     const returned = callback(next, p);
 
     if (returned !== undefined && typeof returned !== 'function') {
-      throw new StateError(
-        'INVALID_CLEANUP',
+      throw new RippleInvalidCleanupError(
         `watch() callback returned ${typeof returned} — expected a cleanup function or void.`,
       );
     }

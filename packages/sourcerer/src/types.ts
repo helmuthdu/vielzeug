@@ -1,4 +1,4 @@
-import type { SourceError } from './errors';
+import type { SourcererError } from './errors';
 
 export type Predicate<T> = (value: T, index: number, array: readonly T[]) => boolean;
 export type Sorter<T> = (a: T, b: T) => number;
@@ -45,18 +45,18 @@ export type InfiniteSourceQuery = Readonly<{
   search?: string;
 }>;
 
-export { SourceDisposedError, SourceError, SourceTimeoutError } from './errors';
-export type { SourceErrorContext } from './errors';
+export { SourceDisposedError, SourcererError, SourceTimeoutError } from './errors';
+export type { SourcererErrorContext } from './errors';
 
 /**
  * Event emitted by the `onFetch` callback after each fetch attempt settles.
- * Carries the full `SourceError` on failure for rich diagnostics.
+ * Carries the full `SourcererError` on failure for rich diagnostics.
  */
 export type FetchEvent<TQuery = unknown> = Readonly<{
   /** Total time in ms from issuing the request to receiving a response (includes retries). */
   durationMs: number;
   /** Structured error when `status` is `'error'`. */
-  error?: SourceError;
+  error?: SourcererError;
   /** The query object that was fetched. */
   query: TQuery;
   status: 'error' | 'success';
@@ -68,7 +68,7 @@ export type FetchEvent<TQuery = unknown> = Readonly<{
  */
 export type SourceMeta = Readonly<{
   /** Structured error from the most recent failed fetch. `null` when healthy. */
-  error: SourceError | null;
+  error: SourcererError | null;
   isLoading: boolean;
   isSearchPending: boolean;
   pageCount: number;
@@ -101,7 +101,7 @@ export type SourceSnapshot<T> = Readonly<{
  * ```
  */
 export type SourceState<T> =
-  | { readonly error: SourceError; readonly status: 'error' }
+  | { readonly error: SourcererError; readonly status: 'error' }
   | { readonly items: readonly T[]; readonly status: 'success' }
   | { readonly status: 'loading' };
 
@@ -308,7 +308,7 @@ export type RemoteConfig<T, TFilter = unknown, TSort = unknown> = Readonly<{
 // ── Cursor-based source types ─────────────────────────────────────────────────
 
 export type CursorMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasNextPage: boolean;
   hasPrevPage: boolean;
   isLoading: boolean;
@@ -352,7 +352,7 @@ export type CursorConfig<T, TCursor = string> = Readonly<{
 // ── Infinite (append) source types ───────────────────────────────────────────
 
 export type InfiniteMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasMore: boolean;
   isLoading: boolean;
   /** `true` only during `loadMore()` fetches — distinct from the initial load. */

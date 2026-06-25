@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useSlots } from 'vue';
 
-import { ICONS, useComponentPreview } from './component-preview/useComponentPreview';
+import { useComponentPreview } from './component-preview/useComponentPreview';
 
 const props = defineProps<{
   title?: string;
@@ -42,7 +42,7 @@ const {
       </div>
 
       <!-- Tabs with proper slot structure -->
-      <ore-tabs value="preview" variant="flat" class="preview-tabs">
+      <ore-tabs value="preview" variant="flat" size="sm" class="preview-tabs">
         <ore-tab-item slot="tabs" value="preview">Preview</ore-tab-item>
         <ore-tab-item slot="tabs" value="code">Code</ore-tab-item>
         <!-- Actions bar above tabs -->
@@ -56,7 +56,7 @@ const {
                 :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
                 @click="setViewportSize('mobile')"
                 title="Mobile view (375px)">
-                <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.mobile" />
+                <ore-icon name="smartphone"></ore-icon>
               </ore-button>
               <ore-button
                 size="sm"
@@ -64,7 +64,7 @@ const {
                 :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
                 @click="setViewportSize('tablet')"
                 title="Tablet view (768px)">
-                <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.tablet" />
+                <ore-icon name="tablet"></ore-icon>
               </ore-button>
               <ore-button
                 size="sm"
@@ -72,7 +72,7 @@ const {
                 :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
                 @click="setViewportSize('desktop')"
                 title="Desktop view (1280px)">
-                <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.desktop" />
+                <ore-icon name="monitor"></ore-icon>
               </ore-button>
             </ore-button-group>
           </div>
@@ -83,7 +83,7 @@ const {
             icon-only
             @click="copyCode"
             :title="isCopied ? 'Copied!' : 'Copy code'">
-            <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="isCopied ? ICONS.copied : ICONS.copy" />
+            <ore-icon :name="isCopied ? 'check' : 'copy'"></ore-icon>
           </ore-button>
 
           <!-- LTR / RTL toggle button -->
@@ -103,7 +103,7 @@ const {
             icon-only
             @click="toggleMaximize"
             :title="isMaximized ? 'Exit fullscreen' : 'Maximize'">
-            <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="isMaximized ? ICONS.minimize : ICONS.maximize" />
+            <ore-icon :name="isMaximized ? 'minimize-2' : 'maximize-2'"></ore-icon>
           </ore-button>
         </div>
 
@@ -142,6 +142,8 @@ const {
   margin: var(--size-6) 0;
   overflow: hidden;
   position: relative;
+  /* Prevent coarse-pointer touch-target expansion inside the preview chrome */
+  --_touch-target: 0px;
 }
 
 .component-preview.maximized {
@@ -153,6 +155,7 @@ const {
   margin: 0;
   border-radius: var(--rounded-none);
   z-index: 9999;
+  --_touch-target: unset;
 }
 
 .preview-overlay {
@@ -260,13 +263,6 @@ const {
   height: 0;
   border: none;
   background: transparent;
-}
-
-.toolbar-icon {
-  width: 16px;
-  height: 16px;
-  display: block;
-  flex-shrink: 0;
 }
 
 /* Actions bar in tabs slot */

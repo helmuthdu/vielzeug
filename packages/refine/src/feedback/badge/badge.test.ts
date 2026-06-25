@@ -8,7 +8,7 @@ describe('ore-badge', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -126,7 +126,7 @@ describe('ore-badge accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Non-interactive', () => {

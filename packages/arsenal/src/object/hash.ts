@@ -1,3 +1,5 @@
+import { ArsenalError } from '../errors';
+
 export type HashOptions = {
   /**
    * What to do when a class instance is encountered (an object whose prototype is
@@ -67,7 +69,7 @@ function _hash(value: unknown, options: HashOptions | undefined, visited: Set<ob
 
   if (proto !== Object.prototype && proto !== null) {
     if (options?.onClassInstance === 'throw') {
-      throw new TypeError(
+      throw new ArsenalError(
         `hash: unsupported type ${(value as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'}`,
       );
     }

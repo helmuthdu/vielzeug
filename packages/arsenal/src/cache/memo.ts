@@ -1,6 +1,7 @@
 import type { Fn } from '../types';
 
 import { LruMap } from '../_internal/_lruMap';
+import { ArsenalError } from '../errors';
 
 export type MemoOptions<T extends Fn> = {
   key?: (...args: Parameters<T>) => PropertyKey;
@@ -21,7 +22,7 @@ const defaultKey = (args: unknown[]): string => {
   } catch (error) {
     const reason = error instanceof Error && error.message ? ` Reason: ${error.message}` : '';
 
-    throw new TypeError(
+    throw new ArsenalError(
       `[arsenal/memo] Failed to serialize memo arguments. Provide options.key for non-serializable arguments.${reason}`,
       { cause: error },
     );

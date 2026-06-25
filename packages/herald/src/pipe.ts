@@ -1,6 +1,7 @@
 import type { Bus, EventKey, EventMap, PipeEntry, PipeableKey, Unsubscribe } from './types';
 
 import { combineSignals } from './bus';
+import { HeraldConfigError } from './errors';
 
 /**
  * Forward selected events from `source` to `target`.
@@ -27,7 +28,7 @@ export function pipeEvents<S extends EventMap, T extends EventMap>(
   entries: readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]],
   opts?: { signal?: AbortSignal },
 ): Unsubscribe {
-  if (entries.length === 0) throw new RangeError('pipeEvents() requires at least one entry');
+  if (entries.length === 0) throw new HeraldConfigError('pipeEvents() requires at least one entry');
 
   // Stop when target disposes or when the caller's signal fires.
   const pipeSignal = opts?.signal ? combineSignals(target.disposalSignal, opts.signal) : target.disposalSignal;

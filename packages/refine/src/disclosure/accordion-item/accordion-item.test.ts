@@ -8,7 +8,7 @@ describe('ore-accordion-item', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -192,7 +192,7 @@ describe('ore-accordion-item accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('WAI-ARIA Attributes', () => {

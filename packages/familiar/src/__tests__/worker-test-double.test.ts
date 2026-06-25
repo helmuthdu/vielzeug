@@ -1,12 +1,12 @@
 import { createTestWorker } from '../testing/testing';
-import { WorkerError } from '../worker';
-import { expectWorkerErrorCode } from './worker-test-helpers';
+import { FamiliarError } from '../worker';
+import { expectFamiliarErrorCode } from './worker-test-helpers';
 
 describe('createTestWorker', () => {
   describe('options validation', () => {
     it('rejects invalid maxQueue values', () => {
-      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 0 })).toThrow(WorkerError);
-      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 1.5 })).toThrow(WorkerError);
+      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 0 })).toThrow(FamiliarError);
+      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 1.5 })).toThrow(FamiliarError);
     });
   });
 
@@ -23,7 +23,7 @@ describe('createTestWorker', () => {
       await expect(worker.run('you')).resolves.toBe('hey you');
     });
 
-    it('propagates callback errors without wrapping in WorkerError', async () => {
+    it('propagates callback errors without wrapping in FamiliarError', async () => {
       const worker = createTestWorker<number, number>((n) => {
         if (n < 0) throw new Error('negative');
 
@@ -31,7 +31,7 @@ describe('createTestWorker', () => {
       });
 
       await expect(worker.run(-1)).rejects.toThrow('negative');
-      // Note: unlike the real worker, createTestWorker does NOT wrap errors in WorkerError
+      // Note: unlike the real worker, createTestWorker does NOT wrap errors in FamiliarError
       // for improved DX — vitest assertion errors surface directly.
     });
 
@@ -61,7 +61,7 @@ describe('createTestWorker', () => {
       const running = worker.run(undefined);
       const queued = worker.run(undefined);
 
-      await expectWorkerErrorCode(worker.run(undefined), 'queue_full');
+      await expectFamiliarErrorCode(worker.run(undefined), 'queue_full');
 
       await running;
       await queued;
@@ -124,7 +124,7 @@ describe('createTestWorker', () => {
 
       worker.dispose();
 
-      await expectWorkerErrorCode(worker.run(1), 'terminated');
+      await expectFamiliarErrorCode(worker.run(1), 'terminated');
     });
 
     it('close drains queued work then terminates', async () => {
@@ -134,7 +134,7 @@ describe('createTestWorker', () => {
       const first = worker.run(1);
       const second = worker.run(2);
 
-      await worker.close();
+      await worker.drain();
 
       await expect(first).resolves.toBe(1);
       await expect(second).resolves.toBe(2);
@@ -146,16 +146,16 @@ describe('createTestWorker', () => {
 
       worker.run(undefined).catch(() => {});
 
-      await expectWorkerErrorCode(worker.close(25), 'timeout');
+      await expectFamiliarErrorCode(worker.drain(25), 'timeout');
       worker.dispose();
     }, 1000);
 
     it('rejects new run() calls once close() has started', async () => {
       const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 20)));
       const running = worker.run(undefined);
-      const closing = worker.close();
+      const closing = worker.drain();
 
-      await expectWorkerErrorCode(worker.run(undefined), 'terminated');
+      await expectFamiliarErrorCode(worker.run(undefined), 'terminated');
       await expect(running).resolves.toBeUndefined();
       await expect(closing).resolves.toBeUndefined();
     });
@@ -166,7 +166,7 @@ describe('createTestWorker', () => {
       // completes naturally. close() therefore resolves once the task finishes.
       const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30)));
       const running = worker.run(undefined);
-      const closing = worker.close();
+      const closing = worker.drain();
 
       worker.dispose();
 
@@ -211,7 +211,7 @@ describe('createTestWorker', () => {
 
       controller.abort();
       await abortable.catch(() => {});
-      await worker.close();
+      await worker.drain();
 
       expect(worker.failed).toBe(0);
     });
@@ -346,7 +346,7 @@ describe('createTestWorker', () => {
       const worker = createTestWorker<number, number>((n) => n);
       const iterator = worker.runStream(1)[Symbol.asyncIterator]();
 
-      await expectWorkerErrorCode(iterator.next(), 'worker');
+      await expectFamiliarErrorCode(iterator.next(), 'worker');
       worker.dispose();
     });
   });

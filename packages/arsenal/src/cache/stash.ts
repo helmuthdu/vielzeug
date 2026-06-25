@@ -1,3 +1,4 @@
+import { ArsenalError } from '../errors';
 import { isPromise } from '../guards/isPromise';
 
 type CacheRecord<K, T> = {
@@ -168,7 +169,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T> = {}): Stash<T,
     if (delayMs === Number.POSITIVE_INFINITY) return;
 
     if (!Number.isFinite(delayMs)) {
-      throw new TypeError('stash: ttlMs must be a finite number or Infinity');
+      throw new ArsenalError('stash: ttlMs must be a finite number or Infinity');
     }
 
     if (delayMs <= 0) {

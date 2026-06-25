@@ -137,6 +137,20 @@
     --tab-item-padding: var(--size-2) var(--size-5);
   }
 
+  /* ─── coarse pointer: promote one size tier for proportional scaling ─── */
+  @media (pointer: coarse) {
+    :host,
+    :host([size='md']) {
+      --tab-item-font-size: var(--text-base);
+      --tab-item-padding: var(--size-2) var(--size-5);
+    }
+
+    :host([size='sm']) {
+      --tab-item-font-size: var(--text-sm);
+      --tab-item-padding: var(--size-1-5) var(--size-4);
+    }
+  }
+
   /* ─── disabled ─── */
   :host([disabled]) {
     pointer-events: none;

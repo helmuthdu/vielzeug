@@ -45,7 +45,7 @@ interface AsyncHandle {
   dispose(): Promise<void>;
   readonly disposed: boolean;
   readonly disposalSignal: AbortSignal;
-  [Symbol.asyncDispose](): Promise<void>; // always last; delegates to dispose()
+  [Symbol.asyncDispose](): Promise<void>; // last here: 'symbol.asyncdispose' (s) > 'disposed'/'disposalSignal' (d)
 }
 ```
 
@@ -53,7 +53,10 @@ interface AsyncHandle {
 - **`dispose()`** is the canonical name. Never use `destroy()`, `disconnect()`, `close()`, or `cleanup()` for owned-resource teardown.
 - **`readonly disposed: boolean`** — always present on disposable objects.
 - **`readonly disposalSignal: AbortSignal`** — present on **long-lived stateful objects** that consumers reasonably tie their own lifetimes to (buses, adapters, forms, worker pools, sourcerers). Not required on short-lived helpers (queries, mutations, batchers).
-- **`[Symbol.dispose]` / `[Symbol.asyncDispose]`** — always placed last in the object literal / interface (ESLint Perfectionist sorts symbol keys after named keys).
+- **`[Symbol.dispose]` / `[Symbol.asyncDispose]`** — ordering depends on context:
+  - **Type aliases** (`export type X = { ... }`): `[Symbol.*]` keys go **first** — `sort-object-types` (case-sensitive `S`) places them before all lowercase-keyed members. This is ESLint-enforced.
+  - **Object literals**: `[Symbol.*]` keys go in **alphabetical position** treating `[Symbol.foo]` as `Symbol.foo` (case-insensitive). E.g. `Symbol.dispose` (s) sorts between `n`-prefix and `t`-prefix members. This is ESLint-enforced via `sort-objects`.
+  - **Interface declarations** (`export interface X { ... }`): `sort-object-types` is not applied; follow alphabetical convention treating `[Symbol.*]` as their lowercased `symbol.*` name (same as object literals).
 - Native platform APIs that return teardown functions (e.g. `autoUpdate() => () => void`) are **not** wrapped — leave them as plain functions.
 
 ## Dev logging standard

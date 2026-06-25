@@ -1,7 +1,7 @@
 import type { Money, MoneyJSON, RoundingMode } from './types';
 
 import { warn } from './_warn';
-import { CurrencyMismatchError } from './errors';
+import { CoinsError, CurrencyMismatchError } from './errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
 
 export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
@@ -174,7 +174,7 @@ export function multiply(m: Money, factor: number | string, mode: RoundingMode =
 export function divide(m: Money, divisor: number | string, mode: RoundingMode = 'half-away-from-zero'): Money {
   const { denominator: parsedDenom, negative: divisorNegative, numerator } = parseRational(String(divisor));
 
-  if (numerator === 0n) throw new RangeError('Division by zero');
+  if (numerator === 0n) throw new CoinsError('Division by zero');
 
   const negative = m.amount < 0n !== divisorNegative;
   const absAmount = m.amount < 0n ? -m.amount : m.amount;
@@ -206,13 +206,13 @@ export function divide(m: Money, divisor: number | string, mode: RoundingMode = 
  * ```
  */
 export function allocate(m: Money, ratios: readonly (number | string)[]): [Money, ...Money[]] {
-  if (ratios.length === 0) throw new RangeError('allocate requires at least one ratio');
+  if (ratios.length === 0) throw new CoinsError('allocate requires at least one ratio');
 
   const parsedRatios = ratios.map((r) => parseRational(String(r)));
 
-  if (parsedRatios.some((p) => p.negative)) throw new RangeError('All ratios must be non-negative');
+  if (parsedRatios.some((p) => p.negative)) throw new CoinsError('All ratios must be non-negative');
 
-  if (!parsedRatios.some((p) => p.numerator > 0n)) throw new RangeError('At least one ratio must be positive');
+  if (!parsedRatios.some((p) => p.numerator > 0n)) throw new CoinsError('At least one ratio must be positive');
 
   const negative = m.amount < 0n;
   const absAmount = negative ? -m.amount : m.amount;
@@ -267,7 +267,7 @@ export function allocate(m: Money, ratios: readonly (number | string)[]): [Money
  * ```
  */
 export function sum(moneys: readonly Money[]): Money {
-  if (moneys.length === 0) throw new RangeError('sum requires at least one Money value');
+  if (moneys.length === 0) throw new CoinsError('sum requires at least one Money value');
 
   const currency = moneys[0]!.currency;
 
@@ -289,7 +289,7 @@ export function sum(moneys: readonly Money[]): Money {
  * ```
  */
 export function min(moneys: readonly Money[]): Money {
-  if (moneys.length === 0) throw new RangeError('min requires at least one Money value');
+  if (moneys.length === 0) throw new CoinsError('min requires at least one Money value');
 
   let result = moneys[0]!;
 
@@ -307,7 +307,7 @@ export function min(moneys: readonly Money[]): Money {
  * ```
  */
 export function max(moneys: readonly Money[]): Money {
-  if (moneys.length === 0) throw new RangeError('max requires at least one Money value');
+  if (moneys.length === 0) throw new CoinsError('max requires at least one Money value');
 
   let result = moneys[0]!;
 
@@ -320,7 +320,7 @@ export function max(moneys: readonly Money[]): Money {
  * Splits `money` into `parts` equal shares without losing or gaining a single minor unit.
  * Equivalent to `allocate(money, Array.from({ length: parts }, () => 1))`.
  *
- * @throws {RangeError} If `parts` is not a positive integer (≥ 1).
+ * @throws {CoinsError} If `parts` is not a positive integer (≥ 1).
  *
  * @example
  * ```ts
@@ -330,7 +330,7 @@ export function max(moneys: readonly Money[]): Money {
  */
 export function splitEvenly(m: Money, parts: number): [Money, ...Money[]] {
   if (!Number.isInteger(parts) || parts <= 0) {
-    throw new RangeError('splitEvenly requires a positive integer number of parts');
+    throw new CoinsError('splitEvenly requires a positive integer number of parts');
   }
 
   return allocate(
@@ -360,7 +360,7 @@ export function clamp(m: Money, lower: Money, upper: Money): Money {
   }
 
   if (compare(lower, upper) > 0) {
-    throw new RangeError(
+    throw new CoinsError(
       `clamp: lower (${toDecimal(lower)} ${lower.currency}) must be <= upper (${toDecimal(upper)} ${upper.currency})`,
     );
   }
@@ -480,8 +480,8 @@ export function fromJSON(json: MoneyJSON): Money {
   const validCurrency = validateCurrencyCode(json.currency);
 
   if (typeof json.amount !== 'string') {
-    throw new TypeError(
-      `Invalid money amount in JSON: ${JSON.stringify(json.amount)} (expected an integer string, e.g. '123456')`,
+    throw new CoinsError(
+      `Invalid money amount in JSON: ${String(json.amount)} (expected an integer string, e.g. '123456')`,
     );
   }
 
@@ -490,7 +490,7 @@ export function fromJSON(json: MoneyJSON): Money {
   try {
     amount = BigInt(json.amount);
   } catch {
-    throw new TypeError(`Invalid money amount in JSON: "${json.amount}" (expected an integer string, e.g. '123456')`);
+    throw new CoinsError(`Invalid money amount in JSON: "${json.amount}" (expected an integer string, e.g. '123456')`);
   }
 
   return { amount, currency: validCurrency };
@@ -557,13 +557,13 @@ export function toNumber(m: Money): number {
  */
 export function roundTo(m: Money, places: number, mode: RoundingMode = 'half-away-from-zero'): Money {
   if (!Number.isInteger(places) || places < 0) {
-    throw new RangeError(`roundTo: places must be a non-negative integer, got ${places}`);
+    throw new CoinsError(`roundTo: places must be a non-negative integer, got ${places}`);
   }
 
   const currencyDecimals = getCurrencyDecimals(m.currency);
 
   if (places > currencyDecimals) {
-    throw new RangeError(
+    throw new CoinsError(
       `roundTo: places (${places}) exceeds the decimal places for ${m.currency} (${currencyDecimals})`,
     );
   }

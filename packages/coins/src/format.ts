@@ -1,6 +1,7 @@
 import type { FormatOptions, Money, MoneyFormatPart } from './types';
 
 import { boundedCache } from './_cache';
+import { CoinsError } from './errors';
 import { applyRounding, getCurrencyDecimals, pow10 } from './utils';
 
 // Template cache key: locale × currency × style × sign — 512 prevents thrashing in multi-locale apps.
@@ -32,7 +33,7 @@ function resolveFormatState(m: Money, options: FormatOptions): FormatState {
   );
 
   if (minFrac > maxFrac) {
-    throw new RangeError('minimumFractionDigits must be less than or equal to maximumFractionDigits');
+    throw new CoinsError('minimumFractionDigits must be less than or equal to maximumFractionDigits');
   }
 
   const scaled = rescaleMinorUnits(m.amount, decimalPlaces, maxFrac);
@@ -139,7 +140,7 @@ function validateFractionDigits(name: string, value: number | undefined, fallbac
   if (value == null) return fallback;
 
   if (!Number.isInteger(value) || value < 0) {
-    throw new RangeError(`${name} must be a non-negative integer`);
+    throw new CoinsError(`${name} must be a non-negative integer`);
   }
 
   return value;

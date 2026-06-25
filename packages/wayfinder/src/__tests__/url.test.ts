@@ -84,7 +84,7 @@ describe('url()', () => {
 
     await settle();
 
-    expect(() => router.url('nonexistent' as never)).toThrow('[wayfinder] Unknown route name');
+    expect(() => router.url('nonexistent' as never)).toThrow('Unknown route name');
     router.dispose();
   });
 
@@ -97,7 +97,7 @@ describe('url()', () => {
 
     await settle();
 
-    expect(() => router.url('user', {} as never)).toThrow('[wayfinder] Missing path param');
+    expect(() => router.url('user', {} as never)).toThrow('Missing path param');
     router.dispose();
   });
 

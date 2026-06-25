@@ -1,7 +1,7 @@
 import type { Unsubscribe } from './types';
 
+import { combineSignals } from './_utils';
 import { PulseAbortError, PulseTimeoutError } from './errors';
-import { combineSignals } from './utils';
 
 /**
  * Shared implementation for `pulse.wait()` and `channel.wait()`.

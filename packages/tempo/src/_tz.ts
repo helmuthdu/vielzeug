@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { CalendarUnit, TimeInput } from './types';
 
-import { fail, TempoErrorCode } from './errors';
+import { TempoInvalidTzError, TempoMissingTzError, fail } from './errors';
 
 // ─── Timezone validation ──────────────────────────────────────────────────────
 
@@ -12,7 +12,7 @@ export function validateTz(tz: string): string {
   } catch {
     fail(
       `Unknown or invalid timezone: "${tz}". Expected an IANA timezone name (e.g. "America/New_York") or UTC offset (e.g. "+05:30").`,
-      TempoErrorCode.INVALID_TZ,
+      TempoInvalidTzError,
     );
   }
 
@@ -25,10 +25,7 @@ export function inferTimeZone(input: TimeInput, options: { tz?: string }): strin
   const tz = options.tz ?? (input instanceof Temporal.ZonedDateTime ? input.timeZoneId : undefined);
 
   if (!tz)
-    fail(
-      'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
-      TempoErrorCode.MISSING_TZ,
-    );
+    fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.', TempoMissingTzError);
 
   return validateTz(tz);
 }
@@ -54,10 +51,7 @@ export function inferSharedTimeZone(inputs: TimeInput[], options: { tz?: string 
   }
 
   if (!inferred)
-    fail(
-      'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.',
-      TempoErrorCode.MISSING_TZ,
-    );
+    fail('This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.', TempoMissingTzError);
 
   return inferred;
 }

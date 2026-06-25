@@ -22,7 +22,7 @@ describe('ore-number-input', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -260,7 +260,7 @@ describe('ore-number-input accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('WAI-ARIA Spinbutton Pattern', () => {

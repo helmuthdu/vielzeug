@@ -15,7 +15,7 @@ describe('ore-copy-command', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
     vi.restoreAllMocks();
   });
 

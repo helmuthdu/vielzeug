@@ -35,14 +35,14 @@ describe('runtime lifecycle: onMounted', () => {
   it('runs mount cleanup on unmount', async () => {
     const spy = vi.fn();
 
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onMounted(() => spy);
 
       return html`<div>Test</div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
-    destroy();
+    dispose();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });
@@ -50,7 +50,7 @@ describe('runtime lifecycle: onMounted', () => {
 describe('runtime lifecycle: execution order', () => {
   it('executes setup -> mount -> unmount in order', async () => {
     const order: string[] = [];
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       order.push('setup');
 
       ctx.onMounted(() => {
@@ -62,7 +62,7 @@ describe('runtime lifecycle: execution order', () => {
       return html`<div>Test</div>`;
     });
 
-    destroy();
+    dispose();
     expect(order).toEqual(['setup', 'mount', 'unmount']);
   });
 });
@@ -70,20 +70,20 @@ describe('runtime lifecycle: execution order', () => {
 describe('runtime lifecycle: onCleanup', () => {
   it('runs callbacks when component unmounts', async () => {
     const spy = vi.fn();
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onCleanup(spy);
 
       return html`<div>Test</div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
-    destroy();
+    dispose();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
   it('supports resource cleanup side effects', async () => {
     let cleaned = false;
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onCleanup(() => {
         cleaned = true;
       });
@@ -91,20 +91,20 @@ describe('runtime lifecycle: onCleanup', () => {
       return html`<div>Test</div>`;
     });
 
-    destroy();
+    dispose();
     expect(cleaned).toBe(true);
   });
 
   it('runs multiple cleanup callbacks in LIFO order', async () => {
     const calls: number[] = [];
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onCleanup(() => calls.push(1));
       ctx.onCleanup(() => calls.push(2));
 
       return html`<div>Test</div>`;
     });
 
-    destroy();
+    dispose();
     expect(calls).toEqual([2, 1]);
   });
 });
@@ -112,7 +112,7 @@ describe('runtime lifecycle: onCleanup', () => {
 describe('runtime lifecycle: mount + cleanup integration', () => {
   it('stops mount-owned async work on unmount', async () => {
     let effectRuns = 0;
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       const count = signal(0);
 
       ctx.onMounted(() => {
@@ -131,7 +131,7 @@ describe('runtime lifecycle: mount + cleanup integration', () => {
 
     const runsBeforeUnmount = effectRuns;
 
-    destroy();
+    dispose();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(effectRuns).toBe(runsBeforeUnmount);
   });
@@ -153,7 +153,7 @@ describe('ctx.onEvent()', () => {
     let clickCount = 0;
     let btn!: HTMLButtonElement;
 
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onMounted(() => {
         btn = document.createElement('button');
         document.body.appendChild(btn);
@@ -170,7 +170,7 @@ describe('ctx.onEvent()', () => {
     btn.dispatchEvent(new Event('click'));
     expect(clickCount).toBe(1);
 
-    destroy();
+    dispose();
 
     btn.dispatchEvent(new Event('click'));
     expect(clickCount).toBe(1);
@@ -294,7 +294,7 @@ describe('imperative cleanup pattern', () => {
   it('disposes previous cleanup when replaced and latest cleanup on unmount', async () => {
     let disposed = 0;
 
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onMounted(() => {
         let cleanup: (() => void) | null = null;
 
@@ -323,7 +323,7 @@ describe('imperative cleanup pattern', () => {
     // Replacing cleanup disposes the previous one.
     expect(disposed).toBe(1);
 
-    destroy();
+    dispose();
 
     // Unmount disposes the latest cleanup.
     expect(disposed).toBe(11);
@@ -364,17 +364,17 @@ describe('SetupContextBag lifecycle aliases (R9)', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('ctx.onCleanup fires on destroy', async () => {
+  it('ctx.onCleanup fires on dispose', async () => {
     const spy = vi.fn();
 
-    const { destroy } = await mount((_props, ctx) => {
+    const { dispose } = await mount((_props, ctx) => {
       ctx.onCleanup(spy);
 
       return html`<div></div>`;
     });
 
     expect(spy).not.toHaveBeenCalled();
-    destroy();
+    dispose();
     expect(spy).toHaveBeenCalledTimes(1);
   });
 

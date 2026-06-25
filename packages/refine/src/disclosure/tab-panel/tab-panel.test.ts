@@ -8,7 +8,7 @@ describe('ore-tab-panel', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Core Functionality', () => {

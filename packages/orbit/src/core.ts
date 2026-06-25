@@ -10,6 +10,7 @@ import type {
 } from './types';
 
 import { warn } from './_warn';
+import { OrbitConfigError } from './errors';
 import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
@@ -188,5 +189,5 @@ export function computePosition(
     currentPlacement = reset.placement ?? state.placement;
   }
 
-  throw new Error('[orbit] Middleware triggered too many resets in a single compute cycle.');
+  throw new OrbitConfigError('Middleware triggered too many resets in a single compute cycle.');
 }

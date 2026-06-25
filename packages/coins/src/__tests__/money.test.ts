@@ -40,32 +40,32 @@ import {
 describe('money factory', () => {
   describe('invalid amount strings', () => {
     it('throws RangeError for non-numeric string', () => {
-      expect(() => money('abc', 'USD')).toThrow(RangeError);
+      expect(() => money('abc', 'USD')).toThrow(CoinsError);
       expect(() => money('abc', 'USD')).toThrow('Invalid decimal string');
     });
 
     it('throws RangeError for amount with multiple dots', () => {
-      expect(() => money('1.2.3', 'USD')).toThrow(RangeError);
+      expect(() => money('1.2.3', 'USD')).toThrow(CoinsError);
     });
 
     it('throws RangeError for empty string amount', () => {
-      expect(() => money('', 'USD')).toThrow(RangeError);
+      expect(() => money('', 'USD')).toThrow(CoinsError);
     });
   });
 
   describe('special number inputs', () => {
     it('throws RangeError for NaN', () => {
-      expect(() => money(NaN, 'USD')).toThrow(RangeError);
+      expect(() => money(NaN, 'USD')).toThrow(CoinsError);
       expect(() => money(NaN, 'USD')).toThrow('Invalid decimal string');
     });
 
     it('throws RangeError for Infinity', () => {
-      expect(() => money(Infinity, 'USD')).toThrow(RangeError);
+      expect(() => money(Infinity, 'USD')).toThrow(CoinsError);
       expect(() => money(Infinity, 'USD')).toThrow('Invalid decimal string');
     });
 
     it('throws RangeError for -Infinity', () => {
-      expect(() => money(-Infinity, 'USD')).toThrow(RangeError);
+      expect(() => money(-Infinity, 'USD')).toThrow(CoinsError);
       expect(() => money(-Infinity, 'USD')).toThrow('Invalid decimal string');
     });
   });
@@ -222,7 +222,7 @@ describe('clamp', () => {
   });
 
   it('throws RangeError when lower > upper', () => {
-    expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow(RangeError);
+    expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow(CoinsError);
     expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow('clamp');
   });
 
@@ -402,8 +402,8 @@ describe('divide', () => {
   });
 
   it('throws on division by zero', () => {
-    expect(() => divide(money('100.00', 'USD'), 0)).toThrow(RangeError);
-    expect(() => divide(money('100.00', 'USD'), '0.0')).toThrow(RangeError);
+    expect(() => divide(money('100.00', 'USD'), 0)).toThrow(CoinsError);
+    expect(() => divide(money('100.00', 'USD'), '0.0')).toThrow(CoinsError);
   });
 
   it('handles very small number divisors in scientific notation', () => {
@@ -585,21 +585,21 @@ describe('allocate', () => {
 
   describe('error cases', () => {
     it('throws on empty ratios', () => {
-      expect(() => allocate(money('10.00', 'USD'), [])).toThrow(RangeError);
+      expect(() => allocate(money('10.00', 'USD'), [])).toThrow(CoinsError);
       expect(() => allocate(money('10.00', 'USD'), [])).toThrow('at least one ratio');
     });
 
     it('throws on negative ratios', () => {
-      expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow(RangeError);
+      expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow(CoinsError);
       expect(() => allocate(money('10.00', 'USD'), [1, -1])).toThrow('non-negative');
     });
 
     it('throws when all ratios are zero', () => {
-      expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow(RangeError);
+      expect(() => allocate(money('10.00', 'USD'), [0, 0])).toThrow(CoinsError);
     });
 
     it('throws on negative string ratios (e.g. "-0.5")', () => {
-      expect(() => allocate(money('10.00', 'USD'), ['-0.5', '1'])).toThrow(RangeError);
+      expect(() => allocate(money('10.00', 'USD'), ['-0.5', '1'])).toThrow(CoinsError);
       expect(() => allocate(money('10.00', 'USD'), ['-0.5', '1'])).toThrow('non-negative');
     });
   });
@@ -638,15 +638,15 @@ describe('splitEvenly', () => {
   });
 
   it('throws for non-integer parts', () => {
-    expect(() => splitEvenly(money('10.00', 'USD'), 1.5)).toThrow(RangeError);
+    expect(() => splitEvenly(money('10.00', 'USD'), 1.5)).toThrow(CoinsError);
   });
 
   it('throws for zero parts', () => {
-    expect(() => splitEvenly(money('10.00', 'USD'), 0)).toThrow(RangeError);
+    expect(() => splitEvenly(money('10.00', 'USD'), 0)).toThrow(CoinsError);
   });
 
   it('throws for negative parts', () => {
-    expect(() => splitEvenly(money('10.00', 'USD'), -1)).toThrow(RangeError);
+    expect(() => splitEvenly(money('10.00', 'USD'), -1)).toThrow(CoinsError);
   });
 });
 
@@ -693,7 +693,7 @@ describe('sum', () => {
   });
 
   it('throws on empty array', () => {
-    expect(() => sum([])).toThrow(RangeError);
+    expect(() => sum([])).toThrow(CoinsError);
     expect(() => sum([])).toThrow('at least one');
   });
 
@@ -731,7 +731,7 @@ describe('min', () => {
   });
 
   it('throws RangeError on empty array', () => {
-    expect(() => min([])).toThrow(RangeError);
+    expect(() => min([])).toThrow(CoinsError);
   });
 
   it('throws on currency mismatch', () => {
@@ -753,7 +753,7 @@ describe('max', () => {
   });
 
   it('throws RangeError on empty array', () => {
-    expect(() => max([])).toThrow(RangeError);
+    expect(() => max([])).toThrow(CoinsError);
   });
 
   it('throws on currency mismatch', () => {
@@ -893,23 +893,23 @@ describe('toJSON / fromJSON', () => {
   });
 
   it('throws TypeError for invalid amount string in fromJSON', () => {
-    expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(TypeError);
+    expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(CoinsError);
   });
 
   it('throws TypeError for decimal (float) amount string in fromJSON', () => {
-    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(TypeError);
+    expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(CoinsError);
     expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow('expected an integer string');
   });
 
   it('throws TypeError when amount is a number instead of string', () => {
-    expect(() => fromJSON({ amount: 123456 as unknown as string, currency: 'USD' })).toThrow(TypeError);
+    expect(() => fromJSON({ amount: 123456 as unknown as string, currency: 'USD' })).toThrow(CoinsError);
     expect(() => fromJSON({ amount: 123456 as unknown as string, currency: 'USD' })).toThrow(
       'expected an integer string',
     );
   });
 
   it('throws TypeError when amount is a bigint instead of string', () => {
-    expect(() => fromJSON({ amount: 123456n as unknown as string, currency: 'USD' })).toThrow(TypeError);
+    expect(() => fromJSON({ amount: 123456n as unknown as string, currency: 'USD' })).toThrow(CoinsError);
   });
 });
 
@@ -1180,16 +1180,16 @@ describe('roundTo', () => {
   });
 
   it('throws RangeError for negative places', () => {
-    expect(() => roundTo(money('10.00', 'USD'), -1)).toThrow(RangeError);
+    expect(() => roundTo(money('10.00', 'USD'), -1)).toThrow(CoinsError);
   });
 
   it('throws RangeError for places > currency decimals', () => {
-    expect(() => roundTo(money('10.00', 'USD'), 3)).toThrow(RangeError);
+    expect(() => roundTo(money('10.00', 'USD'), 3)).toThrow(CoinsError);
     expect(() => roundTo(money('10.00', 'USD'), 3)).toThrow('exceeds');
   });
 
   it('throws RangeError for non-integer places', () => {
-    expect(() => roundTo(money('10.00', 'USD'), 1.5)).toThrow(RangeError);
+    expect(() => roundTo(money('10.00', 'USD'), 1.5)).toThrow(CoinsError);
   });
 });
 

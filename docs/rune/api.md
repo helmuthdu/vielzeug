@@ -287,6 +287,7 @@ Returns a `BatchHandle` with:
 - `.transport` — the `Transport` function to pass to `createLogger({ transports: [handle.transport] })`.
 - `.flush()` — immediately send buffered entries without stopping the timer.
 - `.dispose()` — stop the interval and flush remaining entries. **Call on shutdown.** Idempotent.
+- `.disposed` — `true` after `dispose()` has been called.
 - `[Symbol.dispose]()` — delegates to `.dispose()`. Enables `using` declarations.
 
 After `dispose()`, the transport becomes inert: new entries are silently dropped.
@@ -553,12 +554,13 @@ Opaque type returned by `lazy()`. Pass as a value inside `withBindings()`. The f
 type BatchHandle = {
   [Symbol.dispose]: () => void;
   dispose: () => void;
+  readonly disposed: boolean;
   flush: () => void;
   transport: Transport;
 };
 ```
 
-Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`; call `handle.dispose()` on shutdown.
+Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ transports })`; call `handle.dispose()` on shutdown. `disposed` is `true` after `dispose()` has been called.
 
 ### Logger
 

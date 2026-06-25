@@ -62,6 +62,9 @@ export function reportRuntimeError(error: OreLifecycleError, element: HTMLElemen
 
 // ─── Error message constants ─────────────────────────────────────────────────
 
+/** Thrown by `waitFor` and `waitForEvent` in the testing sub-path when a condition is not met within the timeout. */
+export class OreTimeoutError extends OreError {}
+
 export const ORE_ERRORS = {
   defineDuplicate: (tag: string): string => `define('${tag}') called twice — custom element already registered`,
   defineFieldRequiresFormAssociated: (tag: string): string =>

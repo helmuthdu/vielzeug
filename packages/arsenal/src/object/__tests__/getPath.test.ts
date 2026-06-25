@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ArsenalError } from '../../errors';
 import { getPath } from '../getPath';
 
 const obj = { a: { b: { c: 3 } }, d: [1, 2, 3], e: 0, f: false };
@@ -34,7 +35,7 @@ describe('getPath', () => {
     });
 
     it('throws TypeError when bracketNotation: false and bracket syntax used', () => {
-      expect(() => getPath(obj, 'd[1]', { bracketNotation: false })).toThrow(TypeError);
+      expect(() => getPath(obj, 'd[1]', { bracketNotation: false })).toThrow(ArsenalError);
     });
 
     it('does not throw with bracketNotation: false and no brackets', () => {

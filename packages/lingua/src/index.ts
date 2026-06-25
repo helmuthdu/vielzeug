@@ -7,7 +7,6 @@
  * into the DOM via `innerHTML`. Rendering via `.textContent` is always safe.
  */
 
-export type { ErrorCode } from './i18n';
 export type {
   I18n,
   I18nOptions,
@@ -30,4 +29,16 @@ export type {
 export type { DurationFormatOptions, DurationValue, Formatter, ListFormatOptions } from './format';
 
 export { createFormatter } from './format';
-export { E, LinguaError, createI18n, hydrateI18n, serializeI18n } from './i18n';
+export {
+  LinguaCountInVarsError,
+  LinguaDisposedError,
+  LinguaError,
+  LinguaInvalidCountError,
+  LinguaInvalidLocaleError,
+  LinguaMissingLocaleError,
+  LinguaNamespaceMissingError,
+  LinguaRestoreError,
+  createI18n,
+  hydrateI18n,
+  serializeI18n,
+} from './i18n';

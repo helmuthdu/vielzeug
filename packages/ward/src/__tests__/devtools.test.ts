@@ -104,6 +104,6 @@ describe('debugWard', () => {
         ],
         { strict: true },
       );
-    }).toThrow('[ward]');
+    }).toThrow('rule conflict');
   });
 });

@@ -1,7 +1,12 @@
-import type { SlotStrategy, WorkerHandle, WorkerStatus } from '../_types';
+import type { SlotStrategy, WorkerHandle, WorkerStatus } from '../types';
 
 import { createPool } from '../_pool';
-import { WorkerInvalidOptionsError, WorkerRuntimeError, WorkerTaskError, WorkerTerminatedError } from '../errors';
+import {
+  FamiliarInvalidOptionsError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+} from '../errors';
 
 export type TestWorkerOptions = {
   /**
@@ -10,7 +15,7 @@ export type TestWorkerOptions = {
    */
   concurrency?: number;
   /**
-   * When true, errors from fn are wrapped in WorkerTaskError/WorkerRuntimeError, mirroring
+   * When true, errors from fn are wrapped in FamiliarTaskError/FamiliarRuntimeError, mirroring
    * real worker behavior. Default: false (errors propagate unwrapped for better test DX).
    */
   errorWrapping?: boolean;
@@ -31,11 +36,11 @@ export function createTestWorker<TInput, TOutput>(
   const { concurrency = 1, errorWrapping = false, maxQueue, onFull = 'reject' } = options;
 
   if (!Number.isInteger(concurrency) || concurrency < 1) {
-    throw new WorkerInvalidOptionsError('`concurrency` must be a positive integer');
+    throw new FamiliarInvalidOptionsError('`concurrency` must be a positive integer');
   }
 
   if (maxQueue !== undefined && (!Number.isInteger(maxQueue) || maxQueue < 1)) {
-    throw new WorkerInvalidOptionsError('`maxQueue` must be a positive integer');
+    throw new FamiliarInvalidOptionsError('`maxQueue` must be a positive integer');
   }
 
   const calls: { input: TInput; output: TOutput }[] = [];
@@ -43,7 +48,7 @@ export function createTestWorker<TInput, TOutput>(
   /**
    * In-process SlotStrategy. Errors propagate unwrapped by default (better test DX:
    * vitest AssertionErrors surface directly). Set errorWrapping: true to mirror real worker
-   * behavior (useful when testing code that checks `error instanceof WorkerError`).
+   * behavior (useful when testing code that checks `error instanceof FamiliarError`).
    */
   function makeSlot(): SlotStrategy<TInput, TOutput> {
     let terminated = false;
@@ -58,7 +63,7 @@ export function createTestWorker<TInput, TOutput>(
       },
 
       async run(input: TInput, _transferables: Transferable[], _timeout: number | undefined): Promise<TOutput> {
-        if (terminated) return Promise.reject(new WorkerTerminatedError());
+        if (terminated) return Promise.reject(new FamiliarTerminatedError());
 
         try {
           const output = await fn(input);
@@ -71,7 +76,7 @@ export function createTestWorker<TInput, TOutput>(
 
           const err = e instanceof Error ? e : new Error(String(e));
 
-          throw new WorkerTaskError(err.message, err);
+          throw new FamiliarTaskError(err.message, err);
         }
       },
 
@@ -80,7 +85,7 @@ export function createTestWorker<TInput, TOutput>(
           [Symbol.asyncIterator]() {
             return {
               next(): Promise<IteratorResult<TOutput>> {
-                return Promise.reject(new WorkerRuntimeError('runStream() is not supported by createTestWorker'));
+                return Promise.reject(new FamiliarRuntimeError('runStream() is not supported by createTestWorker'));
               },
             };
           },
@@ -116,11 +121,11 @@ export function createTestWorker<TInput, TOutput>(
 // Re-export types consumed by test files so they don't need to import from two places.
 export type { WorkerHandle, WorkerStatus };
 export {
-  WorkerError,
-  WorkerInvalidOptionsError,
-  WorkerQueueFullError,
-  WorkerRuntimeError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarError,
+  FamiliarInvalidOptionsError,
+  FamiliarQueueFullError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from '../errors';

@@ -1,6 +1,6 @@
 import type { AttemptResult } from './attempt';
 
-import { assert } from '../function/assert';
+import { ArsenalError } from '../errors';
 
 /**
  * Creates a promise queue that processes promises sequentially with optional concurrency limit.
@@ -42,9 +42,7 @@ export interface Queue {
 export function queue(options: { concurrency?: number } = {}): Queue {
   const { concurrency = 1 } = options;
 
-  assert(concurrency >= 1, 'Concurrency must be at least 1', {
-    type: RangeError,
-  });
+  if (concurrency < 1) throw new ArsenalError('Concurrency must be at least 1');
 
   let activeCount = 0;
   let isDraining = false;

@@ -1,3 +1,4 @@
+export { ScrollError, ScrollRangeError } from './errors';
 export { createDomVirtualList, createVirtualScroller } from './dom-virtual-list';
 export type {
   DomVirtualListController,

@@ -1,6 +1,6 @@
 export { ANONYMOUS, WILDCARD } from './constants';
 export { allow, deny, owns, predicate, ruleFor } from './builder';
-export { WardError, WardPredicateError } from './errors';
+export { WardConfigError, WardError, WardPredicateError } from './errors';
 export { createWard } from './factory';
 export { guardRequest, guardRequestWith } from './middleware';
 export { matchesPattern, patternCovers } from './resource';

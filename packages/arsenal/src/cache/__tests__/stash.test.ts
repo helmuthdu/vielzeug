@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ArsenalError } from '../../errors';
 import { stash } from '../stash';
 
 const hash = (key: readonly unknown[]) => JSON.stringify(key);
@@ -111,8 +112,8 @@ describe('stash', () => {
 
     c.set(['k'], 'v');
 
-    expect(() => c.set(['k2'], 'v', { ttlMs: Number.NaN })).toThrow(TypeError);
-    expect(() => c.set(['k3'], 'v', { ttlMs: Number.NEGATIVE_INFINITY })).toThrow(TypeError);
+    expect(() => c.set(['k2'], 'v', { ttlMs: Number.NaN })).toThrow(ArsenalError);
+    expect(() => c.set(['k3'], 'v', { ttlMs: Number.NEGATIVE_INFINITY })).toThrow(ArsenalError);
   });
 
   it('should handle complex keys', () => {

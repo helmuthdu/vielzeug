@@ -45,7 +45,7 @@ describe('mutationObserver()', () => {
     globalThis.MutationObserver = MockMutationObserver;
 
     try {
-      const { destroy } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props, ctx) => {
         const hostRef = ref<HTMLDivElement>();
 
         ctx.onMounted(() => {
@@ -59,7 +59,7 @@ describe('mutationObserver()', () => {
 
       expect(disconnect).not.toHaveBeenCalled();
 
-      destroy();
+      dispose();
 
       expect(disconnect).toHaveBeenCalled();
     } finally {

@@ -834,6 +834,14 @@ createBatcher<K, V>(opts: BatcherOptions<K, V>): Batcher<K, V>;
 
 **Returns:** `Batcher<K, V>`
 
+| Member              | Type                    | Description                                                              |
+| ------------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `load(key)`         | `Promise<V>`            | Enqueues `key`; returns a promise fulfilled with its result              |
+| `dispose()`         | `void`                  | Cancels pending promises, stops scheduled flushes. Idempotent.           |
+| `[Symbol.dispose]`  | `void`                  | Alias for `dispose()` — supports `using` declarations                    |
+| `disposalSignal`    | `AbortSignal` (getter)  | Aborted when `dispose()` is called; use to tie external lifetimes        |
+| `disposed`          | `boolean` (getter)      | `true` after `dispose()`                                                 |
+
 **Example:**
 
 ```ts

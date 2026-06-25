@@ -8,7 +8,7 @@ describe('ore-alert', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -140,7 +140,7 @@ describe('ore-alert', () => {
         fixture = await mount('ore-alert', { attrs: { color } });
 
         expect(fixture.element.getAttribute('color')).toBe(color);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -154,7 +154,7 @@ describe('ore-alert accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('WAI-ARIA Role', () => {
@@ -200,7 +200,7 @@ describe('ore-alert accessibility', () => {
       for (const color of ['primary', 'success', 'warning', 'info']) {
         fixture = await mount('ore-alert', { attrs: { color } });
         expect(fixture.query('[role="status"]')).toBeTruthy();
-        fixture.destroy();
+        fixture.dispose();
       }
     });
   });

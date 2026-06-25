@@ -13,12 +13,16 @@ import { runWithContext } from '../runtime';
 import { flush } from './flush';
 
 export interface HookFixture<T> {
-  /** The value returned by the setup function */
-  result: T;
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
+  /** Teardown the hook (runs cleanups). Idempotent. */
+  dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Flush pending reactive updates */
   flush(): Promise<void>;
-  /** Teardown the hook (runs cleanups) */
-  destroy(): void;
+  /** The value returned by the setup function */
+  result: T;
 }
 
 /**
@@ -102,14 +106,31 @@ export async function renderHook<D extends PropInputDefs, T>(
 
   await flush();
 
+  let isDisposed = false;
+
+  function dispose() {
+    if (isDisposed) return;
+
+    isDisposed = true;
+    hostScope.dispose();
+    hostEl.remove();
+  }
+
   return {
-    destroy() {
-      hostScope.dispose();
-      hostEl.remove();
+    dispose,
+
+    get disposed(): boolean {
+      return isDisposed;
     },
+
     async flush() {
       await flush();
     },
+
     result,
+
+    [Symbol.dispose]() {
+      dispose();
+    },
   };
 }

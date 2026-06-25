@@ -387,3 +387,24 @@ type ReactiveSearch<T> = SearchState<T> & {
 ```
 
 See `createReactiveSearch()` above.
+
+---
+
+## Errors
+
+### `ScoutError`
+
+Base class for all scout errors. Use `instanceof ScoutError` or `ScoutError.is()` to catch any scout-originated error.
+
+```ts
+class ScoutError extends Error {
+  static is(err: unknown): err is ScoutError;
+}
+```
+
+**Named subclasses**
+
+| Class               | Thrown when                                                            |
+| ------------------- | ---------------------------------------------------------------------- |
+| `ScoutDisposedError` | A method is called on a disposed `SearchState` instance               |
+| `ScoutIndexError`   | An index is built or queried with an invalid configuration (e.g. zero fields) |

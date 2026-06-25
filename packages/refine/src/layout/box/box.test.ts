@@ -8,7 +8,7 @@ describe('ore-box', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -75,7 +75,7 @@ describe('ore-box', () => {
         fixture = await mount('ore-box', { attrs: { variant } });
 
         expect(fixture.element.getAttribute('variant')).toBe(variant);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -89,7 +89,7 @@ describe('ore-box accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Semantic Structure', () => {

@@ -1,3 +1,6 @@
+// Errors
+export { OrbitConfigError, OrbitError } from './errors';
+
 // Core engine
 export { computePosition, computePositionAsync, computePositionRaf } from './core';
 export { detectOverflow } from './overflow';

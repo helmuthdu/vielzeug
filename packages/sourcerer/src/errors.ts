@@ -1,5 +1,5 @@
 /**
- * Structured context carried by `SourceError`.
+ * Structured context carried by `SourcererError`.
  * Discriminated on `kind` — narrow with `error.context?.kind` to access typed fields.
  *
  * @example
@@ -9,13 +9,13 @@
  * }
  * ```
  */
-export type SourceErrorContext =
+export type SourcererErrorContext =
   | Readonly<{ kind: 'cursor'; limit: number; search?: string }>
   | Readonly<{ kind: 'infinite'; limit: number; page: number; search?: string }>
   | Readonly<{ kind: 'remote'; limit: number; page: number; search?: string }>;
 
 /**
- * Base class for all sourcerer errors. Catch with `instanceof SourceError` to handle any
+ * Base class for all sourcerer errors. Catch with `instanceof SourcererError` to handle any
  * sourcerer-originated error regardless of specific subtype.
  *
  * Carries the original cause, structured context, and the attempt number.
@@ -27,11 +27,11 @@ export type SourceErrorContext =
  * }
  * ```
  */
-export class SourceError extends Error {
+export class SourcererError extends Error {
   readonly #opts: {
     readonly attempt?: number;
     readonly cause?: unknown;
-    readonly context?: SourceErrorContext;
+    readonly context?: SourcererErrorContext;
   };
 
   constructor(
@@ -39,7 +39,7 @@ export class SourceError extends Error {
     opts: {
       readonly attempt?: number;
       readonly cause?: unknown;
-      readonly context?: SourceErrorContext;
+      readonly context?: SourcererErrorContext;
     } = {},
   ) {
     super(message, opts.cause !== undefined ? { cause: opts.cause } : undefined);
@@ -53,17 +53,17 @@ export class SourceError extends Error {
   }
 
   /** Context bag for the error — safe to log. */
-  get context(): SourceErrorContext | undefined {
+  get context(): SourcererErrorContext | undefined {
     return this.#opts.context;
   }
 
-  static is(err: unknown): err is SourceError {
-    return err instanceof SourceError;
+  static is(err: unknown): err is SourcererError {
+    return err instanceof SourcererError;
   }
 }
 
 /** Thrown by `ready()` when the source timed out waiting for the first successful fetch. */
-export class SourceTimeoutError extends SourceError {
+export class SourceTimeoutError extends SourcererError {
   /** The configured timeout in milliseconds. */
   readonly timeoutMs: number;
 
@@ -74,7 +74,7 @@ export class SourceTimeoutError extends SourceError {
 }
 
 /** Thrown by `ready()` when the source is disposed while waiting. */
-export class SourceDisposedError extends SourceError {
+export class SourceDisposedError extends SourcererError {
   constructor() {
     super('Source disposed while waiting for ready()');
   }

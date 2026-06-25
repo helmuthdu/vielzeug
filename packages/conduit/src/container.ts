@@ -15,13 +15,13 @@ import type {
 
 import { issue } from './_warn.js';
 import {
-  ContainerCircularDependencyError,
-  ContainerDisposedError,
-  ContainerFrozenError,
-  ContainerDuplicateRegistrationError,
-  ContainerProviderNotFoundError,
-  ContainerScopedResolutionError,
-  ContainerSyncResolutionError,
+  ConduitCircularDependencyError,
+  ConduitDisposedError,
+  ConduitFrozenError,
+  ConduitDuplicateRegistrationError,
+  ConduitProviderNotFoundError,
+  ConduitScopedResolutionError,
+  ConduitSyncResolutionError,
   tokenName,
 } from './errors.js';
 
@@ -84,11 +84,11 @@ class ContainerImpl implements Container {
   }
 
   #assertNotDisposed(): void {
-    if (this.#disposed) throw new ContainerDisposedError(this.name);
+    if (this.#disposed) throw new ConduitDisposedError(this.name);
   }
 
   #assertNotFrozen(): void {
-    if (this.#frozen) throw new ContainerFrozenError(this.name);
+    if (this.#frozen) throw new ConduitFrozenError(this.name);
   }
 
   // Emit to local listeners then propagate up to parent.
@@ -116,7 +116,7 @@ class ContainerImpl implements Container {
     this.#assertNotDisposed();
     this.#assertNotFrozen();
 
-    if (this.#registry.has(tok)) throw new ContainerDuplicateRegistrationError(tok);
+    if (this.#registry.has(tok)) throw new ConduitDuplicateRegistrationError(tok);
 
     const reg: ValueRegistration<T> = { dispose: opts?.dispose, kind: 'value', value: val };
 
@@ -130,7 +130,7 @@ class ContainerImpl implements Container {
     this.#assertNotDisposed();
     this.#assertNotFrozen();
 
-    if (this.#registry.has(tok)) throw new ContainerDuplicateRegistrationError(tok);
+    if (this.#registry.has(tok)) throw new ConduitDuplicateRegistrationError(tok);
 
     const reg: FactoryDescriptor<T> = {
       deps: opts?.deps,
@@ -168,7 +168,7 @@ class ContainerImpl implements Container {
 
     const reg = this.#getRegistration(tok) as Registration<T> | undefined;
 
-    if (!reg) throw new ContainerProviderNotFoundError(tok, this.name);
+    if (!reg) throw new ConduitProviderNotFoundError(tok, this.name);
 
     const result = this.#resolveSyncReg(tok, reg);
 
@@ -256,9 +256,9 @@ class ContainerImpl implements Container {
 
   /**
    * Validate the registration graph without freezing it.
-   * Checks statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
-   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
-   * Throws `ContainerDisposedError` if the container is already disposed.
+   * Checks statically-declared `deps`: throws `ConduitProviderNotFoundError` if a
+   * declared dep is missing, or `ConduitCircularDependencyError` if they form a cycle.
+   * Throws `ConduitDisposedError` if the container is already disposed.
    */
   validate(): this {
     this.#assertNotDisposed();
@@ -279,7 +279,7 @@ class ContainerImpl implements Container {
 
           for (const dep of reg.deps) {
             if (this.#getRegistration(dep) === undefined) {
-              throw new ContainerProviderNotFoundError(dep, this.name);
+              throw new ConduitProviderNotFoundError(dep, this.name);
             }
           }
         }
@@ -292,7 +292,7 @@ class ContainerImpl implements Container {
       const done = new Set<Token<any>>();
 
       const dfs = (tok: Token<any>, path: Token<any>[]): void => {
-        if (visiting.has(tok)) throw new ContainerCircularDependencyError([...path, tok]);
+        if (visiting.has(tok)) throw new ConduitCircularDependencyError([...path, tok]);
 
         if (done.has(tok)) return;
 
@@ -495,11 +495,11 @@ class ContainerImpl implements Container {
   }
 
   async #resolveToken<T>(tok: Token<T>, visiting: Set<Token<any>>, path: Token<any>[]): Promise<T> {
-    if (visiting.has(tok)) throw new ContainerCircularDependencyError([...path, tok]);
+    if (visiting.has(tok)) throw new ConduitCircularDependencyError([...path, tok]);
 
     const reg = this.#getRegistration(tok) as Registration<T> | undefined;
 
-    if (!reg) throw new ContainerProviderNotFoundError(tok, this.name);
+    if (!reg) throw new ConduitProviderNotFoundError(tok, this.name);
 
     visiting.add(tok);
 
@@ -519,7 +519,7 @@ class ContainerImpl implements Container {
     if (typeof lifetime === 'symbol') {
       const scopeContainer = this.#findScope(lifetime);
 
-      if (!scopeContainer) throw new ContainerScopedResolutionError(tok, lifetime);
+      if (!scopeContainer) throw new ConduitScopedResolutionError(tok, lifetime);
 
       return this.#populate(scopeContainer.#getCache(reg), reg, visiting, path);
     }
@@ -542,7 +542,7 @@ class ContainerImpl implements Container {
     if (typeof lifetime === 'symbol') {
       const scopeContainer = this.#findScope(lifetime);
 
-      if (!scopeContainer) throw new ContainerScopedResolutionError(tok, lifetime);
+      if (!scopeContainer) throw new ConduitScopedResolutionError(tok, lifetime);
 
       const entry = scopeContainer.#cache.get(reg);
 
@@ -550,10 +550,10 @@ class ContainerImpl implements Container {
 
       if (entry?.rejection !== undefined) throw entry.rejection;
 
-      throw new ContainerSyncResolutionError(tok, lifetime);
+      throw new ConduitSyncResolutionError(tok, lifetime);
     }
 
-    if (lifetime === 'transient') throw new ContainerSyncResolutionError(tok, lifetime);
+    if (lifetime === 'transient') throw new ConduitSyncResolutionError(tok, lifetime);
 
     const cacheContainer = this.#findOwnerContainer(tok);
     const entry = cacheContainer.#cache.get(reg);
@@ -562,7 +562,7 @@ class ContainerImpl implements Container {
 
     if (entry?.rejection !== undefined) throw entry.rejection;
 
-    throw new ContainerSyncResolutionError(tok, lifetime);
+    throw new ConduitSyncResolutionError(tok, lifetime);
   }
 }
 

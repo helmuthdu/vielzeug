@@ -1,10 +1,10 @@
 // ─── Disposable ──────────────────────────────────────────────────────────────
 
 export interface Disposable {
-  readonly disposed: boolean;
+  [Symbol.dispose](): void;
   readonly disposalSignal: AbortSignal;
   dispose(): void;
-  [Symbol.dispose](): void;
+  readonly disposed: boolean;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

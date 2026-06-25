@@ -8,7 +8,7 @@ describe('ore-input', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ──────────────────────────────────────────────────────────────
@@ -460,7 +460,7 @@ describe('ore-input accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Semantic Structure ──────────────────────────────────────────────────────

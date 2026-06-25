@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createLedger } from '../index';
+import { LedgerDisposedError, LedgerError, LedgerExecutionError, LedgerRollbackError, createLedger } from '../index';
 
 describe('createLedger', () => {
   it('executes a command and adds to undo stack', async () => {
@@ -391,5 +391,32 @@ describe('createLedger', () => {
 
       ledger.dispose();
     });
+  });
+});
+
+describe('LedgerError — named subclasses', () => {
+  it('each subclass is instanceof LedgerError and Error', () => {
+    expect(new LedgerDisposedError('disposed')).toBeInstanceOf(LedgerError);
+    expect(new LedgerDisposedError('disposed')).toBeInstanceOf(Error);
+    expect(new LedgerExecutionError('exec')).toBeInstanceOf(LedgerError);
+    expect(new LedgerRollbackError('roll')).toBeInstanceOf(LedgerError);
+  });
+
+  it('each subclass has the correct .name', () => {
+    expect(new LedgerDisposedError('').name).toBe('LedgerDisposedError');
+    expect(new LedgerExecutionError('').name).toBe('LedgerExecutionError');
+    expect(new LedgerRollbackError('').name).toBe('LedgerRollbackError');
+  });
+
+  it('LedgerError.is() returns true for any subclass', () => {
+    expect(LedgerError.is(new LedgerDisposedError(''))).toBe(true);
+    expect(LedgerError.is(new Error('plain'))).toBe(false);
+  });
+
+  it('supports cause chaining via opts?.cause', () => {
+    const cause = new Error('original');
+    const err = new LedgerExecutionError('wrapped', { cause });
+
+    expect(err.cause).toBe(cause);
   });
 });

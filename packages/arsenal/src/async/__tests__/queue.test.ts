@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { queue, type Queue } from '../queue';
 
 describe('queue', () => {
@@ -89,8 +90,8 @@ describe('queue', () => {
     await expect(q.onIdle()).resolves.toBeUndefined();
   });
 
-  it('throws a RangeError for concurrency < 1', () => {
-    expect(() => queue({ concurrency: 0 })).toThrow(RangeError);
+  it('throws ArsenalError for concurrency < 1', () => {
+    expect(() => queue({ concurrency: 0 })).toThrow(ArsenalError);
   });
 
   it('handles task errors without poisoning the queue', async () => {

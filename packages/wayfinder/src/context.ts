@@ -14,6 +14,7 @@ import type {
 } from './types';
 
 import { issue } from './_warn';
+import { WayfinderApiError } from './errors';
 
 // ─── Route state ──────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ export async function executeMiddlewarePipeline<TRoutes extends RouteTable>(
       let called = false;
 
       await middleware[index]!(context, async () => {
-        if (called) throw new Error('[wayfinder] next() called multiple times');
+        if (called) throw new WayfinderApiError('next() called multiple times');
 
         called = true;
         await dispatch(index + 1);

@@ -61,7 +61,7 @@ describe('createRemoteSource', () => {
       await source.refresh();
 
       expect(source.meta.error?.message).toBe('boom');
-      expect(source.meta.error?.name).toBe('SourceError');
+      expect(source.meta.error?.name).toBe('SourcererError');
       expect(source.current).toEqual([]);
     });
 

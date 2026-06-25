@@ -113,6 +113,8 @@ export type BatchHandle = {
   [Symbol.dispose]: () => void;
   /** Stop the interval timer and flush remaining entries. Call on shutdown. Idempotent. */
   dispose: () => void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /** Immediately flush buffered entries to the downstream handler without stopping the timer. */
   flush: () => void;
   /** The transport function to pass to `createLogger({ transports: [handle.transport] })`. */

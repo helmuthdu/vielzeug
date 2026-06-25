@@ -62,6 +62,7 @@ function runScaffold<TCtx>(
   const ctx = buildCtx(base, tooltip, legend);
 
   let disposed = false;
+  const ac = new AbortController();
   const events = makeEventManager(base.svg);
 
   const s = scope(() => {
@@ -84,10 +85,15 @@ function runScaffold<TCtx>(
   }
 
   return {
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
+
     dispose() {
       if (disposed) return;
 
       disposed = true;
+      ac.abort();
       events.detach();
 
       if (config.plugins) for (const p of config.plugins) p.dispose();
@@ -97,7 +103,13 @@ function runScaffold<TCtx>(
       s.dispose();
       base.dispose();
     },
+
+    get disposed(): boolean {
+      return disposed;
+    },
+
     el: base.svg,
+
     [Symbol.dispose]() {
       this.dispose();
     },

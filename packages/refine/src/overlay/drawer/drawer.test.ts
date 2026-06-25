@@ -21,7 +21,7 @@ describe('ore-drawer', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -399,7 +399,7 @@ describe('ore-drawer accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Native Dialog Semantics', () => {

@@ -1,3 +1,5 @@
+import { ArsenalError } from '../errors';
+
 /**
  * Sum numbers in an array or numbers mapped by a callback function.
  *
@@ -20,7 +22,7 @@ export function sum<T>(array: T[], callback?: (item: T) => number): number {
     const val = callback ? callback(item) : (item as unknown as number);
 
     if (Number.isNaN(val)) {
-      throw new TypeError('Cannot sum NaN values');
+      throw new ArsenalError('Cannot sum NaN values');
     }
 
     return acc + val;

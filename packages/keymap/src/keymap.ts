@@ -185,6 +185,8 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
 
   const handleKeydown = makeHandler(chordDown);
   const handleKeyup = makeHandler(chordUp);
+  const ac = new AbortController();
+  let isDisposed = false;
 
   return {
     bind(shortcutStr: string, value: BindingValue): () => void {
@@ -195,11 +197,23 @@ export function createKeymap(initialBindings: Record<string, BindingValue> = {},
       };
     },
 
+    get disposalSignal(): AbortSignal {
+      return ac.signal;
+    },
+
     dispose(): void {
+      if (isDisposed) return;
+
+      isDisposed = true;
+      ac.abort();
       for (const unmount of unmounts) unmount();
       unmounts.clear();
       chordDown.reset();
       chordUp.reset();
+    },
+
+    get disposed(): boolean {
+      return isDisposed;
     },
 
     listBindings(): readonly BindingEntry[] {

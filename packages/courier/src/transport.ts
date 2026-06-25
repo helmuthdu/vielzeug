@@ -1,3 +1,5 @@
+import { CourierError } from './errors';
+
 /**
  * Immutable request context passed through the interceptor pipeline.
  *
@@ -65,7 +67,7 @@ export const DEFAULT_TIMEOUT = 30_000;
 
 export function validateTimeout(timeoutMs: number): void {
   if ((timeoutMs <= 0 || !Number.isFinite(timeoutMs)) && timeoutMs !== Number.POSITIVE_INFINITY) {
-    throw new TypeError('[courier] timeout must be a positive number or Infinity');
+    throw new CourierError('[courier] timeout must be a positive number or Infinity');
   }
 }
 

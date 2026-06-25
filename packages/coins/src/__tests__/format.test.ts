@@ -1,3 +1,4 @@
+import { CoinsError } from '../errors';
 import { format, formatParts } from '../format';
 import { money } from '../money';
 
@@ -141,18 +142,18 @@ describe('format', () => {
 
     it('throws when minimumFractionDigits > maximumFractionDigits', () => {
       expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: 1, minimumFractionDigits: 2 })).toThrow(
-        RangeError,
+        CoinsError,
       );
     });
 
     it('throws on non-integer fraction digits', () => {
-      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: 1.5 })).toThrow(RangeError);
-      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: 1.5 })).toThrow(RangeError);
+      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: 1.5 })).toThrow(CoinsError);
+      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: 1.5 })).toThrow(CoinsError);
     });
 
     it('throws on negative fraction digits', () => {
-      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: -1 })).toThrow(RangeError);
-      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: -1 })).toThrow(RangeError);
+      expect(() => format(money('100.00', 'USD'), { maximumFractionDigits: -1 })).toThrow(CoinsError);
+      expect(() => format(money('100.00', 'USD'), { minimumFractionDigits: -1 })).toThrow(CoinsError);
     });
   });
 });

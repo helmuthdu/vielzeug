@@ -8,7 +8,7 @@ describe('ore-textarea', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ──────────────────────────────────────────────────────────────
@@ -372,7 +372,7 @@ describe('ore-textarea accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Semantic Structure ──────────────────────────────────────────────────────

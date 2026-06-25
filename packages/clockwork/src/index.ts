@@ -1,4 +1,15 @@
-export { MachineError, MachineErrorCode } from './errors.js';
+export {
+  ClockworkError,
+  ClockworkInvalidAfterDelayError,
+  ClockworkInvalidInitialStateError,
+  ClockworkInvalidMaxTransitionsError,
+  ClockworkInvalidSnapshotStateError,
+  ClockworkInvalidTransitionArrayError,
+  ClockworkInvalidValidateContextError,
+  ClockworkMissingCompoundInitialError,
+  ClockworkTransitionLoopGuardError,
+  ClockworkUnknownTargetError,
+} from './errors.js';
 export { createMachine } from './interpret.js';
 export type {
   ActionArgs,

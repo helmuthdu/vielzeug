@@ -1,4 +1,5 @@
-import { DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN, type MeasurementCache, type Overscan } from './utils';
+import { DEFAULT_ESTIMATE_SIZE, DEFAULT_OVERSCAN, type MeasurementCache, type Overscan } from './_utils';
+import { ScrollRangeError } from './errors';
 import {
   createVirtualizer,
   type ScrollToIndexOptions,
@@ -135,6 +136,7 @@ function createNodePool() {
 export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomVirtualListController<T> {
   let currentItems: T[] = [];
   let isDestroyed = false;
+  const ac = new AbortController();
   const listEl = options.listElement;
 
   // Pool must be declared before virtualizer since handleChange (passed as onChange)
@@ -180,8 +182,8 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     const data = currentItems[vi.index];
 
     if (data === undefined) {
-      throw new RangeError(
-        `[@vielzeug/scroll] toRenderItem: index ${vi.index} is out of range (currentItems.length=${currentItems.length})`,
+      throw new ScrollRangeError(
+        `toRenderItem: index ${vi.index} is out of range (currentItems.length=${currentItems.length})`,
       );
     }
 
@@ -250,6 +252,7 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     if (isDestroyed) return;
 
     isDestroyed = true;
+    ac.abort();
     virtualizer?.dispose();
     virtualizer = null;
     clearAndReset();
@@ -259,6 +262,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     // ── Virtualizer passthrough (R11) ──────────────────────────────────────
     get count() {
       return virtualizer?.count ?? 0;
+    },
+
+    get disposalSignal() {
+      return ac.signal;
     },
 
     dispose: _dispose,

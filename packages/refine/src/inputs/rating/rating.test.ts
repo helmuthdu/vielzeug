@@ -8,7 +8,7 @@ describe('ore-rating', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -321,7 +321,7 @@ describe('ore-rating accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('WAI-ARIA Radiogroup Pattern', () => {

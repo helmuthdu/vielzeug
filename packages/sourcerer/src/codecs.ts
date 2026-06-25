@@ -1,5 +1,7 @@
 import type { QueryParams, QueryParamsInput, RemoteSourceQuery, SourceQuery } from './types';
 
+import { SourcererError } from './errors';
+
 /**
  * Serialises a `SourceQuery` or `RemoteSourceQuery` into plain URL-safe string params.
  *
@@ -74,7 +76,7 @@ export const decodeQuery = (
     try {
       return JSON.parse(str) as unknown;
     } catch {
-      if (strict) throw new Error(`Invalid query param "${key}": ${str}`);
+      if (strict) throw new SourcererError(`Invalid query param "${key}": ${str}`);
 
       return undefined;
     }

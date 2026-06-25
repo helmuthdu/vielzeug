@@ -9,8 +9,9 @@ import type { OverlayPositioner } from './positioner';
  * - `'hover'`       — pointer entered the trigger (tooltip)
  * - `'keyboard'`    — keyboard shortcut or Enter/Space on a trigger
  * - `'programmatic'` — opened via the JS API without a user gesture
+ * - `'trigger'`     — opened via the Invoker Commands API (`command="show-modal"`)
  */
-export type OverlayOpenReason = 'click' | 'focus' | 'hover' | 'keyboard' | 'programmatic';
+export type OverlayOpenReason = 'click' | 'focus' | 'hover' | 'keyboard' | 'programmatic' | 'trigger';
 
 /** Close reasons valid for modal dialogs (includes 'swipe' for drawer). */
 export type DialogCloseReason = 'escape' | 'outsideClick' | 'programmatic' | 'swipe' | 'trigger';

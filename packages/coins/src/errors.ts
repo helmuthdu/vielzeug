@@ -1,6 +1,6 @@
 /** Base class for all coins errors. Use `instanceof CoinsError` to catch any coins-originated error. */
 export class CoinsError extends Error {
-  constructor(message: string, opts?: ErrorOptions) {
+  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);

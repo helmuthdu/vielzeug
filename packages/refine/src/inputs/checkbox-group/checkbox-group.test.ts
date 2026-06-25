@@ -23,7 +23,7 @@ describe('ore-checkbox-group', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   const checkboxHtml = `

@@ -1,4 +1,4 @@
-import { resolveEstimateFn } from './utils';
+import { resolveEstimateFn } from './_utils';
 import {
   createVirtualizer,
   DEFAULT_ESTIMATE_SIZE,
@@ -87,6 +87,7 @@ export interface GroupVirtualizerOptions<T> {
 
 export interface GroupVirtualizer<T> {
   readonly count: number;
+  readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   /** `true` while the user is actively scrolling; `false` once scroll has settled. */
   readonly isScrolling: boolean;
@@ -246,6 +247,8 @@ export function createGroupedVirtualizer<T>(
     sticky: (i) => flat[i]?.isHeader ?? false,
   });
 
+  const ac = new AbortController();
+
   // Build a flat-index lookup: [sectionIndex, itemIndex] → flat index.
   // Returns -1 when sectionIndex is out of range so callers can no-op safely.
   function flatIndexOf(sectionIndex: number, itemIndex?: number): number {
@@ -270,10 +273,14 @@ export function createGroupedVirtualizer<T>(
     get count() {
       return virtualizer.count;
     },
+    get disposalSignal() {
+      return ac.signal;
+    },
     dispose() {
       if (destroyed) return;
 
       destroyed = true;
+      ac.abort();
       virtualizer.dispose();
     },
     get disposed() {

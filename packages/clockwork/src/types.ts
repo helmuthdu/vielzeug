@@ -108,7 +108,7 @@ export type StateNode<State extends string, Ctx extends object, Ev extends Machi
 /**
  * Validates context during a transition or at init.
  * - Return `true` for valid context.
- * - Return a non-empty string describing the failure (surfaced in `MachineError.details.reason`).
+ * - Return a non-empty string describing the failure (surfaced in `ClockworkError.details.reason`).
  */
 export type ContextValidator<Ctx extends object> = (context: Ctx) => string | true;
 

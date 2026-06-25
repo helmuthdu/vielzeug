@@ -17,6 +17,7 @@
  * ```
  */
 
+import { RippleEnvironmentError } from '../errors';
 import { _installContextHook, type ContextHook, type ExecutionContext } from '../tracking';
 
 // eslint-disable-next-line no-var
@@ -75,9 +76,8 @@ export const createAsyncProvider = (): TrackingProvider => {
   // Dynamic require so this module can be bundled for environments without AsyncLocalStorage.
   // In browser builds, this code path should never be reached.
   if (typeof require === 'undefined') {
-    throw new Error(
-      '[ripple/ssr] createAsyncProvider() requires Node.js (async_hooks). ' +
-        'It cannot be used in browser environments.',
+    throw new RippleEnvironmentError(
+      'createAsyncProvider() requires Node.js (async_hooks) and cannot be used in browser environments.',
     );
   }
 

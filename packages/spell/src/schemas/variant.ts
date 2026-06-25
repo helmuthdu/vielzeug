@@ -1,6 +1,7 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
 import { ErrorCode, Schema } from '../core';
+import { SpellError } from '../errors';
 import { _messages } from '../messages';
 import { defineOwnProperty, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
@@ -29,8 +30,8 @@ export class VariantSchema<K extends string, M extends VariantMap> extends Schem
       const existingDiscriminator = schema.shape[discriminator];
 
       if (existingDiscriminator && !existingDiscriminator.equals(discriminatorSchema)) {
-        throw new Error(
-          `[@vielzeug/spell] s.variant(): branch "${tag}" defines a conflicting discriminator schema for "${discriminator}".`,
+        throw new SpellError(
+          `s.variant(): branch "${tag}" defines a conflicting discriminator schema for "${discriminator}".`,
         );
       }
 

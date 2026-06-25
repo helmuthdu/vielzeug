@@ -1,8 +1,8 @@
-import type { LogitInstance } from '../../../packages/rune/src/rune';
+import type { Logger } from '../../../packages/rune/src/types';
 
 declare global {
   interface Window {
-    Rune: LogitInstance;
+    defaultLogger: Logger;
   }
 }
 

@@ -42,7 +42,7 @@ describe('ore-calendar', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ─────────────────────────────────────────────────────────────

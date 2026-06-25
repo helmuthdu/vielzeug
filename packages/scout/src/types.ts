@@ -110,8 +110,12 @@ export type SearchState<T> = {
    * `results` and `isSearching` are updated synchronously.
    */
   clear(): void;
+  /** `AbortSignal` aborted when `dispose()` is called. Use to tie other lifecycles to this search. */
+  readonly disposalSignal: AbortSignal;
   /** Releases all reactive subscriptions created by this search state. */
   dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
   /**
    * `true` during the debounce window — between when `query` changes and when `results` updates.
    * Always `false` when `debounce` is `0`.

@@ -1,8 +1,9 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { Subscriber } from './types';
 
+import { runAll } from './_error-utils';
 import { warn } from './_warn';
-import { runAll, StateError } from './errors';
+import { RippleInfiniteLoopError } from './errors';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
@@ -120,7 +121,7 @@ const flushEffects = (): void => {
 
   while (pendingSubscribers.size > 0 || dirtyWithEffectSubs.size > 0) {
     if (++iterations > DEFAULT_MAX_ITERATIONS) {
-      throw new StateError('INFINITE_LOOP', `infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
+      throw new RippleInfiniteLoopError(`infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
     }
 
     if (dirtyWithEffectSubs.size > 0) recomputeWithEffectSubs();

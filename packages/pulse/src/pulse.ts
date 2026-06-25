@@ -12,6 +12,7 @@ import type {
   Unsubscribe,
 } from './types';
 
+import { combineSignals } from './_utils';
 import { createWaitPromise } from './_wait';
 import { warn } from './_warn';
 import { createChannel } from './channel';
@@ -27,7 +28,6 @@ import {
   encode,
 } from './protocol';
 import { createReconnect } from './reconnect';
-import { combineSignals } from './utils';
 
 // ─── Internal routing map ─────────────────────────────────────────────────────
 

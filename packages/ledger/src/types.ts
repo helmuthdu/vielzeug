@@ -26,7 +26,9 @@ export interface Ledger<TData = unknown> {
   readonly pendingCount: Computed<number>;
 
   clear(): Promise<void>;
+  readonly disposalSignal: AbortSignal;
   dispose(): void;
+  readonly disposed: boolean;
   do(command: Command): Promise<void>;
   redo(): Promise<void>;
   undo(): Promise<void>;

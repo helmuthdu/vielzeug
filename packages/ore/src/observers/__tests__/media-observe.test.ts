@@ -73,7 +73,7 @@ describe('mediaObserver()', () => {
     window.matchMedia = vi.fn().mockReturnValue(mockMql);
 
     try {
-      const { destroy } = await mount((_props, ctx) => {
+      const { dispose } = await mount((_props, ctx) => {
         ctx.onMounted(() => {
           mediaObserver('(prefers-reduced-motion: reduce)');
         });
@@ -82,7 +82,7 @@ describe('mediaObserver()', () => {
       });
 
       expect(removeEventListenerSpy).not.toHaveBeenCalled();
-      destroy();
+      dispose();
       expect(removeEventListenerSpy).toHaveBeenCalledOnce();
     } finally {
       window.matchMedia = origMatchMedia;

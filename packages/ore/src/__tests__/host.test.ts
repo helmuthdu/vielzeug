@@ -65,7 +65,7 @@ describe('core/host.ts', () => {
 
     it('auto-registers cleanup so reactive bindings stop after disconnect', async () => {
       let clickCount = 0;
-      const { destroy, element, flush } = await mount((_props, { bind }) => {
+      const { dispose, element, flush } = await mount((_props, { bind }) => {
         bind({
           on: { click: () => clickCount++ },
         });
@@ -77,7 +77,7 @@ describe('core/host.ts', () => {
       await flush();
       expect(clickCount).toBe(1);
 
-      destroy();
+      dispose();
 
       element.dispatchEvent(new MouseEvent('click'));
       expect(clickCount).toBe(1);

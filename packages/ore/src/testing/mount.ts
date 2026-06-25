@@ -17,32 +17,36 @@ import { queryAllByText, queryByText, type QueryScope } from './query';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface Fixture<T extends HTMLElement = HTMLElement> {
-  /** The component element */
-  element: T;
-  /** The component's shadow root (null for light-DOM components) */
-  readonly shadow: ShadowRoot | null;
-  /** Query a single element within shadow root */
-  query<E extends Element = Element>(selector: string): E | null;
-  /** Query all elements within shadow root */
-  queryAll<E extends Element = Element>(selector: string): E[];
-  /** Query the first element whose trimmed text content matches */
-  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
-  /** Query all elements whose trimmed text content matches */
-  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
-  /** Query a single element by its `data-testid` attribute */
-  queryByTestId<E extends Element = Element>(testId: string): E | null;
-  /** Query all elements by their `data-testid` attribute */
-  queryAllByTestId<E extends Element = Element>(testId: string): E[];
+  /** Delegates to `dispose()`. Enables `using` declarations. */
+  [Symbol.dispose](): void;
+  /** Run a callback then flush — the standard way to trigger and assert a reactive update */
+  act(fn: () => unknown): Promise<void>;
   /** Set an attribute (boolean `false` removes it) then flush */
   attr(name: string, value: string | number | boolean): Promise<void>;
   /** Set multiple attributes then flush */
   attrs(record: Record<string, string | number | boolean>): Promise<void>;
+  /** Remove the component from the DOM. Idempotent. */
+  dispose(): void;
+  /** `true` after `dispose()` has been called. */
+  readonly disposed: boolean;
+  /** The component element */
+  element: T;
   /** Wait for all reactive updates and animation frames */
   flush(options?: FlushOptions): Promise<void>;
-  /** Run a callback then flush — the standard way to trigger and assert a reactive update */
-  act(fn: () => unknown): Promise<void>;
-  /** Remove the component from the DOM */
-  destroy(): void;
+  /** Query a single element within shadow root */
+  query<E extends Element = Element>(selector: string): E | null;
+  /** Query all elements within shadow root */
+  queryAll<E extends Element = Element>(selector: string): E[];
+  /** Query all elements by their `data-testid` attribute */
+  queryAllByTestId<E extends Element = Element>(testId: string): E[];
+  /** Query all elements whose trimmed text content matches */
+  queryAllByText<E extends Element = Element>(text: string, selector?: string): E[];
+  /** Query a single element by its `data-testid` attribute */
+  queryByTestId<E extends Element = Element>(testId: string): E | null;
+  /** Query the first element whose trimmed text content matches */
+  queryByText<E extends Element = Element>(text: string, selector?: string): E | null;
+  /** The component's shadow root (null for light-DOM components) */
+  readonly shadow: ShadowRoot | null;
 }
 
 export interface MountOptions {
@@ -180,6 +184,19 @@ export async function mount<T extends HTMLElement = HTMLElement>(
     await flush();
   });
 
+  let isDisposed = false;
+
+  function dispose() {
+    if (isDisposed) return;
+
+    isDisposed = true;
+    element.remove();
+
+    const i = _mountedElements.indexOf(element);
+
+    if (i !== -1) _mountedElements.splice(i, 1);
+  }
+
   return {
     async act(fn) {
       await fn();
@@ -196,13 +213,12 @@ export async function mount<T extends HTMLElement = HTMLElement>(
       await flush();
     },
 
-    destroy() {
-      element.remove();
+    dispose,
 
-      const i = _mountedElements.indexOf(element);
-
-      if (i !== -1) _mountedElements.splice(i, 1);
+    get disposed(): boolean {
+      return isDisposed;
     },
+
     element,
 
     flush,
@@ -233,6 +249,10 @@ export async function mount<T extends HTMLElement = HTMLElement>(
 
     get shadow(): ShadowRoot | null {
       return element.shadowRoot;
+    },
+
+    [Symbol.dispose]() {
+      dispose();
     },
   };
 }

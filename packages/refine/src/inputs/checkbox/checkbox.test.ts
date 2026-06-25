@@ -8,7 +8,7 @@ describe('ore-checkbox', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   // ─── Rendering ───────────────────────────────────────────────────────────────
@@ -339,14 +339,14 @@ describe('ore-checkbox accessibility', () => {
       const fixture = await mount('ore-checkbox');
 
       expect(fixture.element.getAttribute('role')).toBe('checkbox');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('renders a visually-checkable .box element', async () => {
       const fixture = await mount('ore-checkbox');
 
       expect(fixture.query('.box')).toBeTruthy();
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('renders a .label wrapper for slot content', async () => {
@@ -354,7 +354,7 @@ describe('ore-checkbox accessibility', () => {
 
       fixture.element.textContent = 'Accept terms';
       expect(fixture.query('.label')).toBeTruthy();
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -364,14 +364,14 @@ describe('ore-checkbox accessibility', () => {
       const fixture = await mount('ore-checkbox');
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('has aria-checked="mixed" when indeterminate (partial selection)', async () => {
       const fixture = await mount('ore-checkbox', { attrs: { indeterminate: true } });
 
       expect(fixture.element.getAttribute('aria-checked')).toBe('mixed');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('updates aria-checked dynamically as state changes', async () => {
@@ -382,7 +382,7 @@ describe('ore-checkbox accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await user.click(fixture.element);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('sets aria-labelledby pointing to label span when label text provided', async () => {
@@ -395,7 +395,7 @@ describe('ore-checkbox accessibility', () => {
       const labelEl = fixture.element.shadowRoot?.getElementById(labelledBy!);
 
       expect(labelEl).toBeTruthy();
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -405,14 +405,14 @@ describe('ore-checkbox accessibility', () => {
       const fixture = await mount('ore-checkbox');
 
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('has no tabindex when disabled (not keyboard-focusable)', async () => {
       const fixture = await mount('ore-checkbox', { attrs: { disabled: true } });
 
       expect(fixture.element.hasAttribute('tabindex')).toBe(false);
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('toggles state on Space (standard checkbox activation key)', async () => {
@@ -420,7 +420,7 @@ describe('ore-checkbox accessibility', () => {
 
       await user.press(fixture.element, ' ');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('toggles state on Enter', async () => {
@@ -428,7 +428,7 @@ describe('ore-checkbox accessibility', () => {
 
       await user.press(fixture.element, 'Enter');
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('does not toggle on keyboard interaction when disabled', async () => {
@@ -438,7 +438,7 @@ describe('ore-checkbox accessibility', () => {
       fixture.element.addEventListener('change', onChange);
       await user.press(fixture.element, ' ');
       expect(onChange).not.toHaveBeenCalled();
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -449,7 +449,7 @@ describe('ore-checkbox accessibility', () => {
 
       await fixture.attr('disabled', false);
       expect(fixture.element.getAttribute('tabindex')).toBe('0');
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -461,7 +461,7 @@ describe('ore-checkbox accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
       await fixture.attr('checked', true);
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('aria-checked transitions from true → false when unchecked', async () => {
@@ -470,7 +470,7 @@ describe('ore-checkbox accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('true');
       await fixture.attr('checked', false);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
 
     it('aria-checked transitions from mixed → false when indeterminate is cleared', async () => {
@@ -479,7 +479,7 @@ describe('ore-checkbox accessibility', () => {
       expect(fixture.element.getAttribute('aria-checked')).toBe('mixed');
       await fixture.attr('indeterminate', false);
       expect(fixture.element.getAttribute('aria-checked')).toBe('false');
-      fixture.destroy();
+      fixture.dispose();
     });
   });
 
@@ -489,7 +489,7 @@ describe('ore-checkbox accessibility', () => {
 
       const results = await axeCheck(fix.element);
 
-      fix.destroy();
+      fix.dispose();
       expect(results.violations).toHaveLength(0);
     });
   });

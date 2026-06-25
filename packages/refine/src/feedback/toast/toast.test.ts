@@ -41,7 +41,7 @@ describe('ore-toast', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Rendering', () => {
@@ -337,7 +337,7 @@ describe('ore-toast', () => {
         fixture = await mount('ore-toast', { attrs: { position } });
 
         expect(fixture.element.getAttribute('position')).toBe(position);
-        fixture.destroy();
+        fixture.dispose();
       });
     }
   });
@@ -421,7 +421,7 @@ describe('ore-toast accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Live Region', () => {
@@ -536,7 +536,7 @@ describe('createToastService', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('re-uses an existing mounted ore-toast inside the root', async () => {
@@ -635,8 +635,8 @@ describe('createToastService', () => {
     expect(shadowB?.querySelector(`[data-toast-id="${idB}"]`)).toBeTruthy();
     expect(shadowB?.querySelector(`[data-toast-id="${idA}"]`)).toBeNull();
 
-    fixtureA.destroy();
-    fixtureB.destroy();
+    fixtureA.dispose();
+    fixtureB.dispose();
     containerA.remove();
     containerB.remove();
   });
@@ -722,7 +722,7 @@ describe('ore-toast accessibility', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   describe('Accessibility', () => {

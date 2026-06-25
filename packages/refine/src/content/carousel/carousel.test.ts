@@ -29,7 +29,7 @@ describe('ore-carousel', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   const slides = SLIDES_HTML;

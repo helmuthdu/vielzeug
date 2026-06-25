@@ -49,7 +49,7 @@ export interface FactoryResolver {
   resolve<T>(tok: Token<T>): Promise<T>;
   /**
    * Resolve synchronously. Works for value providers and already-resolved
-   * singleton/scoped instances. Throws `ContainerSyncResolutionError` if the instance
+   * singleton/scoped instances. Throws `ConduitSyncResolutionError` if the instance
    * has not been resolved yet.
    */
   resolveSync<T>(tok: Token<T>): T;
@@ -116,6 +116,8 @@ export type ContainerGraph = {
 // ---------------------------------------------------------------------------
 
 export interface Container {
+  /** Delegates to `dispose()`. Enables `await using` declarations. */
+  [Symbol.asyncDispose](): Promise<void>;
   /** Human-readable identifier for this container. Set via createContainer({ name }). */
   readonly name: string;
 
@@ -143,7 +145,7 @@ export interface Container {
   /**
    * Resolve a token synchronously.
    * Works for value registrations and already-resolved singleton/scope instances.
-   * Throws `ContainerSyncResolutionError` for transient factories or unresolved singletons.
+   * Throws `ConduitSyncResolutionError` for transient factories or unresolved singletons.
    * Rethrows the cached rejection if the factory previously failed.
    */
   resolveSync<T>(tok: Token<T>): T;
@@ -173,17 +175,17 @@ export interface Container {
 
   /**
    * Validate the registration graph without freezing it.
-   * Checks statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
-   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
-   * Throws `ContainerDisposedError` if the container is already disposed.
+   * Checks statically-declared `deps`: throws `ConduitProviderNotFoundError` if a
+   * declared dep is missing, or `ConduitCircularDependencyError` if they form a cycle.
+   * Throws `ConduitDisposedError` if the container is already disposed.
    */
   validate(): this;
 
   /**
    * Freeze the container, locking it against further registrations.
-   * After `freeze()`, `value()` and `factory()` throw `ContainerFrozenError`.
-   * Validates statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
-   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
+   * After `freeze()`, `value()` and `factory()` throw `ConduitFrozenError`.
+   * Validates statically-declared `deps`: throws `ConduitProviderNotFoundError` if a
+   * declared dep is missing, or `ConduitCircularDependencyError` if they form a cycle.
    * Idempotent — calling `freeze()` again on an already-frozen container is a no-op.
    * Note: cycle detection for lazy (undeclared) deps happens at resolve time.
    */
@@ -210,6 +212,4 @@ export interface Container {
 
   /** Dispose the container, running all registered cleanup hooks in parallel. */
   dispose(): Promise<void>;
-
-  [Symbol.asyncDispose](): Promise<void>;
 }

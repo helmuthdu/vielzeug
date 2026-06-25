@@ -1,4 +1,4 @@
-import type { SourceError, SourceMeta } from './types';
+import type { SourcererError, SourceMeta } from './types';
 
 const clampInt = (value: number, minimum: number) => {
   const parsed = Math.trunc(value);
@@ -22,7 +22,7 @@ export const clampPage = (page: number, pages: number) => {
 };
 
 export const createMeta = (state: {
-  error: SourceError | null;
+  error: SourcererError | null;
   isLoading: boolean;
   isSearchPending: boolean;
   pageNumber: number;

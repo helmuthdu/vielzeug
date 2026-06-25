@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { chunk } from '../chunk';
 
 describe('chunk', () => {
@@ -7,7 +8,7 @@ describe('chunk', () => {
     });
 
     it('should throw an error if chunk size is less than 1 for arrays', () => {
-      expect(() => chunk([1, 2, 3], 0)).toThrow(RangeError);
+      expect(() => chunk([1, 2, 3], 0)).toThrow(ArsenalError);
     });
 
     it('should handle an empty array', () => {
@@ -27,7 +28,7 @@ describe('chunk', () => {
 
   describe('Invalid inputs', () => {
     it('should throw a TypeError for non-array and non-string inputs', () => {
-      expect(() => chunk(123 as any, 2)).toThrow(TypeError);
+      expect(() => chunk(123 as any, 2)).toThrow(ArsenalError);
     });
   });
 });

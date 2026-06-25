@@ -17,7 +17,7 @@ describe('random', () => {
     const min = 10;
     const max = 1;
 
-    expect(() => random(min, max)).toThrowError('Minimum value must be less than maximum value');
+    expect(() => random(min, max)).toThrowError('random: minimum value must be less than maximum value');
   });
 
   it('should handle edge case where min equals max', () => {

@@ -1,8 +1,8 @@
 import type { CursorConfig, CursorMeta, CursorSource, CursorSourceQuery, SearchOptions } from './types';
 
+import { defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSource } from './asyncSource';
-import { SourceError } from './types';
-import { defaultKeyOf, extractError, retry } from './utils';
+import { SourcererError } from './types';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
@@ -19,7 +19,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
   let prevCursor: TCursor | undefined;
   let items: readonly T[] = [];
   let total = 0;
-  let error: SourceError | null = null;
+  let error: SourcererError | null = null;
   let pendingSearch: PendingSearch | null = null;
 
   // ── Cached accessors ────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ export function createCursorSource<T, TCursor = string>(cfg: CursorConfig<T, TCu
             total = 0;
             nextCursor = undefined;
             prevCursor = undefined;
-            error = new SourceError(extractError(reason), {
+            error = new SourcererError(extractError(reason), {
               cause: reason,
               context: { kind: 'cursor', limit: q.limit, ...(q.search && { search: q.search }) },
             });

@@ -231,6 +231,10 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
   );
 
   return {
+    get disposalSignal(): AbortSignal {
+      return handle.disposalSignal;
+    },
+
     dispose() {
       if (activeRaf !== null) {
         cancelAnimationFrame(activeRaf);
@@ -239,7 +243,13 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
 
       handle.dispose();
     },
+
+    get disposed(): boolean {
+      return handle.disposed;
+    },
+
     el: handle.el,
+
     [Symbol.dispose]() {
       this.dispose();
     },

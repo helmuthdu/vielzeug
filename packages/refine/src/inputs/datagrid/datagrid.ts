@@ -152,6 +152,18 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    * When `'server'`, `sort-change` fires but items are not sorted by the control.
    */
   'sort-mode'?: SortMode;
+  /**
+   * A reactive data source from `@vielzeug/sourcerer` (or any compatible object).
+   * When set, the source drives row data, pagination, and search — the `rows` prop is ignored.
+   * Client-side sort and filter are bypassed; wire `sort-change` to `source.patch()` externally.
+   * @example
+   * ```js
+   * import { createRemoteSource } from '@vielzeug/sourcerer';
+   * const source = createRemoteSource({ fetch: (q, sig) => api.users(q, sig), limit: 20 });
+   * grid.source = source;
+   * ```
+   */
+  source?: DataGridSource<T>;
   /** Apply alternating row backgrounds. */
   striped?: boolean;
   /**
@@ -238,6 +250,59 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * </script>
  * ```
  */
+/**
+ * Minimal structural interface for a reactive data source accepted by `ore-datagrid`.
+ *
+ * Any `@vielzeug/sourcerer` source (`LocalSource<T>`, `RemoteSource<T>`, `PageNavigator<T>`)
+ * satisfies this interface automatically — no direct sourcerer import is required in refine.
+ *
+ * When `source` is set on the grid:
+ * - `rows` prop is ignored; `source.current` drives the displayed items.
+ * - Pagination is driven by `source.meta` (pageCount, pageNumber, totalItems).
+ * - Prev/next buttons call `source.prev()` / `source.next()`.
+ * - The search input calls `source.search(query)` when available.
+ * - `source.meta.isLoading` contributes to the grid's `aria-busy` state.
+ * - Client-side sort and filter are bypassed; wire `sort-change` to `source.patch()` externally.
+ *
+ * @example
+ * ```ts
+ * import { createRemoteSource } from '@vielzeug/sourcerer';
+ *
+ * const source = createRemoteSource({
+ *   fetch: (q, signal) =>
+ *     fetch(`/api/users?page=${q.page}&limit=${q.limit}&search=${q.search ?? ''}`, { signal })
+ *       .then(r => r.json()),
+ *   limit: 20,
+ * });
+ *
+ * const grid = document.querySelector('ore-datagrid');
+ * grid.source = source;
+ * ```
+ */
+export type DataGridSource<T = Record<string, unknown>> = {
+  /** Current page of items. Updated reactively after each fetch or patch. */
+  readonly current: readonly T[];
+  /** Navigate to a specific 1-indexed page number. */
+  goTo?(page: number): Promise<void>;
+  /** Pagination and loading metadata. */
+  readonly meta: {
+    readonly error: { message: string } | null;
+    readonly isLoading: boolean;
+    readonly pageCount: number;
+    readonly pageNumber: number;
+    readonly pageSize: number;
+    readonly totalItems: number;
+  };
+  /** Navigate to the next page. No-op when on the last page. */
+  next?(): Promise<void>;
+  /** Navigate to the previous page. No-op when on the first page. */
+  prev?(): Promise<void>;
+  /** Debounced text search. No-op when not implemented by the source. */
+  search?(query: string, opts?: { immediate?: boolean }): Promise<void>;
+  /** Subscribe to source updates. Returns an unsubscribe function. */
+  subscribe(listener: () => void): () => void;
+};
+
 export const DATAGRID_TAG = 'ore-datagrid' as const;
 
 define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
@@ -260,6 +325,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
     'selected-keys': prop.data<string[]>(),
     'selection-mode': prop.string<SelectionMode>('none'),
     'sort-mode': prop.string<SortMode>('client'),
+    source: prop.data<DataGridSource>(),
     striped: prop.bool(false),
     views: prop.data<DataGridView[]>(),
   },
@@ -350,19 +416,86 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
       rows: computed(() => props.rows.value ?? []),
     });
 
+    // ── Reactive source bridge ────────────────────────────────────────────────
+    // When `source` is provided it drives rows, pagination, and search.
+    // The `rows` prop and client-side filter pipeline are bypassed.
+
+    type SourceMetaState = {
+      error: { message: string } | null;
+      isLoading: boolean;
+      pageCount: number;
+      pageNumber: number;
+      pageSize: number;
+      totalItems: number;
+    };
+
+    const hasSource = computed(() => props.source.value != null);
+    const sourceItems = signal<Record<string, unknown>[]>([]);
+    const sourceMeta = signal<SourceMetaState>({
+      error: null,
+      isLoading: false,
+      pageCount: 1,
+      pageNumber: 1,
+      pageSize: pageSize.value,
+      totalItems: 0,
+    });
+
+    let _sourceUnsub: (() => void) | null = null;
+
+    onCleanup(() => {
+      _sourceUnsub?.();
+      _sourceUnsub = null;
+    });
+
+    watch(
+      props.source,
+      (src) => {
+        _sourceUnsub?.();
+        _sourceUnsub = null;
+
+        if (!src) {
+          sourceItems.value = [];
+          sourceMeta.value = {
+            error: null,
+            isLoading: false,
+            pageCount: 1,
+            pageNumber: 1,
+            pageSize: pageSize.value,
+            totalItems: 0,
+          };
+
+          return;
+        }
+
+        const update = (): void => {
+          sourceItems.value = src.current as Record<string, unknown>[];
+          sourceMeta.value = src.meta as SourceMetaState;
+        };
+
+        update();
+        _sourceUnsub = src.subscribe(update);
+      },
+      { immediate: true },
+    );
+
+    // Items fed to ctrl: source.current when source is active, filtered rows otherwise.
+    const itemsForCtrl = computed<Record<string, unknown>[]>(() =>
+      hasSource.value ? sourceItems.value : controls.filteredRows.value,
+    );
+
     // ── Headless control ──────────────────────────────────────────────────────
 
     const ctrl: DataGridControl = createDataGridControl({
       columns: () => resolvedColumns.value,
       getRowKey: resolveKey,
-      items: controls.filteredRows,
+      items: itemsForCtrl,
       onSelectionChange: (keys: Set<string>) => {
         emit('selection-change', { keys: [...keys], rows: ctrl.selectedRows.value as Record<string, unknown>[] });
       },
       onSortChange: (sort) => {
         emit('sort-change', sort);
       },
-      pageSize: () => pageSize.value,
+      pageSize: () => (hasSource.value ? 0 : pageSize.value),
       selectionMode: () => selectionMode.value,
       signal: lifecycleSignal(onCleanup),
     });
@@ -429,6 +562,15 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
     // ── Pagination handlers ───────────────────────────────────────────────────
 
     function handlePage(direction: 'next' | 'prev'): void {
+      const src = props.source.value;
+
+      if (src) {
+        if (direction === 'prev') void src.prev?.();
+        else void src.next?.();
+
+        return;
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       direction === 'prev' ? ctrl.prevPage() : ctrl.nextPage();
       emit('page-change', { pageIndex: ctrl.pageIndex.value, pageSize: pageSize.value });
@@ -452,9 +594,25 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
 
     // ── Pagination info text ──────────────────────────────────────────────────
 
-    const paginationEnabled = computed(() => pageSize.value > 0);
+    const paginationEnabled = computed(() => {
+      if (hasSource.value) return sourceMeta.value.pageCount > 1;
+
+      return pageSize.value > 0;
+    });
 
     const paginationInfo = computed(() => {
+      if (hasSource.value) {
+        const { pageNumber, pageSize: pSize, totalItems } = sourceMeta.value;
+        const safePSize = Math.max(1, pSize);
+
+        if (!paginationEnabled.value) return `${totalItems} row${totalItems !== 1 ? 's' : ''}`;
+
+        const start = (pageNumber - 1) * safePSize + 1;
+        const end = Math.min(start + safePSize - 1, totalItems);
+
+        return `${start} to ${end} of ${totalItems}`;
+      }
+
       const total = ctrl.totalItems.value;
 
       if (!paginationEnabled.value) return `${total} row${total !== 1 ? 's' : ''}`;
@@ -464,6 +622,24 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
 
       return `${start} to ${end} of ${total}`;
     });
+
+    // ── Source-aware loading and pagination helpers ───────────────────────────
+
+    const isLoading = computed(() => props.loading.value === true || (hasSource.value && sourceMeta.value.isLoading));
+
+    const effectiveHasPrev = computed(() =>
+      hasSource.value ? sourceMeta.value.pageNumber > 1 : ctrl.hasPrevPage.value,
+    );
+
+    const effectiveHasNext = computed(() =>
+      hasSource.value ? sourceMeta.value.pageNumber < sourceMeta.value.pageCount : ctrl.hasNextPage.value,
+    );
+
+    const effectivePageLabel = computed(() =>
+      hasSource.value
+        ? `${sourceMeta.value.pageNumber} / ${sourceMeta.value.pageCount}`
+        : `${ctrl.pageIndex.value + 1} / ${ctrl.pageCount.value}`,
+    );
 
     // ── Row expansion (toggle handler) ───────────────────────────────────────
 
@@ -717,10 +893,20 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     :disabled="${() => isDisabled.value || undefined}"
                     autofocus
                     @input="${(e: CustomEvent<{ value: string }>) => {
-                      controls.setSearchQuery(e.detail.value);
+                      const q = e.detail.value;
+                      const src = props.source.value;
+
+                      if (src?.search) void src.search(q);
+                      else controls.setSearchQuery(q);
                     }}"
                     @keydown="${(e: KeyboardEvent) => {
-                      if (e.key === 'Escape') controls.toggleSearch();
+                      if (e.key === 'Escape') {
+                        const src = props.source.value;
+
+                        if (src?.search) void src.search('');
+
+                        controls.toggleSearch();
+                      }
                     }}">
                     <ore-icon slot="prefix" name="search" size="13" stroke-width="1.75" aria-hidden="true"></ore-icon>
                   </ore-input>`
@@ -729,7 +915,13 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
               class="${() => `dg-icon-btn${controls.searchActive.value ? ' dg-icon-btn--active' : ''}`}"
               type="button"
               :aria-label="${() => (controls.searchActive.value ? 'Close search' : 'Search')}"
-              @click="${() => controls.toggleSearch()}">
+              @click="${() => {
+                const src = props.source.value;
+
+                if (src?.search && controls.searchActive.value) void src.search('');
+
+                controls.toggleSearch();
+              }}">
               <ore-icon
                 :name="${() => (controls.searchActive.value ? 'x' : 'search')}"
                 size="15"
@@ -746,7 +938,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
           part="table"
           role="grid"
           :aria-label="${() => props.label.value ?? undefined}"
-          :aria-busy="${() => (props.loading.value ? 'true' : null)}"
+          :aria-busy="${() => (isLoading.value ? 'true' : null)}"
           :aria-disabled="${() => (isDisabled.value ? 'true' : null)}">
           <!-- Head -->
           <thead class="dg-head" part="thead">
@@ -986,18 +1178,16 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     class="dg-page-btn"
                     type="button"
                     aria-label="Previous page"
-                    ?disabled="${() => !ctrl.hasPrevPage.value || isDisabled.value}"
+                    ?disabled="${() => !effectiveHasPrev.value || isDisabled.value}"
                     @click="${() => handlePage('prev')}">
                     <ore-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
                   </button>
-                  <span class="dg-page-label" dir="ltr" aria-current="page">
-                    ${() => `${ctrl.pageIndex.value + 1} / ${ctrl.pageCount.value}`}
-                  </span>
+                  <span class="dg-page-label" dir="ltr" aria-current="page"> ${() => effectivePageLabel.value} </span>
                   <button
                     class="dg-page-btn"
                     type="button"
                     aria-label="Next page"
-                    ?disabled="${() => !ctrl.hasNextPage.value || isDisabled.value}"
+                    ?disabled="${() => !effectiveHasNext.value || isDisabled.value}"
                     @click="${() => handlePage('next')}">
                     <ore-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
                   </button>

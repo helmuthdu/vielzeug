@@ -12,7 +12,7 @@ describe('ore-combobox', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   /**

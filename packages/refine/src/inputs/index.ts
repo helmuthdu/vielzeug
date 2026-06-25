@@ -1,5 +1,5 @@
 export { DATAGRID_TAG } from './datagrid/datagrid';
-export type { OreDataGridEvents, OreDataGridProps } from './datagrid/datagrid';
+export type { DataGridSource, OreDataGridEvents, OreDataGridProps } from './datagrid/datagrid';
 export { CALENDAR_TAG } from './calendar/calendar';
 export type { OreCalendarEvents, OreCalendarProps, CalendarEvent } from './calendar/calendar';
 export { DATE_PICKER_TAG } from './date-picker/date-picker';

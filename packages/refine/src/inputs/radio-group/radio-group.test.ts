@@ -21,7 +21,7 @@ describe('ore-radio-group', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   const radioHtml = `

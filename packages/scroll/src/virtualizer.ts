@@ -1,5 +1,4 @@
 import { createScrollAdapter } from './_adapter';
-import { createAxis1D, type VirtualItem } from './axis1d';
 import {
   createMeasurementCache,
   DEFAULT_ESTIMATE_SIZE,
@@ -12,7 +11,8 @@ import {
   toNonNegativeInt,
   toPositiveNumber,
   type VirtualKey,
-} from './utils';
+} from './_utils';
+import { createAxis1D, type VirtualItem } from './axis1d';
 
 export {
   createMeasurementCache,
@@ -96,6 +96,7 @@ export interface ScrollToIndexOptions {
 
 export interface Virtualizer {
   readonly count: number;
+  readonly disposalSignal: AbortSignal;
   readonly disposed: boolean;
   /** Currently rendered items. Always populated. */
   readonly items: VirtualItem[];
@@ -567,10 +568,13 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     scrollToOffset(Math.max(0, ax.totalSize - viewportSize), opts);
   }
 
+  const ac = new AbortController();
+
   function _dispose(): void {
     if (destroyed) return;
 
     destroyed = true;
+    ac.abort();
 
     if (scrollEndTimer !== null) {
       clearTimeout(scrollEndTimer);
@@ -618,6 +622,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   return {
     get count() {
       return count;
+    },
+    get disposalSignal() {
+      return ac.signal;
     },
     dispose: _dispose,
     get disposed() {

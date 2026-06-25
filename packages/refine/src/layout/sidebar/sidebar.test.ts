@@ -8,7 +8,7 @@ describe('ore-sidebar', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders a nav landmark with default label', async () => {
@@ -219,7 +219,7 @@ describe('ore-sidebar-group', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('uses native details/summary structure', async () => {
@@ -260,7 +260,7 @@ describe('ore-sidebar-item', () => {
   });
 
   afterEach(() => {
-    fixture?.destroy();
+    fixture?.dispose();
   });
 
   it('renders an anchor only when href is present and not disabled', async () => {

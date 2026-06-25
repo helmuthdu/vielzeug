@@ -3,7 +3,7 @@ export const description = 'Structured logger with level filtering, scoped names
 export const loader = () => import('@vielzeug/rune');
 
 export const apiExports = [
-  'Rune',
+  'defaultLogger',
   'createLogger',
   'lazy',
   'consoleTransport',

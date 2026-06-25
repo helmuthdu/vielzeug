@@ -47,16 +47,16 @@ describe('renderHook()', () => {
     expect(log).toContain(2);
   });
 
-  it('runs onCleanup when destroy() is called', async () => {
+  it('runs onCleanup when dispose() is called', async () => {
     const cleanupSpy = vi.fn();
 
-    const { destroy } = await renderHook((_props, ctx) => {
+    const { dispose } = await renderHook((_props, ctx) => {
       ctx.onCleanup(cleanupSpy);
     });
 
     expect(cleanupSpy).not.toHaveBeenCalled();
 
-    destroy();
+    dispose();
 
     expect(cleanupSpy).toHaveBeenCalledOnce();
   });
@@ -94,10 +94,10 @@ describe('renderHook()', () => {
     expect(log).toEqual(['mounted']);
   });
 
-  it('destroy() disposes the scope, stopping effects', async () => {
+  it('dispose() disposes the scope, stopping effects', async () => {
     const effectSpy = vi.fn();
 
-    const { destroy, flush, result } = await renderHook((_props, ctx) => {
+    const { dispose, flush, result } = await renderHook((_props, ctx) => {
       const s = signal(0);
 
       ctx.watch(() => {
@@ -110,7 +110,7 @@ describe('renderHook()', () => {
 
     const callsBefore = effectSpy.mock.calls.length;
 
-    destroy();
+    dispose();
 
     result.value = 1;
     await flush();

@@ -1,16 +1,16 @@
 import type { Container, ContainerModule, ResolveResult, Token } from './types.js';
 
-import { ContainerProviderNotFoundError } from './errors.js';
+import { ConduitProviderNotFoundError } from './errors.js';
 
 /**
  * Resolve a token, returning `undefined` when not registered.
- * Re-throws any error other than `ContainerProviderNotFoundError`.
+ * Re-throws any error other than `ConduitProviderNotFoundError`.
  */
 export async function resolveOptional<T>(container: Container, tok: Token<T>): Promise<T | undefined> {
   try {
     return await container.resolve(tok);
   } catch (error) {
-    if (error instanceof ContainerProviderNotFoundError) return undefined;
+    if (error instanceof ConduitProviderNotFoundError) return undefined;
 
     throw error;
   }
@@ -18,7 +18,7 @@ export async function resolveOptional<T>(container: Container, tok: Token<T>): P
 
 /**
  * Resolve a token, returning `defaultValue` when not registered.
- * Re-throws any error other than `ContainerProviderNotFoundError`.
+ * Re-throws any error other than `ConduitProviderNotFoundError`.
  */
 export async function resolveOrDefault<T>(container: Container, tok: Token<T>, defaultValue: T): Promise<T> {
   const result = await resolveOptional(container, tok);
@@ -30,7 +30,7 @@ export async function resolveOrDefault<T>(container: Container, tok: Token<T>, d
  * Resolve a token, returning a result object instead of throwing.
  * Returns `{ ok: true, value }` on success or `{ ok: false, error }` when the
  * token is not registered. Re-throws all other errors — including
- * `ContainerDisposedError` and `ContainerCircularDependencyError`.
+ * `ConduitDisposedError` and `ConduitCircularDependencyError`.
  */
 export async function tryResolve<T>(container: Container, tok: Token<T>): Promise<ResolveResult<T>> {
   try {
@@ -38,7 +38,7 @@ export async function tryResolve<T>(container: Container, tok: Token<T>): Promis
 
     return { ok: true, value };
   } catch (error) {
-    if (error instanceof ContainerProviderNotFoundError) return { error, ok: false };
+    if (error instanceof ConduitProviderNotFoundError) return { error, ok: false };
 
     throw error;
   }
@@ -46,13 +46,13 @@ export async function tryResolve<T>(container: Container, tok: Token<T>): Promis
 
 /**
  * Resolve a token synchronously, returning `undefined` when not registered.
- * Re-throws `ContainerSyncResolutionError`, `ContainerScopedResolutionError`, and `ContainerDisposedError`.
+ * Re-throws `ConduitSyncResolutionError`, `ConduitScopedResolutionError`, and `ConduitDisposedError`.
  */
 export function resolveSyncOptional<T>(container: Container, tok: Token<T>): T | undefined {
   try {
     return container.resolveSync(tok);
   } catch (error) {
-    if (error instanceof ContainerProviderNotFoundError) return undefined;
+    if (error instanceof ConduitProviderNotFoundError) return undefined;
 
     throw error;
   }
@@ -60,7 +60,7 @@ export function resolveSyncOptional<T>(container: Container, tok: Token<T>): T |
 
 /**
  * Resolve a token synchronously, returning `defaultValue` when not registered.
- * Re-throws `ContainerSyncResolutionError`, `ContainerScopedResolutionError`, and `ContainerDisposedError`.
+ * Re-throws `ConduitSyncResolutionError`, `ConduitScopedResolutionError`, and `ConduitDisposedError`.
  */
 export function resolveSyncOrDefault<T>(container: Container, tok: Token<T>, defaultValue: T): T {
   const result = resolveSyncOptional(container, tok);
@@ -72,7 +72,7 @@ export function resolveSyncOrDefault<T>(container: Container, tok: Token<T>, def
  * Resolve a token synchronously, returning a result object instead of throwing.
  * Returns `{ ok: true, value }` on success or `{ ok: false, error }` when the
  * token is not registered. Re-throws all other errors — including
- * `ContainerSyncResolutionError`, `ContainerDisposedError`, and `ContainerScopedResolutionError`.
+ * `ConduitSyncResolutionError`, `ConduitDisposedError`, and `ConduitScopedResolutionError`.
  */
 export function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveResult<T> {
   try {
@@ -80,7 +80,7 @@ export function trySyncResolve<T>(container: Container, tok: Token<T>): ResolveR
 
     return { ok: true, value };
   } catch (error) {
-    if (error instanceof ContainerProviderNotFoundError) return { error, ok: false };
+    if (error instanceof ConduitProviderNotFoundError) return { error, ok: false };
 
     throw error;
   }

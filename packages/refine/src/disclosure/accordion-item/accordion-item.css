@@ -246,6 +246,24 @@
     --accordion-item-body: var(--text-base);
   }
 
+  /* ─── coarse pointer: promote one size tier for proportional scaling ─── */
+  @media (pointer: coarse) {
+    :host,
+    :host([size='md']) {
+      --accordion-item-details-padding: var(--size-4) var(--size-5);
+      --accordion-item-title: var(--text-lg);
+      --accordion-item-subtitle-size: var(--text-base);
+      --accordion-item-body: var(--text-base);
+    }
+
+    :host([size='sm']) {
+      --accordion-item-details-padding: var(--size-3) var(--size-4);
+      --accordion-item-title: var(--text-base);
+      --accordion-item-subtitle-size: var(--text-sm);
+      --accordion-item-body: var(--text-sm);
+    }
+  }
+
   /* ========================================
      States
      ======================================== */
@@ -260,8 +278,11 @@
      ======================================== */
 
   .chevron {
-    width: var(--size-5);
-    height: var(--size-5);
+    width: var(--_size, var(--size-5));
+    height: var(--_size, var(--size-5));
+
+    --ore-icon-size: var(--_size, var(--size-5));
+
     margin-inline-start: auto;
     transform: rotate(-90deg);
     transition: transform 200ms var(--ease-spring);

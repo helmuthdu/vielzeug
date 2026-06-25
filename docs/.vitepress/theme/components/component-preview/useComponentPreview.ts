@@ -36,18 +36,6 @@ export const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
   tablet: '768px',
 };
 
-// Inline SVG path data for toolbar icons. Defined here so the template stays
-// readable and icon changes require editing one place, not hunting through markup.
-export const ICONS = {
-  copied: `<path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/>`,
-  copy: `<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></g>`,
-  desktop: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></g>`,
-  maximize: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 3h6v6"/><path d="m21 3-7 7"/><path d="m3 21 7-7"/><path d="M9 21H3v-6"/></g>`,
-  minimize: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 10 21 3"/><path d="M20 10H14V4"/><path d="m3 21 7-7"/><path d="m4 14h6v6"/></g>`,
-  mobile: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="m12 18h.01"/></g>`,
-  tablet: `<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="17.56" height="20" x="3.22" y="2" rx="2" ry="2"/><line x1="12" x2="12.01" y1="18" y2="18"/></g>`,
-} as const;
-
 // ── Composable ────────────────────────────────────────────────────────────────
 
 export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VNode[] | undefined) {

@@ -399,7 +399,7 @@ describe('createInfiniteSource', () => {
       await source.reset();
 
       expect(source.meta.error?.message).toBe('infinite-fail');
-      expect(source.meta.error?.name).toBe('SourceError');
+      expect(source.meta.error?.name).toBe('SourcererError');
     });
 
     it('clears error on successful fetch after failure', async () => {

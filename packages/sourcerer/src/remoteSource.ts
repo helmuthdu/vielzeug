@@ -1,9 +1,9 @@
 import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SearchOptions } from './types';
 
+import { defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSource } from './asyncSource';
-import { SourceError } from './errors';
+import { SourcererError } from './errors';
 import { clampPage, createMeta, pageCount } from './pagination';
-import { defaultKeyOf, extractError, retry } from './utils';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
@@ -24,7 +24,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
   let sort: TSort | undefined = cfg.sort;
   let items: readonly T[] = [];
   let total = 0;
-  let error: SourceError | null = null;
+  let error: SourcererError | null = null;
   let lastFetchTime = 0;
   let lastFetchKey = '';
   let pendingSearch: PendingSearch | null = null;
@@ -155,7 +155,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
               total = 0;
             }
 
-            error = new SourceError(extractError(reason), {
+            error = new SourcererError(extractError(reason), {
               cause: reason,
               context: { kind: 'remote', limit: q.limit, page: q.page, ...(q.search && { search: q.search }) },
             });
@@ -233,7 +233,7 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
     optimisticUpdate(mutator, options) {
       if (optimistic?.active) {
-        throw new Error(
+        throw new SourcererError(
           'An optimistic update is already active. Rollback the previous update before starting another.',
         );
       }

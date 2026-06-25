@@ -40,7 +40,13 @@ export type {
   Unsubscribe,
   UntypedNamedNavigationTarget,
 } from './types';
-export { WayfinderDisposedError, WayfinderError } from './errors';
+export {
+  WayfinderApiError,
+  WayfinderDisposedError,
+  WayfinderError,
+  WayfinderRedirectLoopError,
+  WayfinderRouteError,
+} from './errors';
 export { createRouter } from './router';
 export type { Router } from './router';
 export { createBrowserHistory, createMemoryHistory } from './history';

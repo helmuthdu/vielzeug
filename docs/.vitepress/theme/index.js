@@ -1,4 +1,4 @@
-import { Rune } from '@vielzeug/rune';
+import { defaultLogger } from '@vielzeug/rune';
 import DefaultTheme from 'vitepress/theme';
 
 import CodeWindow from './components/CodeWindow.vue';
@@ -37,7 +37,7 @@ export default {
     app.component('ComponentPreview', ComponentPreview);
 
     if (typeof window !== 'undefined') {
-      window.Rune = Rune;
+      window.defaultLogger = defaultLogger;
 
       const [prism, ripple] = await Promise.all([import('@vielzeug/prism'), import('@vielzeug/ripple')]);
 

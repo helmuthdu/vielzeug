@@ -1,6 +1,6 @@
 /**
  * Shared pool orchestration engine used by both the real worker implementation and the test
- * double. Handles queue management, iterative drain loop, abort handling, lifecycle (close /
+ * double. Handles queue management, iterative drain loop, abort handling, lifecycle (drain /
  * dispose), metrics, batch streaming, task groups, and backpressure.
  *
  * Callers provide a SlotStrategy array — each slot encapsulates run/runStream/prime/terminate.
@@ -19,10 +19,10 @@ import type {
   TaskGroup,
   WorkerHandle,
   WorkerStatus,
-} from './_types';
+} from './types';
 
 import { type QueueItem, TaskQueue } from './_queue';
-import { WorkerQueueFullError, WorkerRuntimeError, WorkerTerminatedError, WorkerTimeoutError } from './errors';
+import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
 
 export type PoolOptions = {
   concurrency: number;
@@ -44,7 +44,7 @@ export function createPool<TInput, TOutput>(
   const fullWaiters: Array<() => void> = [];
 
   let activeCount = 0;
-  let closePromise: Promise<void> | undefined;
+  let drainPromise: Promise<void> | undefined;
   let completedCount = 0;
   let failedCount = 0;
   let groupActiveCount = 0;
@@ -76,7 +76,7 @@ export function createPool<TInput, TOutput>(
 
           if (idx !== -1) idleResolvers.splice(idx, 1);
 
-          reject(new WorkerTimeoutError(timeoutMs));
+          reject(new FamiliarTimeoutError(timeoutMs));
         }, timeoutMs);
 
         if (typeof timer === 'object' && 'unref' in timer) (timer as { unref(): void }).unref();
@@ -128,7 +128,7 @@ export function createPool<TInput, TOutput>(
           freeSlots.push(slot);
           activeCount -= 1;
 
-          if (!(error instanceof WorkerTerminatedError)) failedCount += 1;
+          if (!(error instanceof FamiliarTerminatedError)) failedCount += 1;
 
           item.reject(error);
           drainLoop();
@@ -159,7 +159,7 @@ export function createPool<TInput, TOutput>(
     }
 
     // All remaining items were aborted and rejected above — the pool may now be idle.
-    // Notify any close() waiter so it does not hang.
+    // Notify any drain() waiter so it does not hang.
     notifyIdle();
 
     return undefined;
@@ -181,7 +181,7 @@ export function createPool<TInput, TOutput>(
       if (!item) break;
 
       item.cleanupAbort?.();
-      item.reject(new WorkerTerminatedError());
+      item.reject(new FamiliarTerminatedError());
     }
 
     const resolvers = idleResolvers.splice(0);
@@ -191,17 +191,17 @@ export function createPool<TInput, TOutput>(
     for (const waiter of fullWaiters.splice(0)) waiter();
   }
 
-  function close(timeoutMs?: number): Promise<void> {
+  function drain(timeoutMs?: number): Promise<void> {
     if (terminated) return Promise.resolve();
 
-    if (closePromise) return closePromise;
+    if (drainPromise) return drainPromise;
 
-    closePromise = waitForIdle(timeoutMs).then(dispose, (err) => {
+    drainPromise = waitForIdle(timeoutMs).then(dispose, (err) => {
       dispose();
       throw err;
     });
 
-    return closePromise;
+    return drainPromise;
   }
 
   // ─── run() ───────────────────────────────────────────────────────────────────
@@ -210,11 +210,11 @@ export function createPool<TInput, TOutput>(
     const { priority = 0, signal, timeout, transferables = [] } = runOptions;
 
     if (terminated) {
-      throw new WorkerTerminatedError();
+      throw new FamiliarTerminatedError();
     }
 
-    if (closePromise) {
-      throw new WorkerTerminatedError('Worker is closing');
+    if (drainPromise) {
+      throw new FamiliarTerminatedError('Worker is draining');
     }
 
     if (signal?.aborted) {
@@ -222,13 +222,13 @@ export function createPool<TInput, TOutput>(
     }
 
     if (onFull === 'wait' && maxQueue !== undefined) {
-      while (!terminated && !closePromise && queue.size >= maxQueue) {
+      while (!terminated && !drainPromise && queue.size >= maxQueue) {
         await new Promise<void>((resolve) => fullWaiters.push(resolve));
       }
 
-      if (terminated) throw new WorkerTerminatedError();
+      if (terminated) throw new FamiliarTerminatedError();
 
-      if (closePromise) throw new WorkerTerminatedError('Worker is closing');
+      if (drainPromise) throw new FamiliarTerminatedError('Worker is draining');
     }
 
     let resolve!: (value: TOutput) => void;
@@ -251,7 +251,7 @@ export function createPool<TInput, TOutput>(
 
     if (!queue.enqueue(item, onFull === 'wait' ? undefined : maxQueue)) {
       // maxQueue is guaranteed defined here: enqueue() only returns false when maxQueue is set.
-      throw new WorkerQueueFullError(maxQueue as number);
+      throw new FamiliarQueueFullError(maxQueue as number);
     }
 
     if (signal) {
@@ -280,13 +280,13 @@ export function createPool<TInput, TOutput>(
 
   function runStream(input: TInput, options: Omit<RunOptions, 'signal'> = {}): AsyncIterable<TOutput> {
     if (terminated) {
-      throw new WorkerRuntimeError('Worker was terminated');
+      throw new FamiliarRuntimeError('Worker was terminated');
     }
 
     const slot = freeSlots.pop();
 
     if (!slot) {
-      throw new WorkerRuntimeError(
+      throw new FamiliarRuntimeError(
         `runStream() requires a free worker slot; all ${slots.length} slot${slots.length === 1 ? '' : 's'} are busy`,
       );
     }
@@ -487,7 +487,6 @@ export function createPool<TInput, TOutput>(
       return activeCount;
     },
     batch,
-    close,
     get completed(): number {
       return completedCount;
     },
@@ -501,6 +500,7 @@ export function createPool<TInput, TOutput>(
     get disposed(): boolean {
       return terminated;
     },
+    drain,
     get failed(): number {
       return failedCount;
     },
@@ -519,7 +519,7 @@ export function createPool<TInput, TOutput>(
     get status(): WorkerStatus {
       return getStatus();
     },
-    [Symbol.asyncDispose]: () => close(),
+    [Symbol.asyncDispose]: () => drain(),
     [Symbol.dispose]: dispose,
   };
 }
