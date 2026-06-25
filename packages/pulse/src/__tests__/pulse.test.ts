@@ -1,4 +1,4 @@
-import { TimeoutError } from '../errors';
+import { PulseTimeoutError } from '../errors';
 import { createPulse } from '../pulse';
 
 // ─── MockWebSocket ─────────────────────────────────────────────────────────────
@@ -771,17 +771,17 @@ describe('errors module', () => {
     expect(e).toBeInstanceOf(Error);
   });
 
-  it('ConnectionError carries url', async () => {
-    const { ConnectionError } = await import('../errors');
-    const e = new ConnectionError('msg', 'ws://x');
+  it('PulseConnectionError carries url', async () => {
+    const { PulseConnectionError } = await import('../errors');
+    const e = new PulseConnectionError('msg', 'ws://x');
 
     expect(e.url).toBe('ws://x');
     expect(e).toBeInstanceOf(Error);
   });
 
-  it('TimeoutError carries event name', async () => {
-    const { TimeoutError } = await import('../errors');
-    const e = new TimeoutError('greet');
+  it('PulseTimeoutError carries event name', async () => {
+    const { PulseTimeoutError } = await import('../errors');
+    const e = new PulseTimeoutError('greet');
 
     expect(e.event).toBe('greet');
   });
@@ -919,15 +919,15 @@ describe('createPulse — join() with pre-aborted signal (C5)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('rejects immediately with AbortError when signal is pre-aborted', async () => {
+  it('rejects immediately with PulseAbortError when signal is pre-aborted', async () => {
     const { pulse, ws } = setup();
 
     ws.open();
 
-    const { AbortError } = await import('../errors');
+    const { PulseAbortError } = await import('../errors');
     const p = pulse.join('lobby', { signal: AbortSignal.abort() });
 
-    await expect(p).rejects.toBeInstanceOf(AbortError);
+    await expect(p).rejects.toBeInstanceOf(PulseAbortError);
 
     pulse.dispose();
   });
@@ -969,7 +969,7 @@ describe('createPulse — malformed message handling (C6)', () => {
   });
 });
 
-describe('createPulse — wait() rejects with TimeoutError (C7)', () => {
+describe('createPulse — wait() rejects with PulseTimeoutError (C7)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.stubGlobal('WebSocket', MockWebSocket);
@@ -980,23 +980,23 @@ describe('createPulse — wait() rejects with TimeoutError (C7)', () => {
     vi.useRealTimers();
   });
 
-  it('rejects with TimeoutError instance (not generic Error)', async () => {
+  it('rejects with PulseTimeoutError instance (not generic Error)', async () => {
     const { pulse, ws } = setup();
 
     ws.open();
 
-    const { TimeoutError } = await import('../errors');
+    const { PulseTimeoutError } = await import('../errors');
     const p = pulse.wait('greet', { timeout: 500 });
 
     vi.advanceTimersByTime(500);
 
-    await expect(p).rejects.toBeInstanceOf(TimeoutError);
+    await expect(p).rejects.toBeInstanceOf(PulseTimeoutError);
 
     pulse.dispose();
   });
 });
 
-describe('createPulse — DisposedError on dispose (B1)', () => {
+describe('createPulse — PulseDisposedError on dispose (B1)', () => {
   beforeEach(() => {
     vi.stubGlobal('WebSocket', MockWebSocket);
   });
@@ -1005,31 +1005,31 @@ describe('createPulse — DisposedError on dispose (B1)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('connect() rejects with DisposedError when disposed', async () => {
+  it('connect() rejects with PulseDisposedError when disposed', async () => {
     const { pulse } = setup();
-    const { DisposedError } = await import('../errors');
+    const { PulseDisposedError } = await import('../errors');
 
     pulse.dispose();
 
-    await expect(pulse.connect()).rejects.toBeInstanceOf(DisposedError);
+    await expect(pulse.connect()).rejects.toBeInstanceOf(PulseDisposedError);
   });
 
-  it('join() rejects with DisposedError when disposed', async () => {
+  it('join() rejects with PulseDisposedError when disposed', async () => {
     const { pulse } = setup();
-    const { DisposedError } = await import('../errors');
+    const { PulseDisposedError } = await import('../errors');
 
     pulse.dispose();
 
-    await expect(pulse.join('x')).rejects.toBeInstanceOf(DisposedError);
+    await expect(pulse.join('x')).rejects.toBeInstanceOf(PulseDisposedError);
   });
 
-  it('leave() rejects with DisposedError when disposed', async () => {
+  it('leave() rejects with PulseDisposedError when disposed', async () => {
     const { pulse } = setup();
-    const { DisposedError } = await import('../errors');
+    const { PulseDisposedError } = await import('../errors');
 
     pulse.dispose();
 
-    await expect(pulse.leave('x')).rejects.toBeInstanceOf(DisposedError);
+    await expect(pulse.leave('x')).rejects.toBeInstanceOf(PulseDisposedError);
   });
 });
 
@@ -1044,18 +1044,18 @@ describe('createPulse — channel.wait() timeout (E1)', () => {
     vi.useRealTimers();
   });
 
-  it('rejects with TimeoutError when channel.wait() times out', async () => {
+  it('rejects with PulseTimeoutError when channel.wait() times out', async () => {
     const { pulse, ws } = setup();
 
     ws.open();
 
-    const { TimeoutError } = await import('../errors');
+    const { PulseTimeoutError } = await import('../errors');
     const ch = pulse.channel<{ msg: string }>('chat');
     const p = ch.wait('msg', { timeout: 200 });
 
     vi.advanceTimersByTime(200);
 
-    await expect(p).rejects.toBeInstanceOf(TimeoutError);
+    await expect(p).rejects.toBeInstanceOf(PulseTimeoutError);
 
     pulse.dispose();
   });
@@ -1162,7 +1162,7 @@ describe('createPulse — B2: leave() auto-connect', () => {
     vi.unstubAllGlobals();
   });
 
-  it('leave() rejects with ConnectionError when socket cannot open', async () => {
+  it('leave() rejects with PulseConnectionError when socket cannot open', async () => {
     MockWebSocket.instances = [];
 
     const pulse = createPulse('ws://test', {});
@@ -1177,13 +1177,13 @@ describe('createPulse — B2: leave() auto-connect', () => {
     pulse.dispose();
   });
 
-  it('leave() rejects with DisposedError when disposed', async () => {
+  it('leave() rejects with PulseDisposedError when disposed', async () => {
     const { pulse } = setup();
-    const { DisposedError } = await import('../errors');
+    const { PulseDisposedError } = await import('../errors');
 
     pulse.dispose();
 
-    await expect(pulse.leave('lobby')).rejects.toBeInstanceOf(DisposedError);
+    await expect(pulse.leave('lobby')).rejects.toBeInstanceOf(PulseDisposedError);
   });
 });
 
@@ -1492,13 +1492,13 @@ describe('createPulse — join() timeout', () => {
     vi.useRealTimers();
   });
 
-  it('rejects with TimeoutError when timeout elapses before server confirms', async () => {
+  it('rejects with PulseTimeoutError when timeout elapses before server confirms', async () => {
     const { pulse, ws } = setup();
 
     ws.open();
 
     const joinPromise = pulse.join('room', { timeout: 100 });
-    const assertion = expect(joinPromise).rejects.toBeInstanceOf(TimeoutError);
+    const assertion = expect(joinPromise).rejects.toBeInstanceOf(PulseTimeoutError);
 
     await vi.advanceTimersByTimeAsync(150);
     await assertion;

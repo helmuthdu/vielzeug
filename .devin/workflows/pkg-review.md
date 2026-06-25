@@ -56,15 +56,15 @@ Use consistent markers throughout your review output:
 
 ## 1. Context
 
-- Zero-dependency TypeScript packages targeting ES2022; shipped as ESM + CJS (the documented exception is `sigil`, which bundles `lucide` — do not flag it as a violation).
+- Zero-dependency TypeScript packages targeting ES2022; shipped as ESM + CJS (the documented exception is `refine`, which bundles `lucide` — do not flag it as a violation).
 - Strict mode (`noImplicitAny`, `strictNullChecks`, `noUncheckedIndexedAccess`, etc.)
 - ESLint Perfectionist: sorted imports and object keys
 - Public API surface is `src/index.ts` — anything not exported is internal (some packages also expose sub-path exports; see their `AGENTS.md`)
-- Tests use Vitest; usually in `src/__tests__/`, but some packages co-locate tests next to source (e.g. `sigil`).
+- Tests use Vitest; usually in `src/__tests__/`, but some packages co-locate tests next to source (e.g. `refine`).
 - You are reviewing the _current state of the package_ (not a single diff), but you should still think like a careful pull request reviewer.
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
 - **Read the DOX chain first** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present) — so you review against the package's real contract.
-- **Prefer the `@vielzeug` MCP for context** before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `sigil` prefer `list-components` / `get-component` since its primary API surface is web components. For large packages (e.g. `sigil`), review one category/area per pass.
+- **Prefer the `@vielzeug` MCP for context** before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `refine` prefer `list-components` / `get-component` since its primary API surface is web components. For large packages (e.g. `refine`), review one category/area per pass.
 
 ## Review principles
 

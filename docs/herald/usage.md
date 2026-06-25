@@ -418,11 +418,11 @@ This is useful for serializing state, hydrating a new bus, or debugging all chan
 
 | Method         | Replays current value?                                     |
 | -------------- | ---------------------------------------------------------- |
-| `on()`         | <sg-icon name="check" size="16"></sg-icon> Yes             |
-| `once()`       | <sg-icon name="check" size="16"></sg-icon> Yes (then done) |
-| `on({ once })` | <sg-icon name="check" size="16"></sg-icon> Yes (then done) |
-| `events()`     | <sg-icon name="x" size="16"></sg-icon> No                  |
-| `wait()`       | <sg-icon name="x" size="16"></sg-icon> No                  |
+| `on()`         | <ore-icon name="check" size="16"></ore-icon> Yes             |
+| `once()`       | <ore-icon name="check" size="16"></ore-icon> Yes (then done) |
+| `on({ once })` | <ore-icon name="check" size="16"></ore-icon> Yes (then done) |
+| `events()`     | <ore-icon name="x" size="16"></ore-icon> No                  |
+| `wait()`       | <ore-icon name="x" size="16"></ore-icon> No                  |
 
 ::: warning `once()` on a BehaviorBus fires immediately
 If the bus has a buffered value for the event, `once()` (and `on(event, fn, { once: true })`) fires the listener **synchronously** with the current value and is immediately done — the listener is never registered for future emits. If you need to react to the _next_ new emit rather than the current state, use `on()` and unsubscribe manually after the first call.

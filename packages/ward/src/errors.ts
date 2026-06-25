@@ -1,3 +1,16 @@
+/** Base class for all ward errors. Use `instanceof WardError` to catch any ward-originated error. */
+export class WardError extends Error {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(message, opts);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is WardError {
+    return err instanceof WardError;
+  }
+}
+
 /**
  * Thrown when a `when` predicate in a ward rule throws an exception.
  *
@@ -12,15 +25,13 @@
  * }
  * ```
  */
-export class WardPredicateError extends Error {
+export class WardPredicateError extends WardError {
   readonly ruleIndex: number;
 
   constructor(ruleIndex: number, cause: unknown) {
     const msg = cause instanceof Error ? cause.message : String(cause);
 
-    super(`[ward] Rule[${ruleIndex}] threw: ${msg}`, { cause });
-
-    this.name = 'WardPredicateError';
+    super(`Rule[${ruleIndex}] threw: ${msg}`, { cause });
     this.ruleIndex = ruleIndex;
   }
 }

@@ -5,7 +5,7 @@ package: keymap
 category: app-infrastructure
 keywords: [keyboard, shortcuts, hotkeys, chord, keybinding, headless, accessibility]
 exports: [canonicalizeShortcut, createKeymap, createKeymapLayer, detectModKey, formatShortcut, matchStep, parseShortcut, parseStep]
-related: [herald, sigil, craft]
+related: [herald, refine, ore]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -20,11 +20,11 @@ Browser keyboard handling is error-prone: modifier key normalisation, platform d
 | Feature              | Raw `addEventListener`                       | Keymap                                                    |
 | -------------------- | -------------------------------------------- | --------------------------------------------------------- |
 | Bundle size          | 0 B (built-in)                               | <PackageInfo package="keymap" type="size" />              |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>   | <sg-icon name="check" size="16"></sg-icon>                |
-| Chord sequences      | <sg-icon name="x" size="16"></sg-icon>       | <sg-icon name="check" size="16"></sg-icon>                |
-| Modifier aliases     | <sg-icon name="x" size="16"></sg-icon>       | `cmd`, `win`, `option` → canonical                        |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>   | <ore-icon name="check" size="16"></ore-icon>                |
+| Chord sequences      | <ore-icon name="x" size="16"></ore-icon>       | <ore-icon name="check" size="16"></ore-icon>                |
+| Modifier aliases     | <ore-icon name="x" size="16"></ore-icon>       | `cmd`, `win`, `option` → canonical                        |
 | Context guards       | Manual `if` in handler                       | `when()` predicate per keymap                             |
-| Headless / SSR-safe  | DOM required                                 | <sg-icon name="check" size="16"></sg-icon>                |
+| Headless / SSR-safe  | DOM required                                 | <ore-icon name="check" size="16"></ore-icon>                |
 | Disposable           | Manual `removeEventListener`                 | `dispose()` + `using`                                     |
 
 <div class="decision-callout">
@@ -106,8 +106,8 @@ map.dispose(); // or: using map = createKeymap(…)
 <div class="see-also">
 
 - [Herald](/herald/) — Typed event bus; pair with Keymap by publishing shortcut events to a bus instead of calling handlers directly
-- [Sigil](/sigil/) — `sg-command-palette` uses Keymap internally; register your own shortcuts alongside it
-- [Craft](/craft/) — Attach a keymap inside a `define()` setup function for component-scoped shortcuts
+- [Refine](/refine/) — `ore-command-palette` uses Keymap internally; register your own shortcuts alongside it
+- [Ore](/ore/) — Attach a keymap inside a `define()` setup function for component-scoped shortcuts
 
 </div>
 

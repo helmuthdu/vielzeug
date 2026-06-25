@@ -13,14 +13,14 @@
   "pnpmVersion": "10.33.4",
   "projects": [
     {
-      "packageName": "@vielzeug/sigil",
-      "projectFolder": "packages/sigil",
+      "packageName": "@vielzeug/refine",
+      "projectFolder": "packages/refine",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },
     {
-      "packageName": "@vielzeug/craft",
-      "projectFolder": "packages/craft",
+      "packageName": "@vielzeug/ore",
+      "projectFolder": "packages/ore",
       "shouldPublish": true,
       "versionPolicyName": "vielzeug-packages"
     },

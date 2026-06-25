@@ -6,8 +6,8 @@
       }}</span>
       <span class="reference-hint">Click any to insert at cursor</span>
       <div class="search-container">
-        <sg-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput">
-        </sg-input>
+        <ore-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput">
+        </ore-input>
       </div>
     </div>
     <div class="function-categories">
@@ -18,7 +18,7 @@
         class="category">
         <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
         <div class="function-list">
-          <sg-chip
+          <ore-chip
             v-for="fn in category.functions"
             :key="fn"
             mode="action"
@@ -26,14 +26,14 @@
             variant="outline"
             @click="emit('insert-function', fn)"
             title="Click to insert"
-            >{{ fn }}</sg-chip
+            >{{ fn }}</ore-chip
           >
         </div>
       </div>
       <div v-else class="category">
         <h4>Exports ({{ filteredExports.length }} available)</h4>
         <div class="function-list">
-          <sg-chip
+          <ore-chip
             v-for="ex in filteredExports"
             :key="ex"
             mode="action"
@@ -42,7 +42,7 @@
             :color="isMatch(ex) ? 'primary' : undefined"
             @click="emit('insert-function', ex)"
             title="Click to insert"
-            >{{ ex }}</sg-chip
+            >{{ ex }}</ore-chip
           >
         </div>
       </div>
@@ -163,7 +163,7 @@ const isMatch = (fn: string) => {
   display: block;
 }
 
-.search-container :deep(sg-input),
+.search-container :deep(ore-input),
 .search-container :deep(input) {
   width: 100%;
   box-sizing: border-box;
@@ -208,13 +208,13 @@ const isMatch = (fn: string) => {
   gap: 0.3rem;
 }
 
-.function-list :deep(sg-chip) {
+.function-list :deep(ore-chip) {
   cursor: pointer;
 }
 
-.function-list :deep(sg-chip:hover) {
-  --sg-chip-bg: color-mix(in oklch, var(--color-primary) 12%, transparent);
-  --sg-chip-border: var(--color-primary);
-  --sg-chip-color: var(--color-primary);
+.function-list :deep(ore-chip:hover) {
+  --ore-chip-bg: color-mix(in oklch, var(--color-primary) 12%, transparent);
+  --ore-chip-border: var(--color-primary);
+  --ore-chip-color: var(--color-primary);
 }
 </style>

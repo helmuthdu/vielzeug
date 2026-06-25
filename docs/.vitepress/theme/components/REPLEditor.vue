@@ -2,7 +2,7 @@
   <div class="repl-panes" :class="{ 'has-output': hasOutput }">
     <!-- Shared toolbar: Examples (left) + Run (right) -->
     <div class="editor-toolbar">
-      <sg-select
+      <ore-select
         label-placement="inset"
         style="width: 180px"
         placeholder="Examples..."
@@ -11,10 +11,10 @@
         <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
           <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
         </optgroup>
-      </sg-select>
+      </ore-select>
       <div class="toolbar-spacer" />
       <span class="toolbar-shortcut"><kbd>⌘</kbd><kbd>Return</kbd></span>
-      <sg-button
+      <ore-button
         size="sm"
         color="primary"
         variant="solid"
@@ -35,7 +35,7 @@
           <polygon points="5 3 19 12 5 21 5 3" />
         </svg>
         Run
-      </sg-button>
+      </ore-button>
     </div>
 
     <!-- Code Editor -->
@@ -43,8 +43,8 @@
       <div class="editor-content-wrapper">
         <div ref="editorContainer" class="code-editor"></div>
         <div class="editor-floating-toolbar">
-          <sg-tooltip content="Format Code" placement="top">
-            <sg-button icon-only variant="ghost" size="sm" @click="formatCode">
+          <ore-tooltip content="Format Code" placement="top">
+            <ore-button icon-only variant="ghost" size="sm" @click="formatCode">
               <svg
                 width="14"
                 height="14"
@@ -65,10 +65,10 @@
                   style="stroke-width: 2.00057; stroke-dasharray: none" />
                 <path d="M 15.981361,11.55223 12.594039,8.1175984" id="path1" />
               </svg>
-            </sg-button>
-          </sg-tooltip>
-          <sg-tooltip content="Copy to Clipboard" placement="top">
-            <sg-button icon-only variant="ghost" size="sm" @click="copyCode">
+            </ore-button>
+          </ore-tooltip>
+          <ore-tooltip content="Copy to Clipboard" placement="top">
+            <ore-button icon-only variant="ghost" size="sm" @click="copyCode">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -82,11 +82,11 @@
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
               </svg>
-            </sg-button>
-          </sg-tooltip>
-          <sg-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></sg-separator>
-          <sg-tooltip content="Reset to Default" placement="top">
-            <sg-button icon-only variant="ghost" size="sm" @click="resetEditor">
+            </ore-button>
+          </ore-tooltip>
+          <ore-separator orientation="vertical" style="height: 14px; margin: 0 0.25rem"></ore-separator>
+          <ore-tooltip content="Reset to Default" placement="top">
+            <ore-button icon-only variant="ghost" size="sm" @click="resetEditor">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -100,10 +100,10 @@
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
                 <path d="M3 3v5h5" />
               </svg>
-            </sg-button>
-          </sg-tooltip>
-          <sg-tooltip content="Clear Editor" placement="top">
-            <sg-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
+            </ore-button>
+          </ore-tooltip>
+          <ore-tooltip content="Clear Editor" placement="top">
+            <ore-button icon-only variant="ghost" size="sm" color="error" @click="clearEditor">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
@@ -120,8 +120,8 @@
                 <line x1="10" x2="10" y1="11" y2="17" />
                 <line x1="14" x2="14" y1="11" y2="17" />
               </svg>
-            </sg-button>
-          </sg-tooltip>
+            </ore-button>
+          </ore-tooltip>
         </div>
       </div>
     </div>
@@ -130,8 +130,8 @@
     <div class="output-section">
       <div class="output-header">
         <span class="output-label">Output</span>
-        <sg-tooltip content="Clear Output" placement="bottom">
-          <sg-button icon-only variant="ghost" size="sm" @click="handleClearOutput">
+        <ore-tooltip content="Clear Output" placement="bottom">
+          <ore-button icon-only variant="ghost" size="sm" @click="handleClearOutput">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -148,8 +148,8 @@
               <line x1="10" x2="10" y1="11" y2="17" />
               <line x1="14" x2="14" y1="11" y2="17" />
             </svg>
-          </sg-button>
-        </sg-tooltip>
+          </ore-button>
+        </ore-tooltip>
       </div>
       <div ref="outputContainer" class="output-area">
         <div class="output-placeholder">
@@ -749,8 +749,8 @@ defineExpose({
   margin: 0;
 }
 
-.editor-toolbar :deep(sg-select),
-.editor-toolbar :deep(sg-button) {
+.editor-toolbar :deep(ore-select),
+.editor-toolbar :deep(ore-button) {
   align-self: center;
 }
 

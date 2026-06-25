@@ -52,15 +52,15 @@ for await (const event of bus.events('cart:updated')) {
 | Feature              | Herald                                          | mitt                                                      | EventEmitter3                                             |
 | -------------------- | ----------------------------------------------- | --------------------------------------------------------- | --------------------------------------------------------- |
 | Bundle size          | <PackageInfo package="herald" type="size" />    | ~200 B                                                    | ~1.5 kB                                                   |
-| TypeScript inference | <sg-icon name="check" size="16"></sg-icon> Full | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic |
-| Async/await (`wait`) | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Async streaming      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| AbortSignal          | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Event piping         | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Wildcard (`onAny`)   | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                | <sg-icon name="x" size="16"></sg-icon>                    |
-| Disposal signal      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Error isolation      | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                    | <sg-icon name="x" size="16"></sg-icon>                    |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                | <sg-icon name="check" size="16"></sg-icon>                |
+| TypeScript inference | <ore-icon name="check" size="16"></ore-icon> Full | <ore-icon name="triangle-alert" size="16"></ore-icon> Basic | <ore-icon name="triangle-alert" size="16"></ore-icon> Basic |
+| Async/await (`wait`) | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| Async streaming      | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| AbortSignal          | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| Event piping         | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| Wildcard (`onAny`)   | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon>                | <ore-icon name="x" size="16"></ore-icon>                    |
+| Disposal signal      | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| Error isolation      | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                    | <ore-icon name="x" size="16"></ore-icon>                    |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon>                | <ore-icon name="check" size="16"></ore-icon>                |
 
 <div class="decision-callout">
 

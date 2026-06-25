@@ -11,20 +11,21 @@
 // Kept in a plain .ts file (not inside <script setup>) to avoid Vue's parser
 // treating </script> inside template literals as block boundaries.
 
-import sigilCss from 'sigil-preview:css';
-import sigilDeps from 'sigil-preview:deps';
-import sigilJs from 'sigil-preview:js';
+import refineCss from 'refine-preview:css';
+import refineDeps from 'refine-preview:deps';
+import refineJs from 'refine-preview:js';
 
 export interface SandboxDocOptions {
   html: string;
   dir: 'ltr' | 'rtl';
   dark: boolean;
-  center: boolean;
   vertical: boolean;
-  /** Extra px added to reported height so shadows/blurs aren't clipped. Default: 32. */
+  /** Extra px added to reported height so shadows/blurs aren't clipped. Default: 32. Ignored when height is set. */
   shadowBleed?: number;
   /** When set, the sandbox body background is transparent so the host container's background image shows through. */
   background?: string;
+  /** When set, applied as min-height on the sandbox body so flex centering has vertical free space. */
+  height?: string;
 }
 
 export interface SandboxDocResult {
@@ -48,26 +49,27 @@ new ResizeObserver(() => {
 }
 
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
-  const { background, center, dark, html, shadowBleed = DEFAULT_SHADOW_BLEED, vertical } = options;
+  const { background, dark, height, html, shadowBleed = height ? 0 : DEFAULT_SHADOW_BLEED, vertical } = options;
 
-  const bodyAlign = center ? 'center' : 'flex-start';
+  const bodyAlign = 'center';
   const bodyDirection = vertical ? 'column' : 'row';
   const bodyBackground = background ? background : 'transparent';
+  const bodyMinHeight = height ? height : 'auto';
 
-  // sigil CSS first, then overrides — order matters so our resets win.
+  // refine CSS first, then overrides — order matters so our resets win.
   const overrideCss = [
     `*, *::before, *::after { box-sizing: border-box; }`,
     `html { color-scheme: ${dark ? 'dark' : 'light'}; height: fit-content; }`,
-    `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); }`,
-    `body { display: flex; flex-direction: ${bodyDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem 2rem 0; align-items: ${bodyAlign}; justify-content: ${bodyAlign}; background: ${bodyBackground}; }`,
+    `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); touch-action: manipulation; }`,
+    `body { display: flex; flex-direction: ${bodyDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: ${bodyAlign}; justify-content: ${bodyAlign}; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
   // Scripts are prepended to the fragment so they execute before custom
   // elements in the user HTML are parsed and upgraded by the browser.
-  const fragment = `<style>${sigilCss}</style>
+  const fragment = `<style>${refineCss}</style>
 <style>${overrideCss}</style>
-<script>${sigilDeps}</script>
-<script>${sigilJs}</script>
+<script>${refineDeps}</script>
+<script>${refineJs}</script>
 ${html}
 <script>${makeResizeScript(shadowBleed)}</script>`;
 

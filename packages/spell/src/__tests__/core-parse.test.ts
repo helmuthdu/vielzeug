@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('safeParse and safeParseAsync', () => {
   it('safeParse() returns parsed data on success', () => {
@@ -11,13 +11,13 @@ describe('safeParse and safeParseAsync', () => {
     }
   });
 
-  it('safeParse() returns ValidationError instead of throwing', () => {
+  it('safeParse() returns SpellValidationError instead of throwing', () => {
     const result = s.string().safeParse(123);
 
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(result.error).toBeInstanceOf(ValidationError);
+      expect(result.error).toBeInstanceOf(SpellValidationError);
       expect(result.error.issues).toHaveLength(1);
     }
   });

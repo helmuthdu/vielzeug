@@ -41,7 +41,7 @@ When creating a new `runs/<name>/progress.md`, use this structure:
 - Tests: <N> passing, <F> files
 - Exports: <N> symbols in src/index.ts
 - Lint: clean / <N> errors
-- sigil only: <N> components (from list-components)
+- refine only: <N> components (from list-components)
 
 ## Phase Status
 

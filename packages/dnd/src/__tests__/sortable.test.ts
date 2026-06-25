@@ -1264,7 +1264,7 @@ describe('scope validation', () => {
     const invalidScope = {} as ReturnType<typeof createSortableScope>;
 
     expect(() => createSortable({ element, getKey, scope: invalidScope })).toThrowError(
-      '@vielzeug/dnd: Invalid scope — use createSortableScope() to create scopes.',
+      'Invalid scope — use createSortableScope() to create scopes.',
     );
   });
 });

@@ -40,9 +40,9 @@ import {
   within,
 } from '../index';
 
-const MISSING_TZ = '[tempo] This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.';
+const MISSING_TZ = 'This operation requires a timezone. Pass options.tz or use a ZonedDateTime input.';
 const MISMATCH_ZONES =
-  '[tempo] Comparison received ZonedDateTime inputs with different time zones. Pass options.tz explicitly.';
+  'Comparison received ZonedDateTime inputs with different time zones. Pass options.tz explicitly.';
 
 describe('now', () => {
   it('returns a ZonedDateTime in the requested timezone', () => {
@@ -74,7 +74,7 @@ describe('parseZoned', () => {
     expect(zdt.hour).toBe(11);
   });
   it('throws a descriptive [tempo] error for an invalid string', () => {
-    expect(() => parseZoned('not-a-date')).toThrow('[tempo] Invalid zoned date-time string');
+    expect(() => parseZoned('not-a-date')).toThrow('Invalid zoned date-time string');
   });
 });
 
@@ -87,7 +87,7 @@ describe('parsePlainDate', () => {
     expect(d.day).toBe(21);
   });
   it('throws a descriptive [tempo] error for an invalid string', () => {
-    expect(() => parsePlainDate('not-a-date')).toThrow('[tempo] Invalid plain date string');
+    expect(() => parsePlainDate('not-a-date')).toThrow('Invalid plain date string');
   });
 });
 
@@ -99,7 +99,7 @@ describe('parsePlainDateTime', () => {
     expect(parsePlainDateTime('2026-03-21T10:15:30').toString()).toBe('2026-03-21T10:15:30');
   });
   it('throws a descriptive error including the invalid value', () => {
-    expect(() => parsePlainDateTime('not-a-date')).toThrow('[tempo] Invalid date/time string: "not-a-date"');
+    expect(() => parsePlainDateTime('not-a-date')).toThrow('Invalid date/time string: "not-a-date"');
   });
 });
 
@@ -108,7 +108,7 @@ describe('parseInstant', () => {
     expect(parseInstant('2026-03-21T10:15:30Z').toString()).toBe('2026-03-21T10:15:30Z');
   });
   it('throws a descriptive error including the invalid value', () => {
-    expect(() => parseInstant('not-an-instant')).toThrow('[tempo] Invalid instant string: "not-an-instant"');
+    expect(() => parseInstant('not-an-instant')).toThrow('Invalid instant string: "not-an-instant"');
   });
 });
 
@@ -151,17 +151,17 @@ describe('toInstant', () => {
   });
   it('throws for unsupported input type', () => {
     expect(() => toInstant('2026-03-21T10:15:30Z' as unknown as Temporal.Instant)).toThrow(
-      '[tempo] Unsupported time input type:',
+      'Unsupported time input type:',
     );
   });
   it('throws a [tempo] error for invalid tz with PlainDateTime input', () => {
     expect(() => toInstant(parsePlainDateTime('2026-03-21T10:00:00'), { tz: 'Bad/Zone' })).toThrow(
-      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
+      'Unknown or invalid timezone: "Bad/Zone"',
     );
   });
   it('throws a [tempo] error for invalid tz with PlainDate input', () => {
     expect(() => toInstant(Temporal.PlainDate.from('2026-03-21'), { tz: 'Bad/Zone' })).toThrow(
-      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
+      'Unknown or invalid timezone: "Bad/Zone"',
     );
   });
 });
@@ -181,7 +181,7 @@ describe('inTz', () => {
   });
   it('throws a [tempo] error for an invalid timezone', () => {
     expect(() => inTz(Temporal.Instant.from('2026-03-21T10:00:00Z'), 'Bad/Zone')).toThrow(
-      '[tempo] Unknown or invalid timezone: "Bad/Zone"',
+      'Unknown or invalid timezone: "Bad/Zone"',
     );
   });
 });
@@ -207,7 +207,7 @@ describe('shift', () => {
   });
   it('throws a [tempo] error for an unknown timezone string', () => {
     expect(() => shift(Temporal.Instant.from('2026-03-21T10:00:00Z'), { hours: 1 }, { tz: 'Not/Real' })).toThrow(
-      '[tempo] Unknown or invalid timezone: "Not/Real"',
+      'Unknown or invalid timezone: "Not/Real"',
     );
   });
 });
@@ -521,7 +521,7 @@ describe('formatRange', () => {
     const berlin = Temporal.ZonedDateTime.from('2026-03-21T16:00:00+01:00[Europe/Berlin]');
 
     expect(() => formatRange(ny, berlin)).toThrow(
-      '[tempo] formatRange received ZonedDateTime inputs with different time zones.',
+      'formatRange received ZonedDateTime inputs with different time zones.',
     );
   });
 });
@@ -613,7 +613,7 @@ describe('parseDuration', () => {
     expect(parseDuration({ hours: 2, minutes: 30 }).toString()).toBe('PT2H30M');
   });
   it('throws with invalid value in message', () => {
-    expect(() => parseDuration('not-a-duration')).toThrow('[tempo] Invalid duration input: "not-a-duration"');
+    expect(() => parseDuration('not-a-duration')).toThrow('Invalid duration input: "not-a-duration"');
   });
 });
 
@@ -799,7 +799,7 @@ describe('timeDiff', () => {
   });
   it('throws a [tempo] error for an invalid timezone', () => {
     expect(() => timeDiff(base, Temporal.ZonedDateTime.from('2026-06-01T00:00:00[UTC]'), { tz: 'Foo/Bar' })).toThrow(
-      '[tempo] Unknown or invalid timezone: "Foo/Bar"',
+      'Unknown or invalid timezone: "Foo/Bar"',
     );
   });
 });
@@ -1103,7 +1103,7 @@ describe('formatRangeParts', () => {
     const berlin = Temporal.ZonedDateTime.from('2026-03-21T16:00:00+01:00[Europe/Berlin]');
 
     expect(() => formatRangeParts(ny, berlin)).toThrow(
-      '[tempo] formatRangeParts received ZonedDateTime inputs with different time zones.',
+      'formatRangeParts received ZonedDateTime inputs with different time zones.',
     );
   });
 
@@ -1156,33 +1156,29 @@ describe('parse', () => {
   });
 
   it('throws a descriptive error for an invalid string', () => {
-    expect(() => parse('not-a-date')).toThrow('[tempo] Unable to parse date/time string: "not-a-date"');
+    expect(() => parse('not-a-date')).toThrow('Unable to parse date/time string: "not-a-date"');
   });
 
   it('throws when as="zoned" but string is not a zoned datetime (C2)', () => {
-    expect(() => parse('2026-03-21', 'zoned')).toThrow('[tempo] Invalid zoned date-time string');
+    expect(() => parse('2026-03-21', 'zoned')).toThrow('Invalid zoned date-time string');
   });
 
   it('throws when as="instant" but string is not an instant (C2)', () => {
-    expect(() => parse('not-an-instant', 'instant')).toThrow('[tempo] Invalid instant string');
+    expect(() => parse('not-an-instant', 'instant')).toThrow('Invalid instant string');
   });
 
   it('throws when as="plain-datetime" but string is invalid (C2)', () => {
-    expect(() => parse('not-a-date', 'plain-datetime')).toThrow('[tempo] Invalid date/time string');
+    expect(() => parse('not-a-date', 'plain-datetime')).toThrow('Invalid date/time string');
   });
 
   it('throws when as="plain-date" but string is invalid (C2)', () => {
-    expect(() => parse('not-a-date', 'plain-date')).toThrow('[tempo] Invalid plain date string');
+    expect(() => parse('not-a-date', 'plain-date')).toThrow('Invalid plain date string');
   });
 });
 
 describe('TempoError (E1)', () => {
   it('errors thrown by tempo are instanceof TempoError', () => {
     expect(() => parse('not-a-date')).toThrow(TempoError);
-  });
-
-  it('errors thrown by tempo are instanceof TypeError (backward compat)', () => {
-    expect(() => parse('not-a-date')).toThrow(TypeError);
   });
 
   it('.name is "TempoError"', () => {
@@ -1333,7 +1329,7 @@ describe('validateTz — UTC offset strings (C2)', () => {
   it('throws a descriptive [tempo] error for an unrecognised timezone string', () => {
     const plain = parsePlainDateTime('2026-03-21T10:00:00');
 
-    expect(() => toInstant(plain, { tz: 'Not/ATimezone' })).toThrow('[tempo] Unknown or invalid timezone');
+    expect(() => toInstant(plain, { tz: 'Not/ATimezone' })).toThrow('Unknown or invalid timezone');
   });
 });
 

@@ -3,7 +3,7 @@ description: Tiny, type-safe reactive primitives — signals, effects, computed 
 package: ripple
 category: state
 keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async]
-related: [craft, forge, herald]
+related: [ore, forge, herald]
 exports:
   [
     signal,
@@ -41,9 +41,9 @@ exports:
 
 **Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
 
-**When to use:** Fine-grained reactivity without a framework. Powers Craft templates. Works in any TS/JS environment including Node, Deno, and SSR.
+**When to use:** Fine-grained reactivity without a framework. Powers Ore templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
+**Related:** [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/forge](https://vielzeug.dev/forge/) · [@vielzeug/herald](https://vielzeug.dev/herald/)
 
 </details>
 

@@ -178,33 +178,12 @@ body:has(#repl-container) {
   border-top: none;
 }
 
-/* Protect pkg-hero sg-text[as=h1] from .vp-doc h1 global overrides */
+/* Protect pkg-hero ore-text[as=h1] from .vp-doc h1 global overrides */
 .vp-doc .pkg-hero h1,
-.vp-doc .pkg-hero sg-text h1 {
+.vp-doc .pkg-hero ore-text h1 {
   padding: 0;
   margin: 0;
   border: none;
-}
-
-/* Features list → 2-col grid on wider screens */
-.features-grid ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
-  gap: 0.4rem 1.5rem;
-  padding: 0 !important;
-  list-style: none !important;
-}
-
-.features-grid li {
-  padding: var(--size-1-5) 0;
-  margin: 0 !important;
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  border-bottom: var(--border) solid var(--color-contrast-200);
-}
-
-.features-grid li:last-child {
-  border-bottom: none;
 }
 
 /* Documentation links → compact pill cards */
@@ -238,12 +217,6 @@ body:has(#repl-container) {
     color var(--transition-fast);
 }
 
-.doc-links li a:hover {
-  color: var(--color-primary);
-  background: var(--color-primary-backdrop);
-  border-color: var(--color-primary);
-}
-
 /* See Also links → annotated inline list, no card chrome */
 .see-also ul {
   display: flex;
@@ -269,6 +242,33 @@ body:has(#repl-container) {
 .see-also li a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.doc-links li a:hover {
+  color: var(--color-primary);
+  background: var(--color-primary-backdrop);
+  border-color: var(--color-primary);
+}
+
+/* Features list → 2-col grid on wider screens */
+.features-grid ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 0.4rem 1.5rem;
+  padding: 0 !important;
+  list-style: none !important;
+}
+
+.features-grid li {
+  padding: var(--size-1-5) 0;
+  margin: 0 !important;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  border-bottom: var(--border) solid var(--color-contrast-200);
+}
+
+.features-grid li:last-child {
+  border-bottom: none;
 }
 
 /* Decision callout — Use X when / Consider Y when summary */

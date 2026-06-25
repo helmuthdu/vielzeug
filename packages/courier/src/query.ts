@@ -1,6 +1,7 @@
 import type { RetryOptions } from './retry';
 import type { QueryKey, QueryState, SyncStore, Unsubscribe } from './types';
 
+import { CourierDisposedError } from './errors';
 import {
   buildCacheContext,
   ensureEntry,
@@ -98,7 +99,7 @@ export function createQuery(opts?: QueryClientOptions) {
   );
 
   async function fetchQuery<T>(options: QueryOptions<T>): Promise<T> {
-    if (disposed) throw new Error('[courier] QueryClient has been disposed');
+    if (disposed) throw new CourierDisposedError('QueryClient');
 
     const { enabled = true, fn, gcTime, initialData, key, staleTime, ...retryOpts } = options;
 

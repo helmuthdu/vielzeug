@@ -2,7 +2,7 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { CalendarUnit, TimeInput } from './types';
 
-import { fail, TempoErrorCode } from './_error';
+import { fail, TempoErrorCode } from './errors';
 
 // ─── Timezone validation ──────────────────────────────────────────────────────
 

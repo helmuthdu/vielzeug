@@ -796,7 +796,7 @@ describe('ward: predicate error propagation', () => {
     ]);
 
     expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', { id: 'u1' })).toThrow(
-      '[ward] Rule[0] threw: predicate exploded',
+      'Rule[0] threw: predicate exploded',
     );
   });
 
@@ -840,7 +840,7 @@ describe('ward: predicate error propagation', () => {
     ]);
 
     expect(() => permit.checkAll({ id: 'u1', roles: ['editor'] }, [{ action: 'read', resource: 'posts' }])).toThrow(
-      '[ward] Rule[0] threw: predicate exploded',
+      'Rule[0] threw: predicate exploded',
     );
   });
 });
@@ -1430,7 +1430,7 @@ describe('ward: predicate throws non-Error value', () => {
     ]);
 
     expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
-      '[ward] Rule[0] threw: not-an-error-object',
+      'Rule[0] threw: not-an-error-object',
     );
   });
 
@@ -1448,7 +1448,7 @@ describe('ward: predicate throws non-Error value', () => {
     ]);
 
     expect(() => permit.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read', undefined)).toThrow(
-      '[ward] Rule[0] threw: 42',
+      'Rule[0] threw: 42',
     );
   });
 });

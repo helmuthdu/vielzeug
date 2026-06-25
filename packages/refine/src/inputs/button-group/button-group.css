@@ -1,0 +1,96 @@
+@layer refine.base {
+  /* ========================================
+       Base Styles
+       ======================================== */
+
+  :host {
+    display: inline-flex;
+
+    --group-gap: var(--size-2);
+    --group-radius: var(--rounded-lg);
+  }
+
+  .button-group {
+    display: flex;
+    flex-direction: row;
+    gap: var(--group-gap);
+  }
+}
+
+@layer refine.variants {
+  /* ========================================
+       Orientation
+       ======================================== */
+
+  :host([orientation='vertical']) .button-group {
+    flex-direction: column;
+  }
+}
+
+@layer refine.overrides {
+  /* ========================================
+       Full Width
+       ======================================== */
+
+  :host([fullwidth]) {
+    display: flex;
+    width: 100%;
+  }
+
+  :host([fullwidth]) .button-group {
+    width: 100%;
+  }
+
+  :host([fullwidth]) ::slotted(ore-button) {
+    flex: 1;
+  }
+
+  /* ========================================
+       Attached Mode
+       ======================================== */
+
+  :host([attached]) .button-group {
+    gap: 0;
+  }
+
+  /* Ensure attached buttons have proper z-index on hover/focus */
+  :host([attached]) ::slotted(ore-button:hover),
+  :host([attached]) ::slotted(ore-button:focus-within) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Horizontal attached - remove inner borders and round corners */
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-button) {
+    --button-radius: 0;
+  }
+
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-button:not(:first-child)) {
+    --button-border-start: 0;
+  }
+
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-button:first-child) {
+    --button-radius: var(--group-radius) 0 0 var(--group-radius);
+  }
+
+  :host([attached]:not([orientation='vertical'])) ::slotted(ore-button:last-child) {
+    --button-radius: 0 var(--group-radius) var(--group-radius) 0;
+  }
+
+  /* Vertical attached - remove inner borders and round corners */
+  :host([attached][orientation='vertical']) ::slotted(ore-button) {
+    --button-radius: 0;
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-button:not(:first-child)) {
+    --button-border-top: 0;
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-button:first-child) {
+    --button-radius: var(--group-radius) var(--group-radius) 0 0;
+  }
+
+  :host([attached][orientation='vertical']) ::slotted(ore-button:last-child) {
+    --button-radius: 0 0 var(--group-radius) var(--group-radius);
+  }
+}

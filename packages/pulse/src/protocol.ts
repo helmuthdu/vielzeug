@@ -1,4 +1,4 @@
-import { ProtocolError } from './errors';
+import { PulseProtocolError } from './errors';
 
 // ─── Outgoing frames (client → server) ────────────────────────────────────────
 
@@ -56,12 +56,12 @@ export function encode(frame: OutFrame): string {
 
 /**
  * Parse a raw MessageEvent data string into a typed InFrame.
- * Throws `ProtocolError` if the data is not valid JSON or missing the `type` field.
+ * Throws `PulseProtocolError` if the data is not valid JSON or missing the `type` field.
  * @internal
  */
 export function decode(raw: unknown): InFrame {
   if (typeof raw !== 'string') {
-    throw new ProtocolError('Expected string message data', raw);
+    throw new PulseProtocolError('Expected string message data', raw);
   }
 
   let parsed: unknown;
@@ -69,7 +69,7 @@ export function decode(raw: unknown): InFrame {
   try {
     parsed = JSON.parse(raw);
   } catch (cause) {
-    throw new ProtocolError('JSON parse error', raw);
+    throw new PulseProtocolError('JSON parse error', raw);
   }
 
   if (
@@ -78,7 +78,7 @@ export function decode(raw: unknown): InFrame {
     !('type' in parsed) ||
     typeof (parsed as { type: unknown }).type !== 'string'
   ) {
-    throw new ProtocolError('Missing or invalid "type" field', parsed);
+    throw new PulseProtocolError('Missing or invalid "type" field', parsed);
   }
 
   return parsed as InFrame;

@@ -184,7 +184,7 @@ importers:
         specifier: ^4.1.8
         version: 4.1.9(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/craft:
+  packages/ore:
     dependencies:
       '@vielzeug/ripple':
         specifier: workspace:*
@@ -503,14 +503,14 @@ importers:
         specifier: ^4.1.8
         version: 4.1.9(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.27.7)(jiti@2.7.0))
 
-  packages/sigil:
+  packages/refine:
     dependencies:
       '@vielzeug/arsenal':
         specifier: workspace:*
         version: link:../arsenal
-      '@vielzeug/craft':
+      '@vielzeug/ore':
         specifier: workspace:*
-        version: link:../craft
+        version: link:../ore
       '@vielzeug/dnd':
         specifier: workspace:*
         version: link:../dnd

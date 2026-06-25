@@ -45,11 +45,11 @@ function onHide() {
 
 `handle.position` is `null` on creation. It becomes a `ComputePositionResult` after the first update and tracks every subsequent repositioning.
 
-#### In a Craft Component
+#### In a Ore Component
 
 ```ts
 import { computed, effect, signal } from '@vielzeug/ripple';
-import { define, onMount } from '@vielzeug/craft';
+import { define, onMount } from '@vielzeug/ore';
 import { flip, offset, shift } from '@vielzeug/orbit';
 import { createFloatState } from '@vielzeug/orbit/reactive';
 

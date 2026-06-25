@@ -19,7 +19,7 @@ import type {
   ValidateResult,
 } from '../types';
 
-import { ValidationError } from '../types';
+import { ForgeValidationError } from '../errors';
 import { flattenValues, unflattenValues } from '../utils';
 
 /**
@@ -449,7 +449,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     submitOrThrow: async (handler) => {
       const result = await scopedSubmit(handler);
 
-      if (!result.ok) throw new ValidationError(result.errors as Record<string, string>);
+      if (!result.ok) throw new ForgeValidationError(result.errors as Record<string, string>);
 
       return result.value;
     },

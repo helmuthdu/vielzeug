@@ -3,8 +3,8 @@ import { Temporal } from '@js-temporal/polyfill';
 import type { CalendarUnit, DifferenceOptions, ParseAs, ShiftOptions, TimeInput } from './types';
 
 import { toInstant, toZoned } from './_convert';
-import { fail } from './_error';
 import { CALENDAR_UNITS, inferSharedTimeZone, inferTimeZone } from './_tz';
+import { fail } from './errors';
 
 type TimeOptionsWithTz = { tz: string };
 

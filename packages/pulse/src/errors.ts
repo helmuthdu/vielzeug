@@ -8,13 +8,17 @@ export class PulseError extends Error {
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+
+  static is(err: unknown): err is PulseError {
+    return err instanceof PulseError;
+  }
 }
 
 /**
  * Thrown when a WebSocket connection cannot be established or is lost
  * without triggering auto-reconnect (budget exhausted, or reconnect disabled).
  */
-export class ConnectionError extends PulseError {
+export class PulseConnectionError extends PulseError {
   readonly url: string;
 
   constructor(message: string, url: string, opts?: ErrorOptions) {
@@ -27,7 +31,7 @@ export class ConnectionError extends PulseError {
  * Thrown when `wait()` or `join()`/`leave()` times out before receiving a
  * server response, or when an AbortSignal fires before the event arrives.
  */
-export class TimeoutError extends PulseError {
+export class PulseTimeoutError extends PulseError {
   readonly event: string;
 
   constructor(event: string, opts?: ErrorOptions) {
@@ -39,7 +43,7 @@ export class TimeoutError extends PulseError {
 /**
  * Thrown when `wait()` is aborted via an AbortSignal before the event fires.
  */
-export class AbortError extends PulseError {
+export class PulseAbortError extends PulseError {
   constructor(opts?: ErrorOptions) {
     super('Aborted', opts);
   }
@@ -48,7 +52,7 @@ export class AbortError extends PulseError {
 /**
  * Thrown when a method is called on a disposed Pulse instance or channel.
  */
-export class DisposedError extends PulseError {
+export class PulseDisposedError extends PulseError {
   constructor(target = 'Pulse') {
     super(`${target} instance is disposed`);
   }
@@ -58,7 +62,7 @@ export class DisposedError extends PulseError {
  * Thrown when the server sends a frame that cannot be parsed or violates
  * the wire protocol schema.
  */
-export class ProtocolError extends PulseError {
+export class PulseProtocolError extends PulseError {
   readonly raw: unknown;
 
   constructor(message: string, raw?: unknown) {

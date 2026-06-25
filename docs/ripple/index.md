@@ -5,7 +5,7 @@ package: ripple
 category: state
 keywords:
   [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async, history]
-related: [craft, forge, herald]
+related: [ore, forge, herald]
 exports:
   [
     signal,
@@ -63,19 +63,19 @@ count.value = 1; // notifies automatically
 | Feature                      | Ripple                                                            | Zustand                                              | Jotai                                              | Nanostores                                        |
 | ---------------------------- | ----------------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------- |
 | Bundle size                  | <PackageInfo package="ripple" type="size" />                      | ~3.5 kB                                              | ~7 kB                                              | ~2 kB                                             |
-| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon>        |
-| Framework-agnostic           | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | React-first                                        | <sg-icon name="check" size="16"></sg-icon>        |
-| Fine-grained reactivity      | <sg-icon name="check" size="16"></sg-icon> (per-property)         | <sg-icon name="x" size="16"></sg-icon> (whole store) | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon> (atom) |
-| Structured object stores     | <sg-icon name="check" size="16"></sg-icon> (`store`, `lens`)      | <sg-icon name="check" size="16"></sg-icon>           | Manual atoms                                       | <sg-icon name="x" size="16"></sg-icon>            |
-| Async computed               | <sg-icon name="check" size="16"></sg-icon> (`resource`)           | Manual                                               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
-| Undo / redo history          | <sg-icon name="check" size="16"></sg-icon> (`storeWithHistory`)   | Manual                                               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
-| Computed signals             | <sg-icon name="check" size="16"></sg-icon> (lazy, glitch-free)    | Selectors                                            | <sg-icon name="check" size="16"></sg-icon> (atoms) | <sg-icon name="check" size="16"></sg-icon>        |
-| Batched writes               | <sg-icon name="check" size="16"></sg-icon> (`batch`)              | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>        |
-| Explicit cleanup / scopes    | <sg-icon name="check" size="16"></sg-icon> (`scope`, `onCleanup`) | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
-| SSR support                  | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>        |
-| TypeScript — strict generics | <sg-icon name="check" size="16"></sg-icon>                        | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="check" size="16"></sg-icon>         | Partial                                           |
-| React Suspense               | <sg-icon name="x" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon>         | <sg-icon name="x" size="16"></sg-icon>            |
-| Redux DevTools               | <sg-icon name="x" size="16"></sg-icon>                            | <sg-icon name="check" size="16"></sg-icon>           | <sg-icon name="x" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>            |
+| Zero dependencies            | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon>        |
+| Framework-agnostic           | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | React-first                                        | <ore-icon name="check" size="16"></ore-icon>        |
+| Fine-grained reactivity      | <ore-icon name="check" size="16"></ore-icon> (per-property)         | <ore-icon name="x" size="16"></ore-icon> (whole store) | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon> (atom) |
+| Structured object stores     | <ore-icon name="check" size="16"></ore-icon> (`store`, `lens`)      | <ore-icon name="check" size="16"></ore-icon>           | Manual atoms                                       | <ore-icon name="x" size="16"></ore-icon>            |
+| Async computed               | <ore-icon name="check" size="16"></ore-icon> (`resource`)           | Manual                                               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>            |
+| Undo / redo history          | <ore-icon name="check" size="16"></ore-icon> (`storeWithHistory`)   | Manual                                               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
+| Computed signals             | <ore-icon name="check" size="16"></ore-icon> (lazy, glitch-free)    | Selectors                                            | <ore-icon name="check" size="16"></ore-icon> (atoms) | <ore-icon name="check" size="16"></ore-icon>        |
+| Batched writes               | <ore-icon name="check" size="16"></ore-icon> (`batch`)              | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>        |
+| Explicit cleanup / scopes    | <ore-icon name="check" size="16"></ore-icon> (`scope`, `onCleanup`) | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
+| SSR support                  | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>        |
+| TypeScript — strict generics | <ore-icon name="check" size="16"></ore-icon>                        | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="check" size="16"></ore-icon>         | Partial                                           |
+| React Suspense               | <ore-icon name="x" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon>         | <ore-icon name="x" size="16"></ore-icon>            |
+| Redux DevTools               | <ore-icon name="x" size="16"></ore-icon>                            | <ore-icon name="check" size="16"></ore-icon>           | <ore-icon name="x" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>            |
 
 <div class="decision-callout">
 
@@ -217,7 +217,7 @@ label.dispose();
 
 <div class="see-also">
 
-- [Craft](/craft/) — web-component authoring framework built on ripple
+- [Ore](/ore/) — web-component authoring framework built on ripple
 - [Forge](/forge/) — typed form state that uses signals for field reactivity and submission tracking
 - [Herald](/herald/) — typed event bus; use alongside ripple for cross-module messaging without shared signals
 

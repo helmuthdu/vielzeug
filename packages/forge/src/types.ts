@@ -53,17 +53,6 @@ export type SubmitResult<TResult = void> =
   | { ok: true; value: TResult }
   | { errors: Record<string, string>; ok: false; type: 'validation' };
 
-/** Thrown by `submitOrThrow()` when validation fails. */
-export class ValidationError extends Error {
-  readonly errors: Record<string, string>;
-
-  constructor(errors: Record<string, string>) {
-    super('Form validation failed');
-    this.name = 'ValidationError';
-    this.errors = errors;
-  }
-}
-
 /* -------------------- Utility Types -------------------- */
 
 /**
@@ -348,10 +337,10 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
   readonly state: FormState;
   submit<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<SubmitResult<TResult>>;
   /**
-   * Like `submit()` but throws a `ValidationError` when validation fails instead of returning
+   * Like `submit()` but throws a `ForgeValidationError` when validation fails instead of returning
    * `{ ok: false, ... }`. Use when you prefer a throw-based control flow.
    *
-   * @throws {ValidationError} when validation fails.
+   * @throws {ForgeValidationError} when validation fails.
    * @throws {Error} when `submit()` is already in progress.
    */
   submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult>;

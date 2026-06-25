@@ -2,7 +2,7 @@ import { backoff, sleep } from '@vielzeug/arsenal';
 
 import type { Params } from './url';
 
-import { classifyRequestError, HttpError } from './errors';
+import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierParseError } from './errors';
 import { buildRequestInit } from './serialize';
 import {
   anySignal,
@@ -156,10 +156,10 @@ async function openStreamWith(
   if (!res.ok) {
     const text = await res.text().catch(() => '');
 
-    throw HttpError.fromResponse(res, text, method, full);
+    throw CourierHttpError.fromResponse(res, text, method, full);
   }
 
-  if (!res.body) throw new Error('[courier] Response has no body');
+  if (!res.body) throw new CourierParseError('Response has no body');
 
   return res;
 }
@@ -194,7 +194,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
     url: P,
     config: SseOptions<P> = {} as SseOptions<P>,
   ): SseSource<TEvents> {
-    if (transport.disposed) throw new Error('[courier] StreamClient has been disposed');
+    if (transport.disposed) throw new CourierDisposedError('StreamClient');
 
     const {
       body,
@@ -443,7 +443,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
     url: P,
     config: ReadableConfig<P> = {} as ReadableConfig<P>,
   ): AsyncGenerator<T> {
-    if (transport.disposed) throw new Error('[courier] StreamClient has been disposed');
+    if (transport.disposed) throw new CourierDisposedError('StreamClient');
 
     const {
       body,
@@ -504,7 +504,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
                     try {
                       yield JSON.parse(remaining) as T;
                     } catch {
-                      throw new Error(`[courier] NDJSON: failed to parse line: ${remaining.slice(0, 200)}`);
+                      throw new CourierParseError(`NDJSON: failed to parse line: ${remaining.slice(0, 200)}`);
                     }
                   }
 
@@ -525,7 +525,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
                     try {
                       yield JSON.parse(line) as T;
                     } catch {
-                      throw new Error(`[courier] NDJSON: failed to parse line: ${line.slice(0, 200)}`);
+                      throw new CourierParseError(`NDJSON: failed to parse line: ${line.slice(0, 200)}`);
                     }
                   }
                 }

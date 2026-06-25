@@ -190,6 +190,7 @@ export function buildCsp(options: SandboxOptions = {}): string {
 // - 'ready' is fired LAST so it arrives after all preceding parser-blocking scripts.
 // - 'ready' is handled internally by the host and NOT forwarded to onMessage() subscribers.
 const BRIDGE_SCRIPT = `
+if ('ontouchstart' in window) document.addEventListener('touchstart', function() {}, { passive: true });
 window.addEventListener('message', (e) => {
   const msg = e.data;
   if (msg && msg.type === 'state-update') {
@@ -239,6 +240,7 @@ export function buildDocument(html: string, options: SandboxOptions = {}): strin
 <head>
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 ${styleTag}
 </head>
 <body>

@@ -314,10 +314,10 @@ s.dispose();
 } // ← scope.dispose() called here automatically
 ```
 
-**Inside craft components**, `scope()` is available via `@vielzeug/craft` and is useful for managing sub-scoped cleanup (e.g., an animation controller or WebSocket owned by one part of a component):
+**Inside ore components**, `scope()` is available via `@vielzeug/ore` and is useful for managing sub-scoped cleanup (e.g., an animation controller or WebSocket owned by one part of a component):
 
 ```ts
-import { scope, onCleanup, effect } from '@vielzeug/craft';
+import { scope, onCleanup, effect } from '@vielzeug/ore';
 
 define('my-component', {
   setup() {
@@ -900,23 +900,23 @@ search.subscribe(() => {
 ### 1. Signals for Primitive Values, Stores for Objects
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> signal for a single scalar
+// <ore-icon name="check" size="16"></ore-icon> signal for a single scalar
 const isOpen = signal(false);
 
-// <sg-icon name="check" size="16"></sg-icon> store for structured objects
+// <ore-icon name="check" size="16"></ore-icon> store for structured objects
 const user = store({ id: '', name: '', role: 'guest' });
 
-// <sg-icon name="x" size="16"></sg-icon> store for a simple boolean — overcomplicated
+// <ore-icon name="x" size="16"></ore-icon> store for a simple boolean — overcomplicated
 const isOpen = store({ value: false });
 ```
 
 ### 2. Computed for Derived Values
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> computed instead of duplicating logic in effects
+// <ore-icon name="check" size="16"></ore-icon> computed instead of duplicating logic in effects
 const fullName = computed(() => `${firstName.value} ${lastName.value}`);
 
-// <sg-icon name="x" size="16"></sg-icon> avoid manually syncing derived state in an effect
+// <ore-icon name="x" size="16"></ore-icon> avoid manually syncing derived state in an effect
 const fullNameState = signal('');
 effect(() => {
   fullNameState.value = `${firstName.value} ${lastName.value}`;
@@ -928,13 +928,13 @@ effect(() => {
 Both approaches work; choose based on reuse needs:
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> getter source — simple for one-off watches
+// <ore-icon name="check" size="16"></ore-icon> getter source — simple for one-off watches
 watch(
   () => userStore.value.count,
   (count) => console.log('count:', count),
 );
 
-// <sg-icon name="check" size="16"></sg-icon> composed with computed() — better for shared/complex selections
+// <ore-icon name="check" size="16"></ore-icon> composed with computed() — better for shared/complex selections
 const countSignal = computed(() => userStore.value.count);
 watch(countSignal, (count) => console.log('count:', count));
 countSignal.dispose();
@@ -943,7 +943,7 @@ countSignal.dispose();
 ### 4. Batch Multiple Updates
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> one notification instead of two
+// <ore-icon name="check" size="16"></ore-icon> one notification instead of two
 batch(() => {
   x.value = 1;
   y.value = 2;
@@ -953,10 +953,10 @@ batch(() => {
 ### 5. Use Direct Assignment on Signals; `.replace()` on Stores
 
 ```ts
-// <sg-icon name="check" size="16"></sg-icon> signals: read-modify-write in one line
+// <ore-icon name="check" size="16"></ore-icon> signals: read-modify-write in one line
 count.value = count.value + 1;
 
-// <sg-icon name="check" size="16"></sg-icon> stores: replace via function
+// <ore-icon name="check" size="16"></ore-icon> stores: replace via function
 cart.replace((s) => ({ ...s, items: [...s.items, newItem] }));
 ```
 

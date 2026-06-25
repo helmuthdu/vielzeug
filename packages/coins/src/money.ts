@@ -4,7 +4,7 @@ import { warn } from './_warn';
 import { CurrencyMismatchError } from './errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
 
-export { CurrencyMismatchError, InvalidCurrencyError } from './errors';
+export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
 
 // ─── Factories ───────────────────────────────────────────────────────────────
 

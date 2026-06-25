@@ -1,4 +1,4 @@
-import { type Infer, s, ValidationError } from '../index';
+import { type Infer, s, SpellValidationError } from '../index';
 
 describe('optional nullable nullish required', () => {
   it('optional() accepts undefined and still validates concrete values', () => {
@@ -219,8 +219,8 @@ describe('assert()', () => {
     expect(() => s.string().min(3).assert('hello')).not.toThrow();
   });
 
-  it('throws ValidationError for invalid values', () => {
-    expect(() => s.string().assert(42)).toThrow(ValidationError);
+  it('throws SpellValidationError for invalid values', () => {
+    expect(() => s.string().assert(42)).toThrow(SpellValidationError);
   });
 
   it('narrows the type as an assertion', () => {
@@ -236,8 +236,8 @@ describe('assert()', () => {
       s.string().assert(42, 'userId');
       expect.fail('should have thrown');
     } catch (e) {
-      expect(e).toBeInstanceOf(ValidationError);
-      expect((e as ValidationError).issues[0].message).toMatch(/^userId:/);
+      expect(e).toBeInstanceOf(SpellValidationError);
+      expect((e as SpellValidationError).issues[0].message).toMatch(/^userId:/);
     }
   });
 
@@ -246,9 +246,9 @@ describe('assert()', () => {
       s.object({ name: s.string() }).assert({ name: 42 }, 'payload');
       expect.fail('should have thrown');
     } catch (e) {
-      expect(e).toBeInstanceOf(ValidationError);
+      expect(e).toBeInstanceOf(SpellValidationError);
 
-      const issue = (e as ValidationError).issues[0];
+      const issue = (e as SpellValidationError).issues[0];
 
       expect(issue.path).toEqual(['name']);
       expect(issue.message).not.toMatch(/^payload:/);
@@ -260,8 +260,8 @@ describe('assert()', () => {
       s.string().assert(42);
       expect.fail('should have thrown');
     } catch (e) {
-      expect(e).toBeInstanceOf(ValidationError);
-      expect((e as ValidationError).issues[0].message).not.toMatch(/^undefined:/);
+      expect(e).toBeInstanceOf(SpellValidationError);
+      expect((e as SpellValidationError).issues[0].message).not.toMatch(/^undefined:/);
     }
   });
 });

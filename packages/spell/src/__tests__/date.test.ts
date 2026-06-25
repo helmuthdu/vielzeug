@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('s.date()', () => {
   const d = new Date('2024-06-01');
@@ -9,8 +9,8 @@ describe('s.date()', () => {
 
   it('rejects an invalid Date, strings, and numbers', () => {
     expect(() => s.date().parse(new Date('invalid'))).toThrow('Expected valid date');
-    expect(() => s.date().parse('2024-01-01')).toThrow(ValidationError);
-    expect(() => s.date().parse(1700000000000)).toThrow(ValidationError);
+    expect(() => s.date().parse('2024-01-01')).toThrow(SpellValidationError);
+    expect(() => s.date().parse(1700000000000)).toThrow(SpellValidationError);
   });
 
   it('min / max', () => {

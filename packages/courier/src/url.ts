@@ -1,5 +1,7 @@
 import type { ResponseType } from './response';
 
+import { CourierParseError } from './errors';
+
 type QueryScalar = string | number | boolean | null;
 
 export type ParamValue = QueryScalar | readonly QueryScalar[] | undefined;
@@ -57,7 +59,7 @@ export function buildUrl(base: string, path: string, params?: Params, query?: Pa
   pathClean = pathClean.replace(/\{([^}]+)\}/g, (_, key: string) => {
     const val = params?.[key];
 
-    if (val === undefined || val === null) throw new Error(`[courier] unresolved path param {${key}} in '${path}'`);
+    if (val === undefined || val === null) throw new CourierParseError(`unresolved path param {${key}} in '${path}'`);
 
     return encodeURIComponent(String(val));
   });

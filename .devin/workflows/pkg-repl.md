@@ -28,12 +28,12 @@ When facing ambiguity, apply this priority order:
 2. **Plain JavaScript only in `code` strings** — no TypeScript syntax whatsoever. When in doubt, strip it.
 3. **One concept per example, 10–40 lines** — if a snippet covers two unrelated features, split it.
 4. **Real-world over contrived** — demos should look like code a developer would actually write, not `x = foo(1, 2)`.
-5. **DOM-output packages are excluded** — if asked to add REPL examples for `craft`, `sigil`, or `prism`, emit `[SKIP]` and explain.
+5. **DOM-output packages are excluded** — if asked to add REPL examples for `ore`, `refine`, or `prism`, emit `[SKIP]` and explain.
 
 ### Anti-Patterns to Avoid
 
 - ❌ **Do not** include TypeScript syntax (`type`, `interface`, `: Type`, `<T>`, `as Type`, `!`) in `code` strings — the browser REPL has no transpiler.
-- ❌ **Do not** add REPL examples for DOM-output packages (`craft`, `sigil`, `prism`) — they have no preview container.
+- ❌ **Do not** add REPL examples for DOM-output packages (`ore`, `refine`, `prism`) — they have no preview container.
 - ❌ **Do not** use external dependencies or non-browser APIs in `code` strings — only `@vielzeug/<name>` imports are allowed.
 - ❌ **Do not** skip `pnpm validate:repl -- --package <name>` — a code string that crashes silently is worse than no example.
 - ❌ **Do not** write abstract or toy examples (`add(1, 2)`, contrived math) — prefer realistic usage patterns.
@@ -65,10 +65,10 @@ Use consistent markers throughout your output:
 - Monaco type support for the REPL lives under `docs/.vitepress/theme/components/repl/types/`.
 - Examples must use only top-level `@vielzeug/<name>` imports — no external dependencies and no non-browser APIs.
 - Each example should be self-contained, produce visible output, and run quickly in the browser REPL.
-- **DOM-producing packages are not supported in the REPL.** The REPL has no preview container, so packages whose primary output is a rendered DOM element or custom element (`craft`, `sigil`, `prism`) are intentionally excluded — they have no example folder or Monaco types. Do not add REPL examples for them unless a preview container is introduced.
+- **DOM-producing packages are not supported in the REPL.** The REPL has no preview container, so packages whose primary output is a rendered DOM element or custom element (`ore`, `refine`, `prism`) are intentionally excluded — they have no example folder or Monaco types. Do not add REPL examples for them unless a preview container is introduced.
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
 - **Read the DOX chain first** — root `AGENTS.md` → `docs/AGENTS.md` (REPL ownership and the DOM-output exclusion list) → `packages/<name>/AGENTS.md`.
-- **Prefer the `@vielzeug` MCP for current API data** so examples use real, current signatures. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
+- **Prefer the `@vielzeug` MCP for current API data** so examples use real, current signatures. Use `get-docs` and `get-source` for most packages; for `refine` use `list-components` / `get-component`.
 
 ## 2. Style & quality
 

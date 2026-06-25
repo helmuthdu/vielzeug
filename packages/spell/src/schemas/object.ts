@@ -1,6 +1,6 @@
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, ValidationError, _makeCtx, prependIssuePath } from '../core';
+import { ErrorCode, Schema, SpellValidationError, _makeCtx, prependIssuePath } from '../core';
 import { defineOwnProperty, isUnsafeObjectKey, objectFromEntries } from '../safe-object';
 import { LiteralSchema } from './literal';
 import { UnionSchema } from './union';
@@ -127,7 +127,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
 
       const guarded = this._guardObjectInput(prepared.value, c);
 
-      if (!guarded.ok) throw new ValidationError(guarded.issues);
+      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
 
       const { obj } = guarded;
       const { issues, output } = this._createObjectParseContext(obj, c);
@@ -151,7 +151,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
       const validationIssues = await this._runValidatorsAsync(output, c);
       const allIssues = [...issues, ...validationIssues];
 
-      if (allIssues.length > 0) throw new ValidationError(allIssues);
+      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
 
       return this._runPostprocessors(output) as InferObject<T>;
     });
@@ -201,7 +201,7 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   /**
    * Returns a fully default-filled object by parsing `{}` against this schema.
    * Every required field must have a `.default()` value set; if any required
-   * field is missing a default, this method throws a `ValidationError`.
+   * field is missing a default, this method throws a `SpellValidationError`.
    *
    * @example
    * const Config = s.object({ host: s.string().default('localhost'), port: s.number().default(3000) });

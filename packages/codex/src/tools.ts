@@ -66,7 +66,7 @@ function requireStr(args: Record<string, unknown>, key: string): string {
 
 export interface ToolContext {
   bySlug: Map<string, BundledPackage>;
-  /** Null when /sigil was not built before data generation. */
+  /** Null when /refine was not built before data generation. */
   components: CemDeclaration[] | null;
   /** Pre-filtered tag names from components, or null when components unavailable. */
   componentTags: string[] | null;
@@ -74,8 +74,8 @@ export interface ToolContext {
 }
 
 export function buildToolContext(data: BundledData): ToolContext {
-  const sigilPkg = data.packages.find((p) => p.slug === 'sigil');
-  const components = sigilPkg && sigilPkg.components.length > 0 ? sigilPkg.components : null;
+  const refinePkg = data.packages.find((p) => p.slug === 'refine');
+  const components = refinePkg && refinePkg.components.length > 0 ? refinePkg.components : null;
 
   return {
     bySlug: new Map(data.packages.map((pkg) => [pkg.slug, pkg])),
@@ -219,16 +219,16 @@ const searchPackagesTool: ToolDefinition = {
 
 // --- list-components ---
 
-const SIGIL_UNAVAILABLE =
-  'Sigil component metadata is unavailable in this snapshot. If using the monorepo, build /sigil first then run prepare:data. Published releases include this data automatically.';
+const REFINE_UNAVAILABLE =
+  'Refine component metadata is unavailable in this snapshot. If using the monorepo, build /refine first then run prepare:data. Published releases include this data automatically.';
 
 const listComponentsTool: ToolDefinition = {
   description:
-    'List all @vielzeug/sigil web component tags from bundled Custom Elements Manifest (CEM) metadata. Returns a JSON array with tagName, description, and attrs (name, type, default). Use this to discover available components before calling get-component for full details. Returns isError if sigil was not built before data generation.',
+    'List all @vielzeug/refine web component tags from bundled Custom Elements Manifest (CEM) metadata. Returns a JSON array with tagName, description, and attrs (name, type, default). Use this to discover available components before calling get-component for full details. Returns isError if refine was not built before data generation.',
   inputSchema: { properties: {}, type: 'object' },
   name: 'list-components',
   run(_args, context) {
-    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
+    if (!context.components || !context.componentTags) return error(REFINE_UNAVAILABLE);
 
     const tags = context.components
       .filter((d) => d.tagName)
@@ -250,10 +250,10 @@ const listComponentsTool: ToolDefinition = {
 
 const getComponentTool: ToolDefinition = {
   description:
-    'Get the full Custom Elements Manifest (CEM) declaration for a single @vielzeug/sigil component by its HTML tag name (e.g. "sg-button"). Returns a JSON object with attributes, events, slots, CSS parts, CSS properties, and member methods. Call list-components first to get valid tag names.',
+    'Get the full Custom Elements Manifest (CEM) declaration for a single @vielzeug/refine component by its HTML tag name (e.g. "ore-button"). Returns a JSON object with attributes, events, slots, CSS parts, CSS properties, and member methods. Call list-components first to get valid tag names.',
   inputSchema: {
     properties: {
-      tagName: { description: 'HTML custom element tag, e.g. "sg-button"', minLength: 1, type: 'string' },
+      tagName: { description: 'HTML custom element tag, e.g. "ore-button"', minLength: 1, type: 'string' },
     },
     required: ['tagName'],
     type: 'object',
@@ -262,7 +262,7 @@ const getComponentTool: ToolDefinition = {
   run(args, context) {
     const tagName = requireStr(args, 'tagName');
 
-    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
+    if (!context.components || !context.componentTags) return error(REFINE_UNAVAILABLE);
 
     const declaration = context.components.find((d) => d.tagName === tagName);
 
@@ -394,14 +394,14 @@ function parseSlotNames(html: string): string[] {
 
 const generateTemplateTool: ToolDefinition = {
   description:
-    'Generate a ready-to-use HTML template for a @vielzeug/sigil component. Returns a snippet with required attributes filled with type-appropriate placeholders, optional attributes in a comment block, and all named slots scaffolded. Use this as the starting point for AI-generated declarative UI — avoids hallucinated attribute names. Call list-components first to get valid tag names.',
+    'Generate a ready-to-use HTML template for a @vielzeug/refine component. Returns a snippet with required attributes filled with type-appropriate placeholders, optional attributes in a comment block, and all named slots scaffolded. Use this as the starting point for AI-generated declarative UI — avoids hallucinated attribute names. Call list-components first to get valid tag names.',
   inputSchema: {
     properties: {
       scenario: {
         description: 'Optional usage context to include as a leading comment, e.g. "primary call-to-action button"',
         type: 'string',
       },
-      tagName: { description: 'HTML custom element tag, e.g. "sg-button"', minLength: 1, type: 'string' },
+      tagName: { description: 'HTML custom element tag, e.g. "ore-button"', minLength: 1, type: 'string' },
     },
     required: ['tagName'],
     type: 'object',
@@ -411,7 +411,7 @@ const generateTemplateTool: ToolDefinition = {
     const tagName = requireStr(args, 'tagName');
     const scenario = typeof args['scenario'] === 'string' ? args['scenario'].trim() : undefined;
 
-    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
+    if (!context.components || !context.componentTags) return error(REFINE_UNAVAILABLE);
 
     const decl = context.components.find((d) => d.tagName === tagName);
 
@@ -425,11 +425,11 @@ const generateTemplateTool: ToolDefinition = {
 
 const getTokensTool: ToolDefinition = {
   description:
-    'List all CSS custom properties (design tokens) exposed by @vielzeug/sigil components. Returns a JSON array of { name, description, default, component } objects sorted by name. Pass an optional filter prefix (e.g. "--sg-color") to narrow results. Use when generating dynamic themes or inline styles in AI-driven UI.',
+    'List all CSS custom properties (design tokens) exposed by @vielzeug/refine components. Returns a JSON array of { name, description, default, component } objects sorted by name. Pass an optional filter prefix (e.g. "--refine-color") to narrow results. Use when generating dynamic themes or inline styles in AI-driven UI.',
   inputSchema: {
     properties: {
       filter: {
-        description: 'Optional prefix to filter token names, e.g. "--sg-color". Case-insensitive.',
+        description: 'Optional prefix to filter token names, e.g. "--refine-color". Case-insensitive.',
         type: 'string',
       },
     },
@@ -437,7 +437,7 @@ const getTokensTool: ToolDefinition = {
   },
   name: 'get-tokens',
   run(args, context) {
-    if (!context.components) return error(SIGIL_UNAVAILABLE);
+    if (!context.components) return error(REFINE_UNAVAILABLE);
 
     const rawFilter = typeof args['filter'] === 'string' ? args['filter'].trim().toLowerCase() : undefined;
 
@@ -472,7 +472,7 @@ const getTokensTool: ToolDefinition = {
 
 const validateComponentUsageTool: ToolDefinition = {
   description:
-    'Validate AI-generated HTML against a @vielzeug/sigil component spec. Checks for unknown attributes and unrecognised slot names. Returns a JSON array of { type, message } objects — an empty array means the usage is valid. Use this to close the generate → validate → fix loop before rendering.',
+    'Validate AI-generated HTML against a @vielzeug/refine component spec. Checks for unknown attributes and unrecognised slot names. Returns a JSON array of { type, message } objects — an empty array means the usage is valid. Use this to close the generate → validate → fix loop before rendering.',
   inputSchema: {
     properties: {
       html: {
@@ -481,7 +481,7 @@ const validateComponentUsageTool: ToolDefinition = {
         type: 'string',
       },
       tagName: {
-        description: 'HTML custom element tag to validate against, e.g. "sg-button"',
+        description: 'HTML custom element tag to validate against, e.g. "ore-button"',
         minLength: 1,
         type: 'string',
       },
@@ -501,7 +501,7 @@ const validateComponentUsageTool: ToolDefinition = {
 
     const html = rawHtml.trim();
 
-    if (!context.components || !context.componentTags) return error(SIGIL_UNAVAILABLE);
+    if (!context.components || !context.componentTags) return error(REFINE_UNAVAILABLE);
 
     const decl = context.components.find((d) => d.tagName === tagName);
 
@@ -700,7 +700,7 @@ type SandboxMessage =
  *
  * Sandbox-side: dispatch an event to the host
  *
- *   parent.postMessage({ type: 'event', name: 'sg-click', detail: { id: '42' } }, '*');
+ *   parent.postMessage({ type: 'event', name: 'ore-click', detail: { id: '42' } }, '*');
  */
 `.trim();
 
@@ -755,7 +755,7 @@ const generateSandboxDocumentTool: ToolDefinition = {
 // Tools — ecosystem breadth tier
 // ---------------------------------------------------------------------------
 
-const CRAFT_DIRECTIVES: ReadonlyArray<{
+const ORE_DIRECTIVES: ReadonlyArray<{
   description: string;
   import: string;
   name: string;
@@ -764,14 +764,14 @@ const CRAFT_DIRECTIVES: ReadonlyArray<{
   {
     description:
       'Reactive class string from an object map. Keys are CSS class names; values are booleans or Readable<boolean>.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'classMap',
     signature: 'classMap(record: Record<string, boolean | Readable<boolean>>): DirectiveResult',
   },
   {
     description:
       'Keyed reactive list with DOM diffing. The render function receives Readable<T> (item) and Readable<number> (index). A plain T[] is treated as a one-time static snapshot; wrap in signal() for reactivity. Duplicate keys warn in dev.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'each',
     signature:
       'each<T>(source: Readable<T[]> | T[], key: (item: T) => string, render: (item: Readable<T>, index: Readable<number>) => HTMLResult, fallback?: () => HTMLResult): DirectiveResult',
@@ -779,35 +779,35 @@ const CRAFT_DIRECTIVES: ReadonlyArray<{
   {
     description:
       'One-way binding that skips stale DOM writes during active user input. Use alongside a manual @input handler for controlled inputs to prevent cursor jumps.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'live',
     signature: 'live(signal: LiveSignal): DirectiveResult',
   },
   {
     description:
       'Two-way value binding for input, select, and textarea elements. select emits on change; input/textarea emit on input. <select multiple> expects Signal<string[]>.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'model',
     signature: 'model(signal: Signal<string> | Signal<string[]>): DirectiveResult',
   },
   {
     description:
       'Render a trusted HTML string without escaping. Call setRawSanitizer() before use to avoid XSS. Never pass user-controlled content without sanitization.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'raw',
     signature: 'raw(value: string): DirectiveResult',
   },
   {
     description:
       'Reactive inline style string from an object map. Keys are CSS property names; values are strings or Readable<string>.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'styleMap',
     signature: 'styleMap(record: Record<string, string | Readable<string>>): DirectiveResult',
   },
   {
     description:
       'Conditional rendering. Truthy and falsy branches are lazy factory functions. The condition tracks reactively when passed as a Readable or getter function.',
-    import: '@vielzeug/craft/directives',
+    import: '@vielzeug/ore/directives',
     name: 'when',
     signature:
       'when(condition: boolean | Readable<boolean> | (() => boolean), truthy: () => HTMLResult, falsy?: () => HTMLResult): DirectiveResult',
@@ -1053,11 +1053,11 @@ function extractTypeSignature(source: string, symbol: string): string[] {
 
 const listDirectivesTool: ToolDefinition = {
   description:
-    'List all reactive directives exported by @vielzeug/craft/directives with their TypeScript signatures and descriptions. Returns a JSON array sorted by name. Use when building templates with craft — directives are the primary way to express reactivity, conditionals, and list rendering in HTML templates.',
+    'List all reactive directives exported by @vielzeug/ore/directives with their TypeScript signatures and descriptions. Returns a JSON array sorted by name. Use when building templates with ore — directives are the primary way to express reactivity, conditionals, and list rendering in HTML templates.',
   inputSchema: { properties: {}, type: 'object' },
   name: 'list-directives',
   run(_args, _context) {
-    return text(JSON.stringify(CRAFT_DIRECTIVES, null, 2));
+    return text(JSON.stringify(ORE_DIRECTIVES, null, 2));
   },
 };
 

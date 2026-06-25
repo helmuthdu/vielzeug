@@ -2,7 +2,7 @@
 // Locale chain building, canonicalization, and plural-rules selection.
 // All caches are per-instance — no shared module-level state.
 
-import { E, LinguaError } from './_errors';
+import { E, LinguaError } from './errors';
 
 export type Locale = string;
 

@@ -38,7 +38,7 @@ import {
   executeMiddlewarePipeline,
   reportError,
 } from './context';
-import { RouterDisposedError } from './errors';
+import { WayfinderDisposedError } from './errors';
 import { type RegisteredBlocker, runLeaveBlockers } from './guards';
 import { createBrowserHistory } from './history';
 import { createHydrationManager } from './hydration';
@@ -353,7 +353,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    *   flight, this promise will not resolve until a future navigation lands on `name`.
    *   Typical use-case is awaiting a navigation you just triggered:
    *   `router.navigate(target); await router.waitFor('routeName')`.
-   * @throws {RouterDisposedError} if the router is disposed while the promise is pending,
+   * @throws {WayfinderDisposedError} if the router is disposed while the promise is pending,
    *   or if called after the router has already been disposed.
    */
   waitFor(name: RouteName<TRoutes>): Promise<RouteState<TMeta, TComponent>> {
@@ -483,7 +483,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
     this.#abortController = null;
     this.#unlistenHistory();
     // Abort the disposal signal last — waitFor() listeners clean themselves up via this signal.
-    this.#disposeController.abort(new RouterDisposedError());
+    this.#disposeController.abort(new WayfinderDisposedError());
   }
 
   [Symbol.dispose](): void {
@@ -493,7 +493,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
   // ─── Private: assertions ──────────────────────────────────────────────────
 
   #assertNotDisposed(): void {
-    if (this.#disposed) throw new RouterDisposedError();
+    if (this.#disposed) throw new WayfinderDisposedError();
   }
 
   // ─── Private: history listener ────────────────────────────────────────────

@@ -1,7 +1,7 @@
 /**
  * beforeLeave guards — navigation blocking and removal semantics.
  */
-import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
+import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { mockHistory, mockLocation, resetMocks } from './setup';
 import { settle } from './test-utils';
 
@@ -301,7 +301,7 @@ describe('beforeLeave with route scope', () => {
 });
 
 describe('beforeLeave after dispose', () => {
-  it('throws RouterDisposedError when called after the router is disposed', async () => {
+  it('throws WayfinderDisposedError when called after the router is disposed', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({
       history,
@@ -311,6 +311,6 @@ describe('beforeLeave after dispose', () => {
     await settle();
     router.dispose();
 
-    expect(() => router.beforeLeave(async () => true)).toThrow(RouterDisposedError);
+    expect(() => router.beforeLeave(async () => true)).toThrow(WayfinderDisposedError);
   });
 });

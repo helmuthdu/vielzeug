@@ -40,7 +40,7 @@ export type {
   Unsubscribe,
   UntypedNamedNavigationTarget,
 } from './types';
-export { RouterDisposedError } from './errors';
+export { WayfinderDisposedError, WayfinderError } from './errors';
 export { createRouter } from './router';
 export type { Router } from './router';
 export { createBrowserHistory, createMemoryHistory } from './history';

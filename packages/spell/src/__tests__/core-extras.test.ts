@@ -75,11 +75,11 @@ describe('toDescriptor() preprocessor warning', () => {
 });
 
 // ---------------------------------------------------------------------------
-// UnionSchema async — non-ValidationError re-throw
+// UnionSchema async — non-SpellValidationError re-throw
 // ---------------------------------------------------------------------------
 
-describe('UnionSchema async non-ValidationError re-throw', () => {
-  it('re-throws unexpected non-ValidationError errors from async branches', async () => {
+describe('UnionSchema async non-SpellValidationError re-throw', () => {
+  it('re-throws unexpected non-SpellValidationError errors from async branches', async () => {
     const boom = new TypeError('unexpected internal error');
     const badSchema = s.string().validate(async () => {
       throw boom;
@@ -89,7 +89,7 @@ describe('UnionSchema async non-ValidationError re-throw', () => {
     await expect(schema.safeParseAsync('hello')).rejects.toThrow('unexpected internal error');
   });
 
-  it('collects ValidationError branch failures normally', async () => {
+  it('collects SpellValidationError branch failures normally', async () => {
     const schema = s.union(s.number(), s.string());
     const result = await schema.safeParseAsync(true);
 

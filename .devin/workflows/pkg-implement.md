@@ -72,9 +72,9 @@ Use consistent markers throughout your implementation output:
 - ESLint Perfectionist enforces sorted imports/keys — always run `pnpm --filter @vielzeug/<name> fix` after editing
 - Prettier: 120-char width, 2-space indent, trailing commas
 - All exports must be in `src/index.ts`; no barrel re-exports with `export * from` in internal files unless truly needed
-- Tests live in `src/__tests__/`; run with `pnpm vitest run packages/<name>/src/__tests__/` (co-located packages e.g. `sigil`: `pnpm --filter @vielzeug/<name> test`)
+- Tests live in `src/__tests__/`; run with `pnpm vitest run packages/<name>/src/__tests__/` (co-located packages e.g. `refine`: `pnpm --filter @vielzeug/<name> test`)
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
-- **Read the DOX chain before editing** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present). Local contracts override defaults: e.g. for `sigil` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
+- **Read the DOX chain before editing** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present). Local contracts override defaults: e.g. for `refine` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
 
 ## 2. Philosophy
 
@@ -144,7 +144,7 @@ pnpm vitest run packages/<name>/src/__tests__/
       grep -r "<pattern>" packages/*/src/ --include="*.ts" -l
       ```
    2. For each affected package, apply the same fix (or equivalent) cohesively.
-   3. Run tests for every package you touched (use the correct command per package — standard: `pnpm vitest run packages/<affected>/src/__tests__/`; co-located e.g. `sigil`: `pnpm --filter @vielzeug/<affected> test`).
+   3. Run tests for every package you touched (use the correct command per package — standard: `pnpm vitest run packages/<affected>/src/__tests__/`; co-located e.g. `refine`: `pnpm --filter @vielzeug/<affected> test`).
    4. Record each propagated fix as a sub-item under the original plan item (e.g. `6.1 propagated to: ripple, courier`).
 
    **Scope discipline:** only propagate when the pattern is the same problem. Do not refactor unrelated code just because you are in a file. If a package has the same structural issue but the fix would be large and risky, note it as a follow-up item in the plan rather than applying it immediately.
@@ -167,7 +167,7 @@ pnpm vitest run packages/<name>/src/__tests__/
 - After all plan items for `<name>` are implemented:
   - Run a final `pnpm --filter @vielzeug/<name> fix`
   - Run `pnpm --filter @vielzeug/<name> lint`
-  - Run the test suite — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located (e.g. `sigil`): `pnpm --filter @vielzeug/<name> test`.
+  - Run the test suite — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located (e.g. `refine`): `pnpm --filter @vielzeug/<name> test`.
   - If pkg-plan identified cross-package impacts, run the relevant dependent package tests as well.
   - Generate a `rush change` file for every touched package (do **not** commit it without user approval): `rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`. Use `patch` for fixes, `minor` for new features, `major` for breaking changes.
 

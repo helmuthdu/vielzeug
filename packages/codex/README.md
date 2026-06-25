@@ -1,15 +1,15 @@
 ---
-description: MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Sigil component metadata.
+description: MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Refine component metadata.
 package: codex
 category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
-related: [sigil, spell]
+related: [refine, spell]
 exports: [createServer]
 ---
 
 # @vielzeug/codex
 
-> MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Sigil component metadata.
+> MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Refine component metadata.
 
 [![npm version](https://img.shields.io/npm/v/@vielzeug/codex)](https://www.npmjs.com/package/@vielzeug/codex) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -22,7 +22,7 @@ exports: [createServer]
 
 **When to use:** You want AI clients to query Vielzeug docs and package metadata through a compact MCP tool set.
 
-**Related:** [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/spell](https://vielzeug.dev/spell/)
+**Related:** [@vielzeug/refine](https://vielzeug.dev/refine/) · [@vielzeug/spell](https://vielzeug.dev/spell/)
 
 </details>
 
@@ -66,15 +66,15 @@ npx -y @vielzeug/codex --version
 | `get-docs`        | `packageSlug`, `page?` | Docs page (`index`, `api`, `usage`, `examples`); defaults to `index` |
 | `get-source`      | `packageSlug`          | Bundled `src/index.ts` text                                          |
 | `search-packages` | `query`                | Ranked search across metadata, keywords, docs, and source            |
-| `list-components`          | —                              | Sigil component tags from bundled CEM metadata                       |
-| `get-component`            | `tagName`                      | Full Sigil component CEM declaration by tag                          |
-| `generate-template`        | `tagName`, `scenario?`         | Scaffolded HTML snippet for a Sigil component                        |
-| `get-tokens`               | `filter?`                      | All Sigil CSS custom properties, optionally filtered by prefix       |
+| `list-components`          | —                              | Refine component tags from bundled CEM metadata                       |
+| `get-component`            | `tagName`                      | Full Refine component CEM declaration by tag                          |
+| `generate-template`        | `tagName`, `scenario?`         | Scaffolded HTML snippet for a Refine component                        |
+| `get-tokens`               | `filter?`                      | All Refine CSS custom properties, optionally filtered by prefix       |
 | `validate-component-usage` | `tagName`, `html`              | Validate AI-generated HTML against CEM spec                          |
 | `get-sandbox-context`      | —                              | Execution constraints of the sandbox iframe runtime                  |
 | `get-state-bridge-spec`    | —                              | Typed postMessage bridge protocol (HostMessage / SandboxMessage)     |
 | `generate-sandbox-document` | `html`, `styles?`             | Complete srcdoc-ready HTML document with CSP and bridge script       |
-| `list-directives`           | —                              | All @vielzeug/craft/directives with signatures and descriptions      |
+| `list-directives`           | —                              | All @vielzeug/ore/directives with signatures and descriptions      |
 | `list-validators`           | `slug?`                        | All standalone validator functions in a package (default: spell)     |
 | `get-type-signature`        | `slug`, `symbol`               | TypeScript export declaration for a named symbol from src/index.ts   |
 

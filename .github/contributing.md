@@ -236,7 +236,7 @@ git push origin your-branch-name
 vielzeug/
 ├── packages/          # All packages
 │   ├── block/       # UI Library
-│   ├── craft/       # Web components
+│   ├── ore/         # Web components
 │   ├── vault/       # Client-side storage
 │   ├── courier/       # HTTP client
 │   ├── forge/        # Form management

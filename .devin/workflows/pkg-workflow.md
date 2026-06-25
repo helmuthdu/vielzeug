@@ -98,7 +98,7 @@ If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous
 
 1. **Read `runs/<name>/progress.md`** — identify which phase is 🔄 and any notes in the Notes column.
 2. **Read `runs/<name>/plan.md`** — identify which plan items are marked done and which remain.
-3. **Re-check the baseline** before touching any code (use the correct test command for the package — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `sigil`: `pnpm --filter @vielzeug/<name> test`):
+3. **Re-check the baseline** before touching any code (use the correct test command for the package — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `refine`: `pnpm --filter @vielzeug/<name> test`):
    ```bash
    pnpm --filter @vielzeug/<name> lint
    ```
@@ -134,13 +134,13 @@ pnpm vitest run packages/<name>/src/__tests__/
 pnpm --filter @vielzeug/<name> lint
 ```
 
-For co-located packages (e.g. `sigil`), replace the first command with `pnpm --filter @vielzeug/<name> test`.
+For co-located packages (e.g. `refine`), replace the first command with `pnpm --filter @vielzeug/<name> test`.
 
-Record in the run's `progress.md` (see "Persistence" below): passing test count, test file count, lint status (clean/errors), and exported-symbol count from `src/index.ts`. For `sigil`, also record the component count from `list-components` — that is the more meaningful API surface metric for a web-component library.
+Record in the run's `progress.md` (see "Persistence" below): passing test count, test file count, lint status (clean/errors), and exported-symbol count from `src/index.ts`. For `refine`, also record the component count from `list-components` — that is the more meaningful API surface metric for a web-component library.
 
 ## 4. Phase execution guide
 
-**Carry context across passes.** This workflow runs ~12 multi-pass phases. Do not re-read the whole package on every pass — load it once, then on each subsequent pass re-read only what changed or what the previous pass flagged. Persist findings to `runs/<name>/` (plan/review/security/progress) and build on them rather than re-deriving. Prefer the `@vielzeug` MCP for stable API context: use `get-docs` and `get-source` for most packages; for `sigil` prefer `list-components` / `get-component` since its primary API surface is web components, not plain exports.
+**Carry context across passes.** This workflow runs ~12 multi-pass phases. Do not re-read the whole package on every pass — load it once, then on each subsequent pass re-read only what changed or what the previous pass flagged. Persist findings to `runs/<name>/` (plan/review/security/progress) and build on them rather than re-deriving. Prefer the `@vielzeug` MCP for stable API context: use `get-docs` and `get-source` for most packages; for `refine` prefer `list-components` / `get-component` since its primary API surface is web components, not plain exports.
 
 ### Phase 1 — Plan/Spec × 3
 
@@ -192,7 +192,7 @@ Execute the instructions from `/pkg-implement` in three iterative rounds:
 - **Round 2** `[PASS 2/3]`: Implement medium-priority (🟡 Coverage + 🟢 Enhancement) items; re-verify all tests pass.
 - **Round 3** `[PASS 3/3]`: Final polish — check all new code for TypeScript quality, run `pnpm --filter @vielzeug/<name> fix`, confirm zero lint errors.
 
-**Before starting each round**, re-read `runs/<name>/plan.md` (reload only items remaining) and verify the baseline is still green (use the correct test command — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `sigil`: `pnpm --filter @vielzeug/<name> test`):
+**Before starting each round**, re-read `runs/<name>/plan.md` (reload only items remaining) and verify the baseline is still green (use the correct test command — standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `refine`: `pnpm --filter @vielzeug/<name> test`):
 
 ```bash
 pnpm --filter @vielzeug/<name> lint
@@ -206,7 +206,7 @@ If tests or lint are red at the start of any round, fix them **before** implemen
 pnpm vitest run packages/<name>/src/__tests__/
 ```
 
-For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead.
+For co-located packages (e.g. `refine`), use `pnpm --filter @vielzeug/<name> test` instead.
 
 Fix any failures before proceeding.
 
@@ -299,7 +299,7 @@ After restructuring and adding tests, verify (safe to auto-run):
 pnpm vitest run packages/<name>/src/__tests__/
 ```
 
-For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead. All tests must pass before proceeding.
+For co-located packages (e.g. `refine`), use `pnpm --filter @vielzeug/<name> test` instead. All tests must pass before proceeding.
 
 **Phase checkpoint:**
 
@@ -344,7 +344,7 @@ pnpm --filter @vielzeug/codex build
 
 Emit `[PHASE 7]` before starting (or `[SKIP]` with reason for DOM-output packages). Execute the instructions from `/pkg-repl` once.
 
-> **Skip this phase for DOM-producing packages** (e.g. `craft`, `sigil`, `prism`). The REPL has no preview container, so these packages have no examples or Monaco types. Mark Phase 7 as N/A in the progress table.
+> **Skip this phase for DOM-producing packages** (e.g. `ore`, `refine`, `prism`). The REPL has no preview container, so these packages have no examples or Monaco types. Mark Phase 7 as N/A in the progress table.
 
 Verify that:
 
@@ -365,7 +365,7 @@ Verify that:
 
 Before declaring the workflow complete:
 
-- [ ] All tests pass — use `pnpm vitest run packages/<name>/src/__tests__/` for standard packages or `pnpm --filter @vielzeug/<name> test` for co-located packages (e.g. `sigil`)
+- [ ] All tests pass — use `pnpm vitest run packages/<name>/src/__tests__/` for standard packages or `pnpm --filter @vielzeug/<name> test` for co-located packages (e.g. `refine`)
 - [ ] `pnpm --filter @vielzeug/<name> lint` — zero lint errors
 - [ ] `pnpm --filter @vielzeug/<name> build` — build succeeds, no TypeScript errors
 - [ ] Docs in `docs/<name>/` are in sync with `src/index.ts`

@@ -2,7 +2,7 @@ import type { PathValue, Readable, Signal, Store, Subscription } from './types';
 
 import { computed } from './computed';
 import { getDevToolsHook } from './devtools-hook';
-import { StateError } from './error';
+import { StateError } from './errors';
 import { batch } from './scheduling';
 import { SignalImpl } from './signal';
 import { IS_SIGNAL, IS_STORE } from './symbols';

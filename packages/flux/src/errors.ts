@@ -1,7 +1,12 @@
 export class FluxError extends Error {
   constructor(message: string, options?: ErrorOptions) {
     super(message, options);
-    this.name = 'FluxError';
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is FluxError {
+    return err instanceof FluxError;
   }
 }
 
@@ -10,8 +15,7 @@ export class FluxTimeoutError extends FluxError {
   readonly ms: number;
 
   constructor(ms: number) {
-    super(`[@vielzeug/flux] Timeout after ${ms}ms`);
-    this.name = 'FluxTimeoutError';
+    super(`Timeout after ${ms}ms`);
     this.ms = ms;
   }
 }

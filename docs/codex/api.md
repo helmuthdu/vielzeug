@@ -14,15 +14,15 @@ description: Complete API reference for @vielzeug/codex — tools, resources, an
 | `get-docs`                  | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                    |
 | `get-source`                | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source                  |
 | `search-packages`           | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches                  |
-| `list-components`           | Sigil component tag list                      | Sync           | `isError: true` if Sigil CEM not in snapshot                        |
-| `get-component`             | Single Sigil CEM declaration                  | Sync           | `isError: true` lists available tags on miss                        |
-| `generate-template`         | Scaffolded HTML snippet for a Sigil component | Sync           | Required attrs filled; optional attrs in comment block              |
-| `get-tokens`                | All Sigil CSS custom properties               | Sync           | Optional `filter` prefix; returns `[]` when nothing matches         |
+| `list-components`           | Refine component tag list                      | Sync           | `isError: true` if Refine CEM not in snapshot                        |
+| `get-component`             | Single Refine CEM declaration                  | Sync           | `isError: true` lists available tags on miss                        |
+| `generate-template`         | Scaffolded HTML snippet for a Refine component | Sync           | Required attrs filled; optional attrs in comment block              |
+| `get-tokens`                | All Refine CSS custom properties               | Sync           | Optional `filter` prefix; returns `[]` when nothing matches         |
 | `validate-component-usage`  | Validate AI-generated HTML against CEM spec   | Sync           | Returns `[]` when valid; `isError: true` on bad input               |
 | `get-sandbox-context`       | Execution constraints of the sandbox runtime  | Sync           | Static — no data dependency; always succeeds                        |
 | `get-state-bridge-spec`     | Typed postMessage protocol for the sandbox    | Sync           | Static — no data dependency; always succeeds                        |
 | `generate-sandbox-document` | Complete srcdoc-ready HTML document           | Sync           | `isError: true` when `html` is empty or exceeds 20 000 chars        |
-| `list-directives`           | All craft directives with signatures          | Sync           | Static — always succeeds; sorted alphabetically                     |
+| `list-directives`           | All ore directives with signatures          | Sync           | Static — always succeeds; sorted alphabetically                     |
 | `list-validators`           | All spell validator functions with signatures | Sync           | `isError: true` when package slug is absent from bundled data       |
 | `get-type-signature`        | TypeScript export declaration from source     | Sync           | `isError: true` when symbol not found or no bundled source          |
 | `createServer()`            | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first         |
@@ -62,7 +62,7 @@ Returns an array of `PackageMeta` objects for all packages. Takes no input.
     "category": "state",
     "keywords": ["signals", "reactive"],
     "exports": ["signal", "computed", "effect"],
-    "related": ["craft", "forge"],
+    "related": ["ore", "forge"],
     "availableDocPages": ["index", "api", "usage", "examples"],
     "hasSource": true
   }
@@ -166,8 +166,8 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
     "matchedPages": ["usage", "examples"]
   },
   {
-    "name": "@vielzeug/craft",
-    "slug": "craft",
+    "name": "@vielzeug/ore",
+    "slug": "ore",
     "score": 2.0,
     "matchedIn": ["related"]
   }
@@ -180,7 +180,7 @@ Returns `[]` when nothing matches — not an error.
 
 ### `list-components`
 
-Returns Sigil component tag names from bundled CEM metadata.
+Returns Refine component tag names from bundled CEM metadata.
 
 **Input:** none
 
@@ -189,7 +189,7 @@ Returns Sigil component tag names from bundled CEM metadata.
 ```json
 [
   {
-    "tagName": "sg-button",
+    "tagName": "ore-button",
     "description": "A clickable button element.",
     "attrs": [
       { "name": "variant", "type": "string", "default": "primary" },
@@ -203,39 +203,39 @@ Each entry includes:
 
 | Field         | Type                              | Description                                        |
 | ------------- | --------------------------------- | -------------------------------------------------- |
-| `tagName`     | `string`                          | HTML custom element tag name, e.g. `"sg-button"`   |
+| `tagName`     | `string`                          | HTML custom element tag name, e.g. `"ore-button"`   |
 | `description` | `string`                          | Component description from the CEM (may be empty)  |
 | `attrs`       | `Array<{ name, type, default? }>` | Attribute list; `default` omitted when not defined |
 
-**Error cases:** Sigil CEM not present in this snapshot → `isError: true`.
+**Error cases:** Refine CEM not present in this snapshot → `isError: true`.
 
 ---
 
 ### `get-component`
 
-Returns one full CEM declaration for a Sigil component.
+Returns one full CEM declaration for a Refine component.
 
 **Input:**
 
 | Field     | Type     | Required | Description                                 |
 | --------- | -------- | -------- | ------------------------------------------- |
-| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"sg-button"` |
+| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"` |
 
 **Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS properties.
 
-**Error cases:** unknown tag (lists available tags) or missing Sigil CEM → `isError: true`.
+**Error cases:** unknown tag (lists available tags) or missing Refine CEM → `isError: true`.
 
 ---
 
 ### `generate-template`
 
-Generates a ready-to-use HTML snippet for a Sigil component, derived entirely from bundled CEM metadata. Use this as the AI's starting point for declarative UI generation — it eliminates hallucinated attribute names before they reach the DOM.
+Generates a ready-to-use HTML snippet for a Refine component, derived entirely from bundled CEM metadata. Use this as the AI's starting point for declarative UI generation — it eliminates hallucinated attribute names before they reach the DOM.
 
 **Input:**
 
 | Field      | Type     | Required | Description                                                                        |
 | ---------- | -------- | -------- | ---------------------------------------------------------------------------------- |
-| `tagName`  | `string` | Yes      | HTML custom element tag, e.g. `"sg-button"`                                        |
+| `tagName`  | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"`                                        |
 | `scenario` | `string` | No       | Usage context prepended as an HTML comment, e.g. `"primary call-to-action button"` |
 
 **Result:** An HTML string with:
@@ -249,42 +249,42 @@ Generates a ready-to-use HTML snippet for a Sigil component, derived entirely fr
 
 ```html
 <!-- primary action -->
-<sg-button variant="primary">
+<ore-button variant="primary">
   <!-- Optional attributes:
     disabled  (default: false)
   -->
-  <!-- Events: sg-click -->
+  <!-- Events: ore-click -->
   Content goes here
-</sg-button>
+</ore-button>
 ```
 
-**Error cases:** unknown `tagName` (lists available tags) or missing Sigil CEM → `isError: true`.
+**Error cases:** unknown `tagName` (lists available tags) or missing Refine CEM → `isError: true`.
 
 ---
 
 ### `get-tokens`
 
-Returns all CSS custom properties (design tokens) exposed by Sigil components. Use when generating dynamic themes or inline styles in AI-driven UI — avoids guessing variable names.
+Returns all CSS custom properties (design tokens) exposed by Refine components. Use when generating dynamic themes or inline styles in AI-driven UI — avoids guessing variable names.
 
 **Input:**
 
 | Field    | Type     | Required | Description                                                    |
 | -------- | -------- | -------- | -------------------------------------------------------------- |
-| `filter` | `string` | No       | Case-insensitive prefix to narrow results, e.g. `"--sg-color"` |
+| `filter` | `string` | No       | Case-insensitive prefix to narrow results, e.g. `"--ore-color"` |
 
 **Result shape:**
 
 ```json
 [
   {
-    "name": "--sg-card-bg",
+    "name": "--ore-card-bg",
     "description": "Card background colour",
     "default": "#1e1e2e",
-    "component": "sg-card"
+    "component": "ore-card"
   },
   {
-    "name": "--sg-card-radius",
-    "component": "sg-card"
+    "name": "--ore-card-radius",
+    "component": "ore-card"
   }
 ]
 ```
@@ -293,13 +293,13 @@ Results are sorted by `name` ascending. `description` and `default` are omitted 
 
 Returns `[]` (not an error) when `filter` matches nothing.
 
-**Error cases:** missing Sigil CEM → `isError: true`.
+**Error cases:** missing Refine CEM → `isError: true`.
 
 ---
 
 ### `validate-component-usage`
 
-Validates AI-generated HTML against a Sigil component's CEM spec. Use this to close the **generate → validate → fix** loop before passing HTML to the renderer.
+Validates AI-generated HTML against a Refine component's CEM spec. Use this to close the **generate → validate → fix** loop before passing HTML to the renderer.
 
 **Input:**
 
@@ -314,11 +314,11 @@ Validates AI-generated HTML against a Sigil component's CEM spec. Use this to cl
 [
   {
     "type": "error",
-    "message": "Unknown attribute \"colour\" on <sg-button>. Known: variant, disabled."
+    "message": "Unknown attribute \"colour\" on <ore-button>. Known: variant, disabled."
   },
   {
     "type": "error",
-    "message": "Unknown slot \"icon\" on <sg-button>. Known slots: prefix."
+    "message": "Unknown slot \"icon\" on <ore-button>. Known slots: prefix."
   }
 ]
 ```
@@ -328,7 +328,7 @@ Validates AI-generated HTML against a Sigil component's CEM spec. Use this to cl
 - Unknown attributes (after excluding `class`, `id`, `style`, `aria-*`, `data-*`, `on*`, `tabindex`, `part`, `slot`, and other safe globals)
 - Unknown slot names (only when the component defines at least one named slot)
 
-**Error cases:** unknown `tagName`, missing `<tagName>` opening tag in HTML, `html` exceeding 5000 characters, or missing Sigil CEM → `isError: true`.
+**Error cases:** unknown `tagName`, missing `<tagName>` opening tag in HTML, `html` exceeding 5000 characters, or missing Refine CEM → `isError: true`.
 
 ### `get-sandbox-context`
 
@@ -411,7 +411,7 @@ Wraps an HTML fragment in a complete `srcdoc`-ready document for direct use with
 list - directives();
 ```
 
-Returns a JSON array of all reactive directives exported by `@vielzeug/craft/directives`, sorted alphabetically by name. Each entry includes the directive name, its TypeScript call signature, a description, and the import path.
+Returns a JSON array of all reactive directives exported by `@vielzeug/ore/directives`, sorted alphabetically by name. Each entry includes the directive name, its TypeScript call signature, a description, and the import path.
 
 **Output shape (per entry):**
 
@@ -420,7 +420,7 @@ Returns a JSON array of all reactive directives exported by `@vielzeug/craft/dir
 | `name`        | `string` | Directive name, e.g. `"each"`              |
 | `signature`   | `string` | Full TypeScript call signature             |
 | `description` | `string` | What the directive does and when to use it |
-| `import`      | `string` | Always `"@vielzeug/craft/directives"`      |
+| `import`      | `string` | Always `"@vielzeug/ore/directives"`      |
 
 **Directives included:** `classMap`, `each`, `live`, `model`, `raw`, `styleMap`, `when`
 

@@ -1,6 +1,6 @@
 ---
 title: Codex — Examples
-description: Practical MCP tool-call examples for package discovery, docs lookup, and Sigil component queries.
+description: Practical MCP tool-call examples for package discovery, docs lookup, and Refine component queries.
 ---
 
 ## Examples

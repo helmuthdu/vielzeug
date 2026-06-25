@@ -46,12 +46,12 @@ pnpm add @vielzeug/ripple
 
 ---
 
-### [@vielzeug/craft](packages/craft) – Web Component Primitives
+### [@vielzeug/ore](packages/ore) – Web Component Primitives
 
 Lightweight, type-safe web component authoring with reactive state, typed props, and automatic rendering.
 
 ```bash
-pnpm add @vielzeug/craft
+pnpm add @vielzeug/ore
 ```
 
 **Key Features:**
@@ -60,25 +60,25 @@ pnpm add @vielzeug/craft
 - Shadow DOM with automatic styling and form-associated elements
 - Event handling, lifecycle hooks, and helpers like `live`, `when`, `styleMap`, `until` (18 KB min / 5.0 KB gz)
 
-[📖 Documentation](https://vielzeug.dev/craft/) • [Examples](https://vielzeug.dev/craft/examples)
+[📖 Documentation](https://vielzeug.dev/ore/) • [Examples](https://vielzeug.dev/ore/examples)
 
 ---
 
-### [@vielzeug/sigil](packages/sigil) – Accessible Web Components
+### [@vielzeug/refine](packages/refine) – Accessible Web Components
 
-Accessible, themeable web components built on top of `@vielzeug/craft`. Works with any framework or vanilla HTML.
+Accessible, themeable web components built on top of `@vielzeug/ore`. Works with any framework or vanilla HTML.
 
 ```bash
-pnpm add @vielzeug/sigil
+pnpm add @vielzeug/refine
 ```
 
 **Key Features:**
 - Drop-in accessible components — button, input, select, checkbox, accordion, tooltip, and more
-- Framework agnostic — plain custom elements, no framework required
+- Framework-agnostic — plain custom elements, no framework required
 - Full theming via CSS custom properties
-- Tree-shakeable per-component imports (`@vielzeug/sigil/button`, `@vielzeug/sigil/input`, …)
+- Tree-shakeable per-component imports (`@vielzeug/refine/button`, `@vielzeug/refine/input`, …)
 
-[📖 Documentation](https://vielzeug.dev/sigil/) • [Examples](https://vielzeug.dev/sigil/examples)
+[📖 Documentation](https://vielzeug.dev/refine/) • [Examples](https://vielzeug.dev/refine/examples)
 
 ---
 
@@ -608,7 +608,7 @@ vielzeug/
 │   ├── coins/         # Monetary arithmetic & formatting
 │   ├── conduit/       # Dependency injection
 │   ├── courier/       # HTTP client & query management
-│   ├── craft/         # Web component primitives
+│   ├── ore/           # Web component primitives
 │   ├── dnd/           # Drag-and-drop utilities
 │   ├── familiar/      # Web Worker pool
 │   ├── flux/          # Reactive streams & operators
@@ -621,7 +621,7 @@ vielzeug/
 │   ├── ripple/        # Reactive signals and state
 │   ├── rune/          # Structured logging
 │   ├── scroll/        # Virtual list engine
-│   ├── sigil/         # Accessible web components (built on craft)
+│   ├── refine/        # Accessible web components (built on ore)
 │   ├── sourcerer/     # Reactive data sources
 │   ├── spell/         # Schema validation
 │   ├── tempo/         # Date & time utilities
@@ -658,7 +658,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/coins`        | **9.5 KB**                   | **3.5 KB**     | 0            |
 | `@vielzeug/conduit`      | **7.8 KB**                   | **2.6 KB**     | 0            |
 | `@vielzeug/courier`      | **21.9 KB**                  | **7.4 KB**     | 1\*          |
-| `@vielzeug/craft`        | **28.9 KB**                  | **10.5 KB**    | 1\*          |
+| `@vielzeug/ore`        | **28.9 KB**                  | **10.5 KB**    | 1\*          |
 | `@vielzeug/dnd`          | **9.7 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/familiar`     | **11.3 KB**                  | **4.2 KB**     | 0            |
 | `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
@@ -671,7 +671,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
 | `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
 | `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
-| `@vielzeug/sigil`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
+| `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
 | `@vielzeug/sourcerer`    | **17.2 KB**                  | **5.2 KB**     | 1\*          |
 | `@vielzeug/spell`        | **49.1 KB**                  | **11.9 KB**    | 0            |
 | `@vielzeug/tempo`        | **12.5 KB**                  | **4.0 KB**     | 0            |
@@ -679,7 +679,7 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/ward`         | **7.1 KB**                   | **2.6 KB**     | 0            |
 | `@vielzeug/wayfinder`    | **16.3 KB**                  | **5.9 KB**     | 0            |
 
-\* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable — individual utilities average 0.1–0.8 KB each. `sigil` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
+\* Only depends on other `@vielzeug` packages. `arsenal` is tree-shakeable — individual utilities average 0.1–0.8 KB each. `refine` is designed for per-component imports; the full bundle is ~453 KB / 95 KB.
 
 ---
 

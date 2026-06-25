@@ -1,6 +1,6 @@
 export { createBehaviorBus } from './behavior-bus';
 export { combineSignals, createBus } from './bus';
-export { BusDisposedError } from './errors';
+export { BusDisposedError, HeraldError } from './errors';
 export { pipeEvents } from './pipe';
 export type {
   BehaviorBus,

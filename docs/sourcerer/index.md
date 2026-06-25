@@ -90,14 +90,14 @@ await source.search(search, { immediate: true });
 | Feature                             | Sourcerer                                       | TanStack Query                             | SWR                                                             |
 | ----------------------------------- | ----------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------- |
 | Bundle size                         | <PackageInfo package="sourcerer" type="size" /> | ~16 kB                                     | ~6 kB                                                           |
-| In-memory source primitive          | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                          |
-| Remote source primitive             | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
-| Cursor-based pagination             | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
-| Infinite scroll source              | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
-| Typed page/filter/sort/search model | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
-| Optimistic updates                  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                      |
-| URL query encode/decode helpers     | <sg-icon name="check" size="16"></sg-icon>      | Partial                                    | Partial                                                         |
-| Framework agnostic                  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="triangle-alert" size="16"></sg-icon> React-first |
+| In-memory source primitive          | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                          |
+| Remote source primitive             | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
+| Cursor-based pagination             | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
+| Infinite scroll source              | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
+| Typed page/filter/sort/search model | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
+| Optimistic updates                  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                      |
+| URL query encode/decode helpers     | <ore-icon name="check" size="16"></ore-icon>      | Partial                                    | Partial                                                         |
+| Framework agnostic                  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> React-first |
 
 <div class="decision-callout">
 

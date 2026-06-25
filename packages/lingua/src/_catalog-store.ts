@@ -4,8 +4,8 @@
 import type { NamespaceStore } from './_namespace-store';
 
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
-import { E, LinguaError, checkDisposed, checkDisposedAsync } from './_errors';
 import { warn } from './_warn';
+import { E, LinguaError, checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;
 export type Loader<M extends Messages = Messages> = () => Promise<M>;

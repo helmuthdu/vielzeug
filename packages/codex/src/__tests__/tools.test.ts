@@ -92,12 +92,12 @@ describe('optionalEnum (via get-docs)', () => {
 
 describe('buildToolContext — componentTags', () => {
   const mockComponents: CemDeclaration[] = [
-    { description: 'A button', name: 'Button', tagName: 'sg-button' },
-    { description: 'An input', name: 'Input', tagName: 'sg-input' },
+    { description: 'A button', name: 'Button', tagName: 'ore-button' },
+    { description: 'An input', name: 'Input', tagName: 'ore-input' },
     { description: 'No tag — declaration without tagName', name: 'Mixin' },
   ];
 
-  it('componentTags is null when sigil package has no components', () => {
+  it('componentTags is null when refine package has no components', () => {
     const ctx = buildToolContext(SYNTHETIC_DATA);
 
     expect(ctx.componentTags).toBeNull();
@@ -106,27 +106,27 @@ describe('buildToolContext — componentTags', () => {
 
   it('componentTags contains only entries with a tagName', () => {
     const data: BundledData = {
-      packages: [makePkg({ components: mockComponents, slug: 'sigil' })],
+      packages: [makePkg({ components: mockComponents, slug: 'refine' })],
       schemaVersion: SYNTHETIC_DATA.schemaVersion,
       version: '0.0.0',
     };
     const ctx = buildToolContext(data);
 
-    expect(ctx.componentTags).toEqual(['sg-button', 'sg-input']);
+    expect(ctx.componentTags).toEqual(['ore-button', 'ore-input']);
   });
 
   it('get-component error message uses pre-computed componentTags', async () => {
     const data: BundledData = {
-      packages: [makePkg({ components: mockComponents, slug: 'sigil' })],
+      packages: [makePkg({ components: mockComponents, slug: 'refine' })],
       schemaVersion: SYNTHETIC_DATA.schemaVersion,
       version: '0.0.0',
     };
     const { client } = await createTestPair(data);
-    const result = await call(client, 'get-component', { tagName: 'sg-nonexistent' });
+    const result = await call(client, 'get-component', { tagName: 'ore-nonexistent' });
 
     expect(result.isError).toBe(true);
-    expect(text(result)).toContain('sg-button');
-    expect(text(result)).toContain('sg-input');
+    expect(text(result)).toContain('ore-button');
+    expect(text(result)).toContain('ore-input');
     expect(text(result)).not.toContain('Mixin');
   });
 });
@@ -135,23 +135,23 @@ describe('buildToolContext — componentTags', () => {
 // generate-template
 // ---------------------------------------------------------------------------
 
-const SIGIL_COMPONENTS: CemDeclaration[] = [
+const REFINE_COMPONENTS: CemDeclaration[] = [
   {
     attributes: [
       { name: 'variant', type: { text: "'primary' | 'secondary'" } },
       { default: 'false', name: 'disabled', type: { text: 'boolean' } },
     ],
     description: 'A button',
-    events: [{ name: 'sg-click' }],
+    events: [{ name: 'ore-click' }],
     name: 'Button',
     slots: [{ description: 'Button label', name: '' }],
-    tagName: 'sg-button',
+    tagName: 'ore-button',
   },
   {
     attributes: [{ name: 'label' }],
     cssProperties: [
-      { default: '#fff', description: 'Background colour', name: '--sg-card-bg' },
-      { name: '--sg-card-radius' },
+      { default: '#fff', description: 'Background colour', name: '--ore-card-bg' },
+      { name: '--ore-card-radius' },
     ],
     description: 'A card',
     name: 'Card',
@@ -159,13 +159,13 @@ const SIGIL_COMPONENTS: CemDeclaration[] = [
       { description: 'Main content', name: 'body' },
       { description: 'Footer actions', name: 'footer' },
     ],
-    tagName: 'sg-card',
+    tagName: 'ore-card',
   },
 ];
 
-function sigilData(): BundledData {
+function refineData(): BundledData {
   return {
-    packages: [makePkg({ components: SIGIL_COMPONENTS, slug: 'sigil' })],
+    packages: [makePkg({ components: REFINE_COMPONENTS, slug: 'refine' })],
     schemaVersion: SYNTHETIC_DATA.schemaVersion,
     version: '0.0.0',
   };
@@ -173,61 +173,61 @@ function sigilData(): BundledData {
 
 describe('generate-template', () => {
   it('returns an HTML snippet containing the tag name', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-button' });
 
     expect(result.isError).not.toBe(true);
-    expect(text(result)).toContain('<sg-button');
-    expect(text(result)).toContain('</sg-button>');
+    expect(text(result)).toContain('<ore-button');
+    expect(text(result)).toContain('</ore-button>');
   });
 
   it('uses the first literal from a union type for required attributes', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-button' });
 
     expect(text(result)).toContain('variant="primary"');
   });
 
   it('puts attributes with defaults in a comment block', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-button' });
 
     expect(text(result)).toContain('<!-- Optional attributes:');
     expect(text(result)).toContain('disabled');
   });
 
   it('scaffolds named slots', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-card' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-card' });
 
     expect(text(result)).toContain('slot="body"');
     expect(text(result)).toContain('slot="footer"');
   });
 
   it('includes event names in a comment', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-button' });
 
-    expect(text(result)).toContain('sg-click');
+    expect(text(result)).toContain('ore-click');
   });
 
   it('prepends the scenario as a comment when provided', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { scenario: 'submit action', tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { scenario: 'submit action', tagName: 'ore-button' });
 
     expect(text(result)).toContain('<!-- submit action -->');
   });
 
   it('returns isError for an unknown tag', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'generate-template', { tagName: 'sg-nonexistent' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'generate-template', { tagName: 'ore-nonexistent' });
 
     expect(result.isError).toBe(true);
   });
 
-  it('returns isError when Sigil CEM is absent', async () => {
+  it('returns isError when Refine CEM is absent', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
-    const result = await call(client, 'generate-template', { tagName: 'sg-button' });
+    const result = await call(client, 'generate-template', { tagName: 'ore-button' });
 
     expect(result.isError).toBe(true);
   });
@@ -239,7 +239,7 @@ describe('generate-template', () => {
 
 describe('get-tokens', () => {
   it('returns a sorted JSON array of CSS custom properties', async () => {
-    const { client } = await createTestPair(sigilData());
+    const { client } = await createTestPair(refineData());
     const result = await call(client, 'get-tokens', {});
 
     expect(result.isError).not.toBe(true);
@@ -247,38 +247,38 @@ describe('get-tokens', () => {
     const tokens = JSON.parse(text(result)) as { name: string }[];
 
     expect(tokens.length).toBe(2);
-    expect(tokens[0]!.name).toBe('--sg-card-bg');
-    expect(tokens[1]!.name).toBe('--sg-card-radius');
+    expect(tokens[0]!.name).toBe('--ore-card-bg');
+    expect(tokens[1]!.name).toBe('--ore-card-radius');
   });
 
   it('includes description and default when present', async () => {
-    const { client } = await createTestPair(sigilData());
+    const { client } = await createTestPair(refineData());
     const result = await call(client, 'get-tokens', {});
     const tokens = JSON.parse(text(result)) as { default?: string; description?: string; name: string }[];
-    const bg = tokens.find((t) => t.name === '--sg-card-bg');
+    const bg = tokens.find((t) => t.name === '--ore-card-bg');
 
     expect(bg?.default).toBe('#fff');
     expect(bg?.description).toBe('Background colour');
   });
 
   it('filters by prefix (case-insensitive)', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'get-tokens', { filter: '--sg-card-b' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'get-tokens', { filter: '--ore-card-b' });
     const tokens = JSON.parse(text(result)) as { name: string }[];
 
     expect(tokens.length).toBe(1);
-    expect(tokens[0]!.name).toBe('--sg-card-bg');
+    expect(tokens[0]!.name).toBe('--ore-card-bg');
   });
 
   it('returns empty array when filter matches nothing', async () => {
-    const { client } = await createTestPair(sigilData());
+    const { client } = await createTestPair(refineData());
     const result = await call(client, 'get-tokens', { filter: '--no-match' });
     const tokens = JSON.parse(text(result)) as unknown[];
 
     expect(tokens).toHaveLength(0);
   });
 
-  it('returns isError when Sigil CEM is absent', async () => {
+  it('returns isError when Refine CEM is absent', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
     const result = await call(client, 'get-tokens', {});
 
@@ -292,9 +292,9 @@ describe('get-tokens', () => {
 
 describe('validate-component-usage', () => {
   it('returns empty array for valid usage', async () => {
-    const { client } = await createTestPair(sigilData());
-    const html = `<sg-button variant="primary">Click</sg-button>`;
-    const result = await call(client, 'validate-component-usage', { html, tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const html = `<ore-button variant="primary">Click</ore-button>`;
+    const result = await call(client, 'validate-component-usage', { html, tagName: 'ore-button' });
 
     expect(result.isError).not.toBe(true);
 
@@ -304,9 +304,9 @@ describe('validate-component-usage', () => {
   });
 
   it('reports unknown attributes', async () => {
-    const { client } = await createTestPair(sigilData());
-    const html = `<sg-button variant="primary" unknownprop="bad">Click</sg-button>`;
-    const result = await call(client, 'validate-component-usage', { html, tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const html = `<ore-button variant="primary" unknownprop="bad">Click</ore-button>`;
+    const result = await call(client, 'validate-component-usage', { html, tagName: 'ore-button' });
     const issues = JSON.parse(text(result)) as { message: string; type: string }[];
 
     expect(issues.length).toBeGreaterThan(0);
@@ -315,54 +315,54 @@ describe('validate-component-usage', () => {
   });
 
   it('does not flag safe HTML attributes (class, id, aria-*, data-*, on*)', async () => {
-    const { client } = await createTestPair(sigilData());
-    const html = `<sg-button class="x" id="y" aria-label="z" data-track="1" onclick="fn()">OK</sg-button>`;
-    const result = await call(client, 'validate-component-usage', { html, tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const html = `<ore-button class="x" id="y" aria-label="z" data-track="1" onclick="fn()">OK</ore-button>`;
+    const result = await call(client, 'validate-component-usage', { html, tagName: 'ore-button' });
     const issues = JSON.parse(text(result)) as unknown[];
 
     expect(issues).toHaveLength(0);
   });
 
   it('reports unknown slot names when component defines named slots', async () => {
-    const { client } = await createTestPair(sigilData());
-    const html = `<sg-card label="x"><span slot="ghost">oops</span></sg-card>`;
-    const result = await call(client, 'validate-component-usage', { html, tagName: 'sg-card' });
+    const { client } = await createTestPair(refineData());
+    const html = `<ore-card label="x"><span slot="ghost">oops</span></ore-card>`;
+    const result = await call(client, 'validate-component-usage', { html, tagName: 'ore-card' });
     const issues = JSON.parse(text(result)) as { message: string }[];
 
     expect(issues.some((i) => i.message.includes('ghost'))).toBe(true);
   });
 
   it('returns error when tag is not found in HTML', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'validate-component-usage', { html: '<div>oops</div>', tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'validate-component-usage', { html: '<div>oops</div>', tagName: 'ore-button' });
     const issues = JSON.parse(text(result)) as { type: string }[];
 
     expect(issues[0]!.type).toBe('error');
   });
 
   it('returns isError when html exceeds 5000 chars', async () => {
-    const { client } = await createTestPair(sigilData());
-    const result = await call(client, 'validate-component-usage', { html: 'x'.repeat(5001), tagName: 'sg-button' });
+    const { client } = await createTestPair(refineData());
+    const result = await call(client, 'validate-component-usage', { html: 'x'.repeat(5001), tagName: 'ore-button' });
 
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('5000');
   });
 
   it('returns isError for an unknown tag name', async () => {
-    const { client } = await createTestPair(sigilData());
+    const { client } = await createTestPair(refineData());
     const result = await call(client, 'validate-component-usage', {
-      html: '<sg-nope></sg-nope>',
-      tagName: 'sg-nope',
+      html: '<ore-nope></ore-nope>',
+      tagName: 'ore-nope',
     });
 
     expect(result.isError).toBe(true);
   });
 
-  it('returns isError when Sigil CEM is absent', async () => {
+  it('returns isError when Refine CEM is absent', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
     const result = await call(client, 'validate-component-usage', {
-      html: '<sg-button></sg-button>',
-      tagName: 'sg-button',
+      html: '<ore-button></ore-button>',
+      tagName: 'ore-button',
     });
 
     expect(result.isError).toBe(true);
@@ -406,8 +406,8 @@ describe('get-sandbox-context', () => {
     expect(ctx.notAvailable.some((s) => s.includes('fetch'))).toBe(true);
   });
 
-  it('works with or without Sigil CEM data', async () => {
-    const { client } = await createTestPair(sigilData());
+  it('works with or without Refine CEM data', async () => {
+    const { client } = await createTestPair(refineData());
     const result = await call(client, 'get-sandbox-context', {});
 
     expect(result.isError).not.toBe(true);
@@ -509,7 +509,7 @@ describe('generate-sandbox-document', () => {
 // ---------------------------------------------------------------------------
 
 describe('list-directives', () => {
-  it('returns a JSON array of craft directive descriptors', async () => {
+  it('returns a JSON array of ore directive descriptors', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
     const result = await call(client, 'list-directives', {});
 
@@ -549,7 +549,7 @@ describe('list-directives', () => {
       expect(typeof d.name).toBe('string');
       expect(typeof d.signature).toBe('string');
       expect(typeof d.description).toBe('string');
-      expect(d.import).toBe('@vielzeug/craft/directives');
+      expect(d.import).toBe('@vielzeug/ore/directives');
     }
   });
 

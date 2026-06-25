@@ -2,7 +2,7 @@
 export { Temporal } from '@js-temporal/polyfill';
 
 // ─── Errors ───────────────────────────────────────────────────────────────────
-export { TempoError, TempoErrorCode } from './_error';
+export { TempoError, TempoErrorCode } from './errors';
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
 export {

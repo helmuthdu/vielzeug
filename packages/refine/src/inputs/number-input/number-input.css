@@ -1,0 +1,75 @@
+@layer refine.base {
+  :host {
+    display: inline-flex;
+    width: fit-content;
+  }
+
+  :host([fullwidth]) {
+    width: 100%;
+  }
+
+  .wrapper {
+    display: inline-flex;
+    gap: var(--size-1);
+    align-items: center;
+    width: 100%;
+  }
+
+  /* Align buttons to the top when the label is outside (it adds height above the field) */
+  :host([label-placement='outside']) .wrapper {
+    align-items: flex-end;
+  }
+
+  /* Spin buttons */
+  button {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-10);
+    min-width: var(--size-10);
+    height: var(--size-10);
+    min-height: var(--size-10);
+    padding: 0;
+    color: var(--color-contrast-600);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    border-radius: var(--rounded-md);
+    transition: color var(--transition-fast);
+  }
+
+  button:hover:not(:disabled) {
+    color: var(--color-contrast-800);
+    background: var(--color-contrast-100);
+  }
+
+  button:active:not(:disabled) {
+    background: var(--color-contrast-200);
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+  }
+
+  /* Centre the typed number inside the field */
+  .field::part(input) {
+    text-align: center;
+  }
+
+  .field {
+    width: var(--size-20);
+  }
+
+  :host([fullwidth]) .field {
+    flex: 1;
+    width: auto;
+    min-width: 0;
+  }
+}

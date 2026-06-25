@@ -99,8 +99,8 @@ environments: [browser, node, ssr, deno]
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
-| <Key differentiator> | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
+| <Key differentiator> | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
 
 <div class="decision-callout">
 
@@ -174,7 +174,7 @@ yarn add @vielzeug/<pkg>
 - The `## Documentation` section must use that exact heading. Do not merge it into `## See Also`.
 - Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`, `environments`.
 - The Before/After code block in "Why" must be a single fenced block with a `// Before` comment block followed by a `// After` comment block, not two separate blocks with prose between them.
-- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `<sg-icon name="check" size="16"></sg-icon>`, `<sg-icon name="x" size="16"></sg-icon>`, `<sg-icon name="triangle-alert" size="16"></sg-icon>` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
+- Comparison table rows: always include bundle size, zero dependencies, and 2–3 differentiating feature rows. Use `<ore-icon name="check" size="16"></ore-icon>`, `<ore-icon name="x" size="16"></ore-icon>`, `<ore-icon name="triangle-alert" size="16"></ore-icon>` (for partial/nuanced), and short text like `Manual`, `React only`, `Partial`.
 - "Use when / Consider when" must both be present. They are italic-free, direct statements.
 
 ## `usage.md` — Usage Guide
@@ -504,7 +504,7 @@ The **Codex** MCP (Model Context Protocol) server reads the metadata from `index
 - **Get structured context** about each package (exports, related libraries, available doc pages, source availability)
 - **Read full documentation** (index, api, usage, examples pages)
 - **View source API** (`src/index.ts`)
-- **Find components** (Sigil only)
+- **Find components** (Refine only)
 
 ### Codex Tools That Use Your Metadata
 
@@ -537,7 +537,7 @@ Example: When an AI agent runs Codex's `get-package` tool with `packageSlug: "ri
   "description": "Reactive signals, computed, effects, and stores...",
   "keywords": ["signals", "reactive", "state-management", "effects"],
   "exports": ["signal", "computed", "effect", "store"],
-  "related": ["craft", "forge"],
+  "related": ["ore", "forge"],
   "availableDocPages": ["index", "api", "usage", "examples"],
   "hasSource": true
 }

@@ -5,7 +5,7 @@ package: sandbox
 category: ai-tooling
 keywords: [sandbox, iframe, generative-ui, ai, postmessage, csp, security]
 exports: [buildCsp, buildDocument, createSandbox, SandboxBridge]
-related: [codex, sigil]
+related: [codex, refine]
 environments: [browser]
 ---
 
@@ -20,10 +20,10 @@ Running AI-generated HTML in the main window is unsafe — generated code can ac
 | Feature                    | Raw `<iframe>`              | Sandbox                                                |
 | -------------------------- | --------------------------- | ------------------------------------------------------ |
 | Bundle size                | 0 B (built-in)              | <PackageInfo package="sandbox" type="size" />          |
-| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 | Content-Security-Policy    | Manual                      | Auto-generated, strict by default                      |
-| Typed postMessage protocol | <sg-icon name="x" size="16"></sg-icon> | `setState()` / `SandboxMessage` union           |
-| Error forwarding           | <sg-icon name="x" size="16"></sg-icon> | `onerror` + `unhandledrejection` → host         |
+| Typed postMessage protocol | <ore-icon name="x" size="16"></ore-icon> | `setState()` / `SandboxMessage` union           |
+| Error forwarding           | <ore-icon name="x" size="16"></ore-icon> | `onerror` + `unhandledrejection` → host         |
 | Dispose / `using`          | Manual `remove()`           | `dispose()` + `[Symbol.dispose]`                       |
 
 <div class="decision-callout">
@@ -62,7 +62,7 @@ const sandbox = createSandbox(container);
 
 // Await load, then render
 await sandbox.ready;
-sandbox.render('<sg-button variant="primary">Click me</sg-button>');
+sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 
 // Push state into the sandbox
 sandbox.setState('theme', 'dark');
@@ -118,7 +118,7 @@ sandbox.dispose();
 <div class="see-also">
 
 - [Codex](/codex/) — MCP server with `generate-sandbox-document` and `get-state-bridge-spec` tools; generates document templates for use with Sandbox
-- [Sigil](/sigil/) — Web component library; renders correctly inside the sandbox via `<script>` injection and `allowedScriptOrigins`
+- [Refine](/refine/) — Web component library; renders correctly inside the sandbox via `<script>` injection and `allowedScriptOrigins`
 
 </div>
 

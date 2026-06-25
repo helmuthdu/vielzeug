@@ -4,7 +4,7 @@ description: Zero-dependency floating element positioning for tooltips, dropdown
 package: orbit
 category: ui
 keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement, presets]
-related: [craft, sigil, dnd]
+related: [ore, refine, dnd]
 exports:
   [
     float,
@@ -39,13 +39,13 @@ Positioning floating UI by hand quickly turns into repeated math for viewport bo
 | Feature                  | Orbit                                       | Floating UI                                | Popper                                     |
 | ------------------------ | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size              | <PackageInfo package="orbit" type="size" /> | ~10 kB                                     | ~6 kB                                      |
-| Middleware pipeline      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Direct compute API       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| High-level follow API    | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
-| Inline anchor middleware | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
-| Auto-update helpers      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Framework agnostic       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Zero dependencies        | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Middleware pipeline      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Direct compute API       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| High-level follow API    | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
+| Inline anchor middleware | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
+| Auto-update helpers      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Framework agnostic       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -150,9 +150,9 @@ handle.dispose();
 
 <div class="see-also">
 
-- [Sigil](/sigil/) — accessible web components that use Orbit internally for dropdown, tooltip, and popover positioning
+- [Refine](/refine/) — accessible web components that use Orbit internally for dropdown, tooltip, and popover positioning
 - [Dnd](/dnd/) — drag-and-drop engine; use Orbit to reposition drop targets and drag previews relative to containers
-- [Craft](/craft/) — web-component authoring framework; Orbit integrates as a positioning primitive for overlay elements
+- [Ore](/ore/) — web-component authoring framework; Orbit integrates as a positioning primitive for overlay elements
 
 </div>
 

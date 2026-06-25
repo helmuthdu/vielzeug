@@ -156,7 +156,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   let viewportWidth = 0;
   let rows: VirtualItem[] = [];
   let cols: VirtualItem[] = [];
-  let destroyed = false;
+  let disposed = false;
 
   // ─── Axis1D instances (R1) ─────────────────────────────────────────────────
   // sizeAt closures capture live `measuredRows/Cols` and `estimateFn` vars.
@@ -193,7 +193,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   // ─── Compute and emit ──────────────────────────────────────────────────────
 
   function computeVisible(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     const totalHeight = rowAx.totalSize;
     const totalWidth = colAx.totalSize;
@@ -336,13 +336,13 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   // ─── Public measurement API ────────────────────────────────────────────────
 
   function measureRow(row: number, size: number): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     if (recordRowMeasurement(row, size)) scheduleFlush();
   }
 
   function measureColumn(col: number, size: number): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     if (recordColMeasurement(col, size)) scheduleFlush();
   }
@@ -352,7 +352,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     rowEntries: Array<{ index: number; size: number }>,
     colEntries: Array<{ index: number; size: number }>,
   ): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     let changed = false;
 
@@ -368,7 +368,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function measureRowEl(row: number, el: HTMLElement): () => void {
-    if (destroyed) return () => {};
+    if (disposed) return () => {};
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -382,7 +382,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function measureColEl(col: number, el: HTMLElement): () => void {
-    if (destroyed) return () => {};
+    if (disposed) return () => {};
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -396,7 +396,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function invalidate(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     measuredRows.clear();
     measuredCols.clear();
@@ -406,7 +406,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function refresh(): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     rowAx.rebuild(true);
     colAx.rebuild(true);
@@ -414,7 +414,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function prependRows(additionalRowCount: number): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     const n = toNonNegativeInt(additionalRowCount);
 
@@ -434,7 +434,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function scrollToRow(row: number, opts: Pick<ScrollToCellOptions, 'behavior' | 'rowAlign'> = {}): void {
-    if (destroyed || rowCount === 0) return;
+    if (disposed || rowCount === 0) return;
 
     const safeRow = Math.max(0, Math.min(Math.floor(Number.isFinite(row) ? row : 0), rowCount - 1));
     const behavior = opts.behavior ?? 'auto';
@@ -455,7 +455,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function scrollToColumn(col: number, opts: Pick<ScrollToCellOptions, 'behavior' | 'colAlign'> = {}): void {
-    if (destroyed || colCount === 0) return;
+    if (disposed || colCount === 0) return;
 
     const safeCol = Math.max(0, Math.min(Math.floor(Number.isFinite(col) ? col : 0), colCount - 1));
     const behavior = opts.behavior ?? 'auto';
@@ -476,7 +476,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function scrollToCell(row: number, col: number, opts: ScrollToCellOptions = {}): void {
-    if (destroyed || rowCount === 0 || colCount === 0) return;
+    if (disposed || rowCount === 0 || colCount === 0) return;
 
     const safeRow = Math.max(0, Math.min(Math.floor(Number.isFinite(row) ? row : 0), rowCount - 1));
     const safeCol = Math.max(0, Math.min(Math.floor(Number.isFinite(col) ? col : 0), colCount - 1));
@@ -514,7 +514,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   }
 
   function update(next: GridVirtualizerUpdateOptions): void {
-    if (destroyed) return;
+    if (disposed) return;
 
     let rebuildRows = false;
     let rebuildCols = false;
@@ -595,10 +595,10 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     if (rebuildRows || rebuildCols || needsCompute) computeVisible();
   }
 
-  function destroy(): void {
-    if (destroyed) return;
+  function disposeImpl(): void {
+    if (disposed) return;
 
-    destroyed = true;
+    disposed = true;
     adapter.detach();
   }
 
@@ -641,9 +641,9 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
     get cols() {
       return cols;
     },
-    dispose: destroy,
+    dispose: disposeImpl,
     get disposed() {
-      return destroyed;
+      return disposed;
     },
     invalidate,
     measureBatch,
@@ -665,7 +665,7 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
       return scrollTop;
     },
     scrollToRow,
-    [Symbol.dispose]: destroy,
+    [Symbol.dispose]: disposeImpl,
     get totalHeight() {
       return rowAx.totalSize;
     },

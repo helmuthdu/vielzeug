@@ -4,10 +4,14 @@
  */
 export class VaultError extends Error {
   constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
-    super(`[@vielzeug/vault] ${message}`, opts);
+    super(message, opts);
     this.name = new.target.name;
     // Ensures `instanceof` works correctly when transpiled to ES5.
     Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is VaultError {
+    return err instanceof VaultError;
   }
 }
 

@@ -1,18 +1,18 @@
 ---
-title: 'Dnd Examples — Web Component with craft'
-description: 'Web component with Craft example for @vielzeug/dnd.'
+title: 'Dnd Examples — Web Component with ore'
+description: 'Web component with Ore example for @vielzeug/dnd.'
 ---
 
-## Web Component with craft
+## Web Component with ore
 
 ### Problem
 
-You are building a Craft web component that contains a sortable list. The drag-and-drop lifecycle must be tied to the component's own mount and unmount so it does not leak after the element is removed from the DOM.
+You are building a Ore web component that contains a sortable list. The drag-and-drop lifecycle must be tied to the component's own mount and unmount so it does not leak after the element is removed from the DOM.
 
 ### Solution
 
 ```ts
-import { define, html, onCleanup, ref, signal } from '@vielzeug/craft';
+import { define, html, onCleanup, ref, signal } from '@vielzeug/ore';
 import { createDropZone } from '@vielzeug/dnd';
 
 define('my-dropzone', (props) => {
@@ -53,7 +53,7 @@ define('my-dropzone', (props) => {
 
 ### Related
 
-- [With Craft Component (Orbit)](@vielzeug/orbit/examples/with-craft-component)
+- [With Ore Component (Orbit)](@vielzeug/orbit/examples/with-ore-component)
 
 - [Combined: sortable with inline editing](./combined-sortable-with-inline-editing.md)
 - [File upload drop zone](./file-upload-drop-zone.md)

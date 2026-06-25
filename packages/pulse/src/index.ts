@@ -14,6 +14,13 @@ export type {
   Unsubscribe,
 } from './types';
 
-export { AbortError, ConnectionError, DisposedError, ProtocolError, PulseError, TimeoutError } from './errors';
+export {
+  PulseAbortError,
+  PulseConnectionError,
+  PulseDisposedError,
+  PulseError,
+  PulseProtocolError,
+  PulseTimeoutError,
+} from './errors';
 
 export { createPulse } from './pulse';

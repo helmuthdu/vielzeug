@@ -7,11 +7,11 @@ type LibraryEntry = string | Record<string, string>;
 export type BundleOptions = {
   /** Modules to mark as external in the bundled output. */
   external?: string[];
-  /** Output file base name, without extension (e.g. "sigil" → sigil.js / sigil.cjs / sigil.iife.js). */
+  /** Output file base name, without extension (e.g. "refine" → refine.js / refine.cjs / refine.iife.js). */
   fileName: string;
   /** Explicit IIFE globals overrides (merged on top of auto-derived ones). */
   globals?: Record<string, string>;
-  /** Global variable name for the IIFE output (PascalCase, e.g. "Sigil"). */
+  /** Global variable name for the IIFE output (PascalCase, e.g. "Refine"). */
   name: string;
 };
 

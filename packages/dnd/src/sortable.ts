@@ -1,4 +1,5 @@
 import { warn } from './_warn';
+import { DndScopeError } from './errors';
 import { type Disposable } from './shared';
 
 // ─── Branded scope ────────────────────────────────────────────────────────────
@@ -223,7 +224,7 @@ const DEFAULT_AUTO_SCROLL: ResolvedAutoScrollOptions = {
 function getSortableScopeState(scope: SortableScope): SortableScopeState {
   const state = sortableScopeStates.get(scope);
 
-  if (!state) throw new Error('@vielzeug/dnd: Invalid scope — use createSortableScope() to create scopes.');
+  if (!state) throw new DndScopeError();
 
   return state;
 }

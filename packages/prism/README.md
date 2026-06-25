@@ -3,7 +3,7 @@ description: Reactive SVG charting library — line, bar, and area charts. Zero 
 package: prism
 category: ui
 keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
-related: [ripple, sigil, orbit]
+related: [ripple, refine, orbit]
 exports:
   [
     createLineChart,
@@ -36,7 +36,7 @@ exports:
 
 **When to use:** Data visualization with reactive charts that auto-update when signal-based data sources change. Renders accessible SVG, themeable via CSS custom properties.
 
-**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/) · [@vielzeug/orbit](https://vielzeug.dev/orbit/)
+**Related:** [@vielzeug/ripple](https://vielzeug.dev/ripple/) · [@vielzeug/refine](https://vielzeug.dev/refine/) · [@vielzeug/orbit](https://vielzeug.dev/orbit/)
 
 </details>
 

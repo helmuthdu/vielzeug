@@ -7,7 +7,7 @@ description: 'Use createReactiveVirtualizer to integrate scroll state with @viel
 
 ### Problem
 
-You are building a component with `@vielzeug/ripple` or `@vielzeug/craft` and want scroll state to flow through the reactive graph — no manual `onChange` wiring.
+You are building a component with `@vielzeug/ripple` or `@vielzeug/ore` and want scroll state to flow through the reactive graph — no manual `onChange` wiring.
 
 ### Solution
 

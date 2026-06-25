@@ -5,13 +5,17 @@ export const tokenName = (t: Token<any>): string => t.description ?? 'anonymous'
 /** Base class for all conduit errors. Use `instanceof ContainerError` to catch any conduit-originated error. */
 export class ContainerError extends Error {
   constructor(message: string, opts?: ErrorOptions) {
-    super(`[@vielzeug/conduit] ${message}`, opts);
+    super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
+
+  static is(err: unknown): err is ContainerError {
+    return err instanceof ContainerError;
+  }
 }
 
-export class CircularDependencyError extends ContainerError {
+export class ContainerCircularDependencyError extends ContainerError {
   /** The token path that forms the cycle. */
   readonly cycle: Token<any>[];
 
@@ -21,7 +25,7 @@ export class CircularDependencyError extends ContainerError {
   }
 }
 
-export class ProviderNotFoundError extends ContainerError {
+export class ContainerProviderNotFoundError extends ContainerError {
   /** The token that could not be found. */
   readonly token: Token<any>;
   /** The container name at the time of the lookup. */
@@ -34,7 +38,7 @@ export class ProviderNotFoundError extends ContainerError {
   }
 }
 
-export class DuplicateRegistrationError extends ContainerError {
+export class ContainerDuplicateRegistrationError extends ContainerError {
   /** The token that was registered twice. */
   readonly token: Token<any>;
 
@@ -44,7 +48,7 @@ export class DuplicateRegistrationError extends ContainerError {
   }
 }
 
-export class SyncResolutionError extends ContainerError {
+export class ContainerSyncResolutionError extends ContainerError {
   /** The token that could not be resolved synchronously. */
   readonly token: Token<any>;
   /** The lifetime that prevented synchronous resolution. */
@@ -64,7 +68,7 @@ export class SyncResolutionError extends ContainerError {
   }
 }
 
-export class ScopedResolutionError extends ContainerError {
+export class ContainerScopedResolutionError extends ContainerError {
   /** The token that required a scope container. */
   readonly token: Token<any>;
   /** The required scope token, if any. */

@@ -2,7 +2,7 @@ import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { Subscriber } from './types';
 
 import { warn } from './_warn';
-import { runAll, StateError } from './error';
+import { runAll, StateError } from './errors';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 

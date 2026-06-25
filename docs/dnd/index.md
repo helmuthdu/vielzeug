@@ -4,7 +4,7 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 package: dnd
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [craft, scroll, sigil]
+related: [ore, scroll, refine]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 environments: [browser]
 ---
@@ -50,13 +50,13 @@ const zone = createDropZone({
 | Feature             | DND                                                      | SortableJS                                 | dnd-kit                                    |
 | ------------------- | -------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size         | <PackageInfo package="dnd" type="size" />                | ~15 kB                                     | ~30 kB                                     |
-| Framework agnostic  | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| MIME type filtering | <sg-icon name="check" size="16"></sg-icon> Pre-validated | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Counter-based hover | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>     | N/A                                        |
-| Sortable lists      | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Drag handles        | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| `using` support     | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Zero dependencies   | <sg-icon name="check" size="16"></sg-icon>               | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
+| Framework agnostic  | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| MIME type filtering | <ore-icon name="check" size="16"></ore-icon> Pre-validated | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Counter-based hover | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | N/A                                        |
+| Sortable lists      | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Drag handles        | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| `using` support     | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero dependencies   | <ore-icon name="check" size="16"></ore-icon>               | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
@@ -160,8 +160,8 @@ using sortable = createSortable({
 <div class="see-also">
 
 - [Orbit](/orbit/) — floating element positioning; use alongside Dnd to anchor drag previews and drop-zone indicators to precise positions
-- [Craft](/craft/) — web-component authoring framework; build draggable custom elements with Dnd's pointer event primitives
-- [Sigil](/sigil/) — accessible web components; Dnd powers the drag-and-drop inside Sigil's sortable list and kanban components
+- [Ore](/ore/) — web-component authoring framework; build draggable custom elements with Dnd's pointer event primitives
+- [Refine](/refine/) — accessible web components; Dnd powers the drag-and-drop inside Refine's sortable list and kanban components
 
 </div>
 

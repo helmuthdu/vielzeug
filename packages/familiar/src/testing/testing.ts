@@ -1,7 +1,7 @@
 import type { SlotStrategy, WorkerHandle, WorkerStatus } from '../_types';
 
 import { createPool } from '../_pool';
-import { WorkerInvalidOptionsError, WorkerRuntimeError, WorkerTaskError, WorkerTerminatedError } from '../_types';
+import { WorkerInvalidOptionsError, WorkerRuntimeError, WorkerTaskError, WorkerTerminatedError } from '../errors';
 
 export type TestWorkerOptions = {
   /**
@@ -123,4 +123,4 @@ export {
   WorkerTaskError,
   WorkerTerminatedError,
   WorkerTimeoutError,
-} from '../_types';
+} from '../errors';

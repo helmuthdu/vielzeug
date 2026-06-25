@@ -1,0 +1,251 @@
+@layer refine.base {
+  :host {
+    --_bg: var(--chip-bg, var(--color-contrast-150));
+    --_color: var(--chip-color, var(--color-contrast-800));
+    --_border-color: var(--chip-border-color, transparent);
+    --_radius: var(--chip-radius, var(--rounded-lg));
+    --_font-size: var(--chip-font-size, var(--text-sm));
+    --_font-weight: var(--chip-font-weight, var(--font-medium));
+    --_padding-x: var(--chip-padding-x, var(--size-2-5));
+    --_padding-y: var(--chip-padding-y, var(--size-0-5));
+    --_gap: var(--chip-gap, var(--size-1));
+
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    vertical-align: middle;
+  }
+
+  .chip {
+    position: relative;
+    box-sizing: border-box;
+    display: inline-flex;
+    gap: var(--_gap);
+    align-items: center;
+    max-width: 100%;
+    padding: var(--_padding-y) var(--_padding-x);
+    font-size: var(--_font-size);
+    font-weight: var(--_font-weight);
+    line-height: 1.2;
+    color: var(--_color);
+    white-space: nowrap;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    transition:
+      background var(--transition-fast),
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ========================================
+       Remove Button
+       ======================================== */
+
+  .remove-btn {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1.35em;
+    height: 1.35em;
+    padding: 0;
+    margin-inline: var(--size-0-5) calc(var(--size-2) * -1);
+    color: inherit;
+    cursor: pointer;
+    background: color-mix(in oklch, currentcolor 12%, transparent);
+    border: none;
+    border-radius: var(--_radius);
+    opacity: 0.7;
+    transition:
+      background var(--transition-fast),
+      opacity var(--transition-fast);
+  }
+
+  .remove-btn:hover {
+    background: color-mix(in oklch, currentcolor 28%, transparent);
+    opacity: 1;
+  }
+
+  .remove-btn:focus-visible {
+    outline: 2px solid currentcolor;
+    outline-offset: 1px;
+    opacity: 1;
+  }
+
+  /* ========================================
+       Icon slot
+       ======================================== */
+
+  ::slotted([slot='icon']) {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+  }
+
+  .chip-btn {
+    display: inline-flex;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: pointer;
+    background: none;
+    border: none;
+  }
+
+  .chip-btn:disabled {
+    cursor: not-allowed;
+  }
+
+  :host([mode='selectable'][checked]) .chip {
+    outline: var(--border-2) solid var(--_theme-base, currentColor);
+    outline-offset: -2px;
+  }
+
+  :host([mode='selectable']:not([disabled])) .chip,
+  :host([mode='action']:not([disabled])) .chip {
+    cursor: pointer;
+  }
+
+  .chip-btn:focus-visible {
+    outline: 2px solid var(--_theme-base, currentColor);
+    outline-offset: 2px;
+    border-radius: var(--_radius);
+  }
+}
+
+@layer refine.variants {
+  /* Solid (Default) — full theme color fill */
+  :host(:not([variant])),
+  :host([variant='solid']) {
+    --_bg: var(--chip-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_color: var(--chip-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-800)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
+  }
+
+  /* Flat — subtle tint */
+  :host([variant='flat']) {
+    --_bg: var(--chip-bg, color-mix(in oklch, var(--_theme-backdrop, var(--color-contrast-200)) 55%, transparent));
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-800)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
+  }
+
+  /* Bordered — backdrop fill with themed border */
+  :host([variant='bordered']) {
+    --_bg: var(--chip-bg, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, var(--_theme-border, var(--color-contrast-300)));
+    --_remove-bg: var(--chip-remove-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_remove-color: var(--chip-remove-color, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_hover-color: var(--chip-hover-color, var(--_theme-contrast, var(--color-contrast-50)));
+    --_hover-border-color: var(--chip-hover-border-color, var(--_theme-focus, var(--color-contrast-700)));
+    --_active-bg: var(--chip-active-bg, color-mix(in oklch, var(--_theme-focus, var(--color-contrast-800)) 85%, black));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
+  }
+
+  /* Outline — transparent with colored border */
+  :host([variant='outline']) {
+    --_bg: var(--chip-bg, transparent);
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, var(--_theme-base, var(--color-contrast-400)));
+    --_remove-bg: var(--chip-remove-bg, var(--_theme-focus, var(--color-contrast-700)));
+    --_remove-color: var(--chip-remove-color, var(--_theme-backdrop, var(--color-contrast-50)));
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-backdrop, var(--color-contrast-100)));
+    --_hover-border-color: var(--chip-hover-border-color, var(--_theme-focus, var(--color-contrast-700)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
+  }
+
+  /* Ghost — transparent, no border */
+  :host([variant='ghost']) {
+    --_bg: var(--chip-bg, transparent);
+    --_color: var(--chip-color, var(--_theme-base, var(--color-contrast-900)));
+    --_border-color: var(--chip-border-color, transparent);
+    --_hover-bg: var(--chip-hover-bg, var(--_theme-backdrop, var(--color-contrast-100)));
+    --_active-bg: var(--chip-active-bg, var(--_theme-base, var(--color-contrast-700)));
+    --_active-color: var(--chip-active-color, var(--_theme-contrast, var(--color-contrast-50)));
+  }
+
+  /* ── Remove button theming (tokens set per-variant above) ── */
+
+  :host([variant='bordered']) .remove-btn,
+  :host([variant='outline']) .remove-btn {
+    color: var(--_remove-color);
+    background: var(--_remove-bg);
+    border: var(--border) solid var(--_remove-bg);
+  }
+
+  :host([variant='bordered']) .remove-btn:hover,
+  :host([variant='outline']) .remove-btn:hover {
+    background: var(--chip-remove-hover-bg, color-mix(in oklch, var(--_remove-bg) 80%, var(--color-contrast-900)));
+    opacity: 1;
+  }
+
+  :host([variant='ghost']) .remove-btn {
+    border: var(--border) solid var(--_theme-focus, var(--color-contrast-400));
+  }
+
+  :host([variant='ghost']) .remove-btn:hover {
+    background: var(--chip-remove-hover-bg, color-mix(in oklch, currentcolor 15%, transparent));
+  }
+
+  /* ========================================
+     Hover / Active Feedback — interactive modes
+     ======================================== */
+
+  :host(
+      :is(
+          :not([variant]),
+          [variant='solid'],
+          [variant='flat'],
+          [variant='bordered'],
+          [variant='outline'],
+          [variant='ghost']
+        ):is([mode='selectable'], [mode='action']):not([disabled])
+    )
+    .chip-btn:hover
+    .chip {
+    color: var(--_hover-color, var(--_color));
+    background: var(--_hover-bg, var(--_bg));
+    border-color: var(--_hover-border-color, var(--_border-color));
+  }
+
+  :host(
+      :is(
+          :not([variant]),
+          [variant='solid'],
+          [variant='flat'],
+          [variant='bordered'],
+          [variant='outline'],
+          [variant='ghost']
+        ):is([mode='selectable'], [mode='action']):not([disabled])
+    )
+    .chip-btn:active
+    .chip {
+    color: var(--_active-color, var(--_color));
+    background: var(--_active-bg, var(--_bg));
+    box-shadow: var(--inset-shadow-2xs);
+  }
+}

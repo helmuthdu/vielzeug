@@ -1,8 +1,8 @@
 import type { RemoteConfig, RemoteSource, RemoteSourceQuery, SearchOptions } from './types';
 
 import { createAsyncSource } from './asyncSource';
+import { SourceError } from './errors';
 import { clampPage, createMeta, pageCount } from './pagination';
-import { SourceError } from './types';
 import { defaultKeyOf, extractError, retry } from './utils';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };

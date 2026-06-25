@@ -1,10 +1,10 @@
 ---
 title: Codex — MCP server for the Vielzeug ecosystem
-description: MCP server exposing Vielzeug package metadata, docs pages, source, and Sigil component metadata over stdio or HTTP.
+description: MCP server exposing Vielzeug package metadata, docs pages, source, and Refine component metadata over stdio or HTTP.
 package: codex
 category: ai-tooling
 keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
-related: [sigil, spell]
+related: [refine, spell]
 exports:
   [
     createServer,
@@ -51,12 +51,12 @@ fetch('https://vielzeug.dev/spell/api') → parse HTML → strip nav, ads, marku
 
 | Feature                   | `@vielzeug/codex`                                | Live docs fetch                            | Generic web search                         |
 | ------------------------- | ------------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
-| Structured metadata       | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Works offline             | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Sigil component CEM       | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Ranked search             | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="triangle-alert" size="16"></sg-icon> |
-| Stdio + HTTP transports   | <sg-icon name="check" size="16"></sg-icon>       | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| External runtime dep      | <sg-icon name="triangle-alert" size="16"></sg-icon> (MCP SDK) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| Structured metadata       | <ore-icon name="check" size="16"></ore-icon>       | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Works offline             | <ore-icon name="check" size="16"></ore-icon>       | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Refine component CEM       | <ore-icon name="check" size="16"></ore-icon>       | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Ranked search             | <ore-icon name="check" size="16"></ore-icon>       | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="triangle-alert" size="16"></ore-icon> |
+| Stdio + HTTP transports   | <ore-icon name="check" size="16"></ore-icon>       | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| External runtime dep      | <ore-icon name="triangle-alert" size="16"></ore-icon> (MCP SDK) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 
@@ -129,7 +129,7 @@ Wire it into your AI client — see the [Usage Guide](./usage.md) for client-spe
 
 <div class="see-also">
 
-- [Sigil](/sigil/) — source of the bundled Sigil component CEM metadata exposed via `list-components` and `get-component`
+- [Refine](/refine/) — source of the bundled Refine component CEM metadata exposed via `list-components` and `get-component`
 - [Spell](/spell/) — example of a well-documented package discoverable via `search-packages` and `get-docs`
 
 </div>

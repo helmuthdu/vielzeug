@@ -12,8 +12,8 @@ import type {
 } from './types';
 
 import { toInstant, toZoned } from './_convert';
-import { fail } from './_error';
 import { inferTimeZone } from './_tz';
+import { fail } from './errors';
 
 // ─── Formatter types ──────────────────────────────────────────────────────────
 

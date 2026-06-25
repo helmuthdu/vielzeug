@@ -482,13 +482,13 @@ function useSortable(items: { id: string; text: string }[]) {
 
 ## Working with Other Vielzeug Libraries
 
-### With Craft
+### With Ore
 
 Use Dnd in custom web components by attaching behavior in component lifecycle hooks.
 
 ```ts
 import { createSortable } from '@vielzeug/dnd';
-import { define, onMounted, html } from '@vielzeug/craft';
+import { define, onMounted, html } from '@vielzeug/ore';
 
 define('task-list', {
   setup(_props, { host }) {

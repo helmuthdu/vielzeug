@@ -1,4 +1,4 @@
-import { createForm, ValidationError } from '../../index';
+import { createForm, ForgeValidationError } from '../../index';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -413,16 +413,16 @@ describe('submitOrThrow', () => {
     expect(result).toBe('ok');
   });
 
-  test('throws ValidationError when validation fails', async () => {
+  test('throws ForgeValidationError when validation fails', async () => {
     const form = createForm({
       defaultValues: { name: '' },
       validators: { name: (v: unknown) => (!v ? 'Required' : undefined) },
     });
 
-    await expect(form.submitOrThrow(async () => 'never')).rejects.toThrow(ValidationError);
+    await expect(form.submitOrThrow(async () => 'never')).rejects.toThrow(ForgeValidationError);
   });
 
-  test('thrown ValidationError contains errors map', async () => {
+  test('thrown ForgeValidationError contains errors map', async () => {
     const form = createForm({
       defaultValues: { name: '' },
       validators: { name: (v: unknown) => (!v ? 'Name required' : undefined) },
@@ -436,11 +436,11 @@ describe('submitOrThrow', () => {
       caught = e;
     }
 
-    expect(caught).toBeInstanceOf(ValidationError);
-    expect((caught as ValidationError).errors).toEqual({ name: 'Name required' });
+    expect(caught).toBeInstanceOf(ForgeValidationError);
+    expect((caught as ForgeValidationError).errors).toEqual({ name: 'Name required' });
   });
 
-  test('re-throws handler errors as-is (not wrapped in ValidationError)', async () => {
+  test('re-throws handler errors as-is (not wrapped in ForgeValidationError)', async () => {
     const form = createForm({ defaultValues: { name: 'ok' } });
     const boom = new Error('handler exploded');
 

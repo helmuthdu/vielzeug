@@ -55,7 +55,7 @@ Use consistent markers throughout your audit output:
 ## 1. Context
 
 - These are **client-side and universal TypeScript libraries** — no server-side secrets by default, but they may be used in both browser and Node environments.
-- Zero external runtime dependencies in most packages — the attack surface is largely the package's own code and how callers use it. The exception is `sigil` (bundles `lucide`); audit declared deps under "Dependency Risks".
+- Zero external runtime dependencies in most packages — the attack surface is largely the package's own code and how callers use it. The exception is `refine` (bundles `lucide`); audit declared deps under "Dependency Risks".
 - TypeScript strict mode — type errors are caught at compile time, but runtime inputs can still be unsafe.
 - Assume **untrusted user input can reach any public API** of this package.
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.

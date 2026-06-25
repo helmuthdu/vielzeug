@@ -59,13 +59,13 @@ const loader = createMachine({
 | Feature                    | Clockwork                                                             | xstate                                                      | zustand                                           |
 | -------------------------- | --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------- |
 | Bundle size                | <PackageInfo package="clockwork" type="size" />                       | ~15 KB                                                      | ~2 KB                                             |
-| Zero dependencies          | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="x" size="16"></sg-icon> 5+ deps              | <sg-icon name="check" size="16"></sg-icon>        |
-| Typed discriminated events | <sg-icon name="check" size="16"></sg-icon>                            | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial | <sg-icon name="x" size="16"></sg-icon>            |
-| Reactive signals           | <sg-icon name="check" size="16"></sg-icon> Native                     | <sg-icon name="x" size="16"></sg-icon> Observer pattern     | <sg-icon name="check" size="16"></sg-icon> Native |
-| Persistence adapter        | <sg-icon name="check" size="16"></sg-icon> Pluggable                  | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>        |
-| Hierarchical states        | <sg-icon name="check" size="16"></sg-icon> Compound + leaf resolution | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>            |
-| Interceptor pipeline       | <sg-icon name="check" size="16"></sg-icon> Pure functions             | <sg-icon name="x" size="16"></sg-icon>                      | <sg-icon name="check" size="16"></sg-icon>        |
-| Context isolation          | <sg-icon name="check" size="16"></sg-icon> Cloned on every transition | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>            |
+| Zero dependencies          | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="x" size="16"></ore-icon> 5+ deps              | <ore-icon name="check" size="16"></ore-icon>        |
+| Typed discriminated events | <ore-icon name="check" size="16"></ore-icon>                            | <ore-icon name="triangle-alert" size="16"></ore-icon> Partial | <ore-icon name="x" size="16"></ore-icon>            |
+| Reactive signals           | <ore-icon name="check" size="16"></ore-icon> Native                     | <ore-icon name="x" size="16"></ore-icon> Observer pattern     | <ore-icon name="check" size="16"></ore-icon> Native |
+| Persistence adapter        | <ore-icon name="check" size="16"></ore-icon> Pluggable                  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>        |
+| Hierarchical states        | <ore-icon name="check" size="16"></ore-icon> Compound + leaf resolution | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>            |
+| Interceptor pipeline       | <ore-icon name="check" size="16"></ore-icon> Pure functions             | <ore-icon name="x" size="16"></ore-icon>                      | <ore-icon name="check" size="16"></ore-icon>        |
+| Context isolation          | <ore-icon name="check" size="16"></ore-icon> Cloned on every transition | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>            |
 
 <div class="decision-callout">
 

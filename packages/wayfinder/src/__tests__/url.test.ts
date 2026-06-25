@@ -1,7 +1,7 @@
 /**
  * router.url() — named-route URL construction.
  */
-import { createMemoryHistory, createRouter, RouterDisposedError } from '../';
+import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { settle } from './test-utils';
 
 describe('url()', () => {
@@ -130,7 +130,7 @@ describe('Symbol.dispose', () => {
     router[Symbol.dispose]();
 
     // subscribe() guards against post-dispose use
-    expect(() => router.subscribe(vi.fn())).toThrow(RouterDisposedError);
+    expect(() => router.subscribe(vi.fn())).toThrow(WayfinderDisposedError);
     // getSnapshot() is intentionally still readable post-dispose (useSyncExternalStore teardown)
     expect(() => router.getSnapshot()).not.toThrow();
   });
@@ -149,7 +149,7 @@ describe('disposalSignal', () => {
     router.dispose();
   });
 
-  it('fires with RouterDisposedError reason when router is disposed', async () => {
+  it('fires with WayfinderDisposedError reason when router is disposed', async () => {
     const history = createMemoryHistory('/');
     const router = createRouter({ history, routes: { home: { path: '/' } } });
 
@@ -160,7 +160,7 @@ describe('disposalSignal', () => {
     router.dispose();
 
     expect(signal.aborted).toBe(true);
-    expect(signal.reason).toBeInstanceOf(RouterDisposedError);
+    expect(signal.reason).toBeInstanceOf(WayfinderDisposedError);
     expect(router.disposed).toBe(true);
   });
 

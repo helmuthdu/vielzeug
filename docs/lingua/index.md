@@ -39,14 +39,14 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 | Feature                           | Lingua                                                                 | i18next                                    | FormatJS                                   |
 | --------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size                       | <PackageInfo package="lingua" type="size" />                           | ~24 kB                                     | ~16 kB                                     |
-| Typed key ergonomics              | <sg-icon name="check" size="16"></sg-icon>                             | Partial                                    | Partial                                    |
-| Deterministic fallback chain      | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Async locale preload              | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Namespace lazy loading            | <sg-icon name="check" size="16"></sg-icon> (`extend()`)                | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
-| Runtime snapshots + subscriptions | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| External formatter bridge         | <sg-icon name="check" size="16"></sg-icon> (`createFormatter` in main entry) | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
-| Framework agnostic                | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>                             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
+| Typed key ergonomics              | <ore-icon name="check" size="16"></ore-icon>                             | Partial                                    | Partial                                    |
+| Deterministic fallback chain      | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Async locale preload              | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Namespace lazy loading            | <ore-icon name="check" size="16"></ore-icon> (`extend()`)                | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
+| Runtime snapshots + subscriptions | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| External formatter bridge         | <ore-icon name="check" size="16"></ore-icon> (`createFormatter` in main entry) | Partial                                    | <ore-icon name="check" size="16"></ore-icon> |
+| Framework agnostic                | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies                 | <ore-icon name="check" size="16"></ore-icon>                             | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

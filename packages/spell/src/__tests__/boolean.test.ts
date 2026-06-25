@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('s.boolean()', () => {
   it('accepts true and false', () => {
@@ -8,7 +8,7 @@ describe('s.boolean()', () => {
 
   it('rejects truthy/falsy non-booleans', () => {
     for (const val of [1, 0, 'true', null]) {
-      expect(() => s.boolean().parse(val)).toThrow(ValidationError);
+      expect(() => s.boolean().parse(val)).toThrow(SpellValidationError);
     }
   });
 });

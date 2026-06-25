@@ -1,6 +1,6 @@
 import type { Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, ValidationError, _makeCtx, fail, prependIssuePath, resolveMessage } from '../core';
+import { ErrorCode, Schema, SpellValidationError, _makeCtx, fail, prependIssuePath, resolveMessage } from '../core';
 import { _messages } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
@@ -61,7 +61,7 @@ export class ArraySchema<T> extends Schema<T[]> {
       const raw = prepared.value;
 
       if (!Array.isArray(raw)) {
-        throw new ValidationError(fail(ErrorCode.invalid_type, c.messages.array.type()));
+        throw new SpellValidationError(fail(ErrorCode.invalid_type, c.messages.array.type()));
       }
 
       const settled = await Promise.all(raw.map((item) => this.itemSchema._parseFullAsync(item, c)));
@@ -83,7 +83,7 @@ export class ArraySchema<T> extends Schema<T[]> {
       const validationIssues = await this._runValidatorsAsync(parsed, c);
       const allIssues = [...issues, ...validationIssues];
 
-      if (allIssues.length > 0) throw new ValidationError(allIssues);
+      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
 
       return this._runPostprocessors(parsed) as T[];
     });

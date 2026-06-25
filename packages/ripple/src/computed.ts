@@ -3,7 +3,7 @@ import type { DepEntry } from './tracking';
 import type { Computed, ComputedOptions, Subscription } from './types';
 
 import { getDevToolsHook } from './devtools-hook';
-import { ensureError, StateError } from './error';
+import { ensureError, StateError } from './errors';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';

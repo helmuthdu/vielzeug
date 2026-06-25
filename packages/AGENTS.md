@@ -14,7 +14,7 @@ DOX contract for all source work under `packages/`. Each `packages/<name>/` is a
 Standard package shape: `src/index.ts` (the only public surface), `src/__tests__/` (Vitest), `vite.config.ts` (ESM+CJS), strict `tsconfig.json`.
 
 - All public exports go through `src/index.ts`, sorted (ESLint Perfectionist).
-- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `sigil` bundles `lucide`** — see its local contract. `sigil` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.devin/rules/conventions.md` for the full documented exceptions list.
+- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.devin/rules/conventions.md` for the full documented exceptions list.
 - Internal dev warnings go through `src/_warn.ts` (`warn()` / `issue()`), never bare `console.*`. See the logging standard in `.devin/rules/conventions.md`.
 - Owned-resource teardown is `dispose()` + `[Symbol.dispose]`. Never `destroy()`/`close()`/`cleanup()`.
 
@@ -31,7 +31,7 @@ Standard package shape: `src/index.ts` (the only public surface), `src/__tests__
 
 ## Child DOX Index
 
-- `packages/craft/AGENTS.md` — web-component authoring primitives; multiple sub-path exports.
+- `packages/ore/AGENTS.md` — web-component authoring primitives; multiple sub-path exports.
 - `packages/prism/AGENTS.md` — reactive SVG charting library; DOM-output package; accessibility hard requirement.
-- `packages/sigil/AGENTS.md` — component library; manifest-driven exports; bundles `lucide`.
+- `packages/refine/AGENTS.md` — component library; manifest-driven exports; bundles `lucide`.
 - `packages/codex/AGENTS.md` — MCP server + CLI; bundles docs at build time.

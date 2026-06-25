@@ -27,7 +27,7 @@ export class MachineError extends Error {
   readonly details?: Record<string, unknown>;
 
   constructor(code: MachineErrorCode, message: string, details?: Record<string, unknown>) {
-    super(`[@vielzeug/clockwork] ${message}`);
+    super(message);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
     this.code = code;

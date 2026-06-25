@@ -67,12 +67,12 @@ await container.dispose(); // all hooks run automatically
 | Feature                     | Conduit                                       | tsyringe                                                    | InversifyJS                                                                       |
 | --------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                                                       | ~45 kB                                                                            |
-| Typed token ergonomics      | <sg-icon name="check" size="16"></sg-icon>    | Partial                                                     | Partial                                                                           |
-| Async-first resolution      | <sg-icon name="check" size="16"></sg-icon>    | Partial                                                     | Partial                                                                           |
-| Child container scopes      | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>                                        |
-| Explicit disposal lifecycle | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>                      | Partial                                                                           |
-| Decorator-free usage        | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon> (decorator-oriented) | <sg-icon name="triangle-alert" size="16"></sg-icon> (commonly decorator-oriented) |
-| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="x" size="16"></sg-icon>                                            |
+| Typed token ergonomics      | <ore-icon name="check" size="16"></ore-icon>    | Partial                                                     | Partial                                                                           |
+| Async-first resolution      | <ore-icon name="check" size="16"></ore-icon>    | Partial                                                     | Partial                                                                           |
+| Child container scopes      | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                                        |
+| Explicit disposal lifecycle | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>                      | Partial                                                                           |
+| Decorator-free usage        | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon> (decorator-oriented) | <ore-icon name="triangle-alert" size="16"></ore-icon> (commonly decorator-oriented) |
+| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>                                            |
 
 <div class="decision-callout">
 

@@ -40,11 +40,11 @@ function resolveDocsFile(repoRoot: string, slug: string, page: DocPage): string 
 }
 
 // ---------------------------------------------------------------------------
-// Sigil CEM declarations
+// Refine CEM declarations
 // ---------------------------------------------------------------------------
 
-function readSigilDeclarations(repoRoot: string): CemDeclaration[] {
-  const manifestPath = resolve(repoRoot, 'packages/sigil/dist/custom-elements.json');
+function readRefineDeclarations(repoRoot: string): CemDeclaration[] {
+  const manifestPath = resolve(repoRoot, 'packages/refine/dist/custom-elements.json');
 
   if (!existsSync(manifestPath)) return [];
 
@@ -70,8 +70,8 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
 
       return f ? [f] : [];
     }),
-    // Include CEM manifest so a sigil-only component change invalidates the cache
-    ...(slug === 'sigil' ? [resolve(repoRoot, 'packages/sigil/dist/custom-elements.json')] : []),
+    // Include CEM manifest so a refine-only component change invalidates the cache
+    ...(slug === 'refine' ? [resolve(repoRoot, 'packages/refine/dist/custom-elements.json')] : []),
   ];
 
   const hash = createHash('sha256');
@@ -124,7 +124,7 @@ function resolveStr(primary: unknown, fallback: unknown, field: string, slug: st
   return '';
 }
 
-function processPackage(repoRoot: string, project: RushProject, sigilComponents: CemDeclaration[]): BundledPackage {
+function processPackage(repoRoot: string, project: RushProject, refineComponents: CemDeclaration[]): BundledPackage {
   const slug = project.projectFolder.replace('packages/', '');
   const pkgJson = readJson(resolve(repoRoot, project.projectFolder, 'package.json'));
   const apiSource = readTextIfExists(resolve(repoRoot, project.projectFolder, 'src/index.ts'));
@@ -152,7 +152,7 @@ function processPackage(repoRoot: string, project: RushProject, sigilComponents:
     apiSource: typeof apiSource === 'string' && apiSource.length > 0 ? apiSource : null,
     availableDocPages,
     category: typeof frontmatter['category'] === 'string' ? frontmatter['category'] : '',
-    components: slug === 'sigil' ? sigilComponents : [],
+    components: slug === 'refine' ? refineComponents : [],
     description: resolveStr(frontmatter['description'], pkgJson['description'], 'description', slug),
     docs,
     exports: toStringArray(frontmatter['exports'], 'exports'),
@@ -221,8 +221,8 @@ function buildPackages(
     existingPackages: Map<string, BundledPackage>;
     hashCache: Record<string, string>;
     incremental: boolean;
+    refineComponents: CemDeclaration[];
     repoRoot: string;
-    sigilComponents: CemDeclaration[];
   },
 ): BuildPackagesResult {
   let cacheHits = 0;
@@ -248,7 +248,7 @@ function buildPackages(
         }
       }
 
-      return processPackage(opts.repoRoot, project, opts.sigilComponents);
+      return processPackage(opts.repoRoot, project, opts.refineComponents);
     })
     .sort((a, b) => a.slug.localeCompare(b.slug));
 
@@ -292,7 +292,7 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
   const mcpPackageJson = readJson(resolve(packageRoot, 'package.json'));
   const projects: RushProject[] =
     options.projects ?? (readJson(resolve(repoRoot, 'rush.json')) as unknown as RushJson).projects;
-  const sigilComponents = readSigilDeclarations(repoRoot);
+  const refineComponents = readRefineDeclarations(repoRoot);
 
   const { existingPackages, hashCache } = incremental
     ? loadIncrementalCache(packageRoot)
@@ -302,8 +302,8 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
     existingPackages,
     hashCache,
     incremental,
+    refineComponents,
     repoRoot,
-    sigilComponents,
   });
 
   if (incremental && cacheHits > 0) {

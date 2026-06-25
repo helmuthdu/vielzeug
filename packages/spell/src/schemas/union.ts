@@ -1,6 +1,6 @@
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, Schema, ValidationError, _makeCtx } from '../core';
+import { ErrorCode, Schema, SpellValidationError, _makeCtx } from '../core';
 
 export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOutput<T[number]>> {
   readonly schemas: T;
@@ -62,19 +62,19 @@ export class UnionSchema<T extends readonly AnySchema[]> extends Schema<InferOut
 
         const validationIssues = await this._runValidatorsAsync(data, c);
 
-        if (validationIssues.length) throw new ValidationError(validationIssues);
+        if (validationIssues.length) throw new SpellValidationError(validationIssues);
 
         return this._runPostprocessors(data) as InferOutput<T[number]>;
       } catch (err) {
         if (err instanceof AggregateError) {
           const errors = err.errors as unknown[];
-          const nonValidation = errors.find((e) => !ValidationError.is(e));
+          const nonValidation = errors.find((e) => !SpellValidationError.is(e));
 
           if (nonValidation !== undefined) throw nonValidation;
 
-          const branchErrors = (errors as ValidationError[]).map((e) => e.issues);
+          const branchErrors = (errors as SpellValidationError[]).map((e) => e.issues);
 
-          throw new ValidationError([
+          throw new SpellValidationError([
             {
               code: ErrorCode.invalid_union,
               message: c.messages.union.invalid(),

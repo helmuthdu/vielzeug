@@ -1,13 +1,13 @@
 export { createContainer } from './container';
 export {
-  CircularDependencyError,
+  ContainerCircularDependencyError,
   ContainerDisposedError,
   ContainerError,
   ContainerFrozenError,
-  DuplicateRegistrationError,
-  ProviderNotFoundError,
-  ScopedResolutionError,
-  SyncResolutionError,
+  ContainerDuplicateRegistrationError,
+  ContainerProviderNotFoundError,
+  ContainerScopedResolutionError,
+  ContainerSyncResolutionError,
 } from './errors';
 export type {
   Container,

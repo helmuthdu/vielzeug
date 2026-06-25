@@ -3,7 +3,7 @@ description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, s
 package: dnd
 category: ui-interaction
 keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [craft, scroll, sigil]
+related: [ore, scroll, refine]
 exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
 ---
 
@@ -22,7 +22,7 @@ exports: [createDropZone, createSortable, createSortableScope, applyReorder, mat
 
 **When to use:** File drop zones with MIME filtering and async validation, or sortable lists with keyboard, FLIP animation, and optimistic-update support — zero dependencies.
 
-**Related:** [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/)
+**Related:** [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/scroll](https://vielzeug.dev/scroll/) · [@vielzeug/refine](https://vielzeug.dev/refine/)
 
 </details>
 

@@ -3,7 +3,7 @@
 
 import type { Messages } from './_catalog';
 
-import { checkDisposed, checkDisposedAsync } from './_errors';
+import { checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;
 export type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;

@@ -76,13 +76,13 @@ guard.allowedActions('post', ['delete', 'edit'], post); // ['delete', 'edit'] or
 | Feature                           | Ward                                                   | CASL                                       | AccessControl                                                         |
 | --------------------------------- | ------------------------------------------------------ | ------------------------------------------ | --------------------------------------------------------------------- |
 | Bundle size                       | <PackageInfo package="ward" type="size" />             | ~11 kB                                     | ~7 kB                                                                 |
-| Typed rule contracts              | <sg-icon name="check" size="16"></sg-icon>             | Partial                                    | Partial                                                               |
-| Deterministic deny precedence     | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                            |
-| Rule predicates with request data | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="triangle-alert" size="16"></sg-icon> (manual patterns) |
-| Wildcard action support           | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon>                            |
-| Principal-bound API               | <sg-icon name="check" size="16"></sg-icon> (`forUser`) | Partial                                    | <sg-icon name="x" size="16"></sg-icon>                                |
-| Explainable decisions             | <sg-icon name="check" size="16"></sg-icon>             | Partial                                    | <sg-icon name="x" size="16"></sg-icon>                                |
-| Zero dependencies                 | <sg-icon name="check" size="16"></sg-icon>             | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>                                |
+| Typed rule contracts              | <ore-icon name="check" size="16"></ore-icon>             | Partial                                    | Partial                                                               |
+| Deterministic deny precedence     | <ore-icon name="check" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                            |
+| Rule predicates with request data | <ore-icon name="check" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="triangle-alert" size="16"></ore-icon> (manual patterns) |
+| Wildcard action support           | <ore-icon name="check" size="16"></ore-icon>             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon>                            |
+| Principal-bound API               | <ore-icon name="check" size="16"></ore-icon> (`forUser`) | Partial                                    | <ore-icon name="x" size="16"></ore-icon>                                |
+| Explainable decisions             | <ore-icon name="check" size="16"></ore-icon>             | Partial                                    | <ore-icon name="x" size="16"></ore-icon>                                |
+| Zero dependencies                 | <ore-icon name="check" size="16"></ore-icon>             | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>                                |
 
 <div class="decision-callout">
 

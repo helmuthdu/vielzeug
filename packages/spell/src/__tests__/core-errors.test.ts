@@ -1,18 +1,18 @@
 import { vi } from 'vitest';
 
-import { errorsAt, prependIssuePath, resetMessages, s, setLogger, setMessages, ValidationError } from '../index';
+import { errorsAt, prependIssuePath, resetMessages, s, setLogger, setMessages, SpellValidationError } from '../index';
 
-describe('ValidationError message and shaping', () => {
+describe('SpellValidationError message and shaping', () => {
   it('formats a root-level issue with fallback path label', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
 
-    expect(error.message).toBe('[@vielzeug/spell] value: Invalid [custom]');
+    expect(error.message).toBe('value: Invalid [custom]');
   });
 
   it('formats nested object and array paths', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Invalid', path: ['items', 0, 'name'] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Invalid', path: ['items', 0, 'name'] }]);
 
-    expect(error.message).toBe('[@vielzeug/spell] items.0.name: Invalid [custom]');
+    expect(error.message).toBe('items.0.name: Invalid [custom]');
   });
 
   it('flatten() returns structured path entries for field errors', () => {
@@ -110,14 +110,14 @@ describe('ValidationError message and shaping', () => {
   });
 
   it('errorsAt() returns root errors when no path is given', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Root error', path: [] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Root error', path: [] }]);
     const tree = error.format();
 
     expect(errorsAt(tree)).toEqual(['Root error']);
   });
 
   it('format() uses null-prototype nodes for unsafe path segments', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Blocked', path: ['__proto__', 'polluted'] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Blocked', path: ['__proto__', 'polluted'] }]);
     const tree = error.format();
 
     expect(Object.getPrototypeOf(tree)).toBeNull();
@@ -126,7 +126,7 @@ describe('ValidationError message and shaping', () => {
   });
 
   it('format() safely stores constructor/prototype path segments', () => {
-    const error = new ValidationError([
+    const error = new SpellValidationError([
       { code: 'custom', message: 'Blocked', path: ['constructor', 'prototype', 'polluted'] },
     ]);
     const tree = error.format();
@@ -137,7 +137,7 @@ describe('ValidationError message and shaping', () => {
   });
 
   it('format() remaps "_errors" path segment to avoid corrupting the internal field', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Nested', path: ['_errors', 'field'] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Nested', path: ['_errors', 'field'] }]);
     const tree = error.format();
 
     expect(tree._errors).toEqual([]);
@@ -146,26 +146,26 @@ describe('ValidationError message and shaping', () => {
   });
 
   it('errorsAt() with "_errors" segment does not fall into the string[] internal field', () => {
-    const error = new ValidationError([{ code: 'custom', message: 'Deep', path: ['_errors'] }]);
+    const error = new SpellValidationError([{ code: 'custom', message: 'Deep', path: ['_errors'] }]);
     const tree = error.format();
 
     expect(tree._errors).toEqual([]);
     expect(errorsAt(tree, '_errors')).toEqual(['Deep']);
   });
 
-  it('ValidationError.is() narrows unknown errors', () => {
+  it('SpellValidationError.is() narrows unknown errors', () => {
     const result = s.string().safeParse(42);
 
     expect(result.success).toBe(false);
 
     if (!result.success) {
-      expect(ValidationError.is(result.error)).toBe(true);
-      expect(ValidationError.is(new Error('plain'))).toBe(false);
+      expect(SpellValidationError.is(result.error)).toBe(true);
+      expect(SpellValidationError.is(new Error('plain'))).toBe(false);
     }
   });
 });
 
-describe('ValidationError.bestMatch()', () => {
+describe('SpellValidationError.bestMatch()', () => {
   it('returns null when no invalid_union issue exists', () => {
     const result = s.string().safeParse(42);
 
@@ -195,7 +195,7 @@ describe('ValidationError.bestMatch()', () => {
   });
 
   it('returns null when invalid_union has zero branches', () => {
-    const error = new ValidationError([
+    const error = new SpellValidationError([
       { code: 'invalid_union', message: 'no match', params: { errors: [] }, path: [] },
     ]);
 

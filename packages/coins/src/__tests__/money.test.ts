@@ -6,6 +6,7 @@ import {
   allocate,
   clamp,
   compare,
+  CoinsError,
   CurrencyMismatchError,
   divide,
   fromJSON,
@@ -137,17 +138,17 @@ describe('money factory', () => {
   });
 
   describe('currency validation', () => {
-    it('throws RangeError for invalid currency code (string amount)', () => {
-      expect(() => money('100.00', 'NOTREAL')).toThrow(RangeError);
+    it('throws InvalidCurrencyError for invalid currency code (string amount)', () => {
+      expect(() => money('100.00', 'NOTREAL')).toThrow(InvalidCurrencyError);
       expect(() => money('100.00', 'NOTREAL')).toThrow('Invalid ISO 4217 currency code');
     });
 
-    it('throws RangeError for invalid currency code (number amount)', () => {
-      expect(() => money(100, 'NOTREAL')).toThrow(RangeError);
+    it('throws InvalidCurrencyError for invalid currency code (number amount)', () => {
+      expect(() => money(100, 'NOTREAL')).toThrow(InvalidCurrencyError);
     });
 
-    it('throws RangeError for invalid currency code (bigint amount)', () => {
-      expect(() => money(100n, 'NOTREAL')).toThrow(RangeError);
+    it('throws InvalidCurrencyError for invalid currency code (bigint amount)', () => {
+      expect(() => money(100n, 'NOTREAL')).toThrow(InvalidCurrencyError);
     });
   });
 
@@ -225,23 +226,27 @@ describe('clamp', () => {
     expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow('clamp');
   });
 
-  it('throws TypeError on currency mismatch (m vs bounds)', () => {
-    expect(() => clamp(money('5.00', 'EUR'), lower, upper)).toThrow(TypeError);
+  it('throws CurrencyMismatchError on currency mismatch (m vs bounds)', () => {
+    expect(() => clamp(money('5.00', 'EUR'), lower, upper)).toThrow(CurrencyMismatchError);
     expect(() => clamp(money('5.00', 'EUR'), lower, upper)).toThrow('Currency mismatch');
   });
 
-  it('throws TypeError on currency mismatch (lower vs upper)', () => {
-    expect(() => clamp(money('5.00', 'USD'), lower, money('10.00', 'EUR'))).toThrow(TypeError);
+  it('throws CurrencyMismatchError on currency mismatch (lower vs upper)', () => {
+    expect(() => clamp(money('5.00', 'USD'), lower, money('10.00', 'EUR'))).toThrow(CurrencyMismatchError);
   });
 
-  it('throws TypeError when only upper mismatches (m and lower same, upper different)', () => {
+  it('throws CurrencyMismatchError when only upper mismatches (m and lower same, upper different)', () => {
     // Exercises the new upfront guard: m.currency === lower.currency but !== upper.currency
-    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'EUR'))).toThrow(TypeError);
+    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'EUR'))).toThrow(
+      CurrencyMismatchError,
+    );
     expect(() => clamp(money('5.00', 'USD'), money('1.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
   });
 
-  it('throws TypeError when only lower mismatches (m and upper same, lower different)', () => {
-    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'EUR'), money('10.00', 'USD'))).toThrow(TypeError);
+  it('throws CurrencyMismatchError when only lower mismatches (m and upper same, lower different)', () => {
+    expect(() => clamp(money('5.00', 'USD'), money('1.00', 'EUR'), money('10.00', 'USD'))).toThrow(
+      CurrencyMismatchError,
+    );
   });
 });
 
@@ -255,7 +260,7 @@ describe('add', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(TypeError);
+    expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(CurrencyMismatchError);
     expect(() => add(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -270,7 +275,7 @@ describe('subtract', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(TypeError);
+    expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow(CurrencyMismatchError);
     expect(() => subtract(money('10.00', 'USD'), money('5.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -693,13 +698,17 @@ describe('sum', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(TypeError);
+    expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(CurrencyMismatchError);
     expect(() => sum([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
   });
 
   it('detects mismatch at any position (not just adjacent pairs)', () => {
-    expect(() => sum([money('1.00', 'USD'), money('2.00', 'USD'), money('3.00', 'EUR')])).toThrow(TypeError);
-    expect(() => sum([money('1.00', 'USD'), money('2.00', 'EUR'), money('3.00', 'USD')])).toThrow(TypeError);
+    expect(() => sum([money('1.00', 'USD'), money('2.00', 'USD'), money('3.00', 'EUR')])).toThrow(
+      CurrencyMismatchError,
+    );
+    expect(() => sum([money('1.00', 'USD'), money('2.00', 'EUR'), money('3.00', 'USD')])).toThrow(
+      CurrencyMismatchError,
+    );
   });
 
   it('sums a large array without intermediate Money objects', () => {
@@ -726,7 +735,7 @@ describe('min', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => min([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(TypeError);
+    expect(() => min([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(CurrencyMismatchError);
     expect(() => min([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
   });
 });
@@ -748,7 +757,7 @@ describe('max', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => max([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(TypeError);
+    expect(() => max([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow(CurrencyMismatchError);
     expect(() => max([money('1.00', 'USD'), money('1.00', 'EUR')])).toThrow('Currency mismatch');
   });
 });
@@ -813,9 +822,9 @@ describe('comparison predicates', () => {
   it('predicates throw on currency mismatch', () => {
     const eur = money('5.00', 'EUR');
 
-    expect(() => greaterThan(five, eur)).toThrow(TypeError);
+    expect(() => greaterThan(five, eur)).toThrow(CurrencyMismatchError);
     expect(() => greaterThan(five, eur)).toThrow('Currency mismatch');
-    expect(() => lessThan(five, eur)).toThrow(TypeError);
+    expect(() => lessThan(five, eur)).toThrow(CurrencyMismatchError);
     expect(() => lessThan(five, eur)).toThrow('Currency mismatch');
   });
 });
@@ -834,7 +843,7 @@ describe('compare', () => {
   });
 
   it('throws on currency mismatch', () => {
-    expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow(TypeError);
+    expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow(CurrencyMismatchError);
     expect(() => compare(money('10.00', 'USD'), money('10.00', 'EUR'))).toThrow('Currency mismatch');
   });
 });
@@ -879,8 +888,8 @@ describe('toJSON / fromJSON', () => {
     expect(fromJSON(toJSON(original))).toEqual(original);
   });
 
-  it('throws RangeError for invalid currency in fromJSON', () => {
-    expect(() => fromJSON({ amount: '100', currency: 'FAKE' })).toThrow(RangeError);
+  it('throws InvalidCurrencyError for invalid currency in fromJSON', () => {
+    expect(() => fromJSON({ amount: '100', currency: 'FAKE' })).toThrow(InvalidCurrencyError);
   });
 
   it('throws TypeError for invalid amount string in fromJSON', () => {
@@ -1185,10 +1194,10 @@ describe('roundTo', () => {
 });
 
 describe('CurrencyMismatchError', () => {
-  it('is instanceof TypeError', () => {
+  it('is instanceof CoinsError', () => {
     const e = new CurrencyMismatchError('USD', 'EUR');
 
-    expect(e).toBeInstanceOf(TypeError);
+    expect(e).toBeInstanceOf(CoinsError);
     expect(e).toBeInstanceOf(CurrencyMismatchError);
   });
 
@@ -1219,10 +1228,10 @@ describe('CurrencyMismatchError', () => {
 });
 
 describe('InvalidCurrencyError', () => {
-  it('is instanceof RangeError', () => {
+  it('is instanceof CoinsError', () => {
     const e = new InvalidCurrencyError('FAKE');
 
-    expect(e).toBeInstanceOf(RangeError);
+    expect(e).toBeInstanceOf(CoinsError);
     expect(e).toBeInstanceOf(InvalidCurrencyError);
   });
 

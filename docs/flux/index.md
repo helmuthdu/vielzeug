@@ -101,11 +101,11 @@ const unsub = results$.subscribe(renderResults);
 | Feature                       | Flux                                                        | RxJS                                                         | Observable (TC39)                                      |
 | ----------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
 | Bundle size                   | <PackageInfo package="flux" type="size" />                  | ~50 KB                                                       | Native (no bundle)                                     |
-| Zero dependencies             | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>                   | <sg-icon name="check" size="16"></sg-icon>             |
-| Cold by default               | <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="check" size="16"></sg-icon>                   | <sg-icon name="check" size="16"></sg-icon>             |
-| Disposable (not just teardown)| <sg-icon name="check" size="16"></sg-icon>                  | <sg-icon name="triangle-alert" size="16"></sg-icon> Partial  | <sg-icon name="x" size="16"></sg-icon>                 |
-| Ripple signal adapters        | <sg-icon name="check" size="16"></sg-icon> Native           | <sg-icon name="x" size="16"></sg-icon>                       | <sg-icon name="x" size="16"></sg-icon>                 |
-| Operator library              | <sg-icon name="check" size="16"></sg-icon> 40+ operators    | <sg-icon name="check" size="16"></sg-icon> 100+              | <sg-icon name="triangle-alert" size="16"></sg-icon> WIP|
+| Zero dependencies             | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                   | <ore-icon name="check" size="16"></ore-icon>             |
+| Cold by default               | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                   | <ore-icon name="check" size="16"></ore-icon>             |
+| Disposable (not just teardown)| <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="triangle-alert" size="16"></ore-icon> Partial  | <ore-icon name="x" size="16"></ore-icon>                 |
+| Ripple signal adapters        | <ore-icon name="check" size="16"></ore-icon> Native           | <ore-icon name="x" size="16"></ore-icon>                       | <ore-icon name="x" size="16"></ore-icon>                 |
+| Operator library              | <ore-icon name="check" size="16"></ore-icon> 40+ operators    | <ore-icon name="check" size="16"></ore-icon> 100+              | <ore-icon name="triangle-alert" size="16"></ore-icon> WIP|
 
 <div class="decision-callout">
 

@@ -155,7 +155,7 @@ doubled.dispose();
 ### Related
 
 - [Stores](./stores)
-- [Craft Reactivity](/craft/)
+- [Ore Reactivity](/ore/)
 
 - [Usage Guide](../usage.md#framework-integration)
 - [Pattern: Batch for Complex Mutations](./pattern-batch-for-complex-mutations.md)

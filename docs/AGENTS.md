@@ -14,7 +14,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 - Each `docs/<name>/` has the four standard pages: `index.md` (Explanation), `usage.md` (How-to), `api.md` (Reference), `examples.md` + `examples/*.md` (How-to). Follow `pkg-docs.md` for required frontmatter and section order.
 - REPL wiring lives in `docs/.vitepress/theme/components/repl/`: `examples/<name>/` (example modules) and `types/<name>.ts` (Monaco types), each registered in the matching `index.ts`.
-- **DOM-output packages (`craft`, `sigil`, `prism`) have no REPL examples or types** — the REPL has no preview container. Do not add them.
+- **DOM-output packages (`ore`, `refine`, `prism`) have no REPL examples or types** — the REPL has no preview container. Do not add them.
 - Keep docs in sync with `packages/<name>/src/index.ts`; the `codex` package bundles these docs, so changes here feed the MCP server.
 
 ## Work Guidance

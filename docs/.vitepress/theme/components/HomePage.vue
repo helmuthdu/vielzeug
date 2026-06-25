@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref } from 'vue';
+import PackageInfo from './PackageInfo.vue';
 
 const prefersReducedMotion = ref(false);
 
@@ -135,12 +136,12 @@ const categories = [
     name: 'UI Components',
     icon: 'layout',
     packages: [
-      { id: 'craft', tagline: 'Web component primitives' },
+      { id: 'ore', tagline: 'Web component primitives' },
       { id: 'dnd', tagline: 'Drag & drop' },
       { id: 'orbit', tagline: 'Floating positioning' },
       { id: 'prism', tagline: 'SVG charts' },
       { id: 'scroll', tagline: 'Virtual lists' },
-      { id: 'sigil', tagline: 'Accessible components' },
+      { id: 'refine', tagline: 'Accessible components' },
     ],
   },
   {
@@ -165,16 +166,51 @@ const featuredPackages = [
   { id: 'spell', desc: 'Schema validation with a fluent TypeScript API' },
 ];
 
-const installCmds = ['pnpm add @vielzeug/ripple', 'pnpm add @vielzeug/arsenal', 'pnpm add @vielzeug/spell'];
-const installCmdIndex = ref(0);
-const installCmd = computed(() => installCmds[installCmdIndex.value]);
+const heroPackages = [
+  { id: 'ripple', name: 'ripple', cmd: 'pnpm add @vielzeug/ripple', tagline: 'Signals, computed, and reactive stores' },
+  { id: 'spell', name: 'spell', cmd: 'pnpm add @vielzeug/spell', tagline: 'Schema validation with fluent API' },
+  { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ tree-shakeable TS utilities' },
+];
+const activeHeroIndex = ref(0);
+const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
 
-function cycleInstall() {
-  installCmdIndex.value = (installCmdIndex.value + 1) % installCmds.length;
+const searchQuery = ref('');
+const filteredCategories = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase();
+  if (!query) return categories;
+
+  return categories
+    .map((cat) => {
+      const matchedPackages = cat.packages.filter(
+        (pkg) =>
+          pkg.id.toLowerCase().includes(query) ||
+          pkg.tagline.toLowerCase().includes(query)
+      );
+      if (matchedPackages.length > 0 || cat.name.toLowerCase().includes(query)) {
+        return {
+          ...cat,
+          packages: matchedPackages.length > 0 ? matchedPackages : cat.packages,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean) as typeof categories;
+});
+
+const coreEssentials = [
+  { id: 'ripple', tagline: 'Signals, computed, and effects', size: '1.2 kB' },
+  { id: 'spell', tagline: 'Schema validation with fluent API', size: '1.8 kB' },
+  { id: 'arsenal', tagline: '75+ zero-dependency utility functions', size: '2.5 kB' },
+  { id: 'courier', tagline: 'HTTP client & query cache / mutations', size: '2.0 kB' },
+];
+
+
+function cycleHeroPkg() {
+  activeHeroIndex.value = (activeHeroIndex.value + 1) % heroPackages.length;
 }
 
 onMounted(() => {
-  installCmdIndex.value = 0;
+  activeHeroIndex.value = 0;
 
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
   prefersReducedMotion.value = mq.matches;
@@ -212,58 +248,63 @@ onUnmounted(() => {
         <div class="hero-content">
           <div class="hero-badge">
             <a href="#packages" class="hero-badge-link">
-              <sg-badge variant="primary">{{ packageCount }} packages</sg-badge>
+              <ore-badge variant="primary">{{ packageCount }} packages</ore-badge>
             </a>
-            <sg-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</sg-badge>
+            <ore-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</ore-badge>
           </div>
           <h1 class="hero-title">
-            <span class="hero-title-main">Vielzeug</span>
-            <span class="hero-title-sub">Many Tools. Zero Weight.</span>
+            <ore-text as="span" variant="heading" size="2xl" weight="bold" class="hero-title-main">Vielzeug</ore-text>
+            <ore-text as="span" variant="heading" size="lg" weight="medium" color="muted" class="hero-title-sub">Many Tools. Zero Weight.</ore-text>
           </h1>
-          <p class="hero-description">
-            From signals with <em>Ripple</em> to forms via <em>Forge</em>, explore our full range of zero-dependency
-            TypeScript tools. Pick one or compose them all.
-          </p>
+          <ore-text as="p" size="md" color="muted" class="hero-description">
+            Zero-dependency TypeScript packages — signals, forms, validation, routing, and more. Use one, combine
+            any, trust all of them.
+          </ore-text>
           <div class="hero-values">
-            <sg-tooltip
+            <ore-tooltip
               content="Built with TypeScript from the ground up, with strict types and no 'any'"
               placement="top">
-              <span class="value-item"><sg-icon name="shield-check" size="16"></sg-icon> Type-safe</span>
-            </sg-tooltip>
-            <sg-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
-              <span class="value-item"><sg-icon name="scissors" size="16"></sg-icon> Tree-shakeable</span>
-            </sg-tooltip>
-            <sg-tooltip
+              <span class="value-item"><ore-icon name="shield-check" size="16"></ore-icon> Type-safe</span>
+            </ore-tooltip>
+            <ore-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
+              <span class="value-item"><ore-icon name="scissors" size="16"></ore-icon> Tree-shakeable</span>
+            </ore-tooltip>
+            <ore-tooltip
               content="No external npm dependencies — only other vielzeug packages where needed"
               placement="top">
-              <span class="value-item"><sg-icon name="package" size="16"></sg-icon> Zero External Deps</span>
-            </sg-tooltip>
-            <sg-tooltip content="Free to use in any project, commercial or open-source" placement="top">
-              <span class="value-item"><sg-icon name="scale" size="16"></sg-icon> MIT</span>
-            </sg-tooltip>
+              <span class="value-item"><ore-icon name="package" size="16"></ore-icon> Zero transitive deps</span>
+            </ore-tooltip>
+            <ore-tooltip content="Free to use in any project, commercial or open-source" placement="top">
+              <span class="value-item"><ore-icon name="scale" size="16"></ore-icon> MIT</span>
+            </ore-tooltip>
           </div>
           <div class="hero-install">
-            <sg-copy-command :value="installCmd" class="install-row">
-              <sg-button
+            <ore-copy-command :value="activeHeroPkg.cmd" class="install-row">
+              <ore-button
                 slot="suffix"
                 size="sm"
                 variant="text"
                 icon-only
                 aria-label="Show next package example"
-                @click="cycleInstall">
-                <sg-icon name="chevron-right" size="14" aria-hidden="true"></sg-icon>
-              </sg-button>
-            </sg-copy-command>
+                @click="cycleHeroPkg">
+                <ore-icon name="chevron-right" size="14" aria-hidden="true"></ore-icon>
+              </ore-button>
+            </ore-copy-command>
+            <div class="hero-install-meta">
+              <ore-text color="muted" size="sm">{{ activeHeroPkg.tagline }}</ore-text>
+              <ore-text color="muted" size="sm" style="opacity:0.5">•</ore-text>
+              <ore-text color="primary" size="sm" weight="semibold" family="mono"><PackageInfo :package="activeHeroPkg.id" type="size" /></ore-text>
+            </div>
           </div>
           <div class="hero-actions">
             <a href="/guide/">
-              <sg-button variant="solid" color="primary" size="md" effect="shine">
-                <sg-icon slot="prefix" name="book-open" size="16"></sg-icon>
+              <ore-button variant="solid" color="primary" size="md" effect="shine">
+                <ore-icon slot="prefix" name="book-open" size="16"></ore-icon>
                 Get Started
-              </sg-button>
+              </ore-button>
             </a>
             <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">
-              <sg-button variant="outline" color="primary" size="md"> GitHub </sg-button>
+              <ore-button variant="outline" color="primary" size="md"> GitHub </ore-button>
             </a>
           </div>
         </div>
@@ -373,17 +414,67 @@ onUnmounted(() => {
       </div>
     </section>
 
+    <!-- Why Vielzeug -->
+    <section class="why">
+      <div class="why-inner">
+
+        <div class="why-header">
+          <ore-text as="p" variant="overline" class="why-overline">A different kind of toolkit</ore-text>
+          <ore-text as="h2" variant="heading" size="xl" weight="bold" class="why-title">Everything fits. Nothing fights.</ore-text>
+          <ore-text as="p" color="muted" class="why-subtitle">{{ packageCount }} packages built as one. Same conventions, same primitives, same release cadence — so you spend time on your product, not on integration.</ore-text>
+        </div>
+
+        <!-- Stat strip -->
+        <div class="why-stats">
+          <div class="why-stat">
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">0</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Transitive dependencies across all {{ packageCount }} packages</ore-text>
+          </div>
+          <div class="why-stat-divider"></div>
+          <div class="why-stat">
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">1</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Consistent API surface — one pattern to learn</ore-text>
+          </div>
+          <div class="why-stat-divider"></div>
+          <div class="why-stat">
+            <ore-text as="p" variant="heading" size="2xl" weight="bold" color="primary" class="why-stat-value">{{ packageCount }}</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-stat-label">Independently installable packages</ore-text>
+          </div>
+        </div>
+
+        <!-- Feature cards -->
+        <ore-grid cols="1" cols-md="3" gap="lg" class="why-cards">
+          <ore-card variant="flat" padding="lg" class="why-card">
+            <div class="why-card-icon"><ore-icon name="book-open" size="20"></ore-icon></div>
+            <ore-text as="p" weight="semibold" class="why-card-title">One mental model</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Same <code>dispose()</code> contract. Same signal shape. Same error format. Learn the pattern once — every new package feels familiar from line one.</ore-text>
+          </ore-card>
+          <ore-card variant="flat" padding="lg" class="why-card">
+            <div class="why-card-icon"><ore-icon name="shield-check" size="20"></ore-icon></div>
+            <ore-text as="p" weight="semibold" class="why-card-title">No hidden dependencies</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Every package you install is every package you own. No surprises in <code>node_modules</code>, no version conflicts six months from now.</ore-text>
+          </ore-card>
+          <ore-card variant="flat" padding="lg" class="why-card">
+            <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
+            <ore-text as="p" weight="semibold" class="why-card-title">Packages that compose</ore-text>
+            <ore-text as="p" size="sm" color="muted" class="why-card-desc">Spell schemas slot into Forge fields. Ripple signals drive Ore templates. No glue code, no adapter layer — they were designed to work together.</ore-text>
+          </ore-card>
+        </ore-grid>
+
+      </div>
+    </section>
+
     <!-- Code Showcase -->
     <section id="showcase" class="showcase">
       <div class="showcase-inner">
-        <h2 class="section-title">Modular by Design</h2>
-        <p class="section-subtitle">Import what you need. Each package works alone or together.</p>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" align="center" class="section-title">See how they fit together</ore-text>
+        <ore-text as="p" color="muted" align="center" class="section-subtitle">Each package is standalone. Combined, they eliminate entire categories of glue code.</ore-text>
         <CodeWindow lang="ts" filename="app.ts">
           <pre
-            class="showcase-pre"><code><span class="hl-keyword">import</span> { <span class="hl-fn">createForm</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/forge'</span>;
-<span class="hl-keyword">import</span> { s } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/spell'</span>;
-<span class="hl-keyword">import</span> { <span class="hl-fn">createApi</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/courier'</span>;
-<span class="hl-keyword">import</span> { <span class="hl-fn">createLogger</span> } <span class="hl-keyword">from</span> <span class="hl-string">'@vielzeug/rune'</span>;
+            class="showcase-pre"><code><span class="hl-keyword">import</span> { <span class="hl-fn">createForm</span> } <span class="hl-keyword">from</span> <a href="/forge/" class="showcase-import-link"><span class="hl-string">'@vielzeug/forge'</span></a>;
+<span class="hl-keyword">import</span> { s } <span class="hl-keyword">from</span> <a href="/spell/" class="showcase-import-link"><span class="hl-string">'@vielzeug/spell'</span></a>;
+<span class="hl-keyword">import</span> { <span class="hl-fn">createApi</span> } <span class="hl-keyword">from</span> <a href="/courier/" class="showcase-import-link"><span class="hl-string">'@vielzeug/courier'</span></a>;
+<span class="hl-keyword">import</span> { <span class="hl-fn">createLogger</span> } <span class="hl-keyword">from</span> <a href="/rune/" class="showcase-import-link"><span class="hl-string">'@vielzeug/rune'</span></a>;
 
 <span class="hl-keyword">const</span> log = <span class="hl-fn">createLogger</span>(<span class="hl-string">'auth'</span>);
 <span class="hl-keyword">const</span> api = <span class="hl-fn">createApi</span>({ baseUrl: <span class="hl-string">'https://api.example.com'</span> });
@@ -399,8 +490,8 @@ onUnmounted(() => {
 });
 
 form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (values) =&gt; {
-  <span class="hl-keyword">const</span> user = <span class="hl-keyword">await</span> api.<span class="hl-fn">post</span>(<span class="hl-string">'/auth/login'</span>, { body: values });
-  log.<span class="hl-fn">info</span>(<span class="hl-string">'Login successful'</span>, { user });
+  <span class="hl-keyword">const</span> user = <span class="hl-keyword">await</span> api.<span class="hl-fn">post</span>('/auth/login', { body: values });
+  log.<span class="hl-fn">info</span>('Login successful', { user });
 });</code></pre>
         </CodeWindow>
       </div>
@@ -409,17 +500,52 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
     <!-- Package Explorer -->
     <section id="packages" class="explorer">
       <div class="explorer-inner">
-        <h2 class="section-title">The Complete Toolkit</h2>
-        <p class="section-subtitle">
-          Organized by domain. Every package ships independently, works alongside the rest.
-        </p>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">One source of truth.</ore-text>
+        <ore-text as="p" color="muted" class="section-subtitle">
+          Organized by domain. Every package is independently installable, zero transitive deps.
+        </ore-text>
 
-        <sg-grid responsive min-col-width="320px" gap="xl" class="category-grid">
-          <div v-for="cat in categories" :key="cat.name" class="category-section">
-            <h3 class="category-name">
-              <sg-icon :name="cat.icon" size="16"></sg-icon>
+        <div class="explorer-toolbar">
+          <ore-input
+            type="search"
+            :value="searchQuery"
+            placeholder="Search packages (e.g. ripple, debounce, state)..."
+            variant="outline"
+            color="primary"
+            rounded="full"
+            clearable
+            class="explorer-search"
+            @input="(e: CustomEvent<{value: string}>) => searchQuery = e.detail.value"
+            @change="(e: CustomEvent<{value: string}>) => searchQuery = e.detail.value"
+          ></ore-input>
+        </div>
+
+        <div v-if="!searchQuery" class="essentials-section">
+          <ore-text as="h3" variant="overline" class="essentials-title">Highlighted packages</ore-text>
+          <ore-grid responsive min-col-width="240px" gap="md">
+            <a v-for="pkg in coreEssentials" :key="pkg.id" :href="`/${pkg.id}/`" class="essential-card-link">
+              <ore-card variant="flat" padding="md" class="essential-card">
+                <div class="essential-card-header">
+                  <img :src="`/logo-${pkg.id}.svg`" alt="" class="essential-logo" />
+                  <ore-text weight="bold" family="mono" class="essential-name">{{ pkg.id }}</ore-text>
+                </div>
+                <ore-text as="p" size="sm" color="muted" class="essential-desc">{{ pkg.tagline }}</ore-text>
+                <div slot="footer" class="essential-footer">
+                  <PackageInfo :package="pkg.id" type="size" class="essential-size" />
+                  <ore-text size="xs" color="primary" weight="semibold" class="essential-link-label">View docs →</ore-text>
+                </div>
+              </ore-card>
+            </a>
+          </ore-grid>
+        </div>
+
+        <ore-text v-if="!searchQuery" as="h3" variant="overline" class="all-packages-title">All packages</ore-text>
+        <ore-grid v-if="filteredCategories.length > 0" responsive min-col-width="320px" gap="xl" class="category-grid">
+          <div v-for="cat in filteredCategories" :key="cat.name" class="category-section">
+            <ore-text as="h3" weight="semibold" class="category-name">
+              <ore-icon :name="cat.icon" size="16"></ore-icon>
               {{ cat.name }}
-            </h3>
+            </ore-text>
             <div class="package-list">
               <a v-for="pkg in cat.packages" :key="pkg.id" :href="`/${pkg.id}/`" class="package-tile">
                 <img
@@ -437,46 +563,49 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
               </a>
             </div>
           </div>
-        </sg-grid>
+        </ore-grid>
+        <div v-else class="explorer-empty">
+          No packages found matching "{{ searchQuery }}"
+        </div>
       </div>
     </section>
 
     <!-- Codex AI Section -->
     <section id="codex" class="codex-ai">
       <div class="codex-ai-inner">
-        <sg-grid cols="1" cols-md="2" gap="2xl" align="start" class="codex-ai-content">
+        <ore-grid cols="1" cols-md="2" gap="2xl" align="start" class="codex-ai-content">
           <div class="codex-ai-copy">
-            <h2 class="codex-ai-title">Your AI already knows Vielzeug</h2>
-            <p class="codex-ai-desc">
+            <ore-text as="h2" variant="heading" size="xl" weight="bold" class="codex-ai-title">Your AI already knows Vielzeug</ore-text>
+            <ore-text as="p" color="muted" class="codex-ai-desc">
               <code class="codex-inline-pkg">@vielzeug/codex</code> is an MCP server that bundles the entire
-              documentation, package APIs, and Sigil component metadata into a single offline snapshot. Wire it into
+              documentation, package APIs, and Refine component metadata into a single offline snapshot. Wire it into
               Claude Desktop, Copilot Chat, or any MCP-compatible client — then ask anything.
-            </p>
+            </ore-text>
             <ul class="codex-caps">
               <li class="codex-cap">
-                <sg-icon name="search" size="14"></sg-icon>
+                <ore-icon name="search" size="14"></ore-icon>
                 <span
                   ><strong>search-packages</strong> — find the right package by keyword across docs and exports</span
                 >
               </li>
               <li class="codex-cap">
-                <sg-icon name="book-open" size="14"></sg-icon>
+                <ore-icon name="book-open" size="14"></ore-icon>
                 <span><strong>get-docs</strong> — fetch any package's index, API, usage, or examples page</span>
               </li>
               <li class="codex-cap">
-                <sg-icon name="layers" size="14"></sg-icon>
+                <ore-icon name="layers" size="14"></ore-icon>
                 <span
-                  ><strong>get-component</strong> — full Sigil component CEM: attributes, slots, CSS parts, events</span
+                  ><strong>get-component</strong> — full Refine component CEM: attributes, slots, CSS parts, events</span
                 >
               </li>
             </ul>
             <div class="codex-setup">
-              <sg-text color="muted" size="sm" weight="medium" class="codex-setup-label"
-                >One command. No install required.</sg-text
+              <ore-text color="muted" size="sm" weight="medium" class="codex-setup-label"
+                >Install via npm or run directly:</ore-text
               >
-              <sg-copy-command value="npx -y @vielzeug/codex" class="codex-setup-cmd"></sg-copy-command>
+              <ore-copy-command value="npx -y @vielzeug/codex" class="codex-setup-cmd"></ore-copy-command>
               <a href="/codex/" class="codex-learn-link">
-                <sg-icon name="arrow-right" size="14"></sg-icon>
+                <ore-icon name="arrow-right" size="14"></ore-icon>
                 Setup guide &amp; all tools
               </a>
             </div>
@@ -510,63 +639,63 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
               </div>
             </CodeWindow>
           </div>
-        </sg-grid>
+        </ore-grid>
       </div>
     </section>
 
     <!-- Community & Support -->
     <section id="community" class="community">
       <div class="community-inner">
-        <h2 class="section-title">Built in the open</h2>
-        <p class="section-subtitle">Questions, bug reports, and contributions all live on GitHub. Come find us.</p>
+        <ore-text as="h2" variant="heading" size="xl" weight="bold" class="section-title">Built in the open</ore-text>
+        <ore-text as="p" color="muted" class="section-subtitle">Questions, bug reports, and contributions all live on GitHub. Come find us.</ore-text>
         <div class="community-links">
           <a
             href="https://github.com/helmuthdu/vielzeug/issues"
             target="_blank"
             rel="noopener noreferrer"
             class="community-card-link">
-            <sg-card padding="md">
+            <ore-card padding="md">
               <div class="community-card-inner">
-                <div class="community-card-icon"><sg-icon name="circle-alert" size="22"></sg-icon></div>
+                <div class="community-card-icon"><ore-icon name="circle-alert" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <sg-text weight="semibold" class="community-card-title">GitHub Issues</sg-text>
-                  <sg-text color="muted" size="sm" class="community-card-desc">Report bugs or request features</sg-text>
+                  <ore-text weight="semibold" class="community-card-title">GitHub Issues</ore-text>
+                  <ore-text color="muted" size="sm" class="community-card-desc">Report bugs or request features</ore-text>
                 </div>
-                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
               </div>
-            </sg-card>
+            </ore-card>
           </a>
           <a
             href="https://github.com/helmuthdu/vielzeug/discussions"
             target="_blank"
             rel="noopener noreferrer"
             class="community-card-link">
-            <sg-card padding="md">
+            <ore-card padding="md">
               <div class="community-card-inner">
-                <div class="community-card-icon"><sg-icon name="message-circle" size="22"></sg-icon></div>
+                <div class="community-card-icon"><ore-icon name="message-circle" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <sg-text weight="semibold" class="community-card-title">Discussions</sg-text>
-                  <sg-text color="muted" size="sm" class="community-card-desc">Ask questions and share ideas</sg-text>
+                  <ore-text weight="semibold" class="community-card-title">Discussions</ore-text>
+                  <ore-text color="muted" size="sm" class="community-card-desc">Ask questions and share ideas</ore-text>
                 </div>
-                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
               </div>
-            </sg-card>
+            </ore-card>
           </a>
           <a
             href="https://github.com/helmuthdu/vielzeug/blob/main/CONTRIBUTING.md"
             target="_blank"
             rel="noopener noreferrer"
             class="community-card-link">
-            <sg-card padding="md">
+            <ore-card padding="md">
               <div class="community-card-inner">
-                <div class="community-card-icon"><sg-icon name="git-pull-request" size="22"></sg-icon></div>
+                <div class="community-card-icon"><ore-icon name="git-pull-request" size="22"></ore-icon></div>
                 <div class="community-card-body">
-                  <sg-text weight="semibold" class="community-card-title">Contributing</sg-text>
-                  <sg-text color="muted" size="sm" class="community-card-desc">Learn how to contribute</sg-text>
+                  <ore-text weight="semibold" class="community-card-title">Contributing</ore-text>
+                  <ore-text color="muted" size="sm" class="community-card-desc">Learn how to contribute and join the project</ore-text>
                 </div>
-                <sg-icon name="arrow-right" size="16" class="community-card-arrow"></sg-icon>
+                <ore-icon name="arrow-right" size="16" class="community-card-arrow"></ore-icon>
               </div>
-            </sg-card>
+            </ore-card>
           </a>
         </div>
       </div>
@@ -580,17 +709,17 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
             <img src="/logo-main.svg" alt="Vielzeug" class="footer-logo" />
             <span class="footer-brand-name">Vielzeug</span>
           </div>
-          <sg-text color="muted" size="sm" class="footer-tagline">Zero deps. Fully tree-shakeable.</sg-text>
+          <ore-text color="muted" size="sm" class="footer-tagline">Zero deps. Fully tree-shakeable.</ore-text>
         </div>
-        <sg-grid cols="1" cols-sm="3" gap="xl" class="footer-links-col">
+        <ore-grid cols="1" cols-sm="3" gap="xl" class="footer-links-col">
           <div class="footer-link-group">
-            <h4 class="footer-link-heading">Resources</h4>
+            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Resources</ore-text>
             <a href="/guide/">Documentation</a>
             <a href="/repl">REPL Playground</a>
-            <a href="/sigil/">Components</a>
+            <a href="/refine/">Components</a>
           </div>
           <div class="footer-link-group">
-            <h4 class="footer-link-heading">Community</h4>
+            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Community</ore-text>
             <a href="https://github.com/helmuthdu/vielzeug" target="_blank" rel="noopener noreferrer">GitHub</a>
             <a href="https://github.com/helmuthdu/vielzeug/discussions" target="_blank" rel="noopener noreferrer"
               >Discussions</a
@@ -603,19 +732,19 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
             >
           </div>
           <div class="footer-link-group">
-            <h4 class="footer-link-heading">Legal</h4>
+            <ore-text as="h4" weight="semibold" size="sm" class="footer-link-heading">Legal</ore-text>
             <a href="https://github.com/helmuthdu/vielzeug/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"
               >MIT License</a
             >
           </div>
-        </sg-grid>
+        </ore-grid>
       </div>
       <div class="footer-bottom">
-        <sg-separator></sg-separator>
-        <p class="footer-copyright">
-          <sg-icon name="heart" size="14"></sg-icon>
+        <ore-separator></ore-separator>
+        <ore-text as="p" size="sm" color="muted" align="center" class="footer-copyright">
+          <ore-icon name="heart" size="14"></ore-icon>
           Built by <a href="https://github.com/helmuthdu" target="_blank" rel="noopener noreferrer">Helmuth Saatkamp</a>
-        </p>
+        </ore-text>
       </div>
     </footer>
   </div>
@@ -688,26 +817,21 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 .hero-title-main {
   display: block;
   font-size: clamp(2.5rem, 5vw, 3.5rem);
-  font-weight: 800;
+  line-height: 1.1;
   letter-spacing: -0.03em;
   color: var(--hp-purple);
-  line-height: 1.1;
 }
 
 .hero-title-sub {
   display: block;
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
-  font-weight: 500;
-  color: var(--hp-text);
   margin-top: 0.5rem;
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
 
 .hero-description {
-  font-size: 1.0625rem;
   line-height: 1.6;
-  color: var(--hp-text-muted);
   max-width: 520px;
   margin: 0 0 1.5rem;
 }
@@ -834,10 +958,129 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   z-index: 1;
 }
 
+/* ── Why section ──────────────────────────────────────────── */
+
+.why {
+  padding: 5rem 1.5rem;
+  border-top: 1px solid var(--hp-border);
+  background: var(--hp-surface);
+}
+
+.why-inner {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.why-header {
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.why-overline {
+  margin: 0 0 0.75rem;
+}
+
+.why-title {
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  line-height: 1.2;
+  margin: 0 0 0.75rem;
+}
+
+.why-subtitle {
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* ── Stat strip ───────────────────────────────────────────── */
+
+.why-stats {
+  display: flex;
+  align-items: stretch;
+  background: var(--hp-surface-alt);
+  border: 1px solid var(--hp-border);
+  border-radius: var(--hp-radius);
+  overflow: hidden;
+}
+
+.why-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  padding: 2rem 1.5rem;
+}
+
+.why-stat-value {
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  line-height: 1;
+  margin: 0;
+}
+
+.why-stat-label {
+  margin: 0;
+  max-width: 160px;
+}
+
+.why-stat-divider {
+  width: 1px;
+  background: var(--hp-border);
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
+/* ── Feature cards ────────────────────────────────────────── */
+
+.why-cards {
+  width: 100%;
+}
+
+.why-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.why-card-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 1px solid var(--hp-border);
+  background: var(--hp-surface);
+  color: var(--hp-purple);
+  flex-shrink: 0;
+}
+
+.why-card-title {
+  margin: 0;
+}
+
+.why-card-desc {
+  line-height: 1.6;
+  margin: 0;
+}
+
+.why-card-desc code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--hp-purple);
+  background: var(--hp-purple-subtle);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
 /* ── Code Showcase ─────────────────────────────────────────── */
 
 .showcase {
-  padding: 3rem 1.5rem;
+  padding: 5rem 1.5rem;
   background: var(--hp-surface-alt);
   border-top: 1px solid var(--hp-border);
 }
@@ -848,17 +1091,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .section-title {
-  font-size: 1.75rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--hp-text);
   margin: 0 0 0.5rem;
   text-wrap: balance;
 }
 
 .section-subtitle {
-  font-size: 1.0625rem;
-  color: var(--hp-text-muted);
   margin: 0 0 2rem;
 }
 
@@ -989,7 +1226,9 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 /* ── Package Explorer ──────────────────────────────────────── */
 
 .explorer {
-  padding: 4rem 1.5rem;
+  padding: 5rem 1.5rem;
+  background: var(--hp-surface);
+  border-top: 1px solid var(--hp-border);
 }
 
 @starting-style {
@@ -1089,7 +1328,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 /* ── Community ─────────────────────────────────────────────── */
 
 .community {
-  padding: 4rem 1.5rem;
+  padding: 5rem 1.5rem;
+  background: var(--hp-surface);
 }
 
 .community-inner {
@@ -1098,22 +1338,25 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .community-links {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.75rem;
   margin-top: 2rem;
+  align-items: stretch;
 }
 
 .community-card-link {
   display: block;
   text-decoration: none;
+  height: 100%;
 }
 
-.community-card-link sg-card {
+.community-card-link ore-card {
+  height: 100%;
   transition: transform 0.15s ease-out;
 }
 
-.community-card-link:hover sg-card {
+.community-card-link:hover ore-card {
   --card-border-color: var(--hp-purple);
   --card-shadow: 0 4px 20px var(--hp-purple-glow), 0 0 0 3px var(--hp-purple-glow);
   transform: translateY(-2px);
@@ -1204,9 +1447,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .footer-link-heading {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--hp-text);
   margin: 0 0 0.5rem;
 }
 
@@ -1226,7 +1466,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   margin: 2rem auto 0;
 }
 
-.footer-bottom sg-separator {
+.footer-bottom ore-separator {
   margin-bottom: 1.25rem;
 }
 
@@ -1235,12 +1475,10 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 0.8125rem;
-  color: var(--hp-text-muted);
   margin: 0;
 }
 
-.footer-copyright sg-icon {
+.footer-copyright ore-icon {
   color: var(--hp-purple);
 }
 
@@ -1257,7 +1495,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 /* ── Codex AI ──────────────────────────────────────────────── */
 
 .codex-ai {
-  padding: 4rem 1.5rem;
+  padding: 5rem 1.5rem;
   background: color-mix(in oklch, var(--color-primary-backdrop) 60%, var(--color-canvas));
   border-top: 1px solid var(--hp-border);
   border-bottom: 1px solid var(--hp-border);
@@ -1276,17 +1514,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .codex-ai-title {
   font-size: clamp(1.5rem, 3vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--hp-text);
   margin: 0;
   text-wrap: balance;
 }
 
 .codex-ai-desc {
-  font-size: 1rem;
   line-height: 1.65;
-  color: var(--hp-text-muted);
   margin: 0;
 }
 
@@ -1317,7 +1550,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   line-height: 1.5;
 }
 
-.codex-cap sg-icon {
+.codex-cap ore-icon {
   color: var(--hp-purple);
   flex-shrink: 0;
   position: relative;
@@ -1342,6 +1575,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   --copy-command-font-size: 0.875rem;
 }
 
+
 .codex-learn-link {
   display: inline-flex;
   align-items: center;
@@ -1352,15 +1586,15 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   text-decoration: none;
 }
 
-.codex-learn-link sg-icon {
+.codex-learn-link ore-icon {
   transition: transform 0.15s ease-out;
 }
 
-.codex-learn-link:hover sg-icon {
+.codex-learn-link:hover ore-icon {
   transform: translateX(3px);
 }
 
-/* Chat content styles (window chrome is in sg-code-window) */
+/* Chat content styles (window chrome is in ore-code-window) */
 
 .chat-body {
   display: flex;
@@ -1444,6 +1678,21 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 /* ── Responsive ────────────────────────────────────────────── */
 
 @media (max-width: 768px) {
+  .why-table-head,
+  .why-table-row {
+    grid-template-columns: 1fr 1fr 1fr;
+    font-size: 0.8rem;
+  }
+
+  .why-table-packages {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .why-feature {
+    padding: 1.25rem;
+  }
+
   .hero-inner {
     grid-template-columns: 1fr;
     text-align: center;
@@ -1522,4 +1771,135 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     animation: none;
   }
 }
+
+/* ── Homepage Refactoring Extensions ───────────────────────── */
+
+.hero-install-meta {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+
+
+/* Why table icons */
+.table-icon-bad {
+  color: var(--hp-text-muted);
+  margin-right: 6px;
+  opacity: 0.7;
+}
+
+.table-icon-good {
+  color: var(--hp-purple);
+  margin-right: 6px;
+}
+
+
+.showcase-import-link {
+  text-decoration: none;
+}
+
+.showcase-import-link:hover .hl-string {
+  text-decoration: underline;
+  color: var(--hp-purple);
+}
+
+/* Package Explorer Search & Essentials */
+.explorer-toolbar {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.explorer-search {
+  width: 100%;
+  max-width: 480px;
+}
+
+.essentials-section {
+  margin-bottom: 2rem;
+}
+
+.essentials-title {
+  margin: 0 0 1rem;
+}
+
+.all-packages-title {
+  margin: 0 0 1.5rem;
+}
+
+.essential-card-link {
+  display: contents;
+  text-decoration: none;
+}
+
+.essential-card {
+  transition: all 0.2s ease-out;
+  cursor: pointer;
+}
+
+.essential-card-link:hover .essential-card {
+  --card-border-color: var(--hp-purple);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px var(--hp-purple-glow);
+}
+
+.essential-card-link:hover .essential-link-label {
+  opacity: 1;
+}
+
+.essential-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.essential-logo {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.essential-desc {
+  margin: 0;
+  flex: 1;
+}
+
+.essential-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.essential-link-label {
+  opacity: 0.8;
+}
+
+.essential-card-link:hover .essential-link-label {
+  opacity: 1;
+}
+
+.explorer-empty {
+  text-align: center;
+  padding: 3rem 1.5rem;
+  color: var(--hp-text-muted);
+  font-size: 0.9375rem;
+  background: var(--hp-surface-alt);
+  border-radius: 8px;
+  border: 1px dashed var(--hp-border);
+}
+
+/* Size badges */
+.essential-size {
+  font-size: 0.6875rem;
+  font-family: var(--font-mono);
+  color: var(--hp-text-muted);
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: var(--rounded-sm);
+}
+
 </style>

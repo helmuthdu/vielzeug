@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('s.string()', () => {
   it('accepts strings including empty string', () => {
@@ -8,7 +8,7 @@ describe('s.string()', () => {
 
   it('rejects non-strings', () => {
     for (const val of [123, true, null, undefined, {}]) {
-      expect(() => s.string().parse(val)).toThrow(ValidationError);
+      expect(() => s.string().parse(val)).toThrow(SpellValidationError);
     }
   });
 

@@ -20,7 +20,6 @@ export type ViewportSize = 'mobile' | 'tablet' | 'desktop' | 'full';
 export interface ComponentPreviewProps {
   title?: string;
   vertical?: boolean;
-  center?: boolean;
   background?: string;
   colorful?: boolean;
   height?: string;
@@ -158,8 +157,8 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
     if (found) {
       // Strip only type="module" scripts — they contain ES module imports
-      // (e.g. import '@vielzeug/sigil/toast') that would fail in the sandbox
-      // since sigil is already loaded as a global IIFE. Plain inline scripts
+      // (e.g. import '@vielzeug/refine/toast') that would fail in the sandbox
+      // since refine is already loaded as a global IIFE. Plain inline scripts
       // that define helper functions for onclick handlers must be preserved.
       const html = found.text
         .trim()
@@ -174,7 +173,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     window.addEventListener('message', onSandboxMessage);
 
     // watchEffect (flush:'post') re-renders whenever any reactive dep changes —
-    // isRtl, isDark, props.center, props.vertical — without an explicit dep list.
+    // isRtl, isDark, props.vertical — without an explicit dep list.
     // flush:'post' ensures sandboxContainerRef is populated before the first run.
     watchEffect(
       () => {
@@ -182,9 +181,9 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
         const { fragment } = buildSandboxDoc({
           background: props.background,
-          center: !!props.center,
           dark: isDark.value,
           dir: isRtl.value ? 'rtl' : 'ltr',
+          height: props.height,
           html: codeBlock.value.html,
           vertical: !!props.vertical,
         });

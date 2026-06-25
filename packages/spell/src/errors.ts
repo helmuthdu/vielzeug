@@ -44,7 +44,22 @@ export function errorsAt(formatted: FormattedErrors, ...path: (string | number)[
   return Array.isArray(node) ? node : (node as FormattedErrors)._errors;
 }
 
-/* -------------------- ValidationError -------------------- */
+/* -------------------- SpellError -------------------- */
+
+/** Base class for all spell errors. Use `instanceof SpellError` to catch any spell-originated error. */
+export class SpellError extends Error {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(message, opts);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is SpellError {
+    return err instanceof SpellError;
+  }
+}
+
+/* -------------------- SpellValidationError -------------------- */
 
 function formatIssues(issues: Issue[]): string {
   return issues
@@ -67,18 +82,16 @@ function createFormattedErrors(): FormattedErrors {
   return node;
 }
 
-export class ValidationError extends Error {
+export class SpellValidationError extends SpellError {
   readonly issues: Issue[];
 
   constructor(issues: Issue[], cause?: unknown) {
-    super(`[@vielzeug/spell] ${formatIssues(issues)}`, { cause });
-    this.name = new.target.name;
-    Object.setPrototypeOf(this, new.target.prototype);
+    super(formatIssues(issues), { cause });
     this.issues = issues;
   }
 
-  static is(err: unknown): err is ValidationError {
-    return err instanceof ValidationError;
+  static is(err: unknown): err is SpellValidationError {
+    return err instanceof SpellValidationError;
   }
 
   /**

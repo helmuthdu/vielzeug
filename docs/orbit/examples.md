@@ -11,6 +11,6 @@ description: Practical examples and recipes for orbit.
 - [Popover With Arrow](./examples/popover-with-arrow.md)
 - [Using Presets](./examples/using-presets.md)
 - [Custom Middleware](./examples/custom-middleware.md)
-- [With Craft Component](./examples/with-craft-component.md)
+- [With Ore Component](./examples/with-ore-component.md)
 - [Reactive Adapter](./examples/reactive-adapter.md)
 - [SSR Setup](./examples/ssr-setup.md)

@@ -127,7 +127,7 @@ const checkoutMachine = createMachine({
       },
     },
     success: {
-      entry: () => console.log('<sg-icon name="check" size="16"></sg-icon> Order confirmed!'),
+      entry: () => console.log('<ore-icon name="check" size="16"></ore-icon> Order confirmed!'),
     },
     error: {
       on: {

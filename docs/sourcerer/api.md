@@ -516,7 +516,7 @@ encodeQuery<TFilter, TSort>(
 
 Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
-> <sg-icon name="triangle-alert" size="16"></sg-icon> `filter` and `sort` are serialised with `JSON.stringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+> <ore-icon name="triangle-alert" size="16"></ore-icon> `filter` and `sort` are serialised with `JSON.stringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
 >
 > `encodeQuery` and `decodeQuery` form a round-trip pair: `filter`/`sort` are JSON-stringified on encode and JSON-parsed on decode. Validate/narrow the decoded values before passing them to a source.
 

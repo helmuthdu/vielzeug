@@ -1,6 +1,6 @@
 import { isPlainObject } from '@vielzeug/arsenal';
 
-import { fail, resolveMessage, ValidationError } from './errors';
+import { fail, resolveMessage, SpellValidationError } from './errors';
 import { schemaToJsonSchema } from './json-schema';
 import { _messages, _warn } from './messages';
 import { defineOwnProperty } from './safe-object';
@@ -48,7 +48,7 @@ export {
   type ValidateResult,
 };
 
-export { ValidationError, errorsAt, fail, prependIssuePath, resolveMessage } from './errors';
+export { SpellError, SpellValidationError, errorsAt, fail, prependIssuePath, resolveMessage } from './errors';
 
 function materializeValue<T>(value: T): T {
   if (value == null || typeof value !== 'object') return value;
@@ -166,7 +166,7 @@ export class Schema<Output = unknown, Input = Output> {
       const coreOrPromise = this._parse(prepared.value, c);
 
       if (coreOrPromise instanceof Promise) {
-        throw new ValidationError([
+        throw new SpellValidationError([
           {
             code: ErrorCode.custom,
             message: '[@vielzeug/spell] parse() received an async schema. Use parseAsync() instead.',
@@ -179,7 +179,7 @@ export class Schema<Output = unknown, Input = Output> {
       const validationIssues = core.typeOk ? this._runValidatorsSync(core.data, c) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
-      if (allIssues.length) throw new ValidationError(allIssues);
+      if (allIssues.length) throw new SpellValidationError(allIssues);
 
       return this._runPostprocessors(core.data) as Output;
     });
@@ -189,7 +189,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return { data: this.parse(value, ctx), success: true };
     } catch (error) {
-      if (ValidationError.is(error)) return { error, success: false };
+      if (SpellValidationError.is(error)) return { error, success: false };
 
       throw error;
     }
@@ -207,7 +207,7 @@ export class Schema<Output = unknown, Input = Output> {
       const validationIssues = core.typeOk ? await this._runValidatorsAsync(core.data, c) : [];
       const allIssues = [...core.issues, ...validationIssues];
 
-      if (allIssues.length) throw new ValidationError(allIssues);
+      if (allIssues.length) throw new SpellValidationError(allIssues);
 
       return this._runPostprocessors(core.data) as Output;
     });
@@ -217,7 +217,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return { data: await this.parseAsync(value, ctx), success: true };
     } catch (error) {
-      if (ValidationError.is(error)) return { error, success: false };
+      if (SpellValidationError.is(error)) return { error, success: false };
 
       throw error;
     }
@@ -238,7 +238,7 @@ export class Schema<Output = unknown, Input = Output> {
     const coreOrPromise = this._parse(prepared.value, c);
 
     if (coreOrPromise instanceof Promise) {
-      throw new ValidationError([
+      throw new SpellValidationError([
         {
           code: ErrorCode.custom,
           message: '[@vielzeug/spell] Sync parse path received an async schema.',
@@ -463,7 +463,7 @@ export class Schema<Output = unknown, Input = Output> {
         }))
       : result.issues;
 
-    throw new ValidationError(issues);
+    throw new SpellValidationError(issues);
   }
 
   walk<R>(visitor: SchemaWalker<R>): R | null {
@@ -568,7 +568,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return fn();
     } catch (error) {
-      if (ValidationError.is(error)) return this.state.catch() as unknown as T;
+      if (SpellValidationError.is(error)) return this.state.catch() as unknown as T;
 
       throw error;
     }
@@ -580,7 +580,7 @@ export class Schema<Output = unknown, Input = Output> {
     try {
       return await fn();
     } catch (error) {
-      if (ValidationError.is(error)) return this.state.catch() as unknown as T;
+      if (SpellValidationError.is(error)) return this.state.catch() as unknown as T;
 
       throw error;
     }
@@ -618,7 +618,7 @@ export class Schema<Output = unknown, Input = Output> {
       const typeResult = this._typeValidator(value, ctx);
 
       if (typeResult instanceof Promise) {
-        throw new ValidationError([
+        throw new SpellValidationError([
           {
             code: ErrorCode.custom,
             message: 'Type validator returned a Promise. Use checkAsync() for async validation.',

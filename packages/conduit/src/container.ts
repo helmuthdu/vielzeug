@@ -15,13 +15,13 @@ import type {
 
 import { issue } from './_warn.js';
 import {
-  CircularDependencyError,
+  ContainerCircularDependencyError,
   ContainerDisposedError,
   ContainerFrozenError,
-  DuplicateRegistrationError,
-  ProviderNotFoundError,
-  ScopedResolutionError,
-  SyncResolutionError,
+  ContainerDuplicateRegistrationError,
+  ContainerProviderNotFoundError,
+  ContainerScopedResolutionError,
+  ContainerSyncResolutionError,
   tokenName,
 } from './errors.js';
 
@@ -116,7 +116,7 @@ class ContainerImpl implements Container {
     this.#assertNotDisposed();
     this.#assertNotFrozen();
 
-    if (this.#registry.has(tok)) throw new DuplicateRegistrationError(tok);
+    if (this.#registry.has(tok)) throw new ContainerDuplicateRegistrationError(tok);
 
     const reg: ValueRegistration<T> = { dispose: opts?.dispose, kind: 'value', value: val };
 
@@ -130,7 +130,7 @@ class ContainerImpl implements Container {
     this.#assertNotDisposed();
     this.#assertNotFrozen();
 
-    if (this.#registry.has(tok)) throw new DuplicateRegistrationError(tok);
+    if (this.#registry.has(tok)) throw new ContainerDuplicateRegistrationError(tok);
 
     const reg: FactoryDescriptor<T> = {
       deps: opts?.deps,
@@ -168,7 +168,7 @@ class ContainerImpl implements Container {
 
     const reg = this.#getRegistration(tok) as Registration<T> | undefined;
 
-    if (!reg) throw new ProviderNotFoundError(tok, this.name);
+    if (!reg) throw new ContainerProviderNotFoundError(tok, this.name);
 
     const result = this.#resolveSyncReg(tok, reg);
 
@@ -256,8 +256,8 @@ class ContainerImpl implements Container {
 
   /**
    * Validate the registration graph without freezing it.
-   * Checks statically-declared `deps`: throws `ProviderNotFoundError` if a
-   * declared dep is missing, or `CircularDependencyError` if they form a cycle.
+   * Checks statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
+   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
    * Throws `ContainerDisposedError` if the container is already disposed.
    */
   validate(): this {
@@ -279,7 +279,7 @@ class ContainerImpl implements Container {
 
           for (const dep of reg.deps) {
             if (this.#getRegistration(dep) === undefined) {
-              throw new ProviderNotFoundError(dep, this.name);
+              throw new ContainerProviderNotFoundError(dep, this.name);
             }
           }
         }
@@ -292,7 +292,7 @@ class ContainerImpl implements Container {
       const done = new Set<Token<any>>();
 
       const dfs = (tok: Token<any>, path: Token<any>[]): void => {
-        if (visiting.has(tok)) throw new CircularDependencyError([...path, tok]);
+        if (visiting.has(tok)) throw new ContainerCircularDependencyError([...path, tok]);
 
         if (done.has(tok)) return;
 
@@ -495,11 +495,11 @@ class ContainerImpl implements Container {
   }
 
   async #resolveToken<T>(tok: Token<T>, visiting: Set<Token<any>>, path: Token<any>[]): Promise<T> {
-    if (visiting.has(tok)) throw new CircularDependencyError([...path, tok]);
+    if (visiting.has(tok)) throw new ContainerCircularDependencyError([...path, tok]);
 
     const reg = this.#getRegistration(tok) as Registration<T> | undefined;
 
-    if (!reg) throw new ProviderNotFoundError(tok, this.name);
+    if (!reg) throw new ContainerProviderNotFoundError(tok, this.name);
 
     visiting.add(tok);
 
@@ -519,7 +519,7 @@ class ContainerImpl implements Container {
     if (typeof lifetime === 'symbol') {
       const scopeContainer = this.#findScope(lifetime);
 
-      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
+      if (!scopeContainer) throw new ContainerScopedResolutionError(tok, lifetime);
 
       return this.#populate(scopeContainer.#getCache(reg), reg, visiting, path);
     }
@@ -542,7 +542,7 @@ class ContainerImpl implements Container {
     if (typeof lifetime === 'symbol') {
       const scopeContainer = this.#findScope(lifetime);
 
-      if (!scopeContainer) throw new ScopedResolutionError(tok, lifetime);
+      if (!scopeContainer) throw new ContainerScopedResolutionError(tok, lifetime);
 
       const entry = scopeContainer.#cache.get(reg);
 
@@ -550,10 +550,10 @@ class ContainerImpl implements Container {
 
       if (entry?.rejection !== undefined) throw entry.rejection;
 
-      throw new SyncResolutionError(tok, lifetime);
+      throw new ContainerSyncResolutionError(tok, lifetime);
     }
 
-    if (lifetime === 'transient') throw new SyncResolutionError(tok, lifetime);
+    if (lifetime === 'transient') throw new ContainerSyncResolutionError(tok, lifetime);
 
     const cacheContainer = this.#findOwnerContainer(tok);
     const entry = cacheContainer.#cache.get(reg);
@@ -562,7 +562,7 @@ class ContainerImpl implements Container {
 
     if (entry?.rejection !== undefined) throw entry.rejection;
 
-    throw new SyncResolutionError(tok, lifetime);
+    throw new ContainerSyncResolutionError(tok, lifetime);
   }
 }
 

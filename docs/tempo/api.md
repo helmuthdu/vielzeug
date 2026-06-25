@@ -968,7 +968,7 @@ Either `count` or `until` (or both) **must** be provided — this is enforced at
 
 | Field       | Type                                           | Required                                   | Description                           |
 | ----------- | ---------------------------------------------- | ------------------------------------------ | ------------------------------------- |
-| `frequency` | `'daily' \| 'weekly' \| 'monthly' \| 'yearly'` | <sg-icon name="check" size="16"></sg-icon> | Recurrence frequency                  |
+| `frequency` | `'daily' \| 'weekly' \| 'monthly' \| 'yearly'` | <ore-icon name="check" size="16"></ore-icon> | Recurrence frequency                  |
 | `interval`  | `number`                                       | —                                          | Step multiplier (default `1`)         |
 | `count`     | `number`                                       | One of these two                           | Maximum number of occurrences to emit |
 | `until`     | `TimeInput`                                    | One of these two                           | Inclusive end boundary                |

@@ -37,9 +37,9 @@ describe('parseFrontmatter', () => {
   });
 
   it('parses inline arrays with quoted items', () => {
-    const md = `---\nrelated: ['ripple', 'craft']\n---`;
+    const md = `---\nrelated: ['ripple', 'ore']\n---`;
 
-    expect(parseFrontmatter(md)).toEqual({ related: ['ripple', 'craft'] });
+    expect(parseFrontmatter(md)).toEqual({ related: ['ripple', 'ore'] });
   });
 
   it('parses block sequence arrays', () => {
@@ -103,7 +103,7 @@ describe('packageMeta', () => {
   it('strips docs, apiSource, and components from the output', () => {
     const pkg = makePkg({
       apiSource: 'export function foo() {}',
-      components: [{ name: 'sg-button', tagName: 'sg-button' }],
+      components: [{ name: 'ore-button', tagName: 'ore-button' }],
       docs: { api: '# API', index: '# Index' },
     });
 

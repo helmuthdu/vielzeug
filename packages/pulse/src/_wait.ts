@@ -1,6 +1,6 @@
 import type { Unsubscribe } from './types';
 
-import { AbortError, TimeoutError } from './errors';
+import { PulseAbortError, PulseTimeoutError } from './errors';
 import { combineSignals } from './utils';
 
 /**
@@ -27,7 +27,7 @@ export function createWaitPromise<T>(
       const timeoutCtrl = new AbortController();
 
       timeoutId = setTimeout(() => {
-        timeoutCtrl.abort(new TimeoutError(event));
+        timeoutCtrl.abort(new PulseTimeoutError(event));
       }, opts.timeout);
       signals.push(timeoutCtrl.signal);
     }
@@ -36,7 +36,7 @@ export function createWaitPromise<T>(
 
     if (combined.aborted) {
       clearTimeout(timeoutId);
-      reject(combined.reason instanceof TimeoutError ? combined.reason : new AbortError());
+      reject(combined.reason instanceof PulseTimeoutError ? combined.reason : new PulseAbortError());
 
       return;
     }
@@ -46,7 +46,7 @@ export function createWaitPromise<T>(
     const onAbort = (): void => {
       clearTimeout(timeoutId);
       unsub();
-      reject(combined.reason instanceof TimeoutError ? combined.reason : new AbortError());
+      reject(combined.reason instanceof PulseTimeoutError ? combined.reason : new PulseAbortError());
     };
 
     combined.addEventListener('abort', onAbort, { once: true });

@@ -654,12 +654,12 @@ class VirtualList extends LitElement {
 
 ## Working with Other Vielzeug Libraries
 
-### With Craft
+### With Ore
 
-Build a virtualizing custom element using Craft for the component shell and Scroll for the rendering engine.
+Build a virtualizing custom element using Ore for the component shell and Scroll for the rendering engine.
 
 ```ts
-import { define, html, onMounted, ref } from '@vielzeug/craft';
+import { define, html, onMounted, ref } from '@vielzeug/ore';
 import { createVirtualizer } from '@vielzeug/scroll';
 
 define('virtual-list', {

@@ -21,7 +21,7 @@ Jump to the packages most relevant to your work.
 | I'm building…                        | Start with                                                                   |
 | ------------------------------------ | ---------------------------------------------------------------------------- |
 | Reactive vanilla TS/JS               | [Ripple](#ripple) → [Arsenal](#arsenal)                                      |
-| Custom UI components or a design system | [Craft](#craft) → [Sigil](#sigil) → [Ripple](#ripple)                    |
+| Custom UI components or a design system | [Ore](#ore) → [Refine](#refine) → [Ripple](#ripple)                    |
 | A form-heavy application             | [Forge](#forge) → [Spell](#spell) → [Ripple](#ripple)                        |
 | A full SPA                           | [Wayfinder](#wayfinder) → [Courier](#courier) → [Ripple](#ripple)            |
 | Complex async or event-driven logic  | [Flux](#flux) → [Clockwork](#clockwork) → [Ripple](#ripple)                  |
@@ -53,12 +53,12 @@ Most other packages build on Ripple. Learn it first.
 
 [Ripple docs →](/ripple/)
 
-### Craft
+### Ore
 
 Custom element authoring — reactive templates, signals, slots, and automatic lifecycle management.
 
 ```typescript
-import { define, html } from '@vielzeug/craft';
+import { define, html } from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
 define('my-counter', () => {
@@ -67,7 +67,7 @@ define('my-counter', () => {
 });
 ```
 
-[Craft docs →](/craft/)
+[Ore docs →](/ore/)
 
 ### Arsenal
 
@@ -87,18 +87,18 @@ const clamped = clamp(value, 0, 100);
 
 Packages for the tasks that come up in most real applications.
 
-### Sigil
+### Refine
 
-Accessible, themeable web components built on Craft — buttons, inputs, modals, and more.
+Accessible, themeable web components built on Ore — buttons, inputs, modals, and more.
 
 ```html
-<sg-button variant="solid" color="primary">Save</sg-button>
-<sg-input label="Email" type="email"></sg-input>
+<ore-button variant="solid" color="primary">Save</ore-button>
+<ore-input label="Email" type="email"></ore-input>
 ```
 
 Drop them straight into any project. No framework required.
 
-[Sigil docs →](/sigil/)
+[Refine docs →](/refine/)
 
 ### Forge
 
@@ -318,7 +318,7 @@ const api = await container.resolve(ApiToken);
 
 | Combination                 | Why                                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| **Ripple + Craft**          | Craft templates are powered by Ripple signals — same reactive primitives, zero glue                          |
+| **Ripple + Ore**          | Ore templates are powered by Ripple signals — same reactive primitives, zero glue                          |
 | **Spell + Forge**           | Pass a Spell schema as a field validator — one schema for both form and API                                  |
 | **Courier + Ripple**        | Fetch with caching, push results into a signal for reactive rendering                                        |
 | **Vault + Courier**         | Persist query results in IndexedDB for offline-capable apps                                                  |

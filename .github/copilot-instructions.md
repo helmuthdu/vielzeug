@@ -29,8 +29,8 @@ packages/<name>/
 ## Package dependency graph
 
 ```
-@vielzeug/sigil  → @vielzeug/craft → @vielzeug/ripple, @vielzeug/orbit
-@vielzeug/sigil  → @vielzeug/arsenal, @vielzeug/dnd, @vielzeug/scroll
+@vielzeug/refine  → @vielzeug/ore → @vielzeug/ripple, @vielzeug/orbit
+@vielzeug/refine  → @vielzeug/arsenal, @vielzeug/dnd, @vielzeug/scroll
 @vielzeug/courier  → @vielzeug/arsenal
 @vielzeug/sourcerer  → @vielzeug/arsenal
 @vielzeug/clockwork  → @vielzeug/ripple
@@ -43,8 +43,8 @@ All other packages are fully independent.
 | Package               | Category   | What it does                                                       |
 | --------------------- | ---------- | ------------------------------------------------------------------ |
 | `@vielzeug/ripple`    | State      | Reactive signals, computed, effects, stores                        |
-| `@vielzeug/craft`     | UI         | Functional web-component authoring on top of ripple                |
-| `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
+| `@vielzeug/ore`     | UI         | Functional web-component authoring on top of ripple                |
+| `@vielzeug/refine`     | UI         | Accessible, themeable web components built on ore                  |
 | `@vielzeug/forge`     | Forms      | Typed form state, validation, submission                           |
 | `@vielzeug/spell`     | Validation | Zero-dep schema validation (Zod-like)                              |
 | `@vielzeug/courier`   | HTTP       | Typed HTTP client with caching and mutations                       |

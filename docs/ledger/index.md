@@ -20,10 +20,10 @@ Undo/redo is deceptively complex: you need to handle async side-effects, prevent
 | Feature                | Roll your own                         | Ledger                                                    |
 | ---------------------- | ------------------------------------- | --------------------------------------------------------- |
 | Bundle size            | 0 B                                   | <PackageInfo package="ledger" type="size" />              |
-| Async commands         | Manual promise chaining               | <sg-icon name="check" size="16"></sg-icon> serialised queue |
-| Race prevention        | Manual locks                          | <sg-icon name="check" size="16"></sg-icon> built-in queue |
+| Async commands         | Manual promise chaining               | <ore-icon name="check" size="16"></ore-icon> serialised queue |
+| Race prevention        | Manual locks                          | <ore-icon name="check" size="16"></ore-icon> built-in queue |
 | Reactive `canUndo`     | Poll or manual events                 | `Computed<boolean>` from Ripple                           |
-| Composable commands    | Custom wrapper                        | <sg-icon name="check" size="16"></sg-icon> `compose()`   |
+| Composable commands    | Custom wrapper                        | <ore-icon name="check" size="16"></ore-icon> `compose()`   |
 | History cap            | Array slice                           | `maxHistory` option                                       |
 | Disposable             | Manual                                | `dispose()` + `using`                                     |
 

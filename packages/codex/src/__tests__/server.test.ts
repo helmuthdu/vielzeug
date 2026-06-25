@@ -347,7 +347,7 @@ describe('list-components + get-component', () => {
     const { client } = await createTestPair();
     const listResult = await call(client, 'list-components');
 
-    if (listResult.isError) return; // sigil not built — skip
+    if (listResult.isError) return; // refine not built — skip
 
     const tags = JSON.parse(text(listResult)) as Array<{ tagName: string }>;
     const firstTag = tags[0]!.tagName;
@@ -357,25 +357,25 @@ describe('list-components + get-component', () => {
     expect(text(result)).toContain(firstTag);
   });
 
-  it('list-components returns isError when Sigil CEM is absent', async () => {
-    const noSigil: BundledData = {
+  it('list-components returns isError when Refine CEM is absent', async () => {
+    const noRefine: BundledData = {
       ...data,
-      packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
+      packages: data.packages.map((p) => (p.slug === 'refine' ? { ...p, components: [] } : p)),
     };
-    const { client } = await createTestPair(noSigil);
+    const { client } = await createTestPair(noRefine);
     const result = await call(client, 'list-components');
 
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('unavailable');
   });
 
-  it('get-component returns isError when Sigil CEM is absent', async () => {
-    const noSigil: BundledData = {
+  it('get-component returns isError when Refine CEM is absent', async () => {
+    const noRefine: BundledData = {
       ...data,
-      packages: data.packages.map((p) => (p.slug === 'sigil' ? { ...p, components: [] } : p)),
+      packages: data.packages.map((p) => (p.slug === 'refine' ? { ...p, components: [] } : p)),
     };
-    const { client } = await createTestPair(noSigil);
-    const result = await call(client, 'get-component', { tagName: 'sg-button' });
+    const { client } = await createTestPair(noRefine);
+    const result = await call(client, 'get-component', { tagName: 'ore-button' });
 
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('unavailable');

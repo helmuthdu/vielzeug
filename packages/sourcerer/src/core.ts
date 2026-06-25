@@ -1,4 +1,4 @@
-import { SourceDisposedError, SourceTimeoutError } from './types';
+import { SourceDisposedError, SourceTimeoutError } from './errors';
 
 /**
  * Shared source infrastructure: listener management, debounce scheduling, and ready() polling.

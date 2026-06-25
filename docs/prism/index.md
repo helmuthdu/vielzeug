@@ -4,7 +4,7 @@ description: Reactive SVG charting library — line, bar, and area charts. Signa
 package: prism
 category: ui
 keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
-related: [ripple, sigil, orbit]
+related: [ripple, refine, orbit]
 exports:
   [
     createLineChart,
@@ -73,11 +73,11 @@ data.value = [...data.value, { key: 4, value: 65 }];
 | ------------------ | ------------------------------------------ | -------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size        | ~8 kB                                      | ~60 kB                                 | ~45 kB                                     | ~30 kB (core)                              |
 | Renderer           | SVG                                        | Canvas                                 | Canvas                                     | SVG/Canvas                                 |
-| Zero external deps | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| CSS themeable      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | Limited                                    | <sg-icon name="check" size="16"></sg-icon> |
-| Reactive (signals) | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Accessible SVG     | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | Manual                                     |
-| TypeScript-first   | <sg-icon name="check" size="16"></sg-icon> | Partial                                | <sg-icon name="check" size="16"></sg-icon> | Types available                            |
+| Zero external deps | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| CSS themeable      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | Limited                                    | <ore-icon name="check" size="16"></ore-icon> |
+| Reactive (signals) | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Accessible SVG     | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | Manual                                     |
+| TypeScript-first   | <ore-icon name="check" size="16"></ore-icon> | Partial                                | <ore-icon name="check" size="16"></ore-icon> | Types available                            |
 
 <div class="decision-callout">
 
@@ -184,7 +184,7 @@ chart.dispose();
 <div class="see-also">
 
 - [Ripple](/ripple/) — reactive signals that power Prism's auto-updating charts
-- [Sigil](/sigil/) — accessible web components that pair well with Prism for dashboards
+- [Refine](/refine/) — accessible web components that pair well with Prism for dashboards
 - [Orbit](/orbit/) — floating element positioning for chart tooltips and popovers
 
 </div>

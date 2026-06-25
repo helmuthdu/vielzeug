@@ -65,11 +65,11 @@ const reminder = shift(meeting, { minutes: -15 });
 | Feature        | Tempo                                                                              | date-fns                                   | Day.js                                     | Native Date                            |
 | -------------- | ---------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ | -------------------------------------- |
 | Bundle size    | <PackageInfo package="tempo" type="size" />                                        | ~10 kB                                     | ~3 kB                                      | 0 kB                                   |
-| DST-safe math  | <sg-icon name="check" size="16"></sg-icon> (Temporal)                              | Manual                                     | Manual                                     | <sg-icon name="x" size="16"></sg-icon> |
-| Timezone aware | <sg-icon name="check" size="16"></sg-icon> Full support                            | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | Partial                                |
-| Immutable      | <sg-icon name="check" size="16"></sg-icon>                                         | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon> |
-| Format presets | <sg-icon name="check" size="16"></sg-icon> (`'short'`, `'medium'`, `'long'`, etc.) | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
-| Type inference | <sg-icon name="check" size="16"></sg-icon> Full TypeScript                         | Partial                                    | Partial                                    | <sg-icon name="x" size="16"></sg-icon> |
+| DST-safe math  | <ore-icon name="check" size="16"></ore-icon> (Temporal)                              | Manual                                     | Manual                                     | <ore-icon name="x" size="16"></ore-icon> |
+| Timezone aware | <ore-icon name="check" size="16"></ore-icon> Full support                            | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | Partial                                |
+| Immutable      | <ore-icon name="check" size="16"></ore-icon>                                         | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon> |
+| Format presets | <ore-icon name="check" size="16"></ore-icon> (`'short'`, `'medium'`, `'long'`, etc.) | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| Type inference | <ore-icon name="check" size="16"></ore-icon> Full TypeScript                         | Partial                                    | Partial                                    | <ore-icon name="x" size="16"></ore-icon> |
 
 <div class="decision-callout">
 

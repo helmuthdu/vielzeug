@@ -1,3 +1,4 @@
+export { KeymapError, KeymapParseError } from './errors';
 export { formatShortcut } from './format';
 export { createKeymap } from './keymap';
 export { createKeymapLayer } from './layer';

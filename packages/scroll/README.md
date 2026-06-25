@@ -3,7 +3,7 @@ description: Lightweight, framework-agnostic virtual list engine with variable h
 package: scroll
 category: ui-performance
 keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
-related: [dnd, craft, sigil]
+related: [dnd, ore, refine]
 exports:
   [
     createVirtualizer,
@@ -30,7 +30,7 @@ exports:
 
 **When to use:** Render only visible rows in large lists. Supports fixed heights, variable heights, sticky headers, grouped sections, grid virtualization, programmatic scrolling, and reactive signal integration.
 
-**Related:** [@vielzeug/dnd](https://vielzeug.dev/dnd/) · [@vielzeug/craft](https://vielzeug.dev/craft/) · [@vielzeug/sigil](https://vielzeug.dev/sigil/)
+**Related:** [@vielzeug/dnd](https://vielzeug.dev/dnd/) · [@vielzeug/ore](https://vielzeug.dev/ore/) · [@vielzeug/refine](https://vielzeug.dev/refine/)
 
 </details>
 

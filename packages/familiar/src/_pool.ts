@@ -22,7 +22,7 @@ import type {
 } from './_types';
 
 import { type QueueItem, TaskQueue } from './_queue';
-import { WorkerQueueFullError, WorkerRuntimeError, WorkerTerminatedError, WorkerTimeoutError } from './_types';
+import { WorkerQueueFullError, WorkerRuntimeError, WorkerTerminatedError, WorkerTimeoutError } from './errors';
 
 export type PoolOptions = {
   concurrency: number;

@@ -49,7 +49,7 @@ export interface FactoryResolver {
   resolve<T>(tok: Token<T>): Promise<T>;
   /**
    * Resolve synchronously. Works for value providers and already-resolved
-   * singleton/scoped instances. Throws `SyncResolutionError` if the instance
+   * singleton/scoped instances. Throws `ContainerSyncResolutionError` if the instance
    * has not been resolved yet.
    */
   resolveSync<T>(tok: Token<T>): T;
@@ -143,7 +143,7 @@ export interface Container {
   /**
    * Resolve a token synchronously.
    * Works for value registrations and already-resolved singleton/scope instances.
-   * Throws `SyncResolutionError` for transient factories or unresolved singletons.
+   * Throws `ContainerSyncResolutionError` for transient factories or unresolved singletons.
    * Rethrows the cached rejection if the factory previously failed.
    */
   resolveSync<T>(tok: Token<T>): T;
@@ -173,8 +173,8 @@ export interface Container {
 
   /**
    * Validate the registration graph without freezing it.
-   * Checks statically-declared `deps`: throws `ProviderNotFoundError` if a
-   * declared dep is missing, or `CircularDependencyError` if they form a cycle.
+   * Checks statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
+   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
    * Throws `ContainerDisposedError` if the container is already disposed.
    */
   validate(): this;
@@ -182,8 +182,8 @@ export interface Container {
   /**
    * Freeze the container, locking it against further registrations.
    * After `freeze()`, `value()` and `factory()` throw `ContainerFrozenError`.
-   * Validates statically-declared `deps`: throws `ProviderNotFoundError` if a
-   * declared dep is missing, or `CircularDependencyError` if they form a cycle.
+   * Validates statically-declared `deps`: throws `ContainerProviderNotFoundError` if a
+   * declared dep is missing, or `ContainerCircularDependencyError` if they form a cycle.
    * Idempotent — calling `freeze()` again on an already-frozen container is a no-op.
    * Note: cycle detection for lazy (undeclared) deps happens at resolve time.
    */

@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "include": ["src/**/*.d.ts", "src/**/*.ts"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "customConditions": ["source"],
+    "paths": {
+      "/ore": ["../ore/src/index.ts"],
+      "/ore/controls": ["../ore/src/controls/index.ts"],
+      "/ore/testing": ["../ore/src/testing/index.ts"]
+    }
+  }
+}

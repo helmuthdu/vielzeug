@@ -6,7 +6,6 @@ import { ICONS, useComponentPreview } from './component-preview/useComponentPrev
 const props = defineProps<{
   title?: string;
   vertical?: boolean;
-  center?: boolean;
   background?: string;
   colorful?: boolean;
   height?: string;
@@ -43,76 +42,75 @@ const {
       </div>
 
       <!-- Tabs with proper slot structure -->
-      <sg-tabs value="preview" variant="flat" class="preview-tabs">
-        <sg-tab-item slot="tabs" value="preview">Preview</sg-tab-item>
-        <sg-tab-item slot="tabs" value="code">Code</sg-tab-item>
+      <ore-tabs value="preview" variant="flat" class="preview-tabs">
+        <ore-tab-item slot="tabs" value="preview">Preview</ore-tab-item>
+        <ore-tab-item slot="tabs" value="code">Code</ore-tab-item>
         <!-- Actions bar above tabs -->
         <div class="preview-actions" slot="tabs">
           <!-- Viewport size buttons -->
           <div class="viewport-controls">
-            <sg-button-group attached size="sm">
-              <sg-button
+            <ore-button-group attached size="sm">
+              <ore-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'mobile' ? 'solid' : 'bordered'"
                 @click="setViewportSize('mobile')"
                 title="Mobile view (375px)">
                 <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.mobile" />
-              </sg-button>
-              <sg-button
+              </ore-button>
+              <ore-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'tablet' ? 'solid' : 'bordered'"
                 @click="setViewportSize('tablet')"
                 title="Tablet view (768px)">
                 <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.tablet" />
-              </sg-button>
-              <sg-button
+              </ore-button>
+              <ore-button
                 size="sm"
                 icon-only
                 :variant="viewportSize === 'desktop' ? 'solid' : 'bordered'"
                 @click="setViewportSize('desktop')"
                 title="Desktop view (1280px)">
                 <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="ICONS.desktop" />
-              </sg-button>
-            </sg-button-group>
+              </ore-button>
+            </ore-button-group>
           </div>
           <!-- Copy code button -->
-          <sg-button
+          <ore-button
             variant="bordered"
             size="sm"
             icon-only
             @click="copyCode"
             :title="isCopied ? 'Copied!' : 'Copy code'">
             <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="isCopied ? ICONS.copied : ICONS.copy" />
-          </sg-button>
+          </ore-button>
 
           <!-- LTR / RTL toggle button -->
-          <sg-button
+          <ore-button
             variant="bordered"
             size="sm"
             icon-only
             @click="toggleDirection"
             :title="isRtl ? 'Switch to LTR' : 'Switch to RTL'">
             <span style="font-weight: 600; font-size: 0.6275rem; line-height: 1rem">{{ isRtl ? 'LTR' : 'RTL' }}</span>
-          </sg-button>
+          </ore-button>
 
           <!-- Maximize button -->
-          <sg-button
+          <ore-button
             variant="ghost"
             size="sm"
             icon-only
             @click="toggleMaximize"
             :title="isMaximized ? 'Exit fullscreen' : 'Maximize'">
             <svg class="toolbar-icon" viewBox="0 0 24 24" v-html="isMaximized ? ICONS.minimize : ICONS.maximize" />
-          </sg-button>
+          </ore-button>
         </div>
 
         <!-- Preview tab panel -->
-        <sg-tab-panel value="preview" padding="none">
+        <ore-tab-panel value="preview" padding="none">
           <div
             class="preview-scroll-container"
-            :class="{ 'is-centered': center }"
             :style="!isMaximized && props.height ? { height: props.height, minHeight: props.height } : {}">
             <div class="preview-container-wrapper" :style="{ width: viewportWidth }">
               <div
@@ -125,16 +123,16 @@ const {
               </div>
             </div>
           </div>
-        </sg-tab-panel>
+        </ore-tab-panel>
 
         <!-- Code tab panel -->
-        <sg-tab-panel value="code">
+        <ore-tab-panel value="code">
           <div class="preview-code">
             <component v-if="codeBlock?.vnode" :is="codeBlock.vnode" />
             <pre v-else-if="codeBlock?.html" class="preview-code-fallback">{{ codeBlock.html }}</pre>
           </div>
-        </sg-tab-panel>
-      </sg-tabs>
+        </ore-tab-panel>
+      </ore-tabs>
     </div>
   </div>
 </template>
@@ -205,27 +203,14 @@ const {
   background-size: 16px 16px;
   background-position: 0 0;
   min-height: 150px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  display: grid;
   padding: 0;
-}
-
-.preview-scroll-container.is-centered {
-  align-items: center;
-}
-
-.preview-scroll-container.is-centered .preview-container-wrapper {
-  height: 100%;
 }
 
 /* Full height in maximized mode */
 .preview-wrapper.maximized .preview-scroll-container {
   height: 100%;
   min-height: 100%;
-  /* Keep centering consistent with normal mode */
-  align-items: center;
-  justify-content: center;
 }
 
 .preview-wrapper.maximized .preview-container-wrapper {
@@ -238,7 +223,7 @@ const {
   position: relative;
   transition: width 0.3s ease;
   min-width: var(--size-min);
-  margin-inline: auto;
+  margin: auto;
   container-type: inline-size;
   container-name: preview;
 }

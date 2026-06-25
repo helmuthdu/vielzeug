@@ -1,0 +1,38 @@
+import browserslist from 'browserslist';
+import { browserslistToTargets } from 'lightningcss';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { defineConfig, mergeConfig } from 'vite';
+
+import { getBundleConfig } from '../../vite.config';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+
+const refineExternals = [
+  '@vielzeug/arsenal',
+  '@vielzeug/ore',
+  '@vielzeug/dnd',
+  '@vielzeug/orbit',
+  '@vielzeug/ripple',
+  '@vielzeug/scroll',
+  '@vielzeug/tempo',
+  'lucide',
+];
+
+export default defineConfig(
+  mergeConfig(
+    getBundleConfig(__dirname, {
+      external: refineExternals,
+      fileName: 'refine',
+      name: 'Refine',
+    }),
+    {
+      css: {
+        lightningcss: {
+          targets: browserslistToTargets(browserslist('>= 0.25%')),
+        },
+        transformer: 'lightningcss',
+      },
+    },
+  ),
+);

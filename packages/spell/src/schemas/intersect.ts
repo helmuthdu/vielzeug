@@ -2,7 +2,7 @@ import { isPlainObject } from '@vielzeug/arsenal';
 
 import type { AnySchema, InferOutput, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { Schema, ValidationError, _makeCtx } from '../core';
+import { Schema, SpellValidationError, _makeCtx } from '../core';
 import { cloneRecord, defineOwnProperty } from '../safe-object';
 
 type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (k: infer I) => void ? I : never;
@@ -90,11 +90,11 @@ export class IntersectSchema<T extends readonly AnySchema[]> extends Schema<
         }
       }
 
-      if (state.issues.length > 0) throw new ValidationError(state.issues);
+      if (state.issues.length > 0) throw new SpellValidationError(state.issues);
 
       const validationIssues = await this._runValidatorsAsync(state.output, c);
 
-      if (validationIssues.length) throw new ValidationError(validationIssues);
+      if (validationIssues.length) throw new SpellValidationError(validationIssues);
 
       return this._runPostprocessors(state.output) as UnionToIntersection<InferOutput<T[number]>>;
     });

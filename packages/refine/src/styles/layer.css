@@ -1,0 +1,19 @@
+/* ========================================
+   CSS Cascade Layers
+
+   Define explicit layer order for predictable styling.
+   Layer order > Specificity
+
+   User styles (unlayered or custom layers) automatically
+   have higher priority than all Refine layers.
+   ======================================== */
+
+@layer refine.reset,
+  refine.tokens,
+  refine.themes,
+  refine.base,
+  refine.variants,
+  refine.sizes,
+  refine.states,
+  refine.utilities,
+  refine.overrides;

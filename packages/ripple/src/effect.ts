@@ -17,7 +17,7 @@ import type {
 } from './types';
 
 import { getDevToolsHook } from './devtools-hook';
-import { collectErrors, rethrowWith, runAll, StateError } from './error';
+import { collectErrors, rethrowWith, runAll, StateError } from './errors';
 import { DEFAULT_MAX_ITERATIONS } from './scheduling';
 import { AsyncSubscriptionImpl, SubscriptionImpl } from './subscription';
 import { IS_COMPUTED } from './symbols';

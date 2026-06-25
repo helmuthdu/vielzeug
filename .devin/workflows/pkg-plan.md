@@ -72,9 +72,9 @@ Use consistent markers throughout your analysis:
 - Prettier: 120-char width, 2-space indent, trailing commas
 - Rush orchestrates the monorepo; `pnpm test` runs all tests via Vitest
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
-- **Read the DOX chain first** — before analysing, read the root `AGENTS.md`, then `packages/AGENTS.md`, then `packages/<name>/AGENTS.md` if it exists. Honour any local contract (e.g. `sigil` bundles `lucide` and co-locates tests; `craft`/`sigil` have multiple sub-path exports).
-- **Prefer the `@vielzeug` MCP for context** to gather API/doc context efficiently before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
-- **Scope large packages.** For big packages (e.g. `sigil`, with 70+ component files), analyse one category/area per pass rather than reading the whole `src/` tree at once.
+- **Read the DOX chain first** — before analysing, read the root `AGENTS.md`, then `packages/AGENTS.md`, then `packages/<name>/AGENTS.md` if it exists. Honour any local contract (e.g. `refine` bundles `lucide` and co-locates tests; `ore`/`refine` have multiple sub-path exports).
+- **Prefer the `@vielzeug` MCP for context** to gather API/doc context efficiently before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `refine` use `list-components` / `get-component`.
+- **Scope large packages.** For big packages (e.g. `refine`, with 70+ component files), analyse one category/area per pass rather than reading the whole `src/` tree at once.
 
 ## 1. Design priorities and mindset
 

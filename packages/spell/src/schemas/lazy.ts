@@ -1,6 +1,6 @@
 import type { ParseContext, ParseValue, SchemaDescriptor, SchemaState } from '../core';
 
-import { Schema, ValidationError, _makeCtx } from '../core';
+import { Schema, SpellValidationError, _makeCtx } from '../core';
 
 export class LazySchema<T> extends Schema<T> {
   private readonly _getter: () => Schema<T, any>;
@@ -37,11 +37,11 @@ export class LazySchema<T> extends Schema<T> {
 
       const result = await this._resolve()._parseFullAsync(prepared.value, c);
 
-      if (result.issues.length > 0) throw new ValidationError(result.issues);
+      if (result.issues.length > 0) throw new SpellValidationError(result.issues);
 
       const validationIssues = await this._runValidatorsAsync(result.data, c);
 
-      if (validationIssues.length > 0) throw new ValidationError(validationIssues);
+      if (validationIssues.length > 0) throw new SpellValidationError(validationIssues);
 
       return this._runPostprocessors(result.data) as T;
     });

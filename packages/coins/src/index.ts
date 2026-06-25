@@ -1,4 +1,4 @@
-export { CurrencyMismatchError, InvalidCurrencyError } from './errors';
+export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
 export { exchange } from './exchange';
 export { format, formatParts } from './format';
 export { getCurrencyDecimals, validateCurrencyCode } from './utils';

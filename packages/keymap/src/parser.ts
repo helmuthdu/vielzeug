@@ -1,3 +1,5 @@
+import { KeymapParseError } from './errors';
+
 export type ModifierKey = 'alt' | 'ctrl' | 'meta' | 'shift';
 
 export type ShortcutStep = {
@@ -82,7 +84,7 @@ export function parseStep(raw: string, modKey: 'ctrl' | 'meta' = detectModKey())
   if (keyParts.length === 0) return null;
 
   if (keyParts.length > 1) {
-    throw new Error(`[@vielzeug/keymap] Ambiguous shortcut step: "${raw}" — multiple non-modifier keys found`);
+    throw new KeymapParseError(`Ambiguous shortcut step: "${raw}" — multiple non-modifier keys found`);
   }
 
   const key = normalizeKey(keyParts[0]);
@@ -99,7 +101,7 @@ export function parseShortcut(raw: string, modKey: 'ctrl' | 'meta' = detectModKe
       const result = parseStep(step, modKey);
 
       if (result === null) {
-        throw new Error(`[@vielzeug/keymap] Invalid shortcut step: "${step}" in "${raw}"`);
+        throw new KeymapParseError(`Invalid shortcut step: "${step}" in "${raw}"`);
       }
 
       return result;

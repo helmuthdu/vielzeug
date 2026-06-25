@@ -134,7 +134,7 @@ default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-s
 const csp = buildCsp({
   allowedStyleOrigins: ['https://fonts.googleapis.com'],
   allowedFontOrigins: ['https://fonts.gstatic.com'],
-  scripts: ['https://cdn.example.com/sigil.iife.js'],
+  scripts: ['https://cdn.example.com/refine.iife.js'],
 });
 // script-src includes 'unsafe-inline' + https://cdn.example.com automatically
 ```

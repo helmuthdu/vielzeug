@@ -1,19 +1,19 @@
 import {
-  AbortError,
+  CourierAbortError,
   CourierError,
   createApi,
-  HttpError,
-  NetworkError,
-  SchemaValidationError,
-  TimeoutError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierSchemaValidationError,
+  CourierTimeoutError,
 } from '../index';
 
-async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<HttpError> {
+async function getCourierHttpError<T>(promise: Promise<T>, status?: number): Promise<CourierHttpError> {
   try {
     await promise;
   } catch (error) {
-    if (!HttpError.is(error, status)) {
-      throw new Error(`Expected promise to reject with HttpError${status === undefined ? '' : ` (${status})`}`, {
+    if (!CourierHttpError.is(error, status)) {
+      throw new Error(`Expected promise to reject with CourierHttpError${status === undefined ? '' : ` (${status})`}`, {
         cause: error,
       });
     }
@@ -21,7 +21,7 @@ async function getHttpError<T>(promise: Promise<T>, status?: number): Promise<Ht
     return error;
   }
 
-  throw new Error('Expected promise to reject with HttpError');
+  throw new Error('Expected promise to reject with CourierHttpError');
 }
 
 async function getCourierError<T, E extends CourierError>(
@@ -312,7 +312,7 @@ describe('HTTP Client', () => {
   });
 
   describe('Error Classification', () => {
-    it('throws AbortError when the signal is aborted and cause is a non-DOMException', async () => {
+    it('throws CourierAbortError when the signal is aborted and cause is a non-DOMException', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
       const ac = new AbortController();
 
@@ -331,29 +331,29 @@ describe('HTTP Client', () => {
 
       ac.abort();
 
-      const err = await getCourierError(promise, AbortError);
+      const err = await getCourierError(promise, CourierAbortError);
 
-      expect(err).toBeInstanceOf(AbortError);
+      expect(err).toBeInstanceOf(CourierAbortError);
     });
 
-    it('throws TimeoutError when transport throws a generic error on timeout', async () => {
+    it('throws CourierTimeoutError when transport throws a generic error on timeout', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
 
       fetchMock.mockImplementation(
         (_url: string, init: RequestInit) =>
           new Promise<Response>((_resolve, reject) => {
             // Simulate a transport that throws a plain Error on abort, not the timeout
-            // DOMException. The library must still classify this as TimeoutError via signal.reason.
+            // DOMException. The library must still classify this as CourierTimeoutError via signal.reason.
             init.signal?.addEventListener('abort', () => reject(new Error('Request cancelled')));
           }),
       );
 
-      const err = await getCourierError(http.get('/slow'), TimeoutError);
+      const err = await getCourierError(http.get('/slow'), CourierTimeoutError);
 
-      expect(err).toBeInstanceOf(TimeoutError);
+      expect(err).toBeInstanceOf(CourierTimeoutError);
     });
 
-    it('throws TimeoutError when transport propagates the DOMException TimeoutError cause', async () => {
+    it('throws CourierTimeoutError when transport propagates the DOMException TimeoutError cause', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 5 });
 
       fetchMock.mockImplementation(
@@ -363,22 +363,22 @@ describe('HTTP Client', () => {
           }),
       );
 
-      const err = await getCourierError(http.get('/slow'), TimeoutError);
+      const err = await getCourierError(http.get('/slow'), CourierTimeoutError);
 
-      expect(err).toBeInstanceOf(TimeoutError);
+      expect(err).toBeInstanceOf(CourierTimeoutError);
     });
 
-    it('throws NetworkError for errors without a status or abort signal', async () => {
+    it('throws CourierNetworkError for errors without a status or abort signal', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
 
-      const err = await getCourierError(http.get('/users/1'), NetworkError);
+      const err = await getCourierError(http.get('/users/1'), CourierNetworkError);
 
-      expect(err).toBeInstanceOf(NetworkError);
+      expect(err).toBeInstanceOf(CourierNetworkError);
     });
 
-    it('throws AbortError when an external signal aborts before the timeout fires', async () => {
+    it('throws CourierAbortError when an external signal aborts before the timeout fires', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com', timeout: 30_000 });
       const ac = new AbortController();
 
@@ -393,9 +393,9 @@ describe('HTTP Client', () => {
 
       ac.abort();
 
-      const err = await getCourierError(promise, AbortError);
+      const err = await getCourierError(promise, CourierAbortError);
 
-      expect(err).toBeInstanceOf(AbortError);
+      expect(err).toBeInstanceOf(CourierAbortError);
     });
   });
 
@@ -576,30 +576,30 @@ describe('HTTP Client', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     });
 
-    it('wraps network errors in NetworkError preserving url and method', async () => {
+    it('wraps network errors in CourierNetworkError preserving url and method', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockRejectedValue(new Error('Network error'));
 
-      const err = await getCourierError(http.get('/users/1'), NetworkError);
+      const err = await getCourierError(http.get('/users/1'), CourierNetworkError);
 
-      expect(err).toBeInstanceOf(NetworkError);
+      expect(err).toBeInstanceOf(CourierNetworkError);
       expect(err).toMatchObject({ method: 'GET', url: 'https://api.example.com/users/1' });
     });
 
-    it('wraps non-OK responses in HttpError with status and data', async () => {
+    it('wraps non-OK responses in CourierHttpError with status and data', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockResolvedValue(jsonResponse({ error: 'Not found' }, 404));
 
-      const err: HttpError = await getHttpError(http.get('/users/999'), 404);
+      const err: CourierHttpError = await getCourierHttpError(http.get('/users/999'), 404);
 
-      expect(err).toBeInstanceOf(HttpError);
+      expect(err).toBeInstanceOf(CourierHttpError);
       expect(err).toMatchObject({ data: { error: 'Not found' }, status: 404 });
-      expect(HttpError.is(err, 404)).toBe(true);
+      expect(CourierHttpError.is(err, 404)).toBe(true);
     });
 
-    it('HttpError.headers provides shorthand access to response headers', async () => {
+    it('CourierHttpError.headers provides shorthand access to response headers', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockResolvedValue({
@@ -610,7 +610,7 @@ describe('HTTP Client', () => {
         statusText: 'Gone',
       });
 
-      const err: HttpError = await getHttpError(http.get('/old'));
+      const err: CourierHttpError = await getCourierHttpError(http.get('/old'));
 
       expect(err.headers).toBeInstanceOf(Headers);
       expect(err.headers?.get('x-request-id')).toBe('abc123');
@@ -632,7 +632,7 @@ describe('HTTP Client', () => {
       expect(http.disposalSignal.aborted).toBe(true);
     });
 
-    it('schema validation errors propagate as-is and are NOT wrapped in HttpError', async () => {
+    it('schema validation errors propagate as-is and are NOT wrapped in CourierHttpError', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       fetchMock.mockResolvedValue(jsonResponse({ id: 'not-a-number' }));
@@ -655,9 +655,9 @@ describe('HTTP Client', () => {
         thrown = err;
       }
 
-      expect(thrown).toBeInstanceOf(SchemaValidationError);
-      expect((thrown as SchemaValidationError).cause).toBeInstanceOf(ValidationError);
-      expect(thrown instanceof HttpError).toBe(false);
+      expect(thrown).toBeInstanceOf(CourierSchemaValidationError);
+      expect((thrown as CourierSchemaValidationError).cause).toBeInstanceOf(ValidationError);
+      expect(thrown instanceof CourierHttpError).toBe(false);
     });
 
     it('cancelAll() aborts all in-flight requests', async () => {
@@ -688,15 +688,15 @@ describe('HTTP Client', () => {
   });
 
   describe('URL building errors', () => {
-    it('unresolved path param throws NetworkError', async () => {
+    it('unresolved path param throws CourierNetworkError', async () => {
       const http = createApi({ baseUrl: 'https://api.example.com' });
 
       const err = await getCourierError(
         http.get('/users/{id}', { params: { id: undefined as unknown as string } }),
-        NetworkError,
+        CourierNetworkError,
       );
 
-      expect(err).toBeInstanceOf(NetworkError);
+      expect(err).toBeInstanceOf(CourierNetworkError);
       expect(err.message).toMatch(/unresolved path param/);
     });
   });

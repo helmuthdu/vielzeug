@@ -1,4 +1,4 @@
-import { ProtocolError } from '../errors';
+import { PulseProtocolError } from '../errors';
 import { decode, encode } from '../protocol';
 
 describe('encode', () => {
@@ -35,27 +35,27 @@ describe('decode', () => {
     expect(frame.type).toBe('pong');
   });
 
-  it('throws ProtocolError for non-string input', () => {
-    expect(() => decode(42)).toThrow(ProtocolError);
+  it('throws PulseProtocolError for non-string input', () => {
+    expect(() => decode(42)).toThrow(PulseProtocolError);
   });
 
-  it('throws ProtocolError for invalid JSON', () => {
-    expect(() => decode('not json')).toThrow(ProtocolError);
+  it('throws PulseProtocolError for invalid JSON', () => {
+    expect(() => decode('not json')).toThrow(PulseProtocolError);
   });
 
-  it('throws ProtocolError when type field is missing', () => {
-    expect(() => decode(JSON.stringify({ event: 'x' }))).toThrow(ProtocolError);
+  it('throws PulseProtocolError when type field is missing', () => {
+    expect(() => decode(JSON.stringify({ event: 'x' }))).toThrow(PulseProtocolError);
   });
 
-  it('throws ProtocolError when type field is not a string', () => {
-    expect(() => decode(JSON.stringify({ type: 123 }))).toThrow(ProtocolError);
+  it('throws PulseProtocolError when type field is not a string', () => {
+    expect(() => decode(JSON.stringify({ type: 123 }))).toThrow(PulseProtocolError);
   });
 
-  it('thrown ProtocolError is instanceof ProtocolError', () => {
+  it('thrown PulseProtocolError is instanceof PulseProtocolError', () => {
     try {
       decode('bad');
     } catch (err) {
-      expect(err).toBeInstanceOf(ProtocolError);
+      expect(err).toBeInstanceOf(PulseProtocolError);
     }
   });
 });

@@ -1247,8 +1247,7 @@ describe('ripple', () => {
       expect(err).toBeInstanceOf(StateError);
       expect(err.name).toBe('StateError');
       expect(err.code).toBe('COMPUTED_CYCLE');
-      expect(err.message).toContain('COMPUTED_CYCLE');
-      expect(err.message).toContain('test message');
+      expect(err.message).toBe('test message');
     });
 
     it('is thrown for all documented error conditions', () => {
@@ -1391,7 +1390,13 @@ describe('ripple', () => {
       s.dispose();
 
       expect(() => s.add(() => {})).toThrow(StateError);
-      expect(() => s.add(() => {})).toThrow('DISPOSED_SCOPE');
+
+      try {
+        s.add(() => {});
+      } catch (e) {
+        expect(e).toBeInstanceOf(StateError);
+        expect((e as StateError).code).toBe('DISPOSED_SCOPE');
+      }
     });
 
     it('supports using declaration via Symbol.dispose', () => {

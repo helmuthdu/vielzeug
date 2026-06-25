@@ -73,12 +73,12 @@ a.amount + b.amount + c.amount === price.amount; // true — always
 | Feature                      | Coins                                       | Dinero.js v2                                    | currency.js                                                           |
 | ---------------------------- | ------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------- |
 | Bundle size                  | <PackageInfo package="coins" type="size" /> | ~14 kB                                          | ~2.5 kB                                                               |
-| Zero dependencies            | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="check" size="16"></sg-icon>                            |
-| `bigint` minor units         | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon> (number) | <sg-icon name="x" size="16"></sg-icon> (number)                       |
-| TypeScript-native            | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> third-party types |
-| Validated currency codes     | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>                                |
-| Locale-aware formatting      | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="triangle-alert" size="16"></sg-icon> manual            |
-| Largest Remainder allocation | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                                |
+| Zero dependencies            | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="check" size="16"></ore-icon>                            |
+| `bigint` minor units         | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon> (number) | <ore-icon name="x" size="16"></ore-icon> (number)                       |
+| TypeScript-native            | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="triangle-alert" size="16"></ore-icon> third-party types |
+| Validated currency codes     | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>                                |
+| Locale-aware formatting      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="triangle-alert" size="16"></ore-icon> manual            |
+| Largest Remainder allocation | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                                |
 
 <div class="decision-callout">
 

@@ -35,7 +35,7 @@ For reactive frameworks, subscribe via `onMessage` to receive `error` and `custo
 sandbox.render(`
   <style>body { font-family: sans-serif; }</style>
   <h1>AI-Generated Component</h1>
-  <sg-button variant="primary">Click me</sg-button>
+  <ore-button variant="primary">Click me</ore-button>
 `);
 ```
 
@@ -93,8 +93,8 @@ Use `SandboxOptions` to inject external scripts and styles into every rendered d
 ```ts
 const sandbox = createSandbox(container, {
   scripts: [
-    'https://cdn.example.com/craft.js',
-    'https://cdn.example.com/sigil.js',
+    'https://cdn.example.com/ore.js',
+    'https://cdn.example.com/refine.js',
   ],
   styles: `
     :root { --color-primary: #0066cc; }
@@ -251,17 +251,17 @@ The `generate-sandbox-document` and `get-state-bridge-spec` MCP tools in `@vielz
 sandbox.render(generatedDocument);
 ```
 
-**With Sigil:**
-Inject the Sigil/Craft runtime into the sandbox via `scripts`:
+**With Refine:**
+Inject the Refine/Ore runtime into the sandbox via `scripts`:
 
 ```ts
 const sandbox = createSandbox(container, {
-  scripts: ['https://cdn.example.com/sigil.iife.js'],
-  styles: '/* sigil theme tokens */',
+  scripts: ['https://cdn.example.com/refine.iife.js'],
+  styles: '/* refine theme tokens */',
 });
 
-// Now AI-generated sg-* components work inside the sandbox
-sandbox.render('<sg-card><sg-button>Save</sg-button></sg-card>');
+// Now AI-generated ore-* components work inside the sandbox
+sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
 ```
 
 ## Best Practices

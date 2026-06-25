@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('s.array()', () => {
   it('accepts arrays, rejects non-arrays', () => {
@@ -29,7 +29,7 @@ describe('s.array()', () => {
     const schema = s.array(s.array(s.number()));
 
     expect(schema.parse([[1, 2], [3]])).toEqual([[1, 2], [3]]);
-    expect(() => schema.parse([[1, 'x']])).toThrow(ValidationError);
+    expect(() => schema.parse([[1, 'x']])).toThrow(SpellValidationError);
   });
 
   it('check() on an array receives the parsed items, not the raw input', () => {

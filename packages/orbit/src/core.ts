@@ -9,7 +9,7 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { isDev, warn } from './_warn';
+import { warn } from './_warn';
 import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
 
 // ── DOM helpers ────────────────────────────────────────────────────────────────────────────────
@@ -106,35 +106,33 @@ export function computePosition(
 ): ComputePositionResult {
   const mws = middleware.filter(Boolean) as Middleware[];
 
-  if (isDev) {
-    if (reference === floating) {
-      warn('computePosition: reference and floating are the same element.');
-    }
-
-    const rect = floating.getBoundingClientRect();
-
-    if (rect.width === 0 && rect.height === 0) {
-      warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
-    }
-
-    const pos = getComputedStyle(floating).position;
-
-    if (pos !== 'fixed' && pos !== 'absolute') {
-      warn(
-        `computePosition: floating element has \`position: ${pos}\`. ` +
-          'Orbit computes viewport-relative coordinates and expects position: fixed ' +
-          '(or absolute for scoped stacking contexts).',
-      );
-    }
-
-    const names = mws.map((mw) => {
-      const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
-
-      return typeof tag === 'string' ? tag : null;
-    });
-
-    validateMiddlewareNames(names);
+  if (reference === floating) {
+    warn('computePosition: reference and floating are the same element.');
   }
+
+  const rect = floating.getBoundingClientRect();
+
+  if (rect.width === 0 && rect.height === 0) {
+    warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
+  }
+
+  const pos = getComputedStyle(floating).position;
+
+  if (pos !== 'fixed' && pos !== 'absolute') {
+    warn(
+      `computePosition: floating element has \`position: ${pos}\`. ` +
+        'Orbit computes viewport-relative coordinates and expects position: fixed ' +
+        '(or absolute for scoped stacking contexts).',
+    );
+  }
+
+  const names = mws.map((mw) => {
+    const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
+
+    return typeof tag === 'string' ? tag : null;
+  });
+
+  validateMiddlewareNames(names);
 
   let currentPlacement = placement;
   let middlewareData: MiddlewareData = {};

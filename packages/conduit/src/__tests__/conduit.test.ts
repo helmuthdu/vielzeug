@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  CircularDependencyError,
+  ContainerCircularDependencyError,
   type Container,
   ContainerDisposedError,
   ContainerError,
@@ -10,19 +10,19 @@ import {
   type ContainerGraph,
   type ContainerModule,
   createContainer,
-  DuplicateRegistrationError,
+  ContainerDuplicateRegistrationError,
   type FactoryResolver,
   type InferTokenTypes,
   loadModules,
-  ProviderNotFoundError,
+  ContainerProviderNotFoundError,
   type ResolveInterceptor,
   resolveSyncOptional,
   resolveSyncOrDefault,
   resolveOptional,
   resolveOrDefault,
   scope,
-  ScopedResolutionError,
-  SyncResolutionError,
+  ContainerScopedResolutionError,
+  ContainerSyncResolutionError,
   token,
   tryResolve,
   trySyncResolve,
@@ -89,11 +89,11 @@ describe('createContainer()', () => {
     expect(createContainer().createScope(undefined, { name: 'request' }).name).toBe('request');
   });
 
-  it('ProviderNotFoundError includes container name', async () => {
+  it('ContainerProviderNotFoundError includes container name', async () => {
     const T = token<string>('Svc');
     const c = createContainer({ name: 'myapp' });
 
-    const err = (await c.resolve(T).catch((e) => e)) as ProviderNotFoundError;
+    const err = (await c.resolve(T).catch((e) => e)) as ContainerProviderNotFoundError;
 
     expect(err.message).toContain('myapp');
   });
@@ -141,16 +141,16 @@ describe('Container — registration', () => {
     await expect(c.resolve(T)).resolves.toBe(1);
   });
 
-  it('throws DuplicateRegistrationError when a token is registered twice', () => {
+  it('throws ContainerDuplicateRegistrationError when a token is registered twice', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.value(T, 'first');
 
-    expect(() => c.value(T, 'second')).toThrow(DuplicateRegistrationError);
+    expect(() => c.value(T, 'second')).toThrow(ContainerDuplicateRegistrationError);
   });
 
-  it('DuplicateRegistrationError message contains the token description', () => {
+  it('ContainerDuplicateRegistrationError message contains the token description', () => {
     const T = token<string>('MyToken');
     const c = createContainer();
 
@@ -159,13 +159,13 @@ describe('Container — registration', () => {
     expect(() => c.value(T, 'y')).toThrow('MyToken');
   });
 
-  it('throws DuplicateRegistrationError for duplicate factory registration', () => {
+  it('throws ContainerDuplicateRegistrationError for duplicate factory registration', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, (_r) => 'x');
 
-    expect(() => c.factory(T, (_r) => 'y')).toThrow(DuplicateRegistrationError);
+    expect(() => c.factory(T, (_r) => 'y')).toThrow(ContainerDuplicateRegistrationError);
   });
 });
 
@@ -257,14 +257,14 @@ describe('Container — resolve', () => {
     await expect(c.resolve(T)).resolves.toBe('async');
   });
 
-  it('throws ProviderNotFoundError when no provider exists', async () => {
+  it('throws ContainerProviderNotFoundError when no provider exists', async () => {
     const T = token<string>('Missing');
     const c = createContainer();
 
-    await expect(c.resolve(T)).rejects.toThrow(ProviderNotFoundError);
+    await expect(c.resolve(T)).rejects.toThrow(ContainerProviderNotFoundError);
   });
 
-  it('ProviderNotFoundError message contains the token description', async () => {
+  it('ContainerProviderNotFoundError message contains the token description', async () => {
     const T = token<string>('AuthService');
     const c = createContainer();
 
@@ -292,7 +292,7 @@ describe('resolveOptional()', () => {
     await expect(resolveOptional(c, T)).resolves.toBe(7);
   });
 
-  it('re-throws errors that are not ProviderNotFoundError', async () => {
+  it('re-throws errors that are not ContainerProviderNotFoundError', async () => {
     const T = token<string>('T');
     const c = createContainer();
 
@@ -358,10 +358,10 @@ describe('tryResolve()', () => {
 
     expect(result.ok).toBe(false);
 
-    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ContainerProviderNotFoundError);
   });
 
-  it('re-throws when factory throws a non-ProviderNotFoundError', async () => {
+  it('re-throws when factory throws a non-ContainerProviderNotFoundError', async () => {
     const T = token<string>('T');
     const c = createContainer();
 
@@ -408,7 +408,7 @@ describe('Container — resolveMany()', () => {
 
     c.value(A, 'a');
 
-    await expect(c.resolveMany([A, Missing] as const)).rejects.toThrow(ProviderNotFoundError);
+    await expect(c.resolveMany([A, Missing] as const)).rejects.toThrow(ContainerProviderNotFoundError);
   });
 
   it('throws ContainerDisposedError when the container is disposed', async () => {
@@ -731,17 +731,17 @@ describe('Container — dependency injection', () => {
     expect(calls).toBe(1);
   });
 
-  it('throws ProviderNotFoundError when a dep is missing', async () => {
+  it('throws ContainerProviderNotFoundError when a dep is missing', async () => {
     const Missing = token<string>('Missing');
     const Consumer = token<string>('Consumer');
     const c = createContainer();
 
     c.factory(Consumer, (r) => r.resolve(Missing));
 
-    await expect(c.resolve(Consumer)).rejects.toThrow(ProviderNotFoundError);
+    await expect(c.resolve(Consumer)).rejects.toThrow(ContainerProviderNotFoundError);
   });
 
-  it('throws CircularDependencyError for a direct two-token cycle', async () => {
+  it('throws ContainerCircularDependencyError for a direct two-token cycle', async () => {
     const A = token('A');
     const B = token('B');
     const c = createContainer();
@@ -749,10 +749,10 @@ describe('Container — dependency injection', () => {
     c.factory(A, (r) => r.resolve(B));
     c.factory(B, (r) => r.resolve(A));
 
-    await expect(c.resolve(A)).rejects.toThrow(CircularDependencyError);
+    await expect(c.resolve(A)).rejects.toThrow(ContainerCircularDependencyError);
   });
 
-  it('throws CircularDependencyError for an indirect three-token cycle', async () => {
+  it('throws ContainerCircularDependencyError for an indirect three-token cycle', async () => {
     const A = token('A');
     const B = token('B');
     const C = token('C');
@@ -762,10 +762,10 @@ describe('Container — dependency injection', () => {
     c.factory(B, (r) => r.resolve(C));
     c.factory(C, (r) => r.resolve(A));
 
-    await expect(c.resolve(A)).rejects.toThrow(CircularDependencyError);
+    await expect(c.resolve(A)).rejects.toThrow(ContainerCircularDependencyError);
   });
 
-  it('CircularDependencyError message contains the full cycle path', async () => {
+  it('ContainerCircularDependencyError message contains the full cycle path', async () => {
     const A = token('Alpha');
     const B = token('Beta');
     const c = createContainer();
@@ -773,9 +773,9 @@ describe('Container — dependency injection', () => {
     c.factory(A, (r) => r.resolve(B));
     c.factory(B, (r) => r.resolve(A));
 
-    const err = (await c.resolve(A).catch((e) => e)) as CircularDependencyError;
+    const err = (await c.resolve(A).catch((e) => e)) as ContainerCircularDependencyError;
 
-    expect(err).toBeInstanceOf(CircularDependencyError);
+    expect(err).toBeInstanceOf(ContainerCircularDependencyError);
     expect(err.message).toContain('Alpha');
     expect(err.message).toContain('Beta');
     expect(err).toBeInstanceOf(ContainerError);
@@ -825,7 +825,7 @@ describe('Container — scope containers', () => {
 
     child.value(T, 'child');
 
-    await expect(root.resolve(T)).rejects.toThrow(ProviderNotFoundError);
+    await expect(root.resolve(T)).rejects.toThrow(ContainerProviderNotFoundError);
   });
 
   it('scope can resolve its own local registrations after parent is disposed', async () => {
@@ -1049,24 +1049,24 @@ describe('Container — createScope() / named scopes', () => {
     expect(n).toBe(2);
   });
 
-  it('throws ScopedResolutionError when scope container is missing in the hierarchy', async () => {
+  it('throws ContainerScopedResolutionError when scope container is missing in the hierarchy', async () => {
     const RequestScope = scope('request');
     const T = token<string>('T');
     const root = createContainer();
 
     root.factory(T, (_r) => 'v', { lifetime: RequestScope });
 
-    await expect(root.resolve(T)).rejects.toThrow(ScopedResolutionError);
+    await expect(root.resolve(T)).rejects.toThrow(ContainerScopedResolutionError);
   });
 
-  it('ScopedResolutionError message contains the required scope name', async () => {
+  it('ContainerScopedResolutionError message contains the required scope name', async () => {
     const RequestScope = scope('request-scope');
     const T = token<string>('T');
     const root = createContainer();
 
     root.factory(T, (_r) => 'v', { lifetime: RequestScope });
 
-    const err = (await root.resolve(T).catch((e) => e)) as ScopedResolutionError;
+    const err = (await root.resolve(T).catch((e) => e)) as ContainerScopedResolutionError;
 
     expect(err.message).toContain('request-scope');
   });
@@ -1084,7 +1084,7 @@ describe('Container — createScope() / named scopes', () => {
     await expect(nested.resolve(T)).resolves.toBe('scoped-value');
   });
 
-  it('resolveSync throws SyncResolutionError for an unresolved named-scope factory', () => {
+  it('resolveSync throws ContainerSyncResolutionError for an unresolved named-scope factory', () => {
     const RequestScope = scope('request');
     const T = token<string>('T');
     const root = createContainer();
@@ -1093,10 +1093,10 @@ describe('Container — createScope() / named scopes', () => {
 
     const scopeContainer = root.createScope(RequestScope);
 
-    expect(() => scopeContainer.resolveSync(T)).toThrow(SyncResolutionError);
+    expect(() => scopeContainer.resolveSync(T)).toThrow(ContainerSyncResolutionError);
   });
 
-  it('SyncResolutionError for named scope includes scope name in message', () => {
+  it('ContainerSyncResolutionError for named scope includes scope name in message', () => {
     const RequestScope = scope('my-request-scope');
     const T = token<string>('T');
     const root = createContainer();
@@ -1614,31 +1614,31 @@ describe('Container — resolveSync', () => {
     expect(sc.resolveSync(T)).toBe('scoped');
   });
 
-  it('throws SyncResolutionError for an unresolved singleton factory', () => {
+  it('throws ContainerSyncResolutionError for an unresolved singleton factory', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, (_r) => 'x');
 
-    expect(() => c.resolveSync(T)).toThrow(SyncResolutionError);
+    expect(() => c.resolveSync(T)).toThrow(ContainerSyncResolutionError);
   });
 
-  it('throws SyncResolutionError for a transient factory (never cached)', () => {
+  it('throws ContainerSyncResolutionError for a transient factory (never cached)', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, (_r) => 'x', { lifetime: 'transient' });
 
-    expect(() => c.resolveSync(T)).toThrow(SyncResolutionError);
+    expect(() => c.resolveSync(T)).toThrow(ContainerSyncResolutionError);
   });
 
-  it('throws ProviderNotFoundError when token is not registered', () => {
+  it('throws ContainerProviderNotFoundError when token is not registered', () => {
     const T = token<string>('Missing');
 
-    expect(() => createContainer().resolveSync(T)).toThrow(ProviderNotFoundError);
+    expect(() => createContainer().resolveSync(T)).toThrow(ContainerProviderNotFoundError);
   });
 
-  it('SyncResolutionError message contains the token description', () => {
+  it('ContainerSyncResolutionError message contains the token description', () => {
     const T = token<string>('ConfigService');
     const c = createContainer();
 
@@ -1647,7 +1647,7 @@ describe('Container — resolveSync', () => {
     expect(() => c.resolveSync(T)).toThrow('ConfigService');
   });
 
-  it('SyncResolutionError message distinguishes transient from unresolved singleton', () => {
+  it('ContainerSyncResolutionError message distinguishes transient from unresolved singleton', () => {
     const Singleton = token<string>('MySingleton');
     const Transient = token<string>('MyTransient');
     const c = createContainer();
@@ -1663,8 +1663,8 @@ describe('Container — resolveSync', () => {
       }
     };
 
-    const singletonErr = getError(() => c.resolveSync(Singleton)) as SyncResolutionError;
-    const transientErr = getError(() => c.resolveSync(Transient)) as SyncResolutionError;
+    const singletonErr = getError(() => c.resolveSync(Singleton)) as ContainerSyncResolutionError;
+    const transientErr = getError(() => c.resolveSync(Transient)) as ContainerSyncResolutionError;
 
     expect(singletonErr.message).toContain('not been resolved yet');
     expect(transientErr.message).toContain('transient');
@@ -1676,7 +1676,7 @@ describe('Container — resolveSync', () => {
 // ---------------------------------------------------------------------------
 
 describe('tryResolve() edge cases', () => {
-  it('re-throws CircularDependencyError for a circular dep', async () => {
+  it('re-throws ContainerCircularDependencyError for a circular dep', async () => {
     const A = token('A');
     const B = token('B');
     const c = createContainer();
@@ -1684,7 +1684,7 @@ describe('tryResolve() edge cases', () => {
     c.factory(A, (r) => r.resolve(B));
     c.factory(B, (r) => r.resolve(A));
 
-    await expect(tryResolve(c, A)).rejects.toBeInstanceOf(CircularDependencyError);
+    await expect(tryResolve(c, A)).rejects.toBeInstanceOf(ContainerCircularDependencyError);
   });
 });
 
@@ -1826,7 +1826,7 @@ describe('Container — createScope() post-disposal', () => {
 // ---------------------------------------------------------------------------
 
 describe('Container — resolveSync() after singleton rejection', () => {
-  it('rethrows the cached rejection instead of SyncResolutionError', async () => {
+  it('rethrows the cached rejection instead of ContainerSyncResolutionError', async () => {
     const T = token<string>('T');
     const c = createContainer();
     const boom = new Error('factory failed');
@@ -1838,7 +1838,7 @@ describe('Container — resolveSync() after singleton rejection', () => {
     await expect(c.resolve(T)).rejects.toThrow('factory failed');
 
     expect(() => c.resolveSync(T)).toThrow(boom);
-    expect(() => c.resolveSync(T)).not.toThrow(SyncResolutionError);
+    expect(() => c.resolveSync(T)).not.toThrow(ContainerSyncResolutionError);
   });
 
   it('rethrows the cached rejection for a named-scope singleton', async () => {
@@ -1909,17 +1909,17 @@ describe('Container — validate()', () => {
     expect(() => c.validate()).not.toThrow();
   });
 
-  it('throws ProviderNotFoundError when a declared dep is missing', () => {
+  it('throws ContainerProviderNotFoundError when a declared dep is missing', () => {
     const A = token<string>('A');
     const B = token<string>('B');
     const c = createContainer();
 
     c.factory(B, (_r) => 'b', { deps: [A] });
 
-    expect(() => c.validate()).toThrow(ProviderNotFoundError);
+    expect(() => c.validate()).toThrow(ContainerProviderNotFoundError);
   });
 
-  it('throws CircularDependencyError when declared deps form a cycle', () => {
+  it('throws ContainerCircularDependencyError when declared deps form a cycle', () => {
     const A = token<string>('A');
     const B = token<string>('B');
     const c = createContainer();
@@ -1927,7 +1927,7 @@ describe('Container — validate()', () => {
     c.factory(A, (_r) => 'a', { deps: [B] });
     c.factory(B, (_r) => 'b', { deps: [A] });
 
-    expect(() => c.validate()).toThrow(CircularDependencyError);
+    expect(() => c.validate()).toThrow(ContainerCircularDependencyError);
   });
 
   it('throws ContainerDisposedError when the container is disposed', async () => {
@@ -1995,13 +1995,13 @@ describe('resolveSyncOptional()', () => {
     expect(resolveSyncOptional(c, T)).toBe('built');
   });
 
-  it('re-throws SyncResolutionError for an unresolved singleton (not ProviderNotFoundError)', () => {
+  it('re-throws ContainerSyncResolutionError for an unresolved singleton (not ContainerProviderNotFoundError)', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, (_r) => 'x');
 
-    expect(() => resolveSyncOptional(c, T)).toThrow(SyncResolutionError);
+    expect(() => resolveSyncOptional(c, T)).toThrow(ContainerSyncResolutionError);
   });
 
   it('throws ContainerDisposedError when the container is disposed', async () => {
@@ -2034,13 +2034,13 @@ describe('resolveSyncOrDefault()', () => {
     expect(resolveSyncOrDefault(createContainer(), T, 'fallback')).toBe('fallback');
   });
 
-  it('re-throws SyncResolutionError for an unresolved singleton', () => {
+  it('re-throws ContainerSyncResolutionError for an unresolved singleton', () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, (_r) => 'x');
 
-    expect(() => resolveSyncOrDefault(c, T, 'fallback')).toThrow(SyncResolutionError);
+    expect(() => resolveSyncOrDefault(c, T, 'fallback')).toThrow(ContainerSyncResolutionError);
   });
 
   it('throws ContainerDisposedError when the container is disposed', async () => {
@@ -2176,17 +2176,17 @@ describe('Container — freeze() with declared deps', () => {
     expect(() => c.freeze()).not.toThrow();
   });
 
-  it('throws ProviderNotFoundError when a declared dep is missing', () => {
+  it('throws ContainerProviderNotFoundError when a declared dep is missing', () => {
     const A = token<string>('A');
     const B = token<string>('B');
     const c = createContainer();
 
     c.factory(B, (r) => r.resolve(A), { deps: [A] });
 
-    expect(() => c.freeze()).toThrow(ProviderNotFoundError);
+    expect(() => c.freeze()).toThrow(ContainerProviderNotFoundError);
   });
 
-  it('throws CircularDependencyError when declared deps form a cycle', () => {
+  it('throws ContainerCircularDependencyError when declared deps form a cycle', () => {
     const A = token<string>('A');
     const B = token<string>('B');
     const c = createContainer();
@@ -2194,10 +2194,10 @@ describe('Container — freeze() with declared deps', () => {
     c.factory(A, (r) => r.resolve(B), { deps: [B] });
     c.factory(B, (r) => r.resolve(A), { deps: [A] });
 
-    expect(() => c.freeze()).toThrow(CircularDependencyError);
+    expect(() => c.freeze()).toThrow(ContainerCircularDependencyError);
   });
 
-  it('throws CircularDependencyError for an indirect three-token declared cycle', () => {
+  it('throws ContainerCircularDependencyError for an indirect three-token declared cycle', () => {
     const A = token<string>('A');
     const B = token<string>('B');
     const C = token<string>('C');
@@ -2207,7 +2207,7 @@ describe('Container — freeze() with declared deps', () => {
     c.factory(B, (r) => r.resolve(C), { deps: [C] });
     c.factory(C, (r) => r.resolve(A), { deps: [A] });
 
-    expect(() => c.freeze()).toThrow(CircularDependencyError);
+    expect(() => c.freeze()).toThrow(ContainerCircularDependencyError);
   });
 
   it('freeze() passes without deps: even when the graph has a runtime cycle', async () => {
@@ -2219,7 +2219,7 @@ describe('Container — freeze() with declared deps', () => {
     c.factory(B, (r) => r.resolve(A));
 
     expect(() => c.freeze()).not.toThrow();
-    await expect(c.resolve(A)).rejects.toThrow(CircularDependencyError);
+    await expect(c.resolve(A)).rejects.toThrow(ContainerCircularDependencyError);
   });
 });
 
@@ -2461,14 +2461,14 @@ describe('Container — freeze() idempotency', () => {
 // ---------------------------------------------------------------------------
 
 describe('tryResolve() — refined contract', () => {
-  it('returns { ok: false } only for ProviderNotFoundError', async () => {
+  it('returns { ok: false } only for ContainerProviderNotFoundError', async () => {
     const T = token<string>('T');
     const c = createContainer();
     const result = await tryResolve(c, T);
 
     expect(result.ok).toBe(false);
 
-    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ContainerProviderNotFoundError);
   });
 
   it('returns { ok: true, value } when factory succeeds', async () => {
@@ -2499,23 +2499,23 @@ describe('trySyncResolve()', () => {
     expect(result).toEqual({ ok: true, value: 99 });
   });
 
-  it('returns { ok: false, error: ProviderNotFoundError } when not registered', async () => {
+  it('returns { ok: false, error: ContainerProviderNotFoundError } when not registered', async () => {
     const T = token<number>('T');
     const c = createContainer();
     const result = trySyncResolve(c, T);
 
     expect(result.ok).toBe(false);
 
-    if (!result.ok) expect(result.error).toBeInstanceOf(ProviderNotFoundError);
+    if (!result.ok) expect(result.error).toBeInstanceOf(ContainerProviderNotFoundError);
   });
 
-  it('re-throws SyncResolutionError for an unresolved singleton', async () => {
+  it('re-throws ContainerSyncResolutionError for an unresolved singleton', async () => {
     const T = token<string>('T');
     const c = createContainer();
 
     c.factory(T, async () => 'hello');
 
-    expect(() => trySyncResolve(c, T)).toThrow(SyncResolutionError);
+    expect(() => trySyncResolve(c, T)).toThrow(ContainerSyncResolutionError);
   });
 
   it('re-throws ContainerDisposedError when container is disposed', async () => {
@@ -2680,7 +2680,7 @@ describe('FactoryResolver.resolveSync()', () => {
     expect(result).toBe('test');
   });
 
-  it('throws SyncResolutionError if dep not yet resolved', async () => {
+  it('throws ContainerSyncResolutionError if dep not yet resolved', async () => {
     const Dep = token<string>('Dep');
     const Service = token<string>('Service');
     const c = createContainer();
@@ -2692,6 +2692,6 @@ describe('FactoryResolver.resolveSync()', () => {
       return 'service';
     });
 
-    await expect(c.resolve(Service)).rejects.toThrow(SyncResolutionError);
+    await expect(c.resolve(Service)).rejects.toThrow(ContainerSyncResolutionError);
   });
 });

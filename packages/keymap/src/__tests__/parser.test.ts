@@ -41,7 +41,7 @@ describe('parseStep', () => {
   });
 
   it('throws on ambiguous multi-key step (ctrl+k+j)', () => {
-    expect(() => parseStep('ctrl+k+j')).toThrow('[@vielzeug/keymap] Ambiguous shortcut step');
+    expect(() => parseStep('ctrl+k+j')).toThrow('Ambiguous shortcut step');
   });
 
   it('resolves mod to ctrl when modKey is ctrl', () => {
@@ -100,7 +100,7 @@ describe('parseShortcut', () => {
   });
 
   it('throws when a non-empty step has no valid key (modifier-only)', () => {
-    expect(() => parseShortcut('ctrl+k ctrl')).toThrow('[@vielzeug/keymap] Invalid shortcut step');
+    expect(() => parseShortcut('ctrl+k ctrl')).toThrow('Invalid shortcut step');
   });
 });
 

@@ -11,7 +11,16 @@ export { createCourier } from './courier';
 export type { Courier, CourierMutationOptions, CourierOptions } from './courier';
 
 // Errors
-export { AbortError, CourierError, HttpError, NetworkError, SchemaValidationError, TimeoutError } from './errors';
+export {
+  CourierAbortError,
+  CourierDisposedError,
+  CourierError,
+  CourierHttpError,
+  CourierNetworkError,
+  CourierParseError,
+  CourierSchemaValidationError,
+  CourierTimeoutError,
+} from './errors';
 
 // Focus / reconnect binding helper (opt-in)
 export { bindRefetch } from './focus';

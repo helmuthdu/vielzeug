@@ -5,11 +5,11 @@ export type {
   RunOptions,
   TaskFn,
   TaskGroup,
-  WorkerErrorCode,
   WorkerHandle,
   WorkerOptions,
   WorkerStatus,
 } from './_types';
+export type { WorkerErrorCode } from './errors';
 export {
   WorkerError,
   WorkerInvalidOptionsError,
@@ -18,19 +18,19 @@ export {
   WorkerTaskError,
   WorkerTerminatedError,
   WorkerTimeoutError,
-} from './_types';
+} from './errors';
 
 import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './_types';
 
 import { createPool } from './_pool';
+import { warn } from './_warn';
 import {
   WorkerInvalidOptionsError,
   WorkerRuntimeError,
   WorkerTaskError,
   WorkerTerminatedError,
   WorkerTimeoutError,
-} from './_types';
-import { warn } from './_warn';
+} from './errors';
 
 // ─── task() — optional validation helper ─────────────────────────────────────
 

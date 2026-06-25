@@ -15,7 +15,7 @@ import type {
 import { createWaitPromise } from './_wait';
 import { warn } from './_warn';
 import { createChannel } from './channel';
-import { AbortError, ConnectionError, DisposedError, TimeoutError } from './errors';
+import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseTimeoutError } from './errors';
 import { createHeartbeat } from './heartbeat';
 import { createPresence } from './presence';
 import {
@@ -217,11 +217,11 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     };
 
     ws.onerror = (): void => {
-      opts.onError?.(new ConnectionError('WebSocket error', url));
+      opts.onError?.(new PulseConnectionError('WebSocket error', url));
 
       const pending = pendingOpens.splice(0);
 
-      for (const p of pending) p.reject(new ConnectionError('WebSocket error', url));
+      for (const p of pending) p.reject(new PulseConnectionError('WebSocket error', url));
     };
 
     ws.onclose = (ev: CloseEvent): void => {
@@ -230,7 +230,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       const pending = pendingOpens.splice(0);
 
-      for (const p of pending) p.reject(new ConnectionError('Connection closed before open', url));
+      for (const p of pending) p.reject(new PulseConnectionError('Connection closed before open', url));
 
       if (intentionalClose || disposed) {
         status.value = 'closed';
@@ -343,7 +343,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     frameType: 'join' | 'leave',
     roomOpts?: { signal?: AbortSignal; timeout?: number },
   ): Promise<void> {
-    if (disposed) return Promise.reject(new DisposedError());
+    if (disposed) return Promise.reject(new PulseDisposedError());
 
     return new Promise((resolve, reject) => {
       const extraSignals: AbortSignal[] = [];
@@ -355,7 +355,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       if (roomOpts?.timeout !== undefined) {
         const tc = new AbortController();
 
-        timeoutId = setTimeout(() => tc.abort(new TimeoutError(frameType)), roomOpts.timeout);
+        timeoutId = setTimeout(() => tc.abort(new PulseTimeoutError(frameType)), roomOpts.timeout);
         extraSignals.push(tc.signal);
       }
 
@@ -364,7 +364,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       if (sig.aborted) {
         clearTimeout(timeoutId);
-        reject(sig.reason instanceof TimeoutError ? sig.reason : new AbortError());
+        reject(sig.reason instanceof PulseTimeoutError ? sig.reason : new PulseAbortError());
 
         return;
       }
@@ -386,7 +386,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
         if (set?.size === 0) pending.delete(room);
 
-        reject(sig.reason instanceof TimeoutError ? sig.reason : new AbortError());
+        reject(sig.reason instanceof PulseTimeoutError ? sig.reason : new PulseAbortError());
       };
 
       let pendingSet = pending.get(room);
@@ -458,7 +458,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     },
 
     connect(): Promise<void> {
-      if (disposed) return Promise.reject(new DisposedError());
+      if (disposed) return Promise.reject(new PulseDisposedError());
 
       if (ws?.readyState === WebSocket.OPEN) return Promise.resolve();
 
@@ -489,7 +489,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       const pending = pendingOpens.splice(0);
 
-      for (const p of pending) p.reject(new DisposedError());
+      for (const p of pending) p.reject(new PulseDisposedError());
 
       channelCache.clear();
       pendingJoins.clear();

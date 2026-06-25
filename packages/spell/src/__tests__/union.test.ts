@@ -161,8 +161,8 @@ describe('s.or() alias', () => {
   });
 });
 
-describe('s.union() — async non-ValidationError branch throw', () => {
-  it('does not include non-ValidationError branch throws in branchErrors', async () => {
+describe('s.union() — async non-SpellValidationError branch throw', () => {
+  it('does not include non-SpellValidationError branch throws in branchErrors', async () => {
     const badSchema = s.string().validate(async () => {
       throw new Error('unexpected internal error');
     });

@@ -86,8 +86,8 @@ const playerMachine = createMachine({
       },
     },
     playing: {
-      entry: () => console.log('<sg-icon name="play" size="16"></sg-icon> Playing...'),
-      exit: () => console.log('<sg-icon name="pause" size="16"></sg-icon> Paused'),
+      entry: () => console.log('<ore-icon name="play" size="16"></ore-icon> Playing...'),
+      exit: () => console.log('<ore-icon name="pause" size="16"></ore-icon> Paused'),
       on: {
         PAUSE: [{ target: 'paused' }],
         SEEK: [
@@ -165,10 +165,10 @@ player.subscribe((state) => console.log('State:', state.value, 'Volume:', player
 
 // Once loading completes: state → 'paused'
 setTimeout(() => {
-  player.send({ type: 'PLAY' }); // state: 'playing' (logs "<sg-icon name="play" size="16"></sg-icon> Playing...")
+  player.send({ type: 'PLAY' }); // state: 'playing' (logs "<ore-icon name="play" size="16"></ore-icon> Playing...")
   player.send({ type: 'SEEK', time: 30 }); // Seek to 30s
   player.send({ type: 'VOLUME', level: 50 }); // Volume to 50%
-  player.send({ type: 'PAUSE' }); // state: 'paused' (logs "<sg-icon name="pause" size="16"></sg-icon> Paused")
+  player.send({ type: 'PAUSE' }); // state: 'paused' (logs "<ore-icon name="pause" size="16"></ore-icon> Paused")
 }, 100);
 ```
 
@@ -183,4 +183,4 @@ setTimeout(() => {
 
 - [Fetch with Retry](./fetch-retry.md) — Async loading patterns with retry
 - [Shopping Cart Checkout](./checkout.md) — Multiple state transitions with enter/exit actions
-- [Craft documentation](/craft/) — Binding player state to UI reactively
+- [Ore documentation](/ore/) — Binding player state to UI reactively

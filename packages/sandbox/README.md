@@ -3,7 +3,7 @@ description: Sandboxed iframe runtime with a typed postMessage state bridge for 
 package: sandbox
 category: ai-tooling
 keywords: [sandbox, iframe, generative-ui, ai, postmessage, csp]
-related: [codex, sigil]
+related: [codex, refine]
 exports: [buildCsp, buildDocument, createSandbox, SandboxBridge]
 ---
 
@@ -27,7 +27,7 @@ const sandbox = createSandbox(container);
 
 // Await first load, then render
 await sandbox.ready;
-sandbox.render('<sg-button variant="primary">Click me</sg-button>');
+sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 
 // Await subsequent renders
 sandbox.render(newHtml);

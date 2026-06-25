@@ -1,14 +1,14 @@
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
 import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore } from './_catalog-store';
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
-import { E, LinguaError, checkDisposed, disposedError } from './_errors';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
 import { issue } from './_warn';
+import { E, LinguaError, checkDisposed, disposedError } from './errors';
 import { type Formatter, createFormatter } from './format';
 import { type CompiledTemplate, renderTemplate } from './template';
 
-export { E, LinguaError } from './_errors';
-export type { ErrorCode } from './_errors';
+export { E, LinguaError } from './errors';
+export type { ErrorCode } from './errors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

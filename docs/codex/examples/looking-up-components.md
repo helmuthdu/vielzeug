@@ -1,13 +1,13 @@
 ---
 title: 'Codex Examples — Looking Up Components'
-description: 'Looking up Sigil components example for @vielzeug/codex.'
+description: 'Looking up Refine components example for @vielzeug/codex.'
 ---
 
 ## Looking Up Components
 
 ### Problem
 
-You need to discover which `@vielzeug/sigil` web components are available and inspect their attributes, events, slots, and CSS properties to generate correct usage code.
+You need to discover which `@vielzeug/refine` web components are available and inspect their attributes, events, slots, and CSS properties to generate correct usage code.
 
 ### Solution
 
@@ -23,28 +23,28 @@ Result excerpt:
 
 ```json
 [
-  { "name": "Button", "tagName": "sg-button" },
-  { "name": "Input", "tagName": "sg-input" },
-  { "name": "Dialog", "tagName": "sg-dialog" }
+  { "name": "Button", "tagName": "ore-button" },
+  { "name": "Input", "tagName": "ore-input" },
+  { "name": "Dialog", "tagName": "ore-dialog" }
 ]
 ```
 
 #### Read one component declaration
 
 ```json
-{ "name": "get-component", "arguments": { "tagName": "sg-button" } }
+{ "name": "get-component", "arguments": { "tagName": "ore-button" } }
 ```
 
 The result is the full CEM declaration including `attributes`, `members`, `events`, `slots`, `cssParts`, and `cssProperties`.
 
 ### Pitfalls
 
-- Both tools return `isError: true` when Sigil component metadata is not present in the snapshot. This happens in local monorepo builds when `@vielzeug/sigil` has not been built yet. Run `rush build --to sigil` then `pnpm run prepare:data` in `packages/codex`.
-- `get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"sg-button"` returns an error.
-- Published releases always include Sigil CEM; the missing-metadata error only occurs during local development.
+- Both tools return `isError: true` when Refine component metadata is not present in the snapshot. This happens in local monorepo builds when `@vielzeug/refine` has not been built yet. Run `rush build --to refine` then `pnpm run prepare:data` in `packages/codex`.
+- `get-component` matches on `tagName` exactly. Passing a class name like `"Button"` instead of `"ore-button"` returns an error.
+- Published releases always include Refine CEM; the missing-metadata error only occurs during local development.
 
 ### Related
 
-- [Sigil](/sigil/) — the `@vielzeug/sigil` package
+- [Refine](/refine/) — the `@vielzeug/refine` package
 - [API Reference — list-components](../api.md#list-components)
 - [API Reference — get-component](../api.md#get-component)

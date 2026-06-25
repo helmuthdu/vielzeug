@@ -10,18 +10,18 @@ import PackageHero from './components/PackageHero.vue';
 import PackageInfo from './components/PackageInfo.vue';
 import Repl from './components/REPL.vue';
 
-// Import Sigil styles - using direct paths for monorepo
-import '@vielzeug/sigil/styles/styles.css';
+// Import Refine styles - using direct paths for monorepo
+import '@vielzeug/refine/styles/styles.css';
 // Import Prism chart styles
 import '@vielzeug/prism/theme/prism.css';
 
 import './theme.css';
 
-// Register sigil custom elements as early as possible.
+// Register refine custom elements as early as possible.
 // Dynamic import is required for SSR safety (no `window` on server).
 // Moving it to module-level means it starts loading before enhanceApp runs.
 if (typeof window !== 'undefined') {
-  import('@vielzeug/sigil');
+  import('@vielzeug/refine');
 }
 
 export default {

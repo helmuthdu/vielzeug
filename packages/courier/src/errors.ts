@@ -5,9 +5,13 @@
  */
 export class CourierError extends Error {
   constructor(message: string, opts?: ErrorOptions) {
-    super(`[@vielzeug/courier] ${message}`, opts);
+    super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is CourierError {
+    return err instanceof CourierError;
   }
 }
 
@@ -15,7 +19,7 @@ export class CourierError extends Error {
  * Thrown when the server responds with a non-2xx HTTP status code.
  * Use `HttpError.is(e, status?)` to narrow to a specific status.
  */
-export class HttpError extends CourierError {
+export class CourierHttpError extends CourierError {
   readonly url: string;
   readonly method: string;
   readonly status: number;
@@ -31,8 +35,8 @@ export class HttpError extends CourierError {
     this.headers = opts.headers;
   }
 
-  static fromResponse(res: Response, data: unknown, method: string, url: string): HttpError {
-    return new HttpError({
+  static fromResponse(res: Response, data: unknown, method: string, url: string): CourierHttpError {
+    return new CourierHttpError({
       data,
       headers: res.headers,
       message: res.statusText || `HTTP ${res.status}`,
@@ -42,8 +46,8 @@ export class HttpError extends CourierError {
     });
   }
 
-  static is(err: unknown, status?: number): err is HttpError {
-    return err instanceof HttpError && (status === undefined || err.status === status);
+  static is(err: unknown, status?: number): err is CourierHttpError {
+    return err instanceof CourierHttpError && (status === undefined || err.status === status);
   }
 }
 
@@ -52,7 +56,7 @@ export class HttpError extends CourierError {
  * with no HTTP response. Distinct from `HttpError` so callers never need to check
  * for a missing `status` field.
  */
-export class NetworkError extends CourierError {
+export class CourierNetworkError extends CourierError {
   readonly url: string;
   readonly method: string;
 
@@ -68,7 +72,7 @@ export class NetworkError extends CourierError {
  * timeout option. Distinct from `AbortError` so callers can show retry UI on timeouts
  * without checking any `kind` discriminant.
  */
-export class TimeoutError extends CourierError {
+export class CourierTimeoutError extends CourierError {
   readonly url: string;
   readonly method: string;
 
@@ -83,7 +87,7 @@ export class TimeoutError extends CourierError {
  * Thrown when a request is cancelled via a caller-supplied `AbortSignal` or
  * `cancelAll()` / `dispose()`. Safe to ignore in most UI handlers.
  */
-export class AbortError extends CourierError {
+export class CourierAbortError extends CourierError {
   readonly url: string;
   readonly method: string;
 
@@ -99,13 +103,27 @@ export class AbortError extends CourierError {
  * Distinct from the HTTP error classes so callers can separately handle network failures
  * vs. data contract violations without inspecting the error shape.
  */
-export class SchemaValidationError extends CourierError {
+export class CourierSchemaValidationError extends CourierError {
   /** The raw (pre-validation) response body that failed parsing. */
   readonly data: unknown;
 
   constructor(cause: unknown, data: unknown) {
     super(cause instanceof Error ? cause.message : String(cause), { cause });
     this.data = data;
+  }
+}
+
+/** Thrown when a method is called on a disposed client instance. */
+export class CourierDisposedError extends CourierError {
+  constructor(clientName: string) {
+    super(`${clientName} has been disposed`);
+  }
+}
+
+/** Thrown when a response body cannot be read or parsed. */
+export class CourierParseError extends CourierError {
+  constructor(message: string, opts?: ErrorOptions) {
+    super(message, opts);
   }
 }
 
@@ -123,7 +141,7 @@ export function classifyRequestError(
   method: string,
   url: string,
   signal?: AbortSignal,
-): NetworkError | TimeoutError | AbortError {
+): CourierNetworkError | CourierTimeoutError | CourierAbortError {
   const message = cause instanceof Error ? cause.message : String(cause);
 
   // Signal reason is authoritative — a timed-out signal carries a TimeoutError reason
@@ -131,18 +149,18 @@ export function classifyRequestError(
   const reason = signal?.reason;
 
   if (reason instanceof Error && reason.name === 'TimeoutError') {
-    return new TimeoutError({ cause, message, method, url });
+    return new CourierTimeoutError({ cause, message, method, url });
   }
 
   if (cause instanceof DOMException) {
-    if (cause.name === 'TimeoutError') return new TimeoutError({ cause, message, method, url });
+    if (cause.name === 'TimeoutError') return new CourierTimeoutError({ cause, message, method, url });
 
-    return new AbortError({ cause, message, method, url });
+    return new CourierAbortError({ cause, message, method, url });
   }
 
   if ((cause instanceof Error && cause.name === 'AbortError') || signal?.aborted) {
-    return new AbortError({ cause, message, method, url });
+    return new CourierAbortError({ cause, message, method, url });
   }
 
-  return new NetworkError({ cause, message, method, url });
+  return new CourierNetworkError({ cause, message, method, url });
 }

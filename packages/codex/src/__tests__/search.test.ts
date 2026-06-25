@@ -131,7 +131,7 @@ describe('scorePackage — match categories', () => {
   });
 
   it('reports "related" for a related match', () => {
-    const hit = scorePackage(pkg({ related: ['ripple', 'craft'] }), 'ripple');
+    const hit = scorePackage(pkg({ related: ['ripple', 'ore'] }), 'ripple');
 
     expect(hit?.matchedIn).toContain('related');
   });
@@ -205,7 +205,7 @@ describe('scorePackage — score tiers', () => {
   it.each([
     ['keywords', { keywords: ['validation'] }, 'validation', 2.5],
     ['exports', { exports: ['signal'] }, 'signal', 2.2],
-    ['related', { related: ['craft'] }, 'craft', 2.0],
+    ['related', { related: ['ore'] }, 'ore', 2.0],
   ] as const)('%s match scores in 2.x tier (>= expected, < 3)', (_label, overrides, query, minScore) => {
     const hit = scorePackage(pkg(overrides as Partial<BundledPackage>), query);
 

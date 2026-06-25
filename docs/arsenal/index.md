@@ -38,12 +38,12 @@ Arsenal favors a curated, typed utility surface over an everything-and-the-kitch
 | Feature                     | Arsenal                                       | lodash-es                                  | Remeda                                     |
 | --------------------------- | --------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size                 | <PackageInfo package="arsenal" type="size" /> | ~72 kB                                     | ~18 kB                                     |
-| TypeScript-first ergonomics | <sg-icon name="check" size="16"></sg-icon>    | Partial                                    | <sg-icon name="check" size="16"></sg-icon> |
-| Deep utility coverage       | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
-| Async control-flow helpers  | <sg-icon name="check" size="16"></sg-icon>    | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
-| Typed predicate functions   | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="x" size="16"></sg-icon>     | Partial                                    |
-| Tree-shakeable modules      | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Zero dependencies           | <sg-icon name="check" size="16"></sg-icon>    | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
+| TypeScript-first ergonomics | <ore-icon name="check" size="16"></ore-icon>    | Partial                                    | <ore-icon name="check" size="16"></ore-icon> |
+| Deep utility coverage       | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
+| Async control-flow helpers  | <ore-icon name="check" size="16"></ore-icon>    | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed predicate functions   | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>     | Partial                                    |
+| Tree-shakeable modules      | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
 
 <div class="decision-callout">
 

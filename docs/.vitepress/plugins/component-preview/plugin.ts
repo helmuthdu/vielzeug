@@ -1,15 +1,15 @@
 // plugin.ts
 //
-// Vite virtual-module plugin that makes sigil's IIFE bundle, peer dependencies,
+// Vite virtual-module plugin that makes refine's IIFE bundle, peer dependencies,
 // and inlined CSS available to ComponentPreview (and any future component that
-// needs to render sigil components inside a sandboxed iframe).
+// needs to render refine components inside a sandboxed iframe).
 //
 // srcdoc iframes have a null origin and cannot load external resources, so all
 // assets are inlined at build time via three virtual modules:
 //
-//   sigil-preview:css  — sigil's stylesheet with @import rules fully inlined
-//   sigil-preview:deps — all IIFE peer deps concatenated in load order
-//   sigil-preview:js   — sigil's own IIFE bundle
+//   refine-preview:css  — refine's stylesheet with @import rules fully inlined
+//   refine-preview:deps — all IIFE peer deps concatenated in load order
+//   refine-preview:js   — refine's own IIFE bundle
 
 import type { Plugin } from 'vite';
 
@@ -20,12 +20,12 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const JS_ID = 'sigil-preview:js';
-const CSS_ID = 'sigil-preview:css';
-const DEPS_ID = 'sigil-preview:deps';
+const JS_ID = 'refine-preview:js';
+const CSS_ID = 'refine-preview:css';
+const DEPS_ID = 'refine-preview:deps';
 
 const pkgDir = resolve(__dirname, '../../../../packages');
-const sigilDir = resolve(pkgDir, 'sigil/dist');
+const refineDir = resolve(pkgDir, 'refine/dist');
 
 // createRequire from within .pnpm/node_modules so it can resolve hoisted
 // pnpm packages. Subpath exports on these packages don't expose dist files
@@ -36,12 +36,12 @@ const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../d
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
 // Load order: each entry must appear after its own dependencies.
-// Temporal → Ripple → Arsenal → Craft(Ripple) → Orbit(Arsenal) → Prism(Ripple,Orbit) → Tempo(Temporal) → Dnd → Lucide
+// Temporal → Ripple → Arsenal → Ore(Ripple) → Orbit(Arsenal) → Prism(Ripple,Orbit) → Tempo(Temporal) → Dnd → Lucide
 const depPaths = [
   temporalUmd,
   resolve(pkgDir, 'ripple/dist/ripple.iife.js'),
   resolve(pkgDir, 'arsenal/dist/arsenal.iife.js'),
-  resolve(pkgDir, 'craft/dist/craft.iife.js'),
+  resolve(pkgDir, 'ore/dist/ore.iife.js'),
   resolve(pkgDir, 'orbit/dist/orbit.iife.js'),
   resolve(pkgDir, 'prism/dist/prism.iife.js'),
   resolve(pkgDir, 'tempo/dist/tempo.iife.js'),
@@ -50,7 +50,7 @@ const depPaths = [
 ];
 
 // @js-temporal/polyfill UMD registers as globalThis.temporal (lowercase);
-// sigil.iife.js expects Temporal (uppercase).
+// refine.iife.js expects Temporal (uppercase).
 // tempo.iife.js maps @js-temporal/polyfill to window.Temporal and re-exports
 // it as Tempo.Temporal via `get(){ return t.Temporal }` where t=window.Temporal.
 // So window.Temporal must be the polyfill exports object {Intl,Temporal,...},
@@ -58,7 +58,7 @@ const depPaths = [
 // (Chrome 129+) doesn't shadow the polyfill exports shape that tempo expects.
 const temporalShim = 'if(typeof temporal!=="undefined"){var Temporal=temporal;}';
 
-// Lucide UMD registers as window.lucide (lowercase); sigil.iife.js expects Lucide (uppercase).
+// Lucide UMD registers as window.lucide (lowercase); refine.iife.js expects Lucide (uppercase).
 const lucideShim = 'if(typeof Lucide==="undefined"&&typeof lucide!=="undefined"){var Lucide=lucide;}';
 
 // Recursively replace @import url(...) with file contents so the resulting
@@ -80,16 +80,16 @@ export function componentPreviewPlugin(): Plugin {
   return {
     load(id) {
       if (id === '\0' + JS_ID) {
-        const code = readFileSync(resolve(sigilDir, 'sigil.iife.js'), 'utf-8');
+        const code = readFileSync(resolve(refineDir, 'refine.iife.js'), 'utf-8');
 
         return `export default ${JSON.stringify(code)}`;
       }
 
       if (id === '\0' + CSS_ID) {
-        const sigil = inlineCss(resolve(sigilDir, 'styles/styles.css'));
+        const refine = inlineCss(resolve(refineDir, 'styles/styles.css'));
         const prism = readFileSync(resolve(pkgDir, 'prism/dist/theme/prism.css'), 'utf-8');
 
-        return `export default ${JSON.stringify(sigil + '\n' + prism)}`;
+        return `export default ${JSON.stringify(refine + '\n' + prism)}`;
       }
 
       if (id === '\0' + DEPS_ID) {
@@ -103,7 +103,7 @@ export function componentPreviewPlugin(): Plugin {
         return `export default ${JSON.stringify(combined)}`;
       }
     },
-    name: 'sigil-preview',
+    name: 'refine-preview',
     resolveId(id) {
       if (id === JS_ID || id === CSS_ID || id === DEPS_ID) return '\0' + id;
     },

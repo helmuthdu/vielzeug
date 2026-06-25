@@ -95,7 +95,7 @@ Use consistent markers for agent-parseable output:
 - Do **not** add extra top-level files unless the domain is truly complex. In those rare cases, list the extra file under a "Guides" heading in the sidebar, separate from the standard four pages.
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
 - **Read the DOX chain first** — root `AGENTS.md` → `docs/AGENTS.md` (template/REPL ownership) → `packages/<name>/AGENTS.md` (sub-path exports, exceptions).
-- **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file — it reflects the current public API. Use `get-docs` and `get-source` for most packages; for `sigil` use `list-components` / `get-component`.
+- **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file — it reflects the current public API. Use `get-docs` and `get-source` for most packages; for `refine` use `list-components` / `get-component`.
 
 ### Package archetypes
 
@@ -105,7 +105,7 @@ Not every package is a consumed library. Before applying the template, identify 
 | ---------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Library** (default)        | `src/index.ts` exports functions/classes; imported by userland                          | No adaptations — use the full template as written                                                                                                                                                                                                                                                         |
 | **CLI / executable tool**    | `bin` field in `package.json`; primary interaction is a terminal command, not an import | Quick Start in `index.md` leads with the shell command, not a TypeScript snippet; `## Framework Integration` in `usage.md` is replaced with `## Embedding in a <Runtime> Process` showing programmatic use as a secondary option; comparison table compares deployment/invocation modes, not API surfaces |
-| **DOM-output / headless UI** | Package renders DOM directly (e.g. `sigil`, `prism`); no REPL examples by convention    | No REPL examples or Monaco types; `## Framework Integration` shows web-component usage in HTML/JS, not React/Vue/Svelte unless the package ships framework adapters                                                                                                                                       |
+| **DOM-output / headless UI** | Package renders DOM directly (e.g. `refine`, `prism`); no REPL examples by convention    | No REPL examples or Monaco types; `## Framework Integration` shows web-component usage in HTML/JS, not React/Vue/Svelte unless the package ships framework adapters                                                                                                                                       |
 | **Build / dev tool**         | `devDependencies`-only; runs at build time, not runtime                                 | Quick Start shows CLI invocation or config file; `## Basic Usage` in `usage.md` starts with config, not code; API reference may be a config schema, not function signatures                                                                                                                               |
 | **Pure type package**        | Exports only `type` and `interface`; no runtime code                                    | Skip `## Quick Start` code block; `api.md` is types-only; no examples needed unless the types encode a non-obvious pattern                                                                                                                                                                                |
 
@@ -341,8 +341,8 @@ environments: [browser, node, ssr, deno]
 | Feature              | <PackageName>                               | <Competitor 1> | <Competitor 2> |
 | -------------------- | ------------------------------------------- | -------------- | -------------- |
 | Bundle size          | <PackageInfo package="<pkg>" type="size" /> | ...            | ...            |
-| Zero dependencies    | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
-| <Key differentiator> | <sg-icon name="check" size="16"></sg-icon>  | ...            | ...            |
+| Zero dependencies    | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
+| <Key differentiator> | <ore-icon name="check" size="16"></ore-icon>  | ...            | ...            |
 
 <div class="decision-callout">
 
@@ -415,7 +415,7 @@ yarn add @vielzeug/<pkg>
 - `## Documentation` must use that exact heading; do not merge into `## See Also`.
 - Frontmatter must include `package`, `category`, `keywords`, `related`, `exports`, `environments`.
 - The Before/After block is a single fenced block with `// Before` followed by `// After`.
-- Comparison table icons: `<sg-icon name="check" size="16">`, `<sg-icon name="x" size="16">`, `<sg-icon name="triangle-alert" size="16">`. Do not use `circle-check` or `circle-x`.
+- Comparison table icons: `<ore-icon name="check" size="16">`, `<ore-icon name="x" size="16">`, `<ore-icon name="triangle-alert" size="16">`. Do not use `circle-check` or `circle-x`.
 - Comparison table rows must include bundle size, zero dependencies, and 2–3 differentiators.
 - "Use when / Consider when" must both be present.
 - The **tone rules** (Section 2) apply here as well.

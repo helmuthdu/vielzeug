@@ -113,28 +113,6 @@ importers:
         specifier: ^4.1.8
         version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
 
-  ../../packages/craft:
-    dependencies:
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
-    devDependencies:
-      '@types/node':
-        specifier: ^25.9.3
-        version: 25.9.3
-      jsdom:
-        specifier: ^29.1.1
-        version: 29.1.1
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.16
-        version: 8.0.16(@types/node@25.9.3)
-      vitest:
-        specifier: ^4.1.8
-        version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
-
   ../../packages/dnd:
     devDependencies:
       '@types/node':
@@ -234,6 +212,52 @@ importers:
         specifier: ^4.1.8
         version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
 
+  ../../packages/refine:
+    dependencies:
+      '@vielzeug/arsenal':
+        specifier: workspace:*
+        version: link:../arsenal
+      '@vielzeug/dnd':
+        specifier: workspace:*
+        version: link:../dnd
+      '@vielzeug/orbit':
+        specifier: workspace:*
+        version: link:../orbit
+      '@vielzeug/ore':
+        specifier: workspace:*
+        version: link:../ore
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
+      '@vielzeug/tempo':
+        specifier: workspace:*
+        version: link:../tempo
+      lucide:
+        specifier: ^1.18.0
+        version: 1.18.0
+    devDependencies:
+      '@custom-elements-manifest/analyzer':
+        specifier: ^0.11.0
+        version: 0.11.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+      axe-core:
+        specifier: ^4.12.1
+        version: 4.12.1
+      browserslist:
+        specifier: ^4.28.2
+        version: 4.28.2
+      lightningcss:
+        specifier: ^1.32.0
+        version: 1.32.0
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.3)
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
+
   ../../packages/keymap:
     devDependencies:
       '@types/node':
@@ -295,6 +319,28 @@ importers:
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
+      typescript:
+        specifier: ~6.0.3
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.3)
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
+
+  ../../packages/ore:
+    dependencies:
+      '@vielzeug/ripple':
+        specifier: workspace:*
+        version: link:../ripple
+    devDependencies:
+      '@types/node':
+        specifier: ^25.9.3
+        version: 25.9.3
+      jsdom:
+        specifier: ^29.1.1
+        version: 29.1.1
       typescript:
         specifier: ~6.0.3
         version: 6.0.3
@@ -422,52 +468,6 @@ importers:
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
-      typescript:
-        specifier: ~6.0.3
-        version: 6.0.3
-      vite:
-        specifier: ^8.0.16
-        version: 8.0.16(@types/node@25.9.3)
-      vitest:
-        specifier: ^4.1.8
-        version: 4.1.9(@types/node@25.9.3)(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3))
-
-  ../../packages/sigil:
-    dependencies:
-      '@vielzeug/arsenal':
-        specifier: workspace:*
-        version: link:../arsenal
-      '@vielzeug/craft':
-        specifier: workspace:*
-        version: link:../craft
-      '@vielzeug/dnd':
-        specifier: workspace:*
-        version: link:../dnd
-      '@vielzeug/orbit':
-        specifier: workspace:*
-        version: link:../orbit
-      '@vielzeug/ripple':
-        specifier: workspace:*
-        version: link:../ripple
-      '@vielzeug/tempo':
-        specifier: workspace:*
-        version: link:../tempo
-      lucide:
-        specifier: ^1.18.0
-        version: 1.18.0
-    devDependencies:
-      '@custom-elements-manifest/analyzer':
-        specifier: ^0.11.0
-        version: 0.11.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
-      axe-core:
-        specifier: ^4.12.1
-        version: 4.12.1
-      browserslist:
-        specifier: ^4.28.2
-        version: 4.28.2
-      lightningcss:
-        specifier: ^1.32.0
-        version: 1.32.0
       typescript:
         specifier: ~6.0.3
         version: 6.0.3

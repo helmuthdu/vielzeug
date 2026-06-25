@@ -533,12 +533,12 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
 
 ## Working with Other Vielzeug Libraries
 
-### With Craft
+### With Ore
 
-Use Orbit inside a Craft component to position tooltips and popovers reactively.
+Use Orbit inside a Ore component to position tooltips and popovers reactively.
 
 ```ts
-import { define, onMounted } from '@vielzeug/craft';
+import { define, onMounted } from '@vielzeug/ore';
 import { float, offset, flip, shift } from '@vielzeug/orbit';
 
 define('x-tooltip', {
@@ -553,7 +553,7 @@ define('x-tooltip', {
         middleware: [offset(6), flip(), shift({ padding: 8 })],
       });
 
-      // Returned from onMounted — Craft calls this on disconnect
+      // Returned from onMounted — Ore calls this on disconnect
       return () => handle?.dispose();
     });
   },

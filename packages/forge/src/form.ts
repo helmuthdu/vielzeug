@@ -1,7 +1,8 @@
 import { isAbortError } from '@vielzeug/arsenal';
 import { batch as rippleBatch, signal, type Signal, watch } from '@vielzeug/ripple';
 
-import { isDev, warn } from './_warn';
+import { warn } from './_warn';
+import { ForgeValidationError } from './errors';
 import { createArrayField } from './internal/array';
 import { createScopedForm, type ScopeContext } from './internal/scope';
 import {
@@ -28,7 +29,6 @@ import {
   type TypeAtPath,
   type Unsubscribe,
   type ValidateResult,
-  ValidationError,
 } from './types';
 import { anySignal, flattenValues, isSafeKey, unflattenValues } from './utils';
 
@@ -386,7 +386,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     assertSafeKey(key);
 
-    if (isDev && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
+    if (/\.\d+(\.|$)/.test(key) && !store.has(key)) {
       const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
 
       warn(
@@ -422,7 +422,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
 
     assertSafeKey(key);
 
-    if (isDev && /\.\d+(\.|$)/.test(key) && !store.has(key)) {
+    if (/\.\d+(\.|$)/.test(key) && !store.has(key)) {
       const displayKey = key.replace(/\p{C}/gu, '?').slice(0, 80);
 
       warn(
@@ -677,7 +677,7 @@ export function createForm<TValues extends Record<string, unknown> = Record<stri
   async function submitOrThrow<TResult = void>(handler: (values: TValues) => MaybePromise<TResult>): Promise<TResult> {
     const result = await submit(handler);
 
-    if (!result.ok) throw new ValidationError(result.errors as Record<string, string>);
+    if (!result.ok) throw new ForgeValidationError(result.errors as Record<string, string>);
 
     return result.value;
   }

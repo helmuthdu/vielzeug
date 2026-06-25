@@ -192,9 +192,9 @@ const passwordConn = form.connect('password', { validateOnBlur: true, debounce: 
 | Preset                               | `touchOnBlur`                              | `validateOnBlur`                           | `validateOnChange`                         | `validateOnTouch`                          |
 | ------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ | ------------------------------------------ |
 | `ValidationModes.onSubmit` (default) | —                                          | —                                          | —                                          | —                                          |
-| `ValidationModes.onBlur`             | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | —                                          | —                                          |
-| `ValidationModes.onChange`           | <sg-icon name="check" size="16"></sg-icon> | —                                          | <sg-icon name="check" size="16"></sg-icon> | —                                          |
-| `ValidationModes.onTouched`          | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | —                                          | <sg-icon name="check" size="16"></sg-icon> |
+| `ValidationModes.onBlur`             | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | —                                          | —                                          |
+| `ValidationModes.onChange`           | <ore-icon name="check" size="16"></ore-icon> | —                                          | <ore-icon name="check" size="16"></ore-icon> | —                                          |
+| `ValidationModes.onTouched`          | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | —                                          | <ore-icon name="check" size="16"></ore-icon> |
 
 `debounce` delays auto-triggered validation by a given number of milliseconds — useful for async validators on `onChange` to avoid one request per keystroke.
 

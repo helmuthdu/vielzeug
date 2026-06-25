@@ -54,12 +54,12 @@ const adults = await db.query('users').between('age', 18, 99).orderBy('name').to
 | Feature                 | Vault                                       | Dexie.js                                   | idb-keyval                                 | Raw Web Storage                        |
 | ----------------------- | ------------------------------------------- | ------------------------------------------ | ------------------------------------------ | -------------------------------------- |
 | Bundle size             | <PackageInfo package="vault" type="size" /> | ~26 kB                                     | ~1.3 kB                                    | Native                                 |
-| TypeScript schema types | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
-| Query builder           | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
-| TTL                     | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     | Manual                                 |
-| Multiple backends       | <sg-icon name="check" size="16"></sg-icon>  | IDB only                                   | IDB only                                   | localStorage only                      |
-| Reactivity              | <sg-icon name="check" size="16"></sg-icon>  | `liveQuery`                                | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon> |
-| Zero dependencies       | <sg-icon name="check" size="16"></sg-icon>  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> | Native                                 |
+| TypeScript schema types | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| Query builder           | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| TTL                     | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     | Manual                                 |
+| Multiple backends       | <ore-icon name="check" size="16"></ore-icon>  | IDB only                                   | IDB only                                   | localStorage only                      |
+| Reactivity              | <ore-icon name="check" size="16"></ore-icon>  | `liveQuery`                                | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon> |
+| Zero dependencies       | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> | Native                                 |
 
 <div class="decision-callout">
 

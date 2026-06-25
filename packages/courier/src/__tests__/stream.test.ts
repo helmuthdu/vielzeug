@@ -1,4 +1,4 @@
-import { createStream, HttpError } from '../index';
+import { createStream, CourierHttpError } from '../index';
 
 // ─── SSE helpers ────────────────────────────────────────────────────────────
 
@@ -438,7 +438,7 @@ describe('createStream — sse()', () => {
     expect(headers['x-tenant']).toBe('acme');
   });
 
-  it('throws HttpError on non-OK response', async () => {
+  it('throws CourierHttpError on non-OK response', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
     fetchMock.mockResolvedValue(new Response('Forbidden', { status: 403, statusText: 'Forbidden' }));
@@ -449,8 +449,8 @@ describe('createStream — sse()', () => {
 
     await waitFor(() => errors.length > 0);
 
-    expect(errors[0]).toBeInstanceOf(HttpError);
-    expect((errors[0] as HttpError).status).toBe(403);
+    expect(errors[0]).toBeInstanceOf(CourierHttpError);
+    expect((errors[0] as CourierHttpError).status).toBe(403);
   });
 
   it('sse() after dispose() throws synchronously', () => {
@@ -640,7 +640,7 @@ describe('createStream — readable()', () => {
       for await (const _ of stream.readable('/stream', { parse: 'ndjson' })) {
         /* drain */
       }
-    }).rejects.toThrow('[courier] NDJSON: failed to parse line: not-json');
+    }).rejects.toThrow('NDJSON: failed to parse line: not-json');
   });
 
   it('uses POST when body is provided', async () => {
@@ -655,7 +655,7 @@ describe('createStream — readable()', () => {
     expect(fetchMock.mock.calls[0][1].method).toBe('POST');
   });
 
-  it('throws HttpError on non-OK response', async () => {
+  it('throws CourierHttpError on non-OK response', async () => {
     const stream = createStream({ baseUrl: 'https://api.example.com' });
 
     fetchMock.mockResolvedValue(new Response('Not Found', { status: 404 }));
@@ -664,7 +664,7 @@ describe('createStream — readable()', () => {
       for await (const _ of stream.readable('/missing')) {
         /* drain */
       }
-    }).rejects.toBeInstanceOf(HttpError);
+    }).rejects.toBeInstanceOf(CourierHttpError);
   });
 
   it('throws when disposed', async () => {
@@ -755,7 +755,7 @@ describe('createStream — readable()', () => {
       for await (const _ of stream.readable('/empty')) {
         /* consume */
       }
-    }).rejects.toThrow('[courier] Response has no body');
+    }).rejects.toThrow('Response has no body');
   });
 
   it('early break from for-await loop aborts the underlying fetch connection', async () => {

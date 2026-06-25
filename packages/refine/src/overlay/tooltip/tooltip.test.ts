@@ -1,0 +1,154 @@
+import { type Fixture, mount } from '@vielzeug/ore/testing';
+
+describe('ore-tooltip', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('./tooltip');
+  });
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  describe('Rendering', () => {
+    it('renders slot for trigger', async () => {
+      fixture = await mount('ore-tooltip', { html: '<button>Hover me</button>' });
+
+      expect(fixture.element.textContent?.trim()).toBe('Hover me');
+    });
+
+    it('renders tooltip element in shadow DOM', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'Tooltip text' } });
+
+      expect(fixture.query('.tooltip')).toBeTruthy();
+    });
+
+    it('renders prop content inside fallback text wrapper', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'Line 1\nLine 2' } });
+
+      const text = fixture.query('.tooltip-text');
+
+      expect(text?.textContent).toContain('Line 1');
+      expect(text?.textContent).toContain('Line 2');
+    });
+
+    it('prefers named slot content over fallback text wrapper', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'Fallback text' },
+        html: '<button>Trigger</button><span slot="content">Slotted text</span>',
+      });
+
+      const contentSlot = fixture.query('slot[name="content"]') as HTMLSlotElement | null;
+      const assigned = contentSlot?.assignedElements({ flatten: true }) ?? [];
+
+      expect(assigned.length).toBe(1);
+      expect(assigned[0]?.textContent).toContain('Slotted text');
+    });
+  });
+
+  describe('Props', () => {
+    it('applies content prop', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'Help text' } });
+
+      expect(fixture.element.getAttribute('content')).toBe('Help text');
+    });
+
+    it('applies placement prop', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'tip', placement: 'bottom' } });
+
+      expect(fixture.element.getAttribute('placement')).toBe('bottom');
+    });
+
+    it('applies variant prop', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'tip', variant: 'light' } });
+
+      expect(fixture.element.getAttribute('variant')).toBe('light');
+    });
+  });
+
+  describe('ARIA', () => {
+    it('tooltip element has role tooltip', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'tip' } });
+
+      expect(fixture.query('[role="tooltip"]')).toBeTruthy();
+    });
+  });
+
+  describe('Placements', () => {
+    for (const placement of ['top', 'bottom', 'left', 'right']) {
+      it(`accepts ${placement} placement`, async () => {
+        fixture = await mount('ore-tooltip', { attrs: { content: 'tip', placement } });
+
+        expect(fixture.element.getAttribute('placement')).toBe(placement);
+        fixture.destroy();
+      });
+    }
+  });
+});
+
+describe('ore-tooltip accessibility', () => {
+  let fixture: Awaited<ReturnType<typeof mount>>;
+
+  beforeAll(async () => {
+    if (!HTMLElement.prototype.showPopover) {
+      HTMLElement.prototype.showPopover = function () {
+        this.setAttribute('popover-open', '');
+      };
+    }
+
+    if (!HTMLElement.prototype.hidePopover) {
+      HTMLElement.prototype.hidePopover = function () {
+        this.removeAttribute('popover-open');
+      };
+    }
+
+    await import('./tooltip');
+  });
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  describe('Trigger Relationship', () => {
+    it('trigger receives aria-describedby pointing to tooltip', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'Description', trigger: 'focus' },
+        html: '<button>Trigger</button>',
+      });
+
+      const btn = fixture.element.querySelector('button');
+
+      if (btn) {
+        btn.focus();
+        await fixture.flush();
+        expect(btn.hasAttribute('aria-describedby')).toBe(true);
+      }
+    });
+  });
+
+  describe('Tooltip Hidden State', () => {
+    it('tooltip is aria-hidden when not visible', async () => {
+      fixture = await mount('ore-tooltip', { attrs: { content: 'tip' } });
+
+      const tooltip = fixture.query('.tooltip');
+
+      if (tooltip) {
+        expect(tooltip.getAttribute('aria-hidden')).toBe('true');
+      }
+    });
+  });
+
+  describe('Accessibility', () => {
+    it('passes axe checks', async () => {
+      fixture = await mount('ore-tooltip', {
+        attrs: { content: 'More information' },
+        html: '<button>Info</button>',
+      });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+  });
+});

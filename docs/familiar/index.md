@@ -48,17 +48,17 @@ typedWorker.dispose();
 | Feature           | Worker                                                                          | Comlink                                    | workerpool                                 |
 | ----------------- | ------------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size       | <PackageInfo package="familiar" type="size" />                                  | ~2 kB                                      | ~10 kB                                     |
-| Worker pools      | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon> |
-| Typed payloads    | <sg-icon name="check" size="16"></sg-icon>                                      | Partial                                    | <sg-icon name="x" size="16"></sg-icon>     |
-| Timeout support   | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="check" size="16"></sg-icon> |
-| Priority queue    | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| AbortSignal       | <sg-icon name="check" size="16"></sg-icon> Queued tasks                         | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Streaming         | <sg-icon name="check" size="16"></sg-icon> `runStream()`                        | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Heartbeat         | <sg-icon name="check" size="16"></sg-icon> Auto for inline workers              | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Typed errors      | <sg-icon name="check" size="16"></sg-icon> `instanceof WorkerTimeoutError` etc. | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Testing utilities | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="x" size="16"></sg-icon>     | <sg-icon name="x" size="16"></sg-icon>     |
-| Module workers    | <sg-icon name="check" size="16"></sg-icon> `createModuleWorker`                 | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
-| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                      | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
+| Worker pools      | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> |
+| Typed payloads    | <ore-icon name="check" size="16"></ore-icon>                                      | Partial                                    | <ore-icon name="x" size="16"></ore-icon>     |
+| Timeout support   | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="check" size="16"></ore-icon> |
+| Priority queue    | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| AbortSignal       | <ore-icon name="check" size="16"></ore-icon> Queued tasks                         | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Streaming         | <ore-icon name="check" size="16"></ore-icon> `runStream()`                        | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Heartbeat         | <ore-icon name="check" size="16"></ore-icon> Auto for inline workers              | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed errors      | <ore-icon name="check" size="16"></ore-icon> `instanceof WorkerTimeoutError` etc. | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Testing utilities | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Module workers    | <ore-icon name="check" size="16"></ore-icon> `createModuleWorker`                 | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 

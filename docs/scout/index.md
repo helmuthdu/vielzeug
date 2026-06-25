@@ -32,13 +32,13 @@ Scout builds a **trigram inverted index** at construction time. Query time is O(
 | Feature                  | Arsenal `fuzzy*`                               | Scout `createIndex`                                                                       | Fuse.js                                        |
 | ------------------------ | ---------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | Bundle size              | ~3 KB                                          | <PackageInfo package="scout" type="size" />                                               | ~23 KB                                         |
-| Zero dependencies        | <sg-icon name="check" size="16"></sg-icon>     | <sg-icon name="triangle-alert" size="16"></sg-icon> `@vielzeug/ripple` peer (reactive layer only) | <sg-icon name="check" size="16"></sg-icon>     |
+| Zero dependencies        | <ore-icon name="check" size="16"></ore-icon>     | <ore-icon name="triangle-alert" size="16"></ore-icon> `@vielzeug/ripple` peer (reactive layer only) | <ore-icon name="check" size="16"></ore-icon>     |
 | Algorithm                | Levenshtein                                    | Trigram + Dice coefficient                                                                | Bitap                                          |
 | Query time               | O(n·m)                                         | O(candidates)                                                                             | O(n·m)                                         |
-| Stateful index           | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>                                                | <sg-icon name="check" size="16"></sg-icon>     |
-| Match highlighting       | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>                                                | <sg-icon name="check" size="16"></sg-icon>     |
-| Reactive layer           | <sg-icon name="x" size="16"></sg-icon>         | ripple signals + debounce                                                                 | <sg-icon name="x" size="16"></sg-icon>         |
-| Incremental updates      | <sg-icon name="x" size="16"></sg-icon>         | <sg-icon name="check" size="16"></sg-icon>                                                | Partial                                        |
+| Stateful index           | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
+| Match highlighting       | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | <ore-icon name="check" size="16"></ore-icon>     |
+| Reactive layer           | <ore-icon name="x" size="16"></ore-icon>         | ripple signals + debounce                                                                 | <ore-icon name="x" size="16"></ore-icon>         |
+| Incremental updates      | <ore-icon name="x" size="16"></ore-icon>         | <ore-icon name="check" size="16"></ore-icon>                                                | Partial                                        |
 
 <div class="decision-callout">
 

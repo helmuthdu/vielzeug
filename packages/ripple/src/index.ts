@@ -29,8 +29,8 @@ export type {
   WatchOptions,
 } from './types';
 
-export type { StateErrorCode } from './error';
-export { StateError } from './error';
+export type { StateErrorCode } from './errors';
+export { StateError } from './errors';
 
 // Core primitives
 export { computed } from './computed';

@@ -1,4 +1,4 @@
-import { s, ValidationError } from '../index';
+import { s, SpellValidationError } from '../index';
 
 describe('s.number()', () => {
   it('accepts numbers', () => {
@@ -8,7 +8,7 @@ describe('s.number()', () => {
 
   it('rejects non-numbers and NaN', () => {
     for (const val of ['1', true, null, Number.NaN]) {
-      expect(() => s.number().parse(val)).toThrow(ValidationError);
+      expect(() => s.number().parse(val)).toThrow(SpellValidationError);
     }
   });
 

@@ -1,0 +1,177 @@
+@layer refine.base {
+  :host {
+    --_bg: var(--copy-command-bg, var(--color-contrast-100));
+    --_color: var(--copy-command-color, var(--text-color-body));
+    --_border-color: var(--copy-command-border-color, var(--color-contrast-300));
+    --_radius: var(--copy-command-radius, var(--rounded-md));
+    --_padding: var(--copy-command-padding, var(--size-2) var(--size-3));
+    --_font-size: var(--copy-command-font-size, var(--text-sm));
+    --_icon-color: var(--copy-command-icon-color, var(--text-color-secondary));
+    --_hover-bg: var(--copy-command-hover-bg, var(--color-contrast-200));
+
+    display: inline-block;
+  }
+
+  :host([hidden]) {
+    display: none;
+  }
+
+  /* ── rounded attribute → CSS variable ───────────────────── */
+
+  :host([rounded='none']) {
+    --_radius: var(--rounded-none, 0);
+  }
+
+  :host([rounded='sm']) {
+    --_radius: var(--rounded-sm);
+  }
+
+  :host([rounded='md']) {
+    --_radius: var(--rounded-md);
+  }
+
+  :host([rounded='lg']) {
+    --_radius: var(--rounded-lg);
+  }
+
+  :host([rounded='xl']) {
+    --_radius: var(--rounded-xl);
+  }
+
+  :host([rounded='2xl']) {
+    --_radius: var(--rounded-2xl);
+  }
+
+  :host([rounded='3xl']) {
+    --_radius: var(--rounded-3xl);
+  }
+
+  :host([rounded='full']) {
+    --_radius: var(--rounded-full);
+  }
+
+  /* ── size variants ───────────────────────────────────────── */
+
+  :host([size='sm']) {
+    --_padding: var(--copy-command-padding, var(--size-1) var(--size-2));
+    --_font-size: var(--copy-command-font-size, var(--text-xs));
+  }
+
+  :host([size='lg']) {
+    --_padding: var(--copy-command-padding, var(--size-2-5) var(--size-4));
+    --_font-size: var(--copy-command-font-size, var(--text-base));
+  }
+
+  /* ── visual variants ─────────────────────────────────────── */
+
+  :host([variant='bordered']) {
+    --_bg: var(--copy-command-bg, transparent);
+    --_border-color: var(--copy-command-border-color, var(--color-contrast-400));
+  }
+
+  :host([variant='ghost']) {
+    --_bg: var(--copy-command-bg, transparent);
+    --_border-color: var(--copy-command-border-color, transparent);
+    --_hover-bg: var(--copy-command-hover-bg, var(--color-contrast-100));
+  }
+
+  /* ── layout ──────────────────────────────────────────────── */
+
+  .wrapper {
+    display: inline-flex;
+    align-items: stretch;
+    overflow: hidden;
+    background: var(--_bg);
+    border: var(--border) solid var(--_border-color);
+    border-radius: var(--_radius);
+    transition:
+      border-color var(--transition-normal),
+      background var(--transition-normal);
+  }
+
+  /* ── command button ──────────────────────────────────────── */
+
+  .command {
+    display: inline-flex;
+    flex: 1;
+    gap: var(--size-2);
+    align-items: center;
+    padding: var(--_padding);
+    font-family: var(--font-mono);
+    font-size: var(--_font-size);
+    color: var(--_color);
+    text-align: start;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: background var(--transition-normal);
+  }
+
+  .command:hover {
+    background: var(--_hover-bg);
+  }
+
+  .command:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+    border-radius: calc(var(--_radius) - 1px);
+  }
+
+  /* ── command text ────────────────────────────────────────── */
+
+  .command-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    white-space: nowrap;
+    background: transparent;
+  }
+
+  /* ── copy icon ───────────────────────────────────────────── */
+
+  .copy-icon {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    color: var(--_icon-color);
+    transition: color var(--transition-normal);
+  }
+
+  .icon-copied {
+    color: var(--color-success, oklch(64% 0.17 142deg));
+  }
+
+  /* ── suffix slot ─────────────────────────────────────────── */
+
+  .suffix {
+    display: flex;
+    align-items: stretch;
+    border-inline-start: var(--border) solid var(--_border-color);
+  }
+
+  .suffix[hidden] {
+    display: none;
+  }
+
+  ::slotted([slot='suffix']) {
+    display: flex;
+    align-items: center;
+  }
+
+  /* ── sr-only live region ─────────────────────────────────── */
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    white-space: nowrap;
+    border-width: 0;
+    clip-path: inset(50%);
+  }
+}

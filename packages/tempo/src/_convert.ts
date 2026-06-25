@@ -2,8 +2,8 @@ import { Temporal } from '@js-temporal/polyfill';
 
 import type { DateTimeDisambiguation, TimeInput } from './types';
 
-import { fail, TempoErrorCode } from './_error';
 import { validateTz } from './_tz';
+import { fail, TempoErrorCode } from './errors';
 
 type WithPrefer = { prefer?: DateTimeDisambiguation };
 type TimeOptionsWithTz = { tz: string };

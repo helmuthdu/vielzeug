@@ -1,6 +1,6 @@
 import type { HttpRequestConfig, Params } from './url';
 
-import { classifyRequestError, HttpError, SchemaValidationError } from './errors';
+import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierSchemaValidationError } from './errors';
 import { parseResponse } from './response';
 import { buildRequestInit, hash } from './serialize';
 import {
@@ -76,7 +76,7 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
         body = await res.text().catch(() => '');
       }
 
-      throw HttpError.fromResponse(res, body, m, full);
+      throw CourierHttpError.fromResponse(res, body, m, full);
     }
 
     let raw: unknown;
@@ -91,7 +91,7 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
       try {
         return schema.parse(raw);
       } catch (err) {
-        throw new SchemaValidationError(err, raw);
+        throw new CourierSchemaValidationError(err, raw);
       }
     }
 
@@ -103,7 +103,7 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
     url: P,
     config: HttpRequestConfig<P> = {} as HttpRequestConfig<P>,
   ) {
-    if (transport.disposed) throw new Error('[courier] ApiClient has been disposed');
+    if (transport.disposed) throw new CourierDisposedError('ApiClient');
 
     const m = method.toUpperCase();
 

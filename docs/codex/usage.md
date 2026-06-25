@@ -101,11 +101,11 @@ get-docs { packageSlug: "forge", page: "api" }       → full API reference
 get-source { packageSlug: "forge" }                  → exact exported signatures
 ```
 
-For Sigil component queries:
+For Refine component queries:
 
 ```
 list-components                              → enumerate available tag names
-get-component { tagName: "sg-input" }       → full CEM declaration
+get-component { tagName: "ore-input" }       → full CEM declaration
 ```
 
 ## Programmatic Usage
@@ -160,7 +160,7 @@ cd packages/codex
 pnpm run prepare:data
 ```
 
-If `list-components` returns an error about missing Sigil metadata, build `@vielzeug/sigil` first so `packages/sigil/dist/custom-elements.json` is available during bundling.
+If `list-components` returns an error about missing Refine metadata, build `@vielzeug/refine` first so `packages/refine/dist/custom-elements.json` is available during bundling.
 
 ## Security Notes
 
@@ -189,22 +189,22 @@ npx -y @vielzeug/codex --port 3100
 
 ## Working with Other Vielzeug Libraries
 
-**With Sigil** — the codex MCP server exposes Sigil component metadata via `list-components` and `get-component`. After building `@vielzeug/sigil`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
+**With Refine** — the codex MCP server exposes Refine component metadata via `list-components` and `get-component`. After building `@vielzeug/refine`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
 
 ```bash
-# Ensure Sigil CEM is available before bundling codex
-pnpm --filter @vielzeug/sigil build
+# Ensure Refine CEM is available before bundling codex
+pnpm --filter @vielzeug/refine build
 pnpm --filter @vielzeug/codex run prepare:data
 ```
 
 An AI agent can then call:
 
 ```jsonc
-// list all sg- components
+// list all ore- components
 { "tool": "list-components" }
 
-// get full declaration for sg-button
-{ "tool": "get-component", "arguments": { "tagName": "sg-button" } }
+// get full declaration for ore-button
+{ "tool": "get-component", "arguments": { "tagName": "ore-button" } }
 ```
 
 **With Spell** — codex exposes `spell` documentation so AI agents can discover the schema validation API without leaving the MCP session:

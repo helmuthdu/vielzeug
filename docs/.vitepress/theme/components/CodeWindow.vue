@@ -15,8 +15,8 @@ withDefaults(defineProps<Props>(), {
 </script>
 
 <template>
-  <sg-code-window :variant="variant" :lang="lang" :filename="filename" :title="title">
+  <ore-code-window :variant="variant" :lang="lang" :filename="filename" :title="title">
     <slot />
     <slot name="header-end" slot="header-end" />
-  </sg-code-window>
+  </ore-code-window>
 </template>

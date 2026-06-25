@@ -7,15 +7,15 @@
 ## Key conventions
 
 - **Zero external dependencies** per package. Inter-package `workspace:*` deps are fine. Documented exceptions:
-  - `sigil` — bundles `lucide` as a runtime dependency (icons).
-  - `sigil`, `prism` — use `axe-core` as a devDependency for accessibility testing. It is not bundled and does not appear in production output.
+  - `refine` — bundles `lucide` as a runtime dependency (icons).
+  - `refine`, `prism` — use `axe-core` as a devDependency for accessibility testing. It is not bundled and does not appear in production output.
 - **TypeScript strict mode** everywhere. No `any`, no JS files in `src/`.
 - **`pnpm`** for package management, **Rush** for monorepo orchestration (`pnpm setup` = `rush install`).
 - **ESLint Perfectionist** enforces sorted imports and object keys — run `pnpm fix` to auto-sort.
 - **Prettier** at 120-char line width, 2-space indent, trailing commas.
 - **Conventional commits**: `feat(courier): add retry logic`.
 - **Dead-dep hygiene**: periodically audit each `package.json` `dependencies` and `devDependencies` against actual import usage. Dead `workspace:*` entries inflate the dependency graph and mislead the package catalogue — remove them and keep the dep graph above accurate.
-- Tests live at `packages/<name>/src/__tests__/`. Run with `pnpm test` (vitest). Some packages co-locate tests next to source (e.g. `sigil`) — see their `AGENTS.md`.
+- Tests live at `packages/<name>/src/__tests__/`. Run with `pnpm test` (vitest). Some packages co-locate tests next to source (e.g. `refine`) — see their `AGENTS.md`.
 
 ## Versioning & releases
 
@@ -25,15 +25,35 @@
 
 ## Teardown / disposal convention
 
-Every resource object that requires explicit teardown exposes **both**:
+Every resource object that requires explicit teardown follows one of two protocols.
+
+### Sync disposable (the default)
 
 ```typescript
-dispose(): void;           // named method — always call this directly
-[Symbol.dispose](): void;  // delegates to dispose() — enables `using` declarations
+interface SomeHandle {
+  dispose(): void;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;  // see note below
+  [Symbol.dispose](): void;             // always last; delegates to dispose()
+}
 ```
 
-- **`dispose()`** is the canonical name. Never use `destroy()`, `disconnect()`, `close()`, or `cleanup()` for owned resource teardown.
-- **`[Symbol.dispose]`** is always last in the object/interface (ESLint Perfectionist sorts symbol keys after named keys).
+### Async disposable (only when teardown genuinely requires await — currently vault/IDB)
+
+```typescript
+interface AsyncHandle {
+  dispose(): Promise<void>;
+  readonly disposed: boolean;
+  readonly disposalSignal: AbortSignal;
+  [Symbol.asyncDispose](): Promise<void>; // always last; delegates to dispose()
+}
+```
+
+**Rules:**
+- **`dispose()`** is the canonical name. Never use `destroy()`, `disconnect()`, `close()`, or `cleanup()` for owned-resource teardown.
+- **`readonly disposed: boolean`** — always present on disposable objects.
+- **`readonly disposalSignal: AbortSignal`** — present on **long-lived stateful objects** that consumers reasonably tie their own lifetimes to (buses, adapters, forms, worker pools, sourcerers). Not required on short-lived helpers (queries, mutations, batchers).
+- **`[Symbol.dispose]` / `[Symbol.asyncDispose]`** — always placed last in the object literal / interface (ESLint Perfectionist sorts symbol keys after named keys).
 - Native platform APIs that return teardown functions (e.g. `autoUpdate() => () => void`) are **not** wrapped — leave them as plain functions.
 
 ## Dev logging standard
@@ -45,16 +65,17 @@ Every package follows a two-layer logging model. **Never mix the layers.**
 For API-misuse warnings that fire automatically in dev builds (bad config, mismatched types, missing attributes, etc.).
 
 - Lives in a **private** `src/_warn.ts` — never exported from `index.ts` or `/devtools`.
+- `isDev` is always `const` (never `export const`) — it is private implementation detail.
 - Gated by `isDev` via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
 - Prefix format: `[@vielzeug/<pkg>] <description>` — emits via `console.warn` (warnings) or `console.error` (errors).
-- Add `@security` JSDoc if message text may include user-supplied data (PII risk).
 - **No bare `console.warn` / `console.error` in source** — always go through `warn()` / `issue()` from `_warn.ts`.
+- Both `warn()` and `issue()` are **always present** in every `_warn.ts`.
 
 ```typescript
 // packages/<name>/src/_warn.ts
 const isDev = !(globalThis as { __<NAME>_PROD__?: boolean }).__<NAME>_PROD__;
 
-/** @internal @security Messages may include user data. */
+/** @internal */
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/<name>] ${msg}`);
 }
@@ -63,11 +84,18 @@ export function warn(msg: string): void {
 export function issue(msg: string, ...args: unknown[]): void {
   if (isDev) console.error(`[@vielzeug/<name>] ${msg}`, ...args);
 }
+
+/** @internal — Run fn only in dev builds. Use when dev-only logic goes beyond a single warn() call. */
+export function devOnly(fn: () => void): void {
+  if (isDev) fn();
+}
 ```
+
+Add `@security` to `warn`'s JSDoc only when messages may include user-supplied data (PII risk).
 
 ### Layer 2 — Consumer debug observability (`src/devtools.ts` or `src/devtools/index.ts`)
 
-For opt-in structured debug logging consumer import explicitly. Tree-shaken in production.
+For opt-in structured debug logging consumers import explicitly. Tree-shaken in production.
 
 - Exported **only** from the `/devtools` sub-path (e.g. `import { debugBus } from '@vielzeug/herald/devtools'`).
 - Uses `console.debug` (not `console.warn`).
@@ -79,6 +107,64 @@ For opt-in structured debug logging consumer import explicitly. Tree-shaken in p
 - **`_warn.ts` is never re-exported** from `index.ts`.
 - Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_warn` directly.
 - Expected message format in tests: `'[@vielzeug/<pkg>] <description>'`.
+
+## Error class convention
+
+Every package that throws typed errors has `src/errors.ts` with a base class hierarchy.
+
+```typescript
+// packages/<name>/src/errors.ts
+
+/** Base class for all <name> errors. */
+export class <Pkg>Error extends Error {
+  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+    super(message, opts);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+
+  static is(err: unknown): err is <Pkg>Error {
+    return err instanceof <Pkg>Error;
+  }
+}
+
+/** Thrown when ... */
+export class <Pkg>FooError extends <Pkg>Error {}
+
+/** Thrown when ... (with extra fields) */
+export class <Pkg>BarError extends <Pkg>Error {
+  readonly code: string;
+  constructor(code: string, message: string, opts?: ErrorOptions) {
+    super(message, opts);
+    this.code = code;
+  }
+}
+```
+
+**Rules:**
+- One base class `<Pkg>Error extends Error` — all subtypes extend the base, never `Error` directly.
+- Base always has `this.name = new.target.name` and `Object.setPrototypeOf(this, new.target.prototype)`.
+- `static is()` only on the base class.
+- Use `opts?: ErrorOptions` for cause chaining — no custom `cause?: unknown` pattern.
+- **No `[@vielzeug/<name>]` prefix in error messages** — the class name and module scope identify origin.
+- Error classes live in `errors.ts` only — never in `types.ts` or mixed into `_types.ts`.
+
+## File layout & naming
+
+```
+packages/<name>/src/
+├── _warn.ts          ← always private (_-prefix = never re-exported from index.ts)
+├── _<internal>.ts    ← private impl files (never re-exported)
+├── errors.ts         ← public error types (exported from index.ts)
+├── types.ts          ← public type definitions (exported from index.ts)
+├── devtools.ts       ← optional Layer-2 debug logging, /devtools sub-path only
+└── index.ts          ← sole public surface
+```
+
+**Rules:**
+- `_` prefix means the file is **never re-exported** from `index.ts`.
+- `errors.ts` and `types.ts` have **no** `_` prefix — they are public.
+- Error classes must live in `errors.ts`, not `types.ts` or `_types.ts`.
 
 ## Package layout
 
@@ -109,7 +195,6 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/coins`     | Finance    | Currency formatting and exchange utilities for monetary arithmetic |
 | `@vielzeug/conduit`   | DI         | Typed dependency injection container                               |
 | `@vielzeug/courier`   | HTTP       | Typed HTTP client with caching and mutations                       |
-| `@vielzeug/craft`     | UI         | Functional web-component authoring on top of ripple                |
 | `@vielzeug/dnd`       | UI         | Drag-and-drop — drop zones and sortable lists                      |
 | `@vielzeug/familiar`  | Workers    | Web Worker pool with tasks, timeouts, cancellation                 |
 | `@vielzeug/flux`      | Streams    | Composable stream primitives with hot/cold semantics and operators |
@@ -119,14 +204,15 @@ When in doubt about structure, style, or test layout, imitate an existing exempl
 | `@vielzeug/ledger`    | State      | Async undo/redo command history with Ripple reactive state         |
 | `@vielzeug/lingua`    | i18n       | Typed i18n with pluralization and async loading                    |
 | `@vielzeug/orbit`     | UI         | Floating element positioning (tooltip, popover)                    |
+| `@vielzeug/ore`     | UI         | Functional web-component authoring on top of ripple                |
 | `@vielzeug/prism`     | Charts     | Reactive SVG charting library — line, bar, area, pie, sparkline    |
 | `@vielzeug/pulse`     | WebSockets | Typed WebSocket client with channels, rooms, presence, reconnect   |
+| `@vielzeug/refine`     | UI         | Accessible, themeable web components built on ore                  |
 | `@vielzeug/ripple`    | State      | Reactive signals, computed, effects, stores                        |
 | `@vielzeug/rune`      | Logging    | Structured scoped logger with remote transport                     |
+| `@vielzeug/sandbox`   | AI         | Sandboxed iframe runtime with typed postMessage state bridge       |
 | `@vielzeug/scout`     | Utilities  | Trigram fuzzy-search index with highlighting and reactive layer    |
 | `@vielzeug/scroll`    | UI         | Virtual list engine for large datasets                             |
-| `@vielzeug/sandbox`   | AI         | Sandboxed iframe runtime with typed postMessage state bridge       |
-| `@vielzeug/sigil`     | UI         | Accessible, themeable web components built on craft                |
 | `@vielzeug/sourcerer` | Data       | Reactive data sources with pagination and search                   |
 | `@vielzeug/spell`     | Validation | Zero-dep schema validation (Zod-like)                              |
 | `@vielzeug/tempo`     | Date/Time  | Temporal-powered date utilities                                    |
@@ -142,17 +228,17 @@ Inter-package `@vielzeug/*` runtime dependencies (verified against each `package
 clockwork  → ripple
 coins      → arsenal
 courier    → arsenal
-craft      → arsenal, orbit, ripple
 familiar   → arsenal
 flux       → ripple
 forge      → arsenal, ripple
+ledger     → ripple
 orbit      → arsenal, ripple
+ore        → arsenal, orbit, ripple
 prism      → orbit, ripple
 pulse      → ripple
-ledger     → ripple
+refine     → arsenal, ore, dnd, orbit, ripple, scroll, tempo
 scout      → ripple
 scroll     → ripple
-sigil      → arsenal, craft, dnd, orbit, ripple, scroll, tempo
 sourcerer  → arsenal, ripple
 spell      → arsenal
 ```

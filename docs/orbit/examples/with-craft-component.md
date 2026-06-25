@@ -1,21 +1,21 @@
 ---
-title: 'Orbit Examples — With Craft Component'
-description: 'With Craft Component example for @vielzeug/orbit.'
+title: 'Orbit Examples — With Ore Component'
+description: 'With Ore Component example for @vielzeug/orbit.'
 ---
 
-## With Craft Component
+## With Ore Component
 
 ### Problem
 
-You are adding a positioned tooltip or popover to a Craft custom element. The float's `autoUpdate` cleanup must be tied to the component's own `disconnectedCallback` so it does not outlive the element.
+You are adding a positioned tooltip or popover to a Ore custom element. The float's `autoUpdate` cleanup must be tied to the component's own `disconnectedCallback` so it does not outlive the element.
 
 ### Solution
 
-Usage inside a [@vielzeug/craft](/craft/) component with automatic `autoUpdate` cleanup.
+Usage inside a [@vielzeug/ore](/ore/) component with automatic `autoUpdate` cleanup.
 
 ```ts
 import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/orbit';
-import { define, onMount, signal } from '@vielzeug/craft';
+import { define, onMount, signal } from '@vielzeug/ore';
 
 define('my-tooltip', {
   setup({ host }) {
@@ -45,7 +45,7 @@ define('my-tooltip', {
         cleanup = null;
       });
 
-      // Cleanup is run automatically on unmount by Craft
+      // Cleanup is run automatically on unmount by Ore
       return () => cleanup?.();
     });
   },
@@ -54,13 +54,13 @@ define('my-tooltip', {
 
 ### Pitfalls
 
-- `autoUpdate` must be called after the Craft element's shadow DOM is ready — inside `onMounted`, not the constructor. The floating element reference may not exist before that point.
-- Store the `autoUpdate` cleanup function in a component property and call it in `disconnectedCallback`. Returning it from `onMounted` is the cleanest pattern for Craft.
+- `autoUpdate` must be called after the Ore element's shadow DOM is ready — inside `onMounted`, not the constructor. The floating element reference may not exist before that point.
+- Store the `autoUpdate` cleanup function in a component property and call it in `disconnectedCallback`. Returning it from `onMounted` is the cleanest pattern for Ore.
 - The floating element must have `position: fixed` or `position: absolute`. Without explicit CSS positioning, the computed `top`/`left` values are applied but have no visual effect.
 
 ### Related
 
-- [Web Component with Craft (Dnd)](@vielzeug/dnd/examples/web-component-with-craft)
+- [Web Component with Ore (Dnd)](@vielzeug/dnd/examples/web-component-with-ore)
 
 - [Context Menu](./context-menu.md)
 - [Custom Middleware](./custom-middleware.md)

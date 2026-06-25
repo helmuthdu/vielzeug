@@ -54,14 +54,14 @@ effect(() => console.log('status:', pulse.status.value)); // reactive via ripple
 | Feature               | Pulse                                                      | Native WebSocket                                | socket.io-client                                           |
 | --------------------- | ---------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------- |
 | Bundle size           | <PackageInfo package="pulse" type="size" />                | 0 B (native)                                    | ~44 kB gzip                                                |
-| TypeScript inference  | <sg-icon name="check" size="16"></sg-icon> Full            | <sg-icon name="x" size="16"></sg-icon> None     | <sg-icon name="triangle-alert" size="16"></sg-icon> Basic  |
-| Auto-reconnect        | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
-| Heartbeat (ping/pong) | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
-| Channel multiplexing  | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="check" size="16"></sg-icon>                 |
-| Reactive presence     | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="triangle-alert" size="16"></sg-icon> Manual |
-| Reactive status       | <sg-icon name="check" size="16"></sg-icon>                 | <sg-icon name="x" size="16"></sg-icon>          | <sg-icon name="x" size="16"></sg-icon>                     |
-| Server lock-in        | <sg-icon name="check" size="16"></sg-icon> None            | <sg-icon name="check" size="16"></sg-icon> None | <sg-icon name="x" size="16"></sg-icon> Required            |
-| Zero dependencies     | <sg-icon name="triangle-alert" size="16"></sg-icon> ripple | <sg-icon name="check" size="16"></sg-icon>      | <sg-icon name="x" size="16"></sg-icon>                     |
+| TypeScript inference  | <ore-icon name="check" size="16"></ore-icon> Full            | <ore-icon name="x" size="16"></ore-icon> None     | <ore-icon name="triangle-alert" size="16"></ore-icon> Basic  |
+| Auto-reconnect        | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
+| Heartbeat (ping/pong) | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
+| Channel multiplexing  | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="check" size="16"></ore-icon>                 |
+| Reactive presence     | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="triangle-alert" size="16"></ore-icon> Manual |
+| Reactive status       | <ore-icon name="check" size="16"></ore-icon>                 | <ore-icon name="x" size="16"></ore-icon>          | <ore-icon name="x" size="16"></ore-icon>                     |
+| Server lock-in        | <ore-icon name="check" size="16"></ore-icon> None            | <ore-icon name="check" size="16"></ore-icon> None | <ore-icon name="x" size="16"></ore-icon> Required            |
+| Zero dependencies     | <ore-icon name="triangle-alert" size="16"></ore-icon> ripple | <ore-icon name="check" size="16"></ore-icon>      | <ore-icon name="x" size="16"></ore-icon>                     |
 
 <div class="decision-callout">
 

@@ -1,4 +1,4 @@
-import { createForm, ValidationError } from '../../index';
+import { createForm, ForgeValidationError } from '../../index';
 
 interface Address {
   city: string;
@@ -258,7 +258,7 @@ describe('form.scope()', () => {
     }
   });
 
-  test('submitOrThrow() on scoped form throws ValidationError with scoped errors on failure', async () => {
+  test('submitOrThrow() on scoped form throws ForgeValidationError with scoped errors on failure', async () => {
     const form = createForm({
       defaultValues: defaults,
       validators: {
@@ -278,8 +278,8 @@ describe('form.scope()', () => {
       caught = e;
     }
 
-    expect(caught).toBeInstanceOf(ValidationError);
-    expect((caught as ValidationError).errors).toEqual({ city: 'City required' });
+    expect(caught).toBeInstanceOf(ForgeValidationError);
+    expect((caught as ForgeValidationError).errors).toEqual({ city: 'City required' });
   });
 
   test('submit() on scoped form returns only scoped errors on validation failure', async () => {

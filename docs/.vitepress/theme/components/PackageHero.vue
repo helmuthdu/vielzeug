@@ -77,35 +77,35 @@ const categoryLabel = computed(() => {
             :alt="`${props.package} logo`"
             class="pkg-logo-img"
             @error="(e: Event) => ((e.target as HTMLImageElement).style.display = 'none')" />
-          <sg-text as="h1" variant="heading" size="xl" weight="bold" color="heading">{{ packageName }}</sg-text>
-          <sg-badge v-if="category" color="primary" variant="flat" size="xs" rounded="full">
+          <ore-text as="h1" variant="heading" size="xl" weight="bold" color="heading">{{ packageName }}</ore-text>
+          <ore-badge v-if="category" color="primary" variant="flat" size="xs" rounded="full">
             {{ categoryLabel }}
-          </sg-badge>
+          </ore-badge>
         </div>
-        <sg-text v-if="description" as="p" variant="body" size="md" color="secondary" class="pkg-hero-description">{{
+        <ore-text v-if="description" as="p" variant="body" size="md" color="secondary" class="pkg-hero-description">{{
           description
-        }}</sg-text>
+        }}</ore-text>
         <div class="pkg-meta-row">
-          <sg-tooltip v-if="packageInfo.version" content="Published npm version" placement="top">
-            <sg-badge color="primary" size="xs" rounded="full">v{{ packageInfo.version }}</sg-badge>
-          </sg-tooltip>
-          <sg-tooltip
+          <ore-tooltip v-if="packageInfo.version" content="Published npm version" placement="top">
+            <ore-badge color="primary" size="xs" rounded="full">v{{ packageInfo.version }}</ore-badge>
+          </ore-tooltip>
+          <ore-tooltip
             v-if="packageInfo.size && packageInfo.size !== 'N/A'"
             content="Minified and gzipped bundle size"
             placement="top">
-            <sg-badge color="primary" size="xs" rounded="full">{{ packageInfo.size }} gzip</sg-badge>
-          </sg-tooltip>
-          <sg-tooltip v-if="packageInfo.dependencies === 0" content="No external npm dependencies" placement="top">
-            <sg-badge color="primary" size="xs" rounded="full">0 deps</sg-badge>
-          </sg-tooltip>
-          <sg-tooltip v-if="environments.length" content="Supported runtime environments" placement="top">
-            <sg-badge color="primary" size="xs" rounded="full">
+            <ore-badge color="primary" size="xs" rounded="full">{{ packageInfo.size }} gzip</ore-badge>
+          </ore-tooltip>
+          <ore-tooltip v-if="packageInfo.dependencies === 0" content="No external npm dependencies" placement="top">
+            <ore-badge color="primary" size="xs" rounded="full">0 deps</ore-badge>
+          </ore-tooltip>
+          <ore-tooltip v-if="environments.length" content="Supported runtime environments" placement="top">
+            <ore-badge color="primary" size="xs" rounded="full">
               {{ environments.map((e) => envLabel[e] ?? e).join(' · ') }}
-            </sg-badge>
-          </sg-tooltip>
+            </ore-badge>
+          </ore-tooltip>
         </div>
         <div v-if="exports.length" class="pkg-exports-row">
-          <sg-badge
+          <ore-badge
             v-for="ex in exports.slice(0, 8)"
             :key="ex"
             variant="outline"
@@ -113,14 +113,14 @@ const categoryLabel = computed(() => {
             rounded="sm"
             class="pkg-export-tag">
             {{ ex }}
-          </sg-badge>
+          </ore-badge>
           <a v-if="exports.length > 8" :href="withBase(`/${props.package}/api`)" class="pkg-exports-more">
             +{{ exports.length - 8 }} more →
           </a>
         </div>
         <div v-if="related.length" class="pkg-related-row">
           <a v-for="rel in related" :key="rel" :href="withBase(`/${rel}/`)" class="pkg-related-link">
-            <sg-badge color="secondary" variant="flat" size="xs" rounded="sm">{{ rel }}</sg-badge>
+            <ore-badge color="secondary" variant="flat" size="xs" rounded="sm">{{ rel }}</ore-badge>
           </a>
         </div>
       </div>

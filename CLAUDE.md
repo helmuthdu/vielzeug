@@ -54,20 +54,22 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 ### Package Dependency Graph (notable edges)
 
 ```
-clockwork → ripple
-coins → arsenal
-courier → arsenal
-craft → arsenal, ripple
-familiar → arsenal
-forge → arsenal, ripple
-herald → arsenal
-orbit → arsenal, ripple
-prism → orbit, ripple
-scroll → ripple
-sigil → arsenal, craft, dnd, orbit, ripple, scroll
-sourcerer → arsenal, ripple
-spell → arsenal
-tempo → arsenal
+clockwork  → ripple
+coins      → arsenal
+courier    → arsenal
+familiar   → arsenal
+flux       → ripple
+forge      → arsenal, ripple
+ledger     → ripple
+orbit      → arsenal, ripple
+ore        → arsenal, orbit, ripple
+prism      → orbit, ripple
+pulse      → ripple
+refine     → arsenal, ore, dnd, orbit, ripple, scroll, tempo
+scout      → ripple
+scroll     → ripple
+sourcerer  → arsenal, ripple
+spell      → arsenal
 ```
 
 All other packages are fully independent.
@@ -76,9 +78,9 @@ All other packages are fully independent.
 
 | Category | Packages                                                                                                                                                                                                                                  |
 |---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| State & Reactivity | `ripple` (signals/computed/effects), `craft` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines)                                                                                    |
+| State & Reactivity | `ripple` (signals/computed/effects), `ore` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines)                                                                                    |
 | HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API)                                                                                                                                               |
-| UI Primitives | `sigil` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `dnd` (drag-and-drop), `scroll` (virtual list engine)                                                                                       |
+| UI Primitives | `refine` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `dnd` (drag-and-drop), `scroll` (virtual list engine)                                                                                       |
 | Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization)                                                                                                                                                            |
 | Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `codex` (AI/MCP server) |
 | Finance | `coins` (precise monetary arithmetic)                                                                                                                                                                                                     |

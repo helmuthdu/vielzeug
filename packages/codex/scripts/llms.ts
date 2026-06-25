@@ -95,7 +95,7 @@ function buildLlmsTxt(packages: BundledPackage[], version: string): string {
     '',
     '**MCP (AI agents):** `npx -y @vielzeug/codex` runs the Vielzeug MCP server in standalone stdio mode',
     'with bundled data — no monorepo checkout required. Use `npx -y @vielzeug/codex --port 3100`',
-    'for Streamable HTTP with package discovery, docs lookup, source inspection, and Sigil component metadata.',
+    'for Streamable HTTP with package discovery, docs lookup, source inspection, and Refine component metadata.',
     '',
     '## Packages',
     '',

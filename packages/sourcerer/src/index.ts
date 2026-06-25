@@ -11,7 +11,7 @@ export { prefetchSource, prefetchSourceAndKeep } from './prefetch';
 export { filterContains, filterEquals, filterRange, sortBy } from './presets';
 export { createRemoteSource } from './remoteSource';
 export { sourceState } from './state';
-export { SourceDisposedError, SourceError, SourceTimeoutError } from './types';
+export { SourceDisposedError, SourceError, SourceTimeoutError } from './errors';
 export type {
   CursorConfig,
   CursorMeta,

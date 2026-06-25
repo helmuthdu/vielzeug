@@ -142,17 +142,17 @@ describe('createKeymap', () => {
   });
 
   it('throws on invalid shortcut at construction', () => {
-    expect(() => createKeymap({ ctrl: vi.fn() })).toThrow('[@vielzeug/keymap] Invalid shortcut step: "ctrl"');
+    expect(() => createKeymap({ ctrl: vi.fn() })).toThrow('Invalid shortcut step: "ctrl"');
   });
 
   it('throws on ambiguous shortcut at construction', () => {
-    expect(() => createKeymap({ 'ctrl+k+j': vi.fn() })).toThrow('[@vielzeug/keymap] Ambiguous shortcut step');
+    expect(() => createKeymap({ 'ctrl+k+j': vi.fn() })).toThrow('Ambiguous shortcut step');
   });
 
   it('throws on invalid shortcut passed to bind()', () => {
     const map = createKeymap({});
 
-    expect(() => map.bind('ctrl', vi.fn())).toThrow('[@vielzeug/keymap] Invalid shortcut step: "ctrl"');
+    expect(() => map.bind('ctrl', vi.fn())).toThrow('Invalid shortcut step: "ctrl"');
   });
 
   it('creates an empty keymap with no arguments', () => {

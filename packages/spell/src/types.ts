@@ -202,13 +202,13 @@ export type SchemaDescriptor = BaseDescriptor &
     | { from: SchemaDescriptor; kind: 'pipe'; to: SchemaDescriptor }
   );
 
-/* -------------------- ParseResult (forward-references ValidationError) -------------------- */
+/* -------------------- ParseResult (forward-references SpellValidationError) -------------------- */
 
 import type { Schema } from './core';
 // Import only the type to avoid circular dependencies
-import type { ValidationError } from './errors';
+import type { SpellValidationError } from './errors';
 
-export type ParseResult<T> = { data: T; success: true } | { error: ValidationError; success: false };
+export type ParseResult<T> = { data: T; success: true } | { error: SpellValidationError; success: false };
 
 /* -------------------- AnySchema / Infer (forward-references Schema) -------------------- */
 

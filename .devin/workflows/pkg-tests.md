@@ -52,17 +52,17 @@ Use consistent markers throughout your output:
 
 ## 1. Context
 
-- Tests usually live in `packages/<name>/src/__tests__/`, but some packages **co-locate** tests next to source (e.g. `sigil`: `src/<category>/<component>/<component>.test.ts`). Check the package's `AGENTS.md` for the correct command.
+- Tests usually live in `packages/<name>/src/__tests__/`, but some packages **co-locate** tests next to source (e.g. `refine`: `src/<category>/<component>/<component>.test.ts`). Check the package's `AGENTS.md` for the correct command.
 - Runner: Vitest — use `describe`, `it`, `expect`, `beforeEach`, `afterEach`, `vi.fn()`, `vi.spyOn()`
 - No snapshot tests unless the output is truly stable and human-readable
 - TypeScript strict mode applies to test files too — avoid `any`
 - Run tests with: `pnpm vitest run packages/<name>/src/__tests__/` (or `pnpm --filter @vielzeug/<name> test` to cover co-located tests)
 - **Canonical context** — conventions, package catalogue, and the dependency graph live in `.devin/rules/conventions.md`. Consult it; do not duplicate or restate it.
 - **Read the DOX chain first** — root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present) — and honour the local test command.
-- **Scope large packages.** For big packages (e.g. `sigil`), audit one category/area per pass rather than the whole tree at once.
-- **UI / DOM-output packages** (`sigil`, `craft`, `prism`): accessibility coverage is a **hard requirement**. Follow each package's `AGENTS.md` "Accessibility testing" contract — the scope differs by package type:
-  - `sigil` / `prism` — full component/chart ARIA pattern assertions; every test must call `axeCheck` and assert zero violations.
-  - `craft` — primitive-level only: assert correct `role`, `tabindex`, `aria-*` wiring on elements the primitives produce. Full ARIA pattern correctness is `sigil`'s concern, not `craft`'s. See `packages/craft/AGENTS.md` for details.
+- **Scope large packages.** For big packages (e.g. `refine`), audit one category/area per pass rather than the whole tree at once.
+- **UI / DOM-output packages** (`refine`, `ore`, `prism`): accessibility coverage is a **hard requirement**. Follow each package's `AGENTS.md` "Accessibility testing" contract — the scope differs by package type:
+  - `refine` / `prism` — full component/chart ARIA pattern assertions; every test must call `axeCheck` and assert zero violations.
+  - `ore` — primitive-level only: assert correct `role`, `tabindex`, `aria-*` wiring on elements the primitives produce. Full ARIA pattern correctness is `refine`'s concern, not `ore`'s. See `packages/ore/AGENTS.md` for details.
   - In all cases, under jsdom use the scoped `axeCheck` helper and treat layout/contrast rules as out of automated scope.
 
 ## 2. Goals
@@ -80,13 +80,13 @@ Use consistent markers throughout your output:
 
 **Goal:** Establish a verified green baseline before making any change.
 
-**Check the package's `AGENTS.md` for the correct test command first.** Packages that co-locate tests next to source (e.g. `sigil`) require a different command:
+**Check the package's `AGENTS.md` for the correct test command first.** Packages that co-locate tests next to source (e.g. `refine`) require a different command:
 
 ```bash
 # Standard packages (tests in src/__tests__/)
 pnpm vitest run packages/<name>/src/__tests__/
 
-# Co-located packages (e.g. sigil — tests alongside source)
+# Co-located packages (e.g. refine — tests alongside source)
 pnpm --filter @vielzeug/<name> test
 ```
 
@@ -187,7 +187,7 @@ After changes, run the test suite (safe to auto-run). Use the command that match
 pnpm vitest run packages/<name>/src/__tests__/
 ```
 
-For co-located packages (e.g. `sigil`), use `pnpm --filter @vielzeug/<name> test` instead.
+For co-located packages (e.g. `refine`), use `pnpm --filter @vielzeug/<name> test` instead.
 
 - All tests must pass.
 - If necessary, adjust tests to reflect intentional behaviour changes from the main codebase, but do not weaken tests to hide real bugs.

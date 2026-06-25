@@ -69,11 +69,11 @@ const user = User.parse({ email: 'ada@example.com', role: 'admin' });
 | Feature           | Spell                                                                     | Zod                                        | Yup                                        |
 | ----------------- | ------------------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------ |
 | Bundle size       | <PackageInfo package="spell" type="size" />                               | ~62 kB                                     | ~14 kB                                     |
-| Type inference    | <sg-icon name="check" size="16"></sg-icon> `Infer<T>`                     | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
-| Coercion API      | <sg-icon name="check" size="16"></sg-icon> `s.coerce.*`                   | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Async validation  | <sg-icon name="check" size="16"></sg-icon> `.validate()`                  | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="check" size="16"></sg-icon> |
-| Error flattening  | <sg-icon name="check" size="16"></sg-icon> `flatten()` + `flattenFirst()` | <sg-icon name="check" size="16"></sg-icon> | Partial                                    |
-| Zero dependencies | <sg-icon name="check" size="16"></sg-icon>                                | <sg-icon name="check" size="16"></sg-icon> | <sg-icon name="x" size="16"></sg-icon>     |
+| Type inference    | <ore-icon name="check" size="16"></ore-icon> `Infer<T>`                     | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
+| Coercion API      | <ore-icon name="check" size="16"></ore-icon> `s.coerce.*`                   | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Async validation  | <ore-icon name="check" size="16"></ore-icon> `.validate()`                  | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="check" size="16"></ore-icon> |
+| Error flattening  | <ore-icon name="check" size="16"></ore-icon> `flatten()` + `flattenFirst()` | <ore-icon name="check" size="16"></ore-icon> | Partial                                    |
+| Zero dependencies | <ore-icon name="check" size="16"></ore-icon>                                | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 
 <div class="decision-callout">
 
