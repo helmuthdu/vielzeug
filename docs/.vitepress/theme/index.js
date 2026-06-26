@@ -37,12 +37,11 @@ export default {
     app.component('ComponentPreview', ComponentPreview);
 
     if (typeof window !== 'undefined') {
-      window.defaultLogger = defaultLogger;
-
       const [prism, ripple] = await Promise.all([import('@vielzeug/prism'), import('@vielzeug/ripple')]);
 
       window.Prism = prism;
       window.Ripple = ripple;
+      window.defaultLogger = defaultLogger;
     }
   },
 };

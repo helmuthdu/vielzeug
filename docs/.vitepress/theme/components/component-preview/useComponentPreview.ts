@@ -10,7 +10,8 @@ import { createSandbox } from '@vielzeug/sandbox';
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 
-import { buildSandboxDoc } from './sandboxDoc';
+import { buildSandboxDoc, REFINE_CSS_ID } from './sandboxDoc';
+import { useRefineHmr } from './useRefineHmr';
 import { extractCodeFromSlot } from './vnode';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -27,8 +28,6 @@ export interface ComponentPreviewProps {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Viewport breakpoint widths — plain pixel values; internal sandbox padding
-// is owned by the sandbox body, not the wrapper element.
 export const VIEWPORT_WIDTHS: Record<ViewportSize, string> = {
   desktop: '1280px',
   full: '100%',
@@ -48,16 +47,10 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   const isCopied = ref(false);
   const isRtl = ref(false);
 
-  // Not reactive — side-effect bookkeeping only, never drives the template.
   let savedBodyOverflow = '';
   let copyTimer: ReturnType<typeof setTimeout> | null = null;
 
   // ── Code extraction ─────────────────────────────────────────────────────────
-  //
-  // VitePress renders fenced code blocks at build time into a div.language-* VNode.
-  // extractCodeFromSlot walks the slot tree to find it, returning both the raw text
-  // (sent to the sandbox) and the processed VNode (rendered in the Code tab).
-  // The text is stripped of <script> tags once at extraction time.
 
   const codeBlock = ref<{ html: string; vnode: VNode } | null>(null);
 
@@ -65,8 +58,6 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
   const sandboxContainerRef = ref<HTMLDivElement | null>(null);
 
-  // Cached after first createSandbox() — avoids a querySelector on every resize message.
-  let sandboxIframe: HTMLIFrameElement | null = null;
   let sandbox: ReturnType<typeof createSandbox> | null = null;
 
   // ── Derived values ──────────────────────────────────────────────────────────
@@ -97,8 +88,6 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     isRtl.value = !isRtl.value;
   };
 
-  // Keyboard Escape handler registered only while maximized — avoids stacking
-  // listeners across multiple ComponentPreview instances on the same page.
   const handleKeydown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') toggleMaximize();
   };
@@ -123,31 +112,12 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     viewportSize.value = viewportSize.value === size ? 'full' : size;
   };
 
-  // ── Sandbox message handler ─────────────────────────────────────────────────
-
-  // Auto-resize the iframe to its content height via postMessage from the sandbox.
-  // sandboxIframe is cached at creation time so we only pay one querySelector
-  // per ComponentPreview lifetime, not per resize event.
-  const onSandboxMessage = (event: MessageEvent) => {
-    if (!sandboxIframe || event.source !== sandboxIframe.contentWindow) return;
-
-    if (event.data?.type === 'resize' && typeof event.data.height === 'number') {
-      sandboxIframe.style.height = `${event.data.height}px`;
-    }
-  };
-
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
-  // Extract code from slot VNodes synchronously — VitePress populates slots
-  // at setup time, so they are available before onMounted.
   if (slotVNodes?.length) {
     const found = extractCodeFromSlot(slotVNodes);
 
     if (found) {
-      // Strip only type="module" scripts — they contain ES module imports
-      // (e.g. import '@vielzeug/refine/toast') that would fail in the sandbox
-      // since refine is already loaded as a global IIFE. Plain inline scripts
-      // that define helper functions for onclick handlers must be preserved.
       const html = found.text
         .trim()
         .replace(/<script\b[^>]*\btype=["']module["'][^>]*>[\s\S]*?<\/script>/gi, '')
@@ -158,11 +128,10 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   }
 
   onMounted(() => {
-    window.addEventListener('message', onSandboxMessage);
+    // HMR: when refine's CSS is rebuilt, hot-patch all live sandboxes on the
+    // page without a full reload — no page state or scroll position is lost.
+    useRefineHmr((css) => sandbox?.updateStyle(REFINE_CSS_ID, css));
 
-    // watchEffect (flush:'post') re-renders whenever any reactive dep changes —
-    // isRtl, isDark, props.vertical — without an explicit dep list.
-    // flush:'post' ensures sandboxContainerRef is populated before the first run.
     watchEffect(
       () => {
         if (!sandboxContainerRef.value || !codeBlock.value) return;
@@ -178,23 +147,30 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
         if (!sandbox) {
           sandbox = createSandbox(sandboxContainerRef.value);
+
+          // Route iframe auto-resize through sandbox.onMessage so we don't need
+          // to maintain a manual window listener or a cached iframe reference.
+          sandbox.onMessage((msg) => {
+            if (msg.type === 'resize') {
+              const iframe = sandboxContainerRef.value?.querySelector('iframe') as HTMLIFrameElement | null;
+
+              if (iframe) iframe.style.height = `${msg.height}px`;
+            }
+          });
         }
 
-        sandbox.render(fragment);
+        sandbox.render(fragment).then(() => {
+          // iframe is created lazily by render() — configure it after first render.
+          const iframe = sandboxContainerRef.value?.querySelector('iframe') as HTMLIFrameElement | null;
 
-        // iframe is created lazily by render() — cache it now so onSandboxMessage
-        // can match event.source correctly for auto-resize.
-        if (!sandboxIframe) {
-          sandboxIframe = sandboxContainerRef.value.querySelector('iframe');
-
-          if (sandboxIframe) {
-            sandboxIframe.setAttribute('allowtransparency', 'true');
+          if (iframe && !iframe.hasAttribute('allowtransparency')) {
+            iframe.setAttribute('allowtransparency', 'true');
 
             if (props.height) {
-              sandboxIframe.style.minHeight = props.height;
+              iframe.style.minHeight = props.height;
             }
           }
-        }
+        });
       },
       { flush: 'post' },
     );
@@ -208,10 +184,8 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
       document.removeEventListener('keydown', handleKeydown);
     }
 
-    window.removeEventListener('message', onSandboxMessage);
     sandbox?.dispose();
     sandbox = null;
-    sandboxIframe = null;
   });
 
   return {

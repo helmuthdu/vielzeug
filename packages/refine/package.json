@@ -435,7 +435,8 @@
     "preview": "vite preview",
     "sync:exports": "node ./refine-manifest.mjs sync-exports",
     "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "build:bundle:watch": "vite build --watch --config vite.bundle.config.ts"
   },
   "dependencies": {
     "@vielzeug/ore": "workspace:*",

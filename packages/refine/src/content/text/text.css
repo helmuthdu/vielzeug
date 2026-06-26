@@ -49,7 +49,7 @@
 
 /* Heading
    Default size: --heading-md (24px)
-   Letter-spacing: --tracking-header (-0.025em) per theme guidelines
+   Letter-spacing: --tracking-header (-0.05em) per theme guidelines
    Line-height: --leading-tight (1.15) for display headings */
 :host([variant='heading']) {
   --_size: var(--text-size, var(--heading-md));

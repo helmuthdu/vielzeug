@@ -84,9 +84,10 @@ export type DataGridControlsHandle = {
  * Headless controls for ore-datagrid: search, filter, column visibility, and derived rows.
  *
  * Design notes:
- * - Filter state uses a single Map (filterState) where key presence = active rule.
- *   This eliminates the previous two-signal sync (activeFilterKeys + filterValues)
- *   and makes the invariant structurally enforced.
+ * - Filter state uses two signals: activeFilterKeys (Set) drives filterDefs and
+ *   the filter rule DOM; filterValues (Map) tracks selected values per key.
+ *   Separating them prevents filterDefs from recomputing on value changes, which
+ *   would otherwise destroy and recreate the combobox mid-interaction.
  * - colOptions is computed lazily — only for columns with active filter rules,
  *   so the common case (no active filters) costs O(0) row iterations.
  * - filteredRows is derived here (not in the component) so the full data pipeline
@@ -97,15 +98,18 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
   const searchActive = signal(false);
   const hiddenColumns = signal(new Set<string>());
 
-  // Single source of truth for filter state.
-  // Key presence = active rule; Set value = selected option values (may be empty).
-  const filterState = signal(new Map<string, Set<string>>());
+  // Two-signal filter state: activeFilterKeys tracks which rules exist (drives
+  // filterDefs / DOM structure); filterValues tracks selected values per key.
+  // Separating them prevents filterDefs from recomputing — and the filter rule
+  // DOM from being torn down — every time a value is selected.
+  const activeFilterKeys = signal(new Set<string>());
+  const filterValues = signal(new Map<string, Set<string>>());
 
   // Derive options only for columns that have an active filter rule and are not
   // covered by externally-provided filterOptions. Lazy: O(activeRules × rows).
   const colOptions = computed(() => {
     const externalKeys = new Set((options.filterOptions.value ?? []).map((f) => f.key));
-    const activeKeys = [...filterState.value.keys()].filter((k) => !externalKeys.has(k));
+    const activeKeys = [...activeFilterKeys.value].filter((k) => !externalKeys.has(k));
 
     if (!activeKeys.length) return new Map<string, { label: string; value: string }[]>();
 
@@ -133,10 +137,12 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
   });
 
   // Merge provided filter options with auto-derived ones for active keys.
+  // Depends only on activeFilterKeys (not filterValues) so adding/removing a
+  // value does not tear down the filter rule DOM.
   const filterDefs = computed<FilterOption[]>(() => {
     const provided = options.filterOptions.value ?? [];
     const providedKeys = new Set(provided.map((f) => f.key));
-    const derived = [...filterState.value.keys()]
+    const derived = [...activeFilterKeys.value]
       .filter((k) => !providedKeys.has(k))
       .map((k) => {
         const col = options.columns.value.find((c) => c.key === k);
@@ -147,17 +153,17 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
     return [...provided, ...derived];
   });
 
-  // filterValues mirrors filterState for the public read API.
-  // (Consumers read filterValues; the implementation mutates filterState.)
-  const filterValues: Readable<Map<string, Set<string>>> = filterState;
-
   // Prune stale filter rules when columns are removed.
   watch(
     computed(() => new Set(options.columns.value.map((c) => c.key))),
     (keySet) => {
-      const pruned = new Map([...filterState.value].filter(([k]) => keySet.has(k)));
+      const prunedKeys = new Set([...activeFilterKeys.value].filter((k) => keySet.has(k)));
 
-      if (pruned.size !== filterState.value.size) filterState.value = pruned;
+      if (prunedKeys.size !== activeFilterKeys.value.size) activeFilterKeys.value = prunedKeys;
+
+      const prunedValues = new Map([...filterValues.value].filter(([k]) => keySet.has(k)));
+
+      if (prunedValues.size !== filterValues.value.size) filterValues.value = prunedValues;
     },
     { immediate: false },
   );
@@ -175,7 +181,7 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
 
   const filteredRows = computed(() => {
     const rows = searchedRows.value;
-    const fv = filterState.value;
+    const fv = filterValues.value;
 
     if (!fv.size) return rows;
 
@@ -195,7 +201,7 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
   });
 
   const setFilter = (key: string, values: string[]): void => {
-    const next = new Map(filterState.value);
+    const next = new Map(filterValues.value);
 
     if (values.length === 0) {
       next.delete(key);
@@ -203,24 +209,30 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
       next.set(key, new Set(values));
     }
 
-    filterState.value = next;
+    filterValues.value = next;
   };
 
   const activateFilterKey = (key: string): void => {
-    if (filterState.value.has(key)) return;
+    if (activeFilterKeys.value.has(key)) return;
 
-    filterState.value = new Map(filterState.value).set(key, new Set());
+    activeFilterKeys.value = new Set([...activeFilterKeys.value, key]);
   };
 
   const removeFilter = (key: string): void => {
-    const next = new Map(filterState.value);
+    const nextKeys = new Set(activeFilterKeys.value);
 
-    next.delete(key);
-    filterState.value = next;
+    nextKeys.delete(key);
+    activeFilterKeys.value = nextKeys;
+
+    const nextValues = new Map(filterValues.value);
+
+    nextValues.delete(key);
+    filterValues.value = nextValues;
   };
 
   const clearAllFilters = (): void => {
-    filterState.value = new Map();
+    activeFilterKeys.value = new Set();
+    filterValues.value = new Map();
   };
 
   const setSearchQuery = (q: string): void => {
@@ -251,7 +263,8 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
   };
 
   const resetFilters = (): void => {
-    filterState.value = new Map();
+    activeFilterKeys.value = new Set();
+    filterValues.value = new Map();
   };
 
   return {

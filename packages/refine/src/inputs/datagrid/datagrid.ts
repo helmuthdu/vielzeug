@@ -3,6 +3,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_warn';
 import '../../content/icon/icon';
+import '../../inputs/button/button';
 import '../../inputs/checkbox/checkbox';
 import '../../inputs/combobox/combobox';
 import '../../inputs/select/select';
@@ -53,6 +54,8 @@ export function ariaSortValue(state: SortState, key: string): 'ascending' | 'des
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export type OreDataGridEvents<T = Record<string, unknown>> = {
+  /** Fired when the user cycles the density via the toolbar button. */
+  'density-change': { density: 'compact' | 'cozy' | 'comfortable' };
   /** Fired when the active page changes. */
   'page-change': { pageIndex: number; pageSize: number };
   /** Fired when a row is expanded or collapsed. */
@@ -138,6 +141,13 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    * ```
    */
   rows?: T[];
+  /**
+   * Accessible label for the search toggle button. Supports localization.
+   * Defaults to `'Search'` (open) and `'Close search'` (close).
+   * Pass a tuple `[openLabel, closeLabel]` to override both.
+   * @example `grid['search-label'] = ['Suchen', 'Suche schließen']`
+   */
+  'search-label'?: [open: string, close: string];
   /** Placeholder text for the inline search input in the controls bar. */
   'search-placeholder'?: string;
   /**
@@ -194,6 +204,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * @attr {boolean} loading - Show busy/loading state
  * @attr {boolean} striped - Apply alternating row backgrounds
  * @attr {boolean} fullwidth - Stretch the grid to fill its container's width
+ * @attr {data} search-label - Tuple [openLabel, closeLabel] for the search toggle button
  * @attr {string} search-placeholder - Placeholder for the inline search input
  * @attr {data} filterOptions - Pre-defined filter option definitions per column key
  * @attr {number} page-size - Rows per page (0 = no pagination, default 10)
@@ -321,6 +332,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
     'page-size': prop.number(10),
     'page-size-options': prop.data<number[]>(),
     rows: prop.data<Record<string, unknown>[]>(),
+    'search-label': prop.data<[string, string]>(),
     'search-placeholder': prop.string('Search…'),
     'selected-keys': prop.data<string[]>(),
     'selection-mode': prop.string<SelectionMode>('none'),
@@ -641,6 +653,46 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
         : `${ctrl.pageIndex.value + 1} / ${ctrl.pageCount.value}`,
     );
 
+    // ── Density toggle (E5) ──────────────────────────────────────────────────
+    // Local signal so the toolbar button can cycle density without requiring
+    // the consumer to wire up an external prop. Stays in sync with the `density`
+    // prop: prop changes win; button clicks write back to the host attribute so
+    // the CSS layer picks them up immediately.
+
+    type Density = 'compact' | 'cozy' | 'comfortable';
+
+    const DENSITY_CYCLE: Density[] = ['compact', 'cozy', 'comfortable'];
+    const DENSITY_ICONS: Record<Density, string> = {
+      comfortable: 'rows-2',
+      compact: 'rows-4',
+      cozy: 'rows-3',
+    };
+    const DENSITY_LABELS: Record<Density, string> = {
+      comfortable: 'Density: Comfortable',
+      compact: 'Density: Compact',
+      cozy: 'Density: Cozy',
+    };
+
+    const densitySignal = signal<Density>(props.density.value ?? 'cozy');
+
+    watch(props.density, (d) => {
+      if (d) densitySignal.value = d;
+    });
+
+    const cycleDensity = (): void => {
+      const idx = DENSITY_CYCLE.indexOf(densitySignal.value);
+      const next = DENSITY_CYCLE[(idx + 1) % DENSITY_CYCLE.length]!;
+
+      densitySignal.value = next;
+      el.setAttribute('density', next);
+      emit('density-change', { density: next });
+    };
+
+    // ── Filter badge hover state ────────────────────────────────────────────
+    // Drives the dot↔count toggle on the filter toolbar badge: dot at rest,
+    // count on hover/focus so the number is revealed on interaction only.
+    const filterBadgeActive = signal(false);
+
     // ── Row expansion (toggle handler) ───────────────────────────────────────
 
     const toggleExpand = (key: string): void => {
@@ -688,34 +740,49 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
       const views = props.views.value ?? [];
       const activeId = props['active-view'].value;
 
-      return html`<div class="dg-tabs" role="tablist" aria-label="Views">
+      return html`<div class="dg-tabs" role="tablist" aria-label="Views" aria-controls="dg-tabpanel">
         ${views.map(
           (view) =>
-            html`<button
+            html`<ore-button
               class="${() => `dg-tab${activeId === view.id ? ' dg-tab--active' : ''}`}"
               role="tab"
-              type="button"
+              variant="ghost"
+              rounded="full"
+              size="sm"
               :aria-selected="${() => String(activeId === view.id)}"
+              aria-controls="dg-tabpanel"
               @click="${() => {
                 emit('view-change', { id: view.id, label: view.label });
               }}">
               ${view.label}
-            </button>`,
+            </ore-button>`,
         )}
       </div>`;
     };
 
     const renderSortPopover = (): unknown =>
       html`<ore-popover class="dg-action-popover" placement="bottom-end" label="Sort" style="--popover-min-width:18rem">
-        <button class="dg-icon-btn" type="button" aria-label="Sort">
+        <ore-button
+          class="${() => `dg-icon-btn${ctrl.sortState.value.direction !== 'none' ? ' dg-icon-btn--active' : ''}`}"
+          variant="ghost"
+          size="sm"
+          icon-only
+          label="Sort">
           <ore-icon name="arrow-up-down" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
-        </button>
+        </ore-button>
         <div slot="content" class="dg-pop-sort">
           <div class="dg-pop-header">
             <span class="dg-pop-title">Sort by</span>
-            <button class="dg-icon-btn" type="button" aria-label="Clear sort" @click="${() => ctrl.sortTo('', 'none')}">
+            <ore-button
+              class="dg-icon-btn"
+              variant="ghost"
+              size="sm"
+              icon-only
+              label="Clear sort"
+              :disabled="${() => ctrl.sortState.value.direction === 'none' || undefined}"
+              @click="${() => ctrl.sortTo('', 'none')}">
               <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
-            </button>
+            </ore-button>
           </div>
           <div class="dg-pop-sort-row">
             <ore-select
@@ -738,6 +805,8 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
               variant="flat"
               size="sm"
               rounded="lg"
+              fullwidth
+              :disabled="${() => !ctrl.sortState.value.key || undefined}"
               :value="${() => (ctrl.sortState.value.direction === 'none' ? 'asc' : ctrl.sortState.value.direction)}"
               :options="${() => [
                 { label: 'A → Z', value: 'asc' },
@@ -757,22 +826,49 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
         class="dg-action-popover"
         placement="bottom-end"
         label="Filter"
-        style="--popover-min-width:16rem">
-        <button class="dg-icon-btn" type="button" aria-label="Filter">
-          <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
-        </button>
+        style="--popover-min-width:16rem;--popover-max-height:min(90vh,48rem)">
+        ${() =>
+          controls.filterDefs.value.length
+            ? html`<ore-badge
+                anchor="top-end"
+                color="primary"
+                size="xs"
+                :count="${() => (filterBadgeActive.value ? controls.filterDefs.value.length : undefined)}"
+                :dot="${() => !filterBadgeActive.value || undefined}"
+                :label="${() =>
+                  `${controls.filterDefs.value.length} active filter${controls.filterDefs.value.length > 1 ? 's' : ''}`}"
+                aria-hidden="true"
+                @mouseenter="${() => (filterBadgeActive.value = true)}"
+                @mouseleave="${() => (filterBadgeActive.value = false)}"
+                @focusin="${() => (filterBadgeActive.value = true)}"
+                @focusout="${() => (filterBadgeActive.value = false)}">
+                <ore-button
+                  slot="target"
+                  class="dg-icon-btn dg-icon-btn--active"
+                  variant="ghost"
+                  size="sm"
+                  icon-only
+                  label="Filter">
+                  <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                </ore-button>
+              </ore-badge>`
+            : html`<ore-button class="dg-icon-btn" variant="ghost" size="sm" icon-only label="Filter">
+                <ore-icon name="filter" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
+              </ore-button>`}
         <div slot="content" class="dg-pop-filter">
           <div class="dg-pop-header">
             <span class="dg-pop-title">Filter by</span>
             ${() =>
               controls.filterDefs.value.length
-                ? html`<button
+                ? html`<ore-button
                     class="dg-icon-btn"
-                    type="button"
-                    aria-label="Clear all filters"
+                    variant="ghost"
+                    size="sm"
+                    icon-only
+                    label="Clear all filters"
                     @click="${() => controls.clearAllFilters()}">
                     <ore-icon name="trash-2" size="14" stroke-width="1.75" aria-hidden="true"></ore-icon>
-                  </button>`
+                  </ore-button>`
                 : html``}
           </div>
 
@@ -781,54 +877,55 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
             ${() =>
               resolvedColumns.value.map(
                 (col) =>
-                  html`<button
-                    class="dg-pop-field-row"
-                    type="button"
+                  html`<ore-button
+                    variant="ghost"
+                    :aria-pressed="${() => String(controls.filterDefs.value.some((f) => f.key === col.key))}"
                     @click="${() => controls.activateFilterKey(col.key)}">
                     <ore-icon
+                      slot="prefix"
                       name="list-filter"
                       size="14"
                       stroke-width="1.75"
-                      class="dg-pop-field-icon"
                       aria-hidden="true"></ore-icon>
-                    <span class="dg-pop-field-label">${col.label}</span>
-                  </button>`,
+                    ${col.label}
+                  </ore-button>`,
               )}
           </div>
 
           <!-- Active filter rules (appear below the field picker as rules are added) -->
-          ${() =>
-            controls.filterDefs.value.length
-              ? html`<div class="dg-pop-filter-rules">
-                  ${controls.filterDefs.value.map(
-                    (f) => html`
-                      <div class="dg-pop-filter-rule">
-                        <div class="dg-pop-filter-rule-header">
-                          <span class="dg-pop-filter-field">${f.label}</span>
-                          <span class="dg-pop-filter-op">contains</span>
-                          <button
-                            class="dg-icon-btn"
-                            type="button"
-                            aria-label="Remove filter"
-                            @click="${() => controls.removeFilter(f.key)}">
-                            <ore-icon name="trash-2" size="13" stroke-width="1.75" aria-hidden="true"></ore-icon>
-                          </button>
-                        </div>
-                        <ore-combobox
-                          class="dg-filter"
-                          :placeholder="${() => f.label}"
-                          :options="${() => f.options}"
-                          :disabled="${() => isDisabled.value || undefined}"
-                          multiple
-                          fullwidth
-                          @change="${(e: CustomEvent<{ values: string[] }>) => {
-                            controls.setFilter(f.key, e.detail.values);
-                          }}"></ore-combobox>
-                      </div>
-                    `,
-                  )}
-                </div>`
-              : html``}
+          <div class="dg-pop-filter-rules" ?hidden="${() => !controls.filterDefs.value.length}">
+            ${() =>
+              controls.filterDefs.value.map(
+                (f) => html`
+                  <div class="dg-pop-filter-rule">
+                    <div class="dg-pop-filter-rule-header">
+                      <span class="dg-pop-filter-field">${f.label}</span>
+                      <span class="dg-pop-filter-op" aria-hidden="true">contains</span>
+                      <ore-button
+                        class="dg-icon-btn"
+                        variant="ghost"
+                        size="sm"
+                        icon-only
+                        label="Remove filter"
+                        @click="${() => controls.removeFilter(f.key)}">
+                        <ore-icon name="trash-2" size="13" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                      </ore-button>
+                    </div>
+                    <ore-combobox
+                      class="dg-filter"
+                      :placeholder="${() => f.label}"
+                      :options="${() => f.options}"
+                      :value="${() => [...(controls.filterValues.value.get(f.key) ?? [])]}"
+                      :disabled="${() => isDisabled.value || undefined}"
+                      multiple
+                      fullwidth
+                      @change="${(e: CustomEvent<{ values: string[] }>) => {
+                        controls.setFilter(f.key, e.detail.values);
+                      }}"></ore-combobox>
+                  </div>
+                `,
+              )}
+          </div>
         </div>
       </ore-popover>`;
 
@@ -838,27 +935,27 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
         placement="bottom-end"
         label="Column options"
         style="--popover-min-width:13rem">
-        <button class="dg-icon-btn" type="button" aria-label="Column options">
-          <ore-icon name="columns-3" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
-        </button>
-        <div slot="content" class="dg-pop-col-menu">
-          <div class="dg-pop-col-divider" role="separator"></div>
+        <ore-button class="dg-icon-btn" variant="ghost" size="sm" icon-only label="Column options">
+          <ore-icon name="columns-2" size="15" stroke-width="1.75" aria-hidden="true"></ore-icon>
+        </ore-button>
+        <div slot="content" role="menu" aria-label="Column visibility">
           ${() =>
             resolvedColumns.value.map(
               (col) =>
-                html`<button
+                html`<ore-button
                   class="dg-pop-col-item"
                   role="menuitemcheckbox"
-                  type="button"
+                  variant="ghost"
                   :aria-checked="${() => String(!controls.hiddenColumns.value.has(col.key))}"
                   @click="${() => controls.toggleColumnVisibility(col.key)}">
                   <ore-icon
+                    slot="prefix"
                     :name="${() => (controls.hiddenColumns.value.has(col.key) ? 'eye-off' : 'eye')}"
                     size="13"
                     stroke-width="2"
                     aria-hidden="true"></ore-icon>
                   ${col.label}
-                </button>`,
+                </ore-button>`,
             )}
         </div>
       </ore-popover>`;
@@ -874,6 +971,21 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
         <!-- Right: Action bar -->
         <div class="dg-actions">
           ${() => renderSortPopover()} ${() => renderFilterPopover()} ${() => renderColumnMenu()}
+
+          <!-- Density toggle -->
+          <ore-button
+            class="dg-icon-btn"
+            variant="ghost"
+            size="sm"
+            icon-only
+            :label="${() => DENSITY_LABELS[densitySignal.value]}"
+            @click="${cycleDensity}">
+            <ore-icon
+              :name="${() => DENSITY_ICONS[densitySignal.value]}"
+              size="15"
+              stroke-width="1.75"
+              aria-hidden="true"></ore-icon>
+          </ore-button>
 
           <span class="dg-action-divider" aria-hidden="true" ?hidden="${() => !slots.has('actions').value}"></span>
 
@@ -891,7 +1003,9 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     rounded="full"
                     :placeholder="${() => props['search-placeholder'].value ?? 'Search…'}"
                     :disabled="${() => isDisabled.value || undefined}"
-                    autofocus
+                    ref="${(inputEl: HTMLElement | null) => {
+                      if (inputEl) requestAnimationFrame(() => (inputEl as HTMLElement).focus());
+                    }}"
                     @input="${(e: CustomEvent<{ value: string }>) => {
                       const q = e.detail.value;
                       const src = props.source.value;
@@ -911,10 +1025,16 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     <ore-icon slot="prefix" name="search" size="13" stroke-width="1.75" aria-hidden="true"></ore-icon>
                   </ore-input>`
                 : html``}
-            <button
+            <ore-button
               class="${() => `dg-icon-btn${controls.searchActive.value ? ' dg-icon-btn--active' : ''}`}"
-              type="button"
-              :aria-label="${() => (controls.searchActive.value ? 'Close search' : 'Search')}"
+              variant="ghost"
+              size="sm"
+              icon-only
+              :label="${() => {
+                const [open, close] = props['search-label'].value ?? ['Search', 'Close search'];
+
+                return controls.searchActive.value ? close : open;
+              }}"
               @click="${() => {
                 const src = props.source.value;
 
@@ -927,12 +1047,12 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                 size="15"
                 stroke-width="1.75"
                 aria-hidden="true"></ore-icon>
-            </button>
+            </ore-button>
           </div>
         </div>
       </div>
 
-      <div class="dg-scroll" role="presentation">
+      <div id="dg-tabpanel" class="dg-scroll" role="tabpanel" aria-label="Data">
         <table
           class="dg-table"
           part="table"
@@ -989,24 +1109,23 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     <div class="dg-th-inner">
                       ${() =>
                         col.sortable
-                          ? html`<button
+                          ? html`<ore-button
                               class="dg-sort-btn"
-                              type="button"
-                              :aria-label="${col.headerLabel ?? col.label}"
+                              variant="text"
+                              size="sm"
+                              fullwidth
+                              :label="${col.headerLabel ?? col.label}"
                               :disabled="${() => isDisabled.value || undefined}"
                               @click="${() => {
                                 if (!isDisabled.value) ctrl.sortBy(col.key);
                               }}">
-                              <span class="dg-sort-label">
-                                ${col.label}
-                                <span class="dg-sort-icon" aria-hidden="true">
-                                  <ore-icon
-                                    :name="${() => sortIconName(ctrl.sortState.value, col.key)}"
-                                    size="14"
-                                    stroke-width="2"></ore-icon>
-                                </span>
-                              </span>
-                            </button>`
+                              ${col.label}
+                              <ore-icon
+                                slot="suffix"
+                                :name="${() => sortIconName(ctrl.sortState.value, col.key)}"
+                                size="14"
+                                stroke-width="2"></ore-icon>
+                            </ore-button>`
                           : col.label}
                       ${col.resizable
                         ? html`<span
@@ -1103,10 +1222,12 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                         ${() =>
                           hasExpander.value
                             ? html`<td class="dg-td dg-td-expand" role="gridcell">
-                                <button
+                                <ore-button
                                   class="dg-expand-btn"
-                                  type="button"
-                                  :aria-label="${() => (expandedKeys.value.has(key) ? 'Collapse row' : 'Expand row')}"
+                                  variant="ghost"
+                                  size="sm"
+                                  icon-only
+                                  :label="${() => (expandedKeys.value.has(key) ? 'Collapse row' : 'Expand row')}"
                                   :aria-expanded="${() => String(expandedKeys.value.has(key))}"
                                   :disabled="${() => isDisabled.value || undefined}"
                                   @click="${(e: MouseEvent) => {
@@ -1119,7 +1240,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                                     size="14"
                                     stroke-width="2"
                                     aria-hidden="true"></ore-icon>
-                                </button>
+                                </ore-button>
                               </td>`
                             : html``}
                       </tr>
@@ -1150,47 +1271,67 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
       ${() =>
         paginationEnabled.value
           ? html`<div class="dg-footer" part="footer" role="navigation" aria-label="Pagination">
-              <span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true">${paginationInfo}</span>
+              ${() =>
+                !(props['page-size-options'].value ?? []).length
+                  ? html`<span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true"
+                      >${paginationInfo}</span
+                    >`
+                  : html``}
               <div class="dg-footer-end">
                 ${() => {
                   const opts = props['page-size-options'].value ?? [];
 
                   return opts.length
-                    ? html`<ore-select
-                        class="dg-page-size-select"
-                        fullwidth
-                        aria-label="Rows per page"
-                        :value="${() => String(pageSize.value)}"
-                        :options="${() => opts.map((n) => ({ label: String(n), value: String(n) }))}"
-                        :disabled="${() => isDisabled.value || undefined}"
-                        @change="${(e: CustomEvent<{ value: string }>) => {
-                          const n = parseInt(e.detail.value, 10);
+                    ? html`<div class="dg-page-size-wrap">
+                        <ore-select
+                          class="dg-page-size-select"
+                          fullwidth
+                          aria-label="Rows per page"
+                          :value="${() => String(pageSize.value)}"
+                          :options="${() => opts.map((n) => ({ label: String(n), value: String(n) }))}"
+                          :disabled="${() => isDisabled.value || undefined}"
+                          @change="${(e: CustomEvent<{ values: string[] }>) => {
+                            const n = parseInt(e.detail.values[0], 10);
 
-                          if (!isNaN(n)) {
-                            pageSize.value = n;
-                            emit('page-change', { pageIndex: 0, pageSize: n });
-                          }
-                        }}"></ore-select>`
+                            if (!isNaN(n)) {
+                              pageSize.value = n;
+                              ctrl.goToPage(0);
+                              emit('page-change', { pageIndex: 0, pageSize: n });
+                            }
+                          }}"></ore-select>
+                      </div>`
                     : html``;
                 }}
                 <div class="dg-pagination" role="group" aria-label="Page navigation">
-                  <button
+                  <ore-button
                     class="dg-page-btn"
-                    type="button"
-                    aria-label="Previous page"
-                    ?disabled="${() => !effectiveHasPrev.value || isDisabled.value}"
+                    variant="ghost"
+                    size="sm"
+                    icon-only
+                    label="Previous page"
+                    :disabled="${() => !effectiveHasPrev.value || isDisabled.value}"
                     @click="${() => handlePage('prev')}">
                     <ore-icon name="chevron-left" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
-                  </button>
-                  <span class="dg-page-label" dir="ltr" aria-current="page"> ${() => effectivePageLabel.value} </span>
-                  <button
+                  </ore-button>
+                  <span
+                    class="dg-page-label"
+                    dir="ltr"
+                    aria-current="page"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true">
+                    ${() => effectivePageLabel.value}
+                  </span>
+                  <ore-button
                     class="dg-page-btn"
-                    type="button"
-                    aria-label="Next page"
-                    ?disabled="${() => !effectiveHasNext.value || isDisabled.value}"
+                    variant="ghost"
+                    size="sm"
+                    icon-only
+                    label="Next page"
+                    :disabled="${() => !effectiveHasNext.value || isDisabled.value}"
                     @click="${() => handlePage('next')}">
                     <ore-icon name="chevron-right" size="14" stroke-width="2" aria-hidden="true"></ore-icon>
-                  </button>
+                  </ore-button>
                 </div>
               </div>
             </div>`

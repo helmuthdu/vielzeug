@@ -132,7 +132,7 @@ define<OreButtonProps>(BUTTON_TAG, {
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
     // isLink and effectiveRel are computed from signals — correct even if href changes at runtime.
-    const { effectiveRel, isLink } = useLinkProps(props.href, props.rel, props.target);
+    const { isLink } = useLinkProps(props.href, props.rel, props.target);
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
@@ -143,14 +143,34 @@ define<OreButtonProps>(BUTTON_TAG, {
       value: computed(() => ''),
     });
 
-    const handleClick = useFormAction(
-      () => (isLink.value ? null : formField.internals.form),
-      props.type,
-      isDisabled,
-      el,
-    );
+    const handleClick = (e: MouseEvent) => {
+      if (isDisabled.value) {
+        e.preventDefault();
 
-    // ARIA attributes live on the host; delegatesFocus ensures AT reads them correctly.
+        return;
+      }
+
+      if (isLink.value && props.href.value) {
+        if (!e.defaultPrevented) {
+          if (props.target.value === '_blank') {
+            window.open(props.href.value, '_blank', 'noopener,noreferrer');
+          } else {
+            window.location.href = props.href.value;
+          }
+        }
+      }
+
+      useFormAction(() => (isLink.value ? null : formField.internals.form), props.type, isDisabled, el)(e);
+    };
+
+    const handleKeydown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        (el.shadowRoot?.querySelector('[part="button"]') as HTMLElement)?.click();
+      }
+    };
+
+    // ARIA attributes live on the host.
     bind({
       attr: {
         'aria-busy': props.loading,
@@ -158,36 +178,26 @@ define<OreButtonProps>(BUTTON_TAG, {
         'aria-label': props.label,
         color: effectiveColor,
         effect: props.effect,
+        role: computed(() => el.getAttribute('role') ?? (isLink.value ? 'link' : 'button')),
         size: effectiveSize,
+        tabindex: computed(() => (isDisabled.value ? '-1' : '0')),
         variant: effectiveVariant,
+      },
+      on: {
+        keydown: handleKeydown,
       },
     });
 
     return html`
-      ${() =>
-        isLink.value
-          ? html`<a
-              part="button"
-              :href="${props.href}"
-              :target="${props.target}"
-              :rel="${effectiveRel}"
-              role="button"
-              :aria-busy="${props.loading}"
-              @click="${handleClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </a>`
-          : html`<button part="button" type="button" ?disabled=${isDisabled} @click="${handleClick}">
-              <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-              <slot name="prefix"></slot>
-              <span class="content" part="content"><slot></slot></span>
-              <slot name="suffix"></slot>
-            </button>`}
+      <span part="button" role="presentation" @click="${handleClick}">
+        <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+        <slot name="prefix"></slot>
+        <span class="content" part="content"><slot></slot></span>
+        <slot name="suffix"></slot>
+      </span>
     `;
   },
-  shadow: { delegatesFocus: true },
+  shadow: { delegatesFocus: false },
   styles: [
     colorThemeMixin,
     coarsePointerMixin,

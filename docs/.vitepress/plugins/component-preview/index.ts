@@ -9,4 +9,4 @@
 // The Vue component and its runtime utilities live in:
 //   theme/components/component-preview/
 
-export { componentPreviewPlugin } from './plugin';
+export { componentPreviewPlugin, REFINE_CSS_HMR_EVENT } from './plugin';

@@ -4,7 +4,7 @@ An accessible, keyboard-navigable data grid with built-in column sorting, row-le
 
 ## Basic Usage
 
-<ComponentPreview>
+<ComponentPreview height="400px">
 
 ```html
 <ore-datagrid id="dg-basic" label="Team Members"></ore-datagrid>

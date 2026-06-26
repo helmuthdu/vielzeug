@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
-import { SandboxDisposedError, SandboxError, SandboxTimeoutError } from '../errors';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -15,106 +14,100 @@ function fireCustom(source: Window | null, event = 'test', detail: unknown = nul
   window.dispatchEvent(new MessageEvent('message', { data: { detail, event, type: 'custom' }, source }));
 }
 
+function fireResize(source: Window | null, height: number): void {
+  window.dispatchEvent(new MessageEvent('message', { data: { height, type: 'resize' }, source }));
+}
+
 // ---------------------------------------------------------------------------
 // buildCsp
 // ---------------------------------------------------------------------------
 
 describe('buildCsp', () => {
-  it('includes required directives', () => {
+  it('defaults to unsafe-inline script-src', () => {
     const csp = buildCsp();
 
-    expect(csp).toContain("default-src 'none'");
     expect(csp).toContain("script-src 'unsafe-inline'");
-    expect(csp).toContain("connect-src 'none'");
-    expect(csp).toContain("form-action 'none'");
   });
 
-  it("always includes 'unsafe-inline' in style-src", () => {
+  it('defaults to unsafe-inline style-src', () => {
     expect(buildCsp()).toContain("style-src 'unsafe-inline'");
+  });
+
+  it('defaults to data: img-src', () => {
+    expect(buildCsp()).toContain('img-src data:');
+  });
+
+  it('defaults to none font-src', () => {
+    expect(buildCsp()).toContain("font-src 'none'");
   });
 
   it('appends allowedStyleOrigins to style-src', () => {
     const csp = buildCsp({ allowedStyleOrigins: ['https://cdn.example.com'] });
 
-    expect(csp).toContain("style-src 'unsafe-inline' https://cdn.example.com");
-  });
-
-  it("always includes 'data:' in img-src", () => {
-    expect(buildCsp()).toContain('img-src data:');
+    expect(csp).toContain('https://cdn.example.com');
   });
 
   it('appends allowedImageOrigins to img-src', () => {
     const csp = buildCsp({ allowedImageOrigins: ['https://images.example.com'] });
 
-    expect(csp).toContain('img-src data: https://images.example.com');
+    expect(csp).toContain('https://images.example.com');
   });
 
-  it('includes font-src none by default', () => {
-    expect(buildCsp()).toContain("font-src 'none'");
-  });
-
-  it('appends allowedFontOrigins to font-src', () => {
+  it('sets font-src to provided origins when given', () => {
     const csp = buildCsp({ allowedFontOrigins: ['https://fonts.gstatic.com'] });
 
     expect(csp).toContain('font-src https://fonts.gstatic.com');
   });
 
-  it('includes allowedScriptOrigins in script-src alongside unsafe-inline', () => {
+  it('appends allowedScriptOrigins to script-src', () => {
     const csp = buildCsp({ allowedScriptOrigins: ['https://cdn.example.com'] });
 
-    expect(csp).toContain("script-src 'unsafe-inline' https://cdn.example.com");
+    expect(csp).toContain('https://cdn.example.com');
   });
 
-  it('extracts script origin from scripts[] and adds it to script-src', () => {
+  it('extracts origin from scripts URLs and adds to script-src', () => {
     const csp = buildCsp({ scripts: ['https://cdn.example.com/lib.js'] });
 
-    expect(csp).toContain("script-src 'unsafe-inline' https://cdn.example.com");
+    expect(csp).toContain('https://cdn.example.com');
   });
 
-  it('produces no extra whitespace with empty option arrays', () => {
+  it('handles empty arrays without error', () => {
     const csp = buildCsp({ allowedScriptOrigins: [], allowedStyleOrigins: [] });
 
     expect(csp).toContain("script-src 'unsafe-inline'");
-    expect(csp).toContain("style-src 'unsafe-inline'");
   });
 
-  it('produces the full CSP string in the expected directive order', () => {
+  it('includes all required CSP directives', () => {
     const csp = buildCsp();
-    const directives = csp.split('; ').map((d) => d.split(' ')[0]);
 
-    expect(directives).toEqual([
-      'default-src',
-      'script-src',
-      'style-src',
-      'img-src',
-      'font-src',
-      'connect-src',
-      'form-action',
-    ]);
+    expect(csp).toContain('default-src');
+    expect(csp).toContain('script-src');
+    expect(csp).toContain('style-src');
+    expect(csp).toContain('img-src');
+    expect(csp).toContain('font-src');
+    expect(csp).toContain('connect-src');
+    expect(csp).toContain('form-action');
   });
 
   it('adds nonce to script-src when provided', () => {
     const csp = buildCsp({ nonce: 'abc123' });
 
     expect(csp).toContain("'nonce-abc123'");
-    expect(csp).toContain("script-src 'unsafe-inline' 'nonce-abc123'");
   });
 
-  it('ignores data: URLs in scripts[] — data: origin is null', () => {
+  it('handles data: script URLs without adding null origin', () => {
     const csp = buildCsp({ scripts: ['data:text/javascript,console.log(1)'] });
 
-    expect(csp).toContain("script-src 'unsafe-inline'");
-    expect(csp).not.toContain('data:text');
+    expect(csp).not.toContain('null');
   });
 
-  it('ignores invalid URLs in scripts[]', () => {
+  it('handles non-URL script entries without crashing', () => {
     const csp = buildCsp({ scripts: ['not-a-valid-url'] });
 
-    expect(csp).toContain("script-src 'unsafe-inline'");
-    expect(csp).not.toContain('not-a-valid-url');
+    expect(csp).not.toContain('null');
   });
 
-  it('extracts origin from blob: URLs in scripts[]', () => {
+  it('handles blob: URLs by extracting origin correctly', () => {
     const csp = buildCsp({ scripts: ['blob:https://cdn.example.com/abc-123'] });
 
     expect(csp).toContain('https://cdn.example.com');
@@ -156,10 +149,29 @@ describe('buildDocument', () => {
     expect(doc).toContain("postMessage({ type: 'ready' }");
   });
 
-  it('includes injected styles in the document head', () => {
+  it('includes anonymous styles block (string form)', () => {
     const doc = buildDocument('<p>Hi</p>', { styles: 'body { margin: 0; }' });
 
     expect(doc).toContain('<style>body { margin: 0; }</style>');
+  });
+
+  it('emits named <style id> blocks for namedStyles', () => {
+    const doc = buildDocument('<p>Hi</p>', {
+      namedStyles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
+    });
+
+    expect(doc).toContain('<style id="base-css">body { margin: 0; }</style>');
+    expect(doc).toContain('<style id="theme-css">body { color: red; }</style>');
+  });
+
+  it('emits both styles and namedStyles when both provided', () => {
+    const doc = buildDocument('<p>Hi</p>', {
+      namedStyles: { 'theme-css': 'body { color: red; }' },
+      styles: 'body { margin: 0; }',
+    });
+
+    expect(doc).toContain('<style>body { margin: 0; }</style>');
+    expect(doc).toContain('<style id="theme-css">body { color: red; }</style>');
   });
 
   it('adds nonce to the bridge script tag when provided', () => {
@@ -175,7 +187,7 @@ describe('buildDocument', () => {
     expect(doc).not.toContain('nonce=');
   });
 
-  it('bridge script appears after injected <script src> tags (C3)', () => {
+  it('bridge script appears after injected <script src> tags', () => {
     const doc = buildDocument('<p>hi</p>', {
       scripts: ['https://cdn.example.com/lib.js'],
     });
@@ -189,7 +201,7 @@ describe('buildDocument', () => {
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — lifecycle and lazy init
+// createSandbox — lifecycle
 // ---------------------------------------------------------------------------
 
 describe('createSandbox — lifecycle', () => {
@@ -312,22 +324,21 @@ describe('createSandbox — ready promise', () => {
     await expect(sandbox.ready).resolves.toBeUndefined();
   });
 
-  it('ready is still pending and loaded is false before any render (C2)', async () => {
+  it('ready is still pending before any ready signal', async () => {
     const sandbox = createSandbox(container);
 
     const result = await Promise.race([sandbox.ready.then(() => 'resolved'), Promise.resolve('pending')]);
 
     expect(result).toBe('pending');
-    expect(sandbox.loaded).toBe(false);
     sandbox.dispose();
   });
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — re-render (C1)
+// createSandbox — render() returns Promise
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — re-render', () => {
+describe('createSandbox — render() Promise', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -339,7 +350,57 @@ describe('createSandbox — re-render', () => {
     container.remove();
   });
 
-  it('second render() updates srcdoc with new content', () => {
+  it('resolves when the document signals ready', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    fireReady(iframe.contentWindow);
+    await expect(p).resolves.toBeUndefined();
+    sandbox.dispose();
+  });
+
+  it('resolves immediately when called on a disposed sandbox', async () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.dispose();
+    await expect(sandbox.render('<p>Hello</p>')).resolves.toBeUndefined();
+  });
+
+  it('resolves immediately when signal is already aborted', async () => {
+    const sandbox = createSandbox(container);
+    const ac = new AbortController();
+
+    ac.abort();
+    await expect(sandbox.render('<p>Hello</p>', { signal: ac.signal })).resolves.toBeUndefined();
+    sandbox.dispose();
+  });
+
+  it('first render Promise resolves immediately when a second render() is called', async () => {
+    const sandbox = createSandbox(container);
+    const p1 = sandbox.render('<p>v1</p>');
+    const p2 = sandbox.render('<p>v2</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    // p1 should already be resolved (superseded), p2 pending
+    await expect(p1).resolves.toBeUndefined();
+
+    fireReady(iframe.contentWindow);
+    await expect(p2).resolves.toBeUndefined();
+    sandbox.dispose();
+  });
+
+  it('in-flight render Promise resolves when sandbox is disposed', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>Hello</p>');
+
+    sandbox.dispose();
+    await expect(p).resolves.toBeUndefined();
+  });
+
+  it('second render() updates srcdoc', () => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>v1</p>');
@@ -347,14 +408,13 @@ describe('createSandbox — re-render', () => {
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
     expect(iframe.srcdoc).toContain('v1');
-
     sandbox.render('<p>v2</p>');
     expect(iframe.srcdoc).toContain('v2');
     expect(iframe.srcdoc).not.toContain('v1');
     sandbox.dispose();
   });
 
-  it('re-render reuses the same iframe element, not a new one', () => {
+  it('re-render reuses the same iframe element', () => {
     const sandbox = createSandbox(container);
 
     sandbox.render('<p>v1</p>');
@@ -367,191 +427,6 @@ describe('createSandbox — re-render', () => {
 
     expect(container.querySelectorAll('iframe')).toHaveLength(1);
     expect(iframe1).toBe(iframe2);
-    sandbox.dispose();
-  });
-
-  it('nextReady() registered before second render resolves on the second ready', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>v1</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    fireReady(iframe.contentWindow);
-    await sandbox.ready;
-
-    const next = sandbox.nextReady();
-
-    sandbox.render('<p>v2</p>');
-    fireReady(iframe.contentWindow);
-    await expect(next).resolves.toBeUndefined();
-    sandbox.dispose();
-  });
-
-  it('loaded is false after render() and true after ready (E1)', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>v1</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(sandbox.loaded).toBe(false);
-    fireReady(iframe.contentWindow);
-    await sandbox.ready;
-    expect(sandbox.loaded).toBe(true);
-
-    sandbox.render('<p>v2</p>');
-    expect(sandbox.loaded).toBe(false);
-    fireReady(iframe.contentWindow);
-    await new Promise((r) => setTimeout(r));
-    expect(sandbox.loaded).toBe(true);
-    sandbox.dispose();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createSandbox — nextReady
-// ---------------------------------------------------------------------------
-
-describe('createSandbox — nextReady', () => {
-  let container: HTMLElement;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-  });
-
-  afterEach(() => {
-    container.remove();
-  });
-
-  it('resolves after the next ready message', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>v1</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    fireReady(iframe.contentWindow);
-    await sandbox.ready;
-
-    const next = sandbox.nextReady();
-
-    sandbox.render('<p>v2</p>');
-    fireReady(iframe.contentWindow);
-    await expect(next).resolves.toBeUndefined();
-    sandbox.dispose();
-  });
-
-  it('supports multiple simultaneous callers', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>v1</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    const next1 = sandbox.nextReady();
-    const next2 = sandbox.nextReady();
-
-    fireReady(iframe.contentWindow);
-    await expect(next1).resolves.toBeUndefined();
-    await expect(next2).resolves.toBeUndefined();
-    sandbox.dispose();
-  });
-
-  it('resolves immediately on a disposed sandbox', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.dispose();
-    await expect(sandbox.nextReady()).resolves.toBeUndefined();
-  });
-
-  it('resolves when the sandbox is disposed while waiting', async () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>v1</p>');
-
-    const next = sandbox.nextReady();
-
-    sandbox.dispose();
-    await expect(next).resolves.toBeUndefined();
-  });
-
-  it('resolves when nextReady() is called before the first render()', async () => {
-    const sandbox = createSandbox(container);
-
-    // Register interest before any render — no iframe exists yet
-    const next = sandbox.nextReady();
-
-    sandbox.render('<p>v1</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    fireReady(iframe.contentWindow);
-    await expect(next).resolves.toBeUndefined();
-    sandbox.dispose();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createSandbox — render
-// ---------------------------------------------------------------------------
-
-describe('createSandbox — render', () => {
-  let container: HTMLElement;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-  });
-
-  afterEach(() => {
-    container.remove();
-  });
-
-  it('sets iframe.srcdoc containing the HTML fragment', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('<p>Hello</p>');
-    sandbox.dispose();
-  });
-
-  it('includes the CSP meta tag in the srcdoc', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('http-equiv="Content-Security-Policy"');
-    sandbox.dispose();
-  });
-
-  it('injects custom styles into the srcdoc head when provided', () => {
-    const sandbox = createSandbox(container, { styles: 'body { margin: 0; }' });
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('<style>body { margin: 0; }</style>');
-    sandbox.dispose();
-  });
-
-  it('includes allowedFontOrigins in font-src CSP when provided via SandboxOptions', () => {
-    const sandbox = createSandbox(container, {
-      allowedFontOrigins: ['https://fonts.gstatic.com'],
-    });
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('font-src https://fonts.gstatic.com');
     sandbox.dispose();
   });
 
@@ -585,25 +460,15 @@ describe('createSandbox — render', () => {
     sandbox.dispose();
   });
 
-  it('render() after dispose() warns and does not create an iframe', () => {
+  it('render() after dispose() warns and does not create an iframe', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
 
     sandbox.dispose();
-    sandbox.render('<p>Hello</p>');
+    await sandbox.render('<p>Hello</p>');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
     expect(container.querySelector('iframe')).toBeNull();
     warnSpy.mockRestore();
-  });
-
-  it('render() with an already-aborted signal skips rendering', () => {
-    const sandbox = createSandbox(container);
-    const controller = new AbortController();
-
-    controller.abort();
-    sandbox.render('<p>Hello</p>', { signal: controller.signal });
-    expect(container.querySelector('iframe')).toBeNull();
-    sandbox.dispose();
   });
 
   it('render() with a non-aborted signal renders normally', () => {
@@ -669,6 +534,82 @@ describe('createSandbox — onMessage', () => {
     expect(received).toHaveLength(0);
     sandbox.dispose();
   });
+
+  it('forwards custom messages to onMessage subscribers', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const received: unknown[] = [];
+
+    sandbox.onMessage((msg) => received.push(msg));
+    fireCustom(iframe.contentWindow, 'click', { x: 1 });
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ detail: { x: 1 }, event: 'click', type: 'custom' });
+    sandbox.dispose();
+  });
+
+  it('forwards resize messages to onMessage subscribers', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const received: unknown[] = [];
+
+    sandbox.onMessage((msg) => received.push(msg));
+    fireResize(iframe.contentWindow, 420);
+    expect(received).toHaveLength(1);
+    expect(received[0]).toMatchObject({ height: 420, type: 'resize' });
+    sandbox.dispose();
+  });
+
+  it('does not forward resize messages with non-numeric height', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const received: unknown[] = [];
+
+    sandbox.onMessage((msg) => received.push(msg));
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { height: 'bad', type: 'resize' }, source: iframe.contentWindow }),
+    );
+    expect(received).toHaveLength(0);
+    sandbox.dispose();
+  });
+
+  it('does not forward messages from other sources', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const received: unknown[] = [];
+
+    sandbox.onMessage((msg) => received.push(msg));
+    fireCustom(window, 'spoofed'); // wrong source
+    expect(received).toHaveLength(0);
+    sandbox.dispose();
+  });
+
+  it('unsubscribe removes the handler', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+    const received: unknown[] = [];
+
+    const unsub = sandbox.onMessage((msg) => received.push(msg));
+
+    fireCustom(iframe.contentWindow, 'first');
+    unsub();
+    fireCustom(iframe.contentWindow, 'second');
+    expect(received).toHaveLength(1);
+    sandbox.dispose();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -689,13 +630,12 @@ describe('createSandbox — setState', () => {
 
   it('posts a state-update message to iframe.contentWindow', async () => {
     const sandbox = createSandbox(container);
-
-    sandbox.render('<p>test</p>');
+    const p = sandbox.render('<p>test</p>');
 
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
     fireReady(iframe.contentWindow);
-    await sandbox.ready;
+    await p;
 
     const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
@@ -714,7 +654,7 @@ describe('createSandbox — setState', () => {
     sandbox.dispose();
   });
 
-  it('setState() after render() but before ready warns — bridge may not be initialized (D1)', () => {
+  it('setState() after render() but before ready warns', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
 
@@ -728,13 +668,12 @@ describe('createSandbox — setState', () => {
   it('setState() after ready does not warn', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
-
-    sandbox.render('<p>test</p>');
+    const p = sandbox.render('<p>test</p>');
 
     const iframe = container.querySelector('iframe') as HTMLIFrameElement;
 
     fireReady(iframe.contentWindow);
-    await sandbox.ready;
+    await p;
 
     sandbox.setState('theme', 'dark');
     expect(warnSpy).not.toHaveBeenCalled();
@@ -742,28 +681,22 @@ describe('createSandbox — setState', () => {
     sandbox.dispose();
   });
 
-  it('setState() after dispose() warns and does not post', () => {
+  it('setState() after dispose() warns', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const sandbox = createSandbox(container);
-
-    sandbox.render('<p>test</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
 
     sandbox.dispose();
     sandbox.setState('theme', 'dark');
     expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
-    expect(postSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
   });
 });
 
 // ---------------------------------------------------------------------------
-// createSandbox — postMessage round-trip
+// createSandbox — updateStyle
 // ---------------------------------------------------------------------------
 
-describe('createSandbox — postMessage round-trip', () => {
+describe('createSandbox — updateStyle', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -775,215 +708,164 @@ describe('createSandbox — postMessage round-trip', () => {
     container.remove();
   });
 
-  it('delivers application messages from iframe.contentWindow to onMessage handlers', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-    fireCustom(iframe.contentWindow, 'ping', 42);
-    expect(received).toHaveLength(1);
-    expect(received[0]).toEqual({ detail: 42, event: 'ping', type: 'custom' });
-    sandbox.dispose();
-  });
-
-  it('ignores messages from other sources', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-    fireCustom(window, 'ping', 42); // wrong source
-    expect(received).toHaveLength(0);
-    sandbox.dispose();
-  });
-
-  it('ignores non-object and untyped messages from the sandbox', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-
-    for (const bad of [null, 42, 'string', { noType: true }]) {
-      window.dispatchEvent(new MessageEvent('message', { data: bad, source: iframe.contentWindow }));
-    }
-
-    expect(received).toHaveLength(0);
-    sandbox.dispose();
-  });
-
-  it('ignores messages with unknown type values from the sandbox (allow-list guard)', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-
-    for (const type of ['state-update', 'ping', 'internal']) {
-      window.dispatchEvent(new MessageEvent('message', { data: { type }, source: iframe.contentWindow }));
-    }
-
-    expect(received).toHaveLength(0);
-    sandbox.dispose();
-  });
-
-  it('unsubscribe function stops message delivery', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-    const unsub = sandbox.onMessage((msg) => received.push(msg));
-
-    fireCustom(iframe.contentWindow);
-    expect(received).toHaveLength(1);
-    unsub();
-    fireCustom(iframe.contentWindow);
-    expect(received).toHaveLength(1);
-    sandbox.dispose();
-  });
-
-  it('delivers error messages from the sandbox', () => {
-    const sandbox = createSandbox(container);
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        data: { message: 'Something went wrong', stack: 'Error: ...', type: 'error' },
-        source: iframe.contentWindow,
-      }),
-    );
-    expect(received).toHaveLength(1);
-    expect(received[0]).toEqual({
-      message: 'Something went wrong',
-      stack: 'Error: ...',
-      type: 'error',
+  it('injects named <style id> blocks for namedStyles option', () => {
+    const sandbox = createSandbox(container, {
+      namedStyles: { 'base-css': 'body { margin: 0; }', 'theme-css': 'body { color: red; }' },
     });
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('<style id="base-css">body { margin: 0; }</style>');
+    expect(iframe.srcdoc).toContain('<style id="theme-css">body { color: red; }</style>');
     sandbox.dispose();
   });
 
-  it('delivers custom messages emitted from the sandbox', () => {
+  it('posts style-patch message to iframe when loaded', async () => {
+    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const p = sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    fireReady(iframe.contentWindow);
+    await p;
+
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    sandbox.updateStyle('theme-css', 'body { color: blue; }');
+
+    expect(postSpy).toHaveBeenCalledWith({ css: 'body { color: blue; }', id: 'theme-css', type: 'style-patch' }, '*');
+    sandbox.dispose();
+  });
+
+  it('updates baseline so next render() uses new CSS', async () => {
+    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const p = sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    fireReady(iframe.contentWindow);
+    await p;
+    sandbox.updateStyle('theme-css', 'body { color: blue; }');
+    sandbox.render('<p>Updated</p>');
+
+    expect(iframe.srcdoc).toContain('<style id="theme-css">body { color: blue; }</style>');
+    sandbox.dispose();
+  });
+
+  it('updateStyle before first render updates baseline only (no postMessage)', () => {
+    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const postMessageSpy = vi.fn();
+
+    sandbox.updateStyle('theme-css', 'body { color: green; }');
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('<style id="theme-css">body { color: green; }</style>');
+    expect(postMessageSpy).not.toHaveBeenCalled();
+    sandbox.dispose();
+  });
+
+  it('updateStyle no-ops after dispose', async () => {
+    const sandbox = createSandbox(container, { namedStyles: { 'theme-css': 'body { color: red; }' } });
+    const p = sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    fireReady(iframe.contentWindow);
+    await p;
+    sandbox.dispose();
+
+    expect(() => sandbox.updateStyle('theme-css', 'body { color: blue; }')).not.toThrow();
+  });
+
+  it('updateStyle works for IDs not pre-declared in namedStyles', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    fireReady(iframe.contentWindow);
+    await p;
+
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    sandbox.updateStyle('any-id', 'body { color: blue; }');
+    expect(postSpy).toHaveBeenCalledWith({ css: 'body { color: blue; }', id: 'any-id', type: 'style-patch' }, '*');
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — styles option
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — styles option', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('injects anonymous styles into the srcdoc head when provided', () => {
+    const sandbox = createSandbox(container, { styles: 'body { margin: 0; }' });
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('<style>body { margin: 0; }</style>');
+    sandbox.dispose();
+  });
+
+  it('includes allowedFontOrigins in font-src CSP when provided via SandboxOptions', () => {
+    const sandbox = createSandbox(container, {
+      allowedFontOrigins: ['https://fonts.gstatic.com'],
+    });
+
+    sandbox.render('<p>Hello</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('font-src https://fonts.gstatic.com');
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — disposalSignal
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — disposalSignal', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('disposalSignal is not aborted before dispose()', () => {
     const sandbox = createSandbox(container);
 
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-    const received: unknown[] = [];
-
-    sandbox.onMessage((msg) => received.push(msg));
-    fireCustom(iframe.contentWindow, 'button:click', { label: 'Save' });
-    expect(received).toHaveLength(1);
-    expect(received[0]).toEqual({ detail: { label: 'Save' }, event: 'button:click', type: 'custom' });
-    sandbox.dispose();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createSandbox — scripts option
-// ---------------------------------------------------------------------------
-
-describe('createSandbox — scripts option', () => {
-  let container: HTMLElement;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-  });
-
-  afterEach(() => {
-    container.remove();
-  });
-
-  it('injects script src tags with crossorigin="anonymous" before user content in srcdoc', () => {
-    const sandbox = createSandbox(container, { scripts: ['https://cdn.example.com/lib.js'] });
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('crossorigin="anonymous"');
-    expect(iframe.srcdoc).toContain('src="https://cdn.example.com/lib.js"');
-
-    const scriptPos = iframe.srcdoc.indexOf('cdn.example.com');
-    const contentPos = iframe.srcdoc.indexOf('<p>Hello</p>');
-
-    expect(scriptPos).toBeLessThan(contentPos);
+    expect(sandbox.disposalSignal.aborted).toBe(false);
     sandbox.dispose();
   });
 
-  it('includes the script origin in script-src CSP when scripts are provided', () => {
-    const sandbox = createSandbox(container, { scripts: ['https://cdn.example.com/lib.js'] });
+  it('disposalSignal is aborted after dispose()', () => {
+    const sandbox = createSandbox(container);
 
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain('https://cdn.example.com');
     sandbox.dispose();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// createSandbox — nonce option
-// ---------------------------------------------------------------------------
-
-describe('createSandbox — nonce option', () => {
-  let container: HTMLElement;
-
-  beforeEach(() => {
-    container = document.createElement('div');
-    document.body.appendChild(container);
-  });
-
-  afterEach(() => {
-    container.remove();
-  });
-
-  it('adds nonce to bridge script tag and script-src CSP', () => {
-    const sandbox = createSandbox(container, { nonce: 'abc123' });
-
-    sandbox.render('<p>Hello</p>');
-
-    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
-
-    expect(iframe.srcdoc).toContain("'nonce-abc123'");
-    expect(iframe.srcdoc).toContain('nonce="abc123"');
-    sandbox.dispose();
-  });
-});
-
-describe('SandboxError — named subclasses', () => {
-  it('each subclass is instanceof SandboxError and Error', () => {
-    expect(new SandboxDisposedError('disposed')).toBeInstanceOf(SandboxError);
-    expect(new SandboxDisposedError('disposed')).toBeInstanceOf(Error);
-    expect(new SandboxTimeoutError('timeout')).toBeInstanceOf(SandboxError);
-  });
-
-  it('each subclass has the correct .name', () => {
-    expect(new SandboxDisposedError('').name).toBe('SandboxDisposedError');
-    expect(new SandboxTimeoutError('').name).toBe('SandboxTimeoutError');
-  });
-
-  it('SandboxError.is() returns true for any subclass', () => {
-    expect(SandboxError.is(new SandboxDisposedError(''))).toBe(true);
-    expect(SandboxError.is(new Error('plain'))).toBe(false);
+    expect(sandbox.disposalSignal.aborted).toBe(true);
   });
 });

@@ -17,6 +17,7 @@
     "test": "vitest",
     "validate:repl": "node --import jiti/register scripts/validate-repl.ts",
     "docs:dev": "vitepress dev docs",
+    "docs:dev:refine": "concurrently -c \"auto\" \"pnpm --filter @vielzeug/refine build:bundle:watch\" \"pnpm docs:dev\"",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },

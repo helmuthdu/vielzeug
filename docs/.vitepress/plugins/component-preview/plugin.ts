@@ -10,13 +10,19 @@
 //   refine-preview:css  — refine's stylesheet with @import rules fully inlined
 //   refine-preview:deps — all IIFE peer deps concatenated in load order
 //   refine-preview:js   — refine's own IIFE bundle
+//
+// HMR: CSS-only dist changes send a custom WS event (REFINE_CSS_HMR_EVENT)
+// instead of a full page reload. Consumers subscribe via useRefineHmr().
 
 import type { Plugin } from 'vite';
 
+export { REFINE_CSS_HMR_EVENT } from './constants';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { REFINE_CSS_HMR_EVENT } from './constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -31,7 +37,6 @@ const refineDir = resolve(pkgDir, 'refine/dist');
 // pnpm packages. Subpath exports on these packages don't expose dist files
 // directly, so we resolve the CJS main entry and navigate to the UMD build.
 const req = createRequire(resolve(__dirname, '../../../../node_modules/.pnpm/node_modules/placeholder'));
-
 const temporalUmd = resolve(dirname(req.resolve('@js-temporal/polyfill')), '../dist/index.umd.js');
 const lucideUmd = resolve(dirname(req.resolve('lucide')), '../../dist/umd/lucide.js');
 
@@ -78,6 +83,38 @@ function inlineCss(filePath: string): string {
 
 export function componentPreviewPlugin(): Plugin {
   return {
+    configureServer(server) {
+      // Watch the refine dist directory so that when `pnpm --filter @vielzeug/refine build:bundle:watch`
+      // rebuilds the IIFE bundle, the docs dev server picks up the changes automatically
+      // without requiring a manual restart. Use `pnpm docs:dev:refine` to run both together.
+      server.watcher.add(refineDir);
+
+      server.watcher.on('change', (file) => {
+        if (!file.startsWith(refineDir)) return;
+
+        const isCssOnly = file.endsWith('.css');
+
+        // Invalidate only the affected virtual module(s).
+        const toInvalidate = isCssOnly ? [CSS_ID] : [JS_ID, CSS_ID, DEPS_ID];
+
+        for (const id of toInvalidate) {
+          const mod = server.moduleGraph.getModuleById('\0' + id);
+
+          if (mod) server.moduleGraph.invalidateModule(mod);
+        }
+
+        if (isCssOnly) {
+          // Hot-patch CSS into live iframes without a full page reload.
+          // useComponentPreview listens for this event and calls sandbox.patchStyle().
+          const css = inlineCss(resolve(refineDir, 'styles/styles.css'));
+
+          server.ws.send({ data: { css }, event: REFINE_CSS_HMR_EVENT, type: 'custom' });
+        } else {
+          // JS changes re-register custom elements — full reload required.
+          server.ws.send({ type: 'full-reload' });
+        }
+      });
+    },
     load(id) {
       if (id === '\0' + JS_ID) {
         const code = readFileSync(resolve(refineDir, 'refine.iife.js'), 'utf-8');

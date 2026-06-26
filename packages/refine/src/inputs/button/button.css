@@ -21,8 +21,7 @@
     cursor: wait;
   }
 
-  button,
-  a {
+  [part='button'] {
     position: relative;
     box-sizing: border-box;
     display: flex;
@@ -58,12 +57,7 @@
     );
   }
 
-  a {
-    text-decoration: none;
-  }
-
-  button:focus-visible,
-  a:focus-visible {
+  [part='button']:focus-visible {
     outline: none;
   }
 
@@ -117,7 +111,7 @@
   }
 
   /* Icon-only always uses perfect circle */
-  :host([rounded][icon-only]) :is(button, a) {
+  :host([rounded][icon-only]) [part='button'] {
     border-radius: 50%;
   }
 
@@ -127,7 +121,7 @@
 }
 
 @layer refine.variants {
-  :host([icon-only]) :is(button, a) {
+  :host([icon-only]) [part='button'] {
     aspect-ratio: 1;
     padding: 0;
   }
@@ -161,15 +155,15 @@
     --_active-color: var(--_theme-contrast);
   }
 
-  :host([variant='flat']) :is(button, a) {
+  :host([variant='flat']) [part='button'] {
     box-shadow: var(--inset-shadow-2xs);
   }
 
-  :host([variant='flat']) :is(button, a):hover {
+  :host([variant='flat']) [part='button']:hover {
     box-shadow: var(--inset-shadow-xs);
   }
 
-  :host([variant='flat']) :is(button, a):active {
+  :host([variant='flat']) [part='button']:active {
     box-shadow: var(--inset-shadow-sm);
   }
 
@@ -185,15 +179,15 @@
     --_active-color: var(--_theme-contrast);
   }
 
-  :host([variant='bordered']) :is(button, a) {
+  :host([variant='bordered']) [part='button'] {
     box-shadow: var(--inset-shadow-xs);
   }
 
-  :host([variant='bordered']) :is(button, a):hover {
+  :host([variant='bordered']) [part='button']:hover {
     box-shadow: var(--inset-shadow-xs);
   }
 
-  :host([variant='bordered']) :is(button, a):active {
+  :host([variant='bordered']) [part='button']:active {
     box-shadow: var(--inset-shadow-sm);
   }
 
@@ -218,7 +212,7 @@
     --_active-color: var(--_theme-contrast);
   }
 
-  :host([variant='ghost']) :is(button, a) {
+  :host([variant='ghost']) [part='button'] {
     border-width: 0;
   }
 
@@ -231,7 +225,7 @@
     --_active-color: color-mix(in oklch, var(--_theme-focus) 85%, black);
   }
 
-  :host([variant='text']) :is(button, a) {
+  :host([variant='text']) [part='button'] {
     border-width: 0;
   }
 
@@ -267,13 +261,13 @@
 
   /* ── Shared interactive states — all variants use --_* tokens set above ── */
 
-  :is(button, a):hover {
+  [part='button']:hover {
     color: var(--_hover-color, var(--_color));
     background: var(--_hover-bg, var(--_bg));
     border-color: var(--_hover-border-color, var(--_border-color));
   }
 
-  :is(button, a):active {
+  [part='button']:active {
     color: var(--_active-color, var(--_color));
     background: var(--_active-bg, var(--_bg));
     border-color: var(--_active-border-color, var(--_border-color));
@@ -283,32 +277,27 @@
 
 @layer refine.overrides {
   /* Focus ring — keyboard navigation only; combines focus shadow + halo to avoid shadow pop */
-  button:focus-visible,
-  a:focus-visible {
+  [part='button']:focus-visible {
     outline: none;
     box-shadow: var(--_theme-shadow), var(--_theme-halo);
   }
 
   /* Hover depth — halo border effect matching ore-input focus style */
-  button:hover,
-  a:hover {
+  [part='button']:hover {
     border-color: var(--_hover-border-color, var(--_theme-focus));
     box-shadow: var(--_theme-shadow);
   }
 
   /* Ghost + Text variants: no border/shadow decoration on hover */
-  :host([variant='ghost']) button:hover,
-  :host([variant='ghost']) a:hover,
-  :host([variant='text']) button:hover,
-  :host([variant='text']) a:hover {
+  :host([variant='ghost']) [part='button']:hover,
+  :host([variant='text']) [part='button']:hover {
     border-color: transparent;
     box-shadow: none;
     transform: none;
   }
 
   /* Physical press feedback */
-  button:active,
-  a:active {
+  [part='button']:active {
     transform: translateY(1px);
   }
 }

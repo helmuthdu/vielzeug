@@ -392,7 +392,7 @@ Show file information with truncation using width constraints.
 | Variant    | Default size          | Default weight          | Default color                           | Line height              | Letter spacing                 |
 | ---------- | --------------------- | ----------------------- | --------------------------------------- | ------------------------ | ------------------------------ |
 | `body`     | `--text-base` (16px)  | `--font-normal` (400)   | `--text-color-body` (contrast-800)      | `--leading-normal` (1.5) | `normal`                       |
-| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900)   | `--leading-tight` (1.15) | `--tracking-header` (-0.025em) |
+| `heading`  | `--heading-md` (24px) | `--font-semibold` (600) | `--text-color-heading` (contrast-900)   | `--leading-tight` (1.15) | `--tracking-header` (-0.05em)  |
 | `label`    | `--text-sm` (14px)    | `--font-medium` (500)   | `--text-color-heading` (contrast-900)   | `--leading-snug` (1.375) | `normal`                       |
 | `caption`  | `--text-sm` (14px)    | `--font-normal` (400)   | `--text-color-secondary` (contrast-600) | `--leading-normal` (1.5) | `normal`                       |
 | `overline` | `--text-xs` (12px)    | `--font-semibold` (600) | `--text-color-body` (contrast-800)      | `--leading-none` (1)     | `0.08em`                       |

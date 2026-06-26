@@ -1,3 +1,4 @@
+import { MSG } from './_protocol.js';
 import { warn } from './_warn.js';
 
 // ---------------------------------------------------------------------------
@@ -5,11 +6,11 @@ import { warn } from './_warn.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Unified options for createSandbox, buildCsp, and buildDocument.
+ * Options for createSandbox and buildDocument.
  *
- * All `allowed*Origins` fields whitelist CDN/external origins for their respective
- * CSP directives. Origins from `scripts` URLs are extracted automatically and merged
- * with `allowedScriptOrigins` — there is no need to list them twice.
+ * All `allowed*Origins` fields whitelist CDN/external origins for their
+ * respective CSP directives. Origins from `scripts` URLs are extracted
+ * automatically and merged with `allowedScriptOrigins`.
  */
 export interface SandboxOptions {
   /** Origins added to font-src. Default: 'none'. */
@@ -30,8 +31,14 @@ export interface SandboxOptions {
   nonce?: string;
   /** External script URLs injected before user content. Origins are auto-added to script-src. */
   scripts?: string[];
-  /** CSS injected as a <style> block in the sandbox document <head>. */
+  /** CSS injected as a single anonymous `<style>` block in the document `<head>`. Not hot-patchable. */
   styles?: string;
+  /**
+   * Named CSS blocks injected as `<style id="key">` elements in the document `<head>`.
+   * Each entry is individually hot-patchable via `sandbox.updateStyle(id, css)` without
+   * a full re-render. Keys must be valid HTML id values.
+   */
+  namedStyles?: Record<string, string>;
 }
 
 /**
@@ -45,18 +52,15 @@ export interface SandboxOptions {
  * ```
  */
 export interface SandboxBridge {
-  /**
-   * Emit a custom event to the host.
-   * Received via sandbox.onMessage() as { type: 'custom', event, detail }.
-   */
+  /** Emit a custom event to the host. Received via sandbox.onMessage() as { type: 'custom', event, detail }. */
   emit(event: string, detail?: unknown): void;
 }
 
 /**
  * Application-level messages the sandbox sends to the host via onMessage().
  *
- * The 'ready' lifecycle signal is intentionally excluded — it resolves sandbox.ready
- * and sandbox.nextReady() internally and is not forwarded to onMessage() subscribers.
+ * 'ready' is an internal lifecycle signal — it resolves render() promises and
+ * is never forwarded to onMessage() subscribers.
  *
  * @security All SandboxMessage data is untrusted — sandboxed code controls the payload.
  * Never evaluate or execute message content on the host.
@@ -65,7 +69,8 @@ export type SandboxMessage =
   // eslint-disable-next-line perfectionist/sort-object-types
   | { type: 'error'; message: string; stack?: string }
   // eslint-disable-next-line perfectionist/sort-object-types
-  | { type: 'custom'; event: string; detail: unknown };
+  | { type: 'custom'; event: string; detail: unknown }
+  | { height: number; type: 'resize' };
 
 /** Handle for a running sandbox instance returned by createSandbox(). */
 export interface SandboxHandle {
@@ -74,48 +79,29 @@ export interface SandboxHandle {
   /** True once dispose() has been called. */
   readonly disposed: boolean;
   /**
-   * True once the current sandbox document has signalled it is ready.
-   * Resets to `false` on each new render() call and returns to `true` after the
-   * next ready message. Use this to drive loading spinners or disable setState().
-   */
-  readonly loaded: boolean;
-  /**
-   * Resolves when the first sandbox document signals it has loaded.
+   * Resolves when the first sandbox document signals it is ready.
    * Also resolves if the sandbox is disposed before the first render — unblocking
    * any waiters without leaving dangling Promise chains.
-   * Does NOT reset on subsequent render() calls — use nextReady() for that.
    */
   readonly ready: Promise<void>;
   /** Tear down the sandbox — removes the iframe from the DOM and clears all listeners. */
   dispose(): void;
   /**
-   * Returns a Promise that resolves after the next render() completes (next ready message).
-   * Supports multiple simultaneous callers — each receives its own Promise.
-   * Resolves immediately if the sandbox is already disposed.
-   *
-   * **Ordering:** call nextReady() BEFORE render() to ensure the resolver is registered
-   * before the document begins loading. Calling after render() introduces a race.
-   *
-   * **Liveness:** if the rendered document does not include the bridge script, this
-   * Promise will not resolve until dispose() is called.
-   */
-  nextReady(): Promise<void>;
-  /**
    * Subscribe to application-level messages from the sandboxed document.
-   * Receives 'error' and 'custom' messages only. The 'ready' lifecycle signal is not
-   * forwarded — use sandbox.ready or nextReady() for load synchronisation.
+   * Receives 'error', 'custom', and 'resize' messages. The 'ready' lifecycle
+   * signal is not forwarded — await the Promise returned by render() instead.
    * Returns an unsubscribe function. Returns a no-op if the sandbox is already disposed.
    */
   onMessage(handler: (msg: SandboxMessage) => void): () => void;
   /**
    * Replace the entire sandbox document (full page reset). Creates the iframe lazily
    * on the first call — no DOM is created until render() is invoked.
+   * Returns a Promise that resolves when the new document signals it is ready.
+   * If a second render() is called before the first resolves, the first Promise
+   * resolves immediately (the document navigated away).
    * Warns in dev if html is empty. Pass a signal to skip the render if already aborted.
-   *
-   * **Ordering with nextReady():** call nextReady() before this method so the resolver
-   * is registered before the document begins loading.
    */
-  render(html: string, options?: { signal?: AbortSignal }): void;
+  render(html: string, options?: { signal?: AbortSignal }): Promise<void>;
   /**
    * Push a state value into the sandbox.
    * Dispatches a `sandbox:state-update` CustomEvent on `document` inside the sandbox:
@@ -123,6 +109,15 @@ export interface SandboxHandle {
    * Warns in dev if called before the first render() or before ready fires.
    */
   setState(key: string, value: unknown): void;
+  /**
+   * Replace the CSS for a named style block without a full re-render.
+   * `id` must match a key in the `namedStyles` option passed to `createSandbox`.
+   * Updates both the live iframe (via postMessage) and the baseline so the next
+   * render() call uses the new CSS automatically.
+   * No-ops if the sandbox is disposed. Safe to call before the first render —
+   * only the baseline is updated; the iframe patch is skipped until ready.
+   */
+  updateStyle(id: string, css: string): void;
   [Symbol.dispose](): void;
 }
 
@@ -130,9 +125,6 @@ export interface SandboxHandle {
 // Type guard
 // ---------------------------------------------------------------------------
 
-// Validates that event.data is a typed object before dispatching to subscribers.
-// Prevents malformed sandbox output (null, primitives, objects without `type`) from
-// propagating as SandboxMessage and crashing subscriber code.
 function isMsgObject(data: unknown): data is Record<string, unknown> & { type: string } {
   return typeof data === 'object' && data !== null && typeof (data as { type?: unknown }).type === 'string';
 }
@@ -186,17 +178,19 @@ export function buildCsp(options: SandboxOptions = {}): string {
 // ---------------------------------------------------------------------------
 
 // Bridge script embedded in every sandbox document.
-// Design notes:
-// - ES6+ syntax is safe: 'unsafe-inline' + allow-scripts enables the full JS engine.
-// - window.__sandbox__.emit() lets sandboxed code fire typed custom events to the host.
-// - 'ready' is fired LAST so it arrives after all preceding parser-blocking scripts.
-// - 'ready' is handled internally by the host and NOT forwarded to onMessage() subscribers.
+// Uses string literals matching MSG constants — the bridge runs as plain JS
+// and cannot import _protocol.ts, so the values must stay in sync manually.
+// If a MSG constant value changes, update the bridge string too.
 const BRIDGE_SCRIPT = `
 if ('ontouchstart' in window) document.addEventListener('touchstart', function() {}, { passive: true });
 window.addEventListener('message', (e) => {
   const msg = e.data;
   if (msg && msg.type === 'state-update') {
     document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: msg.key, value: msg.value } }));
+  }
+  if (msg && msg.type === 'style-patch' && msg.id && typeof msg.css === 'string') {
+    var el = document.getElementById(msg.id);
+    if (el) el.textContent = msg.css;
   }
 });
 window.onerror = (message, _src, _line, _col, err) => {
@@ -218,19 +212,25 @@ parent.postMessage({ type: 'ready' }, '*');
 /**
  * Builds a complete, standalone sandbox HTML document.
  *
- * Includes the CSP meta tag, injected scripts/styles, user content, and the bridge
- * script. Suitable as an iframe srcdoc value or for server-side sandbox document
- * generation (e.g., via @vielzeug/codex).
+ * Includes the CSP meta tag, injected scripts/styles, user content, and the
+ * bridge script. Suitable as an iframe srcdoc value or for server-side sandbox
+ * document generation (e.g., via @vielzeug/codex).
  *
- * External scripts carry `crossorigin="anonymous"` so the bridge's error handler
- * receives full error details for cross-origin scripts. Without it, CORS masks
- * errors as "Script error." even on CORS-enabled CDNs.
+ * External scripts carry `crossorigin="anonymous"` so the bridge's error
+ * handler receives full error details for cross-origin scripts.
  */
 export function buildDocument(html: string, options: SandboxOptions = {}): string {
   const csp = buildCsp(options);
-  const styleTag = options.styles ? `<style>${options.styles}</style>` : '';
 
-  // crossorigin="anonymous" enables full error details for cross-origin script errors.
+  const styleTags = [
+    options.styles ? `<style>${options.styles}</style>` : '',
+    ...(options.namedStyles
+      ? Object.entries(options.namedStyles).map(([id, css]) => `<style id="${id}">${css}</style>`)
+      : []),
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   const scriptTags = (options.scripts ?? [])
     .map((src) => `<script crossorigin="anonymous" src="${src}"></script>`)
     .join('\n');
@@ -243,7 +243,7 @@ export function buildDocument(html: string, options: SandboxOptions = {}): strin
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${styleTag}
+${styleTags}
 </head>
 <body>
 ${scriptTags}
@@ -260,25 +260,29 @@ ${BRIDGE_SCRIPT}
 // ---------------------------------------------------------------------------
 
 export function createSandbox(container: HTMLElement, options: SandboxOptions = {}): SandboxHandle {
-  // The iframe is created lazily on the first render() call. This makes createSandbox()
-  // a cheap synchronous factory — no DOM work is performed until there is content to show.
+  // Iframe is created lazily on the first render() call — no DOM work until
+  // there is content to show.
   let iframe: HTMLIFrameElement | null = null;
   const listeners = new Set<(msg: SandboxMessage) => void>();
   let disposed = false;
   const ac = new AbortController();
-  // loaded: true once the bridge posts 'ready' for the current document; false until then.
-  // Reset to false on each render() call. Used both as the public loaded property and as
-  // the guard in setState() to warn when called before the bridge is initialized.
+
+  // Mutable copy of namedStyles — updateStyle() patches this so re-renders
+  // automatically use the latest CSS without the caller re-passing it.
+  const namedStyles: Record<string, string> = options.namedStyles ? { ...options.namedStyles } : {};
+
+  // Internal only — guards setState() warning. Not part of the public API.
   let loaded = false;
 
+  // First-render gate — resolves once (the very first ready signal).
   let resolveReady!: () => void;
   const ready = new Promise<void>((resolve) => {
     resolveReady = resolve;
   });
 
-  // Set of resolvers from concurrent nextReady() callers — all resolved together on the
-  // next 'ready' message. A Set (vs single slot) supports multiple simultaneous callers.
-  const pendingReadyResolvers = new Set<() => void>();
+  // Per-render resolver — replaced on each render(), resolved on the next
+  // 'ready' message or when the render is superseded/disposed.
+  let resolveCurrentRender: (() => void) | null = null;
 
   function handleMessage(event: MessageEvent): void {
     if (!iframe || event.source !== iframe.contentWindow) return;
@@ -287,23 +291,21 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
     const msg = event.data;
 
-    if (msg.type === 'ready') {
-      // Resolve the first-load gate and all pending nextReady() callers.
-      // 'ready' is an internal lifecycle signal — not forwarded to onMessage() subscribers.
+    if (msg.type === MSG.READY) {
+      // Resolve first-load gate and the current render's promise.
       resolveReady();
       loaded = true;
-
-      for (const resolve of pendingReadyResolvers) resolve();
-
-      pendingReadyResolvers.clear();
+      resolveCurrentRender?.();
+      resolveCurrentRender = null;
 
       return;
     }
 
-    // Allow-list: only forward known application message types to subscribers.
-    // Any other type (e.g. malformed sandbox output) is silently dropped to preserve
-    // the SandboxMessage type contract and prevent type-unsafe values reaching handlers.
-    if (msg.type !== 'error' && msg.type !== 'custom') return;
+    // Allow-list: only forward known application message types.
+    if (msg.type !== MSG.ERROR && msg.type !== MSG.CUSTOM && msg.type !== MSG.RESIZE) return;
+
+    // Type-narrow resize to ensure height is a number before forwarding.
+    if (msg.type === MSG.RESIZE && typeof msg.height !== 'number') return;
 
     for (const listener of listeners) listener(msg as SandboxMessage);
   }
@@ -325,14 +327,9 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
     disposed = true;
     ac.abort();
-
-    // Resolve ready and all pending nextReady() callers to unblock any awaiting code.
-    // render() guards against post-dispose calls so callers won't accidentally re-render.
     resolveReady();
-
-    for (const resolve of pendingReadyResolvers) resolve();
-
-    pendingReadyResolvers.clear();
+    resolveCurrentRender?.();
+    resolveCurrentRender = null;
 
     if (iframe) {
       window.removeEventListener('message', handleMessage);
@@ -341,14 +338,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     }
 
     listeners.clear();
-  }
-
-  function nextReady(): Promise<void> {
-    if (disposed) return Promise.resolve();
-
-    return new Promise<void>((resolve) => {
-      pendingReadyResolvers.add(resolve);
-    });
   }
 
   function onMessage(handler: (msg: SandboxMessage) => void): () => void {
@@ -365,21 +354,31 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     };
   }
 
-  function render(html: string, renderOptions?: { signal?: AbortSignal }): void {
+  function render(html: string, renderOptions?: { signal?: AbortSignal }): Promise<void> {
     if (disposed) {
       warn('render() called on a disposed sandbox.');
 
-      return;
+      return Promise.resolve();
     }
 
-    if (renderOptions?.signal?.aborted) return;
+    if (renderOptions?.signal?.aborted) return Promise.resolve();
 
     if (!html.trim()) {
       warn('render() called with empty HTML.');
     }
 
+    // Supersede any in-flight render — its document navigated away.
+    resolveCurrentRender?.();
+
     loaded = false;
-    ensureIframe().srcdoc = buildDocument(html, options);
+
+    const docOptions = Object.keys(namedStyles).length > 0 ? { ...options, namedStyles: { ...namedStyles } } : options;
+
+    ensureIframe().srcdoc = buildDocument(html, docOptions);
+
+    return new Promise<void>((resolve) => {
+      resolveCurrentRender = resolve;
+    });
   }
 
   function setState(key: string, value: unknown): void {
@@ -397,12 +396,22 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
     if (!loaded) {
       warn(
-        'setState() called before ready — state update may be lost if bridge is not yet initialized. Await sandbox.ready first.',
+        'setState() called before ready — state update may be lost if bridge is not yet initialized. Await the Promise returned by render() first.',
       );
     }
 
-    // srcdoc iframes have a null origin — '*' is required; a specific origin would silently fail
-    iframe.contentWindow.postMessage({ key, type: 'state-update', value }, '*');
+    // srcdoc iframes have a null origin — '*' is required.
+    iframe.contentWindow.postMessage({ key, type: MSG.STATE_UPDATE, value }, '*');
+  }
+
+  function updateStyle(id: string, css: string): void {
+    if (disposed) return;
+
+    namedStyles[id] = css;
+
+    if (loaded && iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ css, id, type: MSG.STYLE_PATCH }, '*');
+    }
   }
 
   return {
@@ -413,10 +422,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     get disposed() {
       return disposed;
     },
-    get loaded() {
-      return loaded;
-    },
-    nextReady,
     onMessage,
     ready,
     render,
@@ -424,5 +429,6 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     [Symbol.dispose]() {
       dispose();
     },
+    updateStyle,
   };
 }

@@ -329,8 +329,9 @@ color: var(--color-contrast-800);
 
 | Token               | Value      | Use                              |
 | ------------------- | ---------- | -------------------------------- |
-| `--tracking-tight`  | -0.025em   | Headers, display text            |
-| `--tracking-header` | -0.025em   | Alias for `--tracking-tight`     |
+| `--tracking-tighter`| -0.05em    | Tightest display headings        |
+| `--tracking-tight`  | -0.025em   | Standard headers, display text   |
+| `--tracking-header` | -0.05em    | Default for heading variant      |
 | `--tracking-normal` | 0em        | Default body tracking            |
 | `--tracking-wide`   | 0.05em     | Labels, badges, uppercase caps   |
 

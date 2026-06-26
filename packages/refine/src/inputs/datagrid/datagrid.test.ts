@@ -911,7 +911,7 @@ describe('ore-datagrid', () => {
 
       const select = fixture.query('.dg-page-size-select') as HTMLElement;
 
-      select.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { value: '10' } }));
+      select.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: ['10'] } }));
       await Promise.resolve();
 
       expect(detail).not.toBeNull();
@@ -933,7 +933,7 @@ describe('ore-datagrid', () => {
 
       const select = fixture.query('.dg-page-size-select') as HTMLElement;
 
-      select.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { value: '10' } }));
+      select.dispatchEvent(new CustomEvent('change', { bubbles: true, detail: { values: ['10'] } }));
       await Promise.resolve();
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);

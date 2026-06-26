@@ -1529,7 +1529,6 @@ export default defineConfig({
             { link: '/ripple/usage#watch-signals', text: 'watch' },
             { link: '/ripple/usage#batch-signals', text: 'batch' },
             { link: '/ripple/usage#scope', text: 'scope' },
-            { link: '/ripple/usage#asyncscope', text: 'asyncScope' },
             { link: '/ripple/usage#debugeffect', text: 'debugEffect' },
             { link: '/ripple/usage#async-computed', text: 'Async Computed' },
             { link: '/ripple/usage#store-history--time-travel', text: 'Store History' },

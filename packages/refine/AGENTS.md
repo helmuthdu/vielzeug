@@ -40,7 +40,7 @@ Follow these when authoring or reviewing component styles and behaviour:
 
 ### Typography
 - Single sans-serif font via `var(--font-sans)`.
-- Headers: letter-spacing `var(--tracking-header)` (−2.5%), line-height `var(--leading-tight)` (115%).
+- Headers: letter-spacing `var(--tracking-header)` (−5%), line-height `var(--leading-tight)` (115%).
 - Six font sizes max (`--text-xs` → `--text-2xl`); avoid sizes above 24 px on high-density pages.
 - Hierarchy via size, weight, and color — most important content large/bold/top.
 

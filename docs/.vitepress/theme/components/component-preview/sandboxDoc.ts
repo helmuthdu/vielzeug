@@ -1,19 +1,21 @@
 // sandboxDoc.ts
 //
-// Builds the sandbox content for the ComponentPreview iframe.
+// Builds the fragment HTML for the ComponentPreview sandbox.
 //
-// The sandbox's render() expects an HTML body fragment, not a full document —
-// buildDocument() inside @vielzeug/sandbox wraps it with <head>/<body>.
-// CSS is returned separately to be passed via SandboxOptions.styles.
-// JS is prepended to the fragment as inline <script> tags so it executes
-// before custom elements in the user HTML are parsed and upgraded.
+// Returns a self-contained fragment (styles + scripts + user HTML) that is
+// passed directly to sandbox.render(). The refine CSS is included inline so
+// createSandbox() needs no special options — hot-patching is handled externally
+// via sandbox.updateStyle('refine-css', newCss) from the HMR hook.
 //
-// Kept in a plain .ts file (not inside <script setup>) to avoid Vue's parser
+// Kept as a plain .ts file (not inside <script setup>) to avoid Vue's parser
 // treating </script> inside template literals as block boundaries.
 
 import refineCss from 'refine-preview:css';
 import refineDeps from 'refine-preview:deps';
 import refineJs from 'refine-preview:js';
+
+// Exported so the HMR hook can reference the style id without a magic string.
+export const REFINE_CSS_ID = 'refine-css';
 
 export interface SandboxDocOptions {
   html: string;
@@ -29,16 +31,14 @@ export interface SandboxDocOptions {
 }
 
 export interface SandboxDocResult {
-  /** HTML body fragment to pass to sandbox.render(). Includes inline <style> and <script> tags. */
+  /** Self-contained HTML fragment to pass to sandbox.render(). */
   fragment: string;
 }
 
-// Default extra pixels ensuring box-shadows and blur effects that overflow
-// the layout box are not clipped by the iframe edge.
 const DEFAULT_SHADOW_BLEED = 32;
 
-// Builds the resize-observer script with the configured bleed value.
-// Minification happens naturally at build time via Vite.
+// The resize observer posts { type: 'resize', height } which routes through
+// sandbox.onMessage() as a SandboxMessage of type 'resize'.
 function makeResizeScript(bleed: number): string {
   return `
 new ResizeObserver(() => {
@@ -51,22 +51,21 @@ new ResizeObserver(() => {
 export function buildSandboxDoc(options: SandboxDocOptions): SandboxDocResult {
   const { background, dark, height, html, shadowBleed = height ? 0 : DEFAULT_SHADOW_BLEED, vertical } = options;
 
-  const bodyAlign = 'center';
   const bodyDirection = vertical ? 'column' : 'row';
-  const bodyBackground = background ? background : 'transparent';
-  const bodyMinHeight = height ? height : 'auto';
+  const bodyBackground = background ?? 'transparent';
+  const bodyMinHeight = height ?? 'auto';
 
-  // refine CSS first, then overrides — order matters so our resets win.
   const overrideCss = [
     `*, *::before, *::after { box-sizing: border-box; }`,
     `html { color-scheme: ${dark ? 'dark' : 'light'}; height: fit-content; }`,
     `html, body { margin: 0; padding: 0; overflow: visible; background: transparent; font-family: var(--font-sans, system-ui, sans-serif); touch-action: manipulation; }`,
-    `body { display: flex; flex-direction: ${bodyDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: ${bodyAlign}; justify-content: ${bodyAlign}; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
+    `body { display: flex; flex-direction: ${bodyDirection}; flex-wrap: wrap; gap: 1rem; padding: 2rem; align-items: center; justify-content: center; min-height: ${bodyMinHeight}; background: ${bodyBackground}; }`,
   ].join(' ');
 
-  // Scripts are prepended to the fragment so they execute before custom
-  // elements in the user HTML are parsed and upgraded by the browser.
-  const fragment = `<style>${refineCss}</style>
+  // refine CSS gets an id so updateStyle('refine-css', newCss) can hot-patch it
+  // without a full re-render. Scripts are prepended so they execute before
+  // custom elements in the user HTML are parsed and upgraded by the browser.
+  const fragment = `<style id="${REFINE_CSS_ID}">${refineCss}</style>
 <style>${overrideCss}</style>
 <script>${refineDeps}</script>
 <script>${refineJs}</script>
