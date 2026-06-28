@@ -213,14 +213,60 @@ const hasOutput = ref(false);
 const localSelectedExample = ref(props.selectedExample);
 
 let editor: any = null;
-let lastCursorPosition: any = null; // Track last cursor position
+let lastCursorPosition: any = null;
 let consoleIntercepted = false;
-let pendingExample: string | null = null; // Example queued before editor was ready
+let pendingExample: string | null = null;
 const originalConsole = {
   log: console.log,
   error: console.error,
   warn: console.warn,
 };
+
+// Track timers/intervals spawned by user code so they can be cancelled on the
+// next run. Without this, setInterval/setTimeout from previous examples keep
+// firing console.log forever, accumulating DOM nodes and freezing the editor.
+const activeTimers = new Set<ReturnType<typeof setTimeout>>();
+const activeIntervals = new Set<ReturnType<typeof setInterval>>();
+const originalSetTimeout = window.setTimeout.bind(window);
+const originalSetInterval = window.setInterval.bind(window);
+const originalClearTimeout = window.clearTimeout.bind(window);
+const originalClearInterval = window.clearInterval.bind(window);
+
+function patchTimers(): void {
+  (window as any).setTimeout = (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+    const id = originalSetTimeout(fn, delay, ...args);
+    activeTimers.add(id);
+    return id;
+  };
+  (window as any).setInterval = (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
+    const id = originalSetInterval(fn, delay, ...args);
+    activeIntervals.add(id);
+    return id;
+  };
+  (window as any).clearTimeout = (id?: ReturnType<typeof setTimeout>) => {
+    if (id !== undefined) activeTimers.delete(id);
+    originalClearTimeout(id);
+  };
+  (window as any).clearInterval = (id?: ReturnType<typeof setInterval>) => {
+    if (id !== undefined) activeIntervals.delete(id);
+    originalClearInterval(id);
+  };
+}
+
+function cancelPreviousRunTimers(): void {
+  for (const id of activeTimers) originalClearTimeout(id);
+  for (const id of activeIntervals) originalClearInterval(id);
+  activeTimers.clear();
+  activeIntervals.clear();
+}
+
+function restoreTimers(): void {
+  cancelPreviousRunTimers();
+  (window as any).setTimeout = originalSetTimeout;
+  (window as any).setInterval = originalSetInterval;
+  (window as any).clearTimeout = originalClearTimeout;
+  (window as any).clearInterval = originalClearInterval;
+}
 
 // ============================================================================
 // Computed Properties
@@ -385,11 +431,15 @@ const handleRunCode = async () => {
   originalConsole.log('🚀 Running code...');
   isExecuting.value = true;
 
+  // Cancel any timers/intervals left over from the previous run before starting.
+  cancelPreviousRunTimers();
+
   // Clear output first
   handleClearOutput();
 
-  // Intercept console
+  // Intercept console and patch timers so new ones are tracked.
   interceptConsole();
+  patchTimers();
 
   try {
     let code = editor.getValue();
@@ -398,10 +448,8 @@ const handleRunCode = async () => {
     // Check if code is empty
     if (!code || code.trim() === '') {
       createOutputLine(['⚠️ No code to execute'], 'warn');
-      setTimeout(() => {
-        isExecuting.value = false;
-        restoreConsole();
-      }, 100);
+      isExecuting.value = false;
+      restoreConsole();
       emit('run-code');
       return;
     }
@@ -468,10 +516,8 @@ const handleRunCode = async () => {
     createOutputLine([errorMessage], 'error');
     originalConsole.error('❌ Code execution error:', err);
   } finally {
-    setTimeout(() => {
-      isExecuting.value = false;
-      restoreConsole();
-    }, 100);
+    isExecuting.value = false;
+    restoreConsole();
   }
 
   emit('run-code');
@@ -664,6 +710,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   restoreConsole();
+  restoreTimers();
   if (editor) {
     editor.dispose();
     editor = null;
