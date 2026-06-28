@@ -26,21 +26,23 @@ export type SourceObserver = (source: ReactiveBase<unknown>) => void;
 // Putting the observer inside the context (R12) scopes it to the specific effect/computed
 // run rather than making it a process-wide global — nested computed recomputes use their
 // own context (no observer), so the debugEffect pattern works without identity checks.
-export type TrackingCtx =
+// sourceObserver is shared across both branches and lives outside the discriminant union.
+export type TrackingCtx = {
+  sourceObserver?: SourceObserver;
+} & (
   | {
       computed: ComputedBase<unknown>;
       depCollector: DepEntry[];
       kind: 'computed';
-      sourceObserver?: SourceObserver;
     }
   | {
       cleanups: CleanupFn[];
       deps: Map<ReactiveBase<unknown>, number>;
       effect: Subscriber;
       kind: 'effect';
-      sourceObserver?: SourceObserver;
       subscriptions: Set<CleanupFn>;
-    };
+    }
+);
 
 // ── ExecutionContext ──────────────────────────────────────────────────────────
 //

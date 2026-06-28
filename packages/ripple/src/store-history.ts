@@ -102,25 +102,46 @@ export const storeWithHistory = <T extends object>(
     if (ownsStore) base.dispose();
   };
 
-  // Object.create(base) makes base the prototype of the adapter — all Store<T> methods
-  // (patch, replace, reset, lens, peek, value, subscribe, name) are inherited
-  // automatically without manual forwarding. Only history-specific members are defined.
-  const adapter = Object.create(base as object) as StoreWithHistory<T>;
-
-  Object.defineProperties(adapter, {
-    canRedo: { enumerable: true, get: () => cursor.value < snapshots.length - 1 },
-    canUndo: { enumerable: true, get: () => cursor.value > 0 },
-    dispose: { value: dispose },
-    disposed: { enumerable: true, get: () => disposed },
-    historyAt: { value: historyAt },
-    historyLength: { enumerable: true, get: () => snapshots.length },
-    push: { value: () => pushSnapshot() },
-    pushNamed: { value: (label: string) => pushSnapshot(label) },
-    redo: { value: redo },
-    store: { enumerable: true, get: () => base },
-    [Symbol.dispose]: { value: dispose },
-    undo: { value: undo },
-  });
+  // Explicit delegation: all Store<T> methods are forwarded directly to base.
+  // History-specific properties are defined inline.
+  const adapter: StoreWithHistory<T> = {
+    get canRedo() {
+      return cursor.value < snapshots.length - 1;
+    },
+    // History-specific
+    get canUndo() {
+      return cursor.value > 0;
+    },
+    dispose,
+    get disposed() {
+      return disposed;
+    },
+    historyAt,
+    get historyLength() {
+      return snapshots.length;
+    },
+    lens: <P extends string>(path: P) => base.lens(path),
+    // Store<T> delegation
+    get name() {
+      return base.name;
+    },
+    patch: (partial) => base.patch(partial),
+    peek: () => base.peek(),
+    push: () => pushSnapshot(),
+    pushNamed: (label: string) => pushSnapshot(label),
+    redo,
+    replace: (fn) => base.replace(fn),
+    reset: () => base.reset(),
+    get store() {
+      return base;
+    },
+    subscribe: (listener) => base.subscribe(listener),
+    [Symbol.dispose]: dispose,
+    undo,
+    get value() {
+      return base.value;
+    },
+  };
 
   return adapter;
 };

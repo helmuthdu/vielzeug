@@ -1,4 +1,4 @@
-import { computed, effect as rawEffect, isSignal, type Readable, untrack } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
 
 import type { RegisterCleanup } from '../template';
 
@@ -33,7 +33,7 @@ export function when(
   truthy: () => WhenRenderable,
   falsy?: () => WhenRenderable,
 ): DirectiveResult {
-  if (typeof condition !== 'function' && !isSignal(condition)) {
+  if (typeof condition !== 'function' && !isReactive(condition)) {
     return createDirectiveResult((anchor, registerCleanup) => {
       const branch = condition ? truthy() : falsy ? falsy() : null;
 

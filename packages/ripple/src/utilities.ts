@@ -1,4 +1,4 @@
-import type { Computed, Readable } from './types';
+import type { Computed, Readable, Signal } from './types';
 
 import { IS_COMPUTED, IS_SIGNAL, IS_STORE } from './symbols';
 import { untrack } from './tracking';
@@ -9,9 +9,10 @@ export { untrack };
 //
 // readonly() returns Readable<T> — no dispose() because the wrapper does not
 // own the source. Callers retain ownership and must dispose the source themselves.
-// The [IS_SIGNAL] brand is set so isSignal(readonly(s)) returns true (it is a
-// reactive Readable), but [IS_COMPUTED] is intentionally NOT set — the wrapper
-// is not a Computed<T> and does not have dispose().
+// The [IS_SIGNAL] brand is set so isReactive(readonly(s)) and isSignal(readonly(s))
+// both return true (it is reactive, not IS_COMPUTED, not IS_STORE).
+// [IS_COMPUTED] is intentionally NOT set — the wrapper is not a Computed<T>
+// and does not have dispose().
 
 /**
  * Wraps a reactive value to produce a structurally read-only view.
@@ -57,19 +58,40 @@ export const readonly = <T>(source: Readable<T>): Readable<T> => {
  * Returns `true` for any reactive value that implements `Readable<T>` — including
  * `signal()`, `computed()`, `store()`, and `readonly()` wrappers.
  *
- * This is a broad "is this value reactive?" check, not a specific writable-signal
- * check. Use `isComputed` to distinguish computed-only values.
+ * This is the broad "is this value reactive?" check. Use `isSignal` for writable-only
+ * signals, or `isComputed` to narrow to computed values.
+ *
+ * @example
+ * ```ts
+ * isReactive(signal(0))            // true
+ * isReactive(computed(() => 1))    // true
+ * isReactive(store({ x: 0 }))     // true
+ * isReactive(readonly(signal(0)))  // true
+ * isReactive({})                   // false
+ * ```
+ */
+export const isReactive = <T = unknown>(value: unknown): value is Readable<T> =>
+  typeof value === 'object' && value !== null && !!(value as Record<typeof IS_SIGNAL, unknown>)[IS_SIGNAL];
+
+/**
+ * Returns `true` only for writable `Signal<T>` values — excludes `computed()`, `store()`,
+ * and `readonly()` wrappers.
+ *
+ * Use `isReactive` for the broad "is this reactive?" check.
  *
  * @example
  * ```ts
  * isSignal(signal(0))            // true
- * isSignal(computed(() => 1))    // true
- * isSignal(readonly(signal(0)))  // true
+ * isSignal(computed(() => 1))    // false — computed excluded
+ * isSignal(store({ x: 0 }))     // false — store excluded
+ * isSignal(readonly(signal(0)))  // true — readonly has IS_SIGNAL, not IS_COMPUTED/IS_STORE
  * isSignal({})                   // false
  * ```
  */
-export const isSignal = <T = unknown>(value: unknown): value is Readable<T> =>
-  typeof value === 'object' && value !== null && !!(value as Record<typeof IS_SIGNAL, unknown>)[IS_SIGNAL];
+export const isSignal = <T = unknown>(value: unknown): value is Signal<T> =>
+  isReactive(value) &&
+  !(value as unknown as Record<typeof IS_COMPUTED, unknown>)[IS_COMPUTED] &&
+  !(value as unknown as Record<typeof IS_STORE, unknown>)[IS_STORE];
 
 export const isComputed = <T = unknown>(value: unknown): value is Computed<T> =>
   typeof value === 'object' && value !== null && !!(value as Record<typeof IS_COMPUTED, unknown>)[IS_COMPUTED];

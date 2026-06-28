@@ -29,7 +29,7 @@ import { IS_COMPUTED, IS_SIGNAL } from './symbols';
  * user.dispose();
  * ```
  */
-export const asyncComputed = <T>(
+export const resource = <T>(
   factory: (abortSignal: AbortSignal) => Promise<T>,
   options?: ResourceOptions<T>,
 ): Computed<ResourceState<T>> => {

@@ -87,6 +87,16 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
     return this.recompute();
   }
 
+  private runCompute(depCollector: DepEntry[]): T {
+    try {
+      return withTracking({ computed: this, depCollector, kind: 'computed' }, this.compute_);
+    } catch (error) {
+      // Sources accessed before the throw remain in their computedSubs_ until the
+      // next successful recompute or dispose(). The computed stays dirty and will retry.
+      throw ensureError(error);
+    }
+  }
+
   private recompute(): boolean {
     if (this.computing_) {
       const label = this.name ? ` "${this.name}"` : '';
@@ -99,17 +109,9 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
     try {
       const newDeps: DepEntry[] = [];
 
-      let next: T;
-
       getDevToolsHook()?.compute?.({ name: this.name });
 
-      try {
-        next = withTracking({ computed: this, depCollector: newDeps, kind: 'computed' }, this.compute_);
-      } catch (error) {
-        // Sources accessed before the throw remain in their computedSubs_ until the
-        // next successful recompute or dispose(). The computed stays dirty and will retry.
-        throw ensureError(error);
-      }
+      const next = this.runCompute(newDeps);
 
       this.dirty_ = false;
       this.maxRevision_ = getRevision();

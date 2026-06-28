@@ -3,7 +3,7 @@
  * applied directly to the component's host element or any target element.
  */
 
-import { isSignal, type Readable } from '@vielzeug/ripple';
+import { isReactive, type Readable } from '@vielzeug/ripple';
 
 import { effect, tryRegisterCleanup } from './runtime';
 import { normalizeHostAttrKey } from './utils/aria';
@@ -110,7 +110,7 @@ const applyReactiveBinding = (
     return effect(() => updater(value()));
   }
 
-  if (isSignal(value)) {
+  if (isReactive(value)) {
     return effect(() => updater(value.value));
   }
 
@@ -150,7 +150,7 @@ function applyClassMap(
           const result: Record<string, boolean> = {};
 
           for (const [cls, entry] of Object.entries(value)) {
-            result[cls] = typeof entry === 'function' ? entry() : isSignal(entry) ? entry.value : Boolean(entry);
+            result[cls] = typeof entry === 'function' ? entry() : isReactive(entry) ? entry.value : Boolean(entry);
           }
 
           return result;

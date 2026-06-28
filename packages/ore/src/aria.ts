@@ -5,7 +5,7 @@
  * For off-component usage (e.g. floating trigger callbacks), use `ctx.bind({ attr: {...} }, { target: el })`.
  */
 
-import { effect as rawEffect, isSignal, type Readable } from '@vielzeug/ripple';
+import { effect as rawEffect, isReactive, type Readable } from '@vielzeug/ripple';
 
 import { tryRegisterCleanup } from './runtime';
 import { normalizeAriaKey } from './utils/aria';
@@ -40,7 +40,7 @@ const applyAriaConfig = (target: Element, config: AriaConfig): (() => void) => {
       continue;
     }
 
-    if (isSignal(rawValue)) {
+    if (isReactive(rawValue)) {
       const sub = rawEffect(() => setA11yAttr(target, key, rawValue.value as AriaScalar));
 
       disposers.push(() => sub.dispose());

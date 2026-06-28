@@ -1,4 +1,4 @@
-import { isSignal } from '@vielzeug/ripple';
+import { isReactive } from '@vielzeug/ripple';
 
 import type { ChartEventHandlers } from '../../core/chart-scaffold';
 import type { ChartHandle, PieChartConfig, PieSliceConfig } from '../../types';
@@ -91,7 +91,7 @@ export function createPieChart(container: HTMLElement, config: PieChartConfig): 
       const inner = config.innerRadius !== undefined ? config.innerRadius : defaultInner;
       const outerR = Math.max(inner + 1, outer);
 
-      const slices = isSignal(config.data) ? config.data.value : config.data;
+      const slices = isReactive(config.data) ? config.data.value : config.data;
       const { end, start } = semiAngles(variant);
 
       currentArcs = computeArcs(

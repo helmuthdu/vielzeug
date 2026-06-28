@@ -49,7 +49,7 @@ type LensOptions<V> = {
 };
 
 class LensSignal<V> implements Signal<V> {
-  declare [IS_SIGNAL]: true;
+  [IS_SIGNAL] = true as const;
 
   private source_: Readable<V>;
   private write_: (v: V) => void;
@@ -62,7 +62,6 @@ class LensSignal<V> implements Signal<V> {
   }
 
   constructor(opts: LensOptions<V>) {
-    this[IS_SIGNAL] = true;
     this.source_ = opts.source;
     this.write_ = opts.write;
     this.evict_ = opts.evict;
@@ -116,8 +115,8 @@ class LensSignal<V> implements Signal<V> {
 // own call sites; the method itself stays free of any scheduling concern.
 
 export class StoreImpl<T extends object> implements Store<T> {
-  declare [IS_SIGNAL]: true;
-  declare [IS_STORE]: true;
+  [IS_SIGNAL] = true as const;
+  [IS_STORE] = true as const;
 
   readonly name: string | undefined;
 
@@ -130,8 +129,6 @@ export class StoreImpl<T extends object> implements Store<T> {
   private readonly version_: SignalImpl<number>;
 
   constructor(initial: T, name?: string) {
-    this[IS_SIGNAL] = true;
-    this[IS_STORE] = true;
     this.name = name;
     this.current_ = structuredClone(initial);
     this.disposed_ = false;
@@ -213,13 +210,15 @@ export class StoreImpl<T extends object> implements Store<T> {
   }
 
   /**
-   * Returns a frozen shallow snapshot of the current state.
+   * Returns a frozen deep snapshot of the current state.
    * The returned object reflects state at call time — it does not update as the store mutates.
+   * Nested objects are cloned (not aliased), so mutating nested properties on the snapshot
+   * does not affect the live store state.
    * Use for serialization or one-off reads outside reactive contexts.
    * For reactive reads, use `store.lens(path)` instead.
    */
   peek(): Readonly<T> {
-    return Object.freeze({ ...this.current_ }) as Readonly<T>;
+    return Object.freeze(structuredClone(this.current_)) as Readonly<T>;
   }
 
   readonly subscribe = (listener: () => void): Subscription => {

@@ -1,4 +1,4 @@
-import { isSignal } from '@vielzeug/ripple';
+import { isReactive } from '@vielzeug/ripple';
 
 import type { Point } from '../../svg/path';
 import type { AreaChartConfig, ChartHandle } from '../../types';
@@ -22,8 +22,8 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
     const { groups, legend, tooltip } = ctx;
     const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
-    const seriesList = isSignal(config.series) ? config.series.value : config.series;
-    const allData = seriesList.map((s) => (isSignal(s.data) ? s.data.value : s.data));
+    const seriesList = isReactive(config.series) ? config.series.value : config.series;
+    const allData = seriesList.map((s) => (isReactive(s.data) ? s.data.value : s.data));
     const allX = allData.flat().map((d) => d.key as Date | number);
     const allY = allData.flat().map((d) => d.value);
 
@@ -88,7 +88,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
       dims: () => ctx.dimensions.value,
       getData: () => allData,
       getPoints: () => allPoints,
-      getSeriesList: () => (isSignal(config.series) ? config.series.value : config.series),
+      getSeriesList: () => (isReactive(config.series) ? config.series.value : config.series),
       onClick: config.onClick,
       onHover: config.onHover,
       svg: ctx.svg,

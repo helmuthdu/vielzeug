@@ -14,7 +14,14 @@ export const DEFAULT_MAX_ITERATIONS = 100;
 let batchDepth = 0;
 let ssrWarnFired = false;
 const pendingSubscribers = new Set<Subscriber>();
-const dirtyWithEffectSubs = new Set<ComputedBase<unknown>>();
+
+// Two sets are used for dirtyWithEffectSubs to avoid array allocation in the hot path.
+// While we iterate over one set ("toProcess"), new dirty nodes accumulate in the other
+// ("next"). At the start of each pass we swap the active set, clear the idle one, and
+// iterate the snapshot — zero allocations per iteration.
+const _dirtyWithEffectSubsA = new Set<ComputedBase<unknown>>();
+const _dirtyWithEffectSubsB = new Set<ComputedBase<unknown>>();
+let dirtyWithEffectSubs = _dirtyWithEffectSubsA;
 
 // ── F1: Simplified flush — no topological sort ─────────────────────────────
 //
@@ -89,9 +96,13 @@ const propagateDirty = (node: {
 
 const recomputeWithEffectSubs = (): void => {
   // Iterate until stable — recomputing one computed may dirty others.
+  // Set-swap pattern: swap active/idle sets each pass so new dirty nodes accumulate
+  // in the idle set while we iterate the current batch — zero array allocations.
   while (dirtyWithEffectSubs.size > 0) {
-    const toProcess = [...dirtyWithEffectSubs];
+    const toProcess = dirtyWithEffectSubs;
 
+    // Swap: new dirty nodes from this iteration go into the other set
+    dirtyWithEffectSubs = dirtyWithEffectSubs === _dirtyWithEffectSubsA ? _dirtyWithEffectSubsB : _dirtyWithEffectSubsA;
     dirtyWithEffectSubs.clear();
 
     for (const c of toProcess) {
@@ -113,6 +124,8 @@ const recomputeWithEffectSubs = (): void => {
         }
       }
     }
+
+    toProcess.clear();
   }
 };
 
@@ -135,13 +148,18 @@ const flushEffects = (): void => {
   }
 };
 
+// Fire the warning once per module load in environments that look like Node.js.
+// window-check is unreliable (jsdom sets window in tests); check for process.versions instead.
+// Access entirely via globalThis to avoid requiring @types/node in downstream tsconfigs.
+const isNodeLike = (globalThis as { process?: { versions?: unknown } }).process?.versions != null;
+
 export const notifyNodeChange = (node: ReactiveBase<unknown>): void => {
   if (!node.hasSubscribers()) return;
 
-  if (!ssrWarnFired && typeof window === 'undefined') {
+  if (!ssrWarnFired && isNodeLike) {
     ssrWarnFired = true;
     warn(
-      'Signal updated in a server environment. The module-level flush queue is shared across concurrent requests ' +
+      'Signal updated in a Node.js-like environment. The module-level flush queue is shared across concurrent requests ' +
         '— use per-request worker isolation or the @vielzeug/ripple/ssr sub-path for tracking isolation.',
     );
   }
@@ -166,7 +184,8 @@ export const batch = <T>(fn: () => T): T => {
     // signal write, surfacing errors in unexpected contexts.
     if (batchDepth === 0) {
       pendingSubscribers.clear();
-      dirtyWithEffectSubs.clear();
+      _dirtyWithEffectSubsA.clear();
+      _dirtyWithEffectSubsB.clear();
     }
 
     throw e;

@@ -49,10 +49,10 @@ export { batch } from './scheduling';
 export { effect, effectAsync, onCleanup, scope, watch } from './effect';
 
 // Utilities
-export { isComputed, isSignal, isStore, readonly, untrack } from './utilities';
+export { isComputed, isReactive, isSignal, isStore, readonly, untrack } from './utilities';
 
 // Async computed
-export { asyncComputed as resource } from './async-computed';
+export { resource } from './async-computed';
 
 // Store with history / time-travel
 export { storeWithHistory } from './store-history';

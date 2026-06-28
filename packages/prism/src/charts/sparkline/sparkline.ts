@@ -1,4 +1,4 @@
-import { effect, isSignal, scope } from '@vielzeug/ripple';
+import { effect, isReactive, scope } from '@vielzeug/ripple';
 
 import type { Point } from '../../svg/path';
 import type { ChartHandle, SparklineConfig, StackSegment } from '../../types';
@@ -173,7 +173,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
 
   function renderAll(): void {
     const { height: h, width: w } = base.dimensions.value;
-    const data = isSignal(config.data) ? config.data.value : config.data;
+    const data = isReactive(config.data) ? config.data.value : config.data;
 
     while (innerGroup.firstChild) innerGroup.removeChild(innerGroup.firstChild);
 

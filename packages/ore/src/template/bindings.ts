@@ -8,7 +8,7 @@
  * - Expose `applyBinding()` as the single dispatch entry point.
  */
 
-import { computed, effect as rawEffect, isSignal, type Readable, untrack } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
 
 import { isLiveSignal } from '../directives/live';
 import { getPropMeta } from '../props';
@@ -133,7 +133,7 @@ export const applyAttrBinding = (binding: AttrBinding, registerCleanup: Register
       return;
     }
 
-    if (!isSignal(value) && isStructuredValue(value)) {
+    if (!isReactive(value) && isStructuredValue(value)) {
       if (name !== '__proto__' && name !== 'constructor' && name !== 'prototype') {
         (el as unknown as Record<string, unknown>)[name] = value;
       }
@@ -305,7 +305,7 @@ export const createAttrBindingFromValue = (
     return { el, mode, name, propMeta, signal: computed(value as () => unknown), type: 'attr' };
   }
 
-  if (isSignal(value)) {
+  if (isReactive(value)) {
     return { el, mode, name, propMeta, signal: value as Readable<unknown>, type: 'attr' };
   }
 

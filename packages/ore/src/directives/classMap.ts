@@ -1,4 +1,4 @@
-import { computed, isSignal, type Readable } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
 /**
  * Produces a reactive string of class names from an object map.
@@ -19,7 +19,7 @@ import { computed, isSignal, type Readable } from '@vielzeug/ripple';
 export const classMap = (map: Record<string, (() => boolean) | Readable<boolean> | boolean>): Readable<string> => {
   return computed(() =>
     Object.entries(map)
-      .filter(([, v]) => (typeof v === 'function' ? v() : isSignal(v) ? v.value : v))
+      .filter(([, v]) => (typeof v === 'function' ? v() : isReactive(v) ? v.value : v))
       // Strip whitespace from each key — spaces would inject extra class tokens.
       .map(([k]) => k.replace(/\s+/g, ''))
       .filter(Boolean)

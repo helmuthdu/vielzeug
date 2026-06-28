@@ -1,4 +1,4 @@
-import { computed, effect as rawEffect, isSignal, type Readable, type Signal } from '@vielzeug/ripple';
+import { computed, effect as rawEffect, isReactive, type Readable, type Signal } from '@vielzeug/ripple';
 
 import { warn } from '../_warn';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
@@ -73,7 +73,7 @@ export function raw(value: (() => string) | string | Signal<string> | Readable<s
 
     parent.insertBefore(endMarker, anchor.nextSibling);
 
-    if (isSignal(value)) {
+    if (isReactive(value)) {
       let currentNodes: Node[] = [];
       const src = value as Readable<string>;
 

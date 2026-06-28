@@ -1,4 +1,4 @@
-import { isSignal } from '@vielzeug/ripple';
+import { isReactive } from '@vielzeug/ripple';
 
 import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
 import type { BarScaleContext } from './bar-scale-context';
@@ -30,8 +30,8 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     const { groups, legend, tooltip } = ctx;
     const dims = ctx.dimensions.value;
     const area = chartArea(dims.width, dims.height, dims.margin);
-    const seriesList = isSignal(config.series) ? config.series.value : config.series;
-    const allData = seriesList.map((s) => (isSignal(s.data) ? s.data.value : s.data));
+    const seriesList = isReactive(config.series) ? config.series.value : config.series;
+    const allData = seriesList.map((s) => (isReactive(s.data) ? s.data.value : s.data));
     const categories = [...new Set(allData.flat().map((d) => String(d.key)))];
 
     if (categories.length === 0) {

@@ -1,4 +1,4 @@
-import { computed, isSignal, type Readable } from '@vielzeug/ripple';
+import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
 import { toKebab } from '../utils/dom';
 
@@ -12,7 +12,7 @@ type StyleInput =
   | Readable<string | number | null | undefined | false>;
 
 const toStyleValue = (value: StyleInput): string => {
-  const resolved = typeof value === 'function' ? value() : isSignal(value) ? value.value : value;
+  const resolved = typeof value === 'function' ? value() : isReactive(value) ? value.value : value;
 
   if (resolved == null || resolved === false) return '';
 

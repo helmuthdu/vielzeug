@@ -383,16 +383,6 @@ export const scope = (setup?: () => void): Scope => {
  */
 export function watch<T>(
   source: Readable<T>,
-  callback: (value: T, prev: T) => CleanupFn | void,
-  options?: WatchOptions<T>,
-): Subscription;
-export function watch<T>(
-  source: Readable<T>,
-  callback: (value: T, prev: T | undefined) => CleanupFn | void,
-  options: WatchOptions<T> & { immediate: true },
-): Subscription;
-export function watch<T>(
-  source: Readable<T>,
   callback: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
 ): Subscription {
