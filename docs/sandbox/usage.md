@@ -1,6 +1,6 @@
 ---
 title: Sandbox — Usage Guide
-description: How to render AI-generated HTML, pass state, handle errors, configure CSP, and integrate the sandbox with your application.
+description: How to render untrusted HTML, pass state, handle errors, configure CSP, and integrate the sandbox with your application.
 ---
 
 [[toc]]
@@ -19,44 +19,74 @@ import { createSandbox } from '@vielzeug/sandbox';
 const container = document.getElementById('preview')!;
 const sandbox = createSandbox(container);
 
-await sandbox.ready;
-sandbox.render('<p>Hello from the sandbox</p>');
+await sandbox.render('<p>Hello from the sandbox</p>');
 ```
 
-`sandbox.ready` resolves when the **first** render loads. No DOM is created until `render()` is called — `createSandbox()` is a cheap factory.
+`render()` returns a `Promise<void>` that resolves when the sandbox document signals it is ready. No DOM is created until `render()` is called — `createSandbox()` is a cheap factory.
 
-For reactive frameworks, subscribe via `onMessage` to receive `error` and `custom` events.
+For reactive frameworks, subscribe via `onMessage` to receive `error`, `custom`, and `resize` events.
 
 ## Rendering HTML
 
 `render(html)` replaces the entire sandboxed document with a new one containing your HTML in the body.
 
 ```ts
-sandbox.render(`
+await sandbox.render(`
   <style>body { font-family: sans-serif; }</style>
-  <h1>AI-Generated Component</h1>
+  <h1>Component Preview</h1>
   <ore-button variant="primary">Click me</ore-button>
 `);
 ```
 
-Each call to `render()` is a full page reset — scripts reinitialise, CSS is re-applied, and any DOM state is lost. For incremental updates, push state via `setState()` rather than re-rendering.
+Each call to `render()` is a full page reset — scripts reinitialise, CSS is re-applied, and any DOM state is lost. For incremental updates, push state via `setState()` or patch styles via `updateStyle()` rather than re-rendering.
+
+## Incremental Updates with patch()
+
+`patch(html)` replaces `document.body.innerHTML` in the live document without a full page reset. Scripts, event listeners, `namedStyles` CSS blocks, and any injected global state are all preserved.
+
+Use it for streaming AI-generated output, live editor previews, or any scenario where you want to push new content without reinitialising the page.
+
+```ts
+// Initial render — sets up the document, scripts, and styles
+await sandbox.render(`
+  <script>
+    document.addEventListener('sandbox:state-update', (e) => {
+      document.body.dataset.theme = e.detail.value;
+    });
+  </script>
+  <p>Loading…</p>
+`);
+
+// Subsequent updates — body swapped, script listener preserved
+sandbox.patch('<p>First chunk arrived</p>');
+sandbox.patch('<p>First chunk arrived</p><p>Second chunk…</p>');
+sandbox.patch('<p>Complete response</p>');
+```
+
+**`patch()` vs `render()`:**
+
+| | `render()` | `patch()` |
+|---|---|---|
+| Full page reset | Yes | No |
+| Returns a Promise | Yes | No |
+| Scripts re-run | Yes | No |
+| `namedStyles` preserved | Re-injected | Yes |
+| State listeners preserved | No (must re-register) | Yes |
+| When to use | Initial load, major content change | Streaming, live updates |
+
+**`patch()` must be called after `render()` resolves.** The bridge must be initialized before patches can be received. A dev warning fires if called before the document is ready.
 
 ## Passing State
 
 `setState(key, value)` pushes data into the sandbox without re-rendering.
 
-Always call `setState()` after `ready` (or after checking `sandbox.loaded`) — calling it before the bridge finishes initializing will silently drop the update in a real browser, and a dev warning will fire.
+Always call `setState()` after `render()` resolves — calling it before the bridge finishes initializing will silently drop the update in a real browser, and a dev warning will fire.
 
 ```ts
-// Correct: await ready before pushing state
-await sandbox.ready;
+// Correct: await render() before pushing state
+await sandbox.render('<div id="root"></div>');
 sandbox.setState('theme', 'dark');
 sandbox.setState('user', { name: 'Alice' });
-
-// Correct: check loaded for synchronous callers
-if (sandbox.loaded) {
-  sandbox.setState('count', counter);
-}
 ```
 
 Inside the sandbox document, listen for the `sandbox:state-update` custom event on `document`:
@@ -73,7 +103,7 @@ document.addEventListener('sandbox:state-update', (e) => {
 
 ## Handling Errors
 
-Subscribe to `onMessage` before calling `render()` to catch runtime errors in AI-generated code.
+Subscribe to `onMessage` before calling `render()` to catch runtime errors in sandbox content.
 
 ```ts
 sandbox.onMessage((msg) => {
@@ -96,14 +126,70 @@ const sandbox = createSandbox(container, {
     'https://cdn.example.com/ore.js',
     'https://cdn.example.com/refine.js',
   ],
-  styles: `
-    :root { --color-primary: #0066cc; }
-    body { margin: 0; font-family: var(--font-sans); }
-  `,
+  namedStyles: {
+    base: `
+      :root { --color-primary: #0066cc; }
+      body { margin: 0; font-family: var(--font-sans); }
+    `,
+  },
 });
 ```
 
 Script URLs are injected before user content. Their origins are automatically added to `script-src` in the CSP — you do not need to configure `buildCsp` separately.
+
+## Hot-patching Named Styles
+
+`namedStyles` injects named `<style id="key">` blocks into the document `<head>`. Named blocks can be updated live without a full re-render using `updateStyle(id, css)`.
+
+```ts
+const sandbox = createSandbox(container, {
+  namedStyles: {
+    theme: ':root { --color-primary: #0066cc; --bg: #fff; }',
+  },
+});
+
+await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
+
+// Switch theme live — no re-render
+sandbox.updateStyle('theme', ':root { --color-primary: #bb33ff; --bg: #111; }');
+```
+
+`updateStyle()` sends a postMessage to the iframe, patching `<style id="theme">` in place. It also updates the baseline so the next `render()` starts with the patched CSS. Safe to call before the first render (baseline only — no postMessage sent to an uninitialized iframe).
+
+## Resize Notifications
+
+The bridge script automatically emits `resize` messages via a `ResizeObserver` on `document.body`. No manual wiring is needed in your sandbox content.
+
+```ts
+sandbox.onMessage((msg) => {
+  if (msg.type === 'resize') {
+    container.style.height = `${msg.height}px`;
+  }
+});
+```
+
+The `resize` message fires whenever the `document.body` height changes — on initial load, after content updates via `setState()`, and after style patches via `updateStyle()`.
+
+## Tying Async Work to Sandbox Lifetime
+
+`disposalSignal` is an `AbortSignal` that is aborted when the sandbox is disposed. Pass it to any async operation that should stop when the sandbox is torn down.
+
+```ts
+const sandbox = createSandbox(container);
+
+// Polling loop tied to sandbox lifetime
+async function poll() {
+  while (!sandbox.disposalSignal.aborted) {
+    const data = await fetch('/api/data', { signal: sandbox.disposalSignal }).then(r => r.json()).catch(() => null);
+    if (data) sandbox.setState('data', data);
+    await new Promise(resolve => setTimeout(resolve, 5000));
+  }
+}
+
+poll();
+```
+
+When `sandbox.dispose()` is called, `disposalSignal` aborts, cancelling in-flight fetches and stopping the loop.
 
 ## Configuring CSP
 
@@ -120,7 +206,7 @@ const sandbox = createSandbox(container, {
 Then render HTML that uses those resources:
 
 ```ts
-sandbox.render(`
+await sandbox.render(`
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter">
   <p style="font-family: Inter, sans-serif">Hello</p>
 `);
@@ -137,7 +223,7 @@ sandbox.dispose();
 // Using explicit resource management (TypeScript 5.2+)
 {
   using sandbox = createSandbox(container);
-  sandbox.render('<p>Temporary preview</p>');
+  await sandbox.render('<p>Temporary preview</p>');
 } // sandbox.dispose() called automatically
 ```
 
@@ -150,8 +236,8 @@ const unsubErrors = sandbox.onMessage((msg) => {
   if (msg.type === 'error') logError(msg);
 });
 
-const unsubReady = sandbox.onMessage((msg) => {
-  if (msg.type === 'ready') startRendering();
+const unsubEvents = sandbox.onMessage((msg) => {
+  if (msg.type === 'custom') handleCustomEvent(msg);
 });
 
 // Remove a single subscription
@@ -166,7 +252,7 @@ sandbox.dispose();
 Sandbox code calls `window.__sandbox__.emit(event, detail)` to send events to the host. Receive them via `onMessage` with `msg.type === 'custom'`.
 
 ```html
-<!-- Inside AI-generated sandbox content -->
+<!-- Inside sandbox content -->
 <button onclick="window.__sandbox__.emit('button:click', { label: 'Save' })">Save</button>
 ```
 
@@ -190,27 +276,26 @@ declare interface Window {
 
 ## Awaiting Subsequent Renders
 
-`sandbox.ready` resolves only on the first render and does not reset. For workflows where the sandbox is re-rendered, use `nextReady()` to await each subsequent load:
+`render()` returns a `Promise<void>` that resolves when the new document signals ready. Await it directly for each render:
 
 ```ts
-await sandbox.ready;                    // first render is done
-sandbox.render(newHtml);                // start a new render
-await sandbox.nextReady();              // wait for the new document to load
+await sandbox.render(firstHtml);   // first render complete
+await sandbox.render(secondHtml);  // second render complete
 ```
 
-Multiple callers can call `nextReady()` simultaneously — each receives its own independent `Promise`.
+If a second `render()` starts before the first resolves, the first Promise resolves immediately (superseded). Multiple concurrent callers can each await their own returned Promise.
 
 ## Cancelling Renders with AbortSignal
 
-Pass an `AbortSignal` to `render()` to skip the render if it has already been cancelled by the time the call executes. Useful in streaming or queued workflows:
+Pass an `AbortSignal` to `render()` to skip the render if it has already been cancelled. Useful in streaming or queued workflows:
 
 ```ts
-const controller = new AbortController();
+let controller = new AbortController();
 
 async function streamRender(html: string) {
-  controller.abort();                   // cancel any previous pending render
-  const localController = new AbortController();
-  sandbox.render(html, { signal: localController.signal });
+  controller.abort();                            // cancel previous pending render
+  controller = new AbortController();
+  await sandbox.render(html, { signal: controller.signal });
 }
 ```
 
@@ -226,6 +311,9 @@ import { buildDocument } from '@vielzeug/sandbox';
 const html = buildDocument('<p>Hello</p>', {
   allowedStyleOrigins: ['https://fonts.googleapis.com'],
   allowedFontOrigins: ['https://fonts.gstatic.com'],
+  namedStyles: {
+    theme: ':root { --bg: #fff; }',
+  },
 });
 
 // html is a complete <!doctype html> document — assign directly to srcdoc
@@ -244,11 +332,11 @@ const csp = buildCsp({ allowedFontOrigins: ['https://fonts.gstatic.com'] });
 ## Working with Other Vielzeug Libraries
 
 **With Codex:**
-The `generate-sandbox-document` and `get-state-bridge-spec` MCP tools in `@vielzeug/codex` are designed to work with Sandbox. They generate complete sandbox-ready document templates and document the bridge protocol for AI context.
+The `generate-sandbox-document` and `get-state-bridge-spec` MCP tools in `@vielzeug/codex` are designed to work with Sandbox. They generate complete sandbox-ready document templates and document the bridge protocol.
 
 ```ts
-// After codex generates an HTML document for you:
-sandbox.render(generatedDocument);
+// After codex generates an HTML document:
+await sandbox.render(generatedDocument);
 ```
 
 **With Refine:**
@@ -257,20 +345,22 @@ Inject the Refine/Ore runtime into the sandbox via `scripts`:
 ```ts
 const sandbox = createSandbox(container, {
   scripts: ['https://cdn.example.com/refine.iife.js'],
-  styles: '/* refine theme tokens */',
+  namedStyles: {
+    theme: '/* refine theme tokens */',
+  },
 });
 
-// Now AI-generated ore-* components work inside the sandbox
-sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
+await sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
 ```
 
 ## Best Practices
 
-- **Await `ready` before the first render** — `createSandbox()` creates no DOM until `render()` is called. Await `sandbox.ready` to know the first document has loaded.
-- **Use `nextReady()` for re-renders** — `sandbox.ready` does not reset on subsequent calls to `render()`. Call `nextReady()` before re-rendering to await the new document.
+- **Await `render()` before calling `setState()`** — `setState()` warns in dev if called before the bridge is ready. Await the `Promise` returned by `render()` first.
+- **Use `await sandbox.render(html)` for each render** — `render()` returns a `Promise<void>` that resolves when the document is ready. No separate readiness API is needed.
+- **Use `updateStyle()` for theme switching** — patching a named style is faster than a full `render()` and preserves all script and DOM state.
 - **Check `disposed` before deferred calls** — across async operations, check `sandbox.disposed` before calling any method to avoid spurious dev warnings.
-- **Call `setState()` after ready** — `setState()` warns in dev if called before the first `render()` (no document yet) or before `ready` fires for the current document (bridge may not be listening). Await `sandbox.ready` or check `sandbox.loaded` first.
+- **Tie async work to `disposalSignal`** — pass `disposalSignal` to `fetch` and other async operations so they cancel automatically on dispose.
 - **Treat all messages as untrusted** — sandbox code controls `SandboxMessage` payloads. Do not `eval()` or execute any message field.
 - **One sandbox per preview** — `createSandbox()` is a cheap factory; create a new sandbox per user session or component rather than reusing across unrelated renders.
 - **Use `using` in functions** — in TypeScript 5.2+ contexts, `using` guarantees cleanup even on exceptions.
-- **Prefer state updates over re-renders** — re-render resets all script state. For incremental data pushes, use `setState()` after the initial render.
+- **Prefer `patch()` or `setState()` over re-renders for incremental updates** — `render()` resets all script state. Use `patch()` to swap body content and `setState()` to push data without losing listeners or CSS state.

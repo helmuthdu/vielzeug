@@ -1,9 +1,9 @@
 ---
 title: Sandbox — Sandboxed iframe runtime
-description: Isolated iframe runtime with a typed postMessage bridge for safe execution of AI-generated UI components.
+description: Isolated iframe runtime with a typed postMessage bridge for safe execution of untrusted HTML — component previews, playgrounds, plugin sandboxes, and more.
 package: sandbox
-category: ai-tooling
-keywords: [sandbox, iframe, generative-ui, ai, postmessage, csp, security]
+category: ui-primitives
+keywords: [sandbox, iframe, isolation, playground, csp, postmessage, security, components]
 exports: [buildCsp, buildDocument, createSandbox, SandboxBridge]
 related: [codex, refine]
 environments: [browser]
@@ -15,7 +15,16 @@ environments: [browser]
 
 ## Why Sandbox?
 
-Running AI-generated HTML in the main window is unsafe — generated code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed postMessage bridge. The sandbox cannot reach the host page.
+Running untrusted HTML in the main window is unsafe — arbitrary code can access the DOM, cookies, and user data. Sandbox creates an isolated `<iframe sandbox="allow-scripts">` that receives content over a typed postMessage bridge. The sandbox cannot reach the host page.
+
+Common use cases:
+
+- **Component previews** — render isolated HTML/CSS examples in documentation or design tools
+- **Code playgrounds** — execute user-provided code with full error forwarding and state injection
+- **Plugin sandboxes** — host third-party or user-authored plugin UI without granting host access
+- **User-generated content** — display untrusted HTML (emails, form output, external widgets) safely
+- **Widget embedding** — wrap third-party widgets with strict CSP and bidirectional messaging
+- **AI-generated UI** — render LLM-produced HTML components with guaranteed isolation
 
 | Feature                    | Raw `<iframe>`              | Sandbox                                                |
 | -------------------------- | --------------------------- | ------------------------------------------------------ |
@@ -28,7 +37,7 @@ Running AI-generated HTML in the main window is unsafe — generated code can ac
 
 <div class="decision-callout">
 
-**Use Sandbox when** you need to render AI-generated or untrusted HTML in the browser with guaranteed isolation, CSP enforcement, and a typed event bridge.
+**Use Sandbox when** you need to render untrusted or user-provided HTML in the browser with guaranteed isolation, CSP enforcement, and a typed event bridge.
 
 **Stick with a raw `<iframe>` when** you only need to embed a known third-party URL — Sandbox is for programmatic `srcdoc` content, not URL-based embedding.
 
@@ -60,21 +69,21 @@ import { createSandbox } from '@vielzeug/sandbox';
 const container = document.getElementById('preview')!;
 const sandbox = createSandbox(container);
 
-// Await load, then render
-await sandbox.ready;
-sandbox.render('<ore-button variant="primary">Click me</ore-button>');
+// render() returns a Promise that resolves when the document is ready
+await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 
 // Push state into the sandbox
 sandbox.setState('theme', 'dark');
 
-// Receive events from sandbox code (ready is not forwarded — use sandbox.ready instead)
+// Receive events from sandbox code (ready is not forwarded — internal use only)
 sandbox.onMessage((msg) => {
   if (msg.type === 'custom') console.log(msg.event, msg.detail);
   if (msg.type === 'error') console.error(msg.message);
+  if (msg.type === 'resize') console.log('height:', msg.height);
 });
 
-// Await subsequent renders
-await sandbox.nextReady();
+// Re-render: await the returned Promise
+await sandbox.render(newHtml);
 
 // Clean up — removes iframe, clears listeners
 sandbox.dispose();
@@ -86,18 +95,22 @@ sandbox.dispose();
 <div class="features-grid">
 
 - `createSandbox()` — Creates an isolated `<iframe sandbox="allow-scripts">` in the given container
-- `SandboxHandle.ready` — First-load Promise; resolves on first render or dispose (never hangs)
-- `SandboxHandle.nextReady()` — Fresh Promise per re-render; supports multiple simultaneous callers
+- `SandboxHandle.ready` — Promise resolving on first render's ready signal (also resolves on dispose; check `sandbox.disposed` to distinguish)
+- `SandboxHandle.disposalSignal` — `AbortSignal` aborted when the sandbox is disposed; tie async work to sandbox lifetime
 - `SandboxHandle.disposed` — Observable disposed state; check before deferred calls
-- `render(html, { signal? })` — Lazy iframe creation; pass `AbortSignal` to skip cancelled renders
+- `render(html, { signal? })` — Lazy iframe creation; returns `Promise<void>` resolving when ready; pass `AbortSignal` to skip cancelled renders
+- `patch(html)` — Incremental body update without page reset; preserves scripts, listeners, and CSS state; ideal for streaming content
+- `updateStyle(id, css)` — Hot-patch a named `<style id="…">` block live without re-rendering; also updates baseline for next render
 - `setState(key, value)` — Push state into the sandbox; received as `sandbox:state-update` CustomEvent
+- `namedStyles` option — Named `<style id="key">` blocks in document `<head>`; individually patchable via `updateStyle()`
 - `SandboxBridge` type — Ambient type for `window.__sandbox__` in sandbox-side TypeScript
 - `custom` messages — Sandbox code emits `window.__sandbox__.emit(event, detail)` to the host
+- `resize` messages — Auto-emitted by the bridge's built-in `ResizeObserver`; no manual wiring needed
 - Strict CSP — `default-src 'none'`, inline scripts only, no network by default
 - `nonce` option — Cryptographic nonce for bridge `<script>` tag and `script-src` CSP
 - `scripts` option — Inject CDN scripts with `crossorigin="anonymous"`; origins auto-added to `script-src`
 - `buildCsp()` — Build a standalone CSP string using the same `SandboxOptions`
-- `buildDocument()` — Build a complete sandbox HTML document for server-side or Codex use
+- `buildDocument()` — Build a complete sandbox HTML document for server-side or offline use
 - Error forwarding — `onerror` + `unhandledrejection` forwarded as `{ type: 'error' }` messages
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 

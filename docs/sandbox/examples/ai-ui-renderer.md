@@ -1,10 +1,10 @@
 ## AI UI Renderer
 
-A live preview panel that renders AI-generated HTML, forwards errors to the UI, and pushes state updates without re-rendering.
+A live preview panel that renders AI-generated HTML with streaming updates, error forwarding, and theme injection.
 
 ### Problem
 
-You have an AI code generation pipeline that produces HTML fragments. You want to display them safely in the browser with error reporting, theme injection, and a loading state.
+You have an AI code generation pipeline that streams HTML fragments. You want to display partial output as it arrives, update the preview live without flicker, and report errors — all without reinitialising the sandbox on every token.
 
 ### Solution
 
@@ -19,24 +19,35 @@ interface PreviewOptions {
 
 function createPreview({ container, onError, onReady }: PreviewOptions) {
   const sandbox = createSandbox(container, {
-    styles: `
-      :root { box-sizing: border-box; }
-      *, *::before, *::after { box-sizing: inherit; }
-      body { margin: 0; font-family: system-ui, sans-serif; }
-    `,
+    namedStyles: {
+      base: `
+        :root { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: inherit; }
+        body { margin: 0; font-family: system-ui, sans-serif; }
+      `,
+    },
   });
 
   sandbox.onMessage((msg) => {
-    if (msg.type === 'ready') onReady();
     if (msg.type === 'error') onError(msg.message);
   });
 
+  // render() sets up the document once — scripts, styles, and listeners are initialized here.
+  // patch() streams incremental body updates without reinitialising the page.
+  let initialized = false;
+
   return {
-    render(html: string) {
-      sandbox.render(html);
+    async initialize() {
+      if (initialized) return;
+      // Empty body — content arrives via patch()
+      await sandbox.render('');
+      initialized = true;
+      onReady();
+    },
+    patch(html: string) {
+      sandbox.patch(html);
     },
     setTheme(theme: 'light' | 'dark') {
-      // Push state without re-rendering
       sandbox.setState('theme', theme);
     },
     [Symbol.dispose]() {
@@ -45,40 +56,42 @@ function createPreview({ container, onError, onReady }: PreviewOptions) {
   };
 }
 
-// Usage
+// Usage — streaming AI output
 using preview = createPreview({
   container: document.getElementById('preview')!,
   onError: (msg) => showError(msg),
   onReady: () => hideSpinner(),
 });
 
-// Render AI-generated HTML
-preview.render(await generateUI(userPrompt));
+await preview.initialize();
 
-// Push updated theme without page reload
+// Stream tokens as they arrive from the LLM
+let accumulated = '';
+for await (const chunk of streamUI(userPrompt)) {
+  accumulated += chunk;
+  preview.patch(accumulated);  // live update, no page reset
+}
+
+// Push theme without re-render
 preview.setTheme('dark');
 ```
 
-Inside the AI-generated HTML, listen for theme updates:
+### How streaming works
 
-```html
-<script>
-document.addEventListener('sandbox:state-update', (e) => {
-  if (e.detail.key === 'theme') {
-    document.documentElement.dataset.theme = e.detail.value;
-  }
-});
-</script>
-```
+1. `initialize()` calls `render('')` once — this sets up the bridge, `namedStyles`, and any injected scripts.
+2. Each `patch(html)` call sends `document.body.innerHTML = html` via postMessage. The iframe never navigates — scripts keep running, styles stay applied.
+3. The bridge's built-in `ResizeObserver` fires automatically as content grows, so the container can auto-size without additional wiring.
 
 ### Pitfalls
 
-- **Re-rendering resets state** — every `render()` call is a full document reload. Script state, event listeners, and computed values are lost. Use `setState()` for incremental updates after the initial render.
+- **`patch()` requires `render()` first** — the bridge must be initialized before patches are received. Call `patch()` only after the Promise from `render()` resolves.
+- **`patch()` replaces the entire body** — it's `innerHTML`, not an append. If you want to append incrementally, accumulate on the host side (as shown above) and send the full accumulated string each time.
 - **Error strings are untrusted** — `msg.message` and `msg.stack` come from AI-generated code. Display them in the UI, but do not evaluate or pass them to `Function()` or `eval()`.
+- **`render()` still needed for structural resets** — if the user submits a new prompt and you want a fresh page (clear all script state), call `render('')` again before patching.
 
 ### Related
 
+- [Usage Guide — Incremental Updates with patch()](../usage.md#incremental-updates-with-patch)
 - [Usage Guide — Handling Errors](../usage.md#handling-errors)
 - [Usage Guide — Passing State](../usage.md#passing-state)
-- [Usage Guide — Injecting Scripts and Styles](../usage.md#injecting-scripts-and-styles)
 - [API Reference — SandboxHandle](../api.md#sandboxhandle)

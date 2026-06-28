@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
   getConfig(__dirname, {
-    entry: { index: resolve(__dirname, 'src/index.ts') },
+    entry: { index: resolve(__dirname, 'src/index.ts'), testing: resolve(__dirname, 'src/testing.ts') },
     name: 'sandbox',
   }),
 );
