@@ -559,12 +559,12 @@ describe('ore-carousel', () => {
       });
     });
 
-    it('marquee: shows controls and indicators by default', async () => {
+    it('marquee: shows controls but not indicators by default', async () => {
       fixture = await mount('ore-carousel', { attrs: { variant: 'marquee' }, html: slides });
       await fixture.flush();
 
       expect(fixture.query('.controls')).toBeTruthy();
-      expect(fixture.query('.indicators')).toBeTruthy();
+      expect(fixture.query('.indicators')).toBeNull();
     });
 
     it('marquee: hides controls when show-controls=false', async () => {
@@ -739,19 +739,6 @@ describe('ore-carousel', () => {
       expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
       // animation-play-state must not be stuck paused after an instant seek.
       expect(t.style.getPropertyValue('animation-play-state')).toBe('');
-    });
-
-    it('seeks to slide via indicator: active slide has data-active', async () => {
-      fixture = await mount('ore-carousel', { attrs: { variant: 'marquee' }, html: slides });
-      await fixture.flush();
-
-      dots(fixture)[2]?.click();
-      await fixture.flush();
-
-      const all = getSlides(fixture);
-
-      expect(all[2]?.hasAttribute('data-active')).toBe(true);
-      expect(all[0]?.hasAttribute('data-active')).toBe(false);
     });
 
     it('emits change event when seeking via controls', async () => {

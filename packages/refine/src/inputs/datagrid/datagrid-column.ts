@@ -14,6 +14,7 @@ import { warn } from '../../_warn';
  * @attr {string} label - Header display label (required)
  * @attr {boolean} sortable - Makes the column sortable
  * @attr {boolean} resizable - Adds a drag handle to resize the column
+ * @attr {string} align - Text alignment: 'left' | 'center' | 'right'
  * @attr {string} width - CSS column width (e.g. '12rem')
  * @attr {string} header-label - Accessible label override for the column header
  *
@@ -44,11 +45,20 @@ if (!customElements.get('ore-column'))
 export const COLUMN_TAG = 'ore-column' as const;
 
 /** Attributes observed by the column MutationObserver in ore-datagrid. */
-export const COLUMN_OBSERVED_ATTRS = ['key', 'label', 'sortable', 'resizable', 'width', 'header-label'] as const;
+export const COLUMN_OBSERVED_ATTRS = [
+  'key',
+  'label',
+  'sortable',
+  'resizable',
+  'align',
+  'width',
+  'header-label',
+] as const;
 
 /** Parse all `<ore-column>` direct children of `host` into DataGridColumn descriptors. */
 export function parseColumnChildren(host: HTMLElement): DataGridColumn[] {
   return Array.from(host.querySelectorAll(':scope > ore-column')).map((el) => ({
+    align: (el.getAttribute('align') as any) ?? undefined,
     headerLabel: el.getAttribute('header-label') ?? undefined,
     key: el.getAttribute('key') ?? '',
     label: el.getAttribute('label') ?? '',

@@ -17,7 +17,7 @@
 import type { Plugin } from 'vite';
 
 export { REFINE_CSS_HMR_EVENT } from './constants';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,6 +32,7 @@ const DEPS_ID = 'refine-preview:deps';
 
 const pkgDir = resolve(__dirname, '../../../../packages');
 const refineDir = resolve(pkgDir, 'refine/dist');
+const refineSrcStylesDir = resolve(pkgDir, 'refine/src/styles');
 
 // createRequire from within .pnpm/node_modules so it can resolve hoisted
 // pnpm packages. Subpath exports on these packages don't expose dist files
@@ -84,53 +85,65 @@ function inlineCss(filePath: string): string {
 export function componentPreviewPlugin(): Plugin {
   return {
     configureServer(server) {
-      // Watch the refine dist directory so that when `pnpm --filter @vielzeug/refine build:bundle:watch`
-      // rebuilds the IIFE bundle, the docs dev server picks up the changes automatically
-      // without requiring a manual restart. Use `pnpm docs:dev:refine` to run both together.
+      // Watch refine's src/styles directly — CSS changes hot-patch live iframes
+      // without any build step (color-mix, oklch, light-dark are natively supported
+      // in all modern browsers so lightningcss compilation is not needed in dev).
+      server.watcher.add(refineSrcStylesDir);
+
+      // Also watch dist for JS/IIFE changes when running docs:dev:refine.
       server.watcher.add(refineDir);
 
       server.watcher.on('change', (file) => {
-        if (!file.startsWith(refineDir)) return;
+        const isSrcCss = file.startsWith(refineSrcStylesDir) && file.endsWith('.css');
+        const isDistFile = file.startsWith(refineDir);
 
-        const isCssOnly = file.endsWith('.css');
+        if (!isSrcCss && !isDistFile) return;
 
-        // Invalidate only the affected virtual module(s).
-        const toInvalidate = isCssOnly ? [CSS_ID] : [JS_ID, CSS_ID, DEPS_ID];
+        if (isSrcCss || (isDistFile && file.endsWith('.css'))) {
+          const mod = server.moduleGraph.getModuleById('\0' + CSS_ID);
 
-        for (const id of toInvalidate) {
+          if (mod) server.moduleGraph.invalidateModule(mod);
+
+          const distCssPath = resolve(refineDir, 'styles/styles.css');
+          const srcCssPath = resolve(refineSrcStylesDir, 'styles.css');
+          const css = inlineCss(existsSync(srcCssPath) ? srcCssPath : distCssPath);
+
+          server.ws.send({ data: { css }, event: REFINE_CSS_HMR_EVENT, type: 'custom' });
+
+          return;
+        }
+
+        // JS/IIFE dist change — full reload required (custom element re-registration).
+        for (const id of [JS_ID, CSS_ID, DEPS_ID]) {
           const mod = server.moduleGraph.getModuleById('\0' + id);
 
           if (mod) server.moduleGraph.invalidateModule(mod);
         }
 
-        if (isCssOnly) {
-          // Hot-patch CSS into live iframes without a full page reload.
-          // useComponentPreview listens for this event and calls sandbox.patchStyle().
-          const css = inlineCss(resolve(refineDir, 'styles/styles.css'));
-
-          server.ws.send({ data: { css }, event: REFINE_CSS_HMR_EVENT, type: 'custom' });
-        } else {
-          // JS changes re-register custom elements — full reload required.
-          server.ws.send({ type: 'full-reload' });
-        }
+        server.ws.send({ type: 'full-reload' });
       });
     },
     load(id) {
       if (id === '\0' + JS_ID) {
-        const code = readFileSync(resolve(refineDir, 'refine.iife.js'), 'utf-8');
+        const jsPath = resolve(refineDir, 'refine.iife.js');
+        const code = existsSync(jsPath) ? readFileSync(jsPath, 'utf-8') : '';
 
         return `export default ${JSON.stringify(code)}`;
       }
 
       if (id === '\0' + CSS_ID) {
-        const refine = inlineCss(resolve(refineDir, 'styles/styles.css'));
+        // Prefer src CSS (no build needed); fall back to dist when src unavailable.
+        const distCssPath = resolve(refineDir, 'styles/styles.css');
+        const srcCssPath = resolve(refineSrcStylesDir, 'styles.css');
+        const refineCssPath = existsSync(srcCssPath) ? srcCssPath : distCssPath;
+        const refine = inlineCss(refineCssPath);
         const prism = readFileSync(resolve(pkgDir, 'prism/dist/theme/prism.css'), 'utf-8');
 
         return `export default ${JSON.stringify(refine + '\n' + prism)}`;
       }
 
       if (id === '\0' + DEPS_ID) {
-        const depContents = depPaths.map((p) => readFileSync(p, 'utf-8'));
+        const depContents = depPaths.map((p) => (existsSync(p) ? readFileSync(p, 'utf-8') : ''));
 
         // Inject shims immediately after their respective UMD bundles.
         depContents.splice(1, 0, temporalShim); // after temporalUmd (index 0)

@@ -135,19 +135,19 @@
     inset-inline-end: 0;
     top: 0;
     z-index: 1;
-    transform: translate(calc(var(--_dir) * 50%), -50%);
+    transform: translate(calc(var(--_dir) * 30%), -30%);
   }
 
   :host([anchor='top-start']) .badge {
     inset-inline-start: 0;
     inset-inline-end: unset;
-    transform: translate(calc(var(--_dir) * -50%), -50%);
+    transform: translate(calc(var(--_dir) * -30%), -30%);
   }
 
   :host([anchor='bottom-end']) .badge {
     top: unset;
     bottom: 0;
-    transform: translate(calc(var(--_dir) * 50%), 50%);
+    transform: translate(calc(var(--_dir) * 30%), 30%);
   }
 
   :host([anchor='bottom-start']) .badge {
@@ -155,6 +155,6 @@
     inset-inline-end: unset;
     top: unset;
     bottom: 0;
-    transform: translate(calc(var(--_dir) * -50%), 50%);
+    transform: translate(calc(var(--_dir) * -30%), 30%);
   }
 }

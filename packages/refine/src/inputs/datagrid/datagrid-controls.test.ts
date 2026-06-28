@@ -124,7 +124,7 @@ describe('createDataGridControls', () => {
       ctrl.activateFilterKey('role');
       ctrl.setFilter('role', ['Admin']);
 
-      expect(ctrl.filterValues.value.get('role')).toEqual(new Set(['Admin']));
+      expect(ctrl.filterValues.value.get('role')).toEqual({ operator: 'contains', values: new Set(['Admin']) });
     });
 
     it('setFilter with [] removes the rule from filterState', () => {
@@ -258,7 +258,7 @@ describe('createDataGridControls', () => {
       ctrl.resetSearch();
 
       expect(ctrl.filterDefs.value).toHaveLength(1);
-      expect(ctrl.filterValues.value.get('role')).toEqual(new Set(['Admin']));
+      expect(ctrl.filterValues.value.get('role')).toEqual({ operator: 'contains', values: new Set(['Admin']) });
     });
 
     it('resetFilters clears all filter rules and values', () => {

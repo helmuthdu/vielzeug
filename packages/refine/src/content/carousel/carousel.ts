@@ -602,56 +602,57 @@ define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
 
     // ── Template ─────────────────────────────────────────────────────────────
 
+    const renderControls = () =>
+      showControls.value
+        ? html`<div class="controls" part="controls">
+            <ore-button
+              class="nav-btn prev-btn"
+              part="prev-btn"
+              variant="ghost"
+              :color=${() => props.color.value}
+              rounded
+              icon-only
+              aria-label="Previous slide"
+              :disabled=${() => (!canGoPrev.value ? true : undefined)}
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                prev();
+              }}>
+              <ore-icon
+                :name=${() => (isHorizontal.value ? 'chevron-left' : 'chevron-up')}
+                size="16"
+                stroke-width="2"
+                aria-hidden="true"></ore-icon>
+            </ore-button>
+            <ore-button
+              class="nav-btn next-btn"
+              part="next-btn"
+              variant="ghost"
+              :color=${() => props.color.value}
+              rounded
+              icon-only
+              aria-label="Next slide"
+              :disabled=${() => (!canGoNext.value ? true : undefined)}
+              @click=${(e: Event) => {
+                e.stopPropagation();
+                next();
+              }}>
+              <ore-icon
+                :name=${() => (isHorizontal.value ? 'chevron-right' : 'chevron-down')}
+                size="16"
+                stroke-width="2"
+                aria-hidden="true"></ore-icon>
+            </ore-button>
+          </div>`
+        : html``;
+
     return html`
       <div class="track" part="track" :aria-live=${() => (props.autoplay.value ? 'off' : 'polite')}>
         <slot></slot>
       </div>
 
       ${() =>
-        showControls.value
-          ? html`<div class="controls" part="controls">
-              <ore-button
-                class="nav-btn prev-btn"
-                part="prev-btn"
-                variant="ghost"
-                :color=${() => props.color.value}
-                rounded
-                icon-only
-                aria-label="Previous slide"
-                :disabled=${() => (!canGoPrev.value ? true : undefined)}
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  prev();
-                }}>
-                <ore-icon
-                  :name=${() => (isHorizontal.value ? 'chevron-left' : 'chevron-up')}
-                  size="20"
-                  stroke-width="2"
-                  aria-hidden="true"></ore-icon>
-              </ore-button>
-              <ore-button
-                class="nav-btn next-btn"
-                part="next-btn"
-                variant="ghost"
-                :color=${() => props.color.value}
-                rounded
-                icon-only
-                aria-label="Next slide"
-                :disabled=${() => (!canGoNext.value ? true : undefined)}
-                @click=${(e: Event) => {
-                  e.stopPropagation();
-                  next();
-                }}>
-                <ore-icon
-                  :name=${() => (isHorizontal.value ? 'chevron-right' : 'chevron-down')}
-                  size="20"
-                  stroke-width="2"
-                  aria-hidden="true"></ore-icon>
-              </ore-button>
-            </div>`
-          : html``}
-      ${() =>
-        showIndicators.value && slideCount.value > 1
+        showIndicators.value && slideCount.value > 1 && !isMarquee.value
           ? html`<div class="indicators" part="indicators" role="tablist" aria-label="Slide indicators">
               ${() =>
                 Array.from(
@@ -659,21 +660,23 @@ define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
                   (_, i) =>
                     html`<ore-progress
                       role="tab"
-                      :class=${() => `indicator${i === activeIndex.value ? ' indicator-active' : ''}`}
+                      :class=${() =>
+                        `indicator${!isMarquee.value && i === activeIndex.value ? ' indicator-active' : ''}`}
                       :color=${() => props.color.value}
                       :type=${() => (isHorizontal.value ? 'linear' : 'vertical')}
-                      :value=${() => (i === activeIndex.value ? 100 : 0)}
-                      :aria-selected=${() => String(i === activeIndex.value)}
+                      :value=${() => (!isMarquee.value && i === activeIndex.value ? 100 : 0)}
+                      :aria-selected=${() => String(!isMarquee.value && i === activeIndex.value)}
                       :aria-label=${`Go to slide ${i + 1}`}
                       :style=${() => {
                         const fillAnim = isHorizontal.value ? 'carousel-fill' : 'carousel-fill-v';
 
-                        return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
+                        return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${!isMarquee.value && i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
                       }}
                       @click=${() => goTo(i)}></ore-progress>`,
                 )}
+              ${renderControls}
             </div>`
-          : html``}
+          : html`${renderControls}`}
     `;
   },
   styles: [componentStyles],

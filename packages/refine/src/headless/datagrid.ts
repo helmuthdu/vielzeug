@@ -19,6 +19,8 @@ export type SortState = {
 
 /** Column definition for the datagrid. */
 export type DataGridColumn<T = Record<string, unknown>> = {
+  /** Text alignment for the column: `'left'` | `'center'` | `'right'`. Defaults to `'left'`. */
+  align?: 'left' | 'center' | 'right';
   /**
    * Custom cell renderer. Receives the row item and returns a string.
    * Use for formatted values (e.g. dates, currency, booleans).

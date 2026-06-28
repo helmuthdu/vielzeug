@@ -12,7 +12,15 @@ import type { DataGridColumn } from '../../headless';
 export type FilterOption = {
   key: string;
   label: string;
+  operators?: { label: string; value: string }[];
   options: { label?: string; value: string }[];
+};
+
+export type FilterOperator = 'contains' | 'equals' | 'gt' | 'lt';
+
+export type FilterRule = {
+  operator: FilterOperator;
+  values: Set<string>;
 };
 
 export type DataGridView = {
@@ -49,15 +57,10 @@ export type DataGridControlsHandle = {
    * to the table control so the headless module owns the full data pipeline.
    */
   readonly filteredRows: Readable<Record<string, unknown>[]>;
-  /**
-   * Unified filter state: column key → selected option values.
-   * A key's presence in the map means the filter rule is active.
-   * An empty Set means the rule is open but no value is selected yet.
-   */
-  readonly filterValues: Readable<Map<string, Set<string>>>;
+  /** Unified filter state: column key → filter rule (operator + values). */
+  readonly filterValues: Readable<Map<string, FilterRule>>;
   /** Set of column keys hidden by the user. */
   readonly hiddenColumns: Readable<Set<string>>;
-
   /** Remove a column's filter rule and clear its selected values. */
   removeFilter(key: string): void;
   /** Clear all active filter rules and values. Alias for clearAllFilters, provided for symmetry with resetSearch. */
@@ -68,8 +71,12 @@ export type DataGridControlsHandle = {
   readonly searchActive: Readable<boolean>;
   /** Current text search query. */
   readonly searchQuery: Readable<string>;
+  /** Set the active filter keys at once, pruning stale values. */
+  setActiveFilterKeys(keys: string[]): void;
   /** Apply or update a multi-select filter for a column. Pass [] to clear that column's values. */
   setFilter(key: string, values: string[]): void;
+  /** Update the operator for a specific filter rule. */
+  setFilterOperator(key: string, operator: FilterOperator): void;
   /** Set the raw search query text directly. */
   setSearchQuery(q: string): void;
   /** Toggle a column's visibility. */
@@ -79,6 +86,13 @@ export type DataGridControlsHandle = {
 };
 
 // ── Implementation ─────────────────────────────────────────────────────────────
+
+const DEFAULT_OPERATORS: { label: string; value: FilterOperator }[] = [
+  { label: 'Contains', value: 'contains' },
+  { label: 'Equals', value: 'equals' },
+  { label: 'Greater than', value: 'gt' },
+  { label: 'Less than', value: 'lt' },
+];
 
 /**
  * Headless controls for ore-datagrid: search, filter, column visibility, and derived rows.
@@ -103,7 +117,7 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
   // Separating them prevents filterDefs from recomputing — and the filter rule
   // DOM from being torn down — every time a value is selected.
   const activeFilterKeys = signal(new Set<string>());
-  const filterValues = signal(new Map<string, Set<string>>());
+  const filterValues = signal(new Map<string, FilterRule>());
 
   // Derive options only for columns that have an active filter rule and are not
   // covered by externally-provided filterOptions. Lazy: O(activeRules × rows).
@@ -147,10 +161,15 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
       .map((k) => {
         const col = options.columns.value.find((c) => c.key === k);
 
-        return { key: k, label: col?.label ?? k, options: colOptions.value.get(k) ?? [] };
+        return {
+          key: k,
+          label: col?.label ?? k,
+          operators: DEFAULT_OPERATORS,
+          options: colOptions.value.get(k) ?? [],
+        };
       });
 
-    return [...provided, ...derived];
+    return [...provided.map((f) => ({ ...f, operators: f.operators ?? DEFAULT_OPERATORS })), ...derived];
   });
 
   // Prune stale filter rules when columns are removed.
@@ -188,12 +207,28 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
     const currentKeys = new Set(options.columns.value.map((c) => c.key));
 
     return rows.filter((row) => {
-      for (const [key, selected] of fv) {
-        if (!selected.size || !currentKeys.has(key)) continue;
+      for (const [key, rule] of fv) {
+        if (!rule.values.size || !currentKeys.has(key)) continue;
 
         const cell = row[key];
+        const cellValue = cell == null ? '' : String(cell);
 
-        if (!selected.has(cell == null ? '' : String(cell))) return false;
+        if (rule.operator === 'equals') {
+          if (!rule.values.has(cellValue)) return false;
+        } else if (rule.operator === 'contains') {
+          if (![...rule.values].some((v) => cellValue.toLowerCase().includes(v.toLowerCase()))) return false;
+        } else if (rule.operator === 'gt' || rule.operator === 'lt') {
+          const num = parseFloat(cellValue);
+          const targets = [...rule.values].map(parseFloat).filter((n) => !isNaN(n));
+
+          if (!targets.length) continue;
+
+          if (rule.operator === 'gt') {
+            if (!targets.some((t) => num > t)) return false;
+          } else {
+            if (!targets.some((t) => num < t)) return false;
+          }
+        }
       }
 
       return true;
@@ -206,10 +241,23 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
     if (values.length === 0) {
       next.delete(key);
     } else {
-      next.set(key, new Set(values));
+      const existing = next.get(key);
+
+      next.set(key, { operator: existing?.operator ?? 'contains', values: new Set(values) });
     }
 
     filterValues.value = next;
+  };
+
+  const setFilterOperator = (key: string, operator: FilterOperator): void => {
+    const next = new Map(filterValues.value);
+    const existing = next.get(key);
+
+    if (existing) {
+      next.set(key, { ...existing, operator });
+
+      filterValues.value = next;
+    }
   };
 
   const activateFilterKey = (key: string): void => {
@@ -237,6 +285,25 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
 
   const setSearchQuery = (q: string): void => {
     searchQuery.value = q;
+  };
+
+  const setActiveFilterKeys = (keys: string[]): void => {
+    const nextKeys = new Set(keys);
+
+    activeFilterKeys.value = nextKeys;
+
+    // Prune values for keys that are no longer active.
+    const nextValues = new Map(filterValues.value);
+    let changed = false;
+
+    for (const k of nextValues.keys()) {
+      if (!nextKeys.has(k)) {
+        nextValues.delete(k);
+        changed = true;
+      }
+    }
+
+    if (changed) filterValues.value = nextValues;
   };
 
   const toggleColumnVisibility = (key: string): void => {
@@ -279,7 +346,9 @@ export const createDataGridControls = (options: DataGridControlsOptions): DataGr
     resetSearch,
     searchActive,
     searchQuery,
+    setActiveFilterKeys,
     setFilter,
+    setFilterOperator,
     setSearchQuery,
     toggleColumnVisibility,
     toggleSearch,

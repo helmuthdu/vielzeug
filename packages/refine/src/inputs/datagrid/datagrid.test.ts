@@ -1,3 +1,4 @@
+import { sleep } from '@vielzeug/arsenal';
 import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
 
 import type { DataGridColumn } from '../../headless';
@@ -185,6 +186,33 @@ describe('ore-datagrid', () => {
       fixture = await mountGrid({ 'page-size': 0 });
 
       expect(fixture.query('.dg-footer')).toBeNull();
+    });
+
+    it('applies data-align attribute to th and td based on column definition', async () => {
+      fixture = await mountGrid();
+
+      const el = fixture.element as GridElement;
+
+      el.columns = [
+        { align: 'left', key: 'name', label: 'Name' },
+        { align: 'center', key: 'role', label: 'Role' },
+        { align: 'right', key: 'age', label: 'Age' },
+      ];
+      await Promise.resolve();
+
+      const headers = getHeaderCells(fixture);
+
+      expect(headers[0].getAttribute('data-align')).toBe('left');
+      expect(headers[1].getAttribute('data-align')).toBe('center');
+      expect(headers[2].getAttribute('data-align')).toBe('right');
+
+      const cellLeft = getCell(fixture, 0, 0);
+      const cellCenter = getCell(fixture, 0, 1);
+      const cellRight = getCell(fixture, 0, 2);
+
+      expect(cellLeft?.getAttribute('data-align')).toBe('left');
+      expect(cellCenter?.getAttribute('data-align')).toBe('center');
+      expect(cellRight?.getAttribute('data-align')).toBe('right');
     });
   });
 
@@ -493,10 +521,11 @@ describe('ore-datagrid', () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
       const rows = getBodyRows(fixture);
+      const checks = fixture.queryAll('.dg-td-check ore-checkbox');
 
-      fire.click(rows[0]);
+      fire.change(checks[0]);
       await Promise.resolve();
-      fire.click(rows[1]);
+      fire.change(checks[1]);
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('true');
@@ -534,9 +563,9 @@ describe('ore-datagrid', () => {
     it('select-all ore-checkbox shows indeterminate when some rows are selected', async () => {
       fixture = await mountGrid({ 'selection-mode': 'multi' });
 
-      const rows = getBodyRows(fixture);
+      const checks = fixture.queryAll('.dg-td-check ore-checkbox');
 
-      fire.click(rows[0]);
+      fire.change(checks[0]);
       await Promise.resolve();
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
@@ -809,6 +838,7 @@ describe('ore-datagrid', () => {
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      await sleep(300);
       await Promise.resolve();
 
       const rows = getBodyRows(fixture);
@@ -834,6 +864,7 @@ describe('ore-datagrid', () => {
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'a' } }));
+      await sleep(300);
       await Promise.resolve();
 
       expect(paginationLabel?.textContent?.trim()).toBe('1 / 1');
@@ -848,10 +879,12 @@ describe('ore-datagrid', () => {
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(1);
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: '' } }));
+      await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
     });
@@ -865,10 +898,12 @@ describe('ore-datagrid', () => {
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      await sleep(300);
       await Promise.resolve();
       expect(getBodyRows(fixture).length).toBe(1);
 
       search.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Escape' }));
+      await sleep(300);
       await Promise.resolve();
       expect(fixture.query('.dg-search-input')).toBeNull();
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
@@ -1165,6 +1200,20 @@ describe('ore-datagrid', () => {
       expect(fixture.query('.dg-sort-btn')).toBeTruthy();
     });
 
+    it('parses align attribute from declarative ore-column', async () => {
+      fixture = await mount('ore-datagrid', {});
+
+      const el = fixture.element as HTMLElement & { rows: User[] };
+
+      el.innerHTML = '<ore-column key="name" label="Name" align="right"></ore-column>';
+      el.rows = ROWS;
+      await new Promise((r) => setTimeout(r, 0));
+
+      const th = fixture.query('.dg-th');
+
+      expect(th?.getAttribute('data-align')).toBe('right');
+    });
+
     it('setting columns=[] explicitly clears declarative children', async () => {
       fixture = await mount('ore-datagrid', {});
 
@@ -1364,6 +1413,7 @@ describe('ore-datagrid', () => {
       const search = fixture.query('.dg-search-input') as HTMLElement;
 
       search.dispatchEvent(new CustomEvent('input', { bubbles: true, detail: { value: 'alice' } }));
+      await sleep(300);
       await Promise.resolve();
 
       expect(getBodyRows(fixture).length).toBe(1);

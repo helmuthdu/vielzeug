@@ -65,6 +65,7 @@ export const COMBOBOX_TAG = 'ore-combobox' as const;
 define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
+    autoclose: prop.bool(false),
     color: prop.string<ThemeColor>(),
     creatable: prop.bool(false),
     disabled: prop.bool(false),
@@ -372,7 +373,12 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
         query.value = '';
         emitChange(originalEvent);
         triggerValidation('change');
-        // Keep dropdown open in multiple mode
+
+        if (props.autoclose.value) {
+          closePopup();
+        }
+
+        // Keep dropdown open in multiple mode (unless autoclose is true)
         focusLiveInput();
         requestAnimationFrame(() => focusLiveInput());
       } else {

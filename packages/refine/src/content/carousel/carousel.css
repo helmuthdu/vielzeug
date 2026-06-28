@@ -28,15 +28,13 @@
 
   /* ── Controls (prev / next) ────────────────────────────────────────────── */
 
+  /* Controls live inside the bottom nav bar, right-aligned via margin-inline-start: auto. */
+
   .controls {
-    position: absolute;
-    inset-block: 50%;
-    inset-inline: 0;
     display: flex;
+    gap: var(--size-0-5);
     align-items: center;
-    justify-content: space-between;
-    height: 0;
-    padding-inline: var(--size-2);
+    margin-inline-start: auto;
     pointer-events: none;
   }
 
@@ -112,57 +110,78 @@
     --_slide-translate-after: translateY(100%);
   }
 
-  :host([orientation='vertical']) .controls {
-    inset-block: 0;
-    inset-inline: auto 0;
-    flex-direction: column;
-    gap: var(--size-1);
-    justify-content: center;
-    width: 0;
-    height: 100%;
-    padding-inline: 0;
-  }
-
-  :host([orientation='vertical']) .nav-btn {
-    transform: translateX(-90%) translateY(0);
-  }
-
   :host([orientation='vertical']) .indicators {
-    inset-block: 0;
-    inset-block-end: auto;
+    inset-block: 50% auto;
     inset-inline: var(--size-3) auto;
     flex-direction: column;
     width: auto;
-    height: 100%;
-    padding-block: var(--size-2);
+    height: max-content;
+    padding-block: var(--size-6) var(--size-2);
+    padding-inline: var(--size-1-5);
+    border-radius: var(--rounded-full);
+    transform: translateX(0) translateY(-50%);
   }
 
-  :host([orientation='vertical']) .indicator {
+  :host([orientation='vertical']) .controls {
+    flex-direction: column;
+    margin-block-start: auto;
+    margin-inline-start: 0;
+  }
+
+  :host([orientation='vertical']) .indicator:not(.indicator-active) {
+    width: var(--size-2) !important;
+    height: var(--size-2) !important;
+  }
+
+  :host([orientation='vertical']) .indicator-active {
     width: var(--size-1-5) !important;
     height: var(--size-8);
   }
 
   /* animation properties are inherited from .indicator-active::part(fill) below */
 
-  /* ── Indicators (dots) ─────────────────────────────────────────────────── */
+  /* ── Bottom nav bar: indicators + controls ───────────────────────────── */
+
+  /* Floats above the bottom edge, shrinks to content width, centered.
+     A frosted backdrop keeps it legible over any image. */
 
   .indicators {
     position: absolute;
     inset-block-end: var(--size-3);
-    inset-inline: 0;
+    inset-inline: 50%;
     display: flex;
+    flex-direction: row;
     gap: var(--size-1-5);
     align-items: center;
-    justify-content: center;
+    width: max-content;
+    padding: var(--size-1-5) var(--size-2) var(--size-1-5) var(--size-6);
     pointer-events: none;
+    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
+    border-radius: var(--rounded-full);
+    backdrop-filter: blur(6px);
+    transform: translateX(-50%);
   }
 
   .indicator {
     flex-shrink: 0;
-    width: var(--size-8) !important;
     pointer-events: auto;
     cursor: pointer;
     transition: opacity var(--transition-fast);
+  }
+
+  /* Inactive indicator: small circle */
+  .indicator:not(.indicator-active) {
+    width: var(--size-2) !important;
+    height: var(--size-2) !important;
+    overflow: hidden;
+    border-radius: var(--rounded-full);
+  }
+
+  /* Active indicator: wider pill (progress bar) */
+  .indicator-active {
+    width: var(--size-8) !important;
+
+    --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
   }
 
   .indicator:focus-visible {
@@ -176,10 +195,6 @@
 
   .indicator::part(fill) {
     transition: width var(--transition-normal);
-  }
-
-  .indicator-active {
-    --progress-track-bg: color-mix(in oklch, var(--_dot-bg) 60%, transparent);
   }
 
   .indicator-active::part(fill) {

@@ -495,6 +495,29 @@ describe('ore-combobox', () => {
       expect(options[0]?.style.transform).toContain('translateY(0px)');
     });
 
+    it('autocloses after selection in multiple mode if autoclose is set', async () => {
+      fixture = await mount('ore-combobox', {
+        attrs: { autoclose: '', label: 'Country', multiple: '' },
+        html: optionsHtml,
+      });
+
+      const input = getInput()!;
+
+      await user.click(input);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(fixture.element.hasAttribute('open')).toBe(true);
+
+      const option = fixture.query('.option'); // Select first option
+
+      await user.click(option!);
+      await fixture.flush();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(fixture.element.hasAttribute('open')).toBe(false);
+    });
+
     it('continues searching in the docs multiselect flow after selecting the first item', async () => {
       fixture = await mount('ore-combobox', {
         attrs: { label: 'Technologies', multiple: '', placeholder: 'Search…' },

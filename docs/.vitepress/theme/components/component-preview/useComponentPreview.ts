@@ -6,7 +6,6 @@
 
 import type { VNode } from 'vue';
 
-import { createSandbox } from '@vielzeug/sandbox';
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 
@@ -54,11 +53,10 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
   const codeBlock = ref<{ html: string; vnode: VNode } | null>(null);
 
-  // ── Sandbox ─────────────────────────────────────────────────────────────────
+  // ── Iframe ──────────────────────────────────────────────────────────────────
 
   const sandboxContainerRef = ref<HTMLDivElement | null>(null);
-
-  let sandbox: ReturnType<typeof createSandbox> | null = null;
+  let iframe: HTMLIFrameElement | null = null;
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
@@ -112,6 +110,51 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     viewportSize.value = viewportSize.value === size ? 'full' : size;
   };
 
+  // ── Iframe helpers ──────────────────────────────────────────────────────────
+
+  function ensureIframe(container: HTMLDivElement): HTMLIFrameElement {
+    if (iframe) return iframe;
+
+    iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-scripts');
+    iframe.setAttribute('referrerpolicy', 'no-referrer');
+    iframe.setAttribute('allowtransparency', 'true');
+    iframe.style.width = '100%';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.background = 'transparent';
+
+    if (props.height) iframe.style.minHeight = props.height;
+
+    container.appendChild(iframe);
+
+    // Auto-resize: the fragment inlines a ResizeObserver that posts { type: 'resize', height }.
+    window.addEventListener('message', onMessage);
+
+    return iframe;
+  }
+
+  function onMessage(event: MessageEvent): void {
+    if (!iframe || event.source !== iframe.contentWindow) return;
+
+    const msg = event.data as { height?: number; type?: string };
+
+    if (msg?.type === 'resize' && typeof msg.height === 'number') {
+      iframe.style.height = `${msg.height}px`;
+    }
+  }
+
+  function render(fragment: string): void {
+    if (!sandboxContainerRef.value) return;
+
+    ensureIframe(sandboxContainerRef.value).srcdoc = fragment;
+  }
+
+  // Hot-patch the refine CSS <style id="refine-css"> without a full re-render.
+  function patchCss(css: string): void {
+    iframe?.contentWindow?.postMessage({ css, id: REFINE_CSS_ID, type: 'style-patch' }, '*');
+  }
+
   // ── Lifecycle ───────────────────────────────────────────────────────────────
 
   if (slotVNodes?.length) {
@@ -128,9 +171,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
   }
 
   onMounted(() => {
-    // HMR: when refine's CSS is rebuilt, hot-patch all live sandboxes on the
-    // page without a full reload — no page state or scroll position is lost.
-    useRefineHmr((css) => sandbox?.updateStyle(REFINE_CSS_ID, css));
+    useRefineHmr(patchCss);
 
     watchEffect(
       () => {
@@ -145,32 +186,7 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
           vertical: !!props.vertical,
         });
 
-        if (!sandbox) {
-          sandbox = createSandbox(sandboxContainerRef.value);
-
-          // Route iframe auto-resize through sandbox.onMessage so we don't need
-          // to maintain a manual window listener or a cached iframe reference.
-          sandbox.onMessage((msg) => {
-            if (msg.type === 'resize') {
-              const iframe = sandboxContainerRef.value?.querySelector('iframe') as HTMLIFrameElement | null;
-
-              if (iframe) iframe.style.height = `${msg.height}px`;
-            }
-          });
-        }
-
-        sandbox.render(fragment).then(() => {
-          // iframe is created lazily by render() — configure it after first render.
-          const iframe = sandboxContainerRef.value?.querySelector('iframe') as HTMLIFrameElement | null;
-
-          if (iframe && !iframe.hasAttribute('allowtransparency')) {
-            iframe.setAttribute('allowtransparency', 'true');
-
-            if (props.height) {
-              iframe.style.minHeight = props.height;
-            }
-          }
-        });
+        render(fragment);
       },
       { flush: 'post' },
     );
@@ -184,8 +200,12 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
       document.removeEventListener('keydown', handleKeydown);
     }
 
-    sandbox?.dispose();
-    sandbox = null;
+    window.removeEventListener('message', onMessage);
+
+    if (iframe) {
+      iframe.remove();
+      iframe = null;
+    }
   });
 
   return {

@@ -27,6 +27,8 @@ export type OreComboboxProps = Omit<
   SelectableFieldProps<Exclude<VisualVariant, 'text' | 'frost'>>,
   'label-placement' | 'value'
 > & {
+  /** Automatically close the dropdown after selecting an option (even in multiple mode) */
+  autoclose?: boolean;
   /** Allow typing a new value to create a new option */
   creatable?: boolean;
   'label-placement'?: 'outside' | 'inset';
