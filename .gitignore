@@ -132,15 +132,15 @@ docs/.vitepress/.temp/
 .windsurf/
 !.windsurf/workflows/
 
+# Workflow run artifacts (DOX) — keep the AGENTS.md contract tracked
+.devin/
+!.devin/workflows/
+
+# Claude
+.claude/
+
 # Codex generated bundled data
 packages/codex/data/
-
-# Codex scripts/ compiled artifacts (scripts run under --experimental-strip-types, never compiled by tsc)
-packages/codex/scripts/*.js
-packages/codex/scripts/*.js.map
-
-# Workflow run artifacts (DOX) — keep the AGENTS.md contract tracked
-.devin/workflows/runs/*/
 
 # REPL example validation temp files
 scripts/.repl-tmp/

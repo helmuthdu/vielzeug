@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "veilzeug": {
+      "command": "node",
+      "args": ["/Users/saatkhel/Projects/vielzeug/packages/codex/dist/cli.js"]
+    }
+  }
+}

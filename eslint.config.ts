@@ -7,6 +7,7 @@ import tseslint from 'typescript-eslint';
 
 export default defineConfig([
   globalIgnores([
+    '.claude/',
     'common/',
     'docs/.vitepress/cache/',
     'node_modules/',
