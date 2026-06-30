@@ -264,7 +264,11 @@ parent.postMessage({ type: 'ready' }, '*');
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(function(entries) {
     var entry = entries[0];
-    if (entry) parent.postMessage({ type: 'resize', height: entry.contentRect.height }, '*');
+    if (!entry) return;
+    var h = entry.borderBoxSize && entry.borderBoxSize[0]
+      ? entry.borderBoxSize[0].blockSize
+      : entry.contentRect.height;
+    parent.postMessage({ type: 'resize', height: h }, '*');
   }).observe(document.body);
 }
 `.trim();

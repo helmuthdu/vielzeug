@@ -4,12 +4,14 @@
 // ComponentPreview. The Vue component becomes a thin template shell that owns
 // only props/slots and delegates everything else here.
 
+import type { SandboxHandle, SandboxMessage } from '@vielzeug/sandbox';
 import type { VNode } from 'vue';
 
+import { createSandbox } from '@vielzeug/sandbox';
 import { useData } from 'vitepress';
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue';
 
-import { buildSandboxDoc, REFINE_CSS_ID } from './sandboxDoc';
+import { buildSandboxDoc, REFINE_CSS_ID, refineCss } from './sandboxDoc';
 import { useRefineHmr } from './useRefineHmr';
 import { extractCodeFromSlot } from './vnode';
 
@@ -53,10 +55,10 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
 
   const codeBlock = ref<{ html: string; vnode: VNode } | null>(null);
 
-  // ── Iframe ──────────────────────────────────────────────────────────────────
+  // ── Sandbox ─────────────────────────────────────────────────────────────────
 
   const sandboxContainerRef = ref<HTMLDivElement | null>(null);
-  let iframe: HTMLIFrameElement | null = null;
+  let sandbox: SandboxHandle | null = null;
 
   // ── Derived values ──────────────────────────────────────────────────────────
 
@@ -110,49 +112,33 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
     viewportSize.value = viewportSize.value === size ? 'full' : size;
   };
 
-  // ── Iframe helpers ──────────────────────────────────────────────────────────
+  // ── Sandbox helpers ─────────────────────────────────────────────────────────
 
-  function ensureIframe(container: HTMLDivElement): HTMLIFrameElement {
-    if (iframe) return iframe;
+  function ensureSandbox(container: HTMLDivElement): SandboxHandle {
+    if (sandbox) return sandbox;
 
-    iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-scripts');
-    iframe.setAttribute('referrerpolicy', 'no-referrer');
-    iframe.setAttribute('allowtransparency', 'true');
-    iframe.style.width = '100%';
-    iframe.style.height = '0';
-    iframe.style.border = 'none';
-    iframe.style.background = 'transparent';
+    sandbox = createSandbox(container, { namedStyles: { [REFINE_CSS_ID]: refineCss } });
 
-    if (props.height) iframe.style.minHeight = props.height;
+    sandbox.onMessage((msg: SandboxMessage) => {
+      if (msg.type === 'resize') {
+        const iframe = container.querySelector('iframe') as HTMLIFrameElement | null;
+        const bleed = props.height ? 0 : 32;
 
-    container.appendChild(iframe);
+        if (iframe) iframe.style.height = `${msg.height + bleed}px`;
+      }
+    });
 
-    // Auto-resize: the fragment inlines a ResizeObserver that posts { type: 'resize', height }.
-    window.addEventListener('message', onMessage);
-
-    return iframe;
-  }
-
-  function onMessage(event: MessageEvent): void {
-    if (!iframe || event.source !== iframe.contentWindow) return;
-
-    const msg = event.data as { height?: number; type?: string };
-
-    if (msg?.type === 'resize' && typeof msg.height === 'number') {
-      iframe.style.height = `${msg.height}px`;
-    }
+    return sandbox;
   }
 
   function render(fragment: string): void {
     if (!sandboxContainerRef.value) return;
 
-    ensureIframe(sandboxContainerRef.value).srcdoc = fragment;
+    ensureSandbox(sandboxContainerRef.value).render(fragment);
   }
 
-  // Hot-patch the refine CSS <style id="refine-css"> without a full re-render.
   function patchCss(css: string): void {
-    iframe?.contentWindow?.postMessage({ css, id: REFINE_CSS_ID, type: 'style-patch' }, '*');
+    sandbox?.updateStyle(REFINE_CSS_ID, css);
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -200,12 +186,8 @@ export function useComponentPreview(props: ComponentPreviewProps, slotVNodes: VN
       document.removeEventListener('keydown', handleKeydown);
     }
 
-    window.removeEventListener('message', onMessage);
-
-    if (iframe) {
-      iframe.remove();
-      iframe = null;
-    }
+    sandbox?.dispose();
+    sandbox = null;
   });
 
   return {
