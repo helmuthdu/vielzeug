@@ -250,6 +250,20 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
     const maxWidthPx = signal<number | undefined>(parseMaxWidthPx(props.breakpoint.value));
     const isPreviewMode = signal(false);
 
+    const getExternalSidebar = () => {
+      const selector = String(props['mobile-sidebar'].value ?? '').trim();
+
+      if (!selector) return null;
+
+      const root = el.getRootNode();
+      const scopedTarget =
+        root instanceof ShadowRoot || root instanceof Document
+          ? (root.querySelector(selector) as MobileSidebarElement | null)
+          : null;
+
+      return scopedTarget ?? (document.querySelector(selector) as MobileSidebarElement | null);
+    };
+
     provide(NAVBAR_CTX, {
       isMobile: computed(() => isMobile.value) as Readable<boolean>,
       mobileMenuOpen: computed(() => isMobileMenuOpen.value) as Readable<boolean>,
@@ -270,11 +284,18 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
     const setMobileMenu = (next: boolean) => {
       const open = Boolean(next);
 
-      if (mobileSidebarTarget.value && !hasMobileMenu()) {
-        if (open) mobileSidebarTarget.value.openMobile?.();
-        else mobileSidebarTarget.value.closeMobile?.();
+      if (!hasMobileMenu()) {
+        const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
-        return;
+        if (target) {
+          if (open) {
+            target.openMobile?.();
+          } else {
+            target.closeMobile?.();
+          }
+
+          return;
+        }
       }
 
       if (open && !hasMobileMenu()) return;
@@ -288,10 +309,21 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
     const closeMobileMenu = () => setMobileMenu(false);
     const openMobileMenu = () => setMobileMenu(true);
     const toggleMobileMenu = () => {
-      if (mobileSidebarTarget.value && !hasMobileMenu()) {
-        mobileSidebarTarget.value.toggleMobile?.();
+      if (!hasMobileMenu()) {
+        const target = mobileSidebarTarget.value ?? getExternalSidebar();
 
-        return;
+        if (target) {
+          if (typeof target.toggleMobile === 'function') {
+            target.toggleMobile();
+          } else if (typeof target.openMobile === 'function' && typeof target.closeMobile === 'function') {
+            const isOpen = target.hasAttribute('data-mobile-open');
+
+            if (isOpen) target.closeMobile();
+            else target.openMobile();
+          }
+
+          return;
+        }
       }
 
       setMobileMenu(!isMobileMenuOpen.value);
@@ -389,22 +421,24 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
         isExternalMobileMode.value = false;
         isExternalMobileOpen.value = false;
 
-        const selector = String(props['mobile-sidebar'].value ?? '').trim();
-
-        if (!selector) return;
-
-        const root = el.getRootNode();
-        const scopedTarget =
-          root instanceof ShadowRoot || root instanceof Document
-            ? (root.querySelector(selector) as MobileSidebarElement | null)
-            : null;
-        const target = scopedTarget ?? (document.querySelector(selector) as MobileSidebarElement | null);
+        const target = getExternalSidebar();
 
         if (!target) return;
 
-        const syncTargetState = () => {
-          isExternalMobileMode.value = target.hasAttribute('data-bottom-nav');
-          isExternalMobileOpen.value = target.hasAttribute('data-mobile-open');
+        const syncTargetState = (event?: CustomEvent<{ open: boolean }>) => {
+          const hasBottomNav = target.hasAttribute('data-bottom-nav');
+          const hasMobileOpen = target.hasAttribute('data-mobile-open');
+
+          isExternalMobileMode.value = hasBottomNav;
+          isExternalMobileOpen.value = event?.detail ? event.detail.open : hasMobileOpen;
+
+          // If the sidebar is reporting it's open, it must be in bottom-nav mode
+          // (either natural or forced). We honor this to avoid race conditions
+          // where attributes haven't reflected yet.
+          if (isExternalMobileOpen.value && !isExternalMobileMode.value) {
+            isExternalMobileMode.value = true;
+          }
+
           syncMobileMode();
         };
 

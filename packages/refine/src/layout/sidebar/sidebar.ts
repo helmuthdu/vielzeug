@@ -225,9 +225,14 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
         ? bottomNavSizeMatches.value
         : bottomNavMediaMatches.value || bottomNavSizeMatches.value;
 
-      isBottomNav.value = bottomMatched;
+      // If the mobile drawer is currently open, stay in bottom-nav mode
+      // regardless of the responsive match. This prevents the drawer from
+      // disappearing mid-animation or if forced open via the API on desktop.
+      if (!isMobileOpen.value) {
+        isBottomNav.value = bottomMatched;
+      }
 
-      if (!bottomMatched) {
+      if (!bottomMatched && !isMobileOpen.value) {
         setMobileOpen(false, 'responsive');
       }
 
@@ -284,7 +289,11 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
     const setMobileOpen = (next: boolean, source: SidebarMobileSource) => {
       const open = Boolean(next);
 
-      if (!isBottomNav.value) {
+      if (open && !isBottomNav.value) {
+        isBottomNav.value = true;
+      }
+
+      if (!isBottomNav.value && !open) {
         if (isMobileOpen.value) {
           isMobileOpen.value = false;
         }
@@ -295,12 +304,26 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
       if (isMobileOpen.value === open) return;
 
       isMobileOpen.value = open;
+
+      // If closing, re-evaluate responsive state to potentially exit forced bottom-nav mode
+      if (!open) {
+        applyResponsiveState();
+      }
+
       emit('mobile-open-change', { open, source });
     };
 
     const doToggle = () => {
       setCollapsed(!isCollapsed(), 'toggle');
     };
+
+    const sidebarEl = el as SidebarElement;
+
+    sidebarEl.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
+    sidebarEl.toggle = doToggle;
+    sidebarEl.openMobile = () => setMobileOpen(true, 'api');
+    sidebarEl.closeMobile = () => setMobileOpen(false, 'api');
+    sidebarEl.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
 
     bind({
       attr: {
@@ -312,14 +335,6 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
     });
 
     onMounted(() => {
-      const sidebarEl = el as SidebarElement;
-
-      sidebarEl.setCollapsed = (next) => setCollapsed(Boolean(next), 'api');
-      sidebarEl.toggle = doToggle;
-      sidebarEl.openMobile = () => setMobileOpen(true, 'api');
-      sidebarEl.closeMobile = () => setMobileOpen(false, 'api');
-      sidebarEl.toggleMobile = () => setMobileOpen(!isMobileOpen.value, 'toggle');
-
       // Suppress transitions during initial layout so the sidebar doesn't
       // animate from a collapsed/0 state before the first ResizeObserver fires.
       el.setAttribute('data-no-transition', '');

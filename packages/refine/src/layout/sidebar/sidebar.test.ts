@@ -1,4 +1,5 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
+import { expect, it, vi, describe, beforeAll, afterEach } from 'vitest';
 
 describe('ore-sidebar', () => {
   let fixture: Fixture<HTMLElement>;
@@ -298,5 +299,108 @@ describe('ore-sidebar-item', () => {
 
       expect(results.violations).toHaveLength(0);
     });
+  });
+});
+
+describe('ore-sidebar responsive integration', () => {
+  let fixture: Fixture<HTMLElement>;
+
+  beforeAll(async () => {
+    await import('./sidebar');
+    await import('../navbar/navbar');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('works correctly when already in mobile state', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation((query) => ({
+      addEventListener: vi.fn(),
+      matches: query.includes('640px'),
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('div', {
+        html: `
+          <ore-navbar mobile-sidebar="#sidebar" breakpoint="(max-width: 640px)" label="Navbar">
+            <span slot="logo">Logo</span>
+          </ore-navbar>
+          <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 640px)" label="Sidebar">
+            <ore-sidebar-item href="#">Home</ore-sidebar-item>
+          </ore-sidebar>
+        `,
+      });
+
+      await fixture.flush();
+
+      const navbar = fixture.query('ore-navbar');
+      const sidebar = fixture.query('ore-sidebar');
+
+      expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(true);
+      expect(navbar?.hasAttribute('data-mobile')).toBe(true);
+
+      const toggle = navbar?.shadowRoot?.querySelector('.mobile-toggle') as HTMLButtonElement;
+
+      toggle.click();
+      await fixture.flush();
+      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(true);
+
+      toggle.click();
+      await fixture.flush();
+      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(true);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('honors forced bottom-nav state on desktop and reverts on close', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('div', {
+        html: `
+          <ore-navbar mobile-sidebar="#sidebar" breakpoint="(max-width: 640px)" label="Navbar">
+            <span slot="logo">Logo</span>
+          </ore-navbar>
+          <ore-sidebar id="sidebar" bottom-nav-at="(max-width: 640px)" label="Sidebar">
+            <ore-sidebar-item href="#">Home</ore-sidebar-item>
+          </ore-sidebar>
+        `,
+      });
+
+      await fixture.flush();
+
+      const navbar = fixture.query('ore-navbar');
+      const sidebar = fixture.query('ore-sidebar');
+
+      expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(false);
+
+      const navbarEl = navbar as any;
+
+      navbarEl.toggleMobileMenu();
+      await fixture.flush();
+
+      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(true);
+      expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(true);
+
+      navbarEl.toggleMobileMenu();
+      await fixture.flush();
+
+      expect(sidebar?.hasAttribute('data-mobile-open')).toBe(false);
+      expect(sidebar?.hasAttribute('data-bottom-nav')).toBe(false);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
   });
 });
