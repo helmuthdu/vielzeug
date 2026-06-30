@@ -38,7 +38,7 @@ Use the `open` attribute to show the dialog and remove it (or set it to `false`)
 
 ## Sizes
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-size-sm">Small</ore-button>
@@ -84,7 +84,7 @@ Keep dialog content focused — if a dialog requires scrolling, it is usually a 
 
 Add `dismissible` to show a close (×) button in the top-right corner of the header. The close button carries `aria-label="Close dialog"` so screen readers announce it correctly.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-dismissible-btn">Open dialog</ore-button>
@@ -113,7 +113,7 @@ Add `dismissible` to show a close (×) button in the top-right corner of the hea
 
 Control the backdrop appearance with the `backdrop` attribute.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-backdrop-opaque">opaque</ore-button>
@@ -145,7 +145,7 @@ Control the backdrop appearance with the `backdrop` attribute.
 
 Control the panel drop shadow with the `elevation` attribute. Defaults to `xl`.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-elev-none">None</ore-button>
@@ -183,7 +183,7 @@ Control the panel drop shadow with the `elevation` attribute. Defaults to `xl`.
 
 Control the internal padding of the header, body, and footer with the `padding` attribute. Defaults to `lg` (24 px).
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
@@ -221,7 +221,7 @@ Control the internal padding of the header, body, and footer with the `padding` 
 
 Use the `header` slot to replace the default title + close-button layout entirely.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-custom-header-btn">Open dialog</ore-button>
@@ -257,7 +257,7 @@ Use the `header` slot to replace the default title + close-button layout entirel
 
 Set `persistent` to prevent the dialog from closing when the user clicks outside the panel. Useful for forms where accidental dismissal would lose data. When using `persistent`, always include an accessible way to dismiss — either `dismissible` or a clearly labelled cancel button in the `footer`. A dialog with no dismissal mechanism traps keyboard users indefinitely. Do not nest dialogs; stack them in a queue instead.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-persistent-btn">Open dialog</ore-button>

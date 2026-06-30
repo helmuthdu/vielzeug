@@ -6,7 +6,7 @@ A slide-in panel that overlays page content from any edge of the screen. Built o
 
 Toggle the `open` attribute to show and hide the drawer. Use the `placement` attribute to control which edge the drawer slides in from: `left`, `right` (default), `top`, or `bottom`.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-left">Left</ore-button>
@@ -40,7 +40,7 @@ Toggle the `open` attribute to show and hide the drawer. Use the `placement` att
 
 ## Sizes
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-sm">sm</ore-button>
@@ -76,7 +76,7 @@ Toggle the `open` attribute to show and hide the drawer. Use the `placement` att
 
 Use the `header` slot to replace the default title bar and the `footer` slot for action buttons.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-slots-btn">Open with slots</ore-button>
@@ -112,7 +112,7 @@ Use the `header` slot to replace the default title bar and the `footer` slot for
 
 Use `drag-handle-placement` to control whether the swipe handle sits outside the panel edge or inset inside it.
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-handle-outside">Outside handle</ore-button>
@@ -157,7 +157,7 @@ Use `backdrop` to match dialog behavior:
 - `blur`: dim + blur
 - `transparent`: no overlay
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-button id="open-backdrop-opaque">Opaque</ore-button>

@@ -4,7 +4,7 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 ## Placement
 
-<ComponentPreview center>
+<ComponentPreview>
 
 ```html
 <ore-tooltip content="Tooltip on top" placement="top">
@@ -27,7 +27,7 @@ A lightweight floating label that appears on hover, focus, or click. Automatical
 
 Use the `trigger` attribute to control when the tooltip appears. Multiple triggers can be combined with commas (e.g. `"hover,focus"`). When `trigger` includes `focus`, the tooltip is automatically wired as a programmatic description (`aria-describedby`) for the focused element, which benefits screen reader users.
 
-<ComponentPreview center>
+<ComponentPreview>
 
 ```html
 <ore-tooltip content="Hover trigger" trigger="hover">
@@ -48,7 +48,7 @@ Use the `trigger` attribute to control when the tooltip appears. Multiple trigge
 
 ## Variants
 
-<ComponentPreview center>
+<ComponentPreview>
 
 ```html
 <ore-tooltip content="Dark tooltip (default)">
@@ -65,7 +65,7 @@ Prefer `variant="light"` on dark backgrounds.
 
 ## Sizes
 
-<ComponentPreview center>
+<ComponentPreview height="150px">
 
 ```html
 <ore-tooltip content="Small tooltip" size="sm">
@@ -85,7 +85,7 @@ Prefer `variant="light"` on dark backgrounds.
 
 Use `delay` (milliseconds) to add a pause before the tooltip shows — useful for dense UIs. A value of `400`–`600`ms works well in action-dense toolbars to avoid visual noise on quick cursor sweeps.
 
-<ComponentPreview center>
+<ComponentPreview>
 
 ```html
 <ore-tooltip content="Appears after 600ms" delay="600">
@@ -99,7 +99,7 @@ Use `delay` (milliseconds) to add a pause before the tooltip shows — useful fo
 
 For complex tooltip content, use the `content` named slot. Keep tooltip text short — one sentence or a keyboard shortcut label. Do not add interactive elements (buttons, links) inside the tooltip bubble; tooltips are not focusable.
 
-<ComponentPreview center>
+<ComponentPreview>
 
 ```html
 <ore-tooltip>

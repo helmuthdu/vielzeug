@@ -6,7 +6,7 @@ An action dropdown triggered by any slotted element. Presents a list of `ore-men
 
 Control which side of the trigger the panel opens on. The menu automatically flips to avoid viewport clipping.
 
-<ComponentPreview center>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu placement="bottom-start">
@@ -44,7 +44,7 @@ Use the `icon` named slot on each `ore-menu-item` for leading icons.
 These examples use inline SVG slot content so they stay framework and icon-library agnostic.
 :::
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu>
@@ -74,7 +74,7 @@ These examples use inline SVG slot content so they stay framework and icon-libra
 
 Set `disabled` on a `ore-menu-item` to prevent selection. The item is still visible but non-interactive. Use `disabled` for permissions that might change rather than removing the item entirely, to signal that the action exists but is unavailable.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu>
@@ -92,7 +92,7 @@ Set `disabled` on a `ore-menu-item` to prevent selection. The item is still visi
 
 Set `disabled` on the `ore-menu` element to prevent the panel from opening at all.
 
-<ComponentPreview center>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu disabled>
@@ -153,7 +153,7 @@ Use `value` on each item to handle selection in a single `select` listener rathe
 
 Any element works as the trigger — including icon-only buttons. Always provide a visible label or `aria-label` on an icon-only trigger button so the purpose is clear to screen reader users.
 
-<ComponentPreview center>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu>
@@ -172,7 +172,7 @@ Any element works as the trigger — including icon-only buttons. Always provide
 
 Use `ore-menu-separator` to add a horizontal divider between groups of related items.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu>
@@ -195,7 +195,7 @@ Use `ore-menu-separator` to add a horizontal divider between groups of related i
 
 Set `type="checkbox"` on a `ore-menu-item` to make it toggleable. Clicking or pressing `Enter`/`Space` toggles the `checked` attribute and emits `select` with `checked` in the event detail. The menu stays open when a checkbox item is activated.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu id="view-menu">
@@ -218,7 +218,7 @@ Set `type="checkbox"` on a `ore-menu-item` to make it toggleable. Clicking or pr
 
 Set `type="radio"` to create a group where only one item can be checked at a time. Selecting a radio item automatically unchecks all other `type="radio"` siblings.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px" vertical>
 
 ```html
 <ore-menu id="sort-menu">
