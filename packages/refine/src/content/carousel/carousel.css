@@ -38,6 +38,18 @@
     pointer-events: none;
   }
 
+  /* Controls rendered standalone (no indicators bar) — needs own positioning + backdrop. */
+  :host > .controls {
+    position: absolute;
+    inset-block-end: var(--size-3);
+    inset-inline-end: var(--size-3);
+    padding: var(--size-1-5) var(--size-2);
+    margin-inline-start: 0;
+    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
+    border-radius: var(--rounded-full);
+    backdrop-filter: blur(6px);
+  }
+
   .nav-btn {
     pointer-events: auto;
   }
@@ -126,6 +138,12 @@
     flex-direction: column;
     margin-block-start: auto;
     margin-inline-start: 0;
+  }
+
+  :host([orientation='vertical']) > .controls {
+    inset-block-end: var(--size-3);
+    inset-inline-end: var(--size-3);
+    margin-block-start: 0;
   }
 
   :host([orientation='vertical']) .indicator:not(.indicator-active) {
