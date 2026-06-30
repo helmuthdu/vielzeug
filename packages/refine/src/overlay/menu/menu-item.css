@@ -52,15 +52,9 @@
     background: var(--_focus-bg);
   }
 
-  .item.is-checkbox,
-  .item.is-radio {
-    background: var(--_selection-bg);
-  }
-
   .item.is-checked {
     font-weight: var(--font-medium);
     color: var(--_checked-color);
-    background: var(--_checked-bg);
   }
 
   :host([disabled]) .item {
