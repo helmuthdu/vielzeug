@@ -6,7 +6,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Ownership
 
-- Parent contract: `packages/AGENTS.md` and `.devin/rules/conventions.md`.
+- Parent contract: `packages/AGENTS.md` and `.ai/rules/conventions.md`.
 - Usage docs: `docs/ore/`.
 
 ## Local Contracts

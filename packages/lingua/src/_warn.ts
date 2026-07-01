@@ -6,11 +6,11 @@ export function warn(msg: string): void {
 }
 
 /** @internal */
-export function issue(msg: string, ...args: unknown[]): void {
+export function error(msg: string, ...args: unknown[]): void {
   if (isDev) console.error(`[@vielzeug/lingua] ${msg}`, ...args);
 }
 
-/** @internal — Run fn only in dev builds. Use when dev-only logic goes beyond a single warn() call. */
+/** @internal — Run fn only in dev builds. Use when dev-only logic goes beyond a single warn() / error() call. */
 export function devOnly(fn: () => void): void {
   if (isDev) fn();
 }

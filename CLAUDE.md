@@ -132,7 +132,7 @@ interface SomeHandle {
   dispose(): void;
   readonly disposed: boolean;
   readonly disposalSignal: AbortSignal; // on long-lived stateful objects only
-  [Symbol.dispose](): void;             // always last; delegates to dispose()
+  [Symbol.dispose](): void;
 }
 ```
 
@@ -151,7 +151,7 @@ interface AsyncHandle {
 - `dispose()` is the canonical name — never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
 - `readonly disposed: boolean` — always present on disposable objects.
 - `readonly disposalSignal: AbortSignal` — on long-lived stateful objects that consumers tie their lifetimes to. Not required on short-lived helpers.
-- `[Symbol.dispose]` ordering: in **type aliases** it goes first (capital S sorts before lowercase); in **object literals** and **interface declarations** treat it as `symbol.dispose` (lowercase, alphabetical position).
+- `[Symbol.dispose]` / `[Symbol.asyncDispose]` ordering is enforced automatically by ESLint. Run `pnpm fix` to auto-sort — do not manually reason about Symbol key ordering.
 
 ## Dev Logging Standard (`_warn.ts`)
 
@@ -169,7 +169,7 @@ export function warn(msg: string): void {
 }
 
 /** @internal */
-export function issue(msg: string, ...args: unknown[]): void {
+export function error(msg: string, ...args: unknown[]): void {
   if (isDev) console.error(`[@vielzeug/<name>] ${msg}`, ...args);
 }
 
@@ -183,7 +183,7 @@ export function devOnly(fn: () => void): void {
 - `_warn.ts` is **never exported** from `index.ts`.
 - `isDev` is always `const` (never `export const`).
 - Gate via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
-- Both `warn()` and `issue()` must **always** be present in every `_warn.ts`.
+- `_warn.ts` exports only the helpers the package actually uses (`warn`, `error`, `devOnly`). Do not add unused helpers.
 - No bare `console.warn` / `console.error` in source — always go through `_warn.ts`.
 - Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_warn` directly.
 
@@ -197,7 +197,7 @@ Opt-in structured debug logging exported only from the `/devtools` sub-path. Use
 // packages/<name>/src/errors.ts
 
 export class <Pkg>Error extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
@@ -241,12 +241,11 @@ When in doubt about structure, style, or test layout:
 
 ## Slash Commands (pkg-workflow)
 
-This project has Claude Code slash commands for package development workflows. All are in `.claude/commands/`:
+This project has Claude Code slash commands for package development workflows. Stubs are in `.claude/commands/`; canonical workflow definitions are in `.ai/workflows/`:
 
 | Command | Purpose |
 |---------|---------|
 | `/pkg-plan` | Three-pass architecture & DX analysis → `plan.md` |
-| `/pkg-spec` | Spec-first planning for new features or packages |
 | `/pkg-implement` | Implement items from `plan.md` |
 | `/pkg-review` | Three-lens code review (correctness, arch, types) |
 | `/pkg-security` | Three-surface security audit |
@@ -257,7 +256,7 @@ This project has Claude Code slash commands for package development workflows. A
 The orchestrator workflow (`/pkg-workflow`) runs all phases in sequence for a given package. Invoke via the Workflow tool:
 
 ```
-Workflow({ name: 'pkg-workflow', args: { pkg: 'sandbox', mode: 'improve' } })
+Workflow({ name: 'pkg-workflow', args: { pkg: 'sandbox', mode: 'analyse' } })
 ```
 
-Run artifacts persist under `.devin/workflows/runs/<pkg>/` (plan.md, progress.md, review.md, security.md).
+Run artifacts persist under `.ai/workflows/runs/<pkg>/` (plan.md, progress.md, review.md, security.md).

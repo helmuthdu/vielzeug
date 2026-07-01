@@ -6,9 +6,9 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 ## Ownership
 
-- **Documentation template, tone, and per-page structure rules** — `.devin/workflows/pkg-docs.md` (authoritative; do not duplicate here).
-- **REPL example and Monaco-type rules** — `.devin/workflows/pkg-repl.md`.
-- Package facts referenced by docs — `.devin/rules/conventions.md`.
+- **Documentation template, tone, and per-page structure rules** — `.ai/workflows/pkg-docs.md` (authoritative; do not duplicate here).
+- **REPL example and Monaco-type rules** — `.ai/workflows/pkg-repl.md`.
+- Package facts referenced by docs — `.ai/rules/catalogue.md`.
 
 ## Local Contracts
 

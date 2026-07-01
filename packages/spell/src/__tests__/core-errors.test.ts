@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { errorsAt, prependIssuePath, resetMessages, s, setLogger, setMessages, SpellValidationError } from '../index';
 
 describe('SpellValidationError message and shaping', () => {
-  it('formats a root-level issue with fallback path label', () => {
+  it('formats a root-level error with fallback path label', () => {
     const error = new SpellValidationError([{ code: 'custom', message: 'Invalid', path: [] }]);
 
     expect(error.message).toBe('value: Invalid [custom]');
@@ -166,7 +166,7 @@ describe('SpellValidationError message and shaping', () => {
 });
 
 describe('SpellValidationError.bestMatch()', () => {
-  it('returns null when no invalid_union issue exists', () => {
+  it('returns null when no invalid_union error exists', () => {
     const result = s.string().safeParse(42);
 
     expect(result.success).toBe(false);
@@ -204,7 +204,7 @@ describe('SpellValidationError.bestMatch()', () => {
 });
 
 describe('prependIssuePath()', () => {
-  it('prepends a string segment to all issue paths', () => {
+  it('prepends a string segment to all error paths', () => {
     const issues = prependIssuePath([{ code: 'custom', message: 'Bad', path: ['name'] }], 'user');
 
     expect(issues[0].path).toEqual(['user', 'name']);

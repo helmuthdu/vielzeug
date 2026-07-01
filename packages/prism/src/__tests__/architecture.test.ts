@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Datum, Series, StackSegment } from '../types';
 
-import { issue, warn } from '../_warn';
+import { error, warn } from '../_warn';
 import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
 import { createBarChart } from '../charts/bar';
@@ -166,7 +166,7 @@ describe('warn / error', () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(() => warn('test warn')).not.toThrow();
-    expect(() => issue('test error')).not.toThrow();
+    expect(() => error('test error')).not.toThrow();
 
     warnSpy.mockRestore();
     errorSpy.mockRestore();

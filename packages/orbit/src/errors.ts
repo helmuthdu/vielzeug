@@ -1,6 +1,6 @@
 /** Base class for all orbit errors. Use `instanceof OrbitError` to catch any orbit-originated error. */
 export class OrbitError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);

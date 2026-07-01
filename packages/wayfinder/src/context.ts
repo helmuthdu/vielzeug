@@ -13,7 +13,7 @@ import type {
   RouteTable,
 } from './types';
 
-import { issue } from './_warn';
+import { error as logError } from './_warn';
 import { WayfinderApiError } from './errors';
 
 // ─── Route state ──────────────────────────────────────────────────────────────
@@ -116,5 +116,5 @@ export function reportError(
     return;
   }
 
-  issue('Unhandled router error. Provide an onError callback to handle errors explicitly:', error);
+  logError('Unhandled router error. Provide an onError callback to handle errors explicitly:', error);
 }

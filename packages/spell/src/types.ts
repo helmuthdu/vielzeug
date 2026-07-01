@@ -46,8 +46,8 @@ export type JsonSchema = Record<string, unknown>;
  *
  * Narrowing on `code` gives precise access to `params`:
  * ```ts
- * if (issue.code === 'too_small') {
- *   const min = issue.params.min; // number | bigint | Date
+ * if (error.code === 'too_small') {
+ *   const min = error.params.min; // number | bigint | Date
  * }
  * ```
  */

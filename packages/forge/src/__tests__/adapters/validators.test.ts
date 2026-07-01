@@ -104,7 +104,7 @@ describe('fieldValidator (F3)', () => {
     expect(validator('valid')).toBeUndefined();
   });
 
-  test('returns the first issue message when schema safeParse fails', () => {
+  test('returns the first error message when schema safeParse fails', () => {
     const schema: MockSchema = {
       safeParse: (_v) => ({
         error: {

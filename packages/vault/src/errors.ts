@@ -3,7 +3,7 @@
  * handle any vault-originated error regardless of its specific subtype.
  */
 export class VaultError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     // Ensures `instanceof` works correctly when transpiled to ES5.

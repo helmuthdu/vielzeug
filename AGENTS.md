@@ -4,17 +4,19 @@
 
 Root [DOX](https://github.com/agent0ai/dox) rail for the Vielzeug monorepo. It anchors the AGENTS.md chain.
 
-DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a subtree has local rules not already covered by `.devin/rules/conventions.md`. Leaf packages that follow the standard conventions intentionally have **no** `AGENTS.md` — that absence is expected, not "unindexed".
+DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a subtree has local rules not already covered by the `.ai/rules/` files. Leaf packages that follow the standard conventions intentionally have **no** `AGENTS.md` — that absence is expected, not "unindexed".
 
 ## Ownership
 
-- **Engineering conventions, package catalogue, and dependency graph** — `.devin/rules/conventions.md` (single source of truth; never duplicate it, reference it).
-- **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.devin/workflows/*.md`.
+- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/rules/conventions.md` (single source of truth; never duplicate it, reference it).
+- **Package catalogue and dependency graph** — `.ai/rules/catalogue.md` (live data; update when packages change).
+- **Workspace toolchain, commands, versioning** — `.ai/rules/workspace.md`.
+- **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.ai/workflows/*.md` (single source of truth; tool-specific stubs in `.devin/workflows/`, `.claude/commands/`, and `.junie/workflows/` delegate here).
 - **Contributor and tooling guidance** — `CLAUDE.md`.
 
 ## Workflow Index
 
-Reach for the workflow that matches the task (full definitions in `.devin/workflows/`):
+Reach for the workflow that matches the task (full definitions in `.ai/workflows/`):
 
 | Situation | Workflow |
 | --- | --- |
@@ -34,12 +36,12 @@ Cadence inside `/pkg-workflow`: plan/spec ×3 → implement ×3 → review ×3 �
 
 ## Local Contracts
 
-- Before editing workflow run artifacts, follow the DOX chain: read this file, then `.devin/workflows/runs/AGENTS.md`.
-- Do not duplicate canonical context; link to `.devin/rules/conventions.md`.
+- Before editing workflow run artifacts, follow the DOX chain: read this file, then `.ai/workflows/runs/AGENTS.md`.
+- Do not duplicate canonical context; link to the relevant `.ai/rules/*.md` file.
 
 ## Work Guidance
 
-Defer to `.devin/rules/conventions.md` for code conventions and to the relevant `.devin/workflows/*.md` for task procedure.
+Defer to `.ai/rules/conventions.md` for engineering conventions, `.ai/rules/catalogue.md` for the package catalogue, `.ai/rules/workspace.md` for toolchain and commands, and the relevant `.ai/workflows/*.md` for task procedure.
 
 ## Verification
 
@@ -52,4 +54,4 @@ Defer to `.devin/rules/conventions.md` for code conventions and to the relevant 
 
 - `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
-- `.devin/workflows/runs/AGENTS.md` — persisted hand-off artifacts for package-improvement workflow runs (plans, progress, findings).
+- `.ai/workflows/runs/AGENTS.md` — persisted hand-off artifacts for package-improvement workflow runs (plans, progress, findings).

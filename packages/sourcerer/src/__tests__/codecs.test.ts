@@ -17,7 +17,7 @@ describe('codecs', () => {
       filter: { active: true },
       limit: 5,
       page: 2,
-      search: 'issue',
+      search: 'error',
       sort: { by: 'name', dir: 'asc' },
     });
     const decoded = decodeQuery(encoded, { defaultLimit: 10 });
@@ -26,7 +26,7 @@ describe('codecs', () => {
       filter: { active: true },
       limit: 5,
       page: 2,
-      search: 'issue',
+      search: 'error',
       sort: { by: 'name', dir: 'asc' },
     });
   });

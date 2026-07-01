@@ -1,6 +1,6 @@
 /** Base class for all scroll errors. */
 export class ScrollError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);

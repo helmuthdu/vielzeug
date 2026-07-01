@@ -1,4 +1,4 @@
-import { issue } from './_warn';
+import { error as logError } from './_warn';
 
 // ─── Structured error types ───────────────────────────────────────────────────
 
@@ -49,7 +49,7 @@ export class OreLifecycleError extends OreError {
  * Report a runtime error via the ore:error event and console.
  */
 export function reportRuntimeError(error: OreLifecycleError, element: HTMLElement): void {
-  issue(`<${error.component}> setup error (phase: ${error.phase}):`, error.cause);
+  logError(`<${error.component}> setup error (phase: ${error.phase}):`, error.cause);
 
   element.dispatchEvent(
     new CustomEvent('ore:error', {

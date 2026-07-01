@@ -411,7 +411,7 @@ describe('createRemoteSource', () => {
       resolvers[0]({ items: ['stale-p2'], total: 30 });
       await p1;
 
-      // p3 not yet settled — issue another goTo(3) which should join the existing entry
+      // p3 not yet settled — error another goTo(3) which should join the existing entry
       const p3b = source.goTo(3);
 
       resolvers[1]({ items: ['fresh-p3'], total: 30 });

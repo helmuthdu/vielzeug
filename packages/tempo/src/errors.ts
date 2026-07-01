@@ -1,6 +1,6 @@
 /** Base class for all tempo errors. Use `instanceof TempoError` to catch any tempo-originated error. */
 export class TempoError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);

@@ -38,7 +38,7 @@ export function composeValidators<V = unknown>(...validators: FieldValidator<V>[
 
 /**
  * Wraps a `safeParse`-compatible field schema into a `FieldValidator`.
- * The first validation issue message becomes the field error.
+ * The first validation error message becomes the field error.
  *
  * Works with `@vielzeug/spell`, Zod, Valibot, and any Standard Schema compliant library —
  * no hard dependency required; resolved structurally via `SafeParseSchema`.

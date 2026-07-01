@@ -11,11 +11,6 @@ export function warn(msg: string): void {
 }
 
 /** @internal */
-export function issue(msg: string, ...args: unknown[]): void {
-  if (isDev) console.error(`[@vielzeug/refine] ${msg}`, ...args);
-}
-
-/** @internal */
 export function devOnly(fn: () => void): void {
   if (isDev) fn();
 }

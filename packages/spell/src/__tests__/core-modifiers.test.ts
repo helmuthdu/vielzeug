@@ -231,7 +231,7 @@ describe('assert()', () => {
     expect(value.toUpperCase()).toBe('HELLO');
   });
 
-  it('prepends label to root-level issue messages', () => {
+  it('prepends label to root-level error messages', () => {
     try {
       s.string().assert(42, 'userId');
       expect.fail('should have thrown');

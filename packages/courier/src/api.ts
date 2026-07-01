@@ -167,7 +167,7 @@ export function createApi(opts?: TransportOptions & { transport?: TransportCore 
   return {
     cancelAll(): void {
       // Note: narrow race — a request that starts after the abort signals fire but before
-      // their in-flight promise settles may see an empty inFlight map and issue a redundant
+      // their in-flight promise settles may see an empty inFlight map and error a redundant
       // request. This is an accepted trade-off for the simplicity of a synchronous clear.
       transport.cancelAll();
       inFlight.clear();

@@ -1,6 +1,6 @@
 /** Base class for all wayfinder errors. Use `instanceof WayfinderError` to catch any router-originated error. */
 export class WayfinderError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);

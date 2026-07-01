@@ -17,7 +17,7 @@ exports:
     seriesColor,
     setTheme,
     warn,
-    issue,
+    error,
   ]
 ---
 

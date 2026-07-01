@@ -5,7 +5,7 @@ import { ErrorCode, type Issue, type MessageFn } from './types';
 type IssueParams<C extends string> = Extract<Issue, { code: C }> extends { params: infer P } ? P : undefined;
 
 /**
- * Creates a single-issue failure array. Use in validator functions instead of building the array manually.
+ * Creates a single-error failure array. Use in validator functions instead of building the array manually.
  * Typed overloads ensure params match the given error code.
  */
 export function fail<C extends ErrorCode>(code: C, message: string, params: IssueParams<C>): Issue[];

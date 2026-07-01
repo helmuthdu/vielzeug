@@ -2,7 +2,7 @@ import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
 import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore } from './_catalog-store';
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
-import { issue } from './_warn';
+import { error as logError } from './_warn';
 import {
   LinguaCountInVarsError,
   LinguaDisposedError,
@@ -374,7 +374,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
   const onMissingKey = cfg.onMissingKey ?? ((key: string) => key);
   const onMissingVar = cfg.onMissingVar ?? ((varName: string) => `{${varName}}`);
-  const onSubscriberError = cfg.onSubscriberError ?? ((error: unknown) => issue('subscriber error', error));
+  const onSubscriberError = cfg.onSubscriberError ?? ((error: unknown) => logError('subscriber error', error));
 
   // ─── Lazy formatter — avoids Intl overhead for SSR forks that only need t(). ──
   let _fmt: Formatter | undefined;

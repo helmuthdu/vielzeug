@@ -4,7 +4,7 @@ import { signal } from '@vielzeug/ripple';
 
 import type { Flux } from '../types';
 
-import { issue } from '../_warn';
+import { error } from '../_warn';
 import { flux } from '../core';
 
 /**
@@ -76,7 +76,7 @@ export function toSignal<T>(source: Flux<T>, opts: ToSignalOptions<T>): SignalBi
   const unsub = source.subscribe(
     {
       error(err) {
-        issue('toSignal: source errored — signal value may be stale', err);
+        error('toSignal: source errored — signal value may be stale', err);
       },
       next(v) {
         sig.value = v;

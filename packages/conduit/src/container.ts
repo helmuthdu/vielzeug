@@ -13,7 +13,7 @@ import type {
   ValueOptions,
 } from './types.js';
 
-import { issue } from './_warn.js';
+import { error } from './_warn.js';
 import {
   ConduitCircularDependencyError,
   ConduitDisposedError,
@@ -385,7 +385,7 @@ class ContainerImpl implements Container {
 
     for (const outcome of outcomes) {
       if (outcome.status === 'rejected') {
-        issue(`dispose hook failed in container '${this.name}':`, outcome.reason);
+        error(`dispose hook failed in container '${this.name}':`, outcome.reason);
       }
     }
   }

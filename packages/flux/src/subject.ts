@@ -1,7 +1,7 @@
 import type { Flux, Observer, Operator, Unsubscribe } from './types';
 
 import { makeAsyncIterator } from './_iterator';
-import { issue } from './_warn';
+import { error } from './_warn';
 
 const NOOP: Unsubscribe = () => {};
 
@@ -60,7 +60,7 @@ function makeCore<T>(): SubjectCore<T> {
       try {
         fn(obs);
       } catch (err) {
-        issue('Subscriber threw during broadcast', err);
+        error('Subscriber threw during broadcast', err);
       }
     }
   }
@@ -264,7 +264,7 @@ export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
           try {
             observer.next(current);
           } catch (err) {
-            issue('BehaviorSubject: subscriber threw during initial replay', err);
+            error('BehaviorSubject: subscriber threw during initial replay', err);
           }
         },
         observerOrNext,
@@ -280,7 +280,7 @@ export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
             try {
               obs.next(current);
             } catch (err) {
-              issue('BehaviorSubject: subscriber threw during initial replay', err);
+              error('BehaviorSubject: subscriber threw during initial replay', err);
             }
           },
           obs,
@@ -375,7 +375,7 @@ export function createReplaySubject<T>(bufferSize: number): ReplaySubject<T> {
             try {
               observer.next(v);
             } catch (err) {
-              issue('ReplaySubject: subscriber threw during replay', err);
+              error('ReplaySubject: subscriber threw during replay', err);
             }
           }
         },
@@ -393,7 +393,7 @@ export function createReplaySubject<T>(bufferSize: number): ReplaySubject<T> {
               try {
                 obs.next(v);
               } catch (err) {
-                issue('ReplaySubject: subscriber threw during replay', err);
+                error('ReplaySubject: subscriber threw during replay', err);
               }
             }
           },

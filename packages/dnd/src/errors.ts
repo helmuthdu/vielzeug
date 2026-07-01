@@ -1,6 +1,6 @@
 /** Base class for all dnd errors. Use `instanceof DndError` to catch any dnd-originated error. */
 export class DndError extends Error {
-  constructor(message = 'an unexpected error occurred', opts?: ErrorOptions) {
+  constructor(message: string, opts?: ErrorOptions) {
     super(message, opts);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
