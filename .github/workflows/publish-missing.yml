@@ -69,7 +69,7 @@ jobs:
           echo "✅ Authenticated as: ${NPM_USER}"
 
       - name: Build all packages
-        if: inputs.build-first == true
+        if: inputs.build-first != 'false'
         run: node common/scripts/install-run-rush.js build --verbose
 
       - name: Publish versions missing on npm
@@ -131,18 +131,19 @@ jobs:
             process.stdout.write(`\n📦 Publishing ${name}@${version}\n`);
 
             try {
+              const npmrc = path.join(root, '.npmrc');
               const tarball = cp
-                .execSync('npm pack --json', { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+                .execSync(`npm pack --json --userconfig ${npmrc}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
                 .toString();
               const filename = JSON.parse(tarball)[0]?.filename;
               if (!filename) {
                 throw new Error('npm pack did not return a tarball filename');
               }
 
-              cp.execSync(`npm publish ${filename} --access public --registry=https://registry.npmjs.org`, {
-                cwd,
-                stdio: 'inherit',
-              });
+              cp.execSync(
+                `npm publish ${filename} --access public --registry=https://registry.npmjs.org --userconfig ${npmrc}`,
+                { cwd, stdio: 'inherit' },
+              );
 
               try {
                 fs.unlinkSync(path.join(cwd, filename));
