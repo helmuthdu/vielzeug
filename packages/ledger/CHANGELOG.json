@@ -1,0 +1,24 @@
+{
+  "name": "@vielzeug/ledger",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/ledger_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3a7d011920c0e4e5485fc5003347d8e8fe935c97"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
+          }
+        ]
+      }
+    }
+  ]
+}

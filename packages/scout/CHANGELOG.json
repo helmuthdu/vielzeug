@@ -1,0 +1,24 @@
+{
+  "name": "@vielzeug/scout",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/scout_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "750b497c42c9c3de99d418be9f70b5e4817d95f3"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
+          }
+        ]
+      }
+    }
+  ]
+}

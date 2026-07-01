@@ -1,0 +1,42 @@
+{
+  "name": "@vielzeug/flux",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/flux_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3559d0e0e26e795f88785a43b3db8e1e97cfd04d"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.0`"
+          }
+        ]
+      }
+    }
+  ]
+}

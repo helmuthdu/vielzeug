@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/sandbox",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/sandbox_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1e77fcb4a56119b6e684cce54f2384b223bec973"
+          }
+        ]
+      }
+    }
+  ]
+}

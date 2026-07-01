@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/tempo",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Date and time utilities — timezone conversion, DST-safe arithmetic, and Intl formatting",
   "type": "module",
   "files": [

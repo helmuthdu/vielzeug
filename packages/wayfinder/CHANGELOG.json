@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/wayfinder",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/wayfinder_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2a622e2058ae28a3e3ffd33f639ad8c3d9579aa4"
+          }
+        ]
+      }
+    }
+  ]
+}

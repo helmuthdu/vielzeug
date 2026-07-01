@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/orbit",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Floating element positioning — tooltip, dropdown, popover, and menu placement with middleware",
   "type": "module",
   "files": [

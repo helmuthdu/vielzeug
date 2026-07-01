@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/sandbox",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Sandboxed iframe runtime with a typed postMessage state bridge for safe execution of AI-generated UI",
   "type": "module",
   "files": [

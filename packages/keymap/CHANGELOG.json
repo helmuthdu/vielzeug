@@ -1,0 +1,19 @@
+{
+  "name": "@vielzeug/keymap",
+  "entries": [
+    {
+      "version": "1.0.0",
+      "tag": "@vielzeug/keymap_v1.0.0",
+      "date": "Wed, 01 Jul 2026 16:10:37 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Initial public release",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f5090bdde453be839b7dff39679a9e89510cb0dd"
+          }
+        ]
+      }
+    }
+  ]
+}

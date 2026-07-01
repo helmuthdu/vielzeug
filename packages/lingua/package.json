@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/lingua",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Internationalization with typed translations, pluralization, namespace lazy-loading, and SSR fork support",
   "type": "module",
   "files": [

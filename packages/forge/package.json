@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/forge",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Type-safe form state — field-level validation, submission, dirty tracking, field arrays, and async default values",
   "type": "module",
   "files": [

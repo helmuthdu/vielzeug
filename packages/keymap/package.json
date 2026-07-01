@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/keymap",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings",
   "type": "module",
   "files": [

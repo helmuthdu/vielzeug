@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/scout",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Fast fuzzy-search with a trigram index, per-field weighting, match highlighting, and an optional reactive layer",
   "type": "module",
   "files": [
