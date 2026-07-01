@@ -68,8 +68,13 @@ jobs:
           # Ensure npm can resolve auth in this step before checking identity.
           printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
 
-          NPM_USER=$(npm whoami --registry=https://registry.npmjs.org 2>/dev/null || true)
-          if [ -z "$NPM_USER" ]; then
+          echo "--- .npmrc contents (token masked) ---"
+          sed 's/_authToken=.*/\_authToken=***/' "$HOME/.npmrc"
+          echo "--- npm whoami output ---"
+          NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
+          echo "$NPM_WHOAMI_OUT"
+          NPM_USER=$(echo "$NPM_WHOAMI_OUT" | head -1 | tr -d '[:space:]')
+          if [ -z "$NPM_USER" ] || echo "$NPM_USER" | grep -qi "error\|ENEEDAUTH\|401\|403"; then
             echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
             exit 1
           fi
