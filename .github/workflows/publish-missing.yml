@@ -57,13 +57,8 @@ jobs:
           fi
 
           printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
+          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" >> ".npmrc"
 
-          echo "--- token diagnostics ---"
-          echo "length: ${#NPM_AUTH_TOKEN}"
-          echo "prefix: ${NPM_AUTH_TOKEN:0:4}"
-          echo "--- .npmrc contents (token masked) ---"
-          sed 's/_authToken=.*/\_authToken=***/' "$HOME/.npmrc"
-          echo "--- npm whoami output ---"
           NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
           echo "$NPM_WHOAMI_OUT"
           NPM_USER=$(echo "$NPM_WHOAMI_OUT" | head -1 | tr -d '[:space:]')
