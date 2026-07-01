@@ -78,13 +78,20 @@ jobs:
 
       - name: Verify npm auth
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "❌ NPM_TOKEN secret is missing."
             exit 1
           fi
-          NPM_USER=$(npm whoami 2>/dev/null || true)
+
+          # Ensure npm can resolve auth in this step before checking identity.
+          cat > "$HOME/.npmrc" << EOF
+          registry=https://registry.npmjs.org/
+          //registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}
+          EOF
+
+          NPM_USER=$(npm whoami --registry=https://registry.npmjs.org 2>/dev/null || true)
           if [ -z "$NPM_USER" ]; then
             echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
             exit 1
