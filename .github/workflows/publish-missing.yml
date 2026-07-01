@@ -58,6 +58,9 @@ jobs:
 
           printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
 
+          echo "--- token diagnostics ---"
+          echo "length: ${#NPM_AUTH_TOKEN}"
+          echo "prefix: ${NPM_AUTH_TOKEN:0:4}"
           echo "--- .npmrc contents (token masked) ---"
           sed 's/_authToken=.*/\_authToken=***/' "$HOME/.npmrc"
           echo "--- npm whoami output ---"
