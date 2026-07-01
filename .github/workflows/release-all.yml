@@ -56,10 +56,12 @@ jobs:
 
       - name: Verify npm auth
         env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NPM_AUTH_TOKEN || secrets.NODE_AUTH_TOKEN }}
         run: |
           if [ -z "$NPM_AUTH_TOKEN" ]; then
-            echo "❌ NPM_TOKEN secret is missing."
+            echo "❌ npm token is missing for this job."
+            echo "Expected one of: NPM_TOKEN, NPM_AUTH_TOKEN, NODE_AUTH_TOKEN."
+            echo "If the token is stored as an Environment secret, bind this job to that environment or copy it to repository secrets."
             exit 1
           fi
 
@@ -116,7 +118,7 @@ jobs:
 
       - name: Publish each package
         env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NPM_AUTH_TOKEN || secrets.NODE_AUTH_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASED=""
