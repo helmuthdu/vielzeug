@@ -78,7 +78,7 @@ jobs:
 
       - name: Verify npm auth
         env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN || secrets.NPM_AUTH_TOKEN || secrets.NODE_AUTH_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ -z "$NPM_AUTH_TOKEN" ]; then
             echo "❌ npm token is missing for this job."
@@ -88,10 +88,7 @@ jobs:
           fi
 
           # Ensure npm can resolve auth in this step before checking identity.
-          cat > "$HOME/.npmrc" << EOF
-          registry=https://registry.npmjs.org/
-          //registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}
-          EOF
+          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
 
           NPM_USER=$(npm whoami --registry=https://registry.npmjs.org 2>/dev/null || true)
           if [ -z "$NPM_USER" ]; then
@@ -139,4 +136,4 @@ jobs:
           package: ${{ inputs.package }}
           version: ${{ steps.version.outputs.new-version }}
           folder: ${{ steps.pkg.outputs.folder }}
-          npm-token: ${{ secrets.NPM_TOKEN || secrets.NPM_AUTH_TOKEN || secrets.NODE_AUTH_TOKEN }}
+          npm-token: ${{ secrets.NPM_TOKEN }}
