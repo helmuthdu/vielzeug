@@ -1,0 +1,192 @@
+name: Publish Missing npm Versions
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "publish-missing" to confirm publishing repo versions that are not yet on npm'
+        required: true
+        type: string
+      build-first:
+        description: 'Build all packages before publishing'
+        required: false
+        default: true
+        type: boolean
+
+concurrency:
+  group: release-main-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-missing:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "publish-missing" ]; then
+            echo "❌ You must type 'publish-missing' to continue."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup
+
+      - name: Configure npm auth
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@vielzeug'
+
+      - name: Verify npm auth
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_AUTH_TOKEN" ]; then
+            echo "❌ NPM_TOKEN secret is missing."
+            exit 1
+          fi
+
+          cat > "$HOME/.npmrc" << EOF
+          registry=https://registry.npmjs.org/
+          //registry.npmjs.org/:_authToken=${NPM_AUTH_TOKEN}
+          EOF
+
+          NPM_USER=$(npm whoami --registry=https://registry.npmjs.org 2>/dev/null || true)
+          if [ -z "$NPM_USER" ]; then
+            echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
+            exit 1
+          fi
+
+          echo "✅ Authenticated as: ${NPM_USER}"
+
+      - name: Build all packages
+        if: inputs.build-first == true
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      - name: Publish versions missing on npm
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          const cp = require('child_process');
+
+          const root = process.cwd();
+          const rushPath = path.join(root, 'rush.json');
+          const rush = JSON.parse(fs.readFileSync(rushPath, 'utf8'));
+
+          const published = [];
+          const skipped = [];
+          const failed = [];
+
+          const npmVersionExists = (name, version) => {
+            try {
+              const out = cp
+                .execSync(`npm view ${name}@${version} version --registry=https://registry.npmjs.org`, {
+                  stdio: ['ignore', 'pipe', 'ignore'],
+                })
+                .toString()
+                .trim();
+              return out === version;
+            } catch {
+              return false;
+            }
+          };
+
+          for (const project of rush.projects ?? []) {
+            const pkgPath = path.join(root, project.projectFolder, 'package.json');
+            if (!fs.existsSync(pkgPath)) {
+              continue;
+            }
+
+            const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+            const name = pkg.name;
+            const version = pkg.version;
+
+            if (!name || !version || !name.startsWith('@vielzeug/')) {
+              continue;
+            }
+
+            if (pkg.private === true) {
+              skipped.push(`${name}@${version} (private)`);
+              continue;
+            }
+
+            if (npmVersionExists(name, version)) {
+              skipped.push(`${name}@${version} (already on npm)`);
+              continue;
+            }
+
+            const cwd = path.join(root, project.projectFolder);
+            process.stdout.write(`\n📦 Publishing ${name}@${version}\n`);
+
+            try {
+              const tarball = cp
+                .execSync('npm pack --json', { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+                .toString();
+              const filename = JSON.parse(tarball)[0]?.filename;
+              if (!filename) {
+                throw new Error('npm pack did not return a tarball filename');
+              }
+
+              cp.execSync(`npm publish ${filename} --access public --registry=https://registry.npmjs.org`, {
+                cwd,
+                stdio: 'inherit',
+              });
+
+              try {
+                fs.unlinkSync(path.join(cwd, filename));
+              } catch {
+                // Best effort cleanup only.
+              }
+
+              published.push(`${name}@${version}`);
+            } catch (error) {
+              failed.push(`${name}@${version} :: ${error instanceof Error ? error.message : String(error)}`);
+            }
+          }
+
+          const summaryPath = process.env.GITHUB_STEP_SUMMARY;
+          if (summaryPath) {
+            const lines = [];
+            lines.push('## Publish Missing Summary');
+            lines.push('');
+            lines.push(`- Published: ${published.length}`);
+            lines.push(`- Skipped: ${skipped.length}`);
+            lines.push(`- Failed: ${failed.length}`);
+            lines.push('');
+
+            if (published.length > 0) {
+              lines.push('### Published');
+              for (const item of published) lines.push(`- ✅ ${item}`);
+              lines.push('');
+            }
+
+            if (skipped.length > 0) {
+              lines.push('### Skipped');
+              for (const item of skipped) lines.push(`- ℹ️ ${item}`);
+              lines.push('');
+            }
+
+            if (failed.length > 0) {
+              lines.push('### Failed');
+              for (const item of failed) lines.push(`- ❌ ${item}`);
+              lines.push('');
+            }
+
+            fs.appendFileSync(summaryPath, `${lines.join('\n')}\n`);
+          }
+
+          if (failed.length > 0) {
+            process.exitCode = 1;
+          }
+          NODE
