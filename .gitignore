@@ -105,6 +105,9 @@ common/autoinstallers/*/.npmrc
 **/.rush/temp/
 *.lock
 
+# Per-agent git worktrees — see scripts/worktree.mjs, .ai/rules/workspace.md § Multi-agent worktrees
+.worktrees/
+
 # Common toolchain intermediate files
 temp/
 lib/

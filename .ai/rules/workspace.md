@@ -38,6 +38,27 @@ pnpm lint         # eslint src/
 pnpm fix          # eslint --fix src/
 ```
 
+## Multi-agent worktrees
+
+When multiple agents work on different packages at the same time in one checkout, they race on `.git/index` (concurrent `git add`/`status`/`commit`) and can stomp each other's uncommitted files — hence the standing rule: never `git stash` to work around a collision, fix breaks in place instead.
+
+For a package with **no `@vielzeug/*` dependency edge in either direction**, a git worktree removes the race entirely — separate working directory and index, same `.git/objects`, own branch. Use `scripts/worktree.mjs`, not raw `git worktree` commands — it checks the dependency graph first:
+
+```bash
+pnpm worktree:add <pkg>              # refuses if <pkg> has any @vielzeug dependency edge
+pnpm worktree:add <pkg> -- --force   # override the refusal (see tradeoff below)
+pnpm worktree:list
+pnpm worktree:remove <pkg>
+```
+
+`add` creates `.worktrees/<pkg>/` (gitignored, inside the repo — not a sibling directory, so a sandboxed agent doesn't need an extra scope grant to use it), on a new `agent/<pkg>-<timestamp>` branch, and runs `rush install --to <pkg>` there (fast: pnpm's content-addressed store is shared across worktrees, so this is a link operation, not a re-download — a few seconds, not minutes).
+
+**Why the refusal for coupled packages, not just a warning:** in a shared checkout, if agent A breaks `ripple`'s public API, agent B (on `ore`, which depends on it) sees the break on their very next command — that immediacy is what makes "fix in place" workable. Isolate the two in separate worktrees and that break goes silent until a branch merge — worse, not better, for coupled work. "Coupled" includes optional peer deps (e.g. `flux`'s adapters) — still a real API contract, just a looser one; `scripts/worktree.mjs` labels these `(optional)` in its refusal message so you know which kind of edge you'd be overriding with `--force`.
+
+Independent packages have nothing to hide from each other, so isolation is a pure win there — but don't hand-verify "independent" against `.ai/rules/catalogue.md`'s prose table, it drifts (currently wrong for `tempo`, `herald`, and `arsenal`, all listed there as independent when they aren't). `scripts/worktree.mjs` checks live against `package.json` every time; that's the only check that matters.
+
+`remove` shells out to plain `git worktree remove`, which already refuses if the worktree has uncommitted changes — that safety is intentional, don't add `--force` to the script's remove path.
+
 ## Conventional commits
 
 Use the format: `feat(courier): add retry logic`

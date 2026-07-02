@@ -8,6 +8,7 @@ import tseslint from 'typescript-eslint';
 export default defineConfig([
   globalIgnores([
     '.claude/',
+    '.worktrees/',
     'common/',
     'docs/.vitepress/cache/',
     'docs/.vitepress/theme/components/repl/registry.generated.ts',
