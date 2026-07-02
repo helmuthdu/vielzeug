@@ -31,11 +31,7 @@ After each pass, output a checkpoint before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before starting: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present).
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 These are **client-side and universal TypeScript libraries** — no server-side secrets by default, but they may be used in both browser and Node environments. Zero external runtime dependencies in most packages — the attack surface is largely the package's own code and how callers use it. (`refine` bundles `lucide`; audit its declared deps under "Dependency Risks".)
 
@@ -208,19 +204,21 @@ End with an **Audit Summary** section using **exactly this format**:
 
 ### Overall Risk Rating
 
-🟢 Low / 🟡 Medium / 🔴 High / 🔵 N/A
+🔴 Red / 🟡 Yellow / 🟢 Green / 🔵 N/A
 
 <One sentence justifying the rating.>
 ```
 
+This is a single aggregate signal, deliberately worded differently from the per-finding `CRITICAL`/`MAJOR`/`MINOR`/`NIT` severity scale above (§0) so the two are never mistaken for the same thing — "Red" doesn't mean "has a `CRITICAL`", it means "ship-blocking as a whole."
+
 **Rating rules:**
 
-| Condition                                   | Rating    |
-| -------------------------------------------- | --------- |
-| Any unfixed CRITICAL                         | 🔴 High   |
-| Unfixed MAJOR, no CRITICAL                   | 🟡 Medium |
-| Only MINOR/NIT concerns, no CRITICAL/MAJOR   | 🟢 Low    |
-| No attack surface; no meaningful risks       | 🔵 N/A    |
+| Condition                                  | Rating    |
+| ------------------------------------------ | --------- |
+| Any unfixed CRITICAL                       | 🔴 Red    |
+| Unfixed MAJOR, no CRITICAL                 | 🟡 Yellow |
+| Only MINOR/NIT concerns, no CRITICAL/MAJOR | 🟢 Green  |
+| No attack surface; no meaningful risks     | 🔵 N/A    |
 
 ## 8. Quick reference — execution flow
 

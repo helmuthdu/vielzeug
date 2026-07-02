@@ -35,11 +35,7 @@ After each lens pass, output a checkpoint before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before starting: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present).
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 Prefer the `@vielzeug` MCP's source-lookup tool (`packageSlug: "<name>"`) to gather source context before reading files one-by-one — resolve the exact tool name from your client's MCP tool list, don't assume a fixed prefix. For `refine`, prefer its component-listing tools since its primary API surface is web components. For large packages, review one category/area per pass.
 

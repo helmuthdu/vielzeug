@@ -44,11 +44,7 @@ After each numbered step, output a checkpoint summary before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-**Documentation template, page structures, tone rules, archetypes, and compliance checklists → `.ai/rules/doc-template.md`**
-
-Read the DOX chain before editing: root `AGENTS.md` → `docs/AGENTS.md` → `packages/<name>/AGENTS.md`.
+See `.ai/rules/agent-execution.md § Context pointers` (includes `.ai/rules/doc-template.md`, needed only here) and `§ DOX chain` (docs variant).
 
 **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `refine` use `list-components` / `get-component`.
 

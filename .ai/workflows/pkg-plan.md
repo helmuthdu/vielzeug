@@ -60,11 +60,7 @@ After each pass, output a checkpoint summary before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before analyzing: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present). Honor any local contracts.
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`. Honor any local contracts.
 
 **Before starting any pass:**
 

@@ -42,11 +42,7 @@ After all plan items are complete, output a final checkpoint:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before editing: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present). Local contracts override defaults — e.g. for `refine` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`. Local contracts override defaults — e.g. for `refine` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
 
 ## 2. Philosophy
 

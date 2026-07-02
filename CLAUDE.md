@@ -259,4 +259,4 @@ The orchestrator workflow (`/pkg-workflow`) runs all phases in sequence for a gi
 Workflow({ name: 'pkg-workflow', args: { pkg: 'sandbox', mode: 'analyse' } })
 ```
 
-Run artifacts live under the gitignored `.ai/workflows/runs/<pkg>/` (`state.json`, `plan.md`, `progress.md`, `review.md`, `security.md`) — ephemeral scratch state, not project history. See `.ai/workflows/runs/AGENTS.md`.
+Run artifacts live under the gitignored `.ai/workflows/runs/<pkg>/` (`plan.md`, `progress.md`, `review.md`, `security.md`) — ephemeral scratch state, not project history. See `.ai/workflows/runs/AGENTS.md`.

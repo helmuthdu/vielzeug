@@ -29,11 +29,7 @@ After each step, output a checkpoint before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before starting: root `AGENTS.md` → `docs/AGENTS.md` → `packages/<name>/AGENTS.md`.
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain` (docs variant).
 
 **DOM-output packages are excluded from the REPL** — the REPL has no preview container. The authoritative list is the `DOM-output` column in `.ai/rules/catalogue.md § Package metadata`. If asked to add REPL examples for a DOM-output package, emit `[SKIP]` and explain.
 

@@ -7,7 +7,7 @@
 ## Contract
 
 - **Inputs:** package name, mode, optional scope/goals from user
-- **Outputs:** `runs/<name>/state.json`, `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`
+- **Outputs:** `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`
 - **Universal rules:** `.ai/rules/agent-execution.md` — principles, markers, breaking-change definition, run artifact lifecycle (ephemeral, gitignored — see `.ai/workflows/runs/AGENTS.md`).
 
 ## Modes
@@ -29,14 +29,14 @@ Don't default to the full pipeline. Classify the request, propose a scope, let t
 3. Proceed on confirmation. If the user just says "go", use your best-match scope rather than silently defaulting to `full`.
 
 <!-- GENERATED:scope-table:BEGIN -->
-| Change type                 | Scope key     | Phases (converge within each)     |
-| ---------------------------- | ------------- | ---------------------------------- |
-| Full feature or new package  | `full`        | baseline → plan → implement → review → security → tests → docs → repl |
-| Bug fix (no API change)      | `bug`         | baseline → plan → implement → review-a |
-| New public API               | `new-api`     | baseline → plan → implement → review → security → tests |
-| Docs-only update             | `docs`        | baseline → docs |
-| Test coverage gap            | `tests`       | baseline → review-a → tests |
-| Security hardening           | `security`    | baseline → implement → security |
+| Change type | Scope key | Phases (converge within each) |
+| --- | --- | --- |
+| Full feature or new package | `full` | baseline → plan → implement → review → security → tests → docs → repl |
+| Bug fix (no API change) | `bug` | baseline → plan → implement → review-a |
+| New public API | `new-api` | baseline → plan → implement → review → security → tests |
+| Docs-only update | `docs` | baseline → docs |
+| Test coverage gap | `tests` | baseline → review-a → tests |
+| Security hardening | `security` | baseline → implement → security |
 <!-- GENERATED:scope-table:END -->
 
 Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.scopes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts).
@@ -82,7 +82,7 @@ pnpm --filter @vielzeug/<name> lint
 
 See `.ai/rules/workspace.md § Per-package test command overrides` for packages with a different test command (e.g. `refine`).
 
-Record in `runs/<name>/progress.md` (narrative) and `runs/<name>/state.json` (structured — see `.ai/rules/agent-execution.md § Run artifacts`): passing test count, test file count, lint status (clean/errors), exported-symbol count from `src/index.ts`.
+Record in `runs/<name>/progress.md`: passing test count, test file count, lint status (clean/errors), exported-symbol count from `src/index.ts`.
 
 ## 2. Guardrails
 
@@ -95,15 +95,15 @@ These apply to every phase:
 
 ## 3. Resuming an interrupted run
 
-If `runs/<name>/state.json` (or `progress.md`) shows any phase as `in_progress` (🔄), the previous session was interrupted:
+If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous session was interrupted:
 
-1. Read `runs/<name>/state.json` — identify which phase is `in_progress` and its recorded pass/round count; cross-check `progress.md`'s Notes column for detail.
+1. Read `runs/<name>/progress.md` — identify which phase is 🔄 and any notes in the Notes column.
 2. Read `runs/<name>/plan.md` — identify which plan items are done and which remain.
 3. Re-check the baseline before touching any code. If red, fix before resuming.
 4. Continue from the next uncompleted item in the interrupted phase. Do not re-run completed items.
-5. Update both `state.json` and the progress table: `in_progress` → `done` (🔄 → ✅) once the phase is fully done.
+5. Update the progress table: 🔄 → ✅ once the phase is fully done.
 
-> If `state.json`, `progress.md`, or `plan.md` are missing, treat as a fresh start: capture a new baseline and run from Phase 1.
+> If `progress.md` or `plan.md` are missing, treat as a fresh start: capture a new baseline and run from Phase 1.
 
 ## 4. Phase execution guide
 
@@ -207,7 +207,7 @@ Emit `[PHASE 4]`. Execute `/pkg-security` for all three surfaces — Pass 1 (Inp
 ✅ PHASE 4: Security complete (3/3 surfaces)
 - Findings: X [VULN], Y [CONCERN]
 - All [VULN] fixed: YES / [ESCALATE] (list breaking items)
-- Risk rating: 🟢 Low / 🟡 Medium / 🔴 High / 🔵 N/A
+- Risk rating: 🔴 Red / 🟡 Yellow / 🟢 Green / 🔵 N/A
 - security.md: written
 - Proceeding to Phase 5
 ```
@@ -297,7 +297,7 @@ Output the final report using **exactly this format**:
 | 1. Plan | ✅ | N items |
 | 2. Implement | ✅ | N items done |
 | 3. Review | ✅ | 0 CRITICAL/MAJOR |
-| 4. Security | ✅ | 🟢 Low |
+| 4. Security | ✅ | 🟢 Green |
 | 5. Tests | ✅ | +N tests |
 | 6. Docs | ✅ | N files updated |
 | 7. REPL | ✅ / N/A | N examples |
@@ -313,9 +313,8 @@ Output the final report using **exactly this format**:
 
 Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in `.ai/rules/agent-execution.md § Run artifacts`.
 
-- `state.json` — machine-readable phase status, pass/round counts, baseline metrics. Update it alongside `progress.md` at every checkpoint.
 - `plan.md` — written by Phase 1 (`/pkg-plan`); consumed by Phase 2 (`/pkg-implement`).
-- `progress.md` — baseline metrics + phase status table + propagation notes (human-readable).
+- `progress.md` — baseline metrics + phase status table + propagation notes.
 - `review.md` — consolidated findings from Phase 3.
 - `security.md` — findings from Phase 4.
 
@@ -323,19 +322,19 @@ Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in 
 
 Maintain in `runs/<name>/progress.md`:
 
-| Phase                  | Status | Notes |
-| ---------------------- | ------ | ----- |
-| 1. Plan (converge)     | ⏳     |       |
-| 2. Implement (converge)| ⏳     |       |
-| 3. Review (3 lenses)   | ⏳     |       |
-| 4. Security (3 surfaces)| ⏳    |       |
-| 5. Tests               | ⏳     |       |
-| 6. Docs                | ⏳     |       |
-| 7. REPL                | ⏳     |       |
+| Phase                    | Status | Notes |
+| ------------------------ | ------ | ----- |
+| 1. Plan (converge)       | ⏳     |       |
+| 2. Implement (converge)  | ⏳     |       |
+| 3. Review (3 lenses)     | ⏳     |       |
+| 4. Security (3 surfaces) | ⏳     |       |
+| 5. Tests                 | ⏳     |       |
+| 6. Docs                  | ⏳     |       |
+| 7. REPL                  | ⏳     |       |
 
 Status legend: ⏳ not started · 🔄 in progress (session interrupted) · ✅ complete · N/A not applicable.
 
-Use the Notes column to record which pass you are on and, once known, how many passes the phase converged in (e.g. `"Lens B"`, `"Round 2/2"`, `"Pass 3 — surface: browser"`, `"converged after 2 passes"`) — this makes resumption and later review of the run unambiguous. Mirror the same status/pass fields into `runs/<name>/state.json` (see `.ai/rules/agent-execution.md § Run artifacts`).
+Use the Notes column to record which pass you are on and, once known, how many passes the phase converged in (e.g. `"Lens B"`, `"Round 2/2"`, `"Pass 3 — surface: browser"`, `"converged after 2 passes"`) — this makes resumption and later review of the run unambiguous.
 
 ## 8. Quick reference — execution flow
 

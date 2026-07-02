@@ -33,37 +33,30 @@ The DOX chain is the ordered read sequence before editing any package:
 
 Local contracts override defaults. Read the full chain before editing any package file. For workflow run artifacts (reading/writing `runs/<name>/`), read the root `AGENTS.md` only.
 
+**Docs-focused workflows** (`/pkg-docs`, `/pkg-repl`) use `docs/AGENTS.md` in place of `packages/AGENTS.md` at step 2 — the chain is root `AGENTS.md` → `docs/AGENTS.md` → `packages/<name>/AGENTS.md`.
+
+## Context pointers
+
+Every workflow needs the same three rule files — link to them, never restate their content:
+
+- Monorepo conventions → `.ai/rules/conventions.md`
+- Package catalogue and dependency graph → `.ai/rules/catalogue.md`
+- Toolchain commands → `.ai/rules/workspace.md`
+
+`/pkg-docs` additionally needs `.ai/rules/doc-template.md` (page structures, tone rules, compliance checklists).
+
 ## Run artifacts
 
 Workflow artifacts live under `.ai/workflows/runs/<name>/`. This directory is **gitignored** — it is scratch working state, not project history. Once a file is overwritten, its prior contents are gone unless the user copied them out first. Full lifecycle contract: `.ai/workflows/runs/AGENTS.md`.
 
-| Artifact      | Purpose                                                    | Persistence strategy                                |
-| ------------- | ----------------------------------------------------------- | ---------------------------------------------------- |
-| `state.json`  | Machine-readable phase status, baseline metrics, item IDs — the only file tooling/orchestration should parse | **Overwrite** — reflects current state only |
-| `plan.md`     | Written by Phase 1; consumed by Phase 2                     | **Overwrite** — single current plan                  |
-| `progress.md` | Human-readable phase narrative + baseline metrics           | **Overwrite** — current state, not a log             |
-| `review.md`   | Phase 3 findings (one section per lens)                     | **Append within run; overwrite at new cycle start**  |
-| `security.md` | Phase 4 findings (one section per pass)                     | **Append within run; overwrite at new cycle start**  |
+| Artifact      | Purpose                                 | Persistence strategy                                |
+| ------------- | --------------------------------------- | --------------------------------------------------- |
+| `plan.md`     | Written by Phase 1; consumed by Phase 2 | **Overwrite** — single current plan                 |
+| `progress.md` | Phase status + baseline metrics         | **Overwrite** — current state, not a log            |
+| `review.md`   | Phase 3 findings (one section per lens) | **Append within run; overwrite at new cycle start** |
+| `security.md` | Phase 4 findings (one section per pass) | **Append within run; overwrite at new cycle start** |
 
 "New cycle" = a fresh `/pkg-workflow` invocation for the same package. Stale findings from a prior cycle are misleading — overwrite them.
-
-`state.json` shape (keep in sync with `progress.md`'s narrative, but this is the field an orchestrator or dashboard should actually read):
-
-```json
-{
-  "package": "<name>",
-  "mode": "analyse",
-  "scope": "full",
-  "cycle": 1,
-  "phases": {
-    "plan": { "status": "done", "passesRun": 3 },
-    "implement": { "status": "in_progress", "roundsRun": 2 }
-  },
-  "baseline": { "tests": 90, "testFiles": 1, "lint": "clean", "exports": 7 }
-}
-```
-
-`status` is one of `pending` / `in_progress` / `done` / `skipped`.
 
 ## Universal execution model
 
@@ -110,18 +103,18 @@ These markers have the same meaning in every workflow. Workflow-specific markers
 
 `/pkg-review` and `/pkg-security` share one severity scale — a finding of a given severity means the same thing in both:
 
-| Severity   | Meaning                                                        | Fix-gate behaviour                          |
-| ---------- | --------------------------------------------------------------- | -------------------------------------------- |
-| `CRITICAL` | Must fix — correctness, safety, or a confirmed vulnerability at risk | Blocks proceeding to the next lens/pass unless `[ESCALATE]`d |
+| Severity   | Meaning                                                                              | Fix-gate behaviour                                           |
+| ---------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| `CRITICAL` | Must fix — correctness, safety, or a confirmed vulnerability at risk                 | Blocks proceeding to the next lens/pass unless `[ESCALATE]`d |
 | `MAJOR`    | Should fix — significant DX/design/type-safety issue, or a high-impact risky pattern | Blocks proceeding to the next lens/pass unless `[ESCALATE]`d |
-| `MINOR`    | Worth fixing — low-risk improvement                            | Does not block; fix if time allows           |
-| `NIT`      | Optional polish                                                | Does not block                               |
+| `MINOR`    | Worth fixing — low-risk improvement                                                  | Does not block; fix if time allows                           |
+| `NIT`      | Optional polish                                                                      | Does not block                                               |
 
 `/pkg-security` additionally tags each finding with a **status** (`[VULN]` confirmed / `[CONCERN]` risky pattern / `[SAFE]` checked clean) — status and severity are independent axes: a `[CONCERN]` can still be `CRITICAL` if left unaddressed it would become exploitable.
 
-`/pkg-plan`'s category emojis (🔴 Bug / 🟠 Design / 🟡 Coverage / 🟢 Enhancement) are a *different* axis — category, not severity — but rank in the same order: treat 🔴 as roughly `CRITICAL`/`MAJOR`, 🟠 as `MAJOR`/`MINOR`, 🟡–🟢 as `MINOR`/`NIT`, when you need to compare priority across workflows (e.g. deciding what to fix first when both a plan item and a review finding touch the same file).
+`/pkg-plan`'s category emojis (🔴 Bug / 🟠 Design / 🟡 Coverage / 🟢 Enhancement) are a _different_ axis — category, not severity — but rank in the same order: treat 🔴 as roughly `CRITICAL`/`MAJOR`, 🟠 as `MAJOR`/`MINOR`, 🟡–🟢 as `MINOR`/`NIT`, when you need to compare priority across workflows (e.g. deciding what to fix first when both a plan item and a review finding touch the same file).
 
-`/pkg-tests`'s markers (`[GAP]`, `[ADDED]`, `[REMOVED]`, `[REWRITTEN]`) describe an *action taken*, not a severity — they have no equivalent in this table.
+`/pkg-tests`'s markers (`[GAP]`, `[ADDED]`, `[REMOVED]`, `[REWRITTEN]`) describe an _action taken_, not a severity — they have no equivalent in this table.
 
 ## Breaking change definition
 
@@ -135,11 +128,11 @@ This definition applies across all workflows when deciding whether to use `[ESCA
 
 Two different multi-pass shapes exist — do not treat them the same.
 
-**Convergent phases (Plan, Implement)** — each pass is the *same* activity (discover issues, implement remaining items) applied again. No fixed pass count:
+**Convergent phases (Plan, Implement)** — each pass is the _same_ activity (discover issues, implement remaining items) applied again. No fixed pass count:
 
 - Minimum 1 pass, always.
 - Stop when a pass adds 0 new findings / 0 remaining items — do not add a pass for zero value, even if that's pass 1.
 - `> 5` new findings on what you expected to be the last pass → run one more pass and re-check.
 - ~3 passes is typical for a mid-size package; small packages often converge in 1, large ones may need more. Never pad to hit a round number.
 
-**Enumerated phases (Review's 3 lenses, Security's 3 surfaces)** — each pass targets a *distinct*, predefined concern (correctness / architecture / types; input-injection / leakage-types-deps / browser-server). All are mandatory regardless of size — skipping a lens skips a defect class, it isn't "converging early". Only add an extra pass beyond the enumerated set if a later lens's fix plausibly reintroduced an issue in an earlier lens's territory (targeted re-check, not a full restart of the rotation).
+**Enumerated phases (Review's 3 lenses, Security's 3 surfaces)** — each pass targets a _distinct_, predefined concern (correctness / architecture / types; input-injection / leakage-types-deps / browser-server). All are mandatory regardless of size — skipping a lens skips a defect class, it isn't "converging early". Only add an extra pass beyond the enumerated set if a later lens's fix plausibly reintroduced an issue in an earlier lens's territory (targeted re-check, not a full restart of the rotation).

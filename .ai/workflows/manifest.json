@@ -54,12 +54,12 @@
       "security": ["baseline", "implement", "security"]
     },
     "scopeDescriptions": {
-      "full": "Full feature or new package — all phases",
+      "full": "Full feature or new package",
       "bug": "Bug fix (no API change)",
       "new-api": "New public API",
       "docs": "Docs-only update",
       "tests": "Test coverage gap",
-      "security": "Security hardening (requires existing runs/<name>/plan.md)"
+      "security": "Security hardening"
     },
     "domOutputPackages": ["ore", "prism", "refine"]
   }

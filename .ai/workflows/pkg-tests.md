@@ -29,11 +29,7 @@ After each step, output a checkpoint before proceeding:
 
 ## 1. Context
 
-Monorepo conventions → `.ai/rules/conventions.md`
-Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-Toolchain commands → `.ai/rules/workspace.md`
-
-Read the DOX chain before starting: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present).
+See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 **Test location:** most packages use `packages/<name>/src/__tests__/`. Some packages co-locate tests next to source (e.g. `refine`: `src/<category>/<component>/<component>.test.ts`). Check the package's `AGENTS.md` for the correct command.
 
