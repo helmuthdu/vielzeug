@@ -1,14 +1,14 @@
 # pkg-workflow — Full Package Workflow
 
-> **Canonical source:** This file is the single source of truth for all AI tools. Tool-specific stubs in `.claude/commands/`, `.devin/workflows/`, and `.junie/workflows/` delegate here.
+> **Canonical source:** This file is the single source of truth for all AI tools. Generated, gitignored stubs in `.claude/commands/` and `.devin/workflows/` delegate here (see `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`); `.junie/guidelines.md` links here directly with no stub file.
 >
-> **Automated orchestration:** `.claude/workflows/pkg-workflow.js` runs these same phases via the Workflow tool. Changes to phase structure, scope selection, or mode names here must be reflected there.
+> **Automated orchestration:** `.claude/workflows/pkg-workflow.js` runs these same phases via the Workflow tool. Its phase/scope data is generated from `.ai/workflows/manifest.json` — do not hand-edit the code between the `GENERATED:data` markers; edit the manifest and run `pnpm gen:workflow-docs`.
 
 ## Contract
 
 - **Inputs:** package name, mode, optional scope/goals from user
-- **Outputs:** `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`
-- **Universal rules:** `.ai/rules/agent-execution.md` — principles, markers, breaking-change definition, run artifact persistence.
+- **Outputs:** `runs/<name>/state.json`, `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`
+- **Universal rules:** `.ai/rules/agent-execution.md` — principles, markers, breaking-change definition, run artifact lifecycle (ephemeral, gitignored — see `.ai/workflows/runs/AGENTS.md`).
 
 ## Modes
 
@@ -22,18 +22,24 @@ Mode determines the pass structure in Phase 1. **Phases 2–7 are identical acro
 
 ## Scope selection
 
-Before defaulting to the full 7-phase pipeline, confirm whether a lighter scope fits:
+Don't default to the full pipeline. Classify the request, propose a scope, let the user confirm or override:
 
-| Change type                 | Scope key     | Recommended phases                                |
-| --------------------------- | ------------- | ------------------------------------------------- |
-| Bug fix (no API change)     | `bug`         | 1 (1 pass) → 2 (1 round) → 3 (Lens A) → Checklist |
-| New public API              | `new-api`     | 1 → 2 → 3 → 4 → 5 → Checklist                     |
-| Docs-only update            | `docs`        | Baseline → 6                                      |
-| Test coverage gap           | `tests`       | Baseline → 3 (Lens A) → 5 → Checklist             |
-| Security hardening          | `security`    | Baseline → 2 → 4 → Checklist *(requires existing `runs/<name>/plan.md`)* |
-| Full feature or new package | `full`        | All 7 phases (default)                            |
+1. Read the user's request (and, for `analyse` mode, any linked issue/diff).
+2. Match it against the change types below and state your pick: `"This looks like a <type> — proposing scope: <key>. Proceed, or run the full pipeline instead?"`
+3. Proceed on confirmation. If the user just says "go", use your best-match scope rather than silently defaulting to `full`.
 
-The full workflow is the default for `analyse` mode with no known scope constraints.
+<!-- GENERATED:scope-table:BEGIN -->
+| Change type                 | Scope key     | Phases (converge within each)     |
+| ---------------------------- | ------------- | ---------------------------------- |
+| Full feature or new package  | `full`        | baseline → plan → implement → review → security → tests → docs → repl |
+| Bug fix (no API change)      | `bug`         | baseline → plan → implement → review-a |
+| New public API               | `new-api`     | baseline → plan → implement → review → security → tests |
+| Docs-only update             | `docs`        | baseline → docs |
+| Test coverage gap            | `tests`       | baseline → review-a → tests |
+| Security hardening           | `security`    | baseline → implement → security |
+<!-- GENERATED:scope-table:END -->
+
+Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.scopes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts).
 
 Accepted scope keys: `full`, `bug`, `new-api`, `docs`, `tests`, `security`.
 
@@ -57,8 +63,9 @@ Ask the user for:
 
 1. **Mode** — `analyse` (default) / `feature` / `new-package`
 2. **Package name** — existing package for `analyse`/`feature`; new name + one-line description for `new-package`
-3. **Scope** — full workflow, or start from a specific phase?
-4. **Goals** — for `feature`/`new-package`: describe what to build; for `analyse`: any known issues or focus areas?
+3. **Goals** — for `feature`/`new-package`: describe what to build; for `analyse`: any known issues or focus areas?
+
+Then classify and propose a **scope** yourself per `§ Scope selection` above — don't ask the user to pick a scope key cold.
 
 If the user chooses to start from a later phase (e.g. Docs), treat it as a focused standalone run — do not retroactively run earlier phases unless explicitly requested.
 
@@ -75,7 +82,7 @@ pnpm --filter @vielzeug/<name> lint
 
 See `.ai/rules/workspace.md § Per-package test command overrides` for packages with a different test command (e.g. `refine`).
 
-Record in `runs/<name>/progress.md`: passing test count, test file count, lint status (clean/errors), exported-symbol count from `src/index.ts`.
+Record in `runs/<name>/progress.md` (narrative) and `runs/<name>/state.json` (structured — see `.ai/rules/agent-execution.md § Run artifacts`): passing test count, test file count, lint status (clean/errors), exported-symbol count from `src/index.ts`.
 
 ## 2. Guardrails
 
@@ -88,37 +95,37 @@ These apply to every phase:
 
 ## 3. Resuming an interrupted run
 
-If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous session was interrupted:
+If `runs/<name>/state.json` (or `progress.md`) shows any phase as `in_progress` (🔄), the previous session was interrupted:
 
-1. Read `runs/<name>/progress.md` — identify which phase is 🔄 and any notes in the Notes column.
+1. Read `runs/<name>/state.json` — identify which phase is `in_progress` and its recorded pass/round count; cross-check `progress.md`'s Notes column for detail.
 2. Read `runs/<name>/plan.md` — identify which plan items are done and which remain.
 3. Re-check the baseline before touching any code. If red, fix before resuming.
 4. Continue from the next uncompleted item in the interrupted phase. Do not re-run completed items.
-5. Update the progress table: 🔄 → ✅ once the phase is fully done.
+5. Update both `state.json` and the progress table: `in_progress` → `done` (🔄 → ✅) once the phase is fully done.
 
-> If `progress.md` or `plan.md` are missing, treat as a fresh start: capture a new baseline and run from Phase 1.
+> If `state.json`, `progress.md`, or `plan.md` are missing, treat as a fresh start: capture a new baseline and run from Phase 1.
 
 ## 4. Phase execution guide
 
-**Carry context across passes.** Load prior phase artifacts from `runs/<name>/` rather than re-reading the whole package on every pass. Prefer the `@vielzeug` MCP: `get-docs` and `get-source` for most packages; `list-components` / `get-component` for `refine`.
+**Carry context across passes.** Load prior phase artifacts from `runs/<name>/` rather than re-reading the whole package on every pass. Prefer the `@vielzeug` MCP's source/docs lookup tools for most packages; its component-listing tools for `refine` (resolve exact tool names via your MCP tool list — do not assume a fixed name/prefix).
 
-Phase repetition counts are floors, not fixed targets — see `.ai/rules/agent-execution.md § Multi-pass convergence`.
+Every multi-pass phase (Plan, Implement, Review, Security) converges on evidence, not a fixed count — see `.ai/rules/agent-execution.md § Multi-pass convergence`. ~3 passes is typical for a full-size package; a small package may converge in 1, a large one may need more. Tests, Docs, and REPL are inherently single-pass phases.
 
 ```
-Phase 1: Plan      × 3   (/pkg-plan — mode: analyse / feature / new-package)
-Phase 2: Implement × 3   (/pkg-implement)
-Phase 3: Review    × 3   (/pkg-review)
-Phase 4: Security  × 3   (/pkg-security)
-Phase 5: Tests     × 1   (/pkg-tests)
-Phase 6: Docs      × 1   (/pkg-docs)
-Phase 7: REPL      × 1   (/pkg-repl)
+Phase 1: Plan      (converge, ~3 passes)   (/pkg-plan — mode: analyse / feature / new-package)
+Phase 2: Implement (converge, ~3 rounds)   (/pkg-implement)
+Phase 3: Review    (converge, ~3 lenses)   (/pkg-review)
+Phase 4: Security  (converge, ~3 passes)   (/pkg-security)
+Phase 5: Tests     × 1                     (/pkg-tests)
+Phase 6: Docs      × 1                     (/pkg-docs)
+Phase 7: REPL      × 1                     (/pkg-repl)
 ```
 
 ---
 
-### Phase 1 — Plan × 3
+### Phase 1 — Plan (converge)
 
-Emit `[PHASE 1]`. Run `/pkg-plan` three times. Pass the mode so the correct pass structure is used:
+Emit `[PHASE 1]`. Run `/pkg-plan`, applying its convergence rule (stop when a pass adds 0 new findings, minimum 1 pass). Pass the mode so the correct pass structure is used:
 
 - **`analyse`** → arch review → DX deep-dive → synthesis → `plan.md`
 - **`feature`** → requirements → API design → acceptance criteria → `plan.md`
@@ -127,7 +134,7 @@ Emit `[PHASE 1]`. Run `/pkg-plan` three times. Pass the mode so the correct pass
 **Phase checkpoint:**
 
 ```
-✅ PHASE 1: Plan complete (3/3 passes)
+✅ PHASE 1: Plan complete (N passes, converged)
 - Mode: analyse / feature / new-package
 - Items: N (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement/Feature)
 - Future improvements: N
@@ -137,22 +144,22 @@ Emit `[PHASE 1]`. Run `/pkg-plan` three times. Pass the mode so the correct pass
 
 ---
 
-### Phase 2 — Implement × 3
+### Phase 2 — Implement (converge)
 
-Emit `[PHASE 2]`. Execute `/pkg-implement` in three iterative rounds.
+Emit `[PHASE 2]`. Execute `/pkg-implement`, working through `plan.md` items by priority in as many rounds as needed to finish all items and reach green (typically 3: high-priority → medium-priority → polish).
 
-> **`new-package` mode only — Round 0 — Scaffold** `[PASS 0/3]`: create the package skeleton before Round 1. Follow `.ai/rules/workspace.md § New-package scaffolding`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
+> **`new-package` mode only — Round 0 — Scaffold**: create the package skeleton before Round 1. Follow `.ai/rules/workspace.md § New-package scaffolding`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
 
-- **Round 1** `[PASS 1/3]`: high-priority items (🔴 Bug + 🟠 Design).
-- **Round 2** `[PASS 2/3]`: medium-priority items (🟡 Coverage + 🟢 Enhancement); re-verify all tests pass.
-- **Round 3** `[PASS 3/3]`: final polish — TypeScript quality, `pnpm --filter @vielzeug/<name> fix`, zero lint errors.
+- **Round 1**: high-priority items (🔴 Bug + 🟠 Design).
+- **Round 2**: medium-priority items (🟡 Coverage + 🟢 Enhancement); re-verify all tests pass.
+- **Round 3+**: final polish — TypeScript quality, `pnpm --filter @vielzeug/<name> fix`, zero lint errors. Repeat until all plan items are done and the suite is green.
 
 Before each round, verify the baseline is green. After each round, run the test suite and fix any failures before proceeding. See `.ai/rules/workspace.md` for per-package test commands.
 
 **Phase checkpoint:**
 
 ```
-✅ PHASE 2: Implement complete (3/3 rounds)
+✅ PHASE 2: Implement complete (N rounds)
 - Items completed: N/N
 - Tests: N passing, F files
 - Lint: clean
@@ -174,9 +181,9 @@ Record propagated fixes in the progress table Notes column.
 
 ---
 
-### Phase 3 — Review × 3
+### Phase 3 — Review (3 lenses)
 
-Emit `[PHASE 3]`. Execute `/pkg-review` three times, rotating Lens A (Correctness) → Lens B (Architecture/DX) → Lens C (TypeScript Quality). Follow `/pkg-review` fix-gate and persistence rules exactly — including MINOR/NIT handling after Lens C.
+Emit `[PHASE 3]`. Execute `/pkg-review` for all three lenses — A (Correctness) → B (Architecture/DX) → C (TypeScript Quality). These are distinct defect classes, not repeats — run all three regardless of package size. Follow `/pkg-review` fix-gate and persistence rules exactly — including MINOR/NIT handling after Lens C. Add a targeted re-check pass only if a later lens's fix plausibly reintroduced an earlier lens's issue.
 
 **Phase checkpoint:**
 
@@ -190,9 +197,9 @@ Emit `[PHASE 3]`. Execute `/pkg-review` three times, rotating Lens A (Correctnes
 
 ---
 
-### Phase 4 — Security × 3
+### Phase 4 — Security (3 surfaces)
 
-Emit `[PHASE 4]`. Execute `/pkg-security` three times: Pass 1 (Input/Injection/Prototype Pollution) → Pass 2 (Leakage/Types/Deps) → Pass 3 (Browser/Server + re-scan all [VULN] from Passes 1–2). Fix all [VULN] findings immediately — except where the fix requires a breaking API change, in which case use `[ESCALATE]` and wait.
+Emit `[PHASE 4]`. Execute `/pkg-security` for all three surfaces — Pass 1 (Input/Injection/Prototype Pollution) → Pass 2 (Leakage/Types/Deps) → Pass 3 (Browser/Server + re-scan all [VULN] from Passes 1–2). These are distinct attack surfaces, not repeats — run all three regardless of package size. Fix all [VULN] findings immediately — except where the fix requires a breaking API change, in which case use `[ESCALATE]` and wait.
 
 **Phase checkpoint:**
 
@@ -306,8 +313,9 @@ Output the final report using **exactly this format**:
 
 Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in `.ai/rules/agent-execution.md § Run artifacts`.
 
+- `state.json` — machine-readable phase status, pass/round counts, baseline metrics. Update it alongside `progress.md` at every checkpoint.
 - `plan.md` — written by Phase 1 (`/pkg-plan`); consumed by Phase 2 (`/pkg-implement`).
-- `progress.md` — baseline metrics + phase status table + propagation notes.
+- `progress.md` — baseline metrics + phase status table + propagation notes (human-readable).
 - `review.md` — consolidated findings from Phase 3.
 - `security.md` — findings from Phase 4.
 
@@ -315,37 +323,37 @@ Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in 
 
 Maintain in `runs/<name>/progress.md`:
 
-| Phase            | Status | Notes |
-| ---------------- | ------ | ----- |
-| 1. Plan × 3      | ⏳     |       |
-| 2. Implement × 3 | ⏳     |       |
-| 3. Review × 3    | ⏳     |       |
-| 4. Security × 3  | ⏳     |       |
-| 5. Tests         | ⏳     |       |
-| 6. Docs          | ⏳     |       |
-| 7. REPL          | ⏳     |       |
+| Phase                  | Status | Notes |
+| ---------------------- | ------ | ----- |
+| 1. Plan (converge)     | ⏳     |       |
+| 2. Implement (converge)| ⏳     |       |
+| 3. Review (3 lenses)   | ⏳     |       |
+| 4. Security (3 surfaces)| ⏳    |       |
+| 5. Tests               | ⏳     |       |
+| 6. Docs                | ⏳     |       |
+| 7. REPL                | ⏳     |       |
 
 Status legend: ⏳ not started · 🔄 in progress (session interrupted) · ✅ complete · N/A not applicable.
 
-Use the Notes column to record which pass you are on within multi-pass phases (e.g. `"Lens B"`, `"Round 2"`, `"Pass 3 — surface: browser"`) — this makes resumption unambiguous.
+Use the Notes column to record which pass you are on and, once known, how many passes the phase converged in (e.g. `"Lens B"`, `"Round 2/2"`, `"Pass 3 — surface: browser"`, `"converged after 2 passes"`) — this makes resumption and later review of the run unambiguous. Mirror the same status/pass fields into `runs/<name>/state.json` (see `.ai/rules/agent-execution.md § Run artifacts`).
 
 ## 8. Quick reference — execution flow
 
 ```
 Baseline capture (analyse/feature)    OR    skip (new-package)
     ↓
-[PHASE 1] Plan × 3
+[PHASE 1] Plan — converge (typically ~3 passes)
   analyse    → /pkg-plan  (arch → DX → synthesis)        → plan.md
   feature    → /pkg-plan  (req → API → criteria)          → plan.md
   new-pkg    → /pkg-plan  (req → API → criteria)          → plan.md → Checkpoint
     ↓
-[PHASE 2] Implement × 3
+[PHASE 2] Implement — converge (typically ~3 rounds)
   new-pkg only: Round 0 — Scaffold (see workspace.md)
-  Round 1–3: /pkg-implement items by priority → Checkpoint → Propagation
+  Round N: /pkg-implement items by priority → Checkpoint → Propagation
     ↓
-[PHASE 3] Review × 3    → review.md → Checkpoint
+[PHASE 3] Review — 3 lenses (A, B, C; all mandatory)    → review.md → Checkpoint
     ↓
-[PHASE 4] Security × 3  → security.md → Checkpoint
+[PHASE 4] Security — 3 surfaces (all mandatory)         → security.md → Checkpoint
     ↓
 [PHASE 5] Tests × 1     → Checkpoint
     ↓

@@ -1,6 +1,6 @@
 # pkg-docs — Documentation Sync
 
-> **Canonical source:** This file is the single source of truth for all AI tools. Tool-specific stubs in `.claude/commands/`, `.devin/workflows/`, and `.junie/workflows/` delegate here.
+> **Canonical source:** This file is the single source of truth for all AI tools. Generated, gitignored stubs in `.claude/commands/` and `.devin/workflows/` delegate here (see `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`); `.junie/guidelines.md` links here directly with no stub file.
 
 You are a technical writer and software engineer keeping the **Vielzeug** VitePress docs in sync with the source code and the canonical documentation template.
 
@@ -74,7 +74,7 @@ pnpm --filter @vielzeug/codex build
 
 **Goal:** Build a complete, authoritative list of what the package exports.
 
-1. Prefer MCP first — call `mcp0_get-source` with `packageSlug: "<name>"` to get the current `index.ts`.
+1. Prefer MCP first — call the `@vielzeug` MCP's source-lookup tool with `packageSlug: "<name>"` to get the current `index.ts` (resolve the exact tool name from your client's MCP tool list, don't assume a fixed prefix).
 2. Fallback: read `packages/<name>/src/index.ts` directly.
 3. Extract every exported symbol into a structured list:
 

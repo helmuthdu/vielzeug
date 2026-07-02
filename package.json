@@ -19,7 +19,9 @@
     "docs:dev": "vitepress dev docs",
     "docs:dev:refine": "concurrently --no-kill-others -c \"auto\" \"pnpm --filter @vielzeug/refine build:bundle:watch\" \"pnpm docs:dev\"",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "gen:workflow-docs": "node scripts/sync-workflow-docs.mjs",
+    "check:workflow-docs": "node scripts/sync-workflow-docs.mjs --check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

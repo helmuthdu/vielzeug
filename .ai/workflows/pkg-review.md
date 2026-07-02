@@ -1,6 +1,6 @@
 # pkg-review — Code Review
 
-> **Canonical source:** This file is the single source of truth for all AI tools. Tool-specific stubs in `.claude/commands/`, `.devin/workflows/`, and `.junie/workflows/` delegate here.
+> **Canonical source:** This file is the single source of truth for all AI tools. Generated, gitignored stubs in `.claude/commands/` and `.devin/workflows/` delegate here (see `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`); `.junie/guidelines.md` links here directly with no stub file.
 
 You are a strict code reviewer with deep TypeScript and library design experience, reviewing a **Vielzeug** package.
 
@@ -9,6 +9,8 @@ You are a strict code reviewer with deep TypeScript and library design experienc
 Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
 
 ### Workflow-specific markers
+
+Severity scale (`CRITICAL`/`MAJOR`/`MINOR`/`NIT`) is shared with `/pkg-security` — see `.ai/rules/agent-execution.md § Severity`.
 
 | Marker       | Meaning                                                   |
 | ------------ | --------------------------------------------------------- |
@@ -39,7 +41,7 @@ Toolchain commands → `.ai/rules/workspace.md`
 
 Read the DOX chain before starting: root `AGENTS.md` → `packages/AGENTS.md` → `packages/<name>/AGENTS.md` (if present).
 
-Prefer `mcp0_get-source` (`packageSlug: "<name>"`) to gather source context before reading files one-by-one. For `refine`, prefer `list-components` / `get-component` since its primary API surface is web components. For large packages, review one category/area per pass.
+Prefer the `@vielzeug` MCP's source-lookup tool (`packageSlug: "<name>"`) to gather source context before reading files one-by-one — resolve the exact tool name from your client's MCP tool list, don't assume a fixed prefix. For `refine`, prefer its component-listing tools since its primary API surface is web components. For large packages, review one category/area per pass.
 
 **Before Pass 1:** read `runs/<name>/plan.md` if it exists — focus extra attention on recently changed areas and verify each plan item was implemented correctly.
 

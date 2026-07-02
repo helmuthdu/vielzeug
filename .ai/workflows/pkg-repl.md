@@ -1,6 +1,6 @@
 # pkg-repl — REPL / Playground Examples Update
 
-> **Canonical source:** This file is the single source of truth for all AI tools. Tool-specific stubs in `.claude/commands/`, `.devin/workflows/`, and `.junie/workflows/` delegate here.
+> **Canonical source:** This file is the single source of truth for all AI tools. Generated, gitignored stubs in `.claude/commands/` and `.devin/workflows/` delegate here (see `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`); `.junie/guidelines.md` links here directly with no stub file.
 
 You are updating the interactive playground examples for a **Vielzeug** package.
 
@@ -39,7 +39,7 @@ Read the DOX chain before starting: root `AGENTS.md` → `docs/AGENTS.md` → `p
 
 **`code` strings must be plain JavaScript — no TypeScript syntax.** The browser REPL does not transpile. TypeScript annotations (`type`, `interface`, `: Type`, `<T>`, `as Type`, `!`) will cause syntax errors at runtime.
 
-Prefer `mcp0_get-source` and `mcp0_get-docs` for current API data before reading source file-by-file.
+Prefer the `@vielzeug` MCP's source/docs lookup tools for current API data before reading source file-by-file (resolve exact tool names from your client's MCP tool list, don't assume a fixed prefix).
 
 ### REPL structure
 

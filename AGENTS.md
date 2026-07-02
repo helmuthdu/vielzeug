@@ -11,7 +11,7 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 - **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/rules/conventions.md` (single source of truth; never duplicate it, reference it).
 - **Package catalogue and dependency graph** — `.ai/rules/catalogue.md` (live data; update when packages change).
 - **Workspace toolchain, commands, versioning** — `.ai/rules/workspace.md`.
-- **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.ai/workflows/*.md` (single source of truth; tool-specific stubs in `.devin/workflows/`, `.claude/commands/`, and `.junie/workflows/` delegate here).
+- **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.ai/workflows/*.md` (single source of truth; generated, gitignored stubs in `.devin/workflows/` and `.claude/commands/` delegate here via `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`; `.junie/guidelines.md` links here directly with no stub file).
 - **Contributor and tooling guidance** — `CLAUDE.md`.
 
 ## Workflow Index
@@ -20,23 +20,23 @@ Reach for the workflow that matches the task (full definitions in `.ai/workflows
 
 | Situation | Workflow |
 | --- | --- |
-| Improve one package end-to-end | `/pkg-workflow` (default `improve` mode) |
+| Improve one package end-to-end | `/pkg-workflow` (default `analyse` mode; also proposes a lighter scope than the full pipeline where it fits — see `.ai/workflows/pkg-workflow.md § Scope selection`) |
 | Add a feature to an existing package | `/pkg-workflow mode:feature` |
 | Create a new package from scratch | `/pkg-workflow mode:new-package` |
-| Analyse and produce an improvement plan | `/pkg-plan` (run 3×) |
-| Design a feature or new-package spec | `/pkg-spec` (run 3×) |
-| Apply an existing plan | `/pkg-implement` (run 3×) |
-| Suspected bug / quality concern | `/pkg-review` (Lens A correctness, B design, C types) |
-| Security concern (injection, prototype pollution, leaks) | `/pkg-security` (run 3×) |
+| Analyse and produce an improvement plan | `/pkg-plan` (mode `analyse`, converges — typically ~3 passes) |
+| Design a feature or new-package spec | `/pkg-plan` (mode `feature` / `new-package` — same file, different pass structure) |
+| Apply an existing plan | `/pkg-implement` (converges — as many rounds as needed) |
+| Suspected bug / quality concern | `/pkg-review` (Lens A correctness, B design, C types — all 3 mandatory) |
+| Security concern (injection, prototype pollution, leaks) | `/pkg-security` (3 fixed surfaces — all mandatory) |
 | Coverage gaps or messy tests | `/pkg-tests` |
 | Docs out of sync with the API | `/pkg-docs` |
 | REPL examples stale or missing | `/pkg-repl` |
 
-Cadence inside `/pkg-workflow`: plan/spec ×3 → implement ×3 → review ×3 → security ×3 → tests ×1 → docs ×1 → repl ×1. Phase 1 uses `/pkg-plan` for `improve` mode and `/pkg-spec` for `feature`/`new-package` modes.
+Cadence inside `/pkg-workflow`: plan → implement converge on their own evidence (no fixed count, ~3 passes/rounds typical); review's 3 lenses and security's 3 surfaces are a fixed enumeration, always all run; tests → docs → repl are single-pass. See `.ai/rules/agent-execution.md § Multi-pass convergence` for the exact rule.
 
 ## Local Contracts
 
-- Before editing workflow run artifacts, follow the DOX chain: read this file, then `.ai/workflows/runs/AGENTS.md`.
+- `.ai/workflows/runs/<pkg>/` (workflow run scratch state) is gitignored, not part of the DOX chain — see `.ai/workflows/runs/AGENTS.md` for its lifecycle contract and `.ai/rules/agent-execution.md § Run artifacts` for the canonical, versioned description.
 - Do not duplicate canonical context; link to the relevant `.ai/rules/*.md` file.
 
 ## Work Guidance
@@ -54,4 +54,4 @@ Defer to `.ai/rules/conventions.md` for engineering conventions, `.ai/rules/cata
 
 - `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
-- `.ai/workflows/runs/AGENTS.md` — persisted hand-off artifacts for package-improvement workflow runs (plans, progress, findings).
+- `.ai/workflows/runs/AGENTS.md` — lifecycle contract for gitignored per-package workflow scratch state (plans, progress, findings). Not itself committed history — describes ephemeral state, not a package.

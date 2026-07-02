@@ -241,14 +241,14 @@ When in doubt about structure, style, or test layout:
 
 ## Slash Commands (pkg-workflow)
 
-This project has Claude Code slash commands for package development workflows. Stubs are in `.claude/commands/`; canonical workflow definitions are in `.ai/workflows/`:
+This project has Claude Code slash commands for package development workflows. Stubs are in `.claude/commands/` — gitignored, generated from `.ai/workflows/manifest.json` via `pnpm gen:workflow-docs`; canonical workflow definitions are in `.ai/workflows/`:
 
 | Command | Purpose |
 |---------|---------|
-| `/pkg-plan` | Three-pass architecture & DX analysis → `plan.md` |
-| `/pkg-implement` | Implement items from `plan.md` |
-| `/pkg-review` | Three-lens code review (correctness, arch, types) |
-| `/pkg-security` | Three-surface security audit |
+| `/pkg-plan` | Architecture & DX analysis, converging on a ranked `plan.md` (~3 passes typical) |
+| `/pkg-implement` | Implement items from `plan.md`, converging on green (~3 rounds typical) |
+| `/pkg-review` | Three-lens code review (correctness, arch, types) — all 3 lenses always run |
+| `/pkg-security` | Three-surface security audit — all 3 surfaces always run |
 | `/pkg-tests` | Coverage gap analysis and test expansion |
 | `/pkg-docs` | API sync, template compliance, codex rebuild |
 | `/pkg-repl` | REPL example audit and update |
@@ -259,4 +259,4 @@ The orchestrator workflow (`/pkg-workflow`) runs all phases in sequence for a gi
 Workflow({ name: 'pkg-workflow', args: { pkg: 'sandbox', mode: 'analyse' } })
 ```
 
-Run artifacts persist under `.ai/workflows/runs/<pkg>/` (plan.md, progress.md, review.md, security.md).
+Run artifacts live under the gitignored `.ai/workflows/runs/<pkg>/` (`state.json`, `plan.md`, `progress.md`, `review.md`, `security.md`) — ephemeral scratch state, not project history. See `.ai/workflows/runs/AGENTS.md`.

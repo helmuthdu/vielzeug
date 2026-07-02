@@ -1,6 +1,6 @@
 # pkg-security — Security Audit
 
-> **Canonical source:** This file is the single source of truth for all AI tools. Tool-specific stubs in `.claude/commands/`, `.devin/workflows/`, and `.junie/workflows/` delegate here.
+> **Canonical source:** This file is the single source of truth for all AI tools. Generated, gitignored stubs in `.claude/commands/` and `.devin/workflows/` delegate here (see `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`); `.junie/guidelines.md` links here directly with no stub file.
 
 You are a security engineer auditing a **Vielzeug** TypeScript library package.
 
@@ -24,7 +24,7 @@ After each pass, output a checkpoint before proceeding:
 ✅ CHECKPOINT: Pass N — <Surface> complete
 - Checklist items reviewed: N
 - Findings: N (X [VULN], Y [CONCERN])
-- By severity: C Critical, H High, M Medium, L Low
+- By severity: C CRITICAL, M MAJOR, Mi MINOR, N NIT
 - Breaking escalations: [list or "none"]
 - Proceeding to Pass N+1 / Writing security.md
 ```
@@ -79,7 +79,7 @@ Throughout the audit:
 ```
 ✅ CHECKPOINT: Pass 1 — Input/Injection/Prototype complete
 - Findings: N (X [VULN], Y [CONCERN])
-- By severity: C Critical, H High, M Medium, L Low
+- By severity: C CRITICAL, M MAJOR, Mi MINOR, N NIT
 - Breaking escalations: [list or "none"]
 - Proceeding to Pass 2
 ```
@@ -110,7 +110,7 @@ Throughout the audit:
 ```
 ✅ CHECKPOINT: Pass 2 — Leakage/Types/Deps complete
 - Findings: N (X [VULN], Y [CONCERN])
-- By severity: C Critical, H High, M Medium, L Low
+- By severity: C CRITICAL, M MAJOR, Mi MINOR, N NIT
 - Breaking escalations: [list or "none"]
 - Proceeding to Pass 3
 ```
@@ -166,13 +166,13 @@ Fix: <recommended remediation>
 Where:
 
 - **STATUS**: `[VULN]` = confirmed vulnerability, `[CONCERN]` = risky pattern, `[SAFE]` = explicitly checked safe area
-- **SEVERITY**: `Critical` | `High` | `Medium` | `Low`
+- **SEVERITY**: `CRITICAL` | `MAJOR` | `MINOR` | `NIT` (same scale as `/pkg-review` — see `.ai/rules/agent-execution.md § Severity`)
 - **CATEGORY**: `Input Validation`, `Injection`, `Prototype Pollution`, `Information Leakage`, `Type Safety`, `Dependency`, `Browser`, `Server/API`, or similar
 
 When a finding is fixed during the audit, annotate it inline:
 
 ```
-[VULN] [High] [Injection] File: src/foo.ts:42 [DONE]
+[VULN] [MAJOR] [Injection] File: src/foo.ts:42 [DONE]
 Finding: ...
 Fix: ...
 ```
@@ -194,8 +194,8 @@ End with an **Audit Summary** section using **exactly this format**:
 
 ### Finding Counts
 
-| Status | Critical | High | Medium | Low | Total |
-|--------|----------|------|--------|-----|-------|
+| Status | CRITICAL | MAJOR | MINOR | NIT | Total |
+|--------|----------|-------|-------|-----|-------|
 | [VULN] | N | N | N | N | N |
 | [CONCERN] | N | N | N | N | N |
 | [DONE] | N | N | N | N | N |
@@ -215,12 +215,12 @@ End with an **Audit Summary** section using **exactly this format**:
 
 **Rating rules:**
 
-| Condition                                  | Rating    |
-| ------------------------------------------ | --------- |
-| Any unfixed Critical                       | 🔴 High   |
-| Unfixed High, no Critical                  | 🟡 Medium |
-| Only Medium/Low concerns, no Critical/High | 🟢 Low    |
-| No attack surface; no meaningful risks     | 🔵 N/A    |
+| Condition                                   | Rating    |
+| -------------------------------------------- | --------- |
+| Any unfixed CRITICAL                         | 🔴 High   |
+| Unfixed MAJOR, no CRITICAL                   | 🟡 Medium |
+| Only MINOR/NIT concerns, no CRITICAL/MAJOR   | 🟢 Low    |
+| No attack surface; no meaningful risks       | 🔵 N/A    |
 
 ## 8. Quick reference — execution flow
 

@@ -54,9 +54,11 @@ Use the format: `feat(courier): add retry logic`
 
 ## Run artifact hygiene
 
-`.ai/workflows/runs/` accumulates `plan.md`, `progress.md`, `review.md`, and `security.md` files across packages and cycles. Stale artifacts from old cycles can mislead agents that load prior context.
+`.ai/workflows/runs/` accumulates `state.json`, `plan.md`, `progress.md`, `review.md`, and `security.md` files across packages and cycles. Stale artifacts from old cycles can mislead agents that load prior context. Most of the time this is a non-issue: agents overwrite artifacts within a cycle (see `.ai/rules/agent-execution.md § Run artifacts`), so a fresh `/pkg-workflow` invocation self-corrects without deleting anything.
 
-**When to clean:** before starting a fresh workflow cycle for a package that has old run artifacts.
+**Only delete if stale context is actually causing confusion** (e.g. resuming logic in `pkg-workflow.md § Resuming an interrupted run` misfires because `progress.md`/`state.json` describe a different, older effort). This directory is gitignored — deleting is **irreversible**, there is no git history to recover from.
+
+**Before running either command below, state what you're about to delete and ask the user to confirm.** Do not run it as a routine, unprompted "cleanup" step.
 
 ```bash
 # Remove all run artifacts for a specific package
@@ -65,8 +67,6 @@ rm -rf .ai/workflows/runs/<name>/
 # Remove all run artifacts for all packages
 rm -rf .ai/workflows/runs/*/
 ```
-
-Agents overwrite artifacts within a cycle (see `.ai/rules/agent-execution.md § Run artifacts`), but they do not clean up artifacts from prior cycles automatically.
 
 ## Dead-dep hygiene
 
