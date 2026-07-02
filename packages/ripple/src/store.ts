@@ -7,6 +7,19 @@ import { batch } from './scheduling';
 import { SignalImpl } from './signal';
 import { IS_SIGNAL, IS_STORE } from './symbols';
 
+// ── Key safety ────────────────────────────────────────────────────────────────
+
+/**
+ * Rejects prototype-pollution-prone top-level keys. Called both as an upfront
+ * validation pass (patch/replace — so a later unsafe key never leaves earlier,
+ * safe keys partially applied) and defensively inside applyTopLevelChange_.
+ */
+const assertSafeKey = (key: string): void => {
+  if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    throw new RippleInvalidStoreError(`Unsafe key "${key}" rejected to prevent prototype pollution.`);
+  }
+};
+
 // ── Nested path helpers ───────────────────────────────────────────────────────
 
 const getNestedValue = (obj: unknown, parts: string[]): unknown => {
@@ -185,9 +198,7 @@ export class StoreImpl<T extends object> implements Store<T> {
    * R4: No batch() wrapper — callers that need atomicity must wrap themselves.
    */
   applyTopLevelChange_(key: string, newValue: unknown): void {
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
-      throw new RippleInvalidStoreError(`Unsafe key "${key}" rejected to prevent prototype pollution.`);
-    }
+    assertSafeKey(key);
 
     const current = (this.current_ as Record<string, unknown>)[key];
 
@@ -234,6 +245,11 @@ export class StoreImpl<T extends object> implements Store<T> {
 
     if (keys.length === 0) return;
 
+    // Validate every key before mutating any — a key rejected mid-loop must not
+    // leave earlier, safe keys partially applied (and un-notified — see batch()'s
+    // error path, which clears the pending flush queue rather than replaying it).
+    for (const key of keys) assertSafeKey(key);
+
     batch(() => {
       for (const key of keys) {
         this.applyTopLevelChange_(key, (partial as Record<string, unknown>)[key]);
@@ -249,14 +265,18 @@ export class StoreImpl<T extends object> implements Store<T> {
 
     if (next === snapshot) return;
 
+    const newKeys = Object.keys(next).filter((key) => !Object.hasOwn(snapshot as Record<string, unknown>, key));
+
+    // Same upfront-validation rationale as patch() above.
+    for (const key of Object.keys(snapshot)) assertSafeKey(key);
+    for (const key of newKeys) assertSafeKey(key);
+
     batch(() => {
       for (const key of Object.keys(snapshot)) {
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
 
-      for (const key of Object.keys(next)) {
-        if (Object.hasOwn(snapshot as Record<string, unknown>, key)) continue;
-
+      for (const key of newKeys) {
         this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
       }
     });
@@ -377,6 +397,10 @@ export const store = <T extends object>(initial: T, options?: { name?: string })
   if (typeof initial !== 'object' || initial === null || Array.isArray(initial)) {
     throw new RippleInvalidStoreError('store() requires a plain object initial state.');
   }
+
+  // Same guard as patch()/replace() — reject an unsafe top-level key (e.g. a real
+  // own "__proto__" property from JSON.parse) before it ever enters store state.
+  for (const key of Object.keys(initial)) assertSafeKey(key);
 
   return new StoreImpl(initial, options?.name) as unknown as Store<T>;
 };

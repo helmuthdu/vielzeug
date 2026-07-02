@@ -1,4 +1,4 @@
-import { effect, isComputed, isReactive, resource, signal } from '../';
+import { effect, isComputed, isReactive, resource, scope, signal } from '../';
 
 describe('resource', () => {
   it('starts with status=loading before resolving', () => {
@@ -131,6 +131,38 @@ describe('resource', () => {
 
     expect(ac.name).toBeUndefined();
     ac.dispose();
+  });
+
+  it('auto-disposes when created inside scope.run() — matches computed()/effect() lifecycle', () => {
+    const s = scope();
+    let ac!: ReturnType<typeof resource<number>>;
+
+    s.run(() => {
+      ac = resource(() => Promise.resolve(1));
+    });
+
+    expect(ac.disposed).toBe(false);
+    s.dispose();
+    expect(ac.disposed).toBe(true);
+  });
+
+  it('auto-disposes when created inside an effect — effect owns the lifetime', () => {
+    const trigger = signal(0);
+    let ac!: ReturnType<typeof resource<number>>;
+
+    const stop = effect(() => {
+      void trigger.value;
+      ac = resource(() => Promise.resolve(1));
+    });
+
+    expect(ac.disposed).toBe(false);
+
+    const first = ac;
+
+    trigger.value = 1; // effect re-runs — cleanup disposes the previous run's resource
+    expect(first.disposed).toBe(true);
+    stop.dispose();
+    expect(ac.disposed).toBe(true);
   });
 });
 

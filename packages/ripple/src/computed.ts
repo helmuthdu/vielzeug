@@ -8,7 +8,7 @@ import { RippleComputedCycleError } from './errors';
 import { ComputedBase } from './reactive-base';
 import { SubscriptionImpl } from './subscription';
 import { UNINITIALIZED } from './symbols';
-import { getScopeCleanups, getRevision, getTracking, trackSource, withTracking } from './tracking';
+import { autoRegisterDisposal, getRevision, trackSource, withTracking } from './tracking';
 
 export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
   private value_: T | typeof UNINITIALIZED;
@@ -240,15 +240,8 @@ export class ComputedImpl<T> extends ComputedBase<T> implements Computed<T> {
 
 export const computed = <T>(compute: () => T, options?: ComputedOptions<T>): Computed<T> => {
   const comp = new ComputedImpl(compute, options);
-  const ctx = getTracking();
 
-  // Auto-dispose when created inside an effect — effect owns the lifetime.
-  if (ctx?.kind === 'effect') {
-    ctx.cleanups.push(() => comp.dispose());
-  } else {
-    // Auto-dispose when created inside a scope — scope owns the lifetime.
-    getScopeCleanups()?.push(() => comp.dispose());
-  }
+  autoRegisterDisposal(() => comp.dispose());
 
   return comp;
 };

@@ -1,33 +1,3 @@
----
-description: Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
-package: ripple
-category: state
-keywords: [reactive, signals, computed, effects, store, observable, fine-grained, watch, batch, scope, lens, async]
-related: [ore, forge, herald]
-exports:
-  [
-    signal,
-    computed,
-    effect,
-    effectAsync,
-    asyncComputed,
-    watch,
-    batch,
-    store,
-    storeWithHistory,
-    untrack,
-    scope,
-    asyncScope,
-    onCleanup,
-    readonly,
-    isSignal,
-    isComputed,
-    isStore,
-    getSignalName,
-    getDevToolsHook,
-  ]
----
-
 # @vielzeug/ripple
 
 > Tiny, type-safe reactive primitives — signals, effects, computed values, and object stores. Zero dependencies, works everywhere.
@@ -39,7 +9,7 @@ exports:
 
 **Package:** `@vielzeug/ripple` &nbsp;·&nbsp; **Category:** State
 
-**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `asyncComputed`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `asyncScope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
+**Key exports:** `signal`, `computed`, `effect`, `effectAsync`, `resource`, `watch`, `batch`, `store`, `storeWithHistory`, `untrack`, `scope`, `onCleanup`, `readonly`, `isSignal`, `isComputed`, `isStore`
 
 **When to use:** Fine-grained reactivity without a framework. Powers Ore templates. Works in any TS/JS environment including Node, Deno, and SSR.
 
@@ -66,7 +36,7 @@ yarn add @vielzeug/ripple
 | --------------------------- | ------------------------------------------------------------------------ |
 | `@vielzeug/ripple`          | Core primitives and types                                                |
 | `@vielzeug/ripple/devtools` | `installDevTools`, `debugEffect` — dev-only, tree-shaken from production |
-| `@vielzeug/ripple/ssr`      | No-op stubs for server-side rendering                                    |
+| `@vielzeug/ripple/ssr`      | SSR tracking isolation helpers (`setTrackingProvider`, `createAsyncProvider`, `withProvider`, `runWithProvider`). Node.js only — do not import in browser builds. |
 
 ## Quick Start
 
@@ -75,7 +45,7 @@ import { signal, computed, effect, store, watch, batch } from '@vielzeug/ripple'
 
 // Signals
 const count = signal(0);
-const doubled = count.map((n) => n * 2); // combinator — returns OwnedReactive
+const doubled = computed(() => count.value * 2); // Computed<number>
 
 const sub = effect(() => {
   console.log('doubled:', doubled.value); // re-runs when count changes
@@ -95,19 +65,19 @@ console.log(cart.value); // { items: 3, label: 'empty' }
 cart.replace((s) => ({ ...s, label: 'checkout' })); // replace entire state via fn
 cart.reset();
 
-// Effect options — scheduler, name, custom scheduler fn
+// Effect options — scheduler, name
 const stop = effect(() => console.log('items:', items.value), { scheduler: 'microtask', name: 'cart-logger' });
 stop.dispose();
 
-// Async computed — tracks deps and re-runs on change
-import { asyncComputed } from '@vielzeug/ripple';
+// Async resource — tracks deps and re-runs on change
+import { resource } from '@vielzeug/ripple';
 
 const userId = signal('u1');
-const userState = asyncComputed(async (signal) => {
+const userState = resource(async (signal) => {
   const id = userId.value; // tracked dep
   return fetch(`/users/${id}`, { signal }).then((r) => r.json());
 });
-// userState.value → { status: 'idle' | 'pending' | 'fulfilled' | 'error', value, error }
+// userState.value → { status: 'loading' | 'ready' | 'error', data, error }
 
 // Store with undo/redo history
 import { storeWithHistory } from '@vielzeug/ripple';

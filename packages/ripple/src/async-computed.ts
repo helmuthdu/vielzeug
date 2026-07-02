@@ -3,6 +3,7 @@ import type { Computed, ResourceOptions, ResourceState } from './types';
 import { effect } from './effect';
 import { signal } from './signal';
 import { IS_COMPUTED, IS_SIGNAL } from './symbols';
+import { autoRegisterDisposal } from './tracking';
 
 /**
  * Creates a reactive async resource that emits a `ResourceState<T>` discriminated union.
@@ -10,6 +11,10 @@ import { IS_COMPUTED, IS_SIGNAL } from './symbols';
  * Dependencies are tracked synchronously in the factory (before the first `await`).
  * The factory receives an `AbortSignal` that fires when dependencies change or
  * the resource is disposed, cancelling any in-flight work.
+ *
+ * If `resource()` is created inside an active `effect()` or `scope.run()` context,
+ * it is automatically registered for cleanup and disposed with that context —
+ * matching `computed()`'s auto-disposal behavior.
  *
  * @example
  * ```ts
@@ -79,6 +84,8 @@ export const resource = <T>(
     stop.dispose();
     state.dispose();
   };
+
+  autoRegisterDisposal(dispose);
 
   return {
     dispose,

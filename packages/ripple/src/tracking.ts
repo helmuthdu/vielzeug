@@ -44,6 +44,37 @@ export type TrackingCtx = {
     }
 );
 
+// ── Scheduling state ────────────────────────────────────────────────────────
+//
+// Colocated here (rather than in scheduling.ts) so it can be a field of
+// ExecutionContext without a runtime circular import between tracking.ts and
+// scheduling.ts — scheduling.ts only needs `getSchedulingState()` and the
+// `SchedulingState` type (type-only import, erased at compile time).
+//
+// Isolating this per-request (via the SSR hook) closes the documented gap where
+// concurrent SSR requests share one flush queue: `batchDepth`, `pendingSubscribers`,
+// and the dirty-computed sets are the only scheduling fields that can observably
+// leak across requests (they persist across `await` boundaries via `batch()`
+// spanning shared module-level signals). The propagation epoch/stack in
+// scheduling.ts stay module-level scratch memory — they're only touched within a
+// single synchronous call stack, which JS's run-to-completion model already isolates.
+
+export type SchedulingState = {
+  activeDirty: 'a' | 'b';
+  batchDepth: number;
+  readonly dirtyWithEffectSubsA: Set<ComputedBase<unknown>>;
+  readonly dirtyWithEffectSubsB: Set<ComputedBase<unknown>>;
+  readonly pendingSubscribers: Set<Subscriber>;
+};
+
+export const createSchedulingState = (): SchedulingState => ({
+  activeDirty: 'a',
+  batchDepth: 0,
+  dirtyWithEffectSubsA: new Set(),
+  dirtyWithEffectSubsB: new Set(),
+  pendingSubscribers: new Set(),
+});
+
 // ── ExecutionContext ──────────────────────────────────────────────────────────
 //
 // Unified context replaces two separate globals (_tracking and _scopeStack).
@@ -52,6 +83,7 @@ export type TrackingCtx = {
 // where scope cleanups were always a process-wide singleton even with the hook.
 
 export type ExecutionContext = {
+  readonly scheduling: SchedulingState;
   readonly scopeCleanups: CleanupFn[] | null;
   readonly tracking: TrackingCtx | null;
 };
@@ -61,10 +93,16 @@ export type ContextHook = {
   run<T>(ctx: ExecutionContext, fn: () => T): T;
 };
 
-let _ctx: ExecutionContext = { scopeCleanups: null, tracking: null };
+let _ctx: ExecutionContext = { scheduling: createSchedulingState(), scopeCleanups: null, tracking: null };
 let _hook: ContextHook | null = null;
 
 const getCtx = (): ExecutionContext => (_hook !== null ? _hook.get() : _ctx);
+
+/** Returns the scheduling-state bucket for the active execution context (module-level singleton outside SSR). */
+export const getSchedulingState = (): SchedulingState => getCtx().scheduling;
+
+/** `true` once an SSR context hook is installed — scheduling state is then request-isolated. */
+export const hasContextHook = (): boolean => _hook !== null;
 
 // ── Tracking ──────────────────────────────────────────────────────────────────
 
@@ -117,6 +155,27 @@ export const withScopeCleanups = <T>(cleanups: CleanupFn[], fn: () => T): T => {
  * Returns the cleanup array of the innermost active scope, or `null` if not inside a scope.
  */
 export const getScopeCleanups = (): CleanupFn[] | null => getCtx().scopeCleanups;
+
+// ── Auto-disposal ───────────────────────────────────────────────────────────────
+//
+// Shared by every primitive that ties its own lifetime to the context it was
+// created in (computed(), resource()): dispose when the enclosing effect re-runs
+// or disposes, or — if not inside an effect — when the enclosing scope disposes.
+// No-op if neither is active (the caller owns disposal directly).
+
+/**
+ * Registers `dispose` to run when the enclosing effect re-runs/disposes, or —
+ * if there is no enclosing effect — when the enclosing scope disposes.
+ */
+export const autoRegisterDisposal = (dispose: CleanupFn): void => {
+  const ctx = getTracking();
+
+  if (ctx?.kind === 'effect') {
+    ctx.cleanups.push(dispose);
+  } else {
+    getScopeCleanups()?.push(dispose);
+  }
+};
 
 // ── Context hook (for SSR) ────────────────────────────────────────────────────
 

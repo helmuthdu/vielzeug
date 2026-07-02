@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(ripple): fix store patch/replace atomicity, resource() auto-dispose, SSR scheduling isolation, and add watch() multi-source support",
+      "type": "minor",
+      "packageName": "@vielzeug/ripple"
+    }
+  ],
+  "packageName": "@vielzeug/ripple",
+  "email": "helmuthdu@gmail.com"
+}

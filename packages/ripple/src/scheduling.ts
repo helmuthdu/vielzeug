@@ -4,24 +4,17 @@ import type { Subscriber } from './types';
 import { runAll } from './_error-utils';
 import { warn } from './_warn';
 import { RippleInfiniteLoopError } from './errors';
+import { getSchedulingState, hasContextHook, type SchedulingState } from './tracking';
 
 export const DEFAULT_MAX_ITERATIONS = 100;
 
-// NOTE: These are module-level singletons. In SSR environments with concurrent requests,
-// signal writes from different requests share the same flush queue. The /ripple/ssr
-// sub-path isolates reactive *tracking* per request via AsyncLocalStorage, but does NOT
-// isolate the flush queue. Use one Node.js worker (or isolate) per concurrent request.
-let batchDepth = 0;
+// batchDepth, pendingSubscribers, and the dirty-computed sets live in `SchedulingState`
+// (see tracking.ts) rather than as module-level variables — this lets the /ripple/ssr
+// sub-path isolate the flush queue per request (via the same AsyncLocalStorage-backed
+// context hook that already isolates tracking), closing the gap where concurrent SSR
+// requests previously shared one flush queue. Outside SSR (no hook installed), this is
+// a single module-level singleton with identical behavior and cost to before.
 let ssrWarnFired = false;
-const pendingSubscribers = new Set<Subscriber>();
-
-// Two sets are used for dirtyWithEffectSubs to avoid array allocation in the hot path.
-// While we iterate over one set ("toProcess"), new dirty nodes accumulate in the other
-// ("next"). At the start of each pass we swap the active set, clear the idle one, and
-// iterate the snapshot — zero allocations per iteration.
-const _dirtyWithEffectSubsA = new Set<ComputedBase<unknown>>();
-const _dirtyWithEffectSubsB = new Set<ComputedBase<unknown>>();
-let dirtyWithEffectSubs = _dirtyWithEffectSubsA;
 
 // ── F1: Simplified flush — no topological sort ─────────────────────────────
 //
@@ -46,23 +39,29 @@ let dirtyWithEffectSubs = _dirtyWithEffectSubsA;
 // Computeds without direct effect subs (pure lazy nodes) are still pulled
 // lazily when an effect reads them during re-run.
 
-// Hoisted to module level to avoid allocations on every signal write in the hot path.
-// Epoch-based visited marking — _propEpoch is incremented on each propagation call.
-// Each computed node stores its lastPropEpoch_; if it matches the current epoch it was
-// already visited this propagation. No Set needed — no cleanup required, no corruption
-// risk if an exception interrupts mid-traversal.
+// Module-level scratch state — safe to share even under SSR isolation. Both are only
+// touched within a single synchronous call stack (no `await` inside propagateDirty /
+// recomputeWithEffectSubs / flushEffects), which JS's run-to-completion model already
+// isolates; they never carry information across two separate top-level signal writes.
 let _propEpoch = 0;
 const _propagateStack: ComputedBase<unknown>[] = [];
 
-const propagateDirty = (node: {
-  computedSubs(): Generator<ComputedBase<unknown>>;
-  effectSubs(): ReadonlySet<Subscriber>;
-}): void => {
+/** Returns (and possibly swaps) the currently-active dirty-with-effect-subs set. */
+const activeDirtySet = (s: SchedulingState): Set<ComputedBase<unknown>> =>
+  s.activeDirty === 'a' ? s.dirtyWithEffectSubsA : s.dirtyWithEffectSubsB;
+
+const propagateDirty = (
+  s: SchedulingState,
+  node: {
+    computedSubs(): Generator<ComputedBase<unknown>>;
+    effectSubs(): ReadonlySet<Subscriber>;
+  },
+): void => {
   const epoch = ++_propEpoch;
 
   // Queue direct effect subs of the changed node
   for (const sub of node.effectSubs()) {
-    pendingSubscribers.add(sub);
+    s.pendingSubscribers.add(sub);
   }
 
   for (const c of node.computedSubs()) {
@@ -82,7 +81,7 @@ const propagateDirty = (node: {
       // If this computed has effect subs, defer recompute to the pull phase.
       // We cannot queue them immediately because the computed might not change.
       if (c.effectSubs().size > 0) {
-        dirtyWithEffectSubs.add(c);
+        activeDirtySet(s).add(c);
       }
 
       for (const downstream of c.computedSubs()) {
@@ -94,16 +93,16 @@ const propagateDirty = (node: {
   }
 };
 
-const recomputeWithEffectSubs = (): void => {
+const recomputeWithEffectSubs = (s: SchedulingState): void => {
   // Iterate until stable — recomputing one computed may dirty others.
   // Set-swap pattern: swap active/idle sets each pass so new dirty nodes accumulate
   // in the idle set while we iterate the current batch — zero array allocations.
-  while (dirtyWithEffectSubs.size > 0) {
-    const toProcess = dirtyWithEffectSubs;
+  while (activeDirtySet(s).size > 0) {
+    const toProcess = activeDirtySet(s);
 
     // Swap: new dirty nodes from this iteration go into the other set
-    dirtyWithEffectSubs = dirtyWithEffectSubs === _dirtyWithEffectSubsA ? _dirtyWithEffectSubsB : _dirtyWithEffectSubsA;
-    dirtyWithEffectSubs.clear();
+    s.activeDirty = s.activeDirty === 'a' ? 'b' : 'a';
+    activeDirtySet(s).clear();
 
     for (const c of toProcess) {
       if (!c.hasSubscribers()) continue;
@@ -114,13 +113,13 @@ const recomputeWithEffectSubs = (): void => {
 
       // Value changed — queue effect subs
       for (const sub of c.effectSubs()) {
-        pendingSubscribers.add(sub);
+        s.pendingSubscribers.add(sub);
       }
 
       // Downstream computeds may now need recomputing too
       for (const downstream of c.computedSubs()) {
         if (downstream.markDirty() && downstream.effectSubs().size > 0) {
-          dirtyWithEffectSubs.add(downstream);
+          activeDirtySet(s).add(downstream);
         }
       }
     }
@@ -129,26 +128,28 @@ const recomputeWithEffectSubs = (): void => {
   }
 };
 
-const flushEffects = (): void => {
+const flushEffects = (s: SchedulingState): void => {
   let iterations = 0;
 
-  while (pendingSubscribers.size > 0 || dirtyWithEffectSubs.size > 0) {
+  while (s.pendingSubscribers.size > 0 || activeDirtySet(s).size > 0) {
     if (++iterations > DEFAULT_MAX_ITERATIONS) {
       throw new RippleInfiniteLoopError(`infinite flush loop (> ${DEFAULT_MAX_ITERATIONS} iterations)`);
     }
 
-    if (dirtyWithEffectSubs.size > 0) recomputeWithEffectSubs();
+    if (activeDirtySet(s).size > 0) recomputeWithEffectSubs(s);
 
-    if (pendingSubscribers.size === 0) continue;
+    if (s.pendingSubscribers.size === 0) continue;
 
-    const subscribersToRun = [...pendingSubscribers];
+    const subscribersToRun = [...s.pendingSubscribers];
 
-    pendingSubscribers.clear();
+    s.pendingSubscribers.clear();
     runAll(subscribersToRun, 'subscriber errors');
   }
 };
 
-// Fire the warning once per module load in environments that look like Node.js.
+// Fire the warning once per module load in environments that look like Node.js,
+// and only when no SSR context hook is installed (once installed, the flush queue
+// is genuinely request-isolated via SchedulingState — see tracking.ts).
 // window-check is unreliable (jsdom sets window in tests); check for process.versions instead.
 // Access entirely via globalThis to avoid requiring @types/node in downstream tsconfigs.
 const isNodeLike = (globalThis as { process?: { versions?: unknown } }).process?.versions != null;
@@ -156,44 +157,48 @@ const isNodeLike = (globalThis as { process?: { versions?: unknown } }).process?
 export const notifyNodeChange = (node: ReactiveBase<unknown>): void => {
   if (!node.hasSubscribers()) return;
 
-  if (!ssrWarnFired && isNodeLike) {
+  if (!ssrWarnFired && isNodeLike && !hasContextHook()) {
     ssrWarnFired = true;
     warn(
       'Signal updated in a Node.js-like environment. The module-level flush queue is shared across concurrent requests ' +
-        '— use per-request worker isolation or the @vielzeug/ripple/ssr sub-path for tracking isolation.',
+        '— use per-request worker isolation or the @vielzeug/ripple/ssr sub-path for request-isolated scheduling.',
     );
   }
 
-  propagateDirty(node);
+  const s = getSchedulingState();
 
-  if (batchDepth === 0) flushEffects();
+  propagateDirty(s, node);
+
+  if (s.batchDepth === 0) flushEffects(s);
 };
 
 export const batch = <T>(fn: () => T): T => {
-  batchDepth++;
+  const s = getSchedulingState();
+
+  s.batchDepth++;
 
   let result: T;
 
   try {
     result = fn();
   } catch (e) {
-    batchDepth--;
+    s.batchDepth--;
 
     // Outermost batch: clear the pending flush queue on body error.
     // Leaving stale subscribers in the queue would flush them on the next unrelated
     // signal write, surfacing errors in unexpected contexts.
-    if (batchDepth === 0) {
-      pendingSubscribers.clear();
-      _dirtyWithEffectSubsA.clear();
-      _dirtyWithEffectSubsB.clear();
+    if (s.batchDepth === 0) {
+      s.pendingSubscribers.clear();
+      s.dirtyWithEffectSubsA.clear();
+      s.dirtyWithEffectSubsB.clear();
     }
 
     throw e;
   }
 
-  batchDepth--;
+  s.batchDepth--;
 
-  if (batchDepth === 0) flushEffects();
+  if (s.batchDepth === 0) flushEffects(s);
 
   return result;
 };

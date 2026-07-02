@@ -18,7 +18,7 @@
  */
 
 import { RippleEnvironmentError } from '../errors';
-import { _installContextHook, type ContextHook, type ExecutionContext } from '../tracking';
+import { _installContextHook, createSchedulingState, type ContextHook, type ExecutionContext } from '../tracking';
 
 // eslint-disable-next-line no-var
 declare var require: (id: string) => unknown;
@@ -30,8 +30,24 @@ interface AsyncLocalStorageType<T> {
 
 // ── Public interfaces ─────────────────────────────────────────────────────────
 
-/** The clean starting context for each request — no tracking, no scope. */
-const EMPTY_CTX: ExecutionContext = { scopeCleanups: null, tracking: null };
+/**
+ * The clean starting context used as a fallback when no request is active
+ * (e.g. a signal write outside any `runWithProvider`/`withProvider` call) —
+ * a single shared instance is fine here since there's no concurrent request to isolate from.
+ */
+const EMPTY_CTX: ExecutionContext = { scheduling: createSchedulingState(), scopeCleanups: null, tracking: null };
+
+/**
+ * Builds a fresh, isolated starting context for one request — no tracking, no scope,
+ * and its own `SchedulingState` so this request's `batch()`/flush queue never shares
+ * state with a concurrently-running request. Must be called anew per `run()` — reusing
+ * a single context object across requests would defeat scheduling isolation.
+ */
+const freshRequestContext = (): ExecutionContext => ({
+  scheduling: createSchedulingState(),
+  scopeCleanups: null,
+  tracking: null,
+});
 
 export interface TrackingProvider {
   get(): ExecutionContext;
@@ -100,7 +116,8 @@ export const createAsyncProvider = (): TrackingProvider => {
  * const html = await runWithProvider(provider, () => renderToString(App));
  * ```
  */
-export const runWithProvider = <T>(provider: TrackingProvider, fn: () => T): T => provider.run(EMPTY_CTX, fn);
+export const runWithProvider = <T>(provider: TrackingProvider, fn: () => T): T =>
+  provider.run(freshRequestContext(), fn);
 
 // ── Convenience: run once without installing a persistent provider ─────────────
 
@@ -116,7 +133,7 @@ export const withProvider = <T>(provider: TrackingProvider, fn: () => T): T => {
   const prevHook = _installContextHook(syncHook);
 
   try {
-    return provider.run(EMPTY_CTX, fn);
+    return provider.run(freshRequestContext(), fn);
   } finally {
     _currentProvider = prevProvider;
     _installContextHook(prevHook);

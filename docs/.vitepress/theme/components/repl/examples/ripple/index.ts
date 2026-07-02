@@ -11,6 +11,7 @@ import { storeHistoryExample } from './store-history';
 import { storeLensesExample } from './store-lenses';
 import { storeTodoListExample } from './store-todo-list';
 import { watchAndSubscribeExample } from './watch-and-subscribe';
+import { watchMultiSourceExample } from './watch-multi-source';
 import { watchOnceExample } from './watch-once';
 
 export const rippleExamples = {
@@ -27,5 +28,6 @@ export const rippleExamples = {
   'store-lenses': storeLensesExample,
   'store-todo-list': storeTodoListExample,
   'watch-and-subscribe': watchAndSubscribeExample,
+  'watch-multi-source': watchMultiSourceExample,
   'watch-once': watchOnceExample,
 };

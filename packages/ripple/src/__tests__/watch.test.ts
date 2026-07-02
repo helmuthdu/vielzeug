@@ -375,6 +375,159 @@ describe('watch — once option', () => {
   });
 });
 
+describe('watch — function-source form', () => {
+  it('tracks multiple signals read inside the function and does not fire on creation', () => {
+    const a = signal(1);
+    const b = signal(2);
+    const calls: Array<[number, number | undefined]> = [];
+    const stop = watch(
+      () => a.value + b.value,
+      (sum, prev) => {
+        calls.push([sum, prev]);
+      },
+    );
+
+    expect(calls).toEqual([]);
+    a.value = 10;
+    expect(calls).toEqual([[12, 3]]);
+    b.value = 20;
+    expect(calls).toEqual([
+      [12, 3],
+      [30, 12],
+    ]);
+    stop.dispose();
+  });
+
+  it('does not fire when the tracked dependency changes but the derived value is equal', () => {
+    const a = signal(1);
+    const calls: number[] = [];
+    const stop = watch(
+      () => a.value % 2,
+      (v) => {
+        calls.push(v);
+      },
+    );
+
+    a.value = 3; // 3 % 2 === 1 — same as initial 1 % 2 === 1
+    expect(calls).toEqual([]);
+    a.value = 4; // 4 % 2 === 0 — changed
+    expect(calls).toEqual([0]);
+    stop.dispose();
+  });
+
+  it('respects a custom equals option', () => {
+    const a = signal({ x: 1 });
+    const listener = vi.fn();
+    const stop = watch(() => a.value, listener, { equals: (x, y) => x.x === y.x });
+
+    a.value = { x: 1 };
+    expect(listener).not.toHaveBeenCalled();
+    a.value = { x: 2 };
+    expect(listener).toHaveBeenCalledTimes(1);
+    stop.dispose();
+  });
+
+  it('immediate: true fires immediately with prev === undefined, then tracks changes', () => {
+    const a = signal(1);
+    const b = signal(2);
+    const calls: Array<[number, number | undefined]> = [];
+    const stop = watch(
+      () => a.value + b.value,
+      (sum, prev) => {
+        calls.push([sum, prev]);
+      },
+      { immediate: true },
+    );
+
+    expect(calls).toEqual([[3, undefined]]);
+    a.value = 10;
+    expect(calls).toEqual([
+      [3, undefined],
+      [12, 3],
+    ]);
+    stop.dispose();
+  });
+
+  it('once: true fires exactly once then auto-disposes', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const calls: number[] = [];
+    const stop = watch(
+      () => a.value + b.value,
+      (v) => {
+        calls.push(v);
+      },
+      { once: true },
+    );
+
+    a.value = 1;
+    b.value = 1;
+    expect(calls).toEqual([1]);
+    expect(stop.disposed).toBe(true);
+  });
+
+  it('immediate: true + once: true fires immediately then auto-disposes', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const calls: number[] = [];
+    const stop = watch(
+      () => a.value + b.value,
+      (v) => {
+        calls.push(v);
+      },
+      { immediate: true, once: true },
+    );
+
+    a.value = 1;
+    expect(calls).toEqual([0]);
+    expect(stop.disposed).toBe(true);
+  });
+
+  it('does not fire after dispose', () => {
+    const a = signal(0);
+    const b = signal(0);
+    const calls: number[] = [];
+    const stop = watch(
+      () => a.value + b.value,
+      (v) => {
+        calls.push(v);
+      },
+    );
+
+    a.value = 1;
+    stop.dispose();
+    b.value = 1;
+    expect(calls).toEqual([1]);
+  });
+
+  it('runs callback cleanup on dispose, same as the single-source form', () => {
+    const a = signal(0);
+    const cleanups: number[] = [];
+    const stop = watch(
+      () => a.value,
+      (v) => () => cleanups.push(v),
+    );
+
+    a.value = 1;
+    stop.dispose();
+    expect(cleanups).toEqual([1]);
+  });
+
+  it('throws RippleInvalidCleanupError when callback returns a non-function value', () => {
+    const a = signal(1);
+
+    // @ts-expect-error intentional
+    watch(
+      () => a.value,
+      () => 42,
+    );
+
+    expect(() => {
+      a.value = 2;
+    }).toThrow(RippleInvalidCleanupError);
+  });
+});
+
 describe('watch — subscribe-based semantics', () => {
   it('fires callback when source value changes, not on creation', () => {
     const n = signal(0);

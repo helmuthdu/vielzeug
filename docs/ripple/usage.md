@@ -254,6 +254,23 @@ watch(nameSignal, (name, prev) => console.log('name:', prev, '→', name));
 nameSignal.dispose();
 ```
 
+### Watching Multiple Sources
+
+Pass a function instead of a single `Readable<T>` to track every signal it reads — no intermediate `computed()` node needed:
+
+```ts
+const firstName = signal('Ada');
+const lastName = signal('Lovelace');
+
+const sub = watch(
+  () => `${firstName.value} ${lastName.value}`,
+  (fullName, prev) => console.log(`${prev} → ${fullName}`),
+);
+
+lastName.value = 'King'; // → "Ada Lovelace → Ada King"
+sub.dispose();
+```
+
 ## `batch` (Signals)
 
 `batch()` defers all signal notifications until the callback returns, then
@@ -278,8 +295,9 @@ batch(() => {
 // fires is 2 (one flush for both)
 ```
 
-If the callback throws, pending notifications are still flushed after the error;
-the original error is re-thrown with the flush errors suppressed.
+If the callback throws, the pending flush queue is discarded (not flushed) — writes
+made before the throw are not rolled back, but no effect observes them. The original
+error propagates as-is.
 
 ## `scope`
 
@@ -387,6 +405,16 @@ user.dispose();
 `resource` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
 :::
 
+Like `computed()`, a `resource()` created inside an active `effect()` or `scope.run()` context is automatically registered for cleanup and disposed with that context:
+
+```ts
+effect(() => {
+  // Automatically disposed when the effect re-runs or is disposed
+  const user = resource(() => fetchUser(userId.value));
+  render(user.value);
+});
+```
+
 ## Store History / Time-Travel
 
 `storeWithHistory(initial, options?)` wraps a store with snapshot-based undo/redo. Mutations do **not** automatically push snapshots — call `.push()` (or `.pushNamed(label)`) explicitly after each logical change. History navigation with `undo()` and `redo()` never re-runs logic — it replays snapshots directly.
@@ -476,6 +504,13 @@ s.replace((current) => ({ ...current, count: current.count + 1 }));
 ```
 
 `replace()` is a no-op when `fn` returns the same object reference it received.
+
+::: tip patch() and replace() are atomic
+Every key is validated (including the prototype-pollution guard against `__proto__`,
+`constructor`, and `prototype`) before any key is applied. If any key is rejected, the
+call throws `RippleInvalidStoreError` and **none** of the keys are applied — no partial
+writes, no stray un-notified state changes.
+:::
 
 ### Resetting State
 

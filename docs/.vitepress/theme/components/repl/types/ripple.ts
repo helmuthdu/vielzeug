@@ -164,6 +164,7 @@ declare module '/ripple' {
   /** Reactive async resource — emits a ResourceState<T> discriminated union. */
   export function resource<T>(factory: (abortSignal: AbortSignal) => Promise<T>, options?: ResourceOptions<T>): Computed<ResourceState<T>>;
   export function watch<T>(source: Readable<T>, cb: (value: T, prev: T | undefined) => CleanupFn | void, options?: WatchOptions<T>): Subscription;
+  export function watch<T>(source: () => T, cb: (value: T, prev: T | undefined) => CleanupFn | void, options?: WatchOptions<T>): Subscription;
   export function batch<T>(fn: () => T): T;
   export function untrack<T>(fn: () => T): T;
   export function readonly<T>(source: Readable<T>): Readable<T>;

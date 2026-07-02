@@ -5,7 +5,7 @@ export const scopeSetupExample = {
 // Useful for grouping a set of reactive resources into one lifecycle unit.
 
 const temperature = signal(20, { name: 'temperature' })
-const unit = signal<'C' | 'F'>('C', { name: 'unit' })
+const unit = signal('C', { name: 'unit' })
 
 // Create a scope with inline setup
 const weatherScope = scope(() => {
@@ -31,5 +31,5 @@ unit.value = 'F'
 
 // Dispose the entire scope at once
 weatherScope.dispose()`,
-  name: 'Scope — setup shorthand & getSignalName',
+  name: 'Scope — setup shorthand',
 };

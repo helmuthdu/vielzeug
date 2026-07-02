@@ -210,9 +210,19 @@ function watch<T>(
   cb: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
 ): Subscription;
+function watch<T>(
+  source: () => T,
+  cb: (value: T, prev: T | undefined) => CleanupFn | void,
+  options?: WatchOptions<T>,
+): Subscription;
 ```
 
-Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). For derived slices, use `computed()` or `store.lens(path)` and pass the resulting signal. The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `RippleInvalidCleanupError`.
+Subscribes to value changes on `source`. Does **not** fire immediately by default (unlike `effect`). The callback may return a cleanup function called before the next invocation or on dispose; returning any other non-`undefined` value throws `RippleInvalidCleanupError`.
+
+`source` accepts two forms:
+
+- **A single `Readable<T>`** (signal, computed, store, or lens) — the common case.
+- **A function `() => T`** — tracks every reactive dependency read inside it (like `computed()`), so a multi-signal derived watch no longer needs an intermediate `computed()` node.
 
 ```ts
 // Plain watch
@@ -224,16 +234,21 @@ sub.dispose();
 const userStore = store({ name: 'Alice' });
 watch(userStore.lens('name'), (name) => console.log('name:', name));
 
-// Slice watch — computed
-const nameSig = computed(() => userStore.value.name);
-watch(nameSig, (name) => console.log('name:', name));
+// Function form — tracks every signal read inside, no intermediate computed() needed
+const a = signal(1);
+const b = signal(2);
+watch(
+  () => a.value + b.value,
+  (sum, prevSum) => console.log(`sum: ${prevSum} → ${sum}`),
+);
+a.value = 10; // fires — sum changed
 ```
 
 **Parameters**
 
 | Parameter           | Type                                                    | Description                                               |
 | ------------------- | ------------------------------------------------------- | --------------------------------------------------------- |
-| `source`            | `Readable<T>`                                     | Any signal, computed, store, or lens to watch             |
+| `source`            | `Readable<T> \| (() => T)`                              | A signal, computed, store, or lens to watch directly — or a function whose reactive reads are tracked (like `computed()`) |
 | `cb`                | `(value: T, prev: T \| undefined) => CleanupFn \| void` | Called on each change; may return a cleanup function      |
 | `options.immediate` | `boolean`                                               | Fire once immediately on subscription. Default `false`    |
 | `options.equals`    | `EqualityFn<T>`                                         | Custom equality for change detection. Default `Object.is` |
@@ -250,7 +265,7 @@ watch(nameSig, (name) => console.log('name:', name));
 function batch<T>(fn: () => T): T;
 ```
 
-Runs `fn` and defers all signal/store notifications until it returns, then flushes once. Nested `batch()` calls coalesce into the outermost. If `fn` throws, pending effects are still flushed; the original error takes precedence.
+Runs `fn` and defers all signal/store notifications until it returns, then flushes once. Nested `batch()` calls coalesce into the outermost. If `fn` throws, the pending flush queue is discarded instead of flushed — writes made before the throw are not rolled back, but no effect observes them; the original error propagates.
 
 ```ts
 batch(() => {
@@ -438,6 +453,8 @@ function resource<T>(
 ```
 
 Creates a reactive async resource. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
+
+If `resource()` is created inside an active `effect()` or `scope.run()` context, it is automatically registered for cleanup and disposed with that context — matching `computed()`'s auto-disposal behavior.
 
 The returned `Computed<ResourceState<T>>` is a read-only disposable signal emitting a single discriminated union:
 
@@ -672,7 +689,7 @@ try {
 | `RippleEnvironmentError`     | An SSR API is used in a browser environment                                                                                                                                                                                                                                                                               |
 | `RippleInfiniteLoopError`    | Flush or effect loop exceeds the built-in guard limit (default 100 iterations)                                                                                                                                                                                                                                            |
 | `RippleInvalidCleanupError`  | `onCleanup()` is called outside an active effect or scope                                                                                                                                                                                                                                                                |
-| `RippleInvalidStoreError`    | `store()` is called with a non-object; `patch()` receives a non-object; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
+| `RippleInvalidStoreError`    | `store()` is called with a non-object, or its initial state has an unsafe top-level key (`__proto__`, `constructor`, `prototype`); `patch()`/`replace()` receive a non-object, or any top-level key is unsafe — validated upfront, before any key is applied; `store.lens()` path traverses a `null` or non-object intermediate; a lens path has an empty segment (e.g. `'a..b'`), a forbidden segment (`__proto__`, `constructor`, `prototype`), or exceeds 32 segments; or `store.value` is mutated directly |
 
 Errors from multiple subscribers or cleanup functions in the same flush are aggregated into a standard `AggregateError` with each original error as an element.
 

@@ -400,6 +400,49 @@ describe('store.patch() — prototype pollution guard', () => {
       s.patch(partial as { count: number });
     }).toThrow(RippleError);
   });
+
+  it('patch() is atomic — a safe key before an unsafe key is never applied, and no subscriber fires', () => {
+    const s = store({ a: 0, count: 0 } as Record<string, unknown>);
+    const listener = vi.fn();
+    const stop = s.subscribe(listener);
+
+    expect(() => {
+      // JSON.parse produces a real own "__proto__" key positioned after the safe "a" key.
+      s.patch(JSON.parse('{"a":1,"__proto__":{"evil":true}}') as Record<string, unknown>);
+    }).toThrow(RippleInvalidStoreError);
+
+    // The safe "a" key must not have been silently applied ahead of the rejected key.
+    expect(s.peek()['a']).toBe(0);
+    expect(listener).not.toHaveBeenCalled();
+    stop.dispose();
+  });
+
+  it('store() rejects an unsafe top-level key in the initial state', () => {
+    expect(() => {
+      store(JSON.parse('{"a":1,"__proto__":{"evil":true}}') as Record<string, unknown>);
+    }).toThrow(RippleInvalidStoreError);
+  });
+
+  it('replace() is atomic — new keys are validated before any mutation is applied', () => {
+    const s = store({ count: 0 } as Record<string, unknown>);
+    const listener = vi.fn();
+    const stop = s.subscribe(listener);
+
+    expect(() => {
+      s.replace((state) => {
+        const next: Record<string, unknown> = { ...state, count: 1 };
+
+        // Simulate a __proto__ own-key added by e.g. JSON round-tripping inside a replace fn.
+        Object.defineProperty(next, '__proto__', { enumerable: true, value: 'evil' });
+
+        return next as never;
+      });
+    }).toThrow(RippleInvalidStoreError);
+
+    expect(s.peek()['count']).toBe(0);
+    expect(listener).not.toHaveBeenCalled();
+    stop.dispose();
+  });
 });
 
 describe('store.lens() — unsafe path guard', () => {

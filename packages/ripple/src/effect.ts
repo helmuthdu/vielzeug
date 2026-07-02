@@ -369,6 +369,11 @@ export const scope = (setup?: () => void): Scope => {
  * Observes a reactive source and calls `callback` whenever its value changes.
  * Does NOT invoke `callback` on creation (unless `immediate: true` is passed).
  *
+ * `source` may be a single `Readable<T>` (signal, computed, or store lens), or a
+ * function that reads multiple reactive sources — the function form tracks every
+ * dependency read inside it, like `computed()`, without needing an intermediate
+ * `computed()` node.
+ *
  * When called without `immediate`, `prev` is always `T` — the previous value.
  * When `immediate: true` is passed, `prev` is `T | undefined` on the first call.
  *
@@ -380,14 +385,34 @@ export const scope = (setup?: () => void): Scope => {
  *
  * stop.dispose();
  * ```
+ *
+ * @example
+ * ```ts
+ * // Function form — tracks every signal read inside, re-runs when any changes.
+ * const stopSum = watch(
+ *   () => a.value + b.value,
+ *   (sum, prevSum) => console.log(`sum: ${prevSum} → ${sum}`),
+ * );
+ *
+ * stopSum.dispose();
+ * ```
  */
 export function watch<T>(
   source: Readable<T>,
   callback: (value: T, prev: T | undefined) => CleanupFn | void,
   options?: WatchOptions<T>,
+): Subscription;
+export function watch<T>(
+  source: () => T,
+  callback: (value: T, prev: T | undefined) => CleanupFn | void,
+  options?: WatchOptions<T>,
+): Subscription;
+export function watch<T>(
+  source: Readable<T> | (() => T),
+  callback: (value: T, prev: T | undefined) => CleanupFn | void,
+  options?: WatchOptions<T>,
 ): Subscription {
   const equals: EqualityFn<T> = options?.equals ?? Object.is;
-  let prev: T = source.peek();
   let pendingCleanup: CleanupFn | undefined;
   const invokeCallback = (next: T, p: T | undefined): void => {
     pendingCleanup?.();
@@ -404,33 +429,80 @@ export function watch<T>(
     if (typeof returned === 'function') pendingCleanup = returned;
   };
 
-  // Declared before innerSub so both the subscriber closure and the immediate path
-  // can call watchSub.dispose() when once:true. Subscribers always fire asynchronously
-  // so watchSub is guaranteed to be assigned before the closure executes.
-  // eslint-disable-next-line prefer-const -- forward reference: innerSub subscriber closes over watchSub; both are assigned synchronously before any subscriber fires
+  // Declared before the subscriber/effect closures so both they and the immediate
+  // path can call watchSub.dispose() when once:true. Subscribers/effects always
+  // (re-)run after watchSub is assigned, since it's assigned synchronously right after.
+
   let watchSub!: SubscriptionImpl;
 
-  const innerSub = source.subscribe(() => {
-    const next = source.peek();
+  if (typeof source === 'function') {
+    // Function form — track every dependency read inside `source` via a real effect,
+    // mirroring computed()'s dependency collection. `first` suppresses the callback
+    // on the initial (tracking-establishing) run — handled explicitly below (after
+    // watchSub exists) instead of inside this synchronous first run, since effect()
+    // runs its body immediately and watchSub isn't assigned until after it returns.
+    let prev!: T;
+    let first = true;
 
-    if (!equals(prev, next)) {
-      invokeCallback(next, prev);
-      prev = next;
+    const stopEffect = effect(
+      () => {
+        const next = source();
 
-      if (options?.once) watchSub.dispose();
+        if (first) {
+          first = false;
+          prev = next;
+
+          return;
+        }
+
+        if (!equals(prev, next)) {
+          const p = prev;
+
+          prev = next;
+          invokeCallback(next, p);
+
+          if (options?.once) watchSub.dispose();
+        }
+      },
+      { name: options?.name },
+    );
+
+    watchSub = new SubscriptionImpl(() => {
+      pendingCleanup?.();
+      pendingCleanup = undefined;
+      stopEffect.dispose();
+    });
+
+    if (options?.immediate) {
+      invokeCallback(prev, undefined);
+
+      if (options.once) watchSub.dispose();
     }
-  });
+  } else {
+    let prev: T = source.peek();
 
-  watchSub = new SubscriptionImpl(() => {
-    pendingCleanup?.();
-    pendingCleanup = undefined;
-    innerSub.dispose();
-  });
+    const innerSub = source.subscribe(() => {
+      const next = source.peek();
 
-  if (options?.immediate) {
-    invokeCallback(prev, undefined);
+      if (!equals(prev, next)) {
+        invokeCallback(next, prev);
+        prev = next;
 
-    if (options.once) watchSub.dispose();
+        if (options?.once) watchSub.dispose();
+      }
+    });
+
+    watchSub = new SubscriptionImpl(() => {
+      pendingCleanup?.();
+      pendingCleanup = undefined;
+      innerSub.dispose();
+    });
+
+    if (options?.immediate) {
+      invokeCallback(prev, undefined);
+
+      if (options.once) watchSub.dispose();
+    }
   }
 
   // Auto-register disposal into the enclosing scope (if any) — matches effect() behaviour.
