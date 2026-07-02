@@ -1,4 +1,32 @@
 export const validateStreamExample = {
-  code: "// validateStream yields each field result as it resolves — read-only, does not write to form state\nimport { createForm } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: { email: '', password: '', username: '' },\n  validator: (vals) => {\n    const errors = {}\n    if (!vals.email.includes('@')) errors.email = 'Invalid email'\n    if (vals.password.length < 8) errors._form = 'Password too short'\n    return Object.keys(errors).length ? errors : undefined\n  },\n  validators: {\n    username: (v) => (String(v).length < 3 ? 'Min 3 characters' : undefined),\n  },\n})\n\nform.set('email', 'notanemail')\nform.set('password', 'short')\nform.set('username', 'ab')\n\nconsole.log('Streaming validation results:')\n\nfor await (const { field, error } of form.validateStream()) {\n  console.log(` ${field}: ${error ?? '✓ ok'}`)\n}\n// Form validator yields both 'email' and '_form' entries at the end\n\n// validateStream is read-only — form.state.errors is still empty\nconsole.log('Form errors after stream:', Object.keys(form.state.errors).length, '(unchanged)')",
+  code: `// validateStream yields each field result as it resolves — read-only, does not write to form state
+import { createForm } from '@vielzeug/forge'
+
+const form = createForm({
+  defaultValues: { email: '', password: '', username: '' },
+  validator: (vals) => {
+    const errors = {}
+    if (!vals.email.includes('@')) errors.email = 'Invalid email'
+    if (vals.password.length < 8) errors._form = 'Password too short'
+    return Object.keys(errors).length ? errors : undefined
+  },
+  validators: {
+    username: (v) => (String(v).length < 3 ? 'Min 3 characters' : undefined),
+  },
+})
+
+form.set('email', 'notanemail')
+form.set('password', 'short')
+form.set('username', 'ab')
+
+console.log('Streaming validation results:')
+
+for await (const { field, error } of form.validateStream()) {
+  console.log(\` \${field}: \${error ?? '✓ ok'}\`)
+}
+// Form validator yields both 'email' and '_form' entries at the end
+
+// validateStream is read-only — form.state.errors is still empty
+console.log('Form errors after stream:', Object.keys(form.state.errors).length, '(unchanged)')`,
   name: 'Streaming Validation (validateStream)',
 };

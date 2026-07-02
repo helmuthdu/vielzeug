@@ -1,4 +1,32 @@
 export const httpClientMethodsExample = {
-  code: "import { createApi } from '@vielzeug/courier'\n\nconst http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })\n\n// GET\nconst post = await http.get('/posts/1')\nconsole.log('GET:', post.title)\n\n// POST\nconst created = await http.post('/posts', {\n  body: { title: 'New Post', body: 'Content', userId: 1 },\n})\nconsole.log('POST id:', created.id)\n\n// PUT\nconst updated = await http.put('/posts/1', {\n  body: { id: 1, title: 'Updated', body: 'New content', userId: 1 },\n})\nconsole.log('PUT:', updated.title)\n\n// PATCH\nconst patched = await http.patch('/posts/1', {\n  body: { title: 'Patched Title' },\n})\nconsole.log('PATCH:', patched.title)\n\n// DELETE\nawait http.delete('/posts/1')\nconsole.log('DELETE: Success')",
+  code: `import { createApi } from '@vielzeug/courier'
+
+const http = createApi({ baseUrl: 'https://jsonplaceholder.typicode.com' })
+
+// GET
+const post = await http.get('/posts/1')
+console.log('GET:', post.title)
+
+// POST
+const created = await http.post('/posts', {
+  body: { title: 'New Post', body: 'Content', userId: 1 },
+})
+console.log('POST id:', created.id)
+
+// PUT
+const updated = await http.put('/posts/1', {
+  body: { id: 1, title: 'Updated', body: 'New content', userId: 1 },
+})
+console.log('PUT:', updated.title)
+
+// PATCH
+const patched = await http.patch('/posts/1', {
+  body: { title: 'Patched Title' },
+})
+console.log('PATCH:', patched.title)
+
+// DELETE
+await http.delete('/posts/1')
+console.log('DELETE: Success')`,
   name: 'HTTP Client - All Methods',
 };

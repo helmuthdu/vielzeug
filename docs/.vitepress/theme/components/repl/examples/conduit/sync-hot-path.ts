@@ -1,5 +1,5 @@
 export const syncHotPathExample = {
-  code: `import { createContainer, token, resolveSyncOptional, resolveSyncOrDefault, SyncResolutionError } from '@vielzeug/conduit'
+  code: `import { createContainer, token, resolveSyncOptional, resolveSyncOrDefault, ConduitSyncResolutionError } from '@vielzeug/conduit'
 
 const Config = token('Config')
 const Timeout = token('Timeout')
@@ -28,14 +28,14 @@ console.log('timeout:', timeout) // 5000 — Timeout IS registered
 const missing = resolveSyncOrDefault(container, OptionalPlugin, { name: 'noop' })
 console.log('missing (default):', missing.name) // noop
 
-// resolveSyncOptional still throws SyncResolutionError for unresolved factories
+// resolveSyncOptional still throws ConduitSyncResolutionError for unresolved factories
 const container2 = createContainer()
 container2.factory(Config, () => ({ apiUrl: '...' }))
 // did NOT call resolveAll() — factory not yet resolved
 try {
   resolveSyncOptional(container2, Config)
 } catch (err) {
-  console.log('SyncResolutionError:', err instanceof SyncResolutionError) // true
+  console.log('ConduitSyncResolutionError:', err instanceof ConduitSyncResolutionError) // true
 }`,
   name: 'resolveSyncOptional / resolveSyncOrDefault hot path',
 };

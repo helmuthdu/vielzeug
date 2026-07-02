@@ -1,4 +1,44 @@
 export const remoteSourceBasicsExample = {
-  code: "import { applyRemoteQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer'\n\nconst dataset = Array.from({ length: 12 }, (_, i) => ({\n  id: i + 1,\n  name: `Issue ${i + 1}`,\n}))\n\n// autoFetch: true by default — fires on creation\nconst source = createRemoteSource({\n  fetch: async ({ limit, page, search }, _signal) => {\n    const filtered = search\n      ? dataset.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))\n      : dataset\n    return {\n      items: filtered.slice((page - 1) * limit, page * limit),\n      total: filtered.length,\n    }\n  },\n  limit: 5,\n})\n\nawait source.ready()\nconsole.log('Initial:', source.current, source.meta)\n\nawait source.search('1', { immediate: true })\nconsole.log('Search results:', source.current, source.meta)\n\n// Optimistic update: remove an item immediately before server confirms\nconst rollback = source.optimisticUpdate(\n  (items) => items.filter((item) => item.id !== 1),\n)\nconsole.log('After optimistic remove:', source.current.length)\nrollback() // undo\nconsole.log('After rollback:', source.current.length)\n\n// URL param serialization roundtrip\nconst params = encodeQuery(source.toQuery())\nconsole.log('Encoded params:', params)\nawait source.reset()\nawait applyRemoteQuery(source, decodeQuery(params))\nconsole.log('Restored:', source.current, source.meta)",
+  code: `import { applyRemoteQuery, createRemoteSource, decodeQuery, encodeQuery } from '@vielzeug/sourcerer'
+
+const dataset = Array.from({ length: 12 }, (_, i) => ({
+  id: i + 1,
+  name: \`Issue \${i + 1}\`,
+}))
+
+// autoFetch: true by default — fires on creation
+const source = createRemoteSource({
+  fetch: async ({ limit, page, search }, _signal) => {
+    const filtered = search
+      ? dataset.filter((item) => item.name.toLowerCase().includes(search.toLowerCase()))
+      : dataset
+    return {
+      items: filtered.slice((page - 1) * limit, page * limit),
+      total: filtered.length,
+    }
+  },
+  limit: 5,
+})
+
+await source.ready()
+console.log('Initial:', source.current, source.meta)
+
+await source.search('1', { immediate: true })
+console.log('Search results:', source.current, source.meta)
+
+// Optimistic update: remove an item immediately before server confirms
+const rollback = source.optimisticUpdate(
+  (items) => items.filter((item) => item.id !== 1),
+)
+console.log('After optimistic remove:', source.current.length)
+rollback() // undo
+console.log('After rollback:', source.current.length)
+
+// URL param serialization roundtrip
+const params = encodeQuery(source.toQuery())
+console.log('Encoded params:', params)
+await source.reset()
+await applyRemoteQuery(source, decodeQuery(params))
+console.log('Restored:', source.current, source.meta)`,
   name: 'Remote Source Basics',
 };

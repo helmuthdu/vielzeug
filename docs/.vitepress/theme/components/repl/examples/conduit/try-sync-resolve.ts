@@ -1,5 +1,5 @@
 export const trySyncResolveExample = {
-  code: `import { createContainer, token, trySyncResolve, ProviderNotFoundError, SyncResolutionError } from '@vielzeug/conduit'
+  code: `import { createContainer, token, trySyncResolve, ConduitProviderNotFoundError, ConduitSyncResolutionError } from '@vielzeug/conduit'
 
 const Config = token('Config')
 const Logger = token('Logger')
@@ -24,7 +24,7 @@ container.factory(Service, (r) => {
 // Pre-warm all singletons
 await container.resolveAll()
 
-// trySyncResolve — only returns { ok: false } for ProviderNotFoundError
+// trySyncResolve — only returns { ok: false } for ConduitProviderNotFoundError
 const serviceResult = trySyncResolve(container, Service)
 if (serviceResult.ok) {
   serviceResult.value.start() // starting in production
@@ -32,17 +32,17 @@ if (serviceResult.ok) {
 
 const optResult = trySyncResolve(container, Optional)
 if (!optResult.ok) {
-  console.log('optional not registered:', optResult.error instanceof ProviderNotFoundError) // true
+  console.log('optional not registered:', optResult.error instanceof ConduitProviderNotFoundError) // true
 }
 
-// trySyncResolve re-throws SyncResolutionError (not ProviderNotFoundError)
+// trySyncResolve re-throws ConduitSyncResolutionError (not ConduitProviderNotFoundError)
 const container2 = createContainer()
 container2.factory(Config, async () => ({ env: 'test' }))
-// NOT warmed — resolveSync would throw SyncResolutionError
+// NOT warmed — resolveSync would throw ConduitSyncResolutionError
 try {
   trySyncResolve(container2, Config)
 } catch (err) {
-  console.log('re-thrown SyncResolutionError:', err instanceof SyncResolutionError) // true
+  console.log('re-thrown ConduitSyncResolutionError:', err instanceof ConduitSyncResolutionError) // true
 }`,
   name: 'trySyncResolve + FactoryResolver.resolveSync',
 };

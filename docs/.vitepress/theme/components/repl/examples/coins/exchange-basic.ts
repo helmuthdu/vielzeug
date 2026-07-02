@@ -1,4 +1,56 @@
 export const exchangeBasicExample = {
-  code: "// Convert Money between currencies with exact bigint arithmetic\nimport { CurrencyMismatchError, InvalidCurrencyError, exchange, format, money } from '@vielzeug/coins'\n\nconst price = money('100.00', 'USD')\n\n// Basic exchange — ExchangeRate.from/to are plain strings\nconst rate = { from: 'USD', rate: '0.92', to: 'EUR' }\nconst inEur = exchange(price, rate)\nconsole.log('$100 →', format(inEur))   // '€92.00'\n\n// Explicit rounding mode (sell vs buy rate)\nconst fractional = { from: 'USD', rate: '0.926', to: 'EUR' }\nconsole.log('\\nRounding modes for rate 0.926:')\nconsole.log(' default (half-away):', exchange(price, fractional).amount, 'cents')  // 9260n\nconsole.log(' floor:             ', exchange(price, fractional, 'floor').amount)\nconsole.log(' ceiling:           ', exchange(price, fractional, 'ceiling').amount)\n\n// Error cases\ntry {\n  exchange(price, { from: 'USD', rate: '-0.92', to: 'EUR' })\n} catch (e) {\n  console.log('\\nnegative rate error:', e.message)\n}\n\ntry {\n  exchange(price, { from: 'USD', rate: '1.0', to: 'FAKE' })\n} catch (e) {\n  if (e instanceof InvalidCurrencyError) {\n    console.log('invalid rate.to error, code:', e.code)  // 'FAKE'\n  }\n}\n\ntry {\n  exchange(money('100.00', 'EUR'), rate)\n} catch (e) {\n  if (e instanceof CurrencyMismatchError) {\n    console.log('mismatch error, expected:', e.expected, 'received:', e.received)\n  }\n}\n\n// Multi-currency display\nconst rates = [\n  { from: 'USD', rate: '0.92',  to: 'EUR' },\n  { from: 'USD', rate: '0.79',  to: 'GBP' },\n  { from: 'USD', rate: '149.5', to: 'JPY' },\n]\n\nconsole.log('\\n$50 in multiple currencies:')\nconst fifty = money('50.00', 'USD')\nfor (const r of rates) {\n  console.log(' ', format(exchange(fifty, r)))\n}\n// €46.00   £39.50   ¥7,475",
+  code: `// Convert Money between currencies with exact bigint arithmetic
+import { CurrencyMismatchError, InvalidCurrencyError, exchange, format, money } from '@vielzeug/coins'
+
+const price = money('100.00', 'USD')
+
+// Basic exchange — ExchangeRate.from/to are plain strings
+const rate = { from: 'USD', rate: '0.92', to: 'EUR' }
+const inEur = exchange(price, rate)
+console.log('$100 →', format(inEur))   // '€92.00'
+
+// Explicit rounding mode (sell vs buy rate)
+const fractional = { from: 'USD', rate: '0.926', to: 'EUR' }
+console.log('\\nRounding modes for rate 0.926:')
+console.log(' default (half-away):', exchange(price, fractional).amount, 'cents')  // 9260n
+console.log(' floor:             ', exchange(price, fractional, 'floor').amount)
+console.log(' ceiling:           ', exchange(price, fractional, 'ceiling').amount)
+
+// Error cases
+try {
+  exchange(price, { from: 'USD', rate: '-0.92', to: 'EUR' })
+} catch (e) {
+  console.log('\\nnegative rate error:', e.message)
+}
+
+try {
+  exchange(price, { from: 'USD', rate: '1.0', to: 'FAKE' })
+} catch (e) {
+  if (e instanceof InvalidCurrencyError) {
+    console.log('invalid rate.to error, code:', e.code)  // 'FAKE'
+  }
+}
+
+try {
+  exchange(money('100.00', 'EUR'), rate)
+} catch (e) {
+  if (e instanceof CurrencyMismatchError) {
+    console.log('mismatch error, expected:', e.expected, 'received:', e.received)
+  }
+}
+
+// Multi-currency display
+const rates = [
+  { from: 'USD', rate: '0.92',  to: 'EUR' },
+  { from: 'USD', rate: '0.79',  to: 'GBP' },
+  { from: 'USD', rate: '149.5', to: 'JPY' },
+]
+
+console.log('\\n$50 in multiple currencies:')
+const fifty = money('50.00', 'USD')
+for (const r of rates) {
+  console.log(' ', format(exchange(fifty, r)))
+}
+// €46.00   £39.50   ¥7,475`,
   name: 'Currency exchange',
 };

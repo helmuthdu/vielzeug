@@ -1,5 +1,5 @@
 export const freezeExample = {
-  code: `import { createContainer, token, ContainerFrozenError } from '@vielzeug/conduit'
+  code: `import { createContainer, token, ConduitFrozenError } from '@vielzeug/conduit'
 
 const Config = token('Config')
 const Logger = token('Logger')
@@ -15,11 +15,11 @@ container.freeze()
 const config = await container.resolve(Config)
 console.log('resolved after freeze:', config.apiUrl)
 
-// Attempting to register after freeze throws ContainerFrozenError
+// Attempting to register after freeze throws ConduitFrozenError
 try {
   container.value(token('Late'), 'oops')
 } catch (err) {
-  console.log('frozen error:', err instanceof ContainerFrozenError)
+  console.log('frozen error:', err instanceof ConduitFrozenError)
   console.log('message:', err.message)
 }
 
@@ -28,5 +28,5 @@ const child = container.createScope()
 const Extra = token('Extra')
 child.value(Extra, 'allowed')
 console.log('child registration allowed:', child.has(Extra))`,
-  name: 'freeze() and ContainerFrozenError',
+  name: 'freeze() and ConduitFrozenError',
 };

@@ -1,4 +1,22 @@
 export const objectPruneExample = {
-  code: "import { prune } from '@vielzeug/arsenal'\n\nconst data = {\n  name: '  Alice  ',\n  age: 30,\n  tags: ['js', null, '', 'ts', undefined],\n  settings: { theme: 'dark', extra: null, empty: {} }\n}\n\nconst cleaned = prune(data)\nconsole.log('Pruned object:', cleaned)\n\n// Prune array\nconst mixed = [1, null, 2, undefined, '', 3]\nconsole.log('Pruned array:', prune(mixed))\n\n// Prune string\nconsole.log('Trimmed:', prune('  hello world  '))\nconsole.log('Empty string:', prune('    ')) // undefined",
+  code: `import { prune } from '@vielzeug/arsenal'
+
+const data = {
+  name: '  Alice  ',
+  age: 30,
+  tags: ['js', null, '', 'ts', undefined],
+  settings: { theme: 'dark', extra: null, empty: {} }
+}
+
+const cleaned = prune(data)
+console.log('Pruned object:', cleaned)
+
+// Prune array
+const mixed = [1, null, 2, undefined, '', 3]
+console.log('Pruned array:', prune(mixed))
+
+// Prune string
+console.log('Trimmed:', prune('  hello world  '))
+console.log('Empty string:', prune('    ')) // undefined`,
   name: 'prune - Remove empty values',
 };

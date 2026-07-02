@@ -1,4 +1,3 @@
-<!-- eslint-disable no-undef -->
 <template>
   <div id="repl-container" class="repl-container">
     <!-- IDE layout: sidebar + main -->
@@ -13,28 +12,21 @@
         </div>
         <nav class="sidebar-nav">
           <button
-            v-for="(desc, lib) in libraryDescriptions"
-            :key="lib"
+            v-for="lib in libraries"
+            :key="lib.id"
             class="sidebar-item"
-            :class="{ 'is-active': selectedLibrary === lib }"
-            :title="desc"
-            @click="
-              selectedLibrary = lib;
-              switchLibrary();
-            ">
-            <img :src="withBase(`/logo-${lib}.svg`)" :alt="`${lib} logo`" class="sidebar-logo" />
+            :class="{ 'is-active': selectedLibrary === lib.id }"
+            :title="lib.description"
+            @click="selectedLibrary = lib.id">
+            <img :src="withBase(`/logo-${lib.id}.svg`)" :alt="`${lib.id} logo`" class="sidebar-logo" />
             <span class="sidebar-info">
-              <span class="sidebar-name">{{ lib }}</span>
-              <span class="sidebar-desc">{{ desc }}</span>
+              <span class="sidebar-name">{{ lib.id }}</span>
+              <span class="sidebar-desc">{{ lib.description }}</span>
             </span>
           </button>
         </nav>
         <div class="sidebar-ref">
-          <REPLReference
-            :selected-library="selectedLibrary"
-            :arsenal-categories="ARSENAL_CATEGORIES"
-            :library-exports="LIBRARY_EXPORTS"
-            @insert-function="insertFunction" />
+          <REPLReference :library="currentLibrary" @insert-function="insertFunction" />
         </div>
       </aside>
 
@@ -42,16 +34,9 @@
       <div class="ide-main">
         <REPLEditor
           ref="editorRef"
-          :selected-library="selectedLibrary"
-          :selected-example="selectedExample"
-          :examples="examples"
-          :is-dark="isDark"
-          :get-default-code="getDefaultCode"
-          :update-monaco-types="updateMonacoTypes"
-          :storage-prefix="STORAGE_PREFIX"
-          @update:selected-example="selectedExample = $event"
-          @run-code="onRunCode"
-          @clear-output="onClearOutput" />
+          :library="currentLibrary"
+          :examples="examples[selectedLibrary] ?? {}"
+          :is-dark="isDark" />
       </div>
     </div>
   </div>
@@ -59,19 +44,12 @@
 
 <script setup lang="ts">
 import { withBase } from 'vitepress';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+
 import REPLEditor from './REPLEditor.vue';
 import REPLReference from './REPLReference.vue';
 import { examples } from './repl/examples';
-import { ARSENAL_CATEGORIES, LIBRARY_DESCRIPTIONS, LIBRARY_EXPORTS, LIBRARY_LOADERS } from './repl/libraries/index';
-import { arsenalTypes, libraryTypes } from './repl/types';
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const MONACO_CDN = 'https://unpkg.com/monaco-editor@0.55.1/min/vs';
-const STORAGE_PREFIX = 'vielzeug-repl-code-';
+import { LIBRARY_REGISTRY } from './repl/registry.generated';
 
 // ============================================================================
 // State
@@ -79,120 +57,34 @@ const STORAGE_PREFIX = 'vielzeug-repl-code-';
 
 const editorRef = ref<InstanceType<typeof REPLEditor> | null>(null);
 const selectedLibrary = ref('arsenal');
-const selectedExample = ref('');
 const isDark = ref(true);
 
-// Constants exposed for template
-const libraryDescriptions = LIBRARY_DESCRIPTIONS;
+const libraries = Object.values(LIBRARY_REGISTRY);
+const currentLibrary = computed(() => LIBRARY_REGISTRY[selectedLibrary.value]!);
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-const getDefaultCode = (libName: string) => {
-  const libExamples = examples[libName];
-  const firstKey = libExamples ? Object.keys(libExamples)[0] : null;
-  return firstKey ? libExamples[firstKey].code : '';
-};
-
-const syncTheme = () => {
-  isDark.value = document.documentElement.classList.contains('dark');
-};
-
-const updateMonacoTypes = (libName: string) => {
-  if (!window.monaco) return;
-
-  monaco.languages.typescript.typescriptDefaults.setExtraLibs([]);
-  monaco.languages.typescript.typescriptDefaults.addExtraLib(
-    arsenalTypes,
-    'file:///node_modules/@vielzeug/arsenal/index.d.ts',
-  );
-
-  if (libName !== 'arsenal' && libraryTypes[libName]) {
-    monaco.languages.typescript.typescriptDefaults.addExtraLib(
-      libraryTypes[libName],
-      `file:///node_modules/@vielzeug/${libName}/index.d.ts`,
-    );
-  }
-};
-
-const loadLibrary = async (libName: string) => {
-  try {
-    const loader = LIBRARY_LOADERS[libName];
-    if (!loader) return;
-
-    const module = await loader();
-    Object.entries(module).forEach(([key, val]) => {
-      window[key] = val;
-    });
-    window[libName] = module;
-    updateMonacoTypes(libName);
-  } catch (err) {
-    console.error(`Failed to load ${libName}:`, err);
-  }
-};
-
-const switchLibrary = () => {
-  selectedExample.value = '';
-  loadLibrary(selectedLibrary.value);
-};
-
-const insertFunction = (item: string) => {
+const insertFunction = (item: string): void => {
   editorRef.value?.insertTextAtCursor(item);
 };
 
-const onRunCode = () => {
-  // Code execution is handled by REPLEditor
-};
-
-const onClearOutput = () => {
-  // Output clearing is handled by REPLEditor
-};
-
-// ============================================================================
-// Monaco & Editor Setup
-// ============================================================================
-
-const initializeREPL = () => {
-  const script = document.createElement('script');
-  script.src = `${MONACO_CDN}/loader.js`;
-  script.onload = () => {
-    require.config({ paths: { vs: MONACO_CDN } });
-
-    (require as any)(['vs/editor/editor.main'], () => {
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ESNext,
-        allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        module: monaco.languages.typescript.ModuleKind.CommonJS,
-        noEmit: true,
-        esModuleInterop: true,
-      });
-
-      updateMonacoTypes(selectedLibrary.value);
-
-      // Initialize the REPLEditor component
-      editorRef.value?.initializeEditor();
-      loadLibrary(selectedLibrary.value);
-    });
-  };
-  document.head.appendChild(script);
+const syncTheme = (): void => {
+  isDark.value = document.documentElement.classList.contains('dark');
 };
 
 // ============================================================================
 // Lifecycle Hooks
 // ============================================================================
 
-watch(() => selectedLibrary.value, switchLibrary);
-
 onMounted(() => {
-  initializeREPL();
   syncTheme();
 
   const observer = new MutationObserver(syncTheme);
   observer.observe(document.documentElement, {
-    attributes: true,
     attributeFilter: ['class'],
+    attributes: true,
   });
 
   onBeforeUnmount(() => observer.disconnect());

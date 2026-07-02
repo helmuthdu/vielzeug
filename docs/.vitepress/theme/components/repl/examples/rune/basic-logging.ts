@@ -1,4 +1,19 @@
 export const basicLoggingExample = {
-  code: "import { defaultLogger } from '@vielzeug/rune'\n\n// message-only\ndefaultLogger.debug('app starting')\ndefaultLogger.info('ready')\n\n// context-first \u2014 structured data before message\ndefaultLogger.info({ port: 3000 }, 'server listening')\ndefaultLogger.warn({ retries: 3 }, 'retrying request')\n\n// Pass Error as a context field \u2014 auto-serialized to { message, name, stack }\nconst err = new Error('connection refused')\ndefaultLogger.error({ err }, 'service unavailable')\ndefaultLogger.error({ err, requestId: 'r-001' }, 'request failed')\n\nconsole.log('(Open DevTools console to see styled output)')",
+  code: `import { defaultLogger } from '@vielzeug/rune'
+
+// message-only
+defaultLogger.debug('app starting')
+defaultLogger.info('ready')
+
+// context-first — structured data before message
+defaultLogger.info({ port: 3000 }, 'server listening')
+defaultLogger.warn({ retries: 3 }, 'retrying request')
+
+// Pass Error as a context field — auto-serialized to { message, name, stack }
+const err = new Error('connection refused')
+defaultLogger.error({ err }, 'service unavailable')
+defaultLogger.error({ err, requestId: 'r-001' }, 'request failed')
+
+console.log('(Open DevTools console to see styled output)')`,
   name: 'Basic Logging',
 };

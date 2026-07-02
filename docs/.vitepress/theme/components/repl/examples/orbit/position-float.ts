@@ -1,4 +1,48 @@
 export const floatExample = {
-  code: "import { float, offset, flip, shift } from '@vielzeug/orbit'\n\nconst button = document.createElement('button')\nbutton.textContent = 'Hover me'\nbutton.style.cssText = 'margin: 100px; padding: 8px 16px;'\ndocument.body.appendChild(button)\n\nconst tooltip = document.createElement('div')\ntooltip.textContent = 'Tooltip with middleware'\ntooltip.style.cssText = 'position: fixed; background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; pointer-events: none; display: none;'\ndocument.body.appendChild(tooltip)\n\n// float() returns a FloatHandle — call handle.dispose() to remove listeners\nlet handle = null\n\nfunction show() {\n  tooltip.style.display = 'block'\n  handle = float(button, tooltip, {\n    placement: 'top',\n    middleware: [\n      offset(8),             // 8px gap\n      flip(),                // flip to bottom when no space above\n      shift({ padding: 8 }), // stay inside viewport edges\n    ],\n    apply(result) {\n      tooltip.style.left = result.x + 'px'\n      tooltip.style.top = result.y + 'px'\n      tooltip.dataset.placement = result.placement\n      console.log('Placement:', result.placement)\n    },\n  })\n}\n\nfunction hide() {\n  tooltip.style.display = 'none'\n  handle?.dispose()\n  handle = null\n}\n\nbutton.addEventListener('mouseenter', show)\nbutton.addEventListener('mouseleave', hide)\nbutton.addEventListener('focusin', show)\nbutton.addEventListener('focusout', hide)\n\nconsole.log('Hover the button to position the tooltip')",
+  code: `import { float, offset, flip, shift } from '@vielzeug/orbit'
+
+const button = document.createElement('button')
+button.textContent = 'Hover me'
+button.style.cssText = 'margin: 100px; padding: 8px 16px;'
+document.body.appendChild(button)
+
+const tooltip = document.createElement('div')
+tooltip.textContent = 'Tooltip with middleware'
+tooltip.style.cssText = 'position: fixed; background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px; font-size: 13px; pointer-events: none; display: none;'
+document.body.appendChild(tooltip)
+
+// float() returns a FloatHandle — call handle.dispose() to remove listeners
+let handle = null
+
+function show() {
+  tooltip.style.display = 'block'
+  handle = float(button, tooltip, {
+    placement: 'top',
+    middleware: [
+      offset(8),             // 8px gap
+      flip(),                // flip to bottom when no space above
+      shift({ padding: 8 }), // stay inside viewport edges
+    ],
+    apply(result) {
+      tooltip.style.left = result.x + 'px'
+      tooltip.style.top = result.y + 'px'
+      tooltip.dataset.placement = result.placement
+      console.log('Placement:', result.placement)
+    },
+  })
+}
+
+function hide() {
+  tooltip.style.display = 'none'
+  handle?.dispose()
+  handle = null
+}
+
+button.addEventListener('mouseenter', show)
+button.addEventListener('mouseleave', hide)
+button.addEventListener('focusin', show)
+button.addEventListener('focusout', hide)
+
+console.log('Hover the button to position the tooltip')`,
   name: 'float - With Middleware',
 };

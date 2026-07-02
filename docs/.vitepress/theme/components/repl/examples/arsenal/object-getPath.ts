@@ -1,4 +1,28 @@
 export const objectGetPathExample = {
-  code: "import { getPath } from '@vielzeug/arsenal'\n\nconst config = {\n  server: { host: 'localhost', ports: [3000, 3001] },\n  db: { name: 'mydb', pool: { min: 2, max: 10 } }\n}\n\n// Standard dot-notation\nconsole.log(getPath(config, 'server.host'))                          // 'localhost'\nconsole.log(getPath(config, 'db.pool.max'))                          // 10\nconsole.log(getPath(config, 'server.ports.0'))                       // 3000\nconsole.log(getPath(config, 'missing', { fallback: 'default' }))     // 'default'\n\n// Bracket notation is auto-converted by default\nconsole.log(getPath(config, 'server.ports[1]'))                      // 3001\n\n// strict:true — throws when a path segment is missing\ntry {\n  getPath(config, 'db.pool.timeout', { strict: true })\n} catch (e) {\n  console.log('threw:', e.message)\n}\n\n// Prototype-pollution segments are blocked — returns fallback\nconsole.log(getPath(config, '__proto__.polluted', { fallback: 'safe' })) // 'safe'",
+  code: `import { getPath } from '@vielzeug/arsenal'
+
+const config = {
+  server: { host: 'localhost', ports: [3000, 3001] },
+  db: { name: 'mydb', pool: { min: 2, max: 10 } }
+}
+
+// Standard dot-notation
+console.log(getPath(config, 'server.host'))                          // 'localhost'
+console.log(getPath(config, 'db.pool.max'))                          // 10
+console.log(getPath(config, 'server.ports.0'))                       // 3000
+console.log(getPath(config, 'missing', { fallback: 'default' }))     // 'default'
+
+// Bracket notation is auto-converted by default
+console.log(getPath(config, 'server.ports[1]'))                      // 3001
+
+// strict:true — throws when a path segment is missing
+try {
+  getPath(config, 'db.pool.timeout', { strict: true })
+} catch (e) {
+  console.log('threw:', e.message)
+}
+
+// Prototype-pollution segments are blocked — returns fallback
+console.log(getPath(config, '__proto__.polluted', { fallback: 'safe' })) // 'safe'`,
   name: 'getPath - Dot-notation access with fallback and strict options',
 };

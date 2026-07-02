@@ -10,6 +10,7 @@ export default defineConfig([
     '.claude/',
     'common/',
     'docs/.vitepress/cache/',
+    'docs/.vitepress/theme/components/repl/registry.generated.ts',
     'node_modules/',
     'scripts/',
     '**/coverage/',

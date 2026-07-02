@@ -1,5 +1,5 @@
 export const resolveOptionalExample = {
-  code: `import { createContainer, token, resolveOptional, resolveOrDefault, tryResolve, ContainerDisposedError } from '@vielzeug/conduit'
+  code: `import { createContainer, token, resolveOptional, resolveOrDefault, tryResolve, ConduitDisposedError } from '@vielzeug/conduit'
 
 const Config = token('Config')
 const Plugin = token('Plugin')
@@ -24,12 +24,12 @@ if (result.ok) {
   console.log('not available — error type:', result.error?.constructor?.name)
 }
 
-// resolveOptional still throws ContainerDisposedError
+// resolveOptional still throws ConduitDisposedError
 await container.dispose()
 try {
   await resolveOptional(container, Config)
 } catch (err) {
-  console.log('disposed error:', err instanceof ContainerDisposedError)
+  console.log('disposed error:', err instanceof ConduitDisposedError)
 }`,
   name: 'resolveOptional / resolveOrDefault / tryResolve',
 };

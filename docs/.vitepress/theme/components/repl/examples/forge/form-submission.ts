@@ -1,4 +1,33 @@
 export const formSubmissionExample = {
-  code: "import { createForm } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: {\n    username: '',\n    email: '',\n  },\n  validators: {\n    username: (value) => (!value ? 'Username is required' : undefined),\n    email: (value) => {\n      if (!value) return 'Email is required'\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email'\n    },\n  },\n})\n\nform.set('username', 'johndoe')\nform.set('email', 'john@example.com')\n\nconst result = await form.submit(async (values) => {\n  console.log('Submitting...', values)\n  await new Promise((resolve) => setTimeout(resolve, 200))\n  return { id: 123, success: true }\n})\n\nif (result.ok) {\n  console.log('✓ Form submitted!', result.value)\n} else {\n  console.error('✗ Validation errors:', result.errors)\n}",
+  code: `import { createForm } from '@vielzeug/forge'
+
+const form = createForm({
+  defaultValues: {
+    username: '',
+    email: '',
+  },
+  validators: {
+    username: (value) => (!value ? 'Username is required' : undefined),
+    email: (value) => {
+      if (!value) return 'Email is required'
+      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email'
+    },
+  },
+})
+
+form.set('username', 'johndoe')
+form.set('email', 'john@example.com')
+
+const result = await form.submit(async (values) => {
+  console.log('Submitting...', values)
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  return { id: 123, success: true }
+})
+
+if (result.ok) {
+  console.log('✓ Form submitted!', result.value)
+} else {
+  console.error('✗ Validation errors:', result.errors)
+}`,
   name: 'Form Submission with Validation',
 };

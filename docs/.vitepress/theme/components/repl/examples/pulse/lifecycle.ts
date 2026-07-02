@@ -1,5 +1,5 @@
 export const lifecycleExample = {
-  code: `import { createPulse, DisposedError } from '@vielzeug/pulse'
+  code: `import { createPulse, PulseDisposedError } from '@vielzeug/pulse'
 
 // Status signal, disposalSignal, and error handling on dispose
 const pulse = createPulse('wss://api.example.com/ws', {
@@ -22,12 +22,12 @@ pulse.dispose()
 pulse.dispose()
 console.log('disposed:', pulse.disposed)
 
-// Methods reject with DisposedError after dispose
+// Methods reject with PulseDisposedError after dispose
 try {
   await pulse.connect()
 } catch (err) {
-  if (err instanceof DisposedError) {
-    console.log('connect() rejected with DisposedError — correct')
+  if (err instanceof PulseDisposedError) {
+    console.log('connect() rejected with PulseDisposedError — correct')
   }
 }`,
   name: 'Lifecycle & Disposal',

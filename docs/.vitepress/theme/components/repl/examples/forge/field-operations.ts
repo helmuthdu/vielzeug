@@ -1,4 +1,27 @@
 export const fieldOperationsExample = {
-  code: "import { createForm } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: {\n    name: 'Alice',\n    age: 25,\n  },\n})\n\nconsole.log('Initial:', form.values())\n\nform.set('name', 'Bob')\nconsole.log('After set name:', form.get('name'))\n\nform.batch(() => {\n  form.set('name', 'Charlie')\n  form.set('age', 30)\n})\nconsole.log('After batch:', form.values())\nconsole.log('Field state:', form.field('name'))\nconsole.log('Form state:', form.state)\n\nform.reset()\nconsole.log('After reset:', form.values())",
+  code: `import { createForm } from '@vielzeug/forge'
+
+const form = createForm({
+  defaultValues: {
+    name: 'Alice',
+    age: 25,
+  },
+})
+
+console.log('Initial:', form.values())
+
+form.set('name', 'Bob')
+console.log('After set name:', form.get('name'))
+
+form.batch(() => {
+  form.set('name', 'Charlie')
+  form.set('age', 30)
+})
+console.log('After batch:', form.values())
+console.log('Field state:', form.field('name'))
+console.log('Form state:', form.state)
+
+form.reset()
+console.log('After reset:', form.values())`,
   name: 'Field Operations - Get, Set, Batch, Reset',
 };

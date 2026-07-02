@@ -1,9 +1,7 @@
 <template>
   <div class="reference-section">
     <div class="reference-header">
-      <span class="reference-title">{{
-        selectedLibrary === 'arsenal' ? 'Available Functions' : 'Available Exports'
-      }}</span>
+      <span class="reference-title">Available Exports</span>
       <span class="reference-hint">Click any to insert at cursor</span>
       <div class="search-container">
         <ore-input fullwidth :value="localSearchQuery" placeholder="Search exports..." @input="handleSearchInput">
@@ -11,12 +9,8 @@
       </div>
     </div>
     <div class="function-categories">
-      <div
-        v-if="selectedLibrary === 'arsenal'"
-        v-for="category in filteredCategories"
-        :key="category.name"
-        class="category">
-        <h4>{{ category.name }} ({{ category.functions.length }} functions)</h4>
+      <div v-for="category in filteredCategories" :key="category.name" class="category">
+        <h4>{{ category.name }} ({{ category.functions.length }} exports)</h4>
         <div class="function-list">
           <ore-chip
             v-for="fn in category.functions"
@@ -30,25 +24,7 @@
           >
         </div>
       </div>
-      <div v-else class="category">
-        <h4>Exports ({{ filteredExports.length }} available)</h4>
-        <div class="function-list">
-          <ore-chip
-            v-for="ex in filteredExports"
-            :key="ex"
-            mode="action"
-            size="sm"
-            variant="outline"
-            :color="isMatch(ex) ? 'primary' : undefined"
-            @click="emit('insert-function', ex)"
-            title="Click to insert"
-            >{{ ex }}</ore-chip
-          >
-        </div>
-      </div>
-      <div
-        v-if="(selectedLibrary === 'arsenal' ? filteredCategories.length : filteredExports.length) === 0"
-        class="no-results">
+      <div v-if="filteredCategories.length === 0" class="no-results">
         No exports found matching "{{ localSearchQuery }}"
       </div>
     </div>
@@ -58,17 +34,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 
+import type { LibraryEntry } from './repl/registry.generated';
+
 // ============================================================================
 // Props & Emits
 // ============================================================================
 
+// Every library carries `categories` (arsenal is hand-curated into topical groups; every
+// other library gets a single "Exports" bucket — see generate-repl-registry.ts) so this
+// component never needs to special-case "is this arsenal?" the way it used to.
 const props = defineProps<{
-  selectedLibrary: string;
-  arsenalCategories: ReadonlyArray<{
-    name: string;
-    functions: readonly string[];
-  }>;
-  libraryExports: Record<string, readonly string[]>;
+  library: LibraryEntry;
 }>();
 
 const emit = defineEmits<{
@@ -91,34 +67,16 @@ const handleSearchInput = (e: Event) => {
 // ============================================================================
 
 const filteredCategories = computed(() => {
-  if (props.selectedLibrary !== 'arsenal' || !localSearchQuery.value) {
-    return props.selectedLibrary === 'arsenal' ? props.arsenalCategories : [];
-  }
+  const query = localSearchQuery.value.trim().toLowerCase();
+  if (!query) return props.library.categories;
 
-  const query = localSearchQuery.value.toLowerCase();
-  return props.arsenalCategories
-    .map((cat) => ({
-      ...cat,
-      functions: cat.functions.filter((fn) => fn.toLowerCase().includes(query)),
+  return props.library.categories
+    .map((category) => ({
+      ...category,
+      functions: category.functions.filter((fn) => fn.toLowerCase().includes(query)),
     }))
-    .filter((cat) => cat.functions.length > 0);
+    .filter((category) => category.functions.length > 0);
 });
-
-const filteredExports = computed(() => {
-  const exports = props.libraryExports[props.selectedLibrary] || [];
-  if (!localSearchQuery.value) return exports;
-
-  const query = localSearchQuery.value.toLowerCase();
-  return exports.filter((ex) => ex.toLowerCase().includes(query));
-});
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-const isMatch = (fn: string) => {
-  return localSearchQuery.value && fn.toLowerCase().includes(localSearchQuery.value.toLowerCase());
-};
 </script>
 
 <style scoped>

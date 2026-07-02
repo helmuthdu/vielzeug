@@ -1,4 +1,39 @@
 export const disposalExample = {
-  code: "import { signal, computed, effect, readonly, scope, store } from '@vielzeug/ripple'\n\n// ── store.dispose() ──────────────────────────────────────────────────────────\n// Permanently releases all internal prop signals and cached lenses.\nconst cart = store({ count: 0, label: 'cart' }, { name: 'cart' })\nconst countLens = cart.lens('count')\n\nconsole.log('lens.disposed before:', countLens.disposed) // false\ncart.dispose() // or: using cart = store(...)\nconsole.log('lens.disposed after:', countLens.disposed)  // true\n\n// ── scope.disposed ────────────────────────────────────────────────────────────\n// Useful for guarding async callbacks that may outlive their scope.\nconst s = scope()\nconsole.log('scope.disposed before:', s.disposed) // false\ns.dispose()\nconsole.log('scope.disposed after:', s.disposed)  // true\n\n// ── Reactive.name ───────────────────────────────────────────────────────\n// .name is now on the Reactive interface — no cast or getSignalName() needed.\nconst counter = signal(0, { name: 'counter' })\nconst doubled = computed(() => counter.value * 2, { name: 'doubled' })\nconst ro = readonly(counter)\n\nconsole.log('counter.name:', counter.name) // 'counter'\nconsole.log('doubled.name:', doubled.name) // 'doubled'\nconsole.log('readonly.name:', ro.name)    // 'counter' (delegates to source)\n\n// ── Subscription.disposed ─────────────────────────────────────────────────────\nconst sub = effect(() => { console.log('count:', counter.value) })\nconsole.log('sub.disposed before:', sub.disposed) // false\nsub.dispose()\nconsole.log('sub.disposed after:', sub.disposed)  // true\n\ncounter.dispose()\ndoubled.dispose()",
+  code: `import { signal, computed, effect, readonly, scope, store } from '@vielzeug/ripple'
+
+// ── store.dispose() ──────────────────────────────────────────────────────────
+// Permanently releases all internal prop signals and cached lenses.
+const cart = store({ count: 0, label: 'cart' }, { name: 'cart' })
+const countLens = cart.lens('count')
+
+console.log('lens.disposed before:', countLens.disposed) // false
+cart.dispose() // or: using cart = store(...)
+console.log('lens.disposed after:', countLens.disposed)  // true
+
+// ── scope.disposed ────────────────────────────────────────────────────────────
+// Useful for guarding async callbacks that may outlive their scope.
+const s = scope()
+console.log('scope.disposed before:', s.disposed) // false
+s.dispose()
+console.log('scope.disposed after:', s.disposed)  // true
+
+// ── Reactive.name ───────────────────────────────────────────────────────
+// .name is now on the Reactive interface — no cast or getSignalName() needed.
+const counter = signal(0, { name: 'counter' })
+const doubled = computed(() => counter.value * 2, { name: 'doubled' })
+const ro = readonly(counter)
+
+console.log('counter.name:', counter.name) // 'counter'
+console.log('doubled.name:', doubled.name) // 'doubled'
+console.log('readonly.name:', ro.name)    // 'counter' (delegates to source)
+
+// ── Subscription.disposed ─────────────────────────────────────────────────────
+const sub = effect(() => { console.log('count:', counter.value) })
+console.log('sub.disposed before:', sub.disposed) // false
+sub.dispose()
+console.log('sub.disposed after:', sub.disposed)  // true
+
+counter.dispose()
+doubled.dispose()`,
   name: 'Disposal & .name',
 };

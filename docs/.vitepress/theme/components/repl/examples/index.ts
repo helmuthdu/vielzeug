@@ -1,3 +1,5 @@
+import type { ExampleModule } from './types';
+
 import { arsenalExamples } from './arsenal';
 import { clockworkExamples } from './clockwork';
 import { coinsExamples } from './coins';
@@ -25,7 +27,7 @@ import { vaultExamples } from './vault';
 import { wardExamples } from './ward';
 import { wayfinderExamples } from './wayfinder';
 
-export const examples = {
+export const examples: Record<string, Record<string, ExampleModule>> = {
   arsenal: arsenalExamples,
   clockwork: clockworkExamples,
   coins: coinsExamples,

@@ -1,4 +1,29 @@
 export const positionBasicExample = {
-  code: "import { computePosition } from '@vielzeug/orbit'\n\n// Create reference and floating elements\nconst button = document.createElement('button')\nbutton.textContent = 'Anchor'\nbutton.style.cssText = 'padding: 8px 16px; margin: 50px;'\ndocument.body.appendChild(button)\n\nconst tooltip = document.createElement('div')\ntooltip.textContent = 'Tooltip'\ntooltip.style.cssText = 'position: fixed; background: #333; color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000;'\ndocument.body.appendChild(tooltip)\n\n// computePosition is sync and returns x/y/placement/middlewareData\nfunction updatePosition() {\n  const { x, y, placement } = computePosition(button, tooltip, {\n    placement: 'top',\n  })\n  tooltip.style.left = x + 'px'\n  tooltip.style.top = y + 'px'\n  console.log(`Positioned at ${placement}: (${Math.round(x)}, ${Math.round(y)})`)\n}\n\nbutton.addEventListener('click', updatePosition)\nupdatePosition()\nconsole.log('Tooltip positioned relative to button')",
+  code: `import { computePosition } from '@vielzeug/orbit'
+
+// Create reference and floating elements
+const button = document.createElement('button')
+button.textContent = 'Anchor'
+button.style.cssText = 'padding: 8px 16px; margin: 50px;'
+document.body.appendChild(button)
+
+const tooltip = document.createElement('div')
+tooltip.textContent = 'Tooltip'
+tooltip.style.cssText = 'position: fixed; background: #333; color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 12px; z-index: 1000;'
+document.body.appendChild(tooltip)
+
+// computePosition is sync and returns x/y/placement/middlewareData
+function updatePosition() {
+  const { x, y, placement } = computePosition(button, tooltip, {
+    placement: 'top',
+  })
+  tooltip.style.left = x + 'px'
+  tooltip.style.top = y + 'px'
+  console.log(\`Positioned at \${placement}: (\${Math.round(x)}, \${Math.round(y)})\`)
+}
+
+button.addEventListener('click', updatePosition)
+updatePosition()
+console.log('Tooltip positioned relative to button')`,
   name: 'computePosition - Basic',
 };

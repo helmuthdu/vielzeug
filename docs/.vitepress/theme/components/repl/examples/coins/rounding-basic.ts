@@ -1,4 +1,44 @@
 export const roundingBasicExample = {
-  code: "// roundTo — round to fewer decimal places for display\nimport { money, roundTo, toDecimal } from '@vielzeug/coins'\n\n// money(bigint) — minor units passed as-is\nconst price = money(123456n, 'USD')\nconsole.log('money(bigint) USD:', price)   // { amount: 123456n, currency: 'USD' }\nconsole.log('decimal:', toDecimal(price))   // '1234.56'\n\nconst yen = money(1234n, 'JPY')\nconsole.log('money(bigint) JPY:', yen)     // { amount: 1234n, currency: 'JPY' }\n\n// roundTo — reduce decimal places for display\nconst total = money('1234.56', 'USD')\n\n// Round to 0 decimal places (whole dollars)\nconst wholeDollars = roundTo(total, 0)\nconsole.log('whole dollars:', wholeDollars)  // { amount: 1235n, currency: 'USD' }\nconsole.log('decimal:', toDecimal(wholeDollars))  // '1235'\n\n// Round to 1 decimal place\nconst oneDecimal = roundTo(total, 1)\nconsole.log('1 decimal:', toDecimal(oneDecimal))  // '1234.6'\n\n// roundTo is a no-op when places === currency decimals\nconsole.log('no-op:', roundTo(total, 2) === total)  // true\n\n// Explicit rounding modes\nconsole.log('floor:', toDecimal(roundTo(total, 0, 'floor')))    // '1234'\nconsole.log('ceiling:', toDecimal(roundTo(total, 0, 'ceiling'))) // '1235'\n\n// Negative amounts\nconst debt = money('-1234.56', 'USD')\nconsole.log('negative floor:', toDecimal(roundTo(debt, 0, 'floor')))    // '-1235'\nconsole.log('negative ceiling:', toDecimal(roundTo(debt, 0, 'ceiling'))) // '-1234'\n\n// RangeError when places is out of range\ntry {\n  roundTo(total, 3)  // USD only has 2 decimal places\n} catch (e) {\n  console.log('error:', e.message)\n}",
+  code: `// roundTo — round to fewer decimal places for display
+import { money, roundTo, toDecimal } from '@vielzeug/coins'
+
+// money(bigint) — minor units passed as-is
+const price = money(123456n, 'USD')
+console.log('money(bigint) USD:', price)   // { amount: 123456n, currency: 'USD' }
+console.log('decimal:', toDecimal(price))   // '1234.56'
+
+const yen = money(1234n, 'JPY')
+console.log('money(bigint) JPY:', yen)     // { amount: 1234n, currency: 'JPY' }
+
+// roundTo — reduce decimal places for display
+const total = money('1234.56', 'USD')
+
+// Round to 0 decimal places (whole dollars)
+const wholeDollars = roundTo(total, 0)
+console.log('whole dollars:', wholeDollars)  // { amount: 1235n, currency: 'USD' }
+console.log('decimal:', toDecimal(wholeDollars))  // '1235'
+
+// Round to 1 decimal place
+const oneDecimal = roundTo(total, 1)
+console.log('1 decimal:', toDecimal(oneDecimal))  // '1234.6'
+
+// roundTo is a no-op when places === currency decimals
+console.log('no-op:', roundTo(total, 2) === total)  // true
+
+// Explicit rounding modes
+console.log('floor:', toDecimal(roundTo(total, 0, 'floor')))    // '1234'
+console.log('ceiling:', toDecimal(roundTo(total, 0, 'ceiling'))) // '1235'
+
+// Negative amounts
+const debt = money('-1234.56', 'USD')
+console.log('negative floor:', toDecimal(roundTo(debt, 0, 'floor')))    // '-1235'
+console.log('negative ceiling:', toDecimal(roundTo(debt, 0, 'ceiling'))) // '-1234'
+
+// RangeError when places is out of range
+try {
+  roundTo(total, 3)  // USD only has 2 decimal places
+} catch (e) {
+  console.log('error:', e.message)
+}`,
   name: 'Rounding Money values',
 };

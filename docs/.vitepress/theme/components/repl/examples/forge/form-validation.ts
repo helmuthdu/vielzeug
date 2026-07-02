@@ -1,4 +1,42 @@
 export const formValidationExample = {
-  code: "import { createForm } from '@vielzeug/forge'\n\nconst form = createForm({\n  defaultValues: {\n    email: '',\n    password: '',\n    confirmPassword: '',\n  },\n  validators: {\n    email: (value) => {\n      if (!value) return 'Email is required'\n      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email format'\n    },\n    password: (value) => {\n      if (!value) return 'Password is required'\n      if (String(value).length < 8) return 'Min 8 characters'\n    },\n  },\n  validator: (values) => {\n    if (values.password !== values.confirmPassword) {\n      return { confirmPassword: 'Passwords must match' }\n    }\n  },\n})\n\nform.set('email', 'invalid-email')\nform.set('password', 'short')\nform.set('confirmPassword', 'different')\n\nconst firstRun = await form.validate()\nconsole.log('Valid:', firstRun.valid)\nconsole.log('Errors:', firstRun.errors)\n\nform.set('email', 'user@example.com')\nform.set('password', 'password123')\nform.set('confirmPassword', 'password123')\n\nconst secondRun = await form.validate()\nconsole.log('After fixing:', secondRun.valid ? '✓ Valid' : 'Still errors')",
+  code: `import { createForm } from '@vielzeug/forge'
+
+const form = createForm({
+  defaultValues: {
+    email: '',
+    password: '',
+    confirmPassword: '',
+  },
+  validators: {
+    email: (value) => {
+      if (!value) return 'Email is required'
+      if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(value))) return 'Invalid email format'
+    },
+    password: (value) => {
+      if (!value) return 'Password is required'
+      if (String(value).length < 8) return 'Min 8 characters'
+    },
+  },
+  validator: (values) => {
+    if (values.password !== values.confirmPassword) {
+      return { confirmPassword: 'Passwords must match' }
+    }
+  },
+})
+
+form.set('email', 'invalid-email')
+form.set('password', 'short')
+form.set('confirmPassword', 'different')
+
+const firstRun = await form.validate()
+console.log('Valid:', firstRun.valid)
+console.log('Errors:', firstRun.errors)
+
+form.set('email', 'user@example.com')
+form.set('password', 'password123')
+form.set('confirmPassword', 'password123')
+
+const secondRun = await form.validate()
+console.log('After fixing:', secondRun.valid ? '✓ Valid' : 'Still errors')`,
   name: 'Field & Form Validation',
 };

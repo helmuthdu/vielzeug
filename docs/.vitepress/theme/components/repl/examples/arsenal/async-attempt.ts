@@ -1,4 +1,37 @@
 export const asyncAttemptExample = {
-  code: "import { attempt, isFail, isOk, retry } from '@vielzeug/arsenal'\n\n// attempt() wraps any async function — never throws, always returns { ok, value|error }\nconst ok = await attempt(async () => {\n  await new Promise(r => setTimeout(r, 10))\n  return { id: 1, title: 'Buy groceries' }\n})\n\nif (isOk(ok)) {\n  console.log('Success:', ok.value)\n}\n\n// Failure path — errors are captured, not thrown\nconst fail = await attempt(async () => {\n  throw new Error('network timeout')\n})\n\nif (isFail(fail)) {\n  console.log('Caught:', fail.error.message) // 'network timeout'\n}\n\n// Combine with retry() for resilient operations\nlet calls = 0\nconst result = await attempt(() =>\n  retry(async () => {\n    calls++\n    if (calls < 3) throw new Error('not ready')\n    return 'ready'\n  }, { times: 5, delay: 10 })\n)\n\nconsole.log('ok?', result.ok)          // true\nconsole.log('value:', result.value)    // 'ready'\nconsole.log('calls:', calls)           // 3",
+  code: `import { attempt, isFail, isOk, retry } from '@vielzeug/arsenal'
+
+// attempt() wraps any async function — never throws, always returns { ok, value|error }
+const ok = await attempt(async () => {
+  await new Promise(r => setTimeout(r, 10))
+  return { id: 1, title: 'Buy groceries' }
+})
+
+if (isOk(ok)) {
+  console.log('Success:', ok.value)
+}
+
+// Failure path — errors are captured, not thrown
+const fail = await attempt(async () => {
+  throw new Error('network timeout')
+})
+
+if (isFail(fail)) {
+  console.log('Caught:', fail.error.message) // 'network timeout'
+}
+
+// Combine with retry() for resilient operations
+let calls = 0
+const result = await attempt(() =>
+  retry(async () => {
+    calls++
+    if (calls < 3) throw new Error('not ready')
+    return 'ready'
+  }, { times: 5, delay: 10 })
+)
+
+console.log('ok?', result.ok)          // true
+console.log('value:', result.value)    // 'ready'
+console.log('calls:', calls)           // 3`,
   name: 'attempt - Safe async execution with isFail/isOk helpers',
 };

@@ -1,4 +1,34 @@
 export const streamSseExample = {
-  code: "import { createStream } from '@vielzeug/courier'\n\n// Note: SSE requires a real server-sent events endpoint.\n// This example demonstrates the API against a public SSE test endpoint.\nconst stream = createStream({ baseUrl: 'https://sse.dev' })\n\nconsole.log('Opening SSE connection...')\n\nconst src = stream.sse('/test', {\n  // Auto-reconnect with up to 3 attempts on connection loss\n  reconnect: { times: 3, delay: 1000 },\n  onError: (err) => console.error('Connection lost:', err.message),\n})\n\n// Listen for named SSE events\nconst offMessage = src.on('message', (data) => {\n  console.log('Message:', data)\n})\n\nconst offPing = src.on('ping', (data) => {\n  console.log('Ping received:', data)\n})\n\n// Close after 5 seconds\nsetTimeout(() => {\n  offMessage()\n  offPing()\n  src.close()\n  console.log('SSE connection closed')\n  stream.dispose()\n}, 5000)",
+  code: `import { createStream } from '@vielzeug/courier'
+
+// Note: SSE requires a real server-sent events endpoint.
+// This example demonstrates the API against a public SSE test endpoint.
+const stream = createStream({ baseUrl: 'https://sse.dev' })
+
+console.log('Opening SSE connection...')
+
+const src = stream.sse('/test', {
+  // Auto-reconnect with up to 3 attempts on connection loss
+  reconnect: { times: 3, delay: 1000 },
+  onError: (err) => console.error('Connection lost:', err.message),
+})
+
+// Listen for named SSE events
+const offMessage = src.on('message', (data) => {
+  console.log('Message:', data)
+})
+
+const offPing = src.on('ping', (data) => {
+  console.log('Ping received:', data)
+})
+
+// Close after 5 seconds
+setTimeout(() => {
+  offMessage()
+  offPing()
+  src.close()
+  console.log('SSE connection closed')
+  stream.dispose()
+}, 5000)`,
   name: 'Stream - Server-Sent Events (SSE)',
 };

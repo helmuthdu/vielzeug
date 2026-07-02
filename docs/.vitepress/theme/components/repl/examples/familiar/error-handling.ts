@@ -1,4 +1,78 @@
 export const errorHandlingExample = {
-  code: "import { createWorker, task, WorkerError } from '@vielzeug/familiar'\n\nconst maybeThrow = task((input) => {\n  if (input.shouldThrow) {\n    throw new Error('Task failed: ' + input.reason)\n  }\n  return 'success: ' + input.value\n})\n\nconst worker = createWorker(maybeThrow, {\n  timeout: 200,  // fail tasks that take over 200ms\n  maxQueue: 2,   // reject when more than 2 tasks are waiting\n})\n\nconst slowTask = task(() => {\n  const end = Date.now() + 1000\n  while (Date.now() < end) { /* busy wait */ }\n  return 'done'\n})\n\nconst workerSlow = createWorker(slowTask, {\n  timeout: 100,\n})\n\nasync function run() {\n  // Normal success\n  const ok = await worker.run({ shouldThrow: false, value: 42 })\n  console.log('Success:', ok)\n\n  // Task throws -> WorkerError(code='task')\n  try {\n    await worker.run({ shouldThrow: true, reason: 'bad input' })\n  } catch (err) {\n    if (err instanceof WorkerError && err.code === 'task') {\n      console.log('task error:', err.message)\n    }\n  }\n\n  // Timeout -> WorkerError(code='timeout')\n  try {\n    await workerSlow.run({})\n  } catch (err) {\n    if (err instanceof WorkerError && err.code === 'timeout') {\n      console.log('timeout error:', err.message)\n    }\n  }\n\n  // queue_full -> WorkerError(code='queue_full')\n  // Fill the slot + max queue to trigger back-pressure\n  const slow1 = worker.run({ shouldThrow: false, value: 'a' })\n  worker.run({ shouldThrow: false, value: 'b' })\n  worker.run({ shouldThrow: false, value: 'c' })\n  try {\n    await worker.run({ shouldThrow: false, value: 'd' }) // 4th — over maxQueue=2\n  } catch (err) {\n    if (err instanceof WorkerError && err.code === 'queue_full') {\n      console.log('queue_full error:', err.message)\n    }\n  }\n  await slow1  // drain\n\n  // Dispose then run -> WorkerError(code='terminated')\n  worker.dispose()\n  try {\n    await worker.run({ shouldThrow: false, value: 0 })\n  } catch (err) {\n    if (err instanceof WorkerError && err.code === 'terminated') {\n      console.log('terminated error:', err.message)\n    }\n  }\n\n  workerSlow.dispose()\n}\n\nrun()",
+  code: `import { createWorker, task, WorkerError } from '@vielzeug/familiar'
+
+const maybeThrow = task((input) => {
+  if (input.shouldThrow) {
+    throw new Error('Task failed: ' + input.reason)
+  }
+  return 'success: ' + input.value
+})
+
+const worker = createWorker(maybeThrow, {
+  timeout: 200,  // fail tasks that take over 200ms
+  maxQueue: 2,   // reject when more than 2 tasks are waiting
+})
+
+const slowTask = task(() => {
+  const end = Date.now() + 1000
+  while (Date.now() < end) { /* busy wait */ }
+  return 'done'
+})
+
+const workerSlow = createWorker(slowTask, {
+  timeout: 100,
+})
+
+async function run() {
+  // Normal success
+  const ok = await worker.run({ shouldThrow: false, value: 42 })
+  console.log('Success:', ok)
+
+  // Task throws -> WorkerError(code='task')
+  try {
+    await worker.run({ shouldThrow: true, reason: 'bad input' })
+  } catch (err) {
+    if (err instanceof WorkerError && err.code === 'task') {
+      console.log('task error:', err.message)
+    }
+  }
+
+  // Timeout -> WorkerError(code='timeout')
+  try {
+    await workerSlow.run({})
+  } catch (err) {
+    if (err instanceof WorkerError && err.code === 'timeout') {
+      console.log('timeout error:', err.message)
+    }
+  }
+
+  // queue_full -> WorkerError(code='queue_full')
+  // Fill the slot + max queue to trigger back-pressure
+  const slow1 = worker.run({ shouldThrow: false, value: 'a' })
+  worker.run({ shouldThrow: false, value: 'b' })
+  worker.run({ shouldThrow: false, value: 'c' })
+  try {
+    await worker.run({ shouldThrow: false, value: 'd' }) // 4th — over maxQueue=2
+  } catch (err) {
+    if (err instanceof WorkerError && err.code === 'queue_full') {
+      console.log('queue_full error:', err.message)
+    }
+  }
+  await slow1  // drain
+
+  // Dispose then run -> WorkerError(code='terminated')
+  worker.dispose()
+  try {
+    await worker.run({ shouldThrow: false, value: 0 })
+  } catch (err) {
+    if (err instanceof WorkerError && err.code === 'terminated') {
+      console.log('terminated error:', err.message)
+    }
+  }
+
+  workerSlow.dispose()
+}
+
+run()`,
   name: 'createWorker - Error Handling',
 };

@@ -7,10 +7,12 @@ import { defineConfig, type DefaultTheme, type UserConfig } from 'vitepress';
 
 import type { ThemeConfig } from './theme/types';
 
+import { buildVielzeugSrcAliases } from '../../scripts/vielzeug-packages';
 import { componentPreviewPlugin } from './plugins/component-preview/index';
 import { getPackagesData } from './theme/utils/packageData';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const PACKAGES_DIR = resolve(__dirname, '../../packages');
 
 const NON_COLLAPSIBLE_PACKAGE_PATHS = new Set(['/refine/']);
 
@@ -2160,37 +2162,11 @@ export default defineConfig({
     },
     plugins: [componentPreviewPlugin()],
     resolve: {
-      alias: {
-        '@vielzeug/arsenal': resolve(__dirname, '../../packages/arsenal/src'),
-        '@vielzeug/clockwork': resolve(__dirname, '../../packages/clockwork/src'),
-        '@vielzeug/coins': resolve(__dirname, '../../packages/coins/src'),
-        '@vielzeug/conduit': resolve(__dirname, '../../packages/conduit/src'),
-        '@vielzeug/courier': resolve(__dirname, '../../packages/courier/src'),
-        '@vielzeug/dnd': resolve(__dirname, '../../packages/dnd/src'),
-        '@vielzeug/familiar': resolve(__dirname, '../../packages/familiar/src'),
-        '@vielzeug/flux': resolve(__dirname, '../../packages/flux/src'),
-        '@vielzeug/forge': resolve(__dirname, '../../packages/forge/src'),
-        '@vielzeug/herald': resolve(__dirname, '../../packages/herald/src'),
-        '@vielzeug/keymap': resolve(__dirname, '../../packages/keymap/src'),
-        '@vielzeug/ledger': resolve(__dirname, '../../packages/ledger/src'),
-        '@vielzeug/lingua': resolve(__dirname, '../../packages/lingua/src'),
-        '@vielzeug/orbit': resolve(__dirname, '../../packages/orbit/src'),
-        '@vielzeug/ore': resolve(__dirname, '../../packages/ore/src'),
-        '@vielzeug/prism': resolve(__dirname, '../../packages/prism/src'),
-        '@vielzeug/pulse': resolve(__dirname, '../../packages/pulse/src'),
-        '@vielzeug/refine': resolve(__dirname, '../../packages/refine/src'),
-        '@vielzeug/ripple': resolve(__dirname, '../../packages/ripple/src'),
-        '@vielzeug/rune': resolve(__dirname, '../../packages/rune/src'),
-        '@vielzeug/sandbox': resolve(__dirname, '../../packages/sandbox/src'),
-        '@vielzeug/scout': resolve(__dirname, '../../packages/scout/src'),
-        '@vielzeug/scroll': resolve(__dirname, '../../packages/scroll/src'),
-        '@vielzeug/sourcerer': resolve(__dirname, '../../packages/sourcerer/src'),
-        '@vielzeug/spell': resolve(__dirname, '../../packages/spell/src'),
-        '@vielzeug/tempo': resolve(__dirname, '../../packages/tempo/src'),
-        '@vielzeug/vault': resolve(__dirname, '../../packages/vault/src'),
-        '@vielzeug/ward': resolve(__dirname, '../../packages/ward/src'),
-        '@vielzeug/wayfinder': resolve(__dirname, '../../packages/wayfinder/src'),
-      },
+      // Every `@vielzeug/<name>` package is aliased to its `src/` directory (instead of the
+      // published `dist`) so editing package source is reflected immediately in `docs:dev`
+      // without a build step. Derived from the `packages/` directory listing — see
+      // scripts/vielzeug-packages.ts — instead of a hand-maintained list.
+      alias: buildVielzeugSrcAliases(PACKAGES_DIR),
     },
   },
   vue: {

@@ -1,5 +1,5 @@
 export const reconnectExample = {
-  code: `import { createPulse, ConnectionError } from '@vielzeug/pulse'
+  code: `import { createPulse, PulseConnectionError } from '@vielzeug/pulse'
 
 // onReconnect fires at the start of each reconnect attempt (1-based)
 // Channels are automatically re-subscribed when the socket reopens.
@@ -21,7 +21,7 @@ try {
   await pulse.connect()
   console.log('connected, status:', pulse.status.value)
 } catch (err) {
-  if (err instanceof ConnectionError) {
+  if (err instanceof PulseConnectionError) {
     console.log('connection failed:', err.message)
   }
 }

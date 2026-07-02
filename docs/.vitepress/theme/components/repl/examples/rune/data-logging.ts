@@ -1,4 +1,39 @@
 export const dataLoggingExample = {
-  code: "import { createLogger, lazy } from '@vielzeug/rune'\n\nconst entries = []\nconst log = createLogger({ transports: [(e) => entries.push(e)] })\n\n// lazy() defers factory evaluation until after the level check\nlet callCount = 0\nconst reqLog = log.withBindings({\n  snapshot: lazy(() => ({ n: ++callCount, size: 1024 })),\n})\n\nreqLog.debug('trace')  // snapshot() called \u2014 callCount becomes 1\nreqLog.info('step 2') // snapshot() called \u2014 callCount becomes 2\n\n// Suppress debug: lazy factory is never called\nconst quietLog = log.child({ logLevel: 'warn' })\nconst quietReq = quietLog.withBindings({ val: lazy(() => ++callCount) })\nquietReq.debug('not emitted') // factory skipped\n\nconsole.log('Factory calls:', callCount) // 2, not 3\n\n// time() measures execution and emits { duration_ms } in data\nconst parsed = log.time('parse', () => JSON.parse('[1,2,3]'))\nconsole.log('Parsed:', parsed)\nconsole.log('Timer data:', entries[entries.length - 1].data)\n\n// When the timed fn throws, { err } is also included in data\ntry {\n  log.time('risky', () => { throw new Error('oops') })\n} catch {}\nconsole.log('Error data:', entries[entries.length - 1].data)\n\n// dispose() marks the logger as disposed; subsequent calls become no-ops\nlog.dispose()\nlog.info('silenced') // no-op\nconsole.log('disposed:', log.disposed) // true",
+  code: `import { createLogger, lazy } from '@vielzeug/rune'
+
+const entries = []
+const log = createLogger({ transports: [(e) => entries.push(e)] })
+
+// lazy() defers factory evaluation until after the level check
+let callCount = 0
+const reqLog = log.withBindings({
+  snapshot: lazy(() => ({ n: ++callCount, size: 1024 })),
+})
+
+reqLog.debug('trace')  // snapshot() called — callCount becomes 1
+reqLog.info('step 2') // snapshot() called — callCount becomes 2
+
+// Suppress debug: lazy factory is never called
+const quietLog = log.child({ logLevel: 'warn' })
+const quietReq = quietLog.withBindings({ val: lazy(() => ++callCount) })
+quietReq.debug('not emitted') // factory skipped
+
+console.log('Factory calls:', callCount) // 2, not 3
+
+// time() measures execution and emits { duration_ms } in data
+const parsed = log.time('parse', () => JSON.parse('[1,2,3]'))
+console.log('Parsed:', parsed)
+console.log('Timer data:', entries[entries.length - 1].data)
+
+// When the timed fn throws, { err } is also included in data
+try {
+  log.time('risky', () => { throw new Error('oops') })
+} catch {}
+console.log('Error data:', entries[entries.length - 1].data)
+
+// dispose() marks the logger as disposed; subsequent calls become no-ops
+log.dispose()
+log.info('silenced') // no-op
+console.log('disposed:', log.disposed) // true`,
   name: 'Lazy Bindings & Timing',
 };

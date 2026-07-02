@@ -1,12 +1,12 @@
 <template>
-  <div class="repl-panes" :class="{ 'has-output': hasOutput }">
+  <div class="repl-panes" :class="{ 'has-output': execution.output.value.length > 0 }">
     <!-- Shared toolbar: Examples (left) + Run (right) -->
     <div class="editor-toolbar">
       <ore-select
         label-placement="inset"
         style="width: 180px"
         placeholder="Examples..."
-        :value="localSelectedExample"
+        :value="selectedExample"
         @change="handleExampleSelect">
         <optgroup v-for="category in examplesByCategory" :key="category.name" :label="category.name">
           <option v-for="ex in category.examples" :key="ex.value" :value="ex.value">{{ ex.label }}</option>
@@ -18,10 +18,10 @@
         size="sm"
         color="primary"
         variant="solid"
-        v-bind="isExecuting ? { loading: true } : {}"
-        @click="handleRunCode">
+        v-bind="execution.isExecuting.value ? { loading: true } : {}"
+        @click="runCode">
         <svg
-          v-if="!isExecuting"
+          v-if="!execution.isExecuting.value"
           slot="prefix"
           xmlns="http://www.w3.org/2000/svg"
           width="14"
@@ -131,7 +131,7 @@
       <div class="output-header">
         <span class="output-label">Output</span>
         <ore-tooltip content="Clear Output" placement="bottom">
-          <ore-button icon-only variant="ghost" size="sm" @click="handleClearOutput">
+          <ore-button icon-only variant="ghost" size="sm" @click="execution.clear">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -151,8 +151,8 @@
           </ore-button>
         </ore-tooltip>
       </div>
-      <div ref="outputContainer" class="output-area">
-        <div class="output-placeholder">
+      <div class="output-area">
+        <div v-if="execution.output.value.length === 0" class="output-placeholder">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="28"
@@ -174,6 +174,16 @@
           </ul>
           <span class="placeholder-note">Your edits are saved automatically in the browser</span>
         </div>
+        <div v-else>
+          <div v-for="line in execution.output.value" :key="line.id" class="output-line" :class="`output-${line.type}`">
+            <span v-if="line.type !== 'result'" class="log-timestamp">{{ line.time }}</span>
+            <span class="log-icon">{{ OUTPUT_ICON[line.type] }}</span>
+            <span class="log-content"><span class="log-text">{{ line.text }}</span></span>
+          </div>
+        </div>
+        <!-- Sandboxed execution target — invisible: this REPL only shows console/return-value
+             output, never rendered DOM, so the iframe itself never needs to be seen. -->
+        <div ref="sandboxContainer" class="sandbox-host" aria-hidden="true"></div>
       </div>
     </div>
   </div>
@@ -182,24 +192,22 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
+import { type SandboxLibrary } from './repl/execution/buildSandboxDocument';
+import { executeReplCode } from './repl/execution/executeReplCode';
+import { persistedCode } from './repl/execution/persistedCode';
+import { loadMonaco } from './repl/execution/useMonaco';
+import { type OutputLine, useReplExecution } from './repl/execution/useReplExecution';
+import type { ExampleModule } from './repl/examples/types';
+import { LIBRARY_REGISTRY, type LibraryEntry } from './repl/registry.generated';
+
 // ============================================================================
-// Props & Emits
+// Props
 // ============================================================================
 
 const props = defineProps<{
-  selectedLibrary: string;
-  selectedExample: string;
-  examples: Record<string, any>;
+  examples: Record<string, ExampleModule>;
   isDark: boolean;
-  getDefaultCode: (libName: string) => string;
-  updateMonacoTypes: (libName: string) => void;
-  storagePrefix: string;
-}>();
-
-const emit = defineEmits<{
-  'update:selectedExample': [value: string];
-  'run-code': [];
-  'clear-output': [];
+  library: LibraryEntry;
 }>();
 
 // ============================================================================
@@ -207,79 +215,27 @@ const emit = defineEmits<{
 // ============================================================================
 
 const editorContainer = ref<HTMLElement | null>(null);
-const outputContainer = ref<HTMLElement | null>(null);
-const isExecuting = ref(false);
-const hasOutput = ref(false);
-const localSelectedExample = ref(props.selectedExample);
+const sandboxContainer = ref<HTMLElement | null>(null);
+const selectedExample = ref('');
 
-let editor: any = null;
-let lastCursorPosition: any = null;
-let consoleIntercepted = false;
-let pendingExample: string | null = null;
-const originalConsole = {
-  log: console.log,
-  error: console.error,
-  warn: console.warn,
-};
+const execution = useReplExecution(sandboxContainer);
 
-// Track timers/intervals spawned by user code so they can be cancelled on the
-// next run. Without this, setInterval/setTimeout from previous examples keep
-// firing console.log forever, accumulating DOM nodes and freezing the editor.
-const activeTimers = new Set<ReturnType<typeof setTimeout>>();
-const activeIntervals = new Set<ReturnType<typeof setInterval>>();
-const originalSetTimeout = window.setTimeout.bind(window);
-const originalSetInterval = window.setInterval.bind(window);
-const originalClearTimeout = window.clearTimeout.bind(window);
-const originalClearInterval = window.clearInterval.bind(window);
+const OUTPUT_ICON: Record<OutputLine['type'], string> = { error: '✖', log: '▸', result: '→', warn: '⚠' };
 
-function patchTimers(): void {
-  (window as any).setTimeout = (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
-    const id = originalSetTimeout(fn, delay, ...args);
-    activeTimers.add(id);
-    return id;
-  };
-  (window as any).setInterval = (fn: TimerHandler, delay?: number, ...args: unknown[]) => {
-    const id = originalSetInterval(fn, delay, ...args);
-    activeIntervals.add(id);
-    return id;
-  };
-  (window as any).clearTimeout = (id?: ReturnType<typeof setTimeout>) => {
-    if (id !== undefined) activeTimers.delete(id);
-    originalClearTimeout(id);
-  };
-  (window as any).clearInterval = (id?: ReturnType<typeof setInterval>) => {
-    if (id !== undefined) activeIntervals.delete(id);
-    originalClearInterval(id);
-  };
-}
-
-function cancelPreviousRunTimers(): void {
-  for (const id of activeTimers) originalClearTimeout(id);
-  for (const id of activeIntervals) originalClearInterval(id);
-  activeTimers.clear();
-  activeIntervals.clear();
-}
-
-function restoreTimers(): void {
-  cancelPreviousRunTimers();
-  (window as any).setTimeout = originalSetTimeout;
-  (window as any).setInterval = originalSetInterval;
-  (window as any).clearTimeout = originalClearTimeout;
-  (window as any).clearInterval = originalClearInterval;
-}
+let monaco: Awaited<ReturnType<typeof loadMonaco>> | null = null;
+let editor: import('monaco-editor').editor.IStandaloneCodeEditor | null = null;
+let lastCursorPosition: { column: number; lineNumber: number } | null = null;
 
 // ============================================================================
 // Computed Properties
 // ============================================================================
 
 const examplesByCategory = computed(() => {
-  const libExamples = props.examples[props.selectedLibrary] || {};
-  const grouped: Record<string, any[]> = {};
+  const grouped: Record<string, { label: string; value: string }[]> = {};
 
-  for (const [key, value] of Object.entries(libExamples)) {
+  for (const [key, value] of Object.entries(props.examples)) {
     const category = key.split('-')[0] || 'Other';
-    if (!grouped[category]) grouped[category] = [];
-    grouped[category].push({ label: (value as any).name || key, value: key });
+    (grouped[category] ??= []).push({ label: value.name || key, value: key });
   }
 
   return Object.entries(grouped).map(([name, exampleList]) => ({
@@ -288,399 +244,35 @@ const examplesByCategory = computed(() => {
   }));
 });
 
-// ============================================================================
-// Watchers
-// ============================================================================
-
-watch(
-  () => props.selectedExample,
-  (newVal) => {
-    localSelectedExample.value = newVal;
-  },
+/** This library plus every transitive @vielzeug dependency's registry entry, deps first. */
+const librariesInLoadOrder = computed<LibraryEntry[]>(() =>
+  [...props.library.dependencies, props.library.id].map((id) => (id === props.library.id ? props.library : LIBRARY_REGISTRY[id]!)),
 );
 
-watch(localSelectedExample, (newVal) => {
-  if (newVal) loadExample(props.selectedLibrary);
-});
-
-watch(
-  () => props.selectedLibrary,
-  () => {
-    localSelectedExample.value = '';
-    if (editor) {
-      const savedCode = localStorage.getItem(`${props.storagePrefix}${props.selectedLibrary}`);
-      editor.setValue(savedCode || props.getDefaultCode(props.selectedLibrary));
-    }
-    handleClearOutput();
-  },
-  { flush: 'sync' },
+/** IIFE bundles to inline into the sandbox document, in dependency-first order. */
+const sandboxLibraries = computed<SandboxLibrary[]>(() =>
+  librariesInLoadOrder.value.map((entry) => ({ globalName: entry.globalName, iifeSource: entry.iifeSource })),
 );
 
-watch(
-  () => props.isDark,
-  (newVal) => {
-    if (window.monaco && editor) {
-      monaco.editor.setTheme(newVal ? 'vs-dark' : 'vs');
-    }
-  },
-);
+/** Monaco "extra lib" entries so the editor can resolve types for this library and its deps. */
+function extraLibsFor(entries: LibraryEntry[]): { content: string; filePath: string }[] {
+  return entries.map((entry) => ({
+    content: entry.typeDeclaration,
+    filePath: `file:///node_modules/@vielzeug/${entry.id}/index.d.ts`,
+  }));
+}
 
 // ============================================================================
 // Helper Functions
 // ============================================================================
 
-const stringify = (item: unknown) => {
-  if (item === undefined) return 'undefined';
-  if (item === null) return 'null';
-  if (typeof item === 'string') return `'${item}'`;
-  if (typeof item === 'object') {
-    try {
-      if (item instanceof Date) return `Date(${item.toISOString()})`;
-      if (item instanceof Error) return `Error: ${item.message}`;
-      if (item instanceof RegExp) return String(item);
-      return JSON.stringify(item, null, 2);
-    } catch {
-      return String(item);
-    }
-  }
-  return String(item);
-};
+function defaultCodeFor(libraryId: string): string {
+  const first = Object.values(props.examples)[0];
 
-const createOutputLine = (content: string[], type: 'log' | 'error' | 'warn' | 'result') => {
-  const output = outputContainer.value;
-  if (!output) {
-    console.warn('Output container not found');
-    return;
-  }
+  return first?.code ?? `// @vielzeug/${libraryId}\n`;
+}
 
-  const line = document.createElement('div');
-  line.className = `output-line output-${type}`;
-
-  if (type !== 'result') {
-    const time = document.createElement('span');
-    time.className = 'log-timestamp';
-    time.textContent = new Date().toLocaleTimeString('en-US', { hour12: false });
-    line.appendChild(time);
-  }
-
-  const icon = document.createElement('span');
-  icon.className = 'log-icon';
-  icon.textContent = type === 'log' ? '▸' : type === 'error' ? '✖' : type === 'warn' ? '⚠' : '→';
-  line.appendChild(icon);
-
-  const contentSpan = document.createElement('span');
-  contentSpan.className = 'log-content';
-  contentSpan.textContent = content.join(' ');
-  line.appendChild(contentSpan);
-
-  // Check for placeholder - use querySelector to avoid whitespace text node issues
-  const placeholder = output.querySelector('.output-placeholder');
-  if (placeholder) {
-    output.innerHTML = '';
-  }
-
-  output.appendChild(line);
-  output.scrollTop = output.scrollHeight;
-  hasOutput.value = true;
-};
-
-const interceptConsole = () => {
-  if (consoleIntercepted) return;
-  consoleIntercepted = true;
-
-  console.log = (...args) => {
-    createOutputLine(args.map(stringify), 'log');
-    originalConsole.log(...args);
-  };
-  console.error = (...args) => {
-    createOutputLine(args.map(stringify), 'error');
-    originalConsole.error(...args);
-  };
-  console.warn = (...args) => {
-    createOutputLine(args.map(stringify), 'warn');
-    originalConsole.warn(...args);
-  };
-};
-
-const restoreConsole = () => {
-  if (!consoleIntercepted) return;
-  consoleIntercepted = false;
-  console.log = originalConsole.log;
-  console.error = originalConsole.error;
-  console.warn = originalConsole.warn;
-};
-
-// ============================================================================
-// Editor Actions
-// ============================================================================
-
-const handleRunCode = async () => {
-  // This should ALWAYS log when Run is clicked
-  console.log('🎯 RUN BUTTON CLICKED - handleRunCode executing');
-  console.log('Editor exists:', !!editor);
-  console.log('Output container exists:', !!outputContainer.value);
-
-  if (!editor) {
-    originalConsole.warn('Editor not initialized');
-    if (outputContainer.value) {
-      createOutputLine(['⚠️ Editor not initialized'], 'error');
-    }
-    return;
-  }
-
-  originalConsole.log('🚀 Running code...');
-  isExecuting.value = true;
-
-  // Cancel any timers/intervals left over from the previous run before starting.
-  cancelPreviousRunTimers();
-
-  // Clear output first
-  handleClearOutput();
-
-  // Intercept console and patch timers so new ones are tracked.
-  interceptConsole();
-  patchTimers();
-
-  try {
-    let code = editor.getValue();
-    originalConsole.log('📝 Original code:', code);
-
-    // Check if code is empty
-    if (!code || code.trim() === '') {
-      createOutputLine(['⚠️ No code to execute'], 'warn');
-      isExecuting.value = false;
-      restoreConsole();
-      emit('run-code');
-      return;
-    }
-
-    localStorage.setItem(`${props.storagePrefix}${props.selectedLibrary}`, code);
-
-    // Strip TypeScript-only syntax so cached or hand-typed TS code still runs.
-    // 1. Remove 'type X = ...' declarations, including multiline union types.
-    code = code.replace(/^type\s+\w[^\n]*(?:\n[ \t]+[|&][^\n]*)*/gm, '');
-    // 2. Remove 'as TYPE' casts — 'as' is not a valid JS operator, always safe to drop.
-    //    Handles: 'as any', 'as Foo', 'as Foo[]', 'as A | B', 'as { ... }', 'as { ... }[]'
-    code = code.replace(
-      /\bas\s+(?:\{[^}]*\}(?:\[\])*|[\w$][\w$.<>\[\]]*(?:\s*\|\s*(?:null|undefined|[\w$][\w$.<>\[\]]*))*)/g,
-      '',
-    );
-    // 3. Remove ': any' parameter/variable type annotations.
-    code = code.replace(/:\s*any\b/g, '');
-
-    // Transform import statements to use global variables
-    // Example: import { Vault } from '@vielzeug/vault' -> const { Vault } = window.vault || {}
-    code = code.replace(/import\s+{([^}]+)}\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, imports, libName) => {
-      // Keep only runtime imports (drop type-only specifiers) and map "a as b" to object destructuring alias "a: b".
-      const runtimeImports = imports
-        .split(',')
-        .map((entry: string) => entry.trim())
-        .filter((entry: string) => entry.length > 0)
-        .filter((entry: string) => !entry.startsWith('type '))
-        .map((entry: string) => entry.replace(/^type\s+/, ''))
-        .map((entry: string) => entry.replace(/\s+as\s+/g, ': '));
-
-      if (runtimeImports.length === 0) {
-        return '';
-      }
-
-      return `const { ${runtimeImports.join(', ')} } = window.${libName} || window || {}`;
-    });
-
-    // Also handle default imports: import Lib from '@vielzeug/lib' -> const Lib = window.lib
-    code = code.replace(/import\s+(\w+)\s+from\s+['"]@vielzeug\/([^'"]+)['"]/g, (match, defaultImport, libName) => {
-      return `const ${defaultImport} = window.${libName}`;
-    });
-
-    // Remove any remaining import statements that might not be @vielzeug
-    code = code.replace(/import\s+.+\s+from\s+['"][^'"]+['"]\s*;?\s*/g, '');
-
-    originalConsole.log('🔄 Transformed code:', code);
-    originalConsole.log('🌍 Available globals:', {
-      [props.selectedLibrary]: window[props.selectedLibrary] ? '✅' : '❌',
-    });
-
-    // Create function with access to window globals
-    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-    const fn = new AsyncFunction(code);
-    const result = await fn.call(window);
-
-    originalConsole.log('✅ Execution result:', result);
-
-    if (result !== undefined) {
-      createOutputLine([stringify(result)], 'result');
-    }
-  } catch (err: any) {
-    // Better error reporting
-    const errorMessage = err?.stack || err?.message || String(err);
-    createOutputLine([errorMessage], 'error');
-    originalConsole.error('❌ Code execution error:', err);
-  } finally {
-    isExecuting.value = false;
-    restoreConsole();
-  }
-
-  emit('run-code');
-};
-
-const formatCode = async () => {
-  if (!editor) return;
-  await editor.getAction('editor.action.formatDocument')?.run();
-};
-
-const copyCode = async () => {
-  if (!editor) return;
-  const code = editor.getValue();
-  try {
-    await navigator.clipboard.writeText(code);
-  } catch (err) {
-    console.error('Failed to copy code', err);
-  }
-};
-
-const resetEditor = () => {
-  if (!editor) return;
-  const defaultCode = props.getDefaultCode(props.selectedLibrary);
-  editor.setValue(defaultCode);
-  localStorage.setItem(`${props.storagePrefix}${props.selectedLibrary}`, defaultCode);
-};
-
-const clearEditor = () => {
-  if (!editor) return;
-  editor.setValue('');
-  localStorage.removeItem(`${props.storagePrefix}${props.selectedLibrary}`);
-};
-
-const handleClearOutput = () => {
-  if (!outputContainer.value) return;
-  hasOutput.value = false;
-  outputContainer.value.innerHTML = `
-    <div class="output-placeholder">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="16 18 22 12 16 6" />
-        <polyline points="8 6 2 12 8 18" />
-      </svg>
-      <p>Output cleared</p>
-      <span>Press <kbd>⌘ Enter</kbd> or click <strong>Run</strong> to execute</span>
-    </div>
-  `;
-  emit('clear-output');
-};
-
-const handleExampleSelect = (e: Event) => {
-  const detail = (e as CustomEvent<{ values: string[] }>).detail;
-  const newValue = detail?.values?.[0] ?? '';
-  localSelectedExample.value = newValue;
-  // Always call loadExample directly so that re-selecting the *same* example
-  // also reloads the editor — the watcher only fires when the value changes.
-  if (newValue) loadExample(props.selectedLibrary);
-};
-
-const loadExample = (forLibrary = props.selectedLibrary) => {
-  if (!localSelectedExample.value) return;
-
-  // Editor not ready yet — remember and apply once initializeEditor runs.
-  if (!editor) {
-    pendingExample = localSelectedExample.value;
-    return;
-  }
-
-  // Bail if the library changed by the time this runs (watcher race guard)
-  if (forLibrary !== props.selectedLibrary) return;
-
-  const libExamples = props.examples[forLibrary];
-  const example = libExamples?.[localSelectedExample.value];
-
-  if (example?.code) {
-    editor.setValue(example.code);
-    localStorage.setItem(`${props.storagePrefix}${forLibrary}`, example.code);
-  }
-
-  emit('update:selectedExample', localSelectedExample.value);
-};
-
-// ============================================================================
-// Monaco Editor Setup
-// ============================================================================
-
-const initializeEditor = () => {
-  if (!editorContainer.value || !window.monaco) return;
-
-  const initialCode = getInitialCode();
-  editor = monaco.editor.create(editorContainer.value, {
-    value: initialCode,
-    language: 'typescript',
-    theme: props.isDark ? 'vs-dark' : 'vs',
-    fontSize: 14,
-    minimap: { enabled: false },
-    scrollBeyondLastLine: false,
-    automaticLayout: true,
-  });
-
-  // Apply any example that was selected before the editor finished initializing.
-  if (pendingExample) {
-    localSelectedExample.value = pendingExample;
-    pendingExample = null;
-    loadExample();
-  }
-
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, handleRunCode);
-
-  // Native fallback: catch ⌘+Enter (Mac) and Ctrl+Enter before browser intercepts
-  editorContainer.value?.addEventListener(
-    'keydown',
-    (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault();
-        e.stopPropagation();
-        handleRunCode();
-      }
-    },
-    { capture: true },
-  );
-
-  // Track cursor position changes
-  editor.onDidChangeCursorPosition((e: any) => {
-    lastCursorPosition = e.position;
-  });
-
-  // Store cursor position when editor loses focus
-  editor.onDidBlurEditorText(() => {
-    const position = editor.getPosition();
-    if (position) {
-      lastCursorPosition = position;
-    }
-  });
-
-  // Initialize the last cursor position
-  const position = editor.getPosition();
-  if (position) {
-    lastCursorPosition = position;
-  }
-
-  // Prevent VitePress command menu from appearing when typing "/" in the editor
-  // Listen for keydown events on the editor DOM node
-  const editorDomNode = editor.getDomNode();
-  if (editorDomNode) {
-    editorDomNode.addEventListener(
-      'keydown',
-      (e: KeyboardEvent) => {
-        // Stop propagation for the "/" key to prevent VitePress command menu
-        if (e.key === '/' || e.code === 'Slash') {
-          e.stopPropagation();
-        }
-        // Also prevent other VitePress shortcuts when the editor is focused
-        // Ctrl/Cmd + K (command palette)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-          e.stopPropagation();
-        }
-      },
-      true,
-    ); // Use the capture phase to intercept before VitePress
-  }
-};
-
-const getInitialCode = () => {
+function getInitialCode(): string {
   const urlParams = new URLSearchParams(window.location.search);
   const sharedCode = urlParams.get('code');
 
@@ -688,81 +280,175 @@ const getInitialCode = () => {
     try {
       const decoded = atob(sharedCode);
       window.history.replaceState({}, document.title, window.location.pathname);
+
       return decoded;
-    } catch (e) {
-      console.error('Failed to decode shared code', e);
+    } catch (err) {
+      console.error('Failed to decode shared code from URL', err);
     }
   }
 
-  const savedCode = localStorage.getItem(`${props.storagePrefix}${props.selectedLibrary}`);
-  return savedCode || props.getDefaultCode(props.selectedLibrary);
-};
+  return persistedCode.get(props.library.id) ?? defaultCodeFor(props.library.id);
+}
+
+function resolveGlobalNameFor(entries: LibraryEntry[]): (lib: string) => string {
+  const globalNames = Object.fromEntries(entries.map((entry) => [entry.id, entry.globalName]));
+
+  return (lib: string) => globalNames[lib] ?? lib;
+}
+
+async function runCode(): Promise<void> {
+  // Also guards against overlapping runs: transpileTypeScript() is a real async round trip to
+  // Monaco's worker, so a second Run before the first settles could otherwise resolve out of
+  // order and clobber the newer run's output with the older run's result.
+  if (!editor || !monaco || execution.isExecuting.value) return;
+
+  const rawCode = editor.getValue();
+
+  if (rawCode.trim()) persistedCode.set(props.library.id, rawCode);
+
+  await executeReplCode({
+    execution,
+    libraries: sandboxLibraries.value,
+    model: editor.getModel(),
+    monaco,
+    rawCode,
+    resolveGlobalName: resolveGlobalNameFor(librariesInLoadOrder.value),
+  });
+}
+
+async function formatCode(): Promise<void> {
+  await editor?.getAction('editor.action.formatDocument')?.run();
+}
+
+async function copyCode(): Promise<void> {
+  if (!editor) return;
+
+  try {
+    await navigator.clipboard.writeText(editor.getValue());
+  } catch (err) {
+    console.error('Failed to copy code', err);
+  }
+}
+
+function resetEditor(): void {
+  if (!editor) return;
+
+  const code = defaultCodeFor(props.library.id);
+  editor.setValue(code);
+  persistedCode.set(props.library.id, code);
+}
+
+function clearEditor(): void {
+  editor?.setValue('');
+  persistedCode.clear(props.library.id);
+}
+
+function loadExample(exampleKey: string): void {
+  const example = props.examples[exampleKey];
+
+  if (!editor || !example) return;
+
+  editor.setValue(example.code);
+  persistedCode.set(props.library.id, example.code);
+}
+
+function handleExampleSelect(e: Event): void {
+  const key = (e as CustomEvent<{ values: string[] }>).detail?.values?.[0] ?? '';
+  selectedExample.value = key;
+  if (key) loadExample(key);
+}
+
+function insertTextAtCursor(text: string): void {
+  if (!editor || !monaco) return;
+
+  const position = lastCursorPosition ?? editor.getPosition();
+
+  if (!position) return;
+
+  const range = new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column);
+  editor.executeEdits('insert-text', [{ forceMoveMarkers: true, range, text }]);
+
+  const newPosition = { column: position.column + text.length, lineNumber: position.lineNumber };
+  editor.setPosition(newPosition);
+  editor.revealPositionInCenter(newPosition);
+  lastCursorPosition = newPosition;
+  editor.focus();
+}
 
 // ============================================================================
-// Lifecycle
+// Monaco setup
 // ============================================================================
+
+async function initializeEditor(): Promise<void> {
+  monaco = await loadMonaco();
+
+  if (!editorContainer.value) return;
+
+  monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
+
+  editor = monaco.editor.create(editorContainer.value, {
+    automaticLayout: true,
+    fontSize: 14,
+    language: 'typescript',
+    minimap: { enabled: false },
+    scrollBeyondLastLine: false,
+    theme: props.isDark ? 'vs-dark' : 'vs',
+    value: getInitialCode(),
+  });
+
+  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, runCode);
+  editor.onDidChangeCursorPosition((e) => {
+    lastCursorPosition = e.position;
+  });
+
+  // Prevent VitePress's "/" command palette and Cmd/Ctrl+K shortcut from firing while the
+  // editor has focus.
+  editor.getDomNode()?.addEventListener(
+    'keydown',
+    (e: KeyboardEvent) => {
+      if (e.key === '/' || e.code === 'Slash') e.stopPropagation();
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') e.stopPropagation();
+    },
+    true,
+  );
+}
+
+// ============================================================================
+// Watchers & Lifecycle
+// ============================================================================
+
+watch(
+  () => props.library.id,
+  () => {
+    selectedExample.value = '';
+    // Switching libraries abandons whatever the previous library's code was doing — cancel()
+    // both supersedes the sandbox's current render (so a still-running/hung previous run's
+    // output can't land in what now looks like a fresh panel) and clears the output itself.
+    execution.cancel();
+
+    if (!editor || !monaco) return;
+
+    monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibsFor(librariesInLoadOrder.value));
+    editor.setValue(persistedCode.get(props.library.id) ?? defaultCodeFor(props.library.id));
+  },
+);
+
+watch(
+  () => props.isDark,
+  (dark) => monaco?.editor.setTheme(dark ? 'vs-dark' : 'vs'),
+);
 
 onMounted(() => {
-  if (window.monaco) {
-    initializeEditor();
-  }
+  void initializeEditor();
 });
 
 onBeforeUnmount(() => {
-  restoreConsole();
-  restoreTimers();
-  if (editor) {
-    editor.dispose();
-    editor = null;
-  }
+  editor?.dispose();
+  editor = null;
+  execution.dispose();
 });
 
-// ============================================================================
-// Expose Methods
-// ============================================================================
-
-const insertTextAtCursor = (text: string) => {
-  if (!editor || !window.monaco) return;
-
-  // Use last known cursor position if available, otherwise get current
-  const position = lastCursorPosition || editor.getPosition();
-  if (!position) return;
-
-  // Create a range at the cursor position
-  const range = new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column);
-
-  // Execute the edit
-  editor.executeEdits('insert-text', [
-    {
-      range,
-      text,
-      forceMoveMarkers: true,
-    },
-  ]);
-
-  // Calculate new cursor position after insertion
-  const newPosition = {
-    lineNumber: position.lineNumber,
-    column: position.column + text.length,
-  };
-
-  // Set cursor to new position and reveal it
-  editor.setPosition(newPosition);
-  editor.revealPositionInCenter(newPosition);
-
-  // Update last cursor position
-  lastCursorPosition = newPosition;
-
-  // Focus the editor
-  editor.focus();
-};
-
-defineExpose({
-  initializeEditor,
-  getEditor: () => editor,
-  clearOutput: handleClearOutput,
-  insertTextAtCursor,
-});
+defineExpose({ insertTextAtCursor });
 </script>
 
 <style scoped>
@@ -925,80 +611,6 @@ defineExpose({
 }
 
 /* Output Styles - for dynamically created DOM elements */
-.output-area :deep(.output-line) {
-  margin: var(--size-1-5) 0;
-  padding: var(--size-0-5) 0;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--size-4);
-  border-bottom: var(--border) solid var(--color-contrast-300);
-  opacity: 0.9;
-}
-
-.output-area :deep(.log-timestamp) {
-  font-size: var(--text-xs);
-  color: var(--text-color-tertiary);
-  min-width: 70px;
-  font-variant-numeric: tabular-nums;
-}
-
-.output-area :deep(.log-icon) {
-  font-size: var(--text-sm);
-  color: var(--text-color-secondary);
-  min-width: 16px;
-  text-align: center;
-}
-
-.output-area :deep(.log-content) {
-  flex: 1;
-  word-break: break-all;
-  white-space: pre-wrap;
-  color: var(--text-color-body);
-}
-
-.output-area :deep(.log-text) {
-  word-break: break-all;
-  white-space: pre-wrap;
-}
-
-.output-area :deep(.output-result .log-text) {
-  color: var(--color-primary);
-  font-weight: var(--font-semibold);
-  font-size: var(--text-base);
-}
-
-.output-area :deep(.output-error),
-.output-area :deep(.output-warn) {
-  padding: var(--size-2) var(--size-3);
-  border-radius: var(--rounded-md);
-  margin: var(--size-2) 0;
-}
-
-.output-area :deep(.output-error) {
-  color: var(--color-error);
-  background: var(--color-error-backdrop);
-  border: var(--border) solid var(--color-error-border);
-}
-
-.output-area :deep(.output-warn) {
-  color: var(--color-warning);
-  background: var(--color-warning-backdrop);
-  border: var(--border) solid var(--color-warning-border);
-}
-
-.output-area :deep(.output-result) {
-  color: var(--color-primary);
-  font-weight: var(--font-semibold);
-}
-
-.output-area :deep(.output-log) {
-  color: var(--text-color-body);
-}
-</style>
-
-<style>
-/* Global styles for dynamically created output elements */
-/* These need to be global because they're created via document.createElement */
 .output-area .output-line {
   margin: var(--size-1-5) 0;
   padding: var(--size-0-5) 0;
@@ -1069,6 +681,7 @@ defineExpose({
   color: var(--text-color-body);
 }
 
+/* Output placeholder + result formatting (rendered via v-for, no longer via innerHTML) */
 .output-placeholder {
   display: flex;
   flex-direction: column;
@@ -1154,21 +767,11 @@ defineExpose({
   }
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .editor-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
-    height: auto;
-  }
-
-  .header-actions {
-    width: 100%;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
+.sandbox-host {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  border: 0;
 }
 </style>

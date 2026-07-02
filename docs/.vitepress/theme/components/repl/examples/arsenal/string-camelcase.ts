@@ -1,4 +1,23 @@
 export const stringCamelcaseExample = {
-  code: "import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/arsenal'\n\nconst input = 'hello world example'\n\nconsole.log('camelCase:', camelCase(input))\nconsole.log('PascalCase:', pascalCase(input))\nconsole.log('kebab-case:', kebabCase(input))\nconsole.log('snake_case:', snakeCase(input))\n\n// Different input formats\nconst formats = [\n  'hello-world',\n  'hello_world',\n  'HelloWorld',\n  'helloWorld'\n]\n\nformats.forEach(str => {\n  console.log(`\"${str}\" → camelCase: ${camelCase(str)}`)\n})",
+  code: `import { camelCase, pascalCase, kebabCase, snakeCase } from '@vielzeug/arsenal'
+
+const input = 'hello world example'
+
+console.log('camelCase:', camelCase(input))
+console.log('PascalCase:', pascalCase(input))
+console.log('kebab-case:', kebabCase(input))
+console.log('snake_case:', snakeCase(input))
+
+// Different input formats
+const formats = [
+  'hello-world',
+  'hello_world',
+  'HelloWorld',
+  'helloWorld'
+]
+
+formats.forEach(str => {
+  console.log(\`"\${str}" → camelCase: \${camelCase(str)}\`)
+})`,
   name: 'camelCase - Convert to camelCase',
 };

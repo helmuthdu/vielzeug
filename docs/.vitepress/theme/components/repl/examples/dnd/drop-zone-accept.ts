@@ -1,4 +1,59 @@
 export const dropZoneAcceptExample = {
-  code: "import { createDropZone } from '@vielzeug/dnd'\n\nconst app = document.createElement('div')\napp.style.cssText = 'display:flex;flex-direction:column;gap:12px;align-items:flex-start;'\ndocument.body.appendChild(app)\n\nconst button = document.createElement('button')\nbutton.type = 'button'\nbutton.style.cssText = 'padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font:inherit;'\napp.appendChild(button)\n\nconst dropEl = document.createElement('div')\ndropEl.style.cssText = 'width:300px;height:200px;border:2px dashed #ccc;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;transition:border-color 120ms ease, background 120ms ease, opacity 120ms ease;'\napp.appendChild(dropEl)\n\nconst title = document.createElement('span')\nconst hint = document.createElement('small')\nhint.style.color = '#666'\ndropEl.append(title, hint)\n\nconst options = {\n  element: dropEl,\n  accept: ['image/*', '.pdf'],\n  disabled: false,\n  onDrop: (files) => {\n    console.log('Accepted files:')\n    files.forEach(f => console.log(' ✓', f.name))\n  },\n  onDropRejected: (files) => {\n    console.log('Rejected files (wrong type):')\n    files.forEach(f => console.log(' ✗', f.name, '-', f.type || 'unknown'))\n  },\n  onHoverChange: (hovered) => {\n    render(hovered)\n  },\n}\n\nconst zone = createDropZone(options)\n\nconst render = (hovered = false) => {\n  button.textContent = options.disabled ? 'Enable drop zone' : 'Disable drop zone'\n  title.textContent = options.disabled ? 'Drop zone disabled' : hovered ? 'Release to drop files' : 'Drop images or PDFs here'\n  hint.textContent = options.disabled ? 'Drops are ignored while disabled' : 'Accepted: image/* and .pdf'\n  dropEl.style.opacity = options.disabled ? '0.6' : '1'\n  dropEl.style.borderColor = options.disabled ? '#94a3b8' : hovered ? '#10b981' : '#ccc'\n  dropEl.style.background = !options.disabled && hovered ? '#ecfdf5' : '#fff'\n}\n\nbutton.addEventListener('click', () => {\n  options.disabled = !options.disabled\n  render()\n  console.log('Disabled:', options.disabled)\n})\n\nrender()\nconsole.log('Drop zone ready. Current hover state:', zone.hovered)",
+  code: `import { createDropZone } from '@vielzeug/dnd'
+
+const app = document.createElement('div')
+app.style.cssText = 'display:flex;flex-direction:column;gap:12px;align-items:flex-start;'
+document.body.appendChild(app)
+
+const button = document.createElement('button')
+button.type = 'button'
+button.style.cssText = 'padding:8px 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;cursor:pointer;font:inherit;'
+app.appendChild(button)
+
+const dropEl = document.createElement('div')
+dropEl.style.cssText = 'width:300px;height:200px;border:2px dashed #ccc;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#fff;transition:border-color 120ms ease, background 120ms ease, opacity 120ms ease;'
+app.appendChild(dropEl)
+
+const title = document.createElement('span')
+const hint = document.createElement('small')
+hint.style.color = '#666'
+dropEl.append(title, hint)
+
+const options = {
+  element: dropEl,
+  accept: ['image/*', '.pdf'],
+  disabled: false,
+  onDrop: (files) => {
+    console.log('Accepted files:')
+    files.forEach(f => console.log(' ✓', f.name))
+  },
+  onDropRejected: (files) => {
+    console.log('Rejected files (wrong type):')
+    files.forEach(f => console.log(' ✗', f.name, '-', f.type || 'unknown'))
+  },
+  onHoverChange: (hovered) => {
+    render(hovered)
+  },
+}
+
+const zone = createDropZone(options)
+
+const render = (hovered = false) => {
+  button.textContent = options.disabled ? 'Enable drop zone' : 'Disable drop zone'
+  title.textContent = options.disabled ? 'Drop zone disabled' : hovered ? 'Release to drop files' : 'Drop images or PDFs here'
+  hint.textContent = options.disabled ? 'Drops are ignored while disabled' : 'Accepted: image/* and .pdf'
+  dropEl.style.opacity = options.disabled ? '0.6' : '1'
+  dropEl.style.borderColor = options.disabled ? '#94a3b8' : hovered ? '#10b981' : '#ccc'
+  dropEl.style.background = !options.disabled && hovered ? '#ecfdf5' : '#fff'
+}
+
+button.addEventListener('click', () => {
+  options.disabled = !options.disabled
+  render()
+  console.log('Disabled:', options.disabled)
+})
+
+render()
+console.log('Drop zone ready. Current hover state:', zone.hovered)`,
   name: 'createDropZone - Accept Filter',
 };

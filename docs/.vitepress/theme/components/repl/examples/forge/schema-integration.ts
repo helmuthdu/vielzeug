@@ -1,4 +1,48 @@
 export const schemaIntegrationExample = {
-  code: "// Pass any safeParse-compatible schema directly to validator — no wrapper needed\nimport { createForm } from '@vielzeug/forge'\n\nconst error = (path, message) => ({\n  message,\n  path: [path],\n})\n\n// Simulates @vielzeug/spell, Zod, Valibot, or any safeParse-compatible schema\nconst mockSchema = {\n  safeParse(data) {\n    const value = data ?? {}\n    const issues = []\n\n    if (!value.username || value.username.length < 3) {\n      issues.push(error('username', 'Min 3 characters'))\n    }\n\n    if (!value.email || !value.email.includes('@')) {\n      issues.push(error('email', 'Invalid email'))\n    }\n\n    return issues.length > 0\n      ? { success: false, error: { issues } }\n      : { success: true }\n  },\n}\n\nconst form = createForm({\n  defaultValues: { username: '', email: '' },\n  validator: mockSchema, // auto-detected as a safeParse schema\n})\n\nform.set('username', 'ab')\nform.set('email', 'notanemail')\n\nconst invalid = await form.validate()\nconsole.log('Valid:', invalid.valid)\nconsole.log('Errors:', invalid.errors)\n\nform.set('username', 'alice')\nform.set('email', 'alice@example.com')\n\nconst valid = await form.validate()\nconsole.log('After fix — Valid:', valid.valid)",
+  code: `// Pass any safeParse-compatible schema directly to validator — no wrapper needed
+import { createForm } from '@vielzeug/forge'
+
+const error = (path, message) => ({
+  message,
+  path: [path],
+})
+
+// Simulates @vielzeug/spell, Zod, Valibot, or any safeParse-compatible schema
+const mockSchema = {
+  safeParse(data) {
+    const value = data ?? {}
+    const issues = []
+
+    if (!value.username || value.username.length < 3) {
+      issues.push(error('username', 'Min 3 characters'))
+    }
+
+    if (!value.email || !value.email.includes('@')) {
+      issues.push(error('email', 'Invalid email'))
+    }
+
+    return issues.length > 0
+      ? { success: false, error: { issues } }
+      : { success: true }
+  },
+}
+
+const form = createForm({
+  defaultValues: { username: '', email: '' },
+  validator: mockSchema, // auto-detected as a safeParse schema
+})
+
+form.set('username', 'ab')
+form.set('email', 'notanemail')
+
+const invalid = await form.validate()
+console.log('Valid:', invalid.valid)
+console.log('Errors:', invalid.errors)
+
+form.set('username', 'alice')
+form.set('email', 'alice@example.com')
+
+const valid = await form.validate()
+console.log('After fix — Valid:', valid.valid)`,
   name: 'Schema Integration - safeParse Auto-detection',
 };
