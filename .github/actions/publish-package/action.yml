@@ -52,7 +52,7 @@ runs:
       run: |
         TARBALL=$(npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
         echo "📦 Packed: ${TARBALL}"
-        tar -tzf "${TARBALL}" | head -15
+        tar -tzf "${TARBALL}" | head -15 || true
 
         set +e
         PUBLISH_OUT=$(npm publish "${TARBALL}" --access public 2>&1)
