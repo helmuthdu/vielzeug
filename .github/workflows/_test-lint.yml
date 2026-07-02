@@ -57,3 +57,6 @@ jobs:
 
       - name: Lint CSS
         run: pnpm lint:css
+
+      - name: Check workflow docs are in sync with manifest.json
+        run: pnpm check:workflow-docs

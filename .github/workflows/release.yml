@@ -104,11 +104,46 @@ jobs:
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
+      - name: Set aside change files for other packages
+        run: |
+          # "rush publish --apply" processes every file under common/changes, not just the
+          # target package's — there's no per-package filter. Move everyone else's change
+          # files out of the way so only ours gets consumed/bumped.
+          PKG="${{ inputs.package }}"
+          mkdir -p /tmp/other-changes
+          if [ -d common/changes ]; then
+            find common/changes -type f -name '*.json' ! -path "common/changes/${PKG}/*" -print0 |
+              while IFS= read -r -d '' f; do
+                mkdir -p "/tmp/other-changes/$(dirname "$f")"
+                mv "$f" "/tmp/other-changes/$f"
+              done
+          fi
+          echo "Set aside $(find /tmp/other-changes -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ') change file(s) belonging to other packages"
+
       - name: Apply version bump
         run: |
           node common/scripts/install-run-rush.js publish \
             --apply --target-branch main --add-commit-details
           echo "✅ Rush publish --apply complete"
+
+      - name: Restore change files for other packages
+        if: always()
+        run: |
+          # Rush's internal "git add :/*" stages the set-aside files as deleted since they were
+          # absent from the working tree — put them back and, if needed, commit the correction.
+          if [ -d /tmp/other-changes ]; then
+            find /tmp/other-changes -type f -name '*.json' -print0 |
+              while IFS= read -r -d '' f; do
+                REL="${f#/tmp/other-changes/}"
+                mkdir -p "$(dirname "$REL")"
+                mv "$f" "$REL"
+              done
+          fi
+          if [ -n "$(git status --porcelain -- common/changes)" ]; then
+            git add common/changes
+            git commit -m "chore: restore pending change files for other packages"
+            echo "✅ Restored change files rush publish would have wrongly deleted"
+          fi
 
       - name: Read new version
         id: version
