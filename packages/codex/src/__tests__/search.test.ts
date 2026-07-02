@@ -202,12 +202,12 @@ describe('scorePackage — score tiers', () => {
     expect(nameHit!.score).toBeGreaterThan(descHit!.score);
   });
 
-  it.each([
+  it.each<[string, Partial<BundledPackage>, string, number]>([
     ['keywords', { keywords: ['validation'] }, 'validation', 2.5],
     ['exports', { exports: ['signal'] }, 'signal', 2.2],
     ['related', { related: ['ore'] }, 'ore', 2.0],
-  ] as const)('%s match scores in 2.x tier (>= expected, < 3)', (_label, overrides, query, minScore) => {
-    const hit = scorePackage(pkg(overrides as Partial<BundledPackage>), query);
+  ])('%s match scores in 2.x tier (>= expected, < 3)', (_label, overrides, query, minScore) => {
+    const hit = scorePackage(pkg(overrides), query);
 
     expect(hit?.score).toBeGreaterThanOrEqual(minScore);
     expect(hit?.score).toBeLessThan(3);

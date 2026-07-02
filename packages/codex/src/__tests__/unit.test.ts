@@ -1,3 +1,6 @@
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { parseFrontmatter } from '../../scripts/frontmatter.ts';
@@ -223,6 +226,22 @@ describe('loadData', () => {
 
   it('throws ENOENT with a descriptive message for a missing file', () => {
     expect(() => loadData('/nonexistent/path/data.json')).toThrow(/not found/);
+  });
+
+  it('throws a descriptive error for malformed JSON', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'codex-loaddata-'));
+    const file = join(dir, 'vielzeug-data.json');
+
+    writeFileSync(file, '{ not: valid json', 'utf8');
+
+    expect(() => loadData(file)).toThrow(/malformed JSON/);
+  });
+
+  it('wraps non-ENOENT read errors with a descriptive message', () => {
+    // Reading a directory as a file fails with EISDIR, not ENOENT — exercises the generic read-failure branch.
+    const dir = mkdtempSync(join(tmpdir(), 'codex-loaddata-'));
+
+    expect(() => loadData(dir)).toThrow(/Failed to read bundled MCP data/);
   });
 });
 

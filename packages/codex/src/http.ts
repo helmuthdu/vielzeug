@@ -33,6 +33,7 @@ function handleError(err: unknown, res: ServerResponse, req?: IncomingMessage): 
 
 export interface HttpServerHandle {
   dispose(): Promise<void>;
+  readonly disposed: boolean;
   [Symbol.asyncDispose](): Promise<void>;
 }
 
@@ -132,12 +133,21 @@ export async function startHttpServer(
     });
   });
 
+  let disposed = false;
+
   const handle: HttpServerHandle = {
     dispose(): Promise<void> {
+      if (disposed) return Promise.resolve();
+
+      disposed = true;
+
       return new Promise<void>((resolve) => {
         httpServer.closeAllConnections?.();
         httpServer.close(() => resolve());
       });
+    },
+    get disposed(): boolean {
+      return disposed;
     },
     [Symbol.asyncDispose](): Promise<void> {
       return this.dispose();

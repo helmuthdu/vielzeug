@@ -9,7 +9,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { createServer as createHttpServer } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createRequestHandler } from '../http.js';
+import { createRequestHandler, startHttpServer } from '../http.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -17,6 +17,23 @@ import { createRequestHandler } from '../http.js';
 
 function makeServer(): Server {
   return new Server({ name: 'test', version: '0.0.0' }, { capabilities: { tools: {} } });
+}
+
+/** Binds an ephemeral port, immediately releases it, and returns the port number for reuse. */
+async function getFreePort(): Promise<number> {
+  const probe = createHttpServer();
+
+  return new Promise((resolve, reject) => {
+    probe.once('error', reject);
+    probe.listen(0, () => {
+      const addr = probe.address();
+
+      probe.close(() => {
+        if (addr && typeof addr === 'object') resolve(addr.port);
+        else reject(new Error('could not get a free port'));
+      });
+    });
+  });
 }
 
 interface TestServer {
@@ -146,5 +163,61 @@ describe('HTTP transport — createRequestHandler', () => {
       expect(res.status).toBeGreaterThanOrEqual(400);
       expect(res.status).toBeLessThan(600);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// startHttpServer
+// ---------------------------------------------------------------------------
+
+describe('startHttpServer', () => {
+  it('listens on the requested port and serves /health', async () => {
+    const port = await getFreePort();
+    const handle = await startHttpServer(makeServer(), port, makeServer);
+
+    try {
+      const res = await fetch(`http://localhost:${port}/health`);
+
+      expect(res.status).toBe(200);
+      expect(handle.disposed).toBe(false);
+    } finally {
+      await handle.dispose();
+    }
+  });
+
+  it('dispose() closes the server, sets disposed, and is idempotent', async () => {
+    const port = await getFreePort();
+    const handle = await startHttpServer(makeServer(), port, makeServer);
+
+    await handle.dispose();
+
+    expect(handle.disposed).toBe(true);
+
+    // Second call must not throw and must remain a no-op.
+    await expect(handle.dispose()).resolves.toBeUndefined();
+    await expect(fetch(`http://localhost:${port}/health`)).rejects.toThrow();
+  });
+
+  it('[Symbol.asyncDispose]() delegates to dispose()', async () => {
+    const port = await getFreePort();
+
+    {
+      await using handle = await startHttpServer(makeServer(), port, makeServer);
+
+      expect(handle.disposed).toBe(false);
+    }
+
+    await expect(fetch(`http://localhost:${port}/health`)).rejects.toThrow();
+  });
+
+  it('rejects with an error whose code is EADDRINUSE when the port is already bound', async () => {
+    const port = await getFreePort();
+    const first = await startHttpServer(makeServer(), port, makeServer);
+
+    try {
+      await expect(startHttpServer(makeServer(), port, makeServer)).rejects.toMatchObject({ code: 'EADDRINUSE' });
+    } finally {
+      await first.dispose();
+    }
   });
 });

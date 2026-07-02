@@ -562,22 +562,22 @@ const SANDBOX_CSP: Record<string, string> = {
   'style-src': "'unsafe-inline'",
 };
 
-function buildSandboxCspString(extra: { imgOrigins?: string[]; styleOrigins?: string[] } = {}): string {
-  const styleOrigins = ["'unsafe-inline'", ...(extra.styleOrigins ?? [])].join(' ');
-  const imgOrigins = ['data:', ...(extra.imgOrigins ?? [])].join(' ');
-
+function buildSandboxCspString(): string {
   return [
     "default-src 'none'",
     "script-src 'unsafe-inline'",
-    `style-src ${styleOrigins}`,
-    `img-src ${imgOrigins}`,
+    "style-src 'unsafe-inline'",
+    'img-src data:',
     "connect-src 'none'",
     "form-action 'none'",
   ].join('; ');
 }
 
 function buildSrcdoc(html: string, styles?: string): string {
-  const styleTag = styles ? `<style>${styles}</style>` : '';
+  // Defense-in-depth: styles is documented as CSS-only, so a literal "</style>" must not be able to
+  // close the tag early and inject markup outside of it (html itself is intentionally embedded raw —
+  // this document's whole purpose is to run AI-generated content inside the CSP-sandboxed iframe).
+  const styleTag = styles ? `<style>${styles.replaceAll('</style', '<\\/style')}</style>` : '';
   const csp = buildSandboxCspString();
 
   return `<!doctype html>

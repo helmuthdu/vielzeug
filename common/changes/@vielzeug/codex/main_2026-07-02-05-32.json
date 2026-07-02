@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(codex): handle CLI data-load errors, add disposed to HttpServerHandle, close sandbox-document style breakout, expand test coverage",
+      "type": "patch",
+      "packageName": "@vielzeug/codex"
+    }
+  ],
+  "packageName": "@vielzeug/codex",
+  "email": "helmuthdu@gmail.com"
+}

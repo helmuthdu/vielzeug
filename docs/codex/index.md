@@ -14,6 +14,8 @@ exports:
     loadData,
     packageMeta,
     validateBundledData,
+    CodexError,
+    ToolArgError,
     SCHEMA_VERSION,
     SearchHit,
     BundledData,

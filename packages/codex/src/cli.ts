@@ -1,9 +1,14 @@
 #!/usr/bin/env node
+import type { Server } from '@modelcontextprotocol/sdk/server/index.js';
+
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+
+import type { HttpServerHandle } from './http.js';
+import type { BundledData } from './types.js';
 
 import { log } from './_log.js';
 import { loadData } from './data.js';
@@ -26,9 +31,8 @@ function printUsage(): void {
   );
 }
 
-async function main(): Promise<void> {
-  const argv = process.argv.slice(2);
-
+/** CLI entry point. Exported for testing — invoke directly with a custom argv instead of spawning a subprocess. */
+export async function main(argv: string[] = process.argv.slice(2)): Promise<void> {
   if (argv.includes('--help') || argv.includes('-h')) {
     printUsage();
 
@@ -53,14 +57,27 @@ async function main(): Promise<void> {
     log(`error: ${err instanceof Error ? err.message : String(err)}`);
     printUsage();
     process.exit(1);
+
+    return;
   }
 
-  const data = loadData();
-  const port = resolvePort(values.port);
-  const mcpServer = createServer(data);
+  let port: number | null;
+  let mcpServer: Server;
+  let data: BundledData;
+
+  try {
+    data = loadData();
+    port = resolvePort(values.port);
+    mcpServer = createServer(data);
+  } catch (err) {
+    log(`error: ${err instanceof Error ? err.message : String(err)}`);
+    process.exit(1);
+
+    return;
+  }
 
   if (port !== null) {
-    let handle;
+    let handle: HttpServerHandle;
 
     try {
       handle = await startHttpServer(mcpServer, port, () => createServer(data));
@@ -70,6 +87,8 @@ async function main(): Promise<void> {
 
       log(`error: ${detail}`);
       process.exit(1);
+
+      return;
     }
 
     const shutdown = (): void => {
@@ -95,4 +114,7 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+// Only auto-run when executed directly (e.g. `node dist/cli.js`), not when imported by tests.
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
+  await main();
+}

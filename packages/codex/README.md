@@ -1,12 +1,3 @@
----
-description: MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Refine component metadata.
-package: codex
-category: ai-tooling
-keywords: [mcp, model-context-protocol, ai-agent, claude, copilot, stdio, http, docs]
-related: [refine, spell]
-exports: [createServer]
----
-
 # @vielzeug/codex
 
 > MCP server for the Vielzeug ecosystem. Run over stdio or HTTP to expose package metadata, docs, source entrypoints, and Refine component metadata.
@@ -82,6 +73,7 @@ npx -y @vielzeug/codex --version
 
 - MCP endpoint: `http://localhost:<port>/`
 - Health check: `http://localhost:<port>/health`
+- No authentication and permissive CORS (`Access-Control-Allow-Origin: *`) — any origin reachable from the machine running the server can call every tool. All bundled tools are read-only and side-effect-free (no filesystem writes, no shell/network access beyond serving pre-bundled data), so this is a deliberate trade-off for local developer tooling (editor extensions, browser-based MCP inspectors) rather than a public-facing deployment mode. Do not expose `--port` beyond `localhost` or a trusted network.
 
 ## Programmatic API
 

@@ -480,6 +480,17 @@ describe('generate-sandbox-document', () => {
     expect(text(result)).toContain('<style>body { color: red; }</style>');
   });
 
+  it('escapes a literal "</style" in styles so it cannot break out of the style tag', async () => {
+    const { client } = await createTestPair(SYNTHETIC_DATA);
+    const result = await call(client, 'generate-sandbox-document', {
+      html: '<p>x</p>',
+      styles: 'body{}</style><script>evil()</script>',
+    });
+
+    expect(text(result)).not.toContain('</style><script>evil()</script>');
+    expect(text(result)).toContain('<\\/style');
+  });
+
   it('injects the bridge bootstrap script', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
     const result = await call(client, 'generate-sandbox-document', { html: '<p>x</p>' });

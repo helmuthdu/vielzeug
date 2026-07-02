@@ -592,11 +592,12 @@ Starts an HTTP server that exposes both the Streamable HTTP transport (spec-comp
 ```ts
 interface HttpServerHandle {
   dispose(): Promise<void>;
+  readonly disposed: boolean;
   [Symbol.asyncDispose](): Promise<void>;
 }
 ```
 
-Returned by `startHttpServer()`. Call `dispose()` (or use an `await using` declaration) to close the HTTP server and all open connections. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
+Returned by `startHttpServer()`. Call `dispose()` (or use an `await using` declaration) to close the HTTP server and all open connections — `dispose()` is idempotent, and `disposed` reflects whether it has already run. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
 
 ---
 
@@ -790,9 +791,27 @@ All tool-level failures return a text content item with `isError: true`. The err
 | ----------------- | ---------------- |
 | Unknown tool name | `MethodNotFound` |
 
+### `CodexError`
+
+```ts
+class CodexError extends Error {
+  static is(err: unknown): err is CodexError;
+}
+```
+
+Base class for every error codex throws itself (startup/data-loading failures, invalid tool arguments). Use `CodexError.is(err)` to distinguish codex-originated failures from errors thrown by dependencies (e.g. the MCP SDK) in a catch block.
+
+### `ToolArgError`
+
+```ts
+class ToolArgError extends CodexError {}
+```
+
+Thrown internally when a tool receives an invalid or missing argument (empty string, value exceeding the length limit, unrecognised enum value). Callers never see this directly — the MCP server catches it and converts it into a tool result with `isError: true` and the same message (see "Tool errors" below). Exported so embedders using `createServer()`/`registerTools()` directly can recognise it with `instanceof ToolArgError` or `CodexError.is()`.
+
 ### Startup errors
 
-`loadData()` throws synchronously with an actionable message when:
+`loadData()` throws a `CodexError` synchronously with an actionable message when:
 
 - The bundled data file is missing (`ENOENT`): includes the regen command
 - The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
