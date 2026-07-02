@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "render() now rejects with SandboxTimeoutError if no 'ready' signal arrives within 5s, in all builds (previously a dev-only warning that never rejected). Superseded renders and dispose() still resolve, not reject.",
+      "type": "minor",
+      "packageName": "@vielzeug/sandbox"
+    }
+  ],
+  "packageName": "@vielzeug/sandbox",
+  "email": "helmuthdu@gmail.com"
+}

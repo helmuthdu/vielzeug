@@ -68,6 +68,36 @@ export type Unsubscribe = () => void;
 export interface SandboxBridge {
   /** Emit a custom event to the host. Received via sandbox.onMessage() as { type: 'custom', event, detail }. */
   emit(event: string, detail?: unknown): void;
+  /**
+   * Subscribe to state pushed via sandbox.setState()/setStateAll() for a specific key.
+   * The handler receives only the value for the matching key — filtering the raw
+   * `sandbox:state-update` CustomEvent is handled for you. Returns an unsubscribe function.
+   * @example
+   * ```ts
+   * const off = window.__sandbox__.onState('theme', (value) => {
+   *   document.body.dataset.theme = String(value);
+   * });
+   * ```
+   */
+  onState(key: string, handler: (value: unknown) => void): Unsubscribe;
+}
+
+/**
+ * Detail payload of the `sandbox:state-update` CustomEvent dispatched inside sandbox
+ * documents whenever the host calls setState() or setStateAll(). Sandbox-side code can
+ * listen to this event directly — `window.__sandbox__.onState(key, handler)` wraps it
+ * for the common case of listening to a single key.
+ *
+ * @example Sandbox-side listener:
+ * ```ts
+ * document.addEventListener('sandbox:state-update', (e: CustomEvent<SandboxStateUpdateDetail>) => {
+ *   console.log(e.detail.key, e.detail.value);
+ * });
+ * ```
+ */
+export interface SandboxStateUpdateDetail {
+  key: string;
+  value: unknown;
 }
 
 /**
@@ -122,10 +152,12 @@ export interface SandboxHandle {
   /**
    * Replace the entire sandbox document (full page reset). Creates the iframe lazily
    * on the first call — no DOM is created until render() is invoked.
-   * Returns a Promise that resolves when the new document signals it is ready.
+   * Returns a Promise that resolves when the new document signals it is ready, or
+   * rejects with a SandboxTimeoutError if no 'ready' signal arrives within 5s — the
+   * document is likely missing the bridge script; use buildDocument() to generate
+   * documents that include it.
    * If a second render() starts before the first resolves, the first Promise resolves
-   * immediately (the document navigated away).
-   * In dev, warns after 5 s if the ready signal never arrives (missing bridge script).
+   * (not rejects) immediately — the document simply navigated away.
    * Warns in dev if html is empty. Pass a signal to skip the render if already aborted.
    */
   render(html: string, options?: { signal?: AbortSignal }): Promise<void>;

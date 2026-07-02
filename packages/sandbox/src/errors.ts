@@ -10,3 +10,10 @@ export class SandboxError extends Error {
     return err instanceof SandboxError;
   }
 }
+
+/**
+ * Thrown when render() does not receive a 'ready' signal from the sandbox document
+ * within the timeout window. The document is most likely missing the bridge script —
+ * use buildDocument() to generate documents that include it.
+ */
+export class SandboxTimeoutError extends SandboxError {}

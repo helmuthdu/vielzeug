@@ -209,12 +209,16 @@ describe('buildDocument — namedStyles id escaping (escapeAttr)', () => {
   });
 });
 
-describe('buildDocument — nonce attribute escaping (escapeAttr)', () => {
-  it('escapes a double-quote attribute-breakout attempt in nonce', () => {
+describe('buildDocument — nonce attribute escaping/sanitization', () => {
+  it('strips (not just escapes) a double-quote attribute-breakout attempt in nonce', () => {
+    // The nonce is sanitized with the same stripping function used for the CSP
+    // token (sanitizeNonce) — not just HTML-attribute-escaped — so the bridge
+    // <script nonce="..."> attribute always matches the CSP header's nonce token
+    // byte-for-byte (a mismatch would make the browser silently reject the script).
     const doc = buildDocument('<p>hi</p>', { nonce: 'abc" onmouseover="alert(1)' });
 
     expect(doc).not.toContain('nonce="abc" onmouseover="alert(1)"');
-    expect(doc).toContain('nonce="abc&quot; onmouseover=&quot;alert(1)"');
+    expect(doc).toContain('nonce="abc onmouseover=alert(1)"');
   });
 });
 

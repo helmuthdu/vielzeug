@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { buildCsp, buildDocument, createSandbox } from '../_sandbox.js';
+import { SandboxTimeoutError } from '../errors.js';
 import { createSandboxTestHelpers } from '../testing.js';
 
 // ---------------------------------------------------------------------------
@@ -134,7 +135,7 @@ describe('buildDocument', () => {
   });
 
   it('includes the bridge script with ready postMessage', () => {
-    expect(buildDocument('<p>Hi</p>')).toContain("postMessage({ type: 'ready' }");
+    expect(buildDocument('<p>Hi</p>')).toContain("post({ type: 'ready' }");
   });
 
   it('renders namedStyles as <style id="key"> blocks', () => {
@@ -189,7 +190,7 @@ describe('buildDocument', () => {
 
   it('ResizeObserver setup appears after the ready postMessage', () => {
     const doc = buildDocument('<p>Hi</p>');
-    const readyIdx = doc.indexOf("postMessage({ type: 'ready' }");
+    const readyIdx = doc.indexOf("post({ type: 'ready' }");
     const roIdx = doc.indexOf('ResizeObserver');
 
     expect(readyIdx).toBeGreaterThan(-1);
@@ -540,6 +541,81 @@ describe('createSandbox — render() Promise', () => {
     sandbox.render('<p>Hello</p>', { signal: ac.signal });
     expect((container.querySelector('iframe') as HTMLIFrameElement).srcdoc).toContain('<p>Hello</p>');
     sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// createSandbox — render() ready-timeout rejection
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — render() ready-timeout rejection', () => {
+  let container: HTMLElement;
+  let helpers: ReturnType<typeof makeHelpers>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    container = makeContainer();
+    helpers = makeHelpers(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+    vi.useRealTimers();
+  });
+
+  it('rejects with SandboxTimeoutError if no ready signal arrives within 5s', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>missing bridge</p>');
+    const assertion = expect(p).rejects.toThrow(SandboxTimeoutError);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+    sandbox.dispose();
+  });
+
+  it('SandboxTimeoutError message names the timeout and points to buildDocument()', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>missing bridge</p>');
+    const assertion = expect(p).rejects.toThrow(/5000ms.*buildDocument/s);
+
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+    sandbox.dispose();
+  });
+
+  it('does not reject if ready fires before the timeout', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>hi</p>');
+
+    helpers.fireReady();
+    await expect(p).resolves.toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    sandbox.dispose();
+  });
+
+  it('does not reject a superseded render — it resolves when replaced by a second render()', async () => {
+    const sandbox = createSandbox(container);
+    const p1 = sandbox.render('<p>v1</p>');
+    const p2 = sandbox.render('<p>v2</p>');
+
+    await expect(p1).resolves.toBeUndefined();
+
+    helpers.fireReady();
+    await expect(p2).resolves.toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(5000);
+    sandbox.dispose();
+  });
+
+  it('does not reject a pending render when the sandbox is disposed', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>hi</p>');
+
+    sandbox.dispose();
+    await expect(p).resolves.toBeUndefined();
+
+    await vi.advanceTimersByTimeAsync(5000);
   });
 });
 
@@ -1239,6 +1315,24 @@ describe('buildDocument — nonce in CSP meta tag', () => {
     expect(contentMatch).not.toBeNull();
     expect(contentMatch![1]).toContain("'nonce-abc123'");
   });
+
+  it('the bridge <script nonce="..."> attribute matches the CSP nonce token exactly for a nonce with special characters', () => {
+    // Regression: buildCsp() and buildDocument() previously sanitized the nonce
+    // differently (strip vs escape-only) — a mismatch here means the browser
+    // rejects the nonce and the bridge script silently never executes.
+    const doc = buildDocument('<p>hi</p>', { nonce: `abc;"'\ndef` });
+    const contentMatch = doc.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
+    const scriptNonceMatch = doc.match(/<script nonce="([^"]*)">/);
+
+    expect(contentMatch).not.toBeNull();
+    expect(scriptNonceMatch).not.toBeNull();
+
+    const cspNonceMatch = contentMatch![1]!.match(/'nonce-([^']*)'/);
+
+    expect(cspNonceMatch).not.toBeNull();
+    expect(scriptNonceMatch![1]).toBe(cspNonceMatch![1]);
+    expect(scriptNonceMatch![1]).toBe('abcdef');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1266,6 +1360,158 @@ describe('createSandbox — updateStyle before render', () => {
 
     expect(iframe.srcdoc).toContain('body { color: blue; }');
     expect(iframe.srcdoc).not.toContain('body { color: red; }');
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// window.__sandbox__.onState — bridge-side state subscription
+// ---------------------------------------------------------------------------
+
+describe('buildDocument — window.__sandbox__.onState', () => {
+  it('wires an onState method onto window.__sandbox__ in the bridge script', () => {
+    const doc = buildDocument('<p>hi</p>');
+
+    expect(doc).toContain('onState: function(key, handler)');
+    expect(doc).toContain("addEventListener('sandbox:state-update', listener)");
+    expect(doc).toContain("removeEventListener('sandbox:state-update', listener)");
+  });
+
+  it('onState filters sandbox:state-update events by key and returns an unsubscribe function', () => {
+    // The bridge script is plain JS embedded in an iframe srcdoc — jsdom does not execute
+    // srcdoc scripts. This mirrors onState's exact logic (see BRIDGE_SCRIPT in _sandbox.ts)
+    // against the real DOM to verify the filtering/unsubscribe contract without an iframe.
+    function onState(key: string, handler: (value: unknown) => void) {
+      function listener(e: Event) {
+        const detail = (e as CustomEvent<{ key: string; value: unknown }>).detail;
+
+        if (detail && detail.key === key) handler(detail.value);
+      }
+
+      document.addEventListener('sandbox:state-update', listener);
+
+      return function unsubscribe() {
+        document.removeEventListener('sandbox:state-update', listener);
+      };
+    }
+
+    const received: unknown[] = [];
+    const unsubscribe = onState('theme', (value) => received.push(value));
+
+    document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: 'theme', value: 'dark' } }));
+    document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: 'other', value: 'ignored' } }));
+    expect(received).toEqual(['dark']);
+
+    unsubscribe();
+    document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: 'theme', value: 'light' } }));
+    expect(received).toEqual(['dark']);
+  });
+
+  it("state-update-all fan-out reaches each key's own onState() handler exactly once", () => {
+    // Mirrors the BRIDGE_SCRIPT 'state-update-all' handler: one CustomEvent per key
+    // in the pushed record — verifies the fan-out reaches multiple independent
+    // onState() subscriptions correctly, each receiving only its own key's value.
+    function dispatchStateUpdateAll(record: Record<string, unknown>): void {
+      for (const key of Object.keys(record)) {
+        document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key, value: record[key] } }));
+      }
+    }
+
+    function onState(key: string, handler: (value: unknown) => void) {
+      function listener(e: Event) {
+        const detail = (e as CustomEvent<{ key: string; value: unknown }>).detail;
+
+        if (detail && detail.key === key) handler(detail.value);
+      }
+
+      document.addEventListener('sandbox:state-update', listener);
+
+      return function unsubscribe() {
+        document.removeEventListener('sandbox:state-update', listener);
+      };
+    }
+
+    const themeReceived: unknown[] = [];
+    const countReceived: unknown[] = [];
+    const unsubTheme = onState('theme', (value) => themeReceived.push(value));
+    const unsubCount = onState('count', (value) => countReceived.push(value));
+
+    dispatchStateUpdateAll({ count: 1, label: 'ignored-by-both', theme: 'dark' });
+
+    expect(themeReceived).toEqual(['dark']);
+    expect(countReceived).toEqual([1]);
+
+    unsubTheme();
+    unsubCount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Render generation — stale-document message protection
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — render generation', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = makeContainer();
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('embeds an incrementing generation marker in the live srcdoc on each render()', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>one</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('window.__sandboxGeneration=1;');
+
+    sandbox.render('<p>two</p>');
+    expect(iframe.srcdoc).toContain('window.__sandboxGeneration=2;');
+    sandbox.dispose();
+  });
+
+  it('ignores a ready message carrying a stale (superseded) generation number', async () => {
+    const sandbox = createSandbox(container);
+    const renderPromise = sandbox.render('<p>hi</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    // Simulate a leftover 'ready' message from a document a newer render() already
+    // superseded (generation 0 predates the current render's generation 1).
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { generation: 0, type: 'ready' }, source: iframe.contentWindow }),
+    );
+
+    let resolved = false;
+
+    void renderPromise.then(() => {
+      resolved = true;
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(resolved).toBe(false);
+
+    // The current generation's ready message must still resolve the render.
+    window.dispatchEvent(
+      new MessageEvent('message', { data: { generation: 1, type: 'ready' }, source: iframe.contentWindow }),
+    );
+    await renderPromise;
+    expect(resolved).toBe(true);
+    sandbox.dispose();
+  });
+
+  it('accepts messages with no generation field (e.g. from test helpers)', async () => {
+    const sandbox = createSandbox(container);
+    const helpers = makeHelpers(container);
+
+    const renderPromise = sandbox.render('<p>hi</p>');
+
+    helpers.fireReady();
+    await expect(renderPromise).resolves.toBeUndefined();
     sandbox.dispose();
   });
 });

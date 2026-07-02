@@ -14,10 +14,12 @@ description: Full API reference for @vielzeug/sandbox — createSandbox, buildCs
 | `buildDocument()` | Build a complete standalone sandbox HTML document | Sync | `lang`/`title` are HTML-escaped automatically; don't pre-escape them yourself |
 | `SandboxHandle` | Object returned by `createSandbox()` | — | `setState()`/`setStateAll()` warn in dev if called before `render()` resolves |
 | `SandboxOptions` | Unified options for `createSandbox`, `buildCsp`, `buildDocument` | — | All fields are optional; defaults documented per field below |
-| `SandboxBridge` | Bridge API at `window.__sandbox__` inside sandbox documents | — | Only `emit()` is available — there is no way to call host functions directly |
+| `SandboxBridge` | Bridge API at `window.__sandbox__` inside sandbox documents | — | `emit()` sends events to the host; `onState()` only receives — there is no way to call host functions directly |
 | `SandboxMessage` | Application messages the sandbox sends to the host | — | `'ready'` is not part of this union — it resolves `render()` internally instead |
-| `SandboxError` | Base error class for `@vielzeug/sandbox` | — | Not yet thrown by any API — reserved for future error types |
-| `Unsubscribe` | Return type of `onMessage()` | — | Calling it more than once is a safe no-op |
+| `SandboxError` | Base error class for `@vielzeug/sandbox` | — | Use `SandboxError.is(err)` to narrow — catches `SandboxTimeoutError` and any future subclasses |
+| `SandboxTimeoutError` | Thrown by `render()` when no `'ready'` signal arrives in time | — | Extends `SandboxError`; the document is likely missing the bridge script |
+| `SandboxStateUpdateDetail` | Detail payload of the sandbox-side `sandbox:state-update` CustomEvent | — | Only relevant inside sandbox documents, not on the host |
+| `Unsubscribe` | Return type of `onMessage()` and `SandboxBridge.onState()` | — | Calling it more than once is a safe no-op |
 
 ## Package Entry Points
 
@@ -27,8 +29,15 @@ description: Full API reference for @vielzeug/sandbox — createSandbox, buildCs
 | `@vielzeug/sandbox/testing` | `createSandboxTestHelpers` — postMessage simulation helpers for tests |
 
 ```ts
-import { buildCsp, buildDocument, createSandbox, SandboxError } from '@vielzeug/sandbox';
-import type { SandboxBridge, SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from '@vielzeug/sandbox';
+import { buildCsp, buildDocument, createSandbox, SandboxError, SandboxTimeoutError } from '@vielzeug/sandbox';
+import type {
+  SandboxBridge,
+  SandboxHandle,
+  SandboxMessage,
+  SandboxOptions,
+  SandboxStateUpdateDetail,
+  Unsubscribe,
+} from '@vielzeug/sandbox';
 
 import { createSandboxTestHelpers } from '@vielzeug/sandbox/testing';
 ```
@@ -81,7 +90,7 @@ interface SandboxHandle {
 | `disposed` | `true` once `dispose()` has been called. |
 | `ready` | Promise that resolves when the **first** sandbox document signals it has loaded. Also resolves if the sandbox is disposed before the first render — check `sandbox.disposed` after awaiting to distinguish the two cases. Does **not** reset on re-renders — use the Promise returned by `render()` for subsequent renders. |
 | `patch(html)` | Incrementally update the sandbox body without a full page reset. Replaces `document.body.innerHTML` via postMessage — scripts, event listeners, and `namedStyles` CSS are preserved. Must be called after `render()` resolves. Warns in dev if the bridge is not yet ready. |
-| `render(html, options?)` | Replace the entire sandboxed document (full page reset). Creates the iframe lazily. Returns a `Promise<void>` that resolves when the new document signals ready. If a second `render()` starts before the first resolves, the first Promise resolves immediately. Pass `options.signal` to skip if already aborted. Emits a dev warning when `html` is empty or whitespace-only. |
+| `render(html, options?)` | Replace the entire sandboxed document (full page reset). Creates the iframe lazily. Returns a `Promise<void>` that resolves when the new document signals ready, or **rejects with `SandboxTimeoutError`** if no `'ready'` signal arrives within 5s. If a second `render()` starts before the first resolves, the first Promise resolves (not rejects) immediately — the document simply navigated away. Pass `options.signal` to skip if already aborted. Emits a dev warning when `html` is empty or whitespace-only. |
 | `updateStyle(id, css)` | Hot-patch a named `<style id="…">` block in the live iframe via postMessage, and update the baseline for the next `render()`. No-ops if the sandbox is disposed. Safe to call before the first render (baseline only). Warns in dev if `id` is not a known key in `namedStyles`. |
 | `setState(key, value)` | Push a state value into the sandbox. Dispatches a `sandbox:state-update` CustomEvent inside the iframe. Warns in dev if called before `render()` resolves. |
 | `setStateAll(record)` | Push multiple state values in a single postMessage. Dispatches one `sandbox:state-update` CustomEvent per key inside the iframe. More efficient than calling `setState()` repeatedly for initial state setup. Warns in dev if called before `render()` resolves. |
@@ -95,6 +104,20 @@ Calling `render()`, `setState()`, `setStateAll()`, `updateStyle()`, or `onMessag
 Calling `setState()` or `setStateAll()` before `render()` resolves emits a dev warning — the bridge may not have set up its listener yet and the state update may be silently dropped. Always await the Promise returned by `render()` before calling either.
 
 In production all guard paths are silent no-ops (no warnings).
+:::
+
+::: warning render() can reject
+Unlike the other guard paths above, the `SandboxTimeoutError` rejection from `render()` is **not** a dev-only warning — it fires in every build. Always attach a `.catch()` or wrap `await sandbox.render(...)` in `try`/`catch`:
+
+```ts
+try {
+  await sandbox.render(html);
+} catch (err) {
+  if (SandboxError.is(err)) {
+    console.error('Sandbox failed to load:', err.message);
+  }
+}
+```
 :::
 
 ## `SandboxOptions`
@@ -208,6 +231,17 @@ type SandboxMessage =
 | `custom` | `event: string`, `detail: unknown` | User-defined events emitted from sandbox code via `window.__sandbox__.emit(event, detail)`. |
 | `resize` | `height: number` | Emitted automatically when sandbox content height changes. The bridge script sets up a `ResizeObserver` on `document.body` — no manual wiring needed. |
 
+### `SandboxStateUpdateDetail`
+
+Detail payload of the `sandbox:state-update` CustomEvent dispatched **inside** sandbox documents by `setState()`/`setStateAll()`. Only relevant to sandbox-side code — the host never sees this type directly.
+
+```ts
+interface SandboxStateUpdateDetail {
+  key: string;
+  value: unknown;
+}
+```
+
 **Emitting custom events from inside the sandbox:**
 
 ```js
@@ -237,6 +271,7 @@ The bridge API available as `window.__sandbox__` inside sandbox documents. Expor
 ```ts
 interface SandboxBridge {
   emit(event: string, detail?: unknown): void;
+  onState(key: string, handler: (value: unknown) => void): Unsubscribe;
 }
 ```
 
@@ -249,9 +284,20 @@ declare interface Window {
 }
 ```
 
+`onState(key, handler)` subscribes to state pushed via `sandbox.setState()`/`setStateAll()` for a specific key — it wraps the raw `sandbox:state-update` CustomEvent so sandbox-side code doesn't need to filter by key manually. Returns an `Unsubscribe` function:
+
+```ts
+const off = window.__sandbox__.onState('theme', (value) => {
+  document.body.dataset.theme = String(value);
+});
+
+// Later, stop listening:
+off();
+```
+
 ### State updates
 
-`sandbox.setState(key, value)` sends a single state value into the sandbox; `sandbox.setStateAll(record)` sends multiple values in one postMessage. Both dispatch a `sandbox:state-update` CustomEvent per key. Inside the sandbox, listen via the DOM:
+`sandbox.setState(key, value)` sends a single state value into the sandbox; `sandbox.setStateAll(record)` sends multiple values in one postMessage. Both dispatch a `sandbox:state-update` CustomEvent per key, described by `SandboxStateUpdateDetail`. Inside the sandbox, either listen via the DOM directly or use `window.__sandbox__.onState()`:
 
 ```js
 document.addEventListener('sandbox:state-update', (e) => {
@@ -272,11 +318,21 @@ sandbox.setStateAll({ theme: 'dark', locale: 'en' });
 Treat all `SandboxMessage` data as untrusted. The sandbox controls what `custom` event payloads contain — do not execute or evaluate any message field.
 :::
 
+## Types
+
+### `Unsubscribe`
+
+```ts
+type Unsubscribe = () => void;
+```
+
+Return type of `onMessage()` and `SandboxBridge.onState()`. Calling it more than once is a safe no-op.
+
 ## Errors
 
 ### `SandboxError`
 
-Base class for all `@vielzeug/sandbox` errors. No API in the current version throws it — it exists as scaffolding for future error types.
+Base class for all `@vielzeug/sandbox` errors. Extends `Error`.
 
 ```ts
 class SandboxError extends Error {
@@ -284,16 +340,32 @@ class SandboxError extends Error {
 }
 ```
 
-`SandboxError.is()` is a type-safe static predicate — prefer it over `instanceof` in catch blocks that may receive unknown values:
+`SandboxError.is()` is a type-safe static predicate — prefer it over `instanceof` in catch blocks that may receive unknown values. It also matches subclasses like `SandboxTimeoutError`:
 
 ```ts
 import { SandboxError } from '@vielzeug/sandbox';
 
 try {
-  // ...
+  await sandbox.render(html);
 } catch (err) {
   if (SandboxError.is(err)) {
     console.error(err.message);
+  }
+}
+```
+
+### `SandboxTimeoutError`
+
+Thrown as a rejection from `render()` when no `'ready'` signal arrives within 5 seconds, in every build (not a dev-only warning). Extends `SandboxError`. The sandbox document is most likely missing the bridge script — use `buildDocument()` to generate documents that include it, rather than hand-writing the `srcdoc` HTML.
+
+```ts
+import { SandboxTimeoutError } from '@vielzeug/sandbox';
+
+try {
+  await sandbox.render(customHtmlMissingBridge);
+} catch (err) {
+  if (err instanceof SandboxTimeoutError) {
+    console.error('Sandbox never signaled ready:', err.message);
   }
 }
 ```

@@ -132,6 +132,24 @@ sandbox.onMessage((msg) => {
 
 Both synchronous errors (`window.onerror`) and unhandled promise rejections (`unhandledrejection`) are forwarded as `{ type: 'error' }` messages.
 
+### `render()` rejection
+
+`render()` rejects with a `SandboxTimeoutError` if the document never signals `'ready'` within 5 seconds — this happens in every build, not just dev. It usually means the document is missing the bridge script (custom `srcdoc` HTML built by hand instead of via `buildDocument()`). Always handle it:
+
+```ts
+import { SandboxError } from '@vielzeug/sandbox';
+
+try {
+  await sandbox.render(html);
+} catch (err) {
+  if (SandboxError.is(err)) {
+    console.error('Sandbox failed to load:', err.message);
+  }
+}
+```
+
+A second `render()` call superseding the first does **not** trigger this — the superseded Promise resolves, not rejects.
+
 ## Injecting Scripts and Styles
 
 Use `SandboxOptions` to inject external scripts and styles into every rendered document.
@@ -359,6 +377,112 @@ import { buildCsp } from '@vielzeug/sandbox';
 const csp = buildCsp({ allowedFontOrigins: ['https://fonts.gstatic.com'] });
 // → "default-src 'none'; ... font-src https://fonts.gstatic.com; ..."
 ```
+
+## Testing
+
+Use `createSandboxTestHelpers` from the `/testing` subpath to simulate sandbox→host messages without a real `srcdoc` script execution (jsdom does not execute iframe `srcdoc` scripts).
+
+```ts
+import { createSandbox } from '@vielzeug/sandbox';
+import { createSandboxTestHelpers } from '@vielzeug/sandbox/testing';
+import { describe, expect, it } from 'vitest';
+
+describe('preview panel', () => {
+  it('forwards a custom event from the sandbox', async () => {
+    const container = document.createElement('div');
+    const sandbox = createSandbox(container);
+    const helpers = createSandboxTestHelpers(container);
+
+    const received: unknown[] = [];
+
+    sandbox.onMessage((msg) => received.push(msg));
+
+    const renderPromise = sandbox.render('<button>Save</button>');
+
+    helpers.fireReady(); // simulate the bridge script's initial postMessage
+    await renderPromise;
+
+    helpers.fireCustom('button:click', { label: 'Save' });
+    expect(received).toEqual([{ type: 'custom', event: 'button:click', detail: { label: 'Save' } }]);
+
+    sandbox.dispose();
+  });
+});
+```
+
+`SandboxTestHelpers` also exposes `fireResize(height)` and `fireError(message, stack?)` for testing resize and error handling without a live browser.
+
+## Framework Integration
+
+Create the sandbox once per mount and dispose it on unmount — the container element is stable for the component's lifetime.
+
+::: code-group
+
+```tsx [React]
+import { useEffect, useRef } from 'react';
+import { createSandbox } from '@vielzeug/sandbox';
+
+function SandboxPreview({ html }: { html: string }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const sandbox = createSandbox(containerRef.current);
+
+    sandbox.render(html);
+
+    return () => sandbox.dispose();
+  }, [html]);
+
+  return <div ref={containerRef} />;
+}
+```
+
+```vue [Vue 3]
+<script setup lang="ts">
+import { onMounted, onUnmounted, ref } from 'vue';
+import { createSandbox, type SandboxHandle } from '@vielzeug/sandbox';
+
+const props = defineProps<{ html: string }>();
+const containerRef = ref<HTMLDivElement>();
+let sandbox: SandboxHandle | undefined;
+
+onMounted(() => {
+  if (!containerRef.value) return;
+  sandbox = createSandbox(containerRef.value);
+  sandbox.render(props.html);
+});
+
+onUnmounted(() => sandbox?.dispose());
+</script>
+
+<template>
+  <div ref="containerRef" />
+</template>
+```
+
+```svelte [Svelte]
+<script lang="ts">
+  import { onMount } from 'svelte';
+  import { createSandbox } from '@vielzeug/sandbox';
+
+  export let html: string;
+  let container: HTMLDivElement;
+
+  onMount(() => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render(html);
+
+    return () => sandbox.dispose();
+  });
+</script>
+
+<div bind:this={container}></div>
+```
+
+:::
 
 ## Working with Other Vielzeug Libraries
 

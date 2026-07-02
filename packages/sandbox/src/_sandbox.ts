@@ -1,11 +1,19 @@
 import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
 
 import { devOnly, warn } from './_warn.js';
+import { SandboxTimeoutError } from './errors.js';
 
 // Re-export types so that _sandbox.ts still exposes them via its original named exports.
 // index.ts now imports types from ./types.js directly — these re-exports are kept only
 // to avoid breaking any direct imports of _sandbox.js in tests.
-export type { SandboxBridge, SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
+export type {
+  SandboxBridge,
+  SandboxHandle,
+  SandboxMessage,
+  SandboxOptions,
+  SandboxStateUpdateDetail,
+  Unsubscribe,
+} from './types.js';
 
 // ---------------------------------------------------------------------------
 // Protocol constants
@@ -70,14 +78,29 @@ function escapeText(value: string): string {
 // CSP builder
 // ---------------------------------------------------------------------------
 
-// Strip characters that are illegal inside CSP source-list tokens and would
-// allow directive injection or HTML attribute breakout. Specifically:
+// Characters illegal inside CSP source-list tokens (origins and nonces alike) that
+// would allow directive injection or HTML attribute breakout. Specifically:
 //   ';'  — CSP directive separator (would inject a new directive)
-//   '"'  — breaks out of the HTML content="..." attribute
+//   '"' / "'" — breaks out of the HTML content="..." / nonce="..." attribute
 //   '\n' / '\r' — CSP header line folding / response-splitting
-// Origins must be scheme+host(+port) form; none of these chars belong there.
+const CSP_UNSAFE_CHARS = /['";\n\r]/g;
+
+// Origins must be scheme+host(+port) form; none of CSP_UNSAFE_CHARS belong there.
 function sanitizeCspOrigin(origin: string): string {
-  return origin.replace(/[;"'\n\r]/g, '');
+  return origin.replace(CSP_UNSAFE_CHARS, '');
+}
+
+// Sanitize a nonce for CSP-token embedding — CSP nonces must be base64
+// characters only; stripping quotes/semicolons/newlines prevents early token
+// termination inside 'nonce-{value}'. buildCsp() and buildDocument() MUST both
+// derive their nonce from this exact function: the CSP header's nonce token and
+// the bridge <script nonce="..."> attribute have to match byte-for-byte, or the
+// browser silently rejects the script — breaking the bridge (and CSP nonce
+// matching is stricter than HTML-attribute escaping, so applying escapeAttr()
+// to the raw, unsanitized nonce for the attribute while sanitizing separately
+// for the CSP token can produce two different strings).
+function sanitizeNonce(nonce: string): string {
+  return nonce.replace(CSP_UNSAFE_CHARS, '');
 }
 
 /**
@@ -87,9 +110,7 @@ function sanitizeCspOrigin(origin: string): string {
  * merged with `allowedScriptOrigins` automatically.
  */
 export function buildCsp(options: SandboxOptions = {}): string {
-  // Sanitize the nonce: CSP nonces must be base64 characters only. Stripping
-  // single-quotes prevents early token termination inside 'nonce-{value}'.
-  const safeNonce = options.nonce ? options.nonce.replace(/['";\n\r]/g, '') : null;
+  const safeNonce = options.nonce ? sanitizeNonce(options.nonce) : null;
 
   const scriptOrigins = [
     "'unsafe-inline'",
@@ -153,22 +174,37 @@ window.addEventListener('message', function(e) {
     document.body.innerHTML = msg.html;
   }
 });
+// post() tags every outgoing message with window.__sandboxGeneration (set by render(),
+// see below) and always targets '*' — srcdoc iframes have origin 'null' so no specific
+// origin can be addressed. The host uses the generation tag to ignore messages from a
+// document a newer render() has already superseded.
+function post(msg) {
+  msg.generation = window.__sandboxGeneration;
+  parent.postMessage(msg, '*');
+}
 window.onerror = function(message, _src, _line, _col, err) {
-  parent.postMessage({ type: 'error', message: String(message), stack: err && err.stack }, '*');
+  post({ type: 'error', message: String(message), stack: err && err.stack });
   return true;
 };
 window.addEventListener('unhandledrejection', function(e) {
   var reason = e.reason;
-  parent.postMessage({ type: 'error', message: String(reason), stack: reason && reason.stack }, '*');
+  post({ type: 'error', message: String(reason), stack: reason && reason.stack });
 });
 window.__sandbox__ = {
   emit: function(event, detail) {
-    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
-    parent.postMessage({ type: 'custom', event: event, detail: detail }, '*');
+    post({ type: 'custom', event: event, detail: detail });
+  },
+  onState: function(key, handler) {
+    function listener(e) {
+      if (e.detail && e.detail.key === key) handler(e.detail.value);
+    }
+    document.addEventListener('sandbox:state-update', listener);
+    return function() {
+      document.removeEventListener('sandbox:state-update', listener);
+    };
   }
 };
-// srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
-parent.postMessage({ type: 'ready' }, '*');
+post({ type: 'ready' });
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(function(entries) {
     var entry = entries[0];
@@ -176,8 +212,7 @@ if (typeof ResizeObserver !== 'undefined') {
     var h = entry.borderBoxSize && entry.borderBoxSize[0]
       ? entry.borderBoxSize[0].blockSize
       : entry.contentRect.height;
-    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
-    parent.postMessage({ type: 'resize', height: h }, '*');
+    post({ type: 'resize', height: h });
   }).observe(document.body);
 }
 `.trim();
@@ -208,7 +243,11 @@ export function buildDocument(html: string, options: SandboxOptions = {}): strin
     .map((src) => `<script crossorigin="anonymous" src="${escapeAttr(src)}"></script>`)
     .join('\n');
 
-  const nonceAttr = options.nonce ? ` nonce="${escapeAttr(options.nonce)}"` : '';
+  // Must sanitize with the exact same sanitizeNonce() used by buildCsp() — see its
+  // comment. escapeAttr() alone is not enough: it HTML-encodes but does not strip,
+  // so a raw nonce containing e.g. ';' would attribute-escape differently than the
+  // CSP token strips it, producing a mismatched nonce and a silently broken bridge.
+  const nonceAttr = options.nonce ? ` nonce="${escapeAttr(sanitizeNonce(options.nonce))}"` : '';
 
   return `<!doctype html>
 <html lang="${lang}">
@@ -253,6 +292,12 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
   // Reset to false on each render() so setState/updateStyle guards work correctly.
   let bridgeReady = false;
 
+  // Monotonic counter embedded into each srcdoc as window.__sandboxGeneration (see
+  // render()). iframe.contentWindow's identity is stable across srcdoc navigations in
+  // real browsers, so event.source alone cannot distinguish a superseded document's
+  // messages from the current one — the generation tag closes that gap.
+  let renderGeneration = 0;
+
   // First-render gate — resolves on first ready signal or on dispose().
   // Always resolves (never rejects) so callers can safely fire-and-forget it.
   // Check sandbox.disposed afterward to distinguish a dispose-resolution.
@@ -261,9 +306,10 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     resolveReady = resolve;
   });
 
-  // Per-render resolver — replaced on each render(), resolved on the next
-  // 'ready' message, when the render is superseded, or when disposed.
-  let resolveCurrentRender: (() => void) | null = null;
+  // Per-render settlers — replaced on each render(), resolved on the next 'ready'
+  // message or when superseded/disposed (not an error — the document navigated away
+  // or the sandbox was torn down intentionally), rejected only by the ready-timeout.
+  let currentRenderSettlers: { reject: (err: unknown) => void; resolve: () => void } | null = null;
   let readyTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   function clearReadyTimeout(): void {
@@ -273,12 +319,12 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     }
   }
 
-  // Supersede the in-flight render: resolve its promise, clear the timeout,
-  // and reset bridgeReady. All three must change together — keep them here.
+  // Supersede the in-flight render: resolve (not reject) its promise, clear the
+  // timeout, and reset bridgeReady. All three must change together — keep them here.
   function supersedePendingRender(): void {
     clearReadyTimeout();
-    resolveCurrentRender?.();
-    resolveCurrentRender = null;
+    currentRenderSettlers?.resolve();
+    currentRenderSettlers = null;
     bridgeReady = false;
   }
 
@@ -321,6 +367,13 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     if (!iframe || event.source !== iframe.contentWindow) return;
 
     if (!isMsgObject(event.data)) return;
+
+    // Reject messages tagged with a superseded generation — a document torn down by a
+    // newer render() may still have a message in flight. Messages with no generation
+    // (or a non-number one, e.g. from testing helpers) are trusted and pass through.
+    const generation = event.data.generation;
+
+    if (typeof generation === 'number' && generation !== renderGeneration) return;
 
     // Guard against prototype-inherited properties on msgHandlers (e.g. '__proto__',
     // '__defineGetter__') — these are not functions and calling them via ?.() throws.
@@ -389,27 +442,36 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     // Supersede any in-flight render — its document navigated away.
     supersedePendingRender();
 
+    const generation = ++renderGeneration;
     const docOptions = Object.keys(namedStyles).length > 0 ? { ...options, namedStyles: { ...namedStyles } } : options;
 
-    ensureIframe().srcdoc = buildDocument(html, docOptions);
+    // Inject the generation marker into <head> — it always appears before any user
+    // content in the template, so this replace can never hit HTML inside `html`.
+    const doc = buildDocument(html, docOptions).replace(
+      '<head>',
+      `<head>\n<script>window.__sandboxGeneration=${generation};</script>`,
+    );
 
-    const p = new Promise<void>((resolve) => {
-      resolveCurrentRender = resolve;
+    ensureIframe().srcdoc = doc;
+
+    const p = new Promise<void>((resolve, reject) => {
+      currentRenderSettlers = { reject, resolve };
     });
 
-    // Dev-only guard: if the bridge never fires 'ready', warn after timeout so
-    // the developer knows the bridge script is missing rather than waiting forever.
-    devOnly(() => {
-      readyTimeoutId = setTimeout(() => {
-        if (resolveCurrentRender) {
-          warn(
-            `render() Promise has not resolved after ${READY_TIMEOUT_MS}ms. ` +
-              'The sandbox document may be missing the bridge script. ' +
-              'Use buildDocument() to generate documents that include the bridge.',
-          );
-        }
-      }, READY_TIMEOUT_MS);
-    });
+    // If the bridge never fires 'ready', reject with SandboxTimeoutError so the
+    // document-missing-bridge-script failure is catchable rather than hanging forever.
+    readyTimeoutId = setTimeout(() => {
+      if (currentRenderSettlers) {
+        currentRenderSettlers.reject(
+          new SandboxTimeoutError(
+            `render() did not receive a 'ready' signal from the sandbox document within ${READY_TIMEOUT_MS}ms. ` +
+              'The document is likely missing the bridge script — use buildDocument() to generate documents that include it.',
+          ),
+        );
+        currentRenderSettlers = null;
+        readyTimeoutId = null;
+      }
+    }, READY_TIMEOUT_MS);
 
     return p;
   }

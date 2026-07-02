@@ -16,21 +16,29 @@ import { createSandbox } from '@vielzeug/sandbox';
 const container = document.getElementById('preview')!;
 const sandbox = createSandbox(container);
 
-// Await first load, then render
-await sandbox.ready;
-sandbox.render('<ore-button variant="primary">Click me</ore-button>');
+// render() returns a Promise per call — resolves on 'ready', or rejects with
+// SandboxTimeoutError if the document never signals ready within 5s (in every build,
+// not just dev — always handle it).
+await sandbox.render('<ore-button variant="primary">Click me</ore-button>');
 
-// Await subsequent renders
-sandbox.render(newHtml);
-await sandbox.nextReady();
+// Subsequent renders — same contract, a fresh Promise each time
+await sandbox.render(newHtml);
+
+// Incrementally update the body without a full page reset (preserves scripts/state)
+sandbox.patch('<p>updated</p>');
 
 // Push state into the sandbox
 sandbox.setState('theme', 'dark');
+sandbox.setStateAll({ locale: 'en', theme: 'dark' }); // multiple values, one message
+
+// Hot-patch a named style block (see namedStyles below) without a full re-render
+sandbox.updateStyle('theme', 'body { background: #111; }');
 
 // Receive error and custom events (ready is not forwarded)
 sandbox.onMessage((msg) => {
   if (msg.type === 'custom') console.log(msg.event, msg.detail);
   if (msg.type === 'error') console.error(msg.message);
+  if (msg.type === 'resize') console.log('height:', msg.height);
 });
 
 // Skip render if cancelled
@@ -50,26 +58,31 @@ Creates an isolated `<iframe sandbox="allow-scripts">` inside `container`.
 
 **Options (`SandboxOptions`):**
 
-| Option                  | Type       | Description                                                                |
-| ----------------------- | ---------- | -------------------------------------------------------------------------- |
-| `scripts`               | `string[]` | External scripts injected with `crossorigin="anonymous"`; origins auto-added |
-| `styles`                | `string`   | CSS injected as a `<style>` block in the document head                     |
-| `nonce`                 | `string`   | Cryptographic nonce for the bridge `<script>` tag and `script-src` CSP    |
-| `allowedScriptOrigins`  | `string[]` | Extra origins added to `script-src`                                        |
-| `allowedStyleOrigins`   | `string[]` | Extra origins added to `style-src`                                         |
-| `allowedImageOrigins`   | `string[]` | Extra origins added to `img-src`                                           |
-| `allowedFontOrigins`    | `string[]` | Extra origins added to `font-src`                                          |
+| Option                 | Type                     | Description                                                                    |
+| ---------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| `scripts`               | `string[]`               | External scripts injected with `crossorigin="anonymous"`; origins auto-added   |
+| `namedStyles`           | `Record<string, string>` | Named CSS blocks injected as `<style id="key">`; hot-patchable via `updateStyle(id, css)` |
+| `nonce`                 | `string`                 | Cryptographic nonce for the bridge `<script>` tag and `script-src` CSP        |
+| `lang`                  | `string`                 | BCP 47 language tag for `<html lang="…">`. Default: `'en'`                    |
+| `title`                 | `string`                 | Document `<title>`. Default: `''`                                              |
+| `allowedScriptOrigins`  | `string[]`               | Extra origins added to `script-src`                                            |
+| `allowedStyleOrigins`   | `string[]`               | Extra origins added to `style-src`                                             |
+| `allowedImageOrigins`   | `string[]`               | Extra origins added to `img-src`                                               |
+| `allowedFontOrigins`    | `string[]`               | Extra origins added to `font-src`                                              |
 
 ### `SandboxHandle`
 
 | Member                       | Description                                                                        |
 | ---------------------------- | ---------------------------------------------------------------------------------- |
 | `disposed`                   | `true` once `dispose()` has been called                                            |
+| `disposalSignal`             | `AbortSignal` aborted on `dispose()` — tie async operations to the sandbox's lifetime |
 | `ready`                      | Resolves on the **first** load or dispose; does not reset on re-renders            |
-| `nextReady()`                | Fresh Promise per re-render; supports multiple simultaneous callers                |
-| `render(html, options?)`     | Full page reset; lazy iframe creation; pass `signal` to skip if already aborted    |
-| `setState(key, value)`       | Push state into the sandbox; warns if called before the first `render()`           |
-| `onMessage(handler)`         | Subscribe to `error` and `custom` events; returns an unsubscribe function          |
+| `render(html, options?)`     | Full page reset; lazy iframe creation. Returns a Promise that resolves on ready or rejects with `SandboxTimeoutError` after 5s. Pass `signal` to skip if already aborted |
+| `patch(html)`                | Incrementally replace the body without a full page reset — scripts/state survive. Call after `render()` resolves |
+| `setState(key, value)`       | Push a single state value into the sandbox; warns if called before ready           |
+| `setStateAll(record)`        | Push multiple state values in one message; more efficient than repeated `setState()` |
+| `updateStyle(id, css)`       | Hot-patch a `namedStyles` block by id, live and in the baseline for the next render |
+| `onMessage(handler)`         | Subscribe to `error`, `custom`, and `resize` events; returns an unsubscribe function |
 | `dispose()`                  | Tear down: removes iframe, clears listeners, resolves pending ready Promises       |
 | `[Symbol.dispose]()`         | Explicit resource management alias for `dispose()`                                 |
 
@@ -88,18 +101,25 @@ Builds a complete, standalone sandbox HTML document including CSP meta tag, brid
 // 'ready' is handled internally and NOT forwarded to subscribers
 type SandboxMessage =
   | { type: 'error'; message: string; stack?: string }
-  | { type: 'custom'; event: string; detail: unknown };
+  | { type: 'custom'; event: string; detail: unknown }
+  | { type: 'resize'; height: number };
 
 // Bridge API available as window.__sandbox__ inside sandbox documents
 interface SandboxBridge {
   emit(event: string, detail?: unknown): void;
+  // Subscribe to state pushed via sandbox.setState()/setStateAll() for one key
+  onState(key: string, handler: (value: unknown) => void): () => void;
 }
 ```
 
-Sandbox code emits custom events to the host:
+Sandbox code emits custom events to the host, and can subscribe to host-pushed state:
 
 ```js
 window.__sandbox__.emit('button:click', { label: 'Save' });
+
+const unsubscribe = window.__sandbox__.onState('theme', (value) => {
+  document.body.dataset.theme = String(value);
+});
 ```
 
 For TypeScript support in sandbox-side code, add an ambient declaration:
@@ -108,5 +128,21 @@ For TypeScript support in sandbox-side code, add an ambient declaration:
 // sandbox-env.d.ts
 declare interface Window {
   __sandbox__: import('@vielzeug/sandbox').SandboxBridge;
+}
+```
+
+## Errors
+
+`SandboxError` is the base class for all errors thrown by this package; `SandboxTimeoutError extends SandboxError` and is thrown by `render()`'s returned Promise when no `'ready'` signal arrives within 5 seconds (usually a document missing the bridge script — generate documents with `buildDocument()` to avoid this). This rejection happens in every build, not just dev — always handle it:
+
+```ts
+import { SandboxTimeoutError } from '@vielzeug/sandbox';
+
+try {
+  await sandbox.render(html);
+} catch (err) {
+  if (err instanceof SandboxTimeoutError) {
+    // document likely missing the bridge script
+  }
 }
 ```
