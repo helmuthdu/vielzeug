@@ -56,8 +56,11 @@ jobs:
             exit 1
           fi
 
+          # Write auth to home .npmrc and to a scratch file outside the repo (used as --userconfig below).
+          # Never write secrets into the repo's tracked ".npmrc" — it lives in the working tree and could
+          # end up in a commit, diff, or uploaded artifact.
           printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
-          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" >> ".npmrc"
+          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$RUNNER_TEMP/publish.npmrc"
 
           NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
           echo "$NPM_WHOAMI_OUT"
@@ -131,7 +134,7 @@ jobs:
             process.stdout.write(`\n📦 Publishing ${name}@${version}\n`);
 
             try {
-              const npmrc = path.join(root, '.npmrc');
+              const npmrc = path.join(process.env.RUNNER_TEMP, 'publish.npmrc');
               const tarball = cp
                 .execSync(`npm pack --json --userconfig ${npmrc}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
                 .toString();

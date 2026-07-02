@@ -87,9 +87,10 @@ jobs:
             exit 1
           fi
 
-          # Write auth to home .npmrc and append to project .npmrc (project registry= line can shadow home-level auth).
+          # Write auth to home .npmrc only. Never write secrets into the repo's tracked ".npmrc" —
+          # "rush publish --apply" commits the working tree, which would commit the token too
+          # (this is exactly what tripped GitHub push protection previously).
           printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
-          printf '//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" >> ".npmrc"
 
           NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
           echo "$NPM_WHOAMI_OUT"
