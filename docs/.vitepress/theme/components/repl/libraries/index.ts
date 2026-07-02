@@ -15,6 +15,7 @@ import * as orbit from './orbit';
 import * as pulse from './pulse';
 import * as ripple from './ripple';
 import * as rune from './rune';
+import * as sandbox from './sandbox';
 import * as scout from './scout';
 import * as scroll from './scroll';
 import * as sourcerer from './sourcerer';
@@ -42,6 +43,7 @@ const ALL = {
   pulse,
   ripple,
   rune,
+  sandbox,
   scout,
   scroll,
   sourcerer,

@@ -1,3 +1,8 @@
+---
+title: 'Sandbox Examples — AI UI Renderer'
+description: AI UI Renderer example for @vielzeug/sandbox.
+---
+
 ## AI UI Renderer
 
 A live preview panel that renders AI-generated HTML with streaming updates, error forwarding, and theme injection.

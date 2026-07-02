@@ -43,7 +43,7 @@ export function createSandboxTestHelpers(container: HTMLElement): SandboxTestHel
   }
 
   return {
-    fireCustom: (event, detail = null) => fire({ detail, event, type: 'custom' }),
+    fireCustom: (event, detail = undefined) => fire({ detail, event, type: 'custom' }),
     fireError: (message, stack) => fire({ message, type: 'error', ...(stack !== undefined ? { stack } : {}) }),
     fireReady: () => fire({ type: 'ready' }),
     fireResize: (height) => fire({ height, type: 'resize' }),

@@ -1,3 +1,8 @@
+---
+title: 'Sandbox Examples — User Script Sandbox'
+description: User Script Sandbox example for @vielzeug/sandbox.
+---
+
 ## User Script Sandbox
 
 Run user-provided code with error boundaries and console output capture, keeping the host page safe from untrusted execution.

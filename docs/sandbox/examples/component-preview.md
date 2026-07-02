@@ -1,3 +1,8 @@
+---
+title: 'Sandbox Examples — Component Preview'
+description: Component Preview example for @vielzeug/sandbox.
+---
+
 ## Component Preview
 
 Render isolated HTML/CSS components with live style hot-patching — no full re-render needed when the stylesheet changes.

@@ -1,7 +1,6 @@
-// isDev uses import.meta.env.PROD which Vite replaces at build time — dead-code eliminated in production bundles.
-const isDev = !(import.meta as { env?: { PROD?: boolean } }).env?.PROD;
+const isDev = !(globalThis as { __SANDBOX_PROD__?: boolean }).__SANDBOX_PROD__;
 
-/** @internal */
+/** @internal @security — some callers interpolate user-supplied values (e.g. namedStyles key) into msg; do not log PII. */
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/sandbox] ${msg}`);
 }

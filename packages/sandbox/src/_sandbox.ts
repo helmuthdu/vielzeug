@@ -1,4 +1,11 @@
+import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
+
 import { devOnly, warn } from './_warn.js';
+
+// Re-export types so that _sandbox.ts still exposes them via its original named exports.
+// index.ts now imports types from ./types.js directly — these re-exports are kept only
+// to avoid breaking any direct imports of _sandbox.js in tests.
+export type { SandboxBridge, SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Protocol constants
@@ -10,148 +17,12 @@ import { devOnly, warn } from './_warn.js';
 
 const MSG_READY = 'ready';
 const MSG_STATE_UPDATE = 'state-update';
+const MSG_STATE_UPDATE_ALL = 'state-update-all';
 const MSG_STYLE_PATCH = 'style-patch';
 const MSG_HTML_PATCH = 'html-patch';
 const MSG_ERROR = 'error';
 const MSG_CUSTOM = 'custom';
 const MSG_RESIZE = 'resize';
-
-// ---------------------------------------------------------------------------
-// Public types
-// ---------------------------------------------------------------------------
-
-/**
- * Options for createSandbox, buildCsp, and buildDocument.
- *
- * All `allowed*Origins` fields whitelist CDN/external origins for their
- * respective CSP directives. Origins from `scripts` URLs are extracted
- * automatically and merged with `allowedScriptOrigins`.
- *
- * Use `namedStyles` to inject named `<style id="key">` blocks. Each block is
- * individually hot-patchable via `sandbox.updateStyle(id, css)` without
- * a full re-render.
- */
-export interface SandboxOptions {
-  /** Origins added to font-src. Default: 'none'. */
-  allowedFontOrigins?: string[];
-  /** Origins appended to img-src. data: is always included. */
-  allowedImageOrigins?: string[];
-  /** Origins appended to script-src alongside 'unsafe-inline'. Merged with origins from `scripts`. */
-  allowedScriptOrigins?: string[];
-  /** Origins appended to style-src alongside 'unsafe-inline'. */
-  allowedStyleOrigins?: string[];
-  /**
-   * Named CSS blocks injected as `<style id="key">` elements in the document `<head>`.
-   * Each entry is individually hot-patchable via `sandbox.updateStyle(id, css)`.
-   * Keys must be valid HTML id values.
-   */
-  namedStyles?: Record<string, string>;
-  /**
-   * A cryptographic nonce added to the bridge <script> tag and to `script-src` in the CSP.
-   * In CSP Level 3 browsers the nonce suppresses `'unsafe-inline'` — only the bridge script
-   * (which carries the nonce attribute) executes. `'unsafe-inline'` is retained for CSP Level 2
-   * fallback only.
-   * @example { nonce: crypto.randomUUID() }
-   */
-  nonce?: string;
-  /** External script URLs injected before user content. Origins are auto-added to script-src. */
-  scripts?: string[];
-}
-
-/** Named unsubscribe function returned by `onMessage`. */
-export type Unsubscribe = () => void;
-
-/**
- * The bridge API available as `window.__sandbox__` inside sandbox documents.
- *
- * @example Ambient declaration for sandbox-side TypeScript:
- * ```ts
- * declare interface Window {
- *   __sandbox__: import('@vielzeug/sandbox').SandboxBridge;
- * }
- * ```
- */
-export interface SandboxBridge {
-  /** Emit a custom event to the host. Received via sandbox.onMessage() as { type: 'custom', event, detail }. */
-  emit(event: string, detail?: unknown): void;
-}
-
-/**
- * Application-level messages the sandbox sends to the host via onMessage().
- *
- * 'ready' is an internal lifecycle signal — it resolves render() Promises and
- * is never forwarded to onMessage() subscribers.
- *
- * @security All SandboxMessage data is untrusted — sandboxed code controls the payload.
- * Never evaluate or execute message content on the host.
- */
-export type SandboxMessage =
-  // eslint-disable-next-line perfectionist/sort-object-types
-  | { type: 'error'; message: string; stack?: string }
-  // eslint-disable-next-line perfectionist/sort-object-types
-  | { type: 'custom'; event: string; detail: unknown }
-  | { height: number; type: 'resize' };
-
-/** Handle for a running sandbox instance returned by createSandbox(). */
-export interface SandboxHandle {
-  /** `AbortSignal` aborted when `dispose()` is called. Use to tie async operations to this sandbox's lifetime. */
-  readonly disposalSignal: AbortSignal;
-  /** True once dispose() has been called. */
-  readonly disposed: boolean;
-  /**
-   * Resolves when the first sandbox document signals it is ready.
-   * Also resolves if the sandbox is disposed before the first render — check
-   * `sandbox.disposed` afterward if you need to distinguish the two cases.
-   * Does not reset on re-renders; use the Promise returned by render() for
-   * subsequent renders.
-   */
-  readonly ready: Promise<void>;
-  /** Tear down the sandbox — removes the iframe from the DOM and clears all listeners. */
-  dispose(): void;
-  /**
-   * Subscribe to application-level messages from the sandboxed document.
-   * Receives 'error', 'custom', and 'resize' messages. The 'ready' lifecycle
-   * signal is not forwarded — await the Promise returned by render() instead.
-   * Returns an Unsubscribe function. Returns a no-op if the sandbox is already disposed.
-   */
-  onMessage(handler: (msg: SandboxMessage) => void): Unsubscribe;
-  /**
-   * Incrementally update the body of the live sandbox document without a full page reset.
-   * Replaces `document.body.innerHTML` inside the iframe via postMessage — scripts,
-   * event listeners, and CSS state are preserved. The `ResizeObserver` fires automatically
-   * after the DOM update.
-   *
-   * Call after the first `render()` has resolved — warns in dev if the bridge is not yet ready.
-   * No-ops if disposed. Does NOT accept an AbortSignal — patches are instantaneous once sent.
-   */
-  patch(html: string): void;
-  /**
-   * Replace the entire sandbox document (full page reset). Creates the iframe lazily
-   * on the first call — no DOM is created until render() is invoked.
-   * Returns a Promise that resolves when the new document signals it is ready.
-   * If a second render() starts before the first resolves, the first Promise resolves
-   * immediately (the document navigated away).
-   * In dev, warns after 5 s if the ready signal never arrives (missing bridge script).
-   * Warns in dev if html is empty. Pass a signal to skip the render if already aborted.
-   */
-  render(html: string, options?: { signal?: AbortSignal }): Promise<void>;
-  /**
-   * Push a state value into the sandbox without re-rendering.
-   * Dispatches a `sandbox:state-update` CustomEvent on `document` inside the sandbox.
-   * Warns in dev if called before render() resolves.
-   */
-  setState(key: string, value: unknown): void;
-  /**
-   * Replace the CSS for a named style block without a full re-render.
-   * `id` must match a key in the `namedStyles` option passed to `createSandbox`.
-   * Updates both the live iframe and the baseline so the next render() uses the new CSS.
-   * No-ops if the sandbox is disposed. Safe to call before the first render —
-   * only the baseline is updated; the iframe patch is skipped until ready.
-   * Warns in dev if `id` is not a known namedStyles key.
-   */
-  updateStyle(id: string, css: string): void;
-  [Symbol.dispose](): void;
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -182,9 +53,32 @@ function escapeCss(css: string): string {
   return css.replace(/<\/style/gi, '\\3C /style');
 }
 
+// Escape a string for safe interpolation into an HTML double-quoted attribute
+// value (e.g. lang="…", id="…", nonce="…"). Encodes the four characters that
+// can break out of an attribute or inject new attributes.
+function escapeAttr(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Escape a string for safe interpolation into HTML text content (e.g. <title>).
+// Encodes & and < to prevent tag/entity injection; > is included for symmetry.
+function escapeText(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 // ---------------------------------------------------------------------------
 // CSP builder
 // ---------------------------------------------------------------------------
+
+// Strip characters that are illegal inside CSP source-list tokens and would
+// allow directive injection or HTML attribute breakout. Specifically:
+//   ';'  — CSP directive separator (would inject a new directive)
+//   '"'  — breaks out of the HTML content="..." attribute
+//   '\n' / '\r' — CSP header line folding / response-splitting
+// Origins must be scheme+host(+port) form; none of these chars belong there.
+function sanitizeCspOrigin(origin: string): string {
+  return origin.replace(/[;"'\n\r]/g, '');
+}
 
 /**
  * Builds a strict Content-Security-Policy string for sandboxed iframe documents.
@@ -193,16 +87,20 @@ function escapeCss(css: string): string {
  * merged with `allowedScriptOrigins` automatically.
  */
 export function buildCsp(options: SandboxOptions = {}): string {
+  // Sanitize the nonce: CSP nonces must be base64 characters only. Stripping
+  // single-quotes prevents early token termination inside 'nonce-{value}'.
+  const safeNonce = options.nonce ? options.nonce.replace(/['";\n\r]/g, '') : null;
+
   const scriptOrigins = [
     "'unsafe-inline'",
-    ...(options.nonce ? [`'nonce-${options.nonce}'`] : []),
-    ...(options.allowedScriptOrigins ?? []),
+    ...(safeNonce ? [`'nonce-${safeNonce}'`] : []),
+    ...(options.allowedScriptOrigins ?? []).map(sanitizeCspOrigin),
     ...(options.scripts ?? []).map(extractOrigin).filter((o): o is string => o !== null),
   ].join(' ');
 
-  const styleOrigins = ["'unsafe-inline'", ...(options.allowedStyleOrigins ?? [])].join(' ');
-  const imgOrigins = ['data:', ...(options.allowedImageOrigins ?? [])].join(' ');
-  const fontOrigins = (options.allowedFontOrigins ?? []).join(' ') || "'none'";
+  const styleOrigins = ["'unsafe-inline'", ...(options.allowedStyleOrigins ?? []).map(sanitizeCspOrigin)].join(' ');
+  const imgOrigins = ['data:', ...(options.allowedImageOrigins ?? []).map(sanitizeCspOrigin)].join(' ');
+  const fontOrigins = (options.allowedFontOrigins ?? []).map(sanitizeCspOrigin).join(' ') || "'none'";
 
   return [
     "default-src 'none'",
@@ -212,6 +110,7 @@ export function buildCsp(options: SandboxOptions = {}): string {
     `font-src ${fontOrigins}`,
     "connect-src 'none'",
     "form-action 'none'",
+    "base-uri 'none'",
   ].join('; ');
 }
 
@@ -239,6 +138,13 @@ window.addEventListener('message', function(e) {
   if (msg && msg.type === 'state-update') {
     document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: msg.key, value: msg.value } }));
   }
+  if (msg && msg.type === 'state-update-all' && msg.record && typeof msg.record === 'object') {
+    var keys = Object.keys(msg.record);
+    for (var i = 0; i < keys.length; i++) {
+      var k = keys[i];
+      document.dispatchEvent(new CustomEvent('sandbox:state-update', { detail: { key: k, value: msg.record[k] } }));
+    }
+  }
   if (msg && msg.type === 'style-patch' && msg.id && typeof msg.css === 'string') {
     var el = document.getElementById(msg.id);
     if (el && el.tagName === 'STYLE') el.textContent = msg.css;
@@ -257,9 +163,11 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 window.__sandbox__ = {
   emit: function(event, detail) {
+    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
     parent.postMessage({ type: 'custom', event: event, detail: detail }, '*');
   }
 };
+// srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
 parent.postMessage({ type: 'ready' }, '*');
 if (typeof ResizeObserver !== 'undefined') {
   new ResizeObserver(function(entries) {
@@ -268,6 +176,7 @@ if (typeof ResizeObserver !== 'undefined') {
     var h = entry.borderBoxSize && entry.borderBoxSize[0]
       ? entry.borderBoxSize[0].blockSize
       : entry.contentRect.height;
+    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
     parent.postMessage({ type: 'resize', height: h }, '*');
   }).observe(document.body);
 }
@@ -282,25 +191,32 @@ if (typeof ResizeObserver !== 'undefined') {
  * The bridge script auto-emits `resize` messages via `ResizeObserver`.
  */
 export function buildDocument(html: string, options: SandboxOptions = {}): string {
-  const csp = buildCsp(options);
+  // escapeAttr is applied to the whole CSP string when embedding it in content="..."
+  // because buildCsp() does not know the embedding context. Any user-supplied origin
+  // values that survived sanitizeCspOrigin() but still contain & or < (very unusual)
+  // would otherwise break the HTML attribute.
+  const csp = escapeAttr(buildCsp(options));
   const named = options.namedStyles ?? {};
+  const lang = escapeAttr(options.lang ?? 'en');
+  const title = escapeText(options.title ?? '');
 
   const styleTags = Object.entries(named)
-    .map(([id, css]) => `<style id="${id}">${escapeCss(css)}</style>`)
+    .map(([id, css]) => `<style id="${escapeAttr(id)}">${escapeCss(css)}</style>`)
     .join('\n');
 
   const scriptTags = (options.scripts ?? [])
-    .map((src) => `<script crossorigin="anonymous" src="${src}"></script>`)
+    .map((src) => `<script crossorigin="anonymous" src="${escapeAttr(src)}"></script>`)
     .join('\n');
 
-  const nonceAttr = options.nonce ? ` nonce="${options.nonce}"` : '';
+  const nonceAttr = options.nonce ? ` nonce="${escapeAttr(options.nonce)}"` : '';
 
   return `<!doctype html>
-<html>
+<html lang="${lang}">
 <head>
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title}</title>
 ${styleTags}
 </head>
 <body>
@@ -368,9 +284,23 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
   // Dispatch table for incoming sandbox→host messages.
   // Adding a new message type means adding one entry here — no separate allowlist.
+  // Each handler constructs a typed SandboxMessage rather than casting, so the
+  // compiler verifies the shape and malformed payloads are silently dropped.
   const msgHandlers: Record<string, (msg: Record<string, unknown>) => void> = {
-    [MSG_CUSTOM]: (msg) => broadcast(msg as unknown as SandboxMessage),
-    [MSG_ERROR]: (msg) => broadcast(msg as unknown as SandboxMessage),
+    [MSG_CUSTOM]: (msg) => {
+      if (typeof msg.event === 'string') {
+        broadcast({ detail: msg.detail, event: msg.event, type: MSG_CUSTOM });
+      }
+    },
+    [MSG_ERROR]: (msg) => {
+      if (typeof msg.message === 'string') {
+        broadcast({
+          message: msg.message,
+          ...(typeof msg.stack === 'string' ? { stack: msg.stack } : {}),
+          type: MSG_ERROR,
+        });
+      }
+    },
     [MSG_READY]: () => {
       // supersedePendingRender clears the timeout and resolves the render promise.
       // bridgeReady is re-set to true immediately after because the bridge IS ready.
@@ -379,7 +309,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
       bridgeReady = true;
     },
     [MSG_RESIZE]: (msg) => {
-      if (typeof msg.height === 'number') broadcast(msg as unknown as SandboxMessage);
+      if (typeof msg.height === 'number') broadcast({ height: msg.height, type: MSG_RESIZE });
     },
   };
 
@@ -392,7 +322,12 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
 
     if (!isMsgObject(event.data)) return;
 
-    msgHandlers[event.data.type]?.(event.data);
+    // Guard against prototype-inherited properties on msgHandlers (e.g. '__proto__',
+    // '__defineGetter__') — these are not functions and calling them via ?.() throws.
+    // Object.hasOwn ensures only keys explicitly defined in the dispatch table are invoked.
+    if (Object.hasOwn(msgHandlers, event.data.type)) {
+      msgHandlers[event.data.type]!(event.data);
+    }
   }
 
   function ensureIframe(): HTMLIFrameElement {
@@ -494,6 +429,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
       return;
     }
 
+    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
     iframe.contentWindow.postMessage({ html, type: MSG_HTML_PATCH }, '*');
   }
 
@@ -516,7 +452,31 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
       );
     }
 
+    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
     iframe.contentWindow.postMessage({ key, type: MSG_STATE_UPDATE, value }, '*');
+  }
+
+  function setStateAll(record: Record<string, unknown>): void {
+    if (disposed) {
+      warn('setStateAll() called on a disposed sandbox.');
+
+      return;
+    }
+
+    if (!iframe?.contentWindow) {
+      warn('setStateAll() called before render() — sandbox has no document yet.');
+
+      return;
+    }
+
+    if (!bridgeReady) {
+      warn(
+        'setStateAll() called before ready — state updates may be lost. Await the Promise returned by render() first.',
+      );
+    }
+
+    // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
+    iframe.contentWindow.postMessage({ record, type: MSG_STATE_UPDATE_ALL }, '*');
   }
 
   function updateStyle(id: string, css: string): void {
@@ -534,6 +494,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     namedStyles[id] = css;
 
     if (bridgeReady && iframe?.contentWindow) {
+      // srcdoc iframes have origin 'null' — '*' is required because no specific origin can be targeted.
       iframe.contentWindow.postMessage({ css, id, type: MSG_STYLE_PATCH }, '*');
     }
   }
@@ -551,6 +512,7 @@ export function createSandbox(container: HTMLElement, options: SandboxOptions = 
     ready,
     render,
     setState,
+    setStateAll,
     [Symbol.dispose]() {
       dispose();
     },

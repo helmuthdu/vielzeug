@@ -77,6 +77,7 @@ describe('buildCsp', () => {
       'font-src',
       'connect-src',
       'form-action',
+      'base-uri',
     ]) {
       expect(csp).toContain(directive);
     }
@@ -96,6 +97,14 @@ describe('buildCsp', () => {
 
   it('handles blob: URLs by extracting origin correctly', () => {
     expect(buildCsp({ scripts: ['blob:https://cdn.example.com/abc-123'] })).toContain('https://cdn.example.com');
+  });
+
+  it('does not include a nonce token when nonce is not provided', () => {
+    expect(buildCsp()).not.toContain('nonce-');
+  });
+
+  it("includes base-uri 'none'", () => {
+    expect(buildCsp()).toContain("base-uri 'none'");
   });
 });
 
@@ -135,6 +144,26 @@ describe('buildDocument', () => {
 
     expect(doc).toContain('<style id="base-css">body { margin: 0; }</style>');
     expect(doc).toContain('<style id="theme-css">body { color: red; }</style>');
+  });
+
+  it('renders no <style> block when namedStyles is empty', () => {
+    expect(buildDocument('<p>Hi</p>')).not.toContain('<style');
+  });
+
+  it('defaults lang to "en"', () => {
+    expect(buildDocument('<p>Hi</p>')).toContain('<html lang="en">');
+  });
+
+  it('uses the provided lang value', () => {
+    expect(buildDocument('<p>Hi</p>', { lang: 'de' })).toContain('<html lang="de">');
+  });
+
+  it('defaults to an empty <title>', () => {
+    expect(buildDocument('<p>Hi</p>')).toContain('<title></title>');
+  });
+
+  it('renders the provided title', () => {
+    expect(buildDocument('<p>Hi</p>', { title: 'My Sandbox' })).toContain('<title>My Sandbox</title>');
   });
 
   it('adds nonce to the bridge script tag when provided', () => {
@@ -754,6 +783,83 @@ describe('createSandbox — setState', () => {
 });
 
 // ---------------------------------------------------------------------------
+// createSandbox — setStateAll
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — setStateAll', () => {
+  let container: HTMLElement;
+  let helpers: ReturnType<typeof makeHelpers>;
+
+  beforeEach(() => {
+    container = makeContainer();
+    helpers = makeHelpers(container);
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('posts a state-update-all message with the given record when bridge is ready', async () => {
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>test</p>');
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    helpers.fireReady();
+    await p;
+
+    const postSpy = vi.spyOn(iframe.contentWindow as Window, 'postMessage');
+
+    sandbox.setStateAll({ count: 1, theme: 'dark' });
+    expect(postSpy).toHaveBeenCalledWith({ record: { count: 1, theme: 'dark' }, type: 'state-update-all' }, '*');
+    sandbox.dispose();
+  });
+
+  it('warns before render() — no contentWindow yet', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+
+    sandbox.setStateAll({ key: 'value' });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
+    warnSpy.mockRestore();
+    sandbox.dispose();
+  });
+
+  it('warns after render() but before ready fires', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>test</p>');
+    sandbox.setStateAll({ key: 'value' });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('before ready'));
+    warnSpy.mockRestore();
+    sandbox.dispose();
+  });
+
+  it('does not warn after ready fires', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+    const p = sandbox.render('<p>test</p>');
+
+    helpers.fireReady();
+    await p;
+    sandbox.setStateAll({ key: 'value' });
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+    sandbox.dispose();
+  });
+
+  it('warns after dispose()', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+
+    sandbox.dispose();
+    sandbox.setStateAll({ key: 'value' });
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/sandbox]'));
+    warnSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // createSandbox — updateStyle
 // ---------------------------------------------------------------------------
 
@@ -1002,7 +1108,6 @@ describe('createSandboxTestHelpers', () => {
     sandbox.render('<p>Hello</p>');
 
     const h = createSandboxTestHelpers(container);
-    const received: unknown[] = [];
     // onMessage doesn't forward ready, so spy on the raw message event
     const spy = vi.fn();
 
@@ -1070,6 +1175,97 @@ describe('createSandboxTestHelpers', () => {
     sandbox.onMessage((msg) => received.push(msg));
     h.fireError('Some error');
     expect((received[0] as { stack?: string }).stack).toBeUndefined();
+    sandbox.dispose();
+  });
+
+  it('fireCustom with no detail argument sends detail: undefined (not null)', () => {
+    const sandbox = createSandbox(container);
+
+    sandbox.render('<p>Hello</p>');
+
+    const h = createSandboxTestHelpers(container);
+    const spy = vi.fn();
+
+    window.addEventListener('message', spy);
+    h.fireCustom('ping');
+    window.removeEventListener('message', spy);
+
+    const event = spy.mock.calls[0]![0] as MessageEvent;
+
+    expect('detail' in (event.data as Record<string, unknown>)).toBe(true);
+    expect((event.data as { detail: unknown }).detail).toBeUndefined();
+    sandbox.dispose();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C1: onMessage() on disposed sandbox — exact warning message
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — onMessage disposed warning', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = makeContainer();
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('emits exact warning when onMessage() is called on a disposed sandbox', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const sandbox = createSandbox(container);
+
+    sandbox.dispose();
+    sandbox.onMessage(() => undefined);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[@vielzeug/sandbox] onMessage() called on a disposed sandbox — handler will never fire.',
+    );
+    warnSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C2: buildDocument nonce appears in CSP meta tag content attribute
+// ---------------------------------------------------------------------------
+
+describe('buildDocument — nonce in CSP meta tag', () => {
+  it("nonce appears as 'nonce-<value>' inside the CSP meta tag content attribute", () => {
+    const doc = buildDocument('<p>hi</p>', { nonce: 'abc123' });
+    const contentMatch = doc.match(/http-equiv="Content-Security-Policy"\s+content="([^"]*)"/);
+
+    expect(contentMatch).not.toBeNull();
+    expect(contentMatch![1]).toContain("'nonce-abc123'");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// C3: updateStyle before render() — render picks up updated CSS
+// ---------------------------------------------------------------------------
+
+describe('createSandbox — updateStyle before render', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = makeContainer();
+  });
+
+  afterEach(() => {
+    container.remove();
+  });
+
+  it('render() uses CSS updated via updateStyle() before first render', () => {
+    const sandbox = createSandbox(container, { namedStyles: { theme: 'body { color: red; }' } });
+
+    sandbox.updateStyle('theme', 'body { color: blue; }');
+    sandbox.render('<p>hi</p>');
+
+    const iframe = container.querySelector('iframe') as HTMLIFrameElement;
+
+    expect(iframe.srcdoc).toContain('body { color: blue; }');
+    expect(iframe.srcdoc).not.toContain('body { color: red; }');
     sandbox.dispose();
   });
 });

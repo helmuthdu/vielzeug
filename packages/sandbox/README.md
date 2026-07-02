@@ -1,12 +1,3 @@
----
-description: Sandboxed iframe runtime with a typed postMessage state bridge for safe execution of AI-generated UI
-package: sandbox
-category: ai-tooling
-keywords: [sandbox, iframe, generative-ui, ai, postmessage, csp]
-related: [codex, refine]
-exports: [buildCsp, buildDocument, createSandbox, SandboxBridge]
----
-
 # @vielzeug/sandbox
 
 Sandboxed iframe runtime with a typed postMessage state bridge for safe execution of AI-generated UI.

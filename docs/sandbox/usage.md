@@ -101,6 +101,22 @@ document.addEventListener('sandbox:state-update', (e) => {
 </script>
 ```
 
+## Batch State Updates
+
+`setStateAll(record)` pushes multiple state values in a single postMessage — one call instead of one `setState()` per key. Use it for initial state setup where several values become available at the same time.
+
+```ts
+await sandbox.render('<div id="root"></div>');
+
+// One postMessage instead of two setState() calls
+sandbox.setStateAll({
+  theme: 'dark',
+  user: { name: 'Alice' },
+});
+```
+
+The sandbox side listens the same way as for `setState()` — each key in the record fires its own `sandbox:state-update` event.
+
 ## Handling Errors
 
 Subscribe to `onMessage` before calling `render()` to catch runtime errors in sandbox content.
@@ -136,6 +152,19 @@ const sandbox = createSandbox(container, {
 ```
 
 Script URLs are injected before user content. Their origins are automatically added to `script-src` in the CSP — you do not need to configure `buildCsp` separately.
+
+## Setting Document Language and Title
+
+Use `lang` and `title` to set the generated document's `<html lang="…">` attribute and `<title>`. Both improve screen-reader behaviour for sandboxed content.
+
+```ts
+const sandbox = createSandbox(container, {
+  lang: 'de',
+  title: 'Component Preview',
+});
+```
+
+`lang` defaults to `'en'`, `title` defaults to `''`. Both values are HTML-escaped automatically before being written into the document.
 
 ## Hot-patching Named Styles
 
@@ -211,6 +240,8 @@ await sandbox.render(`
   <p style="font-family: Inter, sans-serif">Hello</p>
 `);
 ```
+
+Origin values and the `nonce` are sanitized before being written into the policy, and the generated CSP always includes `base-uri 'none'` to block `<base>`-tag injection — you do not need to strip untrusted characters yourself.
 
 ## Disposal
 
@@ -355,7 +386,7 @@ await sandbox.render('<ore-card><ore-button>Save</ore-button></ore-card>');
 
 ## Best Practices
 
-- **Await `render()` before calling `setState()`** — `setState()` warns in dev if called before the bridge is ready. Await the `Promise` returned by `render()` first.
+- **Await `render()` before calling `setState()`/`setStateAll()`** — both warn in dev if called before the bridge is ready. Use `setStateAll()` to bootstrap several values in one postMessage instead of calling `setState()` repeatedly.
 - **Use `await sandbox.render(html)` for each render** — `render()` returns a `Promise<void>` that resolves when the document is ready. No separate readiness API is needed.
 - **Use `updateStyle()` for theme switching** — patching a named style is faster than a full `render()` and preserves all script and DOM state.
 - **Check `disposed` before deferred calls** — across async operations, check `sandbox.disposed` before calling any method to avoid spurious dev warnings.

@@ -1,3 +1,8 @@
+---
+title: 'Sandbox Examples — Embedded Widget'
+description: Embedded Widget example for @vielzeug/sandbox.
+---
+
 ## Embedded Widget
 
 Host a third-party widget or plugin with strict CSP, scoped styles, and bidirectional messaging between the widget and your application.
@@ -89,6 +94,20 @@ document.getElementById('submit-btn').addEventListener('click', () => {
 });
 ```
 
+#### With setStateAll (optional)
+
+Bootstrap theme and locale together in one postMessage instead of two separate `setState()` calls:
+
+```ts
+sandbox.render('<div id="widget-root"></div>');
+
+// One postMessage for both initial values
+sandbox.setStateAll({
+  theme: { primary: '#0066cc', radius: '6px' },
+  locale: 'en',
+});
+```
+
 ### Pitfalls
 
 - **`allowedScriptOrigins` vs `scripts`** — origins in the `scripts` array are automatically added to `script-src`. Use `allowedScriptOrigins` only for origins not covered by `scripts` (e.g. dynamically loaded sub-scripts the widget fetches).
@@ -101,5 +120,6 @@ document.getElementById('submit-btn').addEventListener('click', () => {
 - [Usage Guide — Injecting Scripts and Styles](../usage.md#injecting-scripts-and-styles)
 - [Usage Guide — Configuring CSP](../usage.md#configuring-csp)
 - [Usage Guide — Passing State](../usage.md#passing-state)
+- [Usage Guide — Batch State Updates](../usage.md#batch-state-updates)
 - [Usage Guide — Receiving Events from the Sandbox](../usage.md#receiving-events-from-the-sandbox)
 - [API Reference — SandboxOptions](../api.md#sandboxoptions)

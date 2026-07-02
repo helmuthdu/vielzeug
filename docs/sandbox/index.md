@@ -4,7 +4,18 @@ description: Isolated iframe runtime with a typed postMessage bridge for safe ex
 package: sandbox
 category: ui-primitives
 keywords: [sandbox, iframe, isolation, playground, csp, postmessage, security, components]
-exports: [buildCsp, buildDocument, createSandbox, SandboxBridge]
+exports:
+  [
+    createSandbox,
+    buildCsp,
+    buildDocument,
+    SandboxError,
+    SandboxHandle,
+    SandboxOptions,
+    SandboxBridge,
+    SandboxMessage,
+    Unsubscribe,
+  ]
 related: [codex, refine]
 environments: [browser]
 ---
@@ -102,7 +113,9 @@ sandbox.dispose();
 - `patch(html)` — Incremental body update without page reset; preserves scripts, listeners, and CSS state; ideal for streaming content
 - `updateStyle(id, css)` — Hot-patch a named `<style id="…">` block live without re-rendering; also updates baseline for next render
 - `setState(key, value)` — Push state into the sandbox; received as `sandbox:state-update` CustomEvent
+- `setStateAll(record)` — Push multiple state values in a single postMessage; more efficient than repeated `setState()` calls for initial setup
 - `namedStyles` option — Named `<style id="key">` blocks in document `<head>`; individually patchable via `updateStyle()`
+- `lang` / `title` options — Set `<html lang="…">` and `<title>` on the generated document for screen-reader correctness
 - `SandboxBridge` type — Ambient type for `window.__sandbox__` in sandbox-side TypeScript
 - `custom` messages — Sandbox code emits `window.__sandbox__.emit(event, detail)` to the host
 - `resize` messages — Auto-emitted by the bridge's built-in `ResizeObserver`; no manual wiring needed
