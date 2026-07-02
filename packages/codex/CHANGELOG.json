@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "1.0.1",
+      "tag": "@vielzeug/codex_v1.0.1",
+      "date": "Thu, 02 Jul 2026 06:05:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(codex): handle CLI data-load errors, add disposed to HttpServerHandle, close sandbox-document style breakout, expand test coverage",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "d10634f57420a0f21f170fb2f7a93ff6bc2f75bb"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "tag": "@vielzeug/codex_v1.0.0",
       "date": "Wed, 01 Jul 2026 16:10:37 GMT",
