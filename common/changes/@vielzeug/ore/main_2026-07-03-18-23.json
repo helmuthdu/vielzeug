@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(ore): fix XSS gaps in setAttr, matchMedia test env, dead code cleanup, test coverage, and docs accuracy",
+      "type": "patch",
+      "packageName": "@vielzeug/ore"
+    }
+  ],
+  "packageName": "@vielzeug/ore",
+  "email": "helmuthdu@gmail.com"
+}

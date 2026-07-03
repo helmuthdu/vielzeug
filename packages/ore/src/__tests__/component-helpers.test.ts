@@ -1,5 +1,4 @@
 import { define, html, inject, prop, ref } from '../index';
-import { intersectionObserver, mediaObserver, resizeObserver } from '../observers';
 import { onCleanup } from '../runtime';
 import { mount } from '../testing';
 
@@ -54,9 +53,6 @@ describe('component helpers and exports', () => {
       expect(inject).toBeDefined();
       expect(ref).toBeDefined();
       expect(define).toBeDefined();
-      expect(resizeObserver).toBeDefined();
-      expect(intersectionObserver).toBeDefined();
-      expect(mediaObserver).toBeDefined();
 
       return html`<div id="test"></div>`;
     });

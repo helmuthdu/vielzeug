@@ -141,10 +141,11 @@ define('my-counter', {
 
 | Import                      | Purpose                                                                       |
 | --------------------------- | ----------------------------------------------------------------------------- |
-| `@vielzeug/ore`           | Core component API, directives, and utilities                                 |
-| `@vielzeug/ore/devtools`  | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
-| `@vielzeug/ore/observers` | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
-| `@vielzeug/ore/testing`   | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
+| `@vielzeug/ore`            | Core component API and utilities (`define`, `prop`, `html`, `css`, context, forms) |
+| `@vielzeug/ore/devtools`   | `debugFlush` — verbose flush for timing diagnostics (dev only)                |
+| `@vielzeug/ore/directives` | `each`, `when`, `model`, `live`, `raw`, `classMap`, `styleMap`                |
+| `@vielzeug/ore/observers`  | `resizeObserver`, `intersectionObserver`, `mediaObserver`, `mutationObserver` |
+| `@vielzeug/ore/testing`    | `mount`, `fire`, `user`, `waitFor`, `cleanup`, and helpers                    |
 
 ## Documentation
 

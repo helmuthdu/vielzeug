@@ -15,7 +15,8 @@ Use `each()` with positional arguments and `when()` for the empty-state fallback
 
 ```ts
 import { computed, signal } from '@vielzeug/ripple';
-import { define, each, html, when } from '@vielzeug/ore';
+import { each, when } from '@vielzeug/ore/directives';
+import { define, html } from '@vielzeug/ore';
 
 define('search-list', {
   setup() {

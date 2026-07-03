@@ -78,7 +78,7 @@ setup(props, ctx) {
 type ComponentDefinition<Props, Emits, SlotNames> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Template shown while async setup is pending
-  onError?: (error: OreError, element: HTMLElement) => HTMLResult | void;
+  onError?: (error: OreLifecycleError, element: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
   setup: (
     props: InferProps<PropsDef<Props>>,
@@ -277,8 +277,8 @@ Static values (strings, numbers, booleans) are applied once. Getter functions an
 
 ## Slots
 
-- `slots.has(name?)` — `Reactive<boolean>` — whether the named (or default) slot has assigned content
-- `slots.elements(name?)` — `Reactive<Element[]>` — the assigned elements for the slot
+- `slots.has(name?)` — `Readable<boolean>` — whether the named (or default) slot has assigned content
+- `slots.elements(name?)` — `Readable<Element[]>` — the assigned elements for the slot
 
 Slot signals update reactively when assigned content changes, including when slots are inserted dynamically (via `when()` or `each()`) after mount.
 
@@ -295,9 +295,9 @@ Slot signals update reactively when assigned content changes, including when slo
 ## Utilities
 
 - `ref<T>()` — Create a `Signal<T | null>` element reference. Set to the element via `ref=` in templates.
-- `createId()` — Generate a unique incremental string ID (e.g. `'ore-1'`).
-- `createStableId(key)` — Return the same ID for the same string key within a component's lifetime; useful for stable ARIA label associations.
-- `resetIdCounter()` — Reset the ID counter to 0. Call in test `beforeEach` for deterministic IDs.
+- `createId(prefix = 'id')` — Generate a unique incremental string ID (e.g. `'id-1'`, `'id-2'`). Each call returns a new ID — it does not deduplicate by prefix.
+- `createStableId(prefix = 'id')` — Generate a unique ID that also embeds a short random tag shared across all IDs generated in the session (e.g. `'field-a3k21'`), reducing collision risk when multiple app instances run on the same page. Like `createId()`, every call returns a new ID.
+- `resetIdCounter()` — Reset the `createStableId()` counter to 0. Call in test `beforeEach` for deterministic IDs.
 
 ## Form-Associated API
 
@@ -307,7 +307,7 @@ Wire a form-associated element to `ElementInternals`. Requires `formAssociated: 
 
 ```ts
 type FormFieldOptions<T> = {
-  disabled?: Reactive<boolean>;
+  disabled?: Readable<boolean>;
   /**
    * When true, a null/undefined value is submitted as '' instead of null,
    * keeping the field's key present in FormData even when the value is absent.
@@ -316,7 +316,7 @@ type FormFieldOptions<T> = {
    */
   emptyStringForNull?: boolean;
   toFormValue?: (value: T) => File | FormData | string | null;
-  value: Signal<T> | Reactive<T>;
+  value: Signal<T> | Readable<T>;
 };
 
 type FormFieldHandle = {
@@ -338,13 +338,13 @@ Coordinate form state across child field components:
 ```ts
 type FormController = {
   clearStatus(): void; // Clears dirty + error signals; calls onReset callback
-  readonly dirty: Reactive<boolean>;
-  readonly error: Reactive<unknown>; // Last submit error; null if last submit succeeded
+  readonly dirty: Readable<boolean>;
+  readonly error: Readable<unknown>; // Last submit error; null if last submit succeeded
   markDirty(): void; // Call from input/change handlers
-  registerField(validity: Reactive<boolean>): () => void;
+  registerField(validity: Readable<boolean>): () => void;
   submit(e?: Event): Promise<void>; // Resets dirty to false on success; preserves dirty on failure
-  readonly submitting: Reactive<boolean>;
-  readonly valid: Reactive<boolean>; // true when all registered fields are valid
+  readonly submitting: Readable<boolean>;
+  readonly valid: Readable<boolean>; // true when all registered fields are valid
 };
 ```
 
@@ -352,10 +352,10 @@ type FormController = {
 
 Import from `@vielzeug/ore/observers`.
 
-- `resizeObserver(element)` — Returns `Reactive<ResizeObserverEntry>`
-- `intersectionObserver(element, options?)` — Returns `Reactive<IntersectionObserverEntry>`
-- `mutationObserver(element, options?)` — Returns `Reactive<MutationRecord[]>`
-- `mediaObserver(query)` — Returns `Reactive<boolean>`
+- `resizeObserver(element)` — Returns `Readable<{ height: number; width: number }>`, initialised to `{ height: 0, width: 0 }`
+- `intersectionObserver(element, options?)` — Returns `Readable<IntersectionObserverEntry | null>`, initialised to `null`
+- `mutationObserver(element, options?)` — Returns `Readable<{ entries: MutationRecord[]; latest: MutationRecord | null }>`, initialised to `{ entries: [], latest: null }`
+- `mediaObserver(query)` — Returns `Readable<boolean>`, initialised to the query's current `matches` state
 
 ## Testing APIs
 
@@ -382,17 +382,21 @@ Import from `@vielzeug/ore/testing`.
 
 ```ts
 interface Fixture<T extends HTMLElement = HTMLElement> {
+  [Symbol.dispose](): void; // Delegates to dispose() — enables `using` declarations
   element: T;
+  readonly disposed: boolean; // true after dispose() has been called
   readonly shadow: ShadowRoot | null;
   query<E extends Element>(selector: string): E | null;
   queryAll<E extends Element>(selector: string): E[];
   queryByText<E extends Element>(text: string, selector?: string): E | null;
+  queryAllByText<E extends Element>(text: string, selector?: string): E[];
   queryByTestId<E extends Element>(testId: string): E | null;
+  queryAllByTestId<E extends Element>(testId: string): E[];
   attr(name: string, value: string | number | boolean): Promise<void>;
   attrs(record: Record<string, string | number | boolean>): Promise<void>;
   flush(options?: FlushOptions): Promise<void>;
   act(fn: () => unknown): Promise<void>;
-  destroy(): void;
+  dispose(): void; // Removes the component from the DOM — idempotent
 }
 ```
 
@@ -402,7 +406,7 @@ Useful for testing composable lifecycle hooks (`onMounted`, `effect`, `inject`, 
 
 ```ts
 // Without props
-const { result, flush, destroy } = await renderHook((_props, { onMounted }) => {
+const { result, flush, dispose } = await renderHook((_props, { onMounted }) => {
   const count = signal(0);
   onMounted(() => {
     count.value = 1;
@@ -432,7 +436,7 @@ See the [Ripple documentation](/ripple/) for the full API.
 | ------------------ | ------------------------------------------------------------- |
 | `ore:connect`    | After every `connectedCallback` (including reconnects)        |
 | `ore:disconnect` | After `disconnectedCallback`, before component state is reset |
-| `ore:error`      | When setup throws — bubbles, composed; detail is `OreError` |
+| `ore:error`      | When setup throws — bubbles, composed; detail is `OreLifecycleError` |
 
 ## Types
 
@@ -445,10 +449,10 @@ type PropDef<T> = {
 
 /**
  * Infer reactive props type from a PropInputDefs map.
- * Each entry becomes Reactive<T> keyed by prop name.
+ * Each entry becomes Readable<T> keyed by prop name.
  */
 type InferProps<D extends PropInputDefs> = {
-  readonly [K in keyof D]-?: Reactive<InferPropValue<D[K]>>;
+  readonly [K in keyof D]-?: Readable<InferPropValue<D[K]>>;
 };
 
 type SetupContextBag<
@@ -488,7 +492,7 @@ type SetupContextBag<
 type ComponentDefinition<Props, Emits, SlotNames extends string> = {
   formAssociated?: boolean;
   loading?: () => HTMLResult; // Shown while async setup is pending
-  onError?: (error: OreError, el: HTMLElement) => HTMLResult | void;
+  onError?: (error: OreLifecycleError, el: HTMLElement) => HTMLResult | void;
   props?: PropsDef<Props>;
   setup: (
     props: InferProps<PropsDef<Props>>,
@@ -500,14 +504,14 @@ type ComponentDefinition<Props, Emits, SlotNames extends string> = {
 
 type HostBindConfig = {
   attr?: Record<string, HostBindingValue>;
-  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | Reactive<boolean>>;
+  class?: (() => Record<string, boolean>) | Record<string, boolean | (() => boolean) | Readable<boolean>>;
   on?: Record<string, (event: Event) => void>;
   style?: Record<string, HostBindingValue>;
 };
 
 type ComponentSlots<S extends string = string> = {
-  elements(name?: S): Reactive<Element[]>;
-  has(name?: S): Reactive<boolean>;
+  elements(name?: S): Readable<Element[]>;
+  has(name?: S): Readable<boolean>;
 };
 
 type Ref<T extends Element> = Signal<T | null>;
@@ -522,12 +526,13 @@ type OreErrorPhase = 'async-setup' | 'mounted' | 'setup';
 
 ## Errors
 
-`OreError` is thrown when component setup fails. It extends `Error` with:
+`OreError` is the base class for every error `ore` throws — `err instanceof OreError` catches all of them. `OreError.is(err)` is the equivalent static type-guard.
 
-- `component: string` — the element's local name
-- `phase: OreErrorPhase` — `'setup'` | `'async-setup'` | `'mounted'`
-- `cause: Error` — the original error
+- **`OreApiError`** — thrown when the `ore` API itself is misused: calling `define()` with a duplicate tag, calling a lifecycle hook (`inject`, `onMounted`, `onCleanup`, `onEvent`, …) outside of `setup()`, or passing an invalid prop definition to `define()`.
+- **`OreLifecycleError`** — thrown by the runtime when a component's `setup()` throws or its async `setup()` promise rejects. Extends `OreError` with:
+  - `component: string` — the element's local name
+  - `phase: OreErrorPhase` — `'setup'` | `'async-setup'` | `'mounted'`
+  - `cause: Error` — the original error thrown by `setup()`
+- **`OreTimeoutError`** — thrown by `waitFor()`/`waitForEvent()` (from `@vielzeug/ore/testing`) when the timeout elapses before the condition/event is met.
 
-`OreError.is(err)` — static type-guard, equivalent to `err instanceof OreError`.
-
-If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing. This applies to both synchronous and async `setup()`. If `onError` returns `void` (no recovery), a subsequent reconnect can retry setup.
+If `onError(error, element)` is defined on the component definition and returns an `HTMLResult`, it replaces the failed template instead of throwing. `error` here is always an `OreLifecycleError`. This applies to both synchronous and async `setup()`. If `onError` returns `void` (no recovery), a subsequent reconnect can retry setup.

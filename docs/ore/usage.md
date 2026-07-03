@@ -147,11 +147,12 @@ define('profile-name', {
 
 ## directives
 
-Ore includes `each`, `classMap`, `styleMap`, `when`, `live`, and `raw`.
+Ore includes `each`, `classMap`, `styleMap`, `when`, `live`, and `raw` — import them from `@vielzeug/ore/directives`.
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { classMap, define, each, html, styleMap, when } from '@vielzeug/ore';
+import { classMap, each, styleMap, when } from '@vielzeug/ore/directives';
+import { define, html } from '@vielzeug/ore';
 
 define('task-list', {
   setup() {
@@ -202,7 +203,8 @@ Use `live(signal)` for inputs that should preserve in-progress user edits instea
 
 ```ts
 import { signal } from '@vielzeug/ripple';
-import { define, html, live } from '@vielzeug/ore';
+import { live } from '@vielzeug/ore/directives';
+import { define, html } from '@vielzeug/ore';
 
 define('live-search', {
   setup() {
@@ -323,7 +325,8 @@ define('button-wrapper', {
 ## slots and emits
 
 ```ts
-import { define, html, when } from '@vielzeug/ore';
+import { when } from '@vielzeug/ore/directives';
+import { define, html } from '@vielzeug/ore';
 
 define<Record<never, never>, Record<never, never>, 'header' | 'footer'>('card-with-footer', {
   setup(_props, { slots, emit }) {
@@ -414,7 +417,7 @@ define('user-profile', {
 Observer helpers from `@vielzeug/ore/observers` require real DOM nodes, so call them inside `ctx.onMounted()`.
 
 ```ts
-import { watch } from '@vielzeug/ripple';
+import { effect } from '@vielzeug/ripple';
 import { define, html, ref } from '@vielzeug/ore';
 import { intersectionObserver, mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
 
@@ -430,7 +433,8 @@ define('x-observed', {
       const visible = intersectionObserver(element, { threshold: 0.5 });
       const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-      watch([size, visible, dark], () => {
+      // effect() auto-tracks every signal read inside — re-runs when any of the three change.
+      effect(() => {
         console.log(size.value.width, visible.value?.isIntersecting, dark.value);
       });
     });
@@ -445,10 +449,10 @@ define('x-observed', {
 Import from `@vielzeug/ore/testing`.
 
 ```ts
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { signal } from '@vielzeug/ripple';
 import { html } from '@vielzeug/ore';
-import { cleanup, fire, flush, mount, waitFor } from '@vielzeug/ore/testing';
+import { cleanup, fire, mount } from '@vielzeug/ore/testing';
 
 describe('my-counter', () => {
   afterEach(cleanup);
@@ -477,7 +481,7 @@ Ore components are standard custom elements and work natively in any framework.
 
 ```tsx [React]
 // React 19+ supports custom elements natively.
-import '@vielzeug/refine';
+import './x-toggle'; // wherever define('x-toggle', { ... }) is called
 
 function App() {
   return <x-toggle aria-label="Open menu" />;
@@ -486,7 +490,7 @@ function App() {
 
 ```ts [Vue 3]
 <script setup lang="ts">
-import '@vielzeug/refine';
+import './x-toggle'; // wherever define('x-toggle', { ... }) is called
 import { ref } from 'vue';
 
 const open = ref(false);
@@ -499,7 +503,7 @@ const open = ref(false);
 
 ```svelte [Svelte]
 <script>
-  import '@vielzeug/refine';
+  import './x-toggle'; // wherever define('x-toggle', { ... }) is called
 
   function handleClick() {
     console.log('toggled');

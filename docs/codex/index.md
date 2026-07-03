@@ -134,7 +134,7 @@ Wire it into your AI client — see the [Usage Guide](./usage.md) for client-spe
 
 <div class="see-also">
 
-- [Refine](/refine/) — source of the bundled Refine component CEM metadata exposed via `list-components` and `get-component`
+- [Refine](/refine/) — source of the bundled Refine component CEM metadata exposed via `refine-list-components` and `refine-get-component`
 - [Spell](/spell/) — example of a well-documented package discoverable via `search-packages` and `get-docs`
 
 </div>

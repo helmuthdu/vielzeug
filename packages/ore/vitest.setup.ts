@@ -32,6 +32,23 @@ if (!('IntersectionObserver' in globalThis)) {
   } as unknown as typeof IntersectionObserver;
 }
 
+// Polyfill window.matchMedia for JSDOM
+if (typeof window.matchMedia !== 'function') {
+  window.matchMedia = vi.fn().mockImplementation(
+    (query: string) =>
+      ({
+        addEventListener: vi.fn(),
+        addListener: vi.fn(), // deprecated, kept for libraries that still reference it
+        dispatchEvent: vi.fn(),
+        matches: false,
+        media: query,
+        onchange: null,
+        removeEventListener: vi.fn(),
+        removeListener: vi.fn(),
+      }) as unknown as MediaQueryList,
+  );
+}
+
 // Polyfill ElementInternals methods for JSDOM
 if (typeof ElementInternals !== 'undefined') {
   if (!('setFormValue' in ElementInternals.prototype)) {

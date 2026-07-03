@@ -1,6 +1,6 @@
-import { mutationObserver } from '..';
-import { html, ref } from '../../index';
-import { mount } from '../../testing';
+import { html, ref } from '../index';
+import { mutationObserver } from '../observers';
+import { mount } from '../testing';
 
 describe('mutationObserver()', () => {
   it('captures child-list mutations', async () => {

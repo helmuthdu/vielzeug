@@ -14,7 +14,7 @@ You want to write unit tests for a Ore custom element — rendering it in a test
 Use `mount()` from `@vielzeug/ore/testing` to render components, `fire.*` or `user.*` for interactions, and `waitFor()` for async assertions.
 
 ```ts
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, mount, user, waitFor } from '@vielzeug/ore/testing';
 
 // Assumes 'simple-counter' is defined elsewhere
@@ -30,7 +30,7 @@ describe('simple-counter', () => {
 
     await waitFor(() => fixture.query('strong')?.textContent === '2');
 
-    fixture.destroy();
+    fixture.dispose();
   });
 });
 ```

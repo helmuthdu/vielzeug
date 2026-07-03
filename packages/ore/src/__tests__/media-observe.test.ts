@@ -1,6 +1,6 @@
-import { mediaObserver } from '..';
-import { html } from '../../index';
-import { mount } from '../../testing';
+import { html } from '../index';
+import { mediaObserver } from '../observers';
+import { mount } from '../testing';
 
 describe('mediaObserver()', () => {
   it('initialises the signal to the current match state of the query', async () => {

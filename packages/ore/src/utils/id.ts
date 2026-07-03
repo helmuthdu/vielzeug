@@ -14,7 +14,7 @@ export const _resetIdCounter = (): void => {
   _stableCounter = 0;
 };
 
-export const createId = (prefix?: string): string => `${prefix ? `${prefix}-` : 'cft-'}${++_idCounter}`;
+export const createId = (prefix = 'id'): string => `${prefix}-${++_idCounter}`;
 
 /**
  * Generates a stable, unique ID with an optional semantic prefix.

@@ -4,8 +4,8 @@
  */
 import { signal } from '@vielzeug/ripple';
 
-import { cleanup, fire, mock, mount, user, waitFor } from '.';
-import { html } from '..';
+import { html, OreTimeoutError, prop } from '../index';
+import { cleanup, fire, mock, mount, mountComponent, user, waitFor, waitForEvent, within } from '../testing';
 
 describe('Testing: Render Utilities', () => {
   describe('mount()', () => {
@@ -101,6 +101,46 @@ describe('Testing: Render Utilities', () => {
       expect(select.value).toBe('2');
       select.remove();
     });
+
+    it('should press a key (keydown + keyup)', async () => {
+      const downSpy = vi.fn();
+      const upSpy = vi.fn();
+      const input = document.createElement('input');
+
+      input.addEventListener('keydown', downSpy);
+      input.addEventListener('keyup', upSpy);
+      document.body.appendChild(input);
+      await user.press(input, 'Enter');
+      expect(downSpy).toHaveBeenCalledOnce();
+      expect(upSpy).toHaveBeenCalledOnce();
+      input.remove();
+    });
+
+    it('should hover and unhover an element', async () => {
+      const enterSpy = vi.fn();
+      const leaveSpy = vi.fn();
+      const div = document.createElement('div');
+
+      div.addEventListener('pointerenter', enterSpy);
+      div.addEventListener('pointerleave', leaveSpy);
+      document.body.appendChild(div);
+      await user.hover(div);
+      expect(enterSpy).toHaveBeenCalledOnce();
+      await user.unhover(div);
+      expect(leaveSpy).toHaveBeenCalledOnce();
+      div.remove();
+    });
+
+    it('should double-click an element', async () => {
+      const spy = vi.fn();
+      const button = document.createElement('button');
+
+      button.addEventListener('dblclick', spy);
+      document.body.appendChild(button);
+      await user.dblClick(button);
+      expect(spy).toHaveBeenCalledOnce();
+      button.remove();
+    });
   });
 
   describe('waitFor', () => {
@@ -155,6 +195,55 @@ describe('Testing: Render Utilities', () => {
     });
   });
 
+  describe('waitForEvent', () => {
+    it('resolves with the event when it fires', async () => {
+      const el = document.createElement('div');
+      const promise = waitForEvent<CustomEvent>(el, 'my-event');
+
+      fire.custom(el, 'my-event', { detail: 42 });
+
+      const event = await promise;
+
+      expect(event.detail).toBe(42);
+    });
+
+    it('rejects with OreTimeoutError when the event never fires', async () => {
+      const el = document.createElement('div');
+
+      await expect(waitForEvent(el, 'never-fires', 50)).rejects.toBeInstanceOf(OreTimeoutError);
+    });
+  });
+
+  describe('within()', () => {
+    it('scopes query/queryAll to the given element', () => {
+      const root = document.createElement('div');
+
+      root.innerHTML = '<p class="a">First</p><p class="a">Second</p>';
+
+      const { query, queryAll } = within(root);
+
+      expect(query('.a')?.textContent).toBe('First');
+      expect(queryAll('.a')).toHaveLength(2);
+    });
+
+    it('scopes queryByText/queryAllByText/queryByTestId/queryAllByTestId to the given element', () => {
+      const root = document.createElement('div');
+
+      root.innerHTML = `
+        <span data-testid="label">Hello</span>
+        <span data-testid="label">Hello</span>
+        <span data-testid="other">World</span>
+      `;
+
+      const { queryAllByTestId, queryAllByText, queryByTestId, queryByText } = within(root);
+
+      expect(queryByText('Hello')?.getAttribute('data-testid')).toBe('label');
+      expect(queryAllByText('Hello')).toHaveLength(2);
+      expect(queryByTestId('other')?.textContent).toBe('World');
+      expect(queryAllByTestId('label')).toHaveLength(2);
+    });
+  });
+
   describe('mock()', () => {
     it('should register a stub custom element', () => {
       const mockName = 'mock-test-component';
@@ -177,6 +266,55 @@ describe('Testing: Render Utilities', () => {
       expect(document.body.children.length).toBeGreaterThan(0);
       cleanup();
       expect(document.body.children.length).toBe(0);
+    });
+  });
+
+  describe('Fixture — additional query helpers and lifecycle', () => {
+    it('sets multiple attributes via attrs()', async () => {
+      const fixture = await mount(() => html`<div>Test</div>`);
+
+      await fixture.attrs({ 'aria-label': 'Widget', open: true });
+      expect(fixture.element.getAttribute('aria-label')).toBe('Widget');
+      expect(fixture.element.hasAttribute('open')).toBe(true);
+    });
+
+    it('queries by data-testid and by text content within the shadow root', async () => {
+      const fixture = await mount(
+        () =>
+          html`<p data-testid="greeting">Hello</p>
+            <p data-testid="greeting">Hello</p>
+            <p>Other</p>`,
+      );
+
+      expect(fixture.queryByTestId('greeting')?.textContent).toBe('Hello');
+      expect(fixture.queryAllByTestId('greeting')).toHaveLength(2);
+      expect(fixture.queryByText('Other')?.tagName).toBe('P');
+      expect(fixture.queryAllByText('Hello')).toHaveLength(2);
+    });
+
+    it('exposes disposed and shadow, and disposes idempotently via Symbol.dispose', async () => {
+      const fixture = await mount(() => html`<div>Test</div>`);
+
+      expect(fixture.disposed).toBe(false);
+      expect(fixture.shadow).toBeInstanceOf(ShadowRoot);
+
+      fixture[Symbol.dispose]();
+      expect(fixture.disposed).toBe(true);
+
+      // Idempotent: calling dispose again (directly or via Symbol.dispose) is a no-op.
+      fixture.dispose();
+      expect(fixture.disposed).toBe(true);
+    });
+  });
+
+  describe('mountComponent()', () => {
+    it('registers and mounts a component definition in one call', async () => {
+      const { query } = await mountComponent('mount-component-demo', {
+        props: { label: prop.string('hi') },
+        setup: (props) => html`<span>${props.label}</span>`,
+      });
+
+      expect(query('span')?.textContent).toBe('hi');
     });
   });
 

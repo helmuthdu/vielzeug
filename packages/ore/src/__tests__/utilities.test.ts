@@ -2,10 +2,10 @@ import { createId, createStableId, resetIdCounter } from '../utils/id';
 
 describe('core/id-helpers', () => {
   describe('createId()', () => {
-    it('uses default "cft-" prefix when none is supplied', () => {
+    it('uses default "id-" prefix when none is supplied', () => {
       const id = createId();
 
-      expect(id).toMatch(/^cft-/);
+      expect(id).toMatch(/^id-/);
     });
 
     it('uses supplied prefix', () => {

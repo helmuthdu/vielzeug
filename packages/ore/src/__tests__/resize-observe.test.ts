@@ -1,7 +1,7 @@
-import { resizeObserver } from '..';
 // noinspection HtmlUnknownAttribute
-import { html, ref } from '../../index';
-import { mount } from '../../testing';
+import { html, ref } from '../index';
+import { resizeObserver } from '../observers';
+import { mount } from '../testing';
 
 describe('resizeObserver()', () => {
   it('initialises the signal to { height: 0, width: 0 }', async () => {
@@ -18,6 +18,33 @@ describe('resizeObserver()', () => {
     });
 
     expect(capturedSize.value).toEqual({ height: 0, width: 0 });
+  });
+
+  it('observes the target element', async () => {
+    const observeSpy = vi.fn();
+    const origRO = globalThis.ResizeObserver;
+
+    globalThis.ResizeObserver = class {
+      observe = observeSpy;
+      disconnect = vi.fn();
+      constructor(_cb: ResizeObserverCallback) {}
+    } as unknown as typeof ResizeObserver;
+
+    try {
+      await mount((_props, ctx) => {
+        const divRef = ref<HTMLDivElement>();
+
+        ctx.onMounted(() => {
+          resizeObserver(divRef.value!);
+        });
+
+        return html`<div ref=${divRef}></div>`;
+      });
+
+      expect(observeSpy).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+    } finally {
+      globalThis.ResizeObserver = origRO;
+    }
   });
 
   it('updates the signal when the ResizeObserver callback fires', async () => {

@@ -282,11 +282,6 @@ export type InferProps<D extends PropInputDefs> = {
   readonly [K in keyof D]-?: Readable<InferPropValue<D[K]>>;
 };
 
-/** @internal kept for internal ore usage */
-export type InferPropsFromDefs<T extends PropInputDefs> = { [K in keyof T]: InferPropValue<T[K]> };
-/** @internal kept for internal ore usage */
-export type InferPropsSignals<T extends Record<string, unknown>> = { readonly [K in keyof T]-?: Readable<T[K]> };
-
 export function createProps<D extends PropInputDefs>(el: HTMLElement, defs: D): InferProps<D> {
   const props = {} as Record<string, Signal<unknown>>;
 

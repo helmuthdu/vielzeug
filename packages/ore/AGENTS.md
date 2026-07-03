@@ -6,7 +6,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Ownership
 
-- Parent contract: `packages/AGENTS.md` and `.ai/rules/conventions.md`.
+- Parent contract: `packages/AGENTS.md` and `.ai/rules/code/conventions.md`.
 - Usage docs: `docs/ore/`.
 
 ## Local Contracts
@@ -28,7 +28,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 ## Work Guidance
 
-- Depends on `@vielzeug/arsenal`, `@vielzeug/orbit`, `@vielzeug/ripple` (`workspace:*`).
+- Depends on `@vielzeug/ripple` (`workspace:*`).
 - Breaking changes here cascade to `refine` — verify `refine` after public-API changes.
 
 ## Verification

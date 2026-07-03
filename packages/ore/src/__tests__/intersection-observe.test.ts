@@ -1,7 +1,7 @@
-import { intersectionObserver } from '..';
 // noinspection HtmlUnknownAttribute
-import { html, ref } from '../../index';
-import { mount } from '../../testing';
+import { html, ref } from '../index';
+import { intersectionObserver } from '../observers';
+import { mount } from '../testing';
 
 describe('intersectionObserver()', () => {
   it('initialises the signal to null', async () => {
@@ -18,6 +18,33 @@ describe('intersectionObserver()', () => {
     });
 
     expect(capturedEntry.value).toBeNull();
+  });
+
+  it('observes the target element', async () => {
+    const observeSpy = vi.fn();
+    const origIO = globalThis.IntersectionObserver;
+
+    globalThis.IntersectionObserver = class {
+      observe = observeSpy;
+      disconnect = vi.fn();
+      constructor(_cb: IntersectionObserverCallback) {}
+    } as unknown as typeof IntersectionObserver;
+
+    try {
+      await mount((_props, ctx) => {
+        const divRef = ref<HTMLDivElement>();
+
+        ctx.onMounted(() => {
+          intersectionObserver(divRef.value!);
+        });
+
+        return html`<div ref=${divRef}></div>`;
+      });
+
+      expect(observeSpy).toHaveBeenCalledWith(expect.any(HTMLDivElement));
+    } finally {
+      globalThis.IntersectionObserver = origIO;
+    }
   });
 
   it('updates the signal when the IntersectionObserver callback fires', async () => {

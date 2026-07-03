@@ -45,6 +45,17 @@ describe('setAttr — URL security', () => {
     warnSpy.mockRestore();
   });
 
+  it('blocks data:image/svg+xml src (script-capable SVG)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('iframe');
+
+    setAttr(el, 'src', 'data:image/svg+xml,<svg onload="alert(1)"></svg>');
+
+    expect(el.getAttribute('src')).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Blocked dangerous URL'));
+    warnSpy.mockRestore();
+  });
+
   it('allows plain data:image/ src', () => {
     const el = document.createElement('img');
 
@@ -115,6 +126,30 @@ describe('setAttr — on* attribute blocking', () => {
     setAttr(el, 'onmouseover', 'alert(1)');
 
     expect(el.getAttribute('onmouseover')).toBeNull();
+    warnSpy.mockRestore();
+  });
+});
+
+describe('setAttr — srcdoc blocking', () => {
+  it('blocks srcdoc unconditionally (raw HTML, not a URL)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('iframe');
+
+    setAttr(el, 'srcdoc', '<script>alert(1)</script>');
+
+    expect(el.getAttribute('srcdoc')).toBeNull();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Blocked setAttribute("srcdoc"'));
+    warnSpy.mockRestore();
+  });
+
+  it('removes an existing srcdoc attribute rather than leaving it stale', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const el = document.createElement('iframe');
+
+    el.setAttribute('srcdoc', '<p>previous</p>');
+    setAttr(el, 'srcdoc', '<p>next</p>');
+
+    expect(el.getAttribute('srcdoc')).toBeNull();
     warnSpy.mockRestore();
   });
 });

@@ -18,7 +18,7 @@ import { define, html, ref } from '@vielzeug/ore';
 import { mediaObserver, resizeObserver } from '@vielzeug/ore/observers';
 
 define('observed-panel', {
-  setup(_props, { onMounted, effect }) {
+  setup(_props, { onMounted, watch }) {
     const panel = ref<HTMLDivElement>();
 
     onMounted(() => {
@@ -29,7 +29,8 @@ define('observed-panel', {
       const size = resizeObserver(element);
       const dark = mediaObserver('(prefers-color-scheme: dark)');
 
-      effect(() => {
+      // watch() is the setup-context effect — auto-cleaned up on disconnect.
+      watch(() => {
         console.log('panel width', size.value.width, 'dark mode', dark.value);
       });
     });
