@@ -2,6 +2,20 @@
   "name": "@vielzeug/codex",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/codex_v1.0.2",
+      "date": "Fri, 03 Jul 2026 10:09:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(codex): harden security, fix doc drift, add CLI --data flag",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "64a9145b9ab9e041e572921a20259fc8942b26a1"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/codex_v1.0.1",
       "date": "Thu, 02 Jul 2026 06:05:59 GMT",

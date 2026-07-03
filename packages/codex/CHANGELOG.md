@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/codex
 
-This log was last generated on Thu, 02 Jul 2026 06:05:59 GMT and should not be manually modified.
+This log was last generated on Fri, 03 Jul 2026 10:09:41 GMT and should not be manually modified.
+
+## 1.0.2
+Fri, 03 Jul 2026 10:09:41 GMT
+
+### Patches
+
+- fix(codex): harden security, fix doc drift, add CLI --data flag
 
 ## 1.0.1
 Thu, 02 Jul 2026 06:05:59 GMT
