@@ -48,7 +48,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.folder }}
       env:
-        NPM_AUTH_TOKEN: ${{ inputs.npm-token }}
+        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
       run: |
         TARBALL=$(npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
         echo "📦 Packed: ${TARBALL}"
