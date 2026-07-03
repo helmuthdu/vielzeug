@@ -11,9 +11,6 @@ inputs:
   folder:
     description: Project folder relative to repo root e.g. packages/coins
     required: true
-  npm-token:
-    description: npm automation token with publish rights to @vielzeug
-    required: true
 
 outputs:
   published:
@@ -23,12 +20,22 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Configure npm auth
+    - name: Configure npm registry
       uses: actions/setup-node@v4
       with:
         node-version: '22'
         registry-url: 'https://registry.npmjs.org'
         scope: '@vielzeug'
+
+    # Trusted Publishing (OIDC) requires npm CLI >= 11.5.1 and the caller job to have
+    # `permissions: id-token: write`. No NPM_TOKEN needed — npm exchanges the GitHub Actions
+    # OIDC token for a short-lived credential, provided a Trusted Publisher is registered for
+    # this exact repo + workflow filename on npmjs.com (package settings > Trusted Publisher).
+    - name: Upgrade npm for trusted publishing
+      shell: bash
+      run: |
+        npm install -g npm@latest
+        npm --version
 
     - name: Check if already published
       id: check
@@ -47,8 +54,6 @@ runs:
       if: steps.check.outputs.skip == 'false'
       shell: bash
       working-directory: ${{ inputs.folder }}
-      env:
-        NODE_AUTH_TOKEN: ${{ inputs.npm-token }}
       run: |
         TARBALL=$(npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
         echo "📦 Packed: ${TARBALL}"
@@ -64,7 +69,7 @@ runs:
 
         if [ $PUBLISH_EXIT -ne 0 ]; then
           if echo "$PUBLISH_OUT" | grep -q "E404"; then
-            echo "❌ E404: NPM_TOKEN lacks publish rights for @vielzeug scope."
+            echo "❌ E404: no Trusted Publisher registered for @vielzeug/$(basename "${{ inputs.folder }}") + this workflow file on npmjs.com."
           elif echo "$PUBLISH_OUT" | grep -q "E409"; then
             echo "❌ E409: Registry conflict — a previous publish is still processing. Retry in a minute."
           fi

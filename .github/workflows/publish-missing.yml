@@ -20,6 +20,7 @@ concurrency:
 permissions:
   contents: read
   packages: write
+  id-token: write # required for npm Trusted Publishing (OIDC)
 
 jobs:
   publish-missing:
@@ -38,56 +39,26 @@ jobs:
 
       - uses: ./.github/actions/setup
 
-      - name: Configure npm auth
+      - name: Configure npm registry
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           scope: '@vielzeug'
 
-      - name: Sanitize npm token
-        id: npmtoken
+      # Trusted Publishing (OIDC) requires npm CLI >= 11.5.1. No NPM_TOKEN needed — npm exchanges
+      # the GitHub Actions OIDC token for a short-lived credential, provided a Trusted Publisher
+      # is registered for this exact repo + workflow filename on npmjs.com per package.
+      - name: Upgrade npm for trusted publishing
         run: |
-          RAW="${{ secrets.NPM_TOKEN }}"
-          if [ -z "$RAW" ]; then
-            echo "❌ npm token is missing for this job."
-            echo "Expected NPM_TOKEN to exist"
-            echo "If the token is stored as an Environment secret, bind this job to that environment or copy it to repository secrets."
-            exit 1
-          fi
-          # Strip stray whitespace/newlines (common copy-paste artifact when setting the secret) —
-          # an untrimmed token breaks the .npmrc line silently and npm just returns a generic 401.
-          CLEAN=$(printf '%s' "$RAW" | tr -d '[:space:]')
-          echo "::add-mask::$CLEAN"
-          echo "token=$CLEAN" >> "$GITHUB_OUTPUT"
-          echo "Token length: ${#CLEAN}"
-
-      - name: Verify npm auth
-        env:
-          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
-        run: |
-          # Write auth to home .npmrc and to a scratch file outside the repo (used as --userconfig below).
-          # Never write secrets into the repo's tracked ".npmrc" — it lives in the working tree and could
-          # end up in a commit, diff, or uploaded artifact.
-          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
-          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$RUNNER_TEMP/publish.npmrc"
-
-          NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
-          echo "$NPM_WHOAMI_OUT"
-          NPM_USER=$(echo "$NPM_WHOAMI_OUT" | head -1 | tr -d '[:space:]')
-          if [ -z "$NPM_USER" ] || echo "$NPM_USER" | grep -qi "error\|ENEEDAUTH\|401\|403"; then
-            echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
-            exit 1
-          fi
-          echo "✅ Authenticated as: ${NPM_USER}"
+          npm install -g npm@latest
+          npm --version
 
       - name: Build all packages
         if: inputs.build-first != 'false'
         run: node common/scripts/install-run-rush.js build --verbose
 
       - name: Publish versions missing on npm
-        env:
-          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
         run: |
           node <<'NODE'
           const fs = require('fs');
@@ -144,19 +115,18 @@ jobs:
             process.stdout.write(`\n📦 Publishing ${name}@${version}\n`);
 
             try {
-              const npmrc = path.join(process.env.RUNNER_TEMP, 'publish.npmrc');
               const tarball = cp
-                .execSync(`npm pack --json --userconfig ${npmrc}`, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+                .execSync('npm pack --json', { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
                 .toString();
               const filename = JSON.parse(tarball)[0]?.filename;
               if (!filename) {
                 throw new Error('npm pack did not return a tarball filename');
               }
 
-              cp.execSync(
-                `npm publish ${filename} --access public --registry=https://registry.npmjs.org --userconfig ${npmrc}`,
-                { cwd, stdio: 'inherit' },
-              );
+              cp.execSync(`npm publish ${filename} --access public --registry=https://registry.npmjs.org`, {
+                cwd,
+                stdio: 'inherit',
+              });
 
               try {
                 fs.unlinkSync(path.join(cwd, filename));

@@ -15,6 +15,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  id-token: write # required for npm Trusted Publishing (OIDC) — see .github/actions/publish-package
 
 jobs:
   release:
@@ -75,41 +76,6 @@ jobs:
           echo "folder=${FOLDER}" >> $GITHUB_OUTPUT
           echo "old-version=${OLD_VERSION}" >> $GITHUB_OUTPUT
           echo "📦 ${{ inputs.package }} @ ${OLD_VERSION} in ${FOLDER}"
-
-      - name: Sanitize npm token
-        id: npmtoken
-        run: |
-          RAW="${{ secrets.NPM_TOKEN }}"
-          if [ -z "$RAW" ]; then
-            echo "❌ npm token is missing for this job."
-            echo "Expected NPM_TOKEN to exist"
-            echo "If the token is stored as an Environment secret, bind this job to that environment or copy it to repository secrets."
-            exit 1
-          fi
-          # Strip stray whitespace/newlines (common copy-paste artifact when setting the secret) —
-          # an untrimmed token breaks the .npmrc line silently and npm just returns a generic 401.
-          CLEAN=$(printf '%s' "$RAW" | tr -d '[:space:]')
-          echo "::add-mask::$CLEAN"
-          echo "token=$CLEAN" >> "$GITHUB_OUTPUT"
-          echo "Token length: ${#CLEAN}"
-
-      - name: Verify npm auth
-        env:
-          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
-        run: |
-          # Write auth to home .npmrc only. Never write secrets into the repo's tracked ".npmrc" —
-          # "rush publish --apply" commits the working tree, which would commit the token too
-          # (this is exactly what tripped GitHub push protection previously).
-          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
-
-          NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
-          echo "$NPM_WHOAMI_OUT"
-          NPM_USER=$(echo "$NPM_WHOAMI_OUT" | head -1 | tr -d '[:space:]')
-          if [ -z "$NPM_USER" ] || echo "$NPM_USER" | grep -qi "error\|ENEEDAUTH\|401\|403"; then
-            echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
-            exit 1
-          fi
-          echo "✅ Authenticated as: ${NPM_USER}"
 
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
@@ -185,4 +151,3 @@ jobs:
           package: ${{ inputs.package }}
           version: ${{ steps.version.outputs.new-version }}
           folder: ${{ steps.pkg.outputs.folder }}
-          npm-token: ${{ steps.npmtoken.outputs.token }}

@@ -15,6 +15,7 @@ concurrency:
 permissions:
   contents: write
   packages: write
+  id-token: write # required for npm Trusted Publishing (OIDC)
 
 jobs:
   release:
@@ -54,41 +55,6 @@ jobs:
           echo "packages=${PACKAGES}" >> $GITHUB_OUTPUT
           echo "📦 Packages with pending changes: ${PACKAGES}"
 
-      - name: Sanitize npm token
-        id: npmtoken
-        run: |
-          RAW="${{ secrets.NPM_TOKEN }}"
-          if [ -z "$RAW" ]; then
-            echo "❌ npm token is missing for this job."
-            echo "Expected NPM_TOKEN to exist"
-            echo "If the token is stored as an Environment secret, bind this job to that environment or copy it to repository secrets."
-            exit 1
-          fi
-          # Strip stray whitespace/newlines (common copy-paste artifact when setting the secret) —
-          # an untrimmed token breaks the .npmrc line silently and npm just returns a generic 401.
-          CLEAN=$(printf '%s' "$RAW" | tr -d '[:space:]')
-          echo "::add-mask::$CLEAN"
-          echo "token=$CLEAN" >> "$GITHUB_OUTPUT"
-          echo "Token length: ${#CLEAN}"
-
-      - name: Verify npm auth
-        env:
-          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
-        run: |
-          # Write auth to home .npmrc only. Never write secrets into the repo's tracked ".npmrc" —
-          # "rush publish --apply" commits the working tree, which would commit the token too
-          # (this is exactly what tripped GitHub push protection previously).
-          printf 'registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=%s\n' "$NPM_AUTH_TOKEN" > "$HOME/.npmrc"
-
-          NPM_WHOAMI_OUT=$(npm whoami --registry=https://registry.npmjs.org 2>&1) || true
-          echo "$NPM_WHOAMI_OUT"
-          NPM_USER=$(echo "$NPM_WHOAMI_OUT" | head -1 | tr -d '[:space:]')
-          if [ -z "$NPM_USER" ] || echo "$NPM_USER" | grep -qi "error\|ENEEDAUTH\|401\|403"; then
-            echo "❌ npm authentication failed. Use an Automation token with publish rights to @vielzeug."
-            exit 1
-          fi
-          echo "✅ Authenticated as: ${NPM_USER}"
-
       - name: Record versions before bump
         run: |
           for pkg in ${{ steps.changes.outputs.packages }}; do
@@ -120,16 +86,23 @@ jobs:
             echo "🔄 Retry ${attempt}/3..."
           done
 
-      - name: Configure npm auth
+      - name: Configure npm registry
         uses: actions/setup-node@v4
         with:
           node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           scope: '@vielzeug'
 
+      # Trusted Publishing (OIDC) requires npm CLI >= 11.5.1. No NPM_TOKEN needed — npm exchanges
+      # the GitHub Actions OIDC token for a short-lived credential, provided a Trusted Publisher
+      # is registered for this exact repo + workflow filename on npmjs.com per package.
+      - name: Upgrade npm for trusted publishing
+        run: |
+          npm install -g npm@latest
+          npm --version
+
       - name: Publish each package
         env:
-          NODE_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RELEASED=""
