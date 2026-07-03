@@ -39,7 +39,7 @@ See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 Prefer the `@vielzeug` MCP's source-lookup tool (`packageSlug: "<name>"`) to gather source context before reading files one-by-one — resolve the exact tool name from your client's MCP tool list, don't assume a fixed prefix. For `refine`, prefer its component-listing tools since its primary API surface is web components. For large packages, review one category/area per pass.
 
-**Before Pass 1:** read `runs/<name>/plan.md` if it exists — focus extra attention on recently changed areas and verify each plan item was implemented correctly.
+**Before Pass 1:** read `runs/<name>/plan.md` if it exists — focus extra attention on the files/symbols its items reference and verify each plan item was implemented correctly. Do not use `git diff`/`git log` to find "what changed" — `plan.md` already enumerates it, and this is otherwise a full read of the current source, not a diff review.
 
 ## 2. Review principles
 

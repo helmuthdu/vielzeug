@@ -9,6 +9,7 @@ Universal principles, markers, and contracts for all Vielzeug AI workflows. Each
 - Source code always wins over docs, tests, or comments when they disagree.
 - Prefer the `@vielzeug` MCP's source/docs lookup tools for API context before reading files one-by-one. Resolve the actual tool names via your client's MCP tool list — don't hardcode a numeric prefix (e.g. `mcp0_`); it's assigned per-client load order and isn't stable across sessions or tools.
 - Consult `.ai/rules/conventions.md` (engineering conventions), `.ai/rules/catalogue.md` (packages + dep graph), and `.ai/rules/workspace.md` (toolchain + commands) as needed. Do not duplicate — reference them.
+- **`git log`/`git diff`/`git blame` are not context sources for these workflows.** Judge the current implementation as it stands in `packages/<name>/src/` — never "what changed recently" or "why did this used to look different". `plan.md`/`progress.md` already record what a workflow itself touched; use those, not git history, to scope re-review. The only exception is when the user explicitly points at a specific commit, PR, or diff to review.
 
 ### Tests
 

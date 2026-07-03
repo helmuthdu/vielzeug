@@ -24,7 +24,7 @@ Mode determines the pass structure in Phase 1. **Phases 2–7 are identical acro
 
 Don't default to the full pipeline. Classify the request, propose a scope, let the user confirm or override:
 
-1. Read the user's request (and, for `analyse` mode, any linked issue/diff).
+1. Read the user's request (and, for `analyse` mode, any issue/diff the user explicitly links — don't go hunting `git log`/`git diff` yourself to construct one).
 2. Match it against the change types below and state your pick: `"This looks like a <type> — proposing scope: <key>. Proceed, or run the full pipeline instead?"`
 3. Proceed on confirmation. If the user just says "go", use your best-match scope rather than silently defaulting to `full`.
 
