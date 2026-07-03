@@ -1,3 +1,5 @@
+import type { Form } from '../../types';
+
 import { createForm, ForgeValidationError } from '../../index';
 
 interface Address {
@@ -594,5 +596,182 @@ describe('subscribeScoped — change filtering', () => {
     form.touch('address.city');
 
     expect(states.at(-1)).toBe(true);
+  });
+});
+
+describe('scoped single-field delegation methods', () => {
+  test('array() on scoped form mutates the array under the prefixed path', () => {
+    const form = createForm({ defaultValues: { profile: { tags: ['a', 'b'] } } });
+    const profile = form.scope('profile');
+
+    profile.array('tags').append('c');
+
+    expect(form.get('profile.tags')).toEqual(['a', 'b', 'c']);
+    expect(profile.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('clearError() on scoped form clears only the prefixed field error', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    form.setError('address.city', 'Bad city');
+    form.setError('billing.city', 'Bad billing');
+
+    form.scope('address').clearError('city');
+
+    expect(form.field('address.city').error).toBeUndefined();
+    expect(form.field('billing.city').error).toBe('Bad billing');
+  });
+
+  test('untouch() on scoped form marks only the prefixed field untouched', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    address.touch('city');
+    expect(form.field('address.city').touched).toBe(true);
+
+    address.untouch('city');
+    expect(form.field('address.city').touched).toBe(false);
+  });
+
+  test('fields.register() on scoped form registers a new field under the prefixed key', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address') as unknown as Form<Record<string, unknown>>;
+
+    address.fields.register('country', { defaultValue: 'USA' });
+
+    expect(form.get('address.country' as never)).toBe('USA');
+  });
+
+  test('fields.remove() on scoped form removes the prefixed field entirely', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    address.fields.remove('city');
+
+    expect(form.get('address.city')).toBeUndefined();
+  });
+
+  test('disposalSignal on scoped form is the same instance as the root form and aborts on root dispose', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    expect(address.disposalSignal).toBe(form.disposalSignal);
+    expect(address.disposalSignal.aborted).toBe(false);
+
+    form.dispose();
+
+    expect(address.disposalSignal.aborted).toBe(true);
+  });
+
+  test('batch() on scoped form groups multiple scoped writes into one root notification', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+    let calls = 0;
+
+    form.subscribe(() => calls++);
+
+    address.batch(() => {
+      address.set('city', 'Denver');
+      address.set('street', '1 New St');
+    });
+
+    expect(calls).toBe(1);
+  });
+});
+
+describe('scoped bulk operations — patch, resetErrors, untouchAll', () => {
+  test('patch() on scoped form updates only scoped fields and marks them clean', () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    form.set('address.city', 'Chicago');
+    expect(form.field('address.city').dirty).toBe(true);
+
+    address.patch({ city: 'Denver' });
+
+    expect(form.get('address.city')).toBe('Denver');
+    expect(form.field('address.city').dirty).toBe(false);
+    expect(form.get('name')).toBe('Alice');
+  });
+
+  test('resetErrors() on scoped form replaces only scoped field errors, leaving sibling errors intact', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    form.setError('billing.city', 'Billing bad');
+    form.setError('address.city', 'Old address error');
+
+    form.scope('address').resetErrors({ city: 'New address error' });
+
+    expect(form.state.errors['address.city']).toBe('New address error');
+    expect(form.state.errors['billing.city']).toBe('Billing bad');
+  });
+
+  test('resetErrors() on scoped form with no argument clears only scoped errors', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    form.setError('billing.city', 'Billing bad');
+    form.setError('address.city', 'Address bad');
+
+    form.scope('address').resetErrors();
+
+    expect(form.state.errors['address.city']).toBeUndefined();
+    expect(form.state.errors['billing.city']).toBe('Billing bad');
+  });
+
+  test('untouchAll() on scoped form untouches only scoped fields', () => {
+    const form = createForm({ defaultValues: defaults });
+
+    form.touch('address.city');
+    form.touch('billing.city');
+
+    form.scope('address').untouchAll();
+
+    expect(form.field('address.city').touched).toBe(false);
+    expect(form.field('billing.city').touched).toBe(true);
+  });
+});
+
+describe('scoped validateStream()', () => {
+  test('yields only scoped fields, with unscoped field names', async () => {
+    const form = createForm({
+      defaultValues: defaults,
+      validators: {
+        'address.city': (v: unknown) => (!v ? 'City required' : undefined),
+        'billing.city': (v: unknown) => (!v ? 'Billing city required' : undefined),
+      },
+    });
+
+    form.set('address.city', '');
+    form.set('billing.city', '');
+
+    const address = form.scope('address');
+    const results: { error: string | undefined; field: string }[] = [];
+
+    for await (const r of address.validateStream()) {
+      results.push(r);
+    }
+
+    // Only the scoped 'address.city' validator result surfaces, renamed to the relative 'city'.
+    expect(results).toEqual([{ error: 'City required', field: 'city' }]);
+  });
+});
+
+describe('scoped [Symbol.asyncIterator]', () => {
+  test('yields the same unfiltered stream as the root form, not a scope-projected one', async () => {
+    const form = createForm({ defaultValues: defaults });
+    const address = form.scope('address');
+
+    const rootIter = form[Symbol.asyncIterator]();
+    const scopedIter = address[Symbol.asyncIterator]();
+
+    const rootFirst = await rootIter.next();
+    const scopedFirst = await scopedIter.next();
+
+    // Unlike `.state` / `subscribeScoped`, the async iterator on a scoped form delegates
+    // directly to the root form's iterator — it is not scope-filtered.
+    expect(scopedFirst.value).toEqual(rootFirst.value);
+
+    await rootIter.return?.();
+    await scopedIter.return?.();
   });
 });

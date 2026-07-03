@@ -10,10 +10,8 @@ export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
       entry: {
-        'src/adapters/react': resolve(__dirname, 'src/adapters/react.ts'),
-        'src/adapters/svelte': resolve(__dirname, 'src/adapters/svelte.ts'),
-        'src/adapters/validators': resolve(__dirname, 'src/adapters/validators.ts'),
-        'src/adapters/vue': resolve(__dirname, 'src/adapters/vue.ts'),
+        'adapters/validators': resolve(__dirname, 'src/adapters/validators.ts'),
+        devtools: resolve(__dirname, 'src/devtools.ts'),
         'src/index': resolve(__dirname, 'src/index.ts'),
       },
       name: 'forge',

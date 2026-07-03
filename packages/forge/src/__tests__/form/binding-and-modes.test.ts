@@ -275,4 +275,66 @@ describe('per-binding debounce isolation', () => {
 
     expect(binding.disposed).toBe(true);
   });
+
+  test('binding.dispose() cancels its own pending debounce timer so its validator never fires', async () => {
+    vi.useFakeTimers();
+
+    let validatorCalls = 0;
+    const form = createForm({
+      connect: { debounce: 300, validateOnChange: true },
+      defaultValues: { name: '' },
+      validators: {
+        name: () => {
+          validatorCalls++;
+
+          return undefined;
+        },
+      },
+    });
+    const binding = form.connect('name');
+
+    binding.onChange('x');
+    expect(validatorCalls).toBe(0);
+
+    binding.dispose();
+
+    await vi.runAllTimersAsync();
+
+    expect(validatorCalls).toBe(0);
+
+    vi.useRealTimers();
+  });
+
+  test("disposing one binding does not cancel a sibling binding's independent debounce timer", async () => {
+    vi.useFakeTimers();
+
+    let validatorCalls = 0;
+    const form = createForm({
+      connect: { debounce: 300, validateOnChange: true },
+      defaultValues: { name: '' },
+      validators: {
+        name: () => {
+          validatorCalls++;
+
+          return undefined;
+        },
+      },
+    });
+
+    const b1 = form.connect('name');
+    const b2 = form.connect('name');
+
+    b1.onChange('a');
+    b2.onChange('b');
+
+    b1.dispose();
+
+    await vi.runAllTimersAsync();
+
+    // b1's timer was cancelled, but b2's independent timer still fired.
+    expect(validatorCalls).toBe(1);
+
+    form.dispose();
+    vi.useRealTimers();
+  });
 });

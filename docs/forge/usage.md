@@ -1,6 +1,6 @@
 ---
 title: Forge — Usage Guide
-description: Practical usage patterns for values, validation, submission, subscriptions, connect, scope, and framework adapters.
+description: Practical usage patterns for values, validation, submission, subscriptions, connect, scope, and framework integration.
 ---
 
 [[toc]]
@@ -134,7 +134,7 @@ if (result.ok) {
 3. If invalid: returns `{ ok: false, type: 'validation', errors }`
 4. If valid: calls the handler and returns `{ ok: true, value }`
 
-Calling `submit()` while a submission is already in progress throws — guard with `state.isSubmitting` if needed.
+Calling `submit()` while a submission is already in progress rejects the returned promise with a `ForgeSubmitError` (it's an `async function`, so this is never a synchronous throw) — guard with `state.isSubmitting` if needed.
 
 ## Async Default Values
 
@@ -343,29 +343,64 @@ console.log(form.disposed); // true after dispose()
 
 After `dispose()`, all mutating APIs throw.
 
+## Debugging
+
+Import `attachForgeDevtools()` from the dedicated `/devtools` sub-path to log per-field value/error/touched/dirty changes and submit/loading transitions via `console.debug`:
+
+```ts
+import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+
+const detach = attachForgeDevtools(form, { label: 'signup' });
+// later, e.g. on unmount:
+detach();
+```
+
+It is a no-op in production (`__FORGE_PROD__` set) and never imported from the main entry point, so it is tree-shaken out of production bundles entirely. See [API Reference → Devtools](./api.md#devtools-vielzeug-forge-devtools) for the full contract.
+
 ## Framework Integration
 
-Forge ships dedicated adapters for React, Vue, and Svelte.
+Forge has no framework-specific packages — `form.subscribe()`, `form.subscribeField()`, and `form.connect()` are the framework-agnostic primitives every integration is built on. Each snippet below is ~10 lines of glue; keep it in a shared `lib/form-hooks.ts`-style module and reuse it across forms.
 
 ::: code-group
 
 ```tsx [React]
-// lib/form-hooks.ts
-import { useSyncExternalStore } from 'react';
-import { createForgeHooks } from '@vielzeug/forge/react';
-
-export const { useFormState, useField, useFormValues } = createForgeHooks(useSyncExternalStore);
-
-// MyForm.tsx
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import { createForm } from '@vielzeug/forge';
-import { useFormState, useField } from './lib/form-hooks';
+import type { ConnectOptions, FlatKeyOf, Form, TypeAtPath } from '@vielzeug/forge';
+
+function useField<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(form: Form<T>, name: K) {
+  return useSyncExternalStore(
+    (onChange) => form.subscribeField(name, onChange),
+    () => form.field(name),
+  );
+}
+
+// Live connect() binding, recreated when `name` or an option value changes, disposed on unmount
+function useConnect<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(
+  form: Form<T>,
+  name: K,
+  options?: ConnectOptions,
+) {
+  const bindingRef = useRef<{ dispose(): void; disposed: boolean; value: TypeAtPath<T, K> } | null>(null);
+
+  if (!bindingRef.current || bindingRef.current.disposed) bindingRef.current = form.connect(name, options);
+
+  useEffect(() => {
+    const binding = form.connect(name, options);
+
+    bindingRef.current = binding;
+
+    return () => binding.dispose();
+  }, [form, name, options?.debounce, options?.touchOnBlur, options?.validateOnBlur, options?.validateOnChange]);
+
+  return bindingRef.current;
+}
 
 const form = createForm({ defaultValues: { email: '', password: '' } });
 
 function LoginForm() {
-  const state = useFormState(form);
   const email = useField(form, 'email');
-  const conn = form.connect('email', { touchOnBlur: true });
+  const conn = useConnect(form, 'email', { touchOnBlur: true });
 
   return (
     <form
@@ -379,34 +414,34 @@ function LoginForm() {
         onBlur={() => conn.onBlur()}
       />
       {email.error && <p>{email.error}</p>}
-      <button type="submit" disabled={state.isSubmitting}>
-        Submit
-      </button>
+      <button type="submit">Submit</button>
     </form>
   );
 }
 ```
 
 ```ts [Vue 3]
-// lib/form-composables.ts
 import { onScopeDispose, shallowRef } from 'vue';
-import { createForgeComposables } from '@vielzeug/forge/vue';
-
-export const { useFormState, useField, useFormValues } = createForgeComposables({ shallowRef, onScopeDispose });
-
-// MyForm.vue
 import { createForm } from '@vielzeug/forge';
-import { useFormState, useField } from './lib/form-composables';
+import type { FlatKeyOf, Form } from '@vielzeug/forge';
+
+// Wraps a field in a reactive shallowRef; auto-unsubscribes when the scope tears down
+function useField<T extends Record<string, unknown>, K extends FlatKeyOf<T>>(form: Form<T>, name: K) {
+  const ref = shallowRef(form.field(name));
+
+  onScopeDispose(form.subscribeField(name, (state) => (ref.value = state)));
+
+  return ref;
+}
 
 const form = createForm({ defaultValues: { email: '' } });
 
 export default {
   setup() {
-    const state = useFormState(form);
     const email = useField(form, 'email');
     const conn = form.connect('email');
 
-    return { state, email, conn };
+    return { email, conn };
   },
 };
 ```
@@ -414,11 +449,16 @@ export default {
 ```svelte [Svelte]
 <script>
   import { createForm } from '@vielzeug/forge';
-  import { formState, fieldStore } from '@vielzeug/forge/svelte';
 
   const form = createForm({ defaultValues: { email: '' } });
-  const state = formState(form);
-  const email = fieldStore(form, 'email');
+
+  // Any object exposing subscribe() is a valid Svelte store — form.subscribeField() already fits
+  const email = {
+    subscribe(run) {
+      run(form.field('email'));
+      return form.subscribeField('email', run);
+    },
+  };
   const conn = form.connect('email');
 </script>
 
@@ -429,11 +469,13 @@ export default {
     on:blur={() => conn.onBlur()}
   />
   {#if $email.error}<span>{$email.error}</span>{/if}
-  <button disabled={$state.isSubmitting}>Submit</button>
+  <button>Submit</button>
 </form>
 ```
 
 :::
+
+Reuse the same `subscribe`/`subscribeField` pattern for `useFormState`/`useFormValues`-style helpers — swap `form.subscribeField(name, ...)` / `form.field(name)` for `form.subscribe(...)` / `form.state` (or `form.values()`).
 
 ## Working with Other Vielzeug Libraries
 
@@ -478,4 +520,4 @@ const formWithSchema = createForm({
 - Pass a `signal` to long-running validators where applicable — Forge passes its own abort signal to validators on `dispose()`.
 - Set a `connect` default in `createForm()` using `ValidationModes` presets rather than repeating per-field options.
 - Use `replace()` after a successful async load instead of `reset()` — `replace()` updates the baseline so `isDirty` reflects changes against the new data.
-- Guard concurrent submissions with `form.isSubmitting` or `state.isSubmitting` — calling `submit()` while a submission is in progress throws synchronously.
+- Guard concurrent submissions with `form.isSubmitting` or `state.isSubmitting` — calling `submit()` while a submission is in progress rejects the returned promise with a `ForgeSubmitError` (not a synchronous throw, since `submit()` is async).

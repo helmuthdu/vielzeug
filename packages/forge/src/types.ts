@@ -282,6 +282,13 @@ export interface Form<TValues extends Record<string, unknown> = Record<string, u
    */
   fields: {
     /**
+     * Enumerate all currently-known field paths: the deduplicated union of populated store
+     * keys and keys with a registered validator (the same definition `touchAll()` uses).
+     * On a scoped form, paths are relative to the scope's prefix — matching `scope.state`'s
+     * relative-path convention, not `state.touchedFields`'s absolute-path convention.
+     */
+    list(): readonly string[];
+    /**
      * Declare a dynamic field with an optional default value and validator.
      * If the field does not yet exist in the store, `defaultValue` is written to both the
      * store and the baseline so the field starts clean (not dirty).

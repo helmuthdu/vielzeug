@@ -21,6 +21,8 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
     append(value: T) {
       const current = store.get(key);
 
+      if (current !== undefined && !Array.isArray(current)) return;
+
       set(name, (Array.isArray(current) ? [...current, value] : [value]) as TypeAtPath<TValues, K>);
     },
     insert(index: number, value: T) {
@@ -45,6 +47,8 @@ export function createArrayField<TValues extends Record<string, unknown>, K exte
     },
     prepend(value: T) {
       const current = store.get(key);
+
+      if (current !== undefined && !Array.isArray(current)) return;
 
       set(name, (Array.isArray(current) ? [value, ...current] : [value]) as TypeAtPath<TValues, K>);
     },

@@ -124,8 +124,9 @@ if (!submission.ok && submission.type === 'validation') {
 - Mutation batching with `batch(fn)` and dynamic field validators via `fields.setValidator`
 - Baseline-safe `reset`/`replace`/`patch` model
 - Browser-first utility: `toFormData`
-- Ready-made adapters for React, Vue, and Svelte
+- Framework-agnostic core — wire into React, Vue, Svelte, or vanilla JS with `subscribe()`/`connect()`, no dedicated adapter package
 - `@vielzeug/forge/validators` adapter: `fieldValidator` and `composeValidators`
+- `@vielzeug/forge/devtools`: opt-in `attachForgeDevtools()` for `console.debug` state-transition logging, tree-shaken from production
 
 </div>
 

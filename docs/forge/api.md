@@ -14,7 +14,7 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `form.field()` / `form.state`                                               | Read field and form snapshots                                  | Sync                                           | Returns a stable frozen snapshot; re-read on each subscriber call                                                     |
 | `form.validate()`                                                           | Run validation — all fields, a subset, or a single field       | Async                                          | Each call re-runs validators from scratch                                                                             |
 | `form.validateStream()`                                                     | Streaming validation — yields each field result as it resolves | Async (iterator)                               | Read-only — does not write errors to form state                                                                       |
-| `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Throws if called while already submitting — guard with `form.isSubmitting`                                            |
+| `form.submit()`                                                             | Deterministic submit flow returning a `SubmitResult`           | Async                                          | Rejects if called while already submitting — guard with `form.isSubmitting`                                           |
 | `form.connect()`                                                            | Live field binding with DOM event handlers and live getters    | Sync                                           | Do not destructure — live getters lose context; call `dispose()` on unmount                                           |
 | `form.scope()`                                                              | Memoized scoped sub-form with relative field paths             | Sync                                           | Returns the same object for repeated calls with the same prefix; `state` is scoped — flags reflect only prefix fields |
 | `form.array()`                                                              | Array mutation helpers                                         | Sync                                           | Returns a cached helper — call once and reuse                                                                         |
@@ -24,6 +24,7 @@ description: Complete API reference for Forge form creation, validation, submiss
 | `form.touch()` / `form.touchAll()`                                          | Mark fields touched                                            | Sync                                           | `touchAll()` marks every key currently in the store                                                                   |
 | `form.setError()` / `form.clearError()` / `form.resetErrors()`              | Manual error management                                        | Sync                                           | `setError()` bypasses validators; cleared on next `validate()` run for that field                                     |
 | `form.reset()` / `form.replace()` / `form.patch()` / `form.fields.remove()` | Baseline and value management                                  | Sync                                           | `replace()` updates the baseline; `reset()` restores to it                                                            |
+| `form.fields.list()`                                                        | Enumerate currently-known field paths                           | Sync                                           | Scoped forms return prefix-relative paths, not absolute paths like `state.touchedFields`                              |
 | `toFormData()`                                                              | Serialize nested values to `FormData`                          | Sync                                           | Nested objects are dot-path serialized; `File` values are passed through                                              |
 | `ValidationModes`                                                           | Named presets for `connect()` validation triggers              | —                                              | Pass as `connect` option in `createForm()` for a global default                                                       |
 | `FORM_ERROR`                                                                | Reserved key `'_form'` for root-level errors                   | —                                              | Use with `setError(FORM_ERROR, msg)` or `form.validator` return value                                                 |
@@ -31,13 +32,11 @@ description: Complete API reference for Forge form creation, validation, submiss
 
 ## Package Entry Points
 
-| Entry                        | Purpose                                                                                            |
-| ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| `@vielzeug/forge`            | `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`, and all types                         |
-| `@vielzeug/forge/react`      | `createForgeHooks`, `ForgeHooks`, `UseSyncExternalStoreFn`, `UseEffectFn`, `UseRefFn`              |
-| `@vielzeug/forge/vue`        | `createForgeComposables`, `ForgeComposables`, `ShallowRefFn`, `OnScopeDisposeFn`, `VueReadonlyRef` |
-| `@vielzeug/forge/svelte`     | `formState`, `fieldStore`, `formValues`, `SvelteReadable`                                          |
-| `@vielzeug/forge/validators` | `fieldValidator`, `composeValidators` — schema and validator composition helpers                   |
+| Entry                        | Purpose                                                                           |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| `@vielzeug/forge`            | `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`, and all types          |
+| `@vielzeug/forge/validators` | `fieldValidator`, `composeValidators` — schema and validator composition helpers    |
+| `@vielzeug/forge/devtools`   | `attachForgeDevtools` — opt-in `console.debug` logging for form state transitions   |
 
 ## createForm()
 
@@ -151,7 +150,7 @@ type FormState = {
   /**
    * Full dot-notation paths of all currently touched fields.
    * On a scoped form these are still full paths (e.g. "address.city", not "city").
-   * Prefer scope.validate() rather than scope.validateFields([...state.touchedFields]).
+   * Prefer scope.validate() rather than scope.validate([...state.touchedFields]).
    */
   touchedFields: readonly string[];
   /** Paths of fields with an active async validation run. */
@@ -240,14 +239,14 @@ Submit behavior:
 
 1. Marks all known fields touched
 2. Runs full validation
-3. If invalid: returns `{ ok: false, type: 'validation', errors }` / throws `ValidationError`
+3. If invalid: returns `{ ok: false, type: 'validation', errors }` / throws `ForgeValidationError`
 4. If valid: calls `handler(values())` and returns `{ ok: true, value }` / resolves with the handler return value
 
 `submit()` always resolves — it never throws for validation failures. Exceptions thrown inside `handler` propagate normally.
 
-`submitOrThrow()` throws a `ValidationError` when validation fails. Exceptions thrown inside `handler` propagate as-is (not wrapped).
+`submitOrThrow()` throws a `ForgeValidationError` when validation fails. Exceptions thrown inside `handler` propagate as-is (not wrapped).
 
-Calling either method while `state.isSubmitting` is `true` throws synchronously.
+Both methods are `async function`s. Calling either while `state.isSubmitting` is `true` rejects the returned promise with a `ForgeSubmitError` — since they're async, `await` (or `.catch()`) the call to observe the error; it is not thrown synchronously.
 
 ## connect()
 
@@ -381,6 +380,8 @@ type ArrayField = {
 
 `form.array(name)` returns a cached helper — the same object is returned on repeated calls with the same name.
 
+`append()` and `prepend()` initialize the field as a one-item array when its current value is `undefined` or `null`. If the field already holds a non-array, non-nullish value (e.g. written by `set()`), both are a no-op — they never overwrite an existing scalar with an array. `insert()`, `remove()`, `move()`, `swap()`, and `replace()` are all no-ops when the field's current value is not an array.
+
 ## Snapshot / Restore
 
 ```ts
@@ -460,6 +461,7 @@ Namespace for dynamic field lifecycle management.
 
 ```ts
 form.fields: {
+  list(): readonly string[];
   register<K extends FlatKeyOf<TValues>>(
     name: K,
     options?: RegisterFieldOptions<TypeAtPath<TValues, K>>,
@@ -474,6 +476,7 @@ type RegisterFieldOptions<V> = {
 };
 ```
 
+- `fields.list()` — enumerate all currently-known field paths: the deduplicated union of populated store keys and keys with a registered validator (the same definition `touchAll()` uses).
 - `fields.register(name, opts?)` — declare a dynamic field with an optional default value and validator. Returns an unregister callback that calls `fields.remove()` on the same field. If the field already exists, `defaultValue` is ignored.
 - `fields.remove(name)` — drop a field entirely: value, dirty, touched, error, and validator.
 - `fields.setValidator(name, validator?)` — add, replace, or remove a field validator. Removing (`undefined`) immediately clears that field's error.
@@ -484,6 +487,8 @@ On a scoped form, all paths are relative:
 const address = form.scope('address');
 const unsub = address.fields.register('zip', { defaultValue: '' });
 // Equivalent to: form.fields.register('address.zip', { defaultValue: '' })
+
+address.fields.list(); // ['zip'] — relative to the scope's prefix, not ['address.zip']
 ```
 
 ## Lifecycle
@@ -524,62 +529,9 @@ batch(fn: () => void): void
 
 Batches all mutations inside `fn` into a single subscriber notification. Notifications always flush at the end — even if `fn` throws.
 
-## Framework Adapters
+## Validators (`@vielzeug/forge/validators`)
 
-### React (`@vielzeug/forge/react`)
-
-```ts
-import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { createForgeHooks } from '@vielzeug/forge/react';
-import type { ForgeHooks } from '@vielzeug/forge/react';
-
-const hooks: ForgeHooks = createForgeHooks({
-  useEffect,
-  useRef,
-  useSyncExternalStore,
-});
-
-const { useConnect, useField, useFormState, useFormValues } = hooks;
-```
-
-- `useFormState(form)` — subscribes to the full `FormState`. Re-renders when any state changes.
-- `useField(form, name)` — subscribes to a single field. Re-renders only when that field changes.
-- `useFormValues(form)` — subscribes to all values. Re-renders when any field value changes.
-- `useConnect(form, name, options?)` — creates and manages a `ConnectionResult` binding tied to the component lifecycle. Created on mount (or when `form` / `name` change) and **automatically disposed on unmount**. No manual `dispose()` call needed. Requires `useEffect` and `useRef` to be passed to `createForgeHooks`.
-
-> **Note** — `createForgeHooks` also accepts a bare `useSyncExternalStore` function (legacy). In that case, `useConnect` is available but throws at runtime if called, since `useEffect` / `useRef` were not provided.
-
-### Vue (`@vielzeug/forge/vue`)
-
-```ts
-import { onScopeDispose, shallowRef } from 'vue';
-import { createForgeComposables } from '@vielzeug/forge/vue';
-import type { ForgeComposables } from '@vielzeug/forge/vue';
-
-const composables: ForgeComposables = createForgeComposables({ shallowRef, onScopeDispose });
-
-const { useField, useFormState, useFormValues } = composables;
-```
-
-Each composable returns a `VueReadonlyRef<T>` and auto-disposes the subscription when the enclosing Vue scope (component or `effectScope`) is torn down.
-
-### Svelte (`@vielzeug/forge/svelte`)
-
-```ts
-import { createForm } from '@vielzeug/forge';
-import { formState, fieldStore, formValues } from '@vielzeug/forge/svelte';
-
-const form = createForm({ defaultValues: { email: '' } });
-const state = formState(form); // SvelteReadable<FormState>
-const email = fieldStore(form, 'email'); // SvelteReadable<FieldState<string>>
-const values = formValues(form); // SvelteReadable<TValues>
-```
-
-Each helper returns a Svelte `readable`-compatible store (implements `subscribe`) and fires immediately with the current snapshot on subscription.
-
----
-
-### Validators (`@vielzeug/forge/validators`)
+> Forge has no framework-specific sub-paths — `form.subscribe()`, `form.subscribeField()`, and `form.connect()` are the framework-agnostic primitives every integration is built on. See [Usage → Framework Integration](./usage.md#framework-integration) for copy-pasteable React/Vue/Svelte recipes.
 
 ```ts
 import { composeValidators, fieldValidator } from '@vielzeug/forge/validators';
@@ -605,6 +557,36 @@ const form = createForm({
 
 - `fieldValidator(schema)` — wraps any `safeParse`-compatible schema as a `FieldValidator`. The first issue message becomes the field error.
 - `composeValidators(...validators)` — chains validators in order, stopping at the first error. Abort signals are respected between steps.
+
+## Devtools (`@vielzeug/forge/devtools`)
+
+Opt-in `console.debug` logging for form state transitions. Not exported from the main `@vielzeug/forge` entry point — import from this sub-path so the logging code is tree-shaken from production bundles.
+
+```ts
+function attachForgeDevtools<TValues extends Record<string, unknown>>(
+  form: Form<TValues>,
+  options?: ForgeDevtoolsOptions,
+): Unsubscribe;
+
+type ForgeDevtoolsOptions = {
+  label?: string; // included in every log line; default: 'form'
+};
+```
+
+Logs one line per observable state transition: per-field `value`/`error`/`touched`/`dirty` changes, `isSubmitting` edges (submit start/end), and `isLoading` edges (async `defaultValues` resolving). Works identically on scoped sub-forms — field paths logged are relative to whatever `form` object is passed in, matching that form's own `state` convention.
+
+**Development only:** a no-op when `__FORGE_PROD__` is set on `globalThis` — the same convention forge's internal `_dev.ts` warnings use.
+
+```ts
+import { createForm } from '@vielzeug/forge';
+import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+
+const form = createForm({ defaultValues: { email: '' } });
+const detach = attachForgeDevtools(form, { label: 'signup' });
+// [forge:devtools:signup] field "email" value: "" → "a@b.com"
+
+detach(); // stop logging
+```
 
 ## Standalone Utilities
 
@@ -632,7 +614,11 @@ type SetOptions
 type SubscribeOptions
 type Unsubscribe
 type MaybePromise<T>
-class ValidationError  // thrown by submitOrThrow() on validation failure
+class ForgeError            // base class — instanceof / ForgeError.is() catches any forge error
+class ForgeConfigError      // unsafe __proto__/constructor/prototype key
+class ForgeDisposedError    // mutating call after dispose()
+class ForgeSubmitError      // submit()/submitOrThrow() called while already submitting
+class ForgeValidationError  // thrown by submitOrThrow() on validation failure
 
 // Validation
 type FieldValidator<V>
@@ -643,40 +629,44 @@ type ConnectionResult<V>
 const ValidationModes  // named presets object — not a type
 const FORM_ERROR       // string constant '_form' — not a type
 
+// Devtools (@vielzeug/forge/devtools)
+type ForgeDevtoolsOptions
+
 // Utility types
 type DeepPartial<T>
 type FlatKeyOf<TValues>
 type TypeAtPath<TValues, K>
 type ErrorKeyOf<TValues>
 type ScopedValues<TValues, P>
-
-// React adapter
-type ForgeHooks
-type UseSyncExternalStoreFn
-type UseEffectFn
-type UseRefFn
-
-// Vue adapter
-type ForgeComposables
-type ShallowRefFn
-type OnScopeDisposeFn
-type VueReadonlyRef<T>
-
-// Svelte adapter
-type SvelteReadable<T>
 ```
 
 ## Errors
 
-Forge exports `ValidationError` for throw-based validation error handling:
+Forge exports a small typed error hierarchy, all extending a common `ForgeError` base:
 
 ```ts
-class ValidationError extends Error {
-  readonly errors: Readonly<Record<string, string>>;
+class ForgeError extends Error {
+  static is(err: unknown): err is ForgeError;
+}
+
+class ForgeConfigError extends ForgeError {}
+class ForgeDisposedError extends ForgeError {}
+class ForgeSubmitError extends ForgeError {}
+
+class ForgeValidationError extends ForgeError {
+  readonly errors: Record<string, string>;
 }
 ```
 
+- `ForgeError` — base class. Use `instanceof ForgeError` or the static `ForgeError.is(err)` to catch any forge-originated error.
+- `ForgeConfigError` — thrown when a form key contains a reserved prototype-polluting segment (`__proto__`, `constructor`, or `prototype`), e.g. from `form.set('__proto__', ...)`.
+- `ForgeDisposedError` — thrown when a mutating method (e.g. `set()`, `submit()`, `connect()`) is called after `form.dispose()`.
+- `ForgeSubmitError` — thrown when `submit()` or `submitOrThrow()` is called while a submission is already in progress.
+- `ForgeValidationError` — thrown by `submitOrThrow()` when validation fails; carries a `readonly errors: Record<string, string>` map.
+
+Usage notes:
+
 - `form.submit()` returns `{ ok: false, type: 'validation', errors }` — it **never throws** for validation failures.
-- `form.submitOrThrow()` throws a `ValidationError` when validation fails — use when you prefer exception-based control flow.
+- `form.submitOrThrow()` throws a `ForgeValidationError` when validation fails — use when you prefer exception-based control flow.
 - `form.validate()` (all overloads) returns `{ valid: boolean, errors }` — never throws for validation failures.
-- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()`, or calling `submit()` / `submitOrThrow()` while already submitting.
+- Other thrown exceptions are programming errors: calling mutating APIs after `dispose()` (`ForgeDisposedError`), using a reserved key (`ForgeConfigError`), or calling `submit()` / `submitOrThrow()` while already submitting (`ForgeSubmitError`).

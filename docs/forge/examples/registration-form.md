@@ -82,7 +82,5 @@ async function handleRegistration() {
 ### Related
 
 - [Schema Validation with Spell](/spell/)
-
-- [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

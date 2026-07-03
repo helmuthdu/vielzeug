@@ -1,4 +1,4 @@
-import { createForm } from '../../index';
+import { createForm, ForgeDisposedError, ForgeError } from '../../index';
 
 describe('form subscriptions', () => {
   test('subscribe with sync:true sends immediate current snapshot', () => {
@@ -114,6 +114,24 @@ describe('form lifecycle', () => {
     expect(() => form.connect('x')).toThrow('Cannot modify a disposed form');
   });
 
+  test('mutating a disposed form throws a ForgeDisposedError instance, and ForgeError.is() recognizes it', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    form.dispose();
+
+    let caught: unknown;
+
+    try {
+      form.set('x', 2);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ForgeDisposedError);
+    expect(caught).toBeInstanceOf(ForgeError);
+    expect(ForgeError.is(caught)).toBe(true);
+  });
+
   test('subscribe and subscribeField become no-ops after dispose', () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
@@ -121,6 +139,22 @@ describe('form lifecycle', () => {
 
     expect(() => form.subscribe(() => {})).not.toThrow();
     expect(() => form.subscribeField('x', () => {})).not.toThrow();
+  });
+
+  test('disposalSignal is not aborted before dispose() and aborts when dispose() is called', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(form.disposalSignal.aborted).toBe(false);
+
+    form.dispose();
+
+    expect(form.disposalSignal.aborted).toBe(true);
+  });
+
+  test('disposalSignal returns the same AbortSignal instance across repeated reads', () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+
+    expect(form.disposalSignal).toBe(form.disposalSignal);
   });
 });
 
@@ -170,6 +204,21 @@ describe('batch() error handling', () => {
   });
 });
 
+describe('touchAll', () => {
+  test('touchAll() marks every store field and every validator-only field as touched', () => {
+    const form = createForm<Record<string, unknown>>({ defaultValues: { email: '', name: '' } });
+
+    // A field with only a validator, no store entry — reachable exclusively via validators.keys().
+    form.fields.setValidator('age', () => undefined);
+
+    form.touchAll();
+
+    expect(form.field('name').touched).toBe(true);
+    expect(form.field('email').touched).toBe(true);
+    expect(form.field('age').touched).toBe(true);
+  });
+});
+
 describe('async iterator (F4)', () => {
   test('yields the current state immediately on first iteration', async () => {
     const form = createForm({ defaultValues: { name: 'Alice' } });
@@ -182,6 +231,21 @@ describe('async iterator (F4)', () => {
     expect(form.get('name')).toBe('Alice');
 
     iter.return?.();
+  });
+
+  test('an early return() followed by dispose() does not double-unsubscribe or throw', async () => {
+    const form = createForm({ defaultValues: { name: 'Alice' } });
+
+    const iter = form[Symbol.asyncIterator]();
+
+    await iter.next();
+
+    // Simulate a `for await...of` `break` — terminates this iterator's own subscription early.
+    await expect(iter.return?.()).resolves.toEqual({ done: true, value: undefined });
+
+    // The disposeController's abort listener fires queue.terminate() a second time on dispose —
+    // this must not throw or double-invoke teardown in an unsafe way.
+    expect(() => form.dispose()).not.toThrow();
   });
 
   test('yields each state change as mutations are applied', async () => {

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
+      "type": "minor",
+      "packageName": "@vielzeug/forge"
+    }
+  ],
+  "packageName": "@vielzeug/forge",
+  "email": "helmuthdu@gmail.com"
+}

@@ -1,12 +1,3 @@
----
-description: Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.
-package: forge
-category: forms
-keywords: [form-state, validation, input, submission, dirty-tracking, controlled, field]
-related: [spell, ripple, courier]
-exports: [createForm]
----
-
 # @vielzeug/forge
 
 > Framework-agnostic typed form state with path-safe fields, unified validation API, deterministic submit flow, and browser-friendly helpers.

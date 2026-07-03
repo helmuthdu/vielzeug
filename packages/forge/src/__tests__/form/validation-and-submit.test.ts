@@ -1,4 +1,6 @@
-import { createForm, ForgeValidationError } from '../../index';
+import { vi } from 'vitest';
+
+import { createForm, ForgeError, ForgeSubmitError, ForgeValidationError } from '../../index';
 
 function deferred<T>(): {
   promise: Promise<T>;
@@ -134,6 +136,53 @@ describe('form validation', () => {
 
     await form.validate('name');
     expect(form.field('name').error).toBeUndefined();
+  });
+
+  test('setValidator() on a key that looks like an array item path warns in dev', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const form = createForm<Record<string, unknown>>({});
+
+    form.fields.setValidator('items.2' as never, () => undefined);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('path looks like an array item key'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("setValidator('items.2')"));
+
+    warnSpy.mockRestore();
+  });
+
+  test('setValidator() aborts an in-flight validation for the field being reconfigured', async () => {
+    const started = deferred<void>();
+    const form = createForm({
+      defaultValues: { name: 'x' },
+      validators: {
+        name: (_value: unknown, signal?: AbortSignal) =>
+          new Promise<string | undefined>((_, reject) => {
+            started.resolve();
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const err = new Error('aborted');
+
+                err.name = 'AbortError';
+                reject(err);
+              },
+              { once: true },
+            );
+          }),
+      },
+    });
+
+    const pending = form.validate('name');
+
+    await started.promise;
+
+    form.fields.setValidator('name', (v: unknown) => (!v ? 'Required' : undefined));
+
+    const result = await pending;
+
+    // The superseded run is aborted cleanly (no throw/reject) — its result reflects
+    // whatever fieldErrors held at abort time, not the new validator's outcome.
+    expect(result).toEqual({ errors: {}, valid: true });
   });
 
   test('validate(name) clears stale field errors when no validator is registered', async () => {
@@ -323,6 +372,25 @@ describe('form submit', () => {
     await inFlight;
   });
 
+  test('concurrent submit() rejects with a ForgeSubmitError instance, and ForgeError.is() recognizes it', async () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+    const inFlight = form.submit(() => new Promise<void>((resolve) => setTimeout(resolve, 20)));
+
+    let caught: unknown;
+
+    try {
+      await form.submit(async () => undefined);
+    } catch (e) {
+      caught = e;
+    }
+
+    expect(caught).toBeInstanceOf(ForgeSubmitError);
+    expect(caught).toBeInstanceOf(ForgeError);
+    expect(ForgeError.is(caught)).toBe(true);
+
+    await inFlight;
+  });
+
   test('submit increments submitCount for each attempt', async () => {
     const form = createForm({ defaultValues: { x: 1 } });
 
@@ -356,6 +424,20 @@ describe('form submit', () => {
     await form.submit(() => new Promise<void>((resolve) => setTimeout(resolve, 10)));
 
     expect(sawSubmitting).toBe(true);
+    expect(form.state.isSubmitting).toBe(false);
+  });
+
+  test('submit() rejects when the handler throws and resets isSubmitting to false', async () => {
+    const form = createForm({ defaultValues: { x: 1 } });
+    const boom = new Error('handler exploded');
+
+    await expect(
+      form.submit(() => {
+        throw boom;
+      }),
+    ).rejects.toBe(boom);
+
+    expect(form.isSubmitting).toBe(false);
     expect(form.state.isSubmitting).toBe(false);
   });
 
@@ -566,5 +648,53 @@ describe('validateStream', () => {
     expect(byField['_form']).toBe('Overall error');
     expect(byField['email']).toBe('Email invalid');
     expect(byField['name']).toBe('Name required');
+  });
+
+  test('breaking out of a for-await loop over validateStream() aborts remaining in-flight field validators', async () => {
+    let sawAbort = false;
+    let resolveFast!: (v: string | undefined) => void;
+    const fastStarted = deferred<void>();
+    const slowStarted = deferred<void>();
+
+    const form = createForm({
+      validators: {
+        fast: () => {
+          fastStarted.resolve();
+
+          return new Promise<string | undefined>((r) => (resolveFast = r));
+        },
+        slow: (_v: unknown, signal?: AbortSignal) =>
+          new Promise<string | undefined>((_resolve, reject) => {
+            slowStarted.resolve();
+            signal?.addEventListener(
+              'abort',
+              () => {
+                sawAbort = true;
+
+                const err = new Error('aborted');
+
+                err.name = 'AbortError';
+                reject(err);
+              },
+              { once: true },
+            );
+          }),
+      },
+    });
+
+    const iter = form.validateStream();
+
+    await Promise.all([fastStarted.promise, slowStarted.promise]);
+    resolveFast('Fast error');
+
+    const first = await iter.next();
+
+    expect(first.value?.field).toBe('fast');
+
+    // Simulate `for await...of { break; }` — calls iterator.return(), which must
+    // hard-terminate the queue and abort any still-pending field validators.
+    await iter.return?.();
+
+    expect(sawAbort).toBe(true);
   });
 });

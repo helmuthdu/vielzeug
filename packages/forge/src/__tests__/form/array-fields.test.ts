@@ -67,16 +67,69 @@ describe('array field helpers', () => {
     expect(form.get('tags')).toEqual(['first']);
   });
 
-  test.each([
-    ['insert', (form: Form<Record<string, unknown>>) => form.array('x').insert(0, 'v')],
-    ['move', (form: Form<Record<string, unknown>>) => form.array('x').move(0, 1)],
-    ['remove', (form: Form<Record<string, unknown>>) => form.array('x').remove(0)],
-    ['replace', (form: Form<Record<string, unknown>>) => form.array('x').replace(0, 'v')],
-    ['swap', (form: Form<Record<string, unknown>>) => form.array('x').swap(0, 1)],
-  ])('%s is a no-op when target field is not an array', (_, operation) => {
+  const arrayOps: [string, (form: Form<Record<string, unknown>>) => void][] = [
+    ['append', (form) => form.array('x').append('v')],
+    ['insert', (form) => form.array('x').insert(0, 'v')],
+    ['move', (form) => form.array('x').move(0, 1)],
+    ['prepend', (form) => form.array('x').prepend('v')],
+    ['remove', (form) => form.array('x').remove(0)],
+    ['replace', (form) => form.array('x').replace(0, 'v')],
+    ['swap', (form) => form.array('x').swap(0, 1)],
+  ];
+
+  test.each(arrayOps)('%s is a no-op when target field is not an array', (_, operation) => {
     const form = createForm({ defaultValues: { x: 1 } }) as unknown as Form<Record<string, unknown>>;
 
     expect(() => operation(form)).not.toThrow();
     expect(form.get('x')).toBe(1);
+  });
+
+  test.each(arrayOps)('%s is a no-op when target field is null', (_, operation) => {
+    const form = createForm({ defaultValues: { x: null } }) as unknown as Form<Record<string, unknown>>;
+
+    expect(() => operation(form)).not.toThrow();
+    expect(form.get('x')).toBeNull();
+  });
+});
+
+describe('array field helpers — boundary indices', () => {
+  test('insert at an index beyond array length appends at the end (native splice semantics)', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b'] } });
+
+    form.array('tags').insert(10, 'z');
+
+    expect(form.get('tags')).toEqual(['a', 'b', 'z']);
+  });
+
+  test('insert at a negative index inserts relative to the end (native splice semantics)', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b'] } });
+
+    form.array('tags').insert(-1, 'z');
+
+    expect(form.get('tags')).toEqual(['a', 'z', 'b']);
+  });
+
+  test('remove with an out-of-range index is a no-op', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b'] } });
+
+    form.array('tags').remove(10);
+
+    expect(form.get('tags')).toEqual(['a', 'b']);
+  });
+
+  test('move with identical from/to indices leaves the array unchanged', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
+
+    form.array('tags').move(1, 1);
+
+    expect(form.get('tags')).toEqual(['a', 'b', 'c']);
+  });
+
+  test('swap with identical indices leaves the array unchanged', () => {
+    const form = createForm({ defaultValues: { tags: ['a', 'b', 'c'] } });
+
+    form.array('tags').swap(1, 1);
+
+    expect(form.get('tags')).toEqual(['a', 'b', 'c']);
   });
 });

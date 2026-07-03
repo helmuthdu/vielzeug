@@ -115,7 +115,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
       submitCount: rootState.submitCount,
       touchedFields: Object.freeze(touchedFields) as readonly string[],
       validatingFields: Object.freeze(validatingFields) as readonly string[],
-    }) as unknown as FormState;
+    });
   }
 
   function scopedValues(): ScopedValues<TValues, P> {
@@ -126,6 +126,25 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     }
 
     return unflattenValues(sub) as ScopedValues<TValues, P>;
+  }
+
+  /**
+   * Enumerate field paths within this scope's prefix, stripped to relative paths —
+   * matching `scope.state`'s relative-path convention, not `state.touchedFields`'s
+   * absolute-path convention. Same "known field" definition `scopedTouchAll()` uses.
+   */
+  function scopedListFields(): readonly string[] {
+    const known = new Set<string>();
+
+    for (const key of ctx.store.keys()) {
+      if (isScopedKey(key)) known.add(unscope(key));
+    }
+
+    for (const key of ctx.validators.keys()) {
+      if (isScopedKey(key)) known.add(unscope(key));
+    }
+
+    return Object.freeze([...known]);
   }
 
   function scopedTouchAll(): void {
@@ -411,6 +430,7 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     field: (name) =>
       ctx.root.field(pre(name as string) as FlatKeyOf<TValues>) as FieldState<TypeAtPath<S, typeof name>>,
     fields: {
+      list: scopedListFields,
       register: (name, options?) =>
         ctx.root.fields.register(
           pre(name as string) as FlatKeyOf<TValues>,
@@ -432,7 +452,9 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
     reset: scopedReset,
     resetErrors: scopedResetErrors as Form<S>['resetErrors'],
     resetField: (name) => ctx.root.resetField(pre(name as string) as FlatKeyOf<TValues>),
-    restore: (snap) => ctx.root.restore(snap as unknown as FormSnapshot<TValues>),
+    // Cast is irreducible: FormSnapshot<ScopedValues<TValues,P>> and FormSnapshot<TValues> are
+    // structurally unrelated generic instantiations -- TS cannot verify one against the other.
+    restore: (snap) => ctx.root.restore(snap as FormSnapshot<TValues>),
     scope: (subPrefix) => createScopedForm(ctx, pre(subPrefix as string)) as Form<ScopedValues<S, typeof subPrefix>>,
     set: (name, value, options?: SetOptions) =>
       ctx.root.set(
@@ -441,7 +463,9 @@ export function createScopedForm<TValues extends Record<string, unknown>, P exte
         options,
       ),
     setError: (name, message) => ctx.root.setError(pre(name as string) as ErrorKeyOf<TValues>, message),
-    snapshot: () => ctx.root.snapshot() as unknown as FormSnapshot<S>,
+    // Cast is irreducible: FormSnapshot<TValues> and FormSnapshot<ScopedValues<TValues,P>> are
+    // structurally unrelated generic instantiations -- TS cannot verify one against the other.
+    snapshot: () => ctx.root.snapshot() as FormSnapshot<S>,
     get state() {
       return getScopedState();
     },

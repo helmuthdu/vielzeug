@@ -457,6 +457,75 @@ describe('registerField (F1)', () => {
 
     expect(form.get('tag')).toBeUndefined();
   });
+
+  test('registering a field whose name looks like an array item path (e.g. "tags.0") warns in dev', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const form = createForm<Record<string, unknown>>({});
+
+    form.fields.register('tags.0' as never, { defaultValue: 'first' } as never);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('path looks like an array item key'));
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("fields.register('tags.0')"));
+
+    warnSpy.mockRestore();
+  });
+
+  test('does not warn when the array-item-like key already exists as a literal store entry', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const form = createForm<Record<string, unknown>>({});
+
+    form.set('tags.0' as never, 'existing' as never);
+    warnSpy.mockClear();
+
+    form.fields.register('tags.0' as never, { defaultValue: 'ignored' } as never);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  test('removeField aborts in-flight validation for the removed field', async () => {
+    let startedResolve!: () => void;
+    const started = new Promise<void>((resolve) => {
+      startedResolve = resolve;
+    });
+
+    const form = createForm({
+      defaultValues: { name: 'ok' },
+      validators: {
+        name: async (_value: unknown, signal?: AbortSignal) => {
+          startedResolve();
+
+          await new Promise<never>((_, reject) => {
+            signal?.addEventListener(
+              'abort',
+              () => {
+                const abortError = new Error('Aborted');
+
+                abortError.name = 'AbortError';
+                reject(abortError);
+              },
+              { once: true },
+            );
+          });
+
+          return 'Invalid';
+        },
+      },
+    });
+
+    form.set('name', 'bad');
+
+    const pendingValidation = form.validate('name');
+
+    await started;
+
+    form.fields.remove('name');
+    await pendingValidation;
+
+    expect(form.get('name')).toBeUndefined();
+    expect(form.field('name').error).toBeUndefined();
+  });
 });
 
 describe('snapshot and restore', () => {
@@ -512,5 +581,68 @@ describe('async defaultValues', () => {
 
     await vi.waitFor(() => expect(form.isLoading).toBe(false));
     expect(form.values()).toEqual({});
+  });
+
+  test('rejection warning strips control characters and caps length from the error message (log injection hardening)', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    // Embeds a terminal escape sequence (ESC) and an oversized payload — both must be neutralized
+    // before reaching console.warn, mirroring the sanitization already applied to field keys.
+    const hostileMessage = `\x1b[31mFAKE ERROR\x1b[0m${'x'.repeat(500)}`;
+
+    const form = createForm({
+      defaultValues: () => Promise.reject(new Error(hostileMessage)),
+      onLoadError: () => {},
+    });
+
+    await vi.waitFor(() => expect(form.isLoading).toBe(false));
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    const [loggedMessage] = warnSpy.mock.calls[0] as [string];
+
+    expect(loggedMessage).not.toContain('\x1b');
+    expect(loggedMessage.length).toBeLessThan(300);
+
+    warnSpy.mockRestore();
+  });
+
+  test('a successful resolution after dispose() does not call onLoadError or warn', async () => {
+    let resolve!: (v: { name: string }) => void;
+    const factory = () => new Promise<{ name: string }>((r) => (resolve = r));
+    const onLoadError = vi.fn();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const form = createForm({ defaultValues: factory, onLoadError });
+
+    form.dispose();
+    resolve({ name: 'Alice' });
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onLoadError).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+  });
+
+  test('a rejection after dispose() does not call onLoadError or warn', async () => {
+    let reject!: (err: unknown) => void;
+    const factory = () => new Promise<{ name: string }>((_, r) => (reject = r));
+    const onLoadError = vi.fn();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const form = createForm({ defaultValues: factory, onLoadError });
+
+    form.dispose();
+    reject(new Error('too late'));
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(onLoadError).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
   });
 });

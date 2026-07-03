@@ -56,6 +56,15 @@ async function submitTeam() {
 }
 ```
 
+#### With `fields.list()` (optional)
+
+`form.fields.list()` returns every currently-known field path — the top-level keys (`teamName`, `members`), not individual array indices. Use it to inspect what the form currently tracks, e.g. in a debug panel:
+
+```ts
+console.log(form.fields.list());
+// ['teamName', 'members']
+```
+
 ### Pitfalls
 
 - Array items are stored as a whole array — `form.set('members', newArray)` or `form.array('members').remove(i)`. Do not register validators on array-item dot-path keys like `members.0.email`; register them on the parent key `members` instead.

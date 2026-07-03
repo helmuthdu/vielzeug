@@ -15,6 +15,7 @@ Use `createForm()` with a `File` field validator combined with `toFormData()` to
 
 ```typescript
 import { createForm, toFormData } from '@vielzeug/forge';
+import { composeValidators } from '@vielzeug/forge/validators';
 
 const contactForm = createForm({
   defaultValues: {
@@ -26,15 +27,15 @@ const contactForm = createForm({
   },
   validators: {
     name: (v) => (!v ? 'Name is required' : undefined),
-    email: [
+    email: composeValidators(
       (v) => (!v ? 'Email is required' : undefined),
       (v) => (v && !String(v).includes('@') ? 'Invalid email' : undefined),
-    ],
+    ),
     subject: (v) => (!v ? 'Subject is required' : undefined),
-    message: [
+    message: composeValidators(
       (v) => (!v ? 'Message is required' : undefined),
       (v) => (v && String(v).length < 10 ? 'Message must be at least 10 characters' : undefined),
-    ],
+    ),
     attachment: (v) => {
       if (!v) return; // Optional field
       const file = v as File;
@@ -74,12 +75,11 @@ async function handleSubmit() {
 - Do not set `Content-Type` manually when building a `FormData` request. The browser must include the multipart boundary — overriding the header removes it and breaks server parsing.
 - `file.type` is derived from the file extension and can be spoofed. Client-side MIME validation is a UX aid only — always validate the file on the server.
 - `form.state.isSubmitting` is `false` before `submit()` is called. Checking it during the pre-submit validation phase always returns `false`.
+- `FormOptions.validators` accepts one `FieldValidator` function per field, not an array — chain multiple checks with `composeValidators()` from `@vielzeug/forge/validators`.
 
 ### Related
 
-- [File Uploads (Courier)](@vielzeug/courier/examples/file-uploads)
-- [Schema Validation with Sieve](/spell/)
-
-- [Best Practices](./best-practices.md)
+- [File Uploads (Courier)](/courier/examples/file-uploads)
+- [Schema Validation with Spell](/spell/)
 - [Dynamic Form Fields](./dynamic-form-fields.md)
 - [Form with Conditional Fields](./form-with-conditional-fields.md)

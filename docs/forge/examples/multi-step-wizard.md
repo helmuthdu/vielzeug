@@ -91,5 +91,5 @@ function updateStepUI() {
 ### Related
 
 - [Routing Between Steps (Wayfinder)](/wayfinder/)
-- [Schema Validation with Sieve](/spell/)
+- [Schema Validation with Spell](/spell/)
 - [Dynamic Form Fields](./dynamic-form-fields.md)

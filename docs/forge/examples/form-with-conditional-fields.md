@@ -103,6 +103,6 @@ async function submitProfile() {
 
 ### Related
 
-- [Best Practices](./best-practices.md)
 - [Contact Form with File Upload](./contact-form-with-file-upload.md)
 - [Dynamic Form Fields](./dynamic-form-fields.md)
+- [Registration Form](./registration-form.md)
