@@ -1,4 +1,4 @@
-import { error as logError } from './_warn';
+import { error as logError } from './_dev';
 
 // ─── Structured error types ───────────────────────────────────────────────────
 

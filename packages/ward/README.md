@@ -1,27 +1,3 @@
----
-description: Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.
-package: ward
-category: auth
-keywords: [rbac, permissions, roles, access-control, authorization, wildcards, predicates]
-related: [rune, wayfinder, conduit]
-exports:
-  [
-    createWard,
-    allow,
-    deny,
-    ruleFor,
-    predicate,
-    owns,
-    matchesPattern,
-    patternCovers,
-    guardRequest,
-    guardRequestWith,
-    WardPredicateError,
-    WILDCARD,
-    ANONYMOUS,
-  ]
----
-
 # @vielzeug/ward
 
 > Minimal authorization engine with deterministic precedence, wildcard support, and runtime predicates.

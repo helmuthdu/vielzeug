@@ -1,12 +1,3 @@
----
-description: Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.
-package: courier
-category: http
-keywords: [http-client, fetch, caching, deduplication, mutations, query-cache, rest, sse, streaming, interceptors]
-related: [spell, ripple, vault]
-exports: [createApi, createCourier, createMutation, createQuery, createStream, CourierError, HttpError, NetworkError, TimeoutError, AbortError, SchemaValidationError, bindRefetch, withBearerAuth, withRequestId, withLogging, persistQueryCache, hydrateQueryCache]
----
-
 # @vielzeug/courier
 
 > Type-safe HTTP, query cache, mutations, SSE, and streaming built on native fetch.

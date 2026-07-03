@@ -21,8 +21,8 @@ export {
 
 import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './types';
 
+import { warn } from './_dev';
 import { createPool } from './_pool';
-import { warn } from './_warn';
 import {
   FamiliarInvalidOptionsError,
   FamiliarRuntimeError,

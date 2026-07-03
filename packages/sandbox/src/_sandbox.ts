@@ -1,6 +1,6 @@
 import type { SandboxHandle, SandboxMessage, SandboxOptions, Unsubscribe } from './types.js';
 
-import { devOnly, warn } from './_warn.js';
+import { devOnly, warn } from './_dev';
 import { SandboxTimeoutError } from './errors.js';
 
 // Re-export types so that _sandbox.ts still exposes them via its original named exports.

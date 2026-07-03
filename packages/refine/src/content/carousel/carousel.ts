@@ -3,7 +3,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import '../../content/icon/icon';
 import '../../feedback/progress/progress';
 import { announce, createSwipeControl } from '../../headless';

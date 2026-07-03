@@ -1,12 +1,3 @@
----
-description: Typed Web Worker pools with queuing, priorities, streaming, heartbeat, and testing utilities.
-package: familiar
-category: workers
-keywords: [web-workers, pool, concurrency, offload, background, threading, timeout, streaming, priority]
-related: [arsenal, ripple, herald]
-exports: [createWorker, createModuleWorker, createTestWorker]
----
-
 # @vielzeug/familiar
 
 > Typed Web Worker pools with queuing, priorities, streaming, heartbeat, and testing utilities.

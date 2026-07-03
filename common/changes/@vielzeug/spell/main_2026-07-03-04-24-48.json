@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(spell): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/spell"
+    }
+  ],
+  "packageName": "@vielzeug/spell",
+  "email": "helmuthdu@gmail.com"
+}

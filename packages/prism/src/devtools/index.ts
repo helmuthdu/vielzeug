@@ -8,6 +8,6 @@
  * ```
  *
  * Internal validation warnings (misuse of the public API) are emitted
- * automatically in development builds and live in the private `src/_warn.ts`
+ * automatically in development builds and live in the private `src/_dev.ts`
  * module. They are not part of this sub-path.
  */

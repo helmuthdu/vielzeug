@@ -1,7 +1,7 @@
 import type { Flux, Observer, Operator, Unsubscribe } from './types';
 
+import { error } from './_dev';
 import { makeAsyncIterator } from './_iterator';
-import { error } from './_warn';
 
 const NOOP: Unsubscribe = () => {};
 

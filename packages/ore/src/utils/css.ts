@@ -2,7 +2,7 @@
  * CSS tagged template utility and CSSStyleSheet caching.
  */
 
-import { error } from '../_warn';
+import { error } from '../_dev';
 
 export type CSSResult = {
   content: string;

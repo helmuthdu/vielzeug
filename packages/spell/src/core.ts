@@ -2,7 +2,7 @@ import { isPlainObject } from '@vielzeug/arsenal';
 
 import { fail, resolveMessage, SpellValidationError } from './errors';
 import { schemaToJsonSchema } from './json-schema';
-import { _messages, _warn } from './messages';
+import { _messages, _dev } from './messages';
 import { defineOwnProperty } from './safe-object';
 import {
   type AnySchema,
@@ -422,7 +422,7 @@ export class Schema<Output = unknown, Input = Output> {
 
   toDescriptor(): SchemaDescriptor {
     if (this.state.preprocessors.length > 0) {
-      _warn(
+      _dev(
         'toDescriptor(): this schema has preprocessors (e.g. trim(), lowercase(), coerce()). ' +
           'Preprocessors are not serializable and will not appear in the descriptor output.',
       );

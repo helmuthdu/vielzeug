@@ -1,4 +1,4 @@
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { detectModKey, parseShortcut } from './parser';
 
 const KEY_SYMBOLS: Record<string, string> = {

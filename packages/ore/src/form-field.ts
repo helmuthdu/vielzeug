@@ -1,6 +1,6 @@
 import { type Readable, type Signal } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { OreApiError, ORE_ERRORS } from './errors';
 import { effect, getCurrentElement, onCleanup } from './runtime';
 

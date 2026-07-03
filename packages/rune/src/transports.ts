@@ -12,7 +12,7 @@ import type {
   Transport,
 } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { isLevelEnabled } from './types';
 
 export type { RemoteLogData };

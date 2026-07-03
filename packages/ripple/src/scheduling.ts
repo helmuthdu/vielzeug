@@ -1,8 +1,8 @@
 import type { ComputedBase, ReactiveBase } from './reactive-base';
 import type { Subscriber } from './types';
 
+import { warn } from './_dev';
 import { runAll } from './_error-utils';
-import { warn } from './_warn';
 import { RippleInfiniteLoopError } from './errors';
 import { getSchedulingState, hasContextHook, type SchedulingState } from './tracking';
 

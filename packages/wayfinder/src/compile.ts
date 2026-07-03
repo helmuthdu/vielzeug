@@ -1,6 +1,6 @@
 import type { Middleware, RouteBranchDef, RouteDefinition, RouteRecord, RouterOptions, RouteTable } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { WayfinderRouteError } from './errors';
 import { compilePathMatcher, joinPaths, normalizePath } from './path';
 

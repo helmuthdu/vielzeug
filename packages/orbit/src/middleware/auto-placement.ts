@@ -1,6 +1,6 @@
 import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 import { getAvailableSpace, getBoundaryRect, getPlacementOverflow, totalOverflow } from '../overflow';
 import { tagMiddleware, toSideObject } from '../utils';
 

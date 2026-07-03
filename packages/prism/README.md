@@ -1,26 +1,3 @@
----
-description: Reactive SVG charting library — line, bar, and area charts. Zero external dependencies, signal-driven updates.
-package: prism
-category: ui
-keywords: [chart, svg, visualization, reactive, line-chart, bar-chart, area-chart, signals, typescript]
-related: [ripple, refine, orbit]
-exports:
-  [
-    createLineChart,
-    createBarChart,
-    createAreaChart,
-    createPieChart,
-    createSparkline,
-    linearScale,
-    timeScale,
-    bandScale,
-    seriesColor,
-    setTheme,
-    warn,
-    error,
-  ]
----
-
 # @vielzeug/prism
 
 > Reactive SVG charting library — line, bar, area, pie, and sparkline charts. Zero external dependencies, signal-driven updates.

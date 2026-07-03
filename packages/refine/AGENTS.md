@@ -17,7 +17,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
   - `check:manifest` runs in `build` and fails if exports are out of sync — run `sync:exports` to fix.
 - Build also emits a Custom Elements Manifest (`dist/custom-elements.json`) via `analyze`, and copies `src/styles/*.css` to `dist/styles`. CSS ships through the `./styles*` exports.
 - `sideEffects` is set for `dist/*.js`, `dist/*.cjs`, and `dist/styles/**` — keep new side-effectful entry points covered.
-- `src/_warn.ts` is private — never re-export.
+- `src/_dev.ts` is private — never re-export.
 - **DOM-output package** — excluded from the REPL. Do not add REPL examples or Monaco types for refine.
 
 ## Accessibility testing

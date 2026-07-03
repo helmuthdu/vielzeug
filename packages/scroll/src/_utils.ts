@@ -1,4 +1,4 @@
-import { warn } from './_warn';
+import { warn } from './_dev';
 
 export type ScrollTarget = HTMLElement | Window;
 

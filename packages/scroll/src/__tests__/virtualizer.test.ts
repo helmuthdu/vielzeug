@@ -1005,7 +1005,7 @@ describe('exported constants', () => {
 // ─── estimateSize throw guard ───────────────────────────────────────────────
 
 describe('createVirtualizer – throwing estimateSize', () => {
-  it('emits a dev warning via _warn.ts when estimateSize throws', () => {
+  it('emits a dev warning via _dev.ts when estimateSize throws', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const el = makeContainer({ clientHeight: 200 });
 

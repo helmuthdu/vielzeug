@@ -1,7 +1,7 @@
 import type { Shortcut } from './parser';
 import type { BindingEntry, BindingOptions, BindingValue, Handler, Keymap, KeymapOptions } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { canonicalizeShortcut, detectModKey, matchStep, parseShortcut } from './parser';
 
 type ParsedBinding = {

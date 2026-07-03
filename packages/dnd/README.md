@@ -1,12 +1,3 @@
----
-description: Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.
-package: dnd
-category: ui-interaction
-keywords: [drag-drop, sortable, file-upload, drop-zone, dnd, reorder]
-related: [ore, scroll, refine]
-exports: [createDropZone, createSortable, createSortableScope, applyReorder, matchesAccept]
----
-
 # @vielzeug/dnd
 
 > Framework-agnostic drag-and-drop. Drop zones with MIME filtering, sortable lists with drag handles, and explicit connected scopes — zero dependencies.

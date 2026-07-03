@@ -13,7 +13,7 @@ import type {
   ValueOptions,
 } from './types.js';
 
-import { error } from './_warn.js';
+import { error } from './_dev';
 import {
   ConduitCircularDependencyError,
   ConduitDisposedError,

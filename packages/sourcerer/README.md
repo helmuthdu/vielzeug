@@ -1,38 +1,3 @@
----
-description: Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.
-package: sourcerer
-category: data
-keywords: [pagination, filtering, sorting, search, data-source, query, remote, local, cursor, infinite-scroll]
-related: [courier, ripple, wayfinder]
-exports:
-  [
-    createLocalSource,
-    createRemoteSource,
-    createCursorSource,
-    createInfiniteSource,
-    deriveSource,
-    mergeSource,
-    applyQuery,
-    applyLocalQuery,
-    applyRemoteQuery,
-    applyCursorQuery,
-    applyInfiniteQuery,
-    SourceError,
-    SourceTimeoutError,
-    SourceDisposedError,
-    itemRange,
-    sourceState,
-    prefetchSource,
-    composeFetch,
-    filterContains,
-    filterEquals,
-    filterRange,
-    sortBy,
-    encodeQuery,
-    decodeQuery,
-  ]
----
-
 # @vielzeug/sourcerer
 
 > Typed reactive data sources for pagination, filtering, sorting, search, and infinite scroll.

@@ -1,4 +1,4 @@
-import { UNSAFE_PATH_SEGMENTS } from '../_internal/unsafePaths';
+import { UNSAFE_PATH_SEGMENTS } from '../_common/unsafePaths';
 import { isPlainObject } from '../guards/isPlainObject';
 
 /**

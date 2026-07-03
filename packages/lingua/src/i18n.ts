@@ -1,8 +1,8 @@
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
 import { type CatalogStore, type Loader, type LocaleSource, createCatalogStore } from './_catalog-store';
 import { type LocaleCaches, buildLocaleChain, canon, createLocaleCaches, selectPluralForm } from './_chain';
+import { error as logError } from './_dev';
 import { type NamespaceFactory, type NamespaceStore, createNamespaceStore } from './_namespace-store';
-import { error as logError } from './_warn';
 import {
   LinguaCountInVarsError,
   LinguaDisposedError,

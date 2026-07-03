@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(refine): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "helmuthdu@gmail.com"
+}

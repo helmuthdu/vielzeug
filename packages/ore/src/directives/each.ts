@@ -1,6 +1,6 @@
 import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
 
-import { devOnly, warn } from '../_warn';
+import { devOnly, warn } from '../_dev';
 import { OreApiError, ORE_ERRORS } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';

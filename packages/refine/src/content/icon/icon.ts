@@ -3,7 +3,7 @@ import { raw } from '@vielzeug/ore/directives';
 import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import styles from './icon.css?inline';
 
 export type IconNode = Array<[string, Record<string, string | number | undefined>]>;

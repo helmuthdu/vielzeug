@@ -1,4 +1,4 @@
-import { warn as _warnFn } from './_warn';
+import { warn as _warnFn } from './_dev';
 import { cloneRecord, defineOwnProperty, isUnsafeObjectKey } from './safe-object';
 
 export type Messages = {
@@ -246,7 +246,7 @@ let _logger: Logger = (msg) => {
 };
 
 /** @internal */
-export function _warn(message: string): void {
+export function _dev(message: string): void {
   _logger(message);
 }
 
@@ -261,7 +261,7 @@ function mergeMessages<T extends Record<string, unknown>>(base: T, patch: DeepPa
     if (value === undefined) continue;
 
     if (isUnsafeObjectKey(key)) {
-      _warn(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
+      _dev(`[spell] Ignoring unsafe message override key "${key}" to prevent prototype mutation.`);
       continue;
     }
 

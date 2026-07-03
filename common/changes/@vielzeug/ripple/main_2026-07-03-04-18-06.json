@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(ripple): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/ripple"
+    }
+  ],
+  "packageName": "@vielzeug/ripple",
+  "email": "helmuthdu@gmail.com"
+}

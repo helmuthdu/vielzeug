@@ -1,6 +1,6 @@
 import type { HeartbeatOptions } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { encode } from './protocol';
 
 const DEFAULT_INTERVAL = 30_000;

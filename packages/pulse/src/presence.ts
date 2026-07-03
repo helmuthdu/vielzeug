@@ -2,7 +2,7 @@ import { type Signal, signal } from '@vielzeug/ripple';
 
 import type { PresenceChannel, Unsubscribe } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame, encode } from './protocol';
 
 type RawSendFn = (frame: string) => void;

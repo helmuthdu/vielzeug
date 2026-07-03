@@ -1,7 +1,7 @@
 import type { Point } from '../../svg/path';
 import type { Datum, Scale, TransitionConfig } from '../../types';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import { resolveEasing } from '../../animation/easing';
 import { tweenNumber } from '../../animation/tween';
 import { createSvgElement, setAttributes } from '../../svg/element';

@@ -1,6 +1,6 @@
 import type { Scale } from '../types';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 import { linearScale } from '../scales/linear';
 import { timeScale } from '../scales/time';
 

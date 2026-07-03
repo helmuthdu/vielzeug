@@ -4,7 +4,7 @@ import { signal } from '@vielzeug/ripple';
 
 import type { ChartDimensions, ChartMargin } from '../types';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 import { createSvgElement, setAttributes } from '../svg/element';
 import { resolveMargin } from './layout';
 import { observeResize } from './responsive';

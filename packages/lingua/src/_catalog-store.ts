@@ -4,7 +4,7 @@
 import type { NamespaceStore } from './_namespace-store';
 
 import { CatalogEntry, type Messages, flattenStrings } from './_catalog';
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { LinguaMissingLocaleError, checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;

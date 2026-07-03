@@ -16,7 +16,7 @@ Standard package shape: `src/index.ts` (the only public surface), `src/__tests__
 
 - All public exports go through `src/index.ts`, sorted (ESLint Perfectionist).
 - Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.ai/rules/conventions.md` for the full documented exceptions list.
-- Internal dev warnings go through `src/_warn.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/rules/conventions.md`.
+- Internal dev warnings go through `src/_dev.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/rules/conventions.md`.
 - Owned-resource teardown is `dispose()` + `[Symbol.dispose]`. Never `destroy()`/`close()`/`cleanup()`.
 
 ## Work Guidance

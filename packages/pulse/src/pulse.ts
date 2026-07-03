@@ -12,9 +12,9 @@ import type {
   Unsubscribe,
 } from './types';
 
+import { warn } from './_dev';
 import { combineSignals } from './_utils';
 import { createWaitPromise } from './_wait';
-import { warn } from './_warn';
 import { createChannel } from './channel';
 import { PulseAbortError, PulseConnectionError, PulseDisposedError, PulseTimeoutError } from './errors';
 import { createHeartbeat } from './heartbeat';

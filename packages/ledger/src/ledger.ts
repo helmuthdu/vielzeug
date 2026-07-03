@@ -2,7 +2,7 @@ import { computed, signal } from '@vielzeug/ripple';
 
 import type { Command, CommandMeta, Ledger, LedgerOptions } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 
 type StackEntry<TData = unknown> = {
   execute: () => Promise<void>;

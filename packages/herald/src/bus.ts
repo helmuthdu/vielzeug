@@ -12,7 +12,7 @@ import type {
 } from './types';
 
 export { BusDisposedError, HeraldConfigError } from './errors';
-import { warn as _internalWarn } from './_warn.js';
+import { warn as _internalWarn } from './_dev';
 import { BusDisposedError, HeraldConfigError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.

@@ -1,12 +1,3 @@
----
-description: Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, random, and typed checks.
-package: arsenal
-category: utilities
-keywords: [utility, array, string, object, math, async, debounce, throttle, functional, helpers]
-related: []
-exports: [chunk, debounce, throttle, allOf, clamp, isEqual, retry, sleep, stringify, fuzzy, getPath, deepMerge, diff, stash, memo]
----
-
 # @vielzeug/arsenal
 
 > Tree-shakeable, zero-dependency utility library for arrays, async control flow, objects, strings, functions, math, random, and typed checks.

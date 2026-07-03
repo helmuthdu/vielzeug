@@ -391,7 +391,7 @@ import { relevantExport } from '@vielzeug/<pkg>';
 
 - [ ] All signatures in `api.md` match `src/index.ts` exactly
 - [ ] All code blocks use current API (no deprecated patterns without marking)
-- [ ] If `src/_warn.ts` exists, check `@security` JSDoc tags on user-data messages
+- [ ] If `src/_dev.ts` exists, check `@security` JSDoc tags on user-data messages
 
 ### Template compliance
 

@@ -3,7 +3,7 @@ import { isReactive } from '@vielzeug/ripple';
 import type { Point } from '../../svg/path';
 import type { ChartHandle, LineChartConfig } from '../../types';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';

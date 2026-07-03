@@ -1,6 +1,6 @@
 import type { DataGridColumn } from '../../headless';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 
 // ── Declarative ore-column element ────────────────────────────────────────────
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(sourcerer): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/sourcerer"
+    }
+  ],
+  "packageName": "@vielzeug/sourcerer",
+  "email": "helmuthdu@gmail.com"
+}

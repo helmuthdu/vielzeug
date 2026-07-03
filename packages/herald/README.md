@@ -1,12 +1,3 @@
----
-description: Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, bus piping, and test helpers.
-package: herald
-category: events
-keywords: [event-bus, typed-events, pub-sub, reactive, decoupled, async-streams]
-related: [ripple, wayfinder, familiar]
-exports: [createBus, createBehaviorBus, pipeEvents, createTestBus]
----
-
 # @vielzeug/herald
 
 > Zero-dependency typed event bus with subscribe/emit, wait(), async streams, AbortSignal support, bus piping, and test helpers.

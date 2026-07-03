@@ -1,26 +1,3 @@
----
-description: Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.
-package: vault
-category: storage
-keywords: [indexeddb, localstorage, storage, offline, ttl, query, schema, session, reactive, signals]
-related: [courier, rune, ripple, spell, arsenal]
-exports:
-  [
-    createLocalStorage,
-    createSessionStorage,
-    createIndexedDB,
-    createMemory,
-    table,
-    ttl,
-    scheduleExpiredPrune,
-    VaultError,
-    VaultDisposedError,
-    VaultMigrationError,
-    VaultQuotaError,
-    VaultScopeError,
-  ]
----
-
 # @vielzeug/vault
 
 > Typed browser storage with a compact API for LocalStorage, SessionStorage, IndexedDB, and Memory.

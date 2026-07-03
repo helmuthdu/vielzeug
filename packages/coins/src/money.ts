@@ -1,6 +1,6 @@
 import type { Money, MoneyJSON, RoundingMode } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { CoinsError, CurrencyMismatchError } from './errors';
 import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
 

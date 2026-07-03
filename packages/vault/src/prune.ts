@@ -1,6 +1,6 @@
 import type { Adapter, AnySchema } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { VaultDisposedError, VaultError } from './errors';
 
 /**

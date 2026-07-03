@@ -153,14 +153,14 @@ interface AsyncHandle {
 - `readonly disposalSignal: AbortSignal` — on long-lived stateful objects that consumers tie their lifetimes to. Not required on short-lived helpers.
 - `[Symbol.dispose]` / `[Symbol.asyncDispose]` ordering is enforced automatically by ESLint. Run `pnpm fix` to auto-sort — do not manually reason about Symbol key ordering.
 
-## Dev Logging Standard (`_warn.ts`)
+## Dev Logging Standard (`_dev.ts`)
 
 Every package uses a two-layer logging model.
 
-### Layer 1 — Internal validation (`src/_warn.ts`)
+### Layer 1 — Internal validation (`src/_dev.ts`)
 
 ```typescript
-// packages/<name>/src/_warn.ts
+// packages/<name>/src/_dev.ts
 const isDev = !(globalThis as { __<NAME>_PROD__?: boolean }).__<NAME>_PROD__;
 
 /** @internal */
@@ -180,12 +180,12 @@ export function devOnly(fn: () => void): void {
 ```
 
 **Rules:**
-- `_warn.ts` is **never exported** from `index.ts`.
+- `_dev.ts` is **never exported** from `index.ts`.
 - `isDev` is always `const` (never `export const`).
 - Gate via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
-- `_warn.ts` exports only the helpers the package actually uses (`warn`, `error`, `devOnly`). Do not add unused helpers.
-- No bare `console.warn` / `console.error` in source — always go through `_warn.ts`.
-- Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_warn` directly.
+- `_dev.ts` exports only the helpers the package actually uses (`warn`, `error`, `devOnly`). Do not add unused helpers.
+- No bare `console.warn` / `console.error` in source — always go through `_dev.ts`.
+- Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_dev` directly.
 
 ### Layer 2 — Consumer debug observability (`src/devtools.ts`)
 
@@ -223,7 +223,7 @@ export class <Pkg>FooError extends <Pkg>Error {}
 
 ```
 packages/<name>/src/
-├── _warn.ts          ← always private (_-prefix = never re-exported from index.ts)
+├── _dev.ts          ← always private (_-prefix = never re-exported from index.ts)
 ├── _<internal>.ts    ← private impl files (never re-exported)
 ├── errors.ts         ← public error types (exported from index.ts)
 ├── types.ts          ← public type definitions (exported from index.ts)

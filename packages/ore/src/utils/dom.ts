@@ -2,7 +2,7 @@
  * Low-level DOM utilities used throughout the runtime and binding layers.
  */
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 
 export const runAll = (fns: (() => void)[]): void => {
   for (let i = fns.length - 1; i >= 0; i--) fns[i]!();

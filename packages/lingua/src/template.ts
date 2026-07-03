@@ -1,7 +1,7 @@
 // ─── Template helpers ─────────────────────────────────────────────────────────
 // Shared by i18n.ts — extracted for navigability. Not part of the public API.
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 
 type Locale = string;
 type TranslateVars = Record<string, unknown>;

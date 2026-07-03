@@ -5,7 +5,7 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 import type { SwipeControl } from '../../headless';
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import { createSwipeControl } from '../../headless';
 import { reducedMotionMixin } from '../../styles';
 import componentStyles from './toast.css?inline';

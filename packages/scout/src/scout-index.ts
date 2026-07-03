@@ -1,6 +1,6 @@
 import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, SearchResult } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
 import { diceSimilarity, generateTrigrams } from './trigram';

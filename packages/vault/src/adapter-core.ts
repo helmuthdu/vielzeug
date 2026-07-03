@@ -10,7 +10,7 @@ import type {
   TtlMs,
 } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { VaultDisposedError, VaultError, VaultScopeError } from './errors';
 import { createObserveMany, createObserverHub, createWatchIterable, getRecordKey } from './internal';
 import { createQueryBuilder, type NativeRange, type QueryContext } from './query';

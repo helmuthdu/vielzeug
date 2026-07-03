@@ -213,7 +213,7 @@ Apply these checks for each `[API]`:
 - 3+ parameters → options object
 - Error types follow `<Pkg>Error` naming pattern
 - Resources expose `dispose()`, `disposed: boolean`, `disposalSignal: AbortSignal`
-- No inline `console.log` — use `_warn.ts` pattern
+- No inline `console.log` — use `_dev.ts` pattern
 
 #### Pass 3 — Acceptance criteria & implementation plan
 

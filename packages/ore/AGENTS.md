@@ -12,7 +12,7 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 ## Local Contracts
 
 - **Multiple public entry points** — `.`, `./devtools`, `./observers`, `./testing`. Each maps to a `source`/`import`/`require`/`types` block in `package.json` `exports`. When adding or moving an entry point, update `package.json` `exports` to match.
-- `src/_warn.ts` is private — never re-exported from `index.ts` or any sub-path.
+- `src/_dev.ts` is private — never re-exported from `index.ts` or any sub-path.
 - Prop definitions use the `prop.*` factory in `src/props.ts` (`prop.string|bool|number|oneOf|json|data`). `prop.data` is the JS-only escape hatch for objects, arrays, callbacks, and any non-serialisable value; `prop.json` is for attribute-serialisable data. `prop.fn` has been removed — use `prop.data<FnType>()` instead.
 - Lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`) are accessed exclusively through the `SetupContextBag` passed to `setup()`. They are not module-level exports.
 - **DOM-output package** — excluded from the REPL (no preview container). Do not add `docs/.vitepress/.../repl/examples/ore/`.

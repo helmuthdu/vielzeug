@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(arsenal): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/arsenal"
+    }
+  ],
+  "packageName": "@vielzeug/arsenal",
+  "email": "helmuthdu@gmail.com"
+}

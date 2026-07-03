@@ -1,4 +1,4 @@
-import { warn } from './_warn';
+import { warn } from './_dev';
 
 /**
  * Normalizes a string for indexing or querying.

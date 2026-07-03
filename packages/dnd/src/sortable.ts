@@ -1,4 +1,4 @@
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { DndScopeError } from './errors';
 import { type Disposable } from './shared';
 

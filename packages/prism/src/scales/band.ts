@@ -1,6 +1,6 @@
 import type { BandScale, BandScaleConfig } from './types';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 
 export function bandScale(config: BandScaleConfig): BandScale {
   return {

@@ -1,7 +1,7 @@
 import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
 
+import { warn } from './_dev';
 import { createWaitPromise } from './_wait';
-import { warn } from './_warn';
 
 type SendFn = (channel: string, event: string, payload: unknown) => void;
 type SubscribeFn = (channel: string, event: string, handler: (payload: unknown) => void) => () => void;

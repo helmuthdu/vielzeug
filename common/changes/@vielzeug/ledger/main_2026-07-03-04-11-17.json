@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore(ledger): rename internal _warn.ts to _dev.ts",
+      "type": "patch",
+      "packageName": "@vielzeug/ledger"
+    }
+  ],
+  "packageName": "@vielzeug/ledger",
+  "email": "helmuthdu@gmail.com"
+}

@@ -17,8 +17,8 @@ import type {
   TransitionTraceEntry,
 } from './types.js';
 
+import { warn } from './_dev';
 import { createTraceBuffer } from './_trace.js';
-import { warn } from './_warn.js';
 import { getAncestorPaths, getNodeAtPath, resolveLeaf, validateDefinition } from './definition.js';
 import {
   ClockworkInvalidMaxTransitionsError,

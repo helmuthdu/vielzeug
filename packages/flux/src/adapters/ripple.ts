@@ -4,7 +4,7 @@ import { signal } from '@vielzeug/ripple';
 
 import type { Flux } from '../types';
 
-import { error } from '../_warn';
+import { error } from '../_dev';
 import { flux } from '../core';
 
 /**

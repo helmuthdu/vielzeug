@@ -9,7 +9,7 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { OrbitConfigError } from './errors';
 import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
 

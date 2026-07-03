@@ -1,4 +1,4 @@
-import { abortable } from '../../_internal/_abortable';
+import { abortable } from '../../_common/_abortable';
 import { memo } from '../../cache/memo';
 
 describe('async extras', () => {

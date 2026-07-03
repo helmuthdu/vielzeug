@@ -1,24 +1,3 @@
----
-description: Accessible, themeable web components built with Ore for framework and vanilla DOM apps.
-package: refine
-category: ui-components
-keywords: [web-components, accessible, themeable, ui, components, design-system]
-related: [ore, orbit, forge]
-exports:
-  [
-    ore-button,
-    ore-input,
-    ore-dialog,
-    ore-select,
-    ore-form,
-    ore-avatar,
-    ore-avatar-group,
-    ore-carousel,
-    ore-datagrid,
-    ore-combobox,
-  ]
----
-
 # @vielzeug/refine
 
 > Accessible, themeable web components built with Ore for framework and vanilla DOM apps.

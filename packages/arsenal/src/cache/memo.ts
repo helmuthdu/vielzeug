@@ -1,6 +1,6 @@
 import type { Fn } from '../types';
 
-import { LruMap } from '../_internal/_lruMap';
+import { LruMap } from '../_common/_lruMap';
 import { ArsenalError } from '../errors';
 
 export type MemoOptions<T extends Fn> = {

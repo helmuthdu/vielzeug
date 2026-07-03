@@ -13,7 +13,7 @@ import type {
   RouteTable,
 } from './types';
 
-import { error as logError } from './_warn';
+import { error as logError } from './_dev';
 import { WayfinderApiError } from './errors';
 
 // ─── Route state ──────────────────────────────────────────────────────────────

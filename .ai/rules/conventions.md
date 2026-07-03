@@ -51,16 +51,16 @@ interface AsyncHandle {
 
 Every package follows a two-layer logging model. **Never mix the layers.**
 
-### Layer 1 — Internal validation warnings (`src/_warn.ts`)
+### Layer 1 — Internal validation warnings (`src/_dev.ts`)
 
 For API-misuse warnings that fire automatically in dev builds (bad config, mismatched types, missing attributes, etc.).
 
-- Lives in a **private** `src/_warn.ts` — never exported from `index.ts` or `/devtools`.
+- Lives in a **private** `src/_dev.ts` — never exported from `index.ts` or `/devtools`.
 - `isDev` is always `const` (never `export const`) — it is private implementation detail.
 - Gated by `isDev` via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
 - Prefix format: `[@vielzeug/<pkg>] <description>` — emits via `console.warn` (warnings) or `console.error` (errors).
-- **No bare `console.warn` / `console.error` in source** — always go through helpers from `_warn.ts`.
-- `_warn.ts` exports the subset of helpers the package actually uses. Do not add helpers the package does not use.
+- **No bare `console.warn` / `console.error` in source** — always go through helpers from `_dev.ts`.
+- `_dev.ts` exports the subset of helpers the package actually uses. Do not add helpers the package does not use.
 
 | Helper                | When to use                                                               |
 | --------------------- | ------------------------------------------------------------------------- |
@@ -69,7 +69,7 @@ For API-misuse warnings that fire automatically in dev builds (bad config, misma
 | `devOnly(fn)`         | When dev-only logic requires more than a single `warn()` / `error()` call |
 
 ```typescript
-// packages/<name>/src/_warn.ts
+// packages/<name>/src/_dev.ts
 const isDev = !(globalThis as { __<NAME>_PROD__?: boolean }).__<NAME>_PROD__;
 
 /** @internal */
@@ -101,8 +101,8 @@ For opt-in structured debug logging consumers import explicitly. Tree-shaken in 
 
 ### Rules
 
-- **`_warn.ts` is never re-exported** from `index.ts`.
-- Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_warn` directly.
+- **`_dev.ts` is never re-exported** from `index.ts`.
+- Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_dev` directly.
 - Expected message format in tests: `'[@vielzeug/<pkg>] <description>'`.
 
 ## Error class convention
@@ -152,7 +152,7 @@ export class <Pkg>BarError extends <Pkg>Error {
 
 ```
 packages/<name>/src/
-├── _warn.ts          ← always private (_-prefix = never re-exported from index.ts)
+├── _dev.ts          ← always private (_-prefix = never re-exported from index.ts)
 ├── _<internal>.ts    ← private impl files (never re-exported)
 ├── errors.ts         ← public error types (exported from index.ts)
 ├── types.ts          ← public type definitions (exported from index.ts)

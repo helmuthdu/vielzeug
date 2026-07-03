@@ -1,12 +1,3 @@
----
-description: Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.
-package: ore
-category: ui-primitives
-keywords: [web-components, custom-elements, reactive, templates, signals, lifecycle]
-related: [ripple, refine, orbit]
-exports: [define, html, css, prop, ref, signal, computed, watch, each, when, classMap, styleMap, model, live, raw, provide, inject, injectStrict, createContext, defineField, createFormContext, useFormContext, withAria, createStableId, createId, resetIdCounter, OreError]
----
-
 # @vielzeug/ore
 
 > Functional custom-element authoring with typed props, reactive templates, lifecycle helpers, observers, and testing utilities.

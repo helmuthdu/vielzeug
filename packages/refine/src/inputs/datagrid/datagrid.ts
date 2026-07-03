@@ -2,7 +2,7 @@ import { debounce } from '@vielzeug/arsenal';
 import { define, html, prop } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import '../../content/icon/icon';
 import '../../inputs/button/button';
 import '../../inputs/checkbox/checkbox';

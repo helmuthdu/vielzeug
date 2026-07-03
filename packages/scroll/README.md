@@ -1,20 +1,3 @@
----
-description: Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and zero dependencies.
-package: scroll
-category: ui-performance
-keywords: [virtual-list, virtualization, windowing, scroll, performance, large-lists]
-related: [dnd, ore, refine]
-exports:
-  [
-    createVirtualizer,
-    createDomVirtualList,
-    createVirtualScroller,
-    createGroupedVirtualizer,
-    createGridVirtualizer,
-    createReactiveVirtualizer,
-  ]
----
-
 # @vielzeug/scroll
 
 > Lightweight, framework-agnostic virtual list engine with variable heights, sticky headers, grid support, and zero dependencies.

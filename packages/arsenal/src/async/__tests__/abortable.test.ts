@@ -1,4 +1,4 @@
-import { abortable } from '../../_internal/_abortable';
+import { abortable } from '../../_common/_abortable';
 
 describe('abortable', () => {
   it('resolves when the underlying promise resolves', async () => {

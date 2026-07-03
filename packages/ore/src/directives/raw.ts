@@ -1,6 +1,6 @@
 import { computed, effect as rawEffect, isReactive, type Readable, type Signal } from '@vielzeug/ripple';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
 import { removeNodes } from '../utils/dom';
 

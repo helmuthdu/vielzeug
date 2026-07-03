@@ -1,31 +1,3 @@
----
-description: Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
-package: orbit
-category: ui-positioning
-keywords: [floating-ui, tooltip, popover, dropdown, positioning, middleware, placement]
-related: [ore, refine, dnd]
-exports:
-  [
-    float,
-    computePosition,
-    computeOnce,
-    getRects,
-    detectOverflow,
-    autoUpdate,
-    offset,
-    flip,
-    shift,
-    autoPlacement,
-    arrow,
-    size,
-    hide,
-    compose,
-    limitShift,
-    getSide,
-    getAlignment,
-  ]
----
-
 # @vielzeug/orbit
 
 > Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.

@@ -1,31 +1,3 @@
----
-description: Typed dependency injection for TypeScript.
-package: conduit
-category: di
-keywords: [dependency-injection, ioc, container, singleton, transient, factory, named-scope]
-related: [rune, herald, ward]
-exports:
-  [
-    createContainer,
-    token,
-    scope,
-    loadModules,
-    resolveOptional,
-    resolveOrDefault,
-    tryResolve,
-    resolveSyncOptional,
-    resolveSyncOrDefault,
-    ContainerError,
-    CircularDependencyError,
-    ProviderNotFoundError,
-    DuplicateRegistrationError,
-    SyncResolutionError,
-    ScopedResolutionError,
-    ContainerDisposedError,
-    ContainerFrozenError,
-  ]
----
-
 # @vielzeug/conduit
 
 > Typed dependency injection for TypeScript.

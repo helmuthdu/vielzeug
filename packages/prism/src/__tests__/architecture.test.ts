@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Datum, Series, StackSegment } from '../types';
 
-import { error, warn } from '../_warn';
+import { error, warn } from '../_dev';
 import { animate } from '../animation/transition';
 import { createAreaChart } from '../charts/area';
 import { createBarChart } from '../charts/bar';

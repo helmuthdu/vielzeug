@@ -3,7 +3,7 @@ import { isReactive } from '@vielzeug/ripple';
 import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
 import type { BarScaleContext } from './bar-scale-context';
 
-import { warn } from '../../_warn';
+import { warn } from '../../_dev';
 import { renderAxis } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { createChartScaffold } from '../../core/chart-scaffold';

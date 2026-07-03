@@ -1,6 +1,6 @@
 import { type Readable, type Signal, signal } from '@vielzeug/ripple';
 
-import { warn } from './_warn';
+import { warn } from './_dev';
 import { OreApiError, ORE_ERRORS } from './errors';
 import { effect } from './runtime';
 import { isStructuredValue, setAttr, toKebab } from './utils/dom';

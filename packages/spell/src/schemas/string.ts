@@ -24,7 +24,7 @@ import {
   isUrl,
   isUuid,
 } from '../formats';
-import { _messages, _warn } from '../messages';
+import { _messages, _dev } from '../messages';
 
 /* -------------------- Typed annotations -------------------- */
 
@@ -194,7 +194,7 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
         if (ann.pattern === undefined) return { ...ann, pattern: safePattern.source };
 
         if (ann.pattern !== safePattern.source) {
-          _warn(
+          _dev(
             '[spell] Multiple .regex() constraints detected on a single string schema. ' +
               'JSON Schema `pattern` cannot represent multiple patterns and will be omitted from toJsonSchema() output.',
           );

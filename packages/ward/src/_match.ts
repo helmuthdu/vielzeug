@@ -1,7 +1,7 @@
 import type { CompiledEntry } from './_compile';
 import type { Principal, UserPrincipal, WardDecision, WardRule } from './types';
 
-import { error } from './_warn';
+import { error } from './_dev';
 import { ANONYMOUS, WILDCARD } from './constants';
 import { WardConfigError, WardPredicateError } from './errors';
 import { matchesPattern } from './resource';

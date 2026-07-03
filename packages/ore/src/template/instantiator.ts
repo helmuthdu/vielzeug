@@ -8,7 +8,7 @@
 
 import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 import {
   type Binding,
   createHtmlResult,

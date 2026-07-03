@@ -1,12 +1,3 @@
----
-description: Zero-dependency schema validation library with strict-by-default objects, unified sync/async validate(), coercion, flexible schema composition, and full TypeScript inference.
-package: spell
-category: validation
-keywords: [schema, validation, type-safe, parsing, runtime-validation, zod-like, coercion]
-related: [forge, courier, vault]
-exports: [s, ValidationError, setMessages, setLogger, resetMessages, ErrorCode, errorsAt, descriptorToJsonSchema]
----
-
 # @vielzeug/spell
 
 > Zero-dependency schema validation library with strict-by-default objects, unified sync/async `validate()`, coercion, flexible schema composition, and full TypeScript inference.

@@ -1,12 +1,3 @@
----
-description: Framework-agnostic client-side router with typed params, async data loading, middleware, leave guards, and View Transitions support.
-package: wayfinder
-category: routing
-keywords: [router, client-side, middleware, guards, navigation, history, spa, typed-routes]
-related: [ripple, ward, herald]
-exports: [createRouter, createBrowserHistory, createMemoryHistory, redirectTo]
----
-
 # @vielzeug/wayfinder
 
 > Lightweight, type-safe client-side router with nested routes, data loading, middleware, and named navigation.

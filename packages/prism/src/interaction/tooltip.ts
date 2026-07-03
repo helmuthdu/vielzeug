@@ -2,7 +2,7 @@ import { computePosition, flip, offset, shift } from '@vielzeug/orbit';
 
 import type { Datum, Series, TooltipConfig } from '../types';
 
-import { warn } from '../_warn';
+import { warn } from '../_dev';
 
 export interface TooltipState {
   dispose(): void;

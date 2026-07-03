@@ -1,12 +1,3 @@
----
-description: Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
-package: lingua
-category: i18n
-keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
-related: [ripple, wayfinder, courier]
-exports: [createI18n, createFormatter]
----
-
 # @vielzeug/lingua
 
 > Minimal i18n runtime with typed keys, deterministic locale fallback, and framework-agnostic reactive subscriptions.
