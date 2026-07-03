@@ -1918,7 +1918,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .hero-install-counter {
-  margin-left: auto;
   font-family: var(--font-mono);
   opacity: 0.6;
 }
