@@ -147,7 +147,7 @@ describe('ore-copy-command', () => {
       expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
     });
 
-    it('silently fails when clipboard is unavailable', async () => {
+    it('surfaces a visible failure state when clipboard is unavailable', async () => {
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: { writeText: vi.fn().mockRejectedValue(new Error('NotAllowedError')) },
@@ -163,6 +163,31 @@ describe('ore-copy-command', () => {
         await Promise.resolve();
         await Promise.resolve();
       }).not.toThrow();
+
+      const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
+      const live = fixture.element.shadowRoot!.querySelector('[role="status"]');
+
+      expect(icon?.getAttribute('name')).toBe('circle-alert');
+      expect(btn.getAttribute('aria-label')).toBe('Copy failed — press to try again');
+      expect(live?.textContent?.trim()).toBe('Copy failed. Select the command text and copy it manually.');
+    });
+
+    it('resets the failure state after the click can be retried', async () => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: vi.fn().mockRejectedValue(new Error('NotAllowedError')) },
+        writable: true,
+      });
+
+      fixture = await mountCopyCommand('npm install @vielzeug/ripple');
+
+      const btn = fixture.element.shadowRoot!.querySelector<HTMLButtonElement>(`[part="${COPY_BTN_PART}"]`)!;
+
+      btn.click();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      await new Promise((resolve) => setTimeout(resolve, 2100));
 
       const icon = fixture.element.shadowRoot!.querySelector('ore-icon');
 

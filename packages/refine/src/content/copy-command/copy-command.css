@@ -144,6 +144,10 @@
     color: var(--color-success, oklch(64% 0.17 142deg));
   }
 
+  .icon-failed {
+    color: var(--color-danger, oklch(63% 0.21 25deg));
+  }
+
   /* ── suffix slot ─────────────────────────────────────────── */
 
   .suffix {

@@ -160,12 +160,6 @@ const categories = [
   },
 ];
 
-const featuredPackages = [
-  { id: 'arsenal', desc: '75+ zero-dep utilities — the Swiss Army knife' },
-  { id: 'ripple', desc: 'Signals, computed values, and reactive stores' },
-  { id: 'spell', desc: 'Schema validation with a fluent TypeScript API' },
-];
-
 const heroPackages = [
   { id: 'arsenal', name: 'arsenal', cmd: 'pnpm add @vielzeug/arsenal', tagline: '75+ utility functions' },
   { id: 'clockwork', name: 'clockwork', cmd: 'pnpm add @vielzeug/clockwork', tagline: 'Finite state machines' },
@@ -198,6 +192,10 @@ const heroPackages = [
 ];
 const activeHeroIndex = ref(0);
 const activeHeroPkg = computed(() => heroPackages[activeHeroIndex.value]);
+const activeHeroAnnouncement = computed(
+  () =>
+    `Example ${activeHeroIndex.value + 1} of ${heroPackages.length}: ${activeHeroPkg.value.name} — ${activeHeroPkg.value.cmd}`,
+);
 
 const searchQuery = ref('');
 const filteredCategories = computed(() => {
@@ -229,6 +227,14 @@ const coreEssentials = [
 
 function cycleHeroPkg() {
   activeHeroIndex.value = (activeHeroIndex.value + 1) % heroPackages.length;
+}
+
+function hideBrokenImage(e: Event) {
+  (e.target as HTMLImageElement).style.visibility = 'hidden';
+}
+
+function clearSearch() {
+  searchQuery.value = '';
 }
 
 onMounted(() => {
@@ -271,6 +277,7 @@ onUnmounted(() => {
           <div class="hero-badge">
             <a href="#packages" class="hero-badge-link">
               <ore-badge variant="primary">{{ packageCount }} packages</ore-badge>
+              <ore-icon name="arrow-right" size="12" class="hero-badge-arrow" aria-hidden="true"></ore-icon>
             </a>
             <ore-badge v-if="monoVersion" variant="secondary">{{ monoVersion }}</ore-badge>
           </div>
@@ -288,18 +295,24 @@ onUnmounted(() => {
             <ore-tooltip
               content="Built with TypeScript from the ground up, with strict types and no 'any'"
               placement="top">
-              <span class="value-item"><ore-icon name="shield-check" size="16"></ore-icon> Type-safe</span>
+              <button type="button" class="value-item">
+                <ore-icon name="shield-check" size="16"></ore-icon> Type-safe
+              </button>
             </ore-tooltip>
             <ore-tooltip content="Import individual functions — bundlers include only what you use" placement="top">
-              <span class="value-item"><ore-icon name="scissors" size="16"></ore-icon> Tree-shakeable</span>
+              <button type="button" class="value-item">
+                <ore-icon name="scissors" size="16"></ore-icon> Tree-shakeable
+              </button>
             </ore-tooltip>
             <ore-tooltip
               content="No external npm dependencies — only other vielzeug packages where needed"
               placement="top">
-              <span class="value-item"><ore-icon name="package" size="16"></ore-icon> Zero transitive deps</span>
+              <button type="button" class="value-item">
+                <ore-icon name="package" size="16"></ore-icon> Zero transitive deps
+              </button>
             </ore-tooltip>
             <ore-tooltip content="Free to use in any project, commercial or open-source" placement="top">
-              <span class="value-item"><ore-icon name="scale" size="16"></ore-icon> MIT</span>
+              <button type="button" class="value-item"><ore-icon name="scale" size="16"></ore-icon> MIT</button>
             </ore-tooltip>
           </div>
           <div class="hero-install">
@@ -309,7 +322,7 @@ onUnmounted(() => {
                 size="sm"
                 variant="text"
                 icon-only
-                aria-label="Show next package example"
+                :aria-label="`Show next package example (${activeHeroIndex + 1} of ${heroPackages.length})`"
                 @click="cycleHeroPkg">
                 <ore-icon name="chevron-right" size="14" aria-hidden="true"></ore-icon>
               </ore-button>
@@ -320,7 +333,12 @@ onUnmounted(() => {
               <ore-text color="primary" size="sm" weight="semibold" family="mono"
                 ><PackageInfo :package="activeHeroPkg.id" type="size"
               /></ore-text>
+              <ore-text color="muted" size="sm" style="opacity: 0.5">•</ore-text>
+              <ore-text color="muted" size="sm" class="hero-install-counter"
+                >{{ activeHeroIndex + 1 }}/{{ heroPackages.length }}</ore-text
+              >
             </div>
+            <span class="sr-only" role="status" aria-live="polite">{{ activeHeroAnnouncement }}</span>
           </div>
           <div class="hero-actions">
             <a href="/guide/">
@@ -443,20 +461,22 @@ onUnmounted(() => {
     <!-- Framework compatibility strip -->
     <section class="compat">
       <div class="compat-inner">
-        <ore-text size="xs" color="muted" variant="overline">Works with any framework — or none at all</ore-text>
+        <ore-text size="xs" color="muted" variant="overline">Any framework. No framework. Your choice.</ore-text>
         <div class="compat-logos">
-          <span class="compat-logo" title="Vue"><img src="/logo-vue.svg" width="20" height="20" alt="Vue" /></span>
+          <span class="compat-logo" title="Vue"
+            ><img src="/logo-vue.svg" width="20" height="20" alt="Vue" @error="hideBrokenImage"
+          /></span>
           <span class="compat-logo" title="React"
-            ><img src="/logo-react.svg" width="20" height="20" alt="React"
+            ><img src="/logo-react.svg" width="20" height="20" alt="React" @error="hideBrokenImage"
           /></span>
           <span class="compat-logo" title="Svelte"
-            ><img src="/logo-svelte.svg" width="20" height="20" alt="Svelte"
+            ><img src="/logo-svelte.svg" width="20" height="20" alt="Svelte" @error="hideBrokenImage"
           /></span>
           <span class="compat-logo" title="Solid"
-            ><img src="/logo-solidjs.svg" width="20" height="20" alt="Solid"
+            ><img src="/logo-solidjs.svg" width="20" height="20" alt="Solid" @error="hideBrokenImage"
           /></span>
           <span class="compat-logo" title="Angular"
-            ><img src="/logo-angular.svg" width="20" height="20" alt="Angular"
+            ><img src="/logo-angular.svg" width="20" height="20" alt="Angular" @error="hideBrokenImage"
           /></span>
           <span class="compat-logo compat-logo--text" title="Vanilla TS">TS</span>
         </div>
@@ -511,7 +531,7 @@ onUnmounted(() => {
         <ore-grid cols="1" cols-md="3" gap="lg" class="why-cards">
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="book-open" size="20"></ore-icon></div>
-            <ore-text as="p" weight="semibold" class="why-card-title">One mental model</ore-text>
+            <ore-text as="h4" weight="semibold" class="why-card-title">One mental model</ore-text>
             <ore-text as="p" size="sm" color="muted" class="why-card-desc"
               >Same <code>dispose()</code> contract. Same signal shape. Same error format. Learn the pattern once —
               every new package feels familiar from line one.</ore-text
@@ -519,7 +539,7 @@ onUnmounted(() => {
           </ore-card>
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="shield-check" size="20"></ore-icon></div>
-            <ore-text as="p" weight="semibold" class="why-card-title">No hidden dependencies</ore-text>
+            <ore-text as="h4" weight="semibold" class="why-card-title">No hidden dependencies</ore-text>
             <ore-text as="p" size="sm" color="muted" class="why-card-desc"
               >Every package you install is every package you own. No surprises in <code>node_modules</code>, no version
               conflicts six months from now.</ore-text
@@ -527,7 +547,7 @@ onUnmounted(() => {
           </ore-card>
           <ore-card variant="flat" padding="lg" class="why-card">
             <div class="why-card-icon"><ore-icon name="plug" size="20"></ore-icon></div>
-            <ore-text as="p" weight="semibold" class="why-card-title">Built to work together</ore-text>
+            <ore-text as="h4" weight="semibold" class="why-card-title">Built to work together</ore-text>
             <ore-text as="p" size="sm" color="muted" class="why-card-desc"
               >Validation schemas plug into form fields. Signals drive UI templates. No adapter layer, no boilerplate —
               just packages that know about each other.</ore-text
@@ -635,7 +655,7 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
                   :src="`/logo-${pkg.id}.svg`"
                   alt=""
                   class="package-logo"
-                  @error="(e) => ((e.target as HTMLImageElement).style.visibility = 'hidden')" />
+                  @error="hideBrokenImage" />
                 <div class="package-info">
                   <span class="package-name">{{ pkg.id }}</span>
                   <span class="package-tagline">{{ pkg.tagline }}</span>
@@ -647,7 +667,10 @@ form.<span class="hl-fn">submit</span>(<span class="hl-keyword">async</span> (va
             </div>
           </div>
         </ore-grid>
-        <div v-else class="explorer-empty">No packages found matching "{{ searchQuery }}"</div>
+        <div v-else class="explorer-empty" role="status">
+          <ore-text as="p" color="muted">No packages found matching "{{ searchQuery }}"</ore-text>
+          <ore-button variant="outline" color="primary" size="sm" @click="clearSearch">Clear search</ore-button>
+        </div>
       </div>
     </section>
 
@@ -900,8 +923,36 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .hero-badge-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: var(--hp-radius);
   text-decoration: none;
-  display: contents;
+  transition: opacity 0.15s ease-out;
+}
+
+.hero-badge-link:hover {
+  opacity: 0.85;
+}
+
+.hero-badge-link:focus-visible {
+  outline: 2px solid var(--hp-purple);
+  outline-offset: 2px;
+}
+
+.hero-badge-arrow {
+  color: var(--hp-purple);
+  opacity: 0;
+  transform: translateX(-2px);
+  transition:
+    opacity 0.15s ease-out,
+    transform 0.15s ease-out;
+}
+
+.hero-badge-link:hover .hero-badge-arrow,
+.hero-badge-link:focus-visible .hero-badge-arrow {
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .hero-title {
@@ -941,9 +992,25 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--hp-text);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--hp-text);
+  font-family: inherit;
+  cursor: default;
+}
+
+.value-item:hover,
+.value-item:focus-visible {
+  background: var(--hp-purple-subtle);
+}
+
+.value-item:focus-visible {
+  outline: 2px solid var(--hp-purple);
+  outline-offset: 2px;
 }
 
 .hero-install {
@@ -1280,88 +1347,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   color: oklch(72% 0.16 50deg);
 }
 
-/* ── Featured row ─────────────────────────────────────────── */
-
-.featured-row {
-  margin-bottom: 2.5rem;
-  display: block;
-}
-
-.featured-label {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--hp-purple);
-  margin: 0 0 0.875rem;
-  letter-spacing: 0.01em;
-}
-
-.featured-tiles {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-.featured-tile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0.625rem 0.875rem;
-  border-radius: var(--rounded-md);
-  background: var(--hp-surface-alt);
-  border: 1px solid transparent;
-  text-decoration: none;
-  transition:
-    border-color 0.15s ease-out,
-    background 0.15s ease-out;
-}
-
-.featured-tile:hover {
-  border-color: var(--hp-purple);
-  background: var(--hp-purple-subtle);
-}
-
-.featured-tile-logo {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-}
-
-.featured-tile-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-
-.featured-tile-name {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  color: var(--hp-text);
-}
-
-.featured-tile-desc {
-  font-size: 0.75rem;
-  color: var(--hp-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.featured-tile-arrow {
-  color: var(--hp-text-muted);
-  flex-shrink: 0;
-  transition:
-    color 0.15s ease-out,
-    transform 0.15s ease-out;
-}
-
-.featured-tile:hover .featured-tile-arrow {
-  color: var(--hp-purple);
-  transform: translateX(2px);
-}
-
 /* ── Package Explorer ──────────────────────────────────────── */
 
 .explorer {
@@ -1425,9 +1410,15 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     box-shadow 0.15s ease-out;
 }
 
-.package-tile:hover {
+.package-tile:hover,
+.package-tile:focus-visible {
   background: var(--hp-purple-subtle);
   box-shadow: 0 0 0 1px var(--hp-purple-glow);
+}
+
+.package-tile:focus-visible {
+  outline: 2px solid var(--hp-purple);
+  outline-offset: 2px;
 }
 
 .package-logo {
@@ -1450,8 +1441,12 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .package-tagline {
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 0.75rem;
   color: var(--hp-text-muted);
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .package-size {
@@ -1495,10 +1490,17 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   transition: transform 0.15s ease-out;
 }
 
-.community-card-link:hover ore-card {
+.community-card-link:hover ore-card,
+.community-card-link:focus-visible ore-card {
   --card-border-color: var(--hp-purple);
   --card-shadow: 0 4px 20px var(--hp-purple-glow), 0 0 0 3px var(--hp-purple-glow);
   transform: translateY(-2px);
+}
+
+.community-card-link:focus-visible {
+  outline: 2px solid var(--hp-purple);
+  outline-offset: 2px;
+  border-radius: var(--hp-radius);
 }
 
 .community-card-inner {
@@ -1535,7 +1537,8 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
     transform 0.15s ease-out;
 }
 
-.community-card-link:hover .community-card-arrow {
+.community-card-link:hover .community-card-arrow,
+.community-card-link:focus-visible .community-card-arrow {
   color: var(--hp-purple);
   transform: translateX(3px);
 }
@@ -1815,22 +1818,19 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 /* ── Responsive ────────────────────────────────────────────── */
 
+@media (max-width: 1024px) {
+  .hero-logo-wrapper {
+    width: 280px;
+    height: 280px;
+  }
+
+  .hero-logo {
+    width: 280px;
+    height: 280px;
+  }
+}
+
 @media (max-width: 768px) {
-  .why-table-head,
-  .why-table-row {
-    grid-template-columns: 1fr 1fr 1fr;
-    font-size: 0.8rem;
-  }
-
-  .why-table-packages {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .why-feature {
-    padding: 1.25rem;
-  }
-
   .hero-inner {
     grid-template-columns: 1fr;
     text-align: center;
@@ -1870,10 +1870,6 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   .hero-logo {
     width: 252px;
     height: 252px;
-  }
-
-  .featured-tiles {
-    grid-template-columns: 1fr;
   }
 
   .community-links {
@@ -1921,16 +1917,10 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   padding: 0 4px;
 }
 
-/* Why table icons */
-.table-icon-bad {
-  color: var(--hp-text-muted);
-  margin-right: 6px;
-  opacity: 0.7;
-}
-
-.table-icon-good {
-  color: var(--hp-purple);
-  margin-right: 6px;
+.hero-install-counter {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  opacity: 0.6;
 }
 
 .showcase-import-link {
@@ -1967,23 +1957,28 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 }
 
 .essential-card-link {
-  display: contents;
+  display: block;
+  height: 100%;
+  border-radius: var(--hp-radius);
   text-decoration: none;
 }
 
+.essential-card-link:focus-visible {
+  outline: 2px solid var(--hp-purple);
+  outline-offset: 2px;
+}
+
 .essential-card {
+  height: 100%;
   transition: all 0.2s ease-out;
   cursor: pointer;
 }
 
-.essential-card-link:hover .essential-card {
+.essential-card-link:hover .essential-card,
+.essential-card-link:focus-visible .essential-card {
   --card-border-color: var(--hp-purple);
   transform: translateY(-2px);
   box-shadow: 0 4px 20px var(--hp-purple-glow);
-}
-
-.essential-card-link:hover .essential-link-label {
-  opacity: 1;
 }
 
 .essential-card-header {
@@ -2025,15 +2020,20 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   opacity: 0.8;
 }
 
-.essential-card-link:hover .essential-link-label {
+.essential-card-link:hover .essential-link-label,
+.essential-card-link:focus-visible .essential-link-label {
   opacity: 1;
 }
 
 .explorer-empty {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
   padding: 3rem 1.5rem;
   color: var(--hp-text-muted);
   font-size: 0.9375rem;
+  text-align: center;
   background: var(--hp-surface-alt);
   border-radius: 8px;
   border: 1px dashed var(--hp-border);

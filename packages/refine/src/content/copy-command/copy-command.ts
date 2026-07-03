@@ -81,6 +81,7 @@ define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
 
   setup(props, { emit, slots }) {
     const copied = signal(false);
+    const copyFailed = signal(false);
     let resetTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleCopy = async () => {
@@ -88,41 +89,64 @@ define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
 
       if (!text) return;
 
+      if (resetTimer !== null) clearTimeout(resetTimer);
+
       try {
         await navigator.clipboard.writeText(text);
         copied.value = true;
+        copyFailed.value = false;
         emit('copy', { value: text });
-
-        if (resetTimer !== null) clearTimeout(resetTimer);
-
-        resetTimer = setTimeout(() => {
-          copied.value = false;
-          resetTimer = null;
-        }, 2000);
       } catch {
-        // Clipboard access denied — silently fail
+        // Clipboard access denied or unavailable (e.g. insecure context) — surface it instead of failing silently
+        copied.value = false;
+        copyFailed.value = true;
       }
+
+      resetTimer = setTimeout(() => {
+        copied.value = false;
+        copyFailed.value = false;
+        resetTimer = null;
+      }, 2000);
     };
 
     const hasSuffix = computed(() => slots.has('suffix').value);
-    const btnLabel = computed(() => (copied.value ? 'Copied!' : `Copy: ${props.value.value ?? ''}`));
+    const btnLabel = computed(() => {
+      if (copied.value) return 'Copied!';
+
+      if (copyFailed.value) return 'Copy failed — press to try again';
+
+      return `Copy: ${props.value.value ?? ''}`;
+    });
 
     return html`
       <div class="wrapper" part="wrapper">
         <button class="command" part="command" type="button" :aria-label="${btnLabel}" @click=${handleCopy}>
           <code class="command-text" part="command-text">${props.value}</code>
           <span class="copy-icon" part="copy-icon" aria-hidden="true">
-            ${() =>
-              copied.value
-                ? html`<ore-icon name="check" size="14" class="icon-copied" aria-hidden="true"></ore-icon>`
-                : html`<ore-icon name="copy" size="14" aria-hidden="true"></ore-icon>`}
+            ${() => {
+              if (copied.value)
+                return html`<ore-icon name="check" size="14" class="icon-copied" aria-hidden="true"></ore-icon>`;
+
+              if (copyFailed.value)
+                return html`<ore-icon name="circle-alert" size="14" class="icon-failed" aria-hidden="true"></ore-icon>`;
+
+              return html`<ore-icon name="copy" size="14" aria-hidden="true"></ore-icon>`;
+            }}
           </span>
         </button>
         <div class="suffix" part="suffix" ?hidden="${() => !hasSuffix.value}">
           <slot name="suffix"></slot>
         </div>
       </div>
-      <div role="status" class="sr-only">${() => (copied.value ? 'Copied to clipboard.' : '')}</div>
+      <div role="status" class="sr-only">
+        ${() => {
+          if (copied.value) return 'Copied to clipboard.';
+
+          if (copyFailed.value) return 'Copy failed. Select the command text and copy it manually.';
+
+          return '';
+        }}
+      </div>
     `;
   },
 

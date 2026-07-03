@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(refine): surface visible failure state in ore-copy-command instead of silently failing",
+      "type": "patch",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "helmuthdu@gmail.com"
+}
