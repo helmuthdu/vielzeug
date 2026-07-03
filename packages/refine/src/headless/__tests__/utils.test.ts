@@ -212,6 +212,10 @@ describe('toFiniteNumber()', () => {
   it('returns 0 for null (Number(null) === 0)', () => {
     expect(toFiniteNumber(null)).toBe(0);
   });
+
+  it('returns 0 for an empty string (Number("") === 0)', () => {
+    expect(toFiniteNumber('')).toBe(0);
+  });
 });
 
 describe('toFiniteNumberOr()', () => {

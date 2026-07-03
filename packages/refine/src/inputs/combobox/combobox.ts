@@ -12,7 +12,7 @@ import {
   type DialogCloseReason,
   type OverlayOpenReason,
 } from '../../headless';
-import { reducedMotionMixin } from '../../styles';
+import { reducedMotionMixin, srOnlyMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
 import { filterOptions, getCreatableLabel, makeCreatableValue, parseSlottedOptions } from './combobox-options';
 import '../../feedback/chip/chip';
@@ -339,7 +339,7 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
     }
 
     const fieldPress = createInteraction({
-      disabled: () => isDisabled.value,
+      disabled: isDisabled,
       onPress: () => {
         if (!isOpen.value) openPopup(true, 'click');
 
@@ -348,7 +348,7 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
     });
 
     const enterPress = createInteraction({
-      disabled: () => isDisabled.value,
+      disabled: isDisabled,
       keys: ['Enter'],
       onPress: (originalEvent: Event) => {
         const opts = filteredOptions.value;
@@ -893,5 +893,5 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
     `;
   },
   shadow: { delegatesFocus: true },
-  styles: [reducedMotionMixin, componentStyles],
+  styles: [reducedMotionMixin, srOnlyMixin, componentStyles],
 }) as unknown as AddEventListeners<OreComboboxEvents>;

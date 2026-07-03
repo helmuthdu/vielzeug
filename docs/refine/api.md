@@ -283,11 +283,11 @@ Methods: `open(reason?)`, `close(reason?, restoreFocus?)`, `toggle()`, `dispose(
 createOptionList<T extends BaseOptionItem>(options: OptionListOptions<T>): OptionListHandle<T>
 ```
 
-Composed primitive for dropdown option lists. Owns `isOpen`, `focusedIndex`, the dropdown positioner, list navigation, and overlay wiring.
+Composed primitive for dropdown option lists (select, combobox, menu). Owns `isOpen`, `focusedIndex`, the dropdown positioner, list navigation, and overlay wiring.
 
-Required DOM accessors: `dom.getBoundary`, `dom.getPanel`, `dom.getReference`.
+Required DOM accessors (top-level options, not nested): `getBoundary`, `getPanel`, `getReference`. Missing any of them throws `RefineConfigError`.
 
-Key members: `isOpen`, `focusedIndex`, `open()`, `close()`, `toggle()`, `first()`, `last()`, `next()`, `prev()`, `handleKeydown()`.
+Key members: `isOpen`, `focusedIndex`, `ariaExpanded`, `ariaActiveDescendant`, `open(reason?)`, `close(reason?)`, `toggle(openReason?, closeReason?)`, `navigate(action)` (`'first' | 'last' | 'next' | 'prev'`), `set(index)`, `getActiveItem()`, `handleKeydown()`, `scrollFocusedIntoView()`, `updatePosition()`.
 
 ### `createListControl(options)`
 
@@ -301,7 +301,6 @@ Keyboard-navigable list without open state. Supports vertical/horizontal/omni na
 
 | Export                       | Description                                                        |
 | ---------------------------- | ------------------------------------------------------------------ |
-| `createField()`              | Base field: IDs, ARIA signals, label state, validation trigger     |
 | `createSpinnerControl()`     | Number spinner step/clamp/keyboard logic                           |
 | `createSliderControl()`      | Range slider value/step/clamp/keyboard                             |
 | `createSwipeControl()`       | Touch/pointer swipe gesture detection                              |
@@ -312,13 +311,17 @@ Keyboard-navigable list without open state. Supports vertical/horizontal/omni na
 | `createDropdownPositioner()` | Floating dropdown positioner (wraps Orbit)                         |
 | `createDialogFocusControl()` | Dialog-specific focus entry and restoration                        |
 | `createInteraction()`        | Unified click/keyboard press handler for interactive elements      |
-| `keymap()` / `keymapPresets` | Compose custom keymaps from vertical/horizontal/omni presets       |
 | `dispatchKeyboardAction()`   | Low-level keymap dispatcher                                        |
+| `createSelectionControl()`   | Single/multi/none row-selection controller (used by the data grid) |
+| `createSortControl()`        | Client-side column sort controller — cycles asc → desc → none      |
 | `announce()`                 | ARIA live-region announcer (polite or assertive)                   |
 | `syncedSignal()`             | Local writable signal synced from a `Reactive` source              |
 | `parseStringTriggers()`      | Parse comma-separated trigger strings against an allowed set       |
 | `getChoiceLabel()`           | Read the display label from `<ore-option>` or similar              |
 | `getLightChildrenByTag()`    | Collect light-DOM children matching a tag name                     |
+| `parseIso()`                 | Parse an ISO `yyyy-MM-dd` string to `Temporal.PlainDate`, `null` if invalid |
+| `toIsoString()`              | Serialise a `Temporal.PlainDate` to an ISO `yyyy-MM-dd` string      |
+| `formatDisplayDate()`        | Format a `Temporal.PlainDate` for display in a given locale        |
 | `toFiniteNumber()`           | Parse a value to a finite number, `undefined` for non-finite       |
 | `toFiniteNumberOr()`         | Parse a value to a finite number with a fallback                   |
 | `toPositiveStep()`           | Coerce a step value to a positive finite number with a fallback    |

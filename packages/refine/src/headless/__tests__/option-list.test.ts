@@ -2,6 +2,7 @@ import { html } from '@vielzeug/ore';
 import { mount } from '@vielzeug/ore/testing';
 import { describe, expect, it, vi } from 'vitest';
 
+import { RefineConfigError } from '../../errors';
 import { createOptionList, type OptionListOptions } from '../option-list';
 
 type Item = { label: string; value: string };
@@ -518,6 +519,52 @@ describe('createOptionList()', () => {
 
       // After abort the list should be closed
       expect(handle.isOpen.value).toBe(false);
+    });
+  });
+
+  describe('required option validation', () => {
+    const base: OptionListOptions<Item> = {
+      getBoundary: () => document.createElement('div'),
+      getItems: () => ITEMS,
+      getPanel: () => document.createElement('ul'),
+      getReference: () => document.createElement('button'),
+      signal: new AbortController().signal,
+    };
+
+    it('throws RefineConfigError when getBoundary is missing', () => {
+      expect(() =>
+        createOptionList<Item>({
+          ...base,
+          getBoundary: undefined as unknown as OptionListOptions<Item>['getBoundary'],
+        }),
+      ).toThrow(RefineConfigError);
+    });
+
+    it('throws RefineConfigError when getPanel is missing', () => {
+      expect(() =>
+        createOptionList<Item>({ ...base, getPanel: undefined as unknown as OptionListOptions<Item>['getPanel'] }),
+      ).toThrow(RefineConfigError);
+    });
+
+    it('throws RefineConfigError when getReference is missing', () => {
+      expect(() =>
+        createOptionList<Item>({
+          ...base,
+          getReference: undefined as unknown as OptionListOptions<Item>['getReference'],
+        }),
+      ).toThrow(RefineConfigError);
+    });
+
+    it('error message carries no [@vielzeug/refine] prefix', () => {
+      try {
+        createOptionList<Item>({
+          ...base,
+          getBoundary: undefined as unknown as OptionListOptions<Item>['getBoundary'],
+        });
+        expect.unreachable();
+      } catch (error) {
+        expect((error as Error).message).toBe('createOptionList: getBoundary is required');
+      }
     });
   });
 });

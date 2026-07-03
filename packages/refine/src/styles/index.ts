@@ -10,7 +10,7 @@ import { disabledLoadingMixin } from './mixins/states.css';
 import { colorThemeMixin, elevationMixin } from './mixins/theme.css';
 
 // Accessibility Mixins
-export { coarsePointerMixin, reducedMotionMixin } from './mixins/accessibility.css';
+export { coarsePointerMixin, reducedMotionMixin, SR_ONLY_INLINE_STYLE, srOnlyMixin } from './mixins/accessibility.css';
 // Effects
 export {
   rainbowEffectMixin,

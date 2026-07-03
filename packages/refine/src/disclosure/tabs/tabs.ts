@@ -262,7 +262,7 @@ define<OreTabsProps, OreTabsEvents>(TABS_TAG, {
     };
 
     const manualActivationPress = createInteraction({
-      disabled: () => !isManualActivation(),
+      disabled: computed(() => !isManualActivation()),
       onPress: activateFocusedTab,
     });
 

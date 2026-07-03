@@ -259,7 +259,7 @@ define<OreFileInputProps, OreFileInputEvents>(FILE_INPUT_TAG, {
       const dz = dropzoneRef.value!;
       let skipNextClick = false;
       const pressControl = createInteraction({
-        disabled: () => isDisabled.value,
+        disabled: isDisabled,
         onPress: () => {
           inp.click();
         },

@@ -1,4 +1,5 @@
 import { define, html, prop } from '@vielzeug/ore';
+import { computed } from '@vielzeug/ripple';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
 
@@ -130,7 +131,7 @@ define<OreCardProps, OreCardEvents>(CARD_TAG, {
     // ────────────────────────────────────────────────────────────────
 
     const pressControl = createInteraction({
-      disabled: () => !props.interactive.value || Boolean(props.disabled.value),
+      disabled: computed(() => !props.interactive.value || Boolean(props.disabled.value)),
       onPress: (originalEvent, trigger) => {
         emit('activate', { originalEvent, trigger });
       },

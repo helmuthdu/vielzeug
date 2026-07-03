@@ -1,4 +1,5 @@
 import { createStableId, define, html, prop, ref } from '@vielzeug/ore';
+import { signal } from '@vielzeug/ripple';
 
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
 
@@ -165,7 +166,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
     const panelRef = ref<HTMLDivElement>();
 
     // Drag-to-close state
-    let isSwipeClosing = false;
+    const isSwipeClosing = signal(false);
     let swipeCloseTimer: ReturnType<typeof setTimeout> | undefined;
 
     const getHeaderText = () => props.label.value ?? props.title.value ?? '';
@@ -190,7 +191,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
     };
 
     const finalizeSwipeClose = (panel: HTMLElement) => {
-      if (!isSwipeClosing) return;
+      if (!isSwipeClosing.value) return;
 
       if (swipeCloseTimer) {
         clearTimeout(swipeCloseTimer);
@@ -200,7 +201,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
       const dialog = dialogRef.value;
 
       if (!dialog) {
-        isSwipeClosing = false;
+        isSwipeClosing.value = false;
 
         return;
       }
@@ -214,9 +215,9 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
     };
 
     const startSwipeClose = (panel: HTMLElement, swipe: DrawerSwipeConfig, committedDistance: number) => {
-      if (isSwipeClosing) return;
+      if (isSwipeClosing.value) return;
 
-      isSwipeClosing = true;
+      isSwipeClosing.value = true;
 
       const panelSize = swipe.axis === 'x' ? panel.offsetWidth : panel.offsetHeight;
       // Preserve overshoot so closing continues from the dragged position instead of snapping back.
@@ -260,27 +261,32 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
       panel.style.transform = '';
       panel.style.opacity = '';
       panel.style.visibility = '';
-      isSwipeClosing = false;
+      isSwipeClosing.value = false;
+    };
+
+    // Same "snap back or commit close" decision whether the swipe was
+    // interrupted by the platform (onCancel) or simply released without an
+    // intervening move event crossing the threshold (onRelease).
+    const handleSwipeRelease = ({ distance, threshold }: { distance: number; threshold: number }): void => {
+      const panel = panelRef.value;
+
+      if (!panel) return;
+
+      // If the release event crosses the threshold (without an intervening
+      // move event), commit close instead of snapping back to rest first.
+      if (shouldCommitSwipeClose(distance, threshold)) {
+        startSwipeClose(panel, getSwipeConfig(), distance);
+
+        return;
+      }
+
+      resetPanelDragStyles(panel);
     };
 
     const swipe = createSwipeControl({
       axis: () => getSwipeConfig().axis,
-      disabled: () => isSwipeClosing,
-      onCancel: ({ distance, threshold }) => {
-        const panel = panelRef.value;
-
-        if (!panel) return;
-
-        // If the release event crosses the threshold (without an intervening
-        // move event), commit close instead of snapping back to rest first.
-        if (shouldCommitSwipeClose(distance, threshold)) {
-          startSwipeClose(panel, getSwipeConfig(), distance);
-
-          return;
-        }
-
-        resetPanelDragStyles(panel);
-      },
+      disabled: isSwipeClosing,
+      onCancel: handleSwipeRelease,
       onCommit: ({ distance }) => {
         const panel = panelRef.value;
 
@@ -302,6 +308,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
         panel.style.transform = swipeConfig.translate(distance);
         panel.style.opacity = String(1 - progress * 0.4);
       },
+      onRelease: handleSwipeRelease,
       shouldCommit: ({ distance, threshold }) => shouldCommitSwipeClose(distance, threshold),
       threshold: () => {
         const panel = panelRef.value;
@@ -399,7 +406,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;
 
-        if (swipe.isActive() || isSwipeClosing) return;
+        if (swipe.isActive() || isSwipeClosing.value) return;
 
         if (e.target !== dialog) return; // Click inside panel
 

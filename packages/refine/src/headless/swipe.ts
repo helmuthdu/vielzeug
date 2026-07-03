@@ -1,3 +1,5 @@
+import type { Readable } from '@vielzeug/ripple';
+
 export type SwipeAxis = 'x' | 'y';
 
 export type SwipeControlDetail = {
@@ -14,10 +16,13 @@ export type SwipeControlDetail = {
 export type SwipeControlOptions = {
   axis?: () => SwipeAxis;
   captureTarget?: (event: PointerEvent) => HTMLElement | null;
-  disabled?: () => boolean;
+  disabled?: Readable<boolean | undefined>;
+  /** Called when the platform interrupts an in-flight swipe (`pointercancel`). */
   onCancel?: (detail: SwipeControlDetail) => void;
   onCommit?: (detail: SwipeControlDetail) => void;
   onMove?: (detail: SwipeControlDetail) => void;
+  /** Called when the pointer is released (`pointerup`) without crossing the commit threshold. */
+  onRelease?: (detail: SwipeControlDetail) => void;
   onStart?: (detail: SwipeControlDetail) => void;
   shouldCommit?: (detail: SwipeControlDetail) => boolean;
   threshold?: () => number;
@@ -64,7 +69,7 @@ const defaultCaptureTarget = (event: PointerEvent): HTMLElement | null => {
 export const createSwipeControl = (options: SwipeControlOptions): SwipeControl => {
   let active: ActiveSwipe | null = null;
 
-  const isDisabled = (): boolean => Boolean(options.disabled?.());
+  const isDisabled = (): boolean => Boolean(options.disabled?.value);
 
   const reset = (): void => {
     active = null;
@@ -142,7 +147,7 @@ export const createSwipeControl = (options: SwipeControlOptions): SwipeControl =
 
     reset();
 
-    if (detail) options.onCancel?.(detail);
+    if (detail) options.onRelease?.(detail);
 
     return true;
   };

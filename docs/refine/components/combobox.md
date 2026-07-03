@@ -6,7 +6,7 @@ An autocomplete input that combines a text field with a filterable dropdown list
 
 Place `<ore-combobox-option>` elements inside `<ore-combobox>`. The `value` attribute is what gets submitted; the text content is the label used for display and filtering.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Country" placeholder="Search countries…">
@@ -24,7 +24,7 @@ Place `<ore-combobox-option>` elements inside `<ore-combobox>`. The `value` attr
 
 Five visual variants for different UI contexts and levels of emphasis.
 
-<ComponentPreview>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox variant="solid" placeholder="Solid">
@@ -55,7 +55,7 @@ Five visual variants for different UI contexts and levels of emphasis.
 
 Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. The icon is rendered in the dropdown alongside the label.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Role" placeholder="Select a role…">
@@ -82,7 +82,7 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 ## Colors
 
-<ComponentPreview center>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox variant="bordered" label="Default">
@@ -119,7 +119,7 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 ## Sizes
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Small" size="sm">
@@ -142,7 +142,7 @@ Add an `icon` named slot inside any `<ore-combobox-option>` for a leading icon. 
 
 The label can be placed **inset** (inside the field, above the input — default) or **outside** (above the field border). Always provide a visible label so the purpose is clear when the list is hidden.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Inset label (default)" label-placement="inset">
@@ -161,7 +161,7 @@ The label can be placed **inset** (inside the field, above the input — default
 
 Add `clearable` to show a clear (×) button whenever a value is selected. Use this when the field is optional and users might want to reset their choice.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Clearable combobox" clearable>
@@ -177,7 +177,7 @@ Add `clearable` to show a clear (×) button whenever a value is selected. Use th
 
 Add `multiple` to allow selecting more than one option. Each selected value is shown as a removable `ore-chip` inside the field. Pressing **Backspace** on an empty input removes the last chip.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox
@@ -209,7 +209,7 @@ document.querySelector('ore-combobox').addEventListener('change', (e) => {
 
 Pair `error` text with `color="error"` for form validation feedback.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Language" helper="Start typing to filter available languages.">
@@ -230,7 +230,7 @@ Pair `error` text with `color="error"` for form validation feedback.
 
 Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection of individual options.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Role">
@@ -245,7 +245,7 @@ Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection o
 
 ## Disabled State
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Disabled combobox" disabled>
@@ -259,7 +259,7 @@ Add the `disabled` attribute on a `<ore-combobox-option>` to prevent selection o
 
 Set `no-filter` to keep all options visible regardless of what the user types. Use this when filtering happens server-side — replace the `<ore-combobox-option>` children based on the `search` event. For short lists (fewer than 6 items) consider a plain `ore-select` instead.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="User search" no-filter id="user-cb" placeholder="Type to search…">
@@ -291,7 +291,7 @@ cb.addEventListener('search', async (e) => {
 
 Add `creatable` to allow users to create a new option when their query does not match any existing option. A **Create "X"** button appears at the bottom of the dropdown. Selecting it adds the new option and emits a `ore-change` event like any normal selection.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Tags" creatable placeholder="Search or create a tag…">
@@ -314,7 +314,7 @@ document.querySelector('ore-combobox').addEventListener('change', (e) => {
 
 Set `loading` to show a loading indicator inside the dropdown while options are being fetched. Use this together with `no-filter` for server-side search.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox label="Server search" no-filter loading placeholder="Fetching options…"> </ore-combobox>
@@ -347,7 +347,7 @@ Assigning a new array to `options` updates the dropdown immediately. When both `
 
 `ore-combobox` is form-associated — its `name` attribute participates in `FormData` submissions.
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-form id="myForm">
@@ -372,7 +372,7 @@ document.getElementById('myForm').addEventListener('submit', (e) => {
 
 ## Listening to Events
 
-<ComponentPreview vertical>
+<ComponentPreview height="400px">
 
 ```html
 <ore-combobox id="my-cb" label="Programming language">

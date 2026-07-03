@@ -1,3 +1,5 @@
+import { signal } from '@vielzeug/ripple';
+
 import { createInteraction, dispatchKeyboardAction } from '../keyboard';
 
 describe('dispatchKeyboardAction()', () => {
@@ -19,7 +21,7 @@ describe('dispatchKeyboardAction()', () => {
   it('returns false when disabled', () => {
     const handler = vi.fn();
     const handled = dispatchKeyboardAction(new KeyboardEvent('keydown', { key: 'Enter' }), {
-      disabled: () => true,
+      disabled: signal(true),
       keymap: { Enter: handler },
     });
 
@@ -53,6 +55,24 @@ describe('dispatchKeyboardAction()', () => {
 
     expect(preventDefault).not.toHaveBeenCalled();
   });
+
+  it('ignores inherited Object.prototype members for crafted key names', () => {
+    // A synthetic event can carry any string as `key` — `keymap['__proto__']` or
+    // `keymap['constructor']` must never resolve to an inherited prototype member.
+    const handled1 = dispatchKeyboardAction(new KeyboardEvent('keydown', { key: '__proto__' }), {
+      keymap: { Enter: vi.fn() },
+    });
+    const handled2 = dispatchKeyboardAction(new KeyboardEvent('keydown', { key: 'constructor' }), {
+      keymap: { Enter: vi.fn() },
+    });
+    const handled3 = dispatchKeyboardAction(new KeyboardEvent('keydown', { key: 'toString' }), {
+      keymap: { Enter: vi.fn() },
+    });
+
+    expect(handled1).toBe(false);
+    expect(handled2).toBe(false);
+    expect(handled3).toBe(false);
+  });
 });
 
 describe('createInteraction', () => {
@@ -79,7 +99,7 @@ describe('createInteraction', () => {
   it('ignores unsupported keys and disabled state', () => {
     const onPress = vi.fn();
     const disabled = createInteraction({
-      disabled: () => true,
+      disabled: signal(true),
       onPress,
     });
 
@@ -107,7 +127,7 @@ describe('createInteraction', () => {
   it('calls onFocus when enabled and suppresses it when disabled', () => {
     const onFocus = vi.fn();
     const enabled = createInteraction({ onFocus });
-    const disabled = createInteraction({ disabled: () => true, onFocus });
+    const disabled = createInteraction({ disabled: signal(true), onFocus });
 
     enabled.handleFocus(new FocusEvent('focus'));
     expect(onFocus).toHaveBeenCalledTimes(1);
@@ -119,7 +139,7 @@ describe('createInteraction', () => {
   it('calls onBlur when enabled and suppresses it when disabled', () => {
     const onBlur = vi.fn();
     const enabled = createInteraction({ onBlur });
-    const disabled = createInteraction({ disabled: () => true, onBlur });
+    const disabled = createInteraction({ disabled: signal(true), onBlur });
 
     enabled.handleBlur(new FocusEvent('blur'));
     expect(onBlur).toHaveBeenCalledTimes(1);

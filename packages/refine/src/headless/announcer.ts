@@ -14,11 +14,10 @@
 // announce('Error: field is required', { politeness: 'assertive' });
 // ```
 
-// ── Visually-hidden style ─────────────────────────────────────────────────────
+import { SR_ONLY_INLINE_STYLE } from '../styles';
 
-const HIDDEN_STYLES =
-  'position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);' +
-  'white-space:nowrap;border:0;margin:-1px;';
+// ── Visually-hidden style ─────────────────────────────────────────────────────
+// Shared with the CSS-side `.sr-only` mixin — see `src/styles/mixins/accessibility.css.ts`.
 
 // ── Per-document live regions (WeakMap for automatic GC + test isolation) ────
 
@@ -34,7 +33,7 @@ const createRegion = (politeness: 'assertive' | 'polite', doc: Document): HTMLEl
   el.setAttribute('aria-live', politeness);
   el.setAttribute('aria-atomic', 'true');
   el.setAttribute('data-block-announcer', politeness);
-  el.style.cssText = HIDDEN_STYLES;
+  el.style.cssText = SR_ONLY_INLINE_STYLE;
 
   doc.body.appendChild(el);
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "Improve refine headless module: fix dead labelPlacement option, use RefineConfigError in createOptionList, consolidate visually-hidden CSS, unify disabled option convention across headless primitives to Readable signals, split SwipeControl onCancel/onRelease, add selection-control/spinner test coverage",
+      "type": "major",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "devin-ai-integration[bot]@users.noreply.github.com"
+}

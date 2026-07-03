@@ -1,3 +1,5 @@
+import { signal } from '@vielzeug/ripple';
+
 import { createSwipeControl } from '../swipe';
 
 describe('createSwipeControl', () => {
@@ -41,25 +43,28 @@ describe('createSwipeControl', () => {
     expect(control.isActive()).toBe(false);
   });
 
-  it('cancels when the pointer ends before commit', () => {
+  it('fires onRelease (not onCancel) when the pointer ends before commit', () => {
     const onCancel = vi.fn();
+    const onRelease = vi.fn();
     const control = createSwipeControl({
       axis: () => 'y',
       onCancel,
+      onRelease,
       threshold: () => 60,
     });
 
     control.handlePointerDown(new PointerEvent('pointerdown', { clientY: 5, pointerId: 7 }));
 
     expect(control.handlePointerUp(new PointerEvent('pointerup', { clientY: 30, pointerId: 7 }))).toBe(true);
-    expect(onCancel).toHaveBeenCalledWith(expect.objectContaining({ axis: 'y', distance: 25, progress: 25 / 60 }));
+    expect(onRelease).toHaveBeenCalledWith(expect.objectContaining({ axis: 'y', distance: 25, progress: 25 / 60 }));
+    expect(onCancel).not.toHaveBeenCalled();
     expect(control.isActive()).toBe(false);
   });
 
   it('ignores disabled state and unrelated pointer ids', () => {
     const onMove = vi.fn();
     const disabled = createSwipeControl({
-      disabled: () => true,
+      disabled: signal(true),
       onMove,
     });
 

@@ -1,15 +1,21 @@
+import type { Readable } from '@vielzeug/ripple';
+
 // ── Keyboard dispatch ─────────────────────────────────────────────────────────
 
 export type KeyboardDispatchOptions = {
-  disabled?: () => boolean;
+  disabled?: Readable<boolean | undefined>;
   keymap: Record<string, (event: KeyboardEvent) => boolean | void>;
   preventDefault?: 'after' | 'before' | false;
 };
 
 export const dispatchKeyboardAction = (event: KeyboardEvent, options: KeyboardDispatchOptions): boolean => {
-  if (options.disabled?.()) return false;
+  if (options.disabled?.value) return false;
 
-  const action = options.keymap[event.key];
+  // `event.key` is attacker-influenceable on a synthetic KeyboardEvent (e.g. `new
+  // KeyboardEvent('keydown', { key: '__proto__' })`). Guard with `Object.hasOwn` so a
+  // crafted key name can never resolve to an inherited `Object.prototype` member
+  // (`__proto__`, `constructor`, `toString`, …) instead of `undefined`.
+  const action = Object.hasOwn(options.keymap, event.key) ? options.keymap[event.key] : undefined;
 
   if (!action) return false;
 
@@ -33,8 +39,8 @@ export type PressTrigger = 'keyboard' | 'pointer';
  * handler for accessible interactive elements.
  */
 export type InteractionOptions = {
-  /** Returns `true` when the element is disabled. All handlers become no-ops. */
-  disabled?: () => boolean;
+  /** `true` when the element is disabled. All handlers become no-ops. */
+  disabled?: Readable<boolean | undefined>;
   /** Keys that trigger a press. Defaults to `['Enter', ' ']`. */
   keys?: string[];
   /** Called when the element loses focus. */
@@ -59,7 +65,7 @@ export type Interaction = {
  * @example
  * ```ts
  * const interaction = createInteraction({
- *   disabled: () => disabled.value,
+ *   disabled: props.disabled,
  *   onPress: (event, trigger) => toggle(event),
  *   onFocus: (event) => setFocused(true),
  *   onBlur: (event) => setFocused(false),
@@ -73,7 +79,7 @@ export type Interaction = {
  * ```
  */
 export const createInteraction = (options: InteractionOptions): Interaction => {
-  const isDisabled = (): boolean => Boolean(options.disabled?.());
+  const isDisabled = (): boolean => Boolean(options.disabled?.value);
   const keyboardKeys = options.keys ?? ['Enter', ' '];
   const keymap = Object.fromEntries(
     keyboardKeys.map((key) => [key, (keyboardEvent: KeyboardEvent) => options.onPress?.(keyboardEvent, 'keyboard')]),
@@ -93,6 +99,7 @@ export const createInteraction = (options: InteractionOptions): Interaction => {
     handleFocus: (event: FocusEvent): void => {
       if (!isDisabled()) options.onFocus?.(event);
     },
-    handleKeydown: (event: KeyboardEvent): boolean => dispatchKeyboardAction(event, { disabled: isDisabled, keymap }),
+    handleKeydown: (event: KeyboardEvent): boolean =>
+      dispatchKeyboardAction(event, { disabled: options.disabled, keymap }),
   };
 };

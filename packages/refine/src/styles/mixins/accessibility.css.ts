@@ -1,6 +1,49 @@
 import { css } from '@vielzeug/ore';
 
 /**
+ * Visually-Hidden ("sr-only") Style
+ *
+ * Single source of truth for the standard visually-hidden-but-accessible
+ * clipping technique — hides content visually while keeping it in the
+ * accessibility tree (screen readers, `aria-live` regions).
+ *
+ * Two forms are exported from the same declarations so component stylesheets
+ * and JS-created DOM elements never drift out of sync:
+ * - `srOnlyMixin` — a `.sr-only` class for component `styles: [...]` arrays.
+ * - `SR_ONLY_INLINE_STYLE` — the equivalent `cssText` string for elements
+ *   created outside any component's shadow root (e.g. a live region appended
+ *   directly to `document.body`).
+ *
+ * @example
+ * ```ts
+ * // Component stylesheet
+ * import { srOnlyMixin } from '../../styles';
+ * return { styles: [srOnlyMixin, componentStyles], template: html`<span class="sr-only">...</span>` };
+ *
+ * // JS-created element outside a shadow root
+ * import { SR_ONLY_INLINE_STYLE } from '../../styles';
+ * el.style.cssText = SR_ONLY_INLINE_STYLE;
+ * ```
+ */
+export const SR_ONLY_INLINE_STYLE =
+  'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;' +
+  'white-space:nowrap;border-width:0;clip-path:inset(50%);';
+
+export const srOnlyMixin = css`
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    white-space: nowrap;
+    border-width: 0;
+    clip-path: inset(50%);
+  }
+`;
+
+/**
  * Coarse Pointer Mixin
  *
  * Under `@media (pointer: coarse)`, promotes the full component one size tier

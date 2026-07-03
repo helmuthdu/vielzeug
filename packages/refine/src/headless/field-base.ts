@@ -37,10 +37,18 @@ export type FieldOptions = {
   id?: string;
   /**
    * Label text signal. When provided, `labelVisible` and `ariaLabelledBy` are
-   * computed reactively from this value and `labelPlacement`.
+   * computed reactively from this value (see `hasLabel` for the slot-first override).
    */
   label?: Readable<string | undefined>;
-  /** Label placement signal. Defaults to `'inset'`. */
+  /**
+   * Label placement signal. Defaults to `'inset'`.
+   *
+   * Not currently consumed by `createField()` itself — visibility is driven
+   * solely by `hasLabel`/`label`. Threaded through so component authors can
+   * apply placement-specific styling (`label-placement` attribute) without a
+   * second prop; if placement-dependent visibility is ever needed, wire it
+   * into `labelVisible$` in `createField()` instead of adding a new option.
+   */
   labelPlacement?: Readable<LabelPlacement>;
   prefix?: string;
   validateOn?: Readable<ControlValidationMode>;

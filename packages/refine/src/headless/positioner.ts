@@ -1,5 +1,7 @@
 import { autoUpdate, computePosition, flip, offset, type Placement, shift, size } from '@vielzeug/orbit';
 
+import { elementDirection } from './direction';
+
 // ── Overlay positioner contract ──────────────────────────────────────────────
 
 export type OverlayPositioner = {
@@ -13,7 +15,11 @@ export type OverlayPositioner = {
 // ── Dropdown positioner ───────────────────────────────────────────────────────
 
 export type DropdownPositionerOptions = {
-  /** Returns the element used to determine text direction for placement mirroring. Defaults to document. */
+  /**
+   * Returns the text direction used for placement mirroring. Defaults to the resolved
+   * direction of the reference element (nearest `dir="ltr"|"rtl"` ancestor, falling back to
+   * computed style) — most callers never need to pass this explicitly.
+   */
   getDir?: () => 'ltr' | 'rtl';
   /** Getter for the floating (dropdown panel) element. */
   getFloating: () => HTMLElement | null;
@@ -44,8 +50,9 @@ const rtlPlacement = (p: Placement): Placement => {
  * Uses flip + shift + optional width-matching middleware. Supports continuous
  * auto-update for repositioning on scroll or resize.
  *
- * RTL-aware: when `getDir` returns `'rtl'`, start/end placements are automatically
- * mirrored so dropdowns open on the correct side.
+ * RTL-aware: start/end placements are automatically mirrored so dropdowns open on the
+ * correct side, based on `getDir` (or the reference element's resolved direction when
+ * `getDir` is omitted).
  */
 export function createDropdownPositioner({
   getDir,
@@ -58,8 +65,9 @@ export function createDropdownPositioner({
 }: DropdownPositionerOptions): OverlayPositioner {
   function resolvedPlacement(): Placement {
     const base = getPlacement?.() ?? 'bottom-start';
+    const dir = getDir?.() ?? elementDirection(getReference());
 
-    return (getDir?.() ?? 'ltr') === 'rtl' ? rtlPlacement(base) : base;
+    return dir === 'rtl' ? rtlPlacement(base) : base;
   }
 
   function updatePosition(): void {

@@ -47,7 +47,7 @@ const DEFAULT_KEYS: Record<'both' | 'horizontal' | 'vertical', Record<ListNaviga
 };
 
 export type ListNavigationOptions<T> = {
-  disabled?: () => boolean;
+  disabled?: Readable<boolean | undefined>;
   /**
    * Returns a plain-text label for an item used by typeahead search.
    * When provided, pressing a printable character key jumps to the first enabled
@@ -207,7 +207,7 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
 
   // ── Keyboard handling ──────────────────────────────────────────────────────
 
-  const isKeyDisabled = (): boolean => Boolean(options.disabled?.());
+  const isKeyDisabled = (): boolean => Boolean(options.disabled?.value);
 
   const resolveOrientation = (): 'both' | 'horizontal' | 'vertical' =>
     typeof options.orientation === 'function' ? options.orientation() : (options.orientation ?? 'vertical');
@@ -270,7 +270,7 @@ export const createListControl = <T>(options: ListNavigationOptions<T>): ListCon
   const handleKeydown = (event: KeyboardEvent): boolean => {
     const km = _staticKeymap ?? buildKeymap();
 
-    if (dispatchKeyboardAction(event, { disabled: isKeyDisabled, keymap: km })) return true;
+    if (dispatchKeyboardAction(event, { disabled: options.disabled, keymap: km })) return true;
 
     return typeahead?.handleKeydown(event) ?? false;
   };

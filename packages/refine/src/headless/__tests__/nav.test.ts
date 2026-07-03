@@ -1,3 +1,4 @@
+import { signal } from '@vielzeug/ripple';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createListControl } from '../nav';
@@ -312,7 +313,7 @@ describe('createListControl typeahead', () => {
 
   it('does not trigger typeahead when list is disabled', () => {
     const nav = createListControl({
-      disabled: () => true,
+      disabled: signal(true),
       getItemLabel: (item: { label: string }) => item.label,
       getItems: () => [{ label: 'Apple' }],
     });

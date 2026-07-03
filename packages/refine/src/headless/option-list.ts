@@ -1,6 +1,6 @@
-import { assert } from '@vielzeug/arsenal';
 import { computed, type Readable, signal } from '@vielzeug/ripple';
 
+import { RefineConfigError } from '../errors';
 import { createListControl, type ListKeyAction, type ListNavigationAction } from './nav';
 import { createOverlayControl, type DialogCloseReason, type OverlayOpenReason } from './overlay';
 import { createDropdownPositioner, type DropdownPositionerOptions } from './positioner';
@@ -115,9 +115,17 @@ export type OptionListHandle<T extends BaseOptionItem> = {
  * overlay wiring. Composes overlay.ts + nav.ts into a single complete API.
  */
 export const createOptionList = <T extends BaseOptionItem>(options: OptionListOptions<T>): OptionListHandle<T> => {
-  assert(typeof options.getBoundary === 'function', '[@vielzeug/refine] createOptionList: getBoundary is required');
-  assert(typeof options.getPanel === 'function', '[@vielzeug/refine] createOptionList: getPanel is required');
-  assert(typeof options.getReference === 'function', '[@vielzeug/refine] createOptionList: getReference is required');
+  if (typeof options.getBoundary !== 'function') {
+    throw new RefineConfigError('createOptionList: getBoundary is required');
+  }
+
+  if (typeof options.getPanel !== 'function') {
+    throw new RefineConfigError('createOptionList: getPanel is required');
+  }
+
+  if (typeof options.getReference !== 'function') {
+    throw new RefineConfigError('createOptionList: getReference is required');
+  }
 
   const isOpen = signal(false);
 
@@ -134,7 +142,7 @@ export const createOptionList = <T extends BaseOptionItem>(options: OptionListOp
   };
 
   const list = createListControl<T>({
-    disabled: () => !isOpen.value,
+    disabled: computed(() => !isOpen.value),
     getItemLabel: options.getItemLabel,
     getItems: options.getItems,
     isItemDisabled: options.isItemDisabled,

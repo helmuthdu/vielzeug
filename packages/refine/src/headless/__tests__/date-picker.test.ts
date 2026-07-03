@@ -1,7 +1,7 @@
 import { Temporal } from '@vielzeug/tempo';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createDatePickerControl } from '../date-picker';
+import { createDatePickerControl, formatDisplayDate, parseIso, toIsoString } from '../date-picker';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -402,5 +402,67 @@ describe('createDatePickerControl', () => {
     it('returns 7 labels', () => {
       expect(makeCtrl().weekdayLabels().length).toBe(7);
     });
+  });
+});
+
+// ── ISO helpers ───────────────────────────────────────────────────────────────
+
+describe('parseIso()', () => {
+  it('parses a valid ISO date string', () => {
+    const result = parseIso('2025-06-15');
+
+    expect(result).not.toBeNull();
+    expect(result?.toString()).toBe('2025-06-15');
+  });
+
+  it('returns null for undefined', () => {
+    expect(parseIso(undefined)).toBeNull();
+  });
+
+  it('returns null for null', () => {
+    expect(parseIso(null)).toBeNull();
+  });
+
+  it('returns null for an empty string', () => {
+    expect(parseIso('')).toBeNull();
+  });
+
+  it('returns null instead of throwing for a malformed date string', () => {
+    expect(parseIso('not-a-date')).toBeNull();
+  });
+});
+
+describe('toIsoString()', () => {
+  it('serialises a Temporal.PlainDate to yyyy-MM-dd', () => {
+    expect(toIsoString(plain(2025, 6, 15))).toBe('2025-06-15');
+  });
+
+  it('returns null for null', () => {
+    expect(toIsoString(null)).toBeNull();
+  });
+
+  it('round-trips through parseIso()', () => {
+    const iso = '2025-01-05';
+
+    expect(toIsoString(parseIso(iso))).toBe(iso);
+  });
+});
+
+describe('formatDisplayDate()', () => {
+  it('formats a date with day, short month, and year for the given locale', () => {
+    const result = formatDisplayDate(plain(2025, 6, 15), 'en-US');
+
+    expect(result).toContain('15');
+    expect(result).toContain('Jun');
+    expect(result).toContain('2025');
+  });
+
+  it('honours the requested locale', () => {
+    const enResult = formatDisplayDate(plain(2025, 1, 1), 'en-US');
+    const deResult = formatDisplayDate(plain(2025, 1, 1), 'de-DE');
+
+    // English abbreviates January as "Jan"; German as "Jan." — different enough
+    // to prove the locale argument actually changes the output.
+    expect(enResult).not.toBe(deResult);
   });
 });

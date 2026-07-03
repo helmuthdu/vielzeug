@@ -3,6 +3,7 @@ import { define, html, inject, prop, ref } from '@vielzeug/ore';
 import type { ComponentSize, VisualVariant } from '../../types';
 
 import '../../content/icon/icon';
+import { elementDirection } from '../../headless/direction';
 import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
@@ -227,36 +228,10 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
 
       if (!details || !summary) return;
 
-      // Detect RTL by preferring the closest explicit dir="..." ancestor.
+      // Detect RTL so plain CSS classes can target it (see `elementDirection` for the
+      // ancestor-dir / computed-style resolution rule).
       const checkRTL = () => {
-        let isRTL: boolean | undefined;
-
-        // 1) Closest ancestor dir always wins (supports local RTL sections).
-        let parent: HTMLElement | null = el;
-
-        while (parent) {
-          const dir = parent.getAttribute('dir');
-
-          if (dir === 'rtl') {
-            isRTL = true;
-            break;
-          }
-
-          if (dir === 'ltr') {
-            isRTL = false;
-            break;
-          }
-
-          parent = parent.parentElement;
-        }
-
-        // 2) Fallback to computed direction when no explicit dir is found.
-        if (isRTL === undefined) {
-          isRTL = getComputedStyle(el).direction === 'rtl';
-        }
-
-        // 3) Keep markup simple for CSS targeting.
-        details.classList.toggle('rtl', isRTL);
+        details.classList.toggle('rtl', elementDirection(el) === 'rtl');
       };
 
       // Check initially

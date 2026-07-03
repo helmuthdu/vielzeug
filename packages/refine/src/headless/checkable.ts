@@ -83,7 +83,7 @@ export const createCheckable = (options: CheckableOptions): CheckableHandle => {
   };
 
   const interaction = createInteraction({
-    disabled: () => field.disabled.value,
+    disabled: field.disabled,
     onPress: (event) => toggle(event),
   });
 

@@ -3,6 +3,7 @@ import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize } from '../../types';
 
+import { srOnlyMixin } from '../../styles';
 import '../icon/icon';
 import componentStyles from './copy-command.css?inline';
 
@@ -125,5 +126,5 @@ define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
     `;
   },
 
-  styles: [componentStyles],
+  styles: [srOnlyMixin, componentStyles],
 });

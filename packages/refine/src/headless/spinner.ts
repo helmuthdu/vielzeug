@@ -89,8 +89,9 @@ export const createSpinnerControl = (options: SpinnerControlOptions): SpinnerCon
   };
 
   const handleKeydown = (event: KeyboardEvent): boolean => {
+    if (isBlocked()) return false;
+
     return dispatchKeyboardAction(event, {
-      disabled: isBlocked,
       keymap: {
         ArrowDown: () => incrementBy(-step(), event),
         ArrowUp: () => incrementBy(step(), event),

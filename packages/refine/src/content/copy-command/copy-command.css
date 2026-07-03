@@ -161,17 +161,5 @@
     align-items: center;
   }
 
-  /* ── sr-only live region ─────────────────────────────────── */
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    white-space: nowrap;
-    border-width: 0;
-    clip-path: inset(50%);
-  }
+  /* .sr-only is provided by the shared srOnlyMixin (see styles: [...] in copy-command.ts) */
 }

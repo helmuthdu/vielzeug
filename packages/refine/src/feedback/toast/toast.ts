@@ -264,22 +264,27 @@ define<OreToastProps, OreToastEvents>(TOAST_TAG, {
     // Animates .toast-inner to avoid polluting the wrapper transition state.
     // On commit, calls finalizeRemoval() directly (swipe owns the animation).
 
-    const createToastSwipe = (id: string): SwipeControl =>
-      createSwipeControl({
+    const createToastSwipe = (id: string): SwipeControl => {
+      // Same reset behavior whether the swipe was interrupted by the platform
+      // (onCancel) or simply released without crossing the commit threshold
+      // (onRelease) — the toast snaps back to rest either way.
+      const resetSwipeStyles = ({ event }: { event: PointerEvent }): void => {
+        const inner = getInner(event);
+
+        if (!inner) return;
+
+        inner.style.transition = '';
+        inner.style.transform = '';
+        inner.style.opacity = '';
+      };
+
+      return createSwipeControl({
         axis: () => 'x',
         // Do not capture pointers for toast swipe gestures; capture can steal
         // close-button clicks when the gesture does not move.
         captureTarget: () => null,
-        disabled: () => !(getEntry(id)?.dismissible ?? true),
-        onCancel: ({ event }) => {
-          const inner = getInner(event);
-
-          if (!inner) return;
-
-          inner.style.transition = '';
-          inner.style.transform = '';
-          inner.style.opacity = '';
-        },
+        disabled: computed(() => !(getEntry(id)?.dismissible ?? true)),
+        onCancel: resetSwipeStyles,
         onCommit: ({ distance, event }) => {
           const inner = getInner(event);
 
@@ -325,7 +330,9 @@ define<OreToastProps, OreToastEvents>(TOAST_TAG, {
           inner.style.transform = `translateX(${distance}px)`;
           inner.style.opacity = String(Math.max(0, 1 - Math.abs(distance) / 200));
         },
+        onRelease: resetSwipeStyles,
       });
+    };
 
     // ── Toast lifecycle ────────────────────────────────────────────────────
 
