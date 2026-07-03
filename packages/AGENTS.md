@@ -6,8 +6,8 @@ DOX contract for all source work under `packages/`. Each `packages/<name>/` is a
 
 ## Ownership
 
-- **Engineering conventions** (logging standard, dispose convention, error classes, file layout) — `.ai/rules/conventions.md` (single source of truth). Read it before editing any package.
-- **Package catalogue and dependency graph** — `.ai/rules/catalogue.md`.
+- **Engineering conventions** (logging standard, dispose convention, error classes, file layout) — `.ai/rules/code/conventions.md` (single source of truth). Read it before editing any package.
+- **Package catalogue and dependency graph** — `.ai/rules/data/catalogue.md`.
 - **Per-package usage docs** live in `docs/<name>/`; per-package overview in `packages/<name>/README.md`.
 
 ## Local Contracts
@@ -15,13 +15,13 @@ DOX contract for all source work under `packages/`. Each `packages/<name>/` is a
 Standard package shape: `src/index.ts` (the only public surface), `src/__tests__/` (Vitest), `vite.config.ts` (ESM+CJS), strict `tsconfig.json`.
 
 - All public exports go through `src/index.ts`, sorted (ESLint Perfectionist).
-- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.ai/rules/conventions.md` for the full documented exceptions list.
-- Internal dev warnings go through `src/_dev.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/rules/conventions.md`.
+- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.ai/rules/code/conventions.md` for the full documented exceptions list.
+- Internal dev warnings go through `src/_dev.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/rules/code/conventions.md`.
 - Owned-resource teardown is `dispose()` + `[Symbol.dispose]`. Never `destroy()`/`close()`/`cleanup()`.
 
 ## Work Guidance
 
-- Most packages have no local AGENTS.md and need none — the rules above plus `.ai/rules/conventions.md` are their full contract.
+- Most packages have no local AGENTS.md and need none — the rules above plus `.ai/rules/code/conventions.md` are their full contract.
 - Only the packages in the Child DOX Index below carry extra local rules.
 
 ## Verification

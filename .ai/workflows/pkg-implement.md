@@ -6,14 +6,13 @@ You are a TypeScript library author implementing improvements to a **Vielzeug** 
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules. Use the universal `[SKIP]` marker (state reason) for an item you intentionally don't implement — don't invent a separate word for it.
 
 ### Workflow-specific markers
 
-| Marker           | Meaning                                    |
-| ---------------- | ------------------------------------------ |
-| `[IMPLEMENTING]` | Currently working on this item             |
-| `[SKIPPED]`      | Item intentionally deferred (state reason) |
+| Marker           | Meaning                        |
+| ---------------- | ------------------------------- |
+| `[IMPLEMENTING]` | Currently working on this item |
 
 ### Execution checkpoints
 
@@ -42,7 +41,7 @@ After all plan items are complete, output a final checkpoint:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`. Local contracts override defaults — e.g. for `refine` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain`. Local contracts override defaults — e.g. for `refine` run the whole-tree test command and regenerate exports with `sync:exports` (never hand-edit the `exports` map); `lucide` is an allowed dependency there.
 
 ## 2. Philosophy
 
@@ -88,7 +87,7 @@ For each item in the plan (in priority order), emit `[IMPLEMENTING] <ID> — <Ti
    | 🟢 New feature / Enhancement               | **Skip** — by definition not present in siblings                       |
    | 🟡 Test / Coverage                         | **Skip** — tests are package-local                                     |
 
-   For Required propagation, scope the grep to packages that transitively depend on `<name>` using the dependency graph in `.ai/rules/catalogue.md`. For each affected package, apply the same fix cohesively and run its tests. Record each propagated fix as a sub-item (e.g. `6.1 propagated to: ripple, courier`).
+   For Required propagation, scope the grep to packages that transitively depend on `<name>` using the dependency graph in `.ai/rules/data/catalogue.md`. For each affected package, apply the same fix cohesively and run its tests. Record each propagated fix as a sub-item (e.g. `6.1 propagated to: ripple, courier`).
 
 7. **Confirm completion** — emit `[DONE] <ID>` and output the item checkpoint.
 

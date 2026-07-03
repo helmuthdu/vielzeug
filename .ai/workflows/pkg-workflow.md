@@ -7,18 +7,20 @@
 ## Contract
 
 - **Inputs:** package name, mode, optional scope/goals from user
-- **Outputs:** `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`
-- **Universal rules:** `.ai/rules/agent-execution.md` — principles, markers, breaking-change definition, run artifact lifecycle (ephemeral, gitignored — see `.ai/workflows/runs/AGENTS.md`).
+- **Outputs:** `runs/<name>/progress.md`, `runs/<name>/plan.md`, `runs/<name>/review.md`, `runs/<name>/security.md`, `runs/<name>/tests-report.md`, `runs/<name>/repl-report.md`
+- **Universal rules:** `.ai/rules/process/agent-execution.md` — principles, markers, breaking-change definition, run artifact lifecycle (ephemeral, gitignored — see `.ai/workflows/runs/AGENTS.md`).
 
 ## Modes
 
-| Mode          | Use when                                                                          |
-| ------------- | --------------------------------------------------------------------------------- |
-| `analyse`     | Analysing an existing package for bugs, design issues, and enhancements (default) |
-| `feature`     | Adding a specific new feature to an existing package                              |
-| `new-package` | Creating a new package from scratch                                               |
+<!-- GENERATED:mode-table:BEGIN -->
+| Mode | Use when | Pass structure |
+| --- | --- | --- |
+| `analyse` (default) | Existing package improvement | arch review → DX deep-dive → synthesis |
+| `feature` | Adding a specific new feature to an existing package | requirements → API design → acceptance criteria |
+| `new-package` | Creating a new package from scratch | requirements → API design → acceptance criteria |
+<!-- GENERATED:mode-table:END -->
 
-Mode determines the pass structure in Phase 1. **Phases 2–7 are identical across all modes.**
+Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.modes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts; same source `/pkg-plan` uses, so the two can no longer drift apart). Mode determines the pass structure in Phase 1. **Phases 2–7 are identical across all modes.**
 
 ## Scope selection
 
@@ -26,7 +28,8 @@ Don't default to the full pipeline. Classify the request, propose a scope, let t
 
 1. Read the user's request (and, for `analyse` mode, any issue/diff the user explicitly links — don't go hunting `git log`/`git diff` yourself to construct one).
 2. Match it against the change types below and state your pick: `"This looks like a <type> — proposing scope: <key>. Proceed, or run the full pipeline instead?"`
-3. Proceed on confirmation. If the user just says "go", use your best-match scope rather than silently defaulting to `full`.
+3. **No table row fits?** Don't force it into the nearest bucket. Propose a custom phase subset directly — `"This needs <phase> → <phase> → <phase>, which isn't one of the named scopes. Proceed with this subset, or run the full pipeline instead?"` — same confirm-before-proceeding rule as any other scope. The 8 phases are already independent (§ Phase execution guide); named scopes below are common cases, not the only valid combinations.
+4. Proceed on confirmation. If the user just says "go", use your best-match scope (named or custom) rather than silently defaulting to `full`.
 
 <!-- GENERATED:scope-table:BEGIN -->
 | Change type | Scope key | Phases (converge within each) |
@@ -41,15 +44,17 @@ Don't default to the full pipeline. Classify the request, propose a scope, let t
 
 Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.scopes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts).
 
-Accepted scope keys: `full`, `bug`, `new-api`, `docs`, `tests`, `security`.
+**Scope preconditions** (generated from `pkgWorkflow.scopeRequirements` — add a new scope's precondition there, not as a one-off sentence here):
 
-`security` scope runs Implement without running Plan. Use it only when `.ai/workflows/runs/<name>/plan.md` already exists from a prior planning cycle.
+<!-- GENERATED:scope-notes:BEGIN -->
+- **`security`** — Runs Implement without running Plan — use only when `runs/<name>/plan.md` already exists from a prior planning cycle.
+<!-- GENERATED:scope-notes:END -->
 
 ## When to escalate
 
 Pause and ask the user before continuing if:
 
-- The plan implies a **breaking change** rippling into dependent packages (check `.ai/rules/catalogue.md`).
+- The plan implies a **breaking change** rippling into dependent packages (check `.ai/rules/data/catalogue.md`).
 - The **baseline is already red** — confirm whether to fix it first or proceed.
 - Requirements or scope are **ambiguous** and two reasonable interpretations diverge materially.
 - A propagation would touch **many packages** or carries non-trivial risk.
@@ -80,7 +85,7 @@ pnpm vitest run packages/<name>/src/__tests__/
 pnpm --filter @vielzeug/<name> lint
 ```
 
-See `.ai/rules/workspace.md § Per-package test command overrides` for packages with a different test command (e.g. `refine`).
+See `.ai/rules/process/workspace.md § Per-package test command overrides` for packages with a different test command (e.g. `refine`).
 
 Record in `runs/<name>/progress.md`: passing test count, test file count, lint status (clean/errors), exported-symbol count from `src/index.ts`.
 
@@ -90,7 +95,7 @@ These apply to every phase:
 
 - **Do not commit, push, or publish** without explicit user approval. Generating `rush change` files is fine; committing or pushing is not unless asked.
 - **Do not modify other packages** beyond the scoped propagations defined in `/pkg-implement` step 6, and never without noting them.
-- **Do not add runtime or dev dependencies** without explicit instruction (see `.ai/rules/conventions.md` for documented exceptions).
+- **Do not add runtime or dev dependencies** without explicit instruction (see `.ai/rules/code/conventions.md` for documented exceptions).
 - **Stay green:** never weaken, skip, or delete tests to make a phase pass. Surface real failures instead.
 
 ## 3. Resuming an interrupted run
@@ -109,15 +114,15 @@ If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous
 
 **Carry context across passes.** Load prior phase artifacts from `runs/<name>/` rather than re-reading the whole package on every pass. Prefer the `@vielzeug` MCP's source/docs lookup tools for most packages; its component-listing tools for `refine` (resolve exact tool names via your MCP tool list — do not assume a fixed name/prefix).
 
-Every multi-pass phase (Plan, Implement, Review, Security) converges on evidence, not a fixed count — see `.ai/rules/agent-execution.md § Multi-pass convergence`. ~3 passes is typical for a full-size package; a small package may converge in 1, a large one may need more. Tests, Docs, and REPL are inherently single-pass phases.
+Plan and Implement **converge on evidence** — no fixed pass count. Review and Security run a **fixed 3-pass enumeration** (each pass is a distinct, mandatory concern, not a repetition of the same activity) — see `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact distinction. ~3 passes is typical for Plan/Implement on a full-size package; a small package may converge in 1, a large one may need more. Tests, Docs, and REPL are inherently single-pass phases.
 
 ```
-Phase 1: Plan      (converge, ~3 passes)   (/pkg-plan — mode: analyse / feature / new-package)
-Phase 2: Implement (converge, ~3 rounds)   (/pkg-implement)
-Phase 3: Review    (converge, ~3 lenses)   (/pkg-review)
-Phase 4: Security  (converge, ~3 passes)   (/pkg-security)
-Phase 5: Tests     × 1                     (/pkg-tests)
-Phase 6: Docs      × 1                     (/pkg-docs)
+Phase 1: Plan      (converge, ~3 passes)      (/pkg-plan — mode: analyse / feature / new-package)
+Phase 2: Implement (converge, ~3 rounds)      (/pkg-implement)
+Phase 3: Review    (fixed, 3 lenses)          (/pkg-review)
+Phase 4: Security  (fixed, 3 surfaces)        (/pkg-security)
+Phase 5: Tests     × 1                        (/pkg-tests)
+Phase 6: Docs      × 1                        (/pkg-docs)
 Phase 7: REPL      × 1                     (/pkg-repl)
 ```
 
@@ -148,13 +153,13 @@ Emit `[PHASE 1]`. Run `/pkg-plan`, applying its convergence rule (stop when a pa
 
 Emit `[PHASE 2]`. Execute `/pkg-implement`, working through `plan.md` items by priority in as many rounds as needed to finish all items and reach green (typically 3: high-priority → medium-priority → polish).
 
-> **`new-package` mode only — Round 0 — Scaffold**: create the package skeleton before Round 1. Follow `.ai/rules/workspace.md § New-package scaffolding`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
+> **`new-package` mode only — Round 0 — Scaffold**: create the package skeleton before Round 1. Follow `.ai/rules/process/workspace.md § New-package scaffolding`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
 
 - **Round 1**: high-priority items (🔴 Bug + 🟠 Design).
 - **Round 2**: medium-priority items (🟡 Coverage + 🟢 Enhancement); re-verify all tests pass.
 - **Round 3+**: final polish — TypeScript quality, `pnpm --filter @vielzeug/<name> fix`, zero lint errors. Repeat until all plan items are done and the suite is green.
 
-Before each round, verify the baseline is green. After each round, run the test suite and fix any failures before proceeding. See `.ai/rules/workspace.md` for per-package test commands.
+Before each round, verify the baseline is green. After each round, run the test suite and fix any failures before proceeding. See `.ai/rules/process/workspace.md` for per-package test commands.
 
 **Phase checkpoint:**
 
@@ -266,7 +271,7 @@ Emit `[PHASE 7]` — or `[SKIP]` with reason for DOM-output packages (`ore`, `re
 
 ## 5. Final checklist
 
-- [ ] All tests pass — see `.ai/rules/workspace.md` for per-package test commands
+- [ ] All tests pass — see `.ai/rules/process/workspace.md` for per-package test commands
 - [ ] `pnpm --filter @vielzeug/<name> lint` — zero lint errors
 - [ ] `pnpm --filter @vielzeug/<name> build` — build succeeds, no TypeScript errors
 - [ ] Docs in `docs/<name>/` are in sync with `src/index.ts`
@@ -311,7 +316,7 @@ Output the final report using **exactly this format**:
 
 ## 6. Persistence
 
-Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in `.ai/rules/agent-execution.md § Run artifacts`.
+Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in `.ai/rules/process/agent-execution.md § Run artifacts`.
 
 - `plan.md` — written by Phase 1 (`/pkg-plan`); consumed by Phase 2 (`/pkg-implement`).
 - `progress.md` — baseline metrics + phase status table + propagation notes.

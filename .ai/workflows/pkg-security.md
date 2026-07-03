@@ -6,7 +6,7 @@ You are a security engineer auditing a **Vielzeug** TypeScript library package.
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -31,7 +31,7 @@ After each pass, output a checkpoint before proceeding:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 These are **client-side and universal TypeScript libraries** — no server-side secrets by default, but they may be used in both browser and Node environments. Zero external runtime dependencies in most packages — the attack surface is largely the package's own code and how callers use it. (`refine` bundles `lucide`; audit its declared deps under "Dependency Risks".)
 
@@ -149,76 +149,15 @@ Has this finding been fixed?
 
 ## 5. Output format
 
-List every finding with:
-
-```
-[STATUS] [SEVERITY] [CATEGORY]
-File: src/foo.ts:42
-Finding: <description>
-Risk: <what an attacker could do>
-Fix: <recommended remediation>
-```
-
-Where:
-
-- **STATUS**: `[VULN]` = confirmed vulnerability, `[CONCERN]` = risky pattern, `[SAFE]` = explicitly checked safe area
-- **SEVERITY**: `CRITICAL` | `MAJOR` | `MINOR` | `NIT` (same scale as `/pkg-review` — see `.ai/rules/agent-execution.md § Severity`)
-- **CATEGORY**: `Input Validation`, `Injection`, `Prototype Pollution`, `Information Leakage`, `Type Safety`, `Dependency`, `Browser`, `Server/API`, or similar
-
-When a finding is fixed during the audit, annotate it inline:
-
-```
-[VULN] [MAJOR] [Injection] File: src/foo.ts:42 [DONE]
-Finding: ...
-Fix: ...
-```
+See `.ai/rules/docs/security-template.md` for the per-finding format and inline `[DONE]` annotation.
 
 ## 6. Persist findings
 
-Write the audit output to `.ai/workflows/runs/<name>/security.md`. Follow the persistence semantics in `.ai/rules/agent-execution.md § Run artifacts` — append each surface's findings under its own heading within a run; overwrite at the start of a new cycle. Present the same content in chat.
+Write the audit output to `.ai/workflows/runs/<name>/security.md` once, after all 3 passes complete — one section per surface in the final file, not a running append after each pass. Overwrite any prior contents (see `.ai/rules/process/agent-execution.md § Run artifacts`). Present the same content in chat.
 
 ## 7. Audit summary
 
-End with an **Audit Summary** section using **exactly this format**:
-
-```
-## Audit Summary
-
-### Executive Summary
-
-<2–3 sentences: overall security posture, most significant concern, and confidence level.>
-
-### Finding Counts
-
-| Status | CRITICAL | MAJOR | MINOR | NIT | Total |
-|--------|----------|-------|-------|-----|-------|
-| [VULN] | N | N | N | N | N |
-| [CONCERN] | N | N | N | N | N |
-| [DONE] | N | N | N | N | N |
-
-### Remediation Priorities
-
-1. <highest priority finding>
-2. <next>
-3. <next (max 5)>
-
-### Overall Risk Rating
-
-🔴 Red / 🟡 Yellow / 🟢 Green / 🔵 N/A
-
-<One sentence justifying the rating.>
-```
-
-This is a single aggregate signal, deliberately worded differently from the per-finding `CRITICAL`/`MAJOR`/`MINOR`/`NIT` severity scale above (§0) so the two are never mistaken for the same thing — "Red" doesn't mean "has a `CRITICAL`", it means "ship-blocking as a whole."
-
-**Rating rules:**
-
-| Condition                                  | Rating    |
-| ------------------------------------------ | --------- |
-| Any unfixed CRITICAL                       | 🔴 Red    |
-| Unfixed MAJOR, no CRITICAL                 | 🟡 Yellow |
-| Only MINOR/NIT concerns, no CRITICAL/MAJOR | 🟢 Green  |
-| No attack surface; no meaningful risks     | 🔵 N/A    |
+See `.ai/rules/docs/security-template.md` for the exact `security.md` Audit Summary format and Risk Rating rules.
 
 ## 8. Quick reference — execution flow
 

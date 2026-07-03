@@ -1,7 +1,7 @@
 # Vielzeug — Engineering Conventions
 
-> Workspace toolchain and commands → `.ai/rules/workspace.md`
-> Package catalogue and dependency graph → `.ai/rules/catalogue.md`
+> Workspace toolchain and commands → `.ai/rules/process/workspace.md`
+> Package catalogue and dependency graph → `.ai/rules/data/catalogue.md`
 
 ## Key conventions
 

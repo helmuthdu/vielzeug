@@ -13,7 +13,7 @@ Your job is to:
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` for universal principles, decision framework, anti-patterns, and markers.
+Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, anti-patterns, and markers.
 
 ### Workflow-specific markers
 
@@ -37,14 +37,14 @@ After each numbered step, output a checkpoint summary before proceeding:
 ### Decision framework (docs-specific)
 
 1. **Source code is truth** — if docs and source disagree, source wins.
-2. **Template rules are mandatory** — structure and formatting rules in `.ai/rules/doc-template.md` are not suggestions.
+2. **Template rules are mandatory** — structure and formatting rules in `.ai/rules/docs/doc-template.md` are not suggestions.
 3. **Diátaxis quadrant determines content** — never mix reference into how-to or vice versa.
 4. **Minimal diff principle** — prefer surgical edits over rewrites when content is correct but misformatted.
 5. **When uncertain, read more** — use MCP tools or read source before guessing.
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` (includes `.ai/rules/doc-template.md`, needed only here) and `§ DOX chain` (docs variant).
+See `.ai/rules/process/agent-execution.md § Context pointers` (includes `.ai/rules/docs/doc-template.md`, needed only here) and `§ DOX chain` (docs variant).
 
 **Prefer the `@vielzeug` MCP for source-of-truth API data** before reading source file-by-file. Use `get-docs` and `get-source` for most packages; for `refine` use `list-components` / `get-component`.
 
@@ -167,7 +167,7 @@ pnpm --filter @vielzeug/codex build
 
 **Goal:** Apply all findings from Steps 2–3 and enforce template compliance.
 
-**Before editing any page**, identify the package archetype and any template exceptions declared in `packages/<name>/AGENTS.md`. Consult `.ai/rules/doc-template.md` for:
+**Before editing any page**, identify the package archetype and any template exceptions declared in `packages/<name>/AGENTS.md`. Consult `.ai/rules/docs/doc-template.md` for:
 
 - The full archetype table (Library, CLI, DOM-output, Build tool, Pure type)
 - All page template structures (`index.md`, `usage.md`, `api.md`, `examples.md`, `examples/<slug>.md`)
@@ -202,7 +202,7 @@ For each page, output `[ACTION] <filename>: <summary of changes>` or `[SKIP] <fi
 
 **Goal:** Catch errors before declaring done. This step is **mandatory**.
 
-**Compliance self-check** (see `.ai/rules/doc-template.md` for the full checklists):
+**Compliance self-check** (see `.ai/rules/docs/doc-template.md` for the full checklists):
 
 - [ ] All signatures in `api.md` match `src/index.ts` exactly
 - [ ] All code blocks use current API

@@ -7,8 +7,8 @@
 //   node scripts/sync-workflow-docs.mjs --check  # exit 1 if output is stale (CI)
 //
 // Why a hand-rolled module instead of a bundler/codegen library: the output is
-// ~4 small string templates. Pulling in a templating dependency for this would
-// be more machinery than the problem needs — see .ai/rules/conventions.md
+// ~5 small string templates. Pulling in a templating dependency for this would
+// be more machinery than the problem needs — see .ai/rules/code/conventions.md
 // (zero-dependency discipline extends to repo tooling, not just packages).
 //
 // Pure functions below are exported for scripts/__tests__/sync-workflow-docs.test.mjs
@@ -121,7 +121,26 @@ export function assertValidManifest(manifest) {
     }
   }
 
-  const { phases, scopes } = manifest.pkgWorkflow;
+  const { modes, phases, scopeRequirements = {}, scopes } = manifest.pkgWorkflow;
+
+  for (const scopeKey of Object.keys(scopeRequirements)) {
+    if (!(scopeKey in scopes)) {
+      throw new Error(`manifest.pkgWorkflow.scopeRequirements references unknown scope "${scopeKey}"`);
+    }
+  }
+
+  const defaultModes = modes.filter((m) => m.isDefault);
+  if (defaultModes.length !== 1) {
+    throw new Error(
+      `manifest.pkgWorkflow.modes: exactly one mode must set "isDefault": true (found ${defaultModes.length})`,
+    );
+  }
+  for (const { key } of modes) {
+    if (!SLUG_PATTERN.test(key)) {
+      throw new Error(`manifest.pkgWorkflow.modes: key "${key}" must match ${SLUG_PATTERN}`);
+    }
+  }
+
   const knownPhaseKeys = new Set([...phases.map((p) => p.key), ...VIRTUAL_PHASE_KEYS]);
   for (const [scopeKey, phaseKeys] of Object.entries(scopes)) {
     for (const phaseKey of phaseKeys) {
@@ -168,13 +187,36 @@ export function scopeTable({ scopeDescriptions, scopes }) {
   return [toRow(header), toRow(header.map(() => '---')), ...rows.map(toRow)].join('\n');
 }
 
-export function jsDataBlock({ domOutputPackages, phases, scopes }) {
+/** Bullet list of scope preconditions/exceptions that don't fit as a table cell
+ * (e.g. "security" requiring a prior plan.md) — data-driven so a future scope's
+ * precondition can't end up as an easy-to-miss hand-written sentence again. */
+export function scopeNotes(scopeRequirements) {
+  const entries = Object.entries(scopeRequirements);
+  if (entries.length === 0) return '_No scope-specific preconditions._';
+  return entries.map(([key, requirement]) => `- **\`${key}\`** — ${requirement}`).join('\n');
+}
+
+/** Same table, byte-identical, patched into both pkg-plan.md and pkg-workflow.md —
+ * the two previously hand-copied Mode tables drifted from each other in practice
+ * (different wording, different columns) before this became generated. */
+export function modeTable(modes) {
+  const header = ['Mode', 'Use when', 'Pass structure'];
+  const rows = modes.map(({ isDefault, key, passStructure, useWhen }) => [
+    isDefault ? `\`${key}\` (default)` : `\`${key}\``,
+    useWhen,
+    passStructure,
+  ]);
+  const toRow = (cells) => `| ${cells.join(' | ')} |`;
+  return [toRow(header), toRow(header.map(() => '---')), ...rows.map(toRow)].join('\n');
+}
+
+export function jsDataBlock({ domOutputPackages, modes, phases, scopes }) {
   return [
-    `const VALID_MODES = ${printStrArray(['analyse', 'feature', 'new-package'])};`,
+    `const VALID_MODES = ${printStrArray(modes.map((m) => m.key))};`,
     `const VALID_SCOPES = ${printStrArray(Object.keys(scopes))};`,
     '',
     '// DOM-output packages skip the REPL phase (no preview container).',
-    '// Authoritative list: .ai/rules/catalogue.md § Package metadata',
+    '// Authoritative list: .ai/rules/data/catalogue.md § Package metadata',
     `const domOutputPackages = ${printStrArray(domOutputPackages)};`,
     '',
     '// Phase inclusion per scope — source: .ai/workflows/manifest.json § pkgWorkflow.scopes',
@@ -203,7 +245,9 @@ export function syncFile(relPath, content, { check, onStale, root = ROOT } = {})
       onStale?.(`[STALE] ${relPath} is out of sync with .ai/workflows/manifest.json`);
       return 'stale';
     }
-    console.log(`[SKIP] ${relPath} not present locally — gitignored, run \`pnpm gen:workflow-docs\` if you use this tool`);
+    console.log(
+      `[SKIP] ${relPath} not present locally — gitignored, run \`pnpm gen:workflow-docs\` if you use this tool`,
+    );
     return 'skipped';
   }
 
@@ -275,6 +319,24 @@ export function run({ check = false } = {}) {
     scopeTable(manifest.pkgWorkflow),
     { check, onStale },
   );
+
+  syncPatchedFile(
+    '.ai/workflows/pkg-workflow.md',
+    '<!-- GENERATED:scope-notes:BEGIN -->',
+    '<!-- GENERATED:scope-notes:END -->',
+    scopeNotes(manifest.pkgWorkflow.scopeRequirements ?? {}),
+    { check, onStale },
+  );
+
+  for (const relPath of ['.ai/workflows/pkg-plan.md', '.ai/workflows/pkg-workflow.md']) {
+    syncPatchedFile(
+      relPath,
+      '<!-- GENERATED:mode-table:BEGIN -->',
+      '<!-- GENERATED:mode-table:END -->',
+      modeTable(manifest.pkgWorkflow.modes),
+      { check, onStale },
+    );
+  }
 
   syncPatchedFile(
     '.claude/workflows/pkg-workflow.js',

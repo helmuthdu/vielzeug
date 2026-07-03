@@ -50,7 +50,7 @@ flux       → ripple
 forge      → arsenal, ripple
 ledger     → ripple
 orbit      → arsenal, ripple
-ore        → arsenal, orbit, ripple
+ore        → ripple
 prism      → orbit, ripple
 pulse      → ripple
 refine     → arsenal, ore, dnd, orbit, ripple, scroll, tempo

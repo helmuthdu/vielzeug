@@ -6,32 +6,34 @@ You are a TypeScript library author and DX-focused software architect planning w
 
 ## Modes
 
-| Mode                | Use when                                             | Pass structure                                              |
-| ------------------- | ---------------------------------------------------- | ----------------------------------------------------------- |
-| `analyse` (default) | Existing package improvement                         | arch review → DX deep-dive → synthesis → `plan.md`          |
-| `feature`           | Adding a specific new feature to an existing package | requirements → API design → acceptance criteria → `plan.md` |
-| `new-package`       | Creating a new package from scratch                  | requirements → API design → acceptance criteria → `plan.md` |
+<!-- GENERATED:mode-table:BEGIN -->
+| Mode | Use when | Pass structure |
+| --- | --- | --- |
+| `analyse` (default) | Existing package improvement | arch review → DX deep-dive → synthesis |
+| `feature` | Adding a specific new feature to an existing package | requirements → API design → acceptance criteria |
+| `new-package` | Creating a new package from scratch | requirements → API design → acceptance criteria |
+<!-- GENERATED:mode-table:END -->
 
-**Phases 2–7 of `/pkg-workflow` consume `plan.md` identically regardless of mode.** The output format is shared.
+Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.modes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts). All modes converge on `plan.md`; **Phases 2–7 of `/pkg-workflow` consume it identically regardless of mode.** The output format is shared.
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` for universal principles, decision framework, anti-patterns, and convergence rules. This section defines only workflow-specific markers.
+Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, anti-patterns, and convergence rules — including the universal `[FINDING]` and `[SKIP]` markers, reused below rather than re-invented. This section defines only workflow-specific markers: structural spec-content tags with no universal equivalent.
 
 ### Workflow-specific markers
 
-| Marker           | Meaning                                                                  |
-| ---------------- | ------------------------------------------------------------------------ |
-| `[ISSUE]`        | Concrete gap or problem found in source                                  |
-| `[CANDIDATE]`    | Potential improvement item, not yet ranked                               |
-| `[PROMOTED]`     | Item moved from Future into the immediate plan                           |
-| `[REQ]`          | Confirmed requirement (spec modes)                                       |
-| `[CONSTRAINT]`   | Hard constraint — zero-dep, browser compat, export shape (spec modes)    |
-| `[OUT-OF-SCOPE]` | Explicitly excluded from this cycle                                      |
-| `[API]`          | Proposed public export — function, class, or constant (spec modes)       |
-| `[TYPE]`         | Proposed type or interface (spec modes)                                  |
-| `[ERROR]`        | Proposed error class (spec modes)                                        |
-| `[BREAKING]`     | Item that changes an existing public export — escalate before proceeding |
+| Marker         | Meaning                                                                            |
+| -------------- | ----------------------------------------------------------------------------------- |
+| `[CANDIDATE]`  | Potential improvement item, not yet ranked                                         |
+| `[PROMOTED]`   | Item moved from Future into the immediate plan                                     |
+| `[REQ]`        | Confirmed requirement (spec modes)                                                 |
+| `[CONSTRAINT]` | Hard constraint — zero-dep, browser compat, export shape (spec modes)              |
+| `[API]`        | Proposed public export — function, class, or constant (spec modes)                 |
+| `[TYPE]`       | Proposed type or interface (spec modes)                                            |
+| `[ERROR]`      | Proposed error class (spec modes)                                                  |
+| `[BREAKING]`   | Item that changes an existing public export — pair with `[ESCALATE]` before proceeding |
+
+Use `[FINDING]` for a raw discovered problem (`analyse` mode Pass 1) and `[SKIP]` for anything explicitly excluded from this cycle (spec modes) — do not introduce new words for either.
 
 ### Execution checkpoints
 
@@ -52,7 +54,7 @@ After each pass, output a checkpoint summary before proceeding:
 ```
 ✅ CHECKPOINT: Pass N complete
 - Mode: feature / new-package
-- Requirements: N [REQ], N [CONSTRAINT], N [OUT-OF-SCOPE]  ← Pass 1
+- Requirements: N [REQ], N [CONSTRAINT], N [SKIP]  ← Pass 1
 - API items: N [API], N [TYPE], N [ERROR], N [BREAKING]    ← Pass 2+
 - Plan items: N (Pass 3 only)
 - Proceeding to Pass N+1 / Writing plan.md
@@ -60,7 +62,7 @@ After each pass, output a checkpoint summary before proceeding:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`. Honor any local contracts.
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain`. Honor any local contracts.
 
 **Before starting any pass:**
 
@@ -84,7 +86,7 @@ Apply throughout all passes and modes:
 
 ## 3. Three-pass workflow
 
-Three passes (discover → refine → synthesize) is the default shape for a mid-size package. For a small package (roughly <10 exports), it's fine to move faster and merge Pass 1+2 into a single discover-and-rank sweep before synthesis — you still need a synthesis pass to produce `plan.md`, but don't manufacture filler findings in a separate pass just to hit 3. For a large or unusually messy package, add an extra discovery pass rather than cramming — see `.ai/rules/agent-execution.md § Multi-pass convergence`.
+Three passes (discover → refine → synthesize) is the default shape for a mid-size package. For a small package (roughly <10 exports), it's fine to move faster and merge Pass 1+2 into a single discover-and-rank sweep before synthesis — you still need a synthesis pass to produce `plan.md`, but don't manufacture filler findings in a separate pass just to hit 3. For a large or unusually messy package, add an extra discovery pass rather than cramming — see `.ai/rules/process/agent-execution.md § Multi-pass convergence`.
 
 ### `analyse` mode
 
@@ -102,7 +104,7 @@ Treat the package as if designing it from scratch. Focus on:
 Output each finding as:
 
 ```
-[ISSUE] <Category> — <Title>
+[FINDING] <Category> — <Title>
 Location: <file>:<approx lines or function name>
 Problem: <what is wrong>
 Impact: <who is affected and how>
@@ -177,8 +179,8 @@ Reason: <why this constraint applies>
 Output out-of-scope items as:
 
 ```
-[OUT-OF-SCOPE] — <description>
-Reason: <why deferred to Future>
+[SKIP] — <description>
+Reason: <why this is excluded from this cycle>
 ```
 
 #### Pass 2 — API design & types
@@ -292,7 +294,7 @@ For each issue, assign a category:
 
 ## 5. Risks & constraints
 
-Consult `.ai/rules/catalogue.md` for the dependency graph before suggesting breaking changes. Do not restate it here.
+Consult `.ai/rules/data/catalogue.md` for the dependency graph before suggesting breaking changes. Do not restate it here.
 
 Document potential downstream breakage in dependent packages and migration considerations. **Escalate, don't assume** — surface material breaking changes and ask the user before treating them as settled.
 
@@ -300,11 +302,11 @@ Document potential downstream breakage in dependent packages and migration consi
 
 After the passes converge, write `plan.md` to `.ai/workflows/runs/<name>/plan.md`. Read the root `AGENTS.md` first. **Always overwrite** — never append. `runs/` is gitignored scratch state, not history (see `.ai/workflows/runs/AGENTS.md`) — once overwritten, a prior plan is gone unless the user copied it out first.
 
-See `.ai/rules/plan-template.md` for the complete `plan.md` structure for both `analyse` and `feature`/`new-package` modes.
+See `.ai/rules/docs/plan-template.md` for the complete `plan.md` structure for both `analyse` and `feature`/`new-package` modes.
 
 ## 7. Scaffolding reference (`new-package` mode)
 
-See `.ai/rules/workspace.md § New-package scaffolding` for the complete file list and registration steps.
+See `.ai/rules/process/workspace.md § New-package scaffolding` for the complete file list and registration steps.
 
 ## 8. Next step — implementation scope
 

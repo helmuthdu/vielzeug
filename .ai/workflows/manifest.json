@@ -1,5 +1,5 @@
 {
-  "$comment": "Single machine-readable source for workflow metadata. `scripts/sync-workflow-docs.mjs` generates .claude/commands/*.md and .devin/workflows/*.md stubs, the pkg-workflow.md scope/phase tables, and the pkg-workflow.js generated data block from this file. Run `pnpm gen:workflow-docs` after editing. `pnpm check:workflow-docs` fails if generated output is stale.",
+  "$comment": "Single machine-readable source for workflow metadata. `scripts/sync-workflow-docs.mjs` generates .claude/commands/*.md and .devin/workflows/*.md stubs, the pkg-plan.md/pkg-workflow.md mode tables, the pkg-workflow.md scope table, and the pkg-workflow.js generated data block from this file. Run `pnpm gen:workflow-docs` after editing. `pnpm check:workflow-docs` fails if generated output is stale.",
   "workflows": [
     {
       "slug": "pkg-plan",
@@ -35,6 +35,24 @@
     }
   ],
   "pkgWorkflow": {
+    "modes": [
+      {
+        "key": "analyse",
+        "isDefault": true,
+        "useWhen": "Existing package improvement",
+        "passStructure": "arch review → DX deep-dive → synthesis"
+      },
+      {
+        "key": "feature",
+        "useWhen": "Adding a specific new feature to an existing package",
+        "passStructure": "requirements → API design → acceptance criteria"
+      },
+      {
+        "key": "new-package",
+        "useWhen": "Creating a new package from scratch",
+        "passStructure": "requirements → API design → acceptance criteria"
+      }
+    ],
     "phases": [
       { "key": "baseline", "title": "Baseline", "detail": "Capture test count, lint status, exports" },
       { "key": "plan", "title": "Plan", "detail": "Architecture & DX analysis, converging on a ranked plan.md" },
@@ -60,6 +78,9 @@
       "docs": "Docs-only update",
       "tests": "Test coverage gap",
       "security": "Security hardening"
+    },
+    "scopeRequirements": {
+      "security": "Runs Implement without running Plan — use only when `runs/<name>/plan.md` already exists from a prior planning cycle."
     },
     "domOutputPackages": ["ore", "prism", "refine"]
   }

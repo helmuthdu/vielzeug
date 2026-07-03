@@ -6,11 +6,11 @@ You are a strict code reviewer with deep TypeScript and library design experienc
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
 
 ### Workflow-specific markers
 
-Severity scale (`CRITICAL`/`MAJOR`/`MINOR`/`NIT`) is shared with `/pkg-security` — see `.ai/rules/agent-execution.md § Severity`.
+Severity scale (`CRITICAL`/`MAJOR`/`MINOR`/`NIT`) is shared with `/pkg-security` — see `.ai/rules/process/agent-execution.md § Severity`.
 
 | Marker       | Meaning                                                   |
 | ------------ | --------------------------------------------------------- |
@@ -35,7 +35,7 @@ After each lens pass, output a checkpoint before proceeding:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 Prefer the `@vielzeug` MCP's source-lookup tool (`packageSlug: "<name>"`) to gather source context before reading files one-by-one — resolve the exact tool name from your client's MCP tool list, don't assume a fixed prefix. For `refine`, prefer its component-listing tools since its primary API surface is web components. For large packages, review one category/area per pass.
 
@@ -109,75 +109,15 @@ Focus on:
 
 ## 4. Output format
 
-For each issue found:
-
-```
-[SEVERITY] [LENS] File: src/foo.ts:42
-Issue: <concise description>
-Impact: <brief impact/risk>
-Suggestion: <what to change and why>
-```
-
-Where:
-
-- **SEVERITY**: `CRITICAL` | `MAJOR` | `MINOR` | `NIT`
-- **LENS**: `A-CORRECTNESS`, `B-ARCH`, or `C-TYPES`
-
-When a CRITICAL or MAJOR finding is fixed during or immediately after a pass, annotate it inline:
-
-```
-[MAJOR] [B-ARCH] File: src/foo.ts:42 ✅ FIXED
-Issue: ...
-Suggestion: ...
-```
+See `.ai/rules/docs/review-template.md` for the per-finding format and inline `[FIXED]` annotation.
 
 ## 5. Persist findings
 
-Write the review output to `.ai/workflows/runs/<name>/review.md`. On a multi-pass run, append each lens's findings under its own heading rather than overwriting prior passes. Present the same content in chat.
-
-Follow the persistence semantics in `.ai/rules/agent-execution.md § Run artifacts`.
+Write the review output to `.ai/workflows/runs/<name>/review.md` once, after all 3 lenses complete — one section per lens in the final file, not a running append after each pass. Overwrite any prior contents (see `.ai/rules/process/agent-execution.md § Run artifacts`). Present the same content in chat.
 
 ## 6. Summary
 
-End the review with a `Summary` section using **exactly this format**:
-
-```
-## Summary
-
-### Finding Counts
-
-| Lens | CRITICAL | MAJOR | MINOR | NIT | Fixed |
-|------|----------|-------|-------|-----|-------|
-| A — Correctness | N | N | N | N | N |
-| B — Architecture | N | N | N | N | N |
-| C — TypeScript | N | N | N | N | N |
-| **Total** | **N** | **N** | **N** | **N** | **N** |
-
-### Verdict
-
-<✅ Ready | ⚠️ Needs work | ❌ Block>
-
-<One sentence justifying the verdict.>
-
-### Validation Checklist
-
-- [ ] Implementation is correct for its intended purpose: Yes / No / Unclear
-- [ ] Tests are relevant, focused, and sufficient for core behaviour: Yes / No / Partial
-- [ ] Documentation and types reflect current behaviour: Yes / No / Partial
-- [ ] No obsolete, redundant, or transitional code remains: Yes / No / Unsure
-
-### Open Items
-
-<List any unfixed MAJOR/CRITICAL + recommended next step, or "None — all findings resolved.">
-```
-
-**Verdict rules:**
-
-| Condition                       | Verdict       |
-| ------------------------------- | ------------- |
-| 0 unfixed CRITICAL or MAJOR     | ✅ Ready      |
-| 1–2 unfixed MAJOR (no CRITICAL) | ⚠️ Needs work |
-| Any unfixed CRITICAL            | ❌ Block      |
+See `.ai/rules/docs/review-template.md` for the exact `review.md` Summary format, Verdict rules, and Validation Checklist.
 
 ## 7. Quick reference — execution flow
 

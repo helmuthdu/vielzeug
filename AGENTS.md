@@ -8,9 +8,9 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 
 ## Ownership
 
-- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/rules/conventions.md` (single source of truth; never duplicate it, reference it).
-- **Package catalogue and dependency graph** — `.ai/rules/catalogue.md` (live data; update when packages change).
-- **Workspace toolchain, commands, versioning** — `.ai/rules/workspace.md`.
+- **Engineering conventions** (disposal, logging, errors, file layout) — `.ai/rules/code/conventions.md` (single source of truth; never duplicate it, reference it).
+- **Package catalogue and dependency graph** — `.ai/rules/data/catalogue.md` (live data; update when packages change).
+- **Workspace toolchain, commands, versioning** — `.ai/rules/process/workspace.md`.
 - **Reusable package workflows** (plan / implement / review / security / tests / docs / repl / orchestrator) — `.ai/workflows/*.md` (single source of truth; generated, gitignored stubs in `.devin/workflows/` and `.claude/commands/` delegate here via `.ai/workflows/manifest.json` + `pnpm gen:workflow-docs`; `.junie/guidelines.md` links here directly with no stub file).
 - **Contributor and tooling guidance** — `CLAUDE.md`.
 
@@ -32,16 +32,16 @@ Reach for the workflow that matches the task (full definitions in `.ai/workflows
 | Docs out of sync with the API | `/pkg-docs` |
 | REPL examples stale or missing | `/pkg-repl` |
 
-Cadence inside `/pkg-workflow`: plan → implement converge on their own evidence (no fixed count, ~3 passes/rounds typical); review's 3 lenses and security's 3 surfaces are a fixed enumeration, always all run; tests → docs → repl are single-pass. See `.ai/rules/agent-execution.md § Multi-pass convergence` for the exact rule.
+Cadence inside `/pkg-workflow`: plan → implement converge on their own evidence (no fixed count, ~3 passes/rounds typical); review's 3 lenses and security's 3 surfaces are a fixed enumeration, always all run; tests → docs → repl are single-pass. See `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact rule.
 
 ## Local Contracts
 
-- `.ai/workflows/runs/<pkg>/` (workflow run scratch state) is gitignored, not part of the DOX chain — see `.ai/workflows/runs/AGENTS.md` for its lifecycle contract and `.ai/rules/agent-execution.md § Run artifacts` for the canonical, versioned description.
-- Do not duplicate canonical context; link to the relevant `.ai/rules/*.md` file.
+- `.ai/workflows/runs/<pkg>/` (workflow run scratch state) is gitignored, not part of the DOX chain — see `.ai/workflows/runs/AGENTS.md` for its lifecycle contract and `.ai/rules/process/agent-execution.md § Run artifacts` for the canonical, versioned description.
+- Do not duplicate canonical context; link to the relevant `.ai/rules/**/*.md` file.
 
 ## Work Guidance
 
-Defer to `.ai/rules/conventions.md` for engineering conventions, `.ai/rules/catalogue.md` for the package catalogue, `.ai/rules/workspace.md` for toolchain and commands, and the relevant `.ai/workflows/*.md` for task procedure.
+Defer to `.ai/rules/code/conventions.md` for engineering conventions, `.ai/rules/data/catalogue.md` for the package catalogue, `.ai/rules/process/workspace.md` for toolchain and commands, and the relevant `.ai/workflows/*.md` for task procedure.
 
 ## Verification
 

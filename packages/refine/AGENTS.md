@@ -6,7 +6,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 
 ## Ownership
 
-- Parent contract: `packages/AGENTS.md` and `.ai/rules/conventions.md`.
+- Parent contract: `packages/AGENTS.md` and `.ai/rules/code/conventions.md`.
 - Usage docs: `docs/refine/`.
 
 ## Local Contracts

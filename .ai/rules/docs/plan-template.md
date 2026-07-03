@@ -57,7 +57,7 @@ documentation alignment, TypeScript strictness, architectural clarity.>
 ## Risks & Constraints
 
 <Downstream breakage, migration considerations.
-Reference `.ai/rules/catalogue.md` for the dependency graph — do not restate it.>
+Reference `.ai/rules/data/catalogue.md` for the dependency graph — do not restate it.>
 ````
 
 ---
@@ -82,11 +82,11 @@ Future items in this section use `FUT*` IDs to avoid colliding with feature impl
 
 ## Requirements
 
-| ID  | Description   | Status         |
-| --- | ------------- | -------------- |
-| R1  | <requirement> | [REQ]          |
-| —   | <item>        | [CONSTRAINT]   |
-| —   | <item>        | [OUT-OF-SCOPE] |
+| ID  | Description   | Status       |
+| --- | ------------- | ------------ |
+| R1  | <requirement> | [REQ]        |
+| —   | <item>        | [CONSTRAINT] |
+| —   | <item>        | [SKIP]       |
 
 ## Proposed API
 
@@ -133,5 +133,5 @@ Future items in this section use `FUT*` IDs to avoid colliding with feature impl
 ## Risks & Constraints
 
 <Integration risks, breaking changes, cross-package implications.
-Reference `.ai/rules/catalogue.md` for the dependency graph — do not restate it.>
+Reference `.ai/rules/data/catalogue.md` for the dependency graph — do not restate it.>
 ```

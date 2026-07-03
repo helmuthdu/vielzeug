@@ -8,7 +8,7 @@ VitePress documentation site. Per-package docs live in `docs/<name>/` and follow
 
 - **Documentation template, tone, and per-page structure rules** — `.ai/workflows/pkg-docs.md` (authoritative; do not duplicate here).
 - **REPL example and Monaco-type rules** — `.ai/workflows/pkg-repl.md`.
-- Package facts referenced by docs — `.ai/rules/catalogue.md`.
+- Package facts referenced by docs — `.ai/rules/data/catalogue.md`.
 
 ## Local Contracts
 

@@ -6,7 +6,7 @@ MCP (Model Context Protocol) server and CLI that exposes all Vielzeug docs to AI
 
 ## Ownership
 
-- Parent contract: `packages/AGENTS.md` and `.ai/rules/conventions.md`.
+- Parent contract: `packages/AGENTS.md` and `.ai/rules/code/conventions.md`.
 - Source docs it bundles live in `docs/` (owned by `docs/AGENTS.md`).
 
 ## Local Contracts

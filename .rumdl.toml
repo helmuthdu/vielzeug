@@ -12,7 +12,9 @@ exclude = [
 
 # Include only specific files
 include = [
+    "AGENTS.md",
     "README.md",
+    ".ai/**/*.md",
     "docs/**/*.md",
 ]
 

@@ -55,7 +55,7 @@ pnpm worktree:remove <pkg>
 
 **Why the refusal for coupled packages, not just a warning:** in a shared checkout, if agent A breaks `ripple`'s public API, agent B (on `ore`, which depends on it) sees the break on their very next command — that immediacy is what makes "fix in place" workable. Isolate the two in separate worktrees and that break goes silent until a branch merge — worse, not better, for coupled work. "Coupled" includes optional peer deps (e.g. `flux`'s adapters) — still a real API contract, just a looser one; `scripts/worktree.mjs` labels these `(optional)` in its refusal message so you know which kind of edge you'd be overriding with `--force`.
 
-Independent packages have nothing to hide from each other, so isolation is a pure win there — but don't hand-verify "independent" against `.ai/rules/catalogue.md`'s prose table, it drifts (currently wrong for `tempo`, `herald`, and `arsenal`, all listed there as independent when they aren't). `scripts/worktree.mjs` checks live against `package.json` every time; that's the only check that matters.
+Independent packages have nothing to hide from each other, so isolation is a pure win there — but don't hand-verify "independent" against `.ai/rules/data/catalogue.md`'s prose table, it drifts (currently wrong for `tempo`, `herald`, and `arsenal`, all listed there as independent when they aren't). `scripts/worktree.mjs` checks live against `package.json` every time; that's the only check that matters.
 
 `remove` shells out to plain `git worktree remove`, which already refuses if the worktree has uncommitted changes — that safety is intentional, don't add `--force` to the script's remove path.
 
@@ -75,7 +75,7 @@ Use the format: `feat(courier): add retry logic`
 
 ## Run artifact hygiene
 
-`.ai/workflows/runs/` accumulates `plan.md`, `progress.md`, `review.md`, and `security.md` files across packages and cycles. Stale artifacts from old cycles can mislead agents that load prior context. Most of the time this is a non-issue: agents overwrite artifacts within a cycle (see `.ai/rules/agent-execution.md § Run artifacts`), so a fresh `/pkg-workflow` invocation self-corrects without deleting anything.
+`.ai/workflows/runs/` accumulates `plan.md`, `progress.md`, `review.md`, `security.md`, `tests-report.md`, and `repl-report.md` files across packages and cycles. Stale artifacts from old cycles can mislead agents that load prior context. Most of the time this is a non-issue: agents overwrite artifacts within a cycle (see `.ai/rules/process/agent-execution.md § Run artifacts`), so a fresh `/pkg-workflow` invocation self-corrects without deleting anything.
 
 **Only delete if stale context is actually causing confusion** (e.g. resuming logic in `pkg-workflow.md § Resuming an interrupted run` misfires because `progress.md` describes a different, older effort). This directory is gitignored — deleting is **irreversible**, there is no git history to recover from.
 
@@ -88,6 +88,10 @@ rm -rf .ai/workflows/runs/<name>/
 # Remove all run artifacts for all packages
 rm -rf .ai/workflows/runs/*/
 ```
+
+## Local MCP config
+
+`.ai/mcp/mcp.json` points an MCP client at the in-repo `codex` build (`packages/codex/dist/cli.js`, relative to repo root — requires `pnpm --filter @vielzeug/codex build` first) for dogfooding during development. It is not the config external consumers should use — see `docs/codex/usage.md` for the published-package (`npx @vielzeug/codex`) setup.
 
 ## Dead-dep hygiene
 

@@ -6,7 +6,7 @@ You are updating the interactive playground examples for a **Vielzeug** package.
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -29,9 +29,9 @@ After each step, output a checkpoint before proceeding:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain` (docs variant).
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain` (docs variant).
 
-**DOM-output packages are excluded from the REPL** — the REPL has no preview container. The authoritative list is the `DOM-output` column in `.ai/rules/catalogue.md § Package metadata` (kept in sync with `REPL_EXCLUDED_PACKAGES` in `scripts/vielzeug-packages.ts`). If asked to add REPL examples for a DOM-output package, emit `[SKIP]` and explain.
+**DOM-output packages are excluded from the REPL** — the REPL has no preview container. The authoritative list is the `DOM-output` column in `.ai/rules/data/catalogue.md § Package metadata` (kept in sync with `REPL_EXCLUDED_PACKAGES` in `scripts/vielzeug-packages.ts`). If asked to add REPL examples for a DOM-output package, emit `[SKIP]` and explain.
 
 **`code` strings should stay plain JavaScript by convention** — not a technical requirement (the editor transpiles real TypeScript via Monaco's TS worker before running), but plain JS keeps shipped examples maximally copy-pasteable outside the REPL too. Write `code` as a real multi-line template literal (`` code: `...` ``), never a single-line string with escaped `\n` — the latter is unreadable in diffs and gets no editor syntax highlighting.
 
@@ -200,6 +200,8 @@ Output using **exactly this format**:
 - validate:repl: PASS
 - docs:build: PASS
 ```
+
+Write this report to `.ai/workflows/runs/<name>/repl-report.md`, overwriting any prior contents (see `.ai/rules/process/agent-execution.md § Run artifacts`). Present the same content in chat.
 
 ## 4. Quick reference — execution flow
 

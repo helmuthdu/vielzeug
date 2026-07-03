@@ -9,11 +9,13 @@ import {
   assertValidManifest,
   isTracked,
   jsDataBlock,
+  modeTable,
   printPhases,
   printStrArray,
   printStrArrayMap,
   quote,
   replaceBetweenMarkers,
+  scopeNotes,
   scopeTable,
   stubContent,
   syncFile,
@@ -74,15 +76,31 @@ describe('printStrArray() / printStrArrayMap() / printPhases()', () => {
   it('jsDataBlock() output is syntactically valid and round-trips the manifest shape', () => {
     const src = jsDataBlock({
       domOutputPackages: ['ore'],
+      modes: [{ isDefault: true, key: 'analyse' }, { key: 'feature' }],
       phases: [{ detail: 'd', key: 'baseline', title: 'Baseline' }],
       scopes: { full: ['baseline'] },
     });
     // Evaluate as a function body, same shape pkg-workflow.js's harness uses.
     const fn = new Function(`${src}\nreturn { VALID_MODES, VALID_SCOPES, domOutputPackages, SCOPE_PHASES, PHASES };`);
     const result = fn();
+    expect(result.VALID_MODES).toEqual(['analyse', 'feature']);
     expect(result.domOutputPackages).toEqual(['ore']);
     expect(result.SCOPE_PHASES).toEqual({ full: ['baseline'] });
     expect(result.PHASES).toEqual([{ key: 'baseline', title: 'Baseline', detail: 'd' }]);
+  });
+});
+
+describe('modeTable()', () => {
+  it('renders a GFM table with one row per mode, marking the default', () => {
+    const table = modeTable([
+      { isDefault: true, key: 'analyse', passStructure: 'a → b', useWhen: 'Existing package' },
+      { key: 'feature', passStructure: 'c → d', useWhen: 'New feature' },
+    ]);
+    const lines = table.split('\n');
+    expect(lines).toHaveLength(4); // header + separator + 2 rows
+    expect(lines[0]).toBe('| Mode | Use when | Pass structure |');
+    expect(lines[2]).toBe('| `analyse` (default) | Existing package | a → b |');
+    expect(lines[3]).toBe('| `feature` | New feature | c → d |');
   });
 });
 
@@ -104,6 +122,17 @@ describe('scopeTable()', () => {
   });
 });
 
+describe('scopeNotes()', () => {
+  it('renders one bullet per scope precondition', () => {
+    const notes = scopeNotes({ security: 'Requires an existing plan.md.' });
+    expect(notes).toBe('- **`security`** — Requires an existing plan.md.');
+  });
+
+  it('renders a placeholder when there are no preconditions', () => {
+    expect(scopeNotes({})).toBe('_No scope-specific preconditions._');
+  });
+});
+
 describe('stubContent()', () => {
   it('embeds slug and description into the stub template', () => {
     const content = stubContent('pkg-plan', 'Does planning things');
@@ -118,10 +147,12 @@ describe('stubContent()', () => {
 });
 
 describe('assertValidManifest()', () => {
+  const oneMode = [{ isDefault: true, key: 'analyse' }];
+
   it('accepts a well-formed manifest', () => {
     expect(() =>
       assertValidManifest({
-        pkgWorkflow: { phases: [{ key: 'baseline' }], scopes: { full: ['baseline'] } },
+        pkgWorkflow: { modes: oneMode, phases: [{ key: 'baseline' }], scopes: { full: ['baseline'] } },
         workflows: [{ description: 'ok', slug: 'pkg-plan' }],
       }),
     ).not.toThrow();
@@ -130,7 +161,7 @@ describe('assertValidManifest()', () => {
   it('rejects a slug that is unsafe as a file path', () => {
     expect(() =>
       assertValidManifest({
-        pkgWorkflow: { phases: [], scopes: {} },
+        pkgWorkflow: { modes: oneMode, phases: [], scopes: {} },
         workflows: [{ description: 'x', slug: 'bad/slug' }],
       }),
     ).toThrow(/slug "bad\/slug"/);
@@ -139,7 +170,7 @@ describe('assertValidManifest()', () => {
   it('rejects a scope that references an unknown phase key', () => {
     expect(() =>
       assertValidManifest({
-        pkgWorkflow: { phases: [{ key: 'baseline' }], scopes: { x: ['ghost-phase'] } },
+        pkgWorkflow: { modes: oneMode, phases: [{ key: 'baseline' }], scopes: { x: ['ghost-phase'] } },
         workflows: [],
       }),
     ).toThrow(/references unknown phase "ghost-phase"/);
@@ -148,7 +179,64 @@ describe('assertValidManifest()', () => {
   it('accepts "review-a" as a virtual phase key (Lens-A-only sub-mode, not a real phase)', () => {
     expect(() =>
       assertValidManifest({
-        pkgWorkflow: { phases: [{ key: 'review' }], scopes: { bug: ['review-a'] } },
+        pkgWorkflow: { modes: oneMode, phases: [{ key: 'review' }], scopes: { bug: ['review-a'] } },
+        workflows: [],
+      }),
+    ).not.toThrow();
+  });
+
+  it('rejects zero modes flagged isDefault', () => {
+    expect(() =>
+      assertValidManifest({
+        pkgWorkflow: { modes: [{ key: 'analyse' }], phases: [], scopes: {} },
+        workflows: [],
+      }),
+    ).toThrow(/exactly one mode must set "isDefault": true \(found 0\)/);
+  });
+
+  it('rejects more than one mode flagged isDefault', () => {
+    expect(() =>
+      assertValidManifest({
+        pkgWorkflow: {
+          modes: [
+            { isDefault: true, key: 'analyse' },
+            { isDefault: true, key: 'feature' },
+          ],
+          phases: [],
+          scopes: {},
+        },
+        workflows: [],
+      }),
+    ).toThrow(/exactly one mode must set "isDefault": true \(found 2\)/);
+  });
+
+  it('rejects a mode key that is unsafe as a file path', () => {
+    expect(() =>
+      assertValidManifest({
+        pkgWorkflow: { modes: [{ isDefault: true, key: 'Bad Key' }], phases: [], scopes: {} },
+        workflows: [],
+      }),
+    ).toThrow(/modes: key "Bad Key"/);
+  });
+
+  it('rejects a scopeRequirements entry referencing an unknown scope', () => {
+    expect(() =>
+      assertValidManifest({
+        pkgWorkflow: {
+          modes: oneMode,
+          phases: [],
+          scopeRequirements: { ghost: 'some precondition' },
+          scopes: { full: [] },
+        },
+        workflows: [],
+      }),
+    ).toThrow(/scopeRequirements references unknown scope "ghost"/);
+  });
+
+  it('accepts a manifest with no scopeRequirements at all', () => {
+    expect(() =>
+      assertValidManifest({
+        pkgWorkflow: { modes: oneMode, phases: [], scopes: { full: [] } },
         workflows: [],
       }),
     ).not.toThrow();

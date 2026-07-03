@@ -6,7 +6,7 @@ You are a test engineer improving the Vitest test suite for a **Vielzeug** packa
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -15,7 +15,7 @@ Follow `.ai/rules/agent-execution.md` — universal principles, decision framewo
 | `[GAP]`       | Export or behaviour with no test coverage              |
 | `[ADDED]`     | New test added                                         |
 | `[REMOVED]`   | Test removed (always include reason)                   |
-| `[REWRITTEN]` | Existing test improved without changing what it covers |
+| `[UPDATED]` | Existing test improved without changing what it covers (same word `pkg-repl` uses for the equivalent action) |
 
 ### Execution checkpoints
 
@@ -29,7 +29,7 @@ After each step, output a checkpoint before proceeding:
 
 ## 1. Context
 
-See `.ai/rules/agent-execution.md § Context pointers` and `§ DOX chain`.
+See `.ai/rules/process/agent-execution.md § Context pointers` and `§ DOX chain`.
 
 **Test location:** most packages use `packages/<name>/src/__tests__/`. Some packages co-locate tests next to source (e.g. `refine`: `src/<category>/<component>/<component>.test.ts`). Check the package's `AGENTS.md` for the correct command.
 
@@ -134,7 +134,7 @@ When restructuring:
 
 When adding or updating tests:
 
-- Emit `[ADDED]`, `[REMOVED]`, or `[REWRITTEN]` for each test touched.
+- Emit `[ADDED]`, `[REMOVED]`, or `[UPDATED]` for each test touched.
 - Focus on **observable behaviour** rather than internal implementation details.
 - Use `expect.assertions(n)` in async tests to catch swallowed errors.
 - Ensure each new or updated test covers a distinct behaviour or edge case.
@@ -146,7 +146,7 @@ Run the test suite after changes (use the command that matches the package layou
 ✅ CHECKPOINT: Step 3 — Tests updated
 - Tests added: N
 - Tests removed: N ([REMOVED] items with reasons)
-- Tests rewritten: N
+- Tests updated: N
 - Suite status: GREEN / ❌ RED (describe)
 - Proceeding to Step 4
 ```
@@ -168,7 +168,7 @@ Output using **exactly this format**:
 |----------|-------|---------|
 | [ADDED] | N | <brief list> |
 | [REMOVED] | N | <brief list with reasons> |
-| [REWRITTEN] | N | <brief list> |
+| [UPDATED] | N | <brief list> |
 | [DEFERRED] | N | <list with reasons> |
 
 ### Final State
@@ -180,6 +180,8 @@ Output using **exactly this format**:
 ### Remaining Gaps
 <list of exports or scenarios not covered and why, or "None — all public exports covered">
 ```
+
+Write this report to `.ai/workflows/runs/<name>/tests-report.md`, overwriting any prior contents (see `.ai/rules/process/agent-execution.md § Run artifacts`). Present the same content in chat.
 
 ## 4. Quick reference — execution flow
 

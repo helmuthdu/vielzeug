@@ -8,7 +8,7 @@ Universal principles, markers, and contracts for all Vielzeug AI workflows. Each
 
 - Source code always wins over docs, tests, or comments when they disagree.
 - Prefer the `@vielzeug` MCP's source/docs lookup tools for API context before reading files one-by-one. Resolve the actual tool names via your client's MCP tool list — don't hardcode a numeric prefix (e.g. `mcp0_`); it's assigned per-client load order and isn't stable across sessions or tools.
-- Consult `.ai/rules/conventions.md` (engineering conventions), `.ai/rules/catalogue.md` (packages + dep graph), and `.ai/rules/workspace.md` (toolchain + commands) as needed. Do not duplicate — reference them.
+- Consult `.ai/rules/code/conventions.md` (engineering conventions), `.ai/rules/data/catalogue.md` (packages + dep graph), and `.ai/rules/process/workspace.md` (toolchain + commands) as needed. Do not duplicate — reference them.
 - **`git log`/`git diff`/`git blame` are not context sources for these workflows.** Judge the current implementation as it stands in `packages/<name>/src/` — never "what changed recently" or "why did this used to look different". `plan.md`/`progress.md` already record what a workflow itself touched; use those, not git history, to scope re-review. The only exception is when the user explicitly points at a specific commit, PR, or diff to review.
 
 ### Tests
@@ -40,24 +40,28 @@ Local contracts override defaults. Read the full chain before editing any packag
 
 Every workflow needs the same three rule files — link to them, never restate their content:
 
-- Monorepo conventions → `.ai/rules/conventions.md`
-- Package catalogue and dependency graph → `.ai/rules/catalogue.md`
-- Toolchain commands → `.ai/rules/workspace.md`
+- Monorepo conventions → `.ai/rules/code/conventions.md`
+- Package catalogue and dependency graph → `.ai/rules/data/catalogue.md`
+- Toolchain commands → `.ai/rules/process/workspace.md`
 
-`/pkg-docs` additionally needs `.ai/rules/doc-template.md` (page structures, tone rules, compliance checklists).
+`/pkg-docs` additionally needs `.ai/rules/docs/doc-template.md` (page structures, tone rules, compliance checklists). `/pkg-plan` needs `.ai/rules/docs/plan-template.md` (`plan.md` format). `/pkg-review` needs `.ai/rules/docs/review-template.md` (`review.md` format). `/pkg-security` needs `.ai/rules/docs/security-template.md` (`security.md` format).
 
 ## Run artifacts
 
 Workflow artifacts live under `.ai/workflows/runs/<name>/`. This directory is **gitignored** — it is scratch working state, not project history. Once a file is overwritten, its prior contents are gone unless the user copied them out first. Full lifecycle contract: `.ai/workflows/runs/AGENTS.md`.
 
-| Artifact      | Purpose                                 | Persistence strategy                                |
-| ------------- | --------------------------------------- | --------------------------------------------------- |
-| `plan.md`     | Written by Phase 1; consumed by Phase 2 | **Overwrite** — single current plan                 |
-| `progress.md` | Phase status + baseline metrics         | **Overwrite** — current state, not a log            |
-| `review.md`   | Phase 3 findings (one section per lens) | **Append within run; overwrite at new cycle start** |
-| `security.md` | Phase 4 findings (one section per pass) | **Append within run; overwrite at new cycle start** |
+**One persistence rule for every artifact: overwrite, always.** Each file holds the *current* state of its phase, not a log of every pass that ever ran it. A multi-pass phase (Review's 3 lenses, Security's 3 surfaces) accumulates findings across passes in-session and writes the complete, current file once — it does not append a new section per pass and leave prior-pass sections in place. `[FIXED]`/`[DONE]` inline annotations already capture what changed during the phase; a separate append-only history adds nothing a later phase can act on and only bloats the file it has to read.
 
-"New cycle" = a fresh `/pkg-workflow` invocation for the same package. Stale findings from a prior cycle are misleading — overwrite them.
+| Artifact          | Purpose                                            |
+| ----------------- | --------------------------------------------------- |
+| `plan.md`         | Written by Plan; consumed by Implement and Review   |
+| `progress.md`     | Phase status + baseline metrics (resume record)     |
+| `review.md`       | Review's findings, all lenses, current state        |
+| `security.md`     | Security's findings, all surfaces, current state    |
+| `tests-report.md` | Tests phase's coverage report, current state        |
+| `repl-report.md`  | REPL phase's audit report, current state            |
+
+A prior cycle's artifacts are stale the moment a new `/pkg-workflow` invocation starts on the package — overwrite them, don't accumulate across cycles.
 
 ## Universal execution model
 
@@ -115,7 +119,7 @@ These markers have the same meaning in every workflow. Workflow-specific markers
 
 `/pkg-plan`'s category emojis (🔴 Bug / 🟠 Design / 🟡 Coverage / 🟢 Enhancement) are a _different_ axis — category, not severity — but rank in the same order: treat 🔴 as roughly `CRITICAL`/`MAJOR`, 🟠 as `MAJOR`/`MINOR`, 🟡–🟢 as `MINOR`/`NIT`, when you need to compare priority across workflows (e.g. deciding what to fix first when both a plan item and a review finding touch the same file).
 
-`/pkg-tests`'s markers (`[GAP]`, `[ADDED]`, `[REMOVED]`, `[REWRITTEN]`) describe an _action taken_, not a severity — they have no equivalent in this table.
+`/pkg-tests`'s markers (`[GAP]`, `[ADDED]`, `[REMOVED]`, `[UPDATED]`) describe an _action taken_, not a severity — they have no equivalent in this table. `[UPDATED]` is the same word `/pkg-repl` uses for its equivalent action — don't reintroduce a synonym per workflow.
 
 ## Breaking change definition
 
