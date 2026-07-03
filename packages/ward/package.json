@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ward",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Role-based access control — typed permissions, wildcard patterns, and composable predicates",
   "type": "module",
   "files": [

@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/spell",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Schema-first validation and parsing — runtime type checking, coercion, and custom refinements",
   "type": "module",
   "files": [

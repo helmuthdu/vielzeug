@@ -2,6 +2,32 @@
   "name": "@vielzeug/sandbox",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/sandbox_v1.2.0",
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add SandboxBridge.onState() subscription API, SandboxStateUpdateDetail type, and harden bridge messages against superseded-document races via a render generation tag",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "a4bae58e1b729885f222430142b1a4f235ebb5ba"
+          },
+          {
+            "comment": "render() now rejects with SandboxTimeoutError if no 'ready' signal arrives within 5s, in all builds (previously a dev-only warning that never rejected). Superseded renders and dispose() still resolve, not reject.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "a4bae58e1b729885f222430142b1a4f235ebb5ba"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "chore(sandbox): rename internal _warn.ts to _dev.ts",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/sandbox_v1.1.0",
       "date": "Thu, 02 Jul 2026 06:05:59 GMT",

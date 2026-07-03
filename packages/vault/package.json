@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/vault",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Storage adapter for IndexedDB and localStorage with TTL, reactive signals, and schema validation",
   "type": "module",
   "files": [

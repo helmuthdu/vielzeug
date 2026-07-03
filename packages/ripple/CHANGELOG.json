@@ -2,6 +2,27 @@
   "name": "@vielzeug/ripple",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/ripple_v1.1.0",
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat(ripple): fix store patch/replace atomicity, resource() auto-dispose, SSR scheduling isolation, and add watch() multi-source support",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2f788eeff1c7704805fd24e1ca3d78ba64c2de8e"
+          }
+        ],
+        "patch": [
+          {
+            "comment": "chore(ripple): rename internal _warn.ts to _dev.ts",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1b696f77f93b469187d4d7bae13012812a126885"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "tag": "@vielzeug/ripple_v1.0.0",
       "date": "Wed, 01 Jul 2026 16:10:37 GMT",

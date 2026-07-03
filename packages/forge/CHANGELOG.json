@@ -2,6 +2,45 @@
   "name": "@vielzeug/forge",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/forge_v1.1.0",
+      "date": "Fri, 03 Jul 2026 06:00:47 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(forge): close prototype-pollution gaps, fix array/dispose-race bugs, dedupe async-queue/validator internals, expand test coverage and docs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          },
+          {
+            "comment": "chore(forge): rename internal _warn.ts to _dev.ts",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "chore(forge): remove stale adapters — use subscribe()/connect() directly (see docs/forge/usage.md#framework-integration for migration recipes)",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          },
+          {
+            "comment": "feat(forge): decompose createForm() into cohesive internal modules, eliminate all as-unknown-as casts, add opt-in /devtools sub-path and fields.list() API; fix broken /validators export path",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "15275096f7ca42afafef22c6a41a2a4fde80961d"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/arsenal\" to `1.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.1.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.0",
       "tag": "@vielzeug/forge_v1.0.0",
       "date": "Wed, 01 Jul 2026 16:10:37 GMT",
