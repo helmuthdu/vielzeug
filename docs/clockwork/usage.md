@@ -334,12 +334,17 @@ import { createMachine } from '@vielzeug/clockwork';
 const m = createMachine({
   context: { count: 0, name: 'app' },
   initial: 'idle',
-  validateContext: (ctx) => typeof ctx.count === 'number' && typeof ctx.name === 'string',
+  validateContext: (ctx) => {
+    if (typeof ctx.count !== 'number') return 'count must be a number';
+    if (typeof ctx.name !== 'string') return 'name must be a string';
+
+    return true;
+  },
   states: { idle: {} },
 }).start();
 ```
 
-When validation fails, a `MachineError` with code `MACHINE_INVALID_VALIDATE_CONTEXT` is thrown. The machine state and context are **unchanged** — the transition is rolled back before any signals are updated.
+When validation fails, a `ClockworkInvalidValidateContextError` is thrown — its `.reason` field carries the string returned by `validateContext`. The machine state and context are **unchanged** — the transition is rolled back before any signals are updated.
 
 ## Persistence
 
@@ -769,6 +774,40 @@ onUnmounted(() => { unsub?.(); m?.dispose(); });
 ```
 
 :::
+
+## Server-Side Rendering
+
+Clockwork's `state` and `context` are `@vielzeug/ripple` signals, so every machine shares ripple's module-level flush queue by default. That's fine for a single long-running Node process with one machine tree, but if you create machines **per incoming request** (e.g. an SSR handler that runs `createMachine(config).start()` on every request), concurrent requests can share scheduling state and interleave `batch()` flushes.
+
+Install `@vielzeug/ripple`'s SSR tracking provider once at server bootstrap to give each request its own isolated scheduling context — clockwork needs no special import or configuration, it automatically picks up whatever provider ripple has installed:
+
+```ts
+// server bootstrap (once, at startup)
+import { createAsyncProvider, setTrackingProvider } from '@vielzeug/ripple/ssr';
+
+const provider = createAsyncProvider();
+setTrackingProvider(provider);
+```
+
+```ts
+// inside each request handler
+import { runWithProvider } from '@vielzeug/ripple/ssr';
+import { createMachine } from '@vielzeug/clockwork';
+import { trafficConfig } from './machine';
+
+async function handleRequest(req: Request): Promise<Response> {
+  return runWithProvider(provider, async () => {
+    const m = createMachine(trafficConfig).start();
+
+    // ...drive the machine and render...
+
+    m.dispose();
+    return new Response(/* ... */);
+  });
+}
+```
+
+Single-page apps, static builds, and Node scripts that never run concurrent request handlers don't need this — the default (no provider installed) is correct there. See the `@vielzeug/ripple/ssr` entry in `@vielzeug/ripple`'s [API reference](/ripple/api#package-entry-point) for the full provider API.
 
 ## Working with Other Vielzeug Libraries
 

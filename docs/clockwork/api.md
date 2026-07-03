@@ -9,11 +9,10 @@ description: Complete API reference for Clockwork.
 
 | Symbol             | Purpose                                              | Execution mode | Common gotcha                                                    |
 | ------------------ | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------- |
-| `createMachine()`  | Validate config; returns definition handle           | Sync           | Throws `MachineError` on invalid config — check at startup       |
+| `createMachine()`  | Validate config; returns definition handle           | Sync           | Throws `ClockworkError` on invalid config — check at startup     |
 | `.start()`         | Start a running machine instance from a definition   | Sync           | Call `.start(options?)` on the returned `MachineDefinition`      |
 | `.resolve()`       | Pure transition resolver for testing (no side effects) | Sync         | Does not fire debug hooks; pass `onGuard` via `options` object   |
-| `MachineError`     | Typed error for all validation failures              | —              | Check `.code`, not `.message`                                    |
-| `MachineErrorCode` | Const object of all error code strings               | —              | Same identifier used as both type and const object               |
+| `ClockworkError`   | Base class for all validation failures               | —              | Use `instanceof <SpecificError>` or `ClockworkError.is()`         |
 
 ## Package Entry Points
 
@@ -24,7 +23,7 @@ description: Complete API reference for Clockwork.
 
 ## `createMachine()`
 
-Validates a machine configuration and returns a reusable `MachineDefinition` handle. Throws `MachineError` synchronously if validation fails.
+Validates a machine configuration and returns a reusable `MachineDefinition` handle. Throws a `ClockworkError` subclass synchronously if validation fails.
 
 Use `createMachine(config).start()` for the common one-shot case, or hold the definition to start multiple instances or call `.resolve()` in tests.
 
@@ -290,7 +289,7 @@ type MachineConfig<State extends string, Ctx extends object, Ev extends MachineE
 A function used for `validateContext`.
 
 - Return `true` for valid context.
-- Return a non-empty string describing the failure (surfaced in `MachineError.details.reason`).
+- Return a non-empty string describing the failure (surfaced as `ClockworkInvalidValidateContextError.reason`).
 
 ```ts
 type ContextValidator<Ctx extends object> = (context: Ctx) => string | true;
@@ -674,85 +673,55 @@ type MachineTypeOptions<T extends MachineSchema<any, any, any>> = InterpretOptio
 
 ## Errors
 
-### `MachineError`
+### `ClockworkError`
 
-Thrown for all FSM validation and runtime failures. Always check `.code` programmatically — never `.message`.
+Base class for every error `clockwork` throws. Use `instanceof ClockworkError` (or the static `ClockworkError.is()`) to catch any clockwork-originated error, or `instanceof <SpecificError>` to handle one failure mode precisely.
 
 ```ts
-class MachineError extends Error {
-  readonly code: MachineErrorCode;
-  readonly details?: Record<string, unknown>;
-  static is(err: unknown): err is MachineError;
+class ClockworkError extends Error {
+  static is(err: unknown): err is ClockworkError;
 }
 ```
 
-`MachineError.is()` is a type-safe static predicate — prefer it over `instanceof` in catch blocks that may receive unknown values:
+`ClockworkError.is()` is a type-safe static predicate — prefer it over `instanceof ClockworkError` in catch blocks that may receive unknown values:
 
 ```ts
-import { MachineError } from '@vielzeug/clockwork';
+import { ClockworkError } from '@vielzeug/clockwork';
 
-catch (err) {
-  if (MachineError.is(err)) {
-    console.error(err.code, err.details);
+try {
+  createMachine(config);
+} catch (err) {
+  if (ClockworkError.is(err)) {
+    console.error(err.name, err.message);
   }
 }
 ```
 
-All error `.message` strings are prefixed with `[@vielzeug/clockwork]`. Use `.code` for programmatic checks — `.message` is for human-readable logs only.
+Each subclass carries typed fields describing the failure — narrow with `instanceof` to access them:
 
-### `MachineErrorCode`
-
-A const object of all error code strings. Useful for `switch` statements and `if` comparisons without typing raw strings:
-
-```ts
-import { MachineError, MachineErrorCode } from '@vielzeug/clockwork';
-
-catch (err) {
-  if (MachineError.is(err)) {
-    switch (err.code) {
-      case MachineErrorCode.MACHINE_INVALID_VALIDATE_CONTEXT:
-        // context failed validation
-        break;
-      case MachineErrorCode.MACHINE_TRANSITION_LOOP_GUARD:
-        // infinite loop guard hit
-        break;
-    }
-  }
-}
-```
-
-The identifier is both the const object (value) and the string union type:
+| Subclass                                 | Thrown when                                                                                                                                  | Fields                                     |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| `ClockworkInvalidAfterDelayError`         | An `after` delay is negative, `NaN`, or non-finite (`Infinity`)                                                                                | `path`, `delay`                            |
+| `ClockworkInvalidInitialStateError`       | `initial` does not exist in `states` (top-level or compound)                                                                                   | `path`, `initial`                          |
+| `ClockworkInvalidMaxTransitionsError`     | `maxTransitionsPerFlush` is less than 1                                                                                                         | `maxTransitionsPerFlush`                   |
+| `ClockworkInvalidSnapshotStateError`      | Hydrated snapshot refers to an unknown state                                                                                                    | `state`                                    |
+| `ClockworkInvalidTransitionArrayError`    | A transition array is empty, or an `invoke` array is empty                                                                                      | `path`, `eventType?`                       |
+| `ClockworkInvalidValidateContextError`    | Context fails `validateContext`                                                                                                                 | `phase` (`'init' \| 'transition'`), `reason` |
+| `ClockworkMissingCompoundInitialError`    | A compound state (has `states`) is missing `initial`                                                                                            | `path`                                     |
+| `ClockworkTransitionLoopGuardError`       | `maxTransitionsPerFlush` exceeded in one flush                                                                                                  | `maxTransitionsPerFlush`                   |
+| `ClockworkUnknownTargetError`             | A transition or `after` `target` does not exist in `states` — thrown for both unknown root states and unknown nested paths (e.g. `loading.nonexistent`) | `path`, `target`, `eventType?`             |
 
 ```ts
-import type { MachineErrorCode } from '@vielzeug/clockwork';
-
-function handleCode(code: MachineErrorCode) {
-  /* ... */
-}
-```
-
-**Error codes:**
-
-| Code                                        | Thrown when                                                                                                                                  |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MACHINE_INVALID_AFTER_DELAY`               | An `after` delay is negative, `NaN`, or non-finite (`Infinity`)                                                                              |
-| `MACHINE_INVALID_INITIAL_STATE`             | `initial` does not exist in `states` (top-level or compound)                                                                                 |
-| `MACHINE_INVALID_MAX_TRANSITIONS_PER_FLUSH` | `maxTransitionsPerFlush` is less than 1                                                                                                      |
-| `MACHINE_INVALID_SNAPSHOT_STATE`            | Hydrated snapshot refers to an unknown state                                                                                                 |
-| `MACHINE_INVALID_TRANSITION_ARRAY`          | A transition array is empty, or an `invoke` array is empty                                                                                   |
-| `MACHINE_INVALID_VALIDATE_CONTEXT`          | Context fails `validateContext`                                                                                                              |
-| `MACHINE_MISSING_COMPOUND_INITIAL`          | A compound state (has `states`) is missing `initial`                                                                                         |
-| `MACHINE_TRANSITION_LOOP_GUARD`             | `maxTransitionsPerFlush` exceeded in one flush                                                                                               |
-| `MACHINE_UNKNOWN_TARGET`                    | A transition `target` does not exist in `states` — thrown for both unknown root states and unknown nested paths (e.g. `loading.nonexistent`) |
-
-```ts
-import { MachineError, MachineErrorCode } from '@vielzeug/clockwork';
+import { ClockworkError, ClockworkInvalidSnapshotStateError } from '@vielzeug/clockwork';
 
 try {
   const m = createMachine(config).start({ snapshot: corruptedSnapshot });
 } catch (err) {
-  if (MachineError.is(err) && err.code === MachineErrorCode.MACHINE_INVALID_SNAPSHOT_STATE) {
-    // discard snapshot and start fresh
+  if (err instanceof ClockworkInvalidSnapshotStateError) {
+    // discard snapshot and start fresh — err.state names the invalid state
+    console.warn(`discarding snapshot: unknown state "${err.state}"`);
+  } else if (ClockworkError.is(err)) {
+    throw err; // some other clockwork validation failure
   }
 }
 ```

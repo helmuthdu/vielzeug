@@ -50,6 +50,13 @@ const resolveTransition = <State extends string, Ctx extends object, Ev extends 
   onGuard?: (info: { context: Readonly<Ctx>; event: Ev; from: State; passed: boolean; target: State }) => void,
 ): TransitionDef<State, Ctx, Ev> | undefined => {
   const { context, event, state } = input;
+
+  // Defensive: callers piping untyped external data through an `Ev`-typed cast (e.g. a
+  // deserialized network message passed to `send()`) can violate the MachineEvent contract
+  // at runtime. Treat a missing/non-string `type` as "no matching transition" rather than
+  // crashing with a raw TypeError.
+  if (!event || typeof (event as unknown as { type?: unknown }).type !== 'string') return undefined;
+
   const ancestors = getAncestorPaths(state);
 
   for (let i = ancestors.length - 1; i >= 0; i--) {
@@ -57,7 +64,10 @@ const resolveTransition = <State extends string, Ctx extends object, Ev extends 
 
     if (!node?.on) continue;
 
-    const raw = node.on[event.type as EventType<Ev>];
+    // Own-property check — an event `type` of "__proto__"/"constructor"/etc. must resolve
+    // to "no matching transition", not an inherited Object.prototype member.
+    const eventType = event.type as EventType<Ev>;
+    const raw = Object.hasOwn(node.on, eventType) ? node.on[eventType] : undefined;
 
     if (!raw) continue;
 
@@ -109,7 +119,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
   if (persistedSnapshot) {
     const snapshotRoot = persistedSnapshot.state.split('.')[0];
     const snapshotValid =
-      snapshotRoot in definition.states &&
+      Object.hasOwn(definition.states, snapshotRoot) &&
       (!persistedSnapshot.state.includes('.') ||
         !!getNodeAtPath(definition.states as Record<string, StateNode<string, Ctx, Ev>>, persistedSnapshot.state));
 
@@ -170,11 +180,19 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     controller: AbortController;
     event: Ev | LifecycleEvent;
     id: string;
+    /** Path of the state node that owns this invoke — scopes abort-on-exit to that subtree. */
+    path: string;
     state: State;
   }>();
 
-  const stopInvokes = (): void => {
+  /**
+   * Aborts active invokes. With `paths`, only invokes owned by one of those state paths are
+   * stopped (used when exiting part of the hierarchy); omit `paths` to stop everything (dispose).
+   */
+  const stopInvokes = (paths?: readonly string[]): void => {
     for (const invoke of activeInvokes) {
+      if (paths && !paths.includes(invoke.path)) continue;
+
       invoke.controller.abort();
       onDebug?.({
         context: context_.value,
@@ -183,18 +201,25 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
         state: invoke.state,
         type: 'invoke-abort',
       });
+      activeInvokes.delete(invoke);
     }
-
-    activeInvokes.clear();
   };
 
   // ── Section: After-timer scheduler ────────────────────────────────────────
 
-  const activeTimers = new Set<ReturnType<typeof setTimeout>>();
+  const activeTimers = new Set<{ path: string; timer: ReturnType<typeof setTimeout> }>();
 
-  const clearTimers = (): void => {
-    for (const timer of activeTimers) clearTimeout(timer);
-    activeTimers.clear();
+  /**
+   * Clears active after-timers. With `paths`, only timers owned by one of those state paths are
+   * cleared (used when exiting part of the hierarchy); omit `paths` to clear everything (dispose).
+   */
+  const clearTimers = (paths?: readonly string[]): void => {
+    for (const entry of activeTimers) {
+      if (paths && !paths.includes(entry.path)) continue;
+
+      clearTimeout(entry.timer);
+      activeTimers.delete(entry);
+    }
   };
 
   // ── Section: Persistence ───────────────────────────────────────────────────
@@ -287,8 +312,8 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     assertContext(draft, 'transition');
 
     batch(() => {
-      stopInvokes();
-      clearTimers();
+      stopInvokes(exitPaths);
+      clearTimers(exitPaths);
       state_.value = resolvedTarget;
       context_.value = draft;
     });
@@ -298,16 +323,17 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
     trace?.push({ event, from, timestamp: Date.now(), to: resolvedTarget });
     notifySubscribers();
     saveSnapshot();
-    runInvokes(event);
-    scheduleAfterTransitions(resolvedTarget);
+    // Only (re)start invokes/timers for newly-entered paths — ancestors that remain active
+    // across the transition (e.g. a sibling-to-sibling move under the same compound parent)
+    // keep their invokes/timers running uninterrupted.
+    runInvokes(event, entryPaths);
+    scheduleAfterTransitions(entryPaths);
   };
 
   // ── Section: Invoke scheduling ─────────────────────────────────────────────
 
-  const runInvokes = (triggerEvent: Ev | LifecycleEvent): void => {
-    const ancestors = getAncestorPaths(state_.value);
-
-    for (const path of ancestors) {
+  const runInvokes = (triggerEvent: Ev | LifecycleEvent, paths: readonly string[]): void => {
+    for (const path of paths) {
       const node = getNodeAtPath(states, path) as StateNode<State, Ctx, Ev> | undefined;
 
       if (!node?.invoke?.length) continue;
@@ -316,7 +342,7 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
         const controller = new AbortController();
         const invokeId = invokeDef.id ?? String(++invokeCounter);
         const capturedContext = context_.value;
-        const invokeInfo = { controller, event: triggerEvent, id: invokeId, state: state_.value };
+        const invokeInfo = { controller, event: triggerEvent, id: invokeId, path, state: state_.value };
 
         activeInvokes.add(invokeInfo);
         onDebug?.({
@@ -371,20 +397,22 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
   // ── Section: After (delayed) transitions ───────────────────────────────────
 
-  const scheduleAfterTransitions = (currentState: State): void => {
-    const ancestors = getAncestorPaths(currentState);
-
-    for (const path of ancestors) {
+  const scheduleAfterTransitions = (paths: readonly string[]): void => {
+    for (const path of paths) {
       const node = getNodeAtPath(states, path) as StateNode<State, Ctx, Ev> | undefined;
 
       if (!node?.after?.length) continue;
 
       for (const afterDef of node.after) {
         const timer = setTimeout(() => {
-          activeTimers.delete(timer);
+          activeTimers.delete(entry);
 
-          if (disposed || state_.value !== currentState) return;
+          // A sibling-to-sibling transition elsewhere in the tree may have moved the leaf
+          // while this timer's owning path stayed active — fire from wherever we are now,
+          // and only if that path is still part of the live ancestor chain.
+          if (disposed || !getAncestorPaths(state_.value).includes(path)) return;
 
+          const from = state_.value;
           // R10: after.guard unified — receives { context, event } like all other guards
           const afterEvent = { delay: afterDef.delay, type: '$after' } as const;
 
@@ -397,14 +425,15 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
               (args: { context: Ctx; readonly event: Ev | LifecycleEvent }) => void
             >,
             afterEvent,
-            from: currentState,
+            from,
             tag: 'after',
             target: resolvedTarget,
           });
           drainQueue();
         }, afterDef.delay);
+        const entry = { path, timer };
 
-        activeTimers.add(timer);
+        activeTimers.add(entry);
       }
     }
   };
@@ -544,17 +573,18 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
 
   // ── Section: Initialization ────────────────────────────────────────────────
 
+  const initialPaths = getAncestorPaths(resolvedInitial);
+
   if (persistedSnapshot) {
-    runInvokes(HYDRATE_EVENT);
-    scheduleAfterTransitions(resolvedInitial);
+    runInvokes(HYDRATE_EVENT, initialPaths);
+    scheduleAfterTransitions(initialPaths);
   } else {
-    const initPaths = getAncestorPaths(resolvedInitial);
-    const hasEntry = initPaths.some((p) => getNodeAtPath(states, p)?.entry);
+    const hasEntry = initialPaths.some((p) => getNodeAtPath(states, p)?.entry);
 
     if (hasEntry) {
       const initDraft = clone(context_.value);
 
-      for (const p of initPaths) {
+      for (const p of initialPaths) {
         getNodeAtPath(states, p)?.entry?.({ context: initDraft, event: INIT_EVENT });
       }
 
@@ -562,8 +592,8 @@ const _interpret = <State extends string, Ctx extends object, Ev extends Machine
       context_.value = initDraft;
     }
 
-    runInvokes(INIT_EVENT);
-    scheduleAfterTransitions(resolvedInitial);
+    runInvokes(INIT_EVENT, initialPaths);
+    scheduleAfterTransitions(initialPaths);
 
     if (options.persistence) saveSnapshot();
   }

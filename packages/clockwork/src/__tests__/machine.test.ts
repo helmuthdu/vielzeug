@@ -4,13 +4,29 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { debugMachine } from '../devtools.js';
 import {
   ClockworkError,
+  ClockworkInvalidAfterDelayError,
   ClockworkInvalidInitialStateError,
+  ClockworkInvalidMaxTransitionsError,
+  ClockworkInvalidSnapshotStateError,
+  ClockworkInvalidTransitionArrayError,
+  ClockworkInvalidValidateContextError,
+  ClockworkMissingCompoundInitialError,
+  ClockworkTransitionLoopGuardError,
   ClockworkUnknownTargetError,
   createMachine,
+  type AfterActionFn,
   type InterceptorFn,
+  type MachineAction,
   type MachineConfig,
   type MachineEvent,
+  type MachineGuard,
+  type MachineSchema,
   type MachineSnapshot,
+  type MachineTypeConfig,
+  type MachineTypeDefinition,
+  type MachineTypeInstance,
+  type MachineTypeOptions,
+  type PersistenceAdapter,
   type SendResult,
 } from '../index.js';
 
@@ -251,7 +267,7 @@ describe('core runtime', () => {
 
     const m = def.start();
 
-    expect(() => m.send({ type: 'GO' })).toThrow(ClockworkError);
+    expect(() => m.send({ type: 'GO' })).toThrow(ClockworkInvalidValidateContextError);
     expect(m.state.value).toBe('a');
     expect(m.context.value.count).toBe(0);
   });
@@ -566,9 +582,14 @@ describe('invokes', () => {
   });
 
   it('validates maxTransitionsPerFlush option', () => {
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       trafficDef.start({ maxTransitionsPerFlush: 0 });
-    }).toThrowError(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidMaxTransitionsError);
+      expect((err as ClockworkInvalidMaxTransitionsError).maxTransitionsPerFlush).toBe(0);
+    }
   });
 
   it('does not transition after dispose', async () => {
@@ -1040,12 +1061,17 @@ describe('hierarchical states', () => {
   it('validates compound states require initial', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a', Record<string, never>, Event>({
         initial: 'a',
         states: { a: { states: { sub: {} } } },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkMissingCompoundInitialError);
+      expect((err as ClockworkMissingCompoundInitialError).path).toBe('a');
+    }
   });
 });
 
@@ -1186,40 +1212,57 @@ describe('after transitions', () => {
 
 describe('validation', () => {
   it('throws for unknown initial state', () => {
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine({
         initial: 'missing',
         states: { idle: {} },
       } as unknown as MachineConfig<string, object, MachineEvent>);
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidInitialStateError);
+      expect((err as ClockworkInvalidInitialStateError).initial).toBe('missing');
+    }
   });
 
   it('throws for unknown transition target', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [{ target: 'missing' as 'idle' }] } } },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkUnknownTargetError);
+      expect((err as ClockworkUnknownTargetError).target).toBe('missing');
+    }
   });
 
   it('throws for empty transition array', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { on: { GO: [] } } },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidTransitionArrayError);
+      expect((err as ClockworkInvalidTransitionArrayError).eventType).toBe('GO');
+    }
   });
 
   it('throws for negative after delay', () => {
     type Event = { type: 'NOOP' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
@@ -1227,7 +1270,95 @@ describe('validation', () => {
           b: {},
         },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidAfterDelayError);
+      expect((err as ClockworkInvalidAfterDelayError).delay).toBe(-100);
+    }
+  });
+});
+
+describe('prototype-key safety', () => {
+  it('rejects "__proto__"/"constructor" as an initial state instead of matching Object.prototype', () => {
+    expect.assertions(6);
+
+    for (const initial of ['__proto__', 'constructor', 'toString']) {
+      try {
+        createMachine({
+          initial,
+          states: { idle: {} },
+        } as unknown as MachineConfig<string, object, MachineEvent>);
+      } catch (err) {
+        expect(err).toBeInstanceOf(ClockworkInvalidInitialStateError);
+        expect((err as ClockworkInvalidInitialStateError).initial).toBe(initial);
+      }
+    }
+  });
+
+  it('rejects "__proto__"/"constructor" as a transition target', () => {
+    type Event = { type: 'GO' };
+
+    expect.assertions(2);
+
+    try {
+      createMachine<'idle', Record<string, never>, Event>({
+        initial: 'idle',
+        states: { idle: { on: { GO: [{ target: '__proto__' as 'idle' }] } } },
+      });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkUnknownTargetError);
+      expect((err as ClockworkUnknownTargetError).target).toBe('__proto__');
+    }
+  });
+
+  it('treats a "__proto__"/"constructor" event type as an unrecognised event, not a crash', () => {
+    type Event = { type: 'GO' };
+
+    const def = createMachine<'idle', Record<string, never>, Event>({
+      initial: 'idle',
+      states: { idle: { on: { GO: { target: 'idle' } } } },
+    });
+
+    const m = def.start();
+
+    // @ts-expect-error deliberately probing a non-Event-union type string
+    expect(m.can({ type: '__proto__' })).toBe(false);
+    // @ts-expect-error deliberately probing a non-Event-union type string
+    expect(m.send({ type: 'constructor' }).status).toBe('rejected');
+  });
+
+  it('rejects a persisted snapshot whose state is "__proto__"/"constructor"', () => {
+    type Event = { type: 'GO' };
+
+    const def = createMachine<'idle', Record<string, never>, Event>({
+      initial: 'idle',
+      states: { idle: {} },
+    });
+
+    expect.assertions(2);
+
+    try {
+      def.start({ snapshot: { context: {}, state: '__proto__' as 'idle' } });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidSnapshotStateError);
+      expect((err as ClockworkInvalidSnapshotStateError).state).toBe('__proto__');
+    }
+  });
+
+  it('rejects a malformed event (e.g. deserialized external data) instead of crashing', () => {
+    const def = createMachine<'idle', Record<string, never>, TrafficEvent>({
+      initial: 'idle',
+      states: { idle: { on: { NEXT: { target: 'idle' } } } },
+    });
+
+    const m = def.start();
+
+    // Simulates untyped external data (network message, JSON.parse result) forced through
+    // an `Ev`-typed cast — must not throw a raw TypeError.
+    expect(() => m.can(null as unknown as TrafficEvent)).not.toThrow();
+    expect(m.can(null as unknown as TrafficEvent)).toBe(false);
+    expect(() => m.send(null as unknown as TrafficEvent)).not.toThrow();
+    expect(m.send(null as unknown as TrafficEvent).status).toBe('rejected');
+    expect(m.send({} as unknown as TrafficEvent).status).toBe('rejected');
   });
 });
 
@@ -1274,11 +1405,72 @@ describe('after + invoke interaction', () => {
   });
 });
 
+describe('hierarchical invoke scoping', () => {
+  it('does not restart a parent-level invoke when only a child state changes', () => {
+    const src = vi.fn(() => new Promise<never>(() => {}));
+
+    type Event = { type: 'GO' };
+
+    const def = createMachine<'working', Record<string, never>, Event>({
+      initial: 'working',
+      states: {
+        working: {
+          initial: 'step1',
+          invoke: [{ src }],
+          states: {
+            step1: { on: { GO: { target: 'working.step2' as 'working' } } },
+            step2: {},
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+
+    expect(src).toHaveBeenCalledTimes(1);
+
+    m.send({ type: 'GO' });
+
+    expect(m.state.value).toBe('working.step2');
+    expect(src).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops a parent-level invoke when the parent itself is exited', () => {
+    const src = vi.fn(() => new Promise<never>(() => {}));
+
+    type Event = { type: 'LEAVE' };
+
+    const def = createMachine<'idle' | 'working', Record<string, never>, Event>({
+      initial: 'working',
+      states: {
+        idle: {},
+        working: {
+          initial: 'step1',
+          invoke: [{ src }],
+          on: { LEAVE: { target: 'idle' } },
+          states: { step1: {} },
+        },
+      },
+    });
+
+    const m = def.start();
+
+    expect(src).toHaveBeenCalledTimes(1);
+
+    m.send({ type: 'LEAVE' });
+
+    expect(m.state.value).toBe('idle');
+    expect(src).toHaveBeenCalledTimes(1); // aborted, not restarted
+  });
+});
+
 describe('validation — nested target paths', () => {
   it('throws for unknown nested on[] target', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
@@ -1286,13 +1478,18 @@ describe('validation — nested target paths', () => {
           b: { initial: 'sub', states: { sub: {} } },
         },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkUnknownTargetError);
+      expect((err as ClockworkUnknownTargetError).target).toBe('b.nonexistent');
+    }
   });
 
   it('throws for unknown nested after[] target', () => {
     type Event = { type: 'NOOP' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
@@ -1300,7 +1497,10 @@ describe('validation — nested target paths', () => {
           b: { initial: 'sub', states: { sub: {} } },
         },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkUnknownTargetError);
+      expect((err as ClockworkUnknownTargetError).target).toBe('b.ghost');
+    }
   });
 
   it('accepts valid nested on[] target', () => {
@@ -1382,12 +1582,17 @@ describe('getSnapshot()', () => {
 
 describe('maxTransitionsPerFlush via interceptors path', () => {
   it('enforces maxTransitionsPerFlush when interceptors are active', () => {
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       trafficDef.start({
         interceptors: [(event) => event],
         maxTransitionsPerFlush: 0,
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidMaxTransitionsError);
+      expect((err as ClockworkInvalidMaxTransitionsError).maxTransitionsPerFlush).toBe(0);
+    }
   });
 });
 
@@ -1402,7 +1607,15 @@ describe('validateContext at init', () => {
       validateContext: (ctx) => ctx.count >= 0 || 'count must be >= 0',
     });
 
-    expect(() => def.start()).toThrow(ClockworkError);
+    expect.assertions(3);
+
+    try {
+      def.start();
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidValidateContextError);
+      expect((err as ClockworkInvalidValidateContextError).phase).toBe('init');
+      expect((err as ClockworkInvalidValidateContextError).reason).toBe('count must be >= 0');
+    }
   });
 });
 
@@ -1604,9 +1817,14 @@ describe('snapshot hierarchical state validation', () => {
       },
     });
 
-    expect(() => def.start({ snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } })).toThrow(
-      ClockworkError,
-    );
+    expect.assertions(2);
+
+    try {
+      def.start({ snapshot: { context: {}, state: 'active.nonexistent' as 'idle' | 'active' } });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidSnapshotStateError);
+      expect((err as ClockworkInvalidSnapshotStateError).state).toBe('active.nonexistent');
+    }
   });
 });
 
@@ -1935,6 +2153,38 @@ describe('after transitions in hierarchical states', () => {
 
     expect(m.state.value).toBe('cancelled');
   });
+
+  it('does not reset a parent after-timer when only a child state changes', () => {
+    vi.useFakeTimers();
+
+    type Event = { type: 'GO' };
+
+    const def = createMachine<'done' | 'working', Record<string, never>, Event>({
+      initial: 'working',
+      states: {
+        done: {},
+        working: {
+          after: [{ delay: 1000, target: 'done' }],
+          initial: 'step1',
+          states: {
+            step1: { on: { GO: { target: 'working.step2' as 'done' | 'working' } } },
+            step2: {},
+          },
+        },
+      },
+    });
+
+    const m = def.start();
+
+    vi.advanceTimersByTime(600);
+    m.send({ type: 'GO' }); // sibling transition — parent's after-timer must keep ticking
+
+    expect(m.state.value).toBe('working.step2');
+
+    vi.advanceTimersByTime(400); // 1000ms total since start
+
+    expect(m.state.value).toBe('done');
+  });
 });
 
 describe('subscribe after dispose', () => {
@@ -2088,12 +2338,17 @@ describe('validation — empty invoke array', () => {
   it('throws for empty invoke array', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'idle', Record<string, never>, Event>({
         initial: 'idle',
         states: { idle: { invoke: [] } },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidTransitionArrayError);
+      expect((err as ClockworkInvalidTransitionArrayError).path).toBe('idle');
+    }
   });
 });
 
@@ -2204,7 +2459,9 @@ describe('validation — after delay NaN/Infinity', () => {
   it('throws for NaN delay', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
@@ -2212,13 +2469,18 @@ describe('validation — after delay NaN/Infinity', () => {
           b: {},
         },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidAfterDelayError);
+      expect((err as ClockworkInvalidAfterDelayError).delay).toBeNaN();
+    }
   });
 
   it('throws for Infinity delay', () => {
     type Event = { type: 'GO' };
 
-    expect(() => {
+    expect.assertions(2);
+
+    try {
       createMachine<'a' | 'b', Record<string, never>, Event>({
         initial: 'a',
         states: {
@@ -2226,7 +2488,10 @@ describe('validation — after delay NaN/Infinity', () => {
           b: {},
         },
       });
-    }).toThrow(ClockworkError);
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkInvalidAfterDelayError);
+      expect((err as ClockworkInvalidAfterDelayError).delay).toBe(Infinity);
+    }
   });
 });
 
@@ -2274,6 +2539,41 @@ describe('queue cleared on validateContext throw', () => {
 
     expect(result.status).toBe('rejected');
     m.dispose();
+  });
+});
+
+describe('ClockworkTransitionLoopGuardError', () => {
+  it('throws when a re-entrant action keeps re-queuing past maxTransitionsPerFlush', () => {
+    type Event = { type: 'LOOP' };
+
+    const def = createMachine<'a', Record<string, never>, Event>({
+      initial: 'a',
+      states: {
+        a: {
+          on: {
+            LOOP: {
+              actions: [
+                () => {
+                  m.send({ type: 'LOOP' });
+                },
+              ],
+              target: 'a',
+            },
+          },
+        },
+      },
+    });
+
+    const m = def.start({ maxTransitionsPerFlush: 3 });
+
+    expect.assertions(2);
+
+    try {
+      m.send({ type: 'LOOP' });
+    } catch (err) {
+      expect(err).toBeInstanceOf(ClockworkTransitionLoopGuardError);
+      expect((err as ClockworkTransitionLoopGuardError).maxTransitionsPerFlush).toBe(3);
+    }
   });
 });
 
@@ -2754,5 +3054,126 @@ describe('named error subclasses', () => {
       expect(ClockworkError.is(err)).toBe(true);
       expect(err).toBeInstanceOf(ClockworkInvalidInitialStateError);
     }
+  });
+});
+
+describe('MachineSchema bundled-generics helpers', () => {
+  it('MachineTypeConfig/-Definition/-Instance/-Options type a machine from a single bundled schema', () => {
+    type CounterEvent = { type: 'INC' };
+    type CounterSchema = MachineSchema<'idle', { count: number }, CounterEvent>;
+
+    const config: MachineTypeConfig<CounterSchema> = {
+      context: { count: 0 },
+      initial: 'idle',
+      states: {
+        idle: {
+          on: {
+            INC: {
+              actions: [
+                ({ context }) => {
+                  context.count += 1;
+                },
+              ],
+              target: 'idle',
+            },
+          },
+        },
+      },
+    };
+
+    const def: MachineTypeDefinition<CounterSchema> = createMachine(config);
+    const options: MachineTypeOptions<CounterSchema> = { maxTransitionsPerFlush: 10 };
+    const m: MachineTypeInstance<CounterSchema> = def.start(options);
+
+    m.send({ type: 'INC' });
+
+    expect(m.context.value.count).toBe(1);
+  });
+
+  it('MachineAction and MachineGuard type action/guard functions against a bundled schema', () => {
+    type ToggleEvent = { type: 'ACTIVATE' } | { type: 'DEACTIVATE' };
+    type ToggleSchema = MachineSchema<'active' | 'idle', { active: boolean }, ToggleEvent>;
+
+    const activateGuard: MachineGuard<ToggleSchema, { type: 'ACTIVATE' }> = ({ context }) => !context.active;
+    const activateAction: MachineAction<ToggleSchema, { type: 'ACTIVATE' }> = ({ context }) => {
+      context.active = true;
+    };
+
+    const config: MachineTypeConfig<ToggleSchema> = {
+      context: { active: false },
+      initial: 'idle',
+      states: {
+        active: { on: { DEACTIVATE: { target: 'idle' } } },
+        idle: { on: { ACTIVATE: { actions: [activateAction], guard: activateGuard, target: 'active' } } },
+      },
+    };
+
+    const m = createMachine(config).start();
+
+    expect(m.send({ type: 'ACTIVATE' }).status).toBe('transitioned');
+    expect(m.context.value.active).toBe(true);
+  });
+});
+
+describe('PersistenceAdapter type', () => {
+  it('a PersistenceAdapter-typed object round-trips machine state across instances', () => {
+    type Event = { type: 'GO' };
+
+    let saved: MachineSnapshot<'a' | 'b', Record<string, never>> | undefined;
+
+    const adapter: PersistenceAdapter<'a' | 'b', Record<string, never>> = {
+      load: () => saved,
+      save: (snapshot) => {
+        saved = snapshot;
+      },
+    };
+
+    const config: MachineConfig<'a' | 'b', Record<string, never>, Event> = {
+      initial: 'a',
+      states: {
+        a: { on: { GO: { target: 'b' } } },
+        b: {},
+      },
+    };
+
+    const m1 = createMachine(config).start({ persistence: adapter });
+
+    m1.send({ type: 'GO' });
+
+    const m2 = createMachine(config).start({ persistence: adapter });
+
+    expect(m2.state.value).toBe('b');
+  });
+});
+
+describe('AfterActionFn type', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('types an after-transition action extracted into a named function', () => {
+    vi.useFakeTimers();
+
+    type Ctx = { timedOut: boolean };
+    type Event = { type: 'NOOP' };
+
+    const markTimedOut: AfterActionFn<Ctx> = ({ context }) => {
+      context.timedOut = true;
+    };
+
+    const def = createMachine<'done' | 'waiting', Ctx, Event>({
+      context: { timedOut: false },
+      initial: 'waiting',
+      states: {
+        done: {},
+        waiting: { after: [{ actions: [markTimedOut], delay: 100, target: 'done' }] },
+      },
+    });
+
+    const m = def.start();
+
+    vi.advanceTimersByTime(100);
+
+    expect(m.context.value.timedOut).toBe(true);
   });
 });

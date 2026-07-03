@@ -9,8 +9,7 @@ related: [ripple, herald, ward]
 exports:
   [
     createMachine,
-    MachineError,
-    MachineErrorCode,
+    ClockworkError,
     SendResult,
     InterceptorFn,
     InvokeArgs,
@@ -155,6 +154,10 @@ console.log(m.context.value.count); // 5
 - **Subscribe** — Change-detection subscription without direct ripple dependency
 
 </div>
+
+::: tip Running on the server
+Creating machines per-request in an SSR handler? See [Server-Side Rendering](./usage.md#server-side-rendering) for the one-time setup that keeps concurrent requests isolated.
+:::
 
 ## Sub-paths
 

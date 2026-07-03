@@ -1,5 +1,5 @@
 export const resolveAndErrorExample = {
-  code: `import { createMachine, MachineError, MachineErrorCode } from '@vielzeug/clockwork'
+  code: `import { createMachine, ClockworkError, ClockworkInvalidInitialStateError } from '@vielzeug/clockwork'
 
 // .resolve() is a pure function on a MachineDefinition — no side effects, no state change.
 // Use it to inspect transition logic in tests or decision UIs.
@@ -43,23 +43,19 @@ console.log('Resolved target:', result?.target)  // 'locked' (fallthrough)
 console.log('Guard log:', guardLog)
 // ['guard → unlocked: blocked', 'guard → locked: passed']
 
-// --- MachineError.is() + MachineErrorCode for safe error handling ---
+// --- instanceof narrowing + ClockworkError.is() for safe error handling ---
 try {
   createMachine({
     initial: 'missing',
     states: { idle: {} },
   }).start()
 } catch (err) {
-  if (MachineError.is(err)) {
-    console.log('Error code:', err.code)     // 'MACHINE_INVALID_INITIAL_STATE'
-    console.log('Details:', err.details)
-
-    // MachineErrorCode const — autocomplete-safe switch
-    switch (err.code) {
-      case MachineErrorCode.MACHINE_INVALID_INITIAL_STATE:
-        console.log('Fix: check that "initial" matches a key in "states"')
-        break
-    }
+  if (err instanceof ClockworkInvalidInitialStateError) {
+    // Narrowed to the specific subclass — its typed fields are available directly.
+    console.log('Bad initial state:', err.initial)
+    console.log('Fix: check that "initial" matches a key in "states"')
+  } else if (ClockworkError.is(err)) {
+    console.log('Some other clockwork validation error:', err.message)
   }
 }
 
@@ -69,5 +65,5 @@ try {
   m.send({ type: 'UNLOCK' })
   console.log('Admin unlocked:', m.state.value)  // 'unlocked'
 } // m.dispose() called automatically`,
-  name: 'resolve() + MachineError.is()',
+  name: 'resolve() + ClockworkError',
 };

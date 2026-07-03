@@ -20,7 +20,7 @@ A production-ready finite state machine with typed events, reactive state, async
 - **Debuggable** — Unified discriminated union `onDebug` callback and ring-buffer transition tracing
 - **Validated** — Comprehensive definition validation and context checking
 - **Zero overhead** — Debug features have zero cost when unused
-- **Zero deps** — Depends only on `@vielzeug/ripple` (peer)
+- **Zero deps** — Depends only on `@vielzeug/ripple`
 
 ## Quick Start
 
@@ -173,8 +173,7 @@ const m = createMachine(config).start({
 | `createMachine()`   | Validate config; returns a `MachineDefinition` handle    |
 | `.start(options?)`  | Start a running instance from the definition handle      |
 | `.resolve(input)`   | Pure transition resolver for unit-testing transitions    |
-| `MachineError`      | Typed error for validation and runtime failures          |
-| `MachineErrorCode`  | Const object of all error code strings                   |
+| `ClockworkError`    | Base class for all validation and runtime failures       |
 
 ## Features
 
@@ -200,10 +199,10 @@ const m = createMachine(config).start({
 ## Installation
 
 ```sh
-pnpm add @vielzeug/clockwork @vielzeug/ripple
+pnpm add @vielzeug/clockwork
 ```
 
-`@vielzeug/ripple` is a peer dependency and must be installed alongside.
+`@vielzeug/ripple` is installed automatically as a direct dependency.
 
 ## Documentation
 

@@ -1,5 +1,5 @@
 export const contextValidationExample = {
-  code: `import { createMachine, MachineError } from '@vielzeug/clockwork'
+  code: `import { createMachine, ClockworkInvalidValidateContextError } from '@vielzeug/clockwork'
 
 // Context validator — return true if valid, or a string error message if not
 function isValidProfile(ctx) {
@@ -49,14 +49,15 @@ const activated = guest.send({ type: 'ACTIVATE' })
 console.log('Guest activated?', activated.status)   // 'rejected' — guard blocked it
 console.log('State still:', guest.state.value)      // 'idle'
 
-// validateContext also runs when restoring a snapshot — bad context throws
+// validateContext also runs on the initial context at startup — bad context throws.
+// Note: it is skipped when hydrating from a snapshot/persistence — validate untrusted
+// loaded data yourself before interpreting (see "Validate loaded snapshots" in the docs).
 try {
-  createMachine(profileConfig).start({
-    snapshot: { state: 'idle', context: { username: 123, age: -1, tags: null } },
-  })
+  createMachine({ ...profileConfig, context: { username: 123, age: -1, tags: null } }).start()
 } catch (err) {
-  console.log('Snapshot rejected:', err instanceof MachineError, err.code)
-  // MachineError: MACHINE_INVALID_VALIDATE_CONTEXT
+  console.log('Bad initial context rejected:', err instanceof ClockworkInvalidValidateContextError)
+  console.log('Reason:', err.reason)
+  // Reason: 'username must be a string'
 }`,
   name: 'Context Validation',
 };

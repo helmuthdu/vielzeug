@@ -8,6 +8,19 @@ import {
   ClockworkUnknownTargetError,
 } from './errors.js';
 
+// ── Key safety ────────────────────────────────────────────────────────────────
+
+/**
+ * Own-property-only lookup — state paths and event types ultimately come from strings
+ * (persisted snapshots, event payloads) that may not be developer-authored. A plain
+ * `obj[key]` or `key in obj` resolves inherited `Object.prototype` members (`__proto__`,
+ * `constructor`, `toString`, …), which can turn an "unknown state/event" into a crash or
+ * a silently-accepted bogus value instead of the intended "not found". Treat any such key
+ * as absent instead.
+ */
+const getOwn = <T>(obj: Record<string, T> | undefined, key: string): T | undefined =>
+  obj && Object.hasOwn(obj, key) ? obj[key] : undefined;
+
 // ── Hierarchy helpers (internal — not re-exported from index) ─────────────────
 
 /**
@@ -19,14 +32,12 @@ export const resolveLeaf = <Ctx extends object, Ev extends MachineEvent>(
   target: string,
 ): string => {
   const segments = target.split('.');
-  let node: StateNode<string, Ctx, Ev> | undefined = topLevelStates[segments[0]] as
-    | StateNode<string, Ctx, Ev>
-    | undefined;
+  let node = getOwn(topLevelStates, segments[0]);
 
   if (!node) return target;
 
   for (let i = 1; i < segments.length; i++) {
-    node = node.states?.[segments[i]];
+    node = getOwn(node.states, segments[i]);
 
     if (!node) return target;
   }
@@ -35,7 +46,7 @@ export const resolveLeaf = <Ctx extends object, Ev extends MachineEvent>(
 
   while (node?.states && node.initial) {
     path = `${path}.${node.initial}`;
-    node = node.states[node.initial];
+    node = getOwn(node.states, node.initial);
   }
 
   return path;
@@ -49,14 +60,12 @@ export const getNodeAtPath = <Ctx extends object, Ev extends MachineEvent>(
   path: string,
 ): StateNode<string, Ctx, Ev> | undefined => {
   const segments = path.split('.');
-  let node: StateNode<string, Ctx, Ev> | undefined = topLevelStates[segments[0]] as
-    | StateNode<string, Ctx, Ev>
-    | undefined;
+  let node = getOwn(topLevelStates, segments[0]);
 
   for (let i = 1; i < segments.length; i++) {
     if (!node?.states) return undefined;
 
-    node = node.states[segments[i]];
+    node = getOwn(node.states, segments[i]);
   }
 
   return node;
@@ -87,7 +96,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     throw new ClockworkMissingCompoundInitialError(`compound state "${path}" must have an "initial" property`, path);
   }
 
-  if (node.initial && node.states && !(node.initial in node.states)) {
+  if (node.initial && node.states && !Object.hasOwn(node.states, node.initial)) {
     throw new ClockworkInvalidInitialStateError(
       `compound state "${path}" initial "${node.initial}" not found in substates`,
       path,
@@ -109,7 +118,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
     for (const tr of defs as Array<TransitionDef<State, Ctx, Ev>>) {
       const targetRoot = tr.target.split('.')[0];
 
-      if (!(targetRoot in allTopLevel)) {
+      if (!Object.hasOwn(allTopLevel, targetRoot)) {
         throw new ClockworkUnknownTargetError(
           `state "${path}" event "${eventType}" targets unknown state "${tr.target}"`,
           path,
@@ -146,7 +155,7 @@ const validateNode = <State extends string, Ctx extends object, Ev extends Machi
 
     const targetRoot = afterDef.target.split('.')[0];
 
-    if (!(targetRoot in allTopLevel)) {
+    if (!Object.hasOwn(allTopLevel, targetRoot)) {
       throw new ClockworkUnknownTargetError(
         `state "${path}" after[${afterDef.delay}ms] targets unknown state "${afterDef.target}"`,
         path,
@@ -175,7 +184,7 @@ export const validateDefinition = <State extends string, Ctx extends object, Ev 
 ): void => {
   const { states } = definition;
 
-  if (!(definition.initial in states)) {
+  if (!Object.hasOwn(states, definition.initial)) {
     throw new ClockworkInvalidInitialStateError(
       `initial state "${definition.initial}" not found in states`,
       '',
