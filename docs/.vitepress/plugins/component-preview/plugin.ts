@@ -93,7 +93,12 @@ export function componentPreviewPlugin(): Plugin {
       // Also watch dist for JS/IIFE changes when running docs:dev:refine.
       server.watcher.add(refineDir);
 
-      server.watcher.on('change', (file) => {
+      // `pnpm build` empties `dist/` before rewriting it (rimraf + vite `emptyOutDir`), which
+      // chokidar reports as `unlink` + `add` rather than `change`. Listening to `change` only
+      // meant a full package rebuild while `docs:dev` was running left the virtual modules
+      // pinned to whatever they resolved to mid-rebuild (often an empty/missing dist file),
+      // permanently blanking the preview until the dev server was restarted. Handle all three.
+      const handleWatchEvent = (file: string) => {
         const isSrcCss = file.startsWith(refineSrcStylesDir) && file.endsWith('.css');
         const isDistFile = file.startsWith(refineDir);
 
@@ -121,7 +126,9 @@ export function componentPreviewPlugin(): Plugin {
         }
 
         server.ws.send({ type: 'full-reload' });
-      });
+      };
+
+      server.watcher.on('add', handleWatchEvent).on('change', handleWatchEvent).on('unlink', handleWatchEvent);
     },
     load(id) {
       if (id === '\0' + JS_ID) {
