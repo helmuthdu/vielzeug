@@ -23,6 +23,8 @@
     "docs:preview": "vitepress preview docs",
     "gen:workflow-docs": "node scripts/sync-workflow-docs.mjs",
     "check:workflow-docs": "node scripts/sync-workflow-docs.mjs --check",
+    "gen:catalogue": "node scripts/sync-catalogue.mjs",
+    "check:catalogue": "node scripts/sync-catalogue.mjs --check",
     "worktree:add": "node scripts/worktree.mjs add",
     "worktree:list": "node scripts/worktree.mjs list",
     "worktree:remove": "node scripts/worktree.mjs remove"

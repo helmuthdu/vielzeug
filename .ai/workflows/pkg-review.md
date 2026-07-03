@@ -6,7 +6,7 @@ You are a strict code reviewer with deep TypeScript and library design experienc
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -24,7 +24,7 @@ Severity scale (`CRITICAL`/`MAJOR`/`MINOR`/`NIT`) is shared with `/pkg-security`
 
 After each lens pass, output a checkpoint before proceeding:
 
-```
+```text
 ✅ CHECKPOINT: Lens X complete
 - Findings: N (C CRITICAL, M MAJOR, Mi MINOR, N NIT)
 - CRITICAL fixed this pass: [list or "none"]
@@ -121,7 +121,7 @@ See `.ai/rules/docs/review-template.md` for the exact `review.md` Summary format
 
 ## 7. Quick reference — execution flow
 
-```
+```text
 Before Pass 1: Read plan.md + MCP source
     ↓
 Lens A: Correctness  → fix gate (CRITICAL/MAJOR, skip [ESCALATE]) → Checkpoint

@@ -1,6 +1,6 @@
 # Vielzeug — Package Catalogue
 
-> ⚠️ **Live data** — update this file when adding, removing, or renaming packages, or when inter-package dependencies change. Run `pnpm --filter @vielzeug/codex build` after updating to refresh the MCP bundle.
+> ⚠️ **Live data** — update the catalogue table and metadata table below when adding, removing, or renaming packages (the dependency graph regenerates itself via `pnpm gen:catalogue`, see § below). Run `pnpm --filter @vielzeug/codex build` after updating to refresh the MCP bundle.
 
 ## Package catalogue
 
@@ -39,30 +39,34 @@
 
 ## Package dependency graph
 
-Inter-package `@vielzeug/*` runtime dependencies (verified against each `package.json`):
+Inter-package `@vielzeug/*` runtime dependencies — generated from each package's `package.json` by `scripts/sync-catalogue.mjs`. Edit `packages/<name>/package.json`, not this section (`pnpm gen:catalogue` to regenerate; `pnpm check:catalogue` fails CI if it drifts).
 
-```
-clockwork  → ripple
-coins      → arsenal
-courier    → arsenal
-familiar   → arsenal
-flux       → ripple
-forge      → arsenal, ripple
-ledger     → ripple
-orbit      → arsenal, ripple
-ore        → ripple
-prism      → orbit, ripple
-pulse      → ripple
-refine     → arsenal, ore, dnd, orbit, ripple, scroll, tempo
-scout      → ripple
-scroll     → ripple
-sourcerer  → arsenal, ripple
-spell      → arsenal
+<!-- GENERATED:dep-graph:BEGIN -->
+
+```text
+clockwork → ripple
+coins     → arsenal
+courier   → arsenal
+familiar  → arsenal
+flux      → ripple
+forge     → arsenal, ripple
+ledger    → ripple
+orbit     → arsenal, ripple
+ore       → ripple
+prism     → orbit, ripple
+pulse     → ripple
+refine    → arsenal, dnd, orbit, ore, ripple, tempo
+scout     → ripple
+scroll    → ripple
+sourcerer → arsenal
+spell     → arsenal
 ```
 
 Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
 
-> **Note:** `flux` also declares optional peer dependencies on `courier`, `herald`, and `pulse` for its ecosystem adapters.
+> **Note:** `flux` also declares optional peer dependencies on `courier`, `herald`, and `pulse`.
+
+<!-- GENERATED:dep-graph:END -->
 
 ## Package metadata
 

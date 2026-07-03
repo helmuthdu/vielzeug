@@ -13,7 +13,7 @@ Your job is to:
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, anti-patterns, and markers.
+Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, and markers.
 
 ### Workflow-specific markers
 
@@ -26,7 +26,7 @@ Follow `.ai/rules/process/agent-execution.md` for universal principles, decision
 
 After each numbered step, output a checkpoint summary before proceeding:
 
-```
+```text
 ✅ CHECKPOINT: Step N complete
 - Key findings: <bullet list>
 - Decisions made: <bullet list>
@@ -74,7 +74,7 @@ pnpm --filter @vielzeug/codex build
 2. Fallback: read `packages/<name>/src/index.ts` directly.
 3. Extract every exported symbol into a structured list:
 
-   ```
+   ```text
    EXPORT INVENTORY for @vielzeug/<name>:
    - Functions: functionA(), functionB(options)
    - Types: TypeA, TypeB, OptionsC
@@ -85,7 +85,7 @@ pnpm --filter @vielzeug/codex build
 4. Note signatures, JSDoc, defaults, edge cases, and deprecation markers.
 5. Check for sub-path exports — read `package.json` exports field.
 
-```
+```text
 ✅ CHECKPOINT: Step 1 complete
 - Total exports: N (X functions, Y types, Z classes)
 - Sub-path exports: [list or "none"]
@@ -115,7 +115,7 @@ pnpm --filter @vielzeug/codex build
 
 4. Check frontmatter — especially `index.md` `exports` array must match Step 1.
 
-```
+```text
 ✅ CHECKPOINT: Step 2 complete
 - Findings: N issues
   - Missing docs: [list]
@@ -132,7 +132,7 @@ pnpm --filter @vielzeug/codex build
 1. List all example files — `find docs/<name>/examples -name '*.md'`
 2. For each example file, apply this decision tree:
 
-   ```
+   ```text
    Does the recipe use any removed/renamed API?
    ├─ YES → [ACTION] Delete file + remove from examples.md
    └─ NO → Does the recipe use stale signatures/options?
@@ -144,7 +144,7 @@ pnpm --filter @vielzeug/codex build
 
 3. For each new API from Step 1 findings, decide whether a recipe is warranted:
 
-   ```
+   ```text
    Is this a primary factory/function?
    ├─ YES → [ACTION] Create recipe: examples/<slug>.md
    └─ NO → Is it a significant new option/mode?
@@ -154,7 +154,7 @@ pnpm --filter @vielzeug/codex build
 
 4. Sync `examples.md` — must exactly match files on disk. Order: basic → advanced.
 
-```
+```text
 ✅ CHECKPOINT: Step 3 complete
 - Examples deleted: [list or "none"]
 - Examples updated: [list or "none"]
@@ -176,7 +176,7 @@ pnpm --filter @vielzeug/codex build
 
 Output the archetype gate before editing:
 
-```
+```text
 [ACTION] Archetype: <Library | CLI | DOM-output | Build tool | mixed>
 [ACTION] Adaptations: <list of template overrides, or "none">
 ```
@@ -191,7 +191,7 @@ Output the archetype gate before editing:
 
 For each page, output `[ACTION] <filename>: <summary of changes>` or `[SKIP] <filename>: No changes needed`.
 
-```
+```text
 ✅ CHECKPOINT: Step 4 complete
 - Pages updated: [list]
 - Pages unchanged: [list]
@@ -229,7 +229,7 @@ If build fails, fix the error before proceeding. Common issues: invalid frontmat
 pnpm --filter @vielzeug/codex build
 ```
 
-```
+```text
 ✅ CHECKPOINT: Step 5 complete
 - Diátaxis check: PASS
 - Technical accuracy: PASS
@@ -245,7 +245,7 @@ pnpm --filter @vielzeug/codex build
 
 Output this exact structure:
 
-```
+```text
 ## pkg-docs Report: <name>
 
 ### Summary
@@ -271,12 +271,12 @@ Output this exact structure:
 
 ### Follow-up (if any)
 - [BLOCKED] <item needing user input>
-- [VERIFY] <item needing manual check>
+- Needs manual check: <item requiring runtime confirmation beyond static analysis>
 ```
 
 ## 3. Quick reference — execution flow
 
-```
+```text
 Step 1: Inventory API    → Checkpoint
     ↓
 Step 2: Audit docs       → Checkpoint (findings list)

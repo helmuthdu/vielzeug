@@ -58,6 +58,14 @@ documentation alignment, TypeScript strictness, architectural clarity.>
 
 <Downstream breakage, migration considerations.
 Reference `.ai/rules/data/catalogue.md` for the dependency graph — do not restate it.>
+
+## Cycle Log (optional, append-only)
+
+<One dated subsection per `/pkg-workflow` cycle, only if there's real narrative worth keeping — what changed, why, notable deviations. This is where session detail belongs, not `progress.md`'s Notes column (which stays a one-line resumption pointer — see `.ai/rules/process/agent-execution.md § Run artifacts`). Omit entirely on a fresh plan with nothing to log yet.>
+
+### Cycle 1 — <one-line summary>
+
+<Narrative.>
 ````
 
 ---
@@ -134,4 +142,8 @@ Future items in this section use `FUT*` IDs to avoid colliding with feature impl
 
 <Integration risks, breaking changes, cross-package implications.
 Reference `.ai/rules/data/catalogue.md` for the dependency graph — do not restate it.>
+
+## Cycle Log (optional, append-only)
+
+<Same convention as `analyse` mode above — dated narrative subsections, only if worth keeping.>
 ```

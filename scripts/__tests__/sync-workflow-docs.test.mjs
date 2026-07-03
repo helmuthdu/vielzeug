@@ -244,9 +244,9 @@ describe('assertValidManifest()', () => {
 });
 
 describe('replaceBetweenMarkers()', () => {
-  it('replaces content between markers, keeping the markers themselves', () => {
+  it('replaces content between markers, keeping the markers themselves, with a blank line on both sides', () => {
     const result = replaceBetweenMarkers('before\nBEGIN\nold\nEND\nafter', 'BEGIN', 'END', 'new');
-    expect(result).toBe('before\nBEGIN\nnew\nEND\nafter');
+    expect(result).toBe('before\nBEGIN\n\nnew\n\nEND\nafter');
   });
 
   it('throws when markers are missing', () => {
@@ -342,7 +342,9 @@ describe('syncFile() / syncPatchedFile() — filesystem behavior in an isolated 
     writeFileSync(path.join(root, 'target.md'), 'a\nBEGIN\nold\nEND\nb\n');
     const result = syncPatchedFile('target.md', 'BEGIN', 'END', 'new', { root });
     expect(result).toBe('written');
-    expect(execFileSync('cat', [path.join(root, 'target.md')], { encoding: 'utf8' })).toBe('a\nBEGIN\nnew\nEND\nb\n');
+    expect(execFileSync('cat', [path.join(root, 'target.md')], { encoding: 'utf8' })).toBe(
+      'a\nBEGIN\n\nnew\n\nEND\nb\n',
+    );
   });
 
   it('syncPatchedFile skips (does not throw) when the target file is missing', () => {

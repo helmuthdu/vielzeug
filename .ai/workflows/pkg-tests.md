@@ -6,7 +6,7 @@ You are a test engineer improving the Vitest test suite for a **Vielzeug** packa
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -21,7 +21,7 @@ Follow `.ai/rules/process/agent-execution.md` — universal principles, decision
 
 After each step, output a checkpoint before proceeding:
 
-```
+```text
 ✅ CHECKPOINT: Step N — <Name> complete
 - <step-specific fields (see below)>
 - Proceeding to Step N+1
@@ -66,7 +66,7 @@ pnpm vitest run packages/<name>/src/__tests__/
 
 Run the correct test command for the package (check `AGENTS.md` first). Record: current passing test count, number of test files, exported-symbol count from `src/index.ts`. If the suite is already red, surface that immediately — do not proceed until the cause is understood.
 
-```
+```text
 ✅ CHECKPOINT: Step 0 — Baseline captured
 - Tests: N passing, F files
 - Exports: N symbols in src/index.ts
@@ -90,7 +90,7 @@ Run the correct test command for the package (check `AGENTS.md` first). Record: 
 
 Emit `[GAP]` for each coverage hole found.
 
-```
+```text
 ✅ CHECKPOINT: Step 1 — Gap analysis complete
 - Exports with no tests: [list or "none"]
 - Exports with partial coverage: [list or "none"]
@@ -111,7 +111,7 @@ For each export and major behaviour, check for:
 - **Cleanup / lifecycle tests**: does teardown/disposal happen correctly, no leaked timers/listeners?
 - **Regression tests**: if a previous bug is known (or implied by comments), is there a test catching it?
 
-```
+```text
 ✅ CHECKPOINT: Step 2 — Missing categories identified
 - Negative tests needed: [list or "none"]
 - Boundary tests needed: [list or "none"]
@@ -142,7 +142,7 @@ When adding or updating tests:
 
 Run the test suite after changes (use the command that matches the package layout). All tests must pass.
 
-```
+```text
 ✅ CHECKPOINT: Step 3 — Tests updated
 - Tests added: N
 - Tests removed: N ([REMOVED] items with reasons)
@@ -155,7 +155,7 @@ Run the test suite after changes (use the command that matches the package layou
 
 Output using **exactly this format**:
 
-```
+```text
 ## Test Suite Report
 
 ### Baseline
@@ -185,7 +185,7 @@ Write this report to `.ai/workflows/runs/<name>/tests-report.md`, overwriting an
 
 ## 4. Quick reference — execution flow
 
-```
+```text
 Step 0: Baseline capture     → Checkpoint (GREEN required to proceed)
     ↓
 Step 1: Gap analysis         → Checkpoint ([GAP] markers)

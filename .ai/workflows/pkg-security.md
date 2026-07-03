@@ -6,7 +6,7 @@ You are a security engineer auditing a **Vielzeug** TypeScript library package.
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, markers, and convergence rules.
 
 ### Workflow-specific markers
 
@@ -20,7 +20,7 @@ Follow `.ai/rules/process/agent-execution.md` — universal principles, decision
 
 After each pass, output a checkpoint before proceeding:
 
-```
+```text
 ✅ CHECKPOINT: Pass N — <Surface> complete
 - Checklist items reviewed: N
 - Findings: N (X [VULN], Y [CONCERN])
@@ -72,7 +72,7 @@ Throughout the audit:
 - Are properties accessed via dynamic string keys from user input (e.g. `obj[userKey]`)?
 - Are `__proto__`, `constructor`, or `prototype` keys specially handled or guarded against when merging or mapping objects?
 
-```
+```text
 ✅ CHECKPOINT: Pass 1 — Input/Injection/Prototype complete
 - Findings: N (X [VULN], Y [CONCERN])
 - By severity: C CRITICAL, M MAJOR, Mi MINOR, N NIT
@@ -103,7 +103,7 @@ Throughout the audit:
 - Are any `devDependencies` accidentally imported in production code paths?
 - **Dead-dep audit:** are all declared `workspace:*` entries actually imported somewhere in `src/`? (Quick check: `grep -r "@vielzeug/<dep>" packages/<name>/src/ --include="*.ts"`) Dead deps inflate the dependency graph and obscure the real attack surface — remove unused entries.
 
-```
+```text
 ✅ CHECKPOINT: Pass 2 — Leakage/Types/Deps complete
 - Findings: N (X [VULN], Y [CONCERN])
 - By severity: C CRITICAL, M MAJOR, Mi MINOR, N NIT
@@ -132,13 +132,13 @@ For pure client-side utility libraries, note explicitly: **N/A**.
 
 For each `[VULN]` from Passes 1–2:
 
-```
+```text
 Has this finding been fixed?
 ├─ YES → annotate [DONE] in security.md
 └─ NO → confirm it remains open in the summary
 ```
 
-```
+```text
 ✅ CHECKPOINT: Pass 3 — Browser/Server/Re-scan complete
 - New findings this pass: N (X [VULN], Y [CONCERN])
 - Prior [VULN] items fixed: N
@@ -161,7 +161,7 @@ See `.ai/rules/docs/security-template.md` for the exact `security.md` Audit Summ
 
 ## 8. Quick reference — execution flow
 
-```
+```text
 Read plan.md           → focus on changed areas first
     ↓
 Pass 1: Input/Injection/Prototype  → Checkpoint

@@ -6,7 +6,7 @@ You are a TypeScript library author implementing improvements to a **Vielzeug** 
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, anti-patterns, markers, and convergence rules. Use the universal `[SKIP]` marker (state reason) for an item you intentionally don't implement — don't invent a separate word for it.
+Follow `.ai/rules/process/agent-execution.md` — universal principles, decision framework, markers, and convergence rules. Use the universal `[SKIP]` marker (state reason) for an item you intentionally don't implement — don't invent a separate word for it.
 
 ### Workflow-specific markers
 
@@ -18,7 +18,7 @@ Follow `.ai/rules/process/agent-execution.md` — universal principles, decision
 
 After completing each plan item, output a checkpoint before moving to the next:
 
-```
+```text
 ✅ ITEM: <ID> — <Title>
 - Files changed: [list]
 - Tests: PASS (N passing, F files) / FAIL (describe)
@@ -29,7 +29,7 @@ After completing each plan item, output a checkpoint before moving to the next:
 
 After all plan items are complete, output a final checkpoint:
 
-```
+```text
 ✅ CHECKPOINT: Implementation complete
 - Items: N/N completed
 - Tests: N passing, F files
@@ -70,14 +70,16 @@ For each item in the plan (in priority order), emit `[IMPLEMENTING] <ID> — <Ti
 4. **Automated fixes and tests**
    - Run `pnpm --filter @vielzeug/<name> fix` to auto-fix lint/sort/format issues.
    - Run the test suite:
+
      ```bash
      pnpm vitest run packages/<name>/src/__tests__/
      ```
+
    - If tests fail, fix the underlying issue — never weaken tests.
 
 5. **Monorepo stability** — if your change affects dependents, run the relevant tests. Do not revert via broad undo. Adjust and refine until dependents either work with the new API or are clearly documented as temporarily broken with a plan-accepted breaking change.
 
-6. **Cross-package propagation (conditional)**
+6. **Cross-package propagation (conditional)** — not optional for `Required` rows below; bugs and dead deps that exist in one package often exist in siblings.
 
    | Item category                              | Action                                                                 |
    | ------------------------------------------ | ---------------------------------------------------------------------- |
@@ -94,7 +96,7 @@ For each item in the plan (in priority order), emit `[IMPLEMENTING] <ID> — <Ti
 ## 4. Rules
 
 - Treat `plan.md` as authoritative. If an item calls for a big refactor or API redesign, implement it fully, not superficially.
-- Within each item, keep changes **cohesive but not gratuitously broad** — touch all code, tests, and docs needed, but do not refactor unrelated areas.
+- Within each item, keep changes **cohesive but not gratuitously broad** — touch all code, tests, and docs needed, but do not refactor unrelated areas. Never implement an item partially: exports, tests, and types all update together, or the item isn't done.
 - When adding or changing public APIs: export from `src/index.ts` in sorted order, add/update JSDoc, ensure types reflect intended usage.
 - After all plan items are implemented:
   - Run `pnpm --filter @vielzeug/<name> fix`
@@ -115,7 +117,7 @@ Then execute item by item, emitting markers and checkpoints as described in §0.
 
 ## 6. Quick reference — execution flow
 
-```
+```text
 Read plan.md           → list items in order
     ↓
 For each item:

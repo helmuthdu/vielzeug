@@ -6,7 +6,7 @@ Static reference for `review.md` output format. Consumed by `/pkg-review` — do
 
 For each issue found:
 
-```
+```text
 [SEVERITY] [LENS] File: src/foo.ts:42
 Issue: <concise description>
 Impact: <brief impact/risk>
@@ -20,7 +20,7 @@ Where:
 
 When a CRITICAL or MAJOR finding is fixed during or immediately after a pass, annotate it inline:
 
-```
+```text
 [MAJOR] [B-ARCH] File: src/foo.ts:42 ✅ FIXED
 Issue: ...
 Suggestion: ...

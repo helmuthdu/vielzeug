@@ -7,18 +7,20 @@ You are a TypeScript library author and DX-focused software architect planning w
 ## Modes
 
 <!-- GENERATED:mode-table:BEGIN -->
+
 | Mode | Use when | Pass structure |
 | --- | --- | --- |
 | `analyse` (default) | Existing package improvement | arch review → DX deep-dive → synthesis |
 | `feature` | Adding a specific new feature to an existing package | requirements → API design → acceptance criteria |
 | `new-package` | Creating a new package from scratch | requirements → API design → acceptance criteria |
+
 <!-- GENERATED:mode-table:END -->
 
 Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.modes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts). All modes converge on `plan.md`; **Phases 2–7 of `/pkg-workflow` consume it identically regardless of mode.** The output format is shared.
 
 ## 0. Agent execution model
 
-Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, anti-patterns, and convergence rules — including the universal `[FINDING]` and `[SKIP]` markers, reused below rather than re-invented. This section defines only workflow-specific markers: structural spec-content tags with no universal equivalent.
+Follow `.ai/rules/process/agent-execution.md` for universal principles, decision framework, and convergence rules — including the universal `[FINDING]` and `[SKIP]` markers, reused below rather than re-invented. This section defines only workflow-specific markers: structural spec-content tags with no universal equivalent.
 
 ### Workflow-specific markers
 
@@ -41,7 +43,7 @@ After each pass, output a checkpoint summary before proceeding:
 
 **`analyse` mode:**
 
-```
+```text
 ✅ CHECKPOINT: Pass N complete
 - Findings: N issues (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement)
 - New since prior pass: [list or "N/A — first pass"]
@@ -51,7 +53,7 @@ After each pass, output a checkpoint summary before proceeding:
 
 **`feature` / `new-package` mode:**
 
-```
+```text
 ✅ CHECKPOINT: Pass N complete
 - Mode: feature / new-package
 - Requirements: N [REQ], N [CONSTRAINT], N [SKIP]  ← Pass 1
@@ -103,7 +105,7 @@ Treat the package as if designing it from scratch. Focus on:
 
 Output each finding as:
 
-```
+```text
 [FINDING] <Category> — <Title>
 Location: <file>:<approx lines or function name>
 Problem: <what is wrong>
@@ -116,7 +118,7 @@ Impact: <who is affected and how>
 
 For each Pass 1 finding, apply this decision:
 
-```
+```text
 Is the finding actionable for /pkg-implement?
 ├─ YES → keep as [CANDIDATE], add "Where" and "Effort"
 └─ NO → Is it a valuable longer-term idea?
@@ -133,7 +135,7 @@ Also actively look for:
 
 #### Pass 3 — Synthesis into a single improvement plan
 
-**Goal:** Produce the final ranked, verified, actionable plan.
+**Goal:** Produce the final ranked, verified, actionable plan. Write `plan.md` here, once — not before all prescribed passes for this package's size have run (see `.ai/rules/process/agent-execution.md § Multi-pass convergence`).
 
 1. **Consolidate** — deduplicate candidates from Passes 1 and 2 into a single flat list.
 2. **Rank** — order by impact × effort using the design priorities in §2. Bugs (🔴) always come first.
@@ -164,21 +166,21 @@ Answer these questions explicitly:
 
 Output confirmed requirements as:
 
-```
+```text
 [REQ] R<N> — <one-line description>
 Context: <why this is needed / which use case it enables>
 ```
 
 Output constraints as:
 
-```
+```text
 [CONSTRAINT] — <description>
 Reason: <why this constraint applies>
 ```
 
 Output out-of-scope items as:
 
-```
+```text
 [SKIP] — <description>
 Reason: <why this is excluded from this cycle>
 ```
@@ -189,19 +191,19 @@ Reason: <why this is excluded from this cycle>
 
 Based on Pass 1 requirements, produce one block per proposed export:
 
-```
+```text
 [API] <name>(<params>): <return type>
 Purpose: <one-line description>
 Notes: <overloads, options object shape, edge cases, disposal pattern if applicable>
 ```
 
-```
+```text
 [TYPE] <Name>
 Fields:
   <field>: <type> — <description>
 ```
 
-```
+```text
 [ERROR] <ClassName> extends <Base>
 When: <condition that triggers this error>
 Code: <optional string code>
@@ -231,7 +233,7 @@ Map each `[REQ]` and `[API]` to one or more plan items. Each item gets:
 
 **`new-package` mode:** the first item is always the scaffold:
 
-```
+```text
 D1 — Scaffold package structure 🟠 (S)
 What: Create packages/<name>/ with all standard files
 Done when: pnpm --filter @vielzeug/<name> build passes with a stub src/index.ts
@@ -306,7 +308,7 @@ See `.ai/rules/docs/plan-template.md` for the complete `plan.md` structure for b
 
 ## 7. Scaffolding reference (`new-package` mode)
 
-See `.ai/rules/process/workspace.md § New-package scaffolding` for the complete file list and registration steps.
+See `.ai/rules/code/conventions.md § New-package scaffold` for the complete file list and `.ai/rules/process/workspace.md § New-package registration` for the registration steps.
 
 ## 8. Next step — implementation scope
 
@@ -339,7 +341,7 @@ Note for the agent: list all Future items. If none exist, write: "The **Future i
 
 ## 9. Quick reference — execution flow
 
-```
+```text
 analyse:    Read DOX chain → gather API/docs (MCP) → check prior cycle Future items
 feature:    Read DOX chain → gather existing API/docs (MCP) → check prior cycle Future items
 new-pkg:    Read DOX chain → read conventions/catalogue + similar package

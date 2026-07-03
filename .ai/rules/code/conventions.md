@@ -150,7 +150,7 @@ export class <Pkg>BarError extends <Pkg>Error {
 
 ## File layout & naming
 
-```
+```text
 packages/<name>/src/
 ├── _dev.ts          ← always private (_-prefix = never re-exported from index.ts)
 ├── _<internal>.ts    ← private impl files (never re-exported)
@@ -168,7 +168,7 @@ packages/<name>/src/
 
 ## Package layout
 
-```
+```text
 packages/<name>/
 ├── src/
 │   ├── __tests__/     # vitest test files
@@ -176,6 +176,24 @@ packages/<name>/
 ├── dist/              # build output (gitignored)
 ├── package.json
 └── vite.config.ts
+```
+
+## New-package scaffold
+
+The steady-state layout above, at creation time. `new-package` mode (`/pkg-plan` and `/pkg-workflow`) must produce exactly these files — after scaffolding, register the package per `.ai/rules/process/workspace.md § New-package registration`:
+
+```text
+packages/<name>/
+  package.json                  ← copy + adapt from a similar package; update name, version, description
+  tsconfig.json                 ← extends ../../tsconfig.json; include src/**/*.ts
+  tsconfig.declarations.json    ← emits .d.ts only; used by build:types script
+  vitest.config.ts              ← copy from a similar package; points to src/__tests__/
+  vite.config.ts                ← ESM + CJS dual build; lib.entry: src/index.ts
+  src/
+    index.ts                    ← empty barrel with a single comment: // exports go here
+    __tests__/
+      <name>.test.ts            ← describe('<name>', () => { it.todo('baseline') })
+  README.md                     ← package name + one-liner + install snippet
 ```
 
 ## Reference packages

@@ -50,7 +50,7 @@ Every workflow needs the same three rule files — link to them, never restate t
 
 Workflow artifacts live under `.ai/workflows/runs/<name>/`. This directory is **gitignored** — it is scratch working state, not project history. Once a file is overwritten, its prior contents are gone unless the user copied them out first. Full lifecycle contract: `.ai/workflows/runs/AGENTS.md`.
 
-**One persistence rule for every artifact: overwrite, always.** Each file holds the *current* state of its phase, not a log of every pass that ever ran it. A multi-pass phase (Review's 3 lenses, Security's 3 surfaces) accumulates findings across passes in-session and writes the complete, current file once — it does not append a new section per pass and leave prior-pass sections in place. `[FIXED]`/`[DONE]` inline annotations already capture what changed during the phase; a separate append-only history adds nothing a later phase can act on and only bloats the file it has to read.
+**One persistence rule for every artifact: overwrite, always.** Each file holds the _current_ state of its phase, not a log of every pass that ever ran it. A multi-pass phase (Review's 3 lenses, Security's 3 surfaces) accumulates findings across passes in-session and writes the complete, current file once — it does not append a new section per pass and leave prior-pass sections in place. `[FIXED]`/`[DONE]` inline annotations already capture what changed during the phase; a separate append-only history adds nothing a later phase can act on and only bloats the file it has to read.
 
 | Artifact          | Purpose                                            |
 | ----------------- | --------------------------------------------------- |
@@ -78,31 +78,20 @@ When facing ambiguity, apply this priority order:
 3. **Minimal scope** — plan items must be actionable. Avoid "investigate X"; convert to concrete findings or defer.
 4. **When uncertain, read more** — use MCP tools or read source files before guessing at behavior.
 
-### Anti-patterns to avoid (all workflows)
-
-- ❌ Do not invent issues not grounded in actual source code.
-- ❌ Do not reference phantom file paths — spot-check before writing `plan.md`.
-- ❌ Do not weaken, skip, or delete tests to make a phase pass — surface real failures.
-- ❌ Do not commit, push, or publish without explicit user approval.
-- ❌ Do not add runtime or dev dependencies without explicit instruction.
-- ❌ Do not implement an item partially — exports, tests, and types must all be updated together.
-- ❌ Do not write `plan.md` before completing all prescribed passes.
-- ❌ Do not skip the cross-package propagation check — bugs that exist in one package often exist in siblings.
-
 ## Universal markers
 
 These markers have the same meaning in every workflow. Workflow-specific markers are defined locally in each workflow file.
 
-| Marker         | Meaning                                                           |
-| -------------- | ----------------------------------------------------------------- |
-| `[BLOCKED]`    | Cannot proceed — waiting for user input; present a recommendation |
-| `[ESCALATE]`   | Breaking change or irreversible action — state tradeoffs and wait |
-| `[SKIP]`       | Phase, step, or item not applicable — state the reason            |
-| `[VERIFY]`     | Requires runtime or manual confirmation beyond static analysis    |
-| `[PROPAGATED]` | Fix or pattern applied to sibling packages                        |
-| `[DONE]`       | Item complete — code, tests, and lint all pass                    |
-| `[FINDING]`    | Concrete problem or gap discovered in source                      |
-| `[DEFERRED]`   | Item placed in Future improvements (out of immediate scope)       |
+| Marker       | Meaning                                                           |
+| ------------ | ------------------------------------------------------------------ |
+| `[BLOCKED]`  | Cannot proceed — waiting for user input; present a recommendation |
+| `[ESCALATE]` | Breaking change or irreversible action — state tradeoffs and wait |
+| `[SKIP]`     | Phase, step, or item not applicable — state the reason            |
+| `[DONE]`     | Item complete — code, tests, and lint all pass                    |
+| `[FINDING]`  | Concrete problem or gap discovered in source                      |
+| `[DEFERRED]` | Item placed in Future improvements (out of immediate scope)       |
+
+Cross-package propagation is reported as plain prose ("Propagated to: ripple, courier" — see `pkg-implement.md § 6`), not a bracket marker — nothing else in any workflow ever needs to search for "did this propagate" as a scannable token, so a marker added no value over the sentence it would replace. Runtime/manual-verification-needed items are reported the same way — plain prose in the relevant Follow-up/Open-Items list — for the same reason.
 
 ## Severity
 

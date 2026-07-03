@@ -13,11 +13,13 @@
 ## Modes
 
 <!-- GENERATED:mode-table:BEGIN -->
+
 | Mode | Use when | Pass structure |
 | --- | --- | --- |
 | `analyse` (default) | Existing package improvement | arch review → DX deep-dive → synthesis |
 | `feature` | Adding a specific new feature to an existing package | requirements → API design → acceptance criteria |
 | `new-package` | Creating a new package from scratch | requirements → API design → acceptance criteria |
+
 <!-- GENERATED:mode-table:END -->
 
 Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.modes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts; same source `/pkg-plan` uses, so the two can no longer drift apart). Mode determines the pass structure in Phase 1. **Phases 2–7 are identical across all modes.**
@@ -32,6 +34,7 @@ Don't default to the full pipeline. Classify the request, propose a scope, let t
 4. Proceed on confirmation. If the user just says "go", use your best-match scope (named or custom) rather than silently defaulting to `full`.
 
 <!-- GENERATED:scope-table:BEGIN -->
+
 | Change type | Scope key | Phases (converge within each) |
 | --- | --- | --- |
 | Full feature or new package | `full` | baseline → plan → implement → review → security → tests → docs → repl |
@@ -40,6 +43,7 @@ Don't default to the full pipeline. Classify the request, propose a scope, let t
 | Docs-only update | `docs` | baseline → docs |
 | Test coverage gap | `tests` | baseline → review-a → tests |
 | Security hardening | `security` | baseline → implement → security |
+
 <!-- GENERATED:scope-table:END -->
 
 Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.scopes` by `scripts/sync-workflow-docs.mjs` — edit the manifest and run `pnpm gen:workflow-docs`, don't hand-edit this table (`pnpm check:workflow-docs` fails CI if it drifts).
@@ -47,7 +51,9 @@ Generated from `.ai/workflows/manifest.json` § `pkgWorkflow.scopes` by `scripts
 **Scope preconditions** (generated from `pkgWorkflow.scopeRequirements` — add a new scope's precondition there, not as a one-off sentence here):
 
 <!-- GENERATED:scope-notes:BEGIN -->
+
 - **`security`** — Runs Implement without running Plan — use only when `runs/<name>/plan.md` already exists from a prior planning cycle.
+
 <!-- GENERATED:scope-notes:END -->
 
 ## When to escalate
@@ -91,12 +97,7 @@ Record in `runs/<name>/progress.md`: passing test count, test file count, lint s
 
 ## 2. Guardrails
 
-These apply to every phase:
-
-- **Do not commit, push, or publish** without explicit user approval. Generating `rush change` files is fine; committing or pushing is not unless asked.
-- **Do not modify other packages** beyond the scoped propagations defined in `/pkg-implement` step 6, and never without noting them.
-- **Do not add runtime or dev dependencies** without explicit instruction (see `.ai/rules/code/conventions.md` for documented exceptions).
-- **Stay green:** never weaken, skip, or delete tests to make a phase pass. Surface real failures instead.
+Applies to every phase, on top of `.ai/rules/process/agent-execution.md § Scope and safety` / `§ Tests`: **do not modify other packages** beyond the scoped propagations defined in `/pkg-implement` step 6, and never without noting them.
 
 ## 3. Resuming an interrupted run
 
@@ -114,17 +115,7 @@ If `runs/<name>/progress.md` shows any phase as 🔄 (in progress), the previous
 
 **Carry context across passes.** Load prior phase artifacts from `runs/<name>/` rather than re-reading the whole package on every pass. Prefer the `@vielzeug` MCP's source/docs lookup tools for most packages; its component-listing tools for `refine` (resolve exact tool names via your MCP tool list — do not assume a fixed name/prefix).
 
-Plan and Implement **converge on evidence** — no fixed pass count. Review and Security run a **fixed 3-pass enumeration** (each pass is a distinct, mandatory concern, not a repetition of the same activity) — see `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact distinction. ~3 passes is typical for Plan/Implement on a full-size package; a small package may converge in 1, a large one may need more. Tests, Docs, and REPL are inherently single-pass phases.
-
-```
-Phase 1: Plan      (converge, ~3 passes)      (/pkg-plan — mode: analyse / feature / new-package)
-Phase 2: Implement (converge, ~3 rounds)      (/pkg-implement)
-Phase 3: Review    (fixed, 3 lenses)          (/pkg-review)
-Phase 4: Security  (fixed, 3 surfaces)        (/pkg-security)
-Phase 5: Tests     × 1                        (/pkg-tests)
-Phase 6: Docs      × 1                        (/pkg-docs)
-Phase 7: REPL      × 1                     (/pkg-repl)
-```
+Plan and Implement **converge on evidence** — no fixed pass count. Review and Security run a **fixed 3-pass enumeration** (each pass is a distinct, mandatory concern, not a repetition of the same activity) — see `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact distinction. ~3 passes is typical for Plan/Implement on a full-size package; a small package may converge in 1, a large one may need more. Tests, Docs, and REPL are inherently single-pass phases. Cadence per phase (converge / fixed / × 1) is exactly what each `### Phase N` heading below says — not repeated here as a separate diagram that could drift from it.
 
 ---
 
@@ -138,7 +129,7 @@ Emit `[PHASE 1]`. Run `/pkg-plan`, applying its convergence rule (stop when a pa
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 1: Plan complete (N passes, converged)
 - Mode: analyse / feature / new-package
 - Items: N (X 🔴 Bug, Y 🟠 Design, Z 🟡 Coverage, W 🟢 Enhancement/Feature)
@@ -153,7 +144,7 @@ Emit `[PHASE 1]`. Run `/pkg-plan`, applying its convergence rule (stop when a pa
 
 Emit `[PHASE 2]`. Execute `/pkg-implement`, working through `plan.md` items by priority in as many rounds as needed to finish all items and reach green (typically 3: high-priority → medium-priority → polish).
 
-> **`new-package` mode only — Round 0 — Scaffold**: create the package skeleton before Round 1. Follow `.ai/rules/process/workspace.md § New-package scaffolding`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
+> **`new-package` mode only — Round 0 — Scaffold**: create the package skeleton before Round 1. Follow `.ai/rules/code/conventions.md § New-package scaffold`, then `.ai/rules/process/workspace.md § New-package registration`. Run `pnpm --filter @vielzeug/<name> build` — must pass before Round 1. Record scaffolded baseline in `progress.md`.
 
 - **Round 1**: high-priority items (🔴 Bug + 🟠 Design).
 - **Round 2**: medium-priority items (🟡 Coverage + 🟢 Enhancement); re-verify all tests pass.
@@ -163,7 +154,7 @@ Before each round, verify the baseline is green. After each round, run the test 
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 2: Implement complete (N rounds)
 - Items completed: N/N
 - Tests: N passing, F files
@@ -192,7 +183,7 @@ Emit `[PHASE 3]`. Execute `/pkg-review` for all three lenses — A (Correctness)
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 3: Review complete (3/3 lenses)
 - Findings: C CRITICAL, M MAJOR, Mi MINOR, N NIT
 - All CRITICAL/MAJOR fixed: YES / NO (list any open)
@@ -208,7 +199,7 @@ Emit `[PHASE 4]`. Execute `/pkg-security` for all three surfaces — Pass 1 (Inp
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 4: Security complete (3/3 surfaces)
 - Findings: X [VULN], Y [CONCERN]
 - All [VULN] fixed: YES / [ESCALATE] (list breaking items)
@@ -225,7 +216,7 @@ Emit `[PHASE 5]`. Execute `/pkg-tests` once. Run the full test suite after restr
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 5: Tests complete
 - Tests before: N, after: M (delta: +X)
 - Test files: F
@@ -245,7 +236,7 @@ pnpm --filter @vielzeug/codex build
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 6: Docs complete
 - Files updated: [list]
 - docs:build: PASS
@@ -261,7 +252,7 @@ Emit `[PHASE 7]` — or `[SKIP]` with reason for DOM-output packages (`ore`, `re
 
 **Phase checkpoint:**
 
-```
+```text
 ✅ PHASE 7: REPL complete / [SKIP] (DOM-output package)
 - Examples: N modules, K categories
 - validate:repl: PASS
@@ -283,7 +274,7 @@ Emit `[PHASE 7]` — or `[SKIP]` with reason for DOM-output packages (`ore`, `re
 
 Output the final report using **exactly this format**:
 
-```
+```text
 ## Workflow Complete — <name>
 
 ### Baseline → Final
@@ -316,12 +307,7 @@ Output the final report using **exactly this format**:
 
 ## 6. Persistence
 
-Run artifacts persist under `runs/<name>/`. Follow the persistence semantics in `.ai/rules/process/agent-execution.md § Run artifacts`.
-
-- `plan.md` — written by Phase 1 (`/pkg-plan`); consumed by Phase 2 (`/pkg-implement`).
-- `progress.md` — baseline metrics + phase status table + propagation notes.
-- `review.md` — consolidated findings from Phase 3.
-- `security.md` — findings from Phase 4.
+Full artifact list and persistence rules: `.ai/rules/process/agent-execution.md § Run artifacts`.
 
 ## 7. Progress tracking
 
@@ -339,11 +325,11 @@ Maintain in `runs/<name>/progress.md`:
 
 Status legend: ⏳ not started · 🔄 in progress (session interrupted) · ✅ complete · N/A not applicable.
 
-Use the Notes column to record which pass you are on and, once known, how many passes the phase converged in (e.g. `"Lens B"`, `"Round 2/2"`, `"Pass 3 — surface: browser"`, `"converged after 2 passes"`) — this makes resumption and later review of the run unambiguous.
+**Notes column: max ~15 words, one line, no prose.** It's a resumption pointer, not a changelog — e.g. `"Lens B"`, `"Round 2/2"`, `"Pass 3 — surface: browser"`, `"converged after 2 passes"`. Numbers and one-line outcomes only (e.g. `"11/11 items, 199→221 tests"`); never a paragraph. If there's a real narrative worth keeping (what changed and why, notable deviations), append it as a dated subsection at the bottom of `plan.md` instead — that file is versioned per cycle and meant to carry detail; `progress.md` exists to be scanned in five seconds.
 
 ## 8. Quick reference — execution flow
 
-```
+```text
 Baseline capture (analyse/feature)    OR    skip (new-package)
     ↓
 [PHASE 1] Plan — converge (typically ~3 passes)
@@ -352,7 +338,7 @@ Baseline capture (analyse/feature)    OR    skip (new-package)
   new-pkg    → /pkg-plan  (req → API → criteria)          → plan.md → Checkpoint
     ↓
 [PHASE 2] Implement — converge (typically ~3 rounds)
-  new-pkg only: Round 0 — Scaffold (see workspace.md)
+  new-pkg only: Round 0 — Scaffold (see conventions.md + workspace.md)
   Round N: /pkg-implement items by priority → Checkpoint → Propagation
     ↓
 [PHASE 3] Review — 3 lenses (A, B, C; all mandatory)    → review.md → Checkpoint

@@ -55,7 +55,7 @@ pnpm worktree:remove <pkg>
 
 **Why the refusal for coupled packages, not just a warning:** in a shared checkout, if agent A breaks `ripple`'s public API, agent B (on `ore`, which depends on it) sees the break on their very next command — that immediacy is what makes "fix in place" workable. Isolate the two in separate worktrees and that break goes silent until a branch merge — worse, not better, for coupled work. "Coupled" includes optional peer deps (e.g. `flux`'s adapters) — still a real API contract, just a looser one; `scripts/worktree.mjs` labels these `(optional)` in its refusal message so you know which kind of edge you'd be overriding with `--force`.
 
-Independent packages have nothing to hide from each other, so isolation is a pure win there — but don't hand-verify "independent" against `.ai/rules/data/catalogue.md`'s prose table, it drifts (currently wrong for `tempo`, `herald`, and `arsenal`, all listed there as independent when they aren't). `scripts/worktree.mjs` checks live against `package.json` every time; that's the only check that matters.
+Independent packages have nothing to hide from each other, so isolation is a pure win there. `.ai/rules/data/catalogue.md`'s dependency graph is generated from `package.json` (`scripts/sync-catalogue.mjs`, CI-gated) so it no longer silently drifts — but `scripts/worktree.mjs` still checks live against `package.json` on every invocation rather than trusting the doc, since that's a zero-cost check for a command that's about to touch the filesystem anyway.
 
 `remove` shells out to plain `git worktree remove`, which already refuses if the worktree has uncommitted changes — that safety is intentional, don't add `--force` to the script's remove path.
 
@@ -113,25 +113,9 @@ Standard command (all other packages):
 pnpm vitest run packages/<name>/src/__tests__/
 ```
 
-## New-package scaffolding
+## New-package registration
 
-When creating a new package (`new-package` mode in `/pkg-plan` and `/pkg-workflow`), the scaffold item must produce these files:
-
-```
-packages/<name>/
-  package.json                  ← copy + adapt from a similar package; update name, version, description
-  tsconfig.json                 ← extends ../../tsconfig.json; include src/**/*.ts
-  tsconfig.declarations.json    ← emits .d.ts only; used by build:types script
-  vitest.config.ts              ← copy from a similar package; points to src/__tests__/
-  vite.config.ts                ← ESM + CJS dual build; lib.entry: src/index.ts
-  src/
-    index.ts                    ← empty barrel with a single comment: // exports go here
-    __tests__/
-      <name>.test.ts            ← describe('<name>', () => { it.todo('baseline') })
-  README.md                     ← package name + one-liner + install snippet
-```
-
-After creating the files, register the package in:
+When creating a new package (`new-package` mode in `/pkg-plan` and `/pkg-workflow`), scaffold the file tree per `.ai/rules/code/conventions.md § New-package scaffold` first, then register it here:
 
 - **`rush.json`** — add an entry to the `projects` array following the existing pattern
 - **`pnpm-workspace.yaml`** — verify the existing `packages/**` glob already covers it (no change needed in most cases)

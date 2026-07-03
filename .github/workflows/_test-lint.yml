@@ -60,3 +60,6 @@ jobs:
 
       - name: Check workflow docs are in sync with manifest.json
         run: pnpm check:workflow-docs
+
+      - name: Check catalogue dependency graph is in sync with package.json
+        run: pnpm check:catalogue

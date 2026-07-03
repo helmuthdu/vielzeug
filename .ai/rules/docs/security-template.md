@@ -6,7 +6,7 @@ Static reference for `security.md` output format. Consumed by `/pkg-security` â€
 
 List every finding with:
 
-```
+```text
 [STATUS] [SEVERITY] [CATEGORY]
 File: src/foo.ts:42
 Finding: <description>
@@ -22,7 +22,7 @@ Where:
 
 When a finding is fixed during the audit, annotate it inline:
 
-```
+```text
 [VULN] [MAJOR] [Injection] File: src/foo.ts:42 [DONE]
 Finding: ...
 Fix: ...

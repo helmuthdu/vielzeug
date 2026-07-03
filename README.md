@@ -38,6 +38,7 @@ pnpm add @vielzeug/ripple
 ```
 
 **Key Features:**
+
 - Fine-grained signals with `computed()`, `effect()`, `batch()`, `watch()`, and `scope()`
 - `store()` for reactive objects with deep update tracking
 - Zero dependencies (7.0 KB min / 2.4 KB gz)
@@ -55,6 +56,7 @@ pnpm add @vielzeug/ore
 ```
 
 **Key Features:**
+
 - Reactive state management with automatic re-rendering
 - Type-safe component definitions and prop helpers
 - Shadow DOM with automatic styling and form-associated elements
@@ -73,6 +75,7 @@ pnpm add @vielzeug/refine
 ```
 
 **Key Features:**
+
 - Drop-in accessible components — button, input, select, checkbox, accordion, tooltip, and more
 - Framework-agnostic — plain custom elements, no framework required
 - Full theming via CSS custom properties
@@ -91,6 +94,7 @@ pnpm add @vielzeug/clockwork
 ```
 
 **Key Features:**
+
 - Fully typed states, events, and transitions
 - Guard conditions, entry/exit actions, and action arrays
 - Async `invoke` with `onDone`/`onError` callbacks
@@ -110,6 +114,7 @@ pnpm add @vielzeug/flux
 ```
 
 **Key Features:**
+
 - `flux()` factory for cold, pipeable, disposable streams
 - Subjects: `createSubject()` and `createBehaviorSubject()` for hot multicast sources
 - 40+ operators — creation, transformation, filtering, combination, and utility
@@ -129,6 +134,7 @@ pnpm add @vielzeug/forge
 ```
 
 **Key Features:**
+
 - Type-safe form state with inferred types
 - Field-level and form-level validation
 - Reactive subscriptions
@@ -147,6 +153,7 @@ pnpm add @vielzeug/spell
 ```
 
 **Key Features:**
+
 - Fluent schema API — `s.object()`, `s.string()`, `s.number()`, `s.array()`, and more
 - Precise input/output typing with `InferInput<T>` and `Infer<T>`
 - Async validation, custom refinements, and transforms
@@ -165,6 +172,7 @@ pnpm add @vielzeug/courier
 ```
 
 **Key Features:**
+
 - Separate HTTP and Query clients for flexibility
 - Smart caching with stale-while-revalidate and request deduplication
 - Standalone mutations with cancellation, retry, and lifecycle callbacks
@@ -183,6 +191,7 @@ pnpm add @vielzeug/pulse @vielzeug/ripple
 ```
 
 **Key Features:**
+
 - Typed event maps — payload types inferred from the event key
 - Channel multiplexing and room management
 - Reactive `status`, `latency`, and presence signals via `@vielzeug/ripple`
@@ -202,6 +211,7 @@ pnpm add @vielzeug/vault
 ```
 
 **Key Features:**
+
 - Unified API for IndexedDB, LocalStorage, SessionStorage, and in-memory stores
 - Advanced querying and filtering with `table()`
 - TTL (Time-To-Live) expiration and schema migrations (16 KB min / 4.5 KB gz)
@@ -219,6 +229,7 @@ pnpm add @vielzeug/wayfinder
 ```
 
 **Key Features:**
+
 - Route parameters and query string parsing
 - Middleware system for auth, logging, and redirects
 - Hash and History mode with memory history for testing
@@ -237,6 +248,7 @@ pnpm add @vielzeug/ward
 ```
 
 **Key Features:**
+
 - Role-based access control (RBAC) with wildcard support
 - Dynamic attribute-based rules (ABAC) with `owns()` helper
 - Multi-action checks (`canAll`, `canAny`) and `allowedActions()` listing
@@ -255,6 +267,7 @@ pnpm add @vielzeug/conduit
 ```
 
 **Key Features:**
+
 - Token-based typed dependency registration
 - Async factory support and child containers
 - Singleton, transient, and scoped lifetimes
@@ -273,6 +286,7 @@ pnpm add @vielzeug/rune
 ```
 
 **Key Features:**
+
 - Log levels (`debug` → `error`) with priority-based filtering
 - `scope(name)` and `child()` for isolated namespaced loggers
 - Browser CSS badge styling — `symbol`, `icon`, or `text` variants
@@ -292,6 +306,7 @@ pnpm add @vielzeug/lingua
 ```
 
 **Key Features:**
+
 - Type-safe translation keys with autocomplete
 - Pluralization rules and interpolation
 - Async translation loading and lazy namespaces
@@ -310,6 +325,7 @@ pnpm add @vielzeug/herald
 ```
 
 **Key Features:**
+
 - Fully typed event maps — payload types inferred from the event key
 - `once()` for single-fire subscriptions
 - `onError` and `onDispatch` hooks for logging and error handling
@@ -329,6 +345,7 @@ pnpm add @vielzeug/familiar
 ```
 
 **Key Features:**
+
 - `createWorker(fn)` — serialize a function and run it in a dedicated Web Worker
 - `createWorker(fn, { size })` — concurrent worker pool with configurable size
 - Timeout support and task cancellation via `AbortSignal`
@@ -349,6 +366,7 @@ pnpm add @vielzeug/dnd
 ```
 
 **Key Features:**
+
 - `createDropZone()` with MIME type, wildcard, and file extension filtering
 - `onDropRejected` callback and counter-based hover state
 - `createSortable()` for native sortable lists with `data-sort-id`
@@ -368,6 +386,7 @@ pnpm add @vielzeug/orbit
 ```
 
 **Key Features:**
+
 - `positionFloat()` to compute and apply `left` / `top` in one call
 - `computePosition()` for low-level `{ x, y, placement }` control
 - Middleware pipeline: `offset`, `flip`, `shift`, and `size`
@@ -387,6 +406,7 @@ pnpm add @vielzeug/prism
 ```
 
 **Key Features:**
+
 - `createLineChart()`, `createBarChart()`, `createAreaChart()`, `createPieChart()`, `createSparkline()`
 - Signal-driven reactivity via `@vielzeug/ripple` — data updates re-render automatically
 - Built-in scales: `linearScale()`, `bandScale()`, `timeScale()`
@@ -407,6 +427,7 @@ pnpm add @vielzeug/sourcerer
 ```
 
 **Key Features:**
+
 - `createLocalSource()` and `createRemoteSource()` with a unified query API
 - Reactive `items`, `total`, `loading`, and `error` signals
 - Built-in fuzzy search, multi-field sorting, and pagination
@@ -425,6 +446,7 @@ pnpm add @vielzeug/scroll
 ```
 
 **Key Features:**
+
 - Virtualized rendering with configurable overscan
 - Fixed and measured variable-height rows
 - Programmatic scrolling (`scrollToIndex`, `scrollToOffset`)
@@ -444,6 +466,7 @@ pnpm add @vielzeug/tempo
 ```
 
 **Key Features:**
+
 - Built on the TC39 Temporal proposal
 - Timezone-aware date arithmetic, formatting, and parsing
 - Calendar system support and duration helpers
@@ -462,6 +485,7 @@ pnpm add @vielzeug/coins
 ```
 
 **Key Features:**
+
 - `money(amount, currency)` as an immutable value type backed by bigint — exact precision throughout
 - Full arithmetic: `add`, `subtract`, `multiply`, `divide`, `allocate`, `splitEvenly`
 - Locale-aware formatting via `Intl.NumberFormat` with `format()` and `formatParts()`
@@ -481,6 +505,7 @@ pnpm add @vielzeug/arsenal
 ```
 
 **Key Features:**
+
 - 75+ utilities fully typed with TypeScript inference
 - Selector-based and multi-field sorting with `sort()`
 - Fuzzy search with `search()`, deep diff with `diff()`, deep merge, pruning, and more
@@ -503,6 +528,7 @@ pnpm add @vielzeug/codex
 ```
 
 **Key Features:**
+
 - Stdio and HTTP transport modes
 - Tools: `list-packages`, `search-packages`, `get-docs`, `get-package-api`, `list-components`, `get-component`, and more
 - Works with Claude Desktop, Copilot Chat, and any MCP-compatible client
@@ -599,7 +625,7 @@ pnpm docs:dev
 
 ### Project Structure
 
-```
+```text
 vielzeug/
 ├── packages/
 │   └── codex/         # AI / MCP server

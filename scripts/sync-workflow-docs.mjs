@@ -57,13 +57,16 @@ export function isTracked(relPath, root = ROOT) {
   }
 }
 
+/** Blank line on both sides of `replacement` (not just a newline) — GFM requires
+ * a blank line around a table (rumdl MD058) or it doesn't parse as a table at
+ * all; harmless for the one non-markdown consumer (pkg-workflow.js's JS block). */
 export function replaceBetweenMarkers(source, beginMarker, endMarker, replacement) {
   const begin = source.indexOf(beginMarker);
   const end = source.indexOf(endMarker);
   if (begin === -1 || end === -1 || end < begin) {
     throw new Error(`markers ${beginMarker} / ${endMarker} not found`);
   }
-  return source.slice(0, begin + beginMarker.length) + '\n' + replacement + '\n' + source.slice(end);
+  return source.slice(0, begin + beginMarker.length) + '\n\n' + replacement + '\n\n' + source.slice(end);
 }
 
 // ---------------------------------------------------------------------------
