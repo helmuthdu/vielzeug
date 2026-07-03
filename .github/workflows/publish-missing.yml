@@ -45,17 +45,27 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           scope: '@vielzeug'
 
-      - name: Verify npm auth
-        env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Sanitize npm token
+        id: npmtoken
         run: |
-          if [ -z "$NPM_AUTH_TOKEN" ]; then
+          RAW="${{ secrets.NPM_TOKEN }}"
+          if [ -z "$RAW" ]; then
             echo "❌ npm token is missing for this job."
             echo "Expected NPM_TOKEN to exist"
             echo "If the token is stored as an Environment secret, bind this job to that environment or copy it to repository secrets."
             exit 1
           fi
+          # Strip stray whitespace/newlines (common copy-paste artifact when setting the secret) —
+          # an untrimmed token breaks the .npmrc line silently and npm just returns a generic 401.
+          CLEAN=$(printf '%s' "$RAW" | tr -d '[:space:]')
+          echo "::add-mask::$CLEAN"
+          echo "token=$CLEAN" >> "$GITHUB_OUTPUT"
+          echo "Token length: ${#CLEAN}"
 
+      - name: Verify npm auth
+        env:
+          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
+        run: |
           # Write auth to home .npmrc and to a scratch file outside the repo (used as --userconfig below).
           # Never write secrets into the repo's tracked ".npmrc" — it lives in the working tree and could
           # end up in a commit, diff, or uploaded artifact.
@@ -77,7 +87,7 @@ jobs:
 
       - name: Publish versions missing on npm
         env:
-          NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_AUTH_TOKEN: ${{ steps.npmtoken.outputs.token }}
         run: |
           node <<'NODE'
           const fs = require('fs');
