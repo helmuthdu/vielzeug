@@ -29,6 +29,7 @@ Result excerpt:
     "category": "state",
     "exports": ["signal", "computed", "effect"],
     "availableDocPages": ["index", "api", "usage", "examples"],
+    "exampleIds": ["signal-basics", "computed-chain"],
     "hasSource": true
   }
 ]
@@ -44,9 +45,9 @@ Use `get-package` with `packageSlug` to fetch one entry by slug. Returns a `Pack
 
 ### Pitfalls
 
-- The result never includes `docs` content or `apiSource` — call `get-docs` or `get-source` separately.
+- The result never includes `docs` content, `apiSource`, or example `code` — call `get-docs`, `get-source`, or `get-example` separately.
 - For `get-package`, an unknown `packageSlug` returns `isError: true` with available slugs listed. Check before retrying.
-- `availableDocPages` varies per package; always check it before calling `get-docs` with a specific page.
+- `availableDocPages` and `exampleIds` vary per package; always check them before calling `get-docs` or `get-example` with a specific page or id.
 
 ### Related
 
@@ -54,3 +55,4 @@ Use `get-package` with `packageSlug` to fetch one entry by slug. Returns a `Pack
 - [Reading Docs](./reading-docs.md)
 - [API Reference — list-packages](../api.md#list-packages)
 - [API Reference — get-package](../api.md#get-package)
+- [API Reference — list-examples](../api.md#list-examples)

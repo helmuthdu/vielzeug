@@ -185,6 +185,13 @@ function buildLlmsFullTxt(packages: BundledPackage[], version: string): string {
       lines.push(stripped);
       lines.push('');
     }
+
+    if (pkg.examples.length > 0) {
+      lines.push('### REPL Examples');
+      lines.push('');
+      lines.push(pkg.examples.map((e) => `- ${e.name} (id: \`${e.id}\`)`).join('\n'));
+      lines.push('');
+    }
   }
 
   return lines.join('\n').trimEnd() + '\n';

@@ -6,7 +6,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
-import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createRequestHandler, startHttpServer } from '../http.js';
@@ -70,6 +70,32 @@ async function startTestServer(createSseServer: () => Server = makeServer): Prom
   };
 }
 
+/** Binds a raw request handler (bypassing createRequestHandler's own transport wiring) for tests
+ * that need to control the sseSessions map directly — e.g. a pre-populated fake session. */
+async function bindHandler(handler: (req: IncomingMessage, res: ServerResponse) => void): Promise<TestServer> {
+  const httpServer = createHttpServer(handler);
+
+  const port = await new Promise<number>((resolve, reject) => {
+    httpServer.once('error', reject);
+    httpServer.listen(0, () => {
+      const addr = httpServer.address();
+
+      if (addr && typeof addr === 'object') resolve(addr.port);
+      else reject(new Error('could not get bound port'));
+    });
+  });
+
+  return {
+    baseUrl: `http://localhost:${port}`,
+    close(): Promise<void> {
+      return new Promise((resolve) => {
+        httpServer.closeAllConnections?.();
+        httpServer.close(() => resolve());
+      });
+    },
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -98,6 +124,23 @@ describe('HTTP transport — createRequestHandler', () => {
       expect(body).toEqual({ status: 'ok' });
       expect(res.headers.get('content-type')).toContain('application/json');
       expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    });
+
+    it('includes version in the response when the handler was built with one', async () => {
+      const sseSessions = new Map<string, SSEServerTransport>();
+      const streamableTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+      await makeServer().connect(streamableTransport);
+
+      const versioned = await bindHandler(createRequestHandler(streamableTransport, sseSessions, makeServer, '1.2.3'));
+
+      try {
+        const res = await fetch(`${versioned.baseUrl}/health`);
+
+        await expect(res.json()).resolves.toEqual({ status: 'ok', version: '1.2.3' });
+      } finally {
+        await versioned.close();
+      }
     });
   });
 
@@ -146,6 +189,64 @@ describe('HTTP transport — createRequestHandler', () => {
         await sseServer.close();
       }
     });
+
+    it('POST /message with a known sessionId forwards to session.handlePostMessage', async () => {
+      const handlePostMessage = vi.fn((_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+        res.statusCode = 202;
+        res.end('accepted');
+
+        return Promise.resolve();
+      });
+      const sseSessions = new Map<string, SSEServerTransport>([
+        ['known-session', { handlePostMessage } as unknown as SSEServerTransport],
+      ]);
+      const streamableTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+      await makeServer().connect(streamableTransport);
+
+      const known = await bindHandler(createRequestHandler(streamableTransport, sseSessions, makeServer));
+
+      try {
+        const res = await fetch(`${known.baseUrl}/message?sessionId=known-session`, { method: 'POST' });
+
+        expect(handlePostMessage).toHaveBeenCalledOnce();
+        expect(res.status).toBe(202);
+        await expect(res.text()).resolves.toBe('accepted');
+      } finally {
+        await known.close();
+      }
+    });
+
+    it('logs and ends the response without rewriting headers on a mid-stream error', async () => {
+      const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+      const handlePostMessage = vi.fn((_req: IncomingMessage, res: ServerResponse): Promise<void> => {
+        res.writeHead(200, { 'content-type': 'text/plain' });
+        res.write('partial');
+
+        return Promise.reject(new Error('boom mid-stream'));
+      });
+      const sseSessions = new Map<string, SSEServerTransport>([
+        ['mid-stream-session', { handlePostMessage } as unknown as SSEServerTransport],
+      ]);
+      const streamableTransport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+
+      await makeServer().connect(streamableTransport);
+
+      const midStream = await bindHandler(createRequestHandler(streamableTransport, sseSessions, makeServer));
+
+      try {
+        const res = await fetch(`${midStream.baseUrl}/message?sessionId=mid-stream-session`, { method: 'POST' });
+
+        // Headers were already sent before the rejection — the response keeps its 200 status
+        // and partial body instead of being rewritten into a 500 JSON error.
+        expect(res.status).toBe(200);
+        await expect(res.text()).resolves.toBe('partial');
+        expect(stderr.mock.calls.some(([msg]) => String(msg).includes('MCP HTTP error (mid-stream [POST'))).toBe(true);
+      } finally {
+        stderr.mockRestore();
+        await midStream.close();
+      }
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -180,6 +281,19 @@ describe('startHttpServer', () => {
 
       expect(res.status).toBe(200);
       expect(handle.disposed).toBe(false);
+    } finally {
+      await handle.dispose();
+    }
+  });
+
+  it('threads the optional version through to /health', async () => {
+    const port = await getFreePort();
+    const handle = await startHttpServer(makeServer(), port, makeServer, '9.9.9');
+
+    try {
+      const res = await fetch(`http://localhost:${port}/health`);
+
+      await expect(res.json()).resolves.toEqual({ status: 'ok', version: '9.9.9' });
     } finally {
       await handle.dispose();
     }

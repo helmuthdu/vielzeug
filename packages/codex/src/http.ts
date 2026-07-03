@@ -45,6 +45,7 @@ export function createRequestHandler(
   streamableTransport: StreamableHTTPServerTransport,
   sseSessions: Map<string, SSEServerTransport>,
   createSseServer: () => Server,
+  version?: string,
 ): (req: IncomingMessage, res: ServerResponse) => void {
   return (req, res) => {
     setCorsHeaders(res);
@@ -61,7 +62,7 @@ export function createRequestHandler(
     if (req.method === 'GET' && url === '/health') {
       res.statusCode = 200;
       res.setHeader('content-type', 'application/json; charset=utf-8');
-      res.end(JSON.stringify({ status: 'ok' }));
+      res.end(JSON.stringify({ status: 'ok', ...(version !== undefined && { version }) }));
 
       return;
     }
@@ -109,6 +110,7 @@ export async function startHttpServer(
   mcpServer: Server,
   port: number,
   createSseServer: () => Server,
+  version?: string,
 ): Promise<HttpServerHandle> {
   // Legacy SSE sessions keyed by sessionId (for older MCP clients like Windsurf).
   const sseSessions = new Map<string, SSEServerTransport>();
@@ -118,7 +120,7 @@ export async function startHttpServer(
 
   await mcpServer.connect(streamableTransport);
 
-  const httpServer = createHttpServer(createRequestHandler(streamableTransport, sseSessions, createSseServer));
+  const httpServer = createHttpServer(createRequestHandler(streamableTransport, sseSessions, createSseServer, version));
 
   await new Promise<void>((resolve, reject) => {
     const onError = (err: Error): void => reject(err);

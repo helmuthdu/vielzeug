@@ -479,7 +479,7 @@ export default defineConfig({
         {
           items: [
             { link: '/codex/api#api-overview', text: 'Overview' },
-            { link: '/codex/api#package-entry-points', text: 'Entry Points' },
+            { link: '/codex/api#package-entry-point', text: 'Entry Point' },
             { link: '/codex/api#tools', text: 'Tools' },
             { link: '/codex/api#programmatic-api', text: 'Programmatic API' },
             { link: '/codex/api#types', text: 'Types' },
@@ -494,8 +494,9 @@ export default defineConfig({
             { link: '/codex/examples/listing-packages', text: 'Listing Packages' },
             { link: '/codex/examples/searching-packages', text: 'Searching Packages' },
             { link: '/codex/examples/package-metadata', text: 'Package Metadata' },
-            { link: '/codex/examples/looking-up-components', text: 'Looking Up Components' },
             { link: '/codex/examples/reading-docs', text: 'Reading Docs' },
+            { link: '/codex/examples/running-repl-examples', text: 'Running REPL Examples' },
+            { link: '/codex/examples/looking-up-components', text: 'Looking Up Components' },
             { link: '/codex/examples/inspector', text: 'Inspector' },
           ],
           link: '/codex/examples',

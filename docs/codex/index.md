@@ -15,10 +15,12 @@ exports:
     packageMeta,
     validateBundledData,
     CodexError,
-    ToolArgError,
+    ToolError,
+    ToolErrorCode,
     SCHEMA_VERSION,
     SearchHit,
     BundledData,
+    BundledExample,
     BundledPackage,
     PackageMeta,
     DocPage,
@@ -106,12 +108,13 @@ Wire it into your AI client — see the [Usage Guide](./usage.md) for client-spe
 
 <div class="features-grid">
 
-- Seven MCP tools: `list-packages`, `get-package`, `get-docs`, `get-source`, `search-packages`, `list-components`, `get-component`
-- `search-packages` ranks hits by field weight: name (3.9) > category (3.5) > description (3.1) > keywords (2.5) > exports (2.2) > related (2.0) > docs (1.0) > source (0.9)
+- Thirteen MCP tools: `list-packages`, `get-package`, `get-docs`, `get-source`, `list-examples`, `get-example`, `search-packages`, `get-type-signature`, plus five `refine-*` tools for Refine component metadata
+- `search-packages` ranks hits by field weight: name (3.9) > category (3.5) > description (3.1) > keywords (2.5) > exports (2.2) > related (2.0) > docs (1.0) > examples (0.95) > source (0.9)
 - Multi-word AND search — all terms must match within the same field; hyphenated names normalised automatically
 - Bundled snapshot data — runs without a network connection or local Vielzeug checkout
 - Stdio transport (default) for local clients; Streamable HTTP with `--port <n>` for remote agents; legacy SSE at `GET /sse` for older clients
-- Health endpoint at `GET /health` in HTTP mode
+- Health endpoint at `GET /health` in HTTP mode, reporting the bundled snapshot's `version`
+- `--data <path>` loads a custom snapshot instead of the built-in bundled one
 - Fail-fast startup: missing or malformed data bundle aborts with an actionable error and regen hint
 - Programmatic API: `createServer`, `createServerFromDisk`, `startHttpServer`, `loadData`, `validateBundledData`
 

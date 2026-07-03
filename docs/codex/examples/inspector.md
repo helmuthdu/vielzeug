@@ -35,7 +35,7 @@ Verify the server is up:
 
 ```sh
 curl http://localhost:3100/health
-# {"status":"ok"}
+# {"status":"ok","version":"1.0.1"}
 ```
 
 Then connect any MCP client or send raw HTTP requests to `http://localhost:3100/`.

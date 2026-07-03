@@ -90,27 +90,24 @@ async function call(client: Client, name: string, args: Record<string, unknown> 
 // ---------------------------------------------------------------------------
 
 describe('tool registration', () => {
-  it('exposes exactly sixteen named tools', async () => {
+  it('exposes exactly thirteen named tools', async () => {
     const { client } = await createTestPair();
     const { tools } = await client.listTools();
 
     expect(tools.map((t) => t.name).sort()).toEqual([
-      'generate-sandbox-document',
-      'generate-template',
-      'get-component',
       'get-docs',
+      'get-example',
       'get-package',
-      'get-sandbox-context',
       'get-source',
-      'get-state-bridge-spec',
-      'get-tokens',
       'get-type-signature',
-      'list-components',
-      'list-directives',
+      'list-examples',
       'list-packages',
-      'list-validators',
+      'refine-generate-template',
+      'refine-get-component',
+      'refine-get-tokens',
+      'refine-list-components',
+      'refine-validate-usage',
       'search-packages',
-      'validate-component-usage',
     ]);
   });
 
@@ -247,9 +244,11 @@ describe('get-source', () => {
   it('returns isError for a package with no source', async () => {
     const { client } = await createTestPair(SYNTHETIC_DATA);
     const result = await call(client, 'get-source', { packageSlug: 'synthetic' });
+    const { code, message } = JSON.parse(text(result)) as { code: string; message: string };
 
     expect(result.isError).toBe(true);
-    expect(text(result)).toContain('no src/index.ts source');
+    expect(code).toBe('UNAVAILABLE');
+    expect(message).toContain('no src/index.ts source');
   });
 
   it('returns isError for an unknown packageSlug', async () => {
@@ -322,13 +321,13 @@ describe('search-packages', () => {
 });
 
 // ---------------------------------------------------------------------------
-// list-components + get-component
+// refine-list-components + refine-get-component
 // ---------------------------------------------------------------------------
 
-describe('list-components + get-component', () => {
-  it('list-components returns an array of tags or a graceful unavailable error', async () => {
+describe('refine-list-components + refine-get-component', () => {
+  it('refine-list-components returns an array of tags or a graceful unavailable error', async () => {
     const { client } = await createTestPair();
-    const result = await call(client, 'list-components');
+    const result = await call(client, 'refine-list-components');
 
     if (result.isError) {
       expect(text(result)).toContain('unavailable');
@@ -343,39 +342,33 @@ describe('list-components + get-component', () => {
     expect(typeof tags[0]?.tagName).toBe('string');
   });
 
-  it('get-component returns details for a known tag when CEM is available', async () => {
+  it('refine-get-component returns details for a known tag when CEM is available', async () => {
     const { client } = await createTestPair();
-    const listResult = await call(client, 'list-components');
+    const listResult = await call(client, 'refine-list-components');
 
     if (listResult.isError) return; // refine not built — skip
 
     const tags = JSON.parse(text(listResult)) as Array<{ tagName: string }>;
     const firstTag = tags[0]!.tagName;
-    const result = await call(client, 'get-component', { tagName: firstTag });
+    const result = await call(client, 'refine-get-component', { tagName: firstTag });
 
     expect(result.isError).not.toBe(true);
     expect(text(result)).toContain(firstTag);
   });
 
-  it('list-components returns isError when Refine CEM is absent', async () => {
-    const noRefine: BundledData = {
-      ...data,
-      packages: data.packages.map((p) => (p.slug === 'refine' ? { ...p, components: [] } : p)),
-    };
+  it('refine-list-components returns isError when Refine CEM is absent', async () => {
+    const noRefine: BundledData = { ...data, refineComponents: [] };
     const { client } = await createTestPair(noRefine);
-    const result = await call(client, 'list-components');
+    const result = await call(client, 'refine-list-components');
 
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('unavailable');
   });
 
-  it('get-component returns isError when Refine CEM is absent', async () => {
-    const noRefine: BundledData = {
-      ...data,
-      packages: data.packages.map((p) => (p.slug === 'refine' ? { ...p, components: [] } : p)),
-    };
+  it('refine-get-component returns isError when Refine CEM is absent', async () => {
+    const noRefine: BundledData = { ...data, refineComponents: [] };
     const { client } = await createTestPair(noRefine);
-    const result = await call(client, 'get-component', { tagName: 'ore-button' });
+    const result = await call(client, 'refine-get-component', { tagName: 'ore-button' });
 
     expect(result.isError).toBe(true);
     expect(text(result)).toContain('unavailable');

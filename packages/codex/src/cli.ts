@@ -21,10 +21,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 function printUsage(): void {
   log(
     [
-      'Usage: codex [--port <number>]',
+      'Usage: codex [--port <number>] [--data <path>]',
       '',
       'Options:',
       '  --port <number>   Run streamable HTTP transport on the specified port.',
+      '  --data <path>     Load bundled data from a custom snapshot file instead of the built-in one.',
       '  -h, --help        Show this help message.',
       '  -v, --version     Print package version.',
     ].join('\n'),
@@ -49,10 +50,14 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     return;
   }
 
-  let values: { port?: string };
+  let values: { data?: string; port?: string };
 
   try {
-    ({ values } = parseArgs({ args: argv, options: { port: { type: 'string' } }, strict: true }));
+    ({ values } = parseArgs({
+      args: argv,
+      options: { data: { type: 'string' }, port: { type: 'string' } },
+      strict: true,
+    }));
   } catch (err) {
     log(`error: ${err instanceof Error ? err.message : String(err)}`);
     printUsage();
@@ -66,7 +71,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
   let data: BundledData;
 
   try {
-    data = loadData();
+    data = loadData(values.data);
     port = resolvePort(values.port);
     mcpServer = createServer(data);
   } catch (err) {
@@ -80,7 +85,7 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     let handle: HttpServerHandle;
 
     try {
-      handle = await startHttpServer(mcpServer, port, () => createServer(data));
+      handle = await startHttpServer(mcpServer, port, () => createServer(data), data.version);
     } catch (err) {
       const code = err instanceof Error ? (err as NodeJS.ErrnoException).code : undefined;
       const detail = code === 'EADDRINUSE' ? `port ${port} is already in use.` : String(err);

@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// .ts extensions required: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+// .ts extensions required below: this file runs under node --experimental-strip-types (scripts only, never compiled by tsc).
+import { listPackageDirs } from '../../../scripts/vielzeug-packages.ts';
 import {
   type BundledData,
   type BundledPackage,
@@ -14,6 +15,8 @@ import {
 } from '../src/types.ts';
 import { log } from './_log.ts';
 import { parseFrontmatter } from './frontmatter.ts';
+import { readReplExamples } from './repl-examples.ts';
+import { extractExportedSignatures, resolveBarrelFiles } from './type-signatures.ts';
 
 // Resolves to dist/ in the compiled build, src/ when loaded directly under --experimental-strip-types.
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -39,6 +42,18 @@ function resolveDocsFile(repoRoot: string, slug: string, page: DocPage): string 
   return candidates.find((c) => existsSync(c)) ?? null;
 }
 
+/** All files under a package's REPL examples directory, or [] if it has none. */
+function replExampleFiles(repoRoot: string, slug: string): string[] {
+  const dir = resolve(repoRoot, `docs/.vitepress/theme/components/repl/examples/${slug}`);
+
+  if (!existsSync(dir)) return [];
+
+  return readdirSync(dir)
+    .filter((f) => f.endsWith('.ts'))
+    .sort()
+    .map((f) => resolve(dir, f));
+}
+
 // ---------------------------------------------------------------------------
 // Refine CEM declarations
 // ---------------------------------------------------------------------------
@@ -61,15 +76,20 @@ function readRefineDeclarations(repoRoot: string): CemDeclaration[] {
 // ---------------------------------------------------------------------------
 
 function hashPackageFiles(repoRoot: string, folder: string, slug: string): string {
+  const indexTsPath = resolve(repoRoot, folder, 'src/index.ts');
   const paths = [
     resolve(repoRoot, folder, 'package.json'),
-    resolve(repoRoot, folder, 'src/index.ts'),
     resolve(repoRoot, folder, 'README.md'),
+    // Every file typeSignatures was extracted from — indexTsPath plus anything it re-exports
+    // via `export * from`. Without this, editing a barrelled file (e.g. array/chunk.ts) would
+    // leave the cached typeSignatures for that symbol stale until a full CODEX_FORCE_REGEN.
+    ...(existsSync(indexTsPath) ? resolveBarrelFiles(indexTsPath) : []),
     ...DOC_PAGES.flatMap((page) => {
       const f = resolveDocsFile(repoRoot, slug, page);
 
       return f ? [f] : [];
     }),
+    ...replExampleFiles(repoRoot, slug),
     // Include CEM manifest so a refine-only component change invalidates the cache
     ...(slug === 'refine' ? [resolve(repoRoot, 'packages/refine/dist/custom-elements.json')] : []),
   ];
@@ -86,14 +106,64 @@ function hashPackageFiles(repoRoot: string, folder: string, slug: string): strin
   return hash.digest('hex');
 }
 
+/**
+ * Scripts in this directory that do NOT feed into a bundled package entry's content, so a change
+ * to them must not force a full incremental regeneration:
+ * - `_log.ts` — logging only, never touches output data.
+ * - `write-bundled-data.ts`, `generate-bundled-data.ts` — run the generator / persist its result;
+ *   have no influence on `BundledPackage` shape or content themselves.
+ * - `generate-tool-docs.ts` — reads compiled `dist/tools/`, unrelated to bundled data.
+ * - `dev.ts`, `watch-data.ts` — local dev-loop orchestration only.
+ * - `llms.ts` — derives `llms.txt`/`llms-full.txt` fresh from `result.data` on *every* run
+ *   regardless of incremental caching (see `write-bundled-data.ts`), so its own output is never
+ *   itself served stale from cache; no need to invalidate the package cache for it.
+ *
+ * Deliberately an exclude-list rather than an include-list: forgetting to *exclude* a new
+ * data-independent script here only costs an extra (harmless) full regeneration; forgetting to
+ * *include* a new logic-affecting script in an include-list would silently keep serving
+ * output produced by outdated logic — the exclude-list fails safe, not silent.
+ */
+const GENERATOR_SCRIPT_EXCLUDES = new Set([
+  '_log.ts',
+  'dev.ts',
+  'generate-bundled-data.ts',
+  'generate-tool-docs.ts',
+  'llms.ts',
+  'watch-data.ts',
+  'write-bundled-data.ts',
+]);
+
+/** Reserved hash-cache key for the generator-scripts hash — can never collide with a real package
+ * slug (every slug is a real `packages/<slug>` folder name; none start with `__`). */
+const GENERATOR_HASH_KEY = '__generator__';
+
+/**
+ * Hashes every generator script's own content (see `GENERATOR_SCRIPT_EXCLUDES` for what's left
+ * out and why). `hashPackageFiles` only hashes each package's *inputs* (docs, source, examples) —
+ * if the extraction *logic* itself changes (e.g. a rewrite of `extractExportedSignatures`), no
+ * package's inputs changed, so every per-package cache entry would otherwise still "hit" and
+ * silently keep serving output produced by the old logic. Comparing this hash against the previous
+ * run's stored value (see `loadIncrementalCache`) forces a full regeneration whenever the scripts
+ * themselves change, without requiring a manual `SCHEMA_VERSION` bump for every logic-only change
+ * (that constant is reserved for actual `BundledData` shape changes).
+ */
+function hashGeneratorScripts(scriptsDir: string): string {
+  const files = readdirSync(scriptsDir)
+    .filter((f) => f.endsWith('.ts') && !GENERATOR_SCRIPT_EXCLUDES.has(f))
+    .sort();
+
+  const hash = createHash('sha256');
+
+  for (const file of files) {
+    hash.update(readFileSync(resolve(scriptsDir, file)));
+  }
+
+  return hash.digest('hex');
+}
+
 // ---------------------------------------------------------------------------
 // Package processor helpers
 // ---------------------------------------------------------------------------
-
-interface RushProject {
-  packageName: string;
-  projectFolder: string;
-}
 
 function toStringArray(value: unknown, key?: string): string[] {
   if (Array.isArray(value)) {
@@ -124,10 +194,11 @@ function resolveStr(primary: unknown, fallback: unknown, field: string, slug: st
   return '';
 }
 
-function processPackage(repoRoot: string, project: RushProject, refineComponents: CemDeclaration[]): BundledPackage {
-  const slug = project.projectFolder.replace('packages/', '');
-  const pkgJson = readJson(resolve(repoRoot, project.projectFolder, 'package.json'));
-  const apiSource = readTextIfExists(resolve(repoRoot, project.projectFolder, 'src/index.ts'));
+function processPackage(repoRoot: string, projectFolder: string): BundledPackage {
+  const slug = projectFolder.replace('packages/', '');
+  const pkgJson = readJson(resolve(repoRoot, projectFolder, 'package.json'));
+  const indexTsPath = resolve(repoRoot, projectFolder, 'src/index.ts');
+  const apiSource = readTextIfExists(indexTsPath);
   const indexContent = readTextIfExists(resolveDocsFile(repoRoot, slug, 'index')) ?? '';
   const frontmatter = parseFrontmatter(indexContent);
 
@@ -148,18 +219,27 @@ function processPackage(repoRoot: string, project: RushProject, refineComponents
     log(`generator: "${slug}" has no doc pages — get-docs will always error for this package`);
   }
 
+  const source = typeof apiSource === 'string' && apiSource.length > 0 ? apiSource : null;
+  const category = typeof frontmatter['category'] === 'string' ? frontmatter['category'] : '';
+
+  // FI: warn when a package has no category — it silently falls into llms.txt's "general" bucket
+  if (category.length === 0) {
+    log(`generator: "${slug}" has no "category" in frontmatter — falling back to "general" in llms.txt`);
+  }
+
   return {
-    apiSource: typeof apiSource === 'string' && apiSource.length > 0 ? apiSource : null,
+    apiSource: source,
     availableDocPages,
-    category: typeof frontmatter['category'] === 'string' ? frontmatter['category'] : '',
-    components: slug === 'refine' ? refineComponents : [],
+    category,
     description: resolveStr(frontmatter['description'], pkgJson['description'], 'description', slug),
     docs,
+    examples: readReplExamples(repoRoot, slug),
     exports: toStringArray(frontmatter['exports'], 'exports'),
     keywords: toStringArray(frontmatter['keywords'], 'keywords'),
-    name: String(project.packageName),
+    name: String(pkgJson['name']),
     related: toStringArray(frontmatter['related'], 'related'),
     slug,
+    typeSignatures: source ? extractExportedSignatures(indexTsPath) : {},
     version: typeof pkgJson['version'] === 'string' ? pkgJson['version'] : '0.0.0',
   };
 }
@@ -173,7 +253,7 @@ interface CacheState {
   hashCache: Record<string, string>;
 }
 
-function loadIncrementalCache(packageRoot: string): CacheState {
+function loadIncrementalCache(packageRoot: string, generatorHash: string): CacheState {
   const dataFile = resolve(packageRoot, 'data/vielzeug-data.json');
   const cacheFile = resolve(packageRoot, 'data/.cache.json');
 
@@ -189,6 +269,12 @@ function loadIncrementalCache(packageRoot: string): CacheState {
       log(
         `generator: schema version mismatch (found ${String(existingRaw['schemaVersion'])}, expected ${SCHEMA_VERSION}) — discarding cache`,
       );
+
+      return { existingPackages: new Map(), hashCache: {} };
+    }
+
+    if (hashCache[GENERATOR_HASH_KEY] !== generatorHash) {
+      log('generator: generator scripts changed since last run — discarding cache');
 
       return { existingPackages: new Map(), hashCache: {} };
     }
@@ -216,24 +302,23 @@ interface BuildPackagesResult {
 }
 
 function buildPackages(
-  projects: RushProject[],
+  projectFolders: string[],
   opts: {
     existingPackages: Map<string, BundledPackage>;
     hashCache: Record<string, string>;
     incremental: boolean;
-    refineComponents: CemDeclaration[];
     repoRoot: string;
   },
 ): BuildPackagesResult {
   let cacheHits = 0;
   const newHashes: Record<string, string> = {};
 
-  const packages: BundledPackage[] = projects
-    .map((project) => {
-      const slug = project.projectFolder.replace('packages/', '');
+  const packages: BundledPackage[] = projectFolders
+    .map((projectFolder) => {
+      const slug = projectFolder.replace('packages/', '');
 
       if (opts.incremental) {
-        const currentHash = hashPackageFiles(opts.repoRoot, project.projectFolder, slug);
+        const currentHash = hashPackageFiles(opts.repoRoot, projectFolder, slug);
 
         newHashes[slug] = currentHash;
 
@@ -248,7 +333,7 @@ function buildPackages(
         }
       }
 
-      return processPackage(opts.repoRoot, project, opts.refineComponents);
+      return processPackage(opts.repoRoot, projectFolder);
     })
     .sort((a, b) => a.slug.localeCompare(b.slug));
 
@@ -263,10 +348,11 @@ export interface GeneratorOptions {
   /** Enable hash-based incremental generation. Default: false. */
   incremental?: boolean;
   /**
-   * Explicit package list to process. When provided, Rush discovery (rush.json) is skipped entirely.
-   * Useful for non-Rush setups and for isolated testing without touching the filesystem.
+   * Explicit project folder list (e.g. ['packages/arsenal']), relative to repoRoot. When
+   * provided, filesystem discovery is skipped entirely. Useful for isolated testing without
+   * touching the filesystem.
    */
-  projects?: RushProject[];
+  projects?: string[];
   /** Monorepo root. Defaults to auto-detected from this module's location. */
   repoRoot?: string;
 }
@@ -280,29 +366,27 @@ export interface GeneratorResult {
   hashes?: Record<string, string>;
 }
 
-interface RushJson {
-  projects: RushProject[];
-}
-
 export function generateBundledData(options: GeneratorOptions = {}): GeneratorResult {
   const packageRoot = resolve(__dirname, '..');
   const repoRoot = options.repoRoot ?? resolve(packageRoot, '../..');
   const incremental = options.incremental ?? false;
 
   const mcpPackageJson = readJson(resolve(packageRoot, 'package.json'));
-  const projects: RushProject[] =
-    options.projects ?? (readJson(resolve(repoRoot, 'rush.json')) as unknown as RushJson).projects;
+  // Every folder under packages/ with a package.json — unlike the browser-alias package list
+  // used by docs tooling, codex documents every publishable package, including itself.
+  const projects: string[] =
+    options.projects ?? listPackageDirs(resolve(repoRoot, 'packages')).map((name) => `packages/${name}`);
   const refineComponents = readRefineDeclarations(repoRoot);
+  const generatorHash = hashGeneratorScripts(__dirname);
 
   const { existingPackages, hashCache } = incremental
-    ? loadIncrementalCache(packageRoot)
+    ? loadIncrementalCache(packageRoot, generatorHash)
     : { existingPackages: new Map<string, BundledPackage>(), hashCache: {} };
 
   const { cacheHits, newHashes, packages } = buildPackages(projects, {
     existingPackages,
     hashCache,
     incremental,
-    refineComponents,
     repoRoot,
   });
 
@@ -313,9 +397,10 @@ export function generateBundledData(options: GeneratorOptions = {}): GeneratorRe
   return {
     data: {
       packages,
+      refineComponents,
       schemaVersion: SCHEMA_VERSION,
       version: typeof mcpPackageJson['version'] === 'string' ? mcpPackageJson['version'] : '0.0.0',
     },
-    ...(incremental && { hashes: newHashes }),
+    ...(incremental && { hashes: { ...newHashes, [GENERATOR_HASH_KEY]: generatorHash } }),
   };
 }

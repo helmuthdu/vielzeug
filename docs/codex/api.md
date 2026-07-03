@@ -1,46 +1,43 @@
 ---
 title: Codex — API Reference
-description: Complete API reference for @vielzeug/codex — tools, resources, and programmatic API.
+description: Complete API reference for @vielzeug/codex — MCP tools, CLI, and programmatic API.
 ---
 
 [[toc]]
 
 ## API Overview
 
-| Symbol                      | Purpose                                       | Execution mode | Common gotcha                                                       |
-| --------------------------- | --------------------------------------------- | -------------- | ------------------------------------------------------------------- |
-| `list-packages`             | All packages (no filter)                      | Sync           | Use `get-package` to fetch a single package by slug                 |
-| `get-package`               | Single package metadata by slug               | Sync           | `isError: true` when slug is unknown                                |
-| `get-docs`                  | Package documentation page                    | Sync           | `page` enum excludes `source` — use `get-source`                    |
-| `get-source`                | `src/index.ts` text                           | Sync           | `isError: true` when package has no bundled source                  |
-| `search-packages`           | Ranked search across metadata + docs          | Sync           | Returns `[]`, never an error, when nothing matches                  |
-| `list-components`           | Refine component tag list                      | Sync           | `isError: true` if Refine CEM not in snapshot                        |
-| `get-component`             | Single Refine CEM declaration                  | Sync           | `isError: true` lists available tags on miss                        |
-| `generate-template`         | Scaffolded HTML snippet for a Refine component | Sync           | Required attrs filled; optional attrs in comment block              |
-| `get-tokens`                | All Refine CSS custom properties               | Sync           | Optional `filter` prefix; returns `[]` when nothing matches         |
-| `validate-component-usage`  | Validate AI-generated HTML against CEM spec   | Sync           | Returns `[]` when valid; `isError: true` on bad input               |
-| `get-sandbox-context`       | Execution constraints of the sandbox runtime  | Sync           | Static — no data dependency; always succeeds                        |
-| `get-state-bridge-spec`     | Typed postMessage protocol for the sandbox    | Sync           | Static — no data dependency; always succeeds                        |
-| `generate-sandbox-document` | Complete srcdoc-ready HTML document           | Sync           | `isError: true` when `html` is empty or exceeds 20 000 chars        |
-| `list-directives`           | All ore directives with signatures          | Sync           | Static — always succeeds; sorted alphabetically                     |
-| `list-validators`           | All spell validator functions with signatures | Sync           | `isError: true` when package slug is absent from bundled data       |
-| `get-type-signature`        | TypeScript export declaration from source     | Sync           | `isError: true` when symbol not found or no bundled source          |
-| `createServer()`            | Programmatic server factory                   | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first         |
-| `createServerFromDisk()`    | One-call convenience factory                  | Sync           | Calls `loadData()` internally — throws the same errors              |
-| `startHttpServer()`         | Start HTTP server (Streamable + SSE)          | Async          | Used by CLI; import for embedding in a larger process               |
-| `createRequestHandler()`    | Build the HTTP handler without binding a port | Sync           | Exposed for integration testing; prefer `startHttpServer()` in prod |
-| `loadData()`                | Load and validate bundled snapshot            | Sync           | Throws with an actionable message on missing or malformed data      |
-| `packageMeta()`             | Strip heavy fields from a `BundledPackage`    | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, or `components`     |
-| `validateBundledData()`     | Validate raw JSON against `BundledData` shape | Sync           | Use when loading data from a custom path                            |
-| `SCHEMA_VERSION`            | Current snapshot schema version constant      | —              | Used by `validateBundledData` to reject stale snapshots             |
+| Symbol                      | Purpose                                        | Execution mode | Common gotcha                                                    |
+| ---------------------------- | ----------------------------------------------- | -------------- | ----------------------------------------------------------------- |
+| `list-packages`               | All packages (no filter)                        | Sync           | Use `get-package` to fetch a single package by slug                |
+| `get-package`                 | Single package metadata by slug                 | Sync           | `isError: true` when slug is unknown                               |
+| `get-docs`                    | Package documentation page                      | Sync           | `page` enum excludes `source` — use `get-source`                   |
+| `get-source`                  | `src/index.ts` text                             | Sync           | `isError: true` when package has no bundled source                 |
+| `list-examples`               | REPL example ids for a package                  | Sync           | Returns `[]`, never an error, for packages with no examples        |
+| `get-example`                 | Full runnable code for one REPL example         | Sync           | `isError: true` when `exampleId` is unknown for that package       |
+| `search-packages`             | Ranked search across metadata, docs, examples   | Sync           | Returns `[]`, never an error, when nothing matches                 |
+| `get-type-signature`          | TypeScript export declaration from source       | Sync           | `isError: true` when symbol not found or no bundled source         |
+| `refine-list-components`      | Refine component tag list                       | Sync           | `isError: true` if Refine CEM not in snapshot                      |
+| `refine-get-component`        | Single Refine CEM declaration                   | Sync           | `isError: true` lists available tags on miss                       |
+| `refine-generate-template`    | Scaffolded HTML snippet for a Refine component  | Sync           | Required attrs filled; optional attrs in comment block             |
+| `refine-get-tokens`           | All Refine CSS custom properties                | Sync           | Optional `filter` prefix; returns `[]` when nothing matches        |
+| `refine-validate-usage`       | Validate AI-generated HTML against CEM spec     | Sync           | Returns `[]` when valid; `isError: true` on bad input              |
+| `createServer()`              | Programmatic server factory                     | Sync           | Requires pre-loaded `BundledData` — call `loadData()` first        |
+| `createServerFromDisk()`      | One-call convenience factory                    | Sync           | Calls `loadData()` internally — throws the same errors             |
+| `startHttpServer()`           | Start HTTP server (Streamable + SSE)            | Async          | Used by CLI; import for embedding in a larger process              |
+| `createRequestHandler()`      | Build the HTTP handler without binding a port   | Sync           | Exposed for integration testing; prefer `startHttpServer()` in prod |
+| `loadData()`                  | Load and validate bundled snapshot              | Sync           | Throws with an actionable message on missing or malformed data     |
+| `packageMeta()`               | Strip heavy fields from a `BundledPackage`      | Sync           | Returns `PackageMeta` — no `docs`, `apiSource`, `examples`, or `typeSignatures` |
+| `validateBundledData()`       | Validate raw JSON against `BundledData` shape   | Sync           | Use when loading data from a custom path                           |
+| `SCHEMA_VERSION`              | Current snapshot schema version constant        | —              | Used by `validateBundledData` to reject stale snapshots            |
 
-## Package Entry Points
+## Package Entry Point
 
-| Import            | Purpose                                                                                                                                            |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@vielzeug/codex` | `createServer`, `createServerFromDisk`, `createRequestHandler`, `loadData`, `packageMeta`, `validateBundledData`, `startHttpServer`, all CEM types |
+| Import            | Purpose                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@vielzeug/codex` | `createServer`, `createServerFromDisk`, `createRequestHandler`, `startHttpServer`, `loadData`, `packageMeta`, `validateBundledData`, `CodexError`, `ToolError`, all CEM types |
 
-The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring.
+The CLI binary (`codex`) is the primary runtime interface; direct imports are for custom server wiring or embedding.
 
 ## Tools
 
@@ -64,6 +61,7 @@ Returns an array of `PackageMeta` objects for all packages. Takes no input.
     "exports": ["signal", "computed", "effect"],
     "related": ["ore", "forge"],
     "availableDocPages": ["index", "api", "usage", "examples"],
+    "exampleIds": ["signal-basics", "computed-chain"],
     "hasSource": true
   }
 ]
@@ -121,32 +119,87 @@ Returns the bundled `src/index.ts` source text.
 
 ---
 
+### `list-examples`
+
+Returns the REPL example ids and display names for a package — the same runnable examples users
+can pick from interactively at [vielzeug.dev/repl](/repl). Does not include the runnable code; use
+`get-example` for that.
+
+**Input:**
+
+| Field         | Type     | Required | Description                          |
+| ------------- | -------- | -------- | ------------------------------------ |
+| `packageSlug` | `string` | Yes      | Package folder name, e.g. `"ripple"` |
+
+**Result shape:**
+
+```json
+[
+  { "id": "signal-basics", "name": "Signal basics" },
+  { "id": "computed-chain", "name": "Chaining computed values" }
+]
+```
+
+Returns `[]` — not an error — for packages with no REPL examples (e.g. DOM-output packages like
+`refine`, `prism`, `ore`, which have no browser-executable preview container).
+
+**Error cases:** unknown `packageSlug` → `isError: true`.
+
+---
+
+### `get-example`
+
+Returns the full runnable source code for one REPL example.
+
+**Input:**
+
+| Field         | Type     | Required | Description                                  |
+| ------------- | -------- | -------- | --------------------------------------------- |
+| `packageSlug` | `string` | Yes      | Package folder name, e.g. `"ripple"`          |
+| `exampleId`   | `string` | Yes      | Example id from `list-examples`, e.g. `"signal-basics"` |
+
+**Result:** the example's runnable code as plain text (JavaScript, copy-paste ready).
+
+**Error cases:** unknown `packageSlug`, or `exampleId` not found for that package (lists available
+ids) → `isError: true`.
+
+---
+
 ### `search-packages`
 
-Searches metadata, keywords, documentation, and source. Returns ranked `SearchHit` objects.
+Searches metadata, keywords, documentation, REPL examples, and source. Returns ranked `SearchHit`
+objects.
 
 **Input:**
 
 | Field   | Type     | Required | Description           |
-| ------- | -------- | -------- | --------------------- |
-| `query` | `string` | Yes      | Non-empty search term |
+| ------- | -------- | -------- | ---------------------- |
+| `query` | `string` | Yes      | Non-empty search term (max 500 chars) |
 
 **Ranking:**
 
-| Weight | Category     | Field(s) searched                                        |
-| ------ | ------------ | -------------------------------------------------------- |
-| 3.9    | `"metadata"` | `name` (exact package name)                              |
-| 3.5    | `"metadata"` | `category`                                               |
-| 3.1    | `"metadata"` | `description`                                            |
-| 2.5    | `"keywords"` | `keywords` array                                         |
-| 2.2    | `"exports"`  | `exports` array (exported symbol names)                  |
-| 2.0    | `"related"`  | `related` array (sibling package slugs)                  |
-| 1.0    | `"docs"`     | All doc pages (`matchedPages` lists which pages matched) |
-| 0.9    | `"source"`   | Bundled `src/index.ts` text                              |
+| Weight | Category      | Field(s) searched                                        |
+| ------ | -------------- | --------------------------------------------------------- |
+| 3.9    | `"metadata"`   | `name` (exact package name)                                |
+| 3.5    | `"metadata"`   | `category`                                                 |
+| 3.1    | `"metadata"`   | `description`                                              |
+| 2.5    | `"keywords"`   | `keywords` array                                           |
+| 2.2    | `"exports"`    | `exports` array (exported symbol names)                    |
+| 2.0    | `"related"`    | `related` array (sibling package slugs)                    |
+| 1.0    | `"docs"`       | All doc pages (`matchedPages` lists which pages matched)   |
+| 0.95   | `"examples"`   | REPL example names and code (`matchedExamples` lists which ids matched) |
+| 0.9    | `"source"`     | Bundled `src/index.ts` text                                |
 
-`score` is a floating-point number — the highest weight across all matched fields. Results sorted by `score` descending, then `slug` ascending as tiebreaker. Multiple categories can match simultaneously.
+`score` is a floating-point number — the highest weight across all matched fields. Results sorted by
+`score` descending, then `slug` ascending as tiebreaker. Multiple categories can match
+simultaneously.
 
-**Multi-word queries:** all words must appear within the same field's normalised haystack for that category to score. For `keywords`, `exports`, and `related`, the individual array entries are joined into a single string before matching — so `"reactive signal"` matches a package with `keywords: ["reactive", "signal"]`. For `name`, `category`, and `description`, all terms must appear in the single field value. Search terms are normalised — lowercase, hyphens replaced with spaces — before matching. `"my-pkg"` matches a package named `"@vielzeug/my-pkg"`.
+**Multi-word queries:** all words must appear within the same field's normalised haystack for that
+category to score. For `keywords`, `exports`, and `related`, the individual array entries are
+joined into a single string before matching — so `"reactive signal"` matches a package with
+`keywords: ["reactive", "signal"]`. For `name`, `category`, and `description`, all terms must
+appear in the single field value. Search terms are normalised — lowercase, hyphens replaced with
+spaces — before matching. `"my-pkg"` matches a package named `"@vielzeug/my-pkg"`.
 
 **Result shape:**
 
@@ -166,10 +219,11 @@ Searches metadata, keywords, documentation, and source. Returns ranked `SearchHi
     "matchedPages": ["usage", "examples"]
   },
   {
-    "name": "@vielzeug/ore",
-    "slug": "ore",
-    "score": 2.0,
-    "matchedIn": ["related"]
+    "name": "@vielzeug/arsenal",
+    "slug": "arsenal",
+    "score": 0.95,
+    "matchedIn": ["examples"],
+    "matchedExamples": ["function-debounce"]
   }
 ]
 ```
@@ -178,9 +232,32 @@ Returns `[]` when nothing matches — not an error.
 
 ---
 
-### `list-components`
+### `get-type-signature`
 
-Returns Refine component tag names from bundled CEM metadata.
+Extracts the TypeScript export declaration(s) for a named symbol from a package's bundled
+`src/index.ts` (and everything it re-exports via `export * from './x'`). Works for functions,
+constants, type aliases, interfaces, and re-exports.
+
+**Input:**
+
+| Field    | Type     | Required | Description                                 |
+| -------- | -------- | -------- | -------------------------------------------- |
+| `slug`   | `string` | Yes      | Package slug, e.g. `"arsenal"`               |
+| `symbol` | `string` | Yes      | Exported name to look up, e.g. `"debounce"`  |
+
+**Output:** raw declaration text — the exact text as it appears in the source file. Multiple
+declarations for the same name (e.g. function overloads) are joined with a blank line.
+
+**Error cases:** unknown `slug`, package has no bundled source, or `symbol` not found (including
+inherited `Object.prototype` member names like `"constructor"` or `"toString"`, which are never
+real bundled symbols) → `isError: true`.
+
+---
+
+### `refine-list-components`
+
+Lists all `@vielzeug/refine` web component tags from bundled Custom Elements Manifest (CEM)
+metadata.
 
 **Input:** none
 
@@ -201,46 +278,50 @@ Returns Refine component tag names from bundled CEM metadata.
 
 Each entry includes:
 
-| Field         | Type                              | Description                                        |
-| ------------- | --------------------------------- | -------------------------------------------------- |
-| `tagName`     | `string`                          | HTML custom element tag name, e.g. `"ore-button"`   |
-| `description` | `string`                          | Component description from the CEM (may be empty)  |
-| `attrs`       | `Array<{ name, type, default? }>` | Attribute list; `default` omitted when not defined |
+| Field         | Type                              | Description                                         |
+| ------------- | ---------------------------------- | ---------------------------------------------------- |
+| `tagName`     | `string`                           | HTML custom element tag name, e.g. `"ore-button"`    |
+| `description` | `string`                           | Component description from the CEM (may be empty)    |
+| `attrs`       | `Array<{ name, type, default? }>`  | Attribute list; `default` omitted when not defined   |
 
 **Error cases:** Refine CEM not present in this snapshot → `isError: true`.
 
 ---
 
-### `get-component`
+### `refine-get-component`
 
 Returns one full CEM declaration for a Refine component.
 
 **Input:**
 
 | Field     | Type     | Required | Description                                 |
-| --------- | -------- | -------- | ------------------------------------------- |
-| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"` |
+| --------- | -------- | -------- | -------------------------------------------- |
+| `tagName` | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"`  |
 
-**Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS properties.
+**Result:** Full CEM declaration including attributes, members, events, slots, CSS parts, and CSS
+properties.
 
 **Error cases:** unknown tag (lists available tags) or missing Refine CEM → `isError: true`.
 
 ---
 
-### `generate-template`
+### `refine-generate-template`
 
-Generates a ready-to-use HTML snippet for a Refine component, derived entirely from bundled CEM metadata. Use this as the AI's starting point for declarative UI generation — it eliminates hallucinated attribute names before they reach the DOM.
+Generates a ready-to-use HTML snippet for a Refine component, derived entirely from bundled CEM
+metadata. Use this as the AI's starting point for declarative UI generation — it eliminates
+hallucinated attribute names before they reach the DOM.
 
 **Input:**
 
-| Field      | Type     | Required | Description                                                                        |
-| ---------- | -------- | -------- | ---------------------------------------------------------------------------------- |
-| `tagName`  | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"`                                        |
-| `scenario` | `string` | No       | Usage context prepended as an HTML comment, e.g. `"primary call-to-action button"` |
+| Field      | Type     | Required | Description                                                                          |
+| ---------- | -------- | -------- | -------------------------------------------------------------------------------------- |
+| `tagName`  | `string` | Yes      | HTML custom element tag, e.g. `"ore-button"`                                            |
+| `scenario` | `string` | No       | Usage context prepended as an HTML comment, e.g. `"primary call-to-action button"`     |
 
 **Result:** An HTML string with:
 
-- Required attributes filled with type-appropriate placeholders (first literal for union types, bare name for booleans, `""` for plain strings)
+- Required attributes filled with type-appropriate placeholders (first literal for union types,
+  bare name for booleans, `""` for plain strings)
 - Optional attributes (those with defaults) in a `<!-- Optional attributes: -->` comment block
 - Named slots scaffolded as `<span slot="name">…</span>` children
 - Event names listed in a `<!-- Events: -->` comment
@@ -262,15 +343,16 @@ Generates a ready-to-use HTML snippet for a Refine component, derived entirely f
 
 ---
 
-### `get-tokens`
+### `refine-get-tokens`
 
-Returns all CSS custom properties (design tokens) exposed by Refine components. Use when generating dynamic themes or inline styles in AI-driven UI — avoids guessing variable names.
+Returns all CSS custom properties (design tokens) exposed by Refine components. Use when
+generating dynamic themes or inline styles in AI-driven UI — avoids guessing variable names.
 
 **Input:**
 
-| Field    | Type     | Required | Description                                                    |
-| -------- | -------- | -------- | -------------------------------------------------------------- |
-| `filter` | `string` | No       | Case-insensitive prefix to narrow results, e.g. `"--ore-color"` |
+| Field    | Type     | Required | Description                                                     |
+| -------- | -------- | -------- | ----------------------------------------------------------------- |
+| `filter` | `string` | No       | Case-insensitive prefix to narrow results, e.g. `"--ore-color"`   |
 
 **Result shape:**
 
@@ -289,7 +371,10 @@ Returns all CSS custom properties (design tokens) exposed by Refine components. 
 ]
 ```
 
-Results are sorted by `name` ascending. `description` and `default` are omitted when absent. Tokens that appear on multiple components are deduplicated — only the first occurrence is included.
+Results are sorted by `name` ascending. `description` and `default` are omitted when absent.
+Tokens that appear on multiple components are deduplicated by name — components are iterated in
+stable bundled order, so the first occurrence is returned deterministically (shared design tokens
+are typically documented identically everywhere they appear).
 
 Returns `[]` (not an error) when `filter` matches nothing.
 
@@ -297,16 +382,17 @@ Returns `[]` (not an error) when `filter` matches nothing.
 
 ---
 
-### `validate-component-usage`
+### `refine-validate-usage`
 
-Validates AI-generated HTML against a Refine component's CEM spec. Use this to close the **generate → validate → fix** loop before passing HTML to the renderer.
+Validates AI-generated HTML against a Refine component's CEM spec. Use this to close the
+**generate → validate → fix** loop before passing HTML to the renderer.
 
 **Input:**
 
-| Field     | Type     | Required | Description                                     |
-| --------- | -------- | -------- | ----------------------------------------------- |
-| `tagName` | `string` | Yes      | HTML custom element tag to validate against     |
-| `html`    | `string` | Yes      | HTML fragment to validate (max 5000 characters) |
+| Field     | Type     | Required | Description                                       |
+| --------- | -------- | -------- | ---------------------------------------------------- |
+| `tagName` | `string` | Yes      | HTML custom element tag to validate against          |
+| `html`    | `string` | Yes      | HTML fragment to validate (max 5000 characters)      |
 
 **Result shape:** A JSON array of issue objects. An empty array means the usage is valid.
 
@@ -325,156 +411,12 @@ Validates AI-generated HTML against a Refine component's CEM spec. Use this to c
 
 **Checks performed:**
 
-- Unknown attributes (after excluding `class`, `id`, `style`, `aria-*`, `data-*`, `on*`, `tabindex`, `part`, `slot`, and other safe globals)
+- Unknown attributes (after excluding `class`, `id`, `style`, `aria-*`, `data-*`, `on*`, `tabindex`,
+  `part`, `slot`, and other safe globals)
 - Unknown slot names (only when the component defines at least one named slot)
 
-**Error cases:** unknown `tagName`, missing `<tagName>` opening tag in HTML, `html` exceeding 5000 characters, or missing Refine CEM → `isError: true`.
-
-### `get-sandbox-context`
-
-```ts
-get - sandbox - context();
-```
-
-Returns a JSON object describing the execution environment inside the `@vielzeug/sandbox` iframe. Use this once per session to understand what is and is not available before generating code.
-
-**Returns (JSON):**
-
-```json
-{
-  "iframeAttributes": { "sandbox": "allow-scripts", "referrerpolicy": "no-referrer" },
-  "cspPolicy": {
-    "default-src": "'none'",
-    "script-src": "'unsafe-inline'",
-    "style-src": "'unsafe-inline'",
-    "img-src": "data:",
-    "connect-src": "'none'",
-    "form-action": "'none'"
-  },
-  "windowGlobals": ["window", "document", "customElements", "setTimeout", "…"],
-  "notAvailable": ["fetch (blocked by connect-src)", "localStorage (blocked by sandbox)", "…"],
-  "restrictions": ["No network requests", "No form submissions", "…"]
-}
-```
-
-**Error cases:** none — this is a static tool.
-
----
-
-### `get-state-bridge-spec`
-
-```ts
-get - state - bridge - spec();
-```
-
-Returns the full typed postMessage state bridge protocol for `@vielzeug/sandbox` as a TypeScript source string with inline usage comments.
-
-**Output includes:**
-
-- `HostMessage` union type — messages the host sends into the iframe (`render`, `state-update`, `dispose`)
-- `SandboxMessage` union type — messages the sandbox sends back (`ready`, `event`, `error`, `resize`)
-- Code examples for listening to `state-update` and dispatching `event` back to the host
-
-**Error cases:** none — this is a static tool.
-
----
-
-### `generate-sandbox-document`
-
-```ts
-generate-sandbox-document(html: string, styles?: string)
-```
-
-Wraps an HTML fragment in a complete `srcdoc`-ready document for direct use with `@vielzeug/sandbox`. The output can be passed to `sandboxHandle.render()` or set as `iframe.srcdoc`.
-
-**Inputs:**
-
-| Parameter | Type     | Required | Description                                        |
-| --------- | -------- | -------- | -------------------------------------------------- |
-| `html`    | `string` | Yes      | HTML body content to embed (max 20 000 chars)      |
-| `styles`  | `string` | No       | CSS to inject as a `<style>` block in the `<head>` |
-
-**Output:** a complete `<!doctype html>` document with:
-
-- `Content-Security-Policy` meta tag (same policy as the sandbox runtime)
-- Optional `<style>` block
-- User HTML in `<body>`
-- Injected bridge bootstrap `<script>` (handles `state-update`, reports errors, fires `ready`)
-
-**Error cases:** empty `html` or `html` exceeding 20 000 characters → `isError: true`.
-
----
-
-### `list-directives`
-
-```ts
-list - directives();
-```
-
-Returns a JSON array of all reactive directives exported by `@vielzeug/ore/directives`, sorted alphabetically by name. Each entry includes the directive name, its TypeScript call signature, a description, and the import path.
-
-**Output shape (per entry):**
-
-| Field         | Type     | Description                                |
-| ------------- | -------- | ------------------------------------------ |
-| `name`        | `string` | Directive name, e.g. `"each"`              |
-| `signature`   | `string` | Full TypeScript call signature             |
-| `description` | `string` | What the directive does and when to use it |
-| `import`      | `string` | Always `"@vielzeug/ore/directives"`      |
-
-**Directives included:** `classMap`, `each`, `live`, `model`, `raw`, `styleMap`, `when`
-
-**Error cases:** none — this is a static tool.
-
----
-
-### `list-validators`
-
-```ts
-list-validators(slug?: string)
-```
-
-Returns a JSON array of all standalone validator functions exported by a `@vielzeug` package. Currently only `slug: "spell"` is supported.
-
-**Inputs:**
-
-| Parameter | Type     | Required | Default   | Description                            |
-| --------- | -------- | -------- | --------- | -------------------------------------- |
-| `slug`    | `string` | No       | `"spell"` | Package slug; only `"spell"` supported |
-
-**Output shape (per entry):**
-
-| Field         | Type     | Description                                         |
-| ------------- | -------- | --------------------------------------------------- |
-| `name`        | `string` | Validator function name, e.g. `"isEmail"`           |
-| `signature`   | `string` | Full TypeScript signature including return type     |
-| `description` | `string` | What the validator checks                           |
-| `category`    | `string` | One of `"type"`, `"number"`, `"length"`, `"format"` |
-
-**Error cases:** `"spell"` package not present in bundled data → `isError: true`.
-
----
-
-### `get-type-signature`
-
-```ts
-get-type-signature(slug: string, symbol: string)
-```
-
-Extracts the TypeScript export declaration(s) for a named symbol from a package's bundled `src/index.ts`. Works for functions, constants, type aliases, interfaces, and re-exports.
-
-**Inputs:**
-
-| Parameter | Type     | Required | Description                                 |
-| --------- | -------- | -------- | ------------------------------------------- |
-| `slug`    | `string` | Yes      | Package slug, e.g. `"arsenal"`              |
-| `symbol`  | `string` | Yes      | Exported name to look up, e.g. `"debounce"` |
-
-**Output:** raw declaration lines — the exact text as it appears in `src/index.ts`. Multi-line blocks (interfaces, function bodies) are returned in full.
-
-**Error cases:** unknown `slug`, package has no bundled source, or `symbol` not found in `src/index.ts` → `isError: true`.
-
----
+**Error cases:** unknown `tagName`, missing `<tagName>` opening tag in HTML, `html` exceeding 5000
+characters, or missing Refine CEM → `isError: true`.
 
 ## Programmatic API
 
@@ -484,7 +426,8 @@ Extracts the TypeScript export declaration(s) for a named symbol from a package'
 createServerFromDisk(): Server;
 ```
 
-Convenience factory that calls `loadData()` internally and passes the result to `createServer()`. Use this for the common single-expression wiring pattern.
+Convenience factory that calls `loadData()` internally and passes the result to `createServer()`.
+Use this for the common single-expression wiring pattern.
 
 **Returns:** `Server` from `@modelcontextprotocol/sdk`
 
@@ -507,13 +450,13 @@ await createServerFromDisk().connect(new StdioServerTransport());
 createServer(data: BundledData): Server;
 ```
 
-Creates and returns an MCP `Server` instance with all tools and resources registered.
+Creates and returns an MCP `Server` instance with all tools registered.
 
 **Parameters:**
 
-| Parameter | Type          | Description                                                 |
-| --------- | ------------- | ----------------------------------------------------------- |
-| `data`    | `BundledData` | Validated bundled snapshot — call `loadData()` to obtain it |
+| Parameter | Type          | Description                                                   |
+| --------- | ------------- | --------------------------------------------------------------- |
+| `data`    | `BundledData` | Validated bundled snapshot — call `loadData()` to obtain it     |
 
 **Returns:** `Server` from `@modelcontextprotocol/sdk`
 
@@ -532,14 +475,22 @@ await server.connect(new StdioServerTransport());
 ### `loadData()`
 
 ```ts
-loadData(): BundledData;
+loadData(dataFile?: string): BundledData;
 ```
 
-Reads and validates the bundled snapshot from disk. Throws synchronously with an actionable error message if the file is missing, malformed, or fails schema validation.
+Reads and validates a bundled snapshot from disk. Throws synchronously with an actionable error
+message if the file is missing, malformed, or fails schema validation.
+
+**Parameters:**
+
+| Parameter  | Type     | Description                                                                        |
+| ---------- | -------- | ------------------------------------------------------------------------------------ |
+| `dataFile` | `string` | Optional path to a custom snapshot file. Defaults to the bundled `data/vielzeug-data.json`. |
 
 **Returns:** `BundledData`
 
-**Throws:** `Error` — with a `pnpm run prepare:data` regen hint when the data file is absent or malformed. Per-entry validation checks that every package entry has a non-empty `slug` string and a `name` string; a missing or empty value throws immediately with an actionable message.
+**Throws:** `CodexError` — with a `pnpm run prepare:data` regen hint when the data file is absent
+or malformed. Delegates to `validateBundledData()` for schema validation.
 
 ---
 
@@ -549,13 +500,15 @@ Reads and validates the bundled snapshot from disk. Throws synchronously with an
 packageMeta(pkg: BundledPackage): PackageMeta;
 ```
 
-Strips `docs`, `apiSource`, and `components` from a `BundledPackage` and adds `hasSource`. Use this to produce lightweight metadata for tool responses.
+Strips `apiSource`, `docs`, `examples`, and `typeSignatures` from a `BundledPackage`, adds
+`hasSource`, and reduces `examples` to `exampleIds`. Use this to produce lightweight metadata for
+tool responses.
 
 **Parameters:**
 
 | Parameter | Type             | Description                                     |
-| --------- | ---------------- | ----------------------------------------------- |
-| `pkg`     | `BundledPackage` | Full package record from `BundledData.packages` |
+| --------- | ---------------- | -------------------------------------------------- |
+| `pkg`     | `BundledPackage` | Full package record from `BundledData.packages`    |
 
 **Returns:** `PackageMeta`
 
@@ -568,18 +521,22 @@ startHttpServer(
   mcpServer: Server,
   port: number,
   createSseServer: () => Server,
+  version?: string,
 ): Promise<HttpServerHandle>;
 ```
 
-Starts an HTTP server that exposes both the Streamable HTTP transport (spec-compliant clients) and the legacy SSE transport (older clients). The CLI calls this when `--port` is provided; import it when embedding codex into a larger Node.js HTTP process.
+Starts an HTTP server that exposes both the Streamable HTTP transport (spec-compliant clients) and
+the legacy SSE transport (older clients). The CLI calls this when `--port` is provided; import it
+when embedding codex into a larger Node.js HTTP process.
 
 **Parameters:**
 
-| Parameter         | Type           | Description                                                               |
-| ----------------- | -------------- | ------------------------------------------------------------------------- |
-| `mcpServer`       | `Server`       | The MCP server instance to connect to the Streamable HTTP transport       |
-| `port`            | `number`       | Port to bind the HTTP server on                                           |
-| `createSseServer` | `() => Server` | Factory called per legacy SSE connection; returns a fresh server instance |
+| Parameter         | Type           | Description                                                                 |
+| ----------------- | -------------- | ------------------------------------------------------------------------------ |
+| `mcpServer`       | `Server`       | The MCP server instance to connect to the Streamable HTTP transport            |
+| `port`            | `number`       | Port to bind the HTTP server on                                                |
+| `createSseServer` | `() => Server` | Factory called per legacy SSE connection; returns a fresh server instance      |
+| `version`         | `string`       | Optional — included in the `/health` response when provided. The CLI passes the bundled data's own version. |
 
 **Returns:** `Promise<HttpServerHandle>`
 
@@ -597,7 +554,10 @@ interface HttpServerHandle {
 }
 ```
 
-Returned by `startHttpServer()`. Call `dispose()` (or use an `await using` declaration) to close the HTTP server and all open connections — `dispose()` is idempotent, and `disposed` reflects whether it has already run. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()` automatically.
+Returned by `startHttpServer()`. Call `dispose()` (or use an `await using` declaration) to close
+the HTTP server and all open connections — `dispose()` is idempotent, and `disposed` reflects
+whether it has already run. The CLI registers `SIGTERM` and `SIGINT` handlers that call `dispose()`
+automatically.
 
 ---
 
@@ -608,10 +568,13 @@ createRequestHandler(
   streamableTransport: StreamableHTTPServerTransport,
   sseSessions: Map<string, SSEServerTransport>,
   createSseServer: () => Server,
+  version?: string,
 ): (req: IncomingMessage, res: ServerResponse) => void;
 ```
 
-Builds the raw Node.js HTTP request handler without binding a port. Exposed primarily for integration testing — `startHttpServer()` calls this internally. Use `startHttpServer()` for production wiring.
+Builds the raw Node.js HTTP request handler without binding a port. Exposed primarily for
+integration testing — `startHttpServer()` calls this internally. Use `startHttpServer()` for
+production wiring.
 
 **Returns:** A `(req, res) => void` handler suitable for `node:http`'s `createServer()`.
 
@@ -623,17 +586,22 @@ Builds the raw Node.js HTTP request handler without binding a port. Exposed prim
 validateBundledData(raw: unknown): BundledData;
 ```
 
-Validates that `raw` conforms to the `BundledData` shape: checks `schemaVersion` (must match `SCHEMA_VERSION`), `version` (string), `packages` (array), and that each entry has a non-empty `slug` and a `name`. Use when loading data from a custom path instead of `loadData()`.
+Validates that `raw` conforms to the `BundledData` shape: checks `schemaVersion` (must match
+`SCHEMA_VERSION`), `version` (string), `packages` and `refineComponents` (arrays), and for each
+package entry — a non-empty `slug` string, a `name` string, that `availableDocPages`/`examples`/
+`exports`/`keywords`/`related` are arrays, and that `docs`/`typeSignatures` are objects. Use when
+loading data from a custom path instead of `loadData()`.
 
 **Parameters:**
 
-| Parameter | Type      | Description             |
-| --------- | --------- | ----------------------- |
-| `raw`     | `unknown` | Parsed JSON to validate |
+| Parameter | Type      | Description               |
+| --------- | --------- | --------------------------- |
+| `raw`     | `unknown` | Parsed JSON to validate     |
 
 **Returns:** `BundledData` (cast after validation)
 
-**Throws:** `Error` with a descriptive message on schema failure. Per-entry `slug`/`name` validation is also applied — see `loadData()` for the same contract.
+**Throws:** `CodexError` with a descriptive message on schema failure — the message names the
+specific package slug and field that failed validation, not just "malformed data".
 
 **Example:**
 
@@ -654,38 +622,59 @@ The validated snapshot loaded at startup.
 ```ts
 interface BundledData {
   packages: BundledPackage[];
+  refineComponents: CemDeclaration[];
   schemaVersion: number;
   version: string;
 }
 ```
 
+`refineComponents` is `[]` when `@vielzeug/refine` was not built before data generation (published
+releases always include it).
+
 ### `BundledPackage`
 
-Full package record in the snapshot. Includes all docs and source inline.
+Full package record in the snapshot. Includes all docs, source, and REPL examples inline.
 
 ```ts
 interface BundledPackage {
   apiSource: string | null;
   availableDocPages: DocPage[];
   category: string;
-  components: CemDeclaration[];
   description: string;
   docs: Partial<Record<DocPage, string>>;
+  examples: BundledExample[];
   exports: string[];
   keywords: string[];
   name: string;
   related: string[];
   slug: string;
+  typeSignatures: Record<string, string>;
   version: string; // always a string; defaults to '0.0.0' when not found in package.json
+}
+```
+
+### `BundledExample`
+
+A single runnable REPL code example, sourced from
+`docs/.vitepress/theme/components/repl/examples/<slug>/`.
+
+```ts
+interface BundledExample {
+  code: string;
+  id: string;
+  name: string;
 }
 ```
 
 ### `PackageMeta`
 
-Lightweight metadata returned by tools. Derived from `BundledPackage` — heavy content fields (`docs`, `apiSource`, `components`) are omitted, and `hasSource` is computed.
+Lightweight metadata returned by tools. Derived from `BundledPackage` — heavy content fields
+(`apiSource`, `docs`, `examples`, `typeSignatures`) are omitted, `hasSource` is computed, and
+`examples` is reduced to `exampleIds`.
 
 ```ts
-type PackageMeta = Omit<BundledPackage, 'apiSource' | 'components' | 'docs'> & {
+type PackageMeta = Omit<BundledPackage, 'apiSource' | 'docs' | 'examples' | 'typeSignatures'> & {
+  exampleIds: string[];
   hasSource: boolean;
 };
 ```
@@ -696,7 +685,8 @@ Result shape for `search-packages`.
 
 ```ts
 interface SearchHit {
-  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
+  matchedExamples?: string[];
+  matchedIn: Array<'docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
   matchedPages?: DocPage[];
   name: string;
   score: number;
@@ -712,7 +702,9 @@ type DocPage = 'api' | 'examples' | 'index' | 'usage';
 
 ### CEM Types
 
-These types describe the Custom Elements Manifest (CEM) shape used by `get-component` and `list-components`. Import them from `@vielzeug/codex` when processing component declarations in TypeScript.
+These types describe the Custom Elements Manifest (CEM) shape used by `refine-get-component` and
+`refine-list-components`. Import them from `@vielzeug/codex` when processing component
+declarations in TypeScript.
 
 ```ts
 interface CemTypeRef {
@@ -777,19 +769,23 @@ interface CemDeclaration {
 const SCHEMA_VERSION: number;
 ```
 
-The snapshot schema version. `validateBundledData` rejects data whose `schemaVersion` does not match this value. Useful as a guard when loading data from a custom snapshot file.
+The snapshot schema version. `validateBundledData` rejects data whose `schemaVersion` does not
+match this value. Useful as a guard when loading data from a custom snapshot file.
 
 ## Errors
 
 ### Tool errors (`isError: true`)
 
-All tool-level failures return a text content item with `isError: true`. The error message is human-readable and includes actionable context (available slugs, available pages, available tags).
+Every failed tool call returns `isError: true` with a single text content block containing
+`{"code": "...", "message": "..."}` — `code` is one of `INVALID_ARG` (bad or missing argument),
+`NOT_FOUND` (unknown slug/tag/symbol/example), or `UNAVAILABLE` (data not bundled, e.g. Refine CEM
+metadata when `@vielzeug/refine` wasn't built). Branch on `code` instead of matching `message` text.
 
 ### Protocol errors (`McpError`)
 
 | Situation         | Error code       |
-| ----------------- | ---------------- |
-| Unknown tool name | `MethodNotFound` |
+| ------------------ | ----------------- |
+| Unknown tool name  | `MethodNotFound`  |
 
 ### `CodexError`
 
@@ -799,34 +795,51 @@ class CodexError extends Error {
 }
 ```
 
-Base class for every error codex throws itself (startup/data-loading failures, invalid tool arguments). Use `CodexError.is(err)` to distinguish codex-originated failures from errors thrown by dependencies (e.g. the MCP SDK) in a catch block.
+Base class for every error codex throws itself (startup/data-loading failures, invalid tool
+arguments). Use `CodexError.is(err)` to distinguish codex-originated failures from errors thrown by
+dependencies (e.g. the MCP SDK) in a catch block.
 
-### `ToolArgError`
+### `ToolError`
 
 ```ts
-class ToolArgError extends CodexError {}
+type ToolErrorCode = 'INVALID_ARG' | 'NOT_FOUND' | 'UNAVAILABLE';
+
+class ToolError extends CodexError {
+  readonly code: ToolErrorCode;
+}
 ```
 
-Thrown internally when a tool receives an invalid or missing argument (empty string, value exceeding the length limit, unrecognised enum value). Callers never see this directly — the MCP server catches it and converts it into a tool result with `isError: true` and the same message (see "Tool errors" below). Exported so embedders using `createServer()`/`registerTools()` directly can recognise it with `instanceof ToolArgError` or `CodexError.is()`.
+Thrown internally by every tool's `run()` implementation for any expected failure (bad argument,
+unknown slug/tag, missing bundled data). Callers never see this directly — the MCP server's central
+handler catches it and converts it into a tool result with `isError: true` and the `{code,
+message}` JSON body described above. Exported so embedders using `createServer()`/`registerTools()`
+directly can recognise it with `instanceof ToolError` or `CodexError.is()`, and branch on `code`.
 
 ### Startup errors
 
 `loadData()` throws a `CodexError` synchronously with an actionable message when:
 
 - The bundled data file is missing (`ENOENT`): includes the regen command
-- The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system error message
+- The file cannot be read for any other reason (`EACCES`, etc.): includes the file path and system
+  error message
 - The file is malformed JSON: includes the regen command
-- The parsed data fails schema validation: includes the regen command
+- The parsed data fails schema validation (including per-package field shape checks): includes the
+  regen command and, for a field-shape failure, the specific package slug and field name
 - A package entry is missing a non-empty `slug` or `name`: includes the regen command
 
 ## Runtime Behavior
 
 - Default transport: stdio
 - HTTP mode: `--port <number>` using Streamable HTTP (spec-compliant) + legacy SSE at `GET /sse`
-- Health endpoint: `GET /health` → `{ "status": "ok" }`
+- Health endpoint: `GET /health` → `{ "status": "ok", "version": "<bundled snapshot version>" }`
+- `--data <path>` loads bundled data from a custom snapshot file instead of the built-in one
 - Bundled data validated at startup — missing or malformed data aborts with an actionable error
-- CLI flags: `--help` (stderr), `--version` (stdout — prints the npm package version from `package.json`; does not require bundled data)
+- CLI flags: `--help` (stderr), `--version` (stdout — prints the npm package version from
+  `package.json`; does not require bundled data)
 - Unknown flags print a usage hint and exit with code 1
 - `EADDRINUSE` prints `error: port N is already in use.` and exits with code 1
-- HTTP mode registers `SIGTERM` and `SIGINT` handlers; both call `handle.dispose()` and `process.exit(0)`
-- Argument validation failures (`requireStr`) return `isError: true` with a descriptive message — they do not throw an MCP protocol error
+- HTTP mode registers `SIGTERM` and `SIGINT` handlers; both call `handle.dispose()` and
+  `process.exit(0)`
+- Argument validation failures (`parseArgs` against a tool's declared `ToolSchema`) throw
+  `ToolError('INVALID_ARG', ...)`, which the server converts to `isError: true` — they never
+  surface as an MCP protocol error

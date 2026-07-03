@@ -5,8 +5,10 @@ import type { BundledPackage, DocPage } from './types.js';
 // ---------------------------------------------------------------------------
 
 export interface SearchHit {
+  /** REPL example ids where the term appeared. Present when matchedIn includes "examples". */
+  matchedExamples?: string[];
   /** All categories in which the term was found. */
-  matchedIn: Array<'docs' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
+  matchedIn: Array<'docs' | 'examples' | 'exports' | 'keywords' | 'metadata' | 'related' | 'source'>;
   /** Doc pages where the term appeared. Present when matchedIn includes "docs". */
   matchedPages?: DocPage[];
   name: string;
@@ -20,6 +22,12 @@ export interface SearchHit {
   slug: string;
 }
 
+/** One example's id plus its already-normalised `name + code` searchable text. */
+interface NormalisedExample {
+  id: string;
+  text: string;
+}
+
 /**
  * Pre-normalised version of a package's searchable fields — computed once in
  * buildToolContext and reused across all queries. Avoids repeated toLowerCase/replace
@@ -30,6 +38,7 @@ interface NormalisedPackage {
   category: string;
   description: string;
   docs: Partial<Record<DocPage, string>>;
+  examples: NormalisedExample[];
   exports: string;
   keywords: string;
   name: string;
@@ -60,6 +69,7 @@ export function normalisePackage(pkg: BundledPackage): NormalisedPackage {
     category: normalise(pkg.category),
     description: normalise(pkg.description),
     docs,
+    examples: pkg.examples.map((e) => ({ id: e.id, text: normalise(`${e.name} ${e.code}`) })),
     exports: pkg.exports.map(normalise).join(' '),
     keywords: pkg.keywords.map(normalise).join(' '),
     name: pkg.name,
@@ -83,12 +93,38 @@ const W = {
   category: 3.5,
   description: 3.1,
   docs: 1.0,
+  examples: 0.95,
   exports: 2.2,
   keywords: 2.5,
   name: 3.9,
   related: 2.0,
   source: 0.9,
 } as const;
+
+/**
+ * Ordered highest-to-lowest for `describeScoreTiers()`. Single source of truth for the
+ * search-packages tool description's "score: name(3.9) > category(3.5) > ..." prose — the
+ * numbers used to be hand-typed into that description separately from `W`, so retuning a
+ * weight silently made the description lie about the actual scoring.
+ */
+const SCORE_TIERS = [
+  ['name', W.name],
+  ['category', W.category],
+  ['description', W.description],
+  ['keywords', W.keywords],
+  ['exports', W.exports],
+  ['related', W.related],
+  ['docs', W.docs],
+  ['examples', W.examples],
+  ['source', W.source],
+] as const;
+
+export function describeScoreTiers(): string {
+  return SCORE_TIERS.map(([label, weight]) => `${label}(${weight})`).join(' > ');
+}
+
+/** Fields matched by simple substring inclusion, where the matchedIn category name equals the field name. */
+const SIMPLE_FIELDS = ['keywords', 'exports', 'related', 'source'] as const;
 
 /** Score a pre-normalised package against a query. The query is normalised here; fields are pre-normalised. */
 export function scorePackage(pkg: NormalisedPackage, query: string): SearchHit | null {
@@ -101,6 +137,7 @@ export function scorePackage(pkg: NormalisedPackage, query: string): SearchHit |
   let score = 0;
   const matched = new Set<SearchHit['matchedIn'][number]>();
   const matchedPages: DocPage[] = [];
+  const matchedExamples: string[] = [];
 
   if (allTermsMatch(normalise(pkg.name), terms)) {
     score = Math.max(score, W.name);
@@ -117,19 +154,13 @@ export function scorePackage(pkg: NormalisedPackage, query: string): SearchHit |
     matched.add('metadata');
   }
 
-  if (pkg.keywords && allTermsMatch(pkg.keywords, terms)) {
-    score = Math.max(score, W.keywords);
-    matched.add('keywords');
-  }
+  for (const field of SIMPLE_FIELDS) {
+    const value = pkg[field];
 
-  if (pkg.exports && allTermsMatch(pkg.exports, terms)) {
-    score = Math.max(score, W.exports);
-    matched.add('exports');
-  }
-
-  if (pkg.related && allTermsMatch(pkg.related, terms)) {
-    score = Math.max(score, W.related);
-    matched.add('related');
+    if (value && allTermsMatch(value, terms)) {
+      score = Math.max(score, W[field]);
+      matched.add(field);
+    }
   }
 
   for (const page of pkg.availableDocPages) {
@@ -142,14 +173,18 @@ export function scorePackage(pkg: NormalisedPackage, query: string): SearchHit |
     }
   }
 
-  if (pkg.source && allTermsMatch(pkg.source, terms)) {
-    score = Math.max(score, W.source);
-    matched.add('source');
+  for (const example of pkg.examples) {
+    if (allTermsMatch(example.text, terms)) {
+      score = Math.max(score, W.examples);
+      matched.add('examples');
+      matchedExamples.push(example.id);
+    }
   }
 
   if (score === 0) return null;
 
   return {
+    ...(matchedExamples.length > 0 && { matchedExamples }),
     matchedIn: [...matched] as SearchHit['matchedIn'],
     ...(matchedPages.length > 0 && { matchedPages }),
     name: pkg.name,

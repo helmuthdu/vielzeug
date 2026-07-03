@@ -17,14 +17,24 @@ const NON_BROWSER_PACKAGES = new Set(['codex']);
 /** DOM-output packages have no preview container in the REPL — excluded from REPL registration. */
 export const REPL_EXCLUDED_PACKAGES = new Set(['ore', 'prism', 'refine']);
 
-/** Returns every publishable package name under `packagesDir`, sorted alphabetically. */
-export function listVielzeugPackages(packagesDir: string): string[] {
+/**
+ * Returns every directory under `packagesDir` that has a `package.json`, sorted
+ * alphabetically — the raw "what packages exist in this monorepo" primitive, with no
+ * opinion about browser-resolvability. Consumers that need the browser-safe subset
+ * should use `listVielzeugPackages`; consumers documenting/bundling every package
+ * (e.g. codex's data generator) should use this directly.
+ */
+export function listPackageDirs(packagesDir: string): string[] {
   return readdirSync(packagesDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .filter((name) => !NON_BROWSER_PACKAGES.has(name))
     .filter((name) => existsSync(join(packagesDir, name, 'package.json')))
     .sort();
+}
+
+/** Returns every publishable, browser-resolvable package name under `packagesDir`, sorted alphabetically. */
+export function listVielzeugPackages(packagesDir: string): string[] {
+  return listPackageDirs(packagesDir).filter((name) => !NON_BROWSER_PACKAGES.has(name));
 }
 
 /**

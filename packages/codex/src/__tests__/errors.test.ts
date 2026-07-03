@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { CodexError, ToolArgError } from '../errors.js';
+import { CodexError, ToolError } from '../errors.js';
 
 describe('CodexError', () => {
   it('sets name to the constructor name and is an instance of Error', () => {
@@ -24,7 +24,7 @@ describe('CodexError', () => {
     });
 
     it('returns true for a subclass instance', () => {
-      expect(CodexError.is(new ToolArgError('x'))).toBe(true);
+      expect(CodexError.is(new ToolError('INVALID_ARG', 'x'))).toBe(true);
     });
 
     it('returns false for a plain Error', () => {
@@ -39,12 +39,17 @@ describe('CodexError', () => {
   });
 });
 
-describe('ToolArgError', () => {
-  it('is a CodexError with its own name', () => {
-    const err = new ToolArgError('packageSlug: required non-empty string.');
+describe('ToolError', () => {
+  it('is a CodexError with its own name and carries a machine-readable code', () => {
+    const err = new ToolError('INVALID_ARG', 'packageSlug: required non-empty string.');
 
     expect(err).toBeInstanceOf(CodexError);
-    expect(err.name).toBe('ToolArgError');
+    expect(err.name).toBe('ToolError');
+    expect(err.code).toBe('INVALID_ARG');
     expect(err.message).toBe('packageSlug: required non-empty string.');
+  });
+
+  it.each(['INVALID_ARG', 'NOT_FOUND', 'UNAVAILABLE'] as const)('supports code %s', (code) => {
+    expect(new ToolError(code, 'x').code).toBe(code);
   });
 });

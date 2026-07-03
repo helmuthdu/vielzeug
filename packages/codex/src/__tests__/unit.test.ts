@@ -103,18 +103,35 @@ describe('parseFrontmatter', () => {
 // ---------------------------------------------------------------------------
 
 describe('packageMeta', () => {
-  it('strips docs, apiSource, and components from the output', () => {
+  it('strips docs, apiSource, examples, and typeSignatures from the output', () => {
     const pkg = makePkg({
       apiSource: 'export function foo() {}',
-      components: [{ name: 'ore-button', tagName: 'ore-button' }],
       docs: { api: '# API', index: '# Index' },
+      examples: [{ code: 'foo()', id: 'foo-basic', name: 'foo — basic' }],
+      typeSignatures: { foo: 'export function foo() {}' },
     });
 
     const meta = packageMeta(pkg);
 
     expect(meta).not.toHaveProperty('docs');
     expect(meta).not.toHaveProperty('apiSource');
-    expect(meta).not.toHaveProperty('components');
+    expect(meta).not.toHaveProperty('examples');
+    expect(meta).not.toHaveProperty('typeSignatures');
+  });
+
+  it('reduces examples to exampleIds', () => {
+    const pkg = makePkg({
+      examples: [
+        { code: 'foo()', id: 'foo-basic', name: 'foo — basic' },
+        { code: 'bar()', id: 'bar-basic', name: 'bar — basic' },
+      ],
+    });
+
+    expect(packageMeta(pkg).exampleIds).toEqual(['foo-basic', 'bar-basic']);
+  });
+
+  it('sets exampleIds to [] when a package has no REPL examples', () => {
+    expect(packageMeta(makePkg({ examples: [] })).exampleIds).toEqual([]);
   });
 
   it('sets hasSource: true when apiSource is present', () => {
@@ -191,6 +208,7 @@ describe('validateBundledData', () => {
   it('throws for a package entry missing slug', () => {
     const bad = {
       packages: [{ name: '@vielzeug/x', version: '1.0.0' }],
+      refineComponents: [],
       schemaVersion: SCHEMA_VERSION,
       version: '1.0.0',
     };
@@ -201,6 +219,7 @@ describe('validateBundledData', () => {
   it('throws for a package entry missing name', () => {
     const bad = {
       packages: [{ slug: 'x', version: '1.0.0' }],
+      refineComponents: [],
       schemaVersion: SCHEMA_VERSION,
       version: '1.0.0',
     };
@@ -211,11 +230,44 @@ describe('validateBundledData', () => {
   it('throws for a package entry with empty slug', () => {
     const bad = {
       packages: [{ name: '@vielzeug/x', slug: '', version: '1.0.0' }],
+      refineComponents: [],
       schemaVersion: SCHEMA_VERSION,
       version: '1.0.0',
     };
 
     expect(() => validateBundledData(bad)).toThrow(/malformed package entry/);
+  });
+
+  it('throws when refineComponents is missing or not an array', () => {
+    const bad = {
+      packages: [],
+      schemaVersion: SCHEMA_VERSION,
+      version: '1.0.0',
+    };
+
+    expect(() => validateBundledData(bad)).toThrow(/malformed or uses an outdated schema/);
+  });
+
+  it('throws for a package entry with a non-array field (e.g. exports)', () => {
+    const bad = {
+      packages: [{ ...VALID_DATA.packages[0], exports: 'not-an-array' }],
+      refineComponents: [],
+      schemaVersion: SCHEMA_VERSION,
+      version: '1.0.0',
+    };
+
+    expect(() => validateBundledData(bad)).toThrow(/must be an array/);
+  });
+
+  it('throws for a package entry with a non-object field (e.g. docs)', () => {
+    const bad = {
+      packages: [{ ...VALID_DATA.packages[0], docs: 'not-an-object' }],
+      refineComponents: [],
+      schemaVersion: SCHEMA_VERSION,
+      version: '1.0.0',
+    };
+
+    expect(() => validateBundledData(bad)).toThrow(/must be an object/);
   });
 });
 
@@ -262,13 +314,12 @@ describe('createServerFromDisk', () => {
 // ---------------------------------------------------------------------------
 
 describe('generateBundledData — projects override', () => {
-  it('uses provided projects list and skips Rush discovery', () => {
-    const result = generateBundledData({
-      projects: [{ packageName: '@vielzeug/codex', projectFolder: 'packages/codex' }],
-    });
+  it('uses provided project folder list and skips filesystem discovery', () => {
+    const result = generateBundledData({ projects: ['packages/codex'] });
 
     expect(result.data.packages).toHaveLength(1);
     expect(result.data.packages[0]!.slug).toBe('codex');
+    expect(result.data.packages[0]!.name).toBe('@vielzeug/codex');
   });
 
   it('returns empty packages when projects list is empty', () => {

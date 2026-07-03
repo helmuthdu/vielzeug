@@ -51,6 +51,47 @@ describe('generateBundledData', () => {
     }
   });
 
+  it('every package has an examples array, and DOM-output packages have none', () => {
+    for (const pkg of data.packages) {
+      expect(Array.isArray(pkg.examples)).toBe(true);
+    }
+
+    const refine = data.packages.find((p) => p.slug === 'refine');
+
+    expect(refine?.examples).toEqual([]);
+  });
+
+  it('bundles REPL examples with id, name, and code for a package that has them', () => {
+    const arsenal = data.packages.find((p) => p.slug === 'arsenal');
+
+    expect(arsenal?.examples.length).toBeGreaterThan(0);
+
+    const debounce = arsenal?.examples.find((e) => e.id === 'function-debounce');
+
+    expect(debounce?.name.length).toBeGreaterThan(0);
+    expect(debounce?.code).toContain('debounce');
+  });
+
+  it('bundles typeSignatures for symbols re-exported via `export *` barrels, not just index.ts itself', () => {
+    const arsenal = data.packages.find((p) => p.slug === 'arsenal');
+
+    // arsenal/src/index.ts is `export * from './array/chunk'` etc. — debounce's real declaration
+    // lives in function/debounce.ts, not index.ts, so this only passes if barrel-following works.
+    expect(arsenal?.typeSignatures['debounce']).toContain('export function debounce');
+  });
+
+  it('includes codex itself among the documented packages', () => {
+    expect(data.packages.some((p) => p.slug === 'codex')).toBe(true);
+  });
+
+  it('bundles refine CEM data as a top-level array, not per-package', () => {
+    expect(Array.isArray(data.refineComponents)).toBe(true);
+
+    for (const pkg of data.packages) {
+      expect(pkg).not.toHaveProperty('components');
+    }
+  });
+
   it('does not return hashes when incremental is false (default)', () => {
     expect(generateBundledData({ incremental: false }).hashes).toBeUndefined();
   });
@@ -109,20 +150,22 @@ const LLMS_DATA: BundledData = {
       apiSource: null,
       availableDocPages: ['index', 'api'],
       category: 'utilities',
-      components: [],
       description: 'A minimal test package',
       docs: {
         api: '---\ntitle: API\n---\n## Functions\n\nThe `foo()` function does things.',
         index: '---\ntitle: Index\n---\n# Test\n\nA minimal test package.',
       },
+      examples: [{ code: "foo()\n// => 'ok'", id: 'foo-basic', name: 'foo — basic usage' }],
       exports: ['foo', 'bar'],
       keywords: ['test'],
       name: '@vielzeug/test',
       related: [],
       slug: 'test',
+      typeSignatures: {},
       version: '1.0.0',
     },
   ],
+  refineComponents: [],
   schemaVersion: SCHEMA_VERSION,
   version: '1.0.0',
 };
@@ -154,6 +197,11 @@ describe('generateLlmsTxt', () => {
 
     it('labels doc sections (e.g. API Reference)', () => {
       expect(llmsFullTxt).toContain('### API Reference');
+    });
+
+    it('lists REPL example names with their ids under a dedicated section', () => {
+      expect(llmsFullTxt).toContain('### REPL Examples');
+      expect(llmsFullTxt).toContain('foo — basic usage (id: `foo-basic`)');
     });
 
     it('ends with a newline', () => {

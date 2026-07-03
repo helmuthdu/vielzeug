@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { BundledPackage } from '../types.js';
 
-import { normalisePackage, scorePackage } from '../search.js';
+import { describeScoreTiers, normalisePackage, scorePackage } from '../search.js';
 import { makePkg } from './_fixtures.js';
 
 // ---------------------------------------------------------------------------
@@ -153,6 +153,35 @@ describe('scorePackage — match categories', () => {
     expect(hit?.matchedPages).toBeUndefined();
   });
 
+  it('reports "examples" for a REPL example name or code match', () => {
+    const hit = scorePackage(
+      pkg({ examples: [{ code: 'debounce(fn, 200)', id: 'debounce-basic', name: 'debounce — basic usage' }] }),
+      'debounce',
+    );
+
+    expect(hit?.matchedIn).toContain('examples');
+  });
+
+  it('reports matchedExamples with the ids of every matching example', () => {
+    const hit = scorePackage(
+      pkg({
+        examples: [
+          { code: 'debounce(fn, 200)', id: 'debounce-basic', name: 'debounce basics' },
+          { code: 'throttle(fn, 200)', id: 'throttle-basic', name: 'throttle basics' },
+        ],
+      }),
+      'basics',
+    );
+
+    expect(hit?.matchedExamples).toEqual(['debounce-basic', 'throttle-basic']);
+  });
+
+  it('omits matchedExamples when no example matched', () => {
+    const hit = scorePackage(pkg({ description: 'reactive state library' }), 'reactive');
+
+    expect(hit?.matchedExamples).toBeUndefined();
+  });
+
   it('collects multiple match categories when several fields match', () => {
     const hit = scorePackage(
       pkg({ description: 'A reactive signal library', keywords: ['reactive', 'signal'] }),
@@ -236,6 +265,16 @@ describe('scorePackage — score tiers', () => {
     expect(hit?.score).toBeLessThan(1);
   });
 
+  it('examples match scores below docs, above source (>= 0.95, < 1)', () => {
+    const hit = scorePackage(
+      pkg({ examples: [{ code: '', id: 'x', name: 'createQuery basic usage' }] }),
+      'createquery',
+    );
+
+    expect(hit?.score).toBeGreaterThanOrEqual(0.95);
+    expect(hit?.score).toBeLessThan(1);
+  });
+
   it('multi-match score is the maximum weight, not a sum', () => {
     // Both metadata (3.1) and keywords (2.5) match — score should be the metadata weight
     const hit = scorePackage(pkg({ description: 'A reactive library', keywords: ['reactive'] }), 'reactive');
@@ -313,5 +352,17 @@ describe('scorePackage — normalisation', () => {
     const docsCount = hit!.matchedIn.filter((c) => c === 'docs').length;
 
     expect(docsCount).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// describeScoreTiers — single source of truth for the search-packages tool description
+// ---------------------------------------------------------------------------
+
+describe('describeScoreTiers', () => {
+  it('lists every tier highest-to-lowest as "label(weight)" joined by " > "', () => {
+    expect(describeScoreTiers()).toBe(
+      'name(3.9) > category(3.5) > description(3.1) > keywords(2.5) > exports(2.2) > related(2) > docs(1) > examples(0.95) > source(0.9)',
+    );
   });
 });

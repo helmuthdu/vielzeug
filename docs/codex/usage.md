@@ -40,7 +40,18 @@ npx -y @vielzeug/codex --port 3100
 HTTP endpoints:
 
 - MCP endpoint: `http://localhost:3100/`
-- Health check: `http://localhost:3100/health`
+- Health check: `http://localhost:3100/health` → `{ "status": "ok", "version": "<snapshot version>" }`
+
+### Custom data snapshot
+
+Point the CLI at a snapshot file other than the built-in bundled one with `--data`:
+
+```sh
+npx -y @vielzeug/codex --data ./my-snapshot.json
+```
+
+Combine with `--port` for HTTP mode. Useful for testing a locally regenerated snapshot without
+reinstalling the package.
 
 ## Connect Claude Desktop
 
@@ -93,19 +104,29 @@ Create or extend `.vscode/mcp.json` in your workspace root.
 Typical AI-agent pattern from discovery to code generation:
 
 ```
-list-packages                                   → scan catalog, note availableDocPages
+list-packages                                   → scan catalog, note availableDocPages + exampleIds
 search-packages { query: "form validation" }   → multi-word AND search across all fields
 get-package { packageSlug: "forge" }            → structured metadata for one package
 get-docs { packageSlug: "forge", page: "usage" }     → how-to guide
 get-docs { packageSlug: "forge", page: "api" }       → full API reference
 get-source { packageSlug: "forge" }                  → exact exported signatures
+get-type-signature { slug: "forge", symbol: "createForm" }  → one exported declaration, no full-source read
+```
+
+To find and run a REPL example:
+
+```
+list-examples { packageSlug: "arsenal" }              → enumerate example ids for a package
+get-example { packageSlug: "arsenal", exampleId: "function-debounce" }  → full runnable code
 ```
 
 For Refine component queries:
 
 ```
-list-components                              → enumerate available tag names
-get-component { tagName: "ore-input" }       → full CEM declaration
+refine-list-components                              → enumerate available tag names
+refine-get-component { tagName: "ore-input" }       → full CEM declaration
+refine-generate-template { tagName: "ore-input" }   → scaffolded HTML snippet
+refine-validate-usage { tagName: "ore-input", html: "<ore-input placeholder=\"x\">" }  → catch typos before rendering
 ```
 
 ## Programmatic Usage
@@ -160,7 +181,7 @@ cd packages/codex
 pnpm run prepare:data
 ```
 
-If `list-components` returns an error about missing Refine metadata, build `@vielzeug/refine` first so `packages/refine/dist/custom-elements.json` is available during bundling.
+If `refine-list-components` returns an error about missing Refine metadata, build `@vielzeug/refine` first so `packages/refine/dist/custom-elements.json` is available during bundling.
 
 ## Security Notes
 
@@ -189,7 +210,7 @@ npx -y @vielzeug/codex --port 3100
 
 ## Working with Other Vielzeug Libraries
 
-**With Refine** — the codex MCP server exposes Refine component metadata via `list-components` and `get-component`. After building `@vielzeug/refine`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
+**With Refine** — the codex MCP server exposes Refine component metadata via `refine-list-components` and `refine-get-component`. After building `@vielzeug/refine`, the `custom-elements.json` is bundled into the MCP data so AI agents can query component attributes, slots, and events:
 
 ```bash
 # Ensure Refine CEM is available before bundling codex
@@ -201,10 +222,10 @@ An AI agent can then call:
 
 ```jsonc
 // list all ore- components
-{ "tool": "list-components" }
+{ "tool": "refine-list-components" }
 
 // get full declaration for ore-button
-{ "tool": "get-component", "arguments": { "tagName": "ore-button" } }
+{ "tool": "refine-get-component", "arguments": { "tagName": "ore-button" } }
 ```
 
 **With Spell** — codex exposes `spell` documentation so AI agents can discover the schema validation API without leaving the MCP session:
@@ -217,8 +238,9 @@ This returns the complete `spell` API reference, letting an agent write correct 
 
 ## Best Practices
 
-- Call `list-packages` first to discover `availableDocPages`, then `get-package` with `packageSlug` for a focused view before calling `get-docs` — not every package has every page.
+- Call `list-packages` first to discover `availableDocPages` and `exampleIds`, then `get-package` with `packageSlug` for a focused view before calling `get-docs` — not every package has every page or example.
 - Prefer `search-packages` over iterating `list-packages` manually when looking for a capability. Multi-word queries are supported — all words must match.
-- Use `get-source` for the exact public API surface; do not infer exports from docs alone.
-- In HTTP mode, check `/health` before routing traffic to verify the server is up.
+- Use `get-source` for the exact public API surface; prefer `get-type-signature` when you only need one symbol's declaration — it avoids loading the full file.
+- Use `list-examples` + `get-example` to show a real, runnable snippet instead of hand-writing one from docs alone.
+- In HTTP mode, check `/health` before routing traffic to verify the server is up and which snapshot `version` it's serving.
 - Pin a version in production (`npx @vielzeug/codex@3.0.1`) to avoid surprise data changes from snapshot updates.

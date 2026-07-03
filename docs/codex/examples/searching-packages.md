@@ -37,9 +37,10 @@ Result excerpt:
 ]
 ```
 
-- `score` — floating-point weight: 3.9 (name) > 3.5 (category) > 3.1 (description) > 2.5 (keywords) > 2.2 (exports) > 2.0 (related) > 1.0 (docs) > 0.9 (source)
+- `score` — floating-point weight: 3.9 (name) > 3.5 (category) > 3.1 (description) > 2.5 (keywords) > 2.2 (exports) > 2.0 (related) > 1.0 (docs) > 0.95 (examples) > 0.9 (source)
 - `matchedIn` — every category where the query was found
 - `matchedPages` — specific doc pages that matched; present when `matchedIn` includes `"docs"`
+- `matchedExamples` — REPL example ids that matched; present when `matchedIn` includes `"examples"` (follow up with `get-example` to read the matching code)
 
 #### No-match behavior
 
@@ -60,4 +61,5 @@ When nothing matches, the tool returns an empty array — not an error:
 
 - [Listing Packages](./listing-packages.md)
 - [Package Metadata](./package-metadata.md)
+- [Running REPL Examples](./running-repl-examples.md)
 - [API Reference — search-packages](../api.md#search-packages)

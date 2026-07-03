@@ -20,13 +20,17 @@
     "build": "tsc",
     "dev": "node --experimental-strip-types ./scripts/dev.ts",
     "fix": "eslint --fix src",
+    "gen:tool-docs": "node --experimental-strip-types ./scripts/generate-tool-docs.ts",
     "lint": "eslint src",
+    "postbuild": "pnpm run gen:tool-docs",
     "prepare:data": "node --experimental-strip-types ./scripts/generate-bundled-data.ts",
     "prebuild": "pnpm run prepare:data",
     "prepublishOnly": "pnpm run build",
     "pretest": "pnpm run prepare:data",
     "start": "node dist/cli.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run --project integration",
+    "test:unit": "vitest run --project unit"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0"

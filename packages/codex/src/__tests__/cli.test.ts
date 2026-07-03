@@ -4,19 +4,19 @@
  * throughout — it is a `never`-returning stub so control flow after it in the tested code path
  * never actually continues.
  */
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer as createHttpServer } from 'node:http';
-import { dirname, resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { main } from '../cli.js';
 
-const packageVersion = (
-  JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), '../../package.json'), 'utf8')) as {
-    version: string;
-  }
-).version;
+const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+
+const packageVersion = (JSON.parse(readFileSync(resolve(packageRoot, 'package.json'), 'utf8')) as { version: string })
+  .version;
 
 /** Binds an ephemeral port, immediately releases it, and returns the port number for reuse. */
 async function getFreePort(): Promise<number> {
@@ -47,6 +47,7 @@ describe('main — --help', () => {
     await main([flag]);
 
     expect(stderr).toHaveBeenCalledWith(expect.stringContaining('Usage: codex'));
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining('--data <path>'));
     expect(exit).not.toHaveBeenCalled();
   });
 });
@@ -118,5 +119,37 @@ describe('main — HTTP mode', () => {
       process.emit('SIGTERM');
       await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
     }
+  });
+});
+
+describe('main — --data', () => {
+  it('loads bundled data from a custom --data path and serves it over HTTP', async () => {
+    const customFile = join(mkdtempSync(join(tmpdir(), 'codex-cli-data-')), 'vielzeug-data.json');
+
+    writeFileSync(customFile, readFileSync(resolve(packageRoot, 'data/vielzeug-data.json'), 'utf8'));
+
+    const port = await getFreePort();
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    await main(['--port', String(port), '--data', customFile]);
+
+    try {
+      const res = await fetch(`http://localhost:${port}/health`);
+
+      expect(res.status).toBe(200);
+    } finally {
+      process.emit('SIGTERM');
+      await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(0));
+    }
+  });
+
+  it('exits 1 with a descriptive message for a missing --data path', async () => {
+    const stderr = vi.spyOn(process.stderr, 'write').mockImplementation(() => true);
+    const exit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+
+    await main(['--data', '/nonexistent/codex-data-snapshot.json']);
+
+    expect(stderr.mock.calls.some(([msg]) => String(msg).includes('Bundled MCP data not found'))).toBe(true);
+    expect(exit).toHaveBeenCalledWith(1);
   });
 });

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(codex): harden security, fix doc drift, add CLI --data flag",
+      "type": "patch",
+      "packageName": "@vielzeug/codex"
+    }
+  ],
+  "packageName": "@vielzeug/codex",
+  "email": "helmuthdu@gmail.com"
+}

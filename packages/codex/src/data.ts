@@ -9,6 +9,23 @@ const DEFAULT_DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../d
 
 const REGEN_CMD = 'pnpm --dir packages/codex run prepare:data';
 
+/** Array-typed BundledPackage fields that every real generated entry always populates. */
+const PACKAGE_ARRAY_FIELDS = ['availableDocPages', 'examples', 'exports', 'keywords', 'related'] as const;
+
+/** Plain-object-typed BundledPackage fields that every real generated entry always populates. */
+const PACKAGE_OBJECT_FIELDS = ['docs', 'typeSignatures'] as const;
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * `validateBundledData` is public API (see usage.md "load data from a custom snapshot file") and
+ * therefore reachable with arbitrary, possibly malformed JSON — not just the package's own
+ * generated output. Checking only `slug`/`name` let a structurally-wrong `docs`/`examples`/etc.
+ * field pass validation and then throw an unclear `TypeError` deep inside a tool's `run()` instead
+ * of a clear `CodexError` here, at load time.
+ */
 export function validateBundledData(raw: unknown): BundledData {
   const r = raw as Record<string, unknown>;
 
@@ -17,7 +34,8 @@ export function validateBundledData(raw: unknown): BundledData {
     raw === null ||
     r['schemaVersion'] !== SCHEMA_VERSION ||
     typeof r['version'] !== 'string' ||
-    !Array.isArray(r['packages'])
+    !Array.isArray(r['packages']) ||
+    !Array.isArray(r['refineComponents'])
   ) {
     throw new CodexError(
       `Bundled data is malformed or uses an outdated schema (expected v${SCHEMA_VERSION}). Regenerate with ${REGEN_CMD}.`,
@@ -31,6 +49,22 @@ export function validateBundledData(raw: unknown): BundledData {
       throw new CodexError(
         `Bundled data has a malformed package entry (missing slug or name). Regenerate with ${REGEN_CMD}.`,
       );
+    }
+
+    for (const field of PACKAGE_ARRAY_FIELDS) {
+      if (!Array.isArray(p[field])) {
+        throw new CodexError(
+          `Bundled data has a malformed package entry ("${p['slug']}"."${field}" must be an array). Regenerate with ${REGEN_CMD}.`,
+        );
+      }
+    }
+
+    for (const field of PACKAGE_OBJECT_FIELDS) {
+      if (!isPlainObject(p[field])) {
+        throw new CodexError(
+          `Bundled data has a malformed package entry ("${p['slug']}"."${field}" must be an object). Regenerate with ${REGEN_CMD}.`,
+        );
+      }
     }
   }
 
@@ -77,6 +111,7 @@ export function packageMeta(pkg: BundledPackage): PackageMeta {
     availableDocPages: pkg.availableDocPages,
     category: pkg.category,
     description: pkg.description,
+    exampleIds: pkg.examples.map((e) => e.id),
     exports: pkg.exports,
     hasSource: pkg.apiSource !== null,
     keywords: pkg.keywords,

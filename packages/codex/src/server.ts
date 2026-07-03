@@ -3,7 +3,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import type { BundledData } from './types.js';
 
 import { loadData } from './data.js';
-import { buildToolContext, registerTools } from './tools.js';
+import { buildToolContext, registerTools } from './tools/index.js';
 
 export function createServer(data: BundledData): Server {
   const server = new Server({ name: 'vielzeug', version: data.version }, { capabilities: { tools: {} } });

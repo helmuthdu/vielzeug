@@ -1,11 +1,12 @@
 export { loadData, packageMeta, validateBundledData } from './data.js';
-export { CodexError, ToolArgError } from './errors.js';
+export { CodexError, ToolError, type ToolErrorCode } from './errors.js';
 export { createRequestHandler, startHttpServer } from './http.js';
 export type { HttpServerHandle } from './http.js';
 export type { SearchHit } from './search.js';
 export { createServer, createServerFromDisk } from './server.js';
 export {
   type BundledData,
+  type BundledExample,
   type BundledPackage,
   type CemAttribute,
   type CemCssPart,
