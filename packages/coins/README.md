@@ -48,7 +48,7 @@ format(total); // '$35.59'
 format(total, { locale: 'de-DE' }); // '35,59 $'
 format(total, { style: 'code' }); // 'USD 35.59'
 
-// Currency exchange — ExchangeRate.from/to are plain strings; rate is a decimal string
+// Currency exchange — ExchangeRate.from/to are plain strings; rate is a decimal string or number
 const rate: ExchangeRate = { from: 'USD', rate: '0.92', to: 'EUR' };
 exchange(total, rate); // { amount: 3274n, currency: 'EUR' }
 ```
@@ -167,7 +167,7 @@ Joining all `value` fields produces the same string as `format()`.
 
 ### `exchange(money, rate, mode?)`
 
-Converts a `Money` value using an `ExchangeRate`. `ExchangeRate.from` and `.to` are plain strings; `rate.rate` is a decimal string for lossless bigint arithmetic. Throws `CurrencyMismatchError` if `money.currency !== rate.from`.
+Converts a `Money` value using an `ExchangeRate`. `ExchangeRate.from` and `.to` are plain strings; `rate.rate` is a decimal string or number (`number | string`, for symmetry with `multiply()`/`divide()` — prefer a string for lossless bigint arithmetic). Throws `CurrencyMismatchError` if `money.currency !== rate.from`.
 
 ```ts
 import type { ExchangeRate } from '@vielzeug/coins';
@@ -225,7 +225,7 @@ type Money = {
 
 type ExchangeRate = {
   readonly from: string; // source currency code
-  readonly rate: string; // decimal multiplier, e.g. '0.92'
+  readonly rate: number | string; // decimal multiplier, e.g. '0.92' or 0.92
   readonly to: string; // target currency code
 };
 

@@ -69,6 +69,22 @@ describe('exchange', () => {
     });
   });
 
+  describe('number rate', () => {
+    it('accepts a rate as a number, for symmetry with multiply()/divide()', () => {
+      const result = exchange(money('1000.00', 'USD'), { from: 'USD', rate: 0.85, to: 'EUR' });
+
+      expect(result).toEqual({ amount: 85000n, currency: 'EUR' });
+    });
+
+    it('throws CoinsError for a negative number rate', () => {
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: -0.85, to: 'EUR' })).toThrow(CoinsError);
+    });
+
+    it('throws CoinsError for a NaN rate', () => {
+      expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: NaN, to: 'EUR' })).toThrow(CoinsError);
+    });
+  });
+
   describe('rounding modes', () => {
     // 3 cents × 0.5 = 1.5 cents — a fractional minor unit
     const threeUsd: ExchangeRate = { from: 'USD', rate: '0.5', to: 'EUR' };
@@ -146,20 +162,20 @@ describe('exchange', () => {
       );
     });
 
-    it('throws RangeError for invalid rate string', () => {
+    it('throws CoinsError for invalid rate string', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: 'not-a-number', to: 'EUR' })).toThrow(
         CoinsError,
       );
     });
 
-    it('throws RangeError for empty string rate', () => {
+    it('throws CoinsError for empty string rate', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(CoinsError);
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '', to: 'EUR' })).toThrow(
         'non-empty decimal string',
       );
     });
 
-    it('throws RangeError for negative exchange rate', () => {
+    it('throws CoinsError for negative exchange rate', () => {
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(CoinsError);
       expect(() => exchange(money('100.00', 'USD'), { from: 'USD', rate: '-0.85', to: 'EUR' })).toThrow(
         'Exchange rate must be non-negative',

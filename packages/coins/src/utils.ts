@@ -1,4 +1,4 @@
-import type { RoundingMode } from './types';
+import type { CurrencyCode, RoundingMode } from './types';
 
 import { boundedCache } from './_cache';
 import { CoinsError, InvalidCurrencyError } from './errors';
@@ -10,7 +10,7 @@ const currencyDecimalsCache = boundedCache<string, number>(512);
  * Uses `Intl.NumberFormat` to resolve the canonical value (e.g. USD→2, JPY→0, KWD→3).
  * Throws `InvalidCurrencyError` for unrecognized codes or when the runtime cannot determine decimals.
  */
-export function getCurrencyDecimals(currencyCode: string): number {
+export function getCurrencyDecimals(currencyCode: CurrencyCode): number {
   const cached = currencyDecimalsCache.get(currencyCode);
 
   if (cached !== undefined) return cached;
@@ -38,7 +38,7 @@ export function getCurrencyDecimals(currencyCode: string): number {
  * Throws `InvalidCurrencyError` if unrecognized. Uses `getCurrencyDecimals` internally so
  * the result is cached for subsequent decimal lookups.
  */
-export function validateCurrencyCode(code: string): string {
+export function validateCurrencyCode(code: CurrencyCode): CurrencyCode {
   getCurrencyDecimals(code);
 
   return code;
@@ -51,8 +51,9 @@ export function pow10(exponent: number): bigint {
 
 /** Regex for valid decimal strings accepted by `parseRational`. */
 const DECIMAL_RE = /^-?\d+(\.\d+)?$/;
+
 /** Regex matching JavaScript scientific-notation strings, e.g. `'1e-7'`, `'-3.14E+5'`. */
-const SCIENTIFIC_RE = /^(-?\d+\.?\d*)[eE]([+-]?\d+)$/;
+export const SCIENTIFIC_RE = /^(-?\d+\.?\d*)[eE]([+-]?\d+)$/;
 
 /** Maximum absolute exponent allowed in scientific notation. Prevents '0'.repeat(N) allocation attacks. */
 const MAX_SCIENTIFIC_EXP = 1000;
@@ -61,9 +62,9 @@ const MAX_SCIENTIFIC_EXP = 1000;
  * Expands a scientific-notation decimal string into a plain decimal string.
  * `'1e-7'` → `'0.0000001'`, `'1.23e+5'` → `'123000'`.
  * Only called when `SCIENTIFIC_RE` already matched — no extra validation.
- * Throws `RangeError` if the absolute exponent exceeds `MAX_SCIENTIFIC_EXP` (1000).
+ * @throws {CoinsError} If the absolute exponent exceeds `MAX_SCIENTIFIC_EXP` (1000).
  */
-function expandScientific(s: string): string {
+export function expandScientific(s: string): string {
   const match = SCIENTIFIC_RE.exec(s)!;
   const coeff = match[1]!;
   const exp = parseInt(match[2]!, 10);
@@ -101,7 +102,7 @@ function expandScientific(s: string): string {
 /**
  * Parses a decimal string into a rational `{ numerator, denominator, negative }`.
  * The denominator is always a power of 10 and the numerator is always non-negative.
- * Throws `RangeError` for non-numeric input.
+ * @throws {CoinsError} For non-numeric input.
  *
  * Accepts standard decimal strings and JavaScript scientific notation
  * (e.g. `'1e-7'`, `'1.23E+5'`) — the latter is automatically expanded before parsing.

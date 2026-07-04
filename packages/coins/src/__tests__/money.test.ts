@@ -39,32 +39,32 @@ import {
 
 describe('money factory', () => {
   describe('invalid amount strings', () => {
-    it('throws RangeError for non-numeric string', () => {
+    it('throws CoinsError for non-numeric string', () => {
       expect(() => money('abc', 'USD')).toThrow(CoinsError);
       expect(() => money('abc', 'USD')).toThrow('Invalid decimal string');
     });
 
-    it('throws RangeError for amount with multiple dots', () => {
+    it('throws CoinsError for amount with multiple dots', () => {
       expect(() => money('1.2.3', 'USD')).toThrow(CoinsError);
     });
 
-    it('throws RangeError for empty string amount', () => {
+    it('throws CoinsError for empty string amount', () => {
       expect(() => money('', 'USD')).toThrow(CoinsError);
     });
   });
 
   describe('special number inputs', () => {
-    it('throws RangeError for NaN', () => {
+    it('throws CoinsError for NaN', () => {
       expect(() => money(NaN, 'USD')).toThrow(CoinsError);
       expect(() => money(NaN, 'USD')).toThrow('Invalid decimal string');
     });
 
-    it('throws RangeError for Infinity', () => {
+    it('throws CoinsError for Infinity', () => {
       expect(() => money(Infinity, 'USD')).toThrow(CoinsError);
       expect(() => money(Infinity, 'USD')).toThrow('Invalid decimal string');
     });
 
-    it('throws RangeError for -Infinity', () => {
+    it('throws CoinsError for -Infinity', () => {
       expect(() => money(-Infinity, 'USD')).toThrow(CoinsError);
       expect(() => money(-Infinity, 'USD')).toThrow('Invalid decimal string');
     });
@@ -113,7 +113,10 @@ describe('money factory', () => {
     it('handles very small numbers that produce scientific notation via String()', () => {
       // String(1e-7) === '1e-7' — parseRational must expand it before parsing
       // 1e-7 USD = $0.0000001, rounds to $0.00 (0 minor units)
+      const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
       expect(money(1e-7, 'USD')).toEqual({ amount: 0n, currency: 'USD' });
+      spy.mockRestore();
     });
 
     it('handles very large numbers that produce scientific notation via String()', () => {
@@ -221,7 +224,7 @@ describe('clamp', () => {
     expect(clamp(money('0.00', 'USD'), lo, hi)).toEqual({ amount: -100n, currency: 'USD' });
   });
 
-  it('throws RangeError when lower > upper', () => {
+  it('throws CoinsError when lower > upper', () => {
     expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow(CoinsError);
     expect(() => clamp(money('5.00', 'USD'), upper, lower)).toThrow('clamp');
   });
@@ -730,7 +733,7 @@ describe('min', () => {
     expect(min([money('5.00', 'USD')])).toEqual({ amount: 500n, currency: 'USD' });
   });
 
-  it('throws RangeError on empty array', () => {
+  it('throws CoinsError on empty array', () => {
     expect(() => min([])).toThrow(CoinsError);
   });
 
@@ -752,7 +755,7 @@ describe('max', () => {
     expect(max([money('5.00', 'USD')])).toEqual({ amount: 500n, currency: 'USD' });
   });
 
-  it('throws RangeError on empty array', () => {
+  it('throws CoinsError on empty array', () => {
     expect(() => max([])).toThrow(CoinsError);
   });
 
@@ -892,23 +895,23 @@ describe('toJSON / fromJSON', () => {
     expect(() => fromJSON({ amount: '100', currency: 'FAKE' })).toThrow(InvalidCurrencyError);
   });
 
-  it('throws TypeError for invalid amount string in fromJSON', () => {
+  it('throws CoinsError for invalid amount string in fromJSON', () => {
     expect(() => fromJSON({ amount: 'not-a-number', currency: 'USD' })).toThrow(CoinsError);
   });
 
-  it('throws TypeError for decimal (float) amount string in fromJSON', () => {
+  it('throws CoinsError for decimal (float) amount string in fromJSON', () => {
     expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow(CoinsError);
     expect(() => fromJSON({ amount: '1.5', currency: 'USD' })).toThrow('expected an integer string');
   });
 
-  it('throws TypeError when amount is a number instead of string', () => {
+  it('throws CoinsError when amount is a number instead of string', () => {
     expect(() => fromJSON({ amount: 123456 as unknown as string, currency: 'USD' })).toThrow(CoinsError);
     expect(() => fromJSON({ amount: 123456 as unknown as string, currency: 'USD' })).toThrow(
       'expected an integer string',
     );
   });
 
-  it('throws TypeError when amount is a bigint instead of string', () => {
+  it('throws CoinsError when amount is a bigint instead of string', () => {
     expect(() => fromJSON({ amount: 123456n as unknown as string, currency: 'USD' })).toThrow(CoinsError);
   });
 });
@@ -1179,16 +1182,16 @@ describe('roundTo', () => {
     expect(roundTo(m, 0)).toBe(m);
   });
 
-  it('throws RangeError for negative places', () => {
+  it('throws CoinsError for negative places', () => {
     expect(() => roundTo(money('10.00', 'USD'), -1)).toThrow(CoinsError);
   });
 
-  it('throws RangeError for places > currency decimals', () => {
+  it('throws CoinsError for places > currency decimals', () => {
     expect(() => roundTo(money('10.00', 'USD'), 3)).toThrow(CoinsError);
     expect(() => roundTo(money('10.00', 'USD'), 3)).toThrow('exceeds');
   });
 
-  it('throws RangeError for non-integer places', () => {
+  it('throws CoinsError for non-integer places', () => {
     expect(() => roundTo(money('10.00', 'USD'), 1.5)).toThrow(CoinsError);
   });
 });
@@ -1277,6 +1280,26 @@ describe('money() dev warning for number inputs', () => {
     const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 
     money(100, 'USD');
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
+  });
+
+  it('warns for scientific-notation numbers with no literal decimal point (regression: fracLen must expand notation first)', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    // String(1e-7) === '1e-7' — no '.' in the raw string, so a naive fracLen
+    // computation reports 0 fractional digits and misses this entirely.
+    money(1e-7, 'USD');
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/coins]'));
+    expect(spy).toHaveBeenCalledWith(expect.stringContaining('1e-7'));
+    spy.mockRestore();
+  });
+
+  it('does not warn for scientific-notation numbers that fit the currency precision', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    // String(1e2) === '100' — plain integer, well within JPY's 0 decimal places.
+    money(1e2, 'JPY');
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });

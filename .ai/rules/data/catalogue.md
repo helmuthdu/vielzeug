@@ -45,7 +45,6 @@ Inter-package `@vielzeug/*` runtime dependencies — generated from each package
 
 ```text
 clockwork → ripple
-coins     → arsenal
 courier   → arsenal
 familiar  → arsenal
 flux      → ripple
@@ -62,7 +61,7 @@ sourcerer → arsenal
 spell     → arsenal
 ```
 
-Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
+Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `coins`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
 
 > **Note:** `flux` also declares optional peer dependencies on `courier`, `herald`, and `pulse`.
 

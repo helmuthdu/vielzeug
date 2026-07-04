@@ -30,9 +30,6 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "dependencies": {
-    "@vielzeug/arsenal": "workspace:*"
-  },
   "devDependencies": {
     "@types/node": "^25.9.3",
     "typescript": "~6.0.3",

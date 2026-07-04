@@ -8,7 +8,7 @@ export type CurrencyCode = string;
 /** A monetary value. `amount` is stored as bigint minor units (e.g. cents for USD). */
 export type Money = {
   readonly amount: bigint;
-  readonly currency: string;
+  readonly currency: CurrencyCode;
 };
 
 /**
@@ -17,12 +17,14 @@ export type Money = {
  *   Since every `Money.currency` is already a validated ISO 4217 code, a matching
  *   `from` is implicitly valid.
  * - `to` is validated as a recognised ISO 4217 code by `exchange()` before returning.
- * - `rate` is a decimal string (e.g. `'0.847532'`) for lossless bigint precision.
+ * - `rate` is a decimal string (e.g. `'0.847532'`) or number, for symmetry with
+ *   `multiply()`/`divide()`. Prefer a string when precision matters — a number is
+ *   converted via `String()` first and inherits IEEE-754 limits.
  */
 export type ExchangeRate = {
-  readonly from: string;
-  readonly rate: string;
-  readonly to: string;
+  readonly from: CurrencyCode;
+  readonly rate: number | string;
+  readonly to: CurrencyCode;
 };
 
 /** Options for `format()`. */

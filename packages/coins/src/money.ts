@@ -1,8 +1,16 @@
-import type { Money, MoneyJSON, RoundingMode } from './types';
+import type { CurrencyCode, Money, MoneyJSON, RoundingMode } from './types';
 
 import { warn } from './_dev';
 import { CoinsError, CurrencyMismatchError } from './errors';
-import { applyRounding, getCurrencyDecimals, parseRational, pow10, validateCurrencyCode } from './utils';
+import {
+  applyRounding,
+  expandScientific,
+  getCurrencyDecimals,
+  parseRational,
+  pow10,
+  SCIENTIFIC_RE,
+  validateCurrencyCode,
+} from './utils';
 
 export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './errors';
 
@@ -24,7 +32,7 @@ export { CoinsError, CurrencyMismatchError, InvalidCurrencyError } from './error
  * money(123456n,   'USD') // { amount: 123456n, currency: 'USD' }
  * ```
  */
-export function money(amount: bigint | number | string, currency: string): Money {
+export function money(amount: bigint | number | string, currency: CurrencyCode): Money {
   const validCurrency = validateCurrencyCode(currency);
 
   if (typeof amount === 'bigint') {
@@ -34,8 +42,12 @@ export function money(amount: bigint | number | string, currency: string): Money
   if (typeof amount === 'number') {
     const decimals = getCurrencyDecimals(validCurrency);
     const str = String(amount);
-    const dotIndex = str.indexOf('.');
-    const fracLen = dotIndex === -1 ? 0 : str.length - dotIndex - 1;
+    // Expand scientific notation (e.g. String(1e-7) === '1e-7') before measuring fraction
+    // length — otherwise inputs like 1e-7 report 0 fractional digits and skip the warning
+    // below despite having far more precision than the currency supports.
+    const normalized = SCIENTIFIC_RE.test(str) ? expandScientific(str) : str;
+    const dotIndex = normalized.indexOf('.');
+    const fracLen = dotIndex === -1 ? 0 : normalized.length - dotIndex - 1;
 
     if (fracLen > decimals) {
       warn(
@@ -161,9 +173,9 @@ export function multiply(m: Money, factor: number | string, mode: RoundingMode =
 /**
  * Divides a `Money` value by a scalar divisor.
  * The divisor can be a decimal string (lossless) or a number.
- * Throws `RangeError` on division by zero.
  *
  * @param mode Rounding mode for fractional minor units. Defaults to `'half-away-from-zero'`.
+ * @throws {CoinsError} On division by zero.
  *
  * @example
  * ```ts
@@ -343,7 +355,7 @@ export function splitEvenly(m: Money, parts: number): [Money, ...Money[]] {
  * Clamps `m` to the inclusive range `[lower, upper]`.
  *
  * @throws {CurrencyMismatchError} If `m`, `lower`, or `upper` have different currencies.
- * @throws {RangeError}            If `lower > upper`.
+ * @throws {CoinsError}            If `lower > upper`.
  *
  * @example
  * ```ts
@@ -543,7 +555,7 @@ export function toNumber(m: Money): number {
  * `places` must be a non-negative integer in the range `0..currencyDecimals`.
  *
  * Useful for display purposes (e.g. rounding USD to whole dollars).
- * Throws `RangeError` if `places` is out of the allowed range.
+ * @throws {CoinsError} If `places` is out of the allowed range.
  *
  * @param mode Rounding mode. Defaults to `'half-away-from-zero'`.
  *

@@ -6,7 +6,9 @@ import { applyRounding, parseRational, validateCurrencyCode } from './utils';
 /**
  * Converts a `Money` value to another currency using the provided exchange rate.
  * Uses lossless bigint arithmetic throughout — `rate.rate` is parsed as a decimal
- * string to avoid IEEE-754 rounding errors.
+ * string to avoid IEEE-754 rounding errors. A number `rate.rate` is converted via
+ * `String()` first (for symmetry with `multiply()`/`divide()`); prefer a string when
+ * precision matters.
  *
  * @param mode Rounding mode applied when the converted amount is not a whole minor unit.
  *             Defaults to `'half-away-from-zero'`.
@@ -17,7 +19,7 @@ import { applyRounding, parseRational, validateCurrencyCode } from './utils';
  *   If you supply an invalid code in `rate.from`, you will receive `CurrencyMismatchError`, not
  *   `InvalidCurrencyError`. Pre-validate `rate.from` with `validateCurrencyCode()` if needed.
  * @throws {InvalidCurrencyError}  If `rate.to` is not a recognised ISO 4217 currency code.
- * @throws {RangeError}            If `rate.rate` is an empty string or a negative value.
+ * @throws {CoinsError}            If `rate.rate` is an empty string, non-numeric, or a negative value.
  *
  * @example
  * ```ts
@@ -33,7 +35,7 @@ export function exchange(m: Money, rate: ExchangeRate, mode: RoundingMode = 'hal
 
   if (rate.rate === '') throw new CoinsError('Exchange rate must be a non-empty decimal string');
 
-  const { denominator, negative: rateNegative, numerator } = parseRational(rate.rate);
+  const { denominator, negative: rateNegative, numerator } = parseRational(String(rate.rate));
 
   if (rateNegative) throw new CoinsError('Exchange rate must be non-negative');
 
