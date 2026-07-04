@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/orbit` &nbsp;·&nbsp; **Category:** UI Positioning
 
-**Key exports:** `float`, `computePosition`, `computeOnce`, `getRects`, `detectOverflow`, `autoUpdate`, `offset`, `flip`, `shift`, `autoPlacement`, `arrow`, `size`, `hide`, `compose`, `limitShift`, `getSide`, `getAlignment`
+**Key exports:** `float`, `computePosition`, `getRects`, `detectOverflow`, `autoUpdate`, `offset`, `flip`, `shift`, `autoPlacement`, `arrow`, `size`, `hide`, `compose`, `limitShift`, `getSide`, `getAlignment`
 
 **When to use:** Zero-dependency floating element positioning for tooltips, dropdowns, menus, and popovers.
 
@@ -52,19 +52,18 @@ const handle = float(reference, floating, {
 });
 
 // On teardown:
-handle.cleanup();
+handle.dispose();
 ```
 
 ## Sub-paths
 
-| Import                     | Purpose                                       |
-| -------------------------- | --------------------------------------------- |
-| `@vielzeug/orbit`          | Core API, middleware, utilities, types        |
-| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks              |
-| `@vielzeug/orbit/inline`   | `inline` middleware for multi-line references |
-| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)  |
-| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)       |
-| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering         |
+| Import                     | Purpose                                                     |
+| -------------------------- | ------------------------------------------------------------ |
+| `@vielzeug/orbit`          | Core API, middleware (`inline` included), utilities, types |
+| `@vielzeug/orbit/presets`  | Pre-configured middleware stacks                            |
+| `@vielzeug/orbit/reactive` | Reactive signal adapter (`@vielzeug/ripple`)                |
+| `@vielzeug/orbit/devtools` | Visual debug overlay (development only)                     |
+| `@vielzeug/orbit/ssr`      | No-op stubs for server-side rendering                        |
 
 ## Documentation
 

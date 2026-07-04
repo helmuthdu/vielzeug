@@ -1,7 +1,7 @@
 import type { DetectOverflowOptions, Middleware, SizeData, TypedMiddleware } from '../types';
 
-import { getBoundaryRect } from '../overflow';
-import { getSide, tagMiddleware, toSideObject } from '../utils';
+import { resolveBoundary } from '../overflow';
+import { getSide, tagMiddleware } from '../utils';
 
 export type SizeOptions = DetectOverflowOptions;
 
@@ -25,8 +25,7 @@ export type SizeOptions = DetectOverflowOptions;
  */
 export function size(options: SizeOptions = {}): TypedMiddleware<'size', SizeData> {
   function sizeMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
-    const boundary = getBoundaryRect(options.boundary ?? state.boundary);
-    const padding = toSideObject(options.padding ?? state.padding);
+    const { boundary, padding } = resolveBoundary(options, state);
     const side = getSide(state.placement);
     const top = boundary.y + padding.top;
     const right = boundary.x + boundary.width - padding.right;

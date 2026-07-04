@@ -2,7 +2,7 @@
 export { OrbitConfigError, OrbitError } from './errors';
 
 // Core engine
-export { computePosition, computePositionAsync, computePositionRaf } from './core';
+export { computePosition, computePositionAsync, computePositionRaf, getRects } from './core';
 export { detectOverflow } from './overflow';
 
 // High-level API

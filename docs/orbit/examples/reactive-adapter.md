@@ -11,7 +11,7 @@ You need tooltip/popover positioning to drive reactive UI updates — but `float
 
 ### Solution
 
-Use `createFloatState()` from `@vielzeug/orbit/reactive`. It wraps `float()` and exposes position as a Ripple `Reactive<ComputePositionResult | null>`:
+Use `createFloatState()` from `@vielzeug/orbit/reactive`. It wraps `float()` and exposes position as a Ripple `Readable<ComputePositionResult | null>`:
 
 #### Basic Usage
 
@@ -48,19 +48,19 @@ function onHide() {
 #### In a Ore Component
 
 ```ts
-import { computed, effect, signal } from '@vielzeug/ripple';
-import { define, onMount } from '@vielzeug/ore';
+import { effect, signal } from '@vielzeug/ripple';
+import { define, html, prop } from '@vielzeug/ore';
 import { flip, offset, shift } from '@vielzeug/orbit';
 import { createFloatState } from '@vielzeug/orbit/reactive';
 
 define('my-tooltip', {
-  props: ['text'],
-  setup({ host, props }) {
+  props: { text: prop.string('') },
+  setup(props, { el, onMounted }) {
     const visible = signal(false);
 
-    onMount(() => {
-      const tooltipEl = host.el.querySelector<HTMLElement>('[role=tooltip]')!;
-      const floatHandle = createFloatState(host.el, tooltipEl, {
+    onMounted(() => {
+      const tooltipEl = el.querySelector<HTMLElement>('[role=tooltip]')!;
+      const floatHandle = createFloatState(el, tooltipEl, {
         placement: 'top',
         middleware: [offset(8), flip(), shift({ padding: 6 })],
         autoUpdate: { pauseWhenHidden: true },
@@ -78,6 +78,8 @@ define('my-tooltip', {
         floatHandle.dispose();
       };
     });
+
+    return html`<slot></slot><div role="tooltip" style="position: fixed">${props.text}</div>`;
   },
 });
 ```

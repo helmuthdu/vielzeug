@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Middleware } from '../types';
 
-import { getRects } from '../core';
 import {
   arrow,
   autoPlacement,
@@ -17,12 +16,15 @@ import {
   float,
   floatWithAnchor,
   getAlignment,
+  getRects,
   getSide,
   hide,
   inline,
   isCssAnchorSupported,
   limitShift,
   offset,
+  OrbitConfigError,
+  OrbitError,
   shift,
   size,
 } from '../index';
@@ -107,6 +109,69 @@ describe('computePosition', () => {
 
     expect(result.x).toBe(210);
     expect(result.y).toBe(340);
+  });
+
+  it('does not call getComputedStyle for dev-only warnings in production builds (__ORBIT_PROD__ set)', async () => {
+    vi.resetModules();
+    (globalThis as { __ORBIT_PROD__?: boolean }).__ORBIT_PROD__ = true;
+
+    try {
+      const { computePosition: computePositionProd } = await import('../core');
+      const { floating, reference } = makeElements(
+        { height: 40, width: 100, x: 200, y: 300 },
+        { height: 30, width: 80 },
+      );
+      const spy = vi.spyOn(window, 'getComputedStyle');
+
+      computePositionProd(reference, floating, { placement: 'bottom' });
+
+      expect(spy).not.toHaveBeenCalled();
+    } finally {
+      delete (globalThis as { __ORBIT_PROD__?: boolean }).__ORBIT_PROD__;
+      vi.resetModules();
+    }
+  });
+});
+
+// ─── errors ───────────────────────────────────────────────────────────────────
+
+describe('errors', () => {
+  it('OrbitConfigError is an instanceof OrbitError and Error', () => {
+    const err = new OrbitConfigError('bad config');
+
+    expect(err).toBeInstanceOf(OrbitConfigError);
+    expect(err).toBeInstanceOf(OrbitError);
+    expect(err).toBeInstanceOf(Error);
+    expect(err.name).toBe('OrbitConfigError');
+  });
+
+  it('OrbitError.is() identifies orbit errors and rejects everything else', () => {
+    expect(OrbitError.is(new OrbitConfigError('bad config'))).toBe(true);
+    expect(OrbitError.is(new Error('unrelated'))).toBe(false);
+    expect(OrbitError.is('not an error')).toBe(false);
+  });
+
+  it('computePosition throws an OrbitConfigError after too many resets', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
+    const loop: Middleware = () => ({ reset: {} });
+
+    try {
+      computePosition(reference, floating, { middleware: [loop] });
+      throw new Error('expected computePosition to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(OrbitConfigError);
+    }
+  });
+
+  it('validateMiddlewareNames ordering violation throws an OrbitConfigError', () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 200, y: 300 }, { height: 30, width: 80 });
+
+    try {
+      computePosition(reference, floating, { middleware: [flip(), autoPlacement()] });
+      throw new Error('expected computePosition to throw');
+    } catch (err) {
+      expect(err).toBeInstanceOf(OrbitConfigError);
+    }
   });
 });
 
@@ -769,6 +834,13 @@ describe('computePositionAsync', () => {
     await promise;
     expect(resolved).toBe(true);
   });
+
+  it('rejects when the underlying computePosition call throws', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
+    const loop: Middleware = () => ({ reset: {} });
+
+    await expect(computePositionAsync(reference, floating, { middleware: [loop] })).rejects.toThrow(/too many resets/i);
+  });
 });
 
 // ─── Custom middleware ────────────────────────────────────────────────────────
@@ -966,6 +1038,14 @@ describe('compose', () => {
     const mws = compose(offset(8), flip(), shift({ padding: 6 }), size(), arrow({ element: arrowEl }));
 
     expect(mws.length).toBe(5);
+  });
+
+  it('returns callable middleware functions for each entry', () => {
+    const mws = compose(flip(), shift());
+
+    expect(mws.length).toBe(2);
+    expect(typeof mws[0]).toBe('function');
+    expect(typeof mws[1]).toBe('function');
   });
 });
 
@@ -1542,33 +1622,6 @@ describe('middleware ordering validation (via computePosition)', () => {
   });
 });
 
-// ─── compose ─────────────────────────────────────────────────────────────────
-
-describe('compose', () => {
-  beforeEach(() => setViewport());
-
-  it('compose with 2 typed middlewares returns typed tuple', () => {
-    const mws = compose(flip(), shift());
-
-    expect(mws.length).toBe(2);
-    expect(typeof mws[0]).toBe('function');
-    expect(typeof mws[1]).toBe('function');
-  });
-
-  it('compose with 4 typed middlewares returns typed tuple', () => {
-    const arrowEl = makeArrow({ height: 10, width: 10 });
-    const mws = compose(offset(8), flip(), shift({ padding: 6 }), arrow({ element: arrowEl }));
-
-    expect(mws.length).toBe(4);
-  });
-
-  it('compose with falsy entries filters them out', () => {
-    const mws = compose(flip(), null, undefined, false, shift());
-
-    expect(mws.length).toBe(2);
-  });
-});
-
 // ─── floatWithAnchor style cleanup ───────────────────────────────────────────
 
 describe('floatWithAnchor style cleanup', () => {
@@ -1907,5 +1960,15 @@ describe('computePositionRaf', () => {
     expect(rafResult.x).toBe(sync.x);
     expect(rafResult.y).toBe(sync.y);
     expect(rafResult.placement).toBe(sync.placement);
+  });
+
+  it('rejects when the underlying computePosition call throws', async () => {
+    const { floating, reference } = makeElements({ height: 40, width: 100, x: 50, y: 100 }, { height: 20, width: 20 });
+    const loop: Middleware = () => ({ reset: {} });
+    const promise = computePositionRaf(reference, floating, { middleware: [loop] });
+
+    vi.runAllTimers();
+
+    await expect(promise).rejects.toThrow(/too many resets/i);
   });
 });

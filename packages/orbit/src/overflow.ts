@@ -32,6 +32,21 @@ export function getBoundaryRect(boundary?: Element | Rect): Rect {
   return boundary as Rect;
 }
 
+/**
+ * Resolves the effective boundary and padding for a middleware, falling back from
+ * per-middleware `options` to the global `state.boundary` / `state.padding` defaults.
+ * @internal
+ */
+export function resolveBoundary(
+  options: DetectOverflowOptions,
+  state: Pick<MiddlewareState, 'boundary' | 'padding'>,
+): { boundary: Rect; padding: SideObject } {
+  return {
+    boundary: getBoundaryRect(options.boundary ?? state.boundary),
+    padding: toSideObject(options.padding ?? state.padding),
+  };
+}
+
 // ── Floating rect at current position ────────────────────────────────────────
 
 /** The floating element's rect using the current computed x/y from state. */
@@ -110,8 +125,7 @@ export function getPlacementOverflow(
   options: DetectOverflowOptions = {},
 ): SideObject {
   const { x, y } = baseCoords(placement, state.rects.reference, state.rects.floating);
-  const boundary = getBoundaryRect(options.boundary ?? state.boundary);
-  const padding = toSideObject(options.padding ?? state.padding);
+  const { boundary, padding } = resolveBoundary(options, state);
   const rect = { ...state.rects.floating, x, y };
 
   return detectOverflowAtRect(rect, boundary, padding);
@@ -119,8 +133,7 @@ export function getPlacementOverflow(
 
 /** Overflow of the floating element at its current position in the middleware pipeline. */
 export function detectOverflow(state: MiddlewareState, options: DetectOverflowOptions = {}): SideObject {
-  const boundary = getBoundaryRect(options.boundary ?? state.boundary);
-  const padding = toSideObject(options.padding ?? state.padding);
+  const { boundary, padding } = resolveBoundary(options, state);
 
   return detectOverflowAtRect(getFloatingRect(state), boundary, padding);
 }

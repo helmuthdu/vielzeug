@@ -432,7 +432,7 @@ floating.style.top = `${result.y}px`;
 
 ## SSR
 
-For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All three exports are no-ops that return zero-coordinate results and safe cleanup functions.
+For server-side rendering, import from `@vielzeug/orbit/ssr` instead of the main entry. All five exports (`computePosition`, `computePositionAsync`, `computePositionRaf`, `autoUpdate`, `float`) are no-ops that return zero-coordinate results and safe cleanup functions.
 
 ```ts
 // vite.config.ts
@@ -538,24 +538,24 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
 Use Orbit inside a Ore component to position tooltips and popovers reactively.
 
 ```ts
-import { define, onMounted } from '@vielzeug/ore';
-import { float, offset, flip, shift } from '@vielzeug/orbit';
+import { define, html } from '@vielzeug/ore';
+import { flip, float, offset, shift } from '@vielzeug/orbit';
 
 define('x-tooltip', {
-  setup({ host }) {
-    let handle: ReturnType<typeof float> | undefined;
-
+  setup(_props, { el, onMounted }) {
     onMounted(() => {
-      const tooltipEl = host.el.querySelector<HTMLElement>('[role=tooltip]')!;
+      const tooltipEl = el.querySelector<HTMLElement>('[role=tooltip]')!;
 
-      handle = float(host.el, tooltipEl, {
+      const handle = float(el, tooltipEl, {
         placement: 'bottom',
         middleware: [offset(6), flip(), shift({ padding: 8 })],
       });
 
       // Returned from onMounted — Ore calls this on disconnect
-      return () => handle?.dispose();
+      return () => handle.dispose();
     });
+
+    return html`<slot></slot><div role="tooltip"><slot name="content"></slot></div>`;
   },
 });
 ```

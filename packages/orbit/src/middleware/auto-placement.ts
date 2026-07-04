@@ -1,8 +1,8 @@
 import type { Alignment, DetectOverflowOptions, Middleware, Placement, Side } from '../types';
 
 import { warn } from '../_dev';
-import { getAvailableSpace, getBoundaryRect, getPlacementOverflow, totalOverflow } from '../overflow';
-import { tagMiddleware, toSideObject } from '../utils';
+import { getAvailableSpace, getPlacementOverflow, resolveBoundary, totalOverflow } from '../overflow';
+import { tagMiddleware } from '../utils';
 
 export interface AutoPlacementOptions extends DetectOverflowOptions {
   /**
@@ -44,8 +44,7 @@ function getDefaultPlacements(alignment?: Alignment | null): Placement[] {
  */
 export function autoPlacement(options: AutoPlacementOptions = {}): Middleware {
   return tagMiddleware(function autoPlacementMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
-    const padding = toSideObject(options.padding ?? state.padding);
-    const boundary = getBoundaryRect(options.boundary ?? state.boundary);
+    const { boundary, padding } = resolveBoundary(options, state);
     const placements = options.allowedPlacements ?? getDefaultPlacements(options.alignment);
 
     if (placements.length === 0) {

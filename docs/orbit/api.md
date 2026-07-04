@@ -30,6 +30,9 @@ description: Complete API reference for the Orbit floating positioning library.
 | `hide()`                 | Detect when reference or floating is hidden outside boundary | Middleware                      | Combine with CSS `visibility` or `opacity`              |
 | `inline()`               | Accurate rect for inline references spanning multiple lines  | Middleware                      | Place before `flip()`; part of main entry               |
 | presets                  | Pre-configured placement + middleware stacks                 | Factory                         | Import from `@vielzeug/orbit/presets`                   |
+| `debugFloat()`           | Wraps `float()` with a visual debug overlay                  | Sync, returns `FloatHandle`     | Import from `@vielzeug/orbit/devtools`, not the main entry point |
+| `OrbitError`             | Base class for all orbit errors                              | —                                | `OrbitError.is(e)` catches any orbit error                |
+| `OrbitConfigError`       | Thrown when a middleware pipeline is misconfigured           | —                                | e.g. bad ordering, `flip()` + `autoPlacement()` together   |
 
 ## Package Entry Points
 
@@ -345,6 +348,40 @@ console.log(reference.width, floating.height);
 ```
 
 ---
+
+## Errors
+
+### `OrbitError`
+
+```ts
+class OrbitError extends Error {
+  static is(err: unknown): err is OrbitError;
+}
+```
+
+Base class for all orbit errors. Use `OrbitError.is(err)` (or `instanceof OrbitError`) to catch any orbit-originated error.
+
+### `OrbitConfigError`
+
+```ts
+class OrbitConfigError extends OrbitError {}
+```
+
+Thrown when a middleware pipeline is misconfigured — a known-bad ordering (e.g. `flip` scheduled before `inline`), combining `flip()` and `autoPlacement()`, or a middleware chain that triggers more than 8 resets in a single `computePosition` call.
+
+**Example:**
+
+```ts
+import { computePosition, flip, autoPlacement, OrbitConfigError } from '@vielzeug/orbit';
+
+try {
+  computePosition(reference, floating, { middleware: [flip(), autoPlacement()] });
+} catch (err) {
+  if (err instanceof OrbitConfigError) {
+    console.error('Fix the middleware pipeline:', err.message);
+  }
+}
+```
 
 ## Middleware
 
@@ -698,9 +735,7 @@ import type { PositioningPreset, PresetOptions } from '@vielzeug/orbit';
 compose(...middleware: Array<Middleware | null | undefined | false>): Middleware[];
 ```
 
-Filters falsy entries and validates middleware ordering at call time. Throws a descriptive error if middleware are in a known-bad order (e.g. `arrow` before `flip`). Returns a typed array for use in `computePosition()` or `float()`.
-
-When all arguments are `TypedMiddleware` (i.e., built-in middleware like `flip()`, `shift()`, etc.), `compose()` preserves the tuple type in the return value — enabling `InferMiddlewareData` and `TypedComputePositionResult` to resolve middleware data types precisely. Up to 8 typed arguments are supported; beyond that the return type falls back to `Middleware[]`.
+Filters falsy entries and returns a plain `Middleware[]` for use in `computePosition()` or `float()`. Middleware ordering validation runs automatically inside `computePosition()` in development — `compose()` does not duplicate that check, it exists purely for its falsy-filter ergonomics when conditionally including middleware.
 
 **Example:**
 
@@ -785,12 +820,45 @@ handle.dispose();
 
 | Field              | Type                                            | Description                                                                                 |
 | ------------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `position`         | `Reactive<ComputePositionResult \| null>` | Reactive signal. `null` before the first update. Read-only; position is managed internally. |
+| `position`         | `Readable<ComputePositionResult \| null>` | Reactive signal. `null` before the first update. Read-only; position is managed internally. |
 | `disposalSignal`   | `AbortSignal`                                   | Aborted when `dispose()` is called. Use to tie external lifetimes.                          |
 | `dispose()`        | `() => void`                                    | Removes all listeners. Always call on teardown. Idempotent.                                 |
 | `disposed`         | `boolean`                                       | `true` after `dispose()` has been called.                                                   |
 | `update()`         | `() => void`                                    | Manually trigger a position recalculation.                                                  |
 | `[Symbol.dispose]` | `() => void`                                    | Delegates to `dispose()`. Enables `using` declarations.                                     |
+
+## Devtools — `@vielzeug/orbit/devtools`
+
+```ts
+import { debugFloat } from '@vielzeug/orbit/devtools';
+```
+
+### `debugFloat(reference, floating, options?)`
+
+```ts
+debugFloat(reference: ReferenceElement, floating: HTMLElement, options?: FloatOptions): FloatHandle;
+```
+
+Wraps `float()` and attaches a persistent visual debug overlay to `document.body`: a dashed outline for the viewport boundary, a dashed outline for the reference element's bounding rect, and a label showing the active placement string. The overlay updates on every position change and is automatically removed when `handle.dispose()` is called.
+
+Development use only — import from this dedicated sub-path so it is tree-shaken from production bundles.
+
+**Example:**
+
+```ts
+import { debugFloat } from '@vielzeug/orbit/devtools';
+import { flip, offset, shift } from '@vielzeug/orbit';
+
+const handle = debugFloat(reference, tooltip, {
+  placement: 'top',
+  middleware: [offset(8), flip(), shift({ padding: 6 })],
+});
+
+// on teardown:
+handle.dispose();
+```
+
+**Returns:** `FloatHandle` — identical contract to `float()`.
 
 ## SSR Stubs — `@vielzeug/orbit/ssr`
 
@@ -1034,38 +1102,7 @@ type TypedMiddleware<K extends string, D> = Middleware & {
 };
 ```
 
-A branded `Middleware` subtype returned by built-in middleware factories (`flip`, `shift`, `size`, `arrow`, `hide`). The `__brand` field is never accessed at runtime — it is a compile-time marker. Enables typed `middlewareData` inference via `TypedComputePositionResult`.
-
-### `InferMiddlewareData`
-
-```ts
-type InferMiddlewareData<M extends Middleware[]> = ...
-```
-
-Infers a typed `middlewareData` object from a `TypedMiddleware[]` tuple. Each key is optional (middleware may or may not write data on a given run).
-
-### `TypedComputePositionResult`
-
-```ts
-type TypedComputePositionResult<M extends Middleware[]> = ComputePositionResult & {
-  middlewareData: InferMiddlewareData<M>;
-};
-```
-
-Casts `computePosition`'s result to a typed `middlewareData` shape inferred from the middleware array. Use with `as TypedComputePositionResult<typeof myMiddleware>`.
-
-**Example:**
-
-```ts
-import type { TypedComputePositionResult } from '@vielzeug/orbit';
-import { computePosition, flip, shift } from '@vielzeug/orbit';
-
-const mw = [flip(), shift()] as const;
-const result = computePosition(ref, el, { middleware: [...mw] }) as TypedComputePositionResult<typeof mw>;
-
-// result.middlewareData.flip?.skippedPlacements is Placement[]
-// result.middlewareData.shift?.x is number
-```
+A branded `Middleware` subtype returned by built-in middleware factories (`flip`, `shift`, `size`, `arrow`, `hide`). The `__brand` field is never accessed at runtime — it is a compile-time marker identifying which `middlewareData` key the middleware writes, for custom middleware authors who want the same pattern via `tagMiddleware`-style branding.
 
 ### `MiddlewareData`
 

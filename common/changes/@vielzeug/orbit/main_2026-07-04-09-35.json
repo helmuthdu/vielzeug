@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(orbit): stop redundant DOM reads in computePosition hot path, export getRects, fix README API drift, add devtools/error test coverage",
+      "type": "patch",
+      "packageName": "@vielzeug/orbit"
+    }
+  ],
+  "packageName": "@vielzeug/orbit",
+  "email": "helmuthdu@gmail.com"
+}

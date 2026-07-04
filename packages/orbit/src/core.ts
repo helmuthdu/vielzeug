@@ -9,7 +9,7 @@ import type {
   ReferenceElement,
 } from './types';
 
-import { warn } from './_dev';
+import { devOnly, warn } from './_dev';
 import { OrbitConfigError } from './errors';
 import { baseCoords, MIDDLEWARE_NAME, toRect, validateMiddlewareNames } from './utils';
 
@@ -90,8 +90,14 @@ export function computePositionRaf(
   floating: HTMLElement,
   options?: ComputePositionOptions,
 ): Promise<ComputePositionResult> {
-  return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve(computePosition(reference, floating, options)));
+  return new Promise((resolve, reject) => {
+    requestAnimationFrame(() => {
+      try {
+        resolve(computePosition(reference, floating, options));
+      } catch (err) {
+        reject(err);
+      }
+    });
   });
 }
 
@@ -111,22 +117,6 @@ export function computePosition(
     warn('computePosition: reference and floating are the same element.');
   }
 
-  const rect = floating.getBoundingClientRect();
-
-  if (rect.width === 0 && rect.height === 0) {
-    warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
-  }
-
-  const pos = getComputedStyle(floating).position;
-
-  if (pos !== 'fixed' && pos !== 'absolute') {
-    warn(
-      `computePosition: floating element has \`position: ${pos}\`. ` +
-        'Orbit computes viewport-relative coordinates and expects position: fixed ' +
-        '(or absolute for scoped stacking contexts).',
-    );
-  }
-
   const names = mws.map((mw) => {
     const tag = (mw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME];
 
@@ -138,6 +128,22 @@ export function computePosition(
   let currentPlacement = placement;
   let middlewareData: MiddlewareData = {};
   let rects = getRects(reference, floating);
+
+  devOnly(() => {
+    if (rects.floating.width === 0 && rects.floating.height === 0) {
+      warn('computePosition: floating element has zero dimensions — is it hidden or detached from the DOM?');
+    }
+
+    const pos = getComputedStyle(floating).position;
+
+    if (pos !== 'fixed' && pos !== 'absolute') {
+      warn(
+        `computePosition: floating element has \`position: ${pos}\`. ` +
+          'Orbit computes viewport-relative coordinates and expects position: fixed ' +
+          '(or absolute for scoped stacking contexts).',
+      );
+    }
+  });
 
   for (let resets = 0; resets < MAX_RESETS; resets += 1) {
     let state: MiddlewareState = {

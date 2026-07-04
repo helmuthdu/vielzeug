@@ -1,7 +1,7 @@
 import type { DetectOverflowOptions, HideData, Middleware, TypedMiddleware } from '../types';
 
-import { detectOverflowAtRect, getBoundaryRect, getFloatingRect, isFullyClipped } from '../overflow';
-import { tagMiddleware, toSideObject } from '../utils';
+import { detectOverflowAtRect, getFloatingRect, isFullyClipped, resolveBoundary } from '../overflow';
+import { tagMiddleware } from '../utils';
 
 export interface HideOptions extends DetectOverflowOptions {
   /**
@@ -22,8 +22,7 @@ export function hide(options: HideOptions = {}): TypedMiddleware<'hide', HideDat
   const strategy = options.strategy ?? 'both';
 
   function hideMiddleware(state: Parameters<Middleware>[0]): ReturnType<Middleware> {
-    const boundary = getBoundaryRect(options.boundary ?? state.boundary);
-    const padding = toSideObject(options.padding ?? state.padding);
+    const { boundary, padding } = resolveBoundary(options, state);
     const next: HideData = {};
 
     if (strategy === 'escaped' || strategy === 'both') {

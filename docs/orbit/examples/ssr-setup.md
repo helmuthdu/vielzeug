@@ -50,6 +50,7 @@ async function getFloat() {
 | `computePosition`      | `{ x: 0, y: 0, placement, middlewareData: {} }`                                       |
 | `autoUpdate`           | `() => void` (no-op cleanup); `update` is never called                                |
 | `computePositionAsync` | `Promise<{ x: 0, y: 0, placement, middlewareData: {} }>` (resolves immediately)       |
+| `computePositionRaf`   | `Promise<{ x: 0, y: 0, placement, middlewareData: {} }>` (resolves immediately)       |
 | `float`                | `FloatHandle` with no-op `update`; `getPosition()` returns `null`; `disposed` tracked |
 
 The stub `FloatHandle` is fully typed — consuming code that calls `handle.dispose()` will work identically on the server and the client. `disposed` is correctly tracked: it is `false` before `dispose()` and `true` after.

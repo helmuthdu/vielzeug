@@ -8,9 +8,12 @@ related: [ore, refine, dnd]
 exports:
   [
     float,
+    floatWithAnchor,
+    isCssAnchorSupported,
     computePosition,
     computePositionAsync,
     computePositionRaf,
+    getRects,
     autoUpdate,
     detectOverflow,
     offset,
@@ -19,11 +22,16 @@ exports:
     arrow,
     size,
     hide,
+    inline,
     autoPlacement,
     compose,
     limitShift,
     getAlignment,
     getSide,
+    OrbitError,
+    OrbitConfigError,
+    createFloatState,
+    debugFloat,
   ]
 environments: [browser, ssr]
 ---
