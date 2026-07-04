@@ -578,6 +578,28 @@ describe('createBehaviorBus - snapshot()', () => {
 
     bus.dispose();
   });
+
+  it('does not let a "__proto__"/"constructor"/"prototype" event name hijack the snapshot object', () => {
+    // Regression: bracket-assigning `result['__proto__'] = value` on a plain object literal
+    // invokes Object.prototype's __proto__ accessor and reassigns the object's own prototype
+    // instead of setting an own property — a real prototype-hijack risk when event names can be
+    // dynamically/externally determined.
+    const bus = createBehaviorBus<Record<string, unknown>>();
+    const malicious = { polluted: true };
+
+    bus.emit('__proto__', malicious);
+    bus.emit('constructor', malicious);
+    bus.emit('prototype', malicious);
+    bus.emit('count', 1);
+
+    const snap = bus.snapshot();
+
+    expect(Object.getPrototypeOf(snap)).toBe(Object.prototype);
+    expect((snap as { polluted?: boolean }).polluted).toBeUndefined();
+    expect(Object.keys(snap)).toEqual(['count']);
+
+    bus.dispose();
+  });
 });
 
 describe('createBehaviorBus - aborted signal', () => {

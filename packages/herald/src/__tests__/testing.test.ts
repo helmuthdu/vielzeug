@@ -1,3 +1,4 @@
+import { pipeEvents } from '..';
 import { createTestBus } from '../testing';
 
 type TestEvents = {
@@ -297,6 +298,28 @@ describe('createTestBus - allEmitted()', () => {
 
     bus.dispose();
   });
+
+  it('does not let a "__proto__"/"constructor"/"prototype" event name hijack the result object', () => {
+    // Regression: bracket-assigning `result['__proto__'] = value` on a plain object literal
+    // invokes Object.prototype's __proto__ accessor and reassigns the object's own prototype
+    // instead of setting an own property — a real prototype-hijack risk when event names can be
+    // dynamically/externally determined.
+    const bus = createTestBus<Record<string, unknown>>();
+    const malicious = { polluted: true };
+
+    bus.emit('__proto__', malicious);
+    bus.emit('constructor', malicious);
+    bus.emit('prototype', malicious);
+    bus.emit('count', 1);
+
+    const all = bus.allEmitted();
+
+    expect(Object.getPrototypeOf(all)).toBe(Object.prototype);
+    expect((all as { polluted?: boolean }).polluted).toBeUndefined();
+    expect(Object.keys(all)).toEqual(['count']);
+
+    bus.dispose();
+  });
 });
 
 describe('createTestBus - on() SubscribeOptions forwarding', () => {
@@ -427,5 +450,88 @@ describe('createTestBus - Bus API passthrough', () => {
     expect(onError).toHaveBeenCalledOnce();
 
     bus.dispose();
+  });
+
+  it('supports BusOptions middleware pass-through, running before recording', () => {
+    const onDispatch = vi.fn();
+    const bus = createTestBus<TestEvents>({
+      middleware: [
+        (event, payload, next) => {
+          onDispatch(event, payload);
+          next();
+        },
+      ],
+    });
+
+    bus.emit('count', 42);
+    bus.emit('toggle');
+
+    expect(onDispatch.mock.calls).toEqual([
+      ['count', 42],
+      ['toggle', undefined],
+    ]);
+    expect(bus.emitted('count')).toEqual([42]);
+
+    bus.dispose();
+  });
+
+  it('supports waitAny(), preserving the recording for the winning event', async () => {
+    const bus = createTestBus<TestEvents>();
+    const pending = bus.waitAny(['count', 'greet']);
+
+    bus.emit('count', 7);
+
+    await expect(pending).resolves.toEqual({ event: 'count', payload: 7 });
+    expect(bus.emitted('count')).toEqual([7]);
+
+    bus.dispose();
+  });
+
+  it('eventNames() reflects events with active listeners', () => {
+    const bus = createTestBus<TestEvents>();
+
+    expect(bus.eventNames()).toEqual([]);
+
+    bus.on('greet', vi.fn());
+
+    expect(bus.eventNames()).toContain('greet');
+
+    bus.dispose();
+  });
+
+  it('onAny() is delegated and receives every emitted event, alongside normal recording', () => {
+    const bus = createTestBus<TestEvents>();
+    const received: Array<{ event: string; payload: unknown }> = [];
+
+    bus.onAny((event, payload) => received.push({ event, payload }));
+
+    bus.emit('count', 7);
+    bus.emit('toggle');
+
+    expect(received).toEqual([
+      { event: 'count', payload: 7 },
+      { event: 'toggle', payload: undefined },
+    ]);
+    expect(bus.emitted('count')).toEqual([7]);
+
+    bus.dispose();
+  });
+
+  it('pipeEvents() forwards events between two test buses, recording on both sides', () => {
+    const source = createTestBus<TestEvents>();
+    const target = createTestBus<TestEvents>();
+    const listener = vi.fn();
+
+    target.on('count', listener);
+    pipeEvents(source, target, ['count']);
+
+    source.emit('count', 42);
+
+    expect(listener).toHaveBeenCalledWith(42);
+    expect(source.emitted('count')).toEqual([42]);
+    expect(target.emitted('count')).toEqual([42]);
+
+    source.dispose();
+    target.dispose();
   });
 });

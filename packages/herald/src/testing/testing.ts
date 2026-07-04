@@ -2,6 +2,7 @@ import type { Bus, BusOptions, EventKey, EventMap, SubscribeOptions } from '..';
 import type { InternalBusOptions } from '../bus';
 
 import { makeBusDelegate } from '../_delegate';
+import { isUnsafeObjectKey } from '../_prototype';
 import { createBus } from '../bus';
 
 /** A test bus is a regular bus with typed emission recording on top. */
@@ -36,6 +37,10 @@ export function createTestBus<T extends EventMap>(options?: BusOptions<T>): Test
     const result: { [K in EventKey<T>]?: T[K][] } = {};
 
     for (const [key, list] of records) {
+      // Guard against a `__proto__`/`constructor`/`prototype` event name hijacking result's
+      // own prototype via the bracket-assignment accessor — see _prototype.ts.
+      if (isUnsafeObjectKey(key)) continue;
+
       (result as Record<string, unknown[]>)[key] = [...list];
     }
 

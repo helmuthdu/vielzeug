@@ -4,8 +4,3 @@ const isDev = !(globalThis as { __HERALD_PROD__?: boolean }).__HERALD_PROD__;
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/herald] ${msg}`);
 }
-
-/** @internal — Run fn only in dev builds. Use when dev-only logic goes beyond a single warn() / error() call. */
-export function devOnly(fn: () => void): void {
-  if (isDev) fn();
-}

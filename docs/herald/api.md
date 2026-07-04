@@ -13,7 +13,7 @@ description: Complete API reference for @vielzeug/herald.
 | `createBehaviorBus()` | Create a bus that replays the last value to new subs | Sync           | `events()` and `wait()` do not replay; `once()` fires immediately if buffer exists |
 | `pipeEvents()`        | Forward events from one bus to another               | Sync           | Supports cross-type buses and event renaming                                       |
 | `bus.on()`            | Persistent subscription with optional `once` option  | Sync           | Pass `{ signal }` to auto-unsubscribe                                              |
-| `bus.emit()`          | Emit an event; returns listener invocation count     | Sync           | Returns `0` if disposed, middleware blocked, or invalid                            |
+| `bus.emit()`          | Emit an event; returns listener invocation count     | Sync           | Every listener runs even if one throws; first error rethrows after                |
 | `bus.events()`        | Stream future emits as an async generator            | Async          | Subscribes eagerly; use `maxBuffer` to cap the buffer                              |
 | `combineSignals()`    | Merge N AbortSignals into one                        | Sync           | Returns the first already-aborted signal early                                     |
 | `bus.wait()`          | Await a one-time event occurrence                    | Async          | Pass `{ signal }` for timeout / cancellation                                       |
@@ -137,6 +137,7 @@ type BehaviorInitial<T extends EventMap> = { [K in EventKey<T>]?: T[K] };
 type BehaviorBus<T extends EventMap> = Bus<T> & {
   current<K extends EventKey<T>>(event: K): T[K] | undefined;
   reset(event?: EventKey<T>): void;
+  snapshot(): Partial<T>;
 };
 ```
 
@@ -147,6 +148,7 @@ type TestBus<T extends EventMap> = Bus<T> & {
   allEmitted(): { [K in EventKey<T>]?: T[K][] };
   emitted<K extends EventKey<T>>(event: K): T[K][];
   emittedCount<K extends EventKey<T>>(event: K): number;
+  removeAllListeners<K extends EventKey<T>>(event: K): void;
   reset(): void;
 };
 ```
@@ -363,7 +365,7 @@ Waits for the first emitted event among a list of event keys.
 
 **Returns:** `Promise<WaitAnyResult<T, K>>`
 
-**Throws synchronously:** `RangeError` if fewer than 2 event keys are provided.
+**Throws synchronously:** `HeraldConfigError` if fewer than 2 event keys are provided.
 
 **Rejects when:**
 
@@ -390,7 +392,7 @@ Returns an `EventStream<T[K]>` — an `AsyncGenerator` extended with `AsyncDispo
 - `options?: { signal?: AbortSignal; maxBuffer?: number }` — optional early termination and buffering
 
 ::: warning Synchronous validation
-`events()` validates `maxBuffer` **synchronously** at call time. If `maxBuffer` is `0` or negative, a `RangeError` is thrown immediately — not on the first `await`.
+`events()` validates `maxBuffer` **synchronously** at call time. If `maxBuffer` is `0` or negative, a `HeraldConfigError` is thrown immediately — not on the first `await`.
 :::
 
 ::: tip Eager subscription
@@ -441,6 +443,7 @@ Emit an event, calling all registered listeners synchronously in subscription or
 - For `void` events, no second argument is accepted.
 - For payload events, the second argument is required and type-checked.
 - Returns `0` when: the bus is disposed, a `middleware` function blocked dispatch, or `validatePayload` threw an error (with `onError` configured).
+- **Listener throws:** every registered listener (specific and wildcard) for the emission still runs, regardless of whether an earlier one threw. Without `onError` configured, the first thrown error is rethrown once every listener has been called — it never short-circuits the rest of the broadcast. With `onError` configured, every error is forwarded per-listener and `emit()` never throws for a listener failure.
 
 ```ts
 const count = bus.emit('user:login', { userId: '42', email: 'alice@example.com' });
@@ -675,6 +678,10 @@ Returns a plain object containing the most recently emitted value for every curr
 
 Useful for serializing the current state of all channels at once, for debugging, or for hydrating a new bus from a snapshot.
 
+::: tip Dangerous event names are omitted
+An event named `__proto__`, `constructor`, or `prototype` is silently excluded from the returned object — bracket-assigning one of these keys onto a plain object literal would hijack its prototype rather than set an own property. The value itself is still tracked internally and reachable via `current(event)`; only the object-literal snapshot omits it.
+:::
+
 ```ts
 type UIEvents = { theme: 'light' | 'dark'; zoom: number; sidebar: boolean };
 
@@ -702,7 +709,7 @@ Forwards a selected subset of events from a source bus to a target bus. Source a
 | --------- | -------------------------------------------------- | -------------------------------------------------------------------------------- |
 | `source`  | `Bus<S>`                                           | The bus to listen on                                                             |
 | `target`  | `Bus<T>`                                           | The bus to forward events to                                                     |
-| `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames — throws `RangeError` if empty |
+| `entries` | `readonly [PipeEntry<S, T>, ...PipeEntry<S, T>[]]` | One or more string keys or `{ from, to }` renames — throws `HeraldConfigError` if empty |
 | `opts`    | `{ signal?: AbortSignal }` (optional)              | Optional signal to stop forwarding early                                         |
 
 **Returns:** `Unsubscribe` — call to stop forwarding manually.
@@ -831,6 +838,10 @@ Returns a snapshot object containing all recorded payloads for every event that 
 
 Useful for asserting that **no other events** were emitted beyond the ones being tested.
 
+::: tip Dangerous event names are omitted
+An event named `__proto__`, `constructor`, or `prototype` is silently excluded from the returned object — bracket-assigning one of these keys onto a plain object literal would hijack its prototype rather than set an own property. The recorded payloads are still tracked internally and reachable via `emitted(event)`; only the object-literal snapshot omits them.
+:::
+
 ```ts
 bus.emit('user:login', { userId: '1' });
 bus.emit('theme:change', 'dark');
@@ -932,4 +943,89 @@ try {
     throw err; // signal abort or unexpected error
   }
 }
+```
+
+---
+
+### `HeraldConfigError`
+
+```ts
+class HeraldConfigError extends HeraldError {}
+```
+
+Thrown synchronously for invalid arguments or configuration, before any async work begins:
+
+- `waitAny(events)` — fewer than 2 event keys provided
+- `events(event, { maxBuffer })` — `maxBuffer` is `0` or negative
+- `pipeEvents(source, target, entries)` — `entries` is empty
+
+```ts
+import { HeraldConfigError } from '@vielzeug/herald';
+
+try {
+  bus.waitAny(['user:login']); // only one key — needs at least 2
+} catch (err) {
+  if (err instanceof HeraldConfigError) {
+    console.error('Invalid herald call:', err.message);
+  }
+}
+```
+
+---
+
+### `HeraldError`
+
+```ts
+class HeraldError extends Error {
+  static is(err: unknown): err is HeraldError;
+}
+```
+
+Base class for every error herald throws (`BusDisposedError`, `HeraldConfigError`). Use `HeraldError.is()` to catch any herald-originated error without enumerating each subclass:
+
+```ts
+import { HeraldError } from '@vielzeug/herald';
+
+try {
+  bus.waitAny(['user:login']);
+} catch (err) {
+  if (HeraldError.is(err)) {
+    // BusDisposedError or HeraldConfigError
+    console.error('Herald error:', err.message);
+  } else {
+    throw err; // not from herald
+  }
+}
+```
+
+## Devtools
+
+Import from `@vielzeug/herald/devtools` — a dedicated sub-path so `console.debug` references are tree-shaken from production bundles when this sub-path is not imported.
+
+### `debugBus()`
+
+Signature: `debugBus<T extends EventMap>(options?) => Bus<T>`
+
+Equivalent to `createBus({ logger: { debug: console.debug } })`. Pass `logger.warn` to also redirect or silence warnings; every other `BusOptions<T>` field (`maxListeners`, `middleware`, `name`, `onError`, `validatePayload`) passes through unchanged.
+
+```ts
+import { debugBus } from '@vielzeug/herald/devtools';
+
+const bus = debugBus<AppEvents>();
+// or redirect warnings:
+const auditedBus = debugBus<AppEvents>({ logger: { warn: myLogger.warn } });
+```
+
+### `debugBehaviorBus()`
+
+Signature: `debugBehaviorBus<T extends EventMap>(initial?, options?) => BehaviorBus<T>`
+
+Equivalent to `createBehaviorBus(initial, { logger: { debug: console.debug } })`. Same `logger.warn` override and `BehaviorBusOptions<T>` passthrough as `debugBus()`.
+
+```ts
+import { debugBehaviorBus } from '@vielzeug/herald/devtools';
+
+const bus = debugBehaviorBus<UIState>({ theme: 'light' });
+// or redirect warnings:
+const auditedBus = debugBehaviorBus<UIState>({ theme: 'light' }, { logger: { warn: myLogger.warn } });
 ```

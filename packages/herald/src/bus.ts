@@ -11,8 +11,8 @@ import type {
   WaitAnyResult,
 } from './types';
 
-export { BusDisposedError, HeraldConfigError } from './errors';
 import { warn as _internalWarn } from './_dev';
+import { type SafeCallResult, callSafely } from './_safe';
 import { BusDisposedError, HeraldConfigError } from './errors';
 
 // Module-scoped noop — shared across all bus instances to avoid per-bus allocation.
@@ -111,16 +111,14 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
 
   // callSafe is defined once per bus (not per emit) — avoids re-allocating on every emission.
   // Captures options.onError via closure. Used in emit() for both specific and wildcard loops.
-  function callSafe(fn: () => void, event: EventKey<T>, payload: unknown, timestamp: number): void {
-    try {
-      fn();
-    } catch (err) {
-      if (options?.onError) {
-        options.onError({ err, event, payload, timestamp } as EmissionErrorContext<T>);
-      } else {
-        throw err;
-      }
-    }
+  // Does not rethrow directly — see dispatch(), which continues the broadcast to every remaining
+  // listener (including wildcards) before rethrowing the first captured error, if any.
+  function callSafe(fn: () => void, event: EventKey<T>, payload: unknown, timestamp: number): SafeCallResult {
+    const onError = options?.onError
+      ? (err: unknown) => options.onError!({ err, event, payload, timestamp } as EmissionErrorContext<T>)
+      : undefined;
+
+    return callSafely(fn, onError);
   }
 
   // registerEntry opts object — self-documenting call sites.
@@ -348,21 +346,32 @@ export function createBus<T extends EventMap>(options?: InternalBusOptions<T>): 
     options?._onDispatch?.(event, payload);
 
     let count = 0;
+    // Only the first unforwarded error is kept — every listener still runs (see callSafe's
+    // doc comment) — then it's rethrown once the whole broadcast (specific + wildcard) is done.
+    let firstError: { err: unknown } | undefined;
     const set = listeners.get(event);
 
     if (set?.size) {
       for (const entry of [...set]) {
-        callSafe(() => entry.fn(payload), event, payload, timestamp);
+        const result = callSafe(() => entry.fn(payload), event, payload, timestamp);
+
+        if (result.threw && !firstError) firstError = { err: result.err };
+
         count++;
       }
     }
 
     if (wildcards.size) {
       for (const entry of [...wildcards]) {
-        callSafe(() => entry.fn(event, payload), event, payload, timestamp);
+        const result = callSafe(() => entry.fn(event, payload), event, payload, timestamp);
+
+        if (result.threw && !firstError) firstError = { err: result.err };
+
         count++;
       }
     }
+
+    if (firstError) throw firstError.err;
 
     return count;
   }

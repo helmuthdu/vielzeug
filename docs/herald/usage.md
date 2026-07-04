@@ -98,7 +98,7 @@ console.log(count); // number of listeners fired
 
 `emit()` returns `0` when the bus is disposed, when middleware blocks dispatch, or when `validatePayload` rejects the payload with `onError` configured.
 
-If a listener throws and no `onError` is configured, the error propagates to the `emit()` caller. With `onError`, the error is captured and remaining listeners still run.
+Every registered listener still runs even if an earlier one throws. Without `onError` configured, the first thrown error is rethrown once every listener has been called — it never short-circuits the rest of the broadcast. With `onError`, every error is captured per-listener and `emit()` never throws for a listener failure.
 
 ### Middleware
 
@@ -213,9 +213,9 @@ for await (const { userId } of stream) {
 
 ## Error Handling
 
-By default, a listener that throws propagates the error to the `emit()` caller, and subsequent listeners for that emit do not run.
+Every registered listener for an emission runs regardless of whether an earlier one throws. By default (no `onError` configured), the first thrown error propagates to the `emit()` caller once every listener has been called.
 
-Configure `onError` to capture errors instead. All remaining listeners still run.
+Configure `onError` to capture errors instead of rethrowing. `emit()` never throws for a listener failure when `onError` is set.
 
 ```ts
 const bus = createBus<AppEvents>({
@@ -451,6 +451,15 @@ Alternatively, wire logging manually by passing `logger.debug` directly to `crea
 
 ```ts
 const bus = createBus<AppEvents>({ logger: { debug: console.debug } }); // equivalent
+```
+
+`debugBehaviorBus` is the same wrapper for `createBehaviorBus()`:
+
+```ts
+import { debugBehaviorBus } from '@vielzeug/herald/devtools';
+
+const bus = debugBehaviorBus<UIState>({ theme: 'light' });
+bus.on('theme', applyTheme); // replays 'light' immediately, logs the subscription
 ```
 
 Debug logging has no effect on behavior and should not be enabled in production.

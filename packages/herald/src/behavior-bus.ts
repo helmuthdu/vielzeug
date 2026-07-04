@@ -12,6 +12,8 @@ import type {
 } from './types';
 
 import { makeBusDelegate } from './_delegate';
+import { isUnsafeObjectKey } from './_prototype';
+import { callSafely } from './_safe';
 import { createBus, noop } from './bus';
 
 /**
@@ -47,17 +49,18 @@ export function createBehaviorBus<T extends EventMap>(
     },
   } as InternalBusOptions<T>);
 
-  // Wrap listener calls during synchronous replay so throws route through onError when set.
+  // Wrap the listener call during synchronous replay so a throw routes through onError when set.
+  // Only one listener is replayed per call here (unlike bus.ts's dispatch() broadcast loop), so
+  // there's no "keep going" batch to preserve — an unforwarded throw rethrows immediately.
   function callSafeReplay(listener: Listener<unknown>, event: EventKey<T>, value: unknown): void {
-    try {
-      listener(value);
-    } catch (err) {
-      if (options?.onError) {
-        options.onError({ err, event, payload: value, timestamp: Date.now() } as EmissionErrorContext<T>);
-      } else {
-        throw err;
-      }
-    }
+    const onError = options?.onError
+      ? (err: unknown) =>
+          options.onError!({ err, event, payload: value, timestamp: Date.now() } as EmissionErrorContext<T>)
+      : undefined;
+
+    const result = callSafely(() => listener(value), onError);
+
+    if (result.threw) throw result.err;
   }
 
   function on<K extends EventKey<T>>(event: K, listener: Listener<T[K]>, opts?: SubscribeOptions): Unsubscribe {
@@ -99,6 +102,10 @@ export function createBehaviorBus<T extends EventMap>(
     const result: Partial<T> = {};
 
     for (const [key, value] of buffers) {
+      // Guard against a `__proto__`/`constructor`/`prototype` event name hijacking result's
+      // own prototype via the bracket-assignment accessor — see _prototype.ts.
+      if (isUnsafeObjectKey(key)) continue;
+
       (result as Record<string, unknown>)[key] = value;
     }
 

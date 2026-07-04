@@ -12,6 +12,7 @@ exports:
     pipeEvents,
     combineSignals,
     BusDisposedError,
+    HeraldConfigError,
     debugBus,
     debugBehaviorBus,
     createTestBus,

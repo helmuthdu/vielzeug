@@ -88,6 +88,9 @@ export type BusOptions<T extends EventMap = EventMap> = {
   /**
    * If provided, listener errors are forwarded here instead of re-thrown.
    * Receives a structured `EmissionErrorContext` with the error, event key, payload, and timestamp.
+   *
+   * **Note:** every registered listener (specific and wildcard) for an emission always runs,
+   * regardless of `onError` — a throwing listener never prevents the rest from being called.
    */
   onError?: (context: EmissionErrorContext<T>) => void;
   /**
@@ -154,6 +157,11 @@ export type Bus<T extends EventMap> = {
    * Emit an event, calling all registered listeners synchronously.
    * Returns the total number of listeners that were invoked (specific + wildcard).
    * Returns `0` if the bus is disposed, if a middleware blocked dispatch, or if `validatePayload` rejected.
+   *
+   * @remarks **Listener throws:** every listener still runs even if an earlier one throws. Without
+   * `onError` configured, the first thrown error is rethrown once every listener has been called —
+   * it never short-circuits the rest of the broadcast. With `onError` configured, errors are
+   * forwarded per-listener and `emit()` never throws for a listener failure.
    */
   emit<K extends EventKey<T>>(event: K, ...args: T[K] extends void ? [] : [payload: T[K]]): number;
   /** Returns the list of event names that currently have at least one active listener. */

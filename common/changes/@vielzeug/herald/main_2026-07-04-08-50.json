@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(herald): run every listener for an emission even without onError; fix __proto__ key hijacking snapshot()/allEmitted() results; dedupe safe-call helper; drop stray duplicate testing.test.ts and dead exports",
+      "type": "patch",
+      "packageName": "@vielzeug/herald"
+    }
+  ],
+  "packageName": "@vielzeug/herald",
+  "email": "helmuthdu@gmail.com"
+}

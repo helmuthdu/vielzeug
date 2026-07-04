@@ -1,4 +1,4 @@
-import { BusDisposedError, HeraldConfigError, combineSignals, createBus } from '../index';
+import { BusDisposedError, HeraldConfigError, HeraldError, combineSignals, createBus } from '../index';
 import { pipeEvents } from '../pipe';
 
 type TestEvents = {
@@ -293,6 +293,45 @@ describe('createBus - emit behavior', () => {
     });
 
     expect(() => bus.emit('count', 1)).toThrow('boom');
+  });
+
+  it('without onError, still calls every remaining specific listener before rethrowing', () => {
+    const bus = createBus<TestEvents>();
+    const after = vi.fn();
+
+    bus.on('count', () => {
+      throw new Error('boom');
+    });
+    bus.on('count', after);
+
+    expect(() => bus.emit('count', 1)).toThrow('boom');
+    expect(after).toHaveBeenCalledWith(1);
+  });
+
+  it('without onError, still calls wildcard listeners even when a specific listener throws', () => {
+    const bus = createBus<TestEvents>();
+    const wildcard = vi.fn();
+
+    bus.on('count', () => {
+      throw new Error('boom');
+    });
+    bus.onAny(wildcard);
+
+    expect(() => bus.emit('count', 1)).toThrow('boom');
+    expect(wildcard).toHaveBeenCalledWith('count', 1);
+  });
+
+  it('without onError, rethrows only the first error when multiple listeners throw', () => {
+    const bus = createBus<TestEvents>();
+
+    bus.on('count', () => {
+      throw new Error('first');
+    });
+    bus.on('count', () => {
+      throw new Error('second');
+    });
+
+    expect(() => bus.emit('count', 1)).toThrow('first');
   });
 
   it('forwards listener errors to onError and continues remaining listeners', () => {
@@ -1655,5 +1694,18 @@ describe('createBus - events() maxBuffer guards', () => {
     expect(() => bus.events('count', { maxBuffer: 0 })).toThrow(HeraldConfigError);
 
     bus.dispose();
+  });
+});
+
+describe('HeraldError.is()', () => {
+  it('returns true for BusDisposedError and HeraldConfigError instances', () => {
+    expect(HeraldError.is(new BusDisposedError())).toBe(true);
+    expect(HeraldError.is(new HeraldConfigError('bad config'))).toBe(true);
+  });
+
+  it('returns false for a plain Error or a non-error value', () => {
+    expect(HeraldError.is(new Error('plain'))).toBe(false);
+    expect(HeraldError.is('not an error')).toBe(false);
+    expect(HeraldError.is(undefined)).toBe(false);
   });
 });
