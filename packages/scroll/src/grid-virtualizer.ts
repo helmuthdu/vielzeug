@@ -1,15 +1,16 @@
 import { createScrollAdapter } from './_adapter';
+import { createAxis1D, type VirtualItem } from './_axis1d';
 import {
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   normalizeOverscan,
+  observeResize,
   type Overscan,
   resolveEstimateFn,
   type ScrollTarget,
   toNonNegativeInt,
   toPositiveNumber,
 } from './_utils';
-import { createAxis1D, type VirtualItem } from './axis1d';
 
 export { type VirtualItem };
 
@@ -371,29 +372,13 @@ export function createGridVirtualizer(target: ScrollTarget, options: GridVirtual
   function measureRowEl(row: number, el: HTMLElement): () => void {
     if (disposed) return () => {};
 
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        measureRow(row, entry.contentRect.height);
-      }
-    });
-
-    ro.observe(el);
-
-    return () => ro.disconnect();
+    return observeResize(ac.signal, el, (entry) => measureRow(row, entry.contentRect.height));
   }
 
   function measureColEl(col: number, el: HTMLElement): () => void {
     if (disposed) return () => {};
 
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        measureColumn(col, entry.contentRect.width);
-      }
-    });
-
-    ro.observe(el);
-
-    return () => ro.disconnect();
+    return observeResize(ac.signal, el, (entry) => measureColumn(col, entry.contentRect.width));
   }
 
   function invalidate(): void {

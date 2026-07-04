@@ -52,6 +52,26 @@ export function normalizeOverscan(overscan: Overscan | undefined, defaultVal: nu
   };
 }
 
+/**
+ * Create a `ResizeObserver` that reports size changes on `el` via `onSize`, tied to
+ * `signal` so it is disconnected automatically when the owning factory disposes —
+ * even if the caller never calls the returned disconnect function.
+ */
+export function observeResize(
+  signal: AbortSignal,
+  el: HTMLElement,
+  onSize: (entry: ResizeObserverEntry) => void,
+): () => void {
+  const ro = new ResizeObserver((entries) => {
+    for (const entry of entries) onSize(entry);
+  });
+
+  ro.observe(el);
+  signal.addEventListener('abort', () => ro.disconnect(), { once: true });
+
+  return () => ro.disconnect();
+}
+
 export function resolveEstimateFn(
   estimate: number | ((index: number) => number) | undefined,
   defaultSize: number,

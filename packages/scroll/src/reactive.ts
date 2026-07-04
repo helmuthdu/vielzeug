@@ -65,6 +65,17 @@ export function createReactiveGroupedVirtualizer<T>(
 
       return Reflect.get(t, p, r);
     },
+    getOwnPropertyDescriptor(t, p) {
+      if (p === 'state') return { configurable: true, enumerable: true, value: state };
+
+      return Reflect.getOwnPropertyDescriptor(t, p);
+    },
+    has(t, p) {
+      return p === 'state' || Reflect.has(t, p);
+    },
+    ownKeys(t) {
+      return [...Reflect.ownKeys(t), 'state'];
+    },
   }) as unknown as ReactiveGroupVirtualizer<T>;
 }
 
@@ -103,6 +114,17 @@ export function createReactiveVirtualizer(
       if (p === 'state') return state;
 
       return Reflect.get(t, p, r);
+    },
+    getOwnPropertyDescriptor(t, p) {
+      if (p === 'state') return { configurable: true, enumerable: true, value: state };
+
+      return Reflect.getOwnPropertyDescriptor(t, p);
+    },
+    has(t, p) {
+      return p === 'state' || Reflect.has(t, p);
+    },
+    ownKeys(t) {
+      return [...Reflect.ownKeys(t), 'state'];
     },
   }) as unknown as ReactiveVirtualizer;
 }

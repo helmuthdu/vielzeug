@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(scroll): fix ResizeObserver leak on dispose, stale README dispose() calls, reactive Proxy state visibility (has/ownKeys/getOwnPropertyDescriptor), and grouped-virtualizer Symbol.dispose binding; add error-class test coverage; rename axis1d.ts to _axis1d.ts; sync docs and add grid/reactive REPL examples",
+      "packageName": "@vielzeug/scroll",
+      "type": "patch"
+    }
+  ],
+  "email": "helmuthdu@gmail.com",
+  "packageName": "@vielzeug/scroll"
+}

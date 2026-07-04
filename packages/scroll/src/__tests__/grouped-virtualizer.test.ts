@@ -387,7 +387,7 @@ describe('createGroupedVirtualizer – lifecycle', () => {
     }).not.toThrow();
   });
 
-  it('Symbol.dispose delegates to destroy', () => {
+  it('Symbol.dispose delegates to dispose', () => {
     const el = makeContainer({ clientHeight: 300 });
     const gv = createGroupedVirtualizer(el, {
       estimateHeaderSize: 40,
@@ -396,6 +396,19 @@ describe('createGroupedVirtualizer – lifecycle', () => {
     });
 
     expect(() => gv[Symbol.dispose]()).not.toThrow();
+  });
+
+  it('[Symbol.dispose] works when destructured and called without a receiver', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const gv = createGroupedVirtualizer(el, {
+      estimateHeaderSize: 40,
+      estimateItemSize: 30,
+      sections: [makeSection('A', 3)],
+    });
+    const detachedDispose = gv[Symbol.dispose];
+
+    expect(() => detachedDispose()).not.toThrow();
+    expect(gv.disposed).toBe(true);
   });
 });
 

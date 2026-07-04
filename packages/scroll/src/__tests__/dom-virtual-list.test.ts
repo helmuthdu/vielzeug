@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createDomVirtualList, createVirtualScroller } from '../dom-virtual-list';
+import { ScrollRangeError } from '../errors';
 import { flushMicrotasks, makeContainer } from './test-utils';
 
 type Row = { id: number; label: string; size: number };
@@ -905,12 +906,13 @@ describe('createDomVirtualList – toRenderItem RangeError', () => {
     ctrl.dispose();
   });
 
-  it('toRenderItem throws RangeError with [@vielzeug/scroll] prefix for OOB index', () => {
-    // The guard fires when the virtualizer emits an item whose index is beyond
-    // the currentItems array. Trigger it by injecting a count mismatch:
-    // pass count > currentItems.length via a custom onChange callback chain by
-    // creating a list with a render that intercepts the error.
-    let caughtError: unknown;
+  it('throws ScrollRangeError when the items array is mutated shorter without calling setItems again', () => {
+    // A real (if unusual) footgun: the caller passes a mutable array to setItems
+    // and later truncates that same array reference in place instead of calling
+    // setItems again. The virtualizer's internal count is now stale relative to
+    // currentItems, so the next render cycle asks toRenderItem for an index that
+    // no longer exists.
+    const rows = makeRows(10);
     const scrollEl = makeContainer({ clientHeight: 300 });
 
     const ctrl = createDomVirtualList<Row>({
@@ -922,15 +924,11 @@ describe('createDomVirtualList – toRenderItem RangeError', () => {
       scrollElement: scrollEl,
     });
 
-    // Wrap the setItems to inject the count mismatch: set 5 items, then
-    // shrink currentItems mid-cycle by replacing render to capture error.
-    // Since the virtualizer uses count from items, we instead directly
-    // verify the error message format matches the defensive guard string.
-    const errorMsg = `[@vielzeug/scroll] toRenderItem: index 5 is out of range (currentItems.length=3)`;
-    const err = new RangeError(errorMsg);
+    ctrl.setItems(rows);
+    rows.length = 3;
 
-    expect(err).toBeInstanceOf(RangeError);
-    expect(err.message).toMatch(/^\[@vielzeug\/scroll\] toRenderItem: index \d+ is out of range/);
+    expect(() => ctrl.refresh()).toThrow(ScrollRangeError);
+    expect(() => ctrl.refresh()).toThrow(/index \d+ is out of range \(currentItems\.length=3\)/);
     ctrl.dispose();
   });
 });

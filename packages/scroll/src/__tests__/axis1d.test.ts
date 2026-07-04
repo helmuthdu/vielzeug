@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createAxis1D } from '../axis1d';
+import { createAxis1D } from '../_axis1d';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

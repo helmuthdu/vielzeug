@@ -1,10 +1,12 @@
 import { createScrollAdapter } from './_adapter';
+import { createAxis1D, type VirtualItem } from './_axis1d';
 import {
   createMeasurementCache,
   DEFAULT_ESTIMATE_SIZE,
   DEFAULT_OVERSCAN,
   type MeasurementCache,
   normalizeOverscan,
+  observeResize,
   type Overscan,
   resolveEstimateFn,
   type ScrollTarget,
@@ -12,7 +14,6 @@ import {
   toPositiveNumber,
   type VirtualKey,
 } from './_utils';
-import { createAxis1D, type VirtualItem } from './axis1d';
 
 export {
   createMeasurementCache,
@@ -379,15 +380,9 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
   function measureEl(index: number, el: HTMLElement): () => void {
     if (destroyed) return () => {};
 
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        measure(index, horizontal ? entry.contentRect.width : entry.contentRect.height);
-      }
+    return observeResize(ac.signal, el, (entry) => {
+      measure(index, horizontal ? entry.contentRect.width : entry.contentRect.height);
     });
-
-    ro.observe(el);
-
-    return () => ro.disconnect();
   }
 
   // ─── Option updates ───────────────────────────────────────────────────────────

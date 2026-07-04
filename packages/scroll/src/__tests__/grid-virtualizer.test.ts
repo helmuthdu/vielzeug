@@ -220,6 +220,25 @@ describe('createGridVirtualizer – measurement', () => {
     expect(() => disconnect()).not.toThrow();
     v.dispose();
   });
+
+  it('disconnects measureRowEl/measureColEl ResizeObservers on dispose() even without calling the returned disconnect fn', () => {
+    const el = makeGrid();
+    const v = createGridVirtualizer(el, { colCount: 3, estimateColSize: 100, estimateRowSize: 50, rowCount: 5 });
+    const observeSpy = vi.spyOn(ResizeObserver.prototype, 'observe');
+
+    v.measureRowEl(0, document.createElement('div'));
+    v.measureColEl(0, document.createElement('div'));
+
+    const [rowObserver, colObserver] = observeSpy.mock.instances as ResizeObserver[];
+    const rowDisconnectSpy = vi.spyOn(rowObserver!, 'disconnect');
+    const colDisconnectSpy = vi.spyOn(colObserver!, 'disconnect');
+
+    v.dispose();
+
+    expect(rowDisconnectSpy).toHaveBeenCalledTimes(1);
+    expect(colDisconnectSpy).toHaveBeenCalledTimes(1);
+    observeSpy.mockRestore();
+  });
 });
 
 // ─── external measurement caches ──────────────────────────────────────────────

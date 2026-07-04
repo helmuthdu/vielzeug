@@ -160,7 +160,10 @@ virt.measureBatch(entries.map((e) => ({ index: Number(e.target.dataset.index), s
 
 ### `measureEl(index, el)`
 
-Attaches a `ResizeObserver` to auto-measure `el` on resize. Returns a disconnect function.
+Attaches a `ResizeObserver` to auto-measure `el` on resize. Returns a disconnect function. The
+observer is also disconnected automatically when the virtualizer is disposed, so calling the
+returned function is only needed to stop observing a specific element early (e.g. before it is
+recycled or removed).
 
 ```ts
 const disconnect = virt.measureEl(item.index, rowEl);
@@ -567,6 +570,9 @@ interface GridVirtualizerState {
 | `prependRows(n)`                   | Add `n` rows at the top; adjusts scroll offset to keep viewport stable            |
 | `dispose()`                        | Teardown; idempotent                                                              |
 | `[Symbol.dispose]()`               | Delegates to `dispose()`                                                          |
+
+`measureRowEl`/`measureColEl`'s `ResizeObserver` is also disconnected automatically on `dispose()` —
+the returned disconnect function is only needed to stop observing a specific element early.
 
 ### `ScrollToCellOptions`
 

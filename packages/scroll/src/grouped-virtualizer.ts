@@ -249,6 +249,14 @@ export function createGroupedVirtualizer<T>(
 
   const ac = new AbortController();
 
+  function _dispose(): void {
+    if (destroyed) return;
+
+    destroyed = true;
+    ac.abort();
+    virtualizer.dispose();
+  }
+
   // Build a flat-index lookup: [sectionIndex, itemIndex] → flat index.
   // Returns -1 when sectionIndex is out of range so callers can no-op safely.
   function flatIndexOf(sectionIndex: number, itemIndex?: number): number {
@@ -276,13 +284,7 @@ export function createGroupedVirtualizer<T>(
     get disposalSignal() {
       return ac.signal;
     },
-    dispose() {
-      if (destroyed) return;
-
-      destroyed = true;
-      ac.abort();
-      virtualizer.dispose();
-    },
+    dispose: _dispose,
     get disposed() {
       return destroyed;
     },
@@ -361,9 +363,7 @@ export function createGroupedVirtualizer<T>(
     get stickyItems() {
       return virtualizer.stickyItems;
     },
-    [Symbol.dispose]() {
-      this.dispose();
-    },
+    [Symbol.dispose]: _dispose,
     get totalSize() {
       return virtualizer.totalSize;
     },

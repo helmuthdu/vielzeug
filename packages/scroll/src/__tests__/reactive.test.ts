@@ -249,3 +249,62 @@ describe('createReactiveGroupedVirtualizer', () => {
     }).not.toThrow();
   });
 });
+
+// ─── Proxy own-property traps (has / ownKeys / getOwnPropertyDescriptor) ──────
+
+describe('createReactiveVirtualizer – state as a real own property', () => {
+  it('"state" in rv is true', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect('state' in rv).toBe(true);
+    rv.dispose();
+  });
+
+  it('Object.keys(rv) includes "state"', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect(Object.keys(rv)).toContain('state');
+    rv.dispose();
+  });
+
+  it('spreading rv preserves state', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const rv = createReactiveVirtualizer(el, { count: 5, estimateSize: 20 });
+
+    expect({ ...rv }.state).toBe(rv.state);
+    rv.dispose();
+  });
+});
+
+describe('createReactiveGroupedVirtualizer – state as a real own property', () => {
+  const makeSections = () => [
+    { items: ['a', 'b'], label: 'Group 1' },
+    { items: ['c'], label: 'Group 2' },
+  ];
+
+  it('"state" in rv is true', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect('state' in rv).toBe(true);
+    rv.dispose();
+  });
+
+  it('Object.keys(rv) includes "state"', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect(Object.keys(rv)).toContain('state');
+    rv.dispose();
+  });
+
+  it('spreading rv preserves state', () => {
+    const el = makeContainer({ clientHeight: 300 });
+    const rv = createReactiveGroupedVirtualizer(el, { estimateItemSize: 30, sections: makeSections() });
+
+    expect({ ...rv }.state).toBe(rv.state);
+    rv.dispose();
+  });
+});

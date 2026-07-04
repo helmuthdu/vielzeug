@@ -356,6 +356,22 @@ describe('createVirtualizer – measureEl', () => {
 
     expect(() => disconnect()).not.toThrow();
   });
+
+  it('disconnects the ResizeObserver on dispose() even if the caller never called the returned disconnect fn', () => {
+    const el = makeContainer({ clientHeight: 200 });
+    const v = createVirtualizer(el, { count: 5, estimateSize: 20 });
+    const observeSpy = vi.spyOn(ResizeObserver.prototype, 'observe');
+
+    v.measureEl(0, document.createElement('div'));
+
+    const observer = observeSpy.mock.instances[0] as ResizeObserver;
+    const disconnectSpy = vi.spyOn(observer, 'disconnect');
+
+    v.dispose();
+
+    expect(disconnectSpy).toHaveBeenCalledTimes(1);
+    observeSpy.mockRestore();
+  });
 });
 
 // ─── refresh / invalidate ──────────────────────────────────────────────────────

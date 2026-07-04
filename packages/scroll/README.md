@@ -52,7 +52,7 @@ const virt = createVirtualizer(scrollEl, {
 });
 
 // Later:
-virt.destroy();
+virt.dispose();
 ```
 
 ## DOM Adapter
@@ -81,7 +81,7 @@ const domList = createDomVirtualList<Option>({
 
 domList.setItems(options);
 domList.scrollToIndex(focusedIndex, { align: 'auto' });
-domList.destroy();
+domList.dispose();
 ```
 
 ## Self-Contained Scroller
@@ -104,7 +104,7 @@ const list = createVirtualScroller<Option>(document.getElementById('root')!, {
 });
 
 list.setItems(options);
-list.destroy(); // also removes the generated scroll container
+list.dispose(); // also removes the generated scroll container
 ```
 
 ## Grouped Lists
@@ -130,7 +130,7 @@ const virt = createGroupedVirtualizer<Contact>(scrollEl, {
 
 virt.scrollToSection(1, { align: 'start' });
 virt.update(nextSections);
-virt.destroy();
+virt.dispose();
 ```
 
 ## Grid Virtualization
@@ -149,7 +149,7 @@ const grid = createGridVirtualizer(scrollEl, {
 });
 
 grid.scrollToCell(500, 10, { rowAlign: 'center', colAlign: 'start' });
-grid.destroy();
+grid.dispose();
 ```
 
 ## Reactive Integration
@@ -171,7 +171,7 @@ effect(() => {
   // render items...
 });
 
-virt.destroy();
+virt.dispose();
 ```
 
 ## Documentation
