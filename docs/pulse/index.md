@@ -14,11 +14,11 @@ exports:
     PulseOptions,
     BufferOptions,
     PulseError,
-    ConnectionError,
-    TimeoutError,
-    AbortError,
-    DisposedError,
-    ProtocolError,
+    PulseConnectionError,
+    PulseTimeoutError,
+    PulseAbortError,
+    PulseDisposedError,
+    PulseProtocolError,
   ]
 environments: [browser, node]
 ---

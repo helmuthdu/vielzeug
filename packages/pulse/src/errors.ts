@@ -53,8 +53,8 @@ export class PulseAbortError extends PulseError {
  * Thrown when a method is called on a disposed Pulse instance or channel.
  */
 export class PulseDisposedError extends PulseError {
-  constructor(target = 'Pulse') {
-    super(`${target} instance is disposed`);
+  constructor(target = 'Pulse', opts?: ErrorOptions) {
+    super(`${target} instance is disposed`, opts);
   }
 }
 
@@ -65,8 +65,8 @@ export class PulseDisposedError extends PulseError {
 export class PulseProtocolError extends PulseError {
   readonly raw: unknown;
 
-  constructor(message: string, raw?: unknown) {
-    super(message);
+  constructor(message: string, raw?: unknown, opts?: ErrorOptions) {
+    super(message, opts);
     this.raw = raw;
   }
 }

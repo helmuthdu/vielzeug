@@ -35,6 +35,25 @@ function mergeTwo(a: AbortSignal, b: AbortSignal): AbortSignal {
 }
 
 /**
+ * Create a child `AbortController` that aborts as soon as `parent` does.
+ * Handles the case where `parent` is already aborted at call time — a plain
+ * `addEventListener('abort', ...)` would miss that, since the event already fired.
+ *
+ * @internal
+ */
+export function deriveAbortController(parent: AbortSignal): AbortController {
+  const ctrl = new AbortController();
+
+  if (parent.aborted) {
+    ctrl.abort(parent.reason);
+  } else {
+    parent.addEventListener('abort', () => ctrl.abort(parent.reason), { once: true });
+  }
+
+  return ctrl;
+}
+
+/**
  * Sleep for `ms` milliseconds, aborting early when the signal fires.
  * Resolves (does not reject) on abort — callers check `signal.aborted`.
  *

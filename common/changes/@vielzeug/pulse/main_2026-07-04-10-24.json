@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(pulse): correct channel/presence disposal-signal race, warn on silent drops, remove dead code",
+      "type": "patch",
+      "packageName": "@vielzeug/pulse"
+    }
+  ],
+  "packageName": "@vielzeug/pulse",
+  "email": "helmuthdu@gmail.com"
+}

@@ -1,4 +1,4 @@
-import { combineSignals, defaultReconnectDelay, sleep } from '../_utils';
+import { combineSignals, defaultReconnectDelay, deriveAbortController, sleep } from '../_utils';
 
 describe('combineSignals', () => {
   it('returns the same signal when given only one', () => {
@@ -43,6 +43,33 @@ describe('combineSignals', () => {
     c.abort();
 
     expect(combined.aborted).toBe(true);
+  });
+});
+
+describe('deriveAbortController', () => {
+  it('is not aborted when the parent is not aborted', () => {
+    const parent = new AbortController();
+    const child = deriveAbortController(parent.signal);
+
+    expect(child.signal.aborted).toBe(false);
+  });
+
+  it('aborts when the parent aborts later', () => {
+    const parent = new AbortController();
+    const child = deriveAbortController(parent.signal);
+
+    parent.abort('parent-reason');
+
+    expect(child.signal.aborted).toBe(true);
+    expect(child.signal.reason).toBe('parent-reason');
+  });
+
+  it('is immediately aborted when the parent is already aborted', () => {
+    const parent = AbortSignal.abort('already-gone');
+    const child = deriveAbortController(parent);
+
+    expect(child.signal.aborted).toBe(true);
+    expect(child.signal.reason).toBe('already-gone');
   });
 });
 

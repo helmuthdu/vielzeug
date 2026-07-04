@@ -1,72 +1,6 @@
 import { PulseTimeoutError } from '../errors';
 import { createPulse } from '../pulse';
-
-// ─── MockWebSocket ─────────────────────────────────────────────────────────────
-
-class MockWebSocket {
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-
-  static instances: MockWebSocket[] = [];
-
-  readonly OPEN = MockWebSocket.OPEN;
-  readonly CLOSING = MockWebSocket.CLOSING;
-  readonly CLOSED = MockWebSocket.CLOSED;
-
-  readyState: number = 0;
-  url: string;
-  sentMessages: string[] = [];
-
-  onopen: (() => void) | null = null;
-  onclose: ((ev: { code: number; reason: string }) => void) | null = null;
-  onerror: ((ev: unknown) => void) | null = null;
-  onmessage: ((ev: { data: string }) => void) | null = null;
-
-  constructor(url: string) {
-    this.url = url;
-    MockWebSocket.instances.push(this);
-  }
-
-  send(data: string): void {
-    this.sentMessages.push(data);
-  }
-
-  close(code = 1000, reason = ''): void {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code, reason });
-  }
-
-  /** Simulate the server opening the connection. */
-  open(): void {
-    this.readyState = MockWebSocket.OPEN;
-    this.onopen?.();
-  }
-
-  /** Simulate a message arriving from the server. */
-  receive(data: unknown): void {
-    this.onmessage?.({ data: JSON.stringify(data) });
-  }
-
-  /** Simulate an unexpected close (e.g. network drop). */
-  drop(code = 1006, reason = 'network error'): void {
-    this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.({ code, reason });
-  }
-}
-
-type ServerEvents = { greet: { name: string }; ping: void };
-type ClientEvents = { reply: { text: string } };
-
-function setup() {
-  MockWebSocket.instances = [];
-
-  const pulse = createPulse<ServerEvents, ClientEvents>('ws://test', {});
-
-  const ws = MockWebSocket.instances[0]!;
-
-  return { pulse, ws };
-}
+import { type ClientEvents, MockWebSocket, type ServerEvents, setup } from './_fixtures';
 
 // ─── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -150,6 +84,57 @@ describe('createPulse — dispose', () => {
 
     expect(pulse.disposed).toBe(true);
   });
+
+  it('channel() created after dispose() is already disposed', () => {
+    const { pulse } = setup();
+
+    pulse.dispose();
+
+    const ch = pulse.channel('chat');
+
+    expect(ch.disposed).toBe(true);
+    expect(ch.disposalSignal.aborted).toBe(true);
+  });
+
+  it('channel() created after dispose() warns and ignores on()', () => {
+    const { pulse } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    pulse.dispose();
+
+    const ch = pulse.channel('chat');
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("channel('chat') called on a disposed Pulse"));
+
+    const unsub = ch.on('greet', vi.fn());
+
+    expect(() => unsub()).not.toThrow();
+
+    warnSpy.mockRestore();
+  });
+
+  it('presence() created after dispose() is already disposed', () => {
+    const { pulse } = setup();
+
+    pulse.dispose();
+
+    const lobby = pulse.presence('lobby');
+
+    expect(lobby.disposed).toBe(true);
+    expect(lobby.disposalSignal.aborted).toBe(true);
+  });
+
+  it('presence() created after dispose() warns instead of attempting to join', () => {
+    const { pulse } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    pulse.dispose();
+    pulse.presence('lobby');
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("presence('lobby') called on a disposed Pulse"));
+
+    warnSpy.mockRestore();
+  });
 });
 
 describe('createPulse — send / on', () => {
@@ -198,6 +183,18 @@ describe('createPulse — send / on', () => {
     expect(ws.sentMessages).toHaveLength(0);
 
     pulse.dispose();
+  });
+
+  it('send() warns and drops the message when disposed', () => {
+    const { pulse } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    pulse.dispose();
+    pulse.send('reply', { text: 'hi' });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("send('reply') called on a disposed Pulse"));
+
+    warnSpy.mockRestore();
   });
 
   it('unsubscribe removes the listener', () => {
@@ -297,100 +294,6 @@ describe('createPulse — wait()', () => {
     pulse.dispose();
 
     await expect(p).rejects.toThrow();
-  });
-});
-
-describe('createPulse — channel', () => {
-  beforeEach(() => {
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('creates a channel and sends subscribe frame', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-    pulse.channel('chat');
-
-    expect(ws.sentMessages.some((m) => JSON.parse(m).type === 'subscribe')).toBe(true);
-
-    pulse.dispose();
-  });
-
-  it('delivers channel-scoped messages to channel listeners', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel<{ msg: string }>('chat');
-    const handler = vi.fn();
-
-    ch.on('msg', handler);
-    ws.receive({ channel: 'chat', event: 'msg', payload: 'hello', type: 'message' });
-
-    expect(handler).toHaveBeenCalledWith('hello');
-
-    pulse.dispose();
-  });
-
-  it('channel messages do not fire root listeners', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    pulse.channel('chat');
-
-    const root = vi.fn();
-
-    pulse.on('greet', root);
-    ws.receive({ channel: 'chat', event: 'greet', payload: {}, type: 'message' });
-
-    expect(root).not.toHaveBeenCalled();
-
-    pulse.dispose();
-  });
-
-  it('channel.send() sends a channel-scoped frame', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const sentBefore = ws.sentMessages.length;
-    const ch = pulse.channel<Record<string, never>, { reply: string }>('chat');
-
-    ch.send('reply', 'hi');
-
-    const channelMsg = JSON.parse(ws.sentMessages[ws.sentMessages.length - 1]!) as {
-      channel: string;
-      event: string;
-      type: string;
-    };
-
-    expect(ws.sentMessages.length).toBeGreaterThan(sentBefore);
-    expect(channelMsg.channel).toBe('chat');
-    expect(channelMsg.type).toBe('message');
-
-    pulse.dispose();
-  });
-
-  it('channel.dispose() prevents further delivery', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel<{ msg: string }>('chat');
-    const handler = vi.fn();
-
-    ch.on('msg', handler);
-    ch.dispose();
-    ws.receive({ channel: 'chat', event: 'msg', payload: 'after', type: 'message' });
-
-    expect(handler).not.toHaveBeenCalled();
-
-    pulse.dispose();
   });
 });
 
@@ -540,6 +443,21 @@ describe('createPulse — onOpen/onClose/onError callbacks', () => {
 
     pulse.dispose();
   });
+
+  it('warns on socket error when no onError is provided', () => {
+    MockWebSocket.instances = [];
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const pulse = createPulse('ws://test', {});
+    const ws = MockWebSocket.instances[0]!;
+
+    ws.onerror?.(new Event('error'));
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('WebSocket error — pass onError'));
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
 });
 
 describe('createPulse — reconnect', () => {
@@ -586,182 +504,6 @@ describe('createPulse — reconnect', () => {
   });
 });
 
-describe('createPulse — presence', () => {
-  beforeEach(() => {
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('state reflects presence_state frame', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-
-    ws.receive({
-      members: { alice: { name: 'Alice' }, bob: { name: 'Bob' } },
-      room: 'lobby',
-      type: 'presence_state',
-    });
-
-    expect(pres.state.value.get('alice')).toEqual({ name: 'Alice' });
-    expect(pres.state.value.get('bob')).toEqual({ name: 'Bob' });
-
-    pulse.dispose();
-  });
-
-  it('onJoin fires on presence_join frame', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-    const onJoin = vi.fn();
-
-    pres.onJoin(onJoin);
-    ws.receive({ id: 'carol', room: 'lobby', state: { name: 'Carol' }, type: 'presence_join' });
-
-    expect(onJoin).toHaveBeenCalledWith('carol', { name: 'Carol' });
-
-    pulse.dispose();
-  });
-
-  it('onLeave fires on presence_leave frame', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-    const onLeave = vi.fn();
-
-    pres.onLeave(onLeave);
-    ws.receive({ id: 'dave', room: 'lobby', type: 'presence_leave' });
-
-    expect(onLeave).toHaveBeenCalledWith('dave');
-
-    pulse.dispose();
-  });
-
-  it('update() sends a presence frame to the server', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-
-    pres.update({ name: 'Eve' });
-
-    const presenceMsg = ws.sentMessages.find((m) => JSON.parse(m).type === 'presence');
-
-    expect(presenceMsg).toBeDefined();
-    expect(JSON.parse(presenceMsg!)).toMatchObject({ room: 'lobby', state: { name: 'Eve' }, type: 'presence' });
-
-    pulse.dispose();
-  });
-
-  it('ignores frames for a different room', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-    const onJoin = vi.fn();
-
-    pres.onJoin(onJoin);
-    ws.receive({ id: 'frank', room: 'OTHER', state: { name: 'Frank' }, type: 'presence_join' });
-
-    expect(onJoin).not.toHaveBeenCalled();
-
-    pulse.dispose();
-  });
-
-  it('presence.dispose() clears handlers', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence<{ name: string }>('lobby');
-    const onJoin = vi.fn();
-
-    pres.onJoin(onJoin);
-    pres.dispose();
-    ws.receive({ id: 'grace', room: 'lobby', state: { name: 'Grace' }, type: 'presence_join' });
-
-    expect(onJoin).not.toHaveBeenCalled();
-
-    pulse.dispose();
-  });
-});
-
-describe('createPulse — heartbeat', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
-
-  it('sends a ping frame after the interval', async () => {
-    MockWebSocket.instances = [];
-
-    const pulse = createPulse('ws://test', { heartbeat: { interval: 1000, timeout: 500 } });
-    const ws = MockWebSocket.instances[0]!;
-
-    ws.open();
-
-    await vi.advanceTimersByTimeAsync(1000);
-
-    const ping = ws.sentMessages.find((m) => JSON.parse(m).type === 'ping');
-
-    expect(ping).toBeDefined();
-
-    pulse.dispose();
-  });
-
-  it('closes the socket when pong is not received within timeout', async () => {
-    MockWebSocket.instances = [];
-
-    const pulse = createPulse('ws://test', {
-      heartbeat: { interval: 100, timeout: 50 },
-      reconnect: false,
-    });
-    const ws = MockWebSocket.instances[0]!;
-
-    ws.open();
-
-    await vi.advanceTimersByTimeAsync(100 + 50 + 10);
-
-    expect(ws.readyState).toBe(MockWebSocket.CLOSED);
-
-    pulse.dispose();
-  });
-
-  it('does not close socket when pong arrives in time', async () => {
-    MockWebSocket.instances = [];
-
-    const pulse = createPulse('ws://test', { heartbeat: { interval: 100, timeout: 50 } });
-    const ws = MockWebSocket.instances[0]!;
-
-    ws.open();
-
-    await vi.advanceTimersByTimeAsync(100);
-    ws.receive({ ts: Date.now(), type: 'pong' });
-
-    await vi.advanceTimersByTimeAsync(49);
-
-    expect(ws.readyState).toBe(MockWebSocket.OPEN);
-
-    pulse.dispose();
-  });
-});
-
 describe('errors module', () => {
   it('PulseError has correct name', async () => {
     const { PulseError } = await import('../errors');
@@ -769,6 +511,14 @@ describe('errors module', () => {
 
     expect(e.name).toBe('PulseError');
     expect(e).toBeInstanceOf(Error);
+  });
+
+  it('PulseError.is() narrows PulseError instances', async () => {
+    const { PulseError } = await import('../errors');
+
+    expect(PulseError.is(new PulseError('test'))).toBe(true);
+    expect(PulseError.is(new Error('plain'))).toBe(false);
+    expect(PulseError.is('not an error')).toBe(false);
   });
 
   it('PulseConnectionError carries url', async () => {
@@ -784,7 +534,58 @@ describe('errors module', () => {
     const e = new PulseTimeoutError('greet');
 
     expect(e.event).toBe('greet');
+    expect(e.message).toBe('Timed out waiting for "greet"');
   });
+
+  it('PulseAbortError has the expected message', async () => {
+    const { PulseAbortError } = await import('../errors');
+    const e = new PulseAbortError();
+
+    expect(e.message).toBe('Aborted');
+    expect(e).toBeInstanceOf(Error);
+  });
+
+  it('PulseDisposedError defaults target to "Pulse"', async () => {
+    const { PulseDisposedError } = await import('../errors');
+    const e = new PulseDisposedError();
+
+    expect(e.message).toBe('Pulse instance is disposed');
+  });
+
+  it('PulseDisposedError accepts a custom target', async () => {
+    const { PulseDisposedError } = await import('../errors');
+    const e = new PulseDisposedError('Channel');
+
+    expect(e.message).toBe('Channel instance is disposed');
+  });
+
+  it('PulseProtocolError carries the raw value that failed to parse', async () => {
+    const { PulseProtocolError } = await import('../errors');
+    const e = new PulseProtocolError('bad frame', { raw: 'data' });
+
+    expect(e.raw).toEqual({ raw: 'data' });
+  });
+
+  it.each(['PulseConnectionError', 'PulseTimeoutError', 'PulseAbortError', 'PulseDisposedError', 'PulseProtocolError'])(
+    '%s chains a cause via opts.cause',
+    async (className) => {
+      const errors = await import('../errors');
+      const cause = new Error('root cause');
+      const ErrorClass = errors[className as keyof typeof errors] as new (...args: unknown[]) => Error;
+
+      const args: Record<string, unknown[]> = {
+        PulseAbortError: [{ cause }],
+        PulseConnectionError: ['msg', 'ws://x', { cause }],
+        PulseDisposedError: ['Pulse', { cause }],
+        PulseProtocolError: ['bad frame', undefined, { cause }],
+        PulseTimeoutError: ['greet', { cause }],
+      };
+
+      const e = new ErrorClass(...args[className]!);
+
+      expect(e.cause).toBe(cause);
+    },
+  );
 });
 
 // ─── New coverage tests (C1–C7, B1, E1, E3) ───────────────────────────────────
@@ -810,77 +611,6 @@ describe('createPulse — once() early unsubscribe (C1)', () => {
     ws.receive({ event: 'greet', payload: { name: 'Alice' }, type: 'message' });
 
     expect(handler).not.toHaveBeenCalled();
-
-    pulse.dispose();
-  });
-});
-
-describe('createPulse — channel.once() early unsubscribe (C2)', () => {
-  beforeEach(() => {
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('channel.once() unsub before event fires — handler never called', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel<{ msg: string }>('chat');
-    const handler = vi.fn();
-    const unsub = ch.once('msg', handler);
-
-    unsub();
-    ws.receive({ channel: 'chat', event: 'msg', payload: 'hello', type: 'message' });
-
-    expect(handler).not.toHaveBeenCalled();
-
-    pulse.dispose();
-  });
-});
-
-describe('createPulse — heartbeat restart after reconnect (C3)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
-
-  it('sends ping after reconnect succeeds', async () => {
-    MockWebSocket.instances = [];
-
-    const pulse = createPulse('ws://test', {
-      heartbeat: { interval: 100, timeout: 50 },
-      reconnect: { delay: 0, maxAttempts: 1 },
-    });
-
-    const ws1 = MockWebSocket.instances[0]!;
-
-    ws1.open();
-    ws1.drop();
-
-    await vi.runAllTimersAsync();
-
-    const ws2 = MockWebSocket.instances[1];
-
-    if (ws2) {
-      ws2.open();
-
-      await vi.advanceTimersByTimeAsync(100);
-
-      const ping = ws2.sentMessages.find((m) => JSON.parse(m).type === 'ping');
-
-      expect(ping).toBeDefined();
-    } else {
-      expect(pulse.status.value).toBe('closed');
-    }
 
     pulse.dispose();
   });
@@ -967,6 +697,43 @@ describe('createPulse — malformed message handling (C6)', () => {
 
     pulse.dispose();
   });
+
+  it('warns on a frame with a recognized shape but unrecognized type', () => {
+    const { pulse, ws } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    ws.open();
+
+    expect(() => {
+      ws.receive({ type: 'not-a-real-frame-type' });
+    }).not.toThrow();
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Received frame with an unrecognized type: not-a-real-frame-type'),
+    );
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
+
+  it('handles a recognized frame type with a malformed payload without throwing', () => {
+    const { pulse, ws } = setup();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    ws.open();
+    pulse.presence('lobby');
+
+    expect(() => {
+      // 'presence_state' is expected to carry a `members` object; omit it to
+      // simulate a malformed-but-type-valid frame from the server.
+      ws.receive({ room: 'lobby', type: 'presence_state' });
+    }).not.toThrow();
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Frame handling error'));
+
+    warnSpy.mockRestore();
+    pulse.dispose();
+  });
 });
 
 describe('createPulse — wait() rejects with PulseTimeoutError (C7)', () => {
@@ -1030,49 +797,6 @@ describe('createPulse — PulseDisposedError on dispose (B1)', () => {
     pulse.dispose();
 
     await expect(pulse.leave('x')).rejects.toBeInstanceOf(PulseDisposedError);
-  });
-});
-
-describe('createPulse — channel.wait() timeout (E1)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
-
-  it('rejects with PulseTimeoutError when channel.wait() times out', async () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const { PulseTimeoutError } = await import('../errors');
-    const ch = pulse.channel<{ msg: string }>('chat');
-    const p = ch.wait('msg', { timeout: 200 });
-
-    vi.advanceTimersByTime(200);
-
-    await expect(p).rejects.toBeInstanceOf(PulseTimeoutError);
-
-    pulse.dispose();
-  });
-
-  it('resolves if event arrives before timeout', async () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel<{ msg: string }>('chat');
-    const p = ch.wait('msg', { timeout: 500 });
-
-    ws.receive({ channel: 'chat', event: 'msg', payload: 'hi', type: 'message' });
-
-    await expect(p).resolves.toBe('hi');
-
-    pulse.dispose();
   });
 });
 
@@ -1187,129 +911,6 @@ describe('createPulse — B2: leave() auto-connect', () => {
   });
 });
 
-describe('createPulse — D1: channel re-subscription on reconnect', () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.useRealTimers();
-  });
-
-  it('re-sends subscribe frames for active channels after reconnect', async () => {
-    MockWebSocket.instances = [];
-
-    const pulse = createPulse('ws://test', { reconnect: { delay: 0, maxAttempts: 1 } });
-    const ws1 = MockWebSocket.instances[0]!;
-
-    ws1.open();
-    pulse.channel('chat');
-
-    ws1.drop();
-    await vi.runAllTimersAsync();
-
-    const ws2 = MockWebSocket.instances[1];
-
-    if (ws2) {
-      ws2.open();
-
-      const resubscribe = ws2.sentMessages.find((m) => {
-        const parsed = JSON.parse(m) as { channel?: string; type: string };
-
-        return parsed.type === 'subscribe' && parsed.channel === 'chat';
-      });
-
-      expect(resubscribe).toBeDefined();
-    } else {
-      expect(pulse.status.value).toBe('closed');
-    }
-
-    pulse.dispose();
-  });
-
-  it('sends subscribe immediately when socket is already open', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-    pulse.channel('events');
-
-    const sub = ws.sentMessages.find((m) => {
-      const parsed = JSON.parse(m) as { channel?: string; type: string };
-
-      return parsed.type === 'subscribe' && parsed.channel === 'events';
-    });
-
-    expect(sub).toBeDefined();
-
-    pulse.dispose();
-  });
-
-  it('sends unsubscribe when channel is disposed', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel('room1');
-
-    ch.dispose();
-
-    const unsub = ws.sentMessages.find((m) => {
-      const parsed = JSON.parse(m) as { channel?: string; type: string };
-
-      return parsed.type === 'unsubscribe' && parsed.channel === 'room1';
-    });
-
-    expect(unsub).toBeDefined();
-
-    pulse.dispose();
-  });
-
-  it('channel() returns the same object for the same name (memoized)', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch1 = pulse.channel('shared');
-    const ch2 = pulse.channel('shared');
-
-    expect(ch1).toBe(ch2);
-
-    pulse.dispose();
-  });
-
-  it('channel() returns a new object after the previous one is disposed', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch1 = pulse.channel('shared');
-
-    ch1.dispose();
-
-    const ch2 = pulse.channel('shared');
-
-    expect(ch1).not.toBe(ch2);
-
-    pulse.dispose();
-  });
-
-  it('channel() exposes disposalSignal aborted when disposed', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const ch = pulse.channel('events');
-
-    expect(ch.disposalSignal.aborted).toBe(false);
-    ch.dispose();
-    expect(ch.disposalSignal.aborted).toBe(true);
-
-    pulse.dispose();
-  });
-});
-
 describe('createPulse — D3: reconnect budget exhausted warning', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -1346,50 +947,6 @@ describe('createPulse — D3: reconnect budget exhausted warning', () => {
     } else {
       expect(['reconnecting', 'open', 'closed']).toContain(pulse.status.value);
     }
-
-    warnSpy.mockRestore();
-    pulse.dispose();
-  });
-});
-
-describe('createPulse — C1: presence disposed warnings', () => {
-  beforeEach(() => {
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('onJoin() warns when called on disposed presence channel', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const pres = pulse.presence('lobby');
-
-    pres.dispose();
-    pres.onJoin(vi.fn());
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('onJoin()'));
-
-    warnSpy.mockRestore();
-    pulse.dispose();
-  });
-
-  it('onLeave() warns when called on disposed presence channel', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const pres = pulse.presence('lobby');
-
-    pres.dispose();
-    pres.onLeave(vi.fn());
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('onLeave()'));
 
     warnSpy.mockRestore();
     pulse.dispose();
@@ -1502,50 +1059,6 @@ describe('createPulse — join() timeout', () => {
 
     await vi.advanceTimersByTimeAsync(150);
     await assertion;
-
-    pulse.dispose();
-  });
-});
-
-describe('createPulse — presence dispose', () => {
-  beforeEach(() => {
-    vi.stubGlobal('WebSocket', MockWebSocket);
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('presence.dispose() sends a leave frame to the server', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence('lobby');
-
-    pres.dispose();
-
-    const leaveFrame = ws.sentMessages.find((m) => {
-      const parsed = JSON.parse(m) as { room?: string; type: string };
-
-      return parsed.type === 'leave' && parsed.room === 'lobby';
-    });
-
-    expect(leaveFrame).toBeDefined();
-
-    pulse.dispose();
-  });
-
-  it('presence.disposalSignal aborts when presence is disposed', () => {
-    const { pulse, ws } = setup();
-
-    ws.open();
-
-    const pres = pulse.presence('lobby');
-
-    expect(pres.disposalSignal.aborted).toBe(false);
-    pres.dispose();
-    expect(pres.disposalSignal.aborted).toBe(true);
 
     pulse.dispose();
   });

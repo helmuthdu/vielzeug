@@ -106,7 +106,7 @@ const msg = await pulse.wait('chat:message', { timeout: 5_000 });
 const msg = await pulse.wait('chat:message', { signal: AbortSignal.timeout(5_000) });
 ```
 
-`wait()` rejects with `TimeoutError` when `timeout` elapses, with `AbortError` when the signal fires, and with `AbortError` when the pulse is disposed before the event arrives.
+`wait()` rejects with `PulseTimeoutError` when `timeout` elapses, with `PulseAbortError` when the signal fires, and with `PulseAbortError` when the pulse is disposed before the event arrives.
 
 ## Channels
 
@@ -157,13 +157,13 @@ console.log(pulse.rooms.value.has('lobby')); // false
 Pass a `timeout` or `AbortSignal` to bound the wait:
 
 ```ts
-// Reject with TimeoutError if server doesn't confirm within 5 s
+// Reject with PulseTimeoutError if server doesn't confirm within 5 s
 await pulse.join('lobby', { timeout: 5_000 });
 
 // Or cancel with an AbortSignal
 const ctrl = new AbortController();
 const joinP = pulse.join('arena', { signal: ctrl.signal });
-ctrl.abort(); // rejects joinP with AbortError
+ctrl.abort(); // rejects joinP with PulseAbortError
 ```
 
 `pulse.rooms` is a `Readable<ReadonlySet<string>>`. Derive computed views with ripple:

@@ -13,10 +13,10 @@ description: Complete API reference for @vielzeug/pulse.
 | `pulse.on()`         | Subscribe to a typed server event             | Sync           | Returns an `Unsubscribe`; always call it on component teardown            |
 | `pulse.once()`       | One-shot server event subscription            | Sync           | Listener auto-removes after first fire                                    |
 | `pulse.send()`       | Send a typed client event                     | Sync           | Buffered when `buffer: true`; dropped (dev warn) otherwise                |
-| `pulse.wait()`       | Await the next server event                   | Async          | Rejects with `AbortError` on disposal; use `timeout` for a deadline       |
+| `pulse.wait()`       | Await the next server event                   | Async          | Rejects with `PulseAbortError` on disposal; use `timeout` for a deadline       |
 | `pulse.connect()`    | Open the connection explicitly                | Async          | Required when `lazy: true`; otherwise called automatically on creation    |
 | `pulse.disconnect()` | Close without triggering reconnect            | Sync           | Pass code `1000` for a clean close                                        |
-| `pulse.join()`       | Join a room; resolves on server confirmation  | Async          | Rejects with `AbortError` if pulse is disposed before server replies      |
+| `pulse.join()`       | Join a room; resolves on server confirmation  | Async          | Rejects with `PulseAbortError` if pulse is disposed before server replies      |
 | `pulse.leave()`      | Leave a room; resolves on server confirmation | Async          | Room is removed from `pulse.rooms` only after server confirms             |
 | `pulse.channel()`    | Create an isolated channel namespace          | Sync           | Same name returns the **same** object; `dispose()` sends unsubscribe      |
 | `pulse.presence()`   | Reactive presence channel for a room          | Sync           | Implicitly joins the room; `dispose()` to stop tracking                   |
@@ -198,14 +198,14 @@ Returns a promise that resolves with the payload of the next server emission of 
 | Parameter      | Type          | Description                                       |
 | -------------- | ------------- | ------------------------------------------------- |
 | `event`        | `K`           | Server event name to await                        |
-| `opts.signal`  | `AbortSignal` | Optional; rejects with `AbortError` when it fires |
-| `opts.timeout` | `number`      | Optional; rejects with `TimeoutError` after ms    |
+| `opts.signal`  | `AbortSignal` | Optional; rejects with `PulseAbortError` when it fires |
+| `opts.timeout` | `number`      | Optional; rejects with `PulseTimeoutError` after ms    |
 
 **Rejects when:**
 
-- `opts.signal` fires — rejects with `AbortError`
-- `opts.timeout` elapses — rejects with `TimeoutError`
-- The pulse is disposed — rejects with `AbortError`
+- `opts.signal` fires — rejects with `PulseAbortError`
+- `opts.timeout` elapses — rejects with `PulseTimeoutError`
+- The pulse is disposed — rejects with `PulseAbortError`
 
 ```ts
 const msg = await pulse.wait('chat:message', { timeout: 5_000 });
@@ -225,9 +225,9 @@ Opens the WebSocket connection. Resolves when the connection is open. Returns im
 
 **Rejects when:**
 
-- Already disposed — `DisposedError`
-- Socket closes before it opens — `ConnectionError`
-- Socket error — `ConnectionError`
+- Already disposed — `PulseDisposedError`
+- Socket closes before it opens — `PulseConnectionError`
+- Socket error — `PulseConnectionError`
 
 ```ts
 await pulse.connect();
@@ -265,15 +265,15 @@ Requests to join a room. Resolves when the server confirms with a `joined` frame
 | Parameter      | Type          | Description                                       |
 | -------------- | ------------- | ------------------------------------------------- |
 | `room`         | `string`      | Room name                                         |
-| `opts.signal`  | `AbortSignal` | Optional; rejects with `AbortError` on fire       |
-| `opts.timeout` | `number`      | Optional; rejects with `TimeoutError` after ms    |
+| `opts.signal`  | `AbortSignal` | Optional; rejects with `PulseAbortError` on fire       |
+| `opts.timeout` | `number`      | Optional; rejects with `PulseTimeoutError` after ms    |
 
 **Rejects when:**
 
-- Already disposed — `DisposedError`
-- The signal fires — `AbortError`
-- `opts.timeout` elapses — `TimeoutError`
-- The pulse is disposed before confirmation — `AbortError`
+- Already disposed — `PulseDisposedError`
+- The signal fires — `PulseAbortError`
+- `opts.timeout` elapses — `PulseTimeoutError`
+- The pulse is disposed before confirmation — `PulseAbortError`
 
 ```ts
 await pulse.join('lobby', { timeout: 5_000 });
@@ -293,10 +293,10 @@ If the socket is not open, `leave()` connects first (mirroring `join()` behaviou
 
 **Rejects when:**
 
-- Already disposed — `DisposedError`
-- The signal fires — `AbortError`
-- `opts.timeout` elapses — `TimeoutError`
-- Connection fails — `ConnectionError`
+- Already disposed — `PulseDisposedError`
+- The signal fires — `PulseAbortError`
+- `opts.timeout` elapses — `PulseTimeoutError`
+- Connection fails — `PulseConnectionError`
 
 ```ts
 await pulse.leave('lobby');
@@ -346,8 +346,8 @@ Permanently closes the connection and releases all resources:
 
 - Closes the WebSocket with code `1000`
 - Clears all listeners
-- Rejects all pending `wait()`, `join()`, and `leave()` promises with `DisposedError`
-- Rejects any in-flight `connect()` with `DisposedError`
+- Rejects all pending `wait()`, `join()`, and `leave()` promises with `PulseDisposedError`
+- Rejects any in-flight `connect()` with `PulseDisposedError`
 - Aborts `disposalSignal`
 
 Idempotent — safe to call multiple times.
@@ -411,9 +411,9 @@ wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeo
 
 Resolves on the next emission of the given event within this channel. Rejects when:
 
-- `opts.signal` fires — `AbortError`
-- `opts.timeout` elapses — `TimeoutError`
-- The channel is disposed — `AbortError`
+- `opts.signal` fires — `PulseAbortError`
+- `opts.timeout` elapses — `PulseTimeoutError`
+- The channel is disposed — `PulseAbortError`
 
 ---
 
@@ -624,24 +624,26 @@ type PulseOptions = {
 
 All errors extend `PulseError`. Use `instanceof PulseError` to catch any pulse-originated error in one branch.
 
-| Class             | Extends      | Triggers when                                                               | Notable properties |
-| ----------------- | ------------ | --------------------------------------------------------------------------- | ------------------ |
-| `PulseError`      | `Error`      | Base class — never thrown directly                                          | —                  |
-| `ConnectionError` | `PulseError` | Connection cannot be established or is lost with reconnect budget exhausted | `url: string`      |
-| `TimeoutError`    | `PulseError` | `wait()` `timeout` elapses before the event arrives                         | `event: string`    |
-| `AbortError`      | `PulseError` | `wait()`, `join()`, or `leave()` is aborted via signal or pulse disposal    | —                  |
-| `DisposedError`   | `PulseError` | A method is called on a disposed instance or channel                        | —                  |
-| `ProtocolError`   | `PulseError` | The server sends a frame that cannot be parsed or has no `type` field       | `raw: unknown`     |
+All error constructors accept a trailing `opts?: ErrorOptions`, so you can chain a `cause`: `new PulseTimeoutError('chat:message', { cause })`.
+
+| Class                  | Extends      | Triggers when                                                               | Notable properties |
+| ---------------------- | ------------ | --------------------------------------------------------------------------- | ------------------ |
+| `PulseError`           | `Error`      | Base class — never thrown directly                                          | —                  |
+| `PulseConnectionError` | `PulseError` | Connection cannot be established or is lost with reconnect budget exhausted | `url: string`      |
+| `PulseTimeoutError`    | `PulseError` | `wait()` `timeout` elapses before the event arrives                         | `event: string`    |
+| `PulseAbortError`      | `PulseError` | `wait()`, `join()`, or `leave()` is aborted via signal or pulse disposal    | —                  |
+| `PulseDisposedError`   | `PulseError` | A method is called on a disposed instance or channel                        | —                  |
+| `PulseProtocolError`   | `PulseError` | The server sends a frame that cannot be parsed or has no `type` field       | `raw: unknown`     |
 
 ```ts
-import { AbortError, ConnectionError, ProtocolError, PulseError, TimeoutError } from '@vielzeug/pulse';
+import { PulseAbortError, PulseError, PulseTimeoutError } from '@vielzeug/pulse';
 
 try {
   await pulse.wait('chat:message', { timeout: 5_000 });
 } catch (err) {
-  if (err instanceof TimeoutError) {
+  if (err instanceof PulseTimeoutError) {
     console.warn('no message in 5 s, event:', err.event);
-  } else if (err instanceof AbortError) {
+  } else if (err instanceof PulseAbortError) {
     console.log('aborted or pulse disposed');
   } else if (err instanceof PulseError) {
     console.error('unexpected pulse error', err);

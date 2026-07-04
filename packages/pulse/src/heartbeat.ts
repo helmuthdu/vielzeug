@@ -60,6 +60,9 @@ export function createHeartbeat(
 
     start() {
       running = true;
+      clearTimeout(pingTimer);
+      clearTimeout(pongTimer);
+      pongTimer = undefined;
       schedulePing();
     },
 

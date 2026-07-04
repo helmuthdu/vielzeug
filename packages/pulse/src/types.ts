@@ -1,4 +1,4 @@
-import type { Readable, Signal } from '@vielzeug/ripple';
+import type { Readable } from '@vielzeug/ripple';
 
 // ─── Utility types ─────────────────────────────────────────────────────────────
 
@@ -283,8 +283,3 @@ export type Pulse<TServer extends MessageMap = MessageMap, TClient extends Messa
    */
   wait<K extends EventKey<TServer>>(event: K, opts?: { signal?: AbortSignal; timeout?: number }): Promise<TServer[K]>;
 };
-
-// ─── Internal re-exports for sibling modules ────────────────────────────────────
-
-/** @internal */
-export type { Readable, Signal };

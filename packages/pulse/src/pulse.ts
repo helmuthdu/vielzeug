@@ -213,11 +213,19 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         return;
       }
 
-      handleFrame(frame);
+      try {
+        handleFrame(frame);
+      } catch (err) {
+        warn(`Frame handling error: ${String(err)}`);
+      }
     };
 
     ws.onerror = (): void => {
-      opts.onError?.(new PulseConnectionError('WebSocket error', url));
+      if (opts.onError) {
+        opts.onError(new PulseConnectionError('WebSocket error', url));
+      } else {
+        warn('WebSocket error — pass onError to observe it (see onClose for recovery logic)');
+      }
 
       const pending = pendingOpens.splice(0);
 
@@ -332,6 +340,14 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
       case 'subscribed':
       case 'unsubscribed':
         break;
+
+      default: {
+        const unrecognized: { type: unknown } = frame;
+
+        warn(`Received frame with an unrecognized type: ${String(unrecognized.type)}`);
+
+        break;
+      }
     }
   }
 
@@ -433,6 +449,10 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
 
       if (cached) return cached as PulseChannel<TChServer, TChClient>;
 
+      if (disposed) {
+        warn(`channel('${name}') called on a disposed Pulse — returning an already-disposed channel`);
+      }
+
       const ch = createChannel<TChServer, TChClient>(
         name,
         (chan, event, payload) => {
@@ -448,7 +468,7 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         },
       );
 
-      channelCache.set(name, ch as PulseChannel<MessageMap, MessageMap>);
+      if (!disposed) channelCache.set(name, ch as PulseChannel<MessageMap, MessageMap>);
 
       if (ws?.readyState === WebSocket.OPEN) {
         ws.send(encode({ channel: name, type: 'subscribe' }));
@@ -553,9 +573,13 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
         disposalCtrl.signal,
       );
 
-      pulse.join(room).catch((err: unknown) => {
-        warn(`presence() join failed for room '${room}': ${String(err)}`);
-      });
+      if (disposed) {
+        warn(`presence('${room}') called on a disposed Pulse — returning an already-disposed presence channel`);
+      } else {
+        pulse.join(room).catch((err: unknown) => {
+          warn(`presence() join failed for room '${room}': ${String(err)}`);
+        });
+      }
 
       return ch;
     },
@@ -565,7 +589,11 @@ export function createPulse<TServer extends MessageMap = MessageMap, TClient ext
     },
 
     send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void {
-      if (disposed) return;
+      if (disposed) {
+        warn(`send('${String(event)}') called on a disposed Pulse — message dropped`);
+
+        return;
+      }
 
       runMiddleware(event, payload, () => {
         rawSend(encode({ event, payload, type: 'message' }));

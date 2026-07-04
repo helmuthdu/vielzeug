@@ -1,6 +1,7 @@
 import type { EventKey, MessageMap, PulseChannel, Unsubscribe } from './types';
 
 import { warn } from './_dev';
+import { deriveAbortController } from './_utils';
 import { createWaitPromise } from './_wait';
 
 type SendFn = (channel: string, event: string, payload: unknown) => void;
@@ -17,12 +18,10 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
   disposalSignal: AbortSignal,
   onDispose?: () => void,
 ): PulseChannel<TServer, TClient> {
-  let disposed = false;
-
-  const ctrl = new AbortController();
+  const ctrl = deriveAbortController(disposalSignal);
   const tracked = new Set<() => void>();
 
-  disposalSignal.addEventListener('abort', () => ctrl.abort(disposalSignal.reason), { once: true });
+  let disposed = ctrl.signal.aborted;
 
   const channel: PulseChannel<TServer, TClient> = {
     get disposalSignal() {
@@ -91,7 +90,11 @@ export function createChannel<TServer extends MessageMap, TClient extends Messag
     },
 
     send<K extends EventKey<TClient>>(event: K, payload: TClient[K]): void {
-      if (disposed) return;
+      if (disposed) {
+        warn(`send('${String(event)}') called on a disposed channel '${name}' — message dropped`);
+
+        return;
+      }
 
       send(name, event, payload);
     },

@@ -3,6 +3,7 @@ import { type Signal, signal } from '@vielzeug/ripple';
 import type { PresenceChannel, Unsubscribe } from './types';
 
 import { warn } from './_dev';
+import { deriveAbortController } from './_utils';
 import { type InPresenceJoinFrame, type InPresenceLeaveFrame, type InPresenceStateFrame, encode } from './protocol';
 
 type RawSendFn = (frame: string) => void;
@@ -23,11 +24,9 @@ export function createPresence<T>(
   events: PresenceEvents,
   disposalSignal: AbortSignal,
 ): PresenceChannel<T> {
-  let disposed = false;
+  const ctrl = deriveAbortController(disposalSignal);
 
-  const ctrl = new AbortController();
-
-  disposalSignal.addEventListener('abort', () => ctrl.abort(disposalSignal.reason), { once: true });
+  let disposed = ctrl.signal.aborted;
 
   const members: Signal<Map<string, T>> = signal(new Map<string, T>());
   const joinHandlers = new Set<(memberId: string, state: T) => void>();
