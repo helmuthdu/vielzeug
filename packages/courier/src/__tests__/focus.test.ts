@@ -92,4 +92,21 @@ describe('bindRefetch', () => {
 
     unbind();
   });
+
+  it('warns and attaches no listeners when document/window are unavailable', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    vi.stubGlobal('document', undefined);
+    vi.stubGlobal('window', undefined);
+
+    const unbind = bindRefetch(qc);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      '[@vielzeug/courier] bindRefetch() called with no document/window in scope — no listeners attached',
+    );
+
+    expect(() => unbind()).not.toThrow();
+
+    vi.unstubAllGlobals();
+  });
 });

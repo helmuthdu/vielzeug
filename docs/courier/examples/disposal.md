@@ -28,7 +28,7 @@ function cleanup() {
 
 - Aborting via `AbortController` cancels the network request but does not prevent state updates that were queued before the abort. Guard setters with a mounted/active flag.
 - Calling `client.dispose()` cancels all in-flight requests and rejects new ones. Dispose only a component-scoped client — never a shared singleton.
-- `AbortError` does not subclass `Error` in all environments. Check `err.name === 'AbortError'` rather than `err instanceof AbortError` for reliable detection.
+- Courier always converts a cancelled request into a `CourierAbortError` instance before it reaches your `catch` block — use `err instanceof CourierAbortError` (or `CourierError.is(err)` to catch any courier error in one branch), not `err.name === 'AbortError'`, which checks the native platform error name instead.
 
 ### Related
 

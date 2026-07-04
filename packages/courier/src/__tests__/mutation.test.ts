@@ -465,5 +465,19 @@ describe('Mutation', () => {
 
       expect(aborted).toBe(true);
     });
+
+    it('mutate() throws CourierDisposedError after dispose()', async () => {
+      let calls = 0;
+      const mutation = createMutation(async () => {
+        calls++;
+
+        return 'ok';
+      });
+
+      mutation.dispose();
+
+      await expect(mutation.mutate(undefined)).rejects.toThrow('[courier] Mutation disposed');
+      expect(calls).toBe(0);
+    });
   });
 });

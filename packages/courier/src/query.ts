@@ -79,6 +79,25 @@ export type QueryClientOptions = {
   staleTime?: number;
 } & RetryOptions;
 
+/**
+ * Creates a key-based query cache with request deduplication, retries, stale-time/gc-time
+ * eviction, and `observe()`-based reactive subscriptions (`SyncStore`-compatible).
+ *
+ * @example
+ * ```ts
+ * const qc = createQuery({ staleTime: 30_000 });
+ *
+ * // One-shot fetch, always resolves or throws
+ * const user = await qc.fetch({ key: ['users', 1], fn: ({ signal }) => fetchUser(1, signal) });
+ *
+ * // Reactive subscription — errors surface via store.peek().status, not rejection
+ * const store = qc.observe({ key: ['users', 1], fn: ({ signal }) => fetchUser(1, signal) });
+ * const unsub = store.subscribe(() => console.log(store.peek()));
+ *
+ * // later:
+ * qc.dispose();
+ * ```
+ */
 export function createQuery(opts?: QueryClientOptions) {
   let disposed = false;
   const disposeController = new AbortController();

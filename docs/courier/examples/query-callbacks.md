@@ -41,7 +41,7 @@ await qc.fetch({
   key: ['config'],
   fn: ({ signal }) => api.get('/config', { signal }),
   times: 3,
-  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
+  shouldRetry: (err) => !CourierHttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 

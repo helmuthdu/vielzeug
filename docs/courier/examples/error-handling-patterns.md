@@ -11,22 +11,22 @@ HTTP errors (4xx, 5xx), network failures, and timeouts need different recovery s
 
 ### Solution
 
-Use the specific error classes (`AbortError`, `TimeoutError`, `NetworkError`, `HttpError`) to narrow by failure mode, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior.
+Use the specific error classes (`CourierAbortError`, `CourierTimeoutError`, `CourierNetworkError`, `CourierHttpError`) to narrow by failure mode, and `shouldRetry` on `createQuery()` or `createMutation()` to customize retry behavior.
 
 #### Status-code branching
 
 ```ts
-import { AbortError, HttpError, TimeoutError } from '@vielzeug/courier';
+import { CourierAbortError, CourierHttpError, CourierTimeoutError } from '@vielzeug/courier';
 
 try {
   await api.get('/users/1');
 } catch (err) {
-  if (err instanceof AbortError) return; // user canceled
-  if (err instanceof TimeoutError) return toast.error('Request timed out');
-  if (HttpError.is(err, 404)) return null;
-  if (HttpError.is(err, 401)) return redirectToLogin();
-  if (HttpError.is(err, 403)) return showForbidden();
-  if (HttpError.is(err)) throw new Error(`Unexpected ${err.status}: ${err.url}`);
+  if (err instanceof CourierAbortError) return; // user canceled
+  if (err instanceof CourierTimeoutError) return toast.error('Request timed out');
+  if (CourierHttpError.is(err, 404)) return null;
+  if (CourierHttpError.is(err, 401)) return redirectToLogin();
+  if (CourierHttpError.is(err, 403)) return showForbidden();
+  if (CourierHttpError.is(err)) throw new Error(`Unexpected ${err.status}: ${err.url}`);
   throw err; // re-throw non-Courier errors
 }
 ```
@@ -66,9 +66,9 @@ mutation.mutate(1).catch(() => {}); // error is surfaced via state, not thrown
 
 ### Pitfalls
 
-- Courier throws distinct classes for each failure mode — `HttpError` (has a response), `NetworkError` (no response), `TimeoutError`, and `AbortError`. Catching only `HttpError` misses connection failures.
-- A `500` response with a JSON error body throws `HttpError`, not a generic `Error`. Do not use `instanceof Error` alone to detect HTTP failures.
-- Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to `NetworkError` and `HttpError` with status ≥ 500.
+- Courier throws distinct classes for each failure mode — `CourierHttpError` (has a response), `CourierNetworkError` (no response), `CourierTimeoutError`, and `CourierAbortError`. Catching only `CourierHttpError` misses connection failures.
+- A `500` response with a JSON error body throws `CourierHttpError`, not a generic `Error`. Do not use `instanceof Error` alone to detect HTTP failures.
+- Retrying on all errors wastes resources on 401 (wrong credentials) or 422 (validation failure). Limit retries to `CourierNetworkError` and `CourierHttpError` with status ≥ 500.
 
 ### Related
 

@@ -124,11 +124,7 @@ export class CourierDisposedError extends CourierError {
 }
 
 /** Thrown when a response body cannot be read or parsed. */
-export class CourierParseError extends CourierError {
-  constructor(message: string, opts?: ErrorOptions) {
-    super(message, opts);
-  }
-}
+export class CourierParseError extends CourierError {}
 
 /**
  * Classify an error thrown by `fetch` or an abort signal into the appropriate

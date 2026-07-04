@@ -10,6 +10,12 @@
   "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
+    "./devtools": {
+      "source": "./src/devtools.ts",
+      "types": "./dist/devtools.d.ts",
+      "import": "./dist/devtools.js",
+      "require": "./dist/devtools.cjs"
+    },
     ".": {
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",

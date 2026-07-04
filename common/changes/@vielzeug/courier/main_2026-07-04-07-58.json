@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(courier): guard mutate() against disposed state, fix batcher sync-throw hang, dedupe retry/query helpers, add devtools sub-path and sync-store test coverage",
+      "type": "minor",
+      "packageName": "@vielzeug/courier"
+    }
+  ],
+  "packageName": "@vielzeug/courier",
+  "email": "helmuthdu@gmail.com"
+}

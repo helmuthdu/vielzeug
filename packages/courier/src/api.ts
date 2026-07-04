@@ -42,6 +42,26 @@ function getDedupeKey(
   return `${method}:${url}:${hash(dedupeKey)}`;
 }
 
+/**
+ * Creates a typed REST client — `get`/`post`/`put`/`patch`/`delete`/`request`, all backed by a
+ * shared interceptor pipeline, header management, and `AbortController` lifecycle.
+ *
+ * Safe + idempotent requests (`GET`/`HEAD`/`OPTIONS`) are deduplicated by default — concurrent
+ * calls with the same method, URL, and response type share a single in-flight request.
+ *
+ * @example
+ * ```ts
+ * const api = createApi({ baseUrl: 'https://api.example.com', timeout: 10_000 });
+ *
+ * const user = await api.get<User>('/users/{id}', { params: { id: '1' } });
+ * const created = await api.post<User>('/users', { body: { name: 'Ada' } });
+ *
+ * api.use(async (ctx, next) => next(ctx.withHeaders({ authorization: `Bearer ${token}` })));
+ *
+ * // later:
+ * api.dispose();
+ * ```
+ */
 export function createApi(opts?: TransportOptions & { transport?: TransportCore }) {
   const { transport: sharedTransport, ...transportOpts } = opts ?? {};
   const transport = sharedTransport ?? createTransportCore(transportOpts);

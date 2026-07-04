@@ -1,8 +1,9 @@
-import { backoff, sleep } from '@vielzeug/arsenal';
+import { sleep } from '@vielzeug/arsenal';
 
 import type { Params } from './url';
 
 import { classifyRequestError, CourierDisposedError, CourierHttpError, CourierParseError } from './errors';
+import { fullJitterDelay } from './retry';
 import { buildRequestInit } from './serialize';
 import {
   anySignal,
@@ -95,10 +96,6 @@ export type SseSource<TEvents extends Record<string, unknown> = Record<string, s
   readonly status: SseStatus;
 };
 
-function defaultReconnectDelay(attempt: number): number {
-  return Math.random() * backoff(attempt);
-}
-
 /** Parse a raw SSE data string: try JSON, fall back to raw string. */
 function parseEventData(raw: string): unknown {
   try {
@@ -164,6 +161,26 @@ async function openStreamWith(
   return res;
 }
 
+/**
+ * Creates a streaming client exposing `sse()` (Server-Sent Events) and `readable()`
+ * (`ReadableStream`/NDJSON). Both share the same interceptor pipeline, header management,
+ * and `AbortController` lifecycle as `createApi`.
+ *
+ * @example
+ * ```ts
+ * const stream = createStream({ baseUrl: 'https://api.example.com' });
+ *
+ * const src = stream.sse<{ message: { text: string } }>('/events', { reconnect: true });
+ * src.on('message', (data) => console.log(data.text));
+ *
+ * for await (const chunk of stream.readable('/completions', { body: { prompt } })) {
+ *   process.stdout.write(chunk);
+ * }
+ *
+ * // later:
+ * stream.dispose();
+ * ```
+ */
 export function createStream(opts?: TransportOptions & { transport?: TransportCore }) {
   const { transport: sharedTransport, ...transportOpts } = opts ?? {};
   const ownTransport = !sharedTransport;
@@ -224,7 +241,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
     const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
     // `activeReconnectDelay` is mutable so the server's `retry:` field can update
     // the reconnection interval without the caller needing to handle it manually.
-    let activeReconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? defaultReconnectDelay;
+    let activeReconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? fullJitterDelay;
 
     function dispatchEvent(event: string, rawData: string): void {
       const handlers = listeners.get(event);
@@ -463,7 +480,7 @@ export function createStream(opts?: TransportOptions & { transport?: TransportCo
 
     const reconnectOpts: ReconnectOptions = reconnect === true ? {} : reconnect === false ? { times: 0 } : reconnect;
     const maxReconnects = reconnectOpts.times ?? (reconnect ? 5 : 0);
-    const reconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? defaultReconnectDelay;
+    const reconnectDelay: number | ((attempt: number) => number) = reconnectOpts.delay ?? fullJitterDelay;
 
     const ac = new AbortController();
     const untrack = transport.track(ac);

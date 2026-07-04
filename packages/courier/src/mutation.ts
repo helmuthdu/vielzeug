@@ -3,6 +3,7 @@ import { isAbortError, retry } from '@vielzeug/arsenal';
 import type { RetryOptions } from './retry';
 import type { MutationState, SyncStore, Unsubscribe } from './types';
 
+import { CourierDisposedError } from './errors';
 import { resolveRetryDelay } from './retry';
 import { anySignal } from './transport';
 
@@ -52,6 +53,24 @@ export type MutationOptions<TData = unknown, TVariables = void> = RetryOptions &
 
 export type MutationFn<TData, TVariables = void> = (input: TVariables, signal: AbortSignal) => Promise<TData>;
 
+/**
+ * Wraps an async function (typically a write operation — create/update/delete) with
+ * loading/success/error state tracking, retries, cancellation, and lifecycle callbacks.
+ *
+ * @example
+ * ```ts
+ * const createUser = createMutation(
+ *   (input: NewUser, signal) => api.post<User>('/users', { body: input, signal }),
+ *   { onSuccess: (user) => console.log('created', user.id) },
+ * );
+ *
+ * const unsub = createUser.subscribe(() => console.log(createUser.peek()));
+ * const user = await createUser.mutate({ name: 'Ada' });
+ *
+ * // later:
+ * createUser.dispose();
+ * ```
+ */
 export function createMutation<TData, TVariables = void>(
   mutationFn: MutationFn<TData, TVariables>,
   mutOpts?: MutationOptions<TData, TVariables>,
@@ -111,8 +130,12 @@ export function createMutation<TData, TVariables = void>(
      * reflect the **latest** `mutate()` call. Lifecycle callbacks (`onSuccess`, `onError`,
      * `onSettled`) fire for **every** call independently — not just the last one.
      * Cancel earlier calls via `mutation.cancel()` if you need only-last-wins callback semantics.
+     *
+     * @throws {CourierDisposedError} If called after `dispose()`.
      */
     async mutate(variables: TVariables, callOpts?: { signal?: AbortSignal }): Promise<TData> {
+      if (disposed) throw new CourierDisposedError('Mutation');
+
       const localController = new AbortController();
 
       const signal = callOpts?.signal ? anySignal(callOpts.signal, localController.signal)! : localController.signal;

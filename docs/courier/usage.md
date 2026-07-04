@@ -226,6 +226,23 @@ client.use(withLogging({ logger: (msg, meta) => structuredLogger.info(msg, meta)
 
 `withBearerAuth` handles `undefined`, plain object, array-of-tuples, and `Headers` instance inputs in `ctx.init.headers` — no manual spread required.
 
+### Debug Logging
+
+Import `debugCourier` from the dedicated `/devtools` sub-path to create a `Courier` instance with `withLogging()` already registered. The sub-path is tree-shaken from production bundles when not imported.
+
+::: warning Development only
+`withLogging()` logs the full request URL, including any query parameters — if those may contain tokens or PII, use `createCourier()` with a custom `withLogging({ logger })` that sanitizes the URL instead, or none at all in production.
+:::
+
+```ts
+import { debugCourier } from '@vielzeug/courier/devtools';
+
+const client = debugCourier({ baseUrl: 'https://api.example.com' });
+
+await client.api.get('/users');
+// GET https://api.example.com/users 200 (42ms)
+```
+
 ## Query Client
 
 `createQuery()` provides cache-backed reads with request deduplication, prefix invalidation, and reactive subscriptions for any async data source.
@@ -252,7 +269,7 @@ const user = await qc.fetch({
   fn: ({ key, signal }) => api.get<User>('/users/{id}', { params: { id: key[1] as number }, signal }),
   staleTime: 5_000,
   times: 3,
-  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
+  shouldRetry: (err) => !CourierHttpError.is(err) || (err.status ?? 500) >= 500,
 });
 ```
 
@@ -735,31 +752,31 @@ Courier throws distinct error classes for different failure modes:
 
 | Class                   | When thrown                                                            |
 | ----------------------- | ---------------------------------------------------------------------- |
-| `HttpError`             | Non-2xx HTTP response — has `status`, `data`, `headers`                |
-| `NetworkError`          | Connection failed before any response was received                     |
-| `TimeoutError`          | Request aborted by the configured timeout                              |
-| `AbortError`            | Request cancelled via `cancel()`, `cancelAll()`, or an external signal |
-| `SchemaValidationError` | `schema.parse()` rejected the response body                            |
+| `CourierHttpError`             | Non-2xx HTTP response — has `status`, `data`, `headers`                |
+| `CourierNetworkError`          | Connection failed before any response was received                     |
+| `CourierTimeoutError`          | Request aborted by the configured timeout                              |
+| `CourierAbortError`            | Request cancelled via `cancel()`, `cancelAll()`, or an external signal |
+| `CourierSchemaValidationError` | `schema.parse()` rejected the response body                            |
 
 All extend `CourierError`. Use `CourierError.is(err)` to catch any Courier error, then narrow:
 
 ```ts
-import { AbortError, HttpError, NetworkError, TimeoutError } from '@vielzeug/courier';
+import { CourierAbortError, CourierHttpError, CourierNetworkError, CourierTimeoutError } from '@vielzeug/courier';
 
 try {
   await api.get('/users/99');
 } catch (err) {
-  if (HttpError.is(err, 404)) {
+  if (CourierHttpError.is(err, 404)) {
     console.log('Not found');
-  } else if (HttpError.is(err)) {
+  } else if (CourierHttpError.is(err)) {
     console.log(err.status, err.method, err.url);
     console.log(err.data);
     console.log(err.headers.get('x-request-id'));
-  } else if (err instanceof TimeoutError) {
+  } else if (err instanceof CourierTimeoutError) {
     console.log('Timed out after', err.url);
-  } else if (err instanceof AbortError) {
+  } else if (err instanceof CourierAbortError) {
     // User navigated away — ignore
-  } else if (err instanceof NetworkError) {
+  } else if (err instanceof CourierNetworkError) {
     console.log('Connection failed:', err.cause);
   }
 }
@@ -825,7 +842,7 @@ The built-in default uses full-jitter exponential backoff. Override it per query
 const retryingQc = createQuery({
   times: 4,
   delay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
-  shouldRetry: (err) => !HttpError.is(err) || (err.status ?? 500) >= 500,
+  shouldRetry: (err) => !CourierHttpError.is(err) || (err.status ?? 500) >= 500,
 });
 
 await retryingQc.fetch({

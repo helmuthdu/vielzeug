@@ -9,6 +9,44 @@ import {
   CourierTimeoutError,
 } from '../errors';
 
+describe('CourierError', () => {
+  it('is() returns true for the base class and every subclass instance', () => {
+    expect(CourierError.is(new CourierError('boom'))).toBe(true);
+    expect(
+      CourierError.is(
+        new CourierHttpError({
+          data: null,
+          headers: new Headers(),
+          message: 'x',
+          method: 'GET',
+          status: 500,
+          url: 'x',
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it('is() returns false for non-CourierError values', () => {
+    expect(CourierError.is(new Error('plain'))).toBe(false);
+    expect(CourierError.is(null)).toBe(false);
+    expect(CourierError.is(undefined)).toBe(false);
+    expect(CourierError.is('not an error')).toBe(false);
+  });
+
+  it('sets name to the concrete subclass name, not "CourierError"', () => {
+    const err = new CourierHttpError({
+      data: null,
+      headers: new Headers(),
+      message: 'x',
+      method: 'GET',
+      status: 500,
+      url: 'x',
+    });
+
+    expect(err.name).toBe('CourierHttpError');
+  });
+});
+
 describe('CourierHttpError', () => {
   describe('properties', () => {
     it('stores url, method, status, data, headers', () => {

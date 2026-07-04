@@ -27,7 +27,12 @@ export type RetryOptions = {
   times?: number;
 };
 
-function getDefaultRetryDelay(attempt: number): number {
+/**
+ * Full-jitter exponential backoff: a random delay in `[0, min(1s × 2ⁿ, 30s)]` where `n` is the
+ * zero-based attempt index. Shared default delay for both retries (`retry()`/mutations/queries)
+ * and stream reconnects (`sse()`/`readable()`).
+ */
+export function fullJitterDelay(attempt: number): number {
   return Math.random() * backoff(attempt);
 }
 
@@ -43,5 +48,5 @@ export function resolveRetryDelay(attempt: number, userDelay?: number | ((attemp
     return Number.isFinite(userDelay) ? Math.max(0, userDelay) : 0;
   }
 
-  return getDefaultRetryDelay(attempt);
+  return fullJitterDelay(attempt);
 }

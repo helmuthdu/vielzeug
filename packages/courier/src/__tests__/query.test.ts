@@ -1266,6 +1266,14 @@ describe('Query Client', () => {
         expect(snap[0].status).toBe('loading');
         expect(snap[1].status).toBe('loading');
       });
+
+      it('returns an empty array for an empty keys array', () => {
+        const qc = createQuery();
+
+        const store = qc.observeMany([]);
+
+        expect(store.peek()).toEqual([]);
+      });
     });
 
     describe('remove()', () => {
@@ -1378,6 +1386,12 @@ describe('Query Client', () => {
 
         results.forEach((r) => expect(typeof r).toBe('string'));
       });
+
+      it('resolves to an empty array for an empty queries array', async () => {
+        const qc = createQuery();
+
+        await expect(qc.fetchMany([])).resolves.toEqual([]);
+      });
     });
 
     describe('observe() error handling', () => {
@@ -1441,6 +1455,8 @@ describe('Query Client', () => {
     });
 
     it('bindRefetch() is safe in SSR environments where document/window are undefined', () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+
       const origDocument = globalThis.document;
       const origWindow = globalThis.window;
 

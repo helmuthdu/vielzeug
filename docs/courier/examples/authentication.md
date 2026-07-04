@@ -54,7 +54,7 @@ const stopRefreshing = api.use(async (ctx, next) => {
   try {
     return await next(ctx);
   } catch (err) {
-    if (HttpError.is(err, 401)) {
+    if (CourierHttpError.is(err, 401)) {
       const newToken = await refreshToken();
       api.headers({ Authorization: `Bearer ${newToken}` });
       // Replay the original request with the updated header

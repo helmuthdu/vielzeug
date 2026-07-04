@@ -1,7 +1,7 @@
 import type { CacheContext, CacheEntry } from './query-cache';
 import type { AsyncState, QueryState, SyncStore, Unsubscribe } from './types';
 
-import { cancelGc, ensureEntry, hashKey, scheduleGc } from './query-cache';
+import { cancelGc, ensureEntry, hashKey, resolveValue, scheduleGc } from './query-cache';
 
 export type QueryObserver<T, S> = {
   listener: () => void;
@@ -18,10 +18,6 @@ const LOADING_STATE: AsyncState<unknown> = Object.freeze({
   status: 'loading',
   updatedAt: undefined,
 });
-
-function resolveValue<T>(v: T | (() => T | undefined) | undefined): T | undefined {
-  return typeof v === 'function' ? (v as () => T | undefined)() : v;
-}
 
 export function toBaseState<T>(entry: CacheEntry<T>): QueryState<T> {
   if (entry.status === 'loading') {

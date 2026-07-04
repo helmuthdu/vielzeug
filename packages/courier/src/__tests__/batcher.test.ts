@@ -67,6 +67,17 @@ describe('createBatcher', () => {
     await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow('batch failed');
   });
 
+  it('rejects all pending items when resolve() throws synchronously (not async)', async () => {
+    const batcher = createBatcher({
+      // Intentionally not `async` — throws before ever returning a promise.
+      resolve: (_keys: number[]): Promise<number[]> => {
+        throw new Error('sync batch failure');
+      },
+    });
+
+    await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow('sync batch failure');
+  });
+
   it('rejects all items when resolve() returns wrong array length', async () => {
     const batcher = createBatcher({
       resolve: async (keys: number[]) => keys.slice(0, 1), // wrong length
@@ -292,6 +303,17 @@ describe('createBatcher', () => {
       });
 
       await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow('batch crash');
+    });
+
+    it('rejects all when resolveSettled() throws synchronously (not async)', async () => {
+      const batcher = createBatcher<number, number>({
+        // Intentionally not `async` — throws before ever returning a promise.
+        resolveSettled: (): Promise<PromiseSettledResult<number>[]> => {
+          throw new Error('sync batch crash');
+        },
+      });
+
+      await expect(Promise.all([batcher.load(1), batcher.load(2)])).rejects.toThrow('sync batch crash');
     });
 
     it('rejects all when resolveSettled() returns wrong length', async () => {

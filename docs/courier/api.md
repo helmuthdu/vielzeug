@@ -19,20 +19,26 @@ description: Complete API reference for the Courier HTTP client, query client, u
 | `withRequestId()`       | Interceptor preset adding a unique request ID header   | Sync           | Defaults to `x-request-id` with `crypto.randomUUID()`                |
 | `withLogging()`         | Interceptor preset logging method/URL/status/ms        | Sync           | Defaults to `console.debug`; override with `logger` option           |
 | `toSyncStore()`         | Convert any `peek()`/`subscribe()` source to `SyncStore` | Sync          | Useful for framework adapters that accept a `SyncStore` directly     |
+| `createBatcher()`      | DataLoader-style batcher coalescing `load()` calls      | Sync           | Exactly one of `resolve`/`resolveSettled` must be provided            |
 | `persistQueryCache()`   | Subscribe to cache and write successful entries        | Sync           | Eagerly persists existing successful entries on setup                |
 | `hydrateQueryCache()`   | Read persisted entries and seed the cache              | Async          | Runs all keys in parallel; restores original `updatedAt`             |
+| `debugCourier()`       | Create a `Courier` with logging pre-wired (dev only)    | Sync           | Import from `@vielzeug/courier/devtools`, not the main entry point    |
 | `CourierError`          | Base class for all courier errors                      | —              | `CourierError.is(e)` catches any courier error; narrow further after |
-| `HttpError`             | Structured non-2xx HTTP error with status + body       | —              | Use `HttpError.is(err, status?)` for narrowing                       |
-| `NetworkError`          | Connection-level failure (no response received)        | —              | Use `instanceof NetworkError` for narrowing                          |
-| `TimeoutError`          | Request timed out via transport or `AbortSignal`       | —              | Use `instanceof TimeoutError` for narrowing                          |
-| `AbortError`            | Request was cancelled via `cancel()` or signal         | —              | Use `instanceof AbortError` for narrowing                            |
-| `SchemaValidationError` | Thrown when `schema.parse()` rejects the response body | —              | Wraps the original parse error; `data` holds the raw pre-parse body  |
+| `CourierHttpError`             | Structured non-2xx HTTP error with status + body       | —              | Use `CourierHttpError.is(err, status?)` for narrowing                       |
+| `CourierNetworkError`          | Connection-level failure (no response received)        | —              | Use `instanceof CourierNetworkError` for narrowing                          |
+| `CourierTimeoutError`          | Request timed out via transport or `AbortSignal`       | —              | Use `instanceof CourierTimeoutError` for narrowing                          |
+| `CourierAbortError`            | Request was cancelled via `cancel()` or signal         | —              | Use `instanceof CourierAbortError` for narrowing                            |
+| `CourierSchemaValidationError` | Thrown when `schema.parse()` rejects the response body | —              | Wraps the original parse error; `data` holds the raw pre-parse body  |
+| `CourierDisposedError`  | Thrown by any primitive's primary method after `dispose()` | —          | Use `instanceof CourierDisposedError` for narrowing                  |
+| `CourierBatcherError`   | Thrown when a batcher's `resolve`/`resolveSettled` misbehaves | —        | Covers wrong result-array length and synchronous throws              |
+| `CourierParseError`     | Thrown when a response body or path param cannot be parsed | —          | Use `instanceof CourierParseError` for narrowing                     |
 
-## Package Entry Point
+## Package Entry Points
 
-| Import              | Purpose            |
-| ------------------- | ------------------ |
-| `@vielzeug/courier` | Main API and types |
+| Import                       | Purpose                                     |
+| ----------------------------- | -------------------------------------------- |
+| `@vielzeug/courier`           | Main API and types                          |
+| `@vielzeug/courier/devtools`  | `debugCourier` — request logger (dev only)  |
 
 ## Core Functions
 
@@ -213,6 +219,8 @@ await addUser.mutate({ name: 'Alice' });
 When multiple `mutate()` calls run simultaneously, state updates reflect the **latest** call. Lifecycle callbacks (`onSuccess`, `onError`, `onSettled`) fire independently for **every** call — not just the last one. Use `mutation.cancel()` before calling `mutate()` again if you need last-call-wins semantics.
 :::
 
+`mutate()` throws `CourierDisposedError` if called after `dispose()` — the mutation function never runs and no lifecycle callbacks fire, matching `createApi`/`createQuery`/`createStream`.
+
 ---
 
 ### `createCourier()`
@@ -312,22 +320,25 @@ source.dispose();
 
 Base class for all courier errors. Catch with `CourierError.is(e)` to handle any courier error in one branch, then narrow further.
 
-- `name`: `'CourierError'` (overridden by subclasses)
-- `message`: prefixed with `[@vielzeug/courier]`
-- Static helper: `CourierError.is(err)`
+- `name`: `'CourierError'` (overridden by subclasses to their own class name)
+- `message`: not auto-prefixed by the base class — classified request/response errors (`CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, `CourierAbortError`, `CourierSchemaValidationError`) carry the underlying platform/response message as-is; internally-thrown validation and disposal errors (e.g. `CourierDisposedError`) include a `[courier]` prefix
+- Static helper: `CourierError.is(err)` — inherited by every subclass; only checks `instanceof CourierError`, so it does **not** narrow to a specific subclass (use `instanceof <Subclass>` for that, or `CourierHttpError.is(err, status?)` for status-code narrowing)
 
 Hierarchy:
 
 ```
 CourierError
-├── HttpError            — non-2xx response (has status + body)
-├── NetworkError         — connection failed, no response received
-├── TimeoutError         — request aborted by timeout
-├── AbortError           — request cancelled via signal or cancel()
-└── SchemaValidationError
+├── CourierHttpError            — non-2xx response (has status + body)
+├── CourierNetworkError         — connection failed, no response received
+├── CourierTimeoutError         — request aborted by timeout
+├── CourierAbortError           — request cancelled via signal or cancel()
+├── CourierSchemaValidationError — schema.parse() rejected the response body
+├── CourierDisposedError        — a primitive's primary method was called after dispose()
+├── CourierBatcherError         — a batcher's resolve()/resolveSettled() misbehaved
+└── CourierParseError           — a response body or path param could not be parsed
 ```
 
-### `HttpError`
+### `CourierHttpError`
 
 Thrown for non-2xx HTTP responses. Carries the full response metadata.
 
@@ -335,74 +346,107 @@ Thrown for non-2xx HTTP responses. Carries the full response metadata.
 - Static helpers: `fromResponse()`, `is(err, status?)`
 
 ```ts
-import { HttpError } from '@vielzeug/courier';
+import { CourierHttpError } from '@vielzeug/courier';
 
 try {
   await api.get('/users/1');
 } catch (err) {
-  if (HttpError.is(err, 404)) console.log('Not found');
-  else if (HttpError.is(err)) {
+  if (CourierHttpError.is(err, 404)) console.log('Not found');
+  else if (CourierHttpError.is(err)) {
     console.log(err.status, err.method, err.url);
     console.log(err.headers?.get('x-request-id'));
   }
 }
 ```
 
-### `NetworkError`
+### `CourierNetworkError`
 
 Thrown when the connection fails before any response is received (e.g. DNS failure, refused connection).
 
 - `method`, `url`, `cause`
-- Use `instanceof NetworkError` for narrowing.
+- Use `instanceof CourierNetworkError` for narrowing.
 
-### `TimeoutError`
+### `CourierTimeoutError`
 
 Thrown when the request is aborted by the timeout (transport-level or via a timeout `AbortSignal`).
 
 - `method`, `url`, `cause`
-- Use `instanceof TimeoutError` for narrowing.
+- Use `instanceof CourierTimeoutError` for narrowing.
 
-### `AbortError`
+### `CourierAbortError`
 
 Thrown when the request is cancelled explicitly via `cancel()`, `cancelAll()`, or an external `AbortSignal`.
 
 - `method`, `url`
-- Use `instanceof AbortError` for narrowing.
+- Use `instanceof CourierAbortError` for narrowing.
 
 ```ts
-import { AbortError, HttpError, NetworkError, TimeoutError } from '@vielzeug/courier';
+import { CourierAbortError, CourierHttpError, CourierNetworkError, CourierTimeoutError } from '@vielzeug/courier';
 
 try {
   await api.get('/data');
 } catch (err) {
-  if (HttpError.is(err, 404)) console.log('Not found');
-  else if (err instanceof TimeoutError) console.log('Timed out');
-  else if (err instanceof AbortError) console.log('Cancelled');
-  else if (err instanceof NetworkError) console.log('Network failure:', (err as NetworkError).cause);
+  if (CourierHttpError.is(err, 404)) console.log('Not found');
+  else if (err instanceof CourierTimeoutError) console.log('Timed out');
+  else if (err instanceof CourierAbortError) console.log('Cancelled');
+  else if (err instanceof CourierNetworkError) console.log('Network failure:', (err as CourierNetworkError).cause);
 }
 ```
 
-### `SchemaValidationError`
+### `CourierSchemaValidationError`
 
 Thrown when `schema.parse()` rejects the parsed response body.
 
-- `name`: `'SchemaValidationError'`
+- `name`: `'CourierSchemaValidationError'`
 - `data`: the raw (pre-validation) response body
 - `cause`: the original error thrown by `schema.parse()`
-- Static helper: `SchemaValidationError.is(err)`
+- Use `instanceof CourierSchemaValidationError` for narrowing — `static is()` exists only on the base `CourierError` (any-courier-error check) and on `CourierHttpError` (status-code narrowing); it is inherited, not overridden, by every other subclass, so `CourierSchemaValidationError.is(err)` would match **any** courier error, not just this one.
 
 ```ts
-import { SchemaValidationError } from '@vielzeug/courier';
+import { CourierSchemaValidationError } from '@vielzeug/courier';
 
 try {
   const user = await api.get<User>('/users/1', { schema: UserSchema });
 } catch (err) {
-  if (SchemaValidationError.is(err)) {
+  if (err instanceof CourierSchemaValidationError) {
     console.error('Validation failed for body:', err.data);
     console.error('Cause:', err.cause);
   }
 }
 ```
+
+### `CourierDisposedError`
+
+Thrown when a primitive's primary method is called after its `dispose()` has been called — `api.request()` (and the `get`/`post`/etc. shorthands), `qc.fetch()`/`qc.observe()`, `stream.sse()`/`stream.readable()`, `mutation.mutate()`, and `batcher.load()` all guard against this.
+
+- `message`: `` `[courier] ${clientName} disposed` `` — e.g. `'[courier] Mutation disposed'`
+- Use `instanceof CourierDisposedError` for narrowing.
+
+```ts
+import { CourierDisposedError, createMutation } from '@vielzeug/courier';
+
+const mutation = createMutation(saveUser);
+
+mutation.dispose();
+
+try {
+  await mutation.mutate({ name: 'Alice' });
+} catch (err) {
+  if (err instanceof CourierDisposedError) console.log('Mutation was already disposed');
+}
+```
+
+### `CourierBatcherError`
+
+Thrown when a `createBatcher()` batch's `resolve`/`resolveSettled` returns a result array of the wrong length, or throws (synchronously or via a rejected promise) — in either case every pending `load()` call in that batch rejects with this error.
+
+- Use `instanceof CourierBatcherError` for narrowing.
+
+### `CourierParseError`
+
+Thrown when a response body cannot be read or parsed, or when a `{param}` path placeholder cannot be resolved from `params`.
+
+- Use `instanceof CourierParseError` for narrowing.
 
 ## Request and Stream Config
 
@@ -436,7 +480,7 @@ type HttpRequestConfig<P extends string = string> = CourierRequestConfig<P> & {
 | `dedupeKey`    | `StableValue`                 | Explicit stable key for deduplicating non-idempotent writes                                                |
 | `query`        | `Params`                      | Query string parameters                                                                                    |
 | `responseType` | `ResponseType`                | Response parsing strategy                                                                                  |
-| `schema`       | `{ parse(data: unknown): T }` | Response validation schema; `T` matches the request return type. Throws `SchemaValidationError` on failure |
+| `schema`       | `{ parse(data: unknown): T }` | Response validation schema; `T` matches the request return type. Throws `CourierSchemaValidationError` on failure |
 | `timeout`      | `number`                      | Per-request timeout override                                                                               |
 
 Idempotent requests (`GET`, `HEAD`, `OPTIONS`) dedupe by **method + URL + responseType** automatically. `DELETE` does not auto-dedupe (it has side effects); provide an explicit `dedupeKey` to opt in. Request headers are not part of the automatic dedupe key.
@@ -830,7 +874,7 @@ const state2 = useSyncExternalStore(store.subscribe, store.peek);
 createBatcher<K, V>(opts: BatcherOptions<K, V>): Batcher<K, V>;
 ```
 
-`BatcherOptions` requires exactly one of `resolve` or `resolveSettled` (mutually exclusive). `resolve()` must return results in the **same order** as `keys`. A length mismatch rejects all pending promises. `resolveSettled` returns `PromiseSettledResult<V>[]` for per-key error isolation — each `load()` fulfills or rejects independently. After `dispose()`, any subsequent `load()` call rejects immediately.
+`BatcherOptions` requires exactly one of `resolve` or `resolveSettled` (mutually exclusive). `resolve()` must return results in the **same order** as `keys`. A length mismatch, or a throw — synchronous or via a rejected promise — rejects every pending `load()` call in that batch with `CourierBatcherError` (or the thrown value) rather than leaving any of them hanging. `resolveSettled` returns `PromiseSettledResult<V>[]` for per-key error isolation — each `load()` fulfills or rejects independently. After `dispose()`, any subsequent `load()` call rejects immediately.
 
 **Returns:** `Batcher<K, V>`
 
@@ -936,4 +980,29 @@ const stop = persistQueryCache(qc, {
   keys: [['users', userId]],
   storage: localStorage,
 });
+```
+
+---
+
+### `debugCourier()` <Badge type="tip" text="@vielzeug/courier/devtools" />
+
+```ts
+debugCourier(options?: CourierOptions): Courier;
+```
+
+Equivalent to `createCourier(options)` with `client.use(withLogging())` already registered. Returns the same `Courier` instance — every method is identical to `createCourier()`. Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
+
+::: warning Development only
+`withLogging()` logs the full request URL, including any query parameters — if those may contain tokens or PII, use `createCourier()` with a custom `withLogging({ logger })` that sanitizes the URL instead, or none at all in production.
+:::
+
+**Example:**
+
+```ts
+import { debugCourier } from '@vielzeug/courier/devtools';
+
+const client = debugCourier({ baseUrl: 'https://api.example.com' });
+
+await client.api.get('/users');
+// GET https://api.example.com/users 200 (42ms)
 ```

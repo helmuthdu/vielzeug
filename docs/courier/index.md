@@ -27,17 +27,19 @@ exports:
     createQuery,
     createStream,
     CourierError,
-    HttpError,
-    NetworkError,
-    TimeoutError,
-    AbortError,
-    SchemaValidationError,
+    CourierHttpError,
+    CourierNetworkError,
+    CourierTimeoutError,
+    CourierAbortError,
+    CourierSchemaValidationError,
     bindRefetch,
     withBearerAuth,
     withRequestId,
     withLogging,
     persistQueryCache,
     hydrateQueryCache,
+    toSyncStore,
+    debugCourier,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -143,8 +145,9 @@ client.query.invalidate(['users']);
 - **Interceptor presets** — `withBearerAuth()`, `withRequestId()`, and `withLogging()` ready to plug in via `use()`
 - **Focus/reconnect binding** — `bindRefetch(qc)` wires up tab visibility and network events; fully opt-in
 - **Cache persistence** — `persistQueryCache()` and `hydrateQueryCache()` for cross-reload cache survival
-- **Structured errors** — distinct `HttpError`, `NetworkError`, `TimeoutError`, and `AbortError` classes for precise handling
+- **Structured errors** — distinct `CourierHttpError`, `CourierNetworkError`, `CourierTimeoutError`, and `CourierAbortError` classes for precise handling
 - **Disposable** — clients implement `[Symbol.dispose]` for deterministic cleanup
+- **Debug logging** via `debugCourier()` (`@vielzeug/courier/devtools`) — pre-wires `withLogging()`; tree-shaken from production bundles
 
 </div>
 

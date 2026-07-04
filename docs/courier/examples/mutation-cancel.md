@@ -14,6 +14,8 @@ The user triggers a long-running mutation (e.g., a bulk operation) and then want
 Use `mutation.cancel()` to abort the active run and reset state, or pass an external `AbortSignal` via `mutate(vars, { signal })` for caller-controlled cancellation.
 
 ```ts
+import { CourierAbortError, createApi, createMutation, createQuery } from '@vielzeug/courier';
+
 const api = createApi({ baseUrl: 'https://api.example.com' });
 const qc = createQuery();
 
@@ -35,7 +37,9 @@ try {
   const result = await pending;
   qc.invalidate(['files']);
 } catch (error) {
-  if (!(error instanceof DOMException && error.name === 'AbortError')) {
+  // api.post() (the mutation fn here) normalizes cancellation into CourierAbortError —
+  // no need to check the native DOMException name.
+  if (!(error instanceof CourierAbortError)) {
     throw error;
   }
 }
@@ -48,7 +52,7 @@ ac.abort();
 
 - Aborting a mutation does not roll back any optimistic state you already applied. Restore the previous value in the abort handler explicitly.
 - `AbortController.abort()` is idempotent — calling it multiple times on the same controller after the first abort is a no-op. Create a fresh controller for each new mutation attempt.
-- Cancelled mutations may still receive a server response if the request reached the server before the abort. Handle the `AbortError` case and ignore any late-arriving responses.
+- Cancelled mutations may still receive a server response if the request reached the server before the abort. Handle the `CourierAbortError` case and ignore any late-arriving responses.
 
 ### Related
 

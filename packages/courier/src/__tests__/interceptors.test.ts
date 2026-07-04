@@ -115,6 +115,20 @@ describe('withRequestId', () => {
 });
 
 describe('withLogging', () => {
+  it('defaults to console.debug when no logger is provided', async () => {
+    const debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+    const interceptor = withLogging();
+    const ctx = makeCtx();
+
+    await interceptor(ctx, capturingNext({}, 200));
+
+    expect(debugSpy).toHaveBeenCalledTimes(1);
+    expect(debugSpy.mock.calls[0][0]).toContain('GET');
+    expect(debugSpy.mock.calls[0][1]).toMatchObject({ method: 'GET', status: 200 });
+
+    debugSpy.mockRestore();
+  });
+
   it('logs method, url, status, and duration on success', async () => {
     const logger = vi.fn();
     const interceptor = withLogging({ logger });

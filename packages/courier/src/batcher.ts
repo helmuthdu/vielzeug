@@ -81,50 +81,57 @@ export function createBatcher<K, V>(opts: BatcherOptions<K, V>) {
 
     const keys = batch.map((item) => item.key);
 
-    if (resolveSettled) {
-      resolveSettled(keys)
-        .then((results) => {
-          if (results.length !== batch.length) {
-            const err = new CourierBatcherError(
-              `Batcher: resolveSettled() returned ${results.length} results for ${batch.length} keys`,
-            );
+    // resolve()/resolveSettled() are called directly (not just chained with .then/.catch) so a
+    // consumer function that throws synchronously — rather than returning a rejected promise —
+    // still rejects every pending load() instead of leaving them hanging forever.
+    try {
+      if (resolveSettled) {
+        void resolveSettled(keys)
+          .then((results) => {
+            if (results.length !== batch.length) {
+              const err = new CourierBatcherError(
+                `Batcher: resolveSettled() returned ${results.length} results for ${batch.length} keys`,
+              );
 
-            for (const item of batch) item.reject(err);
+              for (const item of batch) item.reject(err);
 
-            return;
-          }
-
-          batch.forEach((item, i) => {
-            const r = results[i];
-
-            if (r.status === 'fulfilled') {
-              item.resolve(r.value);
-            } else {
-              item.reject(r.reason);
+              return;
             }
-          });
-        })
-        .catch((err: unknown) => {
-          for (const item of batch) item.reject(err);
-        });
-    } else {
-      resolve(keys)
-        .then((results) => {
-          if (results.length !== batch.length) {
-            const err = new CourierBatcherError(
-              `Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
-            );
 
+            batch.forEach((item, i) => {
+              const r = results[i];
+
+              if (r.status === 'fulfilled') {
+                item.resolve(r.value);
+              } else {
+                item.reject(r.reason);
+              }
+            });
+          })
+          .catch((err: unknown) => {
             for (const item of batch) item.reject(err);
+          });
+      } else {
+        void resolve(keys)
+          .then((results) => {
+            if (results.length !== batch.length) {
+              const err = new CourierBatcherError(
+                `Batcher: resolve() returned ${results.length} results for ${batch.length} keys`,
+              );
 
-            return;
-          }
+              for (const item of batch) item.reject(err);
 
-          batch.forEach((item, i) => item.resolve(results[i]));
-        })
-        .catch((err: unknown) => {
-          for (const item of batch) item.reject(err);
-        });
+              return;
+            }
+
+            batch.forEach((item, i) => item.resolve(results[i]));
+          })
+          .catch((err: unknown) => {
+            for (const item of batch) item.reject(err);
+          });
+      }
+    } catch (err) {
+      for (const item of batch) item.reject(err);
     }
   }
 
