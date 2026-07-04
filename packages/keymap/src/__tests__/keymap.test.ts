@@ -116,6 +116,24 @@ describe('createKeymap', () => {
     expect(() => map.dispose()).not.toThrow();
   });
 
+  it('disposed reflects lifecycle state', () => {
+    const map = createKeymap();
+
+    expect(map.disposed).toBe(false);
+    map.dispose();
+    expect(map.disposed).toBe(true);
+  });
+
+  it('disposalSignal aborts on dispose() and stays the same signal across calls', () => {
+    const map = createKeymap();
+    const { disposalSignal } = map;
+
+    expect(disposalSignal.aborted).toBe(false);
+    map.dispose();
+    expect(disposalSignal.aborted).toBe(true);
+    expect(map.disposalSignal).toBe(disposalSignal);
+  });
+
   it('supports Symbol.dispose', () => {
     const handler = vi.fn();
     const map = createKeymap({ 'ctrl+k': handler });
@@ -580,6 +598,114 @@ describe('createKeymap', () => {
       expect(map.listBindings()).toHaveLength(1);
       unbind();
       expect(map.listBindings()).toHaveLength(0);
+    });
+
+    it('returns a real snapshot — mutating a returned entry does not affect live matching', () => {
+      const handler = vi.fn();
+      const map = createKeymap({ 'ctrl+k': handler });
+      const unmount = map.mount(target);
+
+      map.listBindings()[0]!.shortcut[0]!.modifiers.add('shift');
+
+      target.dispatch(makeEvent('k', { ctrlKey: true }));
+      expect(handler).toHaveBeenCalledOnce();
+
+      unmount();
+    });
+
+    it('returns distinct modifiers Set instances across calls', () => {
+      const map = createKeymap({ 'ctrl+k': vi.fn() });
+
+      const setA = map.listBindings()[0]!.shortcut[0]!.modifiers;
+      const setB = map.listBindings()[0]!.shortcut[0]!.modifiers;
+
+      expect(setA).not.toBe(setB);
+      expect(setA).toEqual(setB);
+    });
+  });
+
+  describe('mount() duplicate-target warning', () => {
+    it('warns when the same target is mounted twice', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const map = createKeymap({});
+
+      const u1 = map.mount(target);
+      const u2 = map.mount(target);
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[@vielzeug/keymap] mount() called for a target that is already mounted — this registers a duplicate listener',
+      );
+
+      u1();
+      u2();
+      warnSpy.mockRestore();
+    });
+
+    it('does not warn for a fresh mount after a full unmount', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const map = createKeymap({});
+
+      map.mount(target)();
+      map.mount(target)();
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('does not warn when mounting different targets', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const map = createKeymap({});
+      const t2 = new FakeTarget();
+
+      const u1 = map.mount(target);
+      const u2 = map.mount(t2);
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      u1();
+      u2();
+      warnSpy.mockRestore();
+    });
+  });
+
+  describe('numeric option validation', () => {
+    it('clamps a non-positive chordTimeout to the default and warns', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      createKeymap({}, { chordTimeout: -5 });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[@vielzeug/keymap] chordTimeout must be a positive finite number; received -5. Using default of 1000ms.',
+      );
+      warnSpy.mockRestore();
+    });
+
+    it('clamps a non-finite chordTimeout to the default and warns', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      createKeymap({}, { chordTimeout: NaN });
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+      warnSpy.mockRestore();
+    });
+
+    it('does not warn for a valid chordTimeout', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      createKeymap({}, { chordTimeout: 250 });
+
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    it('falls back a non-finite priority to 0 and warns', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const map = createKeymap({ 'ctrl+k': { handler: vi.fn(), priority: NaN } });
+
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[@vielzeug/keymap] binding priority must be a finite number; received NaN. Using 0.',
+      );
+      expect(map.listBindings()[0]!.priority).toBe(0);
+      warnSpy.mockRestore();
     });
   });
 });

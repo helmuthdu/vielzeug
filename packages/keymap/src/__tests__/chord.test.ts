@@ -149,6 +149,52 @@ describe('chord sequences', () => {
     unmount();
   });
 
+  it('does not fire a second chord whose earlier step never matched (cross-binding leakage)', () => {
+    const gx = vi.fn();
+    const hy = vi.fn();
+    const map = createKeymap({ 'g x': gx, 'h y': hy });
+    const unmount = map.mount(target);
+
+    target.dispatch(makeEvent('g'));
+    target.dispatch(makeEvent('y'));
+    expect(hy).not.toHaveBeenCalled();
+    expect(gx).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  it('still fires the correct chord when candidates are narrowed correctly', () => {
+    const gx = vi.fn();
+    const hy = vi.fn();
+    const map = createKeymap({ 'g x': gx, 'h y': hy });
+    const unmount = map.mount(target);
+
+    target.dispatch(makeEvent('g'));
+    target.dispatch(makeEvent('x'));
+    expect(gx).toHaveBeenCalledOnce();
+    expect(hy).not.toHaveBeenCalled();
+
+    unmount();
+  });
+
+  describe('priority and prefix chords', () => {
+    it('a shorter binding always wins over a longer chord sharing its prefix, regardless of priority', () => {
+      const short = vi.fn();
+      const long = vi.fn();
+      // `'g g'` has a higher priority than `'g'`, but can never be reached: the bindings map is
+      // keyed by canonical shortcut, so two live bindings can never tie at the same completion
+      // step — `priority` has nothing to resolve here. Documents the current, honest contract.
+      const map = createKeymap({ g: { handler: short, priority: 0 }, 'g g': { handler: long, priority: 10 } });
+      const unmount = map.mount(target);
+
+      target.dispatch(makeEvent('g'));
+      expect(short).toHaveBeenCalledOnce();
+      expect(long).not.toHaveBeenCalled();
+
+      unmount();
+    });
+  });
+
   it('keyup and keydown chord trackers are independent', () => {
     const upHandler = vi.fn();
     const downHandler = vi.fn();

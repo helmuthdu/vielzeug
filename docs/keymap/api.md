@@ -3,7 +3,7 @@ title: Keymap — API Reference
 description: Full API reference for @vielzeug/keymap — createKeymap, createKeymapLayer, formatShortcut, and all types.
 ---
 
-# API Reference
+[[toc]]
 
 ## API Overview
 
@@ -12,6 +12,9 @@ description: Full API reference for @vielzeug/keymap — createKeymap, createKey
 | `createKeymap` | function | Creates a headless keyboard shortcut manager |
 | `createKeymapLayer` | function | Creates a scoped keymap layer that stacks on a parent |
 | `formatShortcut` | function | Formats a shortcut string for display (Mac symbols or word labels) |
+| `findShortcutConflicts` | function | Finds registered bindings that would conflict with a proposed shortcut |
+| `KeymapError` | class | Base class for all keymap errors |
+| `KeymapParseError` | class | Thrown when a shortcut string cannot be parsed |
 | `Keymap` | interface | Object returned by `createKeymap` |
 | `KeymapLayer` | interface | Extends `Keymap` with `activate()`, `deactivate()`, `active` |
 | `KeymapOptions` | interface | Options for `createKeymap` and `createKeymapLayer` |
@@ -27,17 +30,19 @@ description: Full API reference for @vielzeug/keymap — createKeymap, createKey
 | `Shortcut` | type | `ShortcutStep[]` — the result of `parseShortcut` |
 | `ModifierKey` | type | `'alt' \| 'ctrl' \| 'meta' \| 'shift'` |
 | `BindingEntry` | type | Snapshot of a registered binding: `{ shortcut, trigger, priority }` |
+| `ConflictOptions` | type | Options for `findShortcutConflicts`: `{ modKey?, trigger? }` |
 
 ## Package Entry Points
 
 ```ts
 import {
-  canonicalizeShortcut, createKeymap, createKeymapLayer,
-  detectModKey, formatShortcut, matchStep, parseShortcut, parseStep,
+  canonicalizeShortcut, createKeymap, createKeymapLayer, detectModKey,
+  findShortcutConflicts, formatShortcut, KeymapError, KeymapParseError,
+  matchStep, parseShortcut, parseStep,
 } from '@vielzeug/keymap';
 import type {
-  BindingEntry, BindingOptions, BindingValue, Handler, Keymap,
-  KeymapLayer, KeymapOptions, ModifierKey, Shortcut, ShortcutStep,
+  BindingEntry, BindingOptions, BindingValue, ConflictOptions, Handler,
+  Keymap, KeymapLayer, KeymapOptions, ModifierKey, Shortcut, ShortcutStep,
 } from '@vielzeug/keymap';
 ```
 
@@ -79,6 +84,8 @@ const unmount = map.mount(document);
 interface Keymap {
   bind(shortcut: string, value: BindingValue): () => void;
   dispose(): void;
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
   listBindings(): readonly BindingEntry[];
   mount(target: EventTarget): () => void;
   unbind(shortcut: string): void;
@@ -95,7 +102,7 @@ const unmount = map.mount(document);
 unmount(); // detach
 ```
 
-One keymap can be mounted to multiple targets simultaneously. Each call returns an independent unmount function.
+One keymap can be mounted to multiple targets simultaneously. Each call returns an independent unmount function. Mounting the **same** target a second time without unmounting first still attaches a second listener (handlers fire twice) — this emits a dev warning rather than throwing, since remounting the same target is occasionally intentional.
 
 ### `bind(shortcut, value)`
 
@@ -153,7 +160,7 @@ interface KeymapOptions {
 
 | Option | Default | Description |
 | ------ | ------- | ----------- |
-| `chordTimeout` | `1000` | Milliseconds before a partial chord sequence resets |
+| `chordTimeout` | `1000` | Milliseconds before a partial chord sequence resets. A non-finite or non-positive value falls back to `1000` with a dev warning. |
 | `modKey` | platform | Override `mod` alias resolution: `'meta'` (Mac ⌘) or `'ctrl'` (Windows/Linux). Auto-detected from `navigator` when omitted. |
 | `preventDefault` | `true` | Call `event.preventDefault()` on a matched binding |
 | `stopPropagation` | `false` | Call `event.stopPropagation()` on a matched binding |
@@ -231,6 +238,90 @@ formatShortcut('ctrl+k ctrl+s', 'meta') // '⌃K ⌃S'
 formatShortcut('escape', 'meta') // 'Esc'
 ```
 
+## `findShortcutConflicts(shortcut, entries, options?)`
+
+Finds registered bindings that would conflict with a proposed shortcut — an exact duplicate, a
+shorter binding that would be shadowed as a chord prefix, or a longer binding the proposed
+shortcut would itself shadow. Only compares against entries sharing the same `trigger`.
+
+```ts
+function findShortcutConflicts(
+  shortcut: string,
+  entries: readonly BindingEntry[],
+  options?: ConflictOptions,
+): BindingEntry[]
+```
+
+**Parameters**
+
+- `shortcut` — The shortcut string being considered for a new binding.
+- `entries` — Existing bindings to check against — typically `map.listBindings()`.
+- `options` — See `ConflictOptions`. `trigger` defaults to `'keydown'`.
+
+**Returns** the subset of `entries` that conflict; `[]` if there's no relationship (or `shortcut` is
+empty/whitespace-only).
+
+**Example**
+
+```ts
+const map = createKeymap({ g: () => scrollToTop() });
+
+findShortcutConflicts('g g', map.listBindings());
+// → [{ shortcut: [{ key: 'g', modifiers: Set {} }], trigger: 'keydown', priority: 0 }]
+// binding 'g g' would be shadowed: 'g' fires immediately before the second step is ever read
+```
+
+Useful when building a shortcut-customization UI — check `findShortcutConflicts()` before calling
+`bind()` to warn the user instead of silently creating an unreachable binding.
+
+### `ConflictOptions`
+
+```ts
+interface ConflictOptions {
+  modKey?: 'ctrl' | 'meta';
+  trigger?: 'keydown' | 'keyup';
+}
+```
+
+| Field | Default | Description |
+| ----- | ------- | ----------- |
+| `modKey` | platform | Resolves `mod` in the proposed `shortcut` string |
+| `trigger` | `'keydown'` | Which entries to compare against — `'keydown'` and `'keyup'` never conflict with each other |
+
+## Errors
+
+### `KeymapError`
+
+Base class for all keymap errors. Use `instanceof KeymapError` (or `KeymapError.is()`) to catch
+any keymap-originated error.
+
+```ts
+class KeymapError extends Error {
+  static is(err: unknown): err is KeymapError;
+}
+```
+
+### `KeymapParseError`
+
+Thrown when a shortcut string cannot be parsed — an ambiguous multi-key step (e.g. `'ctrl+k+j'`)
+or an invalid step (modifier-only, with no key). Extends `KeymapError`.
+
+```ts
+class KeymapParseError extends KeymapError {}
+```
+
+```ts
+import { KeymapError, KeymapParseError } from '@vielzeug/keymap';
+
+try {
+  map.bind('ctrl+k+j', handler);
+} catch (err) {
+  if (KeymapError.is(err)) {
+    console.error(err.message); // 'Ambiguous shortcut step: "ctrl+k+j" — multiple non-modifier keys found'
+  }
+}
+```
+
 ## Types
 
 ### `BindingOptions`
@@ -249,9 +340,11 @@ type BindingOptions = {
 | Field | Default | Description |
 | ----- | ------- | ----------- |
 | `handler` | — | The function to call when the shortcut fires |
-| `priority` | `0` | When multiple bindings complete at the same chord step, higher priority wins |
+| `priority` | `0` | Reserved for future conflict resolution — see note below. A non-finite value falls back to `0` with a dev warning. |
 | `trigger` | `'keydown'` | Which keyboard event phase fires the handler |
 | `when` | — | Per-binding guard; handler suppressed when `when()` returns `false` at event time |
+
+> **Note on `priority`:** because bindings are keyed by their canonical shortcut string, two *live* bindings can never share an identical step sequence — the moment they would, the second `bind()` call simply replaces the first (see `bind(shortcut, value)` above). There is currently no scenario where two distinct bindings compete to fire the same event, so `priority` has no observable effect on which handler runs. It's kept as a documented, validated field for forward compatibility rather than removed outright.
 
 ### `BindingValue`
 
@@ -265,7 +358,7 @@ A plain function is treated as `{ handler: fn, priority: 0, trigger: 'keydown' }
 const map = createKeymap({
   'ctrl+k': () => quickAction(),
   esc:      { handler: closePanel, when: () => isPanelOpen() },
-  space:    { handler: togglePlay, trigger: 'keyup', priority: 5 },
+  space:    { handler: togglePlay, trigger: 'keyup' },
 });
 ```
 
@@ -369,18 +462,20 @@ Tests whether a `KeyboardEvent` matches a `ShortcutStep`. Zero allocations — p
 function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean
 ```
 
+Returns `false` (never throws) for a malformed event missing a string `.key` — safe to call with hand-built event objects in headless/non-DOM usage.
+
 ### `canonicalizeShortcut(steps)`
 
 Converts a `ShortcutStep[]` (i.e. the result of `parseShortcut`) into a stable canonical string. Modifiers are sorted alphabetically, steps are space-separated. Useful for conflict detection: two shortcuts resolve to the same canonical string if and only if they match the same key events.
 
 ```ts
-function canonicalizeShortcut(steps: ShortcutStep[]): string
+function canonicalizeShortcut(steps: readonly ShortcutStep[]): string
 ```
 
 ```ts
-canonicalize(parseShortcut('cmd+k', 'ctrl'))    // 'meta+k'
-canonicalize(parseShortcut('meta+k', 'ctrl'))   // 'meta+k'
-canonicalize(parseShortcut('ctrl+k ctrl+s', 'ctrl')) // 'ctrl+k ctrl+s'
+canonicalizeShortcut(parseShortcut('cmd+k', 'ctrl'))    // 'meta+k'
+canonicalizeShortcut(parseShortcut('meta+k', 'ctrl'))   // 'meta+k'
+canonicalizeShortcut(parseShortcut('ctrl+k ctrl+s', 'ctrl')) // 'ctrl+k ctrl+s'
 ```
 
 ### `detectModKey()`

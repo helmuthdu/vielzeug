@@ -141,6 +141,20 @@ describe('createKeymapLayer', () => {
     unmountBase();
   });
 
+  it('disposed and disposalSignal reflect the layer own lifecycle, independent of the parent', () => {
+    const base = createKeymap();
+    const layer = createKeymapLayer(base);
+
+    expect(layer.disposed).toBe(false);
+    expect(layer.disposalSignal.aborted).toBe(false);
+
+    layer.dispose();
+
+    expect(layer.disposed).toBe(true);
+    expect(layer.disposalSignal.aborted).toBe(true);
+    expect(base.disposed).toBe(false);
+  });
+
   it('[Symbol.dispose]() disposes the layer', () => {
     const layerHandler = vi.fn();
     const base = createKeymap({});

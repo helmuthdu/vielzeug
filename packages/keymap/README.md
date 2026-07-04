@@ -1,6 +1,6 @@
 # @vielzeug/keymap
 
-Headless keyboard shortcut manager with chord sequences, per-binding context guards, dynamic bindings, trigger control, priority, and disposable lifecycle.
+Headless keyboard shortcut manager with chord sequences, per-binding context guards, dynamic bindings, trigger control, conflict detection, and disposable lifecycle.
 
 ## Features
 
@@ -10,8 +10,8 @@ Headless keyboard shortcut manager with chord sequences, per-binding context gua
 - **`modKey` option** — explicit platform override for cross-platform tests and SSR
 - **Per-binding `BindingOptions`** — `{ handler, when?, trigger?, priority? }` object syntax
 - **`trigger` option** — `'keydown'` (default) or `'keyup'` per binding
-- **`priority` option** — resolve conflicts when multiple bindings match
-- **Dynamic bindings** — `map.bind()` / `map.unbind()` at any time
+- **Dynamic bindings** — `map.bind()` / `map.unbind()` at any time — the most recent `bind()` for a shortcut always wins
+- **`findShortcutConflicts()`** — detect prefix/duplicate conflicts before binding a user-customized shortcut
 - **`formatShortcut()`** — platform-aware display formatter (`⇧⌘P` on Mac, `Ctrl+Shift+P` elsewhere)
 - **`createKeymapLayer()`** — scoped keymap stack with `activate()` / `deactivate()`
 - **Headless** — accepts any `EventTarget`; works without a DOM (SSR, Node tests)

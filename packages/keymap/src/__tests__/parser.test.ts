@@ -179,6 +179,19 @@ describe('matchStep', () => {
     expect(matchStep(makeEvent('ArrowLeft'), parseStep('left')!)).toBe(true);
     expect(matchStep(makeEvent('ArrowRight'), parseStep('right')!)).toBe(true);
   });
+
+  it('returns false (does not throw) for a malformed event missing `key` (headless/non-DOM usage)', () => {
+    const step = parseStep('k')!;
+    const malformedEvent = {
+      altKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      shiftKey: false,
+    } as unknown as KeyboardEvent;
+
+    expect(() => matchStep(malformedEvent, step)).not.toThrow();
+    expect(matchStep(malformedEvent, step)).toBe(false);
+  });
 });
 
 describe('parseStep standalone', () => {

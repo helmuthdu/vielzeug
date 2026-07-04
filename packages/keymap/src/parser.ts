@@ -108,7 +108,7 @@ export function parseShortcut(raw: string, modKey: 'ctrl' | 'meta' = detectModKe
     });
 }
 
-export function canonicalizeShortcut(steps: ShortcutStep[]): string {
+export function canonicalizeShortcut(steps: readonly ShortcutStep[]): string {
   return steps
     .map((s) => {
       const mods = [...s.modifiers].sort().join('+');
@@ -119,6 +119,11 @@ export function canonicalizeShortcut(steps: ShortcutStep[]): string {
 }
 
 export function matchStep(event: KeyboardEvent, step: ShortcutStep): boolean {
+  // Headless usage (SSR, non-DOM `EventTarget`s, hand-built test events) means `event` isn't
+  // guaranteed to be a real `KeyboardEvent` at runtime even though the type says so — treat a
+  // missing/non-string `key` as "doesn't match" rather than throwing inside the event listener.
+  if (typeof event.key !== 'string') return false;
+
   if (event.key.toLowerCase() !== step.key) return false;
 
   const { modifiers } = step;

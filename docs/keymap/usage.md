@@ -3,7 +3,7 @@ title: Keymap — Usage Guide
 description: How to use createKeymap for single shortcuts, chord sequences, context guards, and framework integration.
 ---
 
-# Usage Guide
+[[toc]]
 
 ## Basic Shortcuts
 
@@ -56,7 +56,7 @@ const map = createKeymap({
 });
 ```
 
-> **Tip:** Keymap fires the first fully-matched binding when multiple bindings share a prefix. Order your bindings from most-specific to least-specific.
+> **Tip:** A shorter binding always fires immediately when typed, even if a longer chord shares its prefix — binding order doesn't matter. `'g'` and `'g g'` together means `'g g'` can never be reached, because `'g'` fires the instant it's pressed. Use `findShortcutConflicts()` (see below) to detect this before it surprises a user.
 
 ## `BindingOptions` — Per-binding Configuration
 
@@ -103,18 +103,20 @@ const map = createKeymap({
 
 Keydown and keyup chord trackers are independent — a `'g g'` chord on `keyup` does not interfere with a `'g g'` chord on `keydown`.
 
-## Priority
+## Replacing a Binding at Runtime
 
-When multiple bindings share an overlapping shortcut (e.g. bound via `bind()` at different points in time), the one with the highest `priority` fires:
+`bind()` always replaces any existing binding for the same shortcut — the most recent call wins, regardless of `priority`:
 
 ```ts
 const map = createKeymap({
-  'ctrl+k': { handler: defaultAction, priority: 0 },
+  'ctrl+k': defaultAction,
 });
 
-// A plugin registers a higher-priority override at runtime:
-map.bind('ctrl+k', { handler: pluginOverride, priority: 10 }); // wins
+// A plugin registers an override at runtime — this replaces the default binding outright:
+map.bind('ctrl+k', pluginOverride);
 ```
+
+> `BindingOptions.priority` doesn't affect this — because bindings are keyed by their canonical shortcut, two *live* bindings can never actually compete for the same event, so there's no tie for `priority` to break. It's a validated, reserved field kept for forward compatibility — see the note in [`api.md`](./api.md#bindingoptions).
 
 ## Display with `formatShortcut`
 
@@ -129,6 +131,29 @@ formatShortcut('ctrl+k ctrl+s');       // platform-detected
 ```
 
 Returns `''` and emits a dev warning for empty or invalid shortcuts.
+
+## Detecting Conflicts
+
+Before binding a user-customized shortcut, check whether it would shadow (or be shadowed by) an
+existing binding — most useful for a shortcut-customization UI where the shortcut string comes
+from user input:
+
+```ts
+import { createKeymap, findShortcutConflicts } from '@vielzeug/keymap';
+
+const map = createKeymap({ g: () => scrollToTop() });
+
+const conflicts = findShortcutConflicts('g g', map.listBindings());
+
+if (conflicts.length > 0) {
+  warnUser('This shortcut would never fire — "g" already handles the first key.');
+} else {
+  map.bind('g g', () => scrollToBottom());
+}
+```
+
+`findShortcutConflicts()` catches both directions: a shorter existing binding shadowing your
+proposal, and your proposal shadowing an existing longer chord.
 
 ## Keymap Layers
 
@@ -172,6 +197,8 @@ const u2 = map.mount(editorB);
 // u1() removes from editorA only
 // map.dispose() removes from both
 ```
+
+Mounting the *same* target twice without unmounting first (e.g. a forgotten cleanup in an effect) still works — handlers just fire twice — and emits a dev warning to flag the likely mistake.
 
 ## `preventDefault` and `stopPropagation`
 

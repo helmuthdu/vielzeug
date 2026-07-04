@@ -1,5 +1,5 @@
 export const parseAndMatchExample = {
-  code: `import { formatShortcut, matchStep, parseShortcut } from '@vielzeug/keymap'
+  code: `import { KeymapError, KeymapParseError, formatShortcut, matchStep, parseShortcut } from '@vielzeug/keymap'
 
 // Parse shortcut strings into structured step objects.
 const steps = parseShortcut('ctrl+k ctrl+s', 'ctrl')
@@ -23,6 +23,14 @@ const shortcuts = [
 
 for (const [shortcut, modKey] of shortcuts) {
   console.log(shortcut, '→', formatShortcut(shortcut, modKey))
+}
+
+// parseShortcut() throws KeymapParseError for ambiguous or invalid steps.
+// Catch it with instanceof KeymapError (or KeymapError.is()) to handle any keymap error.
+try {
+  parseShortcut('ctrl+k+j', 'ctrl') // two non-modifier keys in one step — ambiguous
+} catch (err) {
+  console.log('Caught:', KeymapError.is(err), err instanceof KeymapParseError, err.message)
 }`,
   name: 'Parse & Match',
 };

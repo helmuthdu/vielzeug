@@ -4,7 +4,7 @@ description: Chord-aware keyboard shortcut manager with context guards, modifier
 package: keymap
 category: app-infrastructure
 keywords: [keyboard, shortcuts, hotkeys, chord, keybinding, headless, accessibility]
-exports: [canonicalizeShortcut, createKeymap, createKeymapLayer, detectModKey, formatShortcut, matchStep, parseShortcut, parseStep]
+exports: [canonicalizeShortcut, createKeymap, createKeymapLayer, detectModKey, findShortcutConflicts, formatShortcut, KeymapError, KeymapParseError, matchStep, parseShortcut, parseStep]
 related: [herald, refine, ore]
 environments: [browser, node, ssr, deno]
 ---
@@ -87,6 +87,7 @@ map.dispose(); // or: using map = createKeymap(…)
 - `canonicalizeShortcut()` — convert any shortcut alias to a stable key for conflict detection
 - `detectModKey()` — platform modifier detection (`'meta'` on Mac, `'ctrl'` elsewhere)
 - `listBindings()` — snapshot all active bindings (shortcut, trigger, priority) for palette UIs
+- `findShortcutConflicts()` — detect prefix/duplicate conflicts before binding a user-customized shortcut
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 
 </div>
