@@ -3,7 +3,7 @@ title: Ledger — Usage Guide
 description: How to use createLedger for undo/redo, async commands, batch operations, and reactive UI binding.
 ---
 
-# Usage Guide
+[[toc]]
 
 ## Basic Usage
 
@@ -140,6 +140,44 @@ const ledger = createLedger({
     notify(`Could not undo "${meta.label ?? 'action'}": ${String(err)}`);
   },
 });
+```
+
+## Cancellation
+
+`execute`/`rollback` receive an `AbortSignal` as their argument — pass your own via `{ signal }` on `do()`/`undo()`/`redo()` to cancel a specific in-flight command, or ignore it if the command has nothing to abort:
+
+```ts
+const controller = new AbortController();
+
+const save = ledger.do(
+  {
+    execute: async (signal) => {
+      await fetch('/api/save', { body: JSON.stringify(item), method: 'POST', signal });
+    },
+    label: 'Save item',
+  },
+  { signal: controller.signal },
+);
+
+cancelButton.addEventListener('click', () => controller.abort());
+```
+
+The signal you pass is merged with the ledger's own `disposalSignal`, so a command can bail out early on `dispose()` too — without you having to wire that up yourself:
+
+```ts
+const ledger = createLedger();
+
+const polling = ledger.do({
+  execute: async (signal) => {
+    while (!signal?.aborted) {
+      await pollServer();
+    }
+  },
+});
+
+// later, e.g. when the owning component unmounts:
+ledger.dispose(); // the loop above sees signal.aborted === true and exits
+await polling;
 ```
 
 ## Framework Integration

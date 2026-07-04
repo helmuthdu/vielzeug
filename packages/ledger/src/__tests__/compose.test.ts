@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { compose, createLedger } from '../index';
+import { LedgerRollbackError, compose, createLedger } from '../index';
 
 describe('compose()', () => {
   it('executes all sub-commands in order', async () => {
@@ -181,7 +181,11 @@ describe('compose()', () => {
     );
 
     await ledger.undo();
-    expect(onRollbackError).toHaveBeenCalledWith(err, expect.objectContaining({ label: undefined }));
+    expect(onRollbackError).toHaveBeenCalledWith(
+      expect.objectContaining({ cause: err, message: err.message }),
+      expect.objectContaining({ label: undefined }),
+    );
+    expect(onRollbackError.mock.calls[0][0]).toBeInstanceOf(LedgerRollbackError);
     expect(ledger.canUndo.value).toBe(true);
     expect(ledger.canRedo.value).toBe(false);
 
@@ -207,6 +211,28 @@ describe('compose()', () => {
 
     expect(rb).toHaveBeenCalledOnce();
     expect(ledger.canUndo.value).toBe(false);
+
+    ledger.dispose();
+  });
+
+  it('forwards the same AbortSignal to every sub-command execute/rollback', async () => {
+    const ledger = createLedger();
+    const executeSignals: (AbortSignal | undefined)[] = [];
+    const rollbackSignals: (AbortSignal | undefined)[] = [];
+
+    await ledger.do(
+      compose([
+        { execute: (s) => executeSignals.push(s), rollback: (s) => rollbackSignals.push(s) },
+        { execute: (s) => executeSignals.push(s), rollback: (s) => rollbackSignals.push(s) },
+      ]),
+    );
+    await ledger.undo();
+
+    expect(executeSignals).toHaveLength(2);
+    expect(executeSignals[0]).toBeInstanceOf(AbortSignal);
+    expect(executeSignals[0]).toBe(executeSignals[1]);
+    expect(rollbackSignals).toHaveLength(2);
+    expect(rollbackSignals[0]).toBe(rollbackSignals[1]);
 
     ledger.dispose();
   });

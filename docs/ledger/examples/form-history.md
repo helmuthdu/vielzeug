@@ -1,11 +1,17 @@
 ---
-title: Form History
-description: Reversible form field mutations with reactive undo/redo buttons using Ledger and Ripple.
+title: 'Ledger Examples — Form History'
+description: 'Form History example for @vielzeug/ledger.'
 ---
 
-# Form History
+## Form History
 
-Track field changes as named commands. Each field update is one undo step; the history panel shows labels.
+### Problem
+
+A form with several fields needs undo/redo per field edit, with a history panel that lists what changed, and reactive undo/redo buttons that stay in sync with the stack.
+
+### Solution
+
+Track each field change as a labelled command via `ledger.do()`; bind `canUndo`/`canRedo`/`historySnapshot` with `effect()` from `@vielzeug/ripple`.
 
 ```ts
 import { createLedger } from '@vielzeug/ledger';
@@ -61,3 +67,12 @@ function renderField(field: keyof FormData): void {
   if (input) input.value = form[field];
 }
 ```
+
+### Pitfalls
+
+- `updateField` bails out early when `prev === next` — without that check, no-op edits (e.g. blur without a change) push a redundant undo step.
+- The rollback in this recipe re-reads `prev` from a closure captured at command-creation time, not at execute time — capture `before`/`after` snapshots up front, don't compute them inside `execute`/`rollback`.
+
+### Related
+
+- [Text Editor History](./text-editor.md)

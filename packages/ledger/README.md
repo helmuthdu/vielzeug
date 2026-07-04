@@ -19,7 +19,7 @@ pnpm add @vielzeug/ledger
 ## Quick start
 
 ```typescript
-import { createLedger } from '@vielzeug/ledger';
+import { compose, createLedger } from '@vielzeug/ledger';
 import { effect } from '@vielzeug/ripple';
 
 const ledger = createLedger({ maxHistory: 50 });
@@ -35,8 +35,8 @@ await ledger.do({
 await ledger.undo();
 await ledger.redo();
 
-// Batch — appears as one undo step
-await ledger.batch([cmd1, cmd2, cmd3], { label: 'Multi-edit' });
+// Batch — compose multiple commands into one undo step
+await ledger.do(compose([cmd1, cmd2, cmd3], 'Multi-edit'));
 
 // Bind to UI
 effect(() => {

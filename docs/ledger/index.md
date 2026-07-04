@@ -84,6 +84,7 @@ ledger.dispose(); // or: using ledger = createLedger()
 - Async-safe — `execute()`, `rollback()`, and `clear()` are fully serialised through the queue
 - Typed history — `Command.data` stores custom metadata; `historySnapshot.value[n].data` is typed to `TData`
 - Error-safe rollback — failed `rollback()` warns via dev console; optional `onRollbackError` callback for UI integration
+- Cancellable — `execute`/`rollback` receive an `AbortSignal`, merged from a caller-supplied signal and the ledger's own `disposalSignal`
 - Disposable — `dispose()` + `[Symbol.dispose]` for `using` declarations
 
 </div>

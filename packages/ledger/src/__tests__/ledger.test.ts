@@ -221,6 +221,7 @@ describe('createLedger', () => {
     });
 
     await ledger.undo();
+    await expect(ledger.redo()).rejects.toThrow(LedgerExecutionError);
     await expect(ledger.redo()).rejects.toThrow('re-execute failed');
     expect(ledger.canRedo.value).toBe(true);
     expect(ledger.canUndo.value).toBe(false);
@@ -330,6 +331,146 @@ describe('createLedger', () => {
     ledger.dispose();
   });
 
+  it('failed execute rejects do() with a LedgerExecutionError wrapping the cause', async () => {
+    const ledger = createLedger();
+    const cause = new Error('boom');
+
+    const result = ledger.do({
+      execute: async () => {
+        throw cause;
+      },
+    });
+
+    await expect(result).rejects.toThrow(LedgerExecutionError);
+    await expect(result).rejects.toMatchObject({ cause });
+
+    ledger.dispose();
+  });
+
+  describe('disposed ledger', () => {
+    it('do() rejects with LedgerDisposedError and never calls execute', async () => {
+      const ledger = createLedger();
+      const execute = vi.fn();
+
+      ledger.dispose();
+
+      await expect(ledger.do({ execute })).rejects.toThrow(LedgerDisposedError);
+      expect(execute).not.toHaveBeenCalled();
+    });
+
+    it('undo() rejects with LedgerDisposedError and never calls rollback', async () => {
+      const ledger = createLedger();
+      const rollback = vi.fn();
+
+      await ledger.do({ execute: vi.fn(), rollback });
+      ledger.dispose();
+
+      await expect(ledger.undo()).rejects.toThrow(LedgerDisposedError);
+      expect(rollback).not.toHaveBeenCalled();
+    });
+
+    it('redo() rejects with LedgerDisposedError and never re-executes', async () => {
+      const ledger = createLedger();
+      const execute = vi.fn();
+
+      await ledger.do({ execute });
+      await ledger.undo();
+      ledger.dispose();
+
+      await expect(ledger.redo()).rejects.toThrow(LedgerDisposedError);
+      expect(execute).toHaveBeenCalledOnce();
+    });
+
+    it('clear() rejects with LedgerDisposedError', async () => {
+      const ledger = createLedger();
+
+      ledger.dispose();
+
+      await expect(ledger.clear()).rejects.toThrow(LedgerDisposedError);
+    });
+  });
+
+  describe('cancellation (AbortSignal)', () => {
+    it('disposalSignal is an AbortSignal that aborts on dispose()', () => {
+      const ledger = createLedger();
+
+      expect(ledger.disposalSignal).toBeInstanceOf(AbortSignal);
+      expect(ledger.disposalSignal.aborted).toBe(false);
+
+      ledger.dispose();
+
+      expect(ledger.disposalSignal.aborted).toBe(true);
+    });
+
+    it('do()/undo()/redo() always pass a live AbortSignal to execute/rollback', async () => {
+      const ledger = createLedger();
+      const execute = vi.fn((signal?: AbortSignal) => {
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal?.aborted).toBe(false);
+      });
+      const rollback = vi.fn((signal?: AbortSignal) => {
+        expect(signal).toBeInstanceOf(AbortSignal);
+        expect(signal?.aborted).toBe(false);
+      });
+
+      await ledger.do({ execute, rollback });
+      await ledger.undo();
+      await ledger.redo();
+      expect(execute).toHaveBeenCalledTimes(2);
+      expect(rollback).toHaveBeenCalledOnce();
+
+      ledger.dispose();
+    });
+
+    it('merges a caller-supplied signal — aborting it aborts the signal seen by execute()', async () => {
+      const ledger = createLedger();
+      const controller = new AbortController();
+      let seenSignal: AbortSignal | undefined;
+
+      const promise = ledger.do(
+        {
+          execute: (signal) => {
+            seenSignal = signal;
+          },
+        },
+        { signal: controller.signal },
+      );
+
+      await promise;
+      expect(seenSignal?.aborted).toBe(false);
+
+      controller.abort();
+      expect(seenSignal?.aborted).toBe(true);
+
+      ledger.dispose();
+    });
+
+    it("dispose() aborts the signal seen by an in-flight command's execute()", async () => {
+      const ledger = createLedger();
+      let seenSignal: AbortSignal | undefined;
+      let resolver!: () => void;
+      const longOp = new Promise<void>((resolve) => {
+        resolver = resolve;
+      });
+
+      const promise = ledger.do({
+        execute: async (signal) => {
+          seenSignal = signal;
+          await longOp;
+        },
+      });
+
+      await Promise.resolve();
+      expect(seenSignal?.aborted).toBe(false);
+
+      ledger.dispose();
+      expect(seenSignal?.aborted).toBe(true);
+
+      resolver();
+      await promise;
+    });
+  });
+
   describe('optional rollback', () => {
     it('undo with no rollback still pops the entry', async () => {
       const ledger = createLedger();
@@ -387,7 +528,11 @@ describe('createLedger', () => {
       });
 
       await ledger.undo();
-      expect(onRollbackError).toHaveBeenCalledWith(err, { data: undefined, label: 'my-command' });
+      expect(onRollbackError).toHaveBeenCalledWith(expect.objectContaining({ cause: err, message: err.message }), {
+        data: undefined,
+        label: 'my-command',
+      });
+      expect(onRollbackError.mock.calls[0][0]).toBeInstanceOf(LedgerRollbackError);
 
       ledger.dispose();
     });

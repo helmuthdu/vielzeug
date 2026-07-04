@@ -1,20 +1,27 @@
 import { computed, signal } from '@vielzeug/ripple';
 
-import type { Command, CommandMeta, Ledger, LedgerOptions } from './types';
+import type { Command, CommandMeta, Ledger, LedgerCallOptions, LedgerOptions } from './types';
 
 import { warn } from './_dev';
+import { LedgerDisposedError, LedgerExecutionError, LedgerRollbackError } from './errors';
+
+function toMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
 
 type StackEntry<TData = unknown> = {
-  execute: () => Promise<void>;
+  execute: (signal?: AbortSignal) => Promise<void>;
   meta: CommandMeta<TData>;
-  rollback?: () => Promise<void>;
+  rollback?: (signal?: AbortSignal) => Promise<void>;
 };
 
-function entryFromCommand<TData>(command: Command): StackEntry<TData> {
+function entryFromCommand<TData>(command: Command<TData>): StackEntry<TData> {
+  const { rollback } = command;
+
   return {
-    execute: async () => command.execute(),
-    meta: { data: command.data as TData | undefined, label: command.label },
-    rollback: command.rollback != null ? async () => command.rollback!() : undefined,
+    execute: async (signal) => command.execute(signal),
+    meta: { data: command.data, label: command.label },
+    rollback: rollback != null ? async (signal) => rollback(signal) : undefined,
   };
 }
 
@@ -25,6 +32,10 @@ function entryFromCommand<TData>(command: Command): StackEntry<TData> {
  * without one are still tracked in history but undo skips the reversal step.
  * Operations are serialised — concurrent calls queue behind each other.
  * All state signals are Ripple `Computed` values for zero-glue UI binding.
+ *
+ * `execute`/`rollback` receive an `AbortSignal` — merged from the ledger's own
+ * `disposalSignal` and any `signal` passed to `do()`/`undo()`/`redo()` — so long-running
+ * commands can observe cancellation or disposal.
  *
  * @example
  * const ledger = createLedger({ maxHistory: 50 });
@@ -49,7 +60,7 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
   const isProcessing = computed(() => processing.value, { name: 'ledger:isProcessing' });
   const pendingCount = computed(() => pending.value, { name: 'ledger:pendingCount' });
   const historySnapshot = computed(
-    () => [...undoStack.value].reverse().map((e) => e.meta) as readonly CommandMeta<TData>[],
+    (): readonly CommandMeta<TData>[] => [...undoStack.value].reverse().map((e) => e.meta),
     { name: 'ledger:historySnapshot' },
   );
 
@@ -69,8 +80,16 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
   let isDisposed = false;
   let queue = Promise.resolve();
 
-  function enqueue(task: () => Promise<void>): Promise<void> {
-    if (!isDisposed) pending.value++;
+  const ac = new AbortController();
+
+  function operationSignal(external?: AbortSignal): AbortSignal {
+    return external ? AbortSignal.any([external, ac.signal]) : ac.signal;
+  }
+
+  function enqueue(method: string, task: () => Promise<void>): Promise<void> {
+    if (isDisposed) return Promise.reject(new LedgerDisposedError(`Cannot call ${method}() on a disposed ledger.`));
+
+    pending.value++;
 
     const current = queue.then(task).finally(() => {
       if (!isDisposed) pending.value--;
@@ -91,9 +110,13 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     }
   }
 
-  async function runDo(entry: StackEntry<TData>): Promise<void> {
+  async function runDo(entry: StackEntry<TData>, signal: AbortSignal): Promise<void> {
     await withProcessing(async () => {
-      await entry.execute();
+      try {
+        await entry.execute(signal);
+      } catch (err) {
+        throw new LedgerExecutionError(toMessage(err), { cause: err });
+      }
 
       if (isDisposed) return;
 
@@ -106,7 +129,7 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     });
   }
 
-  async function runUndo(): Promise<void> {
+  async function runUndo(signal: AbortSignal): Promise<void> {
     const stack = undoStack.value;
 
     if (stack.length === 0) return;
@@ -116,10 +139,10 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     await withProcessing(async () => {
       if (entry.rollback) {
         try {
-          await entry.rollback();
+          await entry.rollback(signal);
         } catch (err) {
           warn(`rollback() threw for "${entry.meta.label ?? '(unlabelled)'}". Stack position unchanged.`);
-          onRollbackError?.(err, entry.meta);
+          onRollbackError?.(new LedgerRollbackError(toMessage(err), { cause: err }), entry.meta);
 
           return;
         }
@@ -132,7 +155,7 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     });
   }
 
-  async function runRedo(): Promise<void> {
+  async function runRedo(signal: AbortSignal): Promise<void> {
     const stack = redoStack.value;
 
     if (stack.length === 0) return;
@@ -140,7 +163,11 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     const entry = stack[stack.length - 1];
 
     await withProcessing(async () => {
-      await entry.execute();
+      try {
+        await entry.execute(signal);
+      } catch (err) {
+        throw new LedgerExecutionError(toMessage(err), { cause: err });
+      }
 
       if (isDisposed) return;
 
@@ -150,15 +177,13 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
   }
 
   function clear(): Promise<void> {
-    return enqueue(async () => {
+    return enqueue('clear', async () => {
       if (isDisposed) return;
 
       undoStack.value = [];
       redoStack.value = [];
     });
   }
-
-  const ac = new AbortController();
 
   function dispose(): void {
     isDisposed = true;
@@ -184,8 +209,8 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
       return isDisposed;
     },
 
-    do(command: Command): Promise<void> {
-      return enqueue(() => runDo(entryFromCommand<TData>(command)));
+    do(command: Command<TData>, callOptions?: LedgerCallOptions): Promise<void> {
+      return enqueue('do', () => runDo(entryFromCommand<TData>(command), operationSignal(callOptions?.signal)));
     },
 
     historySize,
@@ -193,16 +218,16 @@ export function createLedger<TData = unknown>(options: LedgerOptions<TData> = {}
     isProcessing,
     pendingCount,
 
-    redo(): Promise<void> {
-      return enqueue(runRedo);
+    redo(callOptions?: LedgerCallOptions): Promise<void> {
+      return enqueue('redo', () => runRedo(operationSignal(callOptions?.signal)));
     },
 
     [Symbol.dispose](): void {
       dispose();
     },
 
-    undo(): Promise<void> {
-      return enqueue(runUndo);
+    undo(callOptions?: LedgerCallOptions): Promise<void> {
+      return enqueue('undo', () => runUndo(operationSignal(callOptions?.signal)));
     },
   };
 }

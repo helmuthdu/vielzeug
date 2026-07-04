@@ -1,11 +1,17 @@
 ---
-title: Text Editor History
-description: Implement per-keystroke undo/redo for a text editor with debouncing and Keymap shortcuts.
+title: 'Ledger Examples — Text Editor History'
+description: 'Text Editor History example for @vielzeug/ledger.'
 ---
 
-# Text Editor History
+## Text Editor History
 
-A minimal text-editor undo stack. Each edit is debounced so rapid keystrokes collapse into one undo step. Keyboard shortcuts are wired with Keymap.
+### Problem
+
+Per-keystroke undo for a text editor would create one undo step per character — undo would need dozens of presses to undo a single sentence. Keyboard shortcuts (`ctrl+z` / `ctrl+shift+z`) also need wiring.
+
+### Solution
+
+Debounce `input` events so a burst of keystrokes collapses into one `ledger.do()` call, and wire `ctrl+z`/`ctrl+shift+z` with `@vielzeug/keymap`.
 
 ```ts
 import { createKeymap } from '@vielzeug/keymap';
@@ -52,3 +58,12 @@ effect(() => {
   (document.getElementById('redo-btn') as HTMLButtonElement).disabled = !ledger.canRedo.value;
 });
 ```
+
+### Pitfalls
+
+- Snapshot `burstStart` on the **first** keystroke of a burst, not the last — otherwise rollback restores the wrong (mid-burst) value.
+- `ctrl+y` is a Windows-only redo alias; don't rely on it as the only redo shortcut on macOS/Linux.
+
+### Related
+
+- [Form History](./form-history.md)

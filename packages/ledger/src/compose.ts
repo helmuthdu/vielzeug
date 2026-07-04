@@ -13,22 +13,22 @@ import type { Command } from './types';
  *   { execute: () => { node.y = newY; }, rollback: () => { node.y = oldY; } },
  * ], 'Move node'));
  */
-export function compose(commands: Command[], label?: string): Command {
+export function compose<TData = unknown>(commands: Command<TData>[], label?: string): Command<TData> {
   const anyHasRollback = commands.some((c) => c.rollback != null);
 
   return {
-    execute: async () => {
-      const done: Command[] = [];
+    execute: async (signal) => {
+      const done: Command<TData>[] = [];
 
       try {
         for (const c of commands) {
-          await c.execute();
+          await c.execute(signal);
           done.push(c);
         }
       } catch (err) {
         for (const c of [...done].reverse()) {
           try {
-            await c.rollback?.();
+            await c.rollback?.(signal);
           } catch {
             // best-effort: suppress compensation errors
           }
@@ -39,13 +39,13 @@ export function compose(commands: Command[], label?: string): Command {
     },
     label,
     rollback: anyHasRollback
-      ? async () => {
+      ? async (signal) => {
           let firstError: unknown;
           let hasError = false;
 
           for (const c of [...commands].reverse()) {
             try {
-              await c.rollback?.();
+              await c.rollback?.(signal);
             } catch (err) {
               if (!hasError) {
                 firstError = err;

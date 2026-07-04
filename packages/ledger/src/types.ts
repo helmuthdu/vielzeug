@@ -1,15 +1,21 @@
 import type { Computed } from '@vielzeug/ripple';
 
-export interface Command {
-  data?: unknown;
-  execute: () => Promise<void> | void;
+export interface Command<TData = unknown> {
+  data?: TData;
+  execute: (signal?: AbortSignal) => Promise<void> | void;
   label?: string;
-  rollback?: () => Promise<void> | void;
+  rollback?: (signal?: AbortSignal) => Promise<void> | void;
 }
 
 export interface CommandMeta<TData = unknown> {
   data: TData | undefined;
   label: string | undefined;
+}
+
+/** Options accepted by `do()`/`undo()`/`redo()`. */
+export interface LedgerCallOptions {
+  /** Merged with the ledger's own `disposalSignal` and passed to `execute`/`rollback`. */
+  signal?: AbortSignal;
 }
 
 export interface LedgerOptions<TData = unknown> {
@@ -29,8 +35,8 @@ export interface Ledger<TData = unknown> {
   readonly disposalSignal: AbortSignal;
   dispose(): void;
   readonly disposed: boolean;
-  do(command: Command): Promise<void>;
-  redo(): Promise<void>;
-  undo(): Promise<void>;
+  do(command: Command<TData>, options?: LedgerCallOptions): Promise<void>;
+  redo(options?: LedgerCallOptions): Promise<void>;
+  undo(options?: LedgerCallOptions): Promise<void>;
   [Symbol.dispose](): void;
 }
