@@ -207,6 +207,25 @@ describe('FluxError', () => {
     expect(err.message).toBe('msg');
     expect(err).toBeInstanceOf(Error);
   });
+
+  describe('.is()', () => {
+    it('returns true for a FluxError instance', () => {
+      expect(FluxError.is(new FluxError('msg'))).toBe(true);
+    });
+
+    it('returns true for a FluxTimeoutError instance (subclass)', () => {
+      expect(FluxError.is(new FluxTimeoutError(100))).toBe(true);
+    });
+
+    it('returns false for a plain Error', () => {
+      expect(FluxError.is(new Error('plain'))).toBe(false);
+    });
+
+    it('returns false for a non-error value', () => {
+      expect(FluxError.is('not an error')).toBe(false);
+      expect(FluxError.is(undefined)).toBe(false);
+    });
+  });
 });
 
 describe('throwError()', () => {
@@ -244,6 +263,117 @@ describe('timer()', () => {
         },
       });
     }));
+});
+
+// ── Operator callback errors ────────────────────────────────────────────────
+
+describe('operator callback throws — forwarded to observer.error()', () => {
+  it('map(): a throw on an async emission calls observer.error() exactly once and auto-unsubscribes the source', () =>
+    new Promise<void>((resolve) => {
+      const nexts: number[] = [];
+      const errors: unknown[] = [];
+
+      interval(5)
+        .pipe(
+          map((n: number) => {
+            if (n === 1) throw new Error('boom');
+
+            return n;
+          }),
+        )
+        .subscribe({
+          error(err) {
+            errors.push(err);
+
+            // No manual unsub() here — the guard-forwarded error() call must already
+            // tear down the upstream interval on its own (mirrors core.ts's own
+            // synchronous-producer-throw cleanup). Wait past several more ticks to
+            // confirm the interval actually stopped rather than merely being ignored.
+            setTimeout(() => {
+              expect(nexts).toEqual([0]);
+              expect(errors).toEqual([expect.objectContaining({ message: 'boom' })]);
+              resolve();
+            }, 25);
+          },
+          next: (v) => nexts.push(v),
+        });
+    }));
+
+  it('tap(): a throw in the side-effect fn forwards to observer.error(), skipping observer.next()', async () => {
+    const onErr = vi.fn();
+    const nexts: number[] = [];
+
+    of(1, 2, 3)
+      .pipe(
+        tap((n) => {
+          if (n === 2) throw new Error('tap-boom');
+        }),
+      )
+      .subscribe({ error: onErr, next: (v) => nexts.push(v) });
+
+    expect(nexts).toEqual([1]);
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'tap-boom' }));
+  });
+
+  it('scan(): a throw in the reducer forwards to observer.error()', async () => {
+    const onErr = vi.fn();
+
+    of(1, 2)
+      .pipe(
+        scan((_acc, n) => {
+          throw new Error(`scan-boom-${n}`);
+        }, 0),
+      )
+      .subscribe({ error: onErr, next: () => {} });
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'scan-boom-1' }));
+  });
+
+  it('switchMap(): a throw in the mapping fn forwards to observer.error()', async () => {
+    const onErr = vi.fn();
+
+    of(1)
+      .pipe(
+        switchMap(() => {
+          throw new Error('switchMap-boom');
+        }),
+      )
+      .subscribe({ error: onErr, next: () => {} });
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'switchMap-boom' }));
+  });
+
+  it('catchError(): a throw in the handler forwards to observer.error()', async () => {
+    const onErr = vi.fn();
+
+    throwError(new Error('source-fail'))
+      .pipe(
+        catchError(() => {
+          throw new Error('handler-boom');
+        }),
+      )
+      .subscribe({ error: onErr, next: () => {} });
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'handler-boom' }));
+  });
+
+  it('finalize(): a throw in the cleanup fn is logged via console.error, not thrown', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await collect<number>(
+      of(1, 2).pipe(
+        finalize(() => {
+          throw new Error('finalize-boom');
+        }),
+      ),
+    );
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]?.[0]).toContain('[@vielzeug/flux]');
+    expect(spy.mock.calls[0]?.[0]).toContain('finalize');
+
+    spy.mockRestore();
+  });
 });
 
 // ── Transformation ──────────────────────────────────────────────────────────
@@ -293,6 +423,39 @@ describe('bufferCount()', () => {
     const result = await collect<number[]>(of(1, 2, 3).pipe(bufferCount(0)));
 
     expect(result).toEqual([[1], [2], [3]]);
+  });
+
+  it('warns via console.warn when size is clamped', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await collect<number[]>(of(1, 2, 3).pipe(bufferCount(0)));
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]?.[0]).toContain('[@vielzeug/flux]');
+    expect(spy.mock.calls[0]?.[0]).toContain('bufferCount');
+
+    spy.mockRestore();
+  });
+
+  it('does not warn when size and every are already valid', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    await collect<number[]>(of(1, 2, 3).pipe(bufferCount(2, 1)));
+
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockRestore();
+  });
+
+  it('treats a NaN size as 1 rather than letting buffers grow unbounded', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const result = await collect<number[]>(of(1, 2, 3).pipe(bufferCount(NaN)));
+
+    expect(result).toEqual([[1], [2], [3]]); // capped at 1, not one ever-growing buffer
+    expect(spy).toHaveBeenCalledOnce();
+
+    spy.mockRestore();
   });
 });
 
@@ -551,6 +714,22 @@ describe('merge()', () => {
 
     expect(result.sort()).toEqual([1, 2, 3, 4]);
   });
+
+  it('forwards an error from any source and unsubscribes the others', () => {
+    const a = createSubject<number>();
+    const b = createSubject<number>();
+    const onErr = vi.fn();
+    const receivedFromB: number[] = [];
+
+    merge(a, b).subscribe({ error: onErr, next: (v) => receivedFromB.push(v as number) });
+
+    a.fail(new Error('a-boom'));
+    b.emit(1); // b is unsubscribed once merge errors — must not be received
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'a-boom' }));
+    expect(receivedFromB).toEqual([]);
+    b.dispose();
+  });
 });
 
 describe('concat()', () => {
@@ -558,6 +737,19 @@ describe('concat()', () => {
     const result = await toArray(concat(of(1, 2), of(3, 4)));
 
     expect(result).toEqual([1, 2, 3, 4]);
+  });
+
+  it('forwards an error and does not subscribe to the next source', () => {
+    const onErr = vi.fn();
+    const nextSourceSubscribed = vi.fn();
+    const second = flux<number>(() => {
+      nextSourceSubscribed();
+    });
+
+    concat(throwError(new Error('concat-boom')), second).subscribe({ error: onErr, next: () => {} });
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'concat-boom' }));
+    expect(nextSourceSubscribed).not.toHaveBeenCalled();
   });
 });
 
@@ -579,6 +771,19 @@ describe('combineLatest()', () => {
     a.dispose();
     b.dispose();
   });
+
+  it('forwards an error from any source', () => {
+    const a = createSubject<number>();
+    const b = createSubject<string>();
+    const onErr = vi.fn();
+
+    combineLatest(a, b).subscribe({ error: onErr, next: () => {} });
+
+    b.fail(new Error('b-boom'));
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'b-boom' }));
+    a.dispose();
+  });
 });
 
 describe('race()', () => {
@@ -595,6 +800,22 @@ describe('race()', () => {
     a.dispose();
     b.dispose();
   });
+
+  it('a source erroring first wins the race and unsubscribes the others', () => {
+    const a = createSubject<string>();
+    const b = createSubject<string>();
+    const onErr = vi.fn();
+    const received: string[] = [];
+
+    race(a, b).subscribe({ error: onErr, next: (v) => received.push(v) });
+
+    a.fail(new Error('a-boom'));
+    b.emit('too-late'); // b is unsubscribed once a wins by erroring
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'a-boom' }));
+    expect(received).toEqual([]);
+    b.dispose();
+  });
 });
 
 describe('zip()', () => {
@@ -606,6 +827,19 @@ describe('zip()', () => {
       [2, 'b'],
     ]);
   });
+
+  it('forwards an error from any source', () => {
+    const a = createSubject<number>();
+    const b = createSubject<string>();
+    const onErr = vi.fn();
+
+    zip(a, b).subscribe({ error: onErr, next: () => {} });
+
+    a.fail(new Error('zip-boom'));
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'zip-boom' }));
+    b.dispose();
+  });
 });
 
 describe('forkJoin()', () => {
@@ -613,6 +847,19 @@ describe('forkJoin()', () => {
     const result = await toArray(forkJoin(of(1, 2), of('a', 'b')));
 
     expect(result).toEqual([[2, 'b']]);
+  });
+
+  it('forwards an error from any source', () => {
+    const a = createSubject<number>();
+    const b = createSubject<string>();
+    const onErr = vi.fn();
+
+    forkJoin(a, b).subscribe({ error: onErr, next: () => {} });
+
+    a.fail(new Error('forkJoin-boom'));
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'forkJoin-boom' }));
+    b.dispose();
   });
 });
 
@@ -635,6 +882,33 @@ describe('withLatestFrom()', () => {
     ]);
     source.dispose();
     other.dispose();
+  });
+
+  it('forwards an error from the source', () => {
+    const source = createSubject<number>();
+    const other = createSubject<string>();
+    const onErr = vi.fn();
+
+    source.pipe(withLatestFrom(other)).subscribe({ error: onErr, next: () => {} });
+
+    source.fail(new Error('source-boom'));
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'source-boom' }));
+    other.dispose();
+  });
+
+  it('forwards an error from "other" (regression — previously swallowed silently)', () => {
+    const source = createSubject<number>();
+    const other = createSubject<string>();
+    const onErr = vi.fn();
+
+    source.pipe(withLatestFrom(other)).subscribe({ error: onErr, next: () => {} });
+
+    other.emit('a');
+    other.fail(new Error('other-boom'));
+
+    expect(onErr).toHaveBeenCalledWith(expect.objectContaining({ message: 'other-boom' }));
+    source.dispose();
   });
 
   it('does not emit when no value from other yet', () => {
@@ -700,6 +974,39 @@ describe('shareReplay()', () => {
     shared.subscribe((n) => late.push(n as number));
     expect(late).toEqual([2, 3]);
     u1();
+    subject.dispose();
+  });
+
+  it('warns via console.warn when bufferSize is clamped', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    of(1)
+      .pipe(shareReplay<number>(0))
+      .subscribe(() => {});
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]?.[0]).toContain('[@vielzeug/flux]');
+    expect(spy.mock.calls[0]?.[0]).toContain('shareReplay');
+
+    spy.mockRestore();
+  });
+
+  it('treats an Infinity bufferSize as 1 rather than buffering unboundedly', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const subject = createSubject<number>();
+    const shared = subject.pipe(shareReplay<number>(Infinity));
+
+    shared.subscribe(() => {});
+    subject.emit(1);
+    subject.emit(2);
+    subject.emit(3);
+
+    const late: number[] = [];
+
+    shared.subscribe((n) => late.push(n as number));
+    expect(late).toEqual([3]); // capped at 1, not the full history
+
+    spy.mockRestore();
     subject.dispose();
   });
 });
@@ -799,6 +1106,26 @@ describe('toPromise()', () => {
 
     expect(result).toBe(3);
   });
+
+  it('rejects immediately when signal is already aborted', async () => {
+    const ac = new AbortController();
+
+    ac.abort();
+    await expect(toPromise(never(), ac.signal)).rejects.toBeInstanceOf(DOMException);
+  });
+
+  it('rejects and unsubscribes when signal aborts mid-stream', async () => {
+    const ac = new AbortController();
+    const subject = createSubject<number>();
+
+    const pending = toPromise(subject, ac.signal);
+
+    ac.abort();
+    await expect(pending).rejects.toBeInstanceOf(DOMException);
+    expect(subject.pipe).toBeDefined(); // subject itself is untouched; only our subscription stopped
+
+    subject.dispose();
+  });
 });
 
 describe('toArray()', () => {
@@ -806,6 +1133,41 @@ describe('toArray()', () => {
     const result = await toArray(of('a', 'b', 'c'));
 
     expect(result).toEqual(['a', 'b', 'c']);
+  });
+
+  it('resolves with values collected so far when signal aborts mid-stream', async () => {
+    const ac = new AbortController();
+    const subject = createSubject<number>();
+
+    const pending = toArray(subject, ac.signal);
+
+    subject.emit(1);
+    subject.emit(2);
+    ac.abort();
+
+    await expect(pending).resolves.toEqual([1, 2]);
+
+    subject.emit(3); // no longer subscribed — must not throw or affect the resolved array
+    subject.dispose();
+  });
+
+  it('resolves with an empty array immediately when signal is already aborted', async () => {
+    const ac = new AbortController();
+
+    ac.abort();
+    await expect(toArray(never(), ac.signal)).resolves.toEqual([]);
+  });
+
+  it('does not leak an abort listener when the source completes synchronously', async () => {
+    const ac = new AbortController();
+    const addSpy = vi.spyOn(ac.signal, 'addEventListener');
+    const removeSpy = vi.spyOn(ac.signal, 'removeEventListener');
+
+    await toArray(of(1, 2, 3), ac.signal);
+
+    expect(addSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy).toHaveBeenCalledTimes(1);
+    expect(removeSpy.mock.calls[0]?.[1]).toBe(addSpy.mock.calls[0]?.[1]); // same listener removed as added
   });
 });
 

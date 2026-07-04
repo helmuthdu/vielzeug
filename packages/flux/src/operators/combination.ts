@@ -145,6 +145,7 @@ export function withLatestFrom<T, U extends Flux<unknown>[]>(
       others.forEach((other, i) => {
         otherUnsubs.push(
           other.subscribe({
+            error: observer.error,
             next(v) {
               latests[i] = v as Rest[typeof i];
               hasValue[i] = true;

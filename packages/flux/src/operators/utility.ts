@@ -1,5 +1,8 @@
 import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
 
+import { error, warn } from '../_dev';
+import { clampPositiveInt } from '../_numeric';
+import { guard } from '../_safe';
 import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
 import { FluxTimeoutError } from '../errors';
@@ -92,7 +95,13 @@ export function share<T>(): Operator<T, T> {
  * const hot$ = cold$.pipe(shareReplay(1)); // last value replayed to late subs
  */
 export function shareReplay<T>(bufferSize = 1): Operator<T, T> {
-  return (source) => makeMulticast(source, Math.max(1, Math.floor(bufferSize)));
+  const { clamped, value: safeSize } = clampPositiveInt(bufferSize);
+
+  if (clamped) {
+    warn(`shareReplay: bufferSize must be a finite integer >= 1, got ${bufferSize} — clamped to ${safeSize}`);
+  }
+
+  return (source) => makeMulticast(source, safeSize);
 }
 
 /** Run a side effect on each emission without modifying the value. */
@@ -103,8 +112,10 @@ export function tap<T>(fn: (value: T) => void): Operator<T, T> {
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          fn(v);
-          observer.next(v);
+          guard(() => {
+            fn(v);
+            observer.next(v);
+          }, observer.error);
         },
       }),
     );
@@ -192,11 +203,13 @@ export function catchError<T>(handler: (err: unknown) => Flux<T>): Operator<T, T
       const sourceUnsub = source.subscribe({
         complete: observer.complete,
         error(err) {
-          fallbackUnsub = handler(err).subscribe({
-            complete: observer.complete,
-            error: observer.error,
-            next: observer.next,
-          });
+          guard(() => {
+            fallbackUnsub = handler(err).subscribe({
+              complete: observer.complete,
+              error: observer.error,
+              next: observer.next,
+            });
+          }, observer.error);
         },
         next: observer.next,
       });
@@ -236,9 +249,11 @@ export function retry<T>(
               const n = attempts++;
 
               if (delayMs !== undefined) {
-                const ms = typeof delayMs === 'function' ? delayMs(n) : delayMs;
+                guard(() => {
+                  const ms = typeof delayMs === 'function' ? delayMs(n) : delayMs;
 
-                cancelDelay = scheduler.delay(attempt, Math.max(0, ms));
+                  cancelDelay = scheduler.delay(attempt, Math.max(0, ms));
+                }, observer.error);
               } else {
                 attempt();
               }
@@ -274,7 +289,12 @@ export function finalize<T>(fn: () => void): Operator<T, T> {
         if (called) return;
 
         called = true;
-        fn();
+
+        try {
+          fn();
+        } catch (err) {
+          error('finalize: cleanup callback threw', err);
+        }
       };
 
       const unsub = source.subscribe({
@@ -296,22 +316,51 @@ export function finalize<T>(fn: () => void): Operator<T, T> {
     });
 }
 
+/** Reject value used when `signal` aborts a pending `toPromise()`/`toArray()`. */
+function abortError(signal: AbortSignal): unknown {
+  return signal.reason ?? new DOMException('Aborted', 'AbortError');
+}
+
 /**
  * Convert a `Flux` to a `Promise` that resolves with the last emitted value
  * when the source completes, or rejects on error.
+ * Pass `signal` to unsubscribe and reject early if the caller loses interest
+ * before the source completes (e.g. a component unmounting).
  *
  * @example
  * const result = await toPromise(source$);
+ * const cancellable = await toPromise(source$, controller.signal);
  */
-export function toPromise<T>(source: Flux<T>): Promise<T | undefined> {
+export function toPromise<T>(source: Flux<T>, signal?: AbortSignal): Promise<T | undefined> {
   return new Promise<T | undefined>((resolve, reject) => {
-    let last: T | undefined;
+    if (signal?.aborted) {
+      reject(abortError(signal));
 
-    source.subscribe({
+      return;
+    }
+
+    let last: T | undefined;
+    let unsub: Unsubscribe = () => {};
+
+    const onAbort = (): void => {
+      unsub();
+      reject(abortError(signal!));
+    };
+
+    // Add the listener before subscribing — the source may complete/error synchronously
+    // during subscribe(), and the complete/error handlers below need it already registered
+    // to remove it (otherwise it leaks on `signal` until the signal itself is GC'd).
+    signal?.addEventListener('abort', onAbort, { once: true });
+
+    unsub = source.subscribe({
       complete() {
+        signal?.removeEventListener('abort', onAbort);
         resolve(last);
       },
-      error: reject,
+      error(err) {
+        signal?.removeEventListener('abort', onAbort);
+        reject(err);
+      },
       next(v) {
         last = v;
       },
@@ -321,19 +370,42 @@ export function toPromise<T>(source: Flux<T>): Promise<T | undefined> {
 
 /**
  * Collect all emitted values into an array resolved when the source completes.
+ * Pass `signal` to stop early and resolve with the values collected so far
+ * (rather than reject) if the caller loses interest before completion.
  *
  * @example
  * const all = await toArray(of(1, 2, 3));
+ * const partial = await toArray(source$, controller.signal);
  */
-export function toArray<T>(source: Flux<T>): Promise<T[]> {
+export function toArray<T>(source: Flux<T>, signal?: AbortSignal): Promise<T[]> {
   return new Promise<T[]>((resolve, reject) => {
     const results: T[] = [];
 
-    source.subscribe({
+    if (signal?.aborted) {
+      resolve(results);
+
+      return;
+    }
+
+    let unsub: Unsubscribe = () => {};
+
+    const onAbort = (): void => {
+      unsub();
+      resolve(results);
+    };
+
+    // See toPromise() above for why the listener is added before subscribing.
+    signal?.addEventListener('abort', onAbort, { once: true });
+
+    unsub = source.subscribe({
       complete() {
+        signal?.removeEventListener('abort', onAbort);
         resolve(results);
       },
-      error: reject,
+      error(err) {
+        signal?.removeEventListener('abort', onAbort);
+        reject(err);
+      },
       next(v) {
         results.push(v);
       },

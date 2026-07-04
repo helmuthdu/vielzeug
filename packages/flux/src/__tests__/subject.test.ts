@@ -339,6 +339,33 @@ describe('createReplaySubject()', () => {
     expect(received).toEqual([2, 3]);
   });
 
+  it('treats NaN bufferSize as 1 rather than an unbounded buffer', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const s = createReplaySubject<number>(NaN);
+
+    for (let i = 0; i < 50; i++) s.emit(i);
+
+    expect(s.buffer).toEqual([49]); // capped at 1, not growing without bound
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]?.[0]).toContain('createReplaySubject');
+
+    spy.mockRestore();
+    s.dispose();
+  });
+
+  it('treats Infinity bufferSize as 1 rather than an unbounded buffer', () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const s = createReplaySubject<number>(Infinity);
+
+    for (let i = 0; i < 50; i++) s.emit(i);
+
+    expect(s.buffer).toEqual([49]);
+    expect(spy).toHaveBeenCalledOnce();
+
+    spy.mockRestore();
+    s.dispose();
+  });
+
   it('exposes .buffer as readonly snapshot', () => {
     const s = createReplaySubject<string>(3);
 

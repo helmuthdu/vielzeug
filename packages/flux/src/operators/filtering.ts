@@ -1,5 +1,6 @@
 import type { Flux, Operator, Scheduler, Unsubscribe } from '../types';
 
+import { guard } from '../_safe';
 import { DEFAULT_SCHEDULER } from '../_scheduler';
 import { flux } from '../core';
 
@@ -131,12 +132,14 @@ export function takeWhile<T>(predicate: (value: T) => boolean): Operator<T, T> {
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          if (predicate(v)) {
-            observer.next(v);
-          } else {
-            observer.complete?.();
-            unsub();
-          }
+          guard(() => {
+            if (predicate(v)) {
+              observer.next(v);
+            } else {
+              observer.complete?.();
+              unsub();
+            }
+          }, observer.error);
         },
       });
 

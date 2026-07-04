@@ -1,10 +1,21 @@
 import type { Observer, Unsubscribe } from './types';
 
+import { warn } from './_dev';
+
 type QueueItem<T> = IteratorResult<T> | { readonly __err: unknown };
+
+/**
+ * Upper bound on the internal buffer before values are dropped (oldest first).
+ * Protects against unbounded memory growth when a producer emits faster than the
+ * `for await` consumer drains the iterator.
+ */
+const MAX_QUEUE_SIZE = 10_000;
 
 /**
  * Creates an `AsyncIterator<T>` backed by a subscribe function.
  * Buffers incoming values until consumed; cancels the subscription on `return()`.
+ * Drops the oldest buffered value (with a one-time dev warning) if the buffer exceeds
+ * `MAX_QUEUE_SIZE` — see `MAX_QUEUE_SIZE`.
  * @internal
  */
 export function makeAsyncIterator<T>(subscribe: (observer: Observer<T>) => Unsubscribe): AsyncIterableIterator<T> {
@@ -14,6 +25,7 @@ export function makeAsyncIterator<T>(subscribe: (observer: Observer<T>) => Unsub
     resolve: (r: IteratorResult<T>) => void;
   }> = [];
   let done = false;
+  let warnedOverflow = false;
 
   const DONE_RESULT: IteratorResult<T> = { done: true, value: undefined as T };
 
@@ -37,9 +49,23 @@ export function makeAsyncIterator<T>(subscribe: (observer: Observer<T>) => Unsub
 
       if (pending.length > 0) {
         pending.shift()!.resolve(item);
-      } else {
-        queue.push(item);
+
+        return;
       }
+
+      if (queue.length >= MAX_QUEUE_SIZE) {
+        queue.shift();
+
+        if (!warnedOverflow) {
+          warnedOverflow = true;
+          warn(
+            `async iterator buffer exceeded ${MAX_QUEUE_SIZE} queued values — dropping the oldest. ` +
+              'The consumer is falling behind the producer; throttle the source or drain the iterator faster.',
+          );
+        }
+      }
+
+      queue.push(item);
     },
   });
 

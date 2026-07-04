@@ -1,7 +1,9 @@
-import type { Flux, Observer, Operator, Unsubscribe } from './types';
+import type { Flux, Observer, Unsubscribe } from './types';
 
-import { error } from './_dev';
+import { error, warn } from './_dev';
 import { makeAsyncIterator } from './_iterator';
+import { clampPositiveInt } from './_numeric';
+import { makePipe } from './_pipe';
 
 const NOOP: Unsubscribe = () => {};
 
@@ -129,6 +131,38 @@ function replaySubscribe<T>(
   return core.doSubscribe(observer, signal);
 }
 
+/**
+ * Shared `dispose()` implementation for every `Subject` variant: aborts the core,
+ * notifies all active subscribers with `complete()`, and clears the subscriber set.
+ * Reused instead of being copy-pasted per factory.
+ * @internal
+ */
+function makeDispose<T>(core: SubjectCore<T>): () => void {
+  return () => {
+    if (core.ac.signal.aborted) return;
+
+    core.ac.abort();
+    core.broadcast((obs) => obs.complete?.());
+    core.subscribers.clear();
+  };
+}
+
+/**
+ * Shared `fail()` implementation for every `Subject` variant: aborts the core,
+ * notifies all active subscribers with `error()`, and clears the subscriber set.
+ * Reused instead of being copy-pasted per factory.
+ * @internal
+ */
+function makeFail<T>(core: SubjectCore<T>): (err: unknown) => void {
+  return (err) => {
+    if (core.ac.signal.aborted) return;
+
+    core.ac.abort();
+    core.broadcast((obs) => obs.error?.(err));
+    core.subscribers.clear();
+  };
+}
+
 // ── createSubject ─────────────────────────────────────────────────────────────
 
 /**
@@ -141,61 +175,47 @@ function replaySubscribe<T>(
  * events.dispose();
  */
 export function createSubject<T>(): Subject<T> {
-  const { ac, broadcast, doSubscribe, subscribers } = makeCore<T>();
+  const core = makeCore<T>();
+  const dispose = makeDispose(core);
+  const fail = makeFail(core);
 
-  const subject = {
-    complete(): void {
-      subject.dispose();
-    },
+  const subject: Subject<T> = {
+    complete: dispose,
 
     get disposalSignal(): AbortSignal {
-      return ac.signal;
+      return core.ac.signal;
     },
 
-    dispose(): void {
-      if (ac.signal.aborted) return;
-
-      ac.abort();
-      broadcast((obs) => obs.complete?.());
-      subscribers.clear();
-    },
+    dispose,
 
     get disposed(): boolean {
-      return ac.signal.aborted;
+      return core.ac.signal.aborted;
     },
 
     emit(value: T): void {
-      if (ac.signal.aborted) return;
+      if (core.ac.signal.aborted) return;
 
-      broadcast((obs) => obs.next(value));
+      core.broadcast((obs) => obs.next(value));
     },
 
-    fail(err: unknown): void {
-      if (ac.signal.aborted) return;
+    fail,
 
-      ac.abort();
-      broadcast((obs) => obs.error?.(err));
-      subscribers.clear();
-    },
+    pipe: makePipe(() => subject),
 
-    pipe(...operators: Operator[]): Flux<unknown> {
-      return operators.reduce((f: Flux<unknown>, op) => op(f), subject as unknown as Flux<unknown>);
-    },
-
-    subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe {
-      return doSubscribe(observerOrNext, signal);
+    subscribe(observerOrNext, signal) {
+      return core.doSubscribe(observerOrNext, signal);
     },
 
     [Symbol.asyncIterator](): AsyncIterableIterator<T> {
-      return makeAsyncIterator<T>((obs) => doSubscribe(obs));
+      return makeAsyncIterator<T>((obs) => core.doSubscribe(obs));
     },
 
     [Symbol.dispose](): void {
-      subject.dispose();
+      dispose();
     },
   };
 
-  return subject as unknown as Subject<T>;
+  return subject;
 }
 
 // ── createBehaviorSubject ─────────────────────────────────────────────────────
@@ -211,50 +231,35 @@ export function createSubject<T>(): Subject<T> {
  */
 export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
   const core = makeCore<T>();
-  const { ac, broadcast, subscribers } = core;
+  const dispose = makeDispose(core);
+  const fail = makeFail(core);
   let current = initial;
 
-  const subject = {
-    complete(): void {
-      subject.dispose();
-    },
+  const subject: BehaviorSubject<T> = {
+    complete: dispose,
 
     get disposalSignal(): AbortSignal {
-      return ac.signal;
+      return core.ac.signal;
     },
 
-    dispose(): void {
-      if (ac.signal.aborted) return;
-
-      ac.abort();
-      broadcast((obs) => obs.complete?.());
-      subscribers.clear();
-    },
+    dispose,
 
     get disposed(): boolean {
-      return ac.signal.aborted;
+      return core.ac.signal.aborted;
     },
 
     emit(value: T): void {
-      if (ac.signal.aborted) return;
+      if (core.ac.signal.aborted) return;
 
       current = value;
-      broadcast((obs) => obs.next(value));
+      core.broadcast((obs) => obs.next(value));
     },
 
-    fail(err: unknown): void {
-      if (ac.signal.aborted) return;
+    fail,
 
-      ac.abort();
-      broadcast((obs) => obs.error?.(err));
-      subscribers.clear();
-    },
+    pipe: makePipe(() => subject),
 
-    pipe(...operators: Operator[]): Flux<unknown> {
-      return operators.reduce((f: Flux<unknown>, op) => op(f), subject as unknown as Flux<unknown>);
-    },
-
-    subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe {
+    subscribe(observerOrNext, signal) {
       return replaySubscribe(
         core,
         () => {
@@ -289,7 +294,7 @@ export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
     },
 
     [Symbol.dispose](): void {
-      subject.dispose();
+      dispose();
     },
 
     get value(): T {
@@ -297,7 +302,7 @@ export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
     },
   };
 
-  return subject as unknown as BehaviorSubject<T>;
+  return subject;
 }
 
 // ── createReplaySubject ───────────────────────────────────────────────────────
@@ -314,57 +319,46 @@ export function createBehaviorSubject<T>(initial: T): BehaviorSubject<T> {
  */
 export function createReplaySubject<T>(bufferSize: number): ReplaySubject<T> {
   const core = makeCore<T>();
-  const { ac, broadcast, subscribers } = core;
-  const max = Math.max(1, Math.floor(bufferSize));
+  const dispose = makeDispose(core);
+  const fail = makeFail(core);
+  const { clamped, value: max } = clampPositiveInt(bufferSize);
   const buf: T[] = [];
 
-  const subject = {
+  if (clamped) {
+    warn(`createReplaySubject: bufferSize must be a finite integer >= 1, got ${bufferSize} — clamped to ${max}`);
+  }
+
+  const subject: ReplaySubject<T> = {
     get buffer(): readonly T[] {
       return buf;
     },
 
-    complete(): void {
-      subject.dispose();
-    },
+    complete: dispose,
 
     get disposalSignal(): AbortSignal {
-      return ac.signal;
+      return core.ac.signal;
     },
 
-    dispose(): void {
-      if (ac.signal.aborted) return;
-
-      ac.abort();
-      broadcast((obs) => obs.complete?.());
-      subscribers.clear();
-    },
+    dispose,
 
     get disposed(): boolean {
-      return ac.signal.aborted;
+      return core.ac.signal.aborted;
     },
 
     emit(value: T): void {
-      if (ac.signal.aborted) return;
+      if (core.ac.signal.aborted) return;
 
       if (buf.length >= max) buf.shift();
 
       buf.push(value);
-      broadcast((obs) => obs.next(value));
+      core.broadcast((obs) => obs.next(value));
     },
 
-    fail(err: unknown): void {
-      if (ac.signal.aborted) return;
+    fail,
 
-      ac.abort();
-      broadcast((obs) => obs.error?.(err));
-      subscribers.clear();
-    },
+    pipe: makePipe(() => subject),
 
-    pipe(...operators: Operator[]): Flux<unknown> {
-      return operators.reduce((f: Flux<unknown>, op) => op(f), subject as unknown as Flux<unknown>);
-    },
-
-    subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe {
+    subscribe(observerOrNext, signal) {
       return replaySubscribe(
         core,
         () => {
@@ -403,9 +397,9 @@ export function createReplaySubject<T>(bufferSize: number): ReplaySubject<T> {
     },
 
     [Symbol.dispose](): void {
-      subject.dispose();
+      dispose();
     },
   };
 
-  return subject as unknown as ReplaySubject<T>;
+  return subject;
 }

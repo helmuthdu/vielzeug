@@ -12,7 +12,7 @@ description: Complete API reference for @vielzeug/flux.
 | `flux()`                   | Cold stream factory                        | Sync  | Producer runs once per subscriber         |
 | `createSubject()`          | Hot multicasting subject                   | Sync  | No replay; late subscribers miss values   |
 | `createBehaviorSubject()`  | Subject replaying latest value             | Sync  | Initial value required                    |
-| `createReplaySubject()`    | Subject replaying last N values            | Sync  | `bufferSize` must be ≥ 1                  |
+| `createReplaySubject()`    | Subject replaying last N values            | Sync  | `bufferSize < 1` warns and clamps to 1    |
 | `flow()`                   | Compose multiple operators into one        | —     | Fully typed up to 8 operators             |
 | `DEFAULT_SCHEDULER`        | Built-in scheduler using real timers       | —     | Default for all timer-based operators     |
 | `of()`                     | Emit static values synchronously           | Sync  | Completes immediately                     |
@@ -24,8 +24,8 @@ description: Complete API reference for @vielzeug/flux.
 | `debounce()`               | Emit after silence period                  | Async | Pending value dropped on source complete  |
 | `timeout()`                | Error on inactivity                        | Async | Timer resets on each emission             |
 | `shareReplay()`            | Replay latest N to late subscribers        | Sync  | Holds strong reference to buffer          |
-| `toPromise()`              | Resolve with last value                    | Async | Rejects if source errors                  |
-| `toArray()`                | Collect all values to array                | Async | Rejects if source errors                  |
+| `toPromise()`              | Resolve with last value                    | Async | Rejects on error or `signal` abort        |
+| `toArray()`                | Collect all values to array                | Async | `signal` resolves with partial results    |
 | `fromSignal()`             | Ripple signal → Flux (emits immediately)   | Sync  | Emits current value on subscribe          |
 | `toSignal()`               | Flux → Ripple `SignalBinding`              | Async | Call `binding.dispose()` to stop tracking |
 
@@ -151,7 +151,7 @@ Creates a `ReplaySubject` that buffers up to `bufferSize` values and replays the
 
 | Parameter    | Type     | Description                              |
 | ------------ | -------- | ---------------------------------------- |
-| `bufferSize` | `number` | Maximum values to keep in the buffer (min 1) |
+| `bufferSize` | `number` | Maximum values to keep in the buffer (min 1; non-finite or `< 1` values log a `console.warn` and clamp to `1`) |
 
 **Returns:** `ReplaySubject<T>`
 
@@ -344,7 +344,7 @@ Prepends `values` before the first source emission.
 bufferCount<T>(size: number, every?: number): Operator<T, T[]>;
 ```
 
-Collects emissions into arrays of length `size`. Starts a new buffer every `every` emissions (default: `size`, non-overlapping). A partial buffer is flushed when the source completes. Values of `size < 1` are treated as `1`.
+Collects emissions into arrays of length `size`. Starts a new buffer every `every` emissions (default: `size`, non-overlapping). A partial buffer is flushed when the source completes. `size`/`every` values that are non-finite or `< 1` log a `console.warn` and clamp to `1`.
 
 ---
 
@@ -628,30 +628,30 @@ Multicasts one source execution to all subscribers. Re-subscribes to the source 
 ### `shareReplay()`
 
 ```ts
-shareReplay<T>(bufferSize: number): Operator<T, T>;
+shareReplay<T>(bufferSize?: number): Operator<T, T>;
 ```
 
-Like `share`, but replays the last `bufferSize` emissions to late subscribers.
+Like `share`, but replays the last `bufferSize` emissions to late subscribers (default `1`). Non-finite or `< 1` values log a `console.warn` and clamp to `1`.
 
 ---
 
 ### `toPromise()`
 
 ```ts
-toPromise<T>(source: Flux<T>): Promise<T>;
+toPromise<T>(source: Flux<T>, signal?: AbortSignal): Promise<T | undefined>;
 ```
 
-Returns a `Promise` that resolves with the last value when the source completes, or rejects if it errors. **Note:** `toPromise` is a direct function, not an operator — pass the `Flux` as the first argument.
+Returns a `Promise` that resolves with the last value when the source completes (`undefined` if it completed without emitting), or rejects if it errors. Pass `signal` to unsubscribe and reject early — with the signal's abort reason, or a `DOMException('Aborted', 'AbortError')` if none was given — if the caller loses interest before the source completes (e.g. a component unmounting). **Note:** `toPromise` is a direct function, not an operator — pass the `Flux` as the first argument.
 
 ---
 
 ### `toArray()`
 
 ```ts
-toArray<T>(source: Flux<T>): Promise<T[]>;
+toArray<T>(source: Flux<T>, signal?: AbortSignal): Promise<T[]>;
 ```
 
-Returns a `Promise` that resolves with all emitted values when the source completes. **Note:** direct function, not an operator.
+Returns a `Promise` that resolves with all emitted values when the source completes. Pass `signal` to stop early and resolve with the values collected so far (rather than reject) if the caller loses interest before completion. **Note:** direct function, not an operator.
 
 ---
 
@@ -799,7 +799,7 @@ interface SignalBinding<T> {
 
 ### `FluxError`
 
-Base class for all Flux errors. `instanceof FluxError` matches any Flux-specific error.
+Base class for all Flux errors. `instanceof FluxError` matches any Flux-specific error. Static helper: `FluxError.is(err)` — equivalent to `err instanceof FluxError`, inherited by every subclass (including `FluxTimeoutError`), so it does not narrow to a specific subclass.
 
 ### `FluxTimeoutError`
 

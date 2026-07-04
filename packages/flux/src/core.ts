@@ -1,6 +1,7 @@
-import type { Flux, Observer, Operator, Producer, Unsubscribe } from './types';
+import type { Flux, Observer, Producer, Unsubscribe } from './types';
 
 import { makeAsyncIterator } from './_iterator';
+import { makePipe } from './_pipe';
 
 const NOOP: Unsubscribe = () => {};
 
@@ -21,7 +22,7 @@ const NOOP: Unsubscribe = () => {};
 export function flux<T>(producer: Producer<T>): Flux<T> {
   const ac = new AbortController();
 
-  const instance = {
+  const instance: Flux<T> = {
     get disposalSignal(): AbortSignal {
       return ac.signal;
     },
@@ -34,9 +35,7 @@ export function flux<T>(producer: Producer<T>): Flux<T> {
       return ac.signal.aborted;
     },
 
-    pipe(...operators: Operator[]): Flux<unknown> {
-      return operators.reduce((f: Flux<unknown>, op) => op(f), instance as Flux<unknown>);
-    },
+    pipe: makePipe(() => instance),
 
     subscribe(observerOrNext: Observer<T> | ((value: T) => void), signal?: AbortSignal): Unsubscribe {
       const observer: Observer<T> = typeof observerOrNext === 'function' ? { next: observerOrNext } : observerOrNext;
@@ -145,7 +144,7 @@ export function flux<T>(producer: Producer<T>): Flux<T> {
       };
     },
 
-    [Symbol.asyncIterator](): AsyncIterator<T> {
+    [Symbol.asyncIterator](): AsyncIterableIterator<T> {
       return makeAsyncIterator<T>((obs) => instance.subscribe(obs));
     },
 
@@ -154,5 +153,5 @@ export function flux<T>(producer: Producer<T>): Flux<T> {
     },
   };
 
-  return instance as unknown as Flux<T>;
+  return instance;
 }

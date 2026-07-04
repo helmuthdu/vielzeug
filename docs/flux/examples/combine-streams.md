@@ -70,7 +70,7 @@ page$.pipe(withLatestFrom(filter$)).subscribe(([page, filter]) => {
 
 - `combineLatest` does not emit until **all** sources have emitted at least once — seed subjects with an initial value or use `startWith()` if you need an immediate emission.
 - For fire-and-forget coordination (wait for all to complete, emit last values) use `forkJoin()` instead.
-- `withLatestFrom` does not subscribe to the `other` stream; it only reads its latest buffered value. If `other` has never emitted, the emission is silently dropped.
+- `withLatestFrom` subscribes to `other` only to track its latest value — it does not wait for `other` before emitting; if `other` has never emitted, the source emission is silently dropped instead. An error from either `source` or `other` terminates the combined stream.
 
 ### Related
 

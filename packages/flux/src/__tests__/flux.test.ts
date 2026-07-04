@@ -295,4 +295,23 @@ describe('flux() — core factory', () => {
 
     expect(received).toEqual([10, 20, 30]);
   });
+
+  it('[Symbol.asyncIterator] drops the oldest buffered value with one console.warn once capacity is exceeded', async () => {
+    const spy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const OVERFLOW = 5;
+    const source = flux<number>((obs) => {
+      for (let i = 0; i < 10_000 + OVERFLOW; i++) obs.next(i);
+
+      obs.complete?.();
+    });
+
+    const iter = source[Symbol.asyncIterator]();
+    const first = await iter.next();
+
+    expect(first).toEqual({ done: false, value: OVERFLOW }); // oldest 5 (0..4) dropped to stay at the 10_000 cap
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]?.[0]).toContain('[@vielzeug/flux]');
+
+    spy.mockRestore();
+  });
 });

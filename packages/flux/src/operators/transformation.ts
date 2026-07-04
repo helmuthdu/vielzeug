@@ -1,5 +1,8 @@
 import type { Flux, Operator, Unsubscribe } from '../types';
 
+import { warn } from '../_dev';
+import { clampPositiveInt } from '../_numeric';
+import { guard } from '../_safe';
 import { flux } from '../core';
 
 /** Transform each emitted value through `fn`. */
@@ -10,7 +13,7 @@ export function map<A, B>(fn: (value: A) => B): Operator<A, B> {
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          observer.next(fn(v));
+          guard(() => observer.next(fn(v)), observer.error);
         },
       }),
     );
@@ -24,7 +27,9 @@ export function filter<T>(predicate: (value: T) => boolean): Operator<T, T> {
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          if (predicate(v)) observer.next(v);
+          guard(() => {
+            if (predicate(v)) observer.next(v);
+          }, observer.error);
         },
       }),
     );
@@ -45,8 +50,10 @@ export function scan<T, A>(reducer: (acc: A, value: T) => A, seed: A): Operator<
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          acc = reducer(acc, v);
-          observer.next(acc);
+          guard(() => {
+            acc = reducer(acc, v);
+            observer.next(acc);
+          }, observer.error);
         },
       });
     });
@@ -73,15 +80,17 @@ export function switchMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
         },
         error: observer.error,
         next(v) {
-          innerUnsub?.();
-          innerUnsub = fn(v).subscribe({
-            complete() {
-              innerUnsub = undefined;
-              checkDone();
-            },
-            error: observer.error,
-            next: observer.next,
-          });
+          guard(() => {
+            innerUnsub?.();
+            innerUnsub = fn(v).subscribe({
+              complete() {
+                innerUnsub = undefined;
+                checkDone();
+              },
+              error: observer.error,
+              next: observer.next,
+            });
+          }, observer.error);
         },
       });
 
@@ -114,26 +123,28 @@ export function flatMap<A, B>(fn: (value: A) => Flux<B>): Operator<A, B> {
         },
         error: observer.error,
         next(v) {
-          activeInner++;
+          guard(() => {
+            activeInner++;
 
-          let syncDone = false;
-          // Init to NOOP to avoid TDZ if complete fires synchronously during subscribe().
-          let unsub: Unsubscribe = () => {};
+            let syncDone = false;
+            // Init to NOOP to avoid TDZ if complete fires synchronously during subscribe().
+            let unsub: Unsubscribe = () => {};
 
-          const sub = fn(v).subscribe({
-            complete() {
-              syncDone = true;
-              activeInner--;
-              innerUnsubs.delete(unsub);
-              checkDone();
-            },
-            error: observer.error,
-            next: observer.next,
-          });
+            const sub = fn(v).subscribe({
+              complete() {
+                syncDone = true;
+                activeInner--;
+                innerUnsubs.delete(unsub);
+                checkDone();
+              },
+              error: observer.error,
+              next: observer.next,
+            });
 
-          unsub = sub;
+            unsub = sub;
 
-          if (!syncDone) innerUnsubs.add(unsub);
+            if (!syncDone) innerUnsubs.add(unsub);
+          }, observer.error);
         },
       });
 
@@ -170,15 +181,17 @@ export function concatMap<A, B>(fn: (value: A) => Flux<B>, maxBuffer = Infinity)
 
         const item = queue.shift()!;
 
-        currentUnsub = fn(item).subscribe({
-          complete() {
-            currentUnsub = undefined;
+        guard(() => {
+          currentUnsub = fn(item).subscribe({
+            complete() {
+              currentUnsub = undefined;
 
-            processNext();
-          },
-          error: observer.error,
-          next: observer.next,
-        });
+              processNext();
+            },
+            error: observer.error,
+            next: observer.next,
+          });
+        }, observer.error);
       }
 
       const outerUnsub = source.subscribe({
@@ -224,11 +237,13 @@ export function distinctUntilChanged<T>(comparator?: (a: T, b: T) => boolean): O
         complete: observer.complete,
         error: observer.error,
         next(v) {
-          if (!hasPrev || !eq(prev, v)) {
-            hasPrev = true;
-            prev = v;
-            observer.next(v);
-          }
+          guard(() => {
+            if (!hasPrev || !eq(prev, v)) {
+              hasPrev = true;
+              prev = v;
+              observer.next(v);
+            }
+          }, observer.error);
         },
       });
     });
@@ -261,8 +276,16 @@ export function startWith<T>(...values: T[]): Operator<T, T> {
  * // [1, 2], [3, 4], [5, 6]
  */
 export function bufferCount<T>(size: number, every?: number): Operator<T, T[]> {
-  const safeSize = Math.max(1, Math.floor(size));
-  const step = Math.max(1, Math.floor(every ?? safeSize));
+  const { clamped: sizeClamped, value: safeSize } = clampPositiveInt(size);
+  const { clamped: everyClamped, value: step } = clampPositiveInt(every ?? safeSize);
+
+  if (sizeClamped) {
+    warn(`bufferCount: size must be a finite integer >= 1, got ${size} — clamped to ${safeSize}`);
+  }
+
+  if (every !== undefined && everyClamped) {
+    warn(`bufferCount: every must be a finite integer >= 1, got ${every} — clamped to ${step}`);
+  }
 
   return (source) =>
     flux<T[]>((observer) => {

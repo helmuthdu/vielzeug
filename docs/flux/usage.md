@@ -239,6 +239,15 @@ const last = await toPromise(of(1, 2, 3));  // 3
 const all  = await toArray(of(1, 2, 3));    // [1, 2, 3]
 ```
 
+Both accept an optional `AbortSignal` to stop waiting on a source that never completes (e.g. cancel when a component unmounts). `toPromise` rejects on abort; `toArray` resolves with whatever it collected so far:
+
+```ts
+const ac = new AbortController();
+
+const pending = toArray(longLivedStream$, ac.signal);
+ac.abort(); // resolves `pending` with the values collected up to this point
+```
+
 ## Disposal
 
 `dispose()` terminates a stream permanently. All active subscribers receive a `complete` notification, then no further values are accepted:
