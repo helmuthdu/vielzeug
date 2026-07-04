@@ -73,7 +73,13 @@ if (container.has(Telemetry)) {
 #### Handling errors
 
 ```ts
-import { createContainer, scope, token, ScopedResolutionError, SyncResolutionError } from '@vielzeug/conduit';
+import {
+  createContainer,
+  scope,
+  token,
+  ConduitScopedResolutionError,
+  ConduitSyncResolutionError,
+} from '@vielzeug/conduit';
 
 const Heavy = token<object>('Heavy');
 const Id = token<string>('Id');
@@ -86,26 +92,26 @@ container.factory(Id, () => crypto.randomUUID(), { lifetime: 'transient' });
 container.factory(Session, () => ({}), { lifetime: RequestScope });
 
 try {
-  container.resolveSync(Heavy); // throws SyncResolutionError — not yet resolved
+  container.resolveSync(Heavy); // throws ConduitSyncResolutionError — not yet resolved
 } catch (err) {
-  if (err instanceof SyncResolutionError) {
+  if (err instanceof ConduitSyncResolutionError) {
     console.error(err.message);
     // "the instance has not been resolved yet; call await container.resolve() first"
   }
 }
 
 try {
-  container.resolveSync(Id); // throws SyncResolutionError — transients are never cached
+  container.resolveSync(Id); // throws ConduitSyncResolutionError — transients are never cached
 } catch (err) {
-  if (err instanceof SyncResolutionError) {
+  if (err instanceof ConduitSyncResolutionError) {
     console.error(err.message); // "transient factories are never cached"
   }
 }
 
 try {
-  container.resolveSync(Session); // throws ScopedResolutionError — must use a scope container
+  container.resolveSync(Session); // throws ConduitScopedResolutionError — must use a scope container
 } catch (err) {
-  if (err instanceof ScopedResolutionError) {
+  if (err instanceof ConduitScopedResolutionError) {
     console.error('use container.createScope(RequestScope) for named-scope tokens');
   }
 }
@@ -113,9 +119,9 @@ try {
 
 ### Pitfalls
 
-- `resolveSync()` on a transient factory always throws `SyncResolutionError` — transient results are never cached, so there is nothing to return synchronously.
-- Calling `resolveSync()` before `await container.resolve()` for a singleton that has an async factory throws `SyncResolutionError`. The warm-up call must complete before the sync path is entered.
-- `resolveSync()` on a named-scope token called outside a matching scope container throws `ScopedResolutionError`. Call `resolveSync()` on the scope container after resolving the scoped token there.
+- `resolveSync()` on a transient factory always throws `ConduitSyncResolutionError` — transient results are never cached, so there is nothing to return synchronously.
+- Calling `resolveSync()` before `await container.resolve()` for a singleton that has an async factory throws `ConduitSyncResolutionError`. The warm-up call must complete before the sync path is entered.
+- `resolveSync()` on a named-scope token called outside a matching scope container throws `ConduitScopedResolutionError`. Call `resolveSync()` on the scope container after resolving the scoped token there.
 
 ### Related
 

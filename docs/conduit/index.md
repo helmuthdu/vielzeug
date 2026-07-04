@@ -17,14 +17,14 @@ exports:
     trySyncResolve,
     resolveSyncOptional,
     resolveSyncOrDefault,
-    ContainerError,
-    CircularDependencyError,
-    ProviderNotFoundError,
-    DuplicateRegistrationError,
-    SyncResolutionError,
-    ScopedResolutionError,
-    ContainerDisposedError,
-    ContainerFrozenError,
+    ConduitError,
+    ConduitCircularDependencyError,
+    ConduitProviderNotFoundError,
+    ConduitDuplicateRegistrationError,
+    ConduitSyncResolutionError,
+    ConduitScopedResolutionError,
+    ConduitDisposedError,
+    ConduitFrozenError,
     InferTokenTypes,
     ResolveInterceptor,
   ]
@@ -64,15 +64,15 @@ const service = await container.resolve(UserService);
 await container.dispose(); // all hooks run automatically
 ```
 
-| Feature                     | Conduit                                       | tsyringe                                                    | InversifyJS                                                                       |
-| --------------------------- | --------------------------------------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                                                       | ~45 kB                                                                            |
-| Typed token ergonomics      | <ore-icon name="check" size="16"></ore-icon>    | Partial                                                     | Partial                                                                           |
-| Async-first resolution      | <ore-icon name="check" size="16"></ore-icon>    | Partial                                                     | Partial                                                                           |
-| Child container scopes      | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                                        |
-| Explicit disposal lifecycle | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon>                      | Partial                                                                           |
-| Decorator-free usage        | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="x" size="16"></ore-icon> (decorator-oriented) | <ore-icon name="triangle-alert" size="16"></ore-icon> (commonly decorator-oriented) |
-| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>    | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>                                            |
+| Feature                     | Conduit                                       | tsyringe                                                      | InversifyJS                                                                         |
+| --------------------------- | --------------------------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Bundle size                 | <PackageInfo package="conduit" type="size" /> | ~6 kB                                                         | ~45 kB                                                                              |
+| Typed token ergonomics      | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                       | Partial                                                                             |
+| Async-first resolution      | <ore-icon name="check" size="16"></ore-icon>  | Partial                                                       | Partial                                                                             |
+| Child container scopes      | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="check" size="16"></ore-icon>                                        |
+| Explicit disposal lifecycle | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon>                      | Partial                                                                             |
+| Decorator-free usage        | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="x" size="16"></ore-icon> (decorator-oriented) | <ore-icon name="triangle-alert" size="16"></ore-icon> (commonly decorator-oriented) |
+| Zero dependencies           | <ore-icon name="check" size="16"></ore-icon>  | <ore-icon name="check" size="16"></ore-icon>                  | <ore-icon name="x" size="16"></ore-icon>                                            |
 
 <div class="decision-callout">
 

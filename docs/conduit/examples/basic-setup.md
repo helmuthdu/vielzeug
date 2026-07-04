@@ -44,7 +44,7 @@ await container.dispose();
 
 ### Pitfalls
 
-- Calling `container.resolve()` before `container.value()` or `container.factory()` throws `ProviderNotFoundError`. Register all providers before resolving.
+- Calling `container.resolve()` before `container.value()` or `container.factory()` throws `ConduitProviderNotFoundError`. Register all providers before resolving.
 - Passing a token of type `Token<A>` where `Token<B>` is expected is a type error at compile time. Each `token()` call creates a distinct symbol even when descriptions match.
 
 ### Related

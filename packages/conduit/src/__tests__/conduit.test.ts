@@ -560,6 +560,17 @@ describe('Container — resolveAll', () => {
 
     expect(calls).toBe(0);
   });
+
+  it('rejects with ConduitCircularDependencyError instead of deadlocking when two singletons dispatched in parallel depend on each other', async () => {
+    const A = token('A');
+    const B = token('B');
+    const c = createContainer();
+
+    c.factory(A, (r) => r.resolve(B));
+    c.factory(B, (r) => r.resolve(A));
+
+    await expect(c.resolveAll()).rejects.toThrow(ConduitCircularDependencyError);
+  });
 });
 
 // ---------------------------------------------------------------------------

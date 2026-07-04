@@ -66,7 +66,7 @@ const container = createContainer();
 
 container.factory(RequestId, () => crypto.randomUUID(), { lifetime: RequestScope });
 
-// Resolving from the root or a plain child throws ScopedResolutionError
+// Resolving from the root or a plain child throws ConduitScopedResolutionError
 // Resolving from a matching scope container creates one instance per scope
 const scopeA = container.createScope(RequestScope);
 const scopeB = container.createScope(RequestScope);
@@ -81,7 +81,7 @@ console.log((await scopeA.resolve(RequestId)) === idA); // true — same scope, 
 ### Pitfalls
 
 - A transient factory can never be resolved synchronously with `resolveSync()` — transients are never cached. Use `resolve()` for transient providers.
-- A named-scope factory resolved outside a matching scope container throws `ScopedResolutionError`.
+- A named-scope factory resolved outside a matching scope container throws `ConduitScopedResolutionError`.
 - Mixing lifetimes can produce stale references: a singleton that holds a reference to a transient gets one specific instance forever. Use named-scope or transient lifetimes at the singleton level when freshness matters.
 
 ### Related

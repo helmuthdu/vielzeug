@@ -81,8 +81,8 @@ log.write('payment processed');
 
 ### Pitfalls
 
-- Resolving a named-scope factory from a container that has no matching scope in its ancestor chain throws `ScopedResolutionError`, including the required scope name in the message.
-- Unlike `'scoped'` lifetime, named scopes require a **specific** container created via `createScope(scopeToken)`. An ordinary `createChild()` container will not satisfy a named-scope factory.
+- Resolving a named-scope factory from a container that has no matching scope in its ancestor chain throws `ConduitScopedResolutionError`, including the required scope name in the message.
+- Named scopes require a **specific** container created via `createScope(scopeToken)`. An ordinary `createScope()` call with no scope token will not satisfy a named-scope factory.
 - A single `createScope()` call creates one scope container. To run concurrent isolated scopes (e.g., per-request), call `createScope()` once per scope and dispose each when done.
 
 ### Related

@@ -73,15 +73,15 @@ await container.dispose();
 
 ## Errors
 
-| Error                        | When thrown                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| `ProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name     |
-| `DuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                   |
-| `SyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory                |
-| `ScopedResolutionError`      | `resolve()` called outside a matching named-scope container                       |
-| `CircularDependencyError`    | `freeze()` detected a cycle; message includes the full path                       |
-| `ContainerDisposedError`     | Any operation called after `dispose()`; message includes container name           |
-| `ContainerFrozenError`       | `value()` or `factory()` called after `freeze()`; message includes container name |
+| Error                               | When thrown                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------------- |
+| `ConduitProviderNotFoundError`      | `resolve()` called for an unregistered token; message includes container name     |
+| `ConduitDuplicateRegistrationError` | `value()` or `factory()` called for an already-registered token                   |
+| `ConduitSyncResolutionError`        | `resolveSync()` called for a transient or not-yet-resolved factory                |
+| `ConduitScopedResolutionError`      | `resolve()` called outside a matching named-scope container                       |
+| `ConduitCircularDependencyError`    | `freeze()` detected a cycle; message includes the full path                       |
+| `ConduitDisposedError`              | Any operation called after `dispose()`; message includes container name           |
+| `ConduitFrozenError`                | `value()` or `factory()` called after `freeze()`; message includes container name |
 
 ## Documentation
 

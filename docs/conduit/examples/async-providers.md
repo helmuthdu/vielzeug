@@ -72,7 +72,7 @@ const db = await container.resolve(Db);
 ### Pitfalls
 
 - When a singleton factory rejects, the rejection is **cached** and rethrown on every subsequent `resolve()` call — the factory is **not** retried. To retry, create a new container and re-register.
-- Calling `resolveSync()` on an async factory before it has been resolved at least once throws `SyncResolutionError`. Warm up the factory with `await container.resolve()` first, or call `await container.resolveAll()` at startup.
+- Calling `resolveSync()` on an async factory before it has been resolved at least once throws `ConduitSyncResolutionError`. Warm up the factory with `await container.resolve()` first, or call `await container.resolveAll()` at startup.
 
 ### Related
 

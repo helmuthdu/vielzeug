@@ -42,7 +42,7 @@ const Config = token<{ apiUrl: string }>('Config');
 
 ## Registration
 
-Use `value()` for constants and pre-constructed instances. Use `factory()` for anything built lazily. A token can only be registered once — `DuplicateRegistrationError` is thrown on a second registration for the same token.
+Use `value()` for constants and pre-constructed instances. Use `factory()` for anything built lazily. A token can only be registered once — `ConduitDuplicateRegistrationError` is thrown on a second registration for the same token.
 
 ```ts
 import { createContainer, token } from '@vielzeug/conduit';
@@ -128,7 +128,7 @@ const config = container.resolveSync(Config);
 const logger = container.resolveSync(Logger);
 ```
 
-`resolveSync()` throws `SyncResolutionError` for transient factories (never cached) and for unresolved singleton instances. It throws `ScopedResolutionError` when called outside a matching named-scope container. If a singleton factory previously **failed**, `resolveSync()` rethrows the original cached rejection.
+`resolveSync()` throws `ConduitSyncResolutionError` for transient factories (never cached) and for unresolved singleton instances. It throws `ConduitScopedResolutionError` when called outside a matching named-scope container. If a singleton factory previously **failed**, `resolveSync()` rethrows the original cached rejection.
 
 > **Note:** `resolveAll()` only pre-warms `'singleton'` factories by default. Pass `{ includeScoped: true }` on a scope container to also pre-warm named-scope factories tagged to that scope. Transient factories are never pre-warmed.
 
@@ -143,7 +143,7 @@ const plugin = resolveSyncOptional(container, OptionalPlugin); // undefined if n
 const timeout = resolveSyncOrDefault(container, RequestTimeout, 5000); // 5000 if not registered
 ```
 
-Both re-throw `SyncResolutionError`, `ContainerDisposedError`, and all other errors — only `ProviderNotFoundError` is silenced.
+Both re-throw `ConduitSyncResolutionError`, `ConduitDisposedError`, and all other errors — only `ConduitProviderNotFoundError` is silenced.
 
 ## Lifetimes
 
@@ -189,7 +189,7 @@ async function handleRequest() {
 }
 ```
 
-Resolving a named-scope factory from a container that is not a matching scope (or one of its descendants) throws `ScopedResolutionError` with the required scope name.
+Resolving a named-scope factory from a container that is not a matching scope (or one of its descendants) throws `ConduitScopedResolutionError` with the required scope name.
 
 ## Async Providers
 
@@ -204,7 +204,7 @@ container.factory(Config, async () => {
 
 ## Resolving Without Throwing
 
-Use `tryResolve()` (free function) to resolve a token as a discriminated union instead of throwing. It returns `{ ok: false, error }` **only** when the token is not registered — all other errors (factory failures, `ContainerDisposedError`, circular deps) are re-thrown:
+Use `tryResolve()` (free function) to resolve a token as a discriminated union instead of throwing. It returns `{ ok: false, error }` **only** when the token is not registered — all other errors (factory failures, `ConduitDisposedError`, circular deps) are re-thrown:
 
 ```ts
 import { tryResolve, trySyncResolve } from '@vielzeug/conduit';
@@ -222,7 +222,7 @@ if (syncResult.ok) {
 }
 ```
 
-> **Note:** `trySyncResolve()` re-throws `SyncResolutionError` and `ContainerDisposedError` — it only swallows `ProviderNotFoundError`.
+> **Note:** `trySyncResolve()` re-throws `ConduitSyncResolutionError` and `ConduitDisposedError` — it only swallows `ConduitProviderNotFoundError`.
 
 Use `resolveMany()` to resolve multiple tokens in parallel with a typed tuple result:
 
@@ -241,7 +241,7 @@ await loadModules(container, dbModule, authModule, serviceModule);
 container.freeze(); // validates declared deps + seals
 
 // Later in application code:
-container.value(SomeToken, x); // throws ContainerFrozenError: Container 'app' is frozen ...
+container.value(SomeToken, x); // throws ConduitFrozenError: Container 'app' is frozen ...
 ```
 
 `freeze()` is **idempotent** — calling it multiple times is safe and a no-op after the first call. Declare `deps` on a factory to enable static validation at freeze time:
@@ -254,8 +254,8 @@ container.value(Logger, new ConsoleLogger());
 container.factory(Service, (r) => new Service(r.resolve(Logger)), { deps: [Logger] });
 
 container.freeze();
-// → throws CircularDependencyError if deps form a cycle
-// → throws ProviderNotFoundError if a declared dep is missing
+// → throws ConduitCircularDependencyError if deps form a cycle
+// → throws ConduitProviderNotFoundError if a declared dep is missing
 ```
 
 > Lazy dependencies not listed in `deps:` are still caught at resolve time — declaring deps is opt-in.
@@ -270,7 +270,7 @@ const child = root.createScope(undefined, { name: 'child-42' });
 const scope = root.createScope(RequestScope, { name: 'scope-42' });
 
 // Error messages will include the container name:
-// ProviderNotFoundError: No provider registered for token: MyToken (in container 'child-42')
+// ConduitProviderNotFoundError: No provider registered for token: MyToken (in container 'child-42')
 ```
 
 ## Cycle Detection
@@ -465,7 +465,7 @@ container.factory(NotificationService, async (r) => {
 - Call `freeze()` after all modules are loaded — it validates the graph and locks the container in one step.
 - Declare `deps:` on factories to enable static cycle detection at `freeze()` time.
 - Use `resolveAll()` once at startup, then `resolveSync()` in hot paths.
-- Use `tryResolve()` or `trySyncResolve()` when optional providers are expected to be absent — both only swallow `ProviderNotFoundError`; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
+- Use `tryResolve()` or `trySyncResolve()` when optional providers are expected to be absent — both only swallow `ConduitProviderNotFoundError`; use `resolveOptional()` for one-off nullable checks; use `resolveOrDefault()` when a concrete fallback value is available.
 - In hot paths after `resolveAll()`, prefer `resolveSyncOptional()` or `resolveSyncOrDefault()` over wrapping `resolveSync()` in try/catch.
 - Use `resolveMany()` to resolve multiple well-known providers at startup in parallel.
 - Use `onResolve()` for observability (telemetry, logging) rather than coupling resolution paths to event parsing.
