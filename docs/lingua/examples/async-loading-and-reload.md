@@ -34,7 +34,7 @@ i18n.register('ja', { greeting: 'こんにちは' });
 
 ### Pitfalls
 
-- `preload()` is idempotent — calling it again for an already-loaded locale is a no-op. Calling it for a locale that is not registered throws `[lingua/E001]`; always register before preloading.
+- `preload()` is idempotent — calling it again for an already-loaded locale is a no-op. Calling it for a locale that is not registered throws `LinguaMissingLocaleError`; always register before preloading.
 - `register()` triggers a subscriber notification even if the catalog content is identical. Avoid calling it in hot code paths.
 - If you need to add keys without discarding the existing catalog, use `extend()` instead of `register()`.
 

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(lingua): restore broken @vielzeug/lingua/validate subpath (vite entry-key/exports mismatch), throw LinguaNamespaceMissingError instead of a raw Error from loadNamespace(), wire up the documented ./format subpath, drop dead ssr.ts/testing.ts entries, dedupe has() logic, add exports smoke check",
+      "type": "minor",
+      "packageName": "@vielzeug/lingua"
+    }
+  ],
+  "packageName": "@vielzeug/lingua",
+  "email": "helmuthdu@gmail.com"
+}

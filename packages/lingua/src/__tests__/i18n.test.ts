@@ -9,6 +9,7 @@ import {
   LinguaInvalidCountError,
   LinguaInvalidLocaleError,
   LinguaMissingLocaleError,
+  LinguaNamespaceMissingError,
   LinguaRestoreError,
   createI18n,
   hydrateI18n,
@@ -2494,6 +2495,13 @@ describe('createI18n', () => {
       await expect(i18n.preload('de')).rejects.toBeInstanceOf(LinguaMissingLocaleError);
     });
 
+    test('loadNamespace() on an unregistered namespace rejects with LinguaNamespaceMissingError', async () => {
+      const i18n = createI18n({ catalogs: { en: {} } });
+
+      await expect(i18n.loadNamespace('missing')).rejects.toBeInstanceOf(LinguaNamespaceMissingError);
+      await expect(i18n.loadNamespace('missing')).rejects.toBeInstanceOf(LinguaError);
+    });
+
     test('error subclass .name matches class name', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
@@ -2605,6 +2613,8 @@ describe('createI18n', () => {
       const i18n = createI18n({ catalogs: { en: {} } });
 
       await expect(i18n.loadNamespace('unregistered')).rejects.toThrow('not registered');
+      await expect(i18n.loadNamespace('unregistered')).rejects.toBeInstanceOf(LinguaNamespaceMissingError);
+      await expect(i18n.loadNamespace('unregistered')).rejects.toBeInstanceOf(LinguaError);
     });
 
     test('isNamespaceRegistered() returns false for an unregistered namespace', () => {

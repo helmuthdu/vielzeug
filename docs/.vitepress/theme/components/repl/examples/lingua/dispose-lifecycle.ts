@@ -51,19 +51,19 @@ console.log('signal aborted after:', routeI18n.disposalSignal.aborted)   // true
 console.log('after dispose — isRegistered("en"):', routeI18n.isRegistered('en'))  // false
 console.log('after dispose — isLoaded("en"):', routeI18n.isLoaded('en'))           // false
 
-// Post-dispose: register() throws [lingua/E007] — consistent with all other mutation methods
+// Post-dispose: register() throws LinguaDisposedError — consistent with all other mutation methods
 try {
   routeI18n.register('en', { greeting: 'Hi' })
 } catch (err) {
-  console.log('register after dispose:', (err as Error).message)  // [lingua/E007] …
+  console.log('register after dispose:', (err as Error).name)  // 'LinguaDisposedError'
 }
 console.log('subscribers notified after dispose:', notified)  // 0
 
-// Post-dispose: setLocale() rejects with [lingua/E007]
+// Post-dispose: setLocale() rejects with LinguaDisposedError
 try {
   await routeI18n.setLocale('en')
 } catch (err) {
-  console.log('setLocale after dispose:', (err as Error).message)  // [lingua/E007] …
+  console.log('setLocale after dispose:', (err as Error).name)  // 'LinguaDisposedError'
 }
 
 // Post-dispose: t() falls back to onMissingKey for every key

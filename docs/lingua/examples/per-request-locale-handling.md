@@ -42,7 +42,7 @@ const html = `<h1>${reqI18n.t('title')}</h1>`;
 ### Pitfalls
 
 - `fork()` copies the catalog snapshot at call time. If the shared instance loads a new locale after a fork is created, the fork does not automatically gain access to it. For preloaded locales this is fine — the fork inherits loaders and will load on demand via `setLocale()`.
-- `setLocale()` throws `[lingua/E001]` if the locale is not registered. Validate the request locale against `sharedI18n.getSupportedLocales()` before switching to avoid a 500 error from an unexpected locale header.
+- `setLocale()` throws `LinguaMissingLocaleError` if the locale is not registered. Validate the request locale against `sharedI18n.getSupportedLocales()` before switching to avoid a 500 error from an unexpected locale header.
 - Do not share the per-request fork across async boundaries (e.g. via a module-level variable) — pass it explicitly to rendering functions.
 
 ### Related

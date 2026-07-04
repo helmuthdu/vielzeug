@@ -16,6 +16,12 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./format": {
+      "source": "./src/format.ts",
+      "types": "./dist/format.d.ts",
+      "import": "./dist/format.js",
+      "require": "./dist/format.cjs"
+    },
     "./validate": {
       "source": "./src/validate.ts",
       "types": "./dist/validate.d.ts",
@@ -24,14 +30,15 @@
     }
   },
   "scripts": {
-    "build": "vite build && pnpm run build:bundle && pnpm run build:types",
+    "build": "vite build && pnpm run build:bundle && pnpm run build:types && pnpm run verify:exports",
     "build:types": "tsc -p tsconfig.declarations.json",
     "fix": "eslint --fix src",
     "lint": "eslint src",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest",
-    "build:bundle": "vite build --config vite.bundle.config.ts"
+    "build:bundle": "vite build --config vite.bundle.config.ts",
+    "verify:exports": "node ./scripts/verify-exports.mjs"
   },
   "publishConfig": {
     "access": "public",

@@ -2,7 +2,6 @@ import { arrayFormattingExample } from './array-formatting';
 import { asyncLoadingExample } from './async-loading';
 import { basicSetupExample } from './basic-setup';
 import { basicTranslationExample } from './basic-translation';
-import { bindPluralExample } from './bind-plural';
 import { disposeLifecycleExample } from './dispose-lifecycle';
 import { fmtFormatterExample } from './fmt-formatter';
 import { forkSsrExample } from './fork-ssr';
@@ -14,6 +13,8 @@ import { pipePluralExample } from './pipe-plural';
 import { pluralizationExample } from './pluralization';
 import { preloadPatternExample } from './preload-pattern';
 import { scopeBindExample } from './scope-bind';
+import { ssrHydrationExample } from './ssr-hydration';
+import { standaloneFormatterExample } from './standalone-formatter';
 import { variableInterpolationExample } from './variable-interpolation';
 
 export const linguaExamples = {
@@ -32,6 +33,7 @@ export const linguaExamples = {
   pluralization: pluralizationExample,
   'preload-pattern': preloadPatternExample,
   'scope-bind': scopeBindExample,
-  'ssr-hydration': bindPluralExample,
+  'ssr-hydration': ssrHydrationExample,
+  'standalone-formatter': standaloneFormatterExample,
   'variable-interpolation': variableInterpolationExample,
 };

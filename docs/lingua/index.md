@@ -5,7 +5,7 @@ package: lingua
 category: i18n
 keywords: [internationalization, translations, pluralization, locale, i18n, l10n, async-loading]
 related: [ripple, wayfinder, courier]
-exports: [createI18n, serializeI18n, hydrateI18n, createFormatter, LinguaError, E, validateCatalog, registerNamespace, loadNamespace, getState, restoreState]
+exports: [createI18n, createFormatter, hydrateI18n, serializeI18n, validateCatalog, LinguaError, LinguaDisposedError, LinguaInvalidCountError, LinguaCountInVarsError, LinguaMissingLocaleError, LinguaInvalidLocaleError, LinguaNamespaceMissingError, LinguaRestoreError]
 environments: [browser, node, ssr, deno]
 ---
 
@@ -32,7 +32,7 @@ const greeting = i18n.t('greeting', { name: 'Alice' });
 - Deterministic locale fallback chain resolution
 - Typed leaf and plural branch keys with explicit APIs (`t` and `tp`)
 - Explicit locale source model (static messages or async loaders)
-- Typed error class `LinguaError` with stable `E.*` code constants
+- Typed error class hierarchy rooted at `LinguaError` — `instanceof` narrows to the specific failure (`LinguaDisposedError`, `LinguaMissingLocaleError`, `LinguaNamespaceMissingError`, …)
 - Framework-agnostic store primitives that compose with any UI framework
 - Zero dependencies
 
@@ -136,7 +136,7 @@ i18n.getSupportedLocales();
 - Loaded-locale predicate: `isLoaded(locale)` returns `true` when a catalog is fully resolved — safe for `serializeI18n()` guards
 - Registered-locale predicate: `isRegistered(locale)` distinguishes "never configured" from "async loader not yet called"
 - Instance disposal: `dispose()` clears all subscribers and catalog state — prevents memory leaks in route-scoped SPA instances
-- Typed error handling: `LinguaError` class with `E.*` code constants for safe error branching
+- Typed error handling: every thrown/rejected error is `instanceof LinguaError`, with named subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, `LinguaNamespaceMissingError`, …) for specific `instanceof` branching
 - Instance forking: `fork(overrides?)` creates an isolated child for SSR or test isolation
 - Reactive model through snapshots: `getSnapshot`, `subscribe`
 - Deterministic fallback chain using active locale plus configured fallback locales

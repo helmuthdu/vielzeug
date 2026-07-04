@@ -1,4 +1,4 @@
-export const bindPluralExample = {
+export const ssrHydrationExample = {
   code: `import { createI18n, serializeI18n, hydrateI18n } from '@vielzeug/lingua'
 
 // ── serializeI18n / hydrateI18n ───────────────────────────────────────────────

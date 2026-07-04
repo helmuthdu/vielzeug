@@ -27,7 +27,7 @@ const i18n = createI18n({
 });
 ```
 
-All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `register` throw `[lingua/E004]` for unrecognised tags.
+All locale strings must be valid BCP 47 tags. `createI18n`, `setLocale`, and `register` throw `LinguaInvalidLocaleError` for unrecognised tags.
 
 ## Locale Lifecycle
 

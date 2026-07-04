@@ -224,7 +224,7 @@ export type I18n<M extends Messages = Messages> = {
    * Loads a previously registered namespace for the given locale (defaults to the active locale).
    * Deduplicates concurrent and repeated calls.
    *
-   * @throws an error if the namespace has not been registered with `registerNamespace()` first.
+   * @throws `LinguaNamespaceMissingError` if the namespace has not been registered with `registerNamespace()` first.
    * @throws `LinguaDisposedError` if called on a disposed instance.
    */
   loadNamespace(ns: string, locale?: Locale): Promise<void>;
@@ -399,6 +399,21 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     }
 
     return undefined;
+  };
+
+  // Shared by has() and scope().has() — true if `base` exists as a leaf key or a plural branch prefix.
+  const hasKey = (base: string): boolean => {
+    if (findEntry(base) !== undefined) return true;
+
+    for (const candidate of state.chain) {
+      const catalog = catalogStore.resolve(candidate);
+
+      if (!catalog) continue;
+
+      if (catalog.prefixes.has(base)) return true;
+    }
+
+    return false;
   };
 
   const interpolate = (
@@ -619,19 +634,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
     },
 
     has(key: MessageLeafKeys<M> | MessageBranchKeys<M> | (string & {})): boolean {
-      const base = String(key);
-
-      if (findEntry(base) !== undefined) return true;
-
-      for (const candidate of state.chain) {
-        const catalog = catalogStore.resolve(candidate);
-
-        if (!catalog) continue;
-
-        if (catalog.prefixes.has(base)) return true;
-      }
-
-      return false;
+      return hasKey(String(key));
     },
 
     isLoaded(loc: Locale): boolean {
@@ -723,21 +726,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         get fmt() {
           return getFormatter();
         },
-        has: (key) => {
-          const fullKey = `${pre}.${key}`;
-
-          if (findEntry(fullKey) !== undefined) return true;
-
-          for (const candidate of state.chain) {
-            const catalog = catalogStore.resolve(candidate);
-
-            if (!catalog) continue;
-
-            if (catalog.prefixes.has(fullKey)) return true;
-          }
-
-          return false;
-        },
+        has: (key) => hasKey(`${pre}.${key}`),
         t: (key, vars?) => translate(`${pre}.${key}`, vars),
         tp: (key, count, options?) => translatePlural(`${pre}.${key}`, count, options),
       };

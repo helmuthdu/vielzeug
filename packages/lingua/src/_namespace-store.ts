@@ -3,7 +3,7 @@
 
 import type { Messages } from './_catalog';
 
-import { checkDisposed, checkDisposedAsync } from './errors';
+import { LinguaNamespaceMissingError, checkDisposed, checkDisposedAsync } from './errors';
 
 export type Locale = string;
 export type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
@@ -75,7 +75,7 @@ export function createNamespaceStore<M extends Messages = Messages>(disposed: ()
 
       if (!factory) {
         return Promise.reject(
-          new Error(`[@vielzeug/lingua] Namespace '${ns}' is not registered. Call registerNamespace() first.`),
+          new LinguaNamespaceMissingError(`Namespace '${ns}' is not registered. Call registerNamespace() first.`),
         );
       }
 

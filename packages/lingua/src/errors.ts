@@ -30,7 +30,7 @@ export class LinguaMissingLocaleError extends LinguaError {}
 /** Thrown when a locale string is not a valid BCP 47 tag. */
 export class LinguaInvalidLocaleError extends LinguaError {}
 
-/** Thrown when a namespace is requested but has not been loaded for the current locale. */
+/** Thrown when `loadNamespace()` / `extend()` is called for a namespace that has not been registered with `registerNamespace()`. */
 export class LinguaNamespaceMissingError extends LinguaError {}
 
 /** Thrown when restoring i18n state whose locale has no catalog. */

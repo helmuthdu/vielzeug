@@ -26,7 +26,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `i18n.disposed`          | `true` after `dispose()` is called                                                 | Sync getter    | —                                                                                                                  |
 | `i18n[Symbol.dispose]()` | Delegates to `dispose()`                                                           | Sync           | Enables `using` declarations                                                                                       |
 | `i18n.registerNamespace()` | Register a namespace factory without loading                                       | Sync           | Call `loadNamespace()` when ready to load, or use `extend()` for register+load in one call                         |
-| `i18n.loadNamespace()`    | Load a registered namespace for a locale                                           | Async          | Deduplicates concurrent and repeated calls; throws if namespace not registered                                      |
+| `i18n.loadNamespace()`    | Load a registered namespace for a locale                                           | Async          | Deduplicates concurrent and repeated calls; throws `LinguaNamespaceMissingError` if namespace not registered        |
 | `i18n.isNamespaceLoaded()`  | Check if a namespace is loaded for the active (or given) locale                  | Sync           | Returns `false` if not registered or not yet loaded for this locale                                                |
 | `i18n.isNamespaceRegistered()` | Check if a namespace factory has been registered                              | Sync           | `true` after `registerNamespace()` or `extend()`; `false` before                                                   |
 | `i18n.getState()`         | Extract a serializable snapshot of loaded catalogs + active locale                 | Sync           | Equivalent to `serializeI18n(i18n)` — preferred for public API access                                              |
@@ -34,7 +34,7 @@ description: Complete API reference for @vielzeug/lingua.
 | `serializeI18n()`         | Serialise loaded catalogs for SSR hydration                                        | Sync           | Loader-only locales are omitted — check `isLoaded()` before calling                                                |
 | `hydrateI18n()`           | Hydrate a client instance from server-serialised state                             | Sync           | Throws `LinguaRestoreError` if `state.locale` has no catalog                                                            |
 | Error classes             | Named error subclasses (`LinguaDisposedError`, `LinguaMissingLocaleError`, …)      | —              | All runtime errors are `instanceof LinguaError`; use `instanceof` for specific handling                            |
-| `createFormatter()`       | Create a standalone Intl formatter                                                 | Sync           | Exported from main entry — pass a getter `() => i18n.locale` to follow locale changes                              |
+| `createFormatter()`       | Create a standalone Intl formatter                                                 | Sync           | Available from the main entry or `@vielzeug/lingua/format` — pass a getter `() => i18n.locale` to follow locale changes |
 | `validateCatalog()`       | Check a catalog for missing CLDR plural forms and missing `{count}` interpolations | Sync           | Import from `@vielzeug/lingua/validate` — not for production                                                       |
 
 ## Package Entry Points
@@ -42,6 +42,7 @@ description: Complete API reference for @vielzeug/lingua.
 | Import                      | Purpose                                                    |
 | --------------------------- | ---------------------------------------------------------- |
 | `@vielzeug/lingua`          | Main exports and types, includes `createFormatter`         |
+| `@vielzeug/lingua/format`   | Standalone `createFormatter` — no `createI18n` dependency  |
 | `@vielzeug/lingua/validate` | `validateCatalog` — dev/CI only, exclude from prod         |
 
 ## createI18n

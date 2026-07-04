@@ -47,7 +47,7 @@ try {
 
 - `onMissingKey` and `onMissingVar` are called synchronously inside `t()` and `tp()`. Keep them fast — avoid network calls or heavy computation.
 - `onMissingKey` and `onMissingVar` must return a `string`. Returning `undefined` or throwing will produce a runtime error in the translation pipeline.
-- `preload()` rejects if the loader throws. If you do not catch the rejection, the `setLocale()` call that follows will throw `[lingua/E001]` because the catalog was never stored.
+- `preload()` rejects if the loader throws. If you do not catch the rejection, the `setLocale()` call that follows will throw `LinguaMissingLocaleError` because the catalog was never stored.
 
 ### Related
 
