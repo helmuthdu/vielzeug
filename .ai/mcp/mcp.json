@@ -1,9 +1,0 @@
-{
-  "$comment": "Local-dev MCP config: points the client at the in-repo codex build (not the published npm package). Requires `pnpm --filter @vielzeug/codex build` first. Path is relative to the repo root — the MCP client must resolve cwd there. For consuming @vielzeug/codex from outside this repo, see docs/codex/usage.md instead.",
-  "mcpServers": {
-    "vielzeug": {
-      "command": "node",
-      "args": ["packages/codex/dist/cli.js"]
-    }
-  }
-}

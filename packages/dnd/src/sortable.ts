@@ -1,6 +1,7 @@
 import { warn } from './_dev';
+import { createDisposable, resolveDisabled } from './_shared';
 import { DndScopeError } from './errors';
-import { type Disposable } from './shared';
+import { type Disposable } from './types';
 
 // ─── Branded scope ────────────────────────────────────────────────────────────
 
@@ -468,35 +469,27 @@ function applyKeyboardReorder(
  * ```
  */
 export function createSortableScope(): SortableScope {
-  let disposed = false;
-  const abortController = new AbortController();
   const state: SortableScopeState = { active: null, disposables: new Set(), handles: new Set() };
-
-  const destroy = (): void => {
-    if (disposed) return;
-
-    disposed = true;
-    abortController.abort();
-
+  const disposable = createDisposable(() => {
     // Dispose all registered sortables (each dispose() call is idempotent)
     for (const disposeFn of state.disposables) {
       disposeFn();
     }
-  };
+  });
 
   const scope = {
     get disposalSignal() {
-      return abortController.signal;
+      return disposable.disposalSignal;
     },
-    dispose: destroy,
+    dispose: disposable.dispose,
     get disposed() {
-      return disposed;
+      return disposable.disposed;
     },
     get isDragging() {
       return state.active !== null;
     },
     [SCOPE_BRAND]: true as const,
-    [Symbol.dispose]: destroy,
+    [Symbol.dispose]: disposable[Symbol.dispose],
   } as SortableScope;
 
   sortableScopeStates.set(scope, state);
@@ -576,6 +569,8 @@ export function createSortable(options: SortableOptions): Sortable {
   };
 
   const markItems = (): void => {
+    const seenKeys = new Set<string>();
+
     // Mark all children that have a key as sortable items
     Array.from(element.children).forEach((child) => {
       const el = child as HTMLElement;
@@ -583,7 +578,17 @@ export function createSortable(options: SortableOptions): Sortable {
       try {
         const key = getKey(el);
 
-        if (key) el.setAttribute(ITEM_ATTR, '');
+        if (key) {
+          if (seenKeys.has(key)) {
+            warn(
+              `getKey returned the duplicate key "${key}" for two sibling items — onReorder's ids and applyReorder may become inconsistent. Ensure getKey returns a unique value per item.`,
+            );
+          } else {
+            seenKeys.add(key);
+          }
+
+          el.setAttribute(ITEM_ATTR, '');
+        }
       } catch (err) {
         warn(
           `getKey threw for a child element — the item will not be sortable. Check your getKey implementation. ${String(err)}`,
@@ -621,8 +626,6 @@ export function createSortable(options: SortableOptions): Sortable {
   };
 
   let lastRevert: (() => void) | null = null;
-  let disposed = false;
-  const abortController = new AbortController();
 
   const handle_: ContainerHandle = {
     commitReorder: (orderedIds) => {
@@ -638,7 +641,7 @@ export function createSortable(options: SortableOptions): Sortable {
       options.onReorder(event);
     },
     getOrderedIds,
-    isDisabled: () => options.disabled === true,
+    isDisabled: () => resolveDisabled(options.disabled),
     notifyBeforeReorder: (from, to) => options.onBeforeReorder?.(from, to),
     notifyDragEnd: (id, event) => options.onDragEnd?.(id, event),
     notifyDragStart: (id, event) => options.onDragStart?.(id, event),
@@ -784,45 +787,35 @@ export function createSortable(options: SortableOptions): Sortable {
 
   markItems();
 
-  element.setAttribute('role', 'list');
-  element.addEventListener('dragstart', handleDragStart);
-  element.addEventListener('dragover', handleDragOver);
-  element.addEventListener('drop', handleDrop);
-  element.addEventListener('dragend', handleDragEnd);
-  element.addEventListener('keydown', handleKeydown);
-
-  const destroy = (): void => {
-    if (disposed) return;
-
-    disposed = true;
-    abortController.abort();
-    scopeState.disposables.delete(destroy);
+  const disposable = createDisposable(() => {
+    scopeState.disposables.delete(disposable.dispose);
 
     if (scopeState.active && (scopeState.active.source === handle_ || scopeState.active.target === handle_)) {
       finishSession(scopeState, new Event('dragend') as DragEvent, true);
     }
 
     scopeState.handles.delete(handle_);
-    element.removeEventListener('dragstart', handleDragStart);
-    element.removeEventListener('dragover', handleDragOver);
-    element.removeEventListener('drop', handleDrop);
-    element.removeEventListener('dragend', handleDragEnd);
-    element.removeEventListener('keydown', handleKeydown);
-
     element.removeAttribute('role');
     cleanupItems();
-  };
+  });
+
+  element.setAttribute('role', 'list');
+  element.addEventListener('dragstart', handleDragStart, { signal: disposable.disposalSignal });
+  element.addEventListener('dragover', handleDragOver, { signal: disposable.disposalSignal });
+  element.addEventListener('drop', handleDrop, { signal: disposable.disposalSignal });
+  element.addEventListener('dragend', handleDragEnd, { signal: disposable.disposalSignal });
+  element.addEventListener('keydown', handleKeydown, { signal: disposable.disposalSignal });
 
   // Register with scope so scope.dispose() can tear this down
-  scopeState.disposables.add(destroy);
+  scopeState.disposables.add(disposable.dispose);
 
   return {
     get disposalSignal() {
-      return abortController.signal;
+      return disposable.disposalSignal;
     },
-    dispose: destroy,
+    dispose: disposable.dispose,
     get disposed() {
-      return disposed;
+      return disposable.disposed;
     },
     get isDragging() {
       return scopeState.active?.source === handle_;
@@ -831,7 +824,7 @@ export function createSortable(options: SortableOptions): Sortable {
       lastRevert?.();
       lastRevert = null;
     },
-    [Symbol.dispose]: destroy,
+    [Symbol.dispose]: disposable[Symbol.dispose],
     sync: () => {
       markItems();
     },

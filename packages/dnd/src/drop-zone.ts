@@ -1,4 +1,5 @@
-import { type Disposable, resolveDisabled } from './shared';
+import { createDisposable, resolveDisabled } from './_shared';
+import { type Disposable } from './types';
 
 // ─── Accept matching ─────────────────────────────────────────────────────────
 
@@ -208,8 +209,6 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   // Determined on the first dragenter and held for the duration of the drag.
   let dragAccepted = false;
   let validating = false;
-  let disposed = false;
-  const abortController = new AbortController();
 
   const setValidating = (next: boolean): void => {
     validating = next;
@@ -232,6 +231,8 @@ export function createDropZone(options: DropZoneOptions): DropZone {
   const resetCounter = (): void => {
     updateCounter(0);
   };
+
+  const disposable = createDisposable(resetCounter);
 
   // Settle the final accepted/rejected split and fire callbacks.
   const settle = (acceptedFiles: File[], rejectedFiles: File[]): void => {
@@ -263,7 +264,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
       .then((valid) => {
         if (options.onValidate) setValidating(false);
 
-        if (disposed) return;
+        if (disposable.disposed) return;
 
         if (valid) {
           settleFn(accepted, rej);
@@ -275,7 +276,7 @@ export function createDropZone(options: DropZoneOptions): DropZone {
       .catch(() => {
         if (options.onValidate) setValidating(false);
 
-        if (disposed) return;
+        if (disposable.disposed) return;
 
         settleFn([], [...rej, ...accepted]);
       });
@@ -343,47 +344,30 @@ export function createDropZone(options: DropZoneOptions): DropZone {
     dispatchWithValidation(Array.from(clipFiles), settleForPaste);
   };
 
-  element.addEventListener('dragenter', handleDragEnter);
-  element.addEventListener('dragover', handleDragOver);
-  element.addEventListener('dragleave', handleDragLeave);
-  element.addEventListener('drop', handleDrop);
+  element.addEventListener('dragenter', handleDragEnter, { signal: disposable.disposalSignal });
+  element.addEventListener('dragover', handleDragOver, { signal: disposable.disposalSignal });
+  element.addEventListener('dragleave', handleDragLeave, { signal: disposable.disposalSignal });
+  element.addEventListener('drop', handleDrop, { signal: disposable.disposalSignal });
 
-  if (options.paste) window.addEventListener('paste', handlePaste);
+  if (options.paste) window.addEventListener('paste', handlePaste, { signal: disposable.disposalSignal });
 
   // These global listeners catch drags that end outside the zone.
   // The window 'drop' also fires for in-zone drops, but resetCounter() is idempotent at counter=0.
-  window.addEventListener('dragend', resetCounter);
-  window.addEventListener('drop', resetCounter);
-
-  const destroy = (): void => {
-    if (disposed) return;
-
-    disposed = true;
-    abortController.abort();
-    element.removeEventListener('dragenter', handleDragEnter);
-    element.removeEventListener('dragover', handleDragOver);
-    element.removeEventListener('dragleave', handleDragLeave);
-    element.removeEventListener('drop', handleDrop);
-
-    if (options.paste) window.removeEventListener('paste', handlePaste);
-
-    window.removeEventListener('dragend', resetCounter);
-    window.removeEventListener('drop', resetCounter);
-    resetCounter();
-  };
+  window.addEventListener('dragend', resetCounter, { signal: disposable.disposalSignal });
+  window.addEventListener('drop', resetCounter, { signal: disposable.disposalSignal });
 
   return {
     get disposalSignal() {
-      return abortController.signal;
+      return disposable.disposalSignal;
     },
-    dispose: destroy,
+    dispose: disposable.dispose,
     get disposed() {
-      return disposed;
+      return disposable.disposed;
     },
     get hovered() {
       return dragCounter > 0 && dragAccepted;
     },
-    [Symbol.dispose]: destroy,
+    [Symbol.dispose]: disposable[Symbol.dispose],
     get validating() {
       return validating;
     },

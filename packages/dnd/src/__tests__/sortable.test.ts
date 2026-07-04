@@ -1348,6 +1348,31 @@ describe('dev-mode warnings', () => {
     warnSpy.mockRestore();
   });
 
+  it('warns when getKey returns a duplicate key for two sibling items', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { element } = makeList('a', 'a', 'b');
+
+    const sortable = createSortable({ element, getKey });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('duplicate key "a"'));
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+
+    sortable.dispose();
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when every getKey value is unique', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { element } = makeList('a', 'b', 'c');
+
+    const sortable = createSortable({ element, getKey });
+
+    expect(warnSpy).not.toHaveBeenCalled();
+
+    sortable.dispose();
+    warnSpy.mockRestore();
+  });
+
   it('warns in dev when getKey throws for a child element', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const element = document.createElement('ul');

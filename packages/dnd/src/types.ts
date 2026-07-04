@@ -6,9 +6,3 @@ export interface Disposable {
   dispose(): void;
   readonly disposed: boolean;
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-export function resolveDisabled(disabled: boolean | undefined): boolean {
-  return disabled === true;
-}
