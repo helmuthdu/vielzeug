@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Vielzeug** (German for "many tools") is a monorepo of 23 independent, zero-dependency, tree-shakeable TypeScript utility packages published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
+**Vielzeug** (German for "many tools") is a monorepo of **30 independent, zero-dependency, tree-shakeable TypeScript packages** published to npm. Each package targets ES2022 and ships both ESM and CJS formats.
+
+For the full package catalogue and dependency graph see `.ai/rules/data/catalogue.md`. For toolchain details see `.ai/rules/process/workspace.md`. For engineering conventions see `.ai/rules/code/conventions.md`.
 
 ## Commands
 
@@ -18,6 +20,8 @@ pnpm lint         # eslint + stylelint
 pnpm fix          # auto-fix JS (eslint --fix) and CSS (prettier + stylelint)
 pnpm docs:dev     # VitePress dev server
 pnpm docs:build   # build documentation
+pnpm validate:repl                        # validate all REPL examples
+pnpm validate:repl -- --package <name>    # validate one package's REPL examples
 ```
 
 ### Per-package
@@ -37,11 +41,21 @@ cd packages/<name>
 pnpm test src/__tests__/specific.test.ts
 ```
 
+### Per-package test command overrides
+
+Most packages use the standard test command. Packages with co-located tests require the filter form:
+
+| Package  | Command                               |
+| -------- | ------------------------------------- |
+| `refine` | `pnpm --filter @vielzeug/refine test` |
+
+Standard command (all other packages): `pnpm vitest run packages/<name>/src/__tests__/`
+
 ## Architecture
 
 ### Monorepo Structure
 
-- **`packages/`** — 23 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
+- **`packages/`** — 30 publishable npm packages, each self-contained with its own `package.json`, `vite.config.ts`, `tsconfig.json`, and `vitest.config.ts`
 - **`docs/`** — VitePress documentation site with one sub-directory per package
 - **`common/`** — Rush shared configs, git hooks, and scripts
 - **`rush.json`** — defines all packages and the `vielzeug-packages` version policy
@@ -53,37 +67,39 @@ Rush.js orchestrates parallel builds across packages. Vite runs in library mode 
 
 ### Package Dependency Graph (notable edges)
 
+Generated from `package.json` files — authoritative copy in `.ai/rules/data/catalogue.md`. Reproduced here for a quick reference:
+
 ```
-clockwork  → ripple
-coins      → arsenal
-courier    → arsenal
-familiar   → arsenal
-flux       → ripple
-forge      → arsenal, ripple
-ledger     → ripple
-orbit      → arsenal, ripple
-ore        → arsenal, orbit, ripple
-prism      → orbit, ripple
-pulse      → ripple
-refine     → arsenal, ore, dnd, orbit, ripple, scroll, tempo
-scout      → ripple
-scroll     → ripple
-sourcerer  → arsenal, ripple
-spell      → arsenal
+clockwork → ripple
+coins     → arsenal
+courier   → arsenal
+familiar  → arsenal
+flux      → ripple
+forge     → arsenal, ripple
+ledger    → ripple
+orbit     → arsenal, ripple
+ore       → ripple
+prism     → orbit, ripple
+pulse     → ripple
+refine    → arsenal, dnd, orbit, ore, ripple, tempo
+scout     → ripple
+scroll    → ripple
+sourcerer → arsenal
+spell     → arsenal
 ```
 
-All other packages are fully independent.
+Fully independent (no `@vielzeug/*` deps): `arsenal`, `codex`, `conduit`, `dnd`, `herald`, `keymap`, `lingua`, `ripple`, `rune`, `sandbox`, `tempo`, `vault`, `ward`, `wayfinder`.
 
 ### Package Categories
 
-| Category | Packages                                                                                                                                                                                                                                  |
-|---|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| State & Reactivity | `ripple` (signals/computed/effects), `ore` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines)                                                                                    |
-| HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API)                                                                                                                                               |
-| UI Primitives | `refine` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `dnd` (drag-and-drop), `scroll` (virtual list engine)                                                                                       |
-| Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization)                                                                                                                                                            |
-| Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `codex` (AI/MCP server) |
-| Finance | `coins` (precise monetary arithmetic)                                                                                                                                                                                                     |
+| Category | Packages |
+|---|---|
+| State & Reactivity | `ripple` (signals/computed/effects), `ore` (web components + reactive state), `forge` (form state + validation), `clockwork` (finite state machines), `ledger` (undo/redo history) |
+| HTTP & Storage | `courier` (HTTP client, caching, mutations), `vault` (IndexedDB + LocalStorage unified API) |
+| UI Primitives | `refine` (accessible web components), `orbit` (tooltip/popover positioning), `prism` (charts), `dnd` (drag-and-drop), `scroll` (virtual list engine) |
+| Routing & i18n | `wayfinder` (client-side router + middleware), `lingua` (i18n + pluralization) |
+| Cross-cutting | `spell` (schema validation), `ward` (RBAC), `herald` (typed event bus), `rune` (structured logging), `conduit` (DI container), `arsenal` (utility functions), `familiar` (Web Worker pool), `tempo`, `sourcerer`, `scout` (fuzzy search), `keymap` (keyboard shortcuts), `codex` (AI/MCP server), `sandbox` (sandboxed iframe runtime) |
+| Finance | `coins` (precise monetary arithmetic) |
 
 ### Standard Package Layout
 
@@ -102,7 +118,7 @@ packages/<name>/
 
 ## Key Conventions
 
-- **TypeScript strict mode** throughout; no JS files in `src/`
+- **TypeScript strict mode** throughout; no `any`, no JS files in `src/`
 - **Zero external dependencies** per package (inter-package deps are allowed). Documented exceptions: `refine` bundles `lucide` as a runtime dep; `refine` and `prism` use `axe-core` as a devDependency for accessibility testing (not bundled).
 - **ESLint Perfectionist plugin** enforces sorted imports and object keys — run `pnpm fix` if linting fails on ordering
 - **Prettier**: 120-char line width, 2-space indent, trailing commas
@@ -120,6 +136,19 @@ rush change --bulk --message "<summary>" --bump-type <patch|minor|major>
 ```
 
 Use `patch` for fixes, `minor` for new features, `major` for breaking changes. **Do not commit, push, or publish without explicit user approval.**
+
+## Multi-Agent Worktrees
+
+For packages with no `@vielzeug/*` dependency edge in either direction, git worktrees prevent race conditions when multiple agents work in parallel:
+
+```bash
+pnpm worktree:add <pkg>              # refuses if <pkg> has any @vielzeug dependency edge
+pnpm worktree:add <pkg> -- --force   # override the refusal
+pnpm worktree:list
+pnpm worktree:remove <pkg>
+```
+
+Creates `.worktrees/<pkg>/` on a new `agent/<pkg>-<timestamp>` branch. Full details in `.ai/rules/process/workspace.md § Multi-agent worktrees`.
 
 ## Teardown / Disposal Convention
 
@@ -150,8 +179,9 @@ interface AsyncHandle {
 **Rules:**
 - `dispose()` is the canonical name — never `destroy()`, `disconnect()`, `close()`, or `cleanup()`.
 - `readonly disposed: boolean` — always present on disposable objects.
-- `readonly disposalSignal: AbortSignal` — on long-lived stateful objects that consumers tie their lifetimes to. Not required on short-lived helpers.
+- `readonly disposalSignal: AbortSignal` — include on long-lived stateful objects that consumers may tie their own cleanup to. Omit on short-lived per-operation objects.
 - `[Symbol.dispose]` / `[Symbol.asyncDispose]` ordering is enforced automatically by ESLint. Run `pnpm fix` to auto-sort — do not manually reason about Symbol key ordering.
+- Native platform APIs that return teardown functions (e.g. `autoUpdate() => () => void`) are **not** wrapped.
 
 ## Dev Logging Standard (`_dev.ts`)
 
@@ -183,13 +213,14 @@ export function devOnly(fn: () => void): void {
 - `_dev.ts` is **never exported** from `index.ts`.
 - `isDev` is always `const` (never `export const`).
 - Gate via `__<PKG>_PROD__` global (set by bundler `define`). **Never use `import.meta.env.DEV`** — library packages are consumed outside Vite contexts.
-- `_dev.ts` exports only the helpers the package actually uses (`warn`, `error`, `devOnly`). Do not add unused helpers.
+- `_dev.ts` exports only the helpers the package actually uses. Do not add unused helpers.
 - No bare `console.warn` / `console.error` in source — always go through `_dev.ts`.
 - Tests that assert warning output: spy on `console.warn` / `console.error`, do NOT import `_dev` directly.
+- Add `@security` to `warn`'s JSDoc only when messages may include user-supplied data (PII risk).
 
 ### Layer 2 — Consumer debug observability (`src/devtools.ts`)
 
-Opt-in structured debug logging exported only from the `/devtools` sub-path. Uses `console.debug`. Tree-shaken in production.
+Opt-in structured debug logging exported only from the `/devtools` sub-path. Uses `console.debug`. Tree-shaken in production. No environment gate needed — consumers choose to import it.
 
 ## Error Class Convention
 
@@ -218,6 +249,7 @@ export class <Pkg>FooError extends <Pkg>Error {}
 - Use `opts?: ErrorOptions` for cause chaining.
 - **No `[@vielzeug/<name>]` prefix in error messages** — class name identifies origin.
 - Error classes live in `errors.ts` only — never in `types.ts` or mixed into `_types.ts`.
+- Base class constructor requires `message: string` — no default message. Every subtype must supply a meaningful message.
 
 ## File Layout & Naming
 
@@ -236,7 +268,7 @@ packages/<name>/src/
 ## Reference Packages
 
 When in doubt about structure, style, or test layout:
-- **`spell`** — canonical standard shape: focused public API, centralised `src/__tests__/`, dedicated `errors.ts` and `types.ts`.
+- **`spell`** — canonical standard shape: focused public API, centralised `src/__tests__/`, dedicated `errors.ts` and `types.ts`. **When creating a new package: copy `spell`'s structure, rename, and remove unneeded files.**
 - **`arsenal`** — canonical tree-shakeable multi-helper: one function per file grouped by category folder, all re-exported from `index.ts`.
 
 ## Slash Commands (pkg-workflow)

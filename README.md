@@ -3,7 +3,7 @@
 
 # Vielzeug
 
-**26 independent, zero-dependency TypeScript packages for modern JavaScript**
+**30 independent, zero-dependency TypeScript packages for modern JavaScript**
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-100%25-blue)](https://www.typescriptlang.org/)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-success)](https://www.npmjs.com/org/vielzeug)
@@ -297,6 +297,26 @@ pnpm add @vielzeug/rune
 
 ---
 
+### [@vielzeug/keymap](packages/keymap) – Keyboard Shortcut Manager
+
+Headless keyboard shortcut manager with chord sequences, context layers, and disposable bindings.
+
+```bash
+pnpm add @vielzeug/keymap
+```
+
+**Key Features:**
+
+- `createKeymap()` — bind handlers to shortcuts with chord sequence support (e.g. `Ctrl+K Ctrl+S`)
+- `createKeymapLayer()` for context-scoped bindings that override the base layer
+- `formatShortcut()` and `parseShortcut()` utilities for display and programmatic use
+- Platform-aware modifier detection (`detectModKey`) — `Meta` on macOS, `Ctrl` elsewhere
+- Disposable bindings with `using` cleanup
+
+[📖 Documentation](https://vielzeug.dev/keymap/) • [Examples](https://vielzeug.dev/keymap/examples)
+
+---
+
 ### [@vielzeug/lingua](packages/lingua) – Internationalization
 
 Lightweight, type-safe i18n with pluralization, interpolation, and async loading.
@@ -377,6 +397,26 @@ pnpm add @vielzeug/dnd
 
 ---
 
+### [@vielzeug/ledger](packages/ledger) – Undo/Redo History
+
+Async undo/redo command history with reactive `canUndo` / `canRedo` signals.
+
+```bash
+pnpm add @vielzeug/ledger
+```
+
+**Key Features:**
+
+- `createLedger()` — execute, undo, and redo typed `Command` objects
+- `compose()` to group multiple commands into a single undoable unit
+- Reactive `canUndo` and `canRedo` signals via `@vielzeug/ripple`
+- Configurable history limit and async execute/rollback support
+- Typed error hierarchy: `LedgerExecutionError`, `LedgerRollbackError`
+
+[📖 Documentation](https://vielzeug.dev/ledger/) • [Examples](https://vielzeug.dev/ledger/examples)
+
+---
+
 ### [@vielzeug/orbit](packages/orbit) – Floating Positioning
 
 Lightweight floating-element positioning for tooltips, dropdowns, popovers, and menus.
@@ -415,6 +455,46 @@ pnpm add @vielzeug/prism
 - Zero external dependencies (32 KB min / 10.3 KB gz)
 
 [📖 Documentation](https://vielzeug.dev/prism/) • [Examples](https://vielzeug.dev/prism/examples)
+
+---
+
+### [@vielzeug/sandbox](packages/sandbox) – Sandboxed iframe Runtime
+
+Safe sandboxed iframe runtime with a typed postMessage bridge for executing untrusted or AI-generated UI code.
+
+```bash
+pnpm add @vielzeug/sandbox
+```
+
+**Key Features:**
+
+- `createSandbox()` — mount a sandboxed iframe in any container element
+- `sandbox.render(html)` — atomically replace the iframe document; generation-stamped to drop stale messages
+- Typed `onMessage` subscription with `SandboxMessage` discriminated union
+- `buildDocument()` and `buildCsp()` helpers for constructing sandboxed HTML with a strict CSP
+- `createSandboxTestHelpers()` for unit-testing consumers without real iframe infrastructure
+
+[📖 Documentation](https://vielzeug.dev/sandbox/) • [Examples](https://vielzeug.dev/sandbox/examples)
+
+---
+
+### [@vielzeug/scout](packages/scout) – Fuzzy Search
+
+Fast fuzzy search with a trigram index, per-field weighting, match highlighting, and an optional reactive layer.
+
+```bash
+pnpm add @vielzeug/scout
+```
+
+**Key Features:**
+
+- `createIndex()` — build a trigram-indexed search index from any array of objects
+- `createSearch()` for single-shot queries and `createReactiveSearch()` for signal-driven live filtering
+- Per-field boost weights and configurable score threshold
+- `highlight()` and `highlightField()` for match range extraction and rendering helpers
+- `toSearchFn()` and `toFilterPredicate()` adapters for integration with existing pipelines
+
+[📖 Documentation](https://vielzeug.dev/scout/) • [Examples](https://vielzeug.dev/scout/examples)
 
 ---
 
@@ -628,26 +708,30 @@ pnpm docs:dev
 ```text
 vielzeug/
 ├── packages/
-│   └── codex/         # AI / MCP server
 │   ├── arsenal/       # 75+ utility functions
 │   ├── clockwork/     # Finite state machines
+│   ├── codex/         # AI / MCP server
 │   ├── coins/         # Monetary arithmetic & formatting
 │   ├── conduit/       # Dependency injection
 │   ├── courier/       # HTTP client & query management
-│   ├── ore/           # Web component primitives
 │   ├── dnd/           # Drag-and-drop utilities
 │   ├── familiar/      # Web Worker pool
 │   ├── flux/          # Reactive streams & operators
 │   ├── forge/         # Form state management
 │   ├── herald/        # Typed event bus
+│   ├── keymap/        # Keyboard shortcut manager
+│   ├── ledger/        # Undo/redo command history
 │   ├── lingua/        # Internationalization
 │   ├── orbit/         # Floating element positioning
+│   ├── ore/           # Web component primitives
 │   ├── prism/         # Reactive SVG charts
 │   ├── pulse/         # WebSocket client
+│   ├── refine/        # Accessible web components (built on ore)
 │   ├── ripple/        # Reactive signals and state
 │   ├── rune/          # Structured logging
+│   ├── sandbox/       # Sandboxed iframe runtime
+│   ├── scout/         # Fuzzy search with trigram index
 │   ├── scroll/        # Virtual list engine
-│   ├── refine/        # Accessible web components (built on ore)
 │   ├── sourcerer/     # Reactive data sources
 │   ├── spell/         # Schema validation
 │   ├── tempo/         # Date & time utilities
@@ -690,12 +774,16 @@ All sizes are **minified + gzipped** production builds:
 | `@vielzeug/flux`         | **12.9 KB**                  | **3.6 KB**     | 1\*          |
 | `@vielzeug/forge`        | **17.9 KB**                  | **5.6 KB**     | 0            |
 | `@vielzeug/herald`       | **6.0 KB**                   | **2.4 KB**     | 0            |
+| `@vielzeug/keymap`       | —                            | —              | 0            |
+| `@vielzeug/ledger`       | —                            | —              | 1\*          |
 | `@vielzeug/lingua`       | **9.1 KB**                   | **3.7 KB**     | 0            |
 | `@vielzeug/orbit`        | **12.7 KB**                  | **4.8 KB**     | 0            |
 | `@vielzeug/prism`        | **33.7 KB**                  | **11.0 KB**    | 2\*          |
 | `@vielzeug/pulse`        | **13.4 KB**                  | **4.6 KB**     | 1\*          |
 | `@vielzeug/ripple`       | **16.3 KB**                  | **5.4 KB**     | 0            |
 | `@vielzeug/rune`         | **7.8 KB**                   | **3.4 KB**     | 0            |
+| `@vielzeug/sandbox`      | —                            | —              | 0            |
+| `@vielzeug/scout`        | —                            | —              | 1\*          |
 | `@vielzeug/scroll`       | **18.3 KB**                  | **6.2 KB**     | 0            |
 | `@vielzeug/refine`        | **~3–6 KB** per component    | **~1–2 KB**    | 3\*          |
 | `@vielzeug/sourcerer`    | **17.2 KB**                  | **5.2 KB**     | 1\*          |
