@@ -269,7 +269,7 @@ Emit `[PHASE 7]` — or `[SKIP]` with reason for DOM-output packages (`ore`, `re
 - [ ] `pnpm --filter @vielzeug/codex build` — MCP bundle updated with latest docs
 - [ ] REPL examples for `<name>` all use the current API and recommended patterns
 - [ ] No `TODO`, `FIXME`, or `HACK` comments left without a tracking issue
-- [ ] Rush change file generated for every touched package (`rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`)
+- [ ] Rush change file generated for the package (`node scripts/rush-change.mjs <name> <patch|minor|major> "<summary>"`)
 - [ ] Commit message follows conventional format: `feat(<name>): <summary>`
 
 Output the final report using **exactly this format**:

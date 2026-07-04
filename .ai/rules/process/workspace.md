@@ -69,7 +69,19 @@ Use the format: `feat(courier): add retry logic`
 
 ## Versioning & releases
 
-- Rush manages versioning via **change files**. After changing a publishable package, run `rush change` (non-interactive: `rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`).
+Rush manages versioning via **change files** in `common/changes/@vielzeug/<name>/`.
+
+**Do not use `rush change --bulk`** — it writes a change file for every package that has uncommitted changes, which in a multi-agent worktree environment will clobber sibling packages' pending change files.
+
+Instead, use the scoped helper script:
+
+```bash
+node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"
+# e.g.: node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads"
+```
+
+The script lives at `scripts/rush-change.mjs` — read it for full usage. Accepts bare name (`orbit`) or scoped (`@vielzeug/orbit`).
+
 - Use `minor` for new features, `major` for breaking changes, `patch` for fixes.
 - **Agents:** do not commit, push, or publish without explicit user approval — generating the change file is fine, committing it is not.
 

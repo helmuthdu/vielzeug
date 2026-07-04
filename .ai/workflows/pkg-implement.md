@@ -102,7 +102,7 @@ For each item in the plan (in priority order), emit `[IMPLEMENTING] <ID> — <Ti
   - Run `pnpm --filter @vielzeug/<name> fix`
   - Run `pnpm --filter @vielzeug/<name> lint`
   - Run the test suite (standard: `pnpm vitest run packages/<name>/src/__tests__/`; co-located e.g. `refine`: `pnpm --filter @vielzeug/<name> test`)
-  - Generate a `rush change` file for every touched package (do **not** commit without user approval): `rush change --bulk --message "<summary>" --bump-type <patch|minor|major>`
+  - Generate a `rush change` file for the package (do **not** commit without user approval): `node scripts/rush-change.mjs <name> <patch|minor|major> "<summary>"`
 
 ## 5. Starting point
 

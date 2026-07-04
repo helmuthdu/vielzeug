@@ -129,10 +129,15 @@ packages/<name>/
 
 ## Versioning & Releases
 
-Rush manages versioning via change files. After touching a publishable package:
+Rush manages versioning via change files in `common/changes/@vielzeug/<name>/`.
+
+**Do not use `rush change --bulk`** — it writes a change file for every package with uncommitted changes, which in a multi-agent worktree environment clobbers sibling packages' pending change files.
+
+Use the scoped helper script instead:
 
 ```bash
-rush change --bulk --message "<summary>" --bump-type <patch|minor|major>
+node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"
+# e.g.: node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads"
 ```
 
 Use `patch` for fixes, `minor` for new features, `major` for breaking changes. **Do not commit, push, or publish without explicit user approval.**
