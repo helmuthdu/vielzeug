@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/rune` &nbsp;·&nbsp; **Category:** Logging
 
-**Key exports:** `createLogger`, `Rune`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`, `pipe`, `isLevelEnabled`
+**Key exports:** `createLogger`, `defaultLogger`, `lazy`, `consoleTransport`, `remoteTransport`, `jsonTransport`, `batchTransport`, `sampleTransport`, `redactTransport`, `pipe`, `isLevelEnabled`
 
 **When to use:** Structured browser/Node logging with log levels, namespaced scopes, lazy bindings, and a pluggable transport pipeline.
 
@@ -30,13 +30,13 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { Rune, createLogger, lazy } from '@vielzeug/rune';
-import { consoleTransport, jsonTransport, remoteTransport } from '@vielzeug/rune';
+import { createLogger, defaultLogger, lazy } from '@vielzeug/rune';
+import { consoleTransport, jsonTransport, remoteTransport, sampleTransport } from '@vielzeug/rune';
 
 // Default singleton — uses consoleTransport() automatically
-Rune.info({ port: 3000 }, 'server started');
-Rune.warn('cache stale');
-Rune.error(new Error('connection lost')); // auto-serializes Error
+defaultLogger.info({ port: 3000 }, 'server started');
+defaultLogger.warn('cache stale');
+defaultLogger.error(new Error('connection lost')); // auto-serializes Error
 
 // Namespaced child loggers
 const api = createLogger('api');
@@ -76,8 +76,11 @@ const nodeLog = createLogger({
 import { pipe } from '@vielzeug/rune';
 const fanout = pipe(consoleTransport(), remoteTransport({ handler, level: 'error' }));
 
-// Logger-level sampling — drop 90 % of debug entries before any transport runs
-const sampledLog = createLogger({ sample: 0.1, logLevel: 'debug' });
+// Sampling — drop 90 % of debug entries before they reach the downstream transport
+const sampledLog = createLogger({
+  logLevel: 'debug',
+  transports: [sampleTransport({ rate: 0.1, transport: consoleTransport() })],
+});
 ```
 
 ## Documentation

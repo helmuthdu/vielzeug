@@ -10,11 +10,14 @@ description: API reference for @vielzeug/rune exports, logger methods, configura
 | Symbol               | Purpose                                          | Execution mode | Common gotcha                                                |
 | -------------------- | ------------------------------------------------ | -------------- | ------------------------------------------------------------ |
 | `createLogger()`     | Create an isolated `Logger` instance             | Sync           | Omitting `transports` defaults to `consoleTransport()`       |
-| `Rune`               | Pre-created default logger singleton             | —              | Shared instance — use `child()` or `withBindings()` to scope |
+| `defaultLogger`      | Pre-created default logger singleton             | —              | Shared instance — use `child()` or `withBindings()` to scope |
 | `lazy(fn)`           | Defer a binding value past the level check       | Sync           | Factory runs on every emit, not once                         |
 | `pipe()`             | Fan-out dispatcher to multiple transports        | Sync           | Errors in one transport don't propagate to others            |
 | `isLevelEnabled()`   | Utility: test whether a level passes a threshold | Sync           | `'off'` always returns `false`                               |
+| `PRIORITY`           | Numeric priority table backing `isLevelEnabled()`| —              | Lower number = more verbose                                  |
 | `resolveTheme()`     | Merge a partial theme onto the default           | Sync           | Returns a fully-populated `ResolvedTheme`                    |
+| `RuneError`          | Base class for all `rune`-originated errors      | —              | Use `RuneError.is(err)` as the type guard                    |
+| `RuneTransportError` | Internal transport-failure error (never thrown)  | —              | Inspect via dev-only warnings, not `try`/`catch`              |
 | `consoleTransport()` | Styled console output                            | Sync           | Theme is resolved once at factory call, not per entry        |
 | `remoteTransport()`  | Async HTTP/webhook delivery                      | Async          | Handler errors are swallowed to `console.warn`               |
 | `jsonTransport()`    | NDJSON to stdout or a custom sink                | Sync           | `process.stdout` is unavailable in browsers                  |
@@ -43,6 +46,8 @@ createLogger(options?: RuneOptions): Logger
 
 > **Note — disposed loggers:** after `dispose()` is called, all log methods (`debug`, `info`, `warn`, `error`, `fatal`), `time()`, and `group()` / `groupCollapsed()` silently no-op. The `fn` callback in `group()` still runs — only the group header is suppressed.
 
+> **Note — transport/middleware fault isolation:** if a transport or middleware function throws, the logger catches it, reports it via a dev-only warning (the transport case wraps the error in `RuneTransportError`), and continues — a single misbehaving transport can never crash the caller of `log.info()`/etc., and sibling transports still receive the entry. A throwing middleware drops just that one entry.
+
 **Returns:** `Logger`
 
 **Example:**
@@ -67,16 +72,16 @@ const serverLog = createLogger({
 });
 ```
 
-## Rune
+## defaultLogger
 
-`Rune` is the pre-created default logger (`createLogger()` called once at module load).
+`defaultLogger` is the pre-created default logger (`createLogger()` called once at module load).
 
 Use it as a quick-start singleton or create a child for module-level use:
 
 ```ts
-import { Rune } from '@vielzeug/rune';
+import { defaultLogger } from '@vielzeug/rune';
 
-const log = Rune.child({ namespace: 'app.worker' });
+const log = defaultLogger.child({ namespace: 'app.worker' });
 ```
 
 ## lazy(fn)
@@ -208,10 +213,10 @@ Forwards entries asynchronously to a remote handler. Fire-and-forget — handler
 
 | Option    | Type                            | Default       | Description                                                                                                                                                     |
 | --------- | ------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry                                                                                                                         |
+| `handler` | `(type: LogType, data: RemoteLogData) => void`      | —             | Required. Receives each forwarded entry                                                                                                                         |
 | `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                                                                                                                                        |
 | `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker                                                                                                                         |
-| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws or rejects. Default: a dev-only `console.warn`. Silent in production — provide an explicit handler for production observability. |
+| `onError` | `(error: unknown, data: RemoteLogData) => void`      | —             | Called when the handler throws or rejects. Default: a dev-only `console.warn`. Silent in production — provide an explicit handler for production observability. |
 
 **Returns:** `Transport`
 
@@ -449,6 +454,46 @@ const theme = resolveTheme({ warn: { badge: '⚡' } });
 
 The built-in badge and namespace colour definitions used by `consoleTransport()`. Override per-transport via `ConsoleTransportOptions.theme`.
 
+### PRIORITY
+
+```ts
+PRIORITY: Record<LogLevel, number>
+```
+
+Numeric priority for each level (`debug: 0`, `info: 1`, `warn: 2`, `error: 3`, `fatal: 4`, `off: 5`) — lower is more verbose. Exported for transport/middleware authors building custom level-comparison logic; `isLevelEnabled()` is built directly on top of it.
+
+## Errors
+
+### RuneError
+
+Base class for all `rune`-originated errors. Use `instanceof RuneError` or `RuneError.is(err)` to catch any error the package throws.
+
+```ts
+import { RuneError } from '@vielzeug/rune';
+
+try {
+  // ...
+} catch (err) {
+  if (RuneError.is(err)) {
+    // handle a rune-originated error
+  }
+}
+```
+
+**Static methods:**
+
+| Method       | Returns                | Description                                  |
+| ------------ | ----------------------- | --------------------------------------------- |
+| `is(err)`    | `err is RuneError`      | Type guard — `true` for `RuneError` and subclasses |
+
+### RuneTransportError
+
+```ts
+class RuneTransportError extends RuneError {}
+```
+
+Constructed internally when a transport function throws during log entry emission. It is **never thrown or propagated** to application code — the logger catches the underlying error, wraps it here (available as `.cause`), and reports it via a dev-only warning. See the transport/middleware fault-isolation note under `createLogger()` above.
+
 ## Types
 
 ### LogType
@@ -485,7 +530,7 @@ Receives every `LogEntry` that passes the logger's level threshold. Responsible 
 
 ### RemoteLogData
 
-Payload shape delivered to `RemoteHandler`:
+Payload shape delivered to `RemoteTransportOptions.handler`:
 
 | Field       | Type                            | Description                               |
 | ----------- | ------------------------------- | ----------------------------------------- |
@@ -495,10 +540,6 @@ Payload shape delivered to `RemoteHandler`:
 | `message`   | `string?`                       | Log message                               |
 | `namespace` | `string?`                       | Effective namespace                       |
 | `timestamp` | `string`                        | Full ISO timestamp                        |
-
-### RemoteHandler
-
-`(type: LogType, data: RemoteLogData) => void`
 
 ### PipeOptions
 
@@ -564,7 +605,7 @@ Returned by `batchTransport()`. Pass `handle.transport` to `createLogger({ trans
 
 ### Logger
 
-The full interface returned by `createLogger()` and `Rune`:
+The full interface returned by `createLogger()` and `defaultLogger`:
 
 ```ts
 type Logger = {
@@ -608,10 +649,10 @@ type Logger = {
 
 | Field     | Type                            | Default       | Description                             |
 | --------- | ------------------------------- | ------------- | --------------------------------------- |
-| `handler` | `RemoteHandler`                 | —             | Required. Receives each forwarded entry |
+| `handler` | `(type: LogType, data: RemoteLogData) => void`      | —             | Required. Receives each forwarded entry |
 | `level`   | `LogLevel`                      | `'debug'`     | Minimum level to forward                |
 | `env`     | `'production' \| 'development'` | auto-detected | Override the runtime environment marker |
-| `onError` | `(error: unknown) => void`      | —             | Called when the handler throws          |
+| `onError` | `(error: unknown, data: RemoteLogData) => void`      | —             | Called when the handler throws          |
 
 ### JsonTransportOptions
 

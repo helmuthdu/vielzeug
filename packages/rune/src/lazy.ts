@@ -1,5 +1,7 @@
 import type { Bindings } from './types';
 
+import { isUnsafeObjectKey } from './_prototype';
+
 const LAZY_BRAND = Symbol('rune.lazy');
 
 /** A deferred binding value — evaluated only when an entry is actually emitted. Create via `lazy(fn)`. */
@@ -34,7 +36,9 @@ export function resolveBindings(bindings: Bindings): Bindings {
   let resolved: Bindings | undefined;
 
   for (const [k, v] of Object.entries(bindings)) {
-    if (isLazy(v)) {
+    // Guard against a `__proto__`/`constructor`/`prototype` binding key hijacking resolved's own
+    // prototype via the bracket-assignment accessor — see _prototype.ts.
+    if (isLazy(v) && !isUnsafeObjectKey(k)) {
       resolved ??= { ...bindings };
       resolved[k] = v.factory();
     }

@@ -11,12 +11,12 @@ Start with the [Overview](./index.md), then use this page for detailed usage pat
 
 ## Basic Usage
 
-`Rune` is the default singleton logger instance. Use `createLogger()` for isolated config.
+`defaultLogger` is the default singleton logger instance. Use `createLogger()` for isolated config.
 
 ```ts
-import { Rune, createLogger } from '@vielzeug/rune';
+import { createLogger, defaultLogger } from '@vielzeug/rune';
 
-const appLog = Rune;
+const appLog = defaultLogger;
 const apiLog = createLogger({ namespace: 'api' });
 const authLog = createLogger('auth'); // shorthand namespace
 ```
@@ -157,10 +157,10 @@ log.info({ path: '/users', status: 200 }, 'request');
 Use `child()` to derive immutable logger variants.
 
 ```ts
-const AppLog = Rune.child({
+const AppLog = defaultLogger.child({
   logLevel: 'warn',
   namespace: 'App',
-  // transports inherited from Rune by default
+  // transports inherited from defaultLogger by default
   // pass transports: [] to disable all, or transports: [...] to replace
 });
 
@@ -193,25 +193,25 @@ The per-call context is shallow-merged with `withBindings()` bindings into `entr
 ## Logging Methods
 
 ```ts
-Rune.debug('debug details');
-Rune.info({ port: 3000 }, 'server started');
-Rune.warn('cache stale');
-Rune.error({ err: new Error('timeout') }, 'request failed'); // Error auto-serialized in context
-Rune.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
+defaultLogger.debug('debug details');
+defaultLogger.info({ port: 3000 }, 'server started');
+defaultLogger.warn('cache stale');
+defaultLogger.error({ err: new Error('timeout') }, 'request failed'); // Error auto-serialized in context
+defaultLogger.fatal({ service: 'db' }, 'terminating'); // above error, use for unrecoverable state
 ```
 
 Use `enabled()` to avoid expensive payload construction before the level check:
 
 ```ts
-if (Rune.enabled('debug')) {
-  Rune.debug({ diagnostics: buildLargePayload() }, 'diagnostics');
+if (defaultLogger.enabled('debug')) {
+  defaultLogger.debug({ diagnostics: buildLargePayload() }, 'diagnostics');
 }
 ```
 
 Or use `lazy()` to let Rune gate it automatically:
 
 ```ts
-const reqLog = Rune.withBindings({ diagnostics: lazy(() => buildLargePayload()) });
+const reqLog = defaultLogger.withBindings({ diagnostics: lazy(() => buildLargePayload()) });
 reqLog.debug('diagnostics'); // buildLargePayload() only called when debug is enabled
 ```
 
@@ -220,7 +220,7 @@ reqLog.debug('diagnostics'); // buildLargePayload() only called when debug is en
 `withBindings(fields)` returns a child logger where the given fields are merged into every log call. This is the idiomatic way to attach per-request or per-user context.
 
 ```ts
-const api = Rune.child({ namespace: 'api' });
+const api = defaultLogger.child({ namespace: 'api' });
 
 const reqLog = api.withBindings({ requestId: 'abc-123', userId: 42 });
 reqLog.info('GET /users'); // always includes requestId and userId
@@ -230,7 +230,7 @@ reqLog.warn({ slow: true }, 'query took 2s'); // call-site fields merged in
 The parent logger is not affected. Bindings stack additively through chained `withBindings()` calls:
 
 ```ts
-const base = Rune.withBindings({ service: 'api' });
+const base = defaultLogger.withBindings({ service: 'api' });
 const req = base.withBindings({ requestId: 'xyz' });
 // req emits both service and requestId on every call
 ```
@@ -248,7 +248,7 @@ console.log(reqLog.bindings); // { requestId: 'abc-123', userId: 42 }
 ```ts
 import { lazy } from '@vielzeug/rune';
 
-const log = Rune.withBindings({
+const log = defaultLogger.withBindings({
   // Only called when debug entries are emitted
   snapshot: lazy(() => JSON.stringify(getFullAppState())),
   // Regular values are always included as-is
@@ -263,7 +263,7 @@ Lazy bindings are resolved on every emitted call, not cached:
 
 ```ts
 const counter = { n: 0 };
-const log = Rune.withBindings({ tick: lazy(() => ++counter.n) });
+const log = defaultLogger.withBindings({ tick: lazy(() => ++counter.n) });
 
 log.info('a'); // tick: 1
 log.info('b'); // tick: 2
@@ -274,7 +274,7 @@ log.info('b'); // tick: 2
 `child(overrides?)` creates a new logger scoped to a namespace, level, or transport set. Use it to create module-level or service-level loggers.
 
 ```ts
-const api = Rune.child({ namespace: 'api' });
+const api = defaultLogger.child({ namespace: 'api' });
 const auth = api.child({ namespace: 'auth' }); // → 'api.auth' (dot-joined automatically)
 
 api.info('GET /users');
@@ -502,7 +502,7 @@ const bus = createBus<AppEvents>({
 
 ## Best Practices
 
-- Create one child logger per module boundary using `Rune.child({ namespace: 'module.name' })` or `createLogger('module.name')`.
+- Create one child logger per module boundary using `defaultLogger.child({ namespace: 'module.name' })` or `createLogger('module.name')`.
 - Use `withBindings()` to pin request/session context instead of repeating fields on each call.
 - Use `lazy()` for expensive diagnostics bindings only needed at `debug` level.
 - Set `logLevel` from environment (`'debug'` in dev, `'warn'` or `'error'` in prod).

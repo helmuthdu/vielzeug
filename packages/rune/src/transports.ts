@@ -13,6 +13,7 @@ import type {
 } from './types';
 
 import { warn } from './_dev';
+import { isUnsafeObjectKey } from './_prototype';
 import { isLevelEnabled } from './types';
 
 export type { RemoteLogData };
@@ -283,6 +284,10 @@ export function redactTransport(options: RedactTransportOptions): Transport {
     const result: Bindings = {};
 
     for (const [k, v] of Object.entries(obj)) {
+      // Guard against a `__proto__`/`constructor`/`prototype` field name hijacking result's own
+      // prototype via the bracket-assignment accessor — see _prototype.ts.
+      if (isUnsafeObjectKey(k)) continue;
+
       result[k] = keySet.has(k) ? replacement : redactValue(v, depth);
     }
 

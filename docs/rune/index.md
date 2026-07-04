@@ -8,7 +8,7 @@ related: [courier, herald, familiar]
 exports:
   [
     createLogger,
-    Rune,
+    defaultLogger,
     consoleTransport,
     remoteTransport,
     jsonTransport,
@@ -20,6 +20,9 @@ exports:
     isLevelEnabled,
     resolveTheme,
     DEFAULT_THEME,
+    PRIORITY,
+    RuneError,
+    RuneTransportError,
   ]
 environments: [browser, node, ssr, deno]
 ---
@@ -92,13 +95,13 @@ yarn add @vielzeug/rune
 ## Quick Start
 
 ```ts
-import { Rune, createLogger, lazy } from '@vielzeug/rune';
+import { createLogger, defaultLogger, lazy } from '@vielzeug/rune';
 import { consoleTransport, pipe, remoteTransport, jsonTransport } from '@vielzeug/rune';
 
 // Default logger — uses consoleTransport() automatically
-Rune.info('Boot complete');
-Rune.warn('Cache stale');
-Rune.fatal({ err: new Error('unrecoverable') }, 'startup failed');
+defaultLogger.info('Boot complete');
+defaultLogger.warn('Cache stale');
+defaultLogger.fatal({ err: new Error('unrecoverable') }, 'startup failed');
 
 // Namespaced child loggers
 const api = createLogger('api');

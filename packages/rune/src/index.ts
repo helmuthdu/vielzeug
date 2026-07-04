@@ -19,7 +19,7 @@ export type {
 } from './types';
 
 export { RuneError, RuneTransportError } from './errors';
-export { isLevelEnabled } from './types';
+export { isLevelEnabled, PRIORITY } from './types';
 export type { LazyBinding } from './lazy';
 export { lazy } from './lazy';
 export { defaultLogger, createLogger } from './logger';

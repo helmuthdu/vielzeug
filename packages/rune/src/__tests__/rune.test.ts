@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { BatchHandle, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 
-import { DEFAULT_THEME, consoleTransport } from '../console';
+import { DEFAULT_THEME, consoleTransport, resolveTheme } from '../console';
+import { RuneError, RuneTransportError } from '../errors';
 import { lazy } from '../lazy';
 import { createLogger, defaultLogger } from '../logger';
 import { batchTransport, jsonTransport, pipe, redactTransport, remoteTransport, sampleTransport } from '../transports';
@@ -159,6 +160,22 @@ describe('emit and payload semantics', () => {
 
     expect(received[0]).toBeInstanceOf(Date);
     expect(received[0]).toBe(received[1]); // same object reference
+  });
+
+  it('entry.data is a fresh object per call, never an alias of internal bindings (B1)', () => {
+    const { entries, log } = setup({ bindings: { a: 1 } });
+
+    log.info('one');
+    log.info('two');
+
+    expect(entries[0].data).not.toBe(entries[1].data);
+    expect(entries[0].data).toEqual({ a: 1 });
+    expect(entries[1].data).toEqual({ a: 1 });
+
+    // Mutating one entry's data must never affect the logger's own bindings or other entries.
+    (entries[0].data as Record<string, unknown>)['a'] = 'mutated';
+    expect(log.bindings).toEqual({ a: 1 });
+    expect(entries[1].data).toEqual({ a: 1 });
   });
 });
 
@@ -440,6 +457,33 @@ describe('consoleTransport', () => {
     const prefix = warnSpy.mock.calls[0][0] as string;
 
     expect(prefix).toContain('⚡');
+  });
+
+  it('escapes %-format specifiers in namespace on the Node.js path so payload args are not swallowed (security)', () => {
+    vi.stubGlobal('window', undefined);
+
+    try {
+      const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+      const log = createLogger({
+        namespace: 'attacker-%s-%s-controlled',
+        transports: [consoleTransport({ ansi: false, timestamp: false })],
+      });
+
+      log.info({ secret: 'top-secret' }, 'evidence message');
+
+      const callArgs = infoSpy.mock.calls[0];
+
+      // The prefix (first arg) must not contain a *live* %s/%d/etc. specifier — Node's console
+      // methods run the first string argument through util.format, and an unescaped specifier
+      // would consume/hide the message and data arguments that follow.
+      expect(callArgs[0]).toContain('%%s');
+      // The message and data must still be delivered as their own, unswallowed arguments.
+      expect(callArgs).toHaveLength(3);
+      expect(callArgs[1]).toBe('evidence message');
+      expect(callArgs[2]).toEqual({ secret: 'top-secret' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('group() uses DEFAULT_THEME badge for group label (R1)', () => {
@@ -1359,6 +1403,17 @@ describe('isLevelEnabled (R8/R6)', () => {
   });
 });
 
+/* ─── PRIORITY public export (D2) ─── */
+
+describe('PRIORITY public export (D2)', () => {
+  it('is re-exported from the package public surface, not just internal ./types', async () => {
+    const publicApi = await import('../index');
+
+    expect(publicApi.PRIORITY).toBe(PRIORITY);
+    expect(publicApi.PRIORITY).toEqual({ debug: 0, error: 3, fatal: 4, info: 1, off: 5, warn: 2 });
+  });
+});
+
 /* ─── child() namespace joining ─── */
 
 describe('child() namespace joining', () => {
@@ -1524,6 +1579,65 @@ describe('redactTransport edge cases', () => {
 
     expect(entries[0].data['token']).toBe('');
   });
+
+  it('does not let a "__proto__" field hijack the redacted output object prototype (security)', () => {
+    const received: Array<{ data: Record<string, unknown> }> = [];
+    const t = redactTransport({ keys: ['password'], transport: (e) => received.push(e as never) });
+    const malicious = JSON.parse('{"__proto__": {"polluted": "yes"}, "password": "x"}') as Record<string, unknown>;
+
+    t({ data: malicious, level: 'info', namespace: '', timestamp: new Date() });
+
+    const outData = received[0].data;
+
+    expect(Object.getPrototypeOf(outData)).toBe(Object.prototype);
+    expect(outData['polluted']).toBeUndefined();
+    expect(outData['password']).toBe('[REDACTED]');
+  });
+});
+
+/* ─── prototype pollution guards (security) ─── */
+
+describe('prototype pollution guards (security)', () => {
+  it('a "__proto__" field in a pinned binding does not hijack entry.data\u2019s prototype', () => {
+    const entries: LogEntry[] = [];
+    const malicious = JSON.parse('{"__proto__": {"polluted": "yes"}, "safe": 1}') as Record<string, unknown>;
+    const log = createLogger({ bindings: malicious, transports: [(e) => entries.push(e)] });
+
+    log.info('no-context call');
+
+    expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
+    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
+    expect(entries[0].data['safe']).toBe(1);
+  });
+
+  it('a "__proto__" field in per-call context does not hijack entry.data\u2019s prototype', () => {
+    const { entries, log } = setup();
+    const malicious = JSON.parse('{"__proto__": {"polluted": "yes"}, "safe": 1}') as Record<string, unknown>;
+
+    log.info(malicious, 'msg');
+
+    expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
+    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
+
+  it('a "__proto__" lazy binding does not hijack the resolved bindings prototype', () => {
+    const entries: LogEntry[] = [];
+    // Object.defineProperty (unlike `{ __proto__: ... }` literal syntax) creates a real *own*
+    // property named "__proto__" instead of setting the object's actual prototype at creation time.
+    const maliciousBindings: Bindings = { safe: 1 };
+
+    Object.defineProperty(maliciousBindings, '__proto__', {
+      enumerable: true,
+      value: lazy(() => ({ polluted: 'yes' })),
+    });
+
+    const log = createLogger({ bindings: maliciousBindings, transports: [(e) => entries.push(e)] });
+
+    log.info('no-context call');
+
+    expect(Object.getPrototypeOf(entries[0].data)).toBe(Object.prototype);
+    expect((entries[0].data as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
 });
 
 /* ─── jsonTransport circular reference safety ─── */
@@ -1534,9 +1648,29 @@ describe('jsonTransport circular reference safety', () => {
 
     circular['self'] = circular;
 
+    const entry: LogEntry = {
+      data: circular,
+      level: 'info',
+      message: 'circular',
+      namespace: '',
+      timestamp: new Date(),
+    };
+
+    expect(() => jsonTransport()(entry)).toThrow();
+  });
+
+  it('a throwing transport is isolated by the logger and never crashes the caller (D1)', () => {
+    const circular: Record<string, unknown> = {};
+
+    circular['self'] = circular;
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const log = createLogger({ transports: [jsonTransport()] });
 
-    expect(() => log.info(circular, 'circular')).toThrow();
+    expect(() => log.info(circular, 'circular')).not.toThrow();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Transport threw an unhandled error'));
+
+    warnSpy.mockRestore();
   });
 });
 
@@ -1914,6 +2048,57 @@ describe('middleware undefined/null drop', () => {
 
     expect(entries).toHaveLength(1);
   });
+
+  it('a throwing middleware is isolated by the logger — entry dropped, no crash (D1)', () => {
+    const { entries, log } = setup({
+      middleware: [
+        () => {
+          throw new Error('middleware-boom');
+        },
+      ],
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    expect(() => log.info('should-be-dropped')).not.toThrow();
+    expect(entries).toHaveLength(0);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('middleware threw and dropped this entry'));
+
+    warnSpy.mockRestore();
+  });
+});
+
+/* ─── dispatch() transport fault isolation (D1) ─── */
+
+describe('dispatch() transport fault isolation (D1)', () => {
+  it('a throwing transport does not prevent sibling transports from receiving the entry', () => {
+    const received: LogEntry[] = [];
+    const throwingTransport: Transport = () => {
+      throw new Error('transport-boom');
+    };
+    const okTransport: Transport = (entry) => received.push(entry);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = createLogger({ transports: [throwingTransport, okTransport] });
+
+    expect(() => log.info('x')).not.toThrow();
+    expect(received).toHaveLength(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Transport threw an unhandled error'));
+
+    warnSpy.mockRestore();
+  });
+
+  it('includes the logger namespace in the warning for easier debugging (review B1)', () => {
+    const throwingTransport: Transport = () => {
+      throw new Error('boom');
+    };
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const log = createLogger('payments.api', { transports: [throwingTransport] });
+
+    log.info('x');
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('namespace: "payments.api"'));
+
+    warnSpy.mockRestore();
+  });
 });
 
 /* ─── lazy factory throw safety ─── */
@@ -2286,6 +2471,31 @@ describe('Error auto-serialization in context', () => {
     expect(entries[0].data['count']).toBe(42);
     expect(entries[0].data['label']).toBe('ok');
   });
+
+  it('Error value in a pinned binding is serialized the same as per-call context (review A1)', () => {
+    const { entries, log } = setup({ bindings: { err: new Error('pinned-fail') } });
+
+    log.info('boom');
+
+    const err = entries[0].data['err'] as Record<string, unknown>;
+
+    expect(err).not.toBeInstanceOf(Error);
+    expect(err['message']).toBe('pinned-fail');
+    expect(err['name']).toBe('Error');
+    expect(typeof err['stack']).toBe('string');
+  });
+
+  it('Error value pinned via withBindings() is serialized', () => {
+    const { entries, log } = setup();
+    const bound = log.withBindings({ err: new Error('bound-fail') });
+
+    bound.error('boom');
+
+    const err = entries[0].data['err'] as Record<string, unknown>;
+
+    expect(err).not.toBeInstanceOf(Error);
+    expect(err['message']).toBe('bound-fail');
+  });
 });
 
 /* ─── DEFAULT_THEME ─── */
@@ -2306,6 +2516,88 @@ describe('DEFAULT_THEME', () => {
       expect(entry).toHaveProperty('border');
       expect(entry).toHaveProperty('color');
     }
+  });
+});
+
+/* ─── resolveTheme() ─── */
+
+describe('resolveTheme()', () => {
+  it('returns DEFAULT_THEME unchanged when no override is given', () => {
+    expect(resolveTheme(undefined)).toBe(DEFAULT_THEME);
+  });
+
+  it('merges only the specified fields of a level, keeping the rest from DEFAULT_THEME', () => {
+    const resolved = resolveTheme({ error: { badge: '✖' } });
+
+    expect(resolved.error.badge).toBe('✖');
+    expect(resolved.error.bg).toBe(DEFAULT_THEME.error.bg);
+    expect(resolved.error.border).toBe(DEFAULT_THEME.error.border);
+    expect(resolved.error.color).toBe(DEFAULT_THEME.error.color);
+  });
+
+  it('leaves untouched levels identical to DEFAULT_THEME', () => {
+    const resolved = resolveTheme({ warn: { badge: '!' } });
+
+    expect(resolved.info).toEqual(DEFAULT_THEME.info);
+    expect(resolved.debug).toEqual(DEFAULT_THEME.debug);
+  });
+
+  it('supports overriding multiple levels at once, including "group" and "ns"', () => {
+    const resolved = resolveTheme({ group: { badge: 'G' }, ns: { color: '#fff' } });
+
+    expect(resolved.group.badge).toBe('G');
+    expect(resolved.ns.color).toBe('#fff');
+  });
+
+  it('an empty override object leaves every level identical to DEFAULT_THEME', () => {
+    expect(resolveTheme({})).toEqual(DEFAULT_THEME);
+  });
+});
+
+/* ─── RuneError / RuneTransportError ─── */
+
+describe('RuneError', () => {
+  it('sets name to the concrete subclass name, not the base class', () => {
+    const err = new RuneTransportError(new Error('boom'));
+
+    expect(err.name).toBe('RuneTransportError');
+  });
+
+  it('RuneError.is() identifies RuneError and its subclasses', () => {
+    expect(RuneError.is(new RuneTransportError(new Error('boom')))).toBe(true);
+    expect(RuneError.is(new RuneError('generic failure'))).toBe(true);
+  });
+
+  it('RuneError.is() returns false for unrelated errors and non-errors', () => {
+    expect(RuneError.is(new Error('plain'))).toBe(false);
+    expect(RuneError.is('not an error')).toBe(false);
+    expect(RuneError.is(undefined)).toBe(false);
+  });
+
+  it('is a real Error instance usable with instanceof and try/catch', () => {
+    expect(new RuneError('msg')).toBeInstanceOf(Error);
+    expect(new RuneTransportError(new Error('boom'))).toBeInstanceOf(RuneError);
+  });
+});
+
+describe('RuneTransportError', () => {
+  it('has a fixed, descriptive message regardless of the underlying cause', () => {
+    const err = new RuneTransportError('a string, not even an Error');
+
+    expect(err.message).toBe('Transport threw an unhandled error');
+  });
+
+  it('preserves an Error cause for inspection', () => {
+    const cause = new Error('original failure');
+    const err = new RuneTransportError(cause);
+
+    expect(err.cause).toBe(cause);
+  });
+
+  it('does not set cause when the underlying value is not an Error', () => {
+    const err = new RuneTransportError('a plain string');
+
+    expect(err.cause).toBeUndefined();
   });
 });
 

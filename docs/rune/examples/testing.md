@@ -51,7 +51,7 @@ it('includes pinned bindings in every entry', () => {
 
   log.info('ok');
 
-  expect(entries[0].bindings).toMatchObject({ requestId: 'abc' });
+  expect(entries[0].data).toMatchObject({ requestId: 'abc' });
 });
 ```
 
@@ -84,4 +84,4 @@ it('writes error to console.error', () => {
 - [Child Logger Overrides](./child-logger-overrides.md)
 - [Module Logger Pattern](./module-logger-pattern.md)
 - [Production Setup](./production-setup.md)
-- [Testing Patterns (Sieve)](/spell/examples/)
+- [Testing Patterns (Spell)](/spell/examples/)

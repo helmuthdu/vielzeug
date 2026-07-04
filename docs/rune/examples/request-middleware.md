@@ -14,9 +14,9 @@ Every log entry produced during an HTTP request should carry the request ID and 
 Use `withBindings({ requestId, ip })` inside the middleware to create a request-scoped logger that pins those fields to every downstream call.
 
 ```ts
-import { Rune } from '@vielzeug/rune';
+import { defaultLogger } from '@vielzeug/rune';
 
-const httpLog = Rune.child({ namespace: 'http' });
+const httpLog = defaultLogger.child({ namespace: 'http' });
 
 export function requestLogger(req, res, next) {
   // pin request-scoped fields to every log call in this handler

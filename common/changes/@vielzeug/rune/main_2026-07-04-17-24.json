@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(rune): patch Node console format-string injection (log forging via namespace) and __proto__ bracket-assignment prototype hijack (serializeErrors/redactObject/resolveBindings); stop entry.data aliasing internal bindings, serialize Error values in pinned bindings (not just per-call context), isolate transport/middleware failures in dispatch() using RuneTransportError, export PRIORITY, fix README Rune/sample drift, drop unused devOnly()",
+      "type": "minor",
+      "packageName": "@vielzeug/rune"
+    }
+  ],
+  "packageName": "@vielzeug/rune",
+  "email": "helmuthdu@gmail.com"
+}

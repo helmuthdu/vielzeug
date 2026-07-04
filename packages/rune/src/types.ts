@@ -30,7 +30,10 @@ export type Bindings = Record<string, unknown>;
  * The structured record produced by every log call and dispatched to all transports.
  * `data` is the merged result of pinned bindings and per-call context — transports
  * receive a single flat object and do not need to merge anything themselves.
- * Any `Error` instances in the context are automatically serialized to `{ message, name, stack }`.
+ * Any `Error` instances — whether from a pinned binding (`bindings`/`withBindings()`) or
+ * per-call context — are automatically serialized to `{ message, name, stack }`.
+ * **Shallow only** — an `Error` nested inside a plain object (e.g. `{ meta: { err } }`) is left as-is;
+ * only top-level fields of `data` are checked.
  */
 export type LogEntry = {
   /**
@@ -47,10 +50,19 @@ export type LogEntry = {
 
 /* ─── Transport ─── */
 
-/** A transport receives a log entry and is responsible for its own delivery and formatting. */
+/**
+ * A transport receives a log entry and is responsible for its own delivery and formatting.
+ * If a transport throws, the logger catches it, reports it via a dev-only warning (wrapped in
+ * `RuneTransportError`), and continues dispatching the entry to remaining transports — a single
+ * misbehaving transport can never crash the caller of `log.info()`/etc. or block its siblings.
+ */
 export type Transport = (entry: LogEntry) => void;
 
-/** Middleware function that transforms or filters log entries before dispatch. Return null to drop the entry. */
+/**
+ * Middleware function that transforms or filters log entries before dispatch. Return null to drop the entry.
+ * If middleware throws, the logger catches it, reports it via a dev-only warning, and drops the entry
+ * (no transports run for it) rather than crashing the caller.
+ */
 export type LogMiddleware = (entry: LogEntry) => LogEntry | null;
 
 /* ─── Transport option types ─── */
@@ -191,7 +203,7 @@ export type RedactTransportOptions = {
 /* ─── Logger options ─── */
 
 export type RuneOptions = {
-  /** Initial pinned bindings for this logger instance. */
+  /** Initial pinned bindings for this logger instance. `Error` values are auto-serialized, same as per-call context. */
   bindings?: Bindings;
   /** Minimum log level for this logger instance. Default: 'debug'. */
   logLevel?: LogLevel;
@@ -217,6 +229,7 @@ export type RuneOptions = {
  * - `log.info('message')` — string-only, most common.
  * - `log.info({ ...fields }, 'message')` — structured context + optional message.
  *   `Error` values in `fields` are automatically serialized to `{ message, name, stack }`.
+ *   Serialization is shallow only — an `Error` nested inside a nested object is left as-is.
  * - `log.error(err, { ...fields }, 'message')` — Error first, then optional context + message.
  *   Shorthand for the pattern where an Error is the primary subject of the log call.
  *

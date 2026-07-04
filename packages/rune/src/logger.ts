@@ -1,6 +1,9 @@
 import type { Bindings, LogEntry, Logger, LogLevel, LogMiddleware, LogType, RuneOptions, Transport } from './types';
 
+import { warn } from './_dev';
+import { isUnsafeObjectKey } from './_prototype';
 import { DEFAULT_THEME, consoleTransport, renderGroup } from './console';
+import { RuneTransportError } from './errors';
 import { resolveBindings } from './lazy';
 import { isLevelEnabled } from './types';
 
@@ -14,6 +17,10 @@ function serializeErrors(ctx: Bindings): Bindings {
   const out: Bindings = {};
 
   for (const [k, v] of Object.entries(ctx)) {
+    // Guard against a `__proto__`/`constructor`/`prototype` field name hijacking out's own
+    // prototype via the bracket-assignment accessor — see _prototype.ts.
+    if (isUnsafeObjectKey(k)) continue;
+
     out[k] = v instanceof Error ? serializeError(v) : v;
   }
 
@@ -95,6 +102,7 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
   let isDisposed = false;
 
   const passes = (type: LogType): boolean => isLevelEnabled(logLevel, type);
+  const namespaceSuffix = (): string => (namespace ? ` (namespace: "${namespace}")` : '');
 
   const dispatch = (entry: LogEntry): void => {
     let current: LogEntry = entry;
@@ -103,18 +111,30 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
       let c: LogEntry = entry;
 
       for (const mw of middleware) {
-        const next = mw(c);
+        try {
+          const next = mw(c);
 
-        if (next == null) return;
+          if (next == null) return;
 
-        c = next;
+          c = next;
+        } catch (err) {
+          warn(`middleware threw and dropped this entry${namespaceSuffix()}: ${String(err)}`);
+
+          return;
+        }
       }
 
       current = c;
     }
 
     for (const t of transports) {
-      t(current);
+      try {
+        t(current);
+      } catch (err) {
+        const transportErr = new RuneTransportError(err);
+
+        warn(`${transportErr.message}${namespaceSuffix()}: ${String(err)}`);
+      }
     }
   };
 
@@ -124,13 +144,12 @@ export function createLogger(initial: RuneOptions | string = {}, extra?: Omit<Ru
     if (!passes(type)) return;
 
     const { context, message } = parseArgs(msgOrCtx, second, third);
-    const resolvedBindings = resolveBindings(ownBindings);
+    // serializeErrors() always allocates a fresh object, so `data` is never an alias of `ownBindings`.
+    const resolvedBindings = serializeErrors(resolveBindings(ownBindings));
 
     const data: Bindings = context
       ? { ...resolvedBindings, ...serializeErrors(resolveBindings(context)) }
-      : Object.keys(resolvedBindings).length > 0
-        ? resolvedBindings
-        : {};
+      : resolvedBindings;
 
     dispatch({
       data,

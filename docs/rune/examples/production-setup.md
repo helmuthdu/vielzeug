@@ -14,12 +14,12 @@ In production you need structured JSON output for log aggregation, suppressed de
 Use `child()` with environment-branched transports to route entries to `jsonTransport` and `remoteTransport` in production, and `consoleTransport` in development.
 
 ```ts
-import { Rune } from '@vielzeug/rune';
+import { defaultLogger } from '@vielzeug/rune';
 import { consoleTransport, jsonTransport, remoteTransport } from '@vielzeug/rune';
 
 const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
 
-export const appLog = Rune.child({
+export const appLog = defaultLogger.child({
   logLevel: isProd ? 'warn' : 'debug',
   transports: isProd
     ? [

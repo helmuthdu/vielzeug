@@ -142,6 +142,16 @@ function badgeStyle(entry: ConsoleThemeEntry, extra = ''): string {
   return `background: ${entry.bg}; color: ${entry.color}; border: 1px solid ${entry.border}; border-radius: 4px; padding: 0 1px${extra}`;
 }
 
+function escapeConsoleFormat(s: string): string {
+  return s.replace(/%/g, '%%');
+}
+
+/**
+ * Builds the Node console prefix string, passed as the first argument to `console.log()`/etc.
+ * alongside the payload. `namespace` is escaped because Node's `console.*` methods run the first
+ * string argument through `util.format` — an unescaped `%s`/`%d`/`%o`/etc. in a caller-controlled
+ * namespace would consume and hide the actual payload arguments that follow (log forging).
+ */
 function buildNodePrefix(
   theme: ResolvedTheme,
   type: LogType,
@@ -150,18 +160,19 @@ function buildNodePrefix(
   useAnsi: boolean,
 ): string {
   const t = theme[type];
-  const badgeText = useAnsi ? ansiColor(t.bg, t.badge) : t.badge;
+  const safeBadge = escapeConsoleFormat(t.badge);
+  const badgeText = useAnsi ? ansiColor(t.bg, safeBadge) : safeBadge;
   const meta = [badgeText];
 
-  if (namespace) meta.push(useAnsi ? ansiMuted(`[${namespace}]`) : `[${namespace}]`);
+  if (namespace) {
+    const safeNamespace = escapeConsoleFormat(namespace);
+
+    meta.push(useAnsi ? ansiMuted(`[${safeNamespace}]`) : `[${safeNamespace}]`);
+  }
 
   if (timestamp) meta.push(useAnsi ? ansiMuted(timestamp) : timestamp);
 
   return `${meta.join(' | ')} |`;
-}
-
-function escapeConsoleFormat(s: string): string {
-  return s.replace(/%/g, '%%');
 }
 
 function buildBrowserPrefix(
