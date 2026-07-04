@@ -105,6 +105,20 @@ describe('queue', () => {
     await expect(p2).resolves.toBe('ok');
   });
 
+  it('rejects the task promise (instead of escaping add()) when a non-async task throws synchronously', async () => {
+    const q = queue({ concurrency: 1 });
+
+    // add() itself must not throw — the sync error should surface as a rejection of the
+    // returned promise instead.
+    const p1 = q.add((): Promise<never> => {
+      throw new Error('sync boom');
+    });
+    const p2 = q.add(async () => 'ok');
+
+    await expect(p1).rejects.toThrow('sync boom');
+    await expect(p2).resolves.toBe('ok');
+  });
+
   it('Queue type is exported and usable for variable typing', () => {
     const q: Queue = queue();
 

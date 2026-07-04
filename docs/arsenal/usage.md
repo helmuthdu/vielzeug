@@ -306,7 +306,7 @@ hash(
 ); // '[Map:"a"=>1,"b"=>2]'
 
 // Class instances: String(instance) by default; throw with onClassInstance: 'throw'
-hash(new MyClass(), { onClassInstance: 'throw' }); // TypeError
+hash(new MyClass(), { onClassInstance: 'throw' }); // ArsenalSerializationError
 ```
 
 ### Fuzzy search with scoring

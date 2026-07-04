@@ -1,4 +1,4 @@
-import { ArsenalError } from '../errors';
+import { ArsenalValidationError } from '../errors';
 import { isPromise } from '../guards/isPromise';
 
 type CacheRecord<K, T> = {
@@ -116,14 +116,21 @@ export type Stash<T, K = string> = {
  *
  * @template T - The type of values stored in the cache.
  * @template K - The key type. Defaults to `string`.
+ *
+ * @throws {ArsenalValidationError} If `options.maxSize` is provided and is not a positive integer or `Infinity`.
  */
 export function stash<T, K = string>(options: CacheOptions<K, T> = {}): Stash<T, K> {
+  const maxSize = options.maxSize ?? Infinity;
+
+  if (maxSize !== Infinity && (!Number.isInteger(maxSize) || maxSize < 1)) {
+    throw new ArsenalValidationError(`stash: maxSize must be a positive integer or Infinity, got ${maxSize}`);
+  }
+
   const store = new Map<string, CacheRecord<K, T>>();
   const gcTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const inFlight = new Map<string, Promise<T>>();
   const hash = options.hash ?? ((key: K) => String(key));
   const onEvict = options.onEvict;
-  const maxSize = options.maxSize ?? Infinity;
   const defaultTtlMs = options.ttlMs;
   const persistence = options.persistence;
   let generation = 0;
@@ -169,7 +176,7 @@ export function stash<T, K = string>(options: CacheOptions<K, T> = {}): Stash<T,
     if (delayMs === Number.POSITIVE_INFINITY) return;
 
     if (!Number.isFinite(delayMs)) {
-      throw new ArsenalError('stash: ttlMs must be a finite number or Infinity');
+      throw new ArsenalValidationError('stash: ttlMs must be a finite number or Infinity');
     }
 
     if (delayMs <= 0) {
@@ -228,9 +235,11 @@ export function stash<T, K = string>(options: CacheOptions<K, T> = {}): Stash<T,
 
     if (isPromise(value)) {
       const capturedGeneration = generation;
-      const promise = value
+      const promise: Promise<T> = value
         .then((resolved) => {
-          inFlight.delete(keyHash);
+          // Only clear the in-flight slot if it's still *this* promise — an overlapping
+          // `forceRefresh` call may have already replaced it with a newer in-flight promise.
+          if (inFlight.get(keyHash) === promise) inFlight.delete(keyHash);
 
           if (generation === capturedGeneration && !deletedWhileInFlight.has(keyHash)) {
             set(key, resolved, opts);
@@ -241,7 +250,8 @@ export function stash<T, K = string>(options: CacheOptions<K, T> = {}): Stash<T,
           return resolved;
         })
         .catch((err: unknown) => {
-          inFlight.delete(keyHash);
+          if (inFlight.get(keyHash) === promise) inFlight.delete(keyHash);
+
           deletedWhileInFlight.delete(keyHash);
           throw err;
         });

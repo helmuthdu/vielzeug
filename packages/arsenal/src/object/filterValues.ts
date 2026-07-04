@@ -1,7 +1,19 @@
 import type { Obj } from '../types';
 
+import { isUnsafeKey } from '../_common/unsafePaths';
+
 /**
- * Filters object entries using a value predicate.
+ * Filters object entries using a value predicate. Dangerous keys (`__proto__`, `constructor`,
+ * `prototype`) are always skipped.
+ *
+ * @example
+ * ```ts
+ * filterValues({ a: 1, b: 2, c: 3 }, (value) => value > 1); // { b: 2, c: 3 }
+ * ```
+ *
+ * @param obj - The source object.
+ * @param predicate - Returns `true` to keep an entry.
+ * @returns A new object containing only entries for which `predicate` returned `true`.
  */
 export function filterValues<T extends Obj>(
   obj: T,
@@ -10,7 +22,7 @@ export function filterValues<T extends Obj>(
   const out: Partial<T> = {};
 
   for (const key of Object.keys(obj) as Array<keyof T>) {
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    if (isUnsafeKey(key as PropertyKey)) continue;
 
     if (predicate(obj[key], key, obj)) {
       out[key] = obj[key];

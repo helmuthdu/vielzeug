@@ -30,7 +30,7 @@ export function throttle<T extends Fn>(
   const leading = options.leading ?? true;
   const trailing = options.trailing ?? false;
 
-  let timerId: number | undefined;
+  let timerId: ReturnType<typeof setTimeout> | undefined;
   let lastInvokeTime = -Infinity;
   let lastArgs: Parameters<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
@@ -43,7 +43,7 @@ export function throttle<T extends Fn>(
   };
 
   const scheduleTimer = (delayMs: number) => {
-    timerId = setTimeout(timerExpired, delayMs) as unknown as number;
+    timerId = setTimeout(timerExpired, delayMs);
   };
 
   const invoke = (now: number) => {

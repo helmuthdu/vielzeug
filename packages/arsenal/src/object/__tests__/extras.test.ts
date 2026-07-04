@@ -3,6 +3,7 @@ import { filterValues } from '../filterValues';
 import { invert } from '../invert';
 import { mapKeys } from '../mapKeys';
 import { mapValues } from '../mapValues';
+import { shallowMerge } from '../merge';
 import { omit } from '../omit';
 import { pick } from '../pick';
 
@@ -30,6 +31,8 @@ describe('object extras', () => {
     const mk = mapKeys(malicious, (k) => k);
     const om = omit(malicious, [] as never[]);
     const fv = filterValues(malicious, () => true);
+    const pk = pick(malicious, ['__proto__'] as never[]);
+    const sm = shallowMerge({}, malicious);
 
     expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
     expect(Object.hasOwn(d, '__proto__')).toBe(false);
@@ -37,6 +40,24 @@ describe('object extras', () => {
     expect(Object.hasOwn(mk, '__proto__')).toBe(false);
     expect(Object.hasOwn(om, '__proto__')).toBe(false);
     expect(Object.hasOwn(fv, '__proto__')).toBe(false);
+    expect(Object.hasOwn(pk, '__proto__')).toBe(false);
+    expect(Object.hasOwn(sm, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(sm)).toBe(Object.prototype);
+  });
+
+  it('pick() only picks own keys, never inherited ones', () => {
+    const input = { a: 1 };
+
+    expect(Object.hasOwn(pick(input, ['toString'] as never[]), 'toString')).toBe(false);
+  });
+
+  it('invert() skips entries whose value is a dangerous key', () => {
+    const input = { safe: 'b', unsafe: '__proto__' };
+    const result = invert(input);
+
+    expect(result).toEqual({ b: 'safe' });
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
+    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
   });
 
   it('invert and defaults', () => {

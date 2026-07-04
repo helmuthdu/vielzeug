@@ -60,4 +60,8 @@ describe('snakeCase', () => {
     expect(snakeCase('helloWorld123')).toBe('hello_world_123');
     expect(snakeCase('123HelloWorld')).toBe('123_hello_world');
   });
+
+  it('preserves accented letters instead of stripping them — regression', () => {
+    expect(snakeCase('café bar')).toBe('café_bar');
+  });
 });

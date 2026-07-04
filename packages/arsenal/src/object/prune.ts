@@ -1,3 +1,4 @@
+import { isUnsafeKey } from '../_common/unsafePaths';
 import { filterMap } from '../array/filterMap';
 import { isEmpty } from '../guards/isEmpty';
 import { isNil } from '../guards/isNil';
@@ -9,7 +10,8 @@ import { isString } from '../guards/isString';
  *
  * - For strings: trims whitespace and returns `undefined` if the result is empty.
  * - For arrays: recursively removes `null`, `undefined`, empty strings, and empty objects/arrays.
- * - For objects: recursively removes properties whose pruned value is empty.
+ * - For objects: recursively removes properties whose pruned value is empty. Dangerous keys
+ *   (`__proto__`, `constructor`, `prototype`) are always skipped.
  * - For any other type: returns the value unchanged.
  *
  * @example
@@ -51,6 +53,8 @@ export function prune<T>(value: T): T | undefined {
     const cleaned: Record<string, unknown> = {};
 
     for (const [key, val] of Object.entries(value)) {
+      if (isUnsafeKey(key)) continue;
+
       const cleanedValue = prune(val);
 
       if (!isEmpty(cleanedValue)) {

@@ -18,7 +18,7 @@ description: Complete API reference for Arsenal.
 | `fuzzyScore(array, query, options?)`    | Score and rank array items by similarity                          | Sync      | Returns `ScoredResult<T>[]` sorted by score descending; empty query returns all at score `1`             |
 | `sort(array, selectors)`                | Multi-key sort without mutation                                   | Sync      | Pass an object `{ key: 'asc' }` or a comparator                                                          |
 | `uniq(array, selector?)`                | Deduplicate by value or key                                       | Sync      | Uses deep equality without a selector                                                                    |
-| `parallel(array, fn, options?)`         | Bounded async fan-out                                             | Async     | `limit` defaults to unbounded                                                                            |
+| `parallel(array, fn, options?)`         | Bounded async fan-out                                             | Async     | `limit` defaults to unbounded; `abortOnError` (default `false`) stops other workers on first failure    |
 | `queue(options?)`                       | Serialise async jobs with concurrency cap                         | Async     | `.onIdle()` resolves when queue drains; `.onSettled(cb)` subscribes to all task completions              |
 | `attempt(fn)`                           | Run a sync or async fn and return `AttemptResult` — never throws  | Both      | Use `isOk(r)` / `isFail(r)` to narrow the result type                                                    |
 | `retry(fn, options?)`                   | Retry a throwing async function with timeout and signal           | Async     | Rethrows on exhaustion; `shouldRetry` receives `(error, failureIndex)` — not called on the final attempt |
@@ -102,6 +102,7 @@ fuzzyScore<T>(array: T[], query: string, options?: FuzzyOptions<T>): ScoredResul
 
 type FuzzyOptions<T> = {
   fields?: ReadonlyArray<keyof T & string>; // limit to specific object keys; searches all values when omitted
+  maxDepth?: number;                        // max recursive depth for full-tree scanning; default: 10
   normalize?: boolean;                      // NFKD Unicode normalization — 'café' matches 'cafe'; default: false
   threshold?: number;                       // 0–1 similarity cutoff; default: 0.25
   // Note: scored is NOT a field on FuzzyOptions — it is only accepted by the fuzzy() overload call site
@@ -113,7 +114,7 @@ type ScoredResult<T> = { item: T; score: number };
 - `fuzzy(arr, q)` returns `T[]` (filter mode); `fuzzy(arr, q, { scored: true })` returns `ScoredResult<T>[]`.
 - `fuzzyFilter` preserves array order; returns items whose best-field score meets `threshold`.
 - `fuzzyScore` returns items above `threshold`, sorted by score descending. Empty query returns all items at score `1`.
-- Nested object traversal is limited to **10 levels**. Values beyond that depth are skipped.
+- Nested object traversal is limited to **10 levels** by default (ignored when `fields` is set); override with `maxDepth`. `maxDepth` must be a non-negative integer (throws `ArsenalValidationError` otherwise) and is silently clamped to a hard ceiling of 1000 regardless of input, to bound worst-case recursion on untrusted data.
 
 ---
 
@@ -124,7 +125,7 @@ type ScoredResult<T> = { item: T; score: number };
 - `backoff(attempt, maxMs?)` — `min(1000 × 2ⁿ, maxMs)`; default cap `30_000 ms`; multiply by `Math.random()` for full jitter
 - `isOk(result)` — type guard: narrows `AttemptResult<T>` to `{ ok: true; value: T }`
 - `isFail(result)` — type guard: narrows `AttemptResult<T>` to `{ ok: false; error: unknown }`
-- `parallel(array, callback, options?)` — bounded concurrent fan-out; `options.limit` caps concurrency
+- `parallel(array, callback, options?)` — bounded concurrent fan-out; `options.limit` caps concurrency; `options.abortOnError` (default `false`) stops other in-flight workers as soon as one callback throws
 - `queue(options?)` — see [queue](#queue)
 - `retry(fn, options?)` — see [retry](#retry)
 - `sleep(ms, signal?)` — delay that resolves after `ms` or rejects when `signal` fires
@@ -271,7 +272,7 @@ type CacheSetOptions = {
 - `max(array, callback?)`
 - `median(array, callback?)`
 - `min(array, callback?)`
-- `mod(a, b)` — sign-correct modulo (result always has the sign of the divisor)
+- `mod(a, b)` — sign-correct modulo (result always has the sign of the divisor); throws `ArsenalValidationError` if `b` is `0`
 - `normalize(value, min, max)` — maps `value` to `0–1` relative to range; clamps
 - `percent(value, total)`
 - `range(stop)` / `range(start, stop)` / `range(start, stop, step)`
@@ -359,11 +360,11 @@ getPath<T, P extends string>(item: T, path: P, options?: GetPathOptions): PathVa
 type GetPathOptions = {
   bracketNotation?: boolean; // auto-convert a[0].b → a.0.b; default: true
   fallback?: unknown;        // returned when path is missing or resolves to undefined
-  strict?: boolean;          // throw Error if any segment is missing; default: false
+  strict?: boolean;          // throw ArsenalValidationError if any segment is missing; default: false
 };
 ```
 
-- Bracket notation is **auto-converted by default** (`a[0].b` → `a.0.b`). Pass `{ bracketNotation: false }` to throw a `TypeError` on bracket syntax.
+- Bracket notation is **auto-converted by default** (`a[0].b` → `a.0.b`). Pass `{ bracketNotation: false }` to throw an `ArsenalValidationError` on bracket syntax.
 - Unsafe path segments (`__proto__`, `constructor`, `prototype`) return `options.fallback` silently.
 - `strict` takes precedence over `fallback` when both are set.
 
@@ -373,8 +374,8 @@ const obj = { a: { b: { c: 3 } }, d: [1, 2, 3] };
 getPath(obj, 'a.b.c'); // 3
 getPath(obj, 'a.b.x', { fallback: 'fallback' }); // 'fallback'
 getPath(obj, 'd[1]'); // 2  (bracket auto-converted)
-getPath(obj, 'e.f.g', { strict: true }); // throws Error
-getPath(obj, 'a[0]', { bracketNotation: false }); // throws TypeError
+getPath(obj, 'e.f.g', { strict: true }); // throws ArsenalValidationError
+getPath(obj, 'a[0]', { bracketNotation: false }); // throws ArsenalValidationError
 ```
 
 ```ts
@@ -424,7 +425,7 @@ hash(
 ); // '[Map:"a"=>1,"b"=>2]'
 hash(42n); // '42n'
 hash(new MyClass()); // String(instance) by default
-hash(new MyClass(), { onClassInstance: 'throw' }); // throws TypeError
+hash(new MyClass(), { onClassInstance: 'throw' }); // throws ArsenalSerializationError
 const o: Record<string, unknown> = { x: 1 };
 o.self = o;
 hash(o); // '{"self":[Circular],"x":1}'
@@ -433,7 +434,8 @@ hash(o); // '{"self":[Circular],"x":1}'
 ## Random
 
 - `draw(array)` — pick one element at random; returns `undefined` for empty arrays
-- `random(min, max)` — random float in `[min, max]`
+- `drawMany(array, n)` — pick up to `n` unique elements at random (Fisher-Yates); `n >= array.length` returns all elements **unshuffled**
+- `random(min, max)` — random integer in `[min, max]`
 - `shuffle(array)` — Fisher-Yates shuffle; returns a new array
 - `uuid()` — `crypto.randomUUID()` wrapper
 
@@ -445,7 +447,7 @@ hash(o); // '{"self":[Circular],"x":1}'
 - `kebabCase(str)`
 - `pad(str, targetLength, fillString?)`
 - `pascalCase(str)`
-- `similarity(str1, str2)` — 0–1 Levenshtein similarity; throws `RangeError` if either input exceeds 10 000 characters
+- `similarity(str1, str2)` — 0–1 Levenshtein similarity; throws `ArsenalValidationError` if either input exceeds 10 000 characters
 - `snakeCase(str)`
 - `startsWith(value, prefix)`
 - `titleCase(str)`
@@ -549,6 +551,7 @@ export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
 
 export type FuzzyOptions<T> = {
   fields?: ReadonlyArray<keyof T & string>;
+  maxDepth?: number;
   normalize?: boolean;
   threshold?: number;
 };
@@ -574,6 +577,46 @@ export type ParseJSONOptions<T> = {
 
 export type TruncateOptions = { completeWords?: boolean; ellipsis?: string };
 ```
+
+## Errors
+
+### `ArsenalError`
+
+Base class for all arsenal errors. Use `instanceof ArsenalError` (or the static
+`ArsenalError.is()` helper) to catch any arsenal-originated error in one branch.
+
+```ts
+class ArsenalError extends Error {
+  static is(err: unknown): err is ArsenalError;
+}
+```
+
+Two named subclasses cover the package's error conditions — catch with `instanceof` for precise
+handling:
+
+```ts
+import { ArsenalError, ArsenalValidationError } from '@vielzeug/arsenal';
+
+try {
+  range(0, 10, 0); // step cannot be 0
+} catch (e) {
+  if (e instanceof ArsenalValidationError) {
+    // precise narrow — invalid argument or option
+  } else if (ArsenalError.is(e)) {
+    // catch any other arsenal error
+  }
+}
+```
+
+**Named subclasses**
+
+| Class                        | Thrown when                                                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ArsenalValidationError`     | A function argument or option is invalid — e.g. `range`'s non-finite bounds, `mod`'s zero divisor, `retry`'s non-positive `times`, `memo`/`stash`'s bad `maxSize`, `truncate`'s bad `limit`, `fuzzy`'s bad `maxDepth`, `getPath`'s strict-mode miss |
+| `ArsenalSerializationError`  | Converting a value to/from its serialized form fails — `memo`'s default cache key (`JSON.stringify`) hits a circular reference, or `hash` encounters an unsupported class instance with `{ onClassInstance: 'throw' }` |
+
+Both subclasses extend `ArsenalError` with no additional members — they exist solely for
+`instanceof` narrowing.
 
 ## See Also
 

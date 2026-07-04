@@ -18,8 +18,6 @@ import { compare } from '../array/compare';
  * @param [callback] - (optional) The function to invoke for each element in the array to determine its value.
  *
  * @return The item with the maximum value as determined by the callback function.
- *
- * @throws {TypeError} If the provided array is not an array.
  */
 export function max<T>(array: T[], callback?: (item: T) => string | number | Date): T | undefined {
   if (array.length === 0) return undefined;

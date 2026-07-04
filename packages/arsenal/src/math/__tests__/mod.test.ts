@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { mod } from '../mod';
 
 describe('mod', () => {
@@ -15,8 +16,8 @@ describe('mod', () => {
     expect(mod(7, -3)).toBe(-2);
   });
 
-  it('returns NaN when divisor is 0', () => {
-    expect(mod(5, 0)).toBeNaN();
+  it('throws ArsenalError when divisor is 0', () => {
+    expect(() => mod(5, 0)).toThrow(ArsenalError);
   });
 
   it('returns 0 when dividend is 0', () => {

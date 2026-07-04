@@ -75,4 +75,16 @@ describe('isMatch', () => {
   it('returns false when object is a Map and source is a plain object', () => {
     expect(isMatch(new Map([['a', 1]]), { a: 1 })).toBe(false);
   });
+
+  it('compares Date values by timestamp instead of vacuously matching', () => {
+    expect(isMatch(new Date('2020-01-01'), new Date('2020-01-01'))).toBe(true);
+    expect(isMatch(new Date('2020-01-01'), new Date('2021-01-01'))).toBe(false);
+    expect(isMatch({ createdAt: new Date('2020-01-01') }, { createdAt: new Date('2021-01-01') })).toBe(false);
+  });
+
+  it('compares RegExp values by source and flags instead of vacuously matching', () => {
+    expect(isMatch(/abc/gi, /abc/gi)).toBe(true);
+    expect(isMatch(/abc/, /abc/gi)).toBe(false);
+    expect(isMatch(/abc/, /xyz/)).toBe(false);
+  });
 });

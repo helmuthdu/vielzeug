@@ -39,6 +39,22 @@ export function isMatch(object: unknown, source: unknown): boolean {
   }
 
   if (typeof source === 'object' && typeof object === 'object') {
+    // Date has no own enumerable properties — compare by timestamp instead of falling through
+    // to the empty Object.keys() loop below (which would vacuously return true).
+    if (source instanceof Date || object instanceof Date) {
+      return source instanceof Date && object instanceof Date && source.getTime() === object.getTime();
+    }
+
+    // Same reasoning for RegExp — compare by source pattern and flags.
+    if (source instanceof RegExp || object instanceof RegExp) {
+      return (
+        source instanceof RegExp &&
+        object instanceof RegExp &&
+        source.source === object.source &&
+        source.flags === object.flags
+      );
+    }
+
     // Map and Set are not structurally matched by key iteration — treat as opaque
     if (source instanceof Map || source instanceof Set || object instanceof Map || object instanceof Set) {
       return false;

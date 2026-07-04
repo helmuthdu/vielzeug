@@ -1,4 +1,4 @@
-import { ArsenalError } from '../errors';
+import { ArsenalSerializationError } from '../errors';
 
 export type HashOptions = {
   /**
@@ -6,7 +6,7 @@ export type HashOptions = {
    * neither `Object.prototype` nor `null`).
    *
    * - `'coerce'` (default) — calls `String(value)`.
-   * - `'throw'` — throws a `TypeError`.
+   * - `'throw'` — throws an `ArsenalSerializationError`.
    */
   onClassInstance?: 'coerce' | 'throw';
 };
@@ -19,7 +19,7 @@ export type HashOptions = {
  * Useful for generating stable cache keys from arbitrary query parameters or options objects.
  *
  * Class instances fall back to `String(value)` by default.
- * Pass `{ onClassInstance: 'throw' }` to throw a `TypeError` instead.
+ * Pass `{ onClassInstance: 'throw' }` to throw an `ArsenalSerializationError` instead.
  *
  * @example
  * ```ts
@@ -27,8 +27,10 @@ export type HashOptions = {
  * hash([3, 1, 2])      // '[3,1,2]'
  * hash(new Date('2024-01-01T00:00:00Z')) // '[Date:2024-01-01T00:00:00.000Z]'
  * hash(new Set([3, 1, 2])) // '[Set:1,2,3]'
- * hash(new MyClass(), { onClassInstance: 'throw' }) // throws TypeError
+ * hash(new MyClass(), { onClassInstance: 'throw' }) // throws ArsenalSerializationError
  * ```
+ *
+ * @throws {ArsenalSerializationError} If `options.onClassInstance` is `'throw'` and a class instance is encountered.
  */
 function _hash(value: unknown, options: HashOptions | undefined, visited: Set<object>): string {
   if (value === undefined) return 'undefined';
@@ -69,7 +71,7 @@ function _hash(value: unknown, options: HashOptions | undefined, visited: Set<ob
 
   if (proto !== Object.prototype && proto !== null) {
     if (options?.onClassInstance === 'throw') {
-      throw new ArsenalError(
+      throw new ArsenalSerializationError(
         `hash: unsupported type ${(value as { constructor?: { name?: string } }).constructor?.name ?? 'unknown'}`,
       );
     }

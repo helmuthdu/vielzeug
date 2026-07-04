@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { memo } from '../memo';
 
 describe('memo', () => {
@@ -142,5 +143,41 @@ describe('memo', () => {
     for (let i = 0; i < 10; i++) memoizedFn(i);
 
     expect(memoizedFn.size).toBeLessThanOrEqual(3);
+  });
+
+  it('throws ArsenalError for a non-integer or NaN maxSize — regression for the disabled-eviction bug', () => {
+    expect(() => memo((x: number) => x, { maxSize: Number.NaN })).toThrow(ArsenalError);
+    expect(() => memo((x: number) => x, { maxSize: -1 })).toThrow(ArsenalError);
+    expect(() => memo((x: number) => x, { maxSize: 1.5 })).toThrow(ArsenalError);
+  });
+
+  it('accepts Infinity as maxSize (the default, unbounded)', () => {
+    expect(() => memo((x: number) => x, { maxSize: Infinity })).not.toThrow();
+  });
+
+  it('does not collide NaN, Infinity, null, and functions on the default key — regression for the key-collision bug', () => {
+    const mockFn = vi.fn((value: unknown) => value);
+    const memoizedFn = memo(mockFn);
+    const fnA = () => 'a';
+    const fnB = () => 'b';
+
+    memoizedFn(Number.NaN);
+    memoizedFn(Number.POSITIVE_INFINITY);
+    memoizedFn(Number.NEGATIVE_INFINITY);
+    memoizedFn(null);
+    memoizedFn(fnA);
+    memoizedFn(fnB);
+
+    expect(mockFn).toHaveBeenCalledTimes(6);
+    expect(memoizedFn.size).toBe(6);
+
+    // Repeating each call should hit the cache, not recompute.
+    memoizedFn(Number.NaN);
+    memoizedFn(Number.POSITIVE_INFINITY);
+    memoizedFn(Number.NEGATIVE_INFINITY);
+    memoizedFn(null);
+    memoizedFn(fnA);
+    memoizedFn(fnB);
+    expect(mockFn).toHaveBeenCalledTimes(6);
   });
 });

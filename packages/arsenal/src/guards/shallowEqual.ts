@@ -6,6 +6,10 @@
  * - Objects are compared key-by-key with `Object.is` on each value (one level deep).
  * - Different types (e.g. array vs object) return `false`.
  *
+ * Uses `Object.is` for the primitive comparison, so `shallowEqual(NaN, NaN)` is `true` and
+ * `shallowEqual(0, -0)` is `false` — the opposite of `isEqual`, which uses `===` and treats
+ * `NaN` as never equal to itself and `-0` as equal to `0`.
+ *
  * For recursive deep equality, use `isEqual`.
  *
  * @example

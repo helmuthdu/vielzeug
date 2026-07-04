@@ -1,7 +1,6 @@
 import { compact } from '../compact';
 import { countBy } from '../countBy';
 import { difference } from '../difference';
-import { drawMany } from '../draw';
 import { drop } from '../drop';
 import { dropLast } from '../dropLast';
 import { first } from '../first';
@@ -22,6 +21,13 @@ describe('array extras', () => {
 
   it('counts by selector', () => {
     expect(countBy(['a', 'bb', 'c'], (item) => item.length)).toEqual({ '1': 2, '2': 1 });
+  });
+
+  it('countBy guards against __proto__ prototype pollution — security regression', () => {
+    const result = countBy(['__proto__', 'safe'], (item) => item);
+
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
   });
 
   it('supports set operations', () => {
@@ -79,13 +85,5 @@ describe('array extras', () => {
       [1, 2],
       ['a', 'b'],
     ]);
-  });
-
-  it('draws unique values without exceeding bounds', () => {
-    const result = drawMany([1, 2, 3, 4], 2);
-
-    expect(result).toHaveLength(2);
-    expect(new Set(result).size).toBe(2);
-    expect(result.every((item) => [1, 2, 3, 4].includes(item))).toBe(true);
   });
 });

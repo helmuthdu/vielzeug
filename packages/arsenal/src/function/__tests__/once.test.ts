@@ -49,4 +49,18 @@ describe('once', () => {
 
     expect(result).toBe(7); // re-runs after reset
   });
+
+  it('a throwing first call does not count as "called" — fn runs again on the next call', () => {
+    const fn = vi.fn().mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
+
+    fn.mockReturnValueOnce('ok');
+
+    const onceFn = once(fn);
+
+    expect(() => onceFn()).toThrow('boom');
+    expect(onceFn()).toBe('ok');
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
 });

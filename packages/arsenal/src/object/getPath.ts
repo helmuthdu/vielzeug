@@ -1,7 +1,7 @@
 import type { Obj } from '../types';
 
 import { UNSAFE_PATH_SEGMENTS } from '../_common/unsafePaths';
-import { ArsenalError } from '../errors';
+import { ArsenalValidationError } from '../errors';
 
 type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
   ? Key extends keyof T
@@ -13,7 +13,7 @@ type PathValue<T, P extends string> = P extends `${infer Key}.${infer Rest}`
 
 export type GetPathOptions = {
   /**
-   * When `false`, throws a `TypeError` on bracket-notation segments instead of
+   * When `false`, throws an `ArsenalValidationError` on bracket-notation segments instead of
    * auto-converting them to dot notation. Default: `true`.
    */
   bracketNotation?: boolean;
@@ -23,7 +23,7 @@ export type GetPathOptions = {
    */
   fallback?: unknown;
   /**
-   * When `true`, throws an `Error` if any path segment is missing.
+   * When `true`, throws an `ArsenalValidationError` if any path segment is missing.
    * Default: `false`.
    */
   strict?: boolean;
@@ -42,8 +42,8 @@ export type GetPathOptions = {
  * getPath(obj, 'a.b.c');                          // 3
  * getPath(obj, 'a.b.x', { fallback: 'fallback' }); // 'fallback'
  * getPath(obj, 'd[1]');                            // 2  (bracket auto-converted)
- * getPath(obj, 'e.f.g', { strict: true });         // throws Error
- * getPath(obj, 'a[0]', { bracketNotation: false }); // throws TypeError
+ * getPath(obj, 'e.f.g', { strict: true });         // throws ArsenalValidationError
+ * getPath(obj, 'a[0]', { bracketNotation: false }); // throws ArsenalValidationError
  * ```
  *
  * @template T - The object type.
@@ -52,8 +52,8 @@ export type GetPathOptions = {
  * @param path - The dot-separated path.
  * @param [options] - Options: `fallback`, `strict`, `bracketNotation`.
  * @returns The resolved value, or `options.fallback` if missing.
- * @throws `TypeError` when `bracketNotation: false` and bracket syntax is used.
- * @throws `Error` when `strict: true` and the path does not exist.
+ * @throws {ArsenalValidationError} When `bracketNotation: false` and bracket syntax is used.
+ * @throws {ArsenalValidationError} When `strict: true` and the path does not exist.
  */
 export function getPath<T extends Obj, P extends string>(
   item: T,
@@ -64,7 +64,7 @@ export function getPath<T extends Obj, P extends string>(
 
   if (/[[\]]/.test(path)) {
     if (!bracketNotation) {
-      throw new ArsenalError(
+      throw new ArsenalValidationError(
         `getPath: bracket notation is not supported. Use dot notation: '${path.replace(/\[(\d+)\]/g, '.$1').replace(/^\.|\.$/g, '')}' or pass { bracketNotation: true }.`,
       );
     }
@@ -79,7 +79,7 @@ export function getPath<T extends Obj, P extends string>(
     if (UNSAFE_PATH_SEGMENTS.has(fragment)) return defaultValue as PathValue<T, P>;
 
     if (current == null || typeof current !== 'object') {
-      if (strict) throw new ArsenalError(`Cannot read property '${fragment}' of ${current}`);
+      if (strict) throw new ArsenalValidationError(`Cannot read property '${fragment}' of ${current}`);
 
       return defaultValue as PathValue<T, P>;
     }
@@ -87,7 +87,7 @@ export function getPath<T extends Obj, P extends string>(
     current = (current as Record<string, unknown>)[fragment];
 
     if (current === undefined) {
-      if (strict) throw new ArsenalError(`Property '${fragment}' does not exist`);
+      if (strict) throw new ArsenalValidationError(`Property '${fragment}' does not exist`);
 
       return defaultValue as PathValue<T, P>;
     }

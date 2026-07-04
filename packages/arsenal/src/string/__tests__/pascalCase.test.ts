@@ -60,4 +60,8 @@ describe('pascalCase', () => {
     expect(pascalCase('helloWorld123')).toBe('HelloWorld123');
     expect(pascalCase('123HelloWorld')).toBe('123HelloWorld');
   });
+
+  it('preserves accented letters instead of stripping them — regression', () => {
+    expect(pascalCase('café bar')).toBe('CaféBar');
+  });
 });

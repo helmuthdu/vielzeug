@@ -2,6 +2,10 @@
  * Recursively compares two values for deep equality.
  * Supports plain objects, arrays, `Date`, `Map`, `Set`, `RegExp`, and circular references.
  *
+ * Uses `===` for the primitive comparison, so `isEqual(NaN, NaN)` is `false` and
+ * `isEqual(0, -0)` is `true` — the opposite of `shallowEqual`, which uses `Object.is` and
+ * treats `NaN` as equal to itself and `-0` as distinct from `0`.
+ *
  * For one-level-deep reference equality, use `shallowEqual` instead.
  *
  * @example

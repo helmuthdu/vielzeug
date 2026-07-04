@@ -15,6 +15,6 @@ import { normalizeCase } from './_caseUtils';
  */
 export function pascalCase(str: string): string {
   return normalizeCase(str, ' ')
-    .replace(/(?:^|\s)(\w)/g, (_, char) => char.toUpperCase())
+    .replace(/(?:^|\s)(\p{L}|\p{N})/gu, (_, char) => char.toUpperCase())
     .replace(/\s+/g, '');
 }

@@ -66,4 +66,16 @@ describe('indexBy', () => {
 
     expect(result).toEqual({ '1': { a: 1 }, '2': { a: 2 } });
   });
+
+  it('guards against __proto__ prototype pollution — security regression', () => {
+    const data = [
+      { key: '__proto__', v: { polluted: true } },
+      { key: 'safe', v: 1 },
+    ];
+    const result = indexBy(data, (item) => item.key);
+
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
 });

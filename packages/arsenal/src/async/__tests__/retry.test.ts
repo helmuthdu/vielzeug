@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { retry } from '../retry';
 import { sleep } from '../sleep';
 
@@ -160,5 +161,19 @@ describe('retry', () => {
     await retry(mockFn, { times: 1 });
 
     expect(mockFn).toHaveBeenCalledWith(undefined);
+  });
+
+  it('throws ArsenalError for times: 0 without calling fn — regression for the silent undefined-return bug', async () => {
+    const mockFn = vi.fn().mockResolvedValue('ok');
+
+    await expect(retry(mockFn, { times: 0 })).rejects.toThrow(ArsenalError);
+    expect(mockFn).not.toHaveBeenCalled();
+  });
+
+  it('throws ArsenalError for a negative times', async () => {
+    const mockFn = vi.fn().mockResolvedValue('ok');
+
+    await expect(retry(mockFn, { times: -1 })).rejects.toThrow(ArsenalError);
+    expect(mockFn).not.toHaveBeenCalled();
   });
 });

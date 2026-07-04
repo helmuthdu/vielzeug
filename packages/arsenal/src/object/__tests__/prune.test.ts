@@ -206,4 +206,16 @@ describe('prune', () => {
       expect(prune([1, 'hello', true, null, { a: 1 }, [], ''])).toEqual([1, 'hello', true, { a: 1 }]);
     });
   });
+
+  describe('security', () => {
+    it('guards against __proto__ prototype pollution — security regression', () => {
+      const malicious = JSON.parse('{"__proto__":{"polluted":true},"safe":1}') as Record<string, unknown>;
+      const result = prune(malicious) as Record<string, unknown>;
+
+      expect(result).toEqual({ safe: 1 });
+      expect(Object.hasOwn(result, '__proto__')).toBe(false);
+      expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+      expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+    });
+  });
 });

@@ -148,4 +148,63 @@ describe('parallel', () => {
       await expect(promise).rejects.toThrow();
     });
   });
+
+  describe('abortOnError', () => {
+    it('stops picking up new items in other workers once one callback throws', async () => {
+      const started: number[] = [];
+      let resolveBlocker!: () => void;
+
+      const promise = parallel(
+        [1, 2, 3, 4, 5, 6],
+        async (n) => {
+          started.push(n);
+
+          if (n === 2) {
+            throw new Error('boom');
+          }
+
+          if (n === 1) {
+            // Keep worker A busy until after worker B has thrown, so we can observe that
+            // worker A picks up no further items once abortOnError kicks in.
+            await new Promise<void>((r) => (resolveBlocker = r));
+          }
+
+          return n;
+        },
+        { abortOnError: true, limit: 2 },
+      );
+
+      // Both workers have already synchronously grabbed their first item (and worker B has
+      // already thrown) by this point — release worker A's blocker so it can observe the abort.
+      resolveBlocker();
+
+      await expect(promise).rejects.toThrow('boom');
+
+      // Only the first two items (one per worker) should ever have started.
+      expect(started).toEqual([1, 2]);
+    });
+
+    it('does not change behavior when abortOnError is false (default)', async () => {
+      const started: number[] = [];
+
+      const promise = parallel(
+        [1, 2, 3, 4],
+        async (n) => {
+          started.push(n);
+
+          if (n === 1) throw new Error('boom');
+
+          return n;
+        },
+        { limit: 1 },
+      );
+
+      await expect(promise).rejects.toThrow('boom');
+
+      // Without abortOnError, subsequent workers are unaffected by an earlier item's failure —
+      // this test uses limit: 1 (sequential) so the throw itself stops the single worker's loop,
+      // matching pre-existing behavior.
+      expect(started).toEqual([1]);
+    });
+  });
 });

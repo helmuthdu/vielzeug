@@ -1,3 +1,4 @@
+import { ArsenalError } from '../../errors';
 import { type TruncateOptions, truncate } from '../truncate';
 
 describe('truncate', () => {
@@ -45,5 +46,21 @@ describe('truncate', () => {
     const opts: TruncateOptions = { completeWords: true, ellipsis: '...' };
 
     expect(truncate('Hello World truncated text', 12, opts)).toBe('Hello World...');
+  });
+
+  it('throws ArsenalError when str is not a string', () => {
+    expect(() => truncate(123 as unknown as string, 5)).toThrow(ArsenalError);
+  });
+
+  it('throws ArsenalError when limit is negative', () => {
+    expect(() => truncate('Hello World', -1)).toThrow(ArsenalError);
+  });
+
+  it('throws ArsenalError when limit is NaN', () => {
+    expect(() => truncate('Hello World', Number.NaN)).toThrow(ArsenalError);
+  });
+
+  it('throws ArsenalError when limit is Infinity', () => {
+    expect(() => truncate('Hello World', Number.POSITIVE_INFINITY)).toThrow(ArsenalError);
   });
 });

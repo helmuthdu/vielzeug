@@ -1,5 +1,6 @@
 import type { Obj } from '../types';
 
+import { isUnsafeKey } from '../_common/unsafePaths';
 import { isPlainObject } from '../guards/isPlainObject';
 
 /**
@@ -23,7 +24,7 @@ export function defaults<T extends Obj>(target: T, ...sources: Array<Partial<T>>
     if (!isPlainObject(source)) continue;
 
     for (const key of Object.keys(source) as Array<keyof T>) {
-      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+      if (isUnsafeKey(key as PropertyKey)) continue;
 
       if (out[key] === undefined) {
         out[key] = source[key] as T[keyof T];

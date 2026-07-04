@@ -154,4 +154,14 @@ describe('isEqual', () => {
       expect(isEqual({ a: 1, b: 2 }, { a: 1 })).toBe(false);
     });
   });
+
+  describe('NaN/-0 semantics (diverge intentionally from shallowEqual)', () => {
+    it('treats NaN as never equal to itself, via ===', () => {
+      expect(isEqual(Number.NaN, Number.NaN)).toBe(false);
+    });
+
+    it('treats 0 and -0 as equal, via ===', () => {
+      expect(isEqual(0, -0)).toBe(true);
+    });
+  });
 });

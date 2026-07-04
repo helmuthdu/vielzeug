@@ -1,5 +1,7 @@
 import type { Fn } from '../types';
 
+import { warn } from '../_dev';
+
 export type DebounceOptions = {
   /** Invoke on the leading edge of the delay window. Default: `false`. */
   leading?: boolean;
@@ -38,7 +40,11 @@ export function debounce<T extends Fn>(
   const leading = options.leading ?? false;
   const trailing = options.trailing ?? true;
 
-  let timerId: number | undefined;
+  if (!leading && !trailing) {
+    warn('debounce: both `leading` and `trailing` are false — the wrapped function will never be invoked.');
+  }
+
+  let timerId: ReturnType<typeof setTimeout> | undefined;
   let lastArgs: Parameters<T> | undefined;
   let lastResult: ReturnType<T> | undefined;
   let leadingFired = false;
@@ -71,26 +77,27 @@ export function debounce<T extends Fn>(
       if (leading && !leadingFired) {
         leadingFired = true;
         lastResult = fn(...args) as ReturnType<T>;
+        // Clear args regardless of `trailing` — the leading call already consumed this
+        // invocation. The trailing timer below only re-invokes `fn` if a *further* call
+        // arrives during the cooldown window and repopulates `lastArgs`.
+        lastArgs = undefined;
 
         if (!trailing) {
-          // Leading-only: clear args and start cooldown — no trailing call needed
-          lastArgs = undefined;
+          // Leading-only: start cooldown — no trailing call needed
           timerId = setTimeout(() => {
             timerId = undefined;
             leadingFired = false;
-          }, delay) as unknown as number;
+          }, delay);
 
           return lastResult;
         }
-
-        // Leading + trailing: keep lastArgs so the trailing timer can re-invoke
       }
 
       // When leading-only, ignore calls within the cooldown window
       if (leading && !trailing && leadingFired) return lastResult;
 
       clearTimer();
-      timerId = setTimeout(invokeTrailing, delay) as unknown as number;
+      timerId = setTimeout(invokeTrailing, delay);
 
       return lastResult;
     },

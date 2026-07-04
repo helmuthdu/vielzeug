@@ -29,4 +29,13 @@ describe('shallowMerge', () => {
     shallowMerge(target, { b: 2 });
     expect(target).toEqual({ a: 1 });
   });
+
+  it('guards against __proto__ prototype pollution — security regression', () => {
+    const malicious = JSON.parse('{"__proto__":{"polluted":true}}') as Record<string, unknown>;
+    const result = shallowMerge({}, malicious);
+
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+    expect((Object.prototype as Record<string, unknown>)['polluted']).toBeUndefined();
+  });
 });

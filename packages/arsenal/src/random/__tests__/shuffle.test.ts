@@ -1,4 +1,4 @@
-import { shuffle } from '../../array/shuffle';
+import { shuffle } from '../shuffle';
 
 describe('shuffle', () => {
   it('should return a new array with the same elements', () => {

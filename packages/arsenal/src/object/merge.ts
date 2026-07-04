@@ -1,5 +1,6 @@
 import type { Obj } from '../types';
 
+import { isUnsafeKey } from '../_common/unsafePaths';
 import { isPlainObject } from '../guards/isPlainObject';
 
 export type DeepMergeOptions = {
@@ -36,7 +37,7 @@ function mergeObjects<T extends Obj, U extends Obj>(target: T, source: U, option
 
   for (const key of Object.keys(source)) {
     // Guard against prototype pollution: skip dangerous keys
-    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+    if (isUnsafeKey(key)) {
       continue;
     }
 
@@ -94,6 +95,7 @@ export function deepMerge<T extends Obj[]>(...args: [...T] | [...T, DeepMergeOpt
 
 /**
  * Shallowly merges two or more objects. Later sources win for duplicate keys.
+ * Dangerous keys (`__proto__`, `constructor`, `prototype`) are always skipped.
  *
  * @example
  * ```ts
@@ -106,5 +108,15 @@ export function deepMerge<T extends Obj[]>(...args: [...T] | [...T, DeepMergeOpt
 export function shallowMerge<T extends Obj[]>(...items: [...T]): Merge<T> {
   if (items.length === 0) return {} as Merge<T>;
 
-  return Object.assign({}, ...items) as Merge<T>;
+  const result: Obj = {};
+
+  for (const item of items) {
+    for (const key of Object.keys(item)) {
+      if (isUnsafeKey(key)) continue;
+
+      result[key] = item[key];
+    }
+  }
+
+  return result as Merge<T>;
 }

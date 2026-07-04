@@ -12,6 +12,11 @@ describe('string extras', () => {
     expect(titleCase('helloWorld-test_case')).toBe('Hello World Test Case');
   });
 
+  it('preserves accented letters instead of stripping them — regression', () => {
+    expect(words('café bar')).toEqual(['café', 'bar']);
+    expect(titleCase('café bar')).toBe('Café Bar');
+  });
+
   it('pads strings evenly', () => {
     expect(pad('hi', 6, '.')).toBe('..hi..');
     expect(pad('cat', 8, '_')).toBe('__cat___');

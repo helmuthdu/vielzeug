@@ -9,6 +9,9 @@ export type Once<T extends Fn> = T & { reset: () => void };
 /**
  * Create a function that runs once and returns the first result.
  *
+ * If the first call throws, it does not count as "called" — the thrown error propagates to
+ * that caller, and the next call will invoke `fn` again (rather than caching the failure).
+ *
  * @example
  * ```ts
  * const onceRandom = once(() => Math.random())

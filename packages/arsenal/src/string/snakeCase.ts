@@ -6,7 +6,7 @@ import { normalizeCase } from './_caseUtils';
  * @example
  * ```ts
  * const text = 'Hello World';
- * toSnakeCase(text) // 'hello_world';
+ * snakeCase(text) // 'hello_world';
  * ```
  *
  * @param str - The string to convert.

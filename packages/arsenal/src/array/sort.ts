@@ -1,4 +1,4 @@
-import { ArsenalError } from '../errors';
+import { ArsenalValidationError } from '../errors';
 import { compare } from './compare';
 import { compareBy } from './compareBy';
 
@@ -24,7 +24,7 @@ export type SortSelectors<T> = Partial<Record<keyof T, SortDirection>>;
  * @param direction - `'asc'` (default) or `'desc'` — only applies to single-field mode.
  * @returns A new sorted array.
  *
- * @throws {ArsenalError} If the first argument is not an array.
+ * @throws {ArsenalValidationError} If the first argument is not an array.
  */
 export function sort<T>(array: T[], selector: (item: T) => unknown, direction?: SortDirection): T[];
 export function sort<T>(array: T[], selectors: SortSelectors<T>): T[];
@@ -33,7 +33,7 @@ export function sort<T>(
   selectorOrSelectors: ((item: T) => unknown) | SortSelectors<T>,
   direction: SortDirection = 'asc',
 ): T[] {
-  if (!Array.isArray(array)) throw new ArsenalError('sort: first argument must be an array');
+  if (!Array.isArray(array)) throw new ArsenalValidationError('sort: first argument must be an array');
 
   if (typeof selectorOrSelectors === 'function') {
     const multiplier = direction === 'desc' ? -1 : 1;

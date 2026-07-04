@@ -1,5 +1,7 @@
 import type { Primitive } from '../types';
 
+import { dedupeBySelector } from '../_common/_selectorSet';
+
 /**
  * Creates a new array with duplicate values removed.
  *
@@ -14,8 +16,6 @@ import type { Primitive } from '../types';
  * @param [selector] - Function used to generate comparison values for each item.
 
  * @returns A new duplicate-free array.
-
- * @throws {TypeError} - If the input is not an array.
  */
 export function uniq<T>(array: T[], selector?: (item: T) => Primitive): T[] {
   if (array.length <= 1) {
@@ -26,17 +26,5 @@ export function uniq<T>(array: T[], selector?: (item: T) => Primitive): T[] {
     return [...new Set(array)];
   }
 
-  const seen = new Set<Primitive>();
-
-  return array.filter((item) => {
-    const key = selector(item) as Primitive;
-
-    if (seen.has(key)) {
-      return false;
-    }
-
-    seen.add(key);
-
-    return true;
-  });
+  return dedupeBySelector(array, selector);
 }

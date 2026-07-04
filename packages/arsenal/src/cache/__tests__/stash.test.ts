@@ -116,6 +116,29 @@ describe('stash', () => {
     expect(() => c.set(['k3'], 'v', { ttlMs: Number.NEGATIVE_INFINITY })).toThrow(ArsenalError);
   });
 
+  it('throws ArsenalError for a non-integer or NaN maxSize — regression for the disabled-eviction bug', () => {
+    expect(() => stash({ maxSize: Number.NaN })).toThrow(ArsenalError);
+    expect(() => stash({ maxSize: -1 })).toThrow(ArsenalError);
+    expect(() => stash({ maxSize: 1.5 })).toThrow(ArsenalError);
+  });
+
+  it('accepts Infinity as maxSize (the default, unbounded)', () => {
+    expect(() => stash({ maxSize: Infinity })).not.toThrow();
+  });
+
+  it('evicts the oldest entry (FIFO) once maxSize is exceeded', () => {
+    const c = stash<string, readonly unknown[]>({ hash, maxSize: 2 });
+
+    c.set(['a'], 'A');
+    c.set(['b'], 'B');
+    c.set(['c'], 'C'); // evicts 'a' (oldest)
+
+    expect(c.size).toBe(2);
+    expect(c.get(['a'])).toBeUndefined();
+    expect(c.get(['b'])).toBe('B');
+    expect(c.get(['c'])).toBe('C');
+  });
+
   it('should handle complex keys', () => {
     const c = stash<string, readonly unknown[]>({ hash });
     const key = ['user', { id: 1, role: 'admin' }, [1, 2, 3]];
@@ -203,6 +226,44 @@ describe('stash', () => {
 
     await expect(p2).resolves.toBe('ok');
     expect(factory).toHaveBeenCalledTimes(2);
+  });
+
+  it('forceRefresh alongside an in-flight request does not corrupt the in-flight map for a third caller — regression', async () => {
+    vi.useRealTimers();
+
+    let resolveFirst!: (v: string) => void;
+    let resolveSecond!: (v: string) => void;
+    const c = stash<string>({ hash: (k) => k });
+
+    const firstFactory = vi.fn(() => new Promise<string>((r) => (resolveFirst = r)));
+    const p1 = c.getOrSet('k', firstFactory); // starts the first in-flight fetch
+
+    const secondFactory = vi.fn(() => new Promise<string>((r) => (resolveSecond = r)));
+    const p2 = c.getOrSet('k', secondFactory, { forceRefresh: true }); // overlapping forceRefresh, tracked in-flight
+
+    // Deleting the key while both are in flight suppresses the first request's cache write on
+    // resolution (`deletedWhileInFlight`) — isolating the in-flight-map bug from the separate,
+    // already-documented "last .then wins the store write" caveat.
+    c.delete('k');
+
+    // The first (older) in-flight request settles first. With the corrupted in-flight map,
+    // its `.then` would unconditionally delete whatever is *currently* tracked for this key
+    // — i.e. `p2`'s still-pending entry — even though `p2` isn't done yet, and even though it
+    // didn't write anything to the store (suppressed by the delete above).
+    resolveFirst('stale');
+    await p1;
+
+    // A third caller, right after the first request settles but before the second one does,
+    // must still join the second (still in-flight) request instead of starting a brand new
+    // factory call.
+    const thirdFactory = vi.fn(() => Promise.resolve('third'));
+    const p3 = c.getOrSet('k', thirdFactory);
+
+    expect(thirdFactory).not.toHaveBeenCalled();
+    expect(p3).toBe(p2);
+
+    resolveSecond('fresh');
+    await expect(p2).resolves.toBe('fresh');
   });
 
   it('onEvict callback fires when a key is explicitly deleted', () => {

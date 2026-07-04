@@ -14,8 +14,6 @@ import { isEqual } from '../guards/isEqual';
  * @param value - The value to search for.
  *
  * @returns true if the value is present in the array, else false.
- *
- * @throws {TypeError} If the first argument is not an array.
  */
 
 export function contains<T>(array: T[], value: unknown): boolean {

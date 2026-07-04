@@ -14,8 +14,6 @@ import type { Predicate } from '../types';
  * @param value - The new value to replace the found element.
  *
  * @return A new array with the replaced value.
- *
- * @throws {TypeError} If the first argument is not an array.
  */
 export function replace<T>(array: T[], predicate: Predicate<T>, value: T): T[] {
   const index = array.findIndex(predicate);

@@ -157,4 +157,26 @@ describe('debounce — leading + trailing', () => {
     expect(fn).toHaveBeenCalledTimes(2);
     expect(fn).toHaveBeenLastCalledWith('c');
   });
+
+  it('fires exactly once for a single call — regression for the leading+trailing double-fire bug', () => {
+    const fn = vi.fn();
+    const d = debounce(fn, 100, { leading: true, trailing: true });
+
+    d('only');
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(100);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('debounce — no-op configuration', () => {
+  it('warns when both leading and trailing are false', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    debounce(vi.fn(), 100, { leading: false, trailing: false });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('[@vielzeug/arsenal]'));
+    warnSpy.mockRestore();
+  });
 });

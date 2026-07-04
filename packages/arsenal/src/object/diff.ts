@@ -1,5 +1,6 @@
 import type { Obj } from '../types';
 
+import { isUnsafeKey } from '../_common/unsafePaths';
 import { isEqual } from '../guards/isEqual';
 
 export type DiffResult<T extends Obj> = {
@@ -14,6 +15,7 @@ export type DiffResult<T extends Obj> = {
 /**
  * Computes the structural difference between two plain objects.
  * Returns an `{ added, removed, changed }` result — no sentinel symbols needed.
+ * Dangerous keys (`__proto__`, `constructor`, `prototype`) are omitted from `changed`.
  *
  * @example
  * ```ts
@@ -43,7 +45,7 @@ export function diff<T extends Obj>(
   for (const key of afterKeys) {
     if (!beforeKeys.has(key)) {
       added.push(key as keyof T & string);
-    } else if (!compareFn(before[key], after[key])) {
+    } else if (!isUnsafeKey(key) && !compareFn(before[key], after[key])) {
       changed[key] = { after: after[key], before: before[key] };
     }
   }

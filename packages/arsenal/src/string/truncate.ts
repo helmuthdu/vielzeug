@@ -1,3 +1,5 @@
+import { ArsenalValidationError } from '../errors';
+
 export type TruncateOptions = {
   completeWords?: boolean;
   ellipsis?: string;
@@ -22,13 +24,21 @@ export type TruncateOptions = {
  *
  * @returns The truncated string.
  *
- * @throws {TypeError} If str is not a string or limit is not a positive number.
+ * @throws {ArsenalValidationError} If str is not a string or limit is not a non-negative finite number.
  */
 export function truncate(
   str: string,
   limit = 25,
   { completeWords = false, ellipsis = '…' }: TruncateOptions = {},
 ): string {
+  if (typeof str !== 'string') {
+    throw new ArsenalValidationError('truncate: str must be a string');
+  }
+
+  if (typeof limit !== 'number' || !Number.isFinite(limit) || limit < 0) {
+    throw new ArsenalValidationError('truncate: limit must be a non-negative finite number');
+  }
+
   if (str.length <= limit) {
     return str;
   }

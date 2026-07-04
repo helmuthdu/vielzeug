@@ -18,8 +18,6 @@ import { abortError } from './abortError';
  * @param signal  - Optional AbortSignal to cancel the sleep early.
  *
  * @returns A Promise that resolves after the specified time.
- *
- * @throws {TypeError} If timeout is not a non-negative number.
  */
 export async function sleep(timeout: number, signal?: AbortSignal): Promise<void> {
   if (!signal) {

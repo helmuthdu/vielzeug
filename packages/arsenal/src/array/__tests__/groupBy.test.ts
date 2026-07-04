@@ -47,4 +47,12 @@ describe('groupBy', () => {
     expect(() => groupBy(undefined as any, selector)).toThrow(TypeError);
     expect(() => groupBy({} as any, selector)).toThrow(TypeError);
   });
+
+  it('guards against __proto__ prototype pollution — security regression', () => {
+    const arr = [{ type: '__proto__' }, { type: 'safe' }];
+    const result = groupBy(arr, (item) => item.type);
+
+    expect(Object.hasOwn(result, '__proto__')).toBe(false);
+    expect(Object.getPrototypeOf(result)).toBe(Object.prototype);
+  });
 });

@@ -13,8 +13,6 @@
  * @param [options.wrap] - If `true`, the rotated-out elements are appended to the end.
  *
  * @returns A new array with the elements rotated.
- *
- * @throws {TypeError} If the first argument is not an array, or the second argument is not a number.
  */
 export function rotate<T>(array: T[], positions: number, { wrap = false }: { wrap?: boolean } = {}): T[] {
   if (array.length === 0) return array;

@@ -1,6 +1,6 @@
 import type { AttemptResult } from './attempt';
 
-import { ArsenalError } from '../errors';
+import { ArsenalValidationError } from '../errors';
 
 /**
  * Creates a promise queue that processes promises sequentially with optional concurrency limit.
@@ -42,7 +42,7 @@ export interface Queue {
 export function queue(options: { concurrency?: number } = {}): Queue {
   const { concurrency = 1 } = options;
 
-  if (concurrency < 1) throw new ArsenalError('Concurrency must be at least 1');
+  if (concurrency < 1) throw new ArsenalValidationError('Concurrency must be at least 1');
 
   let activeCount = 0;
   let isDraining = false;
@@ -84,7 +84,8 @@ export function queue(options: { concurrency?: number } = {}): Queue {
 
       activeCount++;
 
-      void Promise.resolve(task.fn())
+      void Promise.resolve()
+        .then(() => task.fn())
         .then((v) => {
           notifySettled({ ok: true, value: v });
           task.resolve(v);
