@@ -1,12 +1,19 @@
 import { createTestWorker } from '../testing/testing';
-import { FamiliarError } from '../worker';
+import { FamiliarInvalidOptionsError, FamiliarRuntimeError, FamiliarTaskError } from '../worker';
 import { expectFamiliarErrorCode } from './worker-test-helpers';
 
 describe('createTestWorker', () => {
   describe('options validation', () => {
     it('rejects invalid maxQueue values', () => {
-      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 0 })).toThrow(FamiliarError);
-      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 1.5 })).toThrow(FamiliarError);
+      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 0 })).toThrow(FamiliarInvalidOptionsError);
+      expect(() => createTestWorker<number, number>((n) => n, { maxQueue: 1.5 })).toThrow(FamiliarInvalidOptionsError);
+    });
+
+    it('rejects invalid concurrency values', () => {
+      expect(() => createTestWorker<number, number>((n) => n, { concurrency: 0 })).toThrow(FamiliarInvalidOptionsError);
+      expect(() => createTestWorker<number, number>((n) => n, { concurrency: 1.5 })).toThrow(
+        FamiliarInvalidOptionsError,
+      );
     });
   });
 
@@ -33,6 +40,30 @@ describe('createTestWorker', () => {
       await expect(worker.run(-1)).rejects.toThrow('negative');
       // Note: unlike the real worker, createTestWorker does NOT wrap errors in FamiliarError
       // for improved DX — vitest assertion errors surface directly.
+    });
+
+    it('wraps callback errors in FamiliarTaskError when errorWrapping is true', async () => {
+      const worker = createTestWorker<number, number>(
+        (n) => {
+          if (n < 0) throw new Error('negative');
+
+          return n;
+        },
+        { errorWrapping: true },
+      );
+
+      const error = await worker.run(-1).catch((e) => e);
+
+      expect(error).toBeInstanceOf(FamiliarTaskError);
+      expect(error.message).toBe('negative');
+      expect(error.cause).toBeInstanceOf(Error);
+    });
+
+    it('does not wrap the runStream() unsupported rejection even when errorWrapping is true', async () => {
+      const worker = createTestWorker<number, number>((n) => n, { errorWrapping: true });
+      const iterator = worker.runStream(1)[Symbol.asyncIterator]();
+
+      await expect(iterator.next()).rejects.toBeInstanceOf(FamiliarRuntimeError);
     });
 
     it('tracks only successful calls in order', async () => {
@@ -127,7 +158,7 @@ describe('createTestWorker', () => {
       await expectFamiliarErrorCode(worker.run(1), 'terminated');
     });
 
-    it('close drains queued work then terminates', async () => {
+    it('drain() drains queued work then terminates', async () => {
       const worker = createTestWorker<number, number>(
         (n) => new Promise((resolve) => setTimeout(() => resolve(n), 20)),
       );
@@ -141,7 +172,7 @@ describe('createTestWorker', () => {
       expect(worker.status).toBe('terminated');
     });
 
-    it('close() rejects with timeout when in-flight work never settles', async () => {
+    it('drain() rejects with timeout when in-flight work never settles', async () => {
       const worker = createTestWorker<void, void>(() => new Promise(() => {}));
 
       worker.run(undefined).catch(() => {});
@@ -150,29 +181,29 @@ describe('createTestWorker', () => {
       worker.dispose();
     }, 1000);
 
-    it('rejects new run() calls once close() has started', async () => {
+    it('rejects new run() calls once drain() has started', async () => {
       const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 20)));
       const running = worker.run(undefined);
-      const closing = worker.drain();
+      const draining = worker.drain();
 
       await expectFamiliarErrorCode(worker.run(undefined), 'terminated');
       await expect(running).resolves.toBeUndefined();
-      await expect(closing).resolves.toBeUndefined();
+      await expect(draining).resolves.toBeUndefined();
     });
 
-    it('dispose() while close() is pending eventually resolves the close promise', async () => {
+    it('dispose() while drain() is pending eventually resolves the drain promise', async () => {
       // In the test worker, tasks run in-process and cannot be force-terminated mid-flight.
       // dispose() stops accepting new work and drains the queue, but the in-flight task
-      // completes naturally. close() therefore resolves once the task finishes.
+      // completes naturally. drain() therefore resolves once the task finishes.
       const worker = createTestWorker<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30)));
       const running = worker.run(undefined);
-      const closing = worker.drain();
+      const draining = worker.drain();
 
       worker.dispose();
 
       // The in-flight task completes (cannot be interrupted in-process).
       await expect(running).resolves.toBeUndefined();
-      await expect(closing).resolves.toBeUndefined();
+      await expect(draining).resolves.toBeUndefined();
       expect(worker.status).toBe('terminated');
     });
 
@@ -337,6 +368,70 @@ describe('createTestWorker', () => {
       }
 
       expect(collected).toHaveLength(1);
+      worker.dispose();
+    });
+
+    it('bounds in-flight/buffered tasks to concurrency for a slow consumer (ordered:false)', async () => {
+      const concurrency = 2;
+      let started = 0;
+
+      const worker = createTestWorker<number, number>(
+        async (n) => {
+          started++;
+          await new Promise((resolve) => setTimeout(resolve, 5));
+
+          return n;
+        },
+        { concurrency },
+      );
+
+      let consumed = 0;
+      let maxLead = 0;
+
+      for await (const _ of worker.batch(
+        Array.from({ length: 10 }, (_, i) => i),
+        { ordered: false },
+      )) {
+        consumed++;
+        maxLead = Math.max(maxLead, started - consumed);
+        // Simulate a slow consumer — much slower than the 5ms task duration.
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+
+      expect(consumed).toBe(10);
+      // Without windowed submission, `started` would race ahead to 10 almost immediately;
+      // with it, no more than `concurrency` tasks may be started-but-not-yet-consumed at once.
+      expect(maxLead).toBeLessThanOrEqual(concurrency);
+      worker.dispose();
+    });
+
+    it('stops submitting further windowed tasks when consumer breaks early on a large ordered:false batch', async () => {
+      const concurrency = 2;
+      let started = 0;
+
+      const worker = createTestWorker<number, number>(
+        async (n) => {
+          started++;
+          await new Promise((resolve) => setTimeout(resolve, 10));
+
+          return n;
+        },
+        { concurrency },
+      );
+
+      for await (const _ of worker.batch(
+        Array.from({ length: 20 }, (_, i) => i),
+        { ordered: false },
+      )) {
+        break;
+      }
+
+      // Give any wrongly-still-running submission loop a chance to over-submit before asserting.
+      await new Promise((resolve) => setTimeout(resolve, 30));
+
+      // Only the initial window (bounded by concurrency) should ever have been submitted —
+      // breaking early must not let submitNext() keep releasing capacity for the other 18 inputs.
+      expect(started).toBeLessThanOrEqual(concurrency);
       worker.dispose();
     });
   });

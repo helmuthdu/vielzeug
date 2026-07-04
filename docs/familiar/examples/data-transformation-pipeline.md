@@ -40,7 +40,7 @@ async function processDataset(rows: Row[]): Promise<Stats[]> {
 
 ### Pitfalls
 
-- The example calls `statsPool.dispose()` inside `processDataset`'s `finally` block, making the pool single-use. Calling `processDataset` a second time will reject immediately with `WorkerError` code `'terminated'`. Create the pool at module level and dispose at app shutdown if you need to call the function more than once.
+- The example calls `statsPool.dispose()` inside `processDataset`'s `finally` block, making the pool single-use. Calling `processDataset` a second time will reject immediately with `FamiliarTerminatedError`. Create the pool at module level and dispose at app shutdown if you need to call the function more than once.
 - Using `concurrency: 'auto'` saturates all CPU threads, which may degrade other concurrent operations on the page. Set an explicit count when other workers are running in parallel.
 
 ### Related

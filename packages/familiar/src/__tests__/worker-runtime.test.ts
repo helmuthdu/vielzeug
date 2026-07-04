@@ -1,4 +1,3 @@
-import { handleStreamMessages, PROTOCOL_VERSION } from '../protocol';
 import {
   createModuleWorker,
   createWorker,
@@ -52,13 +51,13 @@ describe('createWorker', () => {
           task<number, number>((n) => n),
           { concurrency: 0 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
       expect(() =>
         createWorker(
           task<number, number>((n) => n),
           { concurrency: 1.5 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
     });
 
     it('rejects invalid timeout values', () => {
@@ -67,13 +66,13 @@ describe('createWorker', () => {
           task<number, number>((n) => n),
           { timeout: -1 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
       expect(() =>
         createWorker(
           task<number, number>((n) => n),
           { timeout: 0 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
     });
 
     it('rejects invalid maxQueue values', () => {
@@ -82,13 +81,13 @@ describe('createWorker', () => {
           task<number, number>((n) => n),
           { maxQueue: 0 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
       expect(() =>
         createWorker(
           task<number, number>((n) => n),
           { maxQueue: 1.5 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
     });
 
     it('rejects invalid heartbeatWindow values', () => {
@@ -97,13 +96,13 @@ describe('createWorker', () => {
           task<number, number>((n) => n),
           { heartbeatWindow: -1 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
       expect(() =>
         createWorker(
           task<number, number>((n) => n),
           { heartbeatWindow: 0 },
         ),
-      ).toThrow(FamiliarError);
+      ).toThrow(FamiliarInvalidOptionsError);
     });
 
     it('task() throws FamiliarInvalidOptionsError for native/bound functions', () => {
@@ -464,7 +463,7 @@ describe('createWorker', () => {
       expect(worker.status).toBe('terminated');
     });
 
-    it('close() drains running and queued tasks then terminates', async () => {
+    it('drain() drains running and queued tasks then terminates', async () => {
       const worker = createWorker(
         task<number, number>((n) => new Promise((resolve) => setTimeout(() => resolve(n), 20))),
         { concurrency: 1 },
@@ -472,16 +471,16 @@ describe('createWorker', () => {
 
       const p1 = worker.run(1);
       const p2 = worker.run(2);
-      const closePromise = worker.drain();
+      const drainPromise = worker.drain();
 
       await expect(p1).resolves.toBe(1);
       await expect(p2).resolves.toBe(2);
-      await closePromise;
+      await drainPromise;
       expect(worker.status).toBe('terminated');
       await expectFamiliarErrorCode(worker.run(3), 'terminated');
     });
 
-    it('close() is idempotent', async () => {
+    it('drain() is idempotent', async () => {
       const worker = createWorker(task<number, number>((n) => n));
       const c1 = worker.drain();
       const c2 = worker.drain();
@@ -491,7 +490,7 @@ describe('createWorker', () => {
       expect(worker.status).toBe('terminated');
     });
 
-    it('close() rejects with FamiliarTimeoutError when timeoutMs elapses before idle', async () => {
+    it('drain() rejects with FamiliarTimeoutError when timeoutMs elapses before idle', async () => {
       const worker = createWorker(task<void, void>(() => new Promise(() => {})));
       const running = worker.run(undefined);
       const error = await worker.drain(25).catch((e) => e);
@@ -502,26 +501,26 @@ describe('createWorker', () => {
       await running.catch(() => {});
     }, 1000);
 
-    it('dispose() while close() is pending resolves the close promise', async () => {
+    it('dispose() while drain() is pending resolves the drain promise', async () => {
       const worker = createWorker(task<void, void>(() => new Promise((resolve) => setTimeout(resolve, 50))));
       const running = worker.run(undefined);
-      const closing = worker.drain();
+      const draining = worker.drain();
 
       worker.dispose();
 
       await expect(running).rejects.toBeInstanceOf(FamiliarTerminatedError);
-      await expect(closing).resolves.toBeUndefined();
+      await expect(draining).resolves.toBeUndefined();
       expect(worker.status).toBe('terminated');
     });
 
-    it('rejects new run() calls once close() has started', async () => {
+    it('rejects new run() calls once drain() has started', async () => {
       const worker = createWorker(task<void, void>(() => new Promise((resolve) => setTimeout(resolve, 20))));
       const running = worker.run(undefined);
-      const closing = worker.drain();
+      const draining = worker.drain();
 
       await expectFamiliarErrorCode(worker.run(undefined), 'terminated');
       await expect(running).resolves.toBeUndefined();
-      await expect(closing).resolves.toBeUndefined();
+      await expect(draining).resolves.toBeUndefined();
     });
 
     it('[Symbol.asyncDispose] drains and terminates', async () => {
@@ -1293,8 +1292,11 @@ describe('createWorker', () => {
       type WorkerConstructorOpts = { type?: string };
 
       const workerRef: { current: { onerror: ((e: ErrorEvent) => void) | null } | null } = { current: null };
+      let constructCount = 0;
 
       const InterceptWorker = function (this: unknown, url: string, opts?: WorkerConstructorOpts) {
+        constructCount++;
+
         const instance = new (OriginalWorker as new (url: string, opts?: WorkerConstructorOpts) => Worker)(url, opts);
 
         workerRef.current = instance as unknown as { onerror: ((e: ErrorEvent) => void) | null };
@@ -1328,6 +1330,18 @@ describe('createWorker', () => {
       expect(slotErrors[0]).toBeInstanceOf(FamiliarRuntimeError);
       expect(typeof capturedRestart).toBe('function');
 
+      const countBeforeRestart = constructCount;
+
+      // onerror already stopped and nulled out the failed worker — calling restart() must
+      // pre-warm a fresh one immediately, without waiting for the next run() call.
+      capturedRestart!();
+
+      expect(constructCount).toBe(countBeforeRestart + 1);
+
+      // The pre-warmed worker should be reused by the next run(), not trigger yet another construction.
+      await expect(worker.run(2)).resolves.toBe(2);
+      expect(constructCount).toBe(countBeforeRestart + 1);
+
       // Restore original Worker
       Object.defineProperty(globalThis, 'Worker', { configurable: true, value: OriginalWorker, writable: true });
       worker.dispose();
@@ -1358,22 +1372,8 @@ describe('createModuleWorker', () => {
   });
 });
 
-// ─── PROTOCOL_VERSION (/protocol sub-path) ────────────────────────────────────
-
-describe('PROTOCOL_VERSION', () => {
-  it('is a positive number constant (exported from /protocol sub-path)', () => {
-    expect(typeof PROTOCOL_VERSION).toBe('number');
-    expect(PROTOCOL_VERSION).toBeGreaterThan(0);
-  });
-});
-
-// ─── handleStreamMessages (/protocol sub-path) ────────────────────────────────
-
-describe('handleStreamMessages', () => {
-  it('is a function exported from /protocol sub-path', () => {
-    expect(typeof handleStreamMessages).toBe('function');
-  });
-});
+// Behavioral coverage for PROTOCOL_VERSION, handleMessages, and handleStreamMessages lives in
+// `protocol.test.ts` alongside this file.
 
 // ─── FamiliarError message and toString ─────────────────────────────────────────
 
@@ -1397,6 +1397,18 @@ describe('FamiliarError', () => {
 
     expect(err.message).toBe('Task timed out after 500ms');
     expect(err.toString()).toContain('FamiliarTimeoutError');
+  });
+
+  it('.is() returns true for any FamiliarError subclass instance', () => {
+    expect(FamiliarError.is(new FamiliarRuntimeError('x'))).toBe(true);
+    expect(FamiliarError.is(new FamiliarTimeoutError(1))).toBe(true);
+    expect(FamiliarError.is(new FamiliarTaskError('x'))).toBe(true);
+  });
+
+  it('.is() returns false for a plain Error or non-Error value', () => {
+    expect(FamiliarError.is(new Error('plain'))).toBe(false);
+    expect(FamiliarError.is('not an error')).toBe(false);
+    expect(FamiliarError.is(undefined)).toBe(false);
   });
 });
 
@@ -1485,7 +1497,7 @@ describe('disposalSignal', () => {
     expect(worker.disposalSignal.aborted).toBe(true);
   });
 
-  it('is aborted after close() settles', async () => {
+  it('is aborted after drain() settles', async () => {
     const worker = createWorker(task<number, number>((n) => n));
 
     await worker.drain();
@@ -1581,7 +1593,7 @@ describe('concurrency upper-bound validation', () => {
         task<number, number>((n) => n),
         { concurrency: 513 },
       ),
-    ).toThrow(FamiliarError);
+    ).toThrow(FamiliarInvalidOptionsError);
   });
 
   it('accepts concurrency = 512', () => {
@@ -1595,9 +1607,9 @@ describe('concurrency upper-bound validation', () => {
   });
 });
 
-// ─── close() with all-aborted queue (B1 regression) ─────────────────────────
+// ─── drain() with all-aborted queue (B1 regression) ─────────────────────────
 
-describe('close() with all-aborted queue', () => {
+describe('drain() with all-aborted queue', () => {
   it('resolves when every remaining queued task has a pre-aborted signal', async () => {
     const worker = createWorker(
       task<void, void>(() => new Promise((resolve) => setTimeout(resolve, 30))),
@@ -1614,10 +1626,10 @@ describe('close() with all-aborted queue', () => {
     const q1 = worker.run(undefined, { signal: controller.signal }).catch(() => {});
     const q2 = worker.run(undefined, { signal: controller.signal }).catch(() => {});
 
-    // close() must resolve, not hang, even though all queued tasks are pre-aborted
-    const closePromise = worker.drain();
+    // drain() must resolve, not hang, even though all queued tasks are pre-aborted
+    const drainPromise = worker.drain();
 
-    await expect(closePromise).resolves.toBeUndefined();
+    await expect(drainPromise).resolves.toBeUndefined();
     await running;
     await q1;
     await q2;
@@ -1644,7 +1656,7 @@ describe('close() with all-aborted queue', () => {
     worker.run(undefined, { signal: controller2.signal }).catch(() => {});
     worker.run(undefined, { signal: controller.signal }).catch(() => {});
 
-    // close() waits for running tasks then resolves
+    // drain() waits for running tasks then resolves
     await expect(worker.drain()).resolves.toBeUndefined();
     await r1;
     await r2;

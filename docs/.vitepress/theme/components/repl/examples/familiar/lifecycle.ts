@@ -18,8 +18,8 @@ await p1
 await p2
 
 // Graceful shutdown — drains remaining tasks then terminates
-await pool.close()
-console.log('status after close:', pool.status) // 'terminated'
+await pool.drain()
+console.log('status after drain:', pool.status) // 'terminated'
 console.log('completed:', pool.completed)`,
   name: 'Lifecycle & Metrics',
 };

@@ -23,6 +23,7 @@ import type { SlotStrategy, TaskFn, WorkerHandle, WorkerOptions } from './types'
 
 import { warn } from './_dev';
 import { createPool } from './_pool';
+import { unrefTimer } from './_timers';
 import {
   FamiliarInvalidOptionsError,
   FamiliarRuntimeError,
@@ -62,6 +63,9 @@ export function task<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TaskFn<TInpu
 
 // ─── Options resolution ───────────────────────────────────────────────────────
 
+/** Upper bound on `concurrency`: generous headroom over realistic hardware/IO limits while still catching obvious misconfiguration (e.g. a typo like `50000`). */
+const MAX_CONCURRENCY = 512;
+
 function resolveConcurrency(value: WorkerOptions['concurrency']): number {
   if (value === undefined) return 1;
 
@@ -69,8 +73,8 @@ function resolveConcurrency(value: WorkerOptions['concurrency']): number {
     return Math.max(1, globalThis.navigator?.hardwareConcurrency ?? 1);
   }
 
-  if (!Number.isInteger(value) || value < 1 || value > 512) {
-    throw new FamiliarInvalidOptionsError('`concurrency` must be a positive integer ≤ 512 or "auto"');
+  if (!Number.isInteger(value) || value < 1 || value > MAX_CONCURRENCY) {
+    throw new FamiliarInvalidOptionsError(`\`concurrency\` must be a positive integer ≤ ${MAX_CONCURRENCY} or "auto"`);
   }
 
   return value;
@@ -322,12 +326,14 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
         pending.timer = setTimeout(() => {
           this.restart(new FamiliarTimeoutError(timeout));
         }, timeout);
+        unrefTimer(pending.timer);
       }
 
       if (watchdogMs !== undefined) {
         pending.heartbeatWatchdog = setTimeout(() => {
           this.restart(new FamiliarTimeoutError(watchdogMs));
         }, watchdogMs);
+        unrefTimer(pending.heartbeatWatchdog);
       }
 
       this.pending = pending;
@@ -385,6 +391,7 @@ class Slot<TInput, TOutput> implements SlotStrategy<TInput, TOutput> {
           pending.heartbeatWatchdog = setTimeout(() => {
             this.restart(new FamiliarTimeoutError(pending.watchdogMs!));
           }, pending.watchdogMs);
+          unrefTimer(pending.heartbeatWatchdog);
         }
 
         return;

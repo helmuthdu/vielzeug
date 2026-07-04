@@ -23,13 +23,13 @@ async function run() {
 
   for await (const token of worker.runStream(sentence)) {
     tokens.push(token)
-    process.stdout.write(token + ' ')
+    console.log('token:', token)
   }
 
-  console.log('\\nDone —', tokens.length, 'tokens')
+  console.log('Done —', tokens.length, 'tokens')
 
   // Break early — slot is released cleanly
-  console.log('\\nBreaking after 3 tokens:')
+  console.log('Breaking after 3 tokens:')
   const partial = []
   for await (const token of worker.runStream(sentence)) {
     partial.push(token)

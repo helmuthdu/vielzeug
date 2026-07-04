@@ -22,6 +22,7 @@ import type {
 } from './types';
 
 import { type QueueItem, TaskQueue } from './_queue';
+import { unrefTimer } from './_timers';
 import { FamiliarQueueFullError, FamiliarRuntimeError, FamiliarTerminatedError, FamiliarTimeoutError } from './errors';
 
 export type PoolOptions = {
@@ -79,7 +80,7 @@ export function createPool<TInput, TOutput>(
           reject(new FamiliarTimeoutError(timeoutMs));
         }, timeoutMs);
 
-        if (typeof timer === 'object' && 'unref' in timer) (timer as { unref(): void }).unref();
+        unrefTimer(timer);
       }
     });
   }
@@ -344,24 +345,31 @@ export function createPool<TInput, TOutput>(
     const ac = new AbortController();
 
     try {
-      const promises = inputs.map((input) => run(input, { ...runOpts, signal: ac.signal }));
-
       if (ordered) {
+        const promises = inputs.map((input) => run(input, { ...runOpts, signal: ac.signal }));
+
         for (const p of promises) {
           yield await p;
         }
       } else {
         // As-completed: yield results in the order tasks finish, not submission order.
         // A single-slot notification channel wakes the consumer when the next result is ready.
-        // Note: `completions` accumulates all settled results until the consumer reads them.
-        // For large batches this retains all outputs in memory simultaneously.
+        // Submission is windowed to `concurrency` outstanding (in-flight or buffered-but-unread)
+        // tasks at a time — releasing capacity for one more submission each time the consumer
+        // reads a result — so a slow consumer can't let an entire large batch settle in memory.
         type Completion = { error: unknown } | { value: TOutput };
 
         const completions: Completion[] = [];
         let notifier: (() => void) | null = null;
+        let nextIndex = 0;
+        const windowSize = Math.max(1, concurrency);
 
-        for (const p of promises) {
-          p.then(
+        function submitNext(): void {
+          if (nextIndex >= inputs.length) return;
+
+          const input = inputs[nextIndex++]!;
+
+          run(input, { ...runOpts, signal: ac.signal }).then(
             (value) => {
               completions.push({ value });
               notifier?.();
@@ -375,7 +383,9 @@ export function createPool<TInput, TOutput>(
           );
         }
 
-        for (let i = 0; i < promises.length; i++) {
+        for (let i = 0; i < windowSize && i < inputs.length; i++) submitNext();
+
+        for (let i = 0; i < inputs.length; i++) {
           while (completions.length === 0) {
             await new Promise<void>((resolve) => {
               notifier = resolve;
@@ -387,6 +397,11 @@ export function createPool<TInput, TOutput>(
           if ('error' in next) throw next.error;
 
           yield next.value;
+
+          // Only release capacity for another submission once the consumer has actually resumed
+          // past this yield (i.e. did not break/return early) — submitting here unconditionally
+          // would over-submit by one task on every early exit.
+          submitNext();
         }
       }
     } finally {

@@ -57,12 +57,12 @@ for await (const result of pool.batch([1, 2, 3, 4])) {
 }
 
 // Typed errors — instanceof checks for precise handling
-import { WorkerTimeoutError, WorkerQueueFullError } from '@vielzeug/familiar';
+import { FamiliarTimeoutError, FamiliarQueueFullError } from '@vielzeug/familiar';
 try {
   await pool.run(input, { timeout: 100 });
 } catch (err) {
-  if (err instanceof WorkerTimeoutError) console.error(`Timed out after ${err.timeoutMs}ms`);
-  if (err instanceof WorkerQueueFullError) console.error(`Queue full (max ${err.maxQueue})`);
+  if (err instanceof FamiliarTimeoutError) console.error(`Timed out after ${err.timeoutMs}ms`);
+  if (err instanceof FamiliarQueueFullError) console.error(`Queue full (max ${err.maxQueue})`);
 }
 ```
 

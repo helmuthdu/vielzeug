@@ -26,11 +26,7 @@ export class FamiliarQueueFullError extends FamiliarError {
 }
 
 /** Thrown when the task function throws. The original error is available as `.cause`. */
-export class FamiliarTaskError extends FamiliarError {
-  constructor(message: string, opts?: ErrorOptions) {
-    super(message, opts);
-  }
-}
+export class FamiliarTaskError extends FamiliarError {}
 
 /** Thrown when a task or operation is rejected because the worker was terminated. */
 export class FamiliarTerminatedError extends FamiliarError {
@@ -39,7 +35,7 @@ export class FamiliarTerminatedError extends FamiliarError {
   }
 }
 
-/** Thrown when a task exceeds its timeout or `close()` times out. */
+/** Thrown when a task exceeds its timeout or `drain()` times out. */
 export class FamiliarTimeoutError extends FamiliarError {
   /** The configured timeout in milliseconds. */
   readonly timeoutMs: number;
@@ -51,8 +47,4 @@ export class FamiliarTimeoutError extends FamiliarError {
 }
 
 /** Thrown when the Worker API is unavailable or an unhandled error occurs in the worker thread. */
-export class FamiliarRuntimeError extends FamiliarError {
-  constructor(message: string, opts?: ErrorOptions) {
-    super(message, opts);
-  }
-}
+export class FamiliarRuntimeError extends FamiliarError {}

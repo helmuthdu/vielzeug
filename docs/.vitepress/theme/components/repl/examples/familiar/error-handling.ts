@@ -1,5 +1,12 @@
 export const errorHandlingExample = {
-  code: `import { createWorker, task, WorkerError } from '@vielzeug/familiar'
+  code: `import {
+  createWorker,
+  task,
+  FamiliarTaskError,
+  FamiliarTimeoutError,
+  FamiliarQueueFullError,
+  FamiliarTerminatedError,
+} from '@vielzeug/familiar'
 
 const maybeThrow = task((input) => {
   if (input.shouldThrow) {
@@ -28,25 +35,25 @@ async function run() {
   const ok = await worker.run({ shouldThrow: false, value: 42 })
   console.log('Success:', ok)
 
-  // Task throws -> WorkerError(code='task')
+  // Task throws -> FamiliarTaskError
   try {
     await worker.run({ shouldThrow: true, reason: 'bad input' })
   } catch (err) {
-    if (err instanceof WorkerError && err.code === 'task') {
+    if (err instanceof FamiliarTaskError) {
       console.log('task error:', err.message)
     }
   }
 
-  // Timeout -> WorkerError(code='timeout')
+  // Timeout -> FamiliarTimeoutError
   try {
     await workerSlow.run({})
   } catch (err) {
-    if (err instanceof WorkerError && err.code === 'timeout') {
+    if (err instanceof FamiliarTimeoutError) {
       console.log('timeout error:', err.message)
     }
   }
 
-  // queue_full -> WorkerError(code='queue_full')
+  // Queue full -> FamiliarQueueFullError
   // Fill the slot + max queue to trigger back-pressure
   const slow1 = worker.run({ shouldThrow: false, value: 'a' })
   worker.run({ shouldThrow: false, value: 'b' })
@@ -54,18 +61,18 @@ async function run() {
   try {
     await worker.run({ shouldThrow: false, value: 'd' }) // 4th — over maxQueue=2
   } catch (err) {
-    if (err instanceof WorkerError && err.code === 'queue_full') {
-      console.log('queue_full error:', err.message)
+    if (err instanceof FamiliarQueueFullError) {
+      console.log('queue full error:', err.message)
     }
   }
   await slow1  // drain
 
-  // Dispose then run -> WorkerError(code='terminated')
+  // Dispose then run -> FamiliarTerminatedError
   worker.dispose()
   try {
     await worker.run({ shouldThrow: false, value: 0 })
   } catch (err) {
-    if (err instanceof WorkerError && err.code === 'terminated') {
+    if (err instanceof FamiliarTerminatedError) {
       console.log('terminated error:', err.message)
     }
   }

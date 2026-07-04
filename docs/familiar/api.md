@@ -33,13 +33,13 @@ export {
   createWorker,
   createModuleWorker,
   task,
-  WorkerError,
-  WorkerInvalidOptionsError,
-  WorkerQueueFullError,
-  WorkerRuntimeError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarError,
+  FamiliarInvalidOptionsError,
+  FamiliarQueueFullError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from '@vielzeug/familiar';
 
 export type {
@@ -48,7 +48,6 @@ export type {
   RunOptions,
   TaskFn,
   TaskGroup,
-  WorkerErrorCode,
   WorkerHandle,
   WorkerOptions,
   WorkerStatus,
@@ -100,16 +99,16 @@ type WorkerOptions = {
   heartbeatWindow?: number;
   maxQueue?: number;
   onFull?: 'reject' | 'wait';
-  onSlotError?: (error: WorkerRuntimeError, restart: () => void) => void;
+  onSlotError?: (error: FamiliarRuntimeError, restart: () => void) => void;
   timeout?: number;
 };
 ```
 
 | Field             | Type                       | Default    | Description                                                                                                                                                                                                                         |
 | ----------------- | -------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `concurrency`     | `number \| 'auto'`         | `1`        | Worker slot count (1–512). `'auto'` uses `navigator.hardwareConcurrency`. Throws `WorkerInvalidOptionsError` if out of range.                                                                                                       |
-| `heartbeatWindow` | `number`                   | —          | Watchdog window in ms applied to every task in the pool. If no heartbeat arrives within this window, the task is killed with `WorkerTimeoutError`. Inline workers send heartbeats automatically at `heartbeatWindow / 2` intervals. |
-| `maxQueue`        | `number`                   | unlimited  | Maximum queued tasks. Exceeding this rejects with `WorkerQueueFullError` (or suspends when `onFull='wait'`).                                                                                                                        |
+| `concurrency`     | `number \| 'auto'`         | `1`        | Worker slot count (1–512). `'auto'` uses `navigator.hardwareConcurrency`. Throws `FamiliarInvalidOptionsError` if out of range.                                                                                                     |
+| `heartbeatWindow` | `number`                   | —          | Watchdog window in ms applied to every task in the pool. If no heartbeat arrives within this window, the task is killed with `FamiliarTimeoutError`. Inline workers send heartbeats automatically at `heartbeatWindow / 2` intervals. |
+| `maxQueue`        | `number`                   | unlimited  | Maximum queued tasks. Exceeding this rejects with `FamiliarQueueFullError` (or suspends when `onFull='wait'`).                                                                                                                      |
 | `onFull`          | `'reject' \| 'wait'`       | `'reject'` | Behavior when queue is full. `'wait'` suspends the caller until a slot opens (natural backpressure).                                                                                                                                |
 | `onSlotError`     | `(error, restart) => void` | —          | Called when a Worker slot encounters an unhandled runtime error. `restart()` pre-warms a replacement Worker.                                                                                                                        |
 | `timeout`         | `number`                   | —          | Pool-level task timeout in milliseconds. Can be overridden per-run via `RunOptions.timeout`.                                                                                                                                        |
@@ -161,7 +160,7 @@ Extends `RunOptions` (minus `signal`) with:
 ```ts
 interface WorkerHandle<TInput, TOutput> {
   // Lifecycle
-  close(timeoutMs?: number): Promise<void>;
+  drain(timeoutMs?: number): Promise<void>;
   dispose(): void;
   prime(): Promise<void>;
   readonly disposed: boolean;
@@ -223,7 +222,7 @@ Returned by `worker.group()`. See [`group()`](#group) below.
 | `drain`   | Resolves with `PromiseSettledResult[]` for every task submitted so far. Also closes the group (decrements `groupCount`).                        |
 | `name`    | Optional name passed to `group(name)`, useful for logging and debugging.                                                                        |
 | `pending` | Tasks not yet settled — decrements as tasks complete.                                                                                           |
-| `run`     | Submits a task associated with this group. Throws `WorkerTerminatedError` if the pool has been disposed or is closing (same as `worker.run()`). |
+| `run`     | Submits a task associated with this group. Throws `FamiliarTerminatedError` if the pool has been disposed or is draining (same as `worker.run()`). |
 | `size`    | Total tasks ever submitted to this group (never decrements).                                                                                    |
 
 ---
@@ -236,7 +235,7 @@ function task<TInput, TOutput>(fn: TaskFn<TInput, TOutput>): TaskFn<TInput, TOut
 
 Optional helper that validates `fn` is safe to serialize before passing to `createWorker`. `createWorker` accepts any `TaskFn` directly — `task()` exists only to catch the common mistake of passing a bound or native function.
 
-Throws `WorkerInvalidOptionsError` if `fn` is a bound or native function.
+Throws `FamiliarInvalidOptionsError` if `fn` is a bound or native function.
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -246,7 +245,7 @@ const worker1 = createWorker((n: number) => n * 2);
 const worker2 = createWorker(task((n: number) => n * 2)); // validates fn is not native/bound
 
 // Catches mistakes at construction time:
-createWorker(task(Math.sqrt)); // throws WorkerInvalidOptionsError
+createWorker(task(Math.sqrt)); // throws FamiliarInvalidOptionsError
 ```
 
 ## createWorker
@@ -393,14 +392,14 @@ Dispatches a task to the next available slot. If all slots are busy, the task en
 
 **Rejects with:**
 
-| Error                       | Code           | Condition                                                          |
-| --------------------------- | -------------- | ------------------------------------------------------------------ |
-| `WorkerQueueFullError`      | `'queue_full'` | `maxQueue` is set and the queue is at capacity (`onFull='reject'`) |
-| `WorkerTimeoutError`        | `'timeout'`    | Task exceeded its timeout or heartbeat window                      |
-| `WorkerTerminatedError`     | `'terminated'` | `dispose()` was called before or during the task                   |
-| `WorkerTaskError`           | `'task'`       | Task function threw an error                                       |
-| `WorkerRuntimeError`        | `'worker'`     | Worker runtime or setup failure                                    |
-| `DOMException (AbortError)` | —              | Provided `signal` was aborted before the task started              |
+| Error                        | Condition                                                          |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `FamiliarQueueFullError`     | `maxQueue` is set and the queue is at capacity (`onFull='reject'`) |
+| `FamiliarTimeoutError`       | Task exceeded its timeout or heartbeat window                      |
+| `FamiliarTerminatedError`    | `dispose()` was called before or during the task                   |
+| `FamiliarTaskError`          | Task function threw an error                                       |
+| `FamiliarRuntimeError`       | Worker runtime or setup failure                                    |
+| `DOMException (AbortError)` | Provided `signal` was aborted before the task started              |
 
 ---
 
@@ -411,7 +410,7 @@ Dispatches a task to the next available slot. If all slots are busy, the task en
 Runs a streaming task and yields partial results as they arrive. The task function must return an async iterable; each yielded value is forwarded as a chunk.
 
 ::: warning Requires a free slot — throws synchronously
-`runStream()` cannot be queued. If all slots are busy it **throws `WorkerRuntimeError` synchronously** at the call site. Use `run()` for queueable work.
+`runStream()` cannot be queued. If all slots are busy it **throws `FamiliarRuntimeError` synchronously** at the call site. Use `run()` for queueable work.
 :::
 
 ```ts
@@ -434,7 +433,7 @@ worker.dispose();
 
 Breaking out of a `for-await-of` loop (or throwing from the body) releases the slot cleanly — no leak, no stale timers.
 
-The `timeout` option works the same as for `run()`: if the stream task exceeds the timeout, it is killed and the iterator throws `WorkerTimeoutError`.
+The `timeout` option works the same as for `run()`: if the stream task exceeds the timeout, it is killed and the iterator throws `FamiliarTimeoutError`.
 
 ---
 
@@ -463,7 +462,7 @@ pool.dispose();
 If any task throws, `batch()` aborts remaining queued tasks and re-throws the error.
 
 ::: tip Memory — `ordered: false`
-When `ordered: false`, all settled results are buffered in memory until the consumer reads them. For very large batches, consider processing in smaller chunks.
+`batch()` submits tasks in a window bounded by `concurrency`: at most `concurrency` results can be settled-but-unread ahead of the consumer at any time, regardless of the total batch size. A slow consumer applies natural backpressure instead of buffering the entire batch in memory.
 :::
 
 ---
@@ -535,17 +534,17 @@ Total tasks ever submitted to this group (never decrements).
 
 ---
 
-### `close(timeoutMs?)`
+### `drain(timeoutMs?)`
 
-`close(timeoutMs?: number): Promise<void>`
+`drain(timeoutMs?: number): Promise<void>`
 
-Graceful shutdown. Waits until all queued and in-flight tasks settle, then terminates all workers. Calling `run()` after `close()` has started rejects with `WorkerTerminatedError`.
+Graceful shutdown. Waits until all queued and in-flight tasks settle, then terminates all workers. Calling `run()` after `drain()` has started rejects with `FamiliarTerminatedError`.
 
-If `timeoutMs` is given and the pool has not gone idle within that window, rejects with `WorkerTimeoutError` and force-terminates.
+If `timeoutMs` is given and the pool has not gone idle within that window, rejects with `FamiliarTimeoutError` and force-terminates.
 
 ```ts
-await pool.close(); // drain then terminate
-await pool.close(5000); // must drain within 5 s
+await pool.drain(); // drain then terminate
+await pool.drain(5000); // must drain within 5 s
 ```
 
 ---
@@ -554,7 +553,7 @@ await pool.close(5000); // must drain within 5 s
 
 `dispose(): void`
 
-Immediate forceful termination. Rejects all in-flight and queued tasks with `WorkerTerminatedError`. After `dispose()`, `status` is `'terminated'` and further `run()` calls reject immediately.
+Immediate forceful termination. Rejects all in-flight and queued tasks with `FamiliarTerminatedError`. After `dispose()`, `status` is `'terminated'` and further `run()` calls reject immediately.
 
 ---
 
@@ -562,7 +561,7 @@ Immediate forceful termination. Rejects all in-flight and queued tasks with `Wor
 
 `readonly disposed: boolean`
 
-`true` after `dispose()` has been called or `close()` has settled. Use to guard against post-termination calls.
+`true` after `dispose()` has been called or `drain()` has settled. Use to guard against post-termination calls.
 
 ---
 
@@ -570,7 +569,7 @@ Immediate forceful termination. Rejects all in-flight and queued tasks with `Wor
 
 `readonly disposalSignal: AbortSignal`
 
-`AbortSignal` aborted when the pool is terminated (via `dispose()` or `close()` settling). Use to tie external lifetimes (polling loops, SSE connections, etc.) to the pool's lifecycle.
+`AbortSignal` aborted when the pool is terminated (via `dispose()` or `drain()` settling). Use to tie external lifetimes (polling loops, SSE connections, etc.) to the pool's lifecycle.
 
 ```ts
 const pool = createWorker<number, number>((n) => n * 2);
@@ -617,7 +616,7 @@ const result = await pool.run(21); // no cold-start
 
 `[Symbol.dispose](): void` — alias for `dispose()`, enables the `using` keyword.
 
-`[Symbol.asyncDispose](): Promise<void>` — alias for `close()`, enables `await using`.
+`[Symbol.asyncDispose](): Promise<void>` — alias for `drain()`, enables `await using`.
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -634,7 +633,7 @@ const double = task<number, number>((n) => n * 2);
 {
   await using pool = createWorker(double, { concurrency: 4 });
   const results = await Promise.all([1, 2, 3].map((n) => pool.run(n)));
-} // close() called automatically
+} // drain() called automatically
 ```
 
 ## Error Model
@@ -696,7 +695,7 @@ function createTestWorker<TInput, TOutput>(
 ): TestWorkerHandle<TInput, TOutput>;
 ```
 
-Creates an in-process test double. `fn` runs on the same thread — no Worker is spawned. Successful calls are recorded in `handle.calls`. Errors propagate unwrapped (not wrapped in `WorkerError`), so vitest assertion errors surface directly in test output.
+Creates an in-process test double. `fn` runs on the same thread — no Worker is spawned. Successful calls are recorded in `handle.calls`. Errors propagate unwrapped (not wrapped in `FamiliarError`), so vitest assertion errors surface directly in test output.
 
 ---
 
@@ -714,8 +713,8 @@ type TestWorkerOptions = {
 | Field           | Type                 | Default    | Description                                                                                                                                                    |
 | --------------- | -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `concurrency`   | `number`             | `1`        | In-process slot count. Default `1` for deterministic ordering. Increase only when testing concurrency-specific behavior.                                       |
-| `errorWrapping` | `boolean`            | `false`    | When `true`, errors from `fn` are wrapped in `WorkerTaskError`, mirroring real worker behavior. Useful when testing code that checks `instanceof WorkerError`. |
-| `maxQueue`      | `number`             | unlimited  | Queue capacity before rejecting with `WorkerQueueFullError`.                                                                                                   |
+| `errorWrapping` | `boolean`            | `false`    | When `true`, errors from `fn` are wrapped in `FamiliarTaskError` (with `.cause` set to the original error), mirroring real worker behavior. Useful when testing code that checks `instanceof FamiliarError`. |
+| `maxQueue`      | `number`             | unlimited  | Queue capacity before rejecting with `FamiliarQueueFullError`.                                                                                                 |
 | `onFull`        | `'reject' \| 'wait'` | `'reject'` | Queue-full behavior.                                                                                                                                           |
 
 ---
@@ -734,7 +733,7 @@ Extends `WorkerHandle` with `.calls` — all successful `run()` invocations in c
 
 - Tasks run in-process — serialization constraints are not enforced.
 - `prime()` is a no-op (tasks run in-process).
-- `runStream()` is not supported (rejects with `WorkerRuntimeError` on first `next()`).
+- `runStream()` is not supported (rejects with `FamiliarRuntimeError` on first `next()`).
 - Error wrapping is skipped by default — task errors propagate as-is for better test DX. Set `errorWrapping: true` to mirror real worker behavior.
 
 ```ts

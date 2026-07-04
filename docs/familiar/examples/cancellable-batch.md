@@ -53,7 +53,7 @@ batch.cancel();
 ### Pitfalls
 
 - Aborting only cancels **queued** tasks. Tasks already dispatched to a worker slot continue executing — the `fetch()` call inside the task is not aborted. Design task functions to check for stale results and discard them after abort.
-- The example creates `pool` at module level but never disposes it. Call `pool.dispose()` or `pool.close()` at application shutdown to terminate worker threads and free resources.
+- The example creates `pool` at module level but never disposes it. Call `pool.dispose()` or `pool.drain()` at application shutdown to terminate worker threads and free resources.
 
 ### Related
 

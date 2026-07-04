@@ -61,7 +61,7 @@ for await (const chunk of worker.runStream({ rows, batchSize: 100 })) {
 
 ### Pitfalls
 
-- `runStream()` requires a free slot. If all slots are busy it throws `WorkerRuntimeError` on the first `next()` call — it cannot be queued. For queueable work, use `run()`.
+- `runStream()` requires a free slot. If all slots are busy it throws `FamiliarRuntimeError` on the first `next()` call — it cannot be queued. For queueable work, use `run()`.
 - The type parameter `TOutput` must match the chunk type, not an array of chunks.
 - `runStream()` is not supported by `createTestWorker` — test the underlying logic directly.
 

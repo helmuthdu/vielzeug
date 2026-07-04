@@ -76,7 +76,7 @@ export function createTestWorker<TInput, TOutput>(
 
           const err = e instanceof Error ? e : new Error(String(e));
 
-          throw new FamiliarTaskError(err.message, err);
+          throw new FamiliarTaskError(err.message, { cause: err });
         }
       },
 

@@ -37,7 +37,7 @@ const addWorker = createWorker(add);
 ::: warning Self-contained closures
 The task function runs inside a Web Worker with a separate global scope. Any outer-scope variable you reference will be `undefined` at runtime. Put helpers inside the task function or encode them into the input payload.
 
-`task()` throws `WorkerInvalidOptionsError` if you pass a bound or native function (e.g. `Math.sqrt.bind(null)`).
+`task()` throws `FamiliarInvalidOptionsError` if you pass a bound or native function (e.g. `Math.sqrt.bind(null)`).
 :::
 
 ## Single Worker
@@ -84,10 +84,10 @@ const autoPool = createWorker(square, { concurrency: 'auto' });
 
 ## Queue Back-Pressure (`maxQueue`)
 
-Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full and `onFull` is `'reject'` (the default), `run()` rejects immediately with `WorkerQueueFullError`:
+Set `maxQueue` to cap how many tasks can wait in the queue. When the queue is full and `onFull` is `'reject'` (the default), `run()` rejects immediately with `FamiliarQueueFullError`:
 
 ```ts
-import { createWorker, task, WorkerQueueFullError } from '@vielzeug/familiar';
+import { createWorker, task, FamiliarQueueFullError } from '@vielzeug/familiar';
 
 const double = task<number, number>((n) => n * 2);
 const worker = createWorker(double, {
@@ -98,7 +98,7 @@ const worker = createWorker(double, {
 try {
   await worker.run(1);
 } catch (error) {
-  if (error instanceof WorkerQueueFullError) {
+  if (error instanceof FamiliarQueueFullError) {
     console.error(`Back-pressure triggered: queue is full (max ${error.maxQueue})`);
   }
 }
@@ -108,10 +108,10 @@ For producer→consumer pipelines, use `onFull: 'wait'` to suspend the caller in
 
 ## Timeouts
 
-Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `WorkerError` with code `'timeout'` is thrown.
+Set `timeout` (in milliseconds) to automatically reject tasks that run too long. A `FamiliarTimeoutError` is thrown.
 
 ```ts
-import { createWorker, task, WorkerError } from '@vielzeug/familiar';
+import { createWorker, task, FamiliarTimeoutError } from '@vielzeug/familiar';
 
 const delay = task<number, number>((ms) => new Promise((resolve) => setTimeout(() => resolve(ms), ms)));
 const worker = createWorker(delay, {
@@ -121,8 +121,8 @@ const worker = createWorker(delay, {
 try {
   await worker.run(5000); // will reject after 1 s
 } catch (err) {
-  if (err instanceof WorkerError && err.code === 'timeout') {
-    console.error('Task timed out');
+  if (err instanceof FamiliarTimeoutError) {
+    console.error(`Task timed out after ${err.timeoutMs}ms`);
   }
 }
 
@@ -295,7 +295,7 @@ for await (const result of pool.batch([1, 2, 3], { ordered: false })) {
 When a task yields multiple partial results, use `runStream()`. The task function must return an async iterable; each yielded value is forwarded to the caller as a chunk.
 
 ::: warning Requires a free slot
-`runStream()` cannot queue. If all slots are busy it throws `WorkerRuntimeError` immediately. Design streaming workloads so slots are available or use `run()` for queueable alternatives.
+`runStream()` cannot queue. If all slots are busy it throws `FamiliarRuntimeError` immediately. Design streaming workloads so slots are available or use `run()` for queueable alternatives.
 :::
 
 ```ts
@@ -412,9 +412,9 @@ const pool = createWorker(upper, {
 await pool.run('hello', { timeout: 100 });
 ```
 
-## Graceful Shutdown (`close`)
+## Graceful Shutdown (`drain`)
 
-Use `close()` to finish queued/in-flight work before terminating workers:
+Use `drain()` to finish queued/in-flight work before terminating workers:
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -425,18 +425,18 @@ const worker = createWorker(double, { concurrency: 1 });
 const p1 = worker.run(1);
 const p2 = worker.run(2);
 
-await worker.close();
+await worker.drain();
 
 await p1;
 await p2;
 console.log(worker.status); // 'terminated'
 ```
 
-Pass a timeout to prevent indefinite hangs — if the pool hasn't drained within that window, `close()` rejects with `WorkerError` code `'timeout'` and force-terminates:
+Pass a timeout to prevent indefinite hangs — if the pool hasn't drained within that window, `drain()` rejects with `FamiliarTimeoutError` and force-terminates:
 
 ```ts
 try {
-  await worker.close(5000); // must drain within 5 s
+  await worker.drain(5000); // must drain within 5 s
 } catch (err) {
   // timed out — worker is now force-terminated
 }
@@ -446,7 +446,7 @@ Use `dispose()` for immediate forceful termination.
 
 ## Heartbeat Monitoring
 
-Set `heartbeatWindow` on `WorkerOptions` to kill tasks that stop responding (e.g., blocked CPU work). If the worker does not send a heartbeat within `heartbeatWindow` ms, the task is rejected with `WorkerTimeoutError`.
+Set `heartbeatWindow` on `WorkerOptions` to kill tasks that stop responding (e.g., blocked CPU work). If the worker does not send a heartbeat within `heartbeatWindow` ms, the task is rejected with `FamiliarTimeoutError`.
 
 **Inline workers** (`createWorker`) send heartbeats automatically at `heartbeatWindow / 2` intervals — no worker-side code needed:
 
@@ -504,7 +504,7 @@ If `onSlotError` is omitted, errors are handled silently and the slot restarts l
 
 ## Queue Back-Pressure (`onFull`)
 
-By default, `run()` rejects with `WorkerQueueFullError` when `maxQueue` is reached (`onFull: 'reject'`). Set `onFull: 'wait'` to suspend the caller instead — natural backpressure for producer→consumer pipelines:
+By default, `run()` rejects with `FamiliarQueueFullError` when `maxQueue` is reached (`onFull: 'reject'`). Set `onFull: 'wait'` to suspend the caller instead — natural backpressure for producer→consumer pipelines:
 
 ```ts
 import { createWorker, task } from '@vielzeug/familiar';
@@ -516,12 +516,12 @@ const pool = createWorker(double, {
   onFull: 'wait', // callers suspend until a queue slot opens
 });
 
-// Producer — never rejects with queue_full
+// Producer — never rejects with FamiliarQueueFullError
 for (let i = 0; i < 1000; i++) {
   await pool.run(i); // suspends automatically when queue is full
 }
 
-await pool.close();
+await pool.drain();
 ```
 
 ## Module Workers (`createModuleWorker`)
@@ -561,10 +561,10 @@ Each failure reason has its own class with extra fields for context. Use `instan
 import {
   createWorker,
   task,
-  WorkerQueueFullError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarQueueFullError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from '@vielzeug/familiar';
 
 const validate = task<number, number>((n) => {
@@ -576,32 +576,32 @@ const pool = createWorker(validate, { concurrency: 1, maxQueue: 5, timeout: 1000
 try {
   await pool.run(input);
 } catch (err) {
-  if (err instanceof WorkerTimeoutError) {
+  if (err instanceof FamiliarTimeoutError) {
     // .timeoutMs tells you exactly how long it waited
     console.error(`Timed out after ${err.timeoutMs}ms`);
-  } else if (err instanceof WorkerTaskError) {
+  } else if (err instanceof FamiliarTaskError) {
     // .cause is the original error thrown inside the task
     console.error('Task threw:', (err.cause as Error).message);
-  } else if (err instanceof WorkerQueueFullError) {
+  } else if (err instanceof FamiliarQueueFullError) {
     // .maxQueue is the configured limit
     console.error(`Queue full (max ${err.maxQueue} tasks)`);
-  } else if (err instanceof WorkerTerminatedError) {
+  } else if (err instanceof FamiliarTerminatedError) {
     console.error('Pool was disposed');
   }
 }
 ```
 
-All error subclasses extend `WorkerError` — use `instanceof WorkerError` as a catch-all:
+All error subclasses extend `FamiliarError` — use `instanceof FamiliarError` as a catch-all:
 
 ```ts
-import { WorkerError } from '@vielzeug/familiar';
+import { FamiliarError } from '@vielzeug/familiar';
 
 try {
   await pool.run(input);
 } catch (err) {
-  if (err instanceof WorkerError) {
-    // err.code is always set: 'timeout' | 'task' | 'queue_full' | 'terminated' | 'worker' | 'invalid_options'
-    console.error(`Worker error [${err.code}]:`, err.message);
+  if (err instanceof FamiliarError) {
+    // err.name is the specific subclass name, e.g. 'FamiliarTimeoutError'
+    console.error(`Worker error [${err.name}]:`, err.message);
   }
 }
 ```
@@ -611,14 +611,14 @@ try {
 `createWorker()` is safe to call in any runtime. Actual execution happens only when you call `run()`, and that requires a real Worker implementation.
 
 ```ts
-import { createWorker, task, WorkerError } from '@vielzeug/familiar';
+import { createWorker, task, FamiliarRuntimeError } from '@vielzeug/familiar';
 
 const worker = createWorker(task<number, number>((n) => n * 2));
 
 try {
   console.log(await worker.run(21));
 } catch (error) {
-  if (error instanceof WorkerError) {
+  if (error instanceof FamiliarRuntimeError) {
     console.error('Worker execution is unavailable in this runtime');
   }
 }
@@ -764,7 +764,7 @@ function useWorker<TInput, TOutput>(fn: TaskFn<TInput, TOutput>, concurrency = 2
     void worker.prime();
     ref.current = worker;
     return () => {
-      worker.close();
+      worker.drain();
     };
   }, []);
 
@@ -796,7 +796,7 @@ const pool = createWorker(
   { concurrency: 2 },
 );
 void pool.prime();
-onScopeDispose(() => pool.close());
+onScopeDispose(() => pool.drain());
 
 const result = ref<number | null>(null);
 
@@ -818,7 +818,7 @@ async function runTask(n: number) {
 
   const pool = createWorker(task((n: number) => n * n), { concurrency: 2 });
   void pool.prime();
-  onDestroy(() => pool.close());
+  onDestroy(() => pool.drain());
 
   let result: number | null = null;
 
@@ -894,6 +894,6 @@ async function runTask(input: number) {
 - Pass large binary data (images, audio, WASM buffers) via `transfer()` or `RunOptions.transferables` to avoid copying.
 - Use `AbortSignal` to cancel queued tasks when the user navigates away.
 - Call `await pool.prime()` at startup when you know tasks will arrive soon, to eliminate first-task cold-start latency.
-- Always call `close()` in framework cleanup callbacks to terminate worker threads and free resources.
+- Always call `drain()` in framework cleanup callbacks to terminate worker threads and free resources.
 - Keep worker task functions pure and self-contained — avoid closures over mutable main-thread state.
 - Use `createTestWorker()` in unit tests to run tasks in-process without spinning up real Worker threads.

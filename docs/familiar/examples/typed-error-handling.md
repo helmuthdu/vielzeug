@@ -16,11 +16,11 @@ Every failure reason has a dedicated typed error class with context-specific fie
 ```ts
 import {
   createWorker,
-  WorkerQueueFullError,
-  WorkerRuntimeError,
-  WorkerTaskError,
-  WorkerTerminatedError,
-  WorkerTimeoutError,
+  FamiliarQueueFullError,
+  FamiliarRuntimeError,
+  FamiliarTaskError,
+  FamiliarTerminatedError,
+  FamiliarTimeoutError,
 } from '@vielzeug/familiar';
 
 type ProcessInput = { id: string; data: unknown };
@@ -42,32 +42,32 @@ async function processItem(input: ProcessInput): Promise<ProcessOutput | null> {
   try {
     return await pool.run(input);
   } catch (err) {
-    if (err instanceof WorkerTimeoutError) {
+    if (err instanceof FamiliarTimeoutError) {
       // .timeoutMs tells you the configured limit
       console.warn(`[${input.id}] Timed out after ${err.timeoutMs}ms — will retry`);
       return null; // signal caller to retry
     }
 
-    if (err instanceof WorkerTaskError) {
+    if (err instanceof FamiliarTaskError) {
       // .cause is the original error thrown inside the task function
       const cause = err.cause instanceof Error ? err.cause : new Error(String(err.cause));
       console.error(`[${input.id}] Task error: ${cause.message}`);
       throw err; // propagate application errors
     }
 
-    if (err instanceof WorkerQueueFullError) {
+    if (err instanceof FamiliarQueueFullError) {
       // .maxQueue is the configured cap
       console.error(`Queue exhausted (max ${err.maxQueue}) — shedding load`);
       return null;
     }
 
-    if (err instanceof WorkerTerminatedError) {
+    if (err instanceof FamiliarTerminatedError) {
       // Pool was disposed during in-flight task
       console.error('Pool disposed — shutting down');
       throw err;
     }
 
-    if (err instanceof WorkerRuntimeError) {
+    if (err instanceof FamiliarRuntimeError) {
       // Worker slot crashed (uncaught error inside Worker thread)
       console.error('Worker runtime error:', err.message);
       throw err;
@@ -85,34 +85,35 @@ pool.dispose();
 
 ### Error Hierarchy
 
-| Class                       | Code                | Extra fields         |
-| --------------------------- | ------------------- | -------------------- |
-| `WorkerTimeoutError`        | `'timeout'`         | `.timeoutMs: number` |
-| `WorkerTaskError`           | `'task'`            | `.cause: unknown`    |
-| `WorkerQueueFullError`      | `'queue_full'`      | `.maxQueue: number`  |
-| `WorkerTerminatedError`     | `'terminated'`      | —                    |
-| `WorkerRuntimeError`        | `'worker'`          | `.cause?: unknown`   |
-| `WorkerInvalidOptionsError` | `'invalid_options'` | —                    |
+| Class                         | Extra fields         |
+| ----------------------------- | --------------------- |
+| `FamiliarTimeoutError`        | `.timeoutMs: number` |
+| `FamiliarTaskError`           | `.cause: unknown`    |
+| `FamiliarQueueFullError`      | `.maxQueue: number`  |
+| `FamiliarTerminatedError`     | —                    |
+| `FamiliarRuntimeError`        | `.cause?: unknown`   |
+| `FamiliarInvalidOptionsError` | —                    |
 
-All extend `WorkerError` — use it as a catch-all when you only need `err.code`:
+All extend `FamiliarError` — use it as a catch-all when you only need the specific class name:
 
 ```ts
-import { WorkerError } from '@vielzeug/familiar';
+import { FamiliarError } from '@vielzeug/familiar';
 
 try {
   await pool.run(input);
 } catch (err) {
-  if (err instanceof WorkerError) {
-    metrics.increment(`worker.error.${err.code}`);
+  if (err instanceof FamiliarError) {
+    // err.name is the specific subclass, e.g. 'FamiliarTimeoutError'
+    metrics.increment(`worker.error.${err.name}`);
   }
 }
 ```
 
 ### Pitfalls
 
-- Task errors are wrapped in `WorkerTaskError`. Check `err.cause` (not `err.message`) for the original `Error` instance.
-- `DOMException` with name `'AbortError'` indicates a signal-cancelled task — it is not a `WorkerError` subclass.
-- `createTestWorker` does not wrap errors in `WorkerError` — task errors propagate unwrapped for better test DX.
+- Task errors are wrapped in `FamiliarTaskError`. Check `err.cause` (not `err.message`) for the original `Error` instance.
+- `DOMException` with name `'AbortError'` indicates a signal-cancelled task — it is not a `FamiliarError` subclass.
+- `createTestWorker` does not wrap errors in `FamiliarError` by default — task errors propagate unwrapped for better test DX. Set `{ errorWrapping: true }` to mirror real-worker behavior (errors are then wrapped in `FamiliarTaskError` with `.cause` preserved).
 
 ### Related
 

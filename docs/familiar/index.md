@@ -11,13 +11,13 @@ exports:
     createModuleWorker,
     task,
     createTestWorker,
-    WorkerError,
-    WorkerTimeoutError,
-    WorkerTaskError,
-    WorkerQueueFullError,
-    WorkerTerminatedError,
-    WorkerRuntimeError,
-    WorkerInvalidOptionsError,
+    FamiliarError,
+    FamiliarTimeoutError,
+    FamiliarTaskError,
+    FamiliarQueueFullError,
+    FamiliarTerminatedError,
+    FamiliarRuntimeError,
+    FamiliarInvalidOptionsError,
   ]
 environments: [browser]
 ---
@@ -55,7 +55,7 @@ typedWorker.dispose();
 | AbortSignal       | <ore-icon name="check" size="16"></ore-icon> Queued tasks                         | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Streaming         | <ore-icon name="check" size="16"></ore-icon> `runStream()`                        | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Heartbeat         | <ore-icon name="check" size="16"></ore-icon> Auto for inline workers              | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
-| Typed errors      | <ore-icon name="check" size="16"></ore-icon> `instanceof WorkerTimeoutError` etc. | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
+| Typed errors      | <ore-icon name="check" size="16"></ore-icon> `instanceof FamiliarTimeoutError` etc. | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Testing utilities | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="x" size="16"></ore-icon>     | <ore-icon name="x" size="16"></ore-icon>     |
 | Module workers    | <ore-icon name="check" size="16"></ore-icon> `createModuleWorker`                 | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
 | Zero dependencies | <ore-icon name="check" size="16"></ore-icon>                                      | <ore-icon name="check" size="16"></ore-icon> | <ore-icon name="x" size="16"></ore-icon>     |
@@ -89,7 +89,7 @@ yarn add @vielzeug/familiar
 ## Quick Start
 
 ```ts
-import { createWorker, task, WorkerTimeoutError, WorkerQueueFullError } from '@vielzeug/familiar';
+import { createWorker, task, FamiliarTimeoutError, FamiliarQueueFullError } from '@vielzeug/familiar';
 
 // Wrap the function with task() to mark it as self-contained (safe to serialize)
 const sum = task<number[], number>((nums) => nums.reduce((a, b) => a + b, 0));
@@ -113,8 +113,8 @@ await pool.run(urgentTask, { priority: 10 });
 try {
   await pool.run(input, { timeout: 100 });
 } catch (err) {
-  if (err instanceof WorkerTimeoutError) console.error(`Timed out after ${err.timeoutMs}ms`);
-  if (err instanceof WorkerQueueFullError) console.error(`Queue full (max ${err.maxQueue})`);
+  if (err instanceof FamiliarTimeoutError) console.error(`Timed out after ${err.timeoutMs}ms`);
+  if (err instanceof FamiliarQueueFullError) console.error(`Queue full (max ${err.maxQueue})`);
 }
 ```
 
@@ -126,7 +126,7 @@ try {
 - **Web Worker backed** — CPU-bound work runs off the main thread, no jank
 - **Pool support** — create N workers via the `concurrency` option with built-in queuing
 - **Priority queue** — pass `priority` per-run; higher values run first with FIFO tiebreaking
-- **Timeout support** — pool-level or per-run `timeout` rejects with `WorkerTimeoutError`
+- **Timeout support** — pool-level or per-run `timeout` rejects with `FamiliarTimeoutError`
 - **Heartbeat monitoring** — `heartbeatWindow` kills tasks that stop responding, with auto-heartbeats for inline workers
 - **AbortSignal** — cancel queued tasks with the standard `AbortController` API
 - **Streaming** — `runStream()` for tasks that yield multiple partial results
@@ -135,7 +135,7 @@ try {
 - **Transferables** — move large buffers to the Worker without a structured-clone copy
 - **Prime** — pre-initialize worker slots to eliminate first-task latency
 - **Metrics** — `active`, `queued`, `completed`, `failed`, `groupCount` counters for observability
-- **Typed error hierarchy** — `WorkerTimeoutError`, `WorkerTaskError`, `WorkerQueueFullError`, and more
+- **Typed error hierarchy** — `FamiliarTimeoutError`, `FamiliarTaskError`, `FamiliarQueueFullError`, and more
 - **`[Symbol.dispose]`** — `using` keyword support (ES2025 explicit resource management)
 - **Module workers** — `createModuleWorker` loads a real `.js/.ts` module file as the Worker
 - **Testing utilities** — `createTestWorker` runs tasks in-process with call recording
