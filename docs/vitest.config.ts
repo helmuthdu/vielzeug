@@ -11,7 +11,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [componentPreviewPlugin()],
   resolve: {
-    alias: buildVielzeugSrcAliases(path.resolve(__dirname, '../packages')),
+    alias: {
+      ...buildVielzeugSrcAliases(path.resolve(__dirname, '../packages')),
+      vue: path.resolve(__dirname, '../node_modules/vue'),
+    },
   },
   test: {
     environment: 'jsdom',
