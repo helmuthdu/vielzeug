@@ -32,7 +32,7 @@ jobs:
 
       - name: Upload coverage report
         if: inputs.coverage
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4.6.2
         with:
           name: coverage
           path: coverage/
