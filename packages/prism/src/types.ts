@@ -114,8 +114,16 @@ export interface TooltipConfig {
 }
 
 export interface CrosshairConfig {
+  /** Show the horizontal crosshair line. Defaults to `false`. */
   horizontal?: boolean;
+  /**
+   * Whether the crosshair snaps to the nearest datum (default `true`) or follows
+   * the raw mouse position (`false`). Tooltip/`onHover` data is always based on
+   * the nearest datum regardless of this setting — only the crosshair line's
+   * position is affected.
+   */
   snap?: boolean;
+  /** Show the vertical crosshair line. Defaults to `true`. */
   vertical?: boolean;
 }
 
@@ -146,6 +154,8 @@ export interface TransitionConfig {
 export interface ChartPluginContext {
   container: HTMLElement;
   dimensions: Readable<ChartDimensions>;
+  /** Aborted when the chart is disposed — plugins can tie their own cleanup to this instead of relying solely on `dispose()`. */
+  disposalSignal: AbortSignal;
   svg: SVGSVGElement;
 }
 

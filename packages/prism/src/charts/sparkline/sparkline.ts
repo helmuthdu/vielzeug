@@ -52,6 +52,7 @@ function renderSparkBars(
   height: number,
   color: string,
   transition?: SparklineConfig['transition'],
+  disposalSignal?: AbortSignal,
 ): void {
   const count = data.length;
   const barW = Math.max(1, width / count - 1);
@@ -90,6 +91,8 @@ function renderSparkBars(
       const to = { h: finalH, y: finalY };
 
       const frame = (ts: number) => {
+        if (disposalSignal?.aborted) return;
+
         if (start === null) start = ts;
 
         const t = easing(Math.min(1, (ts - start) / dur));
@@ -213,7 +216,7 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
       const barsGroup = createSvgElement('g', { class: 'prism-spark-bars' });
 
       innerGroup.appendChild(barsGroup);
-      renderSparkBars(barsGroup, data as number[], w, h, color, config.transition);
+      renderSparkBars(barsGroup, data as number[], w, h, color, config.transition, ac.signal);
     } else {
       if (variant === 'area') {
         const fill = createSvgElement('path', { class: 'prism-spark-fill' });
@@ -278,6 +281,8 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     };
   }
 
+  const ac = new AbortController();
+
   const s = scope(() => {
     effect(
       () => {
@@ -287,7 +292,6 @@ export function createSparkline(container: HTMLElement, config: SparklineConfig)
     );
   });
 
-  const ac = new AbortController();
   let isDisposed = false;
 
   return {

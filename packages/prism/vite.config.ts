@@ -9,7 +9,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export default defineConfig(
   mergeConfig(
     getConfig(__dirname, {
-      entry: resolve(__dirname, 'src/index.ts'),
+      entry: {
+        devtools: resolve(__dirname, 'src/devtools/index.ts'),
+        'src/index': resolve(__dirname, 'src/index.ts'),
+      },
       name: 'prism',
     }),
     {

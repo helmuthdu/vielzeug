@@ -24,6 +24,9 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
   el.style.pointerEvents = 'none';
   el.style.top = '0';
   el.style.left = '0';
+  // Non-modal status text — announced by assistive tech whenever content/hide state changes.
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-live', 'polite');
   container.appendChild(el);
 
   const tooltipOffset: number = (config !== true && config?.offset) || 8;
@@ -32,7 +35,7 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
 
   if (render && !sanitize) {
     warn(
-      'createTooltip: `render` is set without `sanitize` — innerHTML will be injected unsanitized. Pass `sanitize` to prevent XSS.',
+      'createTooltip: `render` is set without `sanitize` — falling back to plain-text rendering of the returned string to avoid an XSS risk. Pass `sanitize` to render HTML.',
     );
   }
 
@@ -45,6 +48,9 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
     el,
     hide() {
       el.style.opacity = '0';
+      // Clear the live region's text too — otherwise assistive tech keeps announcing the
+      // last-hovered value as "current" even after the pointer leaves the chart.
+      el.textContent = '';
     },
     show(x: number, y: number, datum: Datum, series: Series) {
       if (!container.isConnected) return;
@@ -52,7 +58,12 @@ export function createTooltip(container: HTMLElement, config?: TooltipConfig | t
       if (render) {
         const html = render(datum, series);
 
-        el.innerHTML = sanitize ? sanitize(html) : html;
+        if (sanitize) {
+          el.innerHTML = sanitize(html);
+        } else {
+          // No sanitizer provided — never inject the raw string as HTML. Render it as text instead.
+          el.textContent = html;
+        }
       } else {
         el.textContent = `${series.name}: ${datum.value}`;
       }

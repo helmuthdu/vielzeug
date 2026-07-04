@@ -10,12 +10,14 @@ import { areaPath, linePath, monotonePath, stepPath } from '../../svg/path';
 export interface AreaRenderOptions {
   color: string;
   curve: 'linear' | 'monotone' | 'step';
+  /** Aborted when the owning chart is disposed — stops the transition's `requestAnimationFrame` loop from rescheduling. */
+  disposalSignal?: AbortSignal;
   fillOpacity: number;
   showLine: boolean;
   transition?: TransitionConfig;
 }
 
-const activeAreaAnimations = new WeakMap<SVGGElement, number>();
+const activeAreaAnimations = new WeakMap<SVGGElement, () => void>();
 const previousPoints = new WeakMap<SVGGElement, Point[]>();
 
 function buildLinePath(pts: Point[], curve: AreaRenderOptions['curve']): string {
@@ -60,9 +62,7 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
     return;
   }
 
-  const prevRafId = activeAreaAnimations.get(parent);
-
-  if (prevRafId !== undefined) cancelAnimationFrame(prevRafId);
+  activeAreaAnimations.get(parent)?.();
 
   const hasExisting = fill.hasAttribute('d');
 
@@ -84,6 +84,12 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   let startTime: number | null = null;
 
   function frame(ts: number) {
+    if (options.disposalSignal?.aborted) {
+      activeAreaAnimations.delete(parent);
+
+      return;
+    }
+
     if (startTime === null) startTime = ts;
 
     const t = Math.min(1, (ts - startTime) / dur);
@@ -99,7 +105,9 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
     if (line) setAttributes(line, { d: buildLinePath(interpolated, options.curve) });
 
     if (t < 1) {
-      activeAreaAnimations.set(parent, requestAnimationFrame(frame));
+      const id = requestAnimationFrame(frame);
+
+      activeAreaAnimations.set(parent, () => cancelAnimationFrame(id));
     } else {
       activeAreaAnimations.delete(parent);
       previousPoints.set(parent, points);
@@ -107,7 +115,10 @@ export function renderArea(parent: SVGGElement, points: Point[], baselineY: numb
   }
 
   previousPoints.set(parent, fromPoints);
-  activeAreaAnimations.set(parent, requestAnimationFrame(frame));
+
+  const id = requestAnimationFrame(frame);
+
+  activeAreaAnimations.set(parent, () => cancelAnimationFrame(id));
 }
 
 export function computeAreaPoints(data: Datum[], xScale: Scale<Date | number>, yScale: Scale<number>): Point[] {
@@ -115,6 +126,8 @@ export function computeAreaPoints(data: Datum[], xScale: Scale<Date | number>, y
     warn(
       'computeAreaPoints: datum.key is null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
+  } else if (data.some((d) => typeof d.key === 'string')) {
+    warn('computeAreaPoints: string keys are not supported for line/area charts — use numeric or Date keys.');
   }
 
   return data.map((d) => ({

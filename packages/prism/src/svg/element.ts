@@ -1,3 +1,5 @@
+import { warn } from '../_dev';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
 export function createSvgElement<K extends keyof SVGElementTagNameMap>(
@@ -15,9 +17,17 @@ export function setAttributes(el: SVGElement, attrs: Record<string, number | str
   for (const [key, value] of Object.entries(attrs)) {
     if (value === undefined) {
       el.removeAttribute(key);
-    } else {
-      el.setAttribute(key, String(value));
+
+      continue;
     }
+
+    if (typeof value === 'number' && !Number.isFinite(value)) {
+      warn(
+        `setAttributes: attribute "${key}" on <${el.tagName}> received a non-finite value (${value}) — check upstream scale/geometry math for invalid input.`,
+      );
+    }
+
+    el.setAttribute(key, String(value));
   }
 }
 

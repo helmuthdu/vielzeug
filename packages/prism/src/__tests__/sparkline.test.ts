@@ -40,6 +40,14 @@ describe('createSparkline', () => {
     expect(() => chart.dispose()).not.toThrow();
   });
 
+  it('disposed reflects lifecycle state', () => {
+    const chart = createSparkline(container, { data: [1, 2, 3] });
+
+    expect(chart.disposed).toBe(false);
+    chart.dispose();
+    expect(chart.disposed).toBe(true);
+  });
+
   it('supports Symbol.dispose', () => {
     const chart = createSparkline(container, { data: [1, 2, 3] });
 

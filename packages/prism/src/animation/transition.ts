@@ -8,7 +8,17 @@ export interface AnimationTarget {
   el: SVGElement;
 }
 
-export function animate(targets: AnimationTarget[], config?: TransitionConfig, onComplete?: () => void): void {
+/**
+ * Runs a batch of attribute tweens, sharing one `requestAnimationFrame` loop.
+ * Returns a `cancel()` function the caller can invoke to stop the loop early
+ * (e.g. a fresh render superseding this batch, or `signal` aborting).
+ */
+export function animate(
+  targets: AnimationTarget[],
+  config?: TransitionConfig,
+  onComplete?: () => void,
+  signal?: AbortSignal,
+): () => void {
   const duration = config?.duration ?? 300;
   const easing = resolveEasing(config?.easing);
   const stagger = Math.max(0, config?.stagger ?? 0);
@@ -22,13 +32,16 @@ export function animate(targets: AnimationTarget[], config?: TransitionConfig, o
 
     onComplete?.();
 
-    return;
+    return () => {};
   }
 
   let startTime: number | null = null;
+  let cancelled = false;
   const totalDuration = Math.max(duration, duration + stagger * (targets.length - 1));
 
   function frame(timestamp: number) {
+    if (cancelled || signal?.aborted) return;
+
     if (startTime === null) startTime = timestamp;
 
     const elapsed = timestamp - startTime;
@@ -53,4 +66,8 @@ export function animate(targets: AnimationTarget[], config?: TransitionConfig, o
   }
 
   requestAnimationFrame(frame);
+
+  return () => {
+    cancelled = true;
+  };
 }

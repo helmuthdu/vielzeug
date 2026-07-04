@@ -19,22 +19,21 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `createPieChart()`   | Pie, donut, or semi-circle donut chart                | `ChartHandle`                  |
 | `seriesColor()`      | CSS variable color for series index                   | `string`                       |
 | `setTheme()`         | Apply custom palette / CSS tokens at runtime          | `void`                         |
-| `buildXScale()`      | Shared horizontal scale builder (auto time or linear) | `Scale<Date> \| Scale<number>` |
-| `buildYScale()`      | Shared vertical linear scale builder                  | `Scale<number>`                |
-| `animate()`          | Animate SVG element attributes via RAF                | `void`                         |
-| `warn()`             | Dev-only console.warn helper (`/devtools` subpath)    | `void`                         |
-| `issue()`            | Dev-only console.error helper (`/devtools` subpath)   | `void`                         |
+| `resetTheme()`       | Clear all custom theme overrides back to defaults     | `void`                         |
+| `animate()`          | Animate SVG element attributes via RAF                | `() => void` (cancel function) |
+| `debugChart()`       | Wrap a `ChartHandle` with lifecycle logging (`/devtools` subpath) | `ChartHandle`       |
+| `PrismError`         | Base class for all prism-originated errors            | class                          |
 | `LegendState`        | Live legend state object (plugin API)                 | type                           |
 | `TooltipState`       | Live tooltip state object (plugin API)                | type                           |
 | `ChartPluginContext` | Context object passed to `ChartPlugin.install()`      | type                           |
 
 ## Package Entry Points
 
-| Import                     | Purpose                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `@vielzeug/prism`          | All chart factories, scales, types, and utilities              |
-| `@vielzeug/prism/theme`    | Default CSS custom properties (light + dark)                   |
-| `@vielzeug/prism/devtools` | `warn` / `issue` — dev-only helpers, tree-shaken in production |
+| Import                     | Purpose                                                                    |
+| -------------------------- | --------------------------------------------------------------------------- |
+| `@vielzeug/prism`          | All chart factories, scales, types, and utilities                           |
+| `@vielzeug/prism/theme`    | Default CSS custom properties (light + dark)                                |
+| `@vielzeug/prism/devtools` | `debugChart()` — opt-in `console.debug` lifecycle logging, tree-shaken in production |
 
 ---
 
@@ -133,14 +132,14 @@ Creates a minimal inline chart with no axes, no legend, and no margin. Designed 
 function linearScale(config: LinearScaleConfig): Scale<number>;
 ```
 
-Continuous linear scale mapping a numeric domain to a pixel range.
+Continuous linear scale mapping a numeric domain to a pixel range. Unlike chart config fields, scale factory config is not `MaybeSignal` — pass plain values and call `linearScale()` again if the domain/range changes.
 
-| Field           | Type                            | Default | Description                         |
-| --------------- | ------------------------------- | ------- | ----------------------------------- |
-| `config.domain` | `MaybeSignal<[number, number]>` | —       | Input data range `[min, max]`       |
-| `config.range`  | `MaybeSignal<[number, number]>` | —       | Output pixel range `[min, max]`     |
-| `config.nice`   | `boolean`                       | `true`  | Extend domain to nice round numbers |
-| `config.clamp`  | `boolean`                       | `false` | Clamp output to range bounds        |
+| Field           | Type               | Default | Description                                                     |
+| --------------- | ------------------ | ------- | ----------------------------------------------------------------- |
+| `config.domain` | `[number, number]` | —       | Input data range `[min, max]`. A reversed domain (`min > max`) is supported for inverted axes. |
+| `config.range`  | `[number, number]` | —       | Output pixel range `[min, max]`                                   |
+| `config.nice`   | `boolean`           | `true`  | Extend domain to nice round numbers                                |
+| `config.clamp`  | `boolean`           | `false` | Clamp output to range bounds                                       |
 
 ---
 
@@ -152,11 +151,11 @@ function timeScale(config: TimeScaleConfig): Scale<Date>;
 
 Time scale mapping `Date` values to pixels. Automatically selects tick intervals (seconds → years).
 
-| Field           | Type                            | Default | Description                      |
-| --------------- | ------------------------------- | ------- | -------------------------------- |
-| `config.domain` | `MaybeSignal<[Date, Date]>`     | —       | Input date range `[start, end]`  |
-| `config.range`  | `MaybeSignal<[number, number]>` | —       | Output pixel range               |
-| `config.nice`   | `boolean`                       | `true`  | Extend domain to nice boundaries |
+| Field           | Type              | Default | Description                      |
+| --------------- | ----------------- | ------- | -------------------------------- |
+| `config.domain` | `[Date, Date]`     | —       | Input date range `[start, end]`  |
+| `config.range`  | `[number, number]` | —       | Output pixel range               |
+| `config.nice`   | `boolean`          | `true`  | Extend domain to nice boundaries |
 
 ---
 
@@ -168,12 +167,12 @@ function bandScale(config: BandScaleConfig): BandScale;
 
 Categorical scale dividing the range into equal bands with configurable padding.
 
-| Field                 | Type                            | Default           | Description               |
-| --------------------- | ------------------------------- | ----------------- | ------------------------- |
-| `config.domain`       | `MaybeSignal<string[]>`         | —                 | Category names            |
-| `config.range`        | `MaybeSignal<[number, number]>` | —                 | Output pixel range        |
-| `config.padding`      | `number`                        | `0.1`             | Inner padding ratio (0–1) |
-| `config.paddingOuter` | `number`                        | same as `padding` | Outer edge padding ratio  |
+| Field                 | Type               | Default           | Description               |
+| --------------------- | ------------------ | ----------------- | ------------------------- |
+| `config.domain`       | `string[]`          | —                 | Category names            |
+| `config.range`        | `[number, number]`  | —                 | Output pixel range        |
+| `config.padding`      | `number`            | `0.1`             | Inner padding ratio (0–1) |
+| `config.paddingOuter` | `number`            | same as `padding` | Outer edge padding ratio  |
 
 ---
 
@@ -185,17 +184,21 @@ Returned by all chart factories.
 
 ```ts
 interface ChartHandle {
+  readonly disposalSignal: AbortSignal;
+  readonly disposed: boolean;
   readonly el: SVGSVGElement;
   dispose(): void;
   [Symbol.dispose](): void;
 }
 ```
 
-| Member               | Description                                                      |
-| -------------------- | ---------------------------------------------------------------- |
-| `el`                 | The root `SVGSVGElement` (for styling or external manipulation)  |
-| `dispose()`          | Tear down all effects, observers, DOM nodes, tooltip, and legend |
-| `[Symbol.dispose]()` | Same as `dispose()` — for TC39 `using` declarations              |
+| Member               | Description                                                                                    |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `el`                 | The root `SVGSVGElement` (for styling or external manipulation)                                 |
+| `disposed`           | `true` once `dispose()` has run; useful for guarding late callbacks                              |
+| `disposalSignal`     | Aborted when the chart is disposed — tie your own cleanup (RAF loops, observers) to this instead of overriding `dispose()` |
+| `dispose()`          | Tear down all effects, observers, DOM nodes, tooltip, and legend. Calling it more than once is a no-op |
+| `[Symbol.dispose]()` | Same as `dispose()` — for TC39 `using` declarations                                              |
 
 > **Note:** Charts re-render automatically when signal data changes. There is no `update()` method — reactivity is fully automatic.
 
@@ -267,20 +270,10 @@ interface BaseChartConfig {
 ### `MaybeSignal<T>`
 
 ```ts
-type MaybeSignal<T> = T | Reactive<T>;
+type MaybeSignal<T> = Readable<T> | T;
 ```
 
-Accepts either a plain value or a `@vielzeug/ripple` signal. Used throughout config types for optional reactivity.
-
----
-
-### `XScale`
-
-```ts
-type XScale = Scale<Date> | Scale<number>;
-```
-
-Union type for horizontal scales. The chart auto-selects `timeScale` when `x` values are `Date` instances, `linearScale` otherwise.
+Accepts either a plain value or a `@vielzeug/ripple` `Readable<T>` signal (e.g. one created with `signal()`). Used for `series`/`data` fields on chart configs — when a signal is passed, the chart re-renders automatically on `.value` changes. Not used by the scale factories (`linearScale`/`timeScale`/`bandScale`), whose config fields are always plain values.
 
 ---
 
@@ -375,14 +368,32 @@ interface Series {
 
 ### `ScaffoldContext`
 
-Passed to `renderFn` inside `createChartScaffold`. Available to plugin authors via advanced extension points.
+Passed to `renderFn` inside `createChartScaffold` — the internal building block behind `createLineChart`/`createBarChart`/`createAreaChart`. Relevant only if you're building a custom cartesian chart type on top of prism's scaffold, not to `ChartPlugin.install()` (see [`ChartPluginContext`](#chartplugincontext) for that).
 
 ```ts
 interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
-  dimensions: Reactive<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
+  disposalSignal: AbortSignal;
   groups: ScaffoldGroups;
+  legend: LegendState | null;
+  svg: SVGSVGElement;
+  tooltip: TooltipState | null;
+}
+```
+
+---
+
+### `RadialScaffoldContext`
+
+The `createRadialScaffold` counterpart to `ScaffoldContext`, for chart types with no cartesian axis groups (pie, donut, semi). Backs `createPieChart`.
+
+```ts
+interface RadialScaffoldContext {
+  container: HTMLElement;
+  dimensions: Readable<ChartDimensions>;
+  disposalSignal: AbortSignal;
   legend: LegendState | null;
   svg: SVGSVGElement;
   tooltip: TooltipState | null;
@@ -520,8 +531,8 @@ interface SparklineConfig {
 | `curve`        | `'linear' \| 'monotone' \| 'step'`        | `'linear'`             | Line interpolation (line/area only)                                                                            |
 | `strokeWidth`  | `number`                                  | `1.5`                  | Line stroke width (line/area only)                                                                             |
 | `fillOpacity`  | `number`                                  | `0.2`                  | Fill opacity (area only)                                                                                       |
-| `cornerRadius` | `number`                                  | `4` (stack), `0` (bar) | Bar corner radius in pixels (bar/stack only)                                                                   |
-| `padPixels`    | `number`                                  | `2`                    | Gap between stack segments in pixels (stack only)                                                              |
+| `cornerRadius` | `number`                                  | `4`                    | Rounded corners for stack segments in pixels. Stack variant only — no effect on line/area/bar                  |
+| `padPixels`    | `number`                                  | `0`                    | Gap between stack segments in pixels. Stack variant only — no effect on line/area/bar                          |
 | `ariaLabel`    | `string`                                  | —                      | Accessible label; sets `role="img"` on the SVG. If omitted the SVG is marked `aria-hidden="true"` (decorative) |
 | `transition`   | `TransitionConfig`                        | —                      | Enter animation (bar/stack only; line/area use RAF interpolation)                                              |
 | `onClick`      | `(index, value) => void`                  | —                      | Called on click with nearest data index. Not fired for 0- or 1-point data                                      |
@@ -710,37 +721,6 @@ interface ChartMargin {
 
 ## Utilities
 
-### `buildXScale`
-
-```ts
-function buildXScale(allX: (Date | number)[], width: number): Scale<Date> | Scale<number>;
-```
-
-Builds a horizontal scale from an array of all X values. Automatically selects `timeScale` when values are `Date` instances, `linearScale` otherwise. Used internally by `createLineChart` and `createAreaChart` — also available for custom visualizations.
-
-| Parameter | Type                 | Description                    |
-| --------- | -------------------- | ------------------------------ |
-| `allX`    | `(Date \| number)[]` | All X values across all series |
-| `width`   | `number`             | Chart area width in pixels     |
-
----
-
-### `buildYScale`
-
-```ts
-function buildYScale(allY: number[], height: number, includeZero?: boolean): Scale<number>;
-```
-
-Builds a vertical scale from all Y values. Domain minimum is clamped to `0` by default, ensuring bar charts always show the baseline.
-
-| Parameter     | Type       | Default | Description                                                                                                                            |
-| ------------- | ---------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `allY`        | `number[]` | —       | All Y values across all series                                                                                                         |
-| `height`      | `number`   | —       | Chart area height in pixels                                                                                                            |
-| `includeZero` | `boolean`  | `true`  | When `false`, the domain starts at the data minimum (useful for line/area charts with a narrow value range, e.g. stock prices 100–110) |
-
----
-
 ### `seriesColor`
 
 ```ts
@@ -769,7 +749,7 @@ interface PrismTheme {
 function setTheme(theme: PrismTheme): void;
 ```
 
-Applies CSS custom properties to `document.documentElement`. Call once at app startup before mounting charts.
+Applies CSS custom properties to `document.documentElement`. Call once at app startup before mounting charts. Setting `colors` clears any unset color slots left over from a previous `setTheme()` call, so a theme with fewer colors than the last one doesn't leave stale high-index colors behind.
 
 ```ts
 import { setTheme } from '@vielzeug/prism';
@@ -777,7 +757,22 @@ import { setTheme } from '@vielzeug/prism';
 setTheme({ colors: ['#6366f1', '#22d3ee', '#f59e0b', '#10b981'] });
 ```
 
-> Both `seriesColor` and `setTheme` are exported from `@vielzeug/prism` (not from the `/theme` CSS subpath).
+### `resetTheme`
+
+```ts
+function resetTheme(): void;
+```
+
+Clears every CSS custom property `setTheme()` can set, restoring prism's default theme (from `@vielzeug/prism/theme`). Useful for test teardown or a theme-switcher's "reset to default" action.
+
+```ts
+import { resetTheme, setTheme } from '@vielzeug/prism';
+
+setTheme({ colors: ['#6366f1'] });
+resetTheme(); // back to the default palette
+```
+
+> `seriesColor`, `setTheme`, and `resetTheme` are all exported from `@vielzeug/prism` (not from the `/theme` CSS subpath).
 
 ---
 
@@ -819,12 +814,13 @@ The live tooltip object available on `ctx.tooltip` inside `ChartPlugin.install`.
 ```ts
 interface ChartPluginContext {
   container: HTMLElement;
-  dimensions: Reactive<ChartDimensions>;
+  dimensions: Readable<ChartDimensions>;
+  disposalSignal: AbortSignal;
   svg: SVGSVGElement;
 }
 ```
 
-Passed to `ChartPlugin.install(ctx)`. Gives plugins access to the reactive `dimensions` signal, the host `container`, and the root `svg` element.
+Passed to `ChartPlugin.install(ctx)`. Gives plugins access to the reactive `dimensions` signal, the host `container`, the root `svg` element, and a `disposalSignal` aborted when the chart is torn down.
 
 ```ts
 import type { ChartPlugin } from '@vielzeug/prism';
@@ -842,7 +838,9 @@ const watermarkPlugin: ChartPlugin = {
 };
 ```
 
-> **Note:** To observe future resize events use `effect(() => { ctx.dimensions.value; })` from `@vielzeug/ripple` within a reactive scope.
+> **Note:** To observe future resize events use `effect(() => { ctx.dimensions.value; })` from `@vielzeug/ripple` within a reactive scope. To run cleanup when the chart is disposed without relying on your own `dispose()` implementation being called, add a listener to `ctx.disposalSignal` instead: `ctx.disposalSignal.addEventListener('abort', cleanup)`.
+>
+> **Error isolation:** if a plugin's `install()` or `dispose()` throws, the error is logged (dev builds only) and the rest of the chart — and any other installed plugins — continues to work. A throwing plugin never aborts chart creation or teardown.
 
 ---
 
@@ -853,13 +851,19 @@ const watermarkPlugin: ChartPlugin = {
 ### `animate`
 
 ```ts
-function animate(targets: AnimationTarget[], config?: TransitionConfig, onComplete?: () => void): void;
+function animate(
+  targets: AnimationTarget[],
+  config?: TransitionConfig,
+  onComplete?: () => void,
+  signal?: AbortSignal,
+): () => void;
 ```
 
-Animates SVG element attributes from `from` to `to` values over the given `TransitionConfig` duration. Calls `onComplete` when all animations finish.
+Animates SVG element attributes from `from` to `to` values over the given `TransitionConfig` duration. Calls `onComplete` when all animations finish. Returns a cancel function — call it to stop the in-flight animation early (its `requestAnimationFrame` loop is cancelled and `onComplete` is not called).
 
-- **Empty targets or `duration: 0`** — attributes are set immediately and `onComplete` is called synchronously; no RAF is scheduled.
+- **Empty targets or `duration: 0`** — attributes are set immediately and `onComplete` is called synchronously; no RAF is scheduled. The returned cancel function is a no-op in this case.
 - **Negative `stagger`** — clamped to `0`; all elements animate in parallel.
+- **`signal`** — if provided and already aborted (or aborted mid-animation), the RAF loop stops rescheduling itself on its next frame, same effect as calling the returned cancel function.
 
 **Parameters — `AnimationTarget`:**
 
@@ -871,7 +875,10 @@ Animates SVG element attributes from `from` to `to` values over the given `Trans
 ```ts
 import { animate } from '@vielzeug/prism';
 
-animate([{ attrs: { opacity: { from: 0, to: 1 } }, el: rect }], { duration: 300, easing: 'ease-out' });
+const cancel = animate([{ attrs: { opacity: { from: 0, to: 1 } }, el: rect }], { duration: 300, easing: 'ease-out' });
+
+// Stop early if the element is removed before the animation completes:
+cancel();
 ```
 
 ### `EasingFn`
@@ -880,7 +887,7 @@ animate([{ attrs: { opacity: { from: 0, to: 1 } }, el: rect }], { duration: 300,
 type EasingFn = (t: number) => number;
 ```
 
-A custom easing function. Receives a normalised time value `t ∈ [0, 1]` and returns a progress value (also typically `[0, 1]`). Pass as `TransitionConfig.easing`.
+A custom easing function. Receives a normalised time value `t ∈ [0, 1]` and returns a progress value (also typically `[0, 1]`). Pass as `TransitionConfig.easing`. Unknown or invalid easing name strings fall back to `'ease-out'` rather than throwing.
 
 ---
 
@@ -888,31 +895,29 @@ A custom easing function. Receives a normalised time value `t ∈ [0, 1]` and re
 
 > **Import:** `@vielzeug/prism/devtools`
 
-Dev-only helpers. Both functions are no-ops when `globalThis.__PRISM_PROD__` is `true` (set by bundlers via `define`), so they are tree-shaken from production builds.
+Opt-in debug logging, separate from the internal dev-mode validation warnings in `_dev.ts` (those run automatically and need no import). Tree-shaken from production bundles when this sub-path isn't imported — there is no environment gate to configure.
 
-### `warn`
+### `debugChart`
 
 ```ts
-function warn(msg: string): void;
+interface DebugChartOptions {
+  label?: string; // defaults to 'chart', producing log prefixes like [prism:chart]
+}
+
+function debugChart<T extends ChartHandle>(handle: T, options?: DebugChartOptions): T;
 ```
 
-Emits `console.warn('[prism] <msg>')` in development. Silent in production.
-
-> ⚠️ **Security:** Warning messages may include user-supplied data (e.g. category names from `bandScale`). Avoid using sensitive values (PII, tokens) as chart category labels.
-
-### `issue`
+Wraps an already-created `ChartHandle` with lifecycle logging to `console.debug`. Logs the chart's mount, every resize (via its own `ResizeObserver` on `handle.el`, independent of the chart's internal one), and disposal — each prefixed with `[prism:<label>]`. Returns the same handle unchanged, so it can wrap any `create*Chart()` call in place.
 
 ```ts
-function issue(msg: string): void;
-```
+import { createLineChart } from '@vielzeug/prism';
+import { debugChart } from '@vielzeug/prism/devtools';
 
-Emits `console.error('[prism] <msg>')` in development. Silent in production.
-
-```ts
-import { warn } from '@vielzeug/prism/devtools';
-
-// In a plugin:
-if (!container.offsetParent) warn('Chart container appears to be detached from the DOM.');
+const chart = debugChart(createLineChart(container, config), { label: 'revenue' });
+// [prism:revenue] mounted
+// [prism:revenue] resized  600×300
+chart.dispose();
+// [prism:revenue] disposed
 ```
 
 ---
@@ -931,7 +936,7 @@ class PrismError extends Error {
 
 **Named subclasses**
 
-| Class               | Thrown when                                                                     |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `PrismDisposedError` | A method is called on a disposed chart instance                                |
-| `PrismRenderError`  | The chart fails to render due to an invalid configuration or missing data       |
+| Class                | Thrown when                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PrismRenderError`   | A chart is given a structurally invalid configuration it cannot render at all (e.g. a non-`Element` `container`). Recoverable issues like empty or malformed data emit a dev-mode warning instead — they do not throw. |
+| `PrismDisposedError` | Reserved for future disposal-sensitive APIs on `ChartHandle`. No code path throws this yet — calling `dispose()` more than once is currently a documented no-op, not an error. |

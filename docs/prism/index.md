@@ -15,11 +15,11 @@ exports:
     linearScale,
     timeScale,
     bandScale,
-    buildXScale,
-    buildYScale,
     seriesColor,
     setTheme,
+    resetTheme,
     animate,
+    PrismError,
     AnimationTarget,
     EasingFn,
     LegendState,
@@ -147,13 +147,12 @@ chart.dispose();
 - **`linearScale(config)`** — continuous numeric scale with nice tick generation
 - **`timeScale(config)`** — date/time scale with interval-based ticks
 - **`bandScale(config)`** — categorical scale for bar charts
-- **`MaybeSignal<T>`** — pass plain values or reactive signals; both work seamlessly
+- **`MaybeSignal<T>`** — pass plain values or `@vielzeug/ripple` signals; both work seamlessly
 - **`seriesColor(index, override?)`** — resolve CSS palette color by series index
-- **`setTheme(theme)`** — apply custom colors, font, and grid tokens at runtime
-- **`buildXScale` / `buildYScale`** — shared cartesian scale builders (auto-select time or linear scale)
+- **`setTheme(theme)` / `resetTheme()`** — apply or clear custom colors, font, and grid tokens at runtime
 - **Event hooks** — `onClick` and `onHover` callbacks on every chart
-- **Plugin system** — extend charts with `ChartPlugin` (install/destroy lifecycle); supported by all chart types including `createPieChart`
-- **Devtools** — `warn` / `issue` from `@vielzeug/prism/devtools`; silenced automatically in production
+- **Plugin system** — extend charts with `ChartPlugin` (`install()`/`dispose()` lifecycle, each isolated from the other's failures); supported by all chart types including `createPieChart`
+- **Devtools** — `debugChart()` from `@vielzeug/prism/devtools` logs mount/resize/dispose to `console.debug`; tree-shaken from production unless imported
 - **CSS custom properties** — full theme control via `--prism-*` tokens
 - **Responsive** — auto-resizes via `ResizeObserver`
 - **Accessible** — ARIA labels and semantic SVG structure
@@ -163,11 +162,11 @@ chart.dispose();
 
 ## Sub-paths
 
-| Import                     | Purpose                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| `@vielzeug/prism`          | All chart factories, scales, and types                         |
-| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                    |
-| `@vielzeug/prism/devtools` | `warn` / `issue` — dev-only helpers, tree-shaken in production |
+| Import                     | Purpose                                                             |
+| -------------------------- | -------------------------------------------------------------------- |
+| `@vielzeug/prism`          | All chart factories, scales, and types                               |
+| `@vielzeug/prism/theme`    | Default CSS (custom properties + dark mode)                          |
+| `@vielzeug/prism/devtools` | `debugChart()` — opt-in `console.debug` lifecycle logging, tree-shaken in production |
 
 ## Documentation
 

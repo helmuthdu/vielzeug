@@ -10,13 +10,15 @@ import { linePath, monotonePath, stepPath } from '../../svg/path';
 export interface LineRenderOptions {
   color: string;
   curve: 'linear' | 'monotone' | 'step';
+  /** Aborted when the owning chart is disposed — stops the transition's `requestAnimationFrame` loop from rescheduling. */
+  disposalSignal?: AbortSignal;
   pointRadius: number;
   showPoints: boolean;
   strokeWidth: number;
   transition?: TransitionConfig;
 }
 
-const activeAnimations = new WeakMap<SVGGElement, number>();
+const activeAnimations = new WeakMap<SVGGElement, () => void>();
 
 function buildPath(pts: Point[], curve: LineRenderOptions['curve']): string {
   return curve === 'monotone' ? monotonePath(pts) : curve === 'step' ? stepPath(pts) : linePath(pts);
@@ -68,9 +70,7 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     return;
   }
 
-  const prevRafId = activeAnimations.get(parent);
-
-  if (prevRafId !== undefined) cancelAnimationFrame(prevRafId);
+  activeAnimations.get(parent)?.();
 
   const hasExisting = !!path.getAttribute('d');
 
@@ -105,6 +105,12 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   let startTime: number | null = null;
 
   function frame(ts: number) {
+    if (options.disposalSignal?.aborted) {
+      activeAnimations.delete(parent);
+
+      return;
+    }
+
     if (startTime === null) startTime = ts;
 
     const t = Math.min(1, (ts - startTime) / dur);
@@ -126,7 +132,9 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
     }
 
     if (t < 1) {
-      activeAnimations.set(parent, requestAnimationFrame(frame));
+      const id = requestAnimationFrame(frame);
+
+      activeAnimations.set(parent, () => cancelAnimationFrame(id));
     } else {
       activeAnimations.delete(parent);
     }
@@ -135,7 +143,9 @@ export function renderLine(parent: SVGGElement, points: Point[], options: LineRe
   if (!hasExisting) {
     setAttributes(path, { d: buildPath(points, options.curve) });
   } else {
-    activeAnimations.set(parent, requestAnimationFrame(frame));
+    const id = requestAnimationFrame(frame);
+
+    activeAnimations.set(parent, () => cancelAnimationFrame(id));
   }
 }
 

@@ -4,9 +4,9 @@ import type { BarChartConfig, BarVariant, ChartHandle } from '../../types';
 import type { BarScaleContext } from './bar-scale-context';
 
 import { warn } from '../../_dev';
-import { renderAxis } from '../../axes/axis';
+import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
-import { createChartScaffold } from '../../core/chart-scaffold';
+import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { getMousePosition } from '../../interaction/events';
 import { bandScale } from '../../scales/band';
@@ -36,6 +36,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
     if (categories.length === 0) {
       warn('createBarChart: no data');
+      clearCartesianDom(groups, legend, tooltip);
 
       return;
     }
@@ -47,6 +48,12 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
     let vMin: number;
 
     if (stacked) {
+      if (allData.some((sd) => sd.some((d) => d.value < 0))) {
+        warn(
+          'createBarChart: negative values in a stacked/stacked-horizontal series are clamped to 0 — stacking mixed-sign data is not supported.',
+        );
+      }
+
       const sums = categories.map((cat) =>
         allData.reduce((sum, sd) => {
           const pt = sd.find((d) => String(d.key) === cat);
@@ -90,23 +97,41 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
 
     // Axes & grid
     if (horizontal) {
-      if (config.xAxis?.grid) renderGrid(groups.grid, valScale, config.xAxis.grid, area.height, 'vertical');
+      if (config.xAxis?.grid) {
+        renderGrid(
+          groups.grid,
+          valScale,
+          config.xAxis.grid,
+          area.height,
+          'vertical',
+          resolveTickCount(config.xAxis, area.width, 'bottom'),
+        );
+      }
 
-      if (config.yAxis) renderAxis(groups.yAxis, catScale, config.yAxis, area.height);
+      if (config.yAxis) renderAxis(groups.yAxis, catScale, config.yAxis, area.height, 'left');
 
       if (config.xAxis) {
         groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
-        renderAxis(groups.xAxis, valScale, config.xAxis, area.width);
+        renderAxis(groups.xAxis, valScale, config.xAxis, area.width, 'bottom');
       }
     } else {
-      if (config.yAxis?.grid) renderGrid(groups.grid, valScale, config.yAxis.grid, area.width, 'horizontal');
+      if (config.yAxis?.grid) {
+        renderGrid(
+          groups.grid,
+          valScale,
+          config.yAxis.grid,
+          area.width,
+          'horizontal',
+          resolveTickCount(config.yAxis, area.height, 'left'),
+        );
+      }
 
       if (config.xAxis) {
         groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
-        renderAxis(groups.xAxis, catScale, config.xAxis, area.width);
+        renderAxis(groups.xAxis, catScale, config.xAxis, area.width, 'bottom');
       }
 
-      if (config.yAxis) renderAxis(groups.yAxis, valScale, config.yAxis, area.height);
+      if (config.yAxis) renderAxis(groups.yAxis, valScale, config.yAxis, area.height, 'left');
     }
 
     // Series groups
@@ -148,6 +173,7 @@ export function createBarChart(container: HTMLElement, config: BarChartConfig): 
         baselineYs,
         borderRadius: series.borderRadius ?? 0,
         color: seriesColor(i, series.color),
+        disposalSignal: ctx.disposalSignal,
         horizontal,
         seriesCount: seriesList.length,
         seriesIndex: i,

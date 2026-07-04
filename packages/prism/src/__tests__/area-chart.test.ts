@@ -46,6 +46,32 @@ describe('createAreaChart', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
+  it('clears series, grid, and axis groups when reactive data becomes empty (B6)', async () => {
+    const data = signal([
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
+    ]);
+    const chart = createAreaChart(container, {
+      series: [{ data, name: 'Reactive' }],
+      xAxis: { grid: true },
+      yAxis: { grid: true },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(chart.el.querySelector('.prism-area-series')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).not.toBeNull();
+
+    data.value = [];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelector('.prism-area-series')).toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).toBeNull();
+    chart.dispose();
+  });
+
   it('renders area fill element', () => {
     const chart = createAreaChart(container, {
       series: [
@@ -297,5 +323,25 @@ describe('createAreaChart', () => {
 
     expect(results.violations).toHaveLength(0);
     chart.dispose();
+  });
+
+  it('cancels an in-flight area transition on dispose (B9)', async () => {
+    const data = signal([{ key: 1, value: 10 }]);
+    const chart = createAreaChart(container, {
+      series: [{ data, name: 'Test' }],
+      transition: { duration: 500 },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    data.value = [{ key: 1, value: 90 }];
+    await new Promise((r) => requestAnimationFrame(r));
+
+    const fill = chart.el.querySelector('.prism-area-fill') as SVGPathElement;
+    const dMidTransition = fill.getAttribute('d');
+
+    chart.dispose();
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(fill.getAttribute('d')).toBe(dMidTransition);
   });
 });

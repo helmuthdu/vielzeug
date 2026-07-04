@@ -71,6 +71,27 @@ describe('linearScale', () => {
     expect(d0).toBeLessThanOrEqual(3);
     expect(d1).toBeGreaterThanOrEqual(97);
   });
+
+  it('produces a finite domain for a reversed (min > max) domain (B1)', () => {
+    const scale = linearScale({ domain: [100, 0], range: [0, 400] });
+
+    expect(scale.domain.every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it('produces non-NaN ticks for a reversed domain even with nice:false (Lens A fix)', () => {
+    const scale = linearScale({ domain: [100, 0], nice: false, range: [0, 400] });
+    const ticks = scale.ticks(5);
+
+    expect(ticks.length).toBeGreaterThan(0);
+    expect(ticks.every((v) => Number.isFinite(v))).toBe(true);
+  });
+
+  it('methods work correctly when destructured (D2)', () => {
+    const scale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const { map } = scale;
+
+    expect(map(5)).toBe(50);
+  });
 });
 
 // ─── timeScale ────────────────────────────────────────────────────────────────
@@ -124,6 +145,19 @@ describe('timeScale', () => {
 
     expect(nd0.getTime()).toBe(d0.getTime());
     expect(nd1.getTime()).toBe(d1.getTime());
+  });
+
+  it('does not pick a degenerate interval for a reversed date domain (B1)', () => {
+    const scale = timeScale({ domain: [d1, d0], range: [0, 500] });
+
+    expect(scale.ticks().length).toBeGreaterThan(0);
+  });
+
+  it('methods work correctly when destructured (D2)', () => {
+    const scale = timeScale({ domain: [d0, d1], nice: false, range: [0, 500] });
+    const { map } = scale;
+
+    expect(map(d0)).toBeCloseTo(0, 0);
   });
 });
 
@@ -187,6 +221,14 @@ describe('bandScale', () => {
     expect(result).toBe(0);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('unknown category'));
     warn.mockRestore();
+  });
+
+  it('methods work correctly when destructured (D2)', () => {
+    const scale = bandScale({ domain: ['A', 'B', 'C'], padding: 0, paddingOuter: 0, range: [0, 300] });
+    const { bandwidth, map } = scale;
+
+    expect(bandwidth()).toBeCloseTo(100, 0);
+    expect(map('A')).toBeCloseTo(0, 0);
   });
 });
 

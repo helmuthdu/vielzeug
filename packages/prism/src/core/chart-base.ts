@@ -5,6 +5,7 @@ import { signal } from '@vielzeug/ripple';
 import type { ChartDimensions, ChartMargin } from '../types';
 
 import { warn } from '../_dev';
+import { PrismRenderError } from '../errors';
 import { createSvgElement, setAttributes } from '../svg/element';
 import { resolveMargin } from './layout';
 import { observeResize } from './responsive';
@@ -20,6 +21,30 @@ export function createChartBase(
   container: HTMLElement,
   options: { ariaHidden?: boolean; ariaLabel?: string; margin?: Partial<ChartMargin> },
 ): ChartBase {
+  // Duck-typed rather than `instanceof Element` — an `instanceof` check would reject a
+  // structurally valid Element from a different realm (e.g. an Element created via
+  // `iframe.contentDocument.createElement(...)`, whose prototype chain terminates in that
+  // iframe's own `Element` constructor), which is a legitimate usage pattern this package
+  // doesn't otherwise restrict.
+  const isElementLike =
+    typeof container === 'object' &&
+    container !== null &&
+    container.nodeType === 1 &&
+    typeof container.appendChild === 'function' &&
+    typeof container.getBoundingClientRect === 'function';
+
+  if (!isElementLike) {
+    const received: unknown = container;
+    const kind =
+      received === null
+        ? 'null'
+        : typeof received === 'object'
+          ? (received.constructor?.name ?? 'object')
+          : typeof received;
+
+    throw new PrismRenderError(`Invalid chart configuration: \`container\` must be a DOM Element, received ${kind}.`);
+  }
+
   const margin = resolveMargin(options.margin);
   const svg = createSvgElement('svg', {
     ...(options.ariaHidden

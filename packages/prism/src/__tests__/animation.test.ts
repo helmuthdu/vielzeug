@@ -101,6 +101,25 @@ describe('resolveEasing', () => {
       expect(fn(1)).toBeCloseTo(1, 5);
     }
   });
+
+  it('falls back to ease-out for unknown easing names, not a crash (SECURITY)', () => {
+    const fn = resolveEasing('not-a-real-easing');
+
+    expect(fn(0.5)).toBeGreaterThan(0.5); // ease-out shape
+  });
+
+  it('does not resolve prototype-chain keys to an Object.prototype value (SECURITY)', () => {
+    // A bare bracket lookup on a plain object literal for these keys would return
+    // Object.prototype/Object itself instead of undefined — resolveEasing must not
+    // let a caller-supplied string reach that.
+    for (const key of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) {
+      const fn = resolveEasing(key);
+
+      expect(typeof fn).toBe('function');
+      expect(fn(0)).toBeCloseTo(0, 5);
+      expect(fn(1)).toBeCloseTo(1, 5);
+    }
+  });
 });
 
 // ─── animate ──────────────────────────────────────────────────────────────────
@@ -138,5 +157,56 @@ describe('animate', () => {
     animate(targets, { duration: 0, stagger: -999 });
     expect(el1.getAttribute('width')).toBe('50');
     expect(el2.getAttribute('width')).toBe('80');
+  });
+
+  // ─── real multi-frame branch (C3) ─────────────────────────────────────────────
+  // The tests above all short-circuit into the synchronous `duration === 0` branch.
+  // These drive the actual requestAnimationFrame loop (per-frame easing + completion).
+
+  it('interpolates over multiple real frames and reaches the final value at completion', async () => {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const targets = [{ attrs: { width: { from: 0, to: 100 } }, el }];
+    const onComplete = vi.fn();
+
+    animate(targets, { duration: 60, easing: 'linear' }, onComplete);
+
+    // One frame in: interpolating, not yet at the final value, onComplete not fired.
+    await new Promise((r) => requestAnimationFrame(r));
+
+    const midValue = Number(el.getAttribute('width'));
+
+    expect(midValue).toBeGreaterThanOrEqual(0);
+    expect(midValue).toBeLessThan(100);
+    expect(onComplete).not.toHaveBeenCalled();
+
+    // Wait past the full duration across several more real frames.
+    await new Promise((r) => setTimeout(r, 200));
+
+    expect(el.getAttribute('width')).toBe('100');
+    expect(onComplete).toHaveBeenCalledOnce();
+  });
+
+  it('stagger delays later targets relative to earlier ones', async () => {
+    const el1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const el2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    const targets = [
+      { attrs: { width: { from: 0, to: 100 } }, el: el1 },
+      { attrs: { width: { from: 0, to: 100 } }, el: el2 },
+    ];
+
+    animate(targets, { duration: 40, easing: 'linear', stagger: 40 });
+
+    // Early on, the staggered (second) target should lag behind the first.
+    await new Promise((r) => requestAnimationFrame(r));
+
+    const v1 = Number(el1.getAttribute('width'));
+    const v2 = Number(el2.getAttribute('width'));
+
+    expect(v2).toBeLessThanOrEqual(v1);
+
+    // Both reach their final value once the full staggered duration elapses.
+    await new Promise((r) => setTimeout(r, 250));
+    expect(el1.getAttribute('width')).toBe('100');
+    expect(el2.getAttribute('width')).toBe('100');
   });
 });

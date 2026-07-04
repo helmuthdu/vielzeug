@@ -11,8 +11,12 @@ export class PrismError extends Error {
   }
 }
 
-/** Thrown when a method is called on a disposed chart instance. */
+/**
+ * Reserved for future disposal-sensitive APIs on `ChartHandle`. Currently, calling
+ * `dispose()` more than once is a documented no-op rather than an error — no code path
+ * throws this yet.
+ */
 export class PrismDisposedError extends PrismError {}
 
-/** Thrown when the chart fails to render due to an invalid configuration or missing data. */
+/** Thrown when a chart is given a structurally invalid configuration it cannot render at all (e.g. a non-Element `container`). Recoverable issues like empty or malformed data emit a dev-mode warning instead — see the package docs for details. */
 export class PrismRenderError extends PrismError {}

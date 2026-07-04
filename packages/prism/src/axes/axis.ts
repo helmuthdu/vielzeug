@@ -1,23 +1,47 @@
-import type { AxisConfig, BandScale, Scale } from '../types';
+import type { AxisConfig, AxisPosition } from '../types';
 
 import { createSvgElement, removeChildren, setAttributes } from '../svg/element';
 import { createTextElement } from '../svg/text';
-
-type AnyScale = BandScale | Scale<Date> | Scale<number>;
+import { type AnyScale, mapTick } from './scale-utils';
 
 const defaultTickFormat = (v: Date | number | string): string =>
   v instanceof Date ? v.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : String(v);
 
-export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisConfig, length: number): void {
+/**
+ * Resolves the tick count an axis will render for a given scale/length — shared with
+ * `renderGrid` so gridlines line up with axis ticks. `defaultPosition` must match the
+ * one passed to the corresponding `renderAxis` call ('bottom' for xAxis, 'left' for yAxis).
+ */
+export function resolveTickCount(config: AxisConfig, length: number, defaultPosition: AxisPosition): number {
+  const position = config.position ?? defaultPosition;
+  const isHorizontal = position === 'bottom' || position === 'top';
+  const defaultTickCount = isHorizontal ? Math.max(2, Math.floor(length / 80)) : Math.max(2, Math.floor(length / 50));
+
+  return config.tickCount ?? defaultTickCount;
+}
+
+/**
+ * `defaultPosition` is applied when `config.position` is unset — pass `'bottom'` for an
+ * xAxis call and `'left'` for a yAxis call so an unconfigured axis renders on its
+ * conventional side instead of always defaulting to a horizontal bottom axis.
+ */
+export function renderAxis(
+  parent: SVGGElement,
+  scale: AnyScale,
+  config: AxisConfig,
+  length: number,
+  defaultPosition: AxisPosition = 'bottom',
+): void {
   removeChildren(parent);
 
-  const position = config.position ?? 'bottom';
+  const position = config.position ?? defaultPosition;
   const isHorizontal = position === 'bottom' || position === 'top';
   const isInverted = position === 'top' || position === 'left';
   const tickSize = 6;
   const tickDirection = isInverted ? -1 : 1;
 
   const axisLine = createSvgElement('line', {
+    'aria-hidden': 'true',
     class: 'prism-axis-line',
     x1: isHorizontal ? 0 : 0,
     x2: isHorizontal ? length : 0,
@@ -27,13 +51,13 @@ export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisCon
 
   parent.appendChild(axisLine);
 
-  const defaultTickCount = isHorizontal ? Math.max(2, Math.floor(length / 80)) : Math.max(2, Math.floor(length / 50));
-  const ticks = scale.ticks(config.tickCount ?? defaultTickCount);
+  const ticks = scale.ticks(resolveTickCount(config, length, defaultPosition));
   const format = config.tickFormat ?? defaultTickFormat;
 
   for (const tick of ticks) {
-    const pos = (scale as Scale<Date | number | string>).map(tick as Date | number | string);
+    const pos = mapTick(scale, tick);
     const tickLine = createSvgElement('line', {
+      'aria-hidden': 'true',
       class: 'prism-axis-tick',
       x1: isHorizontal ? pos : 0,
       x2: isHorizontal ? pos : tickSize * tickDirection,
@@ -44,6 +68,7 @@ export function renderAxis(parent: SVGGElement, scale: AnyScale, config: AxisCon
     parent.appendChild(tickLine);
 
     const label = createTextElement(format(tick), {
+      'aria-hidden': 'true',
       class: 'prism-axis-label',
       'dominant-baseline': isHorizontal ? (isInverted ? 'auto' : 'hanging') : 'middle',
       'text-anchor': isHorizontal ? 'middle' : isInverted ? 'end' : 'start',

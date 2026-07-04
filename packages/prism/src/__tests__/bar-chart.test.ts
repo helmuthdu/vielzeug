@@ -46,6 +46,32 @@ describe('createBarChart', () => {
     expect(container.querySelector('svg')).toBeNull();
   });
 
+  it('clears series, grid, and axis groups when reactive data becomes empty (B6)', async () => {
+    const data = signal([
+      { key: 'A', value: 10 },
+      { key: 'B', value: 20 },
+    ]);
+    const chart = createBarChart(container, {
+      series: [{ data, name: 'Reactive' }],
+      xAxis: { position: 'bottom' },
+      yAxis: { grid: true, position: 'left' },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(chart.el.querySelector('.prism-bar-series')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).not.toBeNull();
+
+    data.value = [];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelector('.prism-bar-series')).toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).toBeNull();
+    chart.dispose();
+  });
+
   it('renders multiple series', () => {
     const chart = createBarChart(container, {
       series: [
@@ -235,6 +261,27 @@ describe('createBarChart', () => {
     chart.dispose();
   });
 
+  it('warns and clamps negative values to 0 in stacked variants (B7)', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const chart = createBarChart(container, {
+      series: [
+        { color: '#3b82f6', data: [{ key: 'A', value: -5 }], name: 'S1' },
+        { color: '#10b981', data: [{ key: 'A', value: 20 }], name: 'S2' },
+      ],
+      variant: 'stacked',
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('negative values'));
+
+    const bars = chart.el.querySelectorAll('.prism-bar');
+
+    // S1's negative value is clamped to 0 — a zero-height rect, not a crash or NaN.
+    expect(Number(bars[0].getAttribute('height'))).toBe(0);
+    expect(Number(bars[0].getAttribute('height'))).not.toBeNaN();
+    chart.dispose();
+    warnSpy.mockRestore();
+  });
+
   it('renders horizontal bars with height and width > 0', () => {
     const chart = createBarChart(container, {
       series: [
@@ -365,5 +412,25 @@ describe('createBarChart', () => {
 
     expect(results.violations).toHaveLength(0);
     chart.dispose();
+  });
+
+  it('cancels an in-flight bar transition on dispose (B9)', async () => {
+    const data = signal([{ key: 'A', value: 10 }]);
+    const chart = createBarChart(container, {
+      series: [{ data, name: 'Test' }],
+      transition: { duration: 500 },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    data.value = [{ key: 'A', value: 90 }];
+    await new Promise((r) => requestAnimationFrame(r));
+
+    const rect = chart.el.querySelector('.prism-bar') as SVGRectElement;
+    const heightMidTransition = rect.getAttribute('height');
+
+    chart.dispose();
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(rect.getAttribute('height')).toBe(heightMidTransition);
   });
 });

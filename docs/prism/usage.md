@@ -65,10 +65,10 @@ data.value = [...data.value, { key: 3, value: 30 }];
 All data-bearing config fields use the `MaybeSignal<T>` type:
 
 ```ts
-type MaybeSignal<T> = T | Reactive<T>;
+type MaybeSignal<T> = Readable<T> | T;
 ```
 
-Pass a plain value when data is fixed, or a signal when it changes dynamically. The chart handles both identically.
+Pass a plain value when data is fixed, or a `@vielzeug/ripple` signal when it changes dynamically. The chart handles both identically.
 
 ## Line Charts
 
@@ -490,28 +490,38 @@ Extend any chart with custom behavior using the `ChartPlugin` interface. All cha
 ```ts
 import type { ChartPlugin } from '@vielzeug/prism';
 
-const myPlugin: ChartPlugin = {
-  install(ctx) {
-    // called once after the chart mounts
-    ctx.svg.addEventListener('click', handler);
-  },
-  dispose() {
-    // called when chart.dispose() runs
-    ctx.svg.removeEventListener('click', handler);
-  },
-};
+function createClickLogger(): ChartPlugin {
+  const handler = (e: MouseEvent) => console.log('chart clicked', e);
+  // `dispose()` receives no arguments, so capture whatever `install()` needs
+  // to clean up (here, the svg it attached the listener to) in this closure.
+  let svg: SVGSVGElement | undefined;
+
+  return {
+    install(ctx) {
+      svg = ctx.svg;
+      svg.addEventListener('click', handler);
+    },
+    dispose() {
+      svg?.removeEventListener('click', handler);
+    },
+  };
+}
 
 const chart = createLineChart(container, {
   series: [{ name: 'Revenue', data }],
-  plugins: [myPlugin],
+  plugins: [createClickLogger()],
 });
 
 // Works for pie charts too:
 const pie = createPieChart(container, {
   data,
-  plugins: [myPlugin],
+  plugins: [createClickLogger()],
 });
 ```
+
+> **Alternative to `dispose()`:** `install(ctx)` can instead listen for `ctx.disposalSignal`'s `abort` event to run cleanup, without needing to capture anything for a separate `dispose()` implementation: `ctx.disposalSignal.addEventListener('abort', () => svg.removeEventListener('click', handler))`.
+>
+> **Error isolation:** if a plugin's `install()` or `dispose()` throws, the error is logged in development and the rest of the chart — plus any other installed plugins — keeps working. A throwing plugin never aborts chart creation or teardown.
 
 ## Animations
 
@@ -552,7 +562,13 @@ setTheme({
 });
 ```
 
-`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults.
+`setTheme` writes to `document.documentElement` style, so it takes precedence over CSS file defaults. Call `resetTheme()` to clear every custom property `setTheme` can set and restore the default theme — useful for a theme-switcher's "reset" action or test teardown:
+
+```ts
+import { resetTheme } from '@vielzeug/prism';
+
+resetTheme();
+```
 
 ### Custom Theme (CSS)
 
@@ -636,7 +652,7 @@ Calling `dispose()`:
 - Cancels all reactive signal effects
 - Disconnects the `ResizeObserver`
 - Removes the SVG element, tooltip, and legend from the DOM
-- Calls `dispose()` on all plugins
+- Calls `dispose()` on all plugins (a plugin that throws is logged and skipped — it never blocks the rest of teardown)
 - Is idempotent — safe to call multiple times
 
 > **Reactivity is automatic** — charts re-render whenever signal data changes. There is no manual `update()` call needed.
@@ -647,18 +663,20 @@ Charts resize automatically when the container dimensions change. Prism uses `Re
 
 ## Devtools
 
-Import dev-only helpers from the `/devtools` subpath. Both are tree-shaken in production when `globalThis.__PRISM_PROD__` is `true`.
+Import `debugChart()` from the `/devtools` subpath to log a chart's mount, resize, and dispose events to `console.debug`. It's separate from prism's internal validation warnings (those run automatically in development, no import needed) and is tree-shaken from production bundles when this subpath isn't imported.
 
 ```ts
-import { warn, issue } from '@vielzeug/prism/devtools';
+import { createLineChart } from '@vielzeug/prism';
+import { debugChart } from '@vielzeug/prism/devtools';
 
-// Use in a plugin or custom renderer:
-if (!container.isConnected) {
-  warn('Chart container is not attached to the document.');
-}
+const chart = debugChart(createLineChart(container, config), { label: 'revenue' });
+// [prism:revenue] mounted
+// [prism:revenue] resized  600×300
+chart.dispose();
+// [prism:revenue] disposed
 ```
 
-> The `/devtools` subpath is separate from the main bundle — only import it in code paths that run in development.
+> `debugChart()` wraps and returns the same `ChartHandle` unchanged, so it drops into any `create*Chart()` call without restructuring your code.
 
 ## Framework Integration
 
@@ -668,14 +686,14 @@ Prism renders into a plain DOM element. Attach charts inside mount/unmount lifec
 
 ```tsx [React]
 import { useEffect, useRef } from 'react';
-import { createLineChart } from '@vielzeug/prism';
+import { createLineChart, type Datum } from '@vielzeug/prism';
 
-function LineChart({ data }: { data: { x: number; y: number }[] }) {
+function LineChart({ data }: { data: Datum[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const chart = createLineChart(containerRef.current!, {
-      series: [{ data }],
+      series: [{ data, name: 'Series' }],
     });
     return () => chart.dispose();
   }, [data]);
@@ -686,14 +704,14 @@ function LineChart({ data }: { data: { x: number; y: number }[] }) {
 
 ```ts [Vue 3]
 import { onMounted, onUnmounted, ref } from 'vue';
-import { createLineChart, type ChartHandle } from '@vielzeug/prism';
+import { createLineChart, type ChartHandle, type Datum } from '@vielzeug/prism';
 
-function useLineChart(data: { x: number; y: number }[]) {
+function useLineChart(data: Datum[]) {
   const containerRef = ref<HTMLElement | null>(null);
   let chart: ChartHandle | null = null;
 
   onMounted(() => {
-    chart = createLineChart(containerRef.value!, { series: [{ data }] });
+    chart = createLineChart(containerRef.value!, { series: [{ data, name: 'Series' }] });
   });
 
   onUnmounted(() => chart?.dispose());
@@ -704,13 +722,13 @@ function useLineChart(data: { x: number; y: number }[]) {
 ```svelte [Svelte]
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { createLineChart } from '@vielzeug/prism';
+  import { createLineChart, type Datum } from '@vielzeug/prism';
 
-  export let data: { x: number; y: number }[] = [];
+  export let data: Datum[] = [];
   let container: HTMLDivElement;
 
   onMount(() => {
-    const chart = createLineChart(container, { series: [{ data }] });
+    const chart = createLineChart(container, { series: [{ data, name: 'Series' }] });
     return () => chart.dispose();
   });
 </script>
@@ -730,19 +748,19 @@ Pass Ripple signals as chart data properties. Prism re-renders automatically whe
 import { signal } from '@vielzeug/ripple';
 import { createLineChart } from '@vielzeug/prism';
 
-const series = signal([
-  { x: 1, y: 10 },
-  { x: 2, y: 20 },
+const data = signal([
+  { key: 1, value: 10 },
+  { key: 2, value: 20 },
 ]);
 
 const chart = createLineChart(container, {
-  series: [{ data: series }], // signal passed directly
+  series: [{ data, name: 'Series' }], // signal passed directly
 });
 
 // Updating the signal triggers an automatic re-render:
-series.value = [
-  { x: 1, y: 15 },
-  { x: 2, y: 25 },
+data.value = [
+  { key: 1, value: 15 },
+  { key: 2, value: 25 },
 ];
 ```
 
@@ -757,10 +775,10 @@ import { createBarChart } from '@vielzeug/prism';
 
 const source = createRemoteSource({ fetch: ({ page }) => api.stats.list({ page }) });
 
-const chartData = computed(() => source.items.value.map((item) => ({ x: item.label, y: item.count })));
+const chartData = computed(() => source.items.value.map((item) => ({ key: item.label, value: item.count })));
 
 const chart = createBarChart(container, {
-  series: [{ data: chartData }],
+  series: [{ data: chartData, name: 'Series' }],
 });
 ```
 
@@ -769,5 +787,5 @@ const chart = createBarChart(container, {
 - Ensure the container element has explicit dimensions before calling a chart factory — `ResizeObserver` needs a non-zero layout size to trigger the first render.
 - Call `chart.dispose()` in your framework's unmount/cleanup phase to cancel signal effects and remove DOM nodes.
 - Prefer `signal()` from Ripple for mutable data properties — charts re-render automatically when signals change, with no manual `update()` call.
-- Use the `/devtools` subpath only in development code paths; it is tree-shaken in production.
+- Wrap a chart with `debugChart()` from the `/devtools` subpath only in development code paths; it is tree-shaken in production.
 - For SSR, skip chart creation server-side — Prism depends on DOM APIs and `ResizeObserver`. Render charts only after hydration in a `onMounted`/`useEffect` callback.

@@ -63,13 +63,21 @@ export function createSeriesInteraction(opts: SeriesInteractionOptions): ChartEv
     if (idx < 0) return;
 
     const pt = baseSeries[idx];
-
-    opts.crosshair?.show(pt.x, pt.y, area.width, area.height);
+    const crosshairX = opts.crosshair?.snap === false ? pos.x : pt.x;
+    const crosshairY = opts.crosshair?.snap === false ? pos.y : pt.y;
 
     const nearestSi = findNearestSeries(allPoints, idx, pos.y);
     const siPt = allPoints[nearestSi]?.[idx];
     const dataPoint = opts.getData()[nearestSi]?.[idx];
     const series = opts.getSeriesList()[nearestSi];
+
+    opts.crosshair?.show(
+      crosshairX,
+      crosshairY,
+      area.width,
+      area.height,
+      series && dataPoint ? `${series.name}: ${dataPoint.value}` : undefined,
+    );
 
     if (siPt && dataPoint && series) {
       opts.tooltip?.show(siPt.x + dims.margin.left, siPt.y + dims.margin.top, dataPoint, series);

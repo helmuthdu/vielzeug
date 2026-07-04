@@ -64,8 +64,9 @@ export type { TooltipState } from './interaction/tooltip';
 // SVG primitives (for plugin authors)
 export type { Point } from './svg/path';
 
-// Scaffold types (for typed plugins)
+// Scaffold types (for authors building a custom chart factory on `createChartScaffold`/
+// `createRadialScaffold` — not the type passed to `ChartPlugin.install()`, see `ChartPluginContext` for that)
 export type { ChartEventHandlers, RadialScaffoldContext, ScaffoldContext, ScaffoldGroups } from './core/chart-scaffold';
 
 // Theme utilities
-export { seriesColor, setTheme } from './theme';
+export { resetTheme, seriesColor, setTheme } from './theme';

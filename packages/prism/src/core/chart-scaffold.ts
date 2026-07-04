@@ -2,13 +2,15 @@ import type { Readable } from '@vielzeug/ripple';
 
 import { effect, scope } from '@vielzeug/ripple';
 
+import type { CrosshairState } from '../interaction/crosshair';
 import type { LegendState } from '../interaction/legend';
 import type { TooltipState } from '../interaction/tooltip';
-import type { BaseChartConfig, ChartDimensions, ChartHandle, ChartPluginContext } from '../types';
+import type { BaseChartConfig, ChartDimensions, ChartHandle, ChartPlugin, ChartPluginContext } from '../types';
 
+import { error } from '../_dev';
 import { createLegend } from '../interaction/legend';
 import { createTooltip } from '../interaction/tooltip';
-import { createSvgElement } from '../svg/element';
+import { createSvgElement, removeChildren } from '../svg/element';
 import { createChartBase } from './chart-base';
 
 export interface ScaffoldGroups {
@@ -18,10 +20,32 @@ export interface ScaffoldGroups {
   yAxis: SVGGElement;
 }
 
+/**
+ * Clears a cartesian chart's series/grid/axis groups and hides its legend/tooltip/crosshair —
+ * shared by every cartesian chart factory's "no data" early-return so a reactive series
+ * transitioning to empty leaves a fully blank chart, not a half-cleared one.
+ */
+export function clearCartesianDom(
+  groups: ScaffoldGroups,
+  legend: LegendState | null,
+  tooltip: TooltipState | null,
+  crosshair?: CrosshairState | null,
+): void {
+  removeChildren(groups.series);
+  removeChildren(groups.grid);
+  removeChildren(groups.xAxis);
+  removeChildren(groups.yAxis);
+  legend?.update([]);
+  tooltip?.hide();
+  crosshair?.hide();
+}
+
 export interface ScaffoldContext {
   chartArea: SVGGElement;
   container: HTMLElement;
   dimensions: Readable<ChartDimensions>;
+  /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
+  disposalSignal: AbortSignal;
   groups: ScaffoldGroups;
   legend: LegendState | null;
   svg: SVGSVGElement;
@@ -31,6 +55,8 @@ export interface ScaffoldContext {
 export interface RadialScaffoldContext {
   container: HTMLElement;
   dimensions: Readable<ChartDimensions>;
+  /** Aborted when the chart is disposed — renderers use this to stop rescheduling in-flight `requestAnimationFrame` transitions. */
+  disposalSignal: AbortSignal;
   legend: LegendState | null;
   svg: SVGSVGElement;
   tooltip: TooltipState | null;
@@ -53,16 +79,17 @@ function runScaffold<TCtx>(
     },
     tooltip: TooltipState | null,
     legend: LegendState | null,
+    disposalSignal: AbortSignal,
   ) => TCtx,
   renderFn: (ctx: TCtx) => ChartEventHandlers | void,
 ): ChartHandle {
   const base = createChartBase(container, { ariaLabel: config.ariaLabel, margin: config.margin });
   const tooltip = config.tooltip ? createTooltip(container, config.tooltip) : null;
   const legend = config.legend ? createLegend(container, config.legend) : null;
-  const ctx = buildCtx(base, tooltip, legend);
+  const ac = new AbortController();
+  const ctx = buildCtx(base, tooltip, legend, ac.signal);
 
   let disposed = false;
-  const ac = new AbortController();
   const events = makeEventManager(base.svg);
 
   const s = scope(() => {
@@ -76,11 +103,23 @@ function runScaffold<TCtx>(
     );
   });
 
+  const installedPlugins: ChartPlugin[] = [];
+
   if (config.plugins) {
-    const pluginCtx: ChartPluginContext = { container, dimensions: base.dimensions, svg: base.svg };
+    const pluginCtx: ChartPluginContext = {
+      container,
+      dimensions: base.dimensions,
+      disposalSignal: ac.signal,
+      svg: base.svg,
+    };
 
     for (const plugin of config.plugins) {
-      plugin.install(pluginCtx);
+      try {
+        plugin.install(pluginCtx);
+        installedPlugins.push(plugin);
+      } catch (err) {
+        error('A chart plugin threw during install() — skipping it; the rest of the chart still renders.', err);
+      }
     }
   }
 
@@ -96,7 +135,13 @@ function runScaffold<TCtx>(
       ac.abort();
       events.detach();
 
-      if (config.plugins) for (const p of config.plugins) p.dispose();
+      for (const p of installedPlugins) {
+        try {
+          p.dispose();
+        } catch (err) {
+          error('A chart plugin threw during dispose() — continuing to tear down the rest of the chart.', err);
+        }
+      }
 
       tooltip?.dispose();
       legend?.dispose();
@@ -163,9 +208,12 @@ export function createChartScaffold(
   return runScaffold(
     container,
     config,
-    (base, tooltip, legend) => {
+    (base, tooltip, legend, disposalSignal) => {
       const groups: ScaffoldGroups = {
-        grid: createSvgElement('g', { class: 'prism-grid' }),
+        // Grid lines are purely decorative relative to the root svg's own role="img"/aria-label.
+        // Axis groups are NOT hidden wholesale — they can contain a meaningful `.prism-axis-title`;
+        // `renderAxis` marks its own decorative tick lines/labels individually instead.
+        grid: createSvgElement('g', { 'aria-hidden': 'true', class: 'prism-grid' }),
         series: createSvgElement('g', { class: 'prism-series' }),
         xAxis: createSvgElement('g', { class: 'prism-x-axis' }),
         yAxis: createSvgElement('g', { class: 'prism-y-axis' }),
@@ -180,6 +228,7 @@ export function createChartScaffold(
         chartArea: base.chartArea,
         container,
         dimensions: base.dimensions,
+        disposalSignal,
         groups,
         legend,
         svg: base.svg,
@@ -202,10 +251,11 @@ export function createRadialScaffold(
   return runScaffold(
     container,
     config,
-    (base, tooltip, legend) =>
+    (base, tooltip, legend, disposalSignal) =>
       ({
         container,
         dimensions: base.dimensions,
+        disposalSignal,
         legend,
         svg: base.svg,
         tooltip,

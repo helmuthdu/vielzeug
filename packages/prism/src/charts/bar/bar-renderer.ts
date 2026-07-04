@@ -8,12 +8,16 @@ export interface BarRenderOptions {
   baselineYs?: number[];
   borderRadius: number;
   color: string;
+  /** Aborted when the owning chart is disposed — stops in-flight transitions from rescheduling. */
+  disposalSignal?: AbortSignal;
   horizontal?: boolean;
   seriesCount: number;
   seriesIndex: number;
   stacked?: boolean;
   transition?: TransitionConfig;
 }
+
+const activeBarAnimations = new WeakMap<SVGGElement, () => void>();
 
 export function renderBars(
   parent: SVGGElement,
@@ -121,12 +125,20 @@ export function renderBars(
   }
 
   if (options.transition) {
+    activeBarAnimations.get(parent)?.();
+
+    const cancels: (() => void)[] = [];
+
     if (enterTargets.length > 0) {
-      animate(enterTargets, options.transition);
+      cancels.push(animate(enterTargets, options.transition, undefined, options.disposalSignal));
     }
 
     if (updateTargets.length > 0) {
-      animate(updateTargets, { ...options.transition, stagger: 0 });
+      cancels.push(animate(updateTargets, { ...options.transition, stagger: 0 }, undefined, options.disposalSignal));
     }
+
+    activeBarAnimations.set(parent, () => {
+      for (const cancel of cancels) cancel();
+    });
   }
 }

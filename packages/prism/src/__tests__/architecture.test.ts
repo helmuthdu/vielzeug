@@ -12,7 +12,7 @@ import { createPieChart } from '../charts/pie';
 import { createSparkline } from '../charts/sparkline';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
 import { createTooltip } from '../interaction/tooltip';
-import { seriesColor, setTheme } from '../theme';
+import { resetTheme, seriesColor, setTheme } from '../theme';
 
 // ─── theme ───────────────────────────────────────────────────────────────────
 
@@ -32,30 +32,50 @@ describe('seriesColor', () => {
 });
 
 describe('setTheme', () => {
+  afterEach(() => resetTheme());
+
   it('sets --prism-color-N custom properties on documentElement', () => {
     setTheme({ colors: ['#aaa', '#bbb'] });
     expect(document.documentElement.style.getPropertyValue('--prism-color-1')).toBe('#aaa');
     expect(document.documentElement.style.getPropertyValue('--prism-color-2')).toBe('#bbb');
-    document.documentElement.style.removeProperty('--prism-color-1');
-    document.documentElement.style.removeProperty('--prism-color-2');
   });
 
   it('sets font-family', () => {
     setTheme({ fontFamily: 'sans-serif' });
     expect(document.documentElement.style.getPropertyValue('--prism-font-family')).toBe('sans-serif');
-    document.documentElement.style.removeProperty('--prism-font-family');
   });
 
   it('sets gridColor', () => {
     setTheme({ gridColor: '#e2e8f0' });
     expect(document.documentElement.style.getPropertyValue('--prism-grid-color')).toBe('#e2e8f0');
-    document.documentElement.style.removeProperty('--prism-grid-color');
   });
 
   it('sets gridOpacity', () => {
     setTheme({ gridOpacity: 0.5 });
     expect(document.documentElement.style.getPropertyValue('--prism-grid-opacity')).toBe('0.5');
-    document.documentElement.style.removeProperty('--prism-grid-opacity');
+  });
+
+  it('clears stale higher-index colors when a later call has fewer colors (D3)', () => {
+    setTheme({ colors: ['#111', '#222', '#333'] });
+    setTheme({ colors: ['#aaa'] });
+
+    expect(document.documentElement.style.getPropertyValue('--prism-color-1')).toBe('#aaa');
+    expect(document.documentElement.style.getPropertyValue('--prism-color-2')).toBe('');
+    expect(document.documentElement.style.getPropertyValue('--prism-color-3')).toBe('');
+  });
+});
+
+describe('resetTheme', () => {
+  it('clears every custom property setTheme() can set', () => {
+    setTheme({ colors: ['#aaa'], fontFamily: 'sans-serif', gridColor: '#e2e8f0', gridOpacity: 0.5 });
+    resetTheme();
+
+    const style = document.documentElement.style;
+
+    expect(style.getPropertyValue('--prism-color-1')).toBe('');
+    expect(style.getPropertyValue('--prism-font-family')).toBe('');
+    expect(style.getPropertyValue('--prism-grid-color')).toBe('');
+    expect(style.getPropertyValue('--prism-grid-opacity')).toBe('');
   });
 });
 
@@ -121,6 +141,203 @@ describe('crosshair', () => {
 
     expect(chart.el.querySelector('.prism-crosshair-h')).not.toBeNull();
     expect(chart.el.querySelector('.prism-crosshair-v')).toBeNull();
+    chart.dispose();
+  });
+
+  it('snap:false follows the raw mouse position instead of the nearest datum (B11)', () => {
+    const chart = createLineChart(container, {
+      crosshair: { snap: false },
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    // margin.left=50, so raw area-local x = clientX - marginLeft = 300 - 50 = 250 —
+    // roughly midway between the two data points (area-local x=0 and x=530), which
+    // snap:true would instead round to the nearer datum (x=0).
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
+
+    const vLine = chart.el.querySelector('.prism-crosshair-v');
+
+    expect(Number(vLine?.getAttribute('x1'))).toBeCloseTo(250, 0);
+    chart.dispose();
+  });
+
+  it('snap:true (default) snaps to the nearest datum, not the raw mouse position (B11)', () => {
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
+
+    const vLine = chart.el.querySelector('.prism-crosshair-v');
+
+    // Nearest datum to area-local x=250 is the first point at area-local x=0.
+    expect(Number(vLine?.getAttribute('x1'))).toBeCloseTo(0, 0);
+    chart.dispose();
+  });
+
+  it('marks the crosshair group as aria-hidden (B15 — decorative)', () => {
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+    });
+
+    expect(chart.el.querySelector('.prism-crosshair')?.getAttribute('aria-hidden')).toBe('true');
+    chart.dispose();
+  });
+
+  it('exposes a role="status"/aria-live="polite" live region announcing the snapped value (B14)', () => {
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    const liveRegion = chart.el.querySelector('.prism-crosshair-live');
+
+    expect(liveRegion?.getAttribute('role')).toBe('status');
+    expect(liveRegion?.getAttribute('aria-live')).toBe('polite');
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 100 }));
+
+    expect(liveRegion?.textContent).toContain('S:');
+    chart.dispose();
+  });
+
+  it('clears the crosshair live region on mouseleave (Lens A fix)', () => {
+    const chart = createLineChart(container, {
+      crosshair: true,
+      series: [
+        {
+          data: [
+            { key: 1, value: 10 },
+            { key: 2, value: 20 },
+          ],
+          name: 'S',
+        },
+      ],
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 200, clientY: 100 }));
+
+    const liveRegion = chart.el.querySelector('.prism-crosshair-live');
+
+    expect(liveRegion?.textContent).toContain('S:');
+
+    chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(liveRegion?.textContent).toBe('');
+    chart.dispose();
+  });
+});
+
+// ─── decorative sub-elements — aria-hidden (B15) ───────────────────────────────
+
+describe('decorative sub-elements — aria-hidden (B15)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => container.remove());
+
+  it('marks grid, axis line, tick lines, and tick labels as aria-hidden, but not the axis title', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+      xAxis: { grid: true, label: 'Time' },
+      yAxis: { label: 'Value' },
+    });
+
+    expect(chart.el.querySelector('.prism-grid')?.getAttribute('aria-hidden')).toBe('true');
+    expect(chart.el.querySelector('.prism-axis-line')?.getAttribute('aria-hidden')).toBe('true');
+    expect(chart.el.querySelector('.prism-axis-tick')?.getAttribute('aria-hidden')).toBe('true');
+    expect(chart.el.querySelector('.prism-axis-label')?.getAttribute('aria-hidden')).toBe('true');
+    expect(chart.el.querySelector('.prism-axis-title')?.hasAttribute('aria-hidden')).toBe(false);
+    chart.dispose();
+  });
+});
+
+// ─── tooltip — ARIA live region (B14) ───────────────────────────────────────────
+
+describe('tooltip — ARIA live region (B14)', () => {
+  let container: HTMLElement;
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    Object.defineProperty(container, 'getBoundingClientRect', {
+      value: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+    });
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => container.remove());
+
+  it('tooltip element has role="status" and aria-live="polite"', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+      tooltip: true,
+    });
+
+    const tooltipEl = chart.el.parentElement?.querySelector('.prism-tooltip');
+
+    expect(tooltipEl?.getAttribute('role')).toBe('status');
+    expect(tooltipEl?.getAttribute('aria-live')).toBe('polite');
+    chart.dispose();
+  });
+
+  it('clears the tooltip live region text on hide (Lens A fix)', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'S' }],
+      tooltip: true,
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 }));
+
+    const tooltipEl = chart.el.parentElement?.querySelector('.prism-tooltip') as HTMLElement;
+
+    expect(tooltipEl.textContent).toContain('S:');
+
+    chart.el.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+    expect(tooltipEl.textContent).toBe('');
     chart.dispose();
   });
 });
@@ -275,6 +492,74 @@ describe('createPieChart — scaffold lifecycle', () => {
     expect(dispose).toHaveBeenCalledOnce();
   });
 
+  it('passes disposalSignal to plugins (D4)', () => {
+    const install = vi.fn();
+    const chart = createPieChart(container, {
+      data: [{ value: 100 }],
+      plugins: [{ dispose: vi.fn(), install }],
+      transition: { duration: 0 },
+    });
+
+    expect(install).toHaveBeenCalledWith(expect.objectContaining({ disposalSignal: chart.disposalSignal }));
+    chart.dispose();
+  });
+
+  it('isolates a throwing plugin instead of aborting chart creation (D4)', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const goodInstall = vi.fn();
+    const goodDispose = vi.fn();
+    const badDispose = vi.fn();
+
+    const chart = createPieChart(container, {
+      data: [{ value: 100 }],
+      plugins: [
+        {
+          dispose: badDispose,
+          install: () => {
+            throw new Error('boom');
+          },
+        },
+        { dispose: goodDispose, install: goodInstall },
+      ],
+      transition: { duration: 0 },
+    });
+
+    expect(goodInstall).toHaveBeenCalledOnce();
+    expect(errorSpy).toHaveBeenCalled();
+    chart.dispose();
+    expect(goodDispose).toHaveBeenCalledOnce();
+    expect(badDispose).not.toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it('isolates a throwing plugin dispose() so the rest of teardown still completes (Lens A fix)', () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const goodDispose = vi.fn();
+
+    const chart = createPieChart(container, {
+      data: [{ value: 100 }],
+      plugins: [
+        {
+          dispose: () => {
+            throw new Error('boom on dispose');
+          },
+          install: vi.fn(),
+        },
+        { dispose: goodDispose, install: vi.fn() },
+      ],
+      tooltip: true,
+      transition: { duration: 0 },
+    });
+
+    expect(() => chart.dispose()).not.toThrow();
+    expect(errorSpy).toHaveBeenCalled();
+    // Teardown continues past the throwing plugin: sibling plugin disposed, tooltip DOM removed.
+    expect(goodDispose).toHaveBeenCalledOnce();
+    expect(container.querySelector('.prism-tooltip')).toBeNull();
+    expect(container.querySelector('svg')).toBeNull();
+    errorSpy.mockRestore();
+  });
+
   it('reactive signal re-renders slices', async () => {
     const data = signal([{ value: 50 }, { value: 50 }]);
     const chart = createPieChart(container, { data, transition: { duration: 0 } });
@@ -416,10 +701,8 @@ describe('tooltip — custom render function', () => {
     const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
 
     expect(tooltip).not.toBeNull();
-
-    if (render.mock.calls.length > 0) {
-      expect(tooltip.innerHTML).toContain('Rev');
-    }
+    expect(render).toHaveBeenCalled();
+    expect(tooltip.textContent).toContain('Rev');
 
     chart.dispose();
   });
@@ -524,7 +807,7 @@ describe('createSparkline — interaction cleanup', () => {
 // ─── animate utility ─────────────────────────────────────────────────────────
 
 describe('animate', () => {
-  it('returns void (not a Promise)', () => {
+  it('returns a cancel function (not a Promise)', () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
 
@@ -533,7 +816,8 @@ describe('animate', () => {
 
     const result = animate([{ attrs: { width: { from: 0, to: 100 } }, el: rect }], { duration: 0 });
 
-    expect(result).toBeUndefined();
+    expect(typeof result).toBe('function');
+    expect(result).not.toBeInstanceOf(Promise);
     svg.remove();
   });
 
@@ -591,12 +875,33 @@ describe('TooltipConfig.sanitize', () => {
 
     chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
 
-    if (sanitize.mock.calls.length > 0) {
-      const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
+    expect(sanitize).toHaveBeenCalled();
 
-      expect(tooltip.innerHTML).not.toContain('<script>');
-    }
+    const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
 
+    expect(tooltip.innerHTML).not.toContain('<script>');
+    expect(tooltip.innerHTML).toContain('Rev');
+
+    chart.dispose();
+  });
+
+  it('SECURITY: falls back to plain text (not innerHTML) when render is set without sanitize (B10)', () => {
+    const render = (_pt: Datum, s: Series) => `<img src=x onerror="window.__pwned=true">${s.name}`;
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 42 }], name: 'Rev' }],
+      tooltip: { render },
+    });
+
+    Object.defineProperty(chart.el, 'getBoundingClientRect', {
+      value: () => ({ height: 300, left: 0, top: 0, width: 600 }),
+    });
+
+    chart.el.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 100, clientY: 150 }));
+
+    const tooltip = container.querySelector('.prism-tooltip') as HTMLElement;
+
+    expect(tooltip.querySelector('img')).toBeNull();
+    expect(tooltip.textContent).toContain('Rev');
     chart.dispose();
   });
 });

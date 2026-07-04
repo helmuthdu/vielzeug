@@ -5,8 +5,11 @@ import { computeAreaPoints } from '../charts/area/area-renderer';
 import { computePoints } from '../charts/line/line-renderer';
 import { arcCentroid, computeArcs } from '../charts/pie/pie-renderer';
 import { buildXScale, buildYScale } from '../core/cartesian-scales';
+import { createChartBase } from '../core/chart-base';
 import { chartArea, resolveMargin } from '../core/layout';
+import { PrismRenderError } from '../errors';
 import { nearestPointX } from '../interaction/hit-test';
+import { bandScale } from '../scales/band';
 import { linearScale } from '../scales/linear';
 import { areaPath, linePath, monotonePath, stepPath } from '../svg/path';
 import { seriesColor } from '../theme';
@@ -424,5 +427,155 @@ describe('computePoints — string-key warning', () => {
 
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
+  });
+});
+
+// ─── computeAreaPoints — string-key warning (B8) ───────────────────────────────────────
+
+describe('computeAreaPoints — string-key warning', () => {
+  it('emits warn once when any datum has a string key', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computeAreaPoints(
+      [
+        { key: 'A', value: 10 },
+        { key: 'B', value: 20 },
+      ],
+      xScale as Parameters<typeof computeAreaPoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('string keys'));
+    warnSpy.mockRestore();
+  });
+
+  it('does not warn when all keys are numbers', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const xScale = linearScale({ domain: [0, 10], nice: false, range: [0, 100] });
+    const yScale = linearScale({ domain: [0, 100], nice: false, range: [300, 0] });
+
+    computeAreaPoints(
+      [
+        { key: 1, value: 10 },
+        { key: 2, value: 20 },
+      ],
+      xScale as Parameters<typeof computeAreaPoints>[1],
+      yScale,
+    );
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+});
+
+// ─── buildXScale / buildYScale — NaN/Infinity guard (B1) ───────────────────────────────
+
+describe('buildXScale — NaN/Infinity guard', () => {
+  it('falls back to [0,1] domain and warns on NaN x value', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildXScale([1, Number.NaN, 3], 300);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NaN or Infinity'));
+    expect(scale.domain.every((v) => Number.isFinite(v as number))).toBe(true);
+    warnSpy.mockRestore();
+  });
+
+  it('falls back to [0,1] domain and warns on Infinity x value', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildXScale([1, Number.POSITIVE_INFINITY], 300);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NaN or Infinity'));
+    expect(scale.domain.every((v) => Number.isFinite(v as number))).toBe(true);
+    warnSpy.mockRestore();
+  });
+});
+
+describe('buildYScale — NaN/Infinity guard', () => {
+  it('falls back to [0,1] domain and warns on NaN y value', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const scale = buildYScale([1, Number.NaN, 3], 300);
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('NaN or Infinity'));
+    expect(scale.domain.every((v) => Number.isFinite(v))).toBe(true);
+    warnSpy.mockRestore();
+  });
+});
+
+// ─── linearScale — reversed domain + ticks(0)/ticks(1) edge cases (B1, B2) ─────────────
+
+describe('linearScale — reversed domain', () => {
+  it('produces a finite, non-NaN domain when min > max', () => {
+    const scale = linearScale({ domain: [100, 0], range: [0, 400] });
+
+    expect(scale.domain.every((v) => Number.isFinite(v))).toBe(true);
+    expect(scale.ticks().every((v) => Number.isFinite(v))).toBe(true);
+  });
+});
+
+describe('linearScale — ticks(0) / ticks(1)', () => {
+  it('ticks(0) returns an empty array', () => {
+    const scale = linearScale({ domain: [0, 100], range: [0, 400] });
+
+    expect(scale.ticks(0)).toEqual([]);
+  });
+
+  it('ticks(1) returns a single tick, not Infinity/NaN', () => {
+    const scale = linearScale({ domain: [0, 100], range: [0, 400] });
+    const ticks = scale.ticks(1);
+
+    expect(ticks).toHaveLength(1);
+    expect(Number.isFinite(ticks[0])).toBe(true);
+  });
+});
+
+describe('bandScale — ticks(0)', () => {
+  it('returns an empty array for an explicit 0, not the full domain', () => {
+    const scale = bandScale({ domain: ['a', 'b', 'c'], range: [0, 300] });
+
+    expect(scale.ticks(0)).toEqual([]);
+  });
+
+  it('returns the full domain when count is omitted', () => {
+    const scale = bandScale({ domain: ['a', 'b', 'c'], range: [0, 300] });
+
+    expect(scale.ticks()).toEqual(['a', 'b', 'c']);
+  });
+});
+
+// ─── createChartBase — invalid container (B13) ─────────────────────────────────────────
+
+describe('createChartBase — invalid container', () => {
+  it('throws PrismRenderError for a non-Element container', () => {
+    expect(() => createChartBase({} as unknown as HTMLElement, {})).toThrow(PrismRenderError);
+  });
+
+  it('throws PrismRenderError for a null container', () => {
+    expect(() => createChartBase(null as unknown as HTMLElement, {})).toThrow(PrismRenderError);
+  });
+
+  it('throws PrismRenderError for an array container', () => {
+    expect(() => createChartBase([] as unknown as HTMLElement, {})).toThrow(PrismRenderError);
+  });
+
+  it('accepts a structurally element-like object that fails instanceof Element (e.g. cross-realm)', () => {
+    // Simulates an Element from a different JS realm (iframe contentDocument, etc.) —
+    // `instanceof Element` would reject this even though it behaves like a real Element.
+    // `getComputedStyle` is a real jsdom global that only accepts genuine jsdom nodes, so it's
+    // stubbed here too — this test targets the container-validation guard specifically, not
+    // full jsdom fidelity of a truly cross-realm object.
+    const getComputedStyleSpy = vi
+      .spyOn(globalThis, 'getComputedStyle')
+      .mockReturnValue({ position: 'relative' } as CSSStyleDeclaration);
+    const fakeRealmElement = {
+      appendChild: () => {},
+      getBoundingClientRect: () => ({ height: 300, width: 600, x: 0, y: 0 }),
+      nodeType: 1,
+    } as unknown as HTMLElement;
+
+    expect(() => createChartBase(fakeRealmElement, {})).not.toThrow();
+    getComputedStyleSpy.mockRestore();
   });
 });

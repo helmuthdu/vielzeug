@@ -4,10 +4,10 @@ import type { Point } from '../../svg/path';
 import type { AreaChartConfig, ChartHandle } from '../../types';
 
 import { warn } from '../../_dev';
-import { renderAxis } from '../../axes/axis';
+import { renderAxis, resolveTickCount } from '../../axes/axis';
 import { renderGrid } from '../../axes/grid';
 import { buildXScale, buildYScale } from '../../core/cartesian-scales';
-import { createChartScaffold } from '../../core/chart-scaffold';
+import { clearCartesianDom, createChartScaffold } from '../../core/chart-scaffold';
 import { chartArea } from '../../core/layout';
 import { createCrosshair } from '../../interaction/crosshair';
 import { createSeriesInteraction } from '../../interaction/series-interaction';
@@ -29,6 +29,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
 
     if (allX.length === 0) {
       warn('createAreaChart: no data');
+      clearCartesianDom(groups, legend, tooltip, crosshair);
 
       return;
     }
@@ -41,16 +42,34 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
     const yScale = buildYScale(allY, area.height);
     const baselineY = yScale.map(0);
 
-    if (config.yAxis?.grid) renderGrid(groups.grid, yScale, config.yAxis.grid, area.width, 'horizontal');
+    if (config.yAxis?.grid) {
+      renderGrid(
+        groups.grid,
+        yScale,
+        config.yAxis.grid,
+        area.width,
+        'horizontal',
+        resolveTickCount(config.yAxis, area.height, 'left'),
+      );
+    }
 
-    if (config.xAxis?.grid) renderGrid(groups.grid, xScale, config.xAxis.grid, area.height, 'vertical');
+    if (config.xAxis?.grid) {
+      renderGrid(
+        groups.grid,
+        xScale,
+        config.xAxis.grid,
+        area.height,
+        'vertical',
+        resolveTickCount(config.xAxis, area.width, 'bottom'),
+      );
+    }
 
     if (config.xAxis) {
       groups.xAxis.setAttribute('transform', `translate(0,${area.height})`);
-      renderAxis(groups.xAxis, xScale, config.xAxis, area.width);
+      renderAxis(groups.xAxis, xScale, config.xAxis, area.width, 'bottom');
     }
 
-    if (config.yAxis) renderAxis(groups.yAxis, yScale, config.yAxis, area.height);
+    if (config.yAxis) renderAxis(groups.yAxis, yScale, config.yAxis, area.height, 'left');
 
     while (groups.series.children.length > seriesList.length) {
       groups.series.removeChild(groups.series.lastChild!);
@@ -74,6 +93,7 @@ export function createAreaChart(container: HTMLElement, config: AreaChartConfig)
       renderArea(group, points, baselineY, {
         color: seriesColor(i, series.color),
         curve: series.curve ?? 'linear',
+        disposalSignal: ctx.disposalSignal,
         fillOpacity: series.fillOpacity ?? 0.3,
         showLine: series.showLine !== false,
         transition: config.transition,

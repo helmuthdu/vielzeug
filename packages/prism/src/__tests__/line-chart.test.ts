@@ -56,6 +56,18 @@ describe('createLineChart', () => {
     expect(() => chart.dispose()).not.toThrow();
   });
 
+  it('disposed reflects lifecycle state', () => {
+    const chart = createLineChart(container, {
+      series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
+    });
+
+    expect(chart.disposed).toBe(false);
+    chart.dispose();
+    expect(chart.disposed).toBe(true);
+    chart.dispose();
+    expect(chart.disposed).toBe(true);
+  });
+
   it('does not expose update() on ChartHandle', () => {
     const chart = createLineChart(container, {
       series: [{ data: [{ key: 1, value: 10 }], name: 'Test' }],
@@ -80,6 +92,32 @@ describe('createLineChart', () => {
       { key: 2, value: 20 },
       { key: 3, value: 30 },
     ];
+    chart.dispose();
+  });
+
+  it('clears series, grid, and axis groups when reactive data becomes empty (B6)', async () => {
+    const data = signal([
+      { key: 1, value: 10 },
+      { key: 2, value: 20 },
+    ]);
+    const chart = createLineChart(container, {
+      series: [{ data, name: 'Reactive' }],
+      xAxis: { grid: true },
+      yAxis: { grid: true },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(chart.el.querySelector('.prism-line-series')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).not.toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).not.toBeNull();
+
+    data.value = [];
+    await new Promise((r) => requestAnimationFrame(r));
+    await new Promise((r) => requestAnimationFrame(r));
+
+    expect(chart.el.querySelector('.prism-line-series')).toBeNull();
+    expect(chart.el.querySelector('.prism-grid-line')).toBeNull();
+    expect(chart.el.querySelector('.prism-axis-tick')).toBeNull();
     chart.dispose();
   });
 
@@ -191,11 +229,18 @@ describe('createLineChart', () => {
     // Wait one RAF for initial render
     await new Promise((r) => requestAnimationFrame(r));
 
+    // x=300 falls within the chart area (margin.left=50 .. width-margin.right=580), so this
+    // deterministically hits the series — not a "may or may not fire" hope.
     const mouseMove = new MouseEvent('mousemove', { bubbles: true, clientX: 300, clientY: 150 });
 
     chart.el.dispatchEvent(mouseMove);
-    // onHover may or may not fire depending on hit test in jsdom (no layout)
-    // Just verify no throw and dispose works
+
+    expect(onHover).toHaveBeenCalledWith(
+      expect.objectContaining({
+        datum: expect.objectContaining({ value: expect.any(Number) }),
+        series: expect.objectContaining({ name: 'Test' }),
+      }),
+    );
     chart.dispose();
   });
 
@@ -329,5 +374,30 @@ describe('createLineChart', () => {
     expect(receivedCtx?.dimensions).toBeDefined();
     expect(receivedCtx?.svg).toBe(chart.el);
     chart.dispose();
+  });
+
+  it('cancels an in-flight line transition on dispose (B9)', async () => {
+    // The first-ever render has no prior `d` to tween from, so it draws synchronously —
+    // a reactive update on an already-mounted chart is what actually schedules the
+    // requestAnimationFrame loop the transition (and this cancellation) targets.
+    const data = signal([{ key: 1, value: 10 }]);
+    const chart = createLineChart(container, {
+      series: [{ data, name: 'Test' }],
+      transition: { duration: 500 },
+    });
+
+    await new Promise((r) => requestAnimationFrame(r));
+    data.value = [{ key: 1, value: 90 }];
+    await new Promise((r) => requestAnimationFrame(r));
+
+    const path = chart.el.querySelector('.prism-line-path') as SVGPathElement;
+    const dMidTransition = path.getAttribute('d');
+
+    chart.dispose();
+
+    // If the rAF loop weren't cancelled by disposalSignal, this next frame would still
+    // mutate `d` on the now-detached path.
+    await new Promise((r) => requestAnimationFrame(r));
+    expect(path.getAttribute('d')).toBe(dMidTransition);
   });
 });

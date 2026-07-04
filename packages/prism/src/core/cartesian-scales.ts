@@ -15,6 +15,12 @@ export function buildXScale(allX: (Date | number)[], width: number): Scale<Date>
     return linearScale({ domain: [0, 1], range: [0, width] });
   }
 
+  if (allX.some((v) => typeof v === 'number' && !Number.isFinite(v))) {
+    warn('buildXScale: one or more x values are NaN or Infinity — check upstream data for invalid arithmetic.');
+
+    return linearScale({ domain: [0, 1], range: [0, width] });
+  }
+
   if (allX[0] instanceof Date) {
     const dates = allX as Date[];
     const minMs = Math.min(...dates.map(Number));
@@ -39,6 +45,12 @@ export function buildYScale(allY: number[], height: number, includeZero = true):
     warn(
       'buildYScale: one or more y values are null or undefined — data must use the Datum shape { key, value }. Did you pass { x, y } instead?',
     );
+
+    return linearScale({ domain: [0, 1], range: [height, 0] });
+  }
+
+  if (allY.some((v) => !Number.isFinite(v))) {
+    warn('buildYScale: one or more y values are NaN or Infinity — check upstream data for invalid arithmetic.');
 
     return linearScale({ domain: [0, 1], range: [height, 0] });
   }
