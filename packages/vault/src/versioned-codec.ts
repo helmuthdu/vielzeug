@@ -39,6 +39,10 @@ export type CodecVersion = {
  * - **Migration note:** records written by any other codec (including `defaultCodec`) lack
  *   the `__v` field and will decode as `undefined` — they will be treated as missing/expired.
  *   Perform a data migration or clear the store before switching to a versioned codec.
+ * - **Secondary index caveat:** the `{ __d, __v }` envelope replaces the default
+ *   `{ value, expiresAt? }` shape, so IndexedDB secondary indexes (created via `.index()`
+ *   with keyPath `value.<field>`) silently stop matching. Don't combine a versioned codec
+ *   with `.index()` on the same table.
  */
 export function createVersionedCodec(versions: CodecVersion[], currentVersion: number): VaultCodec {
   if (versions.length === 0) {

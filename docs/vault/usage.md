@@ -262,11 +262,11 @@ const deleted = await db
 
 Returns the number of deleted records.
 
-## Lazy Iteration (IndexedDB)
+## Lazy Iteration (IndexedDB / Memory)
 
-`iterate(table)` is available on the `IndexedDbAdapter` returned by `createIndexedDB`. It streams records via an IDB cursor — the full table is never loaded into memory.
+`iterate(table)` is available on `IndexedDbAdapter` (returned by `createIndexedDB`) and `MemoryAdapter` (returned by `createMemory`). On IndexedDB it streams records via an IDB cursor — the full table is never loaded into memory.
 
-For memory and web storage adapters, use `getAll()` or `query().toArray()` instead.
+`createLocalStorage` / `createSessionStorage` do not have `iterate()` — use `getAll()` or `query().toArray()` instead.
 
 ```ts
 import { createIndexedDB, table } from '@vielzeug/vault';
@@ -280,7 +280,7 @@ for await (const user of db.iterate('users')) {
 }
 ```
 
-Expired records are skipped automatically. Each call opens a fresh readonly IDB transaction.
+Expired records are skipped automatically. Each call to `iterate()` on `IndexedDbAdapter` opens a fresh readonly IDB transaction.
 
 ## Reactive Reads
 

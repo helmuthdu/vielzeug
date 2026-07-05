@@ -770,6 +770,27 @@ describe('IDB batch count() with ad-hoc TTL', () => {
   });
 });
 
+/* -------------------- keys() with ad-hoc TTL on a non-defaultTtl table -------------------- */
+
+describe('IDB keys() with ad-hoc TTL', () => {
+  test('keys() excludes ad-hoc TTL-expired records even without schema defaultTtl', async () => {
+    const db2 = createIndexedDB({ name: 'IDB-keys-ttl', schema: userSchema, version: 1 });
+
+    try {
+      await db2.put('users', { id: 1, name: 'Ephemeral' }, ttl.ms(1));
+      await db2.put('users', { id: 2, name: 'Permanent' });
+
+      await delay(5); // id:1 expires
+
+      // keys() takes the fast store.getAllKeys() path since `users` has no schema-level
+      // defaultTtl — it must still exclude keys of ad-hoc TTL-expired records.
+      expect(await db2.keys('users')).toEqual([2]);
+    } finally {
+      db2.dispose();
+    }
+  });
+});
+
 /* -------------------- defineMigration -------------------- */
 
 describe('defineMigration', () => {

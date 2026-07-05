@@ -55,6 +55,13 @@ export type TableBuilder<
   /**
    * Register a secondary index on the given field. Can be chained multiple times.
    * Only used by the IndexedDB adapter; other adapters fall back to in-memory filtering.
+   *
+   * **Custom codec caveat:** the IndexedDB adapter creates the index with keyPath
+   * `value.<field>`, which assumes the default `{ value, expiresAt? }` storage envelope
+   * (see `VaultCodec`). A custom codec that changes the top-level shape (e.g.
+   * `createVersionedCodec`, or a compact/encrypted format) breaks index push-down silently —
+   * queries on the indexed field return empty results instead of throwing. Avoid combining
+   * `.index()` with a non-default codec, or design the custom codec to preserve `value.<field>`.
    */
   index: <F extends keyof T & string>(field: F) => TableBuilder<T, Key>;
   /** Set a default TTL (ms) applied to all `put`/`putAll` calls that don't specify one explicitly. */
@@ -203,6 +210,11 @@ export type BaseAdapterOptions<S extends AnySchema> = {
    * Pluggable serialization codec. Provide a custom implementation to change how values
    * are encoded at rest (e.g. compact keys, encryption, msgpack).
    * Defaults to the standard `{ value, expiresAt? }` JSON envelope.
+   *
+   * **IndexedDB + `.index()` caveat:** secondary indexes are created with keyPath
+   * `value.<field>`, which assumes the default envelope shape. A custom codec that changes
+   * the top-level shape breaks index push-down silently (queries return empty results
+   * instead of throwing) — see `TableBuilder.index`.
    */
   codec?: VaultCodec;
   /** Structured logger. A /rune Logger satisfies VaultLogger directly. */

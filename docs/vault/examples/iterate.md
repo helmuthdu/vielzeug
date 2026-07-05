@@ -58,7 +58,7 @@ async function sendToRemote(_entry: LogEntry): Promise<void> {
 
 ### Pitfalls
 
-- `iterate()` is only available on `IndexedDbAdapter` — the type returned by `createIndexedDB`. Memory and web storage adapters do not have this method. For those backends, use `db.getAll(table)` or `db.query(table).toArray()`.
+- `iterate()` is available on `IndexedDbAdapter` and `MemoryAdapter` (returned by `createIndexedDB` and `createMemory`). `createLocalStorage` / `createSessionStorage` do not have this method — use `db.getAll(table)` or `db.query(table).toArray()` there.
 - Each call to `db.iterate(table)` opens a **new readonly IDB transaction**. Two concurrent `iterate()` loops over the same table are independent — they do not share a transaction or interfere with each other.
 - Doing async work between iterations (e.g., `await sendToRemote(entry)`) is safe because the IDB cursor is advanced before the yield, keeping the transaction alive. Do not assume this is true for raw IDB cursors.
 - Calling `db.iterate(table)` after `db.dispose()` throws `VaultDisposedError` synchronously on the first `next()` call.
@@ -68,4 +68,4 @@ async function sendToRemote(_entry: LogEntry): Promise<void> {
 - [Querying](./querying.md)
 - [TTL and Pruning](./ttl.md)
 - [API Reference — IndexedDbAdapter](/vault/api.md#indexeddbadapter)
-- [IndexedDB](/vault/usage.md#lazy-iteration-indexeddb)
+- [Usage Guide — Lazy Iteration](/vault/usage.md#lazy-iteration-indexeddb-memory)

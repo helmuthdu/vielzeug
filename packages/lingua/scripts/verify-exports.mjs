@@ -21,20 +21,20 @@ const main = async () => {
 
     try {
       await import(pathToFileURL(path.join(packageRoot, esmEntry)).href);
-    } catch (error) {
-      failures.push(`${specifier} (import → ${esmEntry}): ${error.message}`);
+    } catch (/** @type {any} */ error) {
+      failures.push(`${specifier} (import → ${esmEntry}): ${/** @type {Error} */ (error).message}`);
     }
 
     try {
       requireFromPackage(path.join(packageRoot, cjsEntry));
-    } catch (error) {
-      failures.push(`${specifier} (require → ${cjsEntry}): ${error.message}`);
+    } catch (/** @type {any} */ error) {
+      failures.push(`${specifier} (require → ${cjsEntry}): ${/** @type {Error} */ (error).message}`);
     }
 
     try {
       await access(path.join(packageRoot, typesEntry));
-    } catch (error) {
-      failures.push(`${specifier} (types → ${typesEntry}): ${error.message}`);
+    } catch (/** @type {any} */ error) {
+      failures.push(`${specifier} (types → ${typesEntry}): ${/** @type {Error} */ (error).message}`);
     }
   }
 

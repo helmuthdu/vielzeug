@@ -15,8 +15,10 @@ exports:
     table,
     ttl,
     defaultCodec,
+    isExpired,
     scheduleExpiredPrune,
     defineMigration,
+    toReadableStream,
     VaultError,
     VaultDisposedError,
     VaultMigrationError,
@@ -119,6 +121,7 @@ void adults;
 - **`update(table, key, changes)`** — shallow-merge partial fields; **`upsert`** for read-modify-write; **`getOrDefault`** for read-or-insert
 - **`delete`** / **`deleteMany`** / **`clear`** — single, bulk, or full-table deletion
 - **`query(table)`** — lazy `QueryBuilder` with `.filter()`, `.equals()`, `.between()`, `.startsWith()`, `.orderBy()`, `.limit()`, `.offset()`; terminal `.toArray()` / `.first()` / `.delete()`
+- **`table<T>('id').index(field)`** — secondary indexes (IndexedDB only); a leading `equals`/`between`/`startsWith` on an indexed field uses a native IDB index instead of a full-table scan
 - **`observe(table, fn, opts?)`** — subscribe to table changes; fires immediately by default (`{ immediate: false }` to skip); returns unsubscribe function
 - **`observeMany(tables, fn, opts?)`** — combined snapshot across multiple tables; `{ eager: true }` fires on first partial snapshot; coalesces batch writes
 - **`watch(table)`** — `AsyncIterable` of fresh snapshots; `mode: 'latest'` drops intermediates; `signal` stops from outside

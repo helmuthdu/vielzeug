@@ -596,20 +596,15 @@ export function createIndexedDB<S extends AnySchema>(options: IndexedDbOptions<S
 
     getAll: (table) => withStore(table, 'readonly', (s) => getAllFromStore<RecordOf<S, typeof table>>(s, decode)),
 
-    // R1: Fast key-only fetch via store.getAllKeys(). For tables with schema-level TTL
-    // we fall back to full record fetch to correctly exclude expired entries.
+    // Ad-hoc per-put TTLs can be attached regardless of schema-level defaultTtl (same caveat as
+    // count()), so we cannot take the O(1) store.getAllKeys() shortcut unconditionally — every
+    // record must be decoded to exclude TTL-expired entries correctly.
     getAllKeys: (table) =>
       withStore(table, 'readonly', async (s) => {
-        if (schema[table].defaultTtl) {
-          // TTL table: must check each record for expiry — keys() still O(n).
-          const records = await getAllFromStore<RecordOf<S, typeof table>>(s, decode);
-          const keyField = schema[table].key;
+        const records = await getAllFromStore<RecordOf<S, typeof table>>(s, decode);
+        const keyField = schema[table].key;
 
-          return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
-        }
-
-        // Non-TTL table: store.getAllKeys() is O(1) IDB engine call.
-        return idbReq<IDBValidKey[]>(s.getAllKeys()).then((keys) => keys as KeyOf<S, typeof table>[]);
+        return records.map((r) => (r as Record<string, unknown>)[keyField] as KeyOf<S, typeof table>);
       }),
 
     getByIndexRange: (table, field, range) =>

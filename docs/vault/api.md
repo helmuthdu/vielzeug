@@ -27,7 +27,7 @@ description: Complete API reference for Vault adapters, schema helpers, query bu
 | `db.isEmpty(table)`                   | Returns `true` when the table has no live records              | Async            | Treats TTL-expired records as absent — consistent with `count()`                    |
 | `db.observe(table, fn, opts?)`        | Subscribe to table changes — fires immediately on registration | Sync             | Pass `{ immediate: false }` to skip the initial snapshot; returns `Unsubscribe`     |
 | `db.watch(table, opts?)`              | Async iterable of table snapshots                              | Async            | Subscribes eagerly on `[Symbol.asyncIterator]()`; always pass `signal` or `break`   |
-| `db.iterate(table)`                   | Cursor-based async iteration — IDB only                        | Async            | Not available on memory or web storage adapters                                     |
+| `db.iterate(table)`                   | Lazy async iteration over live records                          | Async            | Available on IndexedDB and Memory adapters only — not on LocalStorage/SessionStorage |
 | `toReadableStream(iterable)`          | Convert `db.watch()` to a `ReadableStream`                     | Sync             | Always cancel the stream when done to stop the underlying observer                  |
 | `isExpired(expiresAt)`                | Check if an epoch-ms timestamp has passed                      | Sync             | Safe to call with `undefined` — returns `false`                                     |
 | `db.update(table, key, changes)`      | Merge fields into an existing record                           | Async            | Returns `undefined` when the key does not exist — use `upsert` for insert-or-update |
@@ -84,6 +84,8 @@ const schema = { products: table<Product>('id').index('category').index('name') 
 // <ore-icon name="x" size="16"></ore-icon> throws VaultError: table index "category" is already registered
 const bad = table<Product>('id').index('category').index('category');
 ```
+
+> **Custom codec caveat:** the IndexedDB adapter creates each index with keyPath `value.<field>`, which assumes the default `{ value, expiresAt? }` storage envelope (see [`VaultCodec`](#vaultcodec)). A custom codec that changes the top-level shape — including [`createVersionedCodec`](#createversionedcodec) — breaks index push-down silently: queries on the indexed field return empty results instead of throwing. Don't combine `.index()` with a non-default codec unless the codec preserves `value.<field>`.
 
 ## TTL Helper
 
@@ -248,7 +250,32 @@ for await (const user of db.iterate('users')) {
 }
 ```
 
-> `iterate` is only available on the IndexedDB adapter — memory and web storage adapters use `getAll()` or `query().toArray()` for full-table reads.
+> `iterate` is also available on `MemoryAdapter` (see below). It is **not** available on `createLocalStorage` / `createSessionStorage` — use `getAll()` or `query().toArray()` on those adapters.
+
+## MemoryAdapter
+
+`MemoryAdapter<S>` is the type returned by `createMemory`. It extends `Adapter<S>` with the same `iterate()` method as `IndexedDbAdapter`, backed by a plain in-memory `Map` scan instead of an IDB cursor:
+
+```ts
+export type MemoryAdapter<S extends AnySchema> = Adapter<S> & {
+  /** Lazy iteration over all live records in the table. Expired records are skipped automatically. */
+  iterate<K extends keyof S>(table: K): AsyncIterable<RecordOf<S, K>>;
+};
+```
+
+```ts
+import { createMemory, table } from '@vielzeug/vault';
+import type { MemoryAdapter } from '@vielzeug/vault';
+
+type User = { id: number; name: string };
+const schema = { users: table<User>('id') };
+
+const db: MemoryAdapter<typeof schema> = createMemory({ schema });
+
+for await (const user of db.iterate('users')) {
+  await processUser(user);
+}
+```
 
 ## Adapter Interface
 
@@ -559,6 +586,27 @@ Presentation-only ops (`limit`, `offset`, `orderBy`) are respected before checki
 
 `delete()` returns the number of records removed. `between` and `orderBy` accept `number | string` fields.
 
+### Secondary Index Push-down
+
+On `createIndexedDB`, when the **first** operation in the chain is `equals()`, `between()`, or a case-sensitive `startsWith()` (`ignoreCase: false`, the default) on the primary key or a field registered with `.index()`, the query uses a native IDB range or index fetch instead of scanning the full table. Every subsequent operator still runs in-memory against that narrowed result set.
+
+```ts
+const schema = { products: table<Product>('id').index('category') };
+const db = createIndexedDB({ name: 'shop', schema, version: 1 });
+
+// pushed down to the "category" IDB index — no full-table scan
+const electronics = await db.query('products').equals('category', 'electronics').toArray();
+
+// NOT pushed down — equals() is not the first op
+const filtered = await db
+  .query('products')
+  .filter((p) => p.price > 0)
+  .equals('category', 'electronics')
+  .toArray();
+```
+
+`createMemory` and `createLocalStorage` / `createSessionStorage` always scan in memory — `.index()` has no effect on those adapters.
+
 ## Migration
 
 ```ts
@@ -571,6 +619,38 @@ type MigrationContext = {
 
 type MigrationFn = (ctx: MigrationContext) => void;
 ```
+
+Pass a `MigrationFn` as `migrate` to `createIndexedDB`. It runs inside IDB's `onupgradeneeded` and receives the raw `IDBDatabase` and `IDBTransaction` for manual schema changes.
+
+### `defineMigration`
+
+```ts
+function defineMigration(steps: MigrationStep[]): MigrationFn;
+```
+
+```ts
+type MigrationStep =
+  | { field: string; table: string; type: 'addIndex' }
+  | { field: string; table: string; type: 'removeIndex' }
+  | { name: string; type: 'addTable' }
+  | { name: string; type: 'removeTable' };
+```
+
+Builds a `MigrationFn` from a declarative list of schema-change steps instead of hand-writing raw `IDBDatabase` / `IDBTransaction` calls. Each step is idempotent — safe to run when the target already exists or was already removed.
+
+```ts
+import { createIndexedDB, defineMigration } from '@vielzeug/vault';
+
+const migrate = defineMigration([
+  { type: 'addTable', name: 'sessions' },
+  { type: 'addIndex', table: 'users', field: 'email' },
+  { type: 'removeTable', name: 'legacyTokens' },
+]);
+
+const db = createIndexedDB({ name: 'app', version: 2, schema, migrate });
+```
+
+> `addIndex` assumes the default storage envelope (keyPath `value.<field>`) — see the [custom codec caveat](#table).
 
 ## Types
 
@@ -623,6 +703,14 @@ Callback type for `observe()` and `observeMany()`.
 
 ```ts
 type Observer<T> = (records: T[]) => void;
+```
+
+### `Unsubscribe`
+
+Returned by `observe()` and `observeMany()`. Calling it cancels the subscription; equivalent to aborting a `signal` passed to those methods.
+
+```ts
+type Unsubscribe = () => void;
 ```
 
 ### `BaseAdapterOptions`
@@ -704,6 +792,8 @@ Pass `codec` to any factory:
 const db = createLocalStorage({ name: 'app', schema, codec: loggingCodec });
 ```
 
+> **IndexedDB + `.index()` caveat:** see [Custom codec caveat](#table) — a custom codec that changes the envelope shape breaks secondary index push-down silently.
+
 ### `createVersionedCodec`
 
 ```ts
@@ -743,6 +833,8 @@ Throws `VaultError` if:
 - `currentVersion` is not listed in `versions`
 
 > **Migration note:** Records written by any other codec (including `defaultCodec`) lack the `__v` field and decode as `undefined`. Clear or migrate existing data before switching to a versioned codec.
+
+> **Secondary index caveat:** the `{ __d, __v }` envelope replaces the default `{ value, expiresAt? }` shape, so IndexedDB secondary indexes (created via [`.index()`](#table) with keyPath `value.<field>`) silently stop matching. Don't combine a versioned codec with `.index()` on the same table.
 
 ### `CodecVersion`
 

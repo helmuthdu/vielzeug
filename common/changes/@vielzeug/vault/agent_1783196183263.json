@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(vault): correct IndexedDB keys() to exclude ad-hoc TTL-expired records; document custom-codec + secondary-index incompatibility",
+      "packageName": "@vielzeug/vault",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/vault"
+}

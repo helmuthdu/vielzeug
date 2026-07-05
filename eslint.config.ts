@@ -14,6 +14,7 @@ export default defineConfig([
     'docs/.vitepress/theme/components/repl/registry.generated.ts',
     'node_modules/',
     'scripts/',
+    '**/scripts/',
     '**/coverage/',
     '**/dist/',
     '**/node_modules/',
