@@ -27,6 +27,16 @@ runs:
         registry-url: 'https://registry.npmjs.org'
         scope: '@vielzeug'
 
+    # actions/setup-node always exports a dummy NODE_AUTH_TOKEN ("XXXXX-XXXXX-XXXXX-XXXXX")
+    # when registry-url is set, purely so `${NODE_AUTH_TOKEN}` in .npmrc doesn't resolve to an
+    # empty string. npm treats that non-empty (but garbage) token as configured credentials and
+    # skips OIDC entirely, publishing unauthenticated -> registry replies E404 instead of a real
+    # auth error. Clearing it restores npm's trusted-publishing auto-detection.
+    # See https://github.com/actions/setup-node/issues/1440
+    - name: Clear npm auth token placeholder
+      shell: bash
+      run: echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
+
     # Trusted Publishing (OIDC) requires npm CLI >= 11.5.1 and the caller job to have
     # `permissions: id-token: write`. No NPM_TOKEN needed — npm exchanges the GitHub Actions
     # OIDC token for a short-lived credential, provided a Trusted Publisher is registered for
