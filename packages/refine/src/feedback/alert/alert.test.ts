@@ -78,11 +78,14 @@ describe('ore-alert', () => {
       expect(fixture.element.getAttribute('color')).toBe('success');
     });
 
-    it('applies variant', async () => {
-      fixture = await mount('ore-alert', { attrs: { variant: 'outlined' } });
+    for (const variant of ['solid', 'flat', 'bordered']) {
+      it(`applies ${variant} variant`, async () => {
+        fixture = await mount('ore-alert', { attrs: { variant } });
 
-      expect(fixture.element.getAttribute('variant')).toBe('outlined');
-    });
+        expect(fixture.element.getAttribute('variant')).toBe(variant);
+        fixture.dispose();
+      });
+    }
 
     it('applies size', async () => {
       fixture = await mount('ore-alert', { attrs: { size: 'lg' } });

@@ -79,9 +79,9 @@ define<OreAsyncProps, OreAsyncEvents>(ASYNC_TAG, {
     // ARIA attributes are driven reactively by bind().
     bind({
       attr: {
-        ariaBusy: () => (props.status!.value === 'loading' ? 'true' : 'false'),
-        ariaLabel: () => (props.status!.value === 'loading' ? 'Loading…' : null),
-        ariaLive: () => (props.status!.value === 'error' ? 'assertive' : 'polite'),
+        ariaBusy: () => (props.status.value === 'loading' ? 'true' : 'false'),
+        ariaLabel: () => (props.status.value === 'loading' ? 'Loading…' : null),
+        ariaLive: () => (props.status.value === 'error' ? 'assertive' : 'polite'),
         status: props.status,
       },
     });
@@ -152,7 +152,7 @@ define<OreAsyncProps, OreAsyncEvents>(ASYNC_TAG, {
               </div>
               ${renderText('title', props['error-label'])} ${renderText('description', props['error-description'])}
               ${when(
-                () => Boolean(props.retryable!.value),
+                () => Boolean(props.retryable.value),
                 () => html`
                   <button class="retry-btn" type="button" @click=${() => emit('retry')}>
                     <ore-icon name="refresh-cw" size="1em" stroke-width="2" aria-hidden="true"></ore-icon>

@@ -16,10 +16,10 @@ import {
 import { computeSafeRel } from '../../utils';
 import navbarStyles from './navbar.css?inline';
 
-const listen = (
+const listen = <E extends Event = Event>(
   el: EventTarget | null | undefined,
   name: string,
-  handler: (e: any) => void,
+  handler: (e: E) => void,
   options?: AddEventListenerOptions,
 ): (() => void) => {
   if (!el) return () => {};
@@ -225,7 +225,7 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
     breakpoint: prop.string('(max-width: 768px)'),
     color: prop.string<ThemeColor>(),
     'container-breakpoints': prop.bool(false),
-    elevation: prop.json(undefined as ElevationLevel | undefined),
+    elevation: prop.number<ElevationLevel>(),
     floating: prop.bool(false),
     label: prop.string('Main navigation'),
     'mobile-sidebar': prop.string(),

@@ -203,22 +203,11 @@
     left: var(--size-2);
   }
 
-  :host([sidebar-bottom-nav]) .item {
-    flex-direction: column;
-    gap: var(--size-0-5);
-    align-items: center;
-    justify-content: center;
-    min-height: unset;
-    padding: var(--size-1);
-    font-size: var(--text-xs);
-  }
-
-  :host([sidebar-bottom-nav]) .item-label {
-    width: 100%;
-    text-align: center;
-  }
-
-  :host([sidebar-bottom-nav]) .item-end {
+  /* The bottom tab bar (`.bottom-bar` in sidebar.ts) renders its own promoted-item
+     buttons from the same data — the original <ore-sidebar-item> stays inside the
+     (visually off-screen while closed) <nav>, so it must be fully hidden here to
+     avoid a focusable/AT-visible duplicate of the bottom-bar entry. */
+  :host([sidebar-bottom-nav]) {
     display: none;
   }
 }

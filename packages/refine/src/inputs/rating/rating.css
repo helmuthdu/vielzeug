@@ -6,6 +6,7 @@
     --_gap: var(--rating-gap, var(--size-0_5));
 
     display: inline-flex;
+    flex-wrap: wrap;
     align-items: center;
   }
 
@@ -120,6 +121,26 @@
       outline: 2px solid Highlight;
       box-shadow: none;
     }
+  }
+
+  /* ========================================
+       Helper / Error Text
+       ======================================== */
+
+  .helper-text[hidden] {
+    display: none;
+  }
+
+  .helper-text {
+    width: 100%;
+    margin-block-start: var(--size-1);
+    font-size: var(--text-xs);
+    line-height: var(--leading-tight);
+    color: var(--color-contrast-500);
+  }
+
+  .helper-text[role='alert'] {
+    color: var(--color-error);
   }
 }
 

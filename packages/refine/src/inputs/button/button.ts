@@ -132,7 +132,7 @@ define<OreButtonProps>(BUTTON_TAG, {
     const isDisabled = computed(() => !!(props.disabled.value || props.loading.value));
 
     // isLink and effectiveRel are computed from signals — correct even if href changes at runtime.
-    const { isLink } = useLinkProps(props.href, props.rel, props.target);
+    const { effectiveRel, isLink } = useLinkProps(props.href, props.rel, props.target);
 
     // Form association: relay submit/reset clicks to the associated form.
     // The inner <button> always has type="button" so shadow DOM never drives native form actions.
@@ -150,16 +150,8 @@ define<OreButtonProps>(BUTTON_TAG, {
         return;
       }
 
-      if (isLink.value && props.href.value) {
-        if (!e.defaultPrevented) {
-          if (props.target.value === '_blank') {
-            window.open(props.href.value, '_blank', 'noopener,noreferrer');
-          } else {
-            window.location.href = props.href.value;
-          }
-        }
-      }
-
+      // Link mode renders a real <a href> below — the browser handles left/middle/ctrl-click
+      // navigation, target, and rel natively. No manual window.open/location.href needed.
       useFormAction(() => (isLink.value ? null : formField.internals.form), props.type, isDisabled, el)(e);
     };
 
@@ -188,13 +180,33 @@ define<OreButtonProps>(BUTTON_TAG, {
       },
     });
 
+    const buttonContent = html`
+      <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
+      <slot name="prefix"></slot>
+      <span class="content" part="content"><slot></slot></span>
+      <slot name="suffix"></slot>
+    `;
+
+    // The inner element (<a> or <span>) is deliberately non-focusable/decorative — this
+    // component's real interactive semantics (role, tabindex, aria-label) live on the
+    // custom-element host itself (see the `bind()` block above), since ore-button is
+    // formAssociated and needs the host, not an inner element, to carry ElementInternals.
+    // This differs from ore-navbar-item / ore-sidebar-item, which aren't form-associated
+    // and so render their <a> as the one real focusable/semantic element.
     return html`
-      <span part="button" role="presentation" @click="${handleClick}">
-        <span class="loader" part="loader" aria-label="Loading" ?hidden=${() => !props.loading.value}></span>
-        <slot name="prefix"></slot>
-        <span class="content" part="content"><slot></slot></span>
-        <slot name="suffix"></slot>
-      </span>
+      ${() =>
+        isLink.value
+          ? html`<a
+              part="button"
+              role="presentation"
+              tabindex="-1"
+              href="${props.href}"
+              :rel="${effectiveRel}"
+              :target="${props.target}"
+              @click="${handleClick}">
+              ${buttonContent}
+            </a>`
+          : html`<span part="button" role="presentation" @click="${handleClick}">${buttonContent}</span>`}
     `;
   },
   shadow: { delegatesFocus: false },

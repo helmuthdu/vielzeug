@@ -1,17 +1,16 @@
 import { createContext, define, html, prop } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 
-import type { ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, SurfaceVariant } from '../../types';
 
 import { createListControl } from '../../headless';
 import styles from './accordion.css?inline';
 
 /** Context provided by ore-accordion to its ore-accordion-item children. */
 export type AccordionContext = {
-  notifyExpand: (expandedItem: HTMLElement) => void;
   selectionMode: Readable<'single' | 'multiple' | undefined>;
   size: Readable<ComponentSize | undefined>;
-  variant: Readable<VisualVariant | undefined>;
+  variant: Readable<SurfaceVariant | undefined>;
 };
 /** Injection key for the accordion context. */
 export const ACCORDION_CTX = createContext<AccordionContext>('AccordionContext');
@@ -28,7 +27,7 @@ export type OreAccordionProps = {
   /** Size for all items (propagated via context) */
   size?: ComponentSize;
   /** Visual variant for all items (propagated via context) */
-  variant?: VisualVariant;
+  variant?: SurfaceVariant;
 };
 
 /**
@@ -73,14 +72,14 @@ define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
   props: {
     selectionMode: prop.string<'single' | 'multiple'>(),
     size: prop.string<ComponentSize>(),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.string<SurfaceVariant>(),
   },
 
   setup(props, { bind, el, emit, provide }) {
     const handleSelectionMode = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value !== 'single') return;
 
-      el.querySelectorAll('ore-accordion-item[expanded]').forEach((item) => {
+      el.querySelectorAll(':scope > ore-accordion-item[expanded]').forEach((item) => {
         if (item !== expandedItem && item.hasAttribute('expanded')) {
           item.removeAttribute('expanded');
         }
@@ -90,7 +89,7 @@ define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
     };
 
     const getAccordionItems = () => {
-      return [...el.querySelectorAll<HTMLElement>('ore-accordion-item:not([disabled])')];
+      return [...el.querySelectorAll<HTMLElement>(':scope > ore-accordion-item:not([disabled])')];
     };
 
     const getSummaryElements = () => {
@@ -101,7 +100,6 @@ define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
 
     const listControl = createListControl({
       getItems: () => getAccordionItems(),
-      isItemDisabled: (item: HTMLElement) => item.hasAttribute('disabled'),
       loop: true,
       onNavigate: (_action, index) => {
         const summaries = getSummaryElements();
@@ -111,7 +109,6 @@ define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
     });
 
     provide(ACCORDION_CTX, {
-      notifyExpand: handleSelectionMode,
       selectionMode: computed(() => props.selectionMode.value),
       size: props.size,
       variant: props.variant,
@@ -126,6 +123,9 @@ define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
           const expandedItem = (event as CustomEvent<{ item?: HTMLElement }>).detail?.item ?? eventTarget;
 
           if (!expandedItem || expandedItem.localName !== 'ore-accordion-item') return;
+
+          // Guard: only respond to accordion-items that belong to THIS accordion instance
+          if (expandedItem.closest('ore-accordion') !== el) return;
 
           handleSelectionMode(expandedItem);
         },

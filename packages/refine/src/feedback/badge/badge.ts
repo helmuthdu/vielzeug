@@ -4,7 +4,13 @@ import { computed } from '@vielzeug/ripple';
 import type { RoundedSize, ThemeColor, VisualVariant } from '../../types';
 
 import { roundableBundle, themableBundle } from '../../shared';
-import { colorThemeMixin, frostVariantMixin, roundedVariantMixin, sizeVariantMixin } from '../../styles';
+import {
+  colorThemeMixin,
+  forcedColorsMixin,
+  frostVariantMixin,
+  roundedVariantMixin,
+  sizeVariantMixin,
+} from '../../styles';
 import componentStyles from './badge.css?inline';
 
 type BadgeVariant = Extract<VisualVariant, 'solid' | 'flat' | 'bordered' | 'outline' | 'frost'>;
@@ -81,10 +87,10 @@ define<OreBadgeProps>(BADGE_TAG, {
     size: prop.string<BadgeSize>(),
     ...roundableBundle,
     anchor: prop.string<'top-end' | 'top-start' | 'bottom-end' | 'bottom-start'>(),
-    count: prop.json(undefined as number | undefined),
+    count: prop.number(),
     dot: prop.bool(false),
     label: prop.string(),
-    max: prop.json(undefined as number | undefined),
+    max: prop.number(),
     variant: prop.string<BadgeVariant>(),
   },
   setup(props) {
@@ -118,6 +124,7 @@ define<OreBadgeProps>(BADGE_TAG, {
   },
   styles: [
     colorThemeMixin,
+    forcedColorsMixin,
     roundedVariantMixin,
     frostVariantMixin('.badge'),
     sizeVariantMixin({

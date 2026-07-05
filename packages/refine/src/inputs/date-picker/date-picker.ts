@@ -91,7 +91,7 @@ export type OreDatePickerProps = {
  * @attr {string} locale - BCP 47 locale string
  * @attr {string} weekend-days - Comma-separated day indices to disable
  *
- * @fires change - Fired when a date is selected. detail: { value: Date | null, isoValue: string | null }
+ * @fires change - Fired when a date is selected. detail: { isoValue: string | null }
  *
  * @slot label - Custom label for the trigger field
  * @slot prefix - Content before the trigger text (e.g. icon)
@@ -116,8 +116,6 @@ export type OreDatePickerProps = {
  * <!-- Single date with constraints -->
  * <ore-date-picker label="Appointment date" name="date" min="2025-01-01" max="2025-12-31" color="primary"></ore-date-picker>
  *
- * <!-- Range selection -->
- * <ore-date-picker label="Date range" selection-mode="range" color="primary"></ore-date-picker>
  *
  * <!-- Outside label, bordered variant -->
  * <ore-date-picker label="Start date" label-placement="outside" variant="bordered"></ore-date-picker>
@@ -342,6 +340,46 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
       target?.focus();
     }
 
+    // ── Month/year-cell keyboard navigation (fixed 4-column grid) ─────────────
+
+    function handleGridKeydown(e: KeyboardEvent, cellSelector: string, columns: number, onSelect: () => void): void {
+      const cell = e.currentTarget as HTMLElement;
+      const grid = cell.closest('.cal-grid');
+
+      if (!grid) return;
+
+      const allCells = Array.from(grid.querySelectorAll<HTMLElement>(cellSelector));
+      const idx = allCells.indexOf(cell);
+
+      if (idx === -1) return;
+
+      let target: HTMLElement | undefined;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect();
+
+        return;
+      } else if (e.key === 'ArrowRight') {
+        target = allCells[idx + 1];
+      } else if (e.key === 'ArrowLeft') {
+        target = allCells[idx - 1];
+      } else if (e.key === 'ArrowDown') {
+        target = allCells[idx + columns];
+      } else if (e.key === 'ArrowUp') {
+        target = allCells[idx - columns];
+      } else if (e.key === 'Home') {
+        target = allCells[Math.floor(idx / columns) * columns];
+      } else if (e.key === 'End') {
+        target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      target?.focus();
+    }
+
     // ── Open / close ─────────────────────────────────────────────────────────
 
     function openPicker(): void {
@@ -498,31 +536,44 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
           part="grid"
           :aria-label="${() => displayLabel.value}"
           ?hidden="${() => currentView.value !== 'day'}">
-          ${() =>
-            weekdayLabels.value.map(
-              (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
-            )}
-          ${() =>
-            dayCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-day"
-                  role="gridcell"
-                  part="day"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled)}"
-                  :aria-current="${() => (cell.isToday ? 'date' : null)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-today="${() => cell.isToday}"
-                  ?data-outside="${() => cell.isOutsideMonth}"
-                  ?data-disabled="${() => cell.isDisabled}"
-                  data-iso="${cell.iso}"
-                  tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
-                  @click="${() => handleSelectDay(cell.iso)}"
-                  @keydown="${handleDayKeydown}">
-                  ${String(cell.day)}
+          <div role="row" class="cal-grid-row">
+            ${() =>
+              weekdayLabels.value.map(
+                (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
+              )}
+          </div>
+          ${() => {
+            const cells = dayCells.value;
+            const rows: (typeof cells)[number][][] = [];
+
+            for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+
+            return rows.map(
+              (row) =>
+                html`<div role="row" class="cal-grid-row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-day"
+                        role="gridcell"
+                        part="day"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled)}"
+                        :aria-current="${() => (cell.isToday ? 'date' : null)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-today="${() => cell.isToday}"
+                        ?data-outside="${() => cell.isOutsideMonth}"
+                        ?data-disabled="${() => cell.isDisabled}"
+                        data-iso="${cell.iso}"
+                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        @click="${() => handleSelectDay(cell.iso)}"
+                        @keydown="${handleDayKeydown}">
+                        ${String(cell.day)}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
 
         <!-- Month view -->
@@ -531,30 +582,38 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
           role="grid"
           :aria-label="${() => displayYear_.value}"
           ?hidden="${() => currentView.value !== 'month'}">
-          ${() =>
-            monthCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-month"
-                  role="gridcell"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-disabled="${() => cell.isDisabled}"
-                  tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled) handleSelectMonth(cell.month);
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+          ${() => {
+            const cells = monthCells.value;
+            const rows: (typeof cells)[number][][] = [];
 
-                      if (!cell.isDisabled) handleSelectMonth(cell.month);
-                    }
-                  }}">
-                  ${cell.shortLabel}
+            for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
+
+            return rows.map(
+              (row) =>
+                html`<div role="row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-month"
+                        role="gridcell"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-disabled="${() => cell.isDisabled}"
+                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        @click="${() => {
+                          if (!cell.isDisabled) handleSelectMonth(cell.month);
+                        }}"
+                        @keydown="${(e: KeyboardEvent) =>
+                          handleGridKeydown(e, '.cal-cell-month', 4, () => {
+                            if (!cell.isDisabled) handleSelectMonth(cell.month);
+                          })}">
+                        ${cell.shortLabel}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
 
         <!-- Year view -->
@@ -563,30 +622,38 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
           role="grid"
           aria-label="Select year"
           ?hidden="${() => currentView.value !== 'year'}">
-          ${() =>
-            yearCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-year"
-                  role="gridcell"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-disabled="${() => cell.isDisabled}"
-                  tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
-                  @click="${() => {
-                    if (!cell.isDisabled) handleSelectYear(cell.year);
-                  }}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
+          ${() => {
+            const cells = yearCells.value;
+            const rows: (typeof cells)[number][][] = [];
 
-                      if (!cell.isDisabled) handleSelectYear(cell.year);
-                    }
-                  }}">
-                  ${String(cell.year)}
+            for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
+
+            return rows.map(
+              (row) =>
+                html`<div role="row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-year"
+                        role="gridcell"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-disabled="${() => cell.isDisabled}"
+                        tabindex="${() => (cell.isDisabled ? '-1' : '0')}"
+                        @click="${() => {
+                          if (!cell.isDisabled) handleSelectYear(cell.year);
+                        }}"
+                        @keydown="${(e: KeyboardEvent) =>
+                          handleGridKeydown(e, '.cal-cell-year', 4, () => {
+                            if (!cell.isDisabled) handleSelectYear(cell.year);
+                          })}">
+                        ${String(cell.year)}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
       </div>
     `;

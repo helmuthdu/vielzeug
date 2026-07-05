@@ -114,6 +114,8 @@ When a user selects a star, a burst of particle sparks radiates from the chosen 
 | `name`     | `string`                                                                  | —          | Form field name                              |
 | `color`    | `'primary' \| 'secondary' \| 'info' \| 'success' \| 'warning' \| 'error'` | —          | Star highlight color                         |
 | `size`     | `'sm' \| 'md' \| 'lg'`                                                    | `'md'`     | Star size                                    |
+| `helper`   | `string`                                                                  | —          | Helper text shown below the stars            |
+| `error`    | `string`                                                                  | —          | Error message shown below the stars (renders with `role="alert"` and takes precedence over `helper`) |
 
 ### Events
 
@@ -123,10 +125,11 @@ When a user selects a star, a burst of particle sparks radiates from the chosen 
 
 ### Parts
 
-| Part    | Description             |
-| ------- | ----------------------- |
-| `stars` | Stars container element |
-| `star`  | Individual star button  |
+| Part          | Description               |
+| ------------- | -------------------------- |
+| `stars`       | Stars container element    |
+| `star`        | Individual star button     |
+| `helper-text` | The helper/error text element |
 
 ### CSS Custom Properties
 

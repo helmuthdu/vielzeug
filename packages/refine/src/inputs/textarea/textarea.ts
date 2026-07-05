@@ -87,6 +87,8 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * @part label - Label element.
  * @part field - Field container.
  * @part textarea - The native `<textarea>` element.
+ * @part helper - The helper text element.
+ * @part error - The error text element (`role="alert"`).
  *
  * @example
  * ```html
@@ -166,6 +168,7 @@ define<OreTextareaProps, OreTextareaEvents>(TEXTAREA_TAG, {
       ariaLabelledBy,
       assistiveId,
       counter,
+      errorId,
       errorText,
       fieldId: textareaId,
       helperText,
@@ -215,8 +218,8 @@ define<OreTextareaProps, OreTextareaEvents>(TEXTAREA_TAG, {
           : 'counter';
     const counterHidden = () => !counter;
     const counterText = () => counter?.value.counterText.replace(' / ', '/') ?? '';
-    const helperHidden = () => !errorText.value && !helperText.value;
-    const helperTextContent = () => errorText.value || helperText.value;
+    const helperHidden = () => !!errorText.value || !helperText.value;
+    const errorHidden = () => !errorText.value;
 
     return html`
       <div class="textarea-wrapper" part="wrapper">
@@ -242,8 +245,11 @@ define<OreTextareaProps, OreTextareaEvents>(TEXTAREA_TAG, {
             :aria-labelledby="${ariaLabelledBy}"></textarea>
         </div>
         <span class="${counterClass}" aria-live="polite" ?hidden="${counterHidden}">${counterText}</span>
-        <div id="${assistiveId}" class="helper-text" aria-live="polite" ?hidden="${helperHidden}">
-          ${helperTextContent}
+        <div id="${assistiveId}" class="helper-text" aria-live="polite" part="helper" ?hidden="${helperHidden}">
+          ${() => helperText.value}
+        </div>
+        <div id="${errorId}" class="helper-text" role="alert" part="error" ?hidden="${errorHidden}">
+          ${() => errorText.value}
         </div>
       </div>
     `;

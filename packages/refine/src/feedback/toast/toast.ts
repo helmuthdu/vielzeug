@@ -408,9 +408,13 @@ define<OreToastProps, OreToastEvents>(TOAST_TAG, {
         finalizeRemoval(id);
       };
 
-      // TOAST_EXIT_MS matches the CSS opacity transition duration.
+      // TOAST_EXIT_MS is the built-in default, matching the CSS opacity transition's own
+      // default. Read the *actual* computed duration so a consumer-customized
+      // `--toast-exit-duration` doesn't get cut off by a shorter hardcoded fallback.
       // Fallback fires if transitionend never arrives (jsdom, reduced-motion, etc.).
-      const fallback = setTimeout(onDone, TOAST_EXIT_MS + 50);
+      const computedExitMs = innerEl ? parseFloat(getComputedStyle(innerEl).transitionDuration) * 1000 : NaN;
+      const exitMs = Number.isFinite(computedExitMs) && computedExitMs > 0 ? computedExitMs : TOAST_EXIT_MS;
+      const fallback = setTimeout(onDone, exitMs + 50);
 
       // Listen on the container with event delegation so we are immune to
       // ore re-rendering the entries list (e.g. rAF phase transitions that

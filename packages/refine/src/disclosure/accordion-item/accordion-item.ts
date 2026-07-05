@@ -1,9 +1,10 @@
 import { define, html, inject, prop, ref } from '@vielzeug/ore';
 
-import type { ComponentSize, VisualVariant } from '../../types';
+import type { ComponentSize, SurfaceVariant } from '../../types';
 
 import '../../content/icon/icon';
 import { elementDirection } from '../../headless/direction';
+import { disablableBundle } from '../../shared';
 import { coarsePointerMixin } from '../../styles';
 import { ACCORDION_CTX } from '../accordion/accordion';
 import styles from './accordion-item.css?inline';
@@ -23,7 +24,7 @@ export type OreAccordionItemProps = {
   /** Item size */
   size?: ComponentSize;
   /** Visual style variant */
-  variant?: VisualVariant;
+  variant?: SurfaceVariant;
 };
 
 /**
@@ -75,10 +76,10 @@ export type OreAccordionItemProps = {
 export const ACCORDION_ITEM_TAG = 'ore-accordion-item' as const;
 define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
   props: {
-    disabled: prop.bool(false),
+    ...disablableBundle,
     expanded: prop.bool(false),
     size: prop.string<ComponentSize>(),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.string<SurfaceVariant>(),
   },
 
   setup(props, { el, emit, onMounted, watch }) {
@@ -171,6 +172,8 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
     let touchStartY = 0;
 
     const toggleDetails = () => {
+      if (props.disabled.value) return;
+
       const details = detailsRef.value;
 
       if (!details) return;
@@ -237,7 +240,9 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
       // Check initially
       checkRTL();
 
-      // Re-check when DOM attributes change
+      // Re-check when `dir` changes on this element's own ancestor chain (not the whole
+      // document — `elementDirection` only ever looks at `el`'s ancestors, so that's all we
+      // need to watch).
       const observer = new MutationObserver((mutations) => {
         const dirChanged = mutations.some((m) => m.attributeName === 'dir');
 
@@ -246,11 +251,9 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
         }
       });
 
-      observer.observe(document.documentElement, {
-        attributeFilter: ['dir'],
-        attributes: true,
-        subtree: true,
-      });
+      for (let ancestor: Element | null = el; ancestor; ancestor = ancestor.parentElement) {
+        observer.observe(ancestor, { attributeFilter: ['dir'], attributes: true });
+      }
 
       details.addEventListener('toggle', handleToggle);
       summary.addEventListener('touchstart', handleSummaryTouchStart, { passive: true });
@@ -271,6 +274,7 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
         part="summary"
         :aria-expanded="${() => String(props.expanded.value)}"
         :aria-disabled="${() => (props.disabled.value ? 'true' : 'false')}"
+        :tabindex="${() => (props.disabled.value ? '-1' : null)}"
         ref="${summaryRef}">
         <slot name="prefix"></slot>
         <div class="header-content" part="header">

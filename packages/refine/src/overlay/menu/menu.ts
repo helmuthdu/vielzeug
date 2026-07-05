@@ -188,6 +188,7 @@ const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
  * @cssprop --menu-panel-shadow - Box shadow of the floating panel
  * @cssprop --menu-panel-blur - Backdrop blur amount for the floating panel
  * @cssprop --menu-panel-min-width - Minimum width of the floating panel
+ * @cssprop --menu-panel-max-height - Maximum height of the floating panel before it scrolls
  * @cssprop --menu-panel-radius - Border radius of the floating panel
  *
  * @example

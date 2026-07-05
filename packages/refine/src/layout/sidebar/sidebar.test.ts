@@ -288,6 +288,33 @@ describe('ore-sidebar-item', () => {
     expect(fixture.query('a.item')?.getAttribute('aria-current')).toBe('page');
   });
 
+  it('sets sidebar-bottom-nav and hides itself when the parent sidebar is in closed bottom-nav mode', async () => {
+    const originalMatchMedia = window.matchMedia;
+
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: true,
+      removeEventListener: vi.fn(),
+    }));
+
+    try {
+      fixture = await mount('ore-sidebar', {
+        attrs: { 'bottom-nav-at': '(max-width: 768px)' },
+        html: '<ore-sidebar-item href="/">Home</ore-sidebar-item>',
+      });
+      await fixture.flush();
+
+      const item = fixture.element.querySelector('ore-sidebar-item')!;
+
+      // The `:host([sidebar-bottom-nav]) { display: none; }` CSS effect itself needs a real
+      // browser to verify (jsdom has no CSS box model for shadow-adopted stylesheets) — this
+      // pins down the attribute the CSS rule keys off.
+      expect(item.hasAttribute('sidebar-bottom-nav')).toBe(true);
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-sidebar', {

@@ -96,6 +96,16 @@ describe('ore-breadcrumb-item accessibility', () => {
       expect(fixture.query('a')?.getAttribute('href')).toBe('/docs');
       expect(fixture.query('a')?.getAttribute('tabindex')).toBeNull();
     });
+
+    it('active + href: keeps the href but removes the link from the tab order', async () => {
+      fixture = await mount('ore-breadcrumb-item', { attrs: { active: '', href: '/current' }, html: 'Current' });
+
+      const link = fixture.query('a');
+
+      expect(link?.getAttribute('href')).toBe('/current');
+      expect(link?.getAttribute('aria-current')).toBe('page');
+      expect(link?.getAttribute('tabindex')).toBe('-1');
+    });
   });
 
   describe('Accessibility', () => {

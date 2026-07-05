@@ -78,7 +78,7 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
     multiple: prop.bool(false),
     name: prop.string(),
     'no-filter': prop.bool(false),
-    options: prop.json(undefined as ComboboxOptionInput[] | undefined),
+    options: prop.data<ComboboxOptionInput[]>(),
     placeholder: prop.string('Select...'),
     rounded: prop.string<RoundedSize>(),
     size: prop.string<ComponentSize>(),

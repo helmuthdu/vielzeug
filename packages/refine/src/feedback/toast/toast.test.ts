@@ -714,6 +714,214 @@ describe('toast service shortcuts', () => {
   });
 });
 
+// ── ToastService.promise() ─────────────────────────────────────────────────────
+
+describe('toast service promise()', () => {
+  let fixture: Fixture<HTMLElement & ToastElement>;
+  let container: HTMLElement;
+
+  beforeAll(async () => {
+    await import('../alert/alert');
+    await import('./toast');
+  });
+
+  beforeEach(() => {
+    container = document.createElement('div');
+    document.body.appendChild(container);
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+    container.remove();
+  });
+
+  it('shows the loading message, then the success message on resolution', async () => {
+    fixture = await mount('ore-toast', { container });
+
+    const service = createToastService(container);
+    let resolvePromise!: (value: string) => void;
+    const pending = new Promise<string>((resolve) => {
+      resolvePromise = resolve;
+    });
+
+    const result = service.promise(pending, {
+      error: 'Upload failed',
+      loading: 'Uploading…',
+      success: (url) => `Uploaded to ${url}`,
+    });
+
+    await fixture.flush();
+
+    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Uploading…');
+
+    resolvePromise('https://example.com/file');
+    await result;
+    await fixture.flush();
+
+    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('success');
+    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Uploaded to https://example.com/file');
+  });
+
+  it('shows the error message and rethrows on rejection', async () => {
+    fixture = await mount('ore-toast', { container });
+
+    const service = createToastService(container);
+    const pending = Promise.reject(new Error('boom'));
+
+    await expect(
+      service.promise(pending, { error: 'Upload failed', loading: 'Uploading…', success: 'Done' }),
+    ).rejects.toThrow('boom');
+
+    await fixture.flush();
+
+    expect(fixture.query('ore-alert')?.getAttribute('color')).toBe('error');
+    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Upload failed');
+  });
+
+  it('supports a function form for the error message', async () => {
+    fixture = await mount('ore-toast', { container });
+
+    const service = createToastService(container);
+    const pending = Promise.reject(new Error('network down'));
+
+    await expect(
+      service.promise(pending, {
+        error: (err) => `Failed: ${(err as Error).message}`,
+        loading: 'Uploading…',
+        success: 'Done',
+      }),
+    ).rejects.toThrow();
+
+    await fixture.flush();
+
+    expect(fixture.query('ore-alert')?.textContent?.trim()).toContain('Failed: network down');
+  });
+});
+
+// ── Hover/focus pause-on-interaction ────────────────────────────────────────────
+
+describe('ore-toast hover/focus pause', () => {
+  let fixture: Fixture<HTMLElement & ToastElement>;
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  beforeAll(async () => {
+    await import('../alert/alert');
+    await import('./toast');
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+  });
+
+  it('pauses the auto-dismiss timer on pointerenter and resumes on pointerleave', async () => {
+    fixture = await mount('ore-toast');
+
+    fixture.element.add({ duration: 40, message: 'Auto-dismiss me' });
+    await fixture.flush();
+
+    const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
+
+    container.dispatchEvent(new PointerEvent('pointerenter', { bubbles: true }));
+    await wait(80);
+    await fixture.flush();
+
+    // Timer was paused before it could fire — the toast is still present.
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+
+    container.dispatchEvent(new PointerEvent('pointerleave', { bubbles: true }));
+    await wait(80);
+    await completeExit(fixture, fixture.flush);
+
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+  });
+
+  it('pauses the auto-dismiss timer on focusin and resumes on focusout', async () => {
+    fixture = await mount('ore-toast');
+
+    fixture.element.add({ duration: 40, message: 'Auto-dismiss me' });
+    await fixture.flush();
+
+    const container = fixture.element.shadowRoot!.querySelector('.toast-container')!;
+
+    container.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+    await wait(80);
+    await fixture.flush();
+
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+
+    container.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    await wait(80);
+    await completeExit(fixture, fixture.flush);
+
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+  });
+});
+
+// ── Swipe-to-dismiss ─────────────────────────────────────────────────────────────
+
+describe('ore-toast swipe-to-dismiss', () => {
+  let fixture: Fixture<HTMLElement & ToastElement>;
+  let originalMatchMedia: typeof window.matchMedia;
+
+  beforeAll(async () => {
+    await import('../alert/alert');
+    await import('./toast');
+  });
+
+  beforeEach(() => {
+    // onCommit checks prefers-reduced-motion — jsdom has no matchMedia by default.
+    originalMatchMedia = window.matchMedia;
+    window.matchMedia = vi.fn().mockImplementation(() => ({
+      addEventListener: vi.fn(),
+      matches: false,
+      removeEventListener: vi.fn(),
+    }));
+  });
+
+  afterEach(() => {
+    fixture?.dispose();
+    window.matchMedia = originalMatchMedia;
+  });
+
+  it('dismisses the toast when a pointer swipe crosses the commit threshold', async () => {
+    fixture = await mount('ore-toast');
+
+    fixture.element.add({ duration: 0, message: 'Swipe me' });
+    await fixture.flush();
+
+    const wrapper = fixture.element.shadowRoot!.querySelector<HTMLElement>('.toast-wrapper')!;
+    const inner = wrapper.querySelector<HTMLElement>('.toast-inner')!;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0, pointerId: 1 }));
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 0, pointerId: 1 }));
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 0, pointerId: 1 }));
+    await fixture.flush();
+
+    // jsdom doesn't run real CSS transitions — simulate the transitionend that
+    // onCommit's animated-removal path waits for.
+    inner.dispatchEvent(new TransitionEvent('transitionend', { bubbles: true, propertyName: 'transform' }));
+    await fixture.flush();
+
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeNull();
+  });
+
+  it('snaps back without dismissing when the swipe does not cross the commit threshold', async () => {
+    fixture = await mount('ore-toast');
+
+    fixture.element.add({ duration: 0, message: 'Small nudge' });
+    await fixture.flush();
+
+    const wrapper = fixture.element.shadowRoot!.querySelector<HTMLElement>('.toast-wrapper')!;
+
+    wrapper.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, clientX: 0, clientY: 0, pointerId: 1 }));
+    wrapper.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 5, clientY: 0, pointerId: 1 }));
+    wrapper.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, clientX: 5, clientY: 0, pointerId: 1 }));
+    await fixture.flush();
+
+    expect(fixture.element.shadowRoot?.querySelector('ore-alert')).toBeTruthy();
+  });
+});
+
 describe('ore-toast accessibility', () => {
   let fixture: Fixture<HTMLElement>;
 

@@ -9,8 +9,3 @@ const isDev = !(globalThis as { __REFINE_PROD__?: boolean }).__REFINE_PROD__;
 export function warn(msg: string): void {
   if (isDev) console.warn(`[@vielzeug/refine] ${msg}`);
 }
-
-/** @internal */
-export function devOnly(fn: () => void): void {
-  if (isDev) fn();
-}

@@ -15,6 +15,7 @@
 
     position: relative;
     display: inline-flex;
+    flex-wrap: wrap;
     gap: var(--_gap, var(--size-3));
     align-items: center;
     width: 100%;
@@ -156,6 +157,21 @@
   font-size: var(--_font-size);
   color: var(--color-contrast);
   white-space: nowrap;
+}
+
+.helper-text[hidden] {
+  display: none;
+}
+
+.helper-text {
+  width: 100%;
+  font-size: var(--text-xs);
+  line-height: var(--leading-tight);
+  color: var(--color-contrast-500);
+}
+
+.helper-text[role='alert'] {
+  color: var(--color-error);
 }
 
 @media (pointer: coarse) {

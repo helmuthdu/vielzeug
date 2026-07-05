@@ -156,7 +156,7 @@
     height: var(--size-8);
   }
 
-  /* animation properties are inherited from .indicator-active::part(fill) below */
+  /* animation properties are inherited from .indicator-active ore-progress::part(fill) below */
 
   /* ── Bottom nav bar: indicators + controls ───────────────────────────── */
 
@@ -181,10 +181,21 @@
   }
 
   .indicator {
+    display: block;
     flex-shrink: 0;
+    padding: 0;
     pointer-events: auto;
     cursor: pointer;
+    background: none;
+    border: none;
     transition: opacity var(--transition-fast);
+  }
+
+  .indicator > ore-progress {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
   }
 
   /* Inactive indicator: small circle */
@@ -211,11 +222,11 @@
     opacity: 0.8;
   }
 
-  .indicator::part(fill) {
+  .indicator ore-progress::part(fill) {
     transition: width var(--transition-normal);
   }
 
-  .indicator-active::part(fill) {
+  .indicator-active ore-progress::part(fill) {
     animation-name: var(--carousel-animation-name, none);
     animation-duration: calc(var(--carousel-timeout, 4000) * 1ms);
     animation-timing-function: var(--ease-linear);

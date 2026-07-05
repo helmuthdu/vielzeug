@@ -1,7 +1,7 @@
 export { DIALOG_TAG } from './dialog/dialog';
 export type { OreDialogEvents, OreDialogProps } from './dialog/dialog';
 export { DRAWER_TAG } from './drawer/drawer';
-export type { OreDrawerEvents, OreDrawerProps } from './drawer/drawer';
+export type { DrawerElement, OreDrawerEvents, OreDrawerProps } from './drawer/drawer';
 export { MENU_ITEM_TAG, MENU_TAG } from './menu/menu';
 export type { OreMenuEvents, OreMenuItemProps, OreMenuItemType, OreMenuProps, MenuSelectDetail } from './menu/menu';
 export { POPOVER_TAG } from './popover/popover';

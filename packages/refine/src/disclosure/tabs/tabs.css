@@ -212,21 +212,4 @@
   :host([variant='frost']) .indicator {
     display: none;
   }
-
-  /* ─── size variants ─── */
-  :host([size='sm']) {
-    --tabs-tab-size: var(--text-xs);
-    --tabs-tab-padding: var(--size-1) var(--size-3);
-  }
-
-  :host(:not([size])),
-  :host([size='md']) {
-    --tabs-tab-size: var(--text-sm);
-    --tabs-tab-padding: var(--size-1-5) var(--size-4);
-  }
-
-  :host([size='lg']) {
-    --tabs-tab-size: var(--text-base);
-    --tabs-tab-padding: var(--size-2) var(--size-5);
-  }
 }

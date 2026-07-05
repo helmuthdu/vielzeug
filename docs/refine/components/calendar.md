@@ -284,7 +284,7 @@ The calendar panel maintains a stable size across all three views — day view r
 
 ## Accessibility
 
-`ore-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The host element carries `role="group"` and `aria-label` set to the currently visible month/year. The day grid uses `role="grid"` with `role="columnheader"` for weekday headers and `role="gridcell"` on each day cell.
+`ore-calendar` implements the [ARIA Grid Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/grid/). The host element carries `role="group"` and `aria-label` set to the currently visible month/year. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements — `role="columnheader"` for the day view's weekday headers, `role="gridcell"` on every day/month/year cell.
 
 Selected days have `aria-selected="true"`; unselected days have `aria-selected="false"`. Today's cell carries `aria-current="date"`. Out-of-range and disabled-weekday cells have `aria-disabled="true"` and `tabindex="-1"`, removing them from tab order. When the `disabled` attribute is set on the host, it receives `aria-disabled="true"`, all cells become `tabindex="-1"`, and no interaction is processed.
 
@@ -304,9 +304,15 @@ Selected days have `aria-selected="true"`; unselected days have `aria-selected="
 
 **Month and year grids**
 
-| Key               | Action                          |
-| ----------------- | ------------------------------- |
-| `Enter` / `Space` | Select the focused month / year |
+| Key               | Action                                          |
+| ----------------- | ------------------------------------------------ |
+| `ArrowRight`      | Move focus to the next cell                       |
+| `ArrowLeft`       | Move focus to the previous cell                   |
+| `ArrowDown`       | Move focus one row forward (4-column grid)        |
+| `ArrowUp`         | Move focus one row back (4-column grid)           |
+| `Home`            | Move focus to the first cell of the current row   |
+| `End`             | Move focus to the last cell of the current row    |
+| `Enter` / `Space` | Select the focused month / year                   |
 
 **Header controls**
 

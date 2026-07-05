@@ -65,7 +65,7 @@ export type UseDialogHandle = {
    */
   dispatchCloseRequest: (reason: Exclude<DialogCloseReason, 'programmatic'>) => boolean;
   handleBackdropClick: (e: MouseEvent) => void;
-  handleKeydown: (e: KeyboardEvent) => void;
+  handleCancel: (e: Event) => void;
   isOpen: Signal<boolean>;
   /** The overlay control — open/close/toggle/dispose. */
   overlay: OverlayControl;
@@ -74,13 +74,14 @@ export type UseDialogHandle = {
    */
   requestClose: (reason: Exclude<DialogCloseReason, 'programmatic'>) => void;
   /**
-   * Registers the open-prop watcher AND standard click/keydown event listeners on
-   * the dialog element. Use for components that need standard dialog behavior.
+   * Registers the open-prop watcher AND standard click/cancel event listeners on
+   * the dialog element (backdrop click-to-close, Escape via the native `cancel`
+   * event). Use for components that need standard dialog behavior.
    * Call inside `onMounted()`.
    */
   setupNativeListeners: () => void;
   /**
-   * Registers only the open-prop watcher (without adding click/keydown listeners).
+   * Registers only the open-prop watcher (without adding click/cancel listeners).
    * Use for components like drawer that register their own event handlers.
    * Call inside `onMounted()`.
    */
@@ -217,11 +218,16 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
     { signal: abortSignal },
   );
 
-  const handleKeydown = (e: KeyboardEvent): void => {
-    if (e.key === 'Escape' && !options.isPersistent()) {
-      e.preventDefault();
-      requestClose('escape');
-    }
+  // The native `<dialog>` element auto-closes on Escape via its own close-watcher, which
+  // dispatches a cancelable `cancel` event before `close`. Suppressing/redirecting that is the
+  // spec-correct hook — relying on `keydown`'s `preventDefault()` to stop the close-watcher is
+  // implementation-specific, not guaranteed across browsers.
+  const handleCancel = (e: Event): void => {
+    e.preventDefault();
+
+    if (options.isPersistent()) return;
+
+    requestClose('escape');
   };
 
   const handleBackdropClick = (e: MouseEvent): void => {
@@ -268,14 +274,14 @@ export function useDialogControl(options: UseDialogOptions): UseDialogHandle {
 
     watchOpenProp();
     options.onEvent(dialog, 'click', handleBackdropClick);
-    options.onEvent(dialog, 'keydown', handleKeydown);
+    options.onEvent(dialog, 'cancel', handleCancel);
   };
 
   return {
     closeWithAnimation,
     dispatchCloseRequest,
     handleBackdropClick,
-    handleKeydown,
+    handleCancel,
     isOpen,
     overlay,
     requestClose,

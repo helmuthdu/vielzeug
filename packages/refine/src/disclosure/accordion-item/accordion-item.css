@@ -301,15 +301,13 @@
     transform: rotate(0deg);
   }
 
-  /* Fallback CSS selectors for other RTL detection methods */
-  html[dir='rtl'] .chevron,
-  [dir='rtl'] .chevron,
+  /* :dir(rtl) is inheritance-driven and crosses the shadow boundary; the ancestor-attribute
+     selectors (html[dir='rtl']/[dir='rtl']) cannot match anything inside this shadow root and
+     were removed. */
   :dir(rtl) .chevron {
     transform: rotate(90deg);
   }
 
-  html[dir='rtl'] details[open] .chevron,
-  [dir='rtl'] details[open] .chevron,
   :dir(rtl) details[open] .chevron {
     transform: rotate(0deg);
   }

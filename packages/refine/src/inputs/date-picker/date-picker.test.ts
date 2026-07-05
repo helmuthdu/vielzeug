@@ -286,6 +286,31 @@ describe('ore-date-picker', () => {
 
       expect(trigger?.getAttribute('error')).toBe('Required');
     });
+
+    it('day view wraps header + week cells in role="row" elements', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2024-03-15' } });
+
+      await open(fixture);
+
+      const rows = fixture.queryAll('.cal-grid-days [role="row"]');
+
+      expect(rows.length).toBeGreaterThan(1);
+      expect(rows[0]?.querySelector('[role="columnheader"]')).toBeTruthy();
+      expect(rows[1]?.querySelector('[role="gridcell"]')).toBeTruthy();
+    });
+
+    it('month view wraps cells in role="row" elements', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { value: '2024-03-15' } });
+
+      await open(fixture);
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const rows = fixture.queryAll('.cal-grid-months [role="row"]');
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0]?.querySelectorAll('[role="gridcell"]').length).toBe(4);
+    });
   });
 
   // ─── Edge cases ──────────────────────────────────────────────────────────
@@ -319,12 +344,17 @@ describe('ore-date-picker', () => {
     it('passes axe checks when closed', async () => {
       fixture = await mount('ore-date-picker', { attrs: { label: 'Pick a date', value: '2024-03-15' } });
 
-      const results = await axeCheck(fixture.element, {
-        rules: {
-          'aria-required-children': { enabled: false },
-          'aria-required-parent': { enabled: false },
-        },
-      });
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks when open (calendar grid rendered)', async () => {
+      fixture = await mount('ore-date-picker', { attrs: { label: 'Pick a date', value: '2024-03-15' } });
+
+      await open(fixture);
+
+      const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
     });

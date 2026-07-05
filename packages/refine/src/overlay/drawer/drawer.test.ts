@@ -1,5 +1,7 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
+import type { DrawerElement } from './drawer';
+
 describe('ore-drawer', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -319,6 +321,33 @@ describe('ore-drawer', () => {
       expect((detail as { placement: string; reason: string })?.placement).toBe('right');
     });
 
+    it('Escape (native cancel event) actually closes the drawer, not just fires close-request', async () => {
+      fixture = await mount('ore-drawer', { attrs: { open: '', placement: 'right' } });
+
+      const dialog = fixture.query<HTMLDialogElement>('dialog');
+
+      dialog?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      const panel = fixture.query('.panel');
+
+      panel?.dispatchEvent(new Event('transitionend', { bubbles: true }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeFalsy();
+    });
+
+    it('does not close on cancel when persistent', async () => {
+      fixture = await mount('ore-drawer', { attrs: { open: '', persistent: '', placement: 'right' } });
+
+      fixture
+        .query<HTMLDialogElement>('dialog')
+        ?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
+
     it('close reason is programmatic when open is removed externally', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
 
@@ -351,7 +380,7 @@ describe('ore-drawer', () => {
     it('show() opens the drawer', async () => {
       fixture = await mount('ore-drawer');
 
-      const el = fixture.element as typeof fixture.element & { show(): void };
+      const el = fixture.element as DrawerElement;
 
       el.show();
       await fixture.flush();
@@ -362,7 +391,7 @@ describe('ore-drawer', () => {
     it('hide() closes the drawer', async () => {
       fixture = await mount('ore-drawer', { attrs: { open: '' } });
 
-      const el = fixture.element as typeof fixture.element & { hide(): void };
+      const el = fixture.element as DrawerElement;
 
       el.hide();
 

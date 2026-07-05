@@ -1,5 +1,11 @@
 import { type Fixture, mount } from '@vielzeug/ore/testing';
 
+import { registerIcons } from './icon';
+
+const CUSTOM_ICON_NODE: Array<[string, Record<string, string | number | undefined>]> = [
+  ['path', { d: 'M0 0h24v24H0z' }],
+];
+
 describe('ore-icon', () => {
   let fixture: Fixture<HTMLElement>;
 
@@ -87,6 +93,32 @@ describe('ore-icon', () => {
       const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
+    });
+  });
+
+  describe('registerIcons', () => {
+    it('registers a custom icon under a kebab-case name and renders it', async () => {
+      registerIcons({ 'my-custom-icon': CUSTOM_ICON_NODE });
+
+      fixture = await mount('ore-icon', { attrs: { name: 'my-custom-icon' } });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg path')?.getAttribute('d')).toBe('M0 0h24v24H0z');
+    });
+
+    it('registers a custom icon under a PascalCase name, resolvable via kebab-case lookup', async () => {
+      registerIcons({ MyPascalIcon: CUSTOM_ICON_NODE });
+
+      fixture = await mount('ore-icon', { attrs: { name: 'my-pascal-icon' } });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg path')?.getAttribute('d')).toBe('M0 0h24v24H0z');
+    });
+
+    it('overrides an existing icon when re-registered under the same name', async () => {
+      registerIcons({ search: CUSTOM_ICON_NODE });
+
+      fixture = await mount('ore-icon', { attrs: { name: 'search' } });
+
+      expect(fixture.element.shadowRoot?.querySelector('svg path')?.getAttribute('d')).toBe('M0 0h24v24H0z');
     });
   });
 });

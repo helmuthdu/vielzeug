@@ -323,7 +323,7 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
     // Overlay State Management
     // ────────────────────────────────────────────────────────────────
 
-    const { closeWithAnimation, overlay, requestClose, watchOpenProp } = useDialogControl({
+    const { closeWithAnimation, handleCancel, overlay, requestClose, watchOpenProp } = useDialogControl({
       beforeOpen: (dialog) => {
         // Clear any inline drag styles from a previous swipe-close so the CSS
         // entry animation starts from the correct base state.
@@ -394,14 +394,10 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
       // ────────────────────────────────────────────────────────────
       // Event Handlers: Cancel, Backdrop Click
       // ────────────────────────────────────────────────────────────
-
-      const handleCancel = (e: Event) => {
-        e.preventDefault();
-
-        if (props.persistent.value) return;
-
-        requestClose('escape');
-      };
+      // `handleCancel` (Escape via the native `cancel` event) is provided by
+      // `useDialogControl` above — drawer only needs its own backdrop-click
+      // handler since it has swipe-to-dismiss logic the shared dialog helper
+      // doesn't know about.
 
       const handleBackdropClick = (e: MouseEvent) => {
         if (props.persistent.value) return;

@@ -431,11 +431,11 @@ The columns icon (directly right of the Filter button) opens a menu listing ever
     { id: 'admin', label: 'Admins' },
     { id: 'engineering', label: 'Engineering' },
   ];
-  grid['active-view'] = 'all';
+  grid.activeView = 'all';
   grid.rows = ALL_ROWS;
 
   grid.addEventListener('view-change', (e) => {
-    grid['active-view'] = e.detail.id;
+    grid.activeView = e.detail.id;
     if (e.detail.id === 'admin') {
       grid.rows = ALL_ROWS.filter((r) => r.role === 'Admin');
     } else if (e.detail.id === 'engineering') {
@@ -487,11 +487,11 @@ Supply a `views` array and keep `active-view` in sync with `view-change` events.
     { key: 'assignee', label: 'Assignee' },
   ];
   grid.views = VIEWS;
-  grid['active-view'] = 'all';
+  grid.activeView = 'all';
   grid.rows = ALL_ROWS;
 
   grid.addEventListener('view-change', (e) => {
-    grid['active-view'] = e.detail.id;
+    grid.activeView = e.detail.id;
     if (e.detail.id === 'open') {
       grid.rows = ALL_ROWS.filter((r) => r.status === 'Open');
     } else if (e.detail.id === 'closed') {
@@ -507,7 +507,7 @@ Supply a `views` array and keep `active-view` in sync with `view-change` events.
 
 ## Page Size Selector
 
-Set `page-size-options` to show a compact `ore-select` in the footer that lets the user choose how many rows to display per page.
+Set `pageSizeOptions` to show a compact `ore-select` in the footer that lets the user choose how many rows to display per page.
 
 <ComponentPreview>
 
@@ -515,7 +515,7 @@ Set `page-size-options` to show a compact `ore-select` in the footer that lets t
 <ore-datagrid id="dg-page-opts" label="Users" page-size="5"></ore-datagrid>
 <script>
   const grid = document.getElementById('dg-page-opts');
-  grid['page-size-options'] = [5, 10, 25, 50, 100];
+  grid.pageSizeOptions = [5, 10, 25, 50, 100];
   grid.columns = [
     { key: 'name', label: 'Name' },
     { key: 'role', label: 'Role' },
@@ -567,7 +567,7 @@ Set `sort-mode="server"` to disable client-side sorting. The grid emits `sort-ch
 
 ## Controlled Selection
 
-Set `selected-keys` to programmatically control which rows are selected. Any change to this property updates the internal selection immediately.
+Set `selectedKeys` to programmatically control which rows are selected. Any change to this property updates the internal selection immediately.
 
 <ComponentPreview>
 
@@ -590,13 +590,13 @@ Set `selected-keys` to programmatically control which rows are selected. Any cha
     { id: '3', name: 'Carol', role: 'Viewer' },
   ];
   document.getElementById('sel-btn-1').addEventListener('click', () => {
-    grid['selected-keys'] = ['1'];
+    grid.selectedKeys = ['1'];
   });
   document.getElementById('sel-btn-all').addEventListener('click', () => {
-    grid['selected-keys'] = ['1', '2', '3'];
+    grid.selectedKeys = ['1', '2', '3'];
   });
   document.getElementById('sel-btn-clear').addEventListener('click', () => {
-    grid['selected-keys'] = [];
+    grid.selectedKeys = [];
   });
 </script>
 ```
@@ -698,7 +698,7 @@ type DataGridSource<T> = {
 | `views`              | `{ id: string, label: string }[]`      | —                         | Named view tab definitions. When set, tabs appear in the left controls region (JS property)                                               |
 | `active-view`        | `string`                               | —                         | ID of the currently active view. Must match an `id` in `views`. Consumer keeps this in sync via `view-change`                             |
 | `label`              | `string`                               | —                         | Accessible label for the grid (`aria-label`)                                                                                             |
-| `selected-keys`      | `string[]`                             | `[]`                      | Controlled selection — set externally to override the internal selection state (JS property)                                             |
+| `selectedKeys`       | `string[]`                             | `[]`                      | Controlled selection — set externally to override the internal selection state (JS property)                                             |
 | `selection-mode`     | `'none' \| 'single' \| 'multi'`        | `'none'`                  | Row selection behaviour                                                                                                                  |
 | `sort-mode`          | `'client' \| 'server'`                 | `'client'`                | `'server'` disables client-side sorting; consumer handles it via `sort-change`                                                           |
 | `page-size`          | `number`                               | `10`                      | Rows per page; `0` disables pagination. Reactive — can be changed after mount                                                            |
@@ -709,7 +709,7 @@ type DataGridSource<T> = {
 | `fullwidth`          | `boolean`                              | `false`                   | Stretch the grid to fill its container's width                                                                                           |
 | `search-placeholder` | `string`                               | `'Search…'`               | Placeholder text for the inline search input in the controls bar                                                                         |
 | `filterOptions`      | `FilterOption[]`                       | —                         | Pre-defined filter option definitions per column key. When set, those options replace auto-derived ones in the Filter by popover (JS property) |
-| `page-size-options`  | `number[]`                             | —                         | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
+| `pageSizeOptions`    | `number[]`                             | —                         | When set, renders a page-size `ore-select` in the footer (JS property)                                                                    |
 | `source`             | `DataGridSource`                       | —                         | A reactive sourcerer source. When set, drives rows, pagination, and search — the `rows` prop is ignored (JS property)                    |
 | `loading`            | `boolean`                              | `false`                   | Show busy/loading state. Also set automatically from `source.meta.isLoading` when `source` is provided                                   |
 | `disabled`           | `boolean`                              | `false`                   | Disable all interaction                                                                                                                  |

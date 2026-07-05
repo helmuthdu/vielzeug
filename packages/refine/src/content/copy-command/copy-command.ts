@@ -79,10 +79,14 @@ define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
     variant: prop.string<'flat' | 'bordered' | 'ghost'>('flat'),
   },
 
-  setup(props, { emit, slots }) {
+  setup(props, { emit, onCleanup, slots }) {
     const copied = signal(false);
     const copyFailed = signal(false);
     let resetTimer: ReturnType<typeof setTimeout> | null = null;
+
+    onCleanup(() => {
+      if (resetTimer !== null) clearTimeout(resetTimer);
+    });
 
     const handleCopy = async () => {
       const text = props.value.value ?? '';

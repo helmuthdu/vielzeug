@@ -214,7 +214,7 @@ export const AVATAR_GROUP_TAG = 'ore-avatar-group' as const;
 define<OreAvatarGroupProps>(AVATAR_GROUP_TAG, {
   props: {
     max: prop.number(5),
-    total: prop.json(undefined as number | undefined),
+    total: prop.number(),
   },
   setup(props, { el, slots, watch }) {
     const overflowCount = signal(0);

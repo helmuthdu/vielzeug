@@ -3,6 +3,7 @@ export { lifecycleSignal } from './ore';
 
 // ── Field base ───────────────────────────────────────────────────────────────
 export {
+  createErrorHelperState,
   type AriaProps,
   type ControlValidationMode,
   type CounterOptions,

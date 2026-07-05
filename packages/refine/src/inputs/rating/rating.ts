@@ -1,13 +1,14 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { createStableId, define, useField, html, inject, prop } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createSliderControl } from '../../headless';
+import { createErrorHelperState, createSliderControl } from '../../headless';
 import '../../content/icon/icon';
 import { disablableBundle, sizableBundle, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, reducedMotionMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderHelperRegion } from '../shared/templates';
 import styles from './rating.css?inline';
 
 export type OreRatingEvents = {
@@ -20,6 +21,10 @@ export type OreRatingProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
+  /** Error message — marks the field as invalid (fallback when the `error` slot is empty) */
+  error?: string;
+  /** Helper text displayed below the stars (fallback when the `helper` slot is empty) */
+  helper?: string;
   /** Accessible group label */
   label?: string;
   /** Maximum rating (number of stars) */
@@ -50,6 +55,8 @@ export type OreRatingProps = {
  * @attr {string} size - 'sm' | 'md' | 'lg'
  * @attr {string} name - Form field name
  * @attr {boolean} solid - Fill selected stars (outline remains default when omitted)
+ * @attr {string} helper - Helper text below the stars
+ * @attr {string} error - Error message below the stars
  *
  * @fires change - Emitted when value changes. detail: { value: number, originalEvent?: Event }
  *
@@ -60,6 +67,7 @@ export type OreRatingProps = {
  *
  * @part stars - Stars container.
  * @part star - Star item element.
+ * @part helper-text - The helper/error text element.
  * @example
  * ```html
  * <ore-rating value="3" max="5" color="warning"></ore-rating>
@@ -73,6 +81,8 @@ define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
+    error: prop.string(),
+    helper: prop.string(),
     label: prop.string('Rating'),
     max: prop.number(5),
     name: prop.string(),
@@ -102,6 +112,12 @@ define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
         fd.reportValidity();
       }
     };
+
+    const assistiveId = createStableId('helper');
+    const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
+    const errorText = computed(() => assistive.value.errorText);
+    const helperText = computed(() => assistive.value.helperText);
+    const ariaDescribedBy = computed(() => (errorText.value || helperText.value ? assistiveId : null));
 
     const isInteractive = computed(() => !props.readonly!.value && !fCtxProps.disabled.value);
     const hovered = signal<number | null>(null);
@@ -183,7 +199,12 @@ define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
     bind({ attr: { size: fCtxProps.size } });
 
     return html`
-      <div class="stars" part="stars" role="radiogroup" :aria-label="${props.label}" :aria-required="${() => null}">
+      <div
+        class="stars"
+        part="stars"
+        role="radiogroup"
+        :aria-label="${props.label}"
+        :aria-describedby="${ariaDescribedBy}">
         ${() =>
           stars.value.map(
             (star) =>
@@ -210,6 +231,7 @@ define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
           )}
         <div class="sparkle-layer"></div>
       </div>
+      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [colorThemeMixin, sizeVariantMixin({}), coarsePointerMixin, reducedMotionMixin, styles],

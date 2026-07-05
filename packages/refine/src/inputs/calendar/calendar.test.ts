@@ -457,6 +457,74 @@ describe('ore-calendar', () => {
 
       expect(fixture.query('.cal-grid-months:not([hidden])')).toBeTruthy();
     });
+
+    it('ArrowRight moves focus between month cells', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
+
+      cells[0].focus();
+      fire.keyDown(cells[0], { key: 'ArrowRight' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(cells[1]);
+    });
+
+    it('ArrowDown moves focus 4 cells forward in month view (one row)', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
+
+      cells[0].focus();
+      fire.keyDown(cells[0], { key: 'ArrowDown' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(cells[4]);
+    });
+
+    it('Home/End move focus to the first/last cell in the same month-view row', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-06-01' } });
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-month')];
+
+      cells[1].focus();
+      fire.keyDown(cells[1], { key: 'End' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(cells[3]);
+
+      cells[2].focus();
+      fire.keyDown(cells[2], { key: 'Home' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(cells[0]);
+    });
+
+    it('ArrowRight moves focus between year cells', async () => {
+      fixture = await mount('ore-calendar', { props: { value: '2023-01-01' } });
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const cells = [...fixture.queryAll<HTMLElement>('.cal-cell-year')];
+
+      cells[0].focus();
+      fire.keyDown(cells[0], { key: 'ArrowRight' });
+      await fixture.flush();
+
+      expect(fixture.shadow?.activeElement).toBe(cells[1]);
+    });
   });
 
   // ─── Accessibility ──────────────────────────────────────────────────────────
@@ -486,6 +554,43 @@ describe('ore-calendar', () => {
       const cells = getDayCells(fixture);
 
       expect(cells[0]?.getAttribute('role')).toBe('gridcell');
+    });
+
+    it('day view wraps header + week cells in role="row" elements', async () => {
+      fixture = await mount('ore-calendar');
+
+      const rows = fixture.queryAll('.cal-grid-days [role="row"]');
+
+      // 1 header row (weekday labels) + N week rows
+      expect(rows.length).toBeGreaterThan(1);
+      expect(rows[0]?.querySelector('[role="columnheader"]')).toBeTruthy();
+      expect(rows[1]?.querySelector('[role="gridcell"]')).toBeTruthy();
+    });
+
+    it('month view wraps cells in role="row" elements', async () => {
+      fixture = await mount('ore-calendar');
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const rows = fixture.queryAll('.cal-grid-months [role="row"]');
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0]?.querySelectorAll('[role="gridcell"]').length).toBe(4);
+    });
+
+    it('year view wraps cells in role="row" elements', async () => {
+      fixture = await mount('ore-calendar');
+
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+      fire.click(fixture.query('.cal-label-btn')!);
+      await fixture.flush();
+
+      const rows = fixture.queryAll('.cal-grid-years [role="row"]');
+
+      expect(rows.length).toBeGreaterThan(0);
+      expect(rows[0]?.querySelectorAll('[role="gridcell"]').length).toBe(4);
     });
 
     it('selected day has aria-selected="true"', async () => {
@@ -655,6 +760,29 @@ describe('ore-calendar', () => {
       expect(dot?.style.getPropertyValue('--badge-bg')).toBe('#e11d48');
     });
 
+    it('strips CSS-breakout characters from a malicious event color instead of injecting them', async () => {
+      fixture = await mount('ore-calendar', {
+        props: {
+          events: [
+            {
+              color: 'red;position:fixed;inset:0;background:url(https://evil.example/beacon.gif)',
+              date: '2023-06-15',
+              id: '1',
+              label: 'Alert',
+            },
+          ],
+          value: '2023-06-15',
+        },
+      });
+
+      const dot = fixture.query('[data-iso="2023-06-15"] .cal-dot') as HTMLElement | null;
+      const styleAttr = dot?.getAttribute('style') ?? '';
+
+      expect(styleAttr).not.toContain(';position');
+      expect(styleAttr).not.toContain('{');
+      expect(styleAttr).not.toContain('}');
+    });
+
     it('renders no dot container for a date with 0 events', async () => {
       fixture = await mount('ore-calendar', {
         props: {
@@ -751,12 +879,7 @@ describe('ore-calendar', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-calendar', { attrs: { value: '2024-03-15' } });
 
-      const results = await axeCheck(fixture.element, {
-        rules: {
-          'aria-required-children': { enabled: false },
-          'aria-required-parent': { enabled: false },
-        },
-      });
+      const results = await axeCheck(fixture.element);
 
       expect(results.violations).toHaveLength(0);
     });

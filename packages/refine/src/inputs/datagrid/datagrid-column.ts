@@ -58,7 +58,7 @@ export const COLUMN_OBSERVED_ATTRS = [
 /** Parse all `<ore-column>` direct children of `host` into DataGridColumn descriptors. */
 export function parseColumnChildren(host: HTMLElement): DataGridColumn[] {
   return Array.from(host.querySelectorAll(':scope > ore-column')).map((el) => ({
-    align: (el.getAttribute('align') as any) ?? undefined,
+    align: (el.getAttribute('align') as 'left' | 'center' | 'right' | null) ?? undefined,
     headerLabel: el.getAttribute('header-label') ?? undefined,
     key: el.getAttribute('key') ?? '',
     label: el.getAttribute('label') ?? '',

@@ -3,7 +3,7 @@ export type { CodeWindowVariant, OreCodeWindowProps } from './code-window/code-w
 export { COPY_COMMAND_TAG } from './copy-command/copy-command';
 export type { OreCopyCommandEvents, OreCopyCommandProps } from './copy-command/copy-command';
 export { CAROUSEL_SLIDE_TAG, CAROUSEL_TAG } from './carousel/carousel';
-export type { OreCarouselEvents, OreCarouselProps, CarouselOrientation } from './carousel/carousel';
+export type { OreCarouselEvents, OreCarouselProps, CarouselOrientation, CarouselVariant } from './carousel/carousel';
 export { AVATAR_GROUP_TAG, AVATAR_TAG } from './avatar/avatar';
 export type { AvatarStatus, OreAvatarGroupProps, OreAvatarProps } from './avatar/avatar';
 export { BREADCRUMB_ITEM_TAG, BREADCRUMB_TAG } from './breadcrumb/breadcrumb';

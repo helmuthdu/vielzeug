@@ -37,15 +37,18 @@ export type DataGridColumn<T = Record<string, unknown>> = {
    * `<ore-datagrid expandable>` shows a toggle button in each row.
    * Receives the full row item and returns an HTML string.
    *
-   * @security The returned string is inserted via `innerHTML`. If the data
-   * originates from untrusted user input, sanitize it before returning
-   * (e.g. with DOMPurify or your CSP-compliant sanitizer).
+   * @security The returned string is inserted via ore's `raw()` directive — it participates
+   * in any sanitizer registered with `setRawSanitizer()`, but if none is registered it is
+   * inserted as-is. If any part of the returned markup is derived from untrusted data
+   * (row/user content), sanitize it yourself before returning (e.g. with DOMPurify).
    *
    * @example
    * ```js
+   * import DOMPurify from 'dompurify';
+   *
    * grid.columns = [{
    *   key: 'name', label: 'Name',
-   *   renderExpanded: (row) => `<div class="detail"><b>${row.name}</b>: ${row.bio}</div>`,
+   *   renderExpanded: (row) => DOMPurify.sanitize(`<div class="detail"><b>${row.name}</b>: ${row.bio}</div>`),
    * }];
    * ```
    */

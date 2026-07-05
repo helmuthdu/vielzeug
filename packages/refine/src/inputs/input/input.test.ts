@@ -450,6 +450,121 @@ describe('ore-input', () => {
       expect(counter?.hasAttribute('data-near-limit')).toBe(false);
     });
   });
+
+  // ─── Clearable ──────────────────────────────────────────────────────────────
+
+  describe('Clearable', () => {
+    it('hides the clear button when there is no value', async () => {
+      fixture = await mount('ore-input', { attrs: { clearable: '' } });
+
+      expect(fixture.query<HTMLButtonElement>('.clear-btn')?.tabIndex).toBe(-1);
+    });
+
+    it('shows a focusable clear button once the field has a value', async () => {
+      fixture = await mount('ore-input', { attrs: { clearable: '', value: 'hello' } });
+
+      expect(fixture.query<HTMLButtonElement>('.clear-btn')?.tabIndex).toBe(0);
+    });
+
+    it('clicking the clear button empties the value and refocuses the input', async () => {
+      fixture = await mount('ore-input', { attrs: { clearable: '', value: 'hello' } });
+
+      await user.click(fixture.query<HTMLButtonElement>('.clear-btn')!);
+
+      expect(fixture.query<HTMLInputElement>('input')?.value).toBe('');
+      expect(fixture.shadow?.activeElement).toBe(fixture.query('input'));
+    });
+
+    it('clicking the clear button emits input and change with an empty value', async () => {
+      fixture = await mount('ore-input', { attrs: { clearable: '', value: 'hello' } });
+
+      const inputHandler = vi.fn();
+      const changeHandler = vi.fn();
+
+      fixture.element.addEventListener('input', inputHandler);
+      fixture.element.addEventListener('change', changeHandler);
+
+      await user.click(fixture.query<HTMLButtonElement>('.clear-btn')!);
+
+      expect(inputHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ detail: expect.objectContaining({ value: '' }) }),
+      );
+      expect(changeHandler).toHaveBeenCalledWith(
+        expect.objectContaining({ detail: expect.objectContaining({ value: '' }) }),
+      );
+    });
+  });
+
+  // ─── Password Visibility Toggle ─────────────────────────────────────────────
+
+  describe('Password Visibility Toggle', () => {
+    it('renders a password toggle button for type="password"', async () => {
+      fixture = await mount('ore-input', { attrs: { type: 'password' } });
+
+      const toggle = fixture.query<HTMLButtonElement>('.pwd-toggle-btn');
+
+      expect(toggle).toBeTruthy();
+      expect(toggle?.getAttribute('aria-pressed')).toBe('false');
+      expect(toggle?.getAttribute('aria-label')).toBe('Show password');
+    });
+
+    it('clicking the toggle switches the inner input type to text and back', async () => {
+      fixture = await mount('ore-input', { attrs: { type: 'password', value: 'secret' } });
+
+      const toggle = fixture.query<HTMLButtonElement>('.pwd-toggle-btn')!;
+
+      await user.click(toggle);
+
+      expect(fixture.query<HTMLInputElement>('input')?.type).toBe('text');
+      expect(toggle.getAttribute('aria-pressed')).toBe('true');
+      expect(toggle.getAttribute('aria-label')).toBe('Hide password');
+
+      await user.click(toggle);
+
+      expect(fixture.query<HTMLInputElement>('input')?.type).toBe('password');
+      expect(toggle.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('refocuses the input after toggling visibility', async () => {
+      fixture = await mount('ore-input', { attrs: { type: 'password', value: 'secret' } });
+
+      await user.click(fixture.query<HTMLButtonElement>('.pwd-toggle-btn')!);
+
+      expect(fixture.shadow?.activeElement).toBe(fixture.query('input'));
+    });
+
+    it('does not render a password toggle for non-password types', async () => {
+      fixture = await mount('ore-input', { attrs: { type: 'text' } });
+
+      const toggle = fixture.query<HTMLButtonElement>('.pwd-toggle-btn');
+
+      expect(toggle?.tabIndex).toBe(-1);
+    });
+  });
+
+  // ─── ref prop ───────────────────────────────────────────────────────────────
+
+  describe('ref prop', () => {
+    it('invokes the ref callback with the raw <input> element on mount', async () => {
+      const calls: (HTMLInputElement | null)[] = [];
+
+      fixture = await mount('ore-input', { props: { ref: (el: HTMLInputElement | null) => calls.push(el) } });
+      await fixture.flush();
+
+      expect(calls[0]).toBeInstanceOf(HTMLInputElement);
+    });
+
+    it('invokes the ref callback with null on unmount', async () => {
+      const calls: (HTMLInputElement | null)[] = [];
+
+      fixture = await mount('ore-input', { props: { ref: (el: HTMLInputElement | null) => calls.push(el) } });
+      await fixture.flush();
+
+      fixture.dispose();
+
+      expect(calls.at(-1)).toBeNull();
+    });
+  });
 });
 
 describe('ore-input accessibility', () => {

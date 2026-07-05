@@ -154,6 +154,42 @@ describe('ore-dialog', () => {
 
       expect(fixture.query('dialog[open]')).toBeTruthy();
     });
+
+    it('close-request reason is escape for cancel events', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '' } });
+
+      let detail: { reason: string } | undefined;
+
+      fixture.element.addEventListener('close-request', (e) => {
+        detail = (e as CustomEvent<{ reason: string }>).detail;
+      });
+
+      fixture
+        .query<HTMLDialogElement>('dialog')
+        ?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(detail?.reason).toBe('escape');
+    });
+
+    it('persistent dialog stays open on cancel event (Escape)', async () => {
+      fixture = await mount('ore-dialog', { attrs: { open: '', persistent: '' } });
+
+      const closeHandler = vi.fn();
+      const closeRequestHandler = vi.fn();
+
+      fixture.element.addEventListener('close', closeHandler);
+      fixture.element.addEventListener('close-request', closeRequestHandler);
+
+      fixture
+        .query<HTMLDialogElement>('dialog')
+        ?.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(closeRequestHandler).not.toHaveBeenCalled();
+      expect(closeHandler).not.toHaveBeenCalled();
+      expect(fixture.query('dialog[open]')).toBeTruthy();
+    });
   });
 
   describe('Invoker Commands API', () => {

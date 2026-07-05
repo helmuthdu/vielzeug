@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(refine): fix ore-button link mode to render a real anchor, rework ore-number-input composition onto ore-input's ref API, add form association to ore-otp-input, add ARIA grid row structure + arrow-key nav to calendar/date-picker month/year views, add error/helper props to rating/slider, route datagrid renderExpanded through raw() and fix calendar event-color CSS injection, rename datagrid JS properties to camelCase",
+      "type": "minor",
+      "packageName": "@vielzeug/refine"
+    }
+  ],
+  "packageName": "@vielzeug/refine",
+  "email": "helmuthdu@gmail.com"
+}

@@ -152,6 +152,8 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 | `value-text`      | `string`                                                                  | —       | Human-readable ARIA value label for single mode (e.g. `"75%"`)             |
 | `from-value-text` | `string`                                                                  | —       | Human-readable ARIA label for the start thumb in range mode (e.g. `"$20"`) |
 | `to-value-text`   | `string`                                                                  | —       | Human-readable ARIA label for the end thumb in range mode (e.g. `"$80"`)   |
+| `helper`          | `string`                                                                  | —       | Helper text shown below the slider                                        |
+| `error`           | `string`                                                                  | —       | Error message shown below the slider (renders with `role="alert"` and takes precedence over `helper`) |
 
 ### Slots
 
@@ -170,6 +172,7 @@ Use `value-text` (single mode) or `from-value-text` / `to-value-text` (range mod
 | `thumb-start` | The range start (lower) thumb   |
 | `thumb-end`   | The range end (upper) thumb     |
 | `label`       | The label element               |
+| `helper-text` | The helper/error text element   |
 
 ### Events
 

@@ -109,12 +109,11 @@ describe('ore-pagination', () => {
 
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 3"]');
 
-      if (pageBtn) {
-        fire.click(pageBtn);
-        await fixture.flush();
+      expect(pageBtn).toBeTruthy();
+      fire.click(pageBtn!);
+      await fixture.flush();
 
-        expect(fixture.element.getAttribute('page')).toBe('3');
-      }
+      expect(fixture.element.getAttribute('page')).toBe('3');
     });
 
     it('clicking next button advances the page', async () => {
@@ -122,12 +121,11 @@ describe('ore-pagination', () => {
 
       const nextBtn = fixture.query<HTMLButtonElement>('[aria-label="Next page"]');
 
-      if (nextBtn) {
-        fire.click(nextBtn);
-        await fixture.flush();
+      expect(nextBtn).toBeTruthy();
+      fire.click(nextBtn!);
+      await fixture.flush();
 
-        expect(fixture.element.getAttribute('page')).toBe('3');
-      }
+      expect(fixture.element.getAttribute('page')).toBe('3');
     });
 
     it('clicking prev button retreats the page', async () => {
@@ -135,12 +133,11 @@ describe('ore-pagination', () => {
 
       const prevBtn = fixture.query<HTMLButtonElement>('[aria-label="Previous page"]');
 
-      if (prevBtn) {
-        fire.click(prevBtn);
-        await fixture.flush();
+      expect(prevBtn).toBeTruthy();
+      fire.click(prevBtn!);
+      await fixture.flush();
 
-        expect(fixture.element.getAttribute('page')).toBe('2');
-      }
+      expect(fixture.element.getAttribute('page')).toBe('2');
     });
 
     it('clicking first page button navigates to page 1', async () => {
@@ -148,12 +145,11 @@ describe('ore-pagination', () => {
 
       const firstBtn = fixture.query<HTMLButtonElement>('[aria-label="First page"]');
 
-      if (firstBtn) {
-        fire.click(firstBtn);
-        await fixture.flush();
+      expect(firstBtn).toBeTruthy();
+      fire.click(firstBtn!);
+      await fixture.flush();
 
-        expect(fixture.element.getAttribute('page')).toBe('1');
-      }
+      expect(fixture.element.getAttribute('page')).toBe('1');
     });
 
     it('clicking last page button navigates to final page', async () => {
@@ -161,12 +157,11 @@ describe('ore-pagination', () => {
 
       const lastBtn = fixture.query<HTMLButtonElement>('[aria-label="Last page"]');
 
-      if (lastBtn) {
-        fire.click(lastBtn);
-        await fixture.flush();
+      expect(lastBtn).toBeTruthy();
+      fire.click(lastBtn!);
+      await fixture.flush();
 
-        expect(fixture.element.getAttribute('page')).toBe('5');
-      }
+      expect(fixture.element.getAttribute('page')).toBe('5');
     });
 
     it('prev button is disabled on first page', async () => {
@@ -194,7 +189,8 @@ describe('ore-pagination', () => {
 
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 2"]');
 
-      if (pageBtn) fire.click(pageBtn);
+      expect(pageBtn).toBeTruthy();
+      fire.click(pageBtn!);
 
       await fixture.flush();
 
@@ -212,7 +208,8 @@ describe('ore-pagination', () => {
 
       const pageBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-label="Page 3"]');
 
-      if (pageBtn) fire.click(pageBtn);
+      expect(pageBtn).toBeTruthy();
+      fire.click(pageBtn!);
 
       await fixture.flush();
 
@@ -228,7 +225,8 @@ describe('ore-pagination', () => {
 
       const currentBtn = fixture.shadow?.querySelector<HTMLButtonElement>('[aria-current="page"]');
 
-      if (currentBtn) fire.click(currentBtn);
+      expect(currentBtn).toBeTruthy();
+      fire.click(currentBtn!);
 
       await fixture.flush();
 

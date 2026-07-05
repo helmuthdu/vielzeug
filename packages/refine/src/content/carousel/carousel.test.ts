@@ -295,6 +295,51 @@ describe('ore-carousel', () => {
       expect(d[1]?.getAttribute('aria-selected')).toBe('false');
     });
 
+    it('indicator dots are real buttons with roving tabindex (only the active one is tabbable)', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      const d = dots(fixture);
+
+      expect(d[0]?.tagName).toBe('BUTTON');
+      expect(d[0]?.getAttribute('tabindex')).toBe('0');
+      expect(d[1]?.getAttribute('tabindex')).toBe('-1');
+    });
+
+    it('the nested ore-progress visual is decorative, not a duplicate progressbar role', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      const progress = dots(fixture)[0]?.querySelector('ore-progress');
+
+      expect(progress?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('activating a dot with Enter/Space navigates to that slide (native button semantics)', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      dots(fixture)[1]?.click();
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+    });
+
+    it('ArrowRight on a focused indicator dot moves selection to the next dot', async () => {
+      fixture = await mount('ore-carousel', { html: slides });
+      await fixture.flush();
+
+      dots(fixture)[0]?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await fixture.flush();
+
+      expect(activeSlide(fixture)?.textContent?.trim()).toBe('Slide 2');
+
+      const updated = dots(fixture);
+
+      expect(updated[1]?.getAttribute('tabindex')).toBe('0');
+      expect(updated[0]?.getAttribute('tabindex')).toBe('-1');
+    });
+
     it('navigates with ArrowRight / ArrowLeft keyboard keys', async () => {
       fixture = await mount('ore-carousel', { html: slides });
       await fixture.flush();

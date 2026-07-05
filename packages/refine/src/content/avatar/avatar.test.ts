@@ -266,6 +266,19 @@ describe('ore-avatar-group', () => {
 
       expect(fixture.query('.overflow-badge')?.textContent?.trim()).toBe('+2');
     });
+
+    it('total prop overrides the computed overflow count', async () => {
+      fixture = await mount('ore-avatar-group', {
+        attrs: { max: '2', total: '10' },
+        html: `<ore-avatar initials="A"></ore-avatar>
+               <ore-avatar initials="B"></ore-avatar>
+               <ore-avatar initials="C"></ore-avatar>`,
+      });
+
+      await fixture.flush();
+
+      expect(fixture.query('.overflow-badge')?.textContent?.trim()).toBe('+8');
+    });
   });
 
   describe('Props', () => {
@@ -273,6 +286,21 @@ describe('ore-avatar-group', () => {
       fixture = await mount('ore-avatar-group', { attrs: { max: '3' } });
 
       expect(fixture.element.getAttribute('max')).toBe('3');
+    });
+
+    it('reflects total attribute on host', async () => {
+      fixture = await mount('ore-avatar-group', { attrs: { total: '20' } });
+
+      expect(fixture.element.getAttribute('total')).toBe('20');
+    });
+
+    it('reflects total to the attribute when set via the JS property', async () => {
+      fixture = await mount('ore-avatar-group');
+
+      (fixture.element as HTMLElement & { total: number }).total = 15;
+      await fixture.flush();
+
+      expect(fixture.element.getAttribute('total')).toBe('15');
     });
   });
 

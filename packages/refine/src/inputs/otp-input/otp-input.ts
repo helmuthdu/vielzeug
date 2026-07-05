@@ -1,4 +1,4 @@
-import { define, html, inject, prop } from '@vielzeug/ore';
+import { define, useField, html, inject, prop } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -85,6 +85,7 @@ export type OreOtpInputProps = {
  */
 export const OTP_INPUT_TAG = 'ore-otp-input' as const;
 define<OreOtpInputProps, OreOtpInputEvents>(OTP_INPUT_TAG, {
+  formAssociated: true,
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -106,6 +107,11 @@ define<OreOtpInputProps, OreOtpInputEvents>(OTP_INPUT_TAG, {
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));
     const otpValue = signal(String(props.value.value || ''));
     const normalizedPropValue = () => String(props.value.value || '');
+
+    // Form association: the joined cell value is the single form value for `name`,
+    // since individual per-cell <input> elements inside the shadow root cannot
+    // participate in an ancestor <form>'s submission on their own.
+    useField<string>({ disabled: isDisabled, toFormValue: (v) => v, value: otpValue });
 
     bind({
       attr: {
@@ -273,7 +279,6 @@ define<OreOtpInputProps, OreOtpInputEvents>(OTP_INPUT_TAG, {
                 :autocomplete="${() => (i === 0 ? 'one-time-code' : 'off')}"
                 :aria-label="${() => `Digit ${i + 1} of ${lengthValue.value}`}"
                 :disabled="${() => (isDisabled.value ? true : null)}"
-                :name="${() => (props.name.value ? `${props.name.value}[${i}]` : null)}"
                 @input="${(e: Event) => handleInput(e, i)}"
                 @keydown="${(e: KeyboardEvent) => handleKeydown(e, i)}"
                 @paste="${(e: ClipboardEvent) => (i === 0 ? handlePaste(e) : e.preventDefault())}"

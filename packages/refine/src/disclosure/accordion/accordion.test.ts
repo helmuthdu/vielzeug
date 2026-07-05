@@ -73,6 +73,35 @@ describe('ore-accordion', () => {
 
       expect(items[0].hasAttribute('expanded')).toBe(false);
     });
+
+    it('does not let a nested accordion collapse the outer accordion (query scoping)', async () => {
+      fixture = await mount('ore-accordion', {
+        attrs: { 'selection-mode': 'single' },
+        html: `
+          <ore-accordion-item expanded>
+            <span slot="title">Outer First</span>
+            <ore-accordion selection-mode="single">
+              <ore-accordion-item expanded><span slot="title">Inner First</span><p>Inner 1</p></ore-accordion-item>
+              <ore-accordion-item><span slot="title">Inner Second</span><p>Inner 2</p></ore-accordion-item>
+            </ore-accordion>
+          </ore-accordion-item>
+          <ore-accordion-item><span slot="title">Outer Second</span><p>Outer 2</p></ore-accordion-item>
+        `,
+      });
+
+      const outerItems = fixture.element.querySelectorAll(':scope > ore-accordion-item');
+      const innerItems = fixture.element.querySelectorAll('ore-accordion-item ore-accordion ore-accordion-item');
+      const innerSecond = innerItems[1] as HTMLElement;
+
+      innerSecond.setAttribute('expanded', '');
+      innerSecond.dispatchEvent(new Event('expand', { bubbles: true }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      // The inner accordion's own selection change collapses its own first item...
+      expect(innerItems[0].hasAttribute('expanded')).toBe(false);
+      // ...but must not bubble up and collapse the outer accordion's expanded item.
+      expect(outerItems[0].hasAttribute('expanded')).toBe(true);
+    });
   });
 
   describe('Sizes', () => {

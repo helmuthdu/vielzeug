@@ -30,8 +30,10 @@ describe('ore-number-input', () => {
   describe('Rendering', () => {
     it('renders a spinbutton control div', async () => {
       fixture = await mount('ore-number-input');
+      await fixture.flush();
 
-      expect(fixture.query('[role="spinbutton"]')).toBeTruthy();
+      expect(fixture.query('.wrapper')).toBeTruthy();
+      expect(getInput(fixture)?.getAttribute('role')).toBe('spinbutton');
     });
 
     it('renders a decrease button', async () => {
@@ -106,6 +108,13 @@ describe('ore-number-input', () => {
       await fixture.flush();
 
       expect(getInput(fixture)?.getAttribute('inputmode')).toBe('decimal');
+    });
+
+    it('forwards a non-default rounded value to the inner ore-input', async () => {
+      fixture = await mount('ore-number-input', { attrs: { rounded: 'lg' } });
+      await fixture.flush();
+
+      expect(fixture.query('ore-input.field')?.getAttribute('rounded')).toBe('lg');
     });
   });
 
@@ -246,6 +255,94 @@ describe('ore-number-input', () => {
       expect(detail?.originalEvent).toBeDefined();
     });
   });
+
+  describe('Form Integration', () => {
+    // Regression coverage for the "stale form value" bug: number-input used to write
+    // directly to the raw <input>.value DOM property on commit, never updating
+    // ore-input's own reactive `value` prop — the one thing its ElementInternals-based
+    // form participation actually keys off. Asserting on ore-input's own `.value`
+    // property (not just number-input's host attribute) is what pins this down.
+    it('updates the inner ore-input value when committed via the increment button', async () => {
+      fixture = await mount('ore-number-input', { attrs: { value: '5' } });
+
+      const btn = fixture.query<HTMLButtonElement>('[aria-label="Increase"]');
+
+      expect(btn).toBeTruthy();
+      fire.click(btn!);
+      await fixture.flush();
+
+      const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');
+
+      expect(innerInput?.value).toBe('6');
+    });
+
+    it('updates the inner ore-input value when committed via the decrement button', async () => {
+      fixture = await mount('ore-number-input', { attrs: { value: '5' } });
+
+      const btn = fixture.query<HTMLButtonElement>('[aria-label="Decrease"]');
+
+      expect(btn).toBeTruthy();
+      fire.click(btn!);
+      await fixture.flush();
+
+      const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');
+
+      expect(innerInput?.value).toBe('4');
+    });
+
+    it('updates the inner ore-input value when committed via keyboard (Home/End)', async () => {
+      fixture = await mount('ore-number-input', { attrs: { max: '10', min: '0', value: '5' } });
+
+      const wrapper = fixture.query<HTMLElement>('.wrapper');
+
+      wrapper?.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }));
+      await fixture.flush();
+
+      const innerInput = fixture.query<HTMLElement & { value: string }>('ore-input.field');
+
+      expect(innerInput?.value).toBe('10');
+    });
+  });
+
+  describe('ref prop', () => {
+    it('invokes the ref callback with the raw <input> element on mount', async () => {
+      const calls: (HTMLInputElement | null)[] = [];
+
+      fixture = await mount('ore-number-input', { props: { ref: (el: HTMLInputElement | null) => calls.push(el) } });
+      await fixture.flush();
+      await new Promise<void>((r) => setTimeout(r, 50));
+
+      expect(calls.some((c) => c instanceof HTMLInputElement)).toBe(true);
+    });
+
+    it('invokes the ref callback with null on unmount', async () => {
+      const calls: (HTMLInputElement | null)[] = [];
+
+      fixture = await mount('ore-number-input', { props: { ref: (el: HTMLInputElement | null) => calls.push(el) } });
+      await fixture.flush();
+      await new Promise<void>((r) => setTimeout(r, 10));
+
+      fixture.dispose();
+
+      expect(calls.at(-1)).toBeNull();
+    });
+  });
+
+  describe('Reactive min/max after mount', () => {
+    it('updates aria-valuemin/aria-valuemax on the real input when min/max change after mount', async () => {
+      fixture = await mount('ore-number-input', { attrs: { max: '10', min: '0', value: '5' } });
+
+      const input = getInput(fixture);
+
+      expect(input?.getAttribute('aria-valuemin')).toBe('0');
+      expect(input?.getAttribute('aria-valuemax')).toBe('10');
+
+      await fixture.attrs({ max: '20', min: '5' });
+
+      expect(input?.getAttribute('aria-valuemin')).toBe('5');
+      expect(input?.getAttribute('aria-valuemax')).toBe('20');
+    });
+  });
 });
 
 // ─── Accessibility ────────────────────────────────────────────────────────────
@@ -264,58 +361,59 @@ describe('ore-number-input accessibility', () => {
   });
 
   describe('WAI-ARIA Spinbutton Pattern', () => {
-    it('control div has role="spinbutton"', async () => {
+    it('the actually-focusable native input has role="spinbutton"', async () => {
       fixture = await mount('ore-number-input');
+      await fixture.flush();
 
-      expect(fixture.query('[role="spinbutton"]')).toBeTruthy();
+      const input = getInput(fixture);
+
+      expect(input?.getAttribute('role')).toBe('spinbutton');
+      expect(input?.tabIndex).not.toBe(-1);
     });
 
-    it('spinbutton has aria-label when label prop is set', async () => {
+    it('spinbutton is labelled via the ore-input field it is rendered inside (aria-labelledby)', async () => {
       fixture = await mount('ore-number-input', { attrs: { label: 'Quantity' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
+      const input = getInput(fixture);
 
-      expect(control?.getAttribute('aria-label')).toBe('Quantity');
+      expect(input?.hasAttribute('aria-labelledby')).toBe(true);
+      expect(getLabel(fixture)?.textContent?.trim()).toBe('Quantity');
     });
 
     it('spinbutton has aria-valuenow when value is set', async () => {
       fixture = await mount('ore-number-input', { attrs: { value: '7' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
-
-      expect(control?.getAttribute('aria-valuenow')).toBe('7');
+      expect(getInput(fixture)?.getAttribute('aria-valuenow')).toBe('7');
     });
 
     it('spinbutton has aria-valuemin when min is set', async () => {
       fixture = await mount('ore-number-input', { attrs: { min: '1' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
-
-      expect(control?.getAttribute('aria-valuemin')).toBe('1');
+      expect(getInput(fixture)?.getAttribute('aria-valuemin')).toBe('1');
     });
 
     it('spinbutton has aria-valuemax when max is set', async () => {
       fixture = await mount('ore-number-input', { attrs: { max: '100' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
-
-      expect(control?.getAttribute('aria-valuemax')).toBe('100');
+      expect(getInput(fixture)?.getAttribute('aria-valuemax')).toBe('100');
     });
 
-    it('spinbutton has aria-disabled when disabled', async () => {
+    it('spinbutton has native disabled attribute when disabled', async () => {
       fixture = await mount('ore-number-input', { attrs: { disabled: '' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
-
-      expect(control?.getAttribute('aria-disabled')).toBe('true');
+      expect(getInput(fixture)?.disabled).toBe(true);
     });
 
     it('spinbutton has aria-readonly when readonly', async () => {
       fixture = await mount('ore-number-input', { attrs: { readonly: '' } });
+      await fixture.flush();
 
-      const control = fixture.query('[role="spinbutton"]');
-
-      expect(control?.getAttribute('aria-readonly')).toBe('true');
+      expect(getInput(fixture)?.getAttribute('aria-readonly')).toBe('true');
     });
   });
 

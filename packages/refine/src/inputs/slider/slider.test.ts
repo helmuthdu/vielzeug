@@ -182,6 +182,133 @@ describe('ore-slider', () => {
       expect(fixture.element.getAttribute('aria-valuenow')).toBe('0');
     });
   });
+
+  // ─── Helper / Error Text ────────────────────────────────────────────────────
+
+  describe('Helper / Error Text', () => {
+    it('renders helper text when helper attribute is set', async () => {
+      fixture = await mount('ore-slider', { attrs: { helper: 'Choose a volume' } });
+
+      const helperEl = fixture.query('.helper-text:not([role="alert"])');
+
+      expect(helperEl?.textContent?.trim()).toBe('Choose a volume');
+    });
+
+    it('renders error text with role="alert" when error attribute is set', async () => {
+      fixture = await mount('ore-slider', { attrs: { error: 'Value out of range' } });
+
+      const errorEl = fixture.query('.helper-text[role="alert"]');
+
+      expect(errorEl?.textContent?.trim()).toBe('Value out of range');
+    });
+
+    it('shows error text (not helper text) when both are set', async () => {
+      fixture = await mount('ore-slider', { attrs: { error: 'Value out of range', helper: 'Choose a volume' } });
+
+      const region = fixture.query('.helper-text');
+
+      expect(region?.getAttribute('role')).toBe('alert');
+      expect(region?.textContent?.trim()).toBe('Value out of range');
+      expect(region?.textContent).not.toContain('Choose a volume');
+    });
+
+    it('wires aria-describedby on the host in single mode', async () => {
+      fixture = await mount('ore-slider', { attrs: { helper: 'Pick a value' } });
+
+      const helperEl = fixture.query('.helper-text');
+
+      expect(fixture.element.getAttribute('aria-describedby')).toBe(helperEl?.id);
+    });
+  });
+
+  // ─── Range Mode ─────────────────────────────────────────────────────────────
+
+  describe('Range Mode', () => {
+    it('renders both start and end thumbs', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
+
+      expect(fixture.query('.slider-thumb-start')).toBeTruthy();
+      expect(fixture.query('.slider-thumb-end')).toBeTruthy();
+    });
+
+    it('reflects from/to as aria-valuenow on the respective thumbs', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(fixture.query('.slider-thumb-start')?.getAttribute('aria-valuenow')).toBe('20');
+      expect(fixture.query('.slider-thumb-end')?.getAttribute('aria-valuenow')).toBe('80');
+    });
+
+    it('ArrowRight on the start thumb increments its value (step default 1)', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const startThumb = fixture.query<HTMLElement>('.slider-thumb-start')!;
+
+      startThumb.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(startThumb.getAttribute('aria-valuenow')).toBe('21');
+    });
+
+    it('ArrowLeft on the end thumb decrements its value', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const endThumb = fixture.query<HTMLElement>('.slider-thumb-end')!;
+
+      endThumb.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowLeft' }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(endThumb.getAttribute('aria-valuenow')).toBe('79');
+    });
+
+    it('the start thumb cannot be moved past the end thumb', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '49', range: '', to: '50' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const startThumb = fixture.query<HTMLElement>('.slider-thumb-start')!;
+
+      startThumb.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await new Promise((r) => setTimeout(r, 10));
+      startThumb.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(Number(startThumb.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(50);
+    });
+
+    it('emits change with { from, to, value: { from, to } } detail on thumb keydown', async () => {
+      fixture = await mount('ore-slider', { attrs: { from: '20', range: '', to: '80' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      let detail: { from?: number; to?: number; value?: { from: number; to: number } } | undefined;
+
+      fixture.element.addEventListener('change', (e) => {
+        detail = (e as CustomEvent).detail;
+      });
+
+      fixture
+        .query<HTMLElement>('.slider-thumb-start')!
+        .dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(detail?.from).toBe(21);
+      expect(detail?.to).toBe(80);
+      expect(detail?.value).toEqual({ from: 21, to: 80 });
+    });
+
+    it('disabled range slider does not respond to thumb keydown', async () => {
+      fixture = await mount('ore-slider', { attrs: { disabled: '', from: '20', range: '', to: '80' } });
+      await new Promise((r) => setTimeout(r, 10));
+
+      const startThumb = fixture.query<HTMLElement>('.slider-thumb-start')!;
+
+      startThumb.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowRight' }));
+      await new Promise((r) => setTimeout(r, 10));
+
+      expect(startThumb.getAttribute('aria-valuenow')).toBe('20');
+    });
+  });
 });
 
 describe('ore-slider accessibility', () => {

@@ -209,7 +209,7 @@ export const shineEffectMixin = (selector: string) => {
         conic-gradient(red 0 0) padding-box;
 
       /* Use the theme's own focus-shadow — color-aware, well-tuned, no artifacts */
-      box-shadow: var(--_theme-focus-shadow);
+      box-shadow: var(--_theme-shadow);
 
       pointer-events: none;
       animation: shine-rotate 2.5s linear infinite;

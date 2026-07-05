@@ -177,22 +177,35 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
       step: props.step,
     });
 
-    // Ref to the ore-input host element
-    const bitInputRef = ref<HTMLElement>();
-    // Raw inner <input> extracted from ore-input's shadow root
-    let inputEl: HTMLInputElement | null = null;
+    // Composition uses ore-input's own documented `ref` prop (fired with the raw
+    // <input> on mount, `null` on unmount) instead of reaching into its shadow DOM —
+    // see `packages/refine/AGENTS.md` / input.ts's `ref` JSDoc for the supported contract.
+    // Set imperatively (rather than declared in the template) because ore's template
+    // engine treats a function-valued attr binding as a reactive getter to invoke, not
+    // a literal value to assign — a plain property assignment avoids that entirely.
+    const bitInputRef = ref<HTMLElementTagNameMap['ore-input']>();
+    let stopAriaWatch: (() => void) | null = null;
+    let detachListeners: (() => void) | null = null;
+    let refSub: { dispose(): void } | null = null;
 
-    onElement(bitInputRef, (bitInputEl) => {
-      const rawInput = bitInputEl.shadowRoot?.querySelector<HTMLInputElement>('input') ?? null;
+    const handleFieldRef = (rawInput: HTMLInputElement | null): void => {
+      if (!rawInput) {
+        stopAriaWatch?.();
+        detachListeners?.();
+        refSub?.dispose();
+        stopAriaWatch = null;
+        detachListeners = null;
+        refSub = null;
+        props.ref.value?.(null);
 
-      if (!rawInput) return;
+        return;
+      }
 
-      inputEl = rawInput;
-
-      // Set inputmode and text-align imperatively
       rawInput.setAttribute('inputmode', 'decimal');
+      // The wrapper div is a plain layout container — WAI-ARIA spinbutton semantics
+      // live on the actually-focusable element (the raw <input> rendered by ore-input).
+      rawInput.setAttribute('role', 'spinbutton');
 
-      // Wire change/input events
       const handleChange = (e: Event) => {
         const val = (e.target as HTMLInputElement).value;
         const n = val !== '' ? Number.parseFloat(val) : null;
@@ -210,30 +223,39 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
 
       rawInput.addEventListener('change', handleChange);
       rawInput.addEventListener('input', handleInput);
+      detachListeners = () => {
+        rawInput.removeEventListener('change', handleChange);
+        rawInput.removeEventListener('input', handleInput);
+      };
+
+      stopAriaWatch = watch(() => {
+        const now = parseValue();
+
+        if (now == null) rawInput.removeAttribute('aria-valuenow');
+        else rawInput.setAttribute('aria-valuenow', String(now));
+
+        if (props.min.value != null) rawInput.setAttribute('aria-valuemin', String(props.min.value));
+        else rawInput.removeAttribute('aria-valuemin');
+
+        if (props.max.value != null) rawInput.setAttribute('aria-valuemax', String(props.max.value));
+        else rawInput.removeAttribute('aria-valuemax');
+
+        if (isReadonly.value) rawInput.setAttribute('aria-readonly', 'true');
+        else rawInput.removeAttribute('aria-readonly');
+      });
 
       // Fire user ref callback
       props.ref.value?.(rawInput);
 
-      const sub = rippleWatch(props.ref, (cb) => {
+      refSub = rippleWatch(props.ref, (cb) => {
         cb?.(rawInput);
       });
+    };
 
-      return () => {
-        sub.dispose();
-        props.ref.value?.(null);
-        rawInput.removeEventListener('change', handleChange);
-        rawInput.removeEventListener('input', handleInput);
-        inputEl = null;
-      };
-    });
-
-    // Keep the raw input's displayed value in sync with fieldValue signal
-    watch(() => {
-      if (!bitInputRef.value) return;
-
-      const el = inputEl;
-
-      if (el && el.value !== fieldValue.value) el.value = fieldValue.value;
+    // ore-input's own onElement/ref lifecycle calls this back with `null` when its
+    // inner <input> unmounts, so no explicit teardown is needed here.
+    onElement(bitInputRef, (bitInputEl) => {
+      bitInputEl.ref = handleFieldRef;
     });
 
     bind({
@@ -247,17 +269,7 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
     const isNonInteractive = computed(() => isDisabled.value || isReadonly.value);
 
     return html`
-      <div
-        class="wrapper"
-        role="spinbutton"
-        part="control"
-        :aria-valuenow="${() => parseValue() ?? null}"
-        :aria-valuemin="${() => props.min.value}"
-        :aria-valuemax="${() => props.max.value}"
-        :aria-label="${() => props.label.value}"
-        :aria-disabled="${() => (isDisabled.value ? 'true' : null)}"
-        :aria-readonly="${() => (isReadonly.value ? 'true' : null)}"
-        @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
+      <div class="wrapper" part="control" @keydown="${(e: KeyboardEvent) => spinner.handleKeydown(e)}">
         <button
           type="button"
           part="decrement-btn"
@@ -270,6 +282,7 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
           class="field"
           part="field"
           ref="${bitInputRef}"
+          :value="${() => fieldValue.value}"
           :label="${() => props.label.value ?? ''}"
           :label-placement="${() => props['label-placement'].value ?? 'inset'}"
           :placeholder="${() => props.placeholder.value ?? ''}"
@@ -279,7 +292,7 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
           :size="${fCtxProps.size}"
           :color="${() => props.color.value ?? ''}"
           :variant="${() => props.variant.value ?? ''}"
-          ?rounded="${() => props.rounded.value}"
+          :rounded="${() => props.rounded.value}"
           ?disabled="${isDisabled}"
           ?readonly="${isReadonly}"
           ?fullwidth="${() => false}">

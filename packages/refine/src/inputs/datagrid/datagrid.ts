@@ -1,5 +1,6 @@
 import { debounce } from '@vielzeug/arsenal';
 import { define, html, prop } from '@vielzeug/ore';
+import { raw } from '@vielzeug/ore/directives';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { warn } from '../../_dev';
@@ -73,9 +74,9 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   /**
    * The ID of the currently active view. Must match an `id` in `views`.
    * When omitted, no view is active (all data shown).
-   * @example `grid['active-view'] = 'open'`
+   * @example `grid.activeView = 'open'`
    */
-  'active-view'?: string;
+  activeView?: string;
   /**
    * Column definitions (imperative API). Takes precedence over `<ore-column>` children.
    * Passing `[]` explicitly clears declarative children.
@@ -94,13 +95,14 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   /** Disable all interaction. */
   disabled?: boolean;
   /** Text shown when there are no rows. */
-  'empty-text'?: string;
+  emptyText?: string;
   /**
    * Enable row expansion. When set, each row gets a toggle button.
    * Requires at least one column to have a `renderExpanded` function.
    *
-   * @security The `renderExpanded` callback returns an HTML string inserted via `innerHTML`.
-   * If data originates from untrusted user input, sanitize it before returning
+   * @security The `renderExpanded` callback's returned HTML string is inserted via ore's
+   * `raw()` directive (participates in `setRawSanitizer()` if one is registered). If data
+   * originates from untrusted user input, sanitize it before returning
    * (e.g. with DOMPurify or your CSP-compliant sanitizer).
    */
   expandable?: boolean;
@@ -127,13 +129,13 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
   /** Show a busy/loading state with reduced opacity. */
   loading?: boolean;
   /** Number of rows per page. Defaults to `10`. Set to `0` to disable pagination. */
-  'page-size'?: number;
+  pageSize?: number;
   /**
    * Options for the per-page size selector rendered in the footer.
    * When provided, a `ore-select` is shown next to the pagination controls.
-   * @example `grid['page-size-options'] = [10, 25, 50, 100]`
+   * @example `grid.pageSizeOptions = [10, 25, 50, 100]`
    */
-  'page-size-options'?: number[];
+  pageSizeOptions?: number[];
   /**
    * Row data. Pass as a JS property — not serialisable to an HTML attribute.
    * @example
@@ -146,23 +148,23 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    * Accessible label for the search toggle button. Supports localization.
    * Defaults to `'Search'` (open) and `'Close search'` (close).
    * Pass a tuple `[openLabel, closeLabel]` to override both.
-   * @example `grid['search-label'] = ['Suchen', 'Suche schließen']`
+   * @example `grid.searchLabel = ['Suchen', 'Suche schließen']`
    */
-  'search-label'?: [open: string, close: string];
+  searchLabel?: [open: string, close: string];
   /** Placeholder text for the inline search input in the controls bar. */
-  'search-placeholder'?: string;
+  searchPlaceholder?: string;
   /**
    * Pre-selected row keys. Setting this from outside will update the internal selection.
-   * @example `grid['selected-keys'] = ['1', '3']`
+   * @example `grid.selectedKeys = ['1', '3']`
    */
-  'selected-keys'?: string[];
+  selectedKeys?: string[];
   /** Row selection mode. */
-  'selection-mode'?: SelectionMode;
+  selectionMode?: SelectionMode;
   /**
    * Whether sorting is client-side (default) or server-side.
    * When `'server'`, `sort-change` fires but items are not sorted by the control.
    */
-  'sort-mode'?: SortMode;
+  sortMode?: SortMode;
   /**
    * A reactive data source from `@vielzeug/sourcerer` (or any compatible object).
    * When set, the source drives row data, pagination, and search — the `rows` prop is ignored.
@@ -188,7 +190,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
    *   { id: 'open', label: 'Open' },
    *   { id: 'mine', label: 'Mine' },
    * ];
-   * grid['active-view'] = 'all';
+   * grid.activeView = 'all';
    * ```
    */
   views?: DataGridView[];
@@ -207,7 +209,6 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  * @attr {boolean} fullwidth - Stretch the grid to fill its container's width
  * @attr {data} search-label - Tuple [openLabel, closeLabel] for the search toggle button
  * @attr {string} search-placeholder - Placeholder for the inline search input
- * @attr {data} filterOptions - Pre-defined filter option definitions per column key
  * @attr {number} page-size - Rows per page (0 = no pagination, default 10)
  * @attr {string} selection-mode - Row selection: 'none' | 'single' | 'multi'
  * @attr {string} sort-mode - Sorting: 'client' (default) | 'server'
@@ -258,7 +259,7 @@ export type OreDataGridProps<T = Record<string, unknown>> = {
  *     { id: '2', name: 'Bob',   role: 'Viewer' },
  *   ];
  *   grid.views = [{ id: 'all', label: 'All' }, { id: 'open', label: 'Open' }];
- *   grid['active-view'] = 'all';
+ *   grid.activeView = 'all';
  * </script>
  * ```
  */
@@ -319,25 +320,25 @@ export const DATAGRID_TAG = 'ore-datagrid' as const;
 
 define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
   props: {
-    'active-view': prop.string(),
+    activeView: prop.string(),
     density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
     ...disablableBundle,
     ...loadableBundle,
     columns: prop.data<DataGridColumn[]>(),
-    'empty-text': prop.string('No data'),
+    emptyText: prop.string('No data'),
     expandable: prop.bool(false),
     filterOptions: prop.data<FilterOption[]>(),
     fullwidth: prop.bool(false),
     getRowKey: prop.data<(row: Record<string, unknown>) => string>(),
     label: prop.string(),
-    'page-size': prop.number(10),
-    'page-size-options': prop.data<number[]>(),
+    pageSize: prop.number(10),
+    pageSizeOptions: prop.data<number[]>(),
     rows: prop.data<Record<string, unknown>[]>(),
-    'search-label': prop.data<[string, string]>(),
-    'search-placeholder': prop.string('Search…'),
-    'selected-keys': prop.data<string[]>(),
-    'selection-mode': prop.string<SelectionMode>('none'),
-    'sort-mode': prop.string<SortMode>('client'),
+    searchLabel: prop.data<[string, string]>(),
+    searchPlaceholder: prop.string('Search…'),
+    selectedKeys: prop.data<string[]>(),
+    selectionMode: prop.string<SelectionMode>('none'),
+    sortMode: prop.string<SortMode>('client'),
     source: prop.data<DataGridSource>(),
     striped: prop.bool(false),
     views: prop.data<DataGridView[]>(),
@@ -345,7 +346,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
 
   setup(props, { el, emit, onCleanup, onMounted, slots }) {
     const isDisabled = computed(() => props.disabled.value === true);
-    const selectionMode = computed(() => props['selection-mode'].value ?? 'none');
+    const selectionMode = computed(() => props.selectionMode.value ?? 'none');
 
     // ── Row expansion (hoisted — needed by checkOffset + effectiveColCount) ──
     const expandedKeys = signal(new Set<string>());
@@ -362,11 +363,11 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
 
     // ── Page size ────────────────────────────────────────────────────────
     // Signal driven by the `page-size` prop. Stays in sync with prop changes
-    // so consumers can set grid['page-size'] = n reactively after mount.
+    // so consumers can set grid.pageSize = n reactively after mount.
     // The per-page size selector also writes to this signal directly.
-    const pageSize = signal<number>(props['page-size'].value ?? 10);
+    const pageSize = signal<number>(props.pageSize.value ?? 10);
 
-    watch(props['page-size'], (n) => {
+    watch(props.pageSize, (n) => {
       if (n != null) pageSize.value = n;
     });
 
@@ -429,11 +430,14 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
       rows: computed(() => props.rows.value ?? []),
     });
 
-    const debouncedSearch = debounce((q: any) => {
+    const debouncedSearch = debounce((q: unknown) => {
+      // `debounce`'s generic constraint requires the parameter type to accept `unknown`;
+      // the only call site below always passes the search input's string value.
+      const query = q as string;
       const src = props.source.value;
 
-      if (src?.search) void src.search(q as string);
-      else controls.setSearchQuery(q as string);
+      if (src?.search) void src.search(query);
+      else controls.setSearchQuery(query);
     }, 250);
 
     // ── Reactive source bridge ────────────────────────────────────────────────
@@ -523,7 +527,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
     // ── Sync external selected-keys prop into ctrl ────────────────────────────
 
     watch(
-      props['selected-keys'],
+      props.selectedKeys,
       (keys) => {
         if (Array.isArray(keys)) ctrl.setSelection(new Set(keys));
       },
@@ -754,7 +758,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
 
     const renderViewTabs = (): unknown => {
       const views = props.views.value ?? [];
-      const activeId = props['active-view'].value;
+      const activeId = props.activeView.value;
 
       return html`<div
         class="dg-tabs"
@@ -1043,7 +1047,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                     variant="flat"
                     size="sm"
                     rounded="full"
-                    :placeholder="${() => props['search-placeholder'].value ?? 'Search…'}"
+                    :placeholder="${() => props.searchPlaceholder.value ?? 'Search…'}"
                     :disabled="${() => isDisabled.value || undefined}"
                     ref="${(inputEl: HTMLElement | null) => {
                       if (inputEl) requestAnimationFrame(() => (inputEl as HTMLElement).focus());
@@ -1068,7 +1072,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
               size="sm"
               icon-only
               :label="${() => {
-                const [open, close] = props['search-label'].value ?? ['Search', 'Close search'];
+                const [open, close] = props.searchLabel.value ?? ['Search', 'Close search'];
 
                 return controls.searchActive.value ? close : open;
               }}"
@@ -1203,7 +1207,7 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                 ? html`<tr role="row">
                     <td class="dg-empty" role="gridcell" :colspan="${() => String(effectiveColCount.value)}">
                       <div class="dg-empty-content">
-                        ${() => props['empty-text'].value ?? 'No data'}
+                        ${() => props.emptyText.value ?? 'No data'}
                         ${() =>
                           controls.searchQuery.value || controls.filterValues.value.size
                             ? html`<div class="dg-empty-actions">
@@ -1342,16 +1346,22 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                               <td
                                 class="dg-td-expanded"
                                 role="gridcell"
-                                :colspan="${() => String(effectiveColCount.value)}"
-                                ref="${(td: HTMLElement | null) => {
-                                  if (!td) return;
+                                :colspan="${() => String(effectiveColCount.value)}">
+                                ${
+                                  // Routed through raw() (not a bare innerHTML= write) so it
+                                  // participates in the app's registered setRawSanitizer() and
+                                  // the dev-mode unsanitized-HTML warning — see the @security
+                                  // note above: consumers are still responsible for sanitizing
+                                  // any row-derived content their renderExpanded returns.
+                                  raw(() => {
+                                    const renderer = resolvedColumns.value.find(
+                                      (c) => typeof c.renderExpanded === 'function',
+                                    );
 
-                                  const renderer = resolvedColumns.value.find(
-                                    (c) => typeof c.renderExpanded === 'function',
-                                  );
-
-                                  td.innerHTML = renderer?.renderExpanded?.(item) ?? '';
-                                }}"></td>
+                                    return renderer?.renderExpanded?.(item) ?? '';
+                                  })
+                                }
+                              </td>
                             </tr>`
                           : html``} `;
                   })}
@@ -1364,14 +1374,14 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
         paginationEnabled.value
           ? html`<div class="dg-footer" part="footer" role="navigation" aria-label="Pagination">
               ${() =>
-                !(props['page-size-options'].value ?? []).length
+                !(props.pageSizeOptions.value ?? []).length
                   ? html`<span class="dg-footer-info" dir="ltr" aria-live="polite" aria-atomic="true"
                       >${paginationInfo}</span
                     >`
                   : html``}
               <div class="dg-footer-end">
                 ${() => {
-                  const opts = props['page-size-options'].value ?? [];
+                  const opts = props.pageSizeOptions.value ?? [];
 
                   return opts.length
                     ? html`<div class="dg-page-size-wrap">

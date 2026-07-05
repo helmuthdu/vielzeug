@@ -121,24 +121,6 @@ define<OrePaginationProps, OrePaginationEvents>(PAGINATION_TAG, {
       emit('change', { page: next });
     }
 
-    function handlePageClick(event: Event) {
-      const btn = (event.target as HTMLElement)?.closest('[part="page-btn"]') as HTMLButtonElement | null;
-
-      if (!btn) return;
-
-      const ariaLabel = btn.getAttribute('aria-label');
-
-      if (!ariaLabel) return;
-
-      const pageMatch = ariaLabel.match(/\d+/);
-
-      if (!pageMatch) return;
-
-      const page = Number(pageMatch[0]);
-
-      goTo(page);
-    }
-
     const pageItems = computed(() =>
       buildPageRange(props.page.value || 1, props['total-pages'].value || 1, props.siblings.value ?? 1),
     );
@@ -147,7 +129,7 @@ define<OrePaginationProps, OrePaginationEvents>(PAGINATION_TAG, {
     const isLast = computed(() => (props.page.value || 1) >= (props['total-pages'].value || 1));
 
     return html`
-      <nav :aria-label="${props.label}" part="nav" @click=${handlePageClick}>
+      <nav :aria-label="${props.label}" part="nav">
         <ol class="pagination" part="list">
           ${() =>
             props['show-first-last'].value
@@ -189,10 +171,17 @@ define<OrePaginationProps, OrePaginationEvents>(PAGINATION_TAG, {
                 const pgLabel = `Page ${pg}`;
 
                 return isCurrent
-                  ? html`<button type="button" part="page-btn" aria-label="${pgLabel}" aria-current="page">
+                  ? html`<button
+                      type="button"
+                      part="page-btn"
+                      aria-label="${pgLabel}"
+                      aria-current="page"
+                      @click=${() => goTo(pg)}>
                       ${pg}
                     </button>`
-                  : html`<button type="button" part="page-btn" aria-label="${pgLabel}">${pg}</button>`;
+                  : html`<button type="button" part="page-btn" aria-label="${pgLabel}" @click=${() => goTo(pg)}>
+                      ${pg}
+                    </button>`;
               })}
           </li>
           ${() =>

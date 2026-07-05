@@ -64,6 +64,18 @@ describe('ore-skeleton', () => {
 
       expect(fixture.element.getAttribute('data-animated')).toBe('false');
     });
+
+    it('reflects the striped attribute', async () => {
+      fixture = await mount('ore-skeleton', { attrs: { striped: '' } });
+
+      expect(fixture.element.hasAttribute('striped')).toBe(true);
+    });
+
+    it('does not reflect striped by default', async () => {
+      fixture = await mount('ore-skeleton');
+
+      expect(fixture.element.hasAttribute('striped')).toBe(false);
+    });
   });
 
   describe('Accessibility', () => {

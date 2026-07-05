@@ -63,9 +63,9 @@ describe('ore-box', () => {
     });
 
     it('applies rainbow', async () => {
-      fixture = await mount('ore-box', { attrs: { rainbow: '' } });
+      fixture = await mount('ore-box', { attrs: { effect: 'rainbow' } });
 
-      expect(fixture.element.hasAttribute('rainbow')).toBe(true);
+      expect(fixture.element.getAttribute('effect')).toBe('rainbow');
     });
   });
 

@@ -142,6 +142,13 @@
     min-height: calc(7 * var(--size-10) + 6 * var(--size-0-5));
   }
 
+  /* role="row" wrappers exist for ARIA grid structure only — `display: contents`
+     removes them from layout so their children still participate directly in the
+     parent's CSS grid tracks. */
+  .cal-grid [role='row'] {
+    display: contents;
+  }
+
   .cal-cell {
     display: flex;
     align-items: center;

@@ -1,7 +1,7 @@
 import { createContext, define, html, prop, ref } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
 import { createInteraction, createListControl } from '../../headless';
 import { sizableBundle, themableBundle } from '../../shared';
@@ -14,7 +14,7 @@ export type TabsContext = {
   orientation: Readable<'horizontal' | 'vertical'>;
   size: Readable<ComponentSize | undefined>;
   value: Readable<string | undefined>;
-  variant: Readable<VisualVariant | undefined>;
+  variant: Readable<SurfaceVariant | undefined>;
 };
 /** Injection key for the tabs context. */
 export const TABS_CTX = createContext<TabsContext>('TabsContext');
@@ -41,7 +41,7 @@ export type OreTabsProps = {
   /** Currently selected tab value */
   value?: string;
   /** Visual style variant */
-  variant?: VisualVariant;
+  variant?: SurfaceVariant;
 };
 
 /**
@@ -72,7 +72,7 @@ export type OreTabsProps = {
  * @part panels - Container that holds tab panel content
  * @example
  * ```html
- * <ore-tabs value="tab1" variant="underline">
+ * <ore-tabs value="tab1" variant="bordered">
  *   <ore-tab-item slot="tabs" value="tab1">Overview</ore-tab-item>
  *   <ore-tab-item slot="tabs" value="tab2">Settings</ore-tab-item>
  *   <ore-tab-panel value="tab1"><p>Overview content</p></ore-tab-panel>
@@ -89,7 +89,7 @@ define<OreTabsProps, OreTabsEvents>(TABS_TAG, {
     label: prop.string(),
     orientation: prop.oneOf(['horizontal', 'vertical'] as const, 'horizontal'),
     value: prop.string(),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.string<SurfaceVariant>(),
   },
   setup(props, { bind, el, emit, onMounted, provide }) {
     const shadowRoot = el.shadowRoot;
@@ -153,7 +153,6 @@ define<OreTabsProps, OreTabsEvents>(TABS_TAG, {
 
     const listControl = createListControl({
       getItems: () => getEnabledTabs(),
-      isItemDisabled: (tab: HTMLElement) => tab.hasAttribute('disabled'),
       loop: true,
       onNavigate: (_action, index) => {
         const tabs = getEnabledTabs();

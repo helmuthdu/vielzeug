@@ -1,9 +1,7 @@
 import { sleep } from '@vielzeug/arsenal';
 import { fire, type Fixture, mount } from '@vielzeug/ore/testing';
 
-import type { DataGridColumn } from '../../headless';
-
-import { ariaSortValue, sortIconName } from './datagrid';
+import { ariaSortValue, sortIconName, type OreDataGridProps } from './datagrid';
 
 // ── Pure helper unit tests (no DOM required) ──────────────────────────────────
 
@@ -61,13 +59,21 @@ const ROWS: User[] = [
 
 // ── DOM helpers ───────────────────────────────────────────────────────────────
 
-type GridElement = HTMLElement & {
-  columns: DataGridColumn<User>[];
-  getRowKey?: (r: User) => string;
-  'page-size-options'?: number[];
-  rows: typeof ROWS;
-  'selected-keys'?: string[];
-};
+// Derived from the real prop type so a future rename in datagrid.ts's `OreDataGridProps`
+// is caught here at compile time instead of silently no-op'ing through an ad-hoc cast.
+type GridElement = HTMLElement &
+  Pick<
+    OreDataGridProps<User>,
+    | 'activeView'
+    | 'columns'
+    | 'filterOptions'
+    | 'getRowKey'
+    | 'pageSize'
+    | 'pageSizeOptions'
+    | 'rows'
+    | 'selectedKeys'
+    | 'views'
+  >;
 
 async function mountGrid(overrides: Record<string, unknown> = {}): Promise<Fixture<HTMLElement>> {
   const fixture = await mount('ore-datagrid', { props: overrides });
@@ -165,7 +171,7 @@ describe('ore-datagrid', () => {
     });
 
     it('renders empty-text when rows is empty', async () => {
-      fixture = await mount('ore-datagrid', { props: { 'empty-text': 'Nothing here' } });
+      fixture = await mount('ore-datagrid', { props: { emptyText: 'Nothing here' } });
 
       const el = fixture.element as GridElement;
 
@@ -177,13 +183,13 @@ describe('ore-datagrid', () => {
     });
 
     it('renders pagination footer when page-size > 0', async () => {
-      fixture = await mountGrid({ 'page-size': 10 });
+      fixture = await mountGrid({ pageSize: 10 });
 
       expect(fixture.query('.dg-footer')).toBeTruthy();
     });
 
     it('does not render pagination footer when page-size is 0', async () => {
-      fixture = await mountGrid({ 'page-size': 0 });
+      fixture = await mountGrid({ pageSize: 0 });
 
       expect(fixture.query('.dg-footer')).toBeNull();
     });
@@ -324,13 +330,13 @@ describe('ore-datagrid', () => {
     });
 
     it('has role="navigation" on pagination footer', async () => {
-      fixture = await mountGrid({ 'page-size': 10 });
+      fixture = await mountGrid({ pageSize: 10 });
 
       expect(fixture.query('.dg-footer')?.getAttribute('role')).toBe('navigation');
     });
 
     it('prev/next page buttons have aria-label', async () => {
-      fixture = await mountGrid({ 'page-size': 10 });
+      fixture = await mountGrid({ pageSize: 10 });
 
       expect(fixture.query('[aria-label="Previous page"]')).toBeTruthy();
       expect(fixture.query('[aria-label="Next page"]')).toBeTruthy();
@@ -406,7 +412,7 @@ describe('ore-datagrid', () => {
 
   describe('Sorting — server mode', () => {
     it('emits sort-change but does NOT reorder rows', async () => {
-      fixture = await mountGrid({ 'sort-mode': 'server' });
+      fixture = await mountGrid({ sortMode: 'server' });
 
       const originalFirst = getCell(fixture, 0, 0)?.textContent?.trim();
       let detail: { direction: string; key: string } | null = null;
@@ -427,7 +433,7 @@ describe('ore-datagrid', () => {
 
   describe('Selection — single', () => {
     it('sets aria-selected="true" on clicked row', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -438,7 +444,7 @@ describe('ore-datagrid', () => {
     });
 
     it('deselects previous row when new row is clicked', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -452,7 +458,7 @@ describe('ore-datagrid', () => {
     });
 
     it('toggles selection off when same row is clicked again', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -465,7 +471,7 @@ describe('ore-datagrid', () => {
     });
 
     it('emits selection-change with selected row keys and rows', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       let detail: { keys: string[]; rows: User[] } | null = null;
 
@@ -481,7 +487,7 @@ describe('ore-datagrid', () => {
     });
 
     it('selects row with Enter key', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -492,7 +498,7 @@ describe('ore-datagrid', () => {
     });
 
     it('no rows have aria-selected when selection-mode="none"', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'none' });
+      fixture = await mountGrid({ selectionMode: 'none' });
 
       for (const row of getBodyRows(fixture)) {
         expect(row.hasAttribute('aria-selected')).toBe(false);
@@ -504,21 +510,21 @@ describe('ore-datagrid', () => {
 
   describe('Selection — multi', () => {
     it('renders a checkbox column when selection-mode="multi"', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       expect(fixture.query('.dg-th-check')).toBeTruthy();
       expect(fixture.queryAll('.dg-td-check').length).toBe(ROWS.length);
     });
 
     it('renders ore-checkbox in the header and each row', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       expect(fixture.query('.dg-th-check ore-checkbox')).toBeTruthy();
       expect(fixture.queryAll('.dg-td-check ore-checkbox').length).toBe(ROWS.length);
     });
 
     it('allows selecting multiple rows independently', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       const rows = getBodyRows(fixture);
       const checks = fixture.queryAll('.dg-td-check ore-checkbox');
@@ -533,7 +539,7 @@ describe('ore-datagrid', () => {
     });
 
     it('selects all visible rows via the select-all ore-checkbox', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
@@ -546,7 +552,7 @@ describe('ore-datagrid', () => {
     });
 
     it('deselects all rows when select-all is toggled again', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
@@ -561,7 +567,7 @@ describe('ore-datagrid', () => {
     });
 
     it('select-all ore-checkbox shows indeterminate when some rows are selected', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       const checks = fixture.queryAll('.dg-td-check ore-checkbox');
 
@@ -575,7 +581,7 @@ describe('ore-datagrid', () => {
     });
 
     it('select-all ore-checkbox shows checked when all rows are selected', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'multi' });
+      fixture = await mountGrid({ selectionMode: 'multi' });
 
       const selectAll = fixture.query('.dg-th-check ore-checkbox') as HTMLElement | null;
 
@@ -591,7 +597,7 @@ describe('ore-datagrid', () => {
 
   describe('selected-keys (controlled)', () => {
     it('pre-selects rows when selected-keys is set before mount', async () => {
-      fixture = await mountGrid({ 'selected-keys': ['2'], 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectedKeys: ['2'], selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -600,11 +606,11 @@ describe('ore-datagrid', () => {
     });
 
     it('updates selection when selected-keys prop changes', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const el = fixture.element as GridElement;
 
-      (el as unknown as { 'selected-keys': string[] })['selected-keys'] = ['3'];
+      el.selectedKeys = ['3'];
       await Promise.resolve();
 
       const rows = getBodyRows(fixture);
@@ -613,14 +619,14 @@ describe('ore-datagrid', () => {
     });
 
     it('clears selection when selected-keys is set to []', async () => {
-      fixture = await mountGrid({ 'selection-mode': 'single' });
+      fixture = await mountGrid({ selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
       fire.click(rows[0]);
       await Promise.resolve();
 
-      (fixture.element as unknown as { 'selected-keys': string[] })['selected-keys'] = [];
+      (fixture.element as GridElement).selectedKeys = [];
       await Promise.resolve();
 
       expect(rows[0].getAttribute('aria-selected')).toBe('false');
@@ -631,13 +637,13 @@ describe('ore-datagrid', () => {
 
   describe('Pagination', () => {
     it('shows only page-size rows when data exceeds page size', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(getBodyRows(fixture).length).toBe(2);
     });
 
     it('navigates to next page', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const nextBtn = fixture.query('[aria-label="Next page"]') as HTMLButtonElement;
 
@@ -648,7 +654,7 @@ describe('ore-datagrid', () => {
     });
 
     it('prev button is disabled on first page', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const prevBtn = fixture.query('[aria-label="Previous page"]') as HTMLButtonElement;
 
@@ -656,7 +662,7 @@ describe('ore-datagrid', () => {
     });
 
     it('next button is disabled on last page', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const nextBtn = fixture.query('[aria-label="Next page"]') as HTMLButtonElement;
 
@@ -667,7 +673,7 @@ describe('ore-datagrid', () => {
     });
 
     it('emits page-change with new pageIndex', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       let pageDetail: { pageIndex: number } | null = null;
 
@@ -682,13 +688,13 @@ describe('ore-datagrid', () => {
     });
 
     it('shows pagination info text with "to" separator', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(fixture.query('.dg-footer-info')?.textContent?.trim()).toBe('1 to 2 of 3');
     });
 
     it('page-size=0 shows all rows and no footer', async () => {
-      fixture = await mountGrid({ 'page-size': 0 });
+      fixture = await mountGrid({ pageSize: 0 });
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
       expect(fixture.query('.dg-footer')).toBeNull();
@@ -699,7 +705,7 @@ describe('ore-datagrid', () => {
 
   describe('Disabled & loading', () => {
     it('does not select rows when disabled', async () => {
-      fixture = await mountGrid({ disabled: true, 'selection-mode': 'single' });
+      fixture = await mountGrid({ disabled: true, selectionMode: 'single' });
 
       const rows = getBodyRows(fixture);
 
@@ -710,7 +716,7 @@ describe('ore-datagrid', () => {
     });
 
     it('adds data-disabled to rows when disabled', async () => {
-      fixture = await mountGrid({ disabled: true, 'selection-mode': 'single' });
+      fixture = await mountGrid({ disabled: true, selectionMode: 'single' });
 
       for (const row of getBodyRows(fixture)) {
         expect(row.hasAttribute('data-disabled')).toBe(true);
@@ -746,7 +752,7 @@ describe('ore-datagrid', () => {
     });
 
     it('empty state colspan includes checkbox column in multi mode', async () => {
-      fixture = await mount('ore-datagrid', { props: { 'selection-mode': 'multi' } });
+      fixture = await mount('ore-datagrid', { props: { selectionMode: 'multi' } });
 
       const el = fixture.element as GridElement;
 
@@ -774,7 +780,7 @@ describe('ore-datagrid', () => {
     });
 
     it('uses custom getRowKey function', async () => {
-      fixture = await mount('ore-datagrid', { props: { 'selection-mode': 'single' } });
+      fixture = await mount('ore-datagrid', { props: { selectionMode: 'single' } });
 
       const el = fixture.element as GridElement;
 
@@ -821,9 +827,7 @@ describe('ore-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
       expect(fixture.query('.dg-filter')).toBeTruthy();
@@ -848,7 +852,7 @@ describe('ore-datagrid', () => {
     });
 
     it('resets to page 0 when the search query changes', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const paginationLabel = fixture.query('.dg-page-label');
 
@@ -912,30 +916,30 @@ describe('ore-datagrid', () => {
 
   // ── Page-size options ─────────────────────────────────────────────────────────
 
-  describe('page-size-options', () => {
+  describe('pageSizeOptions', () => {
     it('does not render a page-size select by default', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(fixture.query('.dg-page-size-select')).toBeNull();
     });
 
     it('renders a ore-select when page-size-options is set', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const el = fixture.element as GridElement;
 
-      el['page-size-options'] = [2, 5, 10];
+      el.pageSizeOptions = [2, 5, 10];
       await Promise.resolve();
 
       expect(fixture.query('.dg-page-size-select')).toBeTruthy();
     });
 
     it('emits page-change when page size is changed via the select', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const el = fixture.element as GridElement;
 
-      el['page-size-options'] = [2, 10];
+      el.pageSizeOptions = [2, 10];
       await Promise.resolve();
 
       let detail: { pageIndex: number; pageSize: number } | null = null;
@@ -955,11 +959,11 @@ describe('ore-datagrid', () => {
     });
 
     it('changes the page size and resets to page 0 on select change', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       const el = fixture.element as GridElement;
 
-      el['page-size-options'] = [2, 10];
+      el.pageSizeOptions = [2, 10];
       await Promise.resolve();
 
       fire.click(fixture.query('[aria-label="Next page"]') as HTMLElement);
@@ -990,7 +994,7 @@ describe('ore-datagrid', () => {
 
       const el = fixture.element as GridElement;
 
-      (el as unknown as { views: unknown[] }).views = [
+      el.views = [
         { id: 'all', label: 'All' },
         { id: 'open', label: 'Open' },
       ];
@@ -1008,11 +1012,11 @@ describe('ore-datagrid', () => {
 
       const el = fixture.element as GridElement;
 
-      (el as unknown as { views: unknown[] }).views = [
+      el.views = [
         { id: 'all', label: 'All' },
         { id: 'open', label: 'Open' },
       ];
-      (el as unknown as { 'active-view': string })['active-view'] = 'open';
+      el.activeView = 'open';
       await Promise.resolve();
 
       const tabs = Array.from(fixture.queryAll('.dg-tab'));
@@ -1026,7 +1030,7 @@ describe('ore-datagrid', () => {
 
       const el = fixture.element as GridElement;
 
-      (el as unknown as { views: unknown[] }).views = [
+      el.views = [
         { id: 'all', label: 'All' },
         { id: 'open', label: 'Open' },
       ];
@@ -1049,9 +1053,9 @@ describe('ore-datagrid', () => {
 
       const el = fixture.element as GridElement;
 
-      (el as unknown as { views: unknown[] }).views = [{ id: 'all', label: 'All' }];
+      el.views = [{ id: 'all', label: 'All' }];
       await Promise.resolve();
-      (el as unknown as { 'active-view': string })['active-view'] = 'all';
+      el.activeView = 'all';
       await Promise.resolve();
 
       const tab = fixture.query('.dg-tab') as HTMLElement;
@@ -1374,7 +1378,7 @@ describe('ore-datagrid', () => {
 
   describe('B1: pageSize seeded from initial prop', () => {
     it('uses page-size prop value as initial page size', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(getBodyRows(fixture).length).toBe(2);
     });
@@ -1402,9 +1406,7 @@ describe('ore-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
       fire.click(fixture.query('[aria-label="Search"]') as HTMLElement);
@@ -1424,15 +1426,13 @@ describe('ore-datagrid', () => {
 
   describe('B4: reactive page reset', () => {
     it('resets to page 0 when filter changes', async () => {
-      fixture = await mount('ore-datagrid', { props: { 'page-size': 2 } });
+      fixture = await mount('ore-datagrid', { props: { pageSize: 2 } });
 
       const el = fixture.element as GridElement;
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
       fire.click(fixture.query('[aria-label="Next page"]') as HTMLElement);
@@ -1458,9 +1458,7 @@ describe('ore-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await Promise.resolve();
 
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
@@ -1481,9 +1479,7 @@ describe('ore-datagrid', () => {
 
       el.columns = COLS;
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }, { value: 'Editor' }] }];
       await new Promise((r) => setTimeout(r, 0));
 
       const filterSelect = fixture.query('.dg-filter') as HTMLElement;
@@ -1544,22 +1540,22 @@ describe('ore-datagrid', () => {
 
   describe('page-size prop reactivity', () => {
     it('changing page-size prop after mount updates visible row count', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(getBodyRows(fixture).length).toBe(2);
 
-      (fixture.element as unknown as { 'page-size': number })['page-size'] = 1;
+      (fixture.element as GridElement).pageSize = 1;
       await Promise.resolve();
 
       expect(getBodyRows(fixture).length).toBe(1);
     });
 
     it('setting page-size to 0 after mount disables pagination', async () => {
-      fixture = await mountGrid({ 'page-size': 2 });
+      fixture = await mountGrid({ pageSize: 2 });
 
       expect(fixture.query('.dg-footer')).toBeTruthy();
 
-      (fixture.element as unknown as { 'page-size': number })['page-size'] = 0;
+      (fixture.element as GridElement).pageSize = 0;
       await Promise.resolve();
 
       expect(getBodyRows(fixture).length).toBe(ROWS.length);
@@ -1583,7 +1579,7 @@ describe('ore-datagrid', () => {
       const f = await mount('ore-datagrid', { props: { expandable: true } });
       const el = f.element as GridElement;
 
-      (el as unknown as { columns: typeof EXPANDABLE_COLS }).columns = EXPANDABLE_COLS;
+      el.columns = EXPANDABLE_COLS;
       el.rows = ROWS;
       await Promise.resolve();
 
@@ -1711,6 +1707,42 @@ describe('ore-datagrid', () => {
       // effectiveColCount = data columns + 1 expander column
       expect(fixture.query('.dg-td-expanded')?.getAttribute('colspan')).toBe(String(EXPANDABLE_COLS.length + 1));
     });
+
+    it('expanded panel content updates reactively when row data changes (raw() binding, not a one-shot innerHTML write)', async () => {
+      fixture = await mountExpandable();
+
+      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-td-expanded')?.innerHTML).toContain('Alice');
+
+      const el = fixture.element as GridElement;
+
+      el.rows = ROWS.map((r) => (r.id === '1' ? { ...r, name: 'Alicia' } : r));
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-td-expanded')?.innerHTML).toContain('Alicia');
+      expect(fixture.query('.dg-td-expanded')?.innerHTML).not.toContain('Alice:');
+    });
+
+    it('renders an empty expanded panel gracefully when renderExpanded returns an empty string', async () => {
+      fixture = await mount('ore-datagrid', { props: { expandable: true } });
+
+      const el = fixture.element as GridElement;
+
+      el.columns = [
+        { key: 'name', label: 'Name', renderExpanded: () => '' },
+        { key: 'role', label: 'Role' },
+      ];
+      el.rows = ROWS;
+      await Promise.resolve();
+
+      fire.click(fixture.queryAll('.dg-expand-btn')[0] as HTMLElement);
+      await Promise.resolve();
+
+      expect(fixture.query('.dg-tr-expanded')).toBeTruthy();
+      expect(fixture.query('.dg-td-expanded')?.textContent?.trim()).toBe('');
+    });
   });
 
   // ── filterValues pruning ──────────────────────────────────────────────────
@@ -1727,9 +1759,7 @@ describe('ore-datagrid', () => {
         { key: 'role', label: 'Role' },
       ];
       el.rows = ROWS;
-      (el as unknown as { filterOptions: unknown[] }).filterOptions = [
-        { key: 'role', label: 'Role', options: [{ value: 'Admin' }] },
-      ];
+      el.filterOptions = [{ key: 'role', label: 'Role', options: [{ value: 'Admin' }] }];
       await new Promise((r) => setTimeout(r, 0));
 
       // Apply the role filter — only Admin rows should be visible.
@@ -1754,7 +1784,7 @@ describe('ore-datagrid', () => {
 
   describe('getRowKey missing id fallback', () => {
     it('rows without id and without getRowKey each get a unique key (no collapsed rows)', async () => {
-      fixture = await mount('ore-datagrid', { props: { 'selection-mode': 'single' } });
+      fixture = await mount('ore-datagrid', { props: { selectionMode: 'single' } });
 
       const el = fixture.element as HTMLElement & {
         columns: { key: string; label: string }[];

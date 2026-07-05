@@ -27,13 +27,16 @@ describe('ore-textarea', () => {
         attrs: { helper: 'Max 200 characters' },
       });
 
-      expect(fixture.query('.helper-text')).toBeTruthy();
+      expect(fixture.query('.helper-text:not([role="alert"])')).toBeTruthy();
     });
 
     it('renders error message with role="alert"', async () => {
       fixture = await mount('ore-textarea', { attrs: { error: 'Required' } });
 
-      expect(fixture.query('.helper-text')).toBeTruthy();
+      const errorEl = fixture.query('.helper-text[role="alert"]');
+
+      expect(errorEl).toBeTruthy();
+      expect(errorEl?.getAttribute('role')).toBe('alert');
     });
   });
 
@@ -117,7 +120,7 @@ describe('ore-textarea', () => {
     it('renders error message text', async () => {
       fixture = await mount('ore-textarea', { attrs: { error: 'Too short' } });
 
-      const errorEl = fixture.query('.helper-text');
+      const errorEl = fixture.query('.helper-text[role="alert"]');
 
       expect(errorEl?.textContent?.trim()).toBe('Too short');
     });
@@ -160,15 +163,17 @@ describe('ore-textarea', () => {
       expect(fixture.element.hasAttribute('error')).toBe(false);
     });
 
-    it('prefers error text over helper text in merged assistive block', async () => {
+    it('prefers error text over helper text — hides helper, shows error', async () => {
       fixture = await mount('ore-textarea', {
         attrs: { error: 'Too short', helper: 'At least 20 characters' },
       });
 
-      const helperEl = fixture.query<HTMLElement>('.helper-text');
+      const helperEl = fixture.query<HTMLElement>('.helper-text:not([role="alert"])');
+      const errorEl = fixture.query<HTMLElement>('.helper-text[role="alert"]');
 
-      expect(helperEl?.hidden).toBe(false);
-      expect(helperEl?.textContent?.trim()).toBe('Too short');
+      expect(helperEl?.hidden).toBe(true);
+      expect(errorEl?.hidden).toBe(false);
+      expect(errorEl?.textContent?.trim()).toBe('Too short');
     });
   });
 
@@ -395,9 +400,10 @@ describe('ore-textarea accessibility', () => {
         attrs: { error: 'Field is required' },
       });
 
-      const errorEl = fixture.query('.helper-text');
+      const errorEl = fixture.query('.helper-text[role="alert"]');
 
       expect(errorEl).toBeTruthy();
+      expect(errorEl?.getAttribute('role')).toBe('alert');
       expect(errorEl?.textContent?.trim()).toBe('Field is required');
     });
   });

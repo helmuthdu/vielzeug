@@ -10,7 +10,7 @@
     justify-content: var(--button-justify, center);
   }
 
-  /* Link mode: explicit pointer-events on <a> since it is not a :not(slot) direct child in all browsers */
+  /* Link mode: disable pointer interaction on the inner <a> while disabled/loading. */
   :host([disabled]) a,
   :host([loading]) a {
     pointer-events: none;

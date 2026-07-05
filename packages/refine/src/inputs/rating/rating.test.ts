@@ -309,6 +309,49 @@ describe('ore-rating', () => {
       expect(fixture.shadow?.querySelectorAll('[role="radio"]').length).toBe(10);
     });
   });
+
+  describe('Helper / Error Text', () => {
+    it('renders helper text when helper attribute is set', async () => {
+      fixture = await mount('ore-rating', { attrs: { helper: 'Rate your experience' } });
+
+      const helperEl = fixture.query('.helper-text:not([role="alert"])');
+
+      expect(helperEl?.textContent?.trim()).toBe('Rate your experience');
+    });
+
+    it('renders error text with role="alert" when error attribute is set', async () => {
+      fixture = await mount('ore-rating', { attrs: { error: 'A rating is required' } });
+
+      const errorEl = fixture.query('.helper-text[role="alert"]');
+
+      expect(errorEl?.textContent?.trim()).toBe('A rating is required');
+    });
+
+    it('shows error text (not helper text) when both are set', async () => {
+      fixture = await mount('ore-rating', { attrs: { error: 'A rating is required', helper: 'Rate your experience' } });
+
+      const region = fixture.query('.helper-text');
+
+      expect(region?.getAttribute('role')).toBe('alert');
+      expect(region?.textContent?.trim()).toBe('A rating is required');
+      expect(region?.textContent).not.toContain('Rate your experience');
+    });
+
+    it('wires aria-describedby to the helper text region', async () => {
+      fixture = await mount('ore-rating', { attrs: { helper: 'Pick 1-5' } });
+
+      const group = fixture.query('[role="radiogroup"]');
+      const helperEl = fixture.query('.helper-text');
+
+      expect(group?.getAttribute('aria-describedby')).toBe(helperEl?.id);
+    });
+
+    it('has no aria-describedby when neither helper nor error is set', async () => {
+      fixture = await mount('ore-rating');
+
+      expect(fixture.query('[role="radiogroup"]')?.hasAttribute('aria-describedby')).toBe(false);
+    });
+  });
 });
 
 // ─── Accessibility ────────────────────────────────────────────────────────────

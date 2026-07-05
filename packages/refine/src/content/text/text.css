@@ -96,27 +96,27 @@
      ======================================== */
 
 :host([size='xs']) {
-  --_size: var(--text-xs);
+  --_size: var(--text-size, var(--text-xs));
 }
 
 :host([size='sm']) {
-  --_size: var(--text-sm);
+  --_size: var(--text-size, var(--text-sm));
 }
 
 :host([size='md']) {
-  --_size: var(--text-base);
+  --_size: var(--text-size, var(--text-base));
 }
 
 :host([size='lg']) {
-  --_size: var(--text-lg);
+  --_size: var(--text-size, var(--text-lg));
 }
 
 :host([size='xl']) {
-  --_size: var(--text-xl);
+  --_size: var(--text-size, var(--text-xl));
 }
 
 :host([size='2xl']) {
-  --_size: var(--text-2xl);
+  --_size: var(--text-size, var(--text-2xl));
 }
 
 /* ========================================
@@ -126,27 +126,27 @@
      ======================================== */
 
 :host([variant='heading'][size='xs']) {
-  --_size: var(--heading-xs);
+  --_size: var(--text-size, var(--heading-xs));
 }
 
 :host([variant='heading'][size='sm']) {
-  --_size: var(--heading-sm);
+  --_size: var(--text-size, var(--heading-sm));
 }
 
 :host([variant='heading'][size='md']) {
-  --_size: var(--heading-md);
+  --_size: var(--text-size, var(--heading-md));
 }
 
 :host([variant='heading'][size='lg']) {
-  --_size: var(--heading-lg);
+  --_size: var(--text-size, var(--heading-lg));
 }
 
 :host([variant='heading'][size='xl']) {
-  --_size: var(--heading-xl);
+  --_size: var(--text-size, var(--heading-xl));
 }
 
 :host([variant='heading'][size='2xl']) {
-  --_size: var(--heading-2xl);
+  --_size: var(--text-size, var(--heading-2xl));
 }
 
 /* ========================================
@@ -154,19 +154,19 @@
      ======================================== */
 
 :host([weight='normal']) {
-  --_weight: var(--font-normal);
+  --_weight: var(--text-weight, var(--font-normal));
 }
 
 :host([weight='medium']) {
-  --_weight: var(--font-medium);
+  --_weight: var(--text-weight, var(--font-medium));
 }
 
 :host([weight='semibold']) {
-  --_weight: var(--font-semibold);
+  --_weight: var(--text-weight, var(--font-semibold));
 }
 
 :host([weight='bold']) {
-  --_weight: var(--font-bold);
+  --_weight: var(--text-weight, var(--font-bold));
 }
 
 /* ========================================
@@ -176,52 +176,52 @@
      ======================================== */
 
 :host([color='primary']) {
-  --_color: var(--color-primary);
+  --_color: var(--text-color, var(--color-primary));
 }
 
 :host([color='secondary']) {
-  --_color: var(--color-secondary);
+  --_color: var(--text-color, var(--color-secondary));
 }
 
 :host([color='info']) {
-  --_color: var(--color-info);
+  --_color: var(--text-color, var(--color-info));
 }
 
 :host([color='success']) {
-  --_color: var(--color-success);
+  --_color: var(--text-color, var(--color-success));
 }
 
 :host([color='warning']) {
-  --_color: var(--color-warning);
+  --_color: var(--text-color, var(--color-warning));
 }
 
 :host([color='error']) {
-  --_color: var(--color-error);
+  --_color: var(--text-color, var(--color-error));
 }
 
 /* Semantic text colors */
 :host([color='heading']) {
-  --_color: var(--text-color-heading); /* --color-contrast-900 */
+  --_color: var(--text-color, var(--text-color-heading)); /* --color-contrast-900 */
 }
 
 :host([color='body']) {
-  --_color: var(--text-color-body); /* --color-contrast-800 */
+  --_color: var(--text-color, var(--text-color-body)); /* --color-contrast-800 */
 }
 
 :host([color='muted']) {
-  --_color: var(--text-color-secondary); /* --color-contrast-600 — AA compliant */
+  --_color: var(--text-color, var(--text-color-secondary)); /* --color-contrast-600 — AA compliant */
 }
 
 :host([color='tertiary']) {
-  --_color: var(--text-color-tertiary); /* --color-contrast-500 — AA for large text */
+  --_color: var(--text-color, var(--text-color-tertiary)); /* --color-contrast-500 — AA for large text */
 }
 
 :host([color='disabled']) {
-  --_color: var(--text-color-disabled); /* --color-contrast-400 */
+  --_color: var(--text-color, var(--text-color-disabled)); /* --color-contrast-400 */
 }
 
 :host([color='contrast']) {
-  --_color: var(--text-color-contrast); /* --color-contrast-100 */
+  --_color: var(--text-color, var(--text-color-contrast)); /* --color-contrast-100 */
 }
 
 @layer refine.utilities {

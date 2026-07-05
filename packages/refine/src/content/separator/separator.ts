@@ -65,7 +65,12 @@ define<OreSeparatorProps>(SEPARATOR_TAG, {
                   :aria-hidden="${ariaHidden}"
                   :aria-orientation="${() => props.orientation.value}" />
                 <span class="separator-label" part="label">${() => props.label.value}</span>
-                <hr class="separator" part="separator" :role="${roleAttr}" :aria-hidden="${ariaHidden}" />
+                <hr
+                  class="separator"
+                  part="separator"
+                  :role="${roleAttr}"
+                  :aria-hidden="${ariaHidden}"
+                  :aria-orientation="${() => props.orientation.value}" />
               </div>
             `
           : html`

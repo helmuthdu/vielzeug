@@ -12,8 +12,4 @@ export class RefineError extends Error {
 }
 
 /** Thrown when a refine component receives an invalid or unsupported configuration. */
-export class RefineConfigError extends RefineError {
-  constructor(message: string) {
-    super(message);
-  }
-}
+export class RefineConfigError extends RefineError {}

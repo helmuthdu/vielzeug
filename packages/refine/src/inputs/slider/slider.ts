@@ -3,10 +3,11 @@ import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
 
-import { createSliderControl } from '../../headless';
+import { createErrorHelperState, createSliderControl } from '../../headless';
 import { disablableBundle, sizableBundle, SLIDER_SIZE_PRESET, themableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, disabledStateMixin, sizeVariantMixin } from '../../styles';
 import { FORM_CTX, useFormContext } from '../shared/form-context';
+import { renderHelperRegion } from '../shared/templates';
 import componentStyles from './slider.css?inline';
 
 const guard =
@@ -26,10 +27,14 @@ export type OreSliderProps = {
   color?: ThemeColor;
   /** Disable interaction */
   disabled?: boolean;
+  /** Error message — marks the field as invalid (fallback when the `error` slot is empty) */
+  error?: string;
   /** Range mode: lower bound */
   from?: number | string;
   /** Range mode a11y label for the start thumb (e.g. "$20") */
   'from-value-text'?: string;
+  /** Helper text displayed below the slider (fallback when the `helper` slot is empty) */
+  helper?: string;
   /** Maximum value */
   max?: number | string;
   /** Minimum value */
@@ -70,6 +75,8 @@ export type OreSliderProps = {
  * @attr {string}  name  - Form field name (single mode)
  * @attr {string}  color - Theme color: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  * @attr {string}  size  - 'sm' | 'md' | 'lg'
+ * @attr {string}  helper - Helper text below the slider
+ * @attr {string}  error  - Error message below the slider
  *
  * @fires change - detail always includes `value`; single mode: { value: number }, range mode: { value: { from, to }, from, to }, plus optional originalEvent
  *
@@ -82,6 +89,7 @@ export type OreSliderProps = {
  * @part thumb-start - Range start thumb
  * @part thumb-end   - Range end thumb
  * @part label       - Label element
+ * @part helper-text - The helper/error text element
  *
  * @cssprop --slider-height    - Track height
  * @cssprop --slider-size      - Thumb dimensions
@@ -102,8 +110,10 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
     ...themableBundle,
     ...sizableBundle,
     ...disablableBundle,
+    error: prop.string(),
     from: prop.number(0),
     'from-value-text': prop.string(),
+    helper: prop.string(),
     max: prop.number(100),
     min: prop.number(0),
     name: prop.string(),
@@ -129,6 +139,11 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
     const isDragging = signal(false);
     const isDisabled = fCtxProps.disabled;
     const labelledById = signal<string | undefined>(undefined);
+    const assistiveId = createStableId('helper');
+    const assistive = createErrorHelperState({ error: props.error, helper: props.helper });
+    const errorText = computed(() => assistive.value.errorText);
+    const helperText = computed(() => assistive.value.helperText);
+    const ariaDescribedBy = computed(() => (errorText.value || helperText.value ? assistiveId : null));
 
     bind({
       attr: {
@@ -155,6 +170,7 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
       );
       bind({
         attr: {
+          ariaDescribedby: () => ariaDescribedBy.value ?? null,
           ariaDisabled: () => (isDisabled.value ? 'true' : null),
           ariaLabelledby: () => labelledById.value ?? null,
           ariaValuemax: () => sliderControl.max(),
@@ -485,6 +501,7 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
             ref=${thumbStartRef}
             role="slider"
             tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+            :aria-describedby="${ariaDescribedBy}"
             id="${startId}"></div>
           <div
             class="slider-thumb slider-thumb-end"
@@ -492,10 +509,12 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
             ref=${thumbEndRef}
             role="slider"
             tabindex="${() => (isDisabled.value ? '-1' : '0')}"
+            :aria-describedby="${ariaDescribedBy}"
             id="${endId}"></div>
         </div>
       </div>
       <span class="label" part="label" ref=${labelRef}><slot></slot></span>
+      ${renderHelperRegion(assistiveId, errorText, helperText)}
     `;
   },
   styles: [

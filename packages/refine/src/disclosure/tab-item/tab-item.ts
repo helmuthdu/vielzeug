@@ -1,8 +1,9 @@
 import { define, html, inject, prop } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
-import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
+import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
 
+import { disablableBundle } from '../../shared';
 import { coarsePointerMixin, colorThemeMixin, forcedColorsFocusMixin } from '../../styles';
 import { TABS_CTX } from '../tabs/tabs';
 import styles from './tab-item.css?inline';
@@ -19,7 +20,7 @@ export type OreTabItemProps = {
   /** Unique value identifier — must match a ore-tab-panel value */
   value: string;
   /** Visual variant (inherited from ore-tabs) */
-  variant?: VisualVariant;
+  variant?: SurfaceVariant;
 };
 
 /**
@@ -31,7 +32,7 @@ export type OreTabItemProps = {
  * @attr {boolean} active - Set by the parent ore-tabs when this tab is selected
  * @attr {boolean} disabled - Prevents selection
  * @attr {string} size - 'sm' | 'md' | 'lg'
- * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost' | 'underline'
+ * @attr {string} variant - Inherited from ore-tabs: 'solid' | 'flat' | 'bordered' | 'ghost' | 'glass' | 'frost'
  * @attr {string} color - Inherited from ore-tabs: 'primary' | 'secondary' | 'info' | 'success' | 'warning' | 'error'
  *
  * @slot prefix - Icon or content before the label
@@ -57,12 +58,12 @@ export type OreTabItemProps = {
 export const TAB_ITEM_TAG = 'ore-tab-item' as const;
 define<OreTabItemProps>(TAB_ITEM_TAG, {
   props: {
+    ...disablableBundle,
     active: prop.bool(false),
     color: prop.string<ThemeColor>(),
-    disabled: prop.bool(false),
     size: prop.string<ComponentSize>(),
     value: prop.string(''),
-    variant: prop.string<VisualVariant>(),
+    variant: prop.string<SurfaceVariant>(),
   },
   setup(props, { bind, el, watch }) {
     const tabsCtx = inject(TABS_CTX);

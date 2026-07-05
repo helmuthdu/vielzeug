@@ -79,6 +79,39 @@ describe('ore-accordion-item', () => {
 
       expect(fixture.query('summary')?.getAttribute('aria-disabled')).toBe('false');
     });
+
+    it('summary has tabindex -1 when disabled, no tabindex when enabled', async () => {
+      fixture = await mount('ore-accordion-item', { attrs: { disabled: '' } });
+
+      expect(fixture.query('summary')?.getAttribute('tabindex')).toBe('-1');
+
+      fixture.element.removeAttribute('disabled');
+      await fixture.flush();
+
+      expect(fixture.query('summary')?.hasAttribute('tabindex')).toBe(false);
+    });
+
+    it('does not open on click when disabled', async () => {
+      fixture = await mount('ore-accordion-item', { attrs: { disabled: '' } });
+
+      const summary = fixture.query('summary') as HTMLElement;
+
+      summary.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(fixture.query('details')?.hasAttribute('open')).toBe(false);
+    });
+
+    it('does not close on click when disabled and already expanded', async () => {
+      fixture = await mount('ore-accordion-item', { attrs: { disabled: '', expanded: '' } });
+
+      const summary = fixture.query('summary') as HTMLElement;
+
+      summary.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      await fixture.flush();
+
+      expect(fixture.query('details')?.hasAttribute('open')).toBe(true);
+    });
   });
 
   describe('Touch Interaction', () => {

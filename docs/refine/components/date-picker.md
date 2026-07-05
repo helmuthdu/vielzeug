@@ -206,9 +206,9 @@ Set `value` to an ISO 8601 date string to initialise the selection.
 
 `ore-date-picker` follows the [ARIA Date Picker Dialog Pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/examples/datepicker-dialog/).
 
-The trigger has `role="combobox"` and `aria-haspopup="dialog"`, with `aria-expanded` reflecting the open/closed state. The calendar panel has `role="dialog"` and `aria-modal="true"`. The day grid uses `role="grid"`, with each day rendered as a `role="gridcell"` carrying `aria-selected` and `aria-disabled` attributes. Weekday column headers use `role="columnheader"`. Today's date receives `aria-current="date"`. Disabled days have `tabindex="-1"` and `pointer-events: none`.
+The trigger has `role="combobox"` and `aria-haspopup="dialog"`, with `aria-expanded` reflecting the open/closed state. The calendar panel has `role="dialog"` and `aria-modal="true"`. Each view (day/month/year) uses `role="grid"` with cells grouped into `role="row"` elements; the day view additionally renders `role="columnheader"` weekday labels, and every cell is a `role="gridcell"` carrying `aria-selected`/`aria-disabled`. Today's date receives `aria-current="date"`. Disabled days have `tabindex="-1"` and `pointer-events: none`.
 
-Keyboard navigation is fully supported: `Escape` closes the calendar from any focused element inside it. Arrow keys navigate day cells — `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, and `Home`/`End` move to the first or last day of the current row.
+Keyboard navigation is fully supported: `Escape` closes the calendar from any focused element inside it. In the day grid, `ArrowRight`/`ArrowLeft` move by one day, `ArrowDown`/`ArrowUp` move by one week, and `Home`/`End` move to the first or last day of the current row. The month and year grids support the same arrow-key/`Home`/`End` roving navigation over their 4-column layout.
 
 ## Related
 

@@ -602,6 +602,40 @@ define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
 
     // ── Template ─────────────────────────────────────────────────────────────
 
+    const focusIndicator = (index: number): void => {
+      const dot = el.shadowRoot?.querySelector<HTMLElement>(`.indicator[data-index="${index}"]`);
+
+      dot?.focus();
+    };
+
+    const handleIndicatorKeydown = (e: KeyboardEvent, i: number): void => {
+      const count = slideCount.value;
+      let target: number | undefined;
+
+      switch (e.key) {
+        case 'ArrowDown':
+        case 'ArrowRight':
+          target = (i + 1) % count;
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          target = (i - 1 + count) % count;
+          break;
+        case 'End':
+          target = count - 1;
+          break;
+        case 'Home':
+          target = 0;
+          break;
+        default:
+          return;
+      }
+
+      e.preventDefault();
+      goTo(target);
+      focusIndicator(target);
+    };
+
     const renderControls = () =>
       showControls.value
         ? html`<div class="controls" part="controls">
@@ -658,21 +692,29 @@ define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
                 Array.from(
                   { length: slideCount.value },
                   (_, i) =>
-                    html`<ore-progress
+                    html`<button
+                      type="button"
                       role="tab"
+                      data-index="${i}"
                       :class=${() =>
                         `indicator${!isMarquee.value && i === activeIndex.value ? ' indicator-active' : ''}`}
-                      :color=${() => props.color.value}
-                      :type=${() => (isHorizontal.value ? 'linear' : 'vertical')}
-                      :value=${() => (!isMarquee.value && i === activeIndex.value ? 100 : 0)}
                       :aria-selected=${() => String(!isMarquee.value && i === activeIndex.value)}
-                      :aria-label=${`Go to slide ${i + 1}`}
-                      :style=${() => {
-                        const fillAnim = isHorizontal.value ? 'carousel-fill' : 'carousel-fill-v';
+                      :tabindex=${() => (!isMarquee.value && i === activeIndex.value ? '0' : '-1')}
+                      aria-label="${`Go to slide ${i + 1}`}"
+                      @click=${() => goTo(i)}
+                      @keydown=${(e: KeyboardEvent) => handleIndicatorKeydown(e, i)}>
+                      <ore-progress
+                        aria-hidden="true"
+                        tabindex="-1"
+                        :color=${() => props.color.value}
+                        :type=${() => (isHorizontal.value ? 'linear' : 'vertical')}
+                        :value=${() => (!isMarquee.value && i === activeIndex.value ? 100 : 0)}
+                        :style=${() => {
+                          const fillAnim = isHorizontal.value ? 'carousel-fill' : 'carousel-fill-v';
 
-                        return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${!isMarquee.value && i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
-                      }}
-                      @click=${() => goTo(i)}></ore-progress>`,
+                          return `--carousel-timeout:${props['autoplay-interval'].value ?? 5000};--carousel-animation-name:${!isMarquee.value && i === activeIndex.value && props.autoplay.value ? fillAnim : 'none'}`;
+                        }}></ore-progress>
+                    </button>`,
                 )}
               ${renderControls}
             </div>`

@@ -187,7 +187,8 @@ describe('ore-button', () => {
     it('renders as a link when href is provided', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/home' } });
 
-      expect(fixture.query('[part="button"]')).toBeTruthy();
+      expect(fixture.query('a[part="button"]')).toBeTruthy();
+      expect(fixture.query('span[part="button"]')).toBeFalsy();
     });
 
     it('reverts to normal when href is removed', async () => {
@@ -196,28 +197,55 @@ describe('ore-button', () => {
       fixture.element.removeAttribute('href');
       await new Promise<void>((r) => setTimeout(r, 10));
 
-      expect(fixture.query('[part="button"]')).toBeTruthy();
+      expect(fixture.query('span[part="button"]')).toBeTruthy();
+      expect(fixture.query('a[part="button"]')).toBeFalsy();
     });
 
-    it('internal element matches the prop', async () => {
+    it('internal anchor element reflects the href prop', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/about' } });
 
-      // In link mode we don't have href on the span, but we could add it for accessibility if needed
-      // but Refine's ore-button was using native <a>.
+      expect(fixture.query('a[part="button"]')?.getAttribute('href')).toBe('/about');
     });
 
     it('injects noopener noreferrer for target=_blank', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/page', target: '_blank' } });
 
-      // We no longer use a native anchor inside, but we could reflect security props to host if needed
+      const rel = fixture.query('a[part="button"]')?.getAttribute('rel') ?? '';
+
+      expect(rel).toContain('noopener');
+      expect(rel).toContain('noreferrer');
+      expect(fixture.query('a[part="button"]')?.getAttribute('target')).toBe('_blank');
     });
 
     it('does not add rel when target is not _blank', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/page', target: '_self' } });
+
+      expect(fixture.query('a[part="button"]')?.getAttribute('rel')).toBeNull();
     });
 
     it('merges custom rel with security tokens for _blank', async () => {
       fixture = await mount('ore-button', { attrs: { href: '/page', rel: 'external', target: '_blank' } });
+
+      const rel = fixture.query('a[part="button"]')?.getAttribute('rel') ?? '';
+
+      expect(rel).toContain('external');
+      expect(rel).toContain('noopener');
+      expect(rel).toContain('noreferrer');
+    });
+
+    it('the inner anchor is decorative (tabindex -1) — the host carries the real link semantics', async () => {
+      fixture = await mount('ore-button', { attrs: { href: '/page' } });
+
+      expect(fixture.query('a[part="button"]')?.getAttribute('tabindex')).toBe('-1');
+      expect(fixture.element.getAttribute('tabindex')).toBe('0');
+      expect(fixture.element.getAttribute('role')).toBe('link');
+    });
+
+    it('disabling pointer interaction on the anchor when disabled', async () => {
+      fixture = await mount('ore-button', { attrs: { disabled: '', href: '/page' } });
+
+      expect(fixture.element.getAttribute('tabindex')).toBe('-1');
+      expect(fixture.element.getAttribute('aria-disabled')).toBe('true');
     });
 
     it('link mode does not trigger form submission', async () => {

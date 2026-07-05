@@ -1,4 +1,5 @@
 import { define, useField, html, prop } from '@vielzeug/ore';
+import { styleMap } from '@vielzeug/ore/directives';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
@@ -29,7 +30,9 @@ export type CalendarEvent = {
   /**
    * Any CSS color value for the event dot / pill.
    * Defaults to the component's theme color when omitted.
-   * An invalid CSS value silently produces no custom color.
+   * Rendered via `styleMap()`, which strips `;`/`{`/`}` so the value can't break out of
+   * its custom-property declaration — it is not a full CSS-color syntax validator, so an
+   * invalid (but injection-safe) value may still render as no color.
    */
   color?: string;
   /** ISO date the event falls on (yyyy-MM-dd) */
@@ -372,6 +375,46 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
       target?.focus();
     }
 
+    // ── Month/year-cell keyboard navigation (fixed 4-column grid) ─────────────
+
+    function handleGridKeydown(e: KeyboardEvent, cellSelector: string, columns: number, onSelect: () => void): void {
+      const cell = e.currentTarget as HTMLElement;
+      const grid = cell.closest('.cal-grid');
+
+      if (!grid) return;
+
+      const allCells = Array.from(grid.querySelectorAll<HTMLElement>(cellSelector));
+      const idx = allCells.indexOf(cell);
+
+      if (idx === -1) return;
+
+      let target: HTMLElement | undefined;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect();
+
+        return;
+      } else if (e.key === 'ArrowRight') {
+        target = allCells[idx + 1];
+      } else if (e.key === 'ArrowLeft') {
+        target = allCells[idx - 1];
+      } else if (e.key === 'ArrowDown') {
+        target = allCells[idx + columns];
+      } else if (e.key === 'ArrowUp') {
+        target = allCells[idx - columns];
+      } else if (e.key === 'Home') {
+        target = allCells[Math.floor(idx / columns) * columns];
+      } else if (e.key === 'End') {
+        target = allCells[Math.min(Math.floor(idx / columns) * columns + columns - 1, allCells.length - 1)];
+      } else {
+        return;
+      }
+
+      e.preventDefault();
+      target?.focus();
+    }
+
     // ── Host bindings ────────────────────────────────────────────────────────
 
     bind({
@@ -418,82 +461,99 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
           part="grid"
           :aria-label="${() => displayLabel.value}"
           ?hidden="${() => currentView.value !== 'day'}">
-          ${() =>
-            weekdayLabels.value.map(
-              (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
-            )}
-          ${() =>
-            dayCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-day"
-                  role="gridcell"
-                  part="day"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
-                  :aria-current="${() => (cell.isToday ? 'date' : null)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-today="${() => cell.isToday}"
-                  ?data-outside="${() => cell.isOutsideMonth}"
-                  ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
-                  data-iso="${cell.iso}"
-                  data-day="${String(cell.day)}"
-                  tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => handleSelectDay(cell.iso)}"
-                  @keydown="${handleDayKeydown}">
-                  ${String(cell.day)}
-                  ${() => {
-                    const evts = eventsByDate.value.get(cell.iso) ?? [];
+          <div role="row" class="cal-grid-row">
+            ${() =>
+              weekdayLabels.value.map(
+                (lbl) => html`<div class="cal-cell cal-cell-head" role="columnheader" aria-label="${lbl}">${lbl}</div>`,
+              )}
+          </div>
+          ${() => {
+            const cells = dayCells.value;
+            const rows: (typeof cells)[number][][] = [];
 
-                    if (!evts.length) return html``;
+            for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
-                    const shown = evts.slice(0, MAX_EVENTS);
-                    const overflow = evts.length - MAX_EVENTS;
+            return rows.map(
+              (row) =>
+                html`<div role="row" class="cal-grid-row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-day"
+                        role="gridcell"
+                        part="day"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        :aria-current="${() => (cell.isToday ? 'date' : null)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-today="${() => cell.isToday}"
+                        ?data-outside="${() => cell.isOutsideMonth}"
+                        ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
+                        data-iso="${cell.iso}"
+                        data-day="${String(cell.day)}"
+                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        @click="${() => handleSelectDay(cell.iso)}"
+                        @keydown="${handleDayKeydown}">
+                        ${String(cell.day)}
+                        ${() => {
+                          const evts = eventsByDate.value.get(cell.iso) ?? [];
 
-                    if (isExpanded.value) {
-                      return html`<div
-                        class="cal-events"
-                        aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
-                        ${shown.map(
-                          (evt) =>
-                            html`<ore-badge
-                              class="cal-event-pill"
-                              size="xs"
-                              rounded="sm"
-                              aria-label="${evt.label}"
-                              style="${() =>
-                                evt.color ? `--badge-bg:${evt.color};--badge-border-color:${evt.color}` : ''}">
-                              ${evt.label}
-                            </ore-badge>`,
-                        )}
-                        ${overflow > 0
-                          ? html`<span class="cal-event-pill-overflow" aria-hidden="true">+${overflow} more</span>`
-                          : html``}
-                      </div>`;
-                    }
+                          if (!evts.length) return html``;
 
-                    return html`<div
-                      class="cal-dots"
-                      aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
-                      ${shown.map(
-                        (evt) =>
-                          html`<ore-badge
-                            class="cal-dot"
-                            dot
-                            size="xs"
-                            aria-hidden="true"
-                            style="${() =>
-                              evt.color
-                                ? `--badge-bg:${evt.color};--badge-border-color:${evt.color}`
-                                : ''}"></ore-badge>`,
-                      )}
-                      ${overflow > 0
-                        ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`
-                        : html``}
-                    </div>`;
-                  }}
+                          const shown = evts.slice(0, MAX_EVENTS);
+                          const overflow = evts.length - MAX_EVENTS;
+
+                          if (isExpanded.value) {
+                            return html`<div
+                              class="cal-events"
+                              aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
+                              ${shown.map(
+                                (evt) =>
+                                  html`<ore-badge
+                                    class="cal-event-pill"
+                                    size="xs"
+                                    rounded="sm"
+                                    aria-label="${evt.label}"
+                                    :style="${styleMap({
+                                      '--badge-bg': evt.color,
+                                      '--badge-border-color': evt.color,
+                                    })}">
+                                    ${evt.label}
+                                  </ore-badge>`,
+                              )}
+                              ${overflow > 0
+                                ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
+                                    >+${overflow} more</span
+                                  >`
+                                : html``}
+                            </div>`;
+                          }
+
+                          return html`<div
+                            class="cal-dots"
+                            aria-label="${() => `${evts.length} event${evts.length > 1 ? 's' : ''}`}">
+                            ${shown.map(
+                              (evt) =>
+                                html`<ore-badge
+                                  class="cal-dot"
+                                  dot
+                                  size="xs"
+                                  aria-hidden="true"
+                                  :style="${styleMap({
+                                    '--badge-bg': evt.color,
+                                    '--badge-border-color': evt.color,
+                                  })}"></ore-badge>`,
+                            )}
+                            ${overflow > 0
+                              ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`
+                              : html``}
+                          </div>`;
+                        }}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
 
         <!-- Month view -->
@@ -502,27 +562,34 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
           role="grid"
           :aria-label="${() => displayYear_.value}"
           ?hidden="${() => currentView.value !== 'month'}">
-          ${() =>
-            monthCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-month"
-                  role="gridcell"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
-                  tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => handleSelectMonth(cell.month)}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelectMonth(cell.month);
-                    }
-                  }}">
-                  ${cell.shortLabel}
+          ${() => {
+            const cells = monthCells.value;
+            const rows: (typeof cells)[number][][] = [];
+
+            for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
+
+            return rows.map(
+              (row) =>
+                html`<div role="row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-month"
+                        role="gridcell"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
+                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        @click="${() => handleSelectMonth(cell.month)}"
+                        @keydown="${(e: KeyboardEvent) =>
+                          handleGridKeydown(e, '.cal-cell-month', 4, () => handleSelectMonth(cell.month))}">
+                        ${cell.shortLabel}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
 
         <!-- Year view -->
@@ -531,27 +598,34 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
           role="grid"
           aria-label="Select year"
           ?hidden="${() => currentView.value !== 'year'}">
-          ${() =>
-            yearCells.value.map(
-              (cell) =>
-                html`<div
-                  class="cal-cell cal-cell-year"
-                  role="gridcell"
-                  :aria-selected="${() => String(cell.isSelected)}"
-                  :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
-                  ?data-selected="${() => cell.isSelected}"
-                  ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
-                  tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
-                  @click="${() => handleSelectYear(cell.year)}"
-                  @keydown="${(e: KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleSelectYear(cell.year);
-                    }
-                  }}">
-                  ${String(cell.year)}
+          ${() => {
+            const cells = yearCells.value;
+            const rows: (typeof cells)[number][][] = [];
+
+            for (let i = 0; i < cells.length; i += 4) rows.push(cells.slice(i, i + 4));
+
+            return rows.map(
+              (row) =>
+                html`<div role="row">
+                  ${row.map(
+                    (cell) =>
+                      html`<div
+                        class="cal-cell cal-cell-year"
+                        role="gridcell"
+                        :aria-selected="${() => String(cell.isSelected)}"
+                        :aria-disabled="${() => String(cell.isDisabled || isDisabled.value)}"
+                        ?data-selected="${() => cell.isSelected}"
+                        ?data-disabled="${() => cell.isDisabled || isDisabled.value}"
+                        tabindex="${() => (cell.isDisabled || isDisabled.value ? '-1' : '0')}"
+                        @click="${() => handleSelectYear(cell.year)}"
+                        @keydown="${(e: KeyboardEvent) =>
+                          handleGridKeydown(e, '.cal-cell-year', 4, () => handleSelectYear(cell.year))}">
+                        ${String(cell.year)}
+                      </div>`,
+                  )}
                 </div>`,
-            )}
+            );
+          }}
         </div>
       </div>
     `;

@@ -43,6 +43,30 @@ describe('ore-progress', () => {
 
       expect(fill?.getAttribute('style')).toContain('width:40%');
     });
+
+    it('renders the vertical layout with a bar-row-vertical class', async () => {
+      fixture = await mount('ore-progress', { attrs: { type: 'vertical', value: '40' } });
+
+      expect(fixture.query('.bar-row-vertical')).toBeTruthy();
+      expect(fixture.query('.track[role="progressbar"]')).toBeTruthy();
+    });
+
+    it('applies visible fill height (not width) in vertical determinate mode', async () => {
+      fixture = await mount('ore-progress', { attrs: { max: '100', type: 'vertical', value: '40' } });
+
+      const fill = fixture.query<HTMLElement>('.fill');
+
+      expect(fill?.getAttribute('style')).toContain('height:40%');
+      expect(fill?.getAttribute('style')).not.toContain('width:40%');
+    });
+
+    it('omits fill height in vertical indeterminate mode', async () => {
+      fixture = await mount('ore-progress', { attrs: { indeterminate: '', type: 'vertical' } });
+
+      const fill = fixture.query<HTMLElement>('.fill');
+
+      expect(fill?.getAttribute('style') ?? '').not.toContain('height:');
+    });
   });
 
   describe('Accessibility', () => {

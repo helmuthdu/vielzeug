@@ -393,6 +393,10 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
             return;
           }
 
+          if (typeof window.matchMedia !== 'function') {
+            return;
+          }
+
           const mql = window.matchMedia(mediaQuery);
           const onChange = (event: MediaQueryListEvent) => {
             responsiveMediaMatches.value = event.matches;
@@ -437,6 +441,10 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
             return;
           }
 
+          if (typeof window.matchMedia !== 'function') {
+            return;
+          }
+
           const mql = window.matchMedia(mediaQuery);
           const onChange = (event: MediaQueryListEvent) => {
             bottomNavMediaMatches.value = event.matches;
@@ -465,7 +473,8 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
               let rafId: number | undefined;
 
               const onResize = () => {
-                cancelAnimationFrame(rafId!);
+                if (rafId !== undefined) cancelAnimationFrame(rafId);
+
                 rafId = requestAnimationFrame(() => {
                   const resolvedContainer = resolveContainerElement(el);
                   const width = readContainerWidth(el);
