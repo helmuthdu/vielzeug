@@ -1,46 +1,43 @@
 export const errorHandlingExample = {
-  code: `import { TempoError, TempoErrorCode, inTz, parse, parsePlainDateTime, toInstant } from '@vielzeug/tempo';
+  code: `import { TempoError, TempoInvalidTzError, TempoMissingTzError, inTz, parse, parsePlainDateTime, toInstant } from '@vielzeug/tempo';
 
-// ── INVALID_INPUT: bad parse string ──────────────────────────────────────────
+// ── TempoInvalidInputError: bad parse string ─────────────────────────────────
 try {
   parse('not-a-date');
 } catch (e) {
   if (e instanceof TempoError) {
-    console.log(e.code);    // 'INVALID_INPUT'
-    console.log(e.message); // '[tempo] Unable to parse date/time string: "not-a-date"'
+    console.log(e.name);    // 'TempoInvalidInputError'
+    console.log(e.message); // 'Unable to parse date/time string: "not-a-date". ...'
   }
 }
 
-// ── MISSING_TZ: plain input without timezone ──────────────────────────────────
+// ── TempoMissingTzError: plain input without timezone ────────────────────────
 try {
   toInstant(parsePlainDateTime('2026-03-21T10:00:00'));
 } catch (e) {
-  if (e instanceof TempoError) {
-    console.log(e.code); // 'MISSING_TZ'
+  if (e instanceof TempoMissingTzError) {
+    console.log(e.name); // 'TempoMissingTzError'
   }
 }
 
-// ── INVALID_TZ: bad timezone string ──────────────────────────────────────────
+// ── TempoInvalidTzError: bad timezone string ─────────────────────────────────
 try {
   inTz(parse('2026-03-21T10:00:00Z', 'instant'), 'Not/AZone');
 } catch (e) {
-  if (e instanceof TempoError) {
-    console.log(e.code); // 'INVALID_TZ'
+  if (e instanceof TempoInvalidTzError) {
+    console.log(e.name); // 'TempoInvalidTzError'
   }
 }
 
-// ── Still instanceof TypeError (backward compat) ─────────────────────────────
+// ── Every subtype is also a TempoError (single catch-all) ───────────────────
 try {
   parse('bad');
 } catch (e) {
-  console.log(e instanceof TypeError);  // true
+  console.log(e instanceof Error);      // true
   console.log(e instanceof TempoError); // true
+  console.log(TempoError.is(e));        // true — static type guard, same check
 }
-
-// ── Inspect all error codes ───────────────────────────────────────────────────
-console.log(Object.values(TempoErrorCode));
-// ['INVALID_INPUT', 'INVALID_TZ', 'MISSING_TZ', 'UNSUPPORTED_INPUT']
 `,
 
-  name: 'TempoError — instanceof checks and error codes',
+  name: 'TempoError — instanceof checks across the error hierarchy',
 };

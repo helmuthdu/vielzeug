@@ -8,7 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(
   getBundleConfig(__dirname, {
-    external: ['@js-temporal/polyfill', '@vielzeug/arsenal'],
+    external: ['@js-temporal/polyfill'],
     fileName: 'tempo',
     globals: { '@js-temporal/polyfill': 'Temporal' },
     name: 'Tempo',

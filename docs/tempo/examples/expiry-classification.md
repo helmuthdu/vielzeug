@@ -1,6 +1,6 @@
 ---
 title: 'Tempo Examples — Expiry Classification'
-description: 'Certificate and token TTL bucketing with expires() and classify().'
+description: 'Certificate and token TTL bucketing with expires(), timeDiff(), and humanize().'
 ---
 
 ## Expiry Classification
@@ -11,10 +11,11 @@ Applications that manage certificates, tokens, and licenses need to display cont
 
 ### Solution
 
-Use `expires()` to classify a date into named threshold buckets of your choosing. Use `classify()` when you need both the bucket name and the structured time difference in a single call.
+Use `expires()` to classify a date into named threshold buckets of your choosing. Combine it with `timeDiff()` and
+`humanize()` when you need both the bucket name and a human-readable structured time difference.
 
 ```ts
-import { classify, expires, humanize, nowInstant, parseInstant, timeDiff } from '@vielzeug/tempo';
+import { expires, humanize, parseInstant, timeDiff } from '@vielzeug/tempo';
 
 const THRESHOLDS = {
   longExpired: { days: -30 }, // more than 30 days in the past
@@ -26,13 +27,13 @@ const THRESHOLDS = {
 
 const certExpiry = parseInstant('2026-06-04T00:00:00Z');
 
-// Single bucket name
-expires(certExpiry, THRESHOLDS); // 'critical' | 'warning' | 'safe' | ... | null
+// Bucket name
+const key = expires(certExpiry, THRESHOLDS);
+// 'critical'
 
-// Bucket + structured diff in one call
-const { key, diff } = classify(certExpiry, THRESHOLDS);
-// key:  'critical'
-// diff: { unit: 'day', value: 3 }
+// Structured diff, formatted for display
+const diff = timeDiff(certExpiry);
+// { unit: 'day', value: 3 }
 
 const label = `${key}: ${humanize(diff)} remaining`;
 // → 'critical: 3 days remaining'
@@ -56,10 +57,10 @@ expires(parseInstant('2030-01-01T00:00:00Z'), THRESHOLDS, {}, pinnedNow); // 'sa
 
 #### UI Badge Component
 
-Combine `classify()` with a component to render a contextual status badge:
+Combine `expires()` and `timeDiff()` in a component to render a contextual status badge:
 
 ```tsx
-import { classify, humanize, parseInstant } from '@vielzeug/tempo';
+import { expires, humanize, parseInstant, timeDiff } from '@vielzeug/tempo';
 
 const CERT_THRESHOLDS = {
   expired: { days: 0 },
@@ -69,7 +70,9 @@ const CERT_THRESHOLDS = {
 } as const;
 
 function CertBadge({ expiresAt }: { expiresAt: string }) {
-  const { key, diff } = classify(parseInstant(expiresAt), CERT_THRESHOLDS);
+  const target = parseInstant(expiresAt);
+  const key = expires(target, CERT_THRESHOLDS);
+  const diff = timeDiff(target);
 
   const label =
     key === 'expired' ? `Expired ${humanize(diff)} ago` : key === null ? 'Unknown' : `${humanize(diff)} remaining`;
@@ -82,11 +85,11 @@ function CertBadge({ expiresAt }: { expiresAt: string }) {
 
 - `expires()` returns `null` when `diff > max threshold`. Always handle the `null` case when the thresholds don't form a catch-all.
 - Thresholds are compared after ascending sort — overlapping ranges always resolve to the most negative matching threshold.
-- `expires()` uses approximate millisecond constants for month/year thresholds; use `classify()` + `timeDiff()` for calendar-accurate display values.
+- `expires()` uses approximate millisecond constants for month/year thresholds; use `timeDiff()` for calendar-accurate display values.
 - For `PlainDate` or `PlainDateTime` inputs, pass `options.tz` or `expires()` throws.
 
 ### Related
 
 - [API Reference — `expires()`](/tempo/api#expires-date-thresholds-options-k--null)
-- [API Reference — `classify()`](/tempo/api#classify-date-thresholds-options-key-k--null-diff-timediffresult)
 - [API Reference — `timeDiff()`](/tempo/api#timediff-a-b-options-timediffresult)
+- [API Reference — `humanize()`](/tempo/api#humanize-diff-options-string)

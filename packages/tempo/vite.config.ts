@@ -10,7 +10,7 @@ export default defineConfig(
   mergeConfig(getConfig(__dirname, { name: 'tempo' }), {
     build: {
       rolldownOptions: {
-        external: ['@js-temporal/polyfill', '@vielzeug/arsenal'],
+        external: ['@js-temporal/polyfill'],
       },
     },
   }),

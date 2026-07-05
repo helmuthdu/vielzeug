@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: sync README/docs/REPL example with actual error hierarchy, drop dead _dev.ts and arsenal build config",
+      "packageName": "@vielzeug/tempo",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/tempo"
+}

@@ -42,8 +42,11 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 | `humanize(diff, options?)`               | `TimeDiffResult` → human-readable string             | English-only; use `formatRelative()` for localized output                                 |
 | `dateRange(start, end, step, options?)`  | Lazy generator of `ZonedDateTime` values             | `step` must advance time forward; `tz` inferred from `ZonedDateTime`, required otherwise  |
 | `recurrence(start, rule, options?)`      | Lazy generator for repeating dates                   | `count` or `until` required; `tz` inferred from `ZonedDateTime` start                     |
-| `TempoError`                             | Error class thrown by all tempo functions            | `instanceof TempoError`; has `.code: TempoErrorCode` for programmatic handling            |
-| `TempoErrorCode`                         | Frozen constant object of all error code strings     | `'INVALID_INPUT' \| 'INVALID_TZ' \| 'MISSING_TZ' \| 'UNSUPPORTED_INPUT'`                  |
+| `TempoError`                             | Base error class thrown by all tempo functions       | `instanceof TempoError` catches every subtype below                                       |
+| `TempoInvalidInputError`                 | Subtype — parse/duration input could not be understood | Thrown by `parse()`, `parseInstant()`, `parseZoned()`, `parsePlainDate()`, `parsePlainDateTime()`, `parseDuration()` |
+| `TempoInvalidTzError`                    | Subtype — timezone string is not a valid IANA name or offset | Thrown by any function that resolves a `tz` string                                  |
+| `TempoMissingTzError`                    | Subtype — operation needs a timezone but none could be inferred | Thrown when a plain input is passed without `options.tz`                             |
+| `TempoUnsupportedInputError`             | Subtype — input value is not a recognised `TimeInput` | Thrown by `toInstant()` for non-`TimeInput` values                                        |
 
 ## Package Entry Point
 
@@ -51,7 +54,10 @@ description: Complete API reference for @vielzeug/tempo date/time functions.
 import {
   Temporal,
   TempoError,
-  TempoErrorCode,
+  TempoInvalidInputError,
+  TempoInvalidTzError,
+  TempoMissingTzError,
+  TempoUnsupportedInputError,
   clamp,
   dateRange,
   difference,
@@ -997,29 +1003,65 @@ const quarters = [
 
 ## Errors
 
-All errors thrown by tempo are instances of `TempoError`, which extends `TypeError` for backward compatibility.
+All errors thrown by tempo are instances of `TempoError`. Catch the base class to handle any tempo-originated
+error, or catch a specific subtype to distinguish failure modes.
 
 ```ts
-import { parse, TempoError, TempoErrorCode } from '@vielzeug/tempo';
+import { TempoError, TempoMissingTzError, parse, parsePlainDateTime, toInstant } from '@vielzeug/tempo';
 
 try {
   parse('not-a-date');
 } catch (e) {
   if (e instanceof TempoError) {
-    console.log(e.code); // 'INVALID_INPUT'
-    console.log(e.message); // '[tempo] Unable to parse date/time string: "not-a-date"'
+    console.log(e.name); // 'TempoInvalidInputError'
+    console.log(e.message); // 'Unable to parse date/time string: "not-a-date". ...'
+  }
+}
+
+try {
+  toInstant(parsePlainDateTime('2026-03-21T10:00:00'));
+} catch (e) {
+  if (e instanceof TempoMissingTzError) {
+    // narrow to this specific failure mode
   }
 }
 ```
 
-| Code                | Thrown when                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| `INVALID_INPUT`     | Parse failures, invalid duration strings, unrecognised date values |
-| `INVALID_TZ`        | Timezone string is not a valid IANA name or UTC offset             |
-| `MISSING_TZ`        | Operation requires a timezone but none could be inferred           |
-| `UNSUPPORTED_INPUT` | Input type is not a recognised `TimeInput`                         |
+### `TempoError`
 
-Existing `catch (e)` blocks that check `e instanceof TypeError` continue to work — `TempoError` is a `TypeError` subclass.
+Base class for every error tempo throws. Use `TempoError.is()` to catch anything tempo-originated regardless
+of subtype.
+
+```ts
+class TempoError extends Error {
+  constructor(message: string, opts?: ErrorOptions);
+  static is(err: unknown): err is TempoError;
+}
+```
+
+---
+
+### `TempoInvalidInputError`
+
+Thrown by `parse()`, `parseInstant()`, `parseZoned()`, `parsePlainDate()`, `parsePlainDateTime()`, and
+`parseDuration()` when the input string cannot be understood. Also the default error class for any `fail()`
+call site that doesn't specify a more specific subtype (e.g. cross-timezone mismatches in `within()` /
+`clamp()` / `difference()`).
+
+### `TempoInvalidTzError`
+
+Thrown when a timezone string is not a valid IANA name or UTC offset — from `validateTz()`, used by every
+function that resolves a `tz` option (`now()`, `inTz()`, `shift()`, `startOf()`, `endOf()`, etc.).
+
+### `TempoMissingTzError`
+
+Thrown when an operation requires a timezone but none could be inferred — a `PlainDate` or `PlainDateTime`
+input was passed without `options.tz`, or without a shared timezone across two/more `TimeInput` values.
+
+### `TempoUnsupportedInputError`
+
+Thrown by `toInstant()` when the input value is not one of the four `TimeInput` types
+(`Instant`, `ZonedDateTime`, `PlainDateTime`, `PlainDate`).
 
 ---
 
@@ -1027,15 +1069,6 @@ Existing `catch (e)` blocks that check `e instanceof TypeError` continue to work
 
 ```ts
 type TimeInput = Temporal.Instant | Temporal.PlainDate | Temporal.PlainDateTime | Temporal.ZonedDateTime;
-
-type TempoErrorCode = 'INVALID_INPUT' | 'INVALID_TZ' | 'MISSING_TZ' | 'UNSUPPORTED_INPUT';
-
-const TempoErrorCode: Readonly<Record<TempoErrorCode, TempoErrorCode>>; // frozen constant object
-
-class TempoError extends TypeError {
-  readonly code: TempoErrorCode;
-  constructor(code: TempoErrorCode, message: string);
-}
 
 type RelativeTimeInput = Temporal.Instant | Temporal.ZonedDateTime;
 

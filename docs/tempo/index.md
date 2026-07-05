@@ -41,7 +41,10 @@ exports:
     dateRange,
     recurrence,
     TempoError,
-    TempoErrorCode,
+    TempoInvalidInputError,
+    TempoInvalidTzError,
+    TempoMissingTzError,
+    TempoUnsupportedInputError,
   ]
 environments: [browser, node, ssr, deno]
 ---

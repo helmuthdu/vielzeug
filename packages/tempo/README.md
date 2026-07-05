@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/tempo` &nbsp;·&nbsp; **Category:** Date-time
 
-**Key exports:** `now`, `parseLocal`, `parseInstant`, `parseAny`, `toInstant`, `toZoned`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `expires`, `classify`, `timeDiff`, `recurrence`
+**Key exports:** `now`, `parsePlainDateTime`, `parseInstant`, `parse`, `toInstant`, `inTz`, `shift`, `difference`, `format`, `formatRelative`, `isBefore`, `isAfter`, `isSame`, `startOf`, `endOf`, `expires`, `timeDiff`, `recurrence`
 
 **When to use:** Temporal-powered parsing, timezone conversion, arithmetic (DST-safe), and Intl formatting for modern TypeScript.
 
@@ -30,16 +30,16 @@ yarn add @vielzeug/tempo
 ## Quick Start
 
 ```ts
-import { format, formatInstant, parseLocal, shift, toInstant, toZoned } from '@vielzeug/tempo';
+import { format, formatInstant, inTz, parsePlainDateTime, shift, toInstant } from '@vielzeug/tempo';
 
 // Parse a wall-clock string (no timezone attached)
-const localMeeting = parseLocal('2026-03-21T10:30:00');
+const localMeeting = parsePlainDateTime('2026-03-21T10:30:00');
 
 // Convert to an absolute instant using the user's timezone
 const meetingInstant = toInstant(localMeeting, { tz: 'America/New_York' });
 
 // Project to a zoned view and subtract 15 minutes (DST-safe)
-const meetingNY = toZoned(meetingInstant, { tz: 'America/New_York' });
+const meetingNY = inTz(meetingInstant, 'America/New_York');
 const reminder = shift(meetingNY, { minutes: -15 });
 
 // Format for display
