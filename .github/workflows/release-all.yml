@@ -3,77 +3,60 @@ name: Release All Packages
 on:
   workflow_dispatch:
     inputs:
-      confirm:
-        description: 'Type "release-all" to confirm releasing all packages with pending changes'
-        required: true
-        type: string
+      dry-run:
+        description: 'Do everything except the actual npm publish / git tag / GitHub release'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: release-main-${{ github.repository }}
+  group: release-main
   cancel-in-progress: false
 
 permissions:
   contents: write
   packages: write
-  id-token: write # required for npm Trusted Publishing (OIDC)
 
 jobs:
-  release:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      has-releases: ${{ steps.plan.outputs.has-releases }}
+      matrix: ${{ steps.plan.outputs.matrix }}
     steps:
-      - name: Verify confirmation
-        run: |
-          if [ "${{ inputs.confirm }}" != "release-all" ]; then
-            echo "❌ You must type 'release-all' to confirm."
-            exit 1
-          fi
-
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Node-only setup so "nothing pending" fails in seconds instead of after the full
+      # rush/pnpm install below.
       - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - id: changes
+        run: echo "packages=$(node scripts/release/cli.mjs changed-packages)" >> "$GITHUB_OUTPUT"
+
+      - name: Record versions before bump
+        run: node scripts/release/cli.mjs versions ${{ steps.changes.outputs.packages }} > /tmp/versions-before.txt
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Require pending change files
-        id: changes
-        run: |
-          PACKAGES=$(find common/changes -name "*.json" -exec \
-            jq -r '.changes[]?.packageName // empty' {} \; \
-            | sort -u | tr '\n' ' ')
-
-          if [ -z "$PACKAGES" ]; then
-            echo "❌ No pending change files found. Run 'rush change' for each package, commit, then re-trigger."
-            exit 1
-          fi
-
-          echo "packages=${PACKAGES}" >> $GITHUB_OUTPUT
-          echo "📦 Packages with pending changes: ${PACKAGES}"
-
-      - name: Record versions before bump
-        run: |
-          for pkg in ${{ steps.changes.outputs.packages }}; do
-            FOLDER=$(node -e "const r=require('./rush.json'); process.stdout.write(r.projects.find(p=>p.packageName==='${pkg}').projectFolder)")
-            VERSION=$(node -e "process.stdout.write(require('./${FOLDER}/package.json').version)")
-            echo "${pkg}=${VERSION}"
-          done > /tmp/versions-before.txt
-          cat /tmp/versions-before.txt
+      - uses: ./.github/actions/setup
 
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
       - name: Apply version bumps
-        run: |
-          node common/scripts/install-run-rush.js publish \
-            --apply --target-branch main --add-commit-details
-          echo "✅ Rush publish --apply complete"
+        run: node scripts/release/cli.mjs apply
 
       - name: Push version bump commit
+        if: ${{ !inputs.dry-run }}
         run: |
           for attempt in 1 2 3; do
             git fetch origin main
@@ -86,109 +69,38 @@ jobs:
             echo "🔄 Retry ${attempt}/3..."
           done
 
-      - name: Configure npm registry
-        uses: actions/setup-node@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@vielzeug'
+          name: built-packages
+          path: packages/
+          retention-days: 1
 
-      # actions/setup-node always exports a dummy NODE_AUTH_TOKEN ("XXXXX-XXXXX-XXXXX-XXXXX")
-      # when registry-url is set, purely so `${NODE_AUTH_TOKEN}` in .npmrc doesn't resolve to an
-      # empty string. npm treats that non-empty (but garbage) token as configured credentials and
-      # skips OIDC entirely, publishing unauthenticated -> registry replies E404 instead of a real
-      # auth error. Clearing it restores npm's trusted-publishing auto-detection.
-      # See https://github.com/actions/setup-node/issues/1440
-      - name: Clear npm auth token placeholder
-        run: echo "NODE_AUTH_TOKEN=" >> "$GITHUB_ENV"
-
-      # Trusted Publishing (OIDC) requires npm CLI >= 11.5.1. No NPM_TOKEN needed — npm exchanges
-      # the GitHub Actions OIDC token for a short-lived credential, provided a Trusted Publisher
-      # is registered for this exact repo + workflow filename on npmjs.com per package.
-      - name: Upgrade npm for trusted publishing
+      # Filters out anything already on npm or left unbumped by rush *before* the matrix is
+      # built, so the Actions UI only ever shows real publish jobs — no phantom "skipped"
+      # entries for a run where only 2 of 30 packages actually changed.
+      - id: plan
         run: |
-          npm install -g npm@latest
-          npm --version
+          PLAN=$(node scripts/release/cli.mjs plan --before-file /tmp/versions-before.txt ${{ steps.changes.outputs.packages }})
+          echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
+          [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
-      - name: Publish each package
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RELEASED=""
-
-          for pkg in ${{ steps.changes.outputs.packages }}; do
-            FOLDER=$(node -e "const r=require('./rush.json'); process.stdout.write(r.projects.find(p=>p.packageName==='${pkg}').projectFolder)")
-            OLD=$(grep "^${pkg}=" /tmp/versions-before.txt | cut -d'=' -f2)
-            NEW=$(node -e "process.stdout.write(require('./${FOLDER}/package.json').version)")
-
-            echo ""
-            echo "📦 ${pkg}: ${OLD} → ${NEW}"
-
-            if [ "$OLD" = "$NEW" ]; then
-              echo "   ℹ️  Version unchanged — skipping"
-              continue
-            fi
-
-            # Skip if already on npm
-            EXISTING=$(npm view "${pkg}@${NEW}" version 2>/dev/null || echo "")
-            if [ "$EXISTING" = "$NEW" ]; then
-              echo "   ⚠️  ${NEW} already on npm — skipping publish"
-              RELEASED="${RELEASED}${pkg}@${NEW} "
-              continue
-            fi
-
-            # Pack
-            TARBALL=$(cd "$FOLDER" && npm pack --json | node -e "process.stdout.write(JSON.parse(require('fs').readFileSync(0))[0].filename)")
-            echo "   📦 Tarball: ${TARBALL}"
-
-            # Publish
-            set +e
-            OUT=$(cd "$FOLDER" && npm publish "${TARBALL}" --access public 2>&1)
-            EXIT=$?
-            set -e
-            echo "$OUT"
-            cd "$FOLDER" && rm -f "${TARBALL}" && cd - > /dev/null
-
-            if [ $EXIT -ne 0 ]; then
-              echo "   ❌ publish failed (exit ${EXIT})"
-              exit $EXIT
-            fi
-
-            # Tag
-            git tag -f "${pkg}@${NEW}"
-
-            RELEASED="${RELEASED}${pkg}@${NEW} "
-
-            # Brief pause to avoid E409 registry conflicts on rapid multi-package publishes
-            echo "   ⏳ 15s pause before next package..."
-            sleep 15
-
-            # GitHub release
-            TAG="${pkg}@${NEW}"
-            cat > /tmp/notes.md << NOTES
-          ## ${pkg} v${NEW}
-
-          ### Installation
-
-              npm install ${pkg}@${NEW}
-
-          ### Links
-
-          - npm: https://www.npmjs.com/package/${pkg}/v/${NEW}
-          - CHANGELOG: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/blob/${TAG}/${FOLDER}/CHANGELOG.md
-          NOTES
-            gh release create "${TAG}" --title "${pkg} v${NEW}" --generate-notes --notes-file /tmp/notes.md || true
-          done
-
-          # Push all tags at once
-          git push origin --tags
-
-          # Step summary
-          echo "## Release Summary" >> $GITHUB_STEP_SUMMARY
-          if [ -z "$RELEASED" ]; then
-            echo "⚠️ No packages were published." >> $GITHUB_STEP_SUMMARY
-          else
-            for pv in $RELEASED; do
-              echo "- ✅ **${pv}**" >> $GITHUB_STEP_SUMMARY
-            done
-          fi
+  # One matrix entry per package that actually needs publishing — each gets its own job (own
+  # log, own pass/fail) instead of one long bash loop. `fail-fast: false` because one package's
+  # publish failing is not a reason to abort the others; E409 registry conflicts between
+  # different packages' matrix jobs are handled by the retry/backoff in
+  # scripts/release/npm-publish.mjs, not by serializing the matrix.
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.has-releases == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+    uses: ./.github/workflows/_publish-one.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      dry-run: ${{ inputs.dry-run }}
+      folder: ${{ matrix.folder }}
+      package: ${{ matrix.package }}
+      version: ${{ matrix.version }}

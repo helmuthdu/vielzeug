@@ -14,15 +14,12 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: ./.github/actions/setup
 
       - name: Rush build
         run: node common/scripts/install-run-rush.js build --verbose
-
-      - name: Install root workspace tools (vitest, eslint — not managed by Rush)
-        run: pnpm install --frozen-lockfile
 
       - name: Generate codex bundled data
         run: pnpm --dir packages/codex run prepare:data
@@ -32,7 +29,7 @@ jobs:
 
       - name: Upload coverage report
         if: inputs.coverage
-        uses: actions/upload-artifact@v4.6.2
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: coverage
           path: coverage/
@@ -43,20 +40,22 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - uses: ./.github/actions/setup
         with:
           rush-install: 'false'
-
-      - name: Install root workspace tools (vitest, eslint — not managed by Rush)
-        run: pnpm install --frozen-lockfile
 
       - name: Lint JS/TS
         run: pnpm lint:js
 
       - name: Lint CSS
         run: pnpm lint:css
+
+      - name: Lint GitHub Actions workflows
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1.72.0
+        with:
+          fail_level: error
 
       - name: Check workflow docs are in sync with manifest.json
         run: pnpm check:workflow-docs

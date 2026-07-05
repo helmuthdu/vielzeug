@@ -1,0 +1,15 @@
+# Keeps SHA-pinned GitHub Actions (see .github/workflows/*.yml, .github/actions/*/action.yml)
+# up to date. Dependabot updates the pinned SHA and its trailing `# vX.Y.Z` comment together —
+# pinning to SHA instead of a floating tag is a supply-chain hardening measure (a compromised
+# tag can't silently repoint to malicious code); Dependabot is what keeps that from also
+# meaning "never gets security fixes."
+version: 2
+updates:
+  - package-ecosystem: 'github-actions'
+    directory: '/'
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - '*'

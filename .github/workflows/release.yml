@@ -7,24 +7,47 @@ on:
         description: 'Package name (e.g. @vielzeug/coins). Must have a pending change file — run rush change locally first.'
         required: true
         type: string
+      dry-run:
+        description: 'Do everything except the actual npm publish / git tag / GitHub release'
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
-  group: release-main-${{ github.repository }}
+  group: release-main
   cancel-in-progress: false
 
 permissions:
   contents: write
   packages: write
-  id-token: write # required for npm Trusted Publishing (OIDC) — see .github/actions/publish-package
 
 jobs:
-  release:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      folder: ${{ steps.project.outputs.folder }}
+      version: ${{ steps.project.outputs.version }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Node-only setup so a typo'd package name or a missing change file fails in seconds
+      # instead of after paying for the full rush/pnpm install below.
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Validate package name and require a pending change file
+        run: |
+          node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
+          if ! node scripts/release/cli.mjs changed-packages | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
+            echo "❌ No pending change file found for ${{ inputs.package }}."
+            echo "Run 'rush change' locally, commit the generated file, and re-trigger this workflow."
+            exit 1
+          fi
 
       - uses: ./.github/actions/setup
 
@@ -33,106 +56,20 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Validate package name
-        run: |
-          VALID=$(node -e "
-            const r = require('./rush.json');
-            process.stdout.write(r.projects.map(p => p.packageName).join('\n'));
-          ")
-          if ! echo "$VALID" | grep -Fxq "${{ inputs.package }}"; then
-            echo "❌ Unknown package: ${{ inputs.package }}"
-            echo ""
-            echo "Valid packages:"
-            echo "$VALID"
-            exit 1
-          fi
-          echo "✅ Package validated: ${{ inputs.package }}"
-
-      - name: Require change files
-        run: |
-          PKG="${{ inputs.package }}"
-          COUNT=$(find common/changes -name "*.json" -exec \
-            jq -r --arg p "$PKG" '.changes[]? | select(.packageName == $p) | .packageName' {} \; \
-            | wc -l | tr -d ' ')
-
-          if [ "$COUNT" = "0" ]; then
-            echo "❌ No change file found for ${PKG}."
-            echo ""
-            echo "Run 'rush change' locally, commit the generated file, and re-trigger this workflow."
-            exit 1
-          fi
-
-          echo "✅ Found ${COUNT} change entry(ies) for ${PKG}"
-
-      - name: Get package folder and current version
-        id: pkg
-        run: |
-          FOLDER=$(node -e "
-            const r = require('./rush.json');
-            const p = r.projects.find(p => p.packageName === '${{ inputs.package }}');
-            process.stdout.write(p.projectFolder);
-          ")
-          OLD_VERSION=$(node -e "process.stdout.write(require('./${FOLDER}/package.json').version)")
-          echo "folder=${FOLDER}" >> $GITHUB_OUTPUT
-          echo "old-version=${OLD_VERSION}" >> $GITHUB_OUTPUT
-          echo "📦 ${{ inputs.package }} @ ${OLD_VERSION} in ${FOLDER}"
-
       - name: Build all packages
         run: node common/scripts/install-run-rush.js build --verbose
 
-      - name: Set aside change files for other packages
-        run: |
-          # "rush publish --apply" processes every file under common/changes, not just the
-          # target package's — there's no per-package filter. Move everyone else's change
-          # files out of the way so only ours gets consumed/bumped.
-          PKG="${{ inputs.package }}"
-          mkdir -p /tmp/other-changes
-          if [ -d common/changes ]; then
-            find common/changes -type f -name '*.json' ! -path "common/changes/${PKG}/*" -print0 |
-              while IFS= read -r -d '' f; do
-                mkdir -p "/tmp/other-changes/$(dirname "$f")"
-                mv "$f" "/tmp/other-changes/$f"
-              done
-          fi
-          echo "Set aside $(find /tmp/other-changes -type f -name '*.json' 2>/dev/null | wc -l | tr -d ' ') change file(s) belonging to other packages"
-
+      # "rush publish --apply" has no per-package filter — it always consumes every pending
+      # change file. This isolates the target package's change file(s), applies, and restores
+      # the rest. See scripts/release/rush-publish-apply.mjs for why.
       - name: Apply version bump
-        run: |
-          node common/scripts/install-run-rush.js publish \
-            --apply --target-branch main --add-commit-details
-          echo "✅ Rush publish --apply complete"
+        run: node scripts/release/cli.mjs apply "${{ inputs.package }}"
 
-      - name: Restore change files for other packages
-        if: always()
-        run: |
-          # Rush's internal "git add :/*" stages the set-aside files as deleted since they were
-          # absent from the working tree — put them back and, if needed, commit the correction.
-          if [ -d /tmp/other-changes ]; then
-            find /tmp/other-changes -type f -name '*.json' -print0 |
-              while IFS= read -r -d '' f; do
-                REL="${f#/tmp/other-changes/}"
-                mkdir -p "$(dirname "$REL")"
-                mv "$f" "$REL"
-              done
-          fi
-          if [ -n "$(git status --porcelain -- common/changes)" ]; then
-            git add common/changes
-            git commit -m "chore: restore pending change files for other packages"
-            echo "✅ Restored change files rush publish would have wrongly deleted"
-          fi
-
-      - name: Read new version
-        id: version
-        run: |
-          NEW=$(node -e "process.stdout.write(require('./${{ steps.pkg.outputs.folder }}/package.json').version)")
-          if [ "$NEW" = "${{ steps.pkg.outputs.old-version }}" ]; then
-            echo "❌ Version was not bumped (still $NEW). Change file may not have matched."
-            exit 1
-          fi
-          echo "new-version=${NEW}" >> $GITHUB_OUTPUT
-          echo "✅ Version: ${{ steps.pkg.outputs.old-version }} → ${NEW}"
+      - id: project
+        run: node scripts/release/cli.mjs project "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
 
       - name: Push version bump commit
+        if: ${{ !inputs.dry-run }}
         run: |
           for attempt in 1 2 3; do
             git fetch origin main
@@ -142,12 +79,23 @@ jobs:
               break
             fi
             [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
-            echo "� Retry ${attempt}/3..."
+            echo "🔄 Retry ${attempt}/3..."
           done
 
-      - name: Publish, tag and release
-        uses: ./.github/actions/publish-package
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          package: ${{ inputs.package }}
-          version: ${{ steps.version.outputs.new-version }}
-          folder: ${{ steps.pkg.outputs.folder }}
+          name: built-packages
+          path: packages/
+          retention-days: 1
+
+  publish:
+    needs: prepare
+    uses: ./.github/workflows/_publish-one.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      dry-run: ${{ inputs.dry-run }}
+      folder: ${{ needs.prepare.outputs.folder }}
+      package: ${{ inputs.package }}
+      version: ${{ needs.prepare.outputs.version }}

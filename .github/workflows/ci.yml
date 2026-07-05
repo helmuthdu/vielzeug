@@ -9,38 +9,26 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Build, Test & Lint
+  # ── Verify a from-scratch rebuild succeeds ────────────────────────────────────
+  build:
+    name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
 
       - name: Rush rebuild
         run: node common/scripts/install-run-rush.js rebuild --verbose
 
-      - name: Install root workspace tools (vitest, eslint — not managed by Rush)
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate codex bundled data
-        run: pnpm --dir packages/codex run prepare:data
-
-      - name: Run unit tests with coverage
-        run: pnpm test --run --coverage
-
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4.6.2
-        if: always()
-        with:
-          name: coverage
-          path: coverage/
-          retention-days: 14
-
-      - name: Lint JS/TS
-        run: pnpm lint:js
-
-      - name: Lint CSS
-        run: pnpm lint:css
+  # ── Test + Lint (parallel, both independent of the rebuild check) ────────────
+  test-lint:
+    name: Test & Lint
+    needs: build
+    uses: ./.github/workflows/_test-lint.yml
+    with:
+      coverage: true
