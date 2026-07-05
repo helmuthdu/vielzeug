@@ -20,8 +20,8 @@ description: Complete API reference for Wayfinder.
 | `router.isActive(name, options?)`       | Check if a named route matches the current URL             | Sync                 | Compares against the current snapshot pathname, not `history.location` directly                           |
 | `router.resolve(pathname)`              | Resolve a pathname to a branch without side effects        | Sync                 | Returns `null` for redirect routes                                                                        |
 | `router.match(url, options?)`           | Resolve a URL to a full state including data loaders       | Async                | Lazy modules are resolved as a side effect                                                                |
-| `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; aborted automatically when the router is disposed         |
-| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `RouterDisposedError` if disposed while pending |
+| `router.preload(name, params?, query?)` | Eagerly run data loaders without navigating                | Async                | Pass `query` to match the navigation cache key; rejects with `WayfinderDisposedError` if the router is disposed |
+| `router.waitFor(name)`                  | Wait for the router to settle on a named route             | Async                | Rejects immediately if `status === 'error'`; rejects with `WayfinderDisposedError` if disposed while pending |
 | `router.beforeLeave(blocker, options?)` | Register a global leave guard                              | Sync (returns unsub) | Scoped to specific routes via `options.routes`                                                            |
 | `router.dispose()`                      | Remove listeners and shut down the router                  | Sync                 | Idempotent — safe to call multiple times                                                                  |
 
@@ -174,7 +174,7 @@ Remove listeners, clear subscribers, and reject future router interaction. Idemp
 
 #### `router.disposalSignal`
 
-`AbortSignal` that is aborted (with a `RouterDisposedError` reason) when the router is disposed. Use this to tie external resource lifetimes to the router's lifetime.
+`AbortSignal` that is aborted (with a `WayfinderDisposedError` reason) when the router is disposed. Use this to tie external resource lifetimes to the router's lifetime.
 
 ```ts
 source.on('update', syncRouteParams, { signal: router.disposalSignal });
@@ -314,7 +314,7 @@ Eagerly runs the data loaders for a named route without navigating. Useful for h
 
 Pass the same `query` you intend to navigate with to ensure the preloaded result hits the cache. Without `query`, the key is the bare path — a navigation with a query string will produce a cache miss and re-run the loader.
 
-In-flight preloads are aborted automatically via the router's disposal signal when `router.dispose()` is called.
+In-flight preloads are aborted automatically via the router's disposal signal when `router.dispose()` is called. Calling `preload()` on an already-disposed router throws `WayfinderDisposedError` immediately, without running the data loader — consistent with `navigate()`, `subscribe()`, `beforeLeave()`, and `waitFor()`.
 
 **Returns:** `Promise<void>`
 
@@ -761,35 +761,65 @@ type Unsubscribe = () => void;
 
 ## Errors
 
-### `RouterDisposedError`
+### `WayfinderError`
 
-Thrown when any guarded router method is called after `dispose()`. Also used as the `AbortSignal.reason` on `disposalSignal`.
+Base class for every error Wayfinder throws. Catch this to handle any router-originated error without enumerating subclasses. `WayfinderError.is(err)` is equivalent to `err instanceof WayfinderError`.
 
 ```ts
-import { RouterDisposedError } from '@vielzeug/wayfinder';
+import { WayfinderError } from '@vielzeug/wayfinder';
 
 try {
   await router.navigate({ name: 'home' });
 } catch (e) {
-  if (e instanceof RouterDisposedError) {
+  if (WayfinderError.is(e)) {
+    // any router-originated error — check e.name or `instanceof` a subclass for detail
+  }
+}
+```
+
+### `WayfinderDisposedError`
+
+Thrown when `navigate()`, `subscribe()`, `beforeLeave()`, `waitFor()`, or `preload()` is called after `dispose()`. Also used as the `AbortSignal.reason` on `disposalSignal`.
+
+```ts
+import { WayfinderDisposedError } from '@vielzeug/wayfinder';
+
+try {
+  await router.navigate({ name: 'home' });
+} catch (e) {
+  if (e instanceof WayfinderDisposedError) {
     // router was disposed
   }
 }
 ```
 
+### `WayfinderRouteError`
+
+Thrown for malformed route definitions — at `createRouter()` time for config errors, or when a `url()`/`navigate()` call references an unknown route name or a missing path param.
+
+### `WayfinderRedirectLoopError`
+
+Thrown when a chain of declarative `redirect`s (or a mix of declarative redirects and `ctx.navigate()` calls inside route middleware) exceeds 5 hops.
+
+### `WayfinderApiError`
+
+Thrown on middleware misuse — currently only when a middleware function calls its `next()` more than once.
+
 ### Runtime error messages
 
-The following plain errors are thrown for programmer mistakes at route-config time:
-
-| Message                                                             | When                                                                                                        |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `Router is disposed`                                                | Calling `navigate()`, `subscribe()`, or `beforeLeave()` after `dispose()` (thrown as `RouterDisposedError`) |
-| `[@vielzeug/wayfinder] Unknown route name: X. Available routes: Y`  | Navigating to or resolving an unregistered route name                                                       |
-| `[@vielzeug/wayfinder] Duplicate route name: X`                     | Two routes resolve to the same compound name during `createRouter()`                                        |
-| `[@vielzeug/wayfinder] Redirect loop detected`                      | A declarative `redirect` chain exceeds 5 hops                                                               |
-| `[@vielzeug/wayfinder] Invalid param name ":X" in path "Y"`         | A param name contains non-word characters (e.g., `:user-id`)                                                |
-| `[@vielzeug/wayfinder] Wildcard "*" must be the final segment in X` | A `*` segment appears before the last segment                                                               |
-| `[@vielzeug/wayfinder] Wildcard param must be final segment in X`   | A `:param*` greedy param appears before the last segment                                                    |
+| Message                                                          | Class                        | When                                                                  |
+| ----------------------------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| `Router is disposed`                                             | `WayfinderDisposedError`      | Calling a guarded method (see above) after `dispose()`                |
+| `Unknown route name: X. Available routes: Y`                     | `WayfinderRouteError`         | Navigating to, resolving, or building a URL for an unregistered route  |
+| `Route "X" cannot define both index and path`                    | `WayfinderRouteError`         | A route sets `index: true` and `path` at the same time                |
+| `Route "X" must define path or set index: true`                  | `WayfinderRouteError`         | A route defines neither `index: true` nor `path`                      |
+| `Duplicate route name: "X"`                                      | `WayfinderRouteError`         | Two routes resolve to the same compound name during `createRouter()`  |
+| `Missing path param: X`                                          | `WayfinderRouteError`         | `url()`/`navigate()`/`preload()` omits a param the path pattern requires |
+| `Invalid param name ":X" in path "Y"`                            | `WayfinderRouteError`         | A param name contains non-word characters (e.g., `:user-id`)          |
+| `Wildcard "*" must be the final segment in path: X`              | `WayfinderRouteError`         | A `*` segment appears before the last segment                         |
+| `Wildcard param must be final segment in path: X`                | `WayfinderRouteError`         | A `:param*` greedy param appears before the last segment              |
+| `Redirect loop detected`                                         | `WayfinderRedirectLoopError`  | A declarative `redirect` chain (or mixed redirect + `navigate()`) exceeds 5 hops |
+| `next() called multiple times`                                  | `WayfinderApiError`           | Middleware calls its `next()` callback more than once                 |
 
 ## Pattern Rules
 

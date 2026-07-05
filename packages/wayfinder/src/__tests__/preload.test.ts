@@ -1,7 +1,7 @@
 /**
  * preload() — warm data loaders without navigating.
  */
-import { createMemoryHistory, createRouter } from '../';
+import { createMemoryHistory, createRouter, WayfinderDisposedError } from '../';
 import { settle } from './test-utils';
 
 describe('preload', () => {
@@ -237,5 +237,25 @@ describe('preload', () => {
 
     expect(callCount).toBe(2);
     router.dispose();
+  });
+
+  it('throws WayfinderDisposedError when called after the router is disposed', async () => {
+    const dataFn = vi.fn(async () => ({ ok: true }));
+    const history = createMemoryHistory('/');
+    const router = createRouter({
+      history,
+      routes: {
+        home: { path: '/' },
+        page: { data: dataFn, path: '/page' },
+      },
+    });
+
+    await settle();
+    router.dispose();
+
+    await expect(router.preload('page')).rejects.toThrow(WayfinderDisposedError);
+    // The data loader must never run once the router is disposed — consistent with
+    // navigate()/subscribe()/beforeLeave(), all of which reject before doing any work.
+    expect(dataFn).not.toHaveBeenCalled();
   });
 });

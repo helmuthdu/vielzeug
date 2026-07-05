@@ -138,16 +138,28 @@ export function matchesPrefix<TMeta = unknown, TComponent = unknown>(
   return record.matcher.prefixPattern.test(pathname);
 }
 
-/** Parse `?foo=a&foo=b&bar=c` into `{ foo: ['a', 'b'], bar: 'c' }`. */
+/**
+ * Parse `?foo=a&foo=b&bar=c` into `{ foo: ['a', 'b'], bar: 'c' }`.
+ *
+ * @security Query keys come directly from the (attacker-controlled) URL. Plain bracket
+ * assignment (`out[key] = value`) would let a key like `__proto__` reach the inherited
+ * `Object.prototype.__proto__` setter and silently rewrite `out`'s own prototype instead of
+ * storing a value — `setQueryValue` uses `Object.defineProperty` so every key, including
+ * `__proto__`/`constructor`/`prototype`, is always stored as a plain own data property.
+ */
 export function parseQuery(queryString: string): QueryParams {
   const search = new URLSearchParams(queryString);
   const out: QueryParams = {};
 
+  const setQueryValue = (key: string, value: QueryParams[string]): void => {
+    Object.defineProperty(out, key, { configurable: true, enumerable: true, value, writable: true });
+  };
+
   for (const [key, value] of search.entries()) {
-    const existing = out[key];
+    const existing = Object.hasOwn(out, key) ? out[key] : undefined;
 
     if (existing === undefined) {
-      out[key] = value;
+      setQueryValue(key, value);
       continue;
     }
 
@@ -156,7 +168,7 @@ export function parseQuery(queryString: string): QueryParams {
       continue;
     }
 
-    out[key] = [existing, value];
+    setQueryValue(key, [existing, value]);
   }
 
   return out;

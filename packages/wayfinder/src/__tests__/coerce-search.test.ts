@@ -84,4 +84,25 @@ describe('coerceSearch', () => {
     expect(data).toHaveBeenCalledWith(expect.objectContaining({ query: { tab: 3 } }));
     router.dispose();
   });
+
+  it('stores a `__proto__` query key as a plain own property instead of rewriting the object prototype', async () => {
+    const data = vi.fn();
+    const router = createRouter({
+      history: createMemoryHistory('/page?__proto__=a&__proto__=b&constructor=c'),
+      routes: { page: { data, path: '/page' } },
+    });
+
+    await settle();
+
+    const query = router.getSnapshot().location.query;
+
+    // Both attacker-controlled keys must be readable, own, plain-object-safe properties —
+    // not have hijacked query's actual prototype (which would make Array.isArray(query) true,
+    // drop the keys from Object.keys(), etc).
+    expect(Object.getPrototypeOf(query)).toBe(Object.prototype);
+    expect(Object.keys(query)).toEqual(expect.arrayContaining(['__proto__', 'constructor']));
+    expect(query.__proto__).toEqual(['a', 'b']);
+    expect(query.constructor).toBe('c');
+    router.dispose();
+  });
 });

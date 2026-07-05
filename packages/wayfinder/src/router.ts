@@ -404,12 +404,16 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
    * Pass the same `query` you intend to navigate with to ensure the cached result
    * matches the navigation's cache key. Without `query`, the preload key is the
    * bare path — any navigation with a query string will produce a cache miss.
+   *
+   * @throws {WayfinderDisposedError} if the router has already been disposed.
    */
   async preload<Name extends RouteName<TRoutes>>(
     name: Name,
     params?: PathParams<RoutePathByName<TRoutes, Name>>,
     query?: QueryParams,
   ): Promise<void> {
+    this.#assertNotDisposed();
+
     const route = getRouteByName(name, this.#routesByName);
     const cacheKey = buildPreloadKey(this.#base, route.path, params as RouteParams, query);
 
@@ -417,9 +421,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     if (inflight) return inflight;
 
-    const controller = new AbortController();
-    const signal = AbortSignal.any([controller.signal, this.#disposeController.signal]);
-    const work = this.#doPreload(cacheKey, signal, query).finally(() => {
+    const work = this.#doPreload(cacheKey, this.#disposeController.signal, query).finally(() => {
       this.#preload.untrack(cacheKey);
     });
 
@@ -712,7 +714,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
   // ─── Private: preload ─────────────────────────────────────────────────────
 
-  async #doPreload(startUrl: string, signal?: AbortSignal, query?: QueryParams): Promise<void> {
+  async #doPreload(startUrl: string, signal: AbortSignal, query?: QueryParams): Promise<void> {
     const prepared = await this.#resolveUrl(startUrl);
 
     if (prepared.type !== 'matched') return;
@@ -723,7 +725,6 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
 
     if (!hasData) return;
 
-    const effectiveSignal = signal ?? new AbortController().signal;
     const branch = buildMatchBranch(
       defs,
       params,
@@ -731,7 +732,7 @@ class Router<TRoutes extends RouteTable, TMeta = unknown, TComponent = unknown> 
       defs.map(() => undefined),
     );
     const context = createRouteContext<TRoutes>(location, resolvedQuery, params, branch, () => Promise.resolve());
-    const results = await this.#loadDataDrain(defs, context, effectiveSignal);
+    const results = await this.#loadDataDrain(defs, context, signal);
 
     this.#preload.set(buildPreloadKey(this.#base, record.path, params, query ?? location.query), results);
   }

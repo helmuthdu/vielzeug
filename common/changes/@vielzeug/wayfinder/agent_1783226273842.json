@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: prevent preload() from running after dispose, guard parseQuery against __proto__ key hijack, add devtools test coverage",
+      "packageName": "@vielzeug/wayfinder",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/wayfinder"
+}

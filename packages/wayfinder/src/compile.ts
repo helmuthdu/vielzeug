@@ -22,11 +22,11 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
     ancestorMiddleware: RouteRecord<TMeta, TComponent>['ownMiddleware'],
   ): void => {
     if (route.index && route.path !== undefined) {
-      throw new WayfinderRouteError(`[wayfinder] Route "${name}" cannot define both index and path`);
+      throw new WayfinderRouteError(`Route "${name}" cannot define both index and path`);
     }
 
     if (!route.index && route.path === undefined) {
-      throw new WayfinderRouteError(`[wayfinder] Route "${name}" must define path or set index: true`);
+      throw new WayfinderRouteError(`Route "${name}" must define path or set index: true`);
     }
 
     const ownPath = route.index
@@ -83,7 +83,7 @@ export function compileRoutes<TRoutes extends RouteTable, TMeta, TComponent>(
   for (const record of records) {
     if (namesSeen.has(record.leaf.name)) {
       throw new WayfinderRouteError(
-        `[wayfinder] Duplicate route name: "${record.leaf.name}". A top-level route key must not coincide with a nested route's dot-notation name.`,
+        `Duplicate route name: "${record.leaf.name}". A top-level route key must not coincide with a nested route's dot-notation name.`,
       );
     }
 
