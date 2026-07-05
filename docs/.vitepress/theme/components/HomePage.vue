@@ -461,7 +461,9 @@ onUnmounted(() => {
     <!-- Framework compatibility strip -->
     <section class="compat">
       <div class="compat-inner">
-        <ore-text size="xs" color="muted" variant="overline">Any framework. No framework. Your choice.</ore-text>
+        <ore-text size="xs" color="muted" variant="overline" align="center"
+          >Any framework. No framework. Your choice.</ore-text
+        >
         <div class="compat-logos">
           <span class="compat-logo" title="Vue"
             ><img src="/logo-vue.svg" width="20" height="20" alt="Vue" @error="hideBrokenImage"
@@ -1298,6 +1300,7 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
 
 .section-title {
   margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
   text-wrap: balance;
 }
 
@@ -1897,6 +1900,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   .why-stat-divider {
     width: auto;
     height: 1px;
+  }
+
+  .compat-inner {
+    flex-direction: column;
+    gap: 0.875rem;
   }
 }
 
