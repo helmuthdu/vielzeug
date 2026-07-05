@@ -1,4 +1,4 @@
-import type { Computed, ResourceOptions, ResourceState } from './types';
+import type { Resource, ResourceOptions, ResourceState } from './types';
 
 import { effect } from './effect';
 import { signal } from './signal';
@@ -16,6 +16,9 @@ import { autoRegisterDisposal } from './tracking';
  * it is automatically registered for cleanup and disposed with that context —
  * matching `computed()`'s auto-disposal behavior.
  *
+ * Call `refresh()` to force the factory to re-run immediately, even if no tracked
+ * dependency changed — useful for manual "retry"/"refetch" actions.
+ *
  * @example
  * ```ts
  * const userId = signal('u1');
@@ -31,24 +34,31 @@ import { autoRegisterDisposal } from './tracking';
  *   renderUser(s.data);
  * });
  *
+ * user.refresh(); // force a re-fetch without changing userId
  * user.dispose();
  * ```
  */
 export const resource = <T>(
   factory: (abortSignal: AbortSignal) => Promise<T>,
   options?: ResourceOptions<T>,
-): Computed<ResourceState<T>> => {
+): Resource<T> => {
   const name = options?.name;
   const state = signal<ResourceState<T>>(
     { data: options?.initialValue, status: 'loading' },
     name ? { name } : undefined,
   );
+  // Internal-only trigger — never exposed. Read (but never written to a meaningful
+  // value) inside the effect purely so it becomes a tracked dep; refresh() bumps it
+  // to force a re-run without requiring a real dependency to change.
+  const epoch = signal(0);
 
   let controller: AbortController | null = null;
   let disposed = false;
 
   const stop = effect(
     () => {
+      void epoch.value;
+
       controller?.abort();
       controller = new AbortController();
 
@@ -76,6 +86,12 @@ export const resource = <T>(
     name ? { name } : undefined,
   );
 
+  const refresh = (): void => {
+    if (disposed) return;
+
+    epoch.value = epoch.peek() + 1;
+  };
+
   const dispose = (): void => {
     if (disposed) return;
 
@@ -83,6 +99,7 @@ export const resource = <T>(
     controller?.abort();
     stop.dispose();
     state.dispose();
+    epoch.dispose();
   };
 
   autoRegisterDisposal(dispose);
@@ -98,10 +115,11 @@ export const resource = <T>(
       return state.name;
     },
     peek: () => state.peek(),
+    refresh,
     subscribe: (listener: () => void) => state.subscribe(listener),
     [Symbol.dispose]: dispose,
     get value() {
       return state.value;
     },
-  } as Computed<ResourceState<T>>;
+  } as Resource<T>;
 };

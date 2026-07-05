@@ -372,7 +372,7 @@ const stop = debugEffect(() => renderUser(userId.value, name.value), { name: 're
 
 `resource(factory, options?)` tracks reactive dependencies inside an async factory and re-runs when they change. The factory receives an `AbortSignal` that fires when the factory is superseded or disposed.
 
-The returned `Computed<ResourceState<T>>` emits a single discriminated union:
+The returned `Resource<T>` emits a single discriminated union:
 
 - `{ status: 'loading', data: T | undefined }` — initial state or while re-running
 - `{ status: 'ready', data: T }` — last successful result
@@ -398,11 +398,16 @@ effect(() => {
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch, re-runs factory
+user.refresh(); // force a re-fetch for the current userId — e.g. a "retry" button
 user.dispose();
 ```
 
 ::: tip deps must be read synchronously
 `resource` tracks dependencies the same way `computed` does: only reads that happen **synchronously**, before the first `await`, are tracked. Reads inside `await` expressions are NOT tracked.
+:::
+
+::: tip manual refresh
+Call `.refresh()` to force the factory to re-run immediately, aborting any in-flight run — even if no tracked dependency changed. This is the idiomatic way to implement a "retry" button after an error, or a manual "refetch" action.
 :::
 
 Like `computed()`, a `resource()` created inside an active `effect()` or `scope.run()` context is automatically registered for cleanup and disposed with that context:
@@ -512,6 +517,22 @@ call throws `RippleInvalidStoreError` and **none** of the keys are applied — n
 writes, no stray un-notified state changes.
 :::
 
+::: tip replace() can remove keys
+A key present in the current state but **omitted** from the object `fn` returns is
+actually removed — not set to `undefined`:
+
+```ts
+const s = store<{ count: number; note?: string }>({ count: 0, note: 'draft' });
+
+s.replace((state) => {
+  const { note, ...rest } = state; // drop `note` entirely
+  return rest;
+});
+
+Object.hasOwn(s.value, 'note'); // false
+```
+:::
+
 ### Resetting State
 
 ```ts
@@ -521,7 +542,8 @@ s.reset();
 
 `reset()` triggers a notification if the state actually changes. The initial state
 is defensively copied at construction time — external mutations to the original
-object cannot corrupt `reset()`.
+object cannot corrupt `reset()`. Any key added after construction (e.g. via `.replace()`)
+and absent from the original `initial` state is removed on reset, same as `.replace()`.
 
 ### Derived Slices
 

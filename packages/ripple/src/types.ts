@@ -127,6 +127,18 @@ export type ResourceState<T> =
   | { readonly data: T; readonly status: 'ready' }
   | { readonly data?: T; readonly error: unknown; readonly status: 'error' };
 
+/**
+ * Disposable handle returned by `resource()`. Extends `Computed<ResourceState<T>>`
+ * with `refresh()` for manually forcing a re-fetch.
+ */
+export interface Resource<T> extends Computed<ResourceState<T>> {
+  /**
+   * Forces the factory to re-run immediately, aborting any in-flight run —
+   * even if no tracked dependency changed. No-op after `dispose()`.
+   */
+  refresh(): void;
+}
+
 // ── Store history / time-travel ───────────────────────────────────────────────
 
 /**

@@ -210,6 +210,42 @@ export class StoreImpl<T extends object> implements Store<T> {
   }
 
   /**
+   * @internal Removes a top-level key entirely (as opposed to applyTopLevelChange_,
+   * which can only ever assign a value — including `undefined` — never delete the key).
+   * Companion used by applyFullState_ for keys absent from the target state.
+   */
+  deleteTopLevelKey_(key: string): void {
+    if (!Object.hasOwn(this.current_ as object, key)) return;
+
+    delete (this.current_ as Record<string, unknown>)[key];
+    this.propSignalFor_(key).value = undefined as never;
+    this.version_.value = this.version_.peek() + 1;
+  }
+
+  /**
+   * @internal Applies `next` as the authoritative full top-level state: keys present in
+   * `next` are set via applyTopLevelChange_, keys present in current_ but absent from
+   * `next` are removed via deleteTopLevelKey_. Shared by replace() and reset() so both
+   * can actually remove a key, not just null it out — see B1 in the ripple improvement plan.
+   */
+  applyFullState_(next: Record<string, unknown>): void {
+    const current = this.current_ as Record<string, unknown>;
+    const allKeys = new Set([...Object.keys(current), ...Object.keys(next)]);
+
+    for (const key of allKeys) assertSafeKey(key);
+
+    batch(() => {
+      for (const key of allKeys) {
+        if (Object.hasOwn(next, key)) {
+          this.applyTopLevelChange_(key, next[key]);
+        } else {
+          this.deleteTopLevelKey_(key);
+        }
+      }
+    });
+  }
+
+  /**
    * Returns the current state as a tracked read — registers the store as a dependency
    * inside `effect()` / `computed()`. Any mutation re-runs the subscriber.
    * For untracked one-off reads, use `peek()` instead.
@@ -265,33 +301,13 @@ export class StoreImpl<T extends object> implements Store<T> {
 
     if (next === snapshot) return;
 
-    const newKeys = Object.keys(next).filter((key) => !Object.hasOwn(snapshot as Record<string, unknown>, key));
-
-    // Same upfront-validation rationale as patch() above.
-    for (const key of Object.keys(snapshot)) assertSafeKey(key);
-    for (const key of newKeys) assertSafeKey(key);
-
-    batch(() => {
-      for (const key of Object.keys(snapshot)) {
-        this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
-      }
-
-      for (const key of newKeys) {
-        this.applyTopLevelChange_(key, (next as Record<string, unknown>)[key]);
-      }
-    });
+    this.applyFullState_(next as Record<string, unknown>);
 
     getDevToolsHook()?.mutate?.({ kind: 'replace', name: this.name });
   }
 
   reset(): void {
-    const initial = this.initial_ as Record<string, unknown>;
-
-    batch(() => {
-      for (const key of Object.keys(this.current_)) {
-        this.applyTopLevelChange_(key, initial[key]);
-      }
-    });
+    this.applyFullState_(this.initial_ as Record<string, unknown>);
 
     getDevToolsHook()?.mutate?.({ kind: 'reset', name: this.name });
   }

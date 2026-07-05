@@ -13,7 +13,7 @@ You need to fetch data reactively — re-running the fetch whenever a reactive d
 
 Use `resource()` to wrap an async factory. Dependencies read synchronously before the first `await` are tracked. The factory receives an `AbortSignal` that fires when it is superseded or disposed.
 
-The returned `Computed<ResourceState<T>>` emits a single discriminated union:
+The returned `Resource<T>` emits a single discriminated union:
 
 | `status`    | Fields present                          |
 | ----------- | --------------------------------------- |
@@ -48,6 +48,7 @@ effect(() => {
 });
 
 userId.value = 'u2'; // aborts the in-flight fetch and re-runs
+user.refresh(); // force a re-fetch for the current userId — e.g. a "retry" button
 user.dispose(); // cancel and detach
 ```
 
@@ -75,7 +76,7 @@ const results = resource(
 
 - Dependencies must be read **synchronously** before the first `await`. Reads inside `await` expressions are not tracked.
 - When a dep changes while a fetch is in-flight, the old `AbortSignal` fires. Always pass it to `fetch()` to respect cancellation. `status` immediately becomes `'loading'` again.
-- `resource()` does not retry on error. Handle retries inside the factory by catching and re-throwing after a delay.
+- `resource()` does not retry on error automatically. Call `.refresh()` for a manual retry (e.g. a retry button), or catch and re-throw after a delay inside the factory for automatic backoff retries.
 
 ### Related
 

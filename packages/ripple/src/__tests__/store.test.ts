@@ -1,4 +1,4 @@
-import { batch, computed, effect, isReactive, signal, store, watch } from '../';
+import { computed, effect, isReactive, store } from '../';
 import { RippleError, RippleInvalidStoreError } from '../';
 
 describe('store — basics', () => {
@@ -555,6 +555,81 @@ describe('store.replace() — new keys', () => {
     s.replace((state) => ({ ...state, b: 99 }));
     expect(s.peek().a).toBe(1);
     expect(s.peek().b).toBe(99);
+  });
+});
+
+describe('store.replace() / reset() — key removal', () => {
+  it('replace() actually removes a key omitted from the returned state, not just sets it to undefined', () => {
+    const s = store<{ count: number; name?: string }>({ count: 0, name: 'Ada' });
+
+    s.replace((state) => {
+      const { name: _name, ...rest } = state;
+
+      return rest;
+    });
+
+    expect(Object.hasOwn(s.peek(), 'name')).toBe(false);
+    expect(Object.hasOwn(s.value, 'name')).toBe(false);
+    expect(s.peek()).toEqual({ count: 0 });
+  });
+
+  it('replace() removing a key notifies subscribers', () => {
+    const s = store<{ count: number; name?: string }>({ count: 0, name: 'Ada' });
+    const listener = vi.fn();
+    const stop = s.subscribe(listener);
+
+    s.replace((state) => {
+      const { name: _name, ...rest } = state;
+
+      return rest;
+    });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+    stop.dispose();
+  });
+
+  it('reset() removes a key that was added after construction via replace()', () => {
+    const s = store<{ a: number; b?: number }>({ a: 1 });
+
+    s.replace((state) => ({ ...state, b: 99 }));
+    expect(s.peek().b).toBe(99);
+
+    s.reset();
+    expect(Object.hasOwn(s.peek(), 'b')).toBe(false);
+    expect(s.peek()).toEqual({ a: 1 });
+  });
+
+  it('removing a key that was never present is a no-op — no spurious notification', () => {
+    const s = store<{ count: number; name?: string }>({ count: 0 });
+    const listener = vi.fn();
+    const stop = s.subscribe(listener);
+
+    s.replace((state) => {
+      const { name: _name, ...rest } = state;
+
+      return rest;
+    });
+
+    expect(listener).not.toHaveBeenCalled();
+    stop.dispose();
+  });
+
+  it('an existing lens on a removed key reactively updates to undefined', () => {
+    const s = store<{ count: number; name?: string }>({ count: 0, name: 'Ada' });
+    const nameLens = s.lens('name');
+    const log: (string | undefined)[] = [];
+    const stop = effect(() => {
+      log.push(nameLens.value);
+    });
+
+    s.replace((state) => {
+      const { name: _name, ...rest } = state;
+
+      return rest;
+    });
+
+    expect(log).toEqual(['Ada', undefined]);
+    stop.dispose();
   });
 });
 

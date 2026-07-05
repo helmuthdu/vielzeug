@@ -1,3 +1,4 @@
+import { asyncResourceExample } from './async-resource';
 import { basicSignalExample } from './basic-signal';
 import { batchUntrackExample } from './batch-untrack';
 import { derivedSignalsExample } from './derived-signals';
@@ -15,6 +16,7 @@ import { watchMultiSourceExample } from './watch-multi-source';
 import { watchOnceExample } from './watch-once';
 
 export const rippleExamples = {
+  'async-resource': asyncResourceExample,
   'basic-signal': basicSignalExample,
   'batch-untrack': batchUntrackExample,
   'derived-signals': derivedSignalsExample,

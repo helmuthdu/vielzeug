@@ -14,6 +14,10 @@ console.log('After patch:', user.peek())
 user.replace((s) => ({ ...s, name: 'Alice Smith' }))
 console.log('After replace:', user.peek())
 
+// Omitting a key from the returned object actually removes it — not just sets it to undefined
+user.replace((s) => { const { email, ...rest } = s; return rest })
+console.log('After removing email:', user.peek(), 'has email:', Object.hasOwn(user.peek(), 'email'))
+
 // lens() — writable Signal scoped to a path
 const nameLens = user.lens('name')
 console.log('Name via lens:', nameLens.value)

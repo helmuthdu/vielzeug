@@ -166,6 +166,86 @@ describe('resource', () => {
   });
 });
 
+describe('resource — refresh()', () => {
+  it('re-runs the factory even when no tracked dependency changed', async () => {
+    const calls: number[] = [];
+    let n = 0;
+    const ac = resource(async () => {
+      n += 1;
+      calls.push(n);
+
+      return n;
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toEqual([1]);
+    expect(ac.value).toEqual({ data: 1, status: 'ready' });
+
+    ac.refresh();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toEqual([1, 2]);
+    expect(ac.value).toEqual({ data: 2, status: 'ready' });
+    ac.dispose();
+  });
+
+  it('aborts an in-flight run when refresh() is called mid-flight', async () => {
+    const aborts: boolean[] = [];
+    let resolveFirst!: (v: number) => void;
+    let callCount = 0;
+    const ac = resource(
+      (abortSignal) =>
+        new Promise<number>((resolve) => {
+          callCount += 1;
+
+          if (callCount === 1) resolveFirst = resolve;
+          else resolve(99);
+
+          abortSignal.addEventListener('abort', () => aborts.push(true));
+        }),
+    );
+
+    ac.refresh();
+    expect(aborts).toEqual([true]);
+    resolveFirst(1); // first run's resolve — ignored because its AbortSignal fired
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ac.value).toEqual({ data: 99, status: 'ready' });
+    ac.dispose();
+  });
+
+  it('retries successfully after a prior error', async () => {
+    let shouldFail = true;
+    const ac = resource(async () => {
+      if (shouldFail) throw new Error('network down');
+
+      return 'recovered';
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ac.value.status).toBe('error');
+
+    shouldFail = false;
+    ac.refresh();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(ac.value).toEqual({ data: 'recovered', status: 'ready' });
+    ac.dispose();
+  });
+
+  it('is a no-op after dispose()', async () => {
+    const calls: number[] = [];
+    const ac = resource(async () => {
+      calls.push(1);
+
+      return 1;
+    });
+
+    await new Promise((r) => setTimeout(r, 0));
+    ac.dispose();
+    ac.refresh();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toEqual([1]);
+  });
+});
+
 describe('resource with initialValue', () => {
   it('exposes initialValue as data while status=loading', () => {
     let resolve!: (v: number) => void;

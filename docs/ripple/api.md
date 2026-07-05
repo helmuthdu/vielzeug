@@ -13,7 +13,7 @@ description: Complete type signatures, parameter docs, and return values for eve
 | `computed()`         | Derive memoized values from dependencies                              | Sync           | Avoid side effects inside computed callbacks                                      |
 | `effect()`           | Run and re-run sync side effects                                      | Sync           | Dispose when no longer needed to prevent memory leaks                             |
 | `effectAsync()`      | Run async side effects with AbortSignal                               | Async          | Read reactive deps synchronously before the first `await`                         |
-| `resource()`         | Reactive async data source; emits a `ResourceState<T>` discriminated union   | Async          | `status` starts `'loading'`; read `resource.value.status` for the discriminated union |
+| `resource()`         | Reactive async data source; emits a `ResourceState<T>` discriminated union   | Async          | `status` starts `'loading'`; call `.refresh()` to force a re-fetch without a dep change |
 | `watch()`            | Subscribe to value changes                                            | Sync           | Does not fire immediately unlike `effect()`                                       |
 | `batch()`            | Coalesce multiple writes                                              | Sync           | Nested batches merge into the outermost                                           |
 | `untrack()`          | Read without subscribing                                              | Sync           | Only suppresses dependency registration, value is still read                      |
@@ -446,17 +446,14 @@ See also: [`Scope`](#scope-1)
 ### `resource`
 
 ```ts
-function resource<T>(
-  factory: (abortSignal: AbortSignal) => Promise<T>,
-  options?: ResourceOptions<T>,
-): Computed<ResourceState<T>>;
+function resource<T>(factory: (abortSignal: AbortSignal) => Promise<T>, options?: ResourceOptions<T>): Resource<T>;
 ```
 
 Creates a reactive async resource. The factory re-runs whenever its tracked dependencies change. Dependencies are tracked synchronously (before the first `await`). The factory receives an `AbortSignal` that is aborted when superseded or disposed.
 
 If `resource()` is created inside an active `effect()` or `scope.run()` context, it is automatically registered for cleanup and disposed with that context — matching `computed()`'s auto-disposal behavior.
 
-The returned `Computed<ResourceState<T>>` is a read-only disposable signal emitting a single discriminated union:
+The returned `Resource<T>` is a read-only disposable signal emitting a single discriminated union:
 
 ```ts
 type ResourceState<T> =
@@ -464,6 +461,8 @@ type ResourceState<T> =
   | { readonly data: T;   readonly status: 'ready' }
   | { readonly data?: T;  readonly error: unknown; readonly status: 'error' };
 ```
+
+Call `refresh()` to force the factory to re-run immediately — even if no tracked dependency changed — aborting any in-flight run first. Useful for manual "retry"/"refetch" actions (e.g. a retry button after an error). No-op after `dispose()`.
 
 ```ts
 const userId = signal('u1');
@@ -481,6 +480,7 @@ effect(() => {
 });
 
 userId.value = 'u2'; // aborts in-flight fetch, re-runs factory
+user.refresh(); // force a re-fetch for the current userId — e.g. a "retry" button
 user.dispose();
 console.log(user.disposed); // true
 ```
@@ -493,9 +493,9 @@ console.log(user.disposed); // true
 | `options.initialValue` | `T`                                        | Populates `data` in the initial `loading` state before the first result |
 | `options.name`         | `string`                                   | Debug name propagated to the internal signal and effect              |
 
-**Returns** — `Computed<ResourceState<T>>`
+**Returns** — `Resource<T>`
 
-See also: [`ResourceOptions<T>`](#resourceoptions), [`ResourceState<T>`](#resourcestate)
+See also: [`ResourceOptions<T>`](#resourceoptions), [`ResourceState<T>`](#resourcestate), [`Resource<T>`](#resourcet)
 
 ---
 
@@ -778,8 +778,8 @@ interface Store<T extends object> extends Computed<Readonly<T>> {
 | `.dispose()`      | Permanently disposes the store — releases all internal prop signals and cached lenses. Idempotent.                                    |
 | `.lens(path)`     | Returns a cached, writable `Signal` for a property or dot-path; writes produce an immutable copy                                      |
 | `.patch(partial)` | Shallow-merge when any provided key changes (`Object.is` comparison)                                                                  |
-| `.replace(fn)`    | Receive a deep clone (`structuredClone`) of current state; return the new state; returning the same clone reference is a silent no-op |
-| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline)                                                                |
+| `.replace(fn)`    | Receive a deep clone (`structuredClone`) of current state; return the new state; returning the same clone reference is a silent no-op; a key present in the current state but omitted from the returned object is **removed**, not set to `undefined` |
+| `.reset()`        | Restore the original `initial` state (deep-clones the stored baseline); any key added after construction (e.g. via `.replace()`) and absent from `initial` is **removed**                                            |
 | `.subscribe()`    | Fires on any mutation (`patch` / `replace` / `reset` / lens write) — use for external adapters; prefer `store.lens()` for reactive reads |
 
 `Store<T>` extends `Computed<Readonly<T>>` — `dispose()`, `disposed`, `name`, and `[Symbol.dispose]()` are all inherited.
@@ -981,6 +981,18 @@ type ResourceOptions<T> = {
 ```
 
 Options for `resource()`. `initialValue` populates the `data` field in the initial `loading` state before the first result. `name` is a debug identifier passed to the internal signal and effect.
+
+---
+
+### `Resource<T>`
+
+```ts
+interface Resource<T> extends Computed<ResourceState<T>> {
+  refresh(): void;
+}
+```
+
+Returned by `resource()`. Extends `Computed<ResourceState<T>>` with `refresh()` — forces the factory to re-run immediately, aborting any in-flight run, even when no tracked dependency changed. No-op after `dispose()`.
 
 ---
 

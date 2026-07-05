@@ -126,6 +126,7 @@ stopWatch.dispose();
 - Computed values are recalculated lazily when accessed, not eagerly when dependencies change. Reading a computed in a `setTimeout` may return a stale value if it has not been accessed since the last signal update.
 - Exporting a writable store directly allows external code to mutate it and bypass your invariants. Export `readonly(store)` and explicit mutation functions instead.
 - Creating a store inside a factory function called multiple times creates independent instances. This is correct for per-component stores but wrong for shared module stores — create module-level stores outside any function.
+- `replace()` and `reset()` actually **remove** a top-level key that's absent from the returned/initial state — they don't just set it to `undefined`. Omit a key from a destructure (`const { unwanted, ...rest } = state; return rest;`) to remove it.
 
 ### Related
 

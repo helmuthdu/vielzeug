@@ -18,6 +18,7 @@ export type {
   HistoryEntry,
   PathValue,
   Readable,
+  Resource,
   ResourceOptions,
   ResourceState,
   Scope,
