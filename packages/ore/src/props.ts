@@ -232,7 +232,14 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
 
   if (hasPreUpgradeProperty) {
     delete (el as unknown as Record<string, unknown>)[propName];
-    s.value = preUpgradeValue as T;
+    // Frameworks (e.g. Vue, when hydrating or patching an already-upgraded custom
+    // element) may assign the pre-upgrade value as a plain string rather than calling
+    // setAttribute — the same way it would for a real HTML attribute. Route strings
+    // through the same parser an attribute value would use so e.g. size="16" doesn't
+    // end up stored as the string "16" instead of the number 16. Already-typed values
+    // (objects, functions, booleans, numbers set deliberately as JS properties) pass
+    // through untouched.
+    s.value = (typeof preUpgradeValue === 'string' ? parse(preUpgradeValue) : preUpgradeValue) as T;
   } else if (el.hasAttribute(attrName)) {
     s.value = parse(el.getAttribute(attrName)) as T;
   }
@@ -244,7 +251,13 @@ const registerProp = <T>(el: HTMLElement, propName: string, attrName: string, pr
     enumerable: true,
     get: () => s.value,
     set: (value: T) => {
-      s.value = value;
+      // A framework can still reach this setter with a raw attribute-style string after
+      // the element has already upgraded — e.g. Vue reconciling server-rendered markup
+      // against a custom element that auto-upgraded (from its SSR attribute) before
+      // hydration ran: it finds the property already defined and assigns the vnode's
+      // plain string prop value directly instead of calling setAttribute. Route strings
+      // through the same parser an attribute value would use so it isn't stored raw.
+      s.value = (typeof value === 'string' ? parse(value) : value) as T;
     },
   });
 

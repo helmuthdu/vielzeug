@@ -2,7 +2,7 @@ import { signal } from '@vielzeug/ripple';
 import { vi } from 'vitest';
 
 import { define, html, prop } from '../index';
-import { fire, mount } from '../testing';
+import { fire, flush, mount } from '../testing';
 import { expectType, uniqueTag } from './test-utils';
 
 describe('component props', () => {
@@ -383,6 +383,73 @@ describe('component props', () => {
 
       expect(query('.v')?.textContent).toBe('undefined');
       warnSpy.mockRestore();
+    });
+  });
+
+  describe('pre-upgrade property values', () => {
+    // Frameworks that hydrate/patch server-rendered custom elements (e.g. Vue) may assign
+    // a prop as a plain JS property on the element *before* it upgrades — the browser stashes
+    // that as an own instance property, which `registerProp` must then adopt. When the
+    // assigned value is a string (as it would be for a plain HTML-style attribute such as
+    // `size="16"`), it must be routed through the same `parse` the attribute path uses.
+    it('parses a string pre-upgrade property the same way an attribute value would be', async () => {
+      const tag = uniqueTag('test-pre-upgrade-string');
+      const element = document.createElement(tag) as HTMLElement & { size?: unknown };
+
+      // Simulate a framework assigning the value as a property prior to upgrade.
+      element.size = '16';
+
+      define<{ size: number }>(tag, {
+        props: { size: prop.number(0) },
+        setup: (props) => html`<div class="size">${() => String(props.size.value)}</div>`,
+      });
+
+      document.body.appendChild(element);
+      await flush();
+
+      expect(element.shadowRoot?.querySelector('.size')?.textContent).toBe('16');
+      expect(typeof element.size).toBe('number');
+
+      element.remove();
+    });
+
+    it('uses an already-typed pre-upgrade property value as-is', async () => {
+      const tag = uniqueTag('test-pre-upgrade-typed');
+      const element = document.createElement(tag) as HTMLElement & { config?: unknown };
+      const preTyped = { x: 42 };
+
+      element.config = preTyped;
+
+      define<{ config: { x: number } }>(tag, {
+        props: { config: prop.data<{ x: number }>({ x: 0 }) },
+        setup: (props) => html`<div class="config">${() => JSON.stringify(props.config.value)}</div>`,
+      });
+
+      document.body.appendChild(element);
+      await flush();
+
+      expect(element.shadowRoot?.querySelector('.config')?.textContent).toBe(JSON.stringify(preTyped));
+
+      element.remove();
+    });
+
+    it('parses a string assigned via the property setter after the element already upgraded', async () => {
+      // Mirrors the other half of the same hydration race: the element auto-upgrades from its
+      // SSR attribute *before* the framework's reconciliation pass reaches it, so the property
+      // already exists — the framework then assigns straight through the setter with the vnode's
+      // raw (string) prop value instead of calling setAttribute.
+      const { element } = await mount((props) => html`<div class="size">${() => String(props.size.value)}</div>`, {
+        attrs: { size: '16' },
+        componentOptions: { props: { size: prop.number(0) } },
+      });
+
+      expect((element as HTMLElement & { size: number }).size).toBe(16);
+
+      (element as HTMLElement & { size: unknown }).size = '16';
+      await flush();
+
+      expect((element as HTMLElement & { size: number }).size).toBe(16);
+      expect(typeof (element as HTMLElement & { size: unknown }).size).toBe('number');
     });
   });
 });
