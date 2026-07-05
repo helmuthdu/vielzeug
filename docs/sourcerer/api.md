@@ -15,13 +15,13 @@ description: Complete API surface for @vielzeug/sourcerer.
 | `createInfiniteSource()`               | Async append-mode (infinite scroll) collection                                                | Async          | `loadMore()` is a no-op once `meta.hasMore` is `false`                            |
 | `deriveSource()`                       | Create a reactive projection of another source                                                | Sync           | Derived source disposes automatically when parent disposes                        |
 | `mergeSource()`                        | Combine multiple sources into one `MergedSource<T>`                                           | Sync           | No `meta` field — returned type is `MergedSource<T>`, not `ReactiveSource<T>`     |
-| `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                    | Async          | Delegates directly to `source.patch(changes)`                                     |
-| `SourceError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt`   | Class          | Extends `Error`; access context via getters, not object spread                    |
-| `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourceError`; also caught by `instanceof SourceError`                    |
-| `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourceError`; catch separately from `SourceTimeoutError` if needed       |
+| `applyQuery()`                         | Apply a partial query patch to any source with `patch()` — fires one fetch                    | Async          | Ignores `page` on Cursor/InfiniteSource — no page concept there                    |
+| `SourcererError`                          | Base error class for all sourcerer errors; carries `message`, `cause`, `context`, `attempt`   | Class          | Extends `Error`; access context via getters, not object spread                    |
+| `SourceTimeoutError`                   | Error thrown when `ready()` times out; has `timeoutMs` property                               | Class          | Extends `SourcererError`; also caught by `instanceof SourcererError`                    |
+| `SourceDisposedError`                  | Error thrown by `ready()` when the source is disposed                                         | Class          | Extends `SourcererError`; catch separately from `SourceTimeoutError` if needed       |
 | `sourceState()`                        | Derive a discriminated union (`loading`/`error`/`success`) from any source                    | Sync           | Returns `'loading'` when `isSearchPending` is true too                            |
 | `itemRange()`                          | Compute 1-based display range from `SourceMeta`                                               | Sync           | Returns `{ start: 0, end: 0 }` when `totalItems === 0`                            |
-| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot; source is disposed immediately           | Async          | **Throws `SourceError`** if fetch fails                                           |
+| `prefetchSource()`                     | SSR: fetch first page, return serialisable snapshot; source is disposed immediately           | Async          | **Throws `SourcererError`** if fetch fails                                           |
 | `prefetchSourceAndKeep()`              | SSR: fetch first page, return both snapshot and live source (no double-fetch)                 | Async          | Caller must call `source.dispose()` on the returned source                        |
 | `filterContains()`                     | Preset predicate: case-insensitive substring match                                            | Sync           | Matches against a getter's string value                                           |
 | `filterEquals()`                       | Preset predicate: strict equality match                                                       | Sync           | Uses `Object.is` semantics                                                        |
@@ -46,12 +46,12 @@ description: Complete API surface for @vielzeug/sourcerer.
 ```ts
 createLocalSource<T>(
   initialData: readonly T[],
-  cfg?: LocalConfig<T>,
+  cfg?: LocalSourceConfig<T>,
 ): LocalSource<T>
 ```
 
 ```ts
-type LocalConfig<T> = {
+type LocalSourceConfig<T> = {
   debounceMs?: number; // default: 300
   initialData?: readonly T[]; // alternative to positional data arg; takes precedence when both are provided
   filter?: Predicate<T>;
@@ -105,7 +105,7 @@ type RemoteConfig<T, TFilter, TSort> = {
   ) => Promise<{ items: readonly T[]; total: number }>;
   filter?: TFilter;
   limit?: number; // default: 20
-  onFetch?: (event: FetchEvent<RemoteFetchQuery<TFilter, TSort>>) => void; // telemetry callback
+  onFetch?: (event: FetchEvent<RemoteSourceQuery<TFilter, TSort>>) => void; // telemetry callback
   queryKey?: (q: RemoteSourceQuery<TFilter, TSort>) => string;
   refreshInterval?: number; // auto re-fetch every N ms; cancelled on dispose()
   retry?: RetryConfig;
@@ -234,7 +234,7 @@ All methods return `Promise<void>` unless noted.
 | `next()`               | Navigate to the next page (no-op at last page)                                                                                                                                        |
 | `patch(changes)`       | Apply one or more query changes atomically — a single recompute for any combination of `limit`, `page`, `search`, `filter`, `sort`                                                    |
 | `prev()`               | Navigate to the previous page (no-op at first page)                                                                                                                                   |
-| `query`                | Current state as a `LocalSourceQuery` — read-only snapshot; stable between changes                                                                                                   |
+| `query`                | Current state as a `SourceQuery` (`limit`/`page`/`search` only — filter/sort aren't part of the query snapshot) — read-only snapshot; stable between changes                                                                                                   |
 | `ready(timeout?)`      | Resolve when no async computation is pending and no debounce is scheduled; rejects with `SourceDisposedError` if already disposed; optional timeout rejects with `SourceTimeoutError` |
 | `reset()`              | Restore initial config and return to page 1                                                                                                                                           |
 | `search(query, opts?)` | Always returns `Promise<void>`. Debounced by default; pass `{ immediate: true }` to cancel debounce and await immediately                                                             |
@@ -315,13 +315,15 @@ optimisticUpdate(
 ### `applyQuery`
 
 ```ts
-applyQuery<TChanges extends Record<string, unknown>>(
-  source: { patch(changes: Partial<TChanges>): Promise<void> },
-  changes: Partial<TChanges>,
+applyQuery<T extends { patch(changes: Partial<SourceQuery>): Promise<void> }>(
+  source: T,
+  changes: Partial<SourceQuery>,
 ): Promise<void>
 ```
 
-Applies a partial query patch to any source that exposes `patch()`. Fires a single fetch or recomputation for any combination of changed fields. No-op when `changes` is empty or all values are unchanged.
+Applies a partial `SourceQuery` (`limit`/`page`/`search`) patch to any source that exposes a compatible `patch()` — delegates directly to `source.patch(changes)`. Fires a single fetch or recomputation for any combination of changed fields. No-op when `changes` is empty or all values are unchanged, per each source's own `patch()` implementation.
+
+`CursorSource` and `InfiniteSource` have no page-number concept (keyset/append navigation) — their `patch()` only reads `limit`/`search`, so a `page` field from `decodeQuery()` output is silently ignored on those two source types.
 
 **Example:**
 
@@ -336,41 +338,42 @@ await applyQuery(source, q);
 
 ## Error Utilities
 
-### `SourceError`
+### `SourcererError`
 
 ```ts
-class SourceError extends Error {
-  readonly name = 'SourceError';
-  get attempt(): number; // retry attempt that produced this error (0-based)
-  get context(): SourceErrorContext | undefined; // structured context object
+class SourcererError extends Error {
+  readonly name = 'SourcererError';
+  get attempt(): number; // retry attempt that produced this error (0-based); defaults to 0
+  get context(): SourcererErrorContext | undefined; // structured context bag — safe to log
+  static is(err: unknown): err is SourcererError;
   // Also inherits: .message, .cause, .stack
 }
 ```
 
-Base class for all sourcerer errors. Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value. `SourceTimeoutError` and `SourceDisposedError` both extend this class, so a single `instanceof SourceError` check covers all sourcerer errors.
+Base class for all sourcerer errors. Thrown (and stored as `meta.error`) when a fetch fails. `cause` is the original thrown value. `SourceTimeoutError` and `SourceDisposedError` both extend this class, so a single `instanceof SourcererError` check covers all sourcerer errors.
 
 ### `SourceTimeoutError`
 
 ```ts
-class SourceTimeoutError extends SourceError {
+class SourceTimeoutError extends SourcererError {
   readonly name = 'SourceTimeoutError';
   readonly timeoutMs: number;
   // message: 'Source.ready() timed out after Nms'
 }
 ```
 
-Thrown by `ready(timeout)` when the timeout expires before the source becomes idle. Also caught by `instanceof SourceError`.
+Thrown by `ready(timeout)` when the timeout expires before the source becomes idle. Also caught by `instanceof SourcererError`.
 
 ### `SourceDisposedError`
 
 ```ts
-class SourceDisposedError extends SourceError {
+class SourceDisposedError extends SourcererError {
   readonly name = 'SourceDisposedError';
   // message: 'Source disposed while waiting for ready()'
 }
 ```
 
-Thrown by `ready()` when the source is disposed before becoming idle. Also caught by `instanceof SourceError`.
+Thrown by `ready()` when the source is disposed before becoming idle. Also caught by `instanceof SourcererError`.
 
 **Example:**
 
@@ -378,8 +381,8 @@ Thrown by `ready()` when the source is disposed before becoming idle. Also caugh
 try {
   await prefetchSource({ fetch: fetchUsers, limit: 20 });
 } catch (err) {
-  if (err instanceof SourceError) {
-    console.error(err.message, err.query, err.cause);
+  if (SourcererError.is(err)) {
+    console.error(err.message, err.context, err.cause);
   }
 }
 ```
@@ -392,7 +395,7 @@ try {
 sourceState<T>(source: {
   readonly current: readonly T[];
   readonly meta: {
-    readonly error: SourceError | null;
+    readonly error: SourcererError | null;
     readonly isLoading: boolean;
     readonly isSearchPending?: boolean; // optional — treated as false when absent
   };
@@ -404,7 +407,7 @@ Derives a discriminated union from any source. Returns `'loading'` when either `
 ```ts
 type SourceState<T> =
   | { readonly status: 'loading' }
-  | { readonly error: SourceError; readonly status: 'error' }
+  | { readonly error: SourcererError; readonly status: 'error' }
   | { readonly items: readonly T[]; readonly status: 'success' };
 ```
 
@@ -458,7 +461,7 @@ prefetchSource<T, TFilter = unknown, TSort = unknown>(
 ): Promise<SourceSnapshot<T>>
 ```
 
-Fetches the first page server-side, then **disposes the internal source immediately** and returns a serialisable `SourceSnapshot`. **Throws `SourceError`** if the fetch fails.
+Fetches the first page server-side, then **disposes the internal source immediately** and returns a serialisable `SourceSnapshot`. **Throws `SourcererError`** if the fetch fails.
 
 ```ts
 type SourceSnapshot<T> = Readonly<{
@@ -516,7 +519,7 @@ encodeQuery<TFilter, TSort>(
 
 Serializes `filter` and `sort` as JSON when present. Omits `search` when absent.
 
-> <ore-icon name="triangle-alert" size="16"></ore-icon> `filter` and `sort` are serialised with `JSON.stringify`. Circular object references will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+> <ore-icon name="triangle-alert" size="16"></ore-icon> `filter` and `sort` are serialised with `JSON.stringify`, without a try/catch. A circular object reference throws a native `TypeError` ("Converting circular structure to JSON") straight out of `encodeQuery` — ensure filter/sort values are plain serialisable objects, or wrap the call yourself.
 >
 > `encodeQuery` and `decodeQuery` form a round-trip pair: `filter`/`sort` are JSON-stringified on encode and JSON-parsed on decode. Validate/narrow the decoded values before passing them to a source.
 
@@ -535,13 +538,15 @@ new URLSearchParams(params).toString();
 ### `decodeQuery`
 
 ```ts
-decodeQuery<TFilter, TSort>(
+decodeQuery(
   params: QueryParamsInput | URLSearchParams,
   options?: { defaultLimit?: number; strict?: boolean },
-): Partial<RemoteSourceQuery<TFilter, TSort>>
+): Partial<RemoteSourceQuery<unknown, unknown>>
 ```
 
 Accepts either a `Record<string, string | string[] | undefined>` or a `URLSearchParams` instance directly.
+Not generic — `filter`/`sort` on the result are always typed `unknown`. Narrow them with a runtime schema
+(e.g. Zod) or an explicit cast before use, rather than trying to pass type arguments to `decodeQuery` itself.
 
 - `defaultLimit` defaults to `20`.
 - When `strict: false` (default), malformed `filter`/`sort` JSON is silently dropped.
@@ -554,8 +559,8 @@ Accepts either a `Record<string, string | string[] | undefined>` or a `URLSearch
 ```ts
 import { applyQuery, decodeQuery } from '@vielzeug/sourcerer';
 
-// Pass URLSearchParams directly
-const query = decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 });
+// Pass URLSearchParams directly — filter/sort come back as `unknown`, narrow before use
+const query = decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 });
 await applyQuery(source, query);
 ```
 
@@ -578,7 +583,7 @@ type LocalSourceQuery<T> = Partial<{
 }>;
 
 type SourceMeta = Readonly<{
-  error: SourceError | null; // null when healthy
+  error: SourcererError | null; // null when healthy
   isLoading: boolean;
   isSearchPending: boolean;
   pageCount: number;
@@ -588,7 +593,7 @@ type SourceMeta = Readonly<{
 }>;
 
 type CursorMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasNextPage: boolean;
   hasPrevPage: boolean;
   isLoading: boolean;
@@ -598,7 +603,7 @@ type CursorMeta = Readonly<{
 }>;
 
 type InfiniteMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasMore: boolean;
   isLoading: boolean;
   isLoadingMore: boolean; // true only during loadMore() — not during reset()
@@ -630,11 +635,14 @@ type MergedSource<T> = {
 
 type SourceState<T> =
   | { readonly status: 'loading' }
-  | { readonly error: SourceError; readonly status: 'error' }
+  | { readonly error: SourcererError; readonly status: 'error' }
   | { readonly items: readonly T[]; readonly status: 'success' };
 
-// Opaque context bag on SourceError — safe to log, do not rely on specific field names
-type SourceErrorContext = Readonly<Record<string, unknown>>;
+// Discriminated union — narrow with `context.kind` to access the fields for that source type
+type SourcererErrorContext =
+  | Readonly<{ kind: 'cursor'; limit: number; search?: string }>
+  | Readonly<{ kind: 'infinite'; limit: number; page: number; search?: string }>
+  | Readonly<{ kind: 'remote'; limit: number; page: number; search?: string }>;
 
 // Returned by deriveSource() — identical contract to ReactiveSource
 type DerivedSource<T, TMeta = SourceMeta> = ReactiveSource<T, TMeta>;
@@ -686,7 +694,7 @@ type LocalSourceConfig<T> = Readonly<{
 
 type FetchEvent<TQuery = unknown> = Readonly<{
   durationMs: number;
-  error?: SourceError; // only present when status === 'error'
+  error?: SourcererError; // only present when status === 'error'
   query: TQuery;
   status: 'error' | 'success';
 }>;
@@ -694,14 +702,14 @@ type FetchEvent<TQuery = unknown> = Readonly<{
 
 ## Errors
 
-### `SourceError`
+### `SourcererError`
 
-See [Error Utilities > `SourceError`](#sourceerror) above.
+See [Error Utilities > `SourcererError`](#sourcererror) above.
 
 ### `SourceTimeoutError`
 
 ```ts
-class SourceTimeoutError extends SourceError {
+class SourceTimeoutError extends SourcererError {
   readonly name = 'SourceTimeoutError';
   readonly timeoutMs: number;
   // message: 'Source.ready() timed out after Nms'
@@ -725,7 +733,7 @@ try {
 ### `SourceDisposedError`
 
 ```ts
-class SourceDisposedError extends SourceError {
+class SourceDisposedError extends SourcererError {
   readonly name = 'SourceDisposedError';
   // message: 'Source disposed while waiting for ready()'
 }

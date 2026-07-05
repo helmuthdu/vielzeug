@@ -14,6 +14,18 @@ describe('pagination helpers', () => {
     expect(clampPage(99, 3)).toBe(3);
   });
 
+  it('falls back to safe minimums for non-finite totals/limits', () => {
+    expect(pageCount(Number.NaN, 10)).toBe(1);
+    expect(pageCount(10, Number.NaN)).toBe(10);
+    expect(pageCount(Number.POSITIVE_INFINITY, 10)).toBe(1);
+    expect(pageCount(10, Number.POSITIVE_INFINITY)).toBe(10);
+  });
+
+  it('falls back to page 1 for a non-finite page number', () => {
+    expect(clampPage(Number.NaN, 5)).toBe(1);
+    expect(clampPage(Number.POSITIVE_INFINITY, 5)).toBe(1);
+  });
+
   it('creates correct meta values for empty result sets', () => {
     const meta = createMeta({
       error: null,

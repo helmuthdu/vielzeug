@@ -1,8 +1,8 @@
 export const errorHandlingExample = {
-  code: `// SourceError, SourceDisposedError, SourceTimeoutError — typed error handling
-import { createRemoteSource, SourceDisposedError, SourceError, SourceTimeoutError } from '@vielzeug/sourcerer'
+  code: `// SourcererError, SourceDisposedError, SourceTimeoutError — typed error handling
+import { createRemoteSource, SourceDisposedError, SourcererError, SourceTimeoutError } from '@vielzeug/sourcerer'
 
-// --- SourceError: structured fetch failure ---
+// --- SourcererError: structured fetch failure ---
 const failing = createRemoteSource({
   autoFetch: false,
   fetch: async () => { throw new Error('network down') },
@@ -10,9 +10,9 @@ const failing = createRemoteSource({
 
 await failing.refresh()
 
-if (failing.meta.error instanceof SourceError) {
-  console.log('SourceError.message:', failing.meta.error.message)
-  console.log('SourceError.cause:', (failing.meta.error.cause as Error).message)
+if (SourcererError.is(failing.meta.error)) {
+  console.log('SourcererError.message:', failing.meta.error.message)
+  console.log('SourcererError.cause:', (failing.meta.error.cause as Error).message)
 }
 
 failing.dispose()

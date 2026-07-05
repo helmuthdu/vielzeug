@@ -1,5 +1,5 @@
 import { sourceState } from '../state';
-import { SourcererError, SourceTimeoutError } from '../types';
+import { SourceDisposedError, SourcererError, SourceTimeoutError } from '../types';
 
 const makeSource = (isLoading: boolean, error: SourcererError | null, items: readonly number[]) => ({
   current: items,
@@ -92,6 +92,26 @@ describe('sourceState', () => {
     expect(err).toBeInstanceOf(SourceTimeoutError);
     expect(err.name).toBe('SourceTimeoutError');
     expect(err.message).toBe('Source.ready() timed out after 500ms');
+  });
+
+  it('SourceDisposedError is instanceof Error and SourcererError with the expected message', () => {
+    const err = new SourceDisposedError();
+
+    expect(err).toBeInstanceOf(Error);
+    expect(err).toBeInstanceOf(SourcererError);
+    expect(err).toBeInstanceOf(SourceDisposedError);
+    expect(err.name).toBe('SourceDisposedError');
+    expect(err.message).toBe('Source disposed while waiting for ready()');
+  });
+
+  it('SourcererError.is() narrows SourcererError and its subclasses, rejects everything else', () => {
+    expect(SourcererError.is(new SourcererError('fail'))).toBe(true);
+    expect(SourcererError.is(new SourceTimeoutError(100))).toBe(true);
+    expect(SourcererError.is(new SourceDisposedError())).toBe(true);
+    expect(SourcererError.is(new Error('plain'))).toBe(false);
+    expect(SourcererError.is('not an error')).toBe(false);
+    expect(SourcererError.is(null)).toBe(false);
+    expect(SourcererError.is(undefined)).toBe(false);
   });
 
   it('returns loading when isSearchPending is true (even if isLoading is false)', () => {

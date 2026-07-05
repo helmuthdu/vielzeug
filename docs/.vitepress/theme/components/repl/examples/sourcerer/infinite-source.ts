@@ -1,6 +1,6 @@
 export const infiniteSourceExample = {
   code: `// Infinite scroll source: loadMore() appends pages to source.current
-import { applyInfiniteQuery, createInfiniteSource } from '@vielzeug/sourcerer'
+import { createInfiniteSource } from '@vielzeug/sourcerer'
 
 const db = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, title: \`Post \${i + 1}\` }))
 
@@ -26,12 +26,12 @@ await source.loadMore()
 await source.loadMore()
 console.log('After exhaustion:', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
 
-// applyInfiniteQuery({ limit?, search? }) resets and refetches if values changed — no-op otherwise
-await applyInfiniteQuery(source, { limit: 5 }) // new limit — clears accumulated items and restarts
-console.log('After applyInfiniteQuery(limit:5):', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
+// patch({ limit?, search? }) resets and refetches if values changed — no-op otherwise
+await source.patch({ limit: 5 }) // new limit — clears accumulated items and restarts
+console.log('After patch(limit:5):', source.current.length, 'items — loadedPages:', source.meta.loadedPages)
 
-await applyInfiniteQuery(source, { limit: 5 }) // same value — no fetch, no-op
-console.log('No-op applyInfiniteQuery:', source.current.length, 'items')
+await source.patch({ limit: 5 }) // same value — no fetch, no-op
+console.log('No-op patch:', source.current.length, 'items')
 
 source.dispose()`,
   name: 'Infinite Source',

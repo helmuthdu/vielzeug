@@ -11,7 +11,7 @@ You have an in-memory dataset you need to paginate, filter, and sort without sen
 
 ### Solution
 
-Use `createLocalSource()`. The source owns page state; calling `setFilter()` or `setSort()` resets to page 1 automatically.
+Use `createLocalSource()`. The source owns page state; `patch({ filter })` or `patch({ sort })` resets to page 1 automatically.
 
 ```ts
 import { createLocalSource } from '@vielzeug/sourcerer';
@@ -28,10 +28,10 @@ const products: Product[] = [
 const source = createLocalSource(products, { limit: 2 });
 
 // Filter to items whose name contains 'ap' (case-insensitive)
-await source.setFilter((p) => p.name.toLowerCase().includes('ap'));
+await source.patch({ filter: (p) => p.name.toLowerCase().includes('ap') });
 
 // Sort by price ascending
-await source.setSort((a, b) => a.price - b.price);
+await source.patch({ sort: (a, b) => a.price - b.price });
 
 console.log(source.current);
 // [{ id: 1, name: 'Apple', price: 2 }, { id: 4, name: 'Apricot', price: 4 }]
@@ -49,7 +49,7 @@ await source.patch({
 });
 ```
 
-Calling `setFilter()` and `setSort()` in sequence triggers two separate recomputes. `patch()` is the preferred approach whenever multiple query fields change together.
+Calling `patch({ filter })` and `patch({ sort })` in sequence (as above) triggers two separate recomputes. Passing both fields to a single `patch()` call is the preferred approach whenever multiple query fields change together.
 
 You can also set both as initial config if the values are known up front:
 
@@ -66,12 +66,12 @@ const source = createLocalSource(products, {
 Inline composition keeps things explicit and avoids external dependencies:
 
 ```ts
-await source.setFilter((p) => p.name.toLowerCase().includes('a') && p.price <= 3);
+await source.patch({ filter: (p) => p.name.toLowerCase().includes('a') && p.price <= 3 });
 ```
 
 ### Pitfalls
 
-- Calling `setFilter()` and `setSort()` separately triggers two recomputes and two subscriber notifications. Use `patch({ filter, sort })` instead to apply both in a single recompute with one notification.
+- Calling `patch({ filter })` and `patch({ sort })` separately triggers two recomputes and two subscriber notifications. Use `patch({ filter, sort })` instead to apply both in a single recompute with one notification.
 - The default `searchFn` uses fuzzy matching. For exact substring matching in tests or precise UIs, provide a custom `searchFn`:
   ```ts
   createLocalSource(data, {

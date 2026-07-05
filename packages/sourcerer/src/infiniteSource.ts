@@ -2,7 +2,7 @@ import type { InfiniteConfig, InfiniteMeta, InfiniteSource, InfiniteSourceQuery,
 
 import { defaultKeyOf, extractError, retry } from './_utils';
 import { createAsyncSource } from './asyncSource';
-import { SourcererError } from './types';
+import { SourcererError } from './errors';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };
 
@@ -179,12 +179,19 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
         }
       }
 
-      if ('search' in changes && changes.search !== search) {
+      // `|| base.core.isScheduled` also catches patching in the same search text as an already-pending
+      // debounced search() call — that still needs flushing, not silently dropping as a no-op.
+      if ('search' in changes && (changes.search !== search || base.core.isScheduled)) {
         search = changes.search ?? '';
         changed = true;
       }
 
       if (!changed) return Promise.resolve();
+
+      // patch() is documented as a single atomic fetch — cancel any debounced search()
+      // still pending so it doesn't fire a second, redundant fetch afterwards.
+      base.core.cancelTimer();
+      resolvePendingSearch();
 
       items = [];
       total = 0;
@@ -220,7 +227,9 @@ export function createInfiniteSource<T>(cfg: InfiniteConfig<T>): InfiniteSource<
 
     search(q, opts?: SearchOptions): Promise<void> {
       if (opts?.immediate) {
-        if (q === search) return Promise.resolve();
+        // A pending debounced search for this same text still needs flushing —
+        // `q === search` alone doesn't mean the fetch already happened.
+        if (q === search && !base.core.isScheduled) return Promise.resolve();
 
         base.core.cancelTimer();
         resolvePendingSearch();

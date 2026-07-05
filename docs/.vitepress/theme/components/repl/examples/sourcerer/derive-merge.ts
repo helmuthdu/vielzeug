@@ -15,7 +15,7 @@ const names = deriveSource(source, items => items.map(u => u.name))
 console.log('Derived names:', names.current)
 
 // Changing the parent re-computes the derived source automatically
-await source.setSort((a, b) => b.score - a.score)
+await source.patch({ sort: (a, b) => b.score - a.score })
 console.log('Derived after sort by score desc:', names.current)
 
 // mergeSource: combine two sources with a user-supplied combine function

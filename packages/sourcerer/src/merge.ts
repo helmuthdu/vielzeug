@@ -43,7 +43,7 @@ export function mergeSource<T>(
     }),
   );
 
-  return {
+  const source: MergedSource<T> = {
     get current() {
       return cachedCurrent;
     },
@@ -71,7 +71,9 @@ export function mergeSource<T>(
     },
 
     [Symbol.dispose]() {
-      this.dispose();
+      source.dispose();
     },
   };
+
+  return source;
 }

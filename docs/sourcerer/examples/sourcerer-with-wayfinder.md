@@ -35,9 +35,9 @@ const source = createRemoteSource<Item, Filter, Sort>({
   autoFetch: false, // we'll restore from URL first
 });
 
-// Restore from the current URL once on mount
+// Restore from the current URL once on mount — filter/sort come back as `unknown`
 const route = useRoute();
-await applyQuery(source, decodeQuery<Filter, Sort>(route.query, { defaultLimit: 20 }));
+await applyQuery(source, decodeQuery(route.query, { defaultLimit: 20 }));
 
 // Subscribe and push state back to the URL whenever source changes
 const stopSync = source.subscribe(() => {

@@ -122,6 +122,16 @@ describe('deriveSource', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it('[Symbol.dispose] works when destructured off the source', () => {
+    const parent = createLocalSource([1, 2, 3]);
+    const derived = deriveSource(parent, (items) => items);
+    const dispose = derived[Symbol.dispose];
+
+    dispose();
+
+    expect(derived.disposed).toBe(true);
+  });
+
   it('disposes itself when parent is disposed', () => {
     const parent = createLocalSource([1, 2, 3]);
     const derived = deriveSource(parent, (items) => items);

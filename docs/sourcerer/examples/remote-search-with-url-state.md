@@ -35,8 +35,8 @@ const source = createRemoteSource<Item, Filter, Sort>({
 });
 
 // On load: restore state from current URL
-// decodeQuery accepts URLSearchParams directly
-await applyQuery(source, decodeQuery<Filter, Sort>(new URLSearchParams(location.search), { defaultLimit: 20 }));
+// decodeQuery accepts URLSearchParams directly — filter/sort come back as `unknown`
+await applyQuery(source, decodeQuery(new URLSearchParams(location.search), { defaultLimit: 20 }));
 await source.ready();
 
 // User interaction: apply a search

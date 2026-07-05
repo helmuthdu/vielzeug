@@ -1,5 +1,7 @@
 import { applyQuery } from '../applyQuery';
 import { decodeQuery, encodeQuery } from '../codecs';
+import { createCursorSource } from '../cursorSource';
+import { createInfiniteSource } from '../infiniteSource';
 import { createLocalSource } from '../localSource';
 import { createRemoteSource } from '../remoteSource';
 
@@ -36,6 +38,28 @@ describe('applyQuery', () => {
     await applyQuery(source, { limit: 10, page: 2 });
 
     expect(fetch).toHaveBeenCalledWith(expect.objectContaining({ limit: 10, page: 2 }), expect.any(AbortSignal));
+  });
+
+  it('CursorSource has no page concept — page is silently ignored by patch()', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
+
+    await applyQuery(source, { limit: 10, page: 99, search: 'q' });
+
+    expect(fetch).toHaveBeenCalledWith(expect.objectContaining({ limit: 10, search: 'q' }), expect.any(AbortSignal));
+    expect(fetch.mock.calls[0]?.[0]).not.toHaveProperty('page');
+  });
+
+  it('InfiniteSource has no page concept — page is silently ignored by patch()', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createInfiniteSource({ autoFetch: false, fetch, limit: 5 });
+
+    await applyQuery(source, { limit: 10, page: 99, search: 'q' });
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, page: 1, search: 'q' }),
+      expect.any(AbortSignal),
+    );
   });
 
   it('round-trips through encodeQuery + decodeQuery', async () => {

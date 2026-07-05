@@ -277,16 +277,18 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       }
 
       if ('filter' in changes) {
-        filter = changes.filter as TFilter | undefined;
+        filter = changes.filter;
         changed = true;
       }
 
       if ('sort' in changes) {
-        sort = changes.sort as TSort | undefined;
+        sort = changes.sort;
         changed = true;
       }
 
-      if ('search' in changes && changes.search !== search) {
+      // `|| base.core.isScheduled` also catches patching in the same search text as an already-pending
+      // debounced search() call — that still needs flushing, not silently dropping as a no-op.
+      if ('search' in changes && (changes.search !== search || base.core.isScheduled)) {
         search = changes.search ?? '';
         changed = true;
       }
@@ -302,6 +304,11 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
       }
 
       if (!changed) return Promise.resolve();
+
+      // patch() is documented as a single atomic fetch — cancel any debounced search()
+      // still pending so it doesn't fire a second, redundant fetch afterwards.
+      base.core.cancelTimer();
+      resolvePendingSearch();
 
       // Reset to page 1 when non-page query fields changed without explicit page
       if (
@@ -353,7 +360,9 @@ export function createRemoteSource<T, TFilter = unknown, TSort = unknown>(
 
     search(q, opts?: SearchOptions): Promise<void> {
       if (opts?.immediate) {
-        if (q === search) return Promise.resolve();
+        // A pending debounced search for this same text still needs flushing —
+        // `q === search` alone doesn't mean the fetch already happened.
+        if (q === search && !base.core.isScheduled) return Promise.resolve();
 
         base.core.cancelTimer();
         resolvePendingSearch();

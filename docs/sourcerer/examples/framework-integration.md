@@ -11,7 +11,7 @@ You are using React, Vue, or Svelte and need to wire a Sourcerer source into you
 
 ### Solution
 
-Subscribe to the source in the appropriate component lifecycle hook for your framework. The source exposes a `subscribe()` method that returns an unsubscribe function. Call `refresh()` explicitly for remote sources to trigger the first fetch.
+Subscribe to the source in the appropriate component lifecycle hook for your framework. The source exposes a `subscribe()` method that returns an unsubscribe function. For remote sources, set `autoFetch: false` and call `refresh()` explicitly from the mount hook so there is exactly one fetch, tied to a lifecycle you control.
 
 #### Local source
 
@@ -84,6 +84,7 @@ export function RemoteIssues() {
   const source = useMemo(
     () =>
       createRemoteSource({
+        autoFetch: false, // fetch explicitly from useEffect below, not on creation
         fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
         limit: 20,
       }),
@@ -105,6 +106,7 @@ import { createRemoteSource } from '@vielzeug/sourcerer';
 import { onMounted, onUnmounted, ref } from 'vue';
 
 const source = createRemoteSource({
+  autoFetch: false, // fetch explicitly from onMounted below, not on creation
   fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
   limit: 20,
 });
@@ -123,6 +125,7 @@ onUnmounted(stop);
   import { createRemoteSource } from '@vielzeug/sourcerer';
 
   const source = createRemoteSource({
+    autoFetch: false, // fetch explicitly from onMount below, not on creation
     fetch: ({ limit, page, search }) => api.issues.list({ limit, page, search }),
     limit: 20,
   });
@@ -146,7 +149,7 @@ onUnmounted(stop);
 
 ### Pitfalls
 
-- Remote sources auto-fetch on creation by default (`autoFetch: true`). If you subscribe in a lifecycle hook that runs after creation, the first fetch may already be in-flight. Call `ready()` to wait for it, or set `autoFetch: false` and trigger `refresh()` explicitly from the mount hook.
+- Remote sources auto-fetch on creation by default (`autoFetch: true`). Calling `refresh()` from a mount hook on top of that default double-fetches. The examples above set `autoFetch: false` and trigger the one fetch explicitly from the mount hook; the alternative is to keep the default and call `ready()` in the mount hook to await the already-in-flight fetch instead of calling `refresh()`.
 - Each component instance should create its own source (or share one via context/store); subscribing to a shared source that another component mutates can cause duplicate re-renders.
 - In React, wrap `createLocalSource`/`createRemoteSource` in `useMemo` to avoid recreating the source on every render.
 

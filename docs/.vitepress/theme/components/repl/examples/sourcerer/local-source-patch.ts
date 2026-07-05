@@ -1,6 +1,6 @@
 export const localSourcePatchExample = {
   code: `// patch() applies filter, sort, search, limit, and page atomically — one recompute
-import { applyLocalQuery, createLocalSource } from '@vielzeug/sourcerer'
+import { createLocalSource } from '@vielzeug/sourcerer'
 
 const tasks = [
   { id: 1, done: false, priority: 2, title: 'Write tests'     },
@@ -20,8 +20,8 @@ await source.patch({
 })
 console.log('Open tasks by priority:', source.current.map(t => t.title))
 
-// applyLocalQuery is the typed convenience wrapper — same single-recompute guarantee
-await applyLocalQuery(source, {
+// patch() accepts any combination of filter/sort/search/limit/page in one call
+await source.patch({
   filter: undefined,           // clear filter
   sort:   (a, b) => b.priority - a.priority,
   search: 'doc',

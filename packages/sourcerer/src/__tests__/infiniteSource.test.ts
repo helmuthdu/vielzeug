@@ -385,6 +385,23 @@ describe('createInfiniteSource', () => {
 
       expect(source.current).toEqual(['instant']);
     });
+
+    it('immediate:true still flushes a pending debounce for the same text', async () => {
+      const fetch = vi.fn(async ({ search }: { search?: string }) => ({
+        items: [search ?? 'none'],
+        total: 1,
+      }));
+      const source = createInfiniteSource({ autoFetch: false, debounceMs: 300, fetch });
+
+      void source.search('instant');
+      fetch.mockClear();
+
+      await source.search('instant', { immediate: true });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.current).toEqual(['instant']);
+    });
   });
 
   describe('meta', () => {
@@ -677,5 +694,18 @@ describe('createInfiniteSource — patch()', () => {
     await source.patch({ search: '' });
 
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('patch({ search }) with the same text as a pending debounce still flushes it', async () => {
+    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const source = createInfiniteSource({ autoFetch: false, debounceMs: 300, fetch, limit: 5 });
+
+    void source.search('ban');
+    fetch.mockClear();
+
+    await source.patch({ search: 'ban' });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(source.meta.isSearchPending).toBe(false);
   });
 });

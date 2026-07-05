@@ -153,4 +153,23 @@ describe('mergeSource', () => {
 
     expect(merged.disposalSignal.aborted).toBe(true);
   });
+
+  it('[Symbol.dispose] delegates to dispose()', () => {
+    const a = makeSource([1]);
+    const merged = mergeSource([a], (all) => all.flat());
+
+    merged[Symbol.dispose]();
+
+    expect(merged.disposed).toBe(true);
+  });
+
+  it('[Symbol.dispose] works when destructured off the source', () => {
+    const a = makeSource([1]);
+    const merged = mergeSource([a], (all) => all.flat());
+    const dispose = merged[Symbol.dispose];
+
+    dispose();
+
+    expect(merged.disposed).toBe(true);
+  });
 });

@@ -49,7 +49,7 @@ export function deriveSource<T, U, TMeta>(
     parent.disposalSignal.addEventListener('abort', () => core.dispose(), { once: true });
   }
 
-  return {
+  const source: DerivedSource<U, TMeta> = {
     get current() {
       return cachedCurrent;
     },
@@ -78,7 +78,9 @@ export function deriveSource<T, U, TMeta>(
     },
 
     [Symbol.dispose]() {
-      this.dispose();
+      source.dispose();
     },
   };
+
+  return source;
 }

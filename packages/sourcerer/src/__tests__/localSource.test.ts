@@ -59,6 +59,20 @@ describe('createLocalSource', () => {
       expect(listener).not.toHaveBeenCalled();
     });
 
+    it('next, prev, and goToLast work when destructured off the source', async () => {
+      const source = createLocalSource([1, 2, 3, 4], { limit: 2 });
+      const { goToLast, next, prev } = source;
+
+      await next();
+      expect(source.meta.pageNumber).toBe(2);
+
+      await prev();
+      expect(source.meta.pageNumber).toBe(1);
+
+      await goToLast();
+      expect(source.meta.pageNumber).toBe(2);
+    });
+
     it('patch({ limit }) changes page size and resets to page 1', async () => {
       const source = createLocalSource([1, 2, 3, 4, 5], { limit: 2 });
 
@@ -67,6 +81,31 @@ describe('createLocalSource', () => {
 
       expect(source.meta.pageNumber).toBe(1);
       expect(source.meta.totalItems).toBe(5);
+    });
+
+    it('patch() cancels a pending search debounce so it does not fire a stray recompute afterwards', async () => {
+      const source = createLocalSource([1, 2, 3, 4, 5], { limit: 10 });
+      const listener = vi.fn();
+
+      void source.search('2');
+      source.subscribe(listener);
+
+      await source.patch({ limit: 3 });
+      listener.mockClear();
+
+      vi.advanceTimersByTime(300);
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+
+    it('patch({ search }) with the same text as a pending debounce still flushes it', async () => {
+      const source = createLocalSource(['apple', 'banana', 'cherry']);
+
+      void source.search('ban');
+      await source.patch({ search: 'ban' });
+
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.current).toEqual(['banana']);
     });
   });
 
@@ -180,6 +219,18 @@ describe('createLocalSource', () => {
       expect(source.meta.isSearchPending).toBe(false);
       expect(source.current).toEqual(['banana']);
     });
+
+    it('immediate:true still flushes a pending debounce for the same text', async () => {
+      const source = createLocalSource(['apple', 'banana', 'cherry']);
+
+      void source.search('ban');
+      expect(source.meta.isSearchPending).toBe(true);
+
+      await source.search('ban', { immediate: true });
+
+      expect(source.meta.isSearchPending).toBe(false);
+      expect(source.current).toEqual(['banana']);
+    });
   });
 
   describe('stable references (sync)', () => {
@@ -283,6 +334,19 @@ describe('createLocalSource', () => {
   });
 
   describe('async pipeline (filterAsync / sortAsync)', () => {
+    it('runs the async pipeline on construction, without waiting for a mutating call', async () => {
+      const sortAsync = vi.fn(async (items: readonly number[]) => [...items].sort((a, b) => a - b));
+      const source = createLocalSource([5, 3, 1, 4, 2], { limit: 10, sortAsync });
+
+      expect(source.meta.isLoading).toBe(true);
+
+      await source.ready();
+
+      expect(sortAsync).toHaveBeenCalledTimes(1);
+      expect(source.current).toEqual([1, 2, 3, 4, 5]);
+      expect(source.meta.isLoading).toBe(false);
+    });
+
     it('filterAsync applies asynchronous filter and sets isLoading', async () => {
       const filterAsync = vi.fn(async (items: readonly number[]) => items.filter((x) => x > 2));
       const source = createLocalSource([1, 2, 3, 4, 5], { filterAsync, limit: 10 });
@@ -301,6 +365,34 @@ describe('createLocalSource', () => {
 
       expect(source.current).toEqual([3, 2, 1]);
       expect(source.meta.isLoading).toBe(false);
+    });
+
+    it('surfaces a filterAsync rejection as meta.error instead of swallowing it', async () => {
+      const filterAsync = vi.fn(async () => {
+        throw new Error('worker crashed');
+      });
+      const source = createLocalSource([1, 2, 3], { filterAsync, limit: 10 });
+
+      await source.ready().catch(() => {});
+
+      expect(source.meta.error?.message).toBe('worker crashed');
+      expect(source.meta.isLoading).toBe(false);
+    });
+
+    it('clears a previous filterAsync error once a later attempt succeeds', async () => {
+      const filterAsync = vi
+        .fn<(items: readonly number[]) => Promise<readonly number[]>>()
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValue([1, 2, 3]);
+      const source = createLocalSource([1, 2, 3], { filterAsync, limit: 10 });
+
+      await source.ready().catch(() => {});
+      expect(source.meta.error).not.toBeNull();
+
+      await source.setData([1, 2, 3]);
+
+      expect(source.meta.error).toBeNull();
+      expect(source.current).toEqual([1, 2, 3]);
     });
 
     it('resolves ready() after async filterAsync completes', async () => {
@@ -401,6 +493,15 @@ describe('createLocalSource', () => {
       const source = createLocalSource([1, 2, 3]);
 
       source[Symbol.dispose]();
+
+      expect(source.disposed).toBe(true);
+    });
+
+    it('[Symbol.dispose] works when destructured off the source', () => {
+      const source = createLocalSource([1, 2, 3]);
+      const dispose = source[Symbol.dispose];
+
+      dispose();
 
       expect(source.disposed).toBe(true);
     });

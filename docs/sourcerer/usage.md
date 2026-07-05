@@ -278,13 +278,13 @@ await applyQuery(source, { limit: query.limit, search: query.search });
 
 ## Error Handling
 
-All sources expose `meta.error` as a `SourceError | null`. `SourceError` extends `Error` and carries structured context for logging and display:
+All sources expose `meta.error` as a `SourcererError | null`. `SourcererError` extends `Error` and carries structured context for logging and display:
 
 ```ts
 if (source.meta.error) {
   console.error(source.meta.error.message); // human-readable message
   console.error(source.meta.error.cause); // original thrown value
-  console.error(source.meta.error.query); // query that triggered the failure
+  console.error(source.meta.error.context); // structured context bag (query fields, kind, etc.)
 }
 ```
 
@@ -320,7 +320,7 @@ source.meta; // SourceMeta | CursorMeta | InfiniteMeta — pagination and status
 
 ```ts
 type SourceMeta = Readonly<{
-  error: SourceError | null; // null when healthy
+  error: SourcererError | null; // null when healthy
   isLoading: boolean;
   isSearchPending: boolean; // true while a debounced search timer is active
   pageCount: number;
@@ -344,7 +344,7 @@ console.log(`Showing ${start}–${end} of ${source.meta.totalItems}`);
 
 ```ts
 type CursorMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasNextPage: boolean;
   hasPrevPage: boolean;
   isLoading: boolean;
@@ -358,11 +358,12 @@ type CursorMeta = Readonly<{
 
 ```ts
 type InfiniteMeta = Readonly<{
-  error: SourceError | null;
+  error: SourcererError | null;
   hasMore: boolean;
   isLoading: boolean;
   isLoadingMore: boolean; // true only during loadMore() — not during reset()
   isSearchPending: boolean;
+  loadedPages: number; // number of pages currently accumulated in current[]
   pageSize: number;
   totalItems: number;
 }>;
@@ -431,7 +432,7 @@ const source = createRemoteSource({ fetch: fetchUsers, limit: 20, snapshot });
 // source starts populated — no loading flash
 ```
 
-`prefetchSource()` throws a `SourceError` if the fetch fails. Handle it server-side before embedding the snapshot.
+`prefetchSource()` throws a `SourcererError` if the fetch fails. Handle it server-side before embedding the snapshot.
 
 To get both the snapshot and a live source without a double-fetch, use `prefetchSourceAndKeep()`:
 

@@ -315,6 +315,19 @@ describe('createRemoteSource', () => {
       expect(fetch).not.toHaveBeenCalled();
     });
 
+    it('patch({ search }) with the same text as a pending debounce still flushes it', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, debounceMs: 300, fetch, limit: 5 });
+
+      void source.search('ban');
+      fetch.mockClear();
+
+      await source.patch({ search: 'ban' });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(source.meta.isSearchPending).toBe(false);
+    });
+
     it('patch() applies filter and sort fields in a single fetch', async () => {
       const fetchFn = vi.fn(async (q: { filter?: { active: boolean }; sort?: { by: string } }) => ({
         items: [`filter=${String(q.filter?.active)}-sort=${q.sort?.by ?? 'none'}`],
@@ -1073,6 +1086,19 @@ describe('createRemoteSource', () => {
 
       expect(searchArgs).not.toContain('hello');
       expect(searchArgs).toContain('world');
+    });
+
+    it('immediate:true still flushes a pending debounce for the same text', async () => {
+      const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+      const source = createRemoteSource({ autoFetch: false, debounceMs: 300, fetch });
+
+      void source.search('hello');
+      fetch.mockClear();
+
+      await source.search('hello', { immediate: true });
+
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(source.meta.isSearchPending).toBe(false);
     });
   });
 });

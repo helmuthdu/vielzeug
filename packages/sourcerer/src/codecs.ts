@@ -5,8 +5,9 @@ import { SourcererError } from './errors';
 /**
  * Serialises a `SourceQuery` or `RemoteSourceQuery` into plain URL-safe string params.
  *
- * ⚠️ `filter` and `sort` are JSON-stringified. Circular object references
- * will cause a stack overflow — ensure filter/sort values are plain serialisable objects.
+ * ⚠️ `filter` and `sort` are JSON-stringified without a try/catch. A circular object reference
+ * throws a native `TypeError` ("Converting circular structure to JSON") straight out of this
+ * function — ensure filter/sort values are plain serialisable objects, or wrap the call yourself.
  *
  * ⚠️ Round-trip fidelity: `page` and `limit` must be positive integers. `encodeQuery` will
  * serialise any number (including 0), but `decodeQuery` clamps non-positive values to 1/defaultLimit.

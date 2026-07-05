@@ -1,6 +1,8 @@
 import type { LocalSource, LocalSourceConfig, LocalSourceQuery, SearchOptions, SourceQuery } from './types';
 
+import { extractError } from './_utils';
 import { createSourceCore } from './core';
+import { SourcererError } from './errors';
 import { clampPage, createMeta, pageCount } from './pagination';
 
 type PendingSearch = { promise: Promise<void>; resolve: () => void };
@@ -49,6 +51,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
   let processed: readonly T[] = [];
   let isLoading = false;
   let isSearchPending = false;
+  let error: SourcererError | null = null;
   let asyncController: AbortController | null = null;
   let pendingSearch: PendingSearch | null = null;
 
@@ -90,6 +93,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
 
     asyncController = controller;
     isLoading = true;
+    error = null;
     commit();
 
     try {
@@ -118,10 +122,11 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
       const pages = pageCount(processed.length, limit);
 
       page = clampPage(page, pages);
-    } catch {
+    } catch (reason: unknown) {
       if (!controller.signal.aborted) {
         isLoading = false;
         isSearchPending = false;
+        error = new SourcererError(extractError(reason), { cause: reason });
       }
     } finally {
       if (asyncController === controller) asyncController = null;
@@ -145,13 +150,14 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
 
   // ── Initial state ───────────────────────────────────────────────────────────
   if (isAsync) {
-    // Async: run initial sync pass (no async ops involved yet)
+    // Async: seed with a sync pass so `current` isn't empty while the async pass runs.
     processed = runSyncPipeline();
+    void runAsyncPipeline();
   } else {
     recompute();
   }
 
-  return {
+  const source: LocalSource<T> = {
     get current() {
       const start = (page - 1) * limit;
 
@@ -189,12 +195,12 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     goToLast() {
-      return this.goTo(pageCount(processed.length, limit));
+      return source.goTo(pageCount(processed.length, limit));
     },
 
     get meta() {
       return createMeta({
-        error: null,
+        error,
         isLoading,
         isSearchPending,
         pageNumber: page,
@@ -204,7 +210,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     next() {
-      return this.goTo(page + 1);
+      return source.goTo(page + 1);
     },
 
     patch(changes: LocalSourceQuery<T>) {
@@ -229,7 +235,9 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
         changed = true;
       }
 
-      if ('search' in changes && changes.search !== search) {
+      // `|| core.isScheduled` also catches patching in the same search text as an already-pending
+      // debounced search() call — that still needs flushing, not silently dropping as a no-op.
+      if ('search' in changes && (changes.search !== search || core.isScheduled)) {
         search = changes.search ?? '';
         changed = true;
       }
@@ -245,6 +253,11 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
 
       if (!changed) return Promise.resolve();
 
+      // patch() is documented as a single atomic recompute — cancel any debounced search()
+      // still pending so it doesn't fire a second, redundant recompute afterwards.
+      core.cancelTimer();
+      resolvePendingSearch();
+
       // Reset page only when non-page query fields changed without an explicit page
       if (
         (changes.limit !== undefined || 'filter' in changes || 'sort' in changes || 'search' in changes) &&
@@ -257,7 +270,7 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     prev() {
-      return this.goTo(page - 1);
+      return source.goTo(page - 1);
     },
 
     get query(): SourceQuery {
@@ -286,7 +299,9 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
 
     search(q, opts?: SearchOptions): Promise<void> {
       if (opts?.immediate) {
-        if (q === search) return Promise.resolve();
+        // A pending debounced search for this same text still needs flushing —
+        // `q === search` alone doesn't mean the recompute already happened.
+        if (q === search && !core.isScheduled) return Promise.resolve();
 
         core.cancelTimer();
         isSearchPending = false;
@@ -334,7 +349,9 @@ export function createLocalSource<T>(data: readonly T[], cfg: LocalSourceConfig<
     },
 
     [Symbol.dispose]() {
-      this.dispose();
+      source.dispose();
     },
   };
+
+  return source;
 }

@@ -7,6 +7,8 @@ description: Practical examples and recipes for sourcerer.
 
 - [Local Pagination and Filtering](./examples/local-pagination-and-filtering.md)
 - [Remote Search with URL State](./examples/remote-search-with-url-state.md)
+- [Cursor-Based Pagination](./examples/cursor-based-pagination.md)
+- [Infinite Scroll](./examples/infinite-scroll.md)
 - [Reactive Controls with Ripple](./examples/sourcerer-with-ripple.md)
 - [Remote Data with Courier](./examples/sourcerer-with-courier.md)
 - [URL-Synced List with Wayfinder](./examples/sourcerer-with-wayfinder.md)

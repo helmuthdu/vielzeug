@@ -5,7 +5,8 @@
  * - Aborts superseded in-flight requests when a new query key arrives.
  * - Tracks pending count so callers can reflect loading state.
  *
- * Not exported from the public API — consumed by remoteSource and cursorSource.
+ * Not exported from the public API — consumed via `asyncSource.ts` by remoteSource,
+ * cursorSource, and infiniteSource.
  */
 
 type InFlightEntry = { controller: AbortController; promise: Promise<void> };
@@ -63,12 +64,14 @@ export function createFetchManager<TQuery>(keyOf: (q: TQuery) => string): FetchM
       }
 
       // Join an identical in-flight request rather than issuing a duplicate.
-      if (inflight.has(key)) {
+      const existing = inflight.get(key);
+
+      if (existing) {
         _pendingCount++;
         onPendingChange();
 
         try {
-          await inflight.get(key)!.promise;
+          await existing.promise;
         } finally {
           _pendingCount--;
           onPendingChange();

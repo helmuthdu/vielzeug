@@ -45,10 +45,10 @@ const controls = store({
 // Reactively project shared UI state into the source
 effect(() => {
   const { query, role, sort } = controls.value;
-  void source.setFilter(role === 'all' ? undefined : (user) => user.role === role);
-  void source.setSort(
-    sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : (a, b) => a.role.localeCompare(b.role),
-  );
+  void source.patch({
+    filter: role === 'all' ? undefined : (user) => user.role === role,
+    sort: sort === 'name' ? (a, b) => a.name.localeCompare(b.name) : (a, b) => a.role.localeCompare(b.role),
+  });
   void source.search(query); // debounced — fires after debounceMs
 });
 
@@ -69,7 +69,7 @@ source.dispose();
 
 - The `effect()` runs immediately on creation. Make sure the source is initialized before the effect is created.
 - Do **not** write to `controls` inside the `effect()` callback — this creates an infinite reactive loop. Only read from `controls` in the effect; write from UI event handlers.
-- Calling `setFilter()`, `setSort()`, and `search()` in sequence triggers three recomputes. For a single notification, use `source.patch({ filter, sort, search })` instead.
+- The example above already combines `filter`/`sort` into one `patch()` call to avoid two separate recomputes; folding `search` into the same `patch({ filter, sort, search })` call would collapse all three into a single recompute, but then loses `search()`'s built-in debounce — only do this if you also debounce `controls.query` yourself.
 - Always call `unsub()` and `source.dispose()` when the component or page is torn down.
 
 ### Related
