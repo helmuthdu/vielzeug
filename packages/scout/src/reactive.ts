@@ -2,6 +2,7 @@ import { batch, computed, signal } from '@vielzeug/ripple';
 
 import type { CreateSearchOptions, ScoutIndexOptions, SearchResult, SearchState } from './types';
 
+import { ScoutDisposedError } from './errors';
 import { createIndex, type ScoutIndex } from './scout-index';
 
 /**
@@ -41,6 +42,9 @@ const DEFAULT_DEBOUNCE = 200;
  * search.dispose();
  * ```
  *
+ * `results` also updates when the index is mutated directly via `index.add()` / `.remove()`
+ * / `.reindex()` (not just when `query` changes), by subscribing to `index.onMutate()`.
+ *
  * @param index - A `ScoutIndex` built with `createIndex()`.
  * @param options.debounce - Milliseconds to wait before committing query changes. Default: `200`.
  * @param options.limit - Override the index-level result limit.
@@ -52,11 +56,21 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
 
   const query = signal<string>('', { name: 'scout:query' });
   const committedQuery = signal<string>('', { name: 'scout:committedQuery' });
+  const indexVersion = signal(0, { name: 'scout:indexVersion' });
+
+  const unsubscribeMutations = index.onMutate(() => {
+    indexVersion.value++;
+  });
 
   const isSearching = computed(() => query.value !== committedQuery.value, { name: 'scout:isSearching' });
 
   const results = computed<SearchResult<T>[]>(
-    () => index.search(committedQuery.value, { limit, minQueryLength, threshold }),
+    () => {
+      // Reading .value establishes a dependency so index mutations trigger a recompute.
+      void indexVersion.value;
+
+      return index.search(committedQuery.value, { limit, minQueryLength, threshold });
+    },
     { name: 'scout:results' },
   );
 
@@ -89,6 +103,8 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
   });
 
   function clear(): void {
+    if (isDisposed) throw new ScoutDisposedError('SearchState.clear() called after dispose()');
+
     cancelTimer();
 
     batch(() => {
@@ -105,10 +121,12 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
     ac.abort();
     cancelTimer();
     subscription.dispose();
+    unsubscribeMutations();
     query.dispose();
     committedQuery.dispose();
     isSearching.dispose();
     results.dispose();
+    indexVersion.dispose();
   }
 
   return {
@@ -157,7 +175,7 @@ export function createSearch<T>(index: ScoutIndex<T>, options: CreateSearchOptio
  */
 export function createReactiveSearch<T>(
   items: T[],
-  options: ScoutIndexOptions<T> & { debounce?: number },
+  options: ScoutIndexOptions<T> & Pick<CreateSearchOptions, 'debounce'>,
 ): ReactiveSearch<T> {
   const index = createIndex(items, {
     fields: options.fields,

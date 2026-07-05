@@ -9,7 +9,7 @@ import { warn } from './_dev';
 export function tokenize(text: string): string {
   return text
     .toLowerCase()
-    .replace(/[^a-zA-Z0-9\s']/g, ' ')
+    .replace(/[^\p{L}\p{N}\s']/gu, ' ')
     .trim()
     .replace(/\s+/g, ' ');
 }
@@ -32,9 +32,7 @@ export function defaultStringify(value: unknown): string {
         'Falling back to joining string/number/boolean elements with a space.',
     );
 
-    return (value as unknown[])
-      .filter((v) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean')
-      .join(' ');
+    return value.filter((v) => typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean').join(' ');
   }
 
   return '';

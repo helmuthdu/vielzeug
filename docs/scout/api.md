@@ -15,6 +15,7 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `ScoutIndex.remove()`     | Remove one item by reference                          | Sync           | No-op for unknown references                                  |
 | `ScoutIndex.reindex()`    | Re-index a mutated item in-place; preserves order     | Sync           | Call after mutating item properties; no-op if not in index    |
 | `ScoutIndex.items`        | All indexed items in insertion order                  | Sync           | Returns a new array snapshot each call                        |
+| `ScoutIndex.onMutate()`   | Subscribe to `add`/`remove`/`reindex` mutations       | Sync           | Only fires on mutations that actually change the index — not on no-ops |
 | `createSearch()`          | Reactive search state backed by a `ScoutIndex`        | Sync           | Requires `@vielzeug/ripple` — dispose when done               |
 | `createReactiveSearch()`  | One-call index + reactive search state                | Sync           | Exposes `.index` for incremental mutations                    |
 | `findMatchRanges()`       | Compute match ranges for a text + query pair          | Sync           | Returns sorted, non-overlapping `[start, end]` ranges         |
@@ -22,12 +23,15 @@ description: Complete API reference for @vielzeug/scout — createIndex, createR
 | `highlightField()`        | Highlight a named field from a `SearchResult`         | Sync           | Shorthand for the `matches.find(…).ranges → highlight()` pattern |
 | `toSearchFn()`            | Adapt `ScoutIndex` to sourcerer's `searchFn` API      | Sync           | Ignores the `items` arg — index is the source of truth        |
 | `toFilterPredicate()`     | Snapshot predicate from a one-time query              | Sync           | Re-call when query or corpus changes                          |
+| `segmentWords()`          | Split unsegmented-script text (CJK, Thai, ...) into words | Sync       | Uses native `Intl.Segmenter` — not applied inside `tokenize()` itself (see Pitfalls) |
+| `debugSearch()`           | Log a `SearchState`'s query/results transitions       | Sync           | Import from `@vielzeug/scout/devtools`, not the main entry point |
 
 ## Package Entry Point
 
 | Import | Purpose |
 | --- | --- |
-| `@vielzeug/scout` | All exports — `createIndex`, `createReactiveSearch`, `createSearch`, `findMatchRanges`, `highlight`, `highlightField`, `toSearchFn`, `toFilterPredicate`, all types |
+| `@vielzeug/scout` | All exports — `createIndex`, `createReactiveSearch`, `createSearch`, `findMatchRanges`, `highlight`, `highlightField`, `segmentWords`, `toSearchFn`, `toFilterPredicate`, all types |
+| `@vielzeug/scout/devtools` | `debugSearch` — reactive search state logger (dev only) |
 
 ---
 
@@ -108,6 +112,23 @@ index.reindex(item);
 
 ```ts
 const all = index.items;
+```
+
+### `.onMutate(listener)`
+
+```ts
+onMutate(listener: () => void): () => void
+```
+
+Subscribes `listener` to run after every `add()` / `remove()` / `reindex()` call that actually changes the index — no-ops (e.g. removing an item that isn't indexed) don't fire it. Returns an unsubscribe function. `createSearch()` uses this internally to keep `results` in sync with index mutations; most callers building on `createIndex()` directly won't need to call it themselves.
+
+```ts
+const unsubscribe = index.onMutate(() => {
+  console.log(`Index changed — now ${index.size} items`);
+});
+
+index.add(newUser); // logs "Index changed — now 6 items"
+unsubscribe();
 ```
 
 ---
@@ -298,6 +319,57 @@ const results = products.filter(toFilterPredicate(index, 'widget'));
 
 // Cap results via limit
 const top5 = products.filter(toFilterPredicate(index, 'widget', { limit: 5 }));
+```
+
+---
+
+## `segmentWords(text)`
+
+Splits `text` into whitespace-joined word segments using the runtime's native `Intl.Segmenter` — no dependency beyond the platform API. Falls back to returning `text` unchanged where `Intl.Segmenter` isn't available.
+
+```ts
+function segmentWords(text: string): string
+```
+
+`tokenize()`'s trigram-based scoring already works on unsegmented scripts (Chinese, Japanese, Thai, ...) without this — trigrams are generated per-character, not per-word. `segmentWords()` is for `findMatchRanges()` / highlighting and the multi-word query semantics on `SearchConstraints`, which assume space-separated words. **Not applied inside `tokenize()` itself** — benchmarked at ~15x slower than the plain regex path for the common whitespace-delimited case, which would regress `createIndex()`'s construction cost for every caller, not just those indexing unsegmented scripts.
+
+**Example**
+
+```ts
+const index = createIndex(documents, {
+  fields: [{ field: 'title', stringify: (v) => segmentWords(String(v)) }],
+});
+```
+
+---
+
+## `debugSearch(search)` <Badge type="tip" text="@vielzeug/scout/devtools" />
+
+```ts
+debugSearch<T>(search: SearchState<T>): () => void
+```
+
+Logs `query` → `isSearching` → `results` transitions of a `SearchState` to `console.debug`. Returns a function that unsubscribes all listeners installed by this call. Import from the dedicated sub-path so it's tree-shaken from production bundles.
+
+::: warning Development only
+Logs the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't enable this in production.
+:::
+
+**Example**
+
+```ts
+import { debugSearch } from '@vielzeug/scout/devtools';
+
+const search = createSearch(index);
+const stopDebugging = debugSearch(search);
+
+search.query.value = 'alice';
+// [scout:search] query -> "alice"
+// [scout:search] isSearching -> true
+// [scout:search] isSearching -> false
+// [scout:search] results -> 1 item(s)
+
+stopDebugging();
 ```
 
 ---

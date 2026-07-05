@@ -9,7 +9,9 @@ Fast fuzzy-search. Builds a trigram inverted index at construction — O(candida
 - **Match highlighting** — character-range offsets for UI rendering
 - **Reactive layer** — `createSearch()` wraps any index in `ripple` signals with debounce
 - **Framework adapters** — `toSearchFn()` for sourcerer, `toFilterPredicate()` for filter pipelines
-- **Incremental updates** — `add()`, `remove()`, `update()` patch the index in O(field_length)
+- **Incremental updates** — `add()`, `remove()`, `reindex()` patch the index in O(field_length)
+- **Unsegmented-script helper** — `segmentWords()` pre-splits CJK/Thai text into words via `Intl.Segmenter`
+- **Devtools** — `@vielzeug/scout/devtools`'s `debugSearch()` logs query/results transitions
 
 ## Install
 

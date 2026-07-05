@@ -31,7 +31,7 @@ export type FieldDef<T> =
  * and `createReactiveSearch()`.
  */
 export type SearchConstraints = {
-  /** Maximum results returned. Default: `50`. */
+  /** Maximum results returned. Default: `50`. Negative values are clamped to `0`. */
   limit?: number;
   /**
    * Minimum query length (in characters) before trigram scoring is used.
@@ -91,7 +91,11 @@ export type SearchResult<T> = {
   score: number;
 };
 
-/** A text fragment produced by `highlight()` or `highlightField()`. */
+/**
+ * A text fragment produced by `highlight()` or `highlightField()`.
+ * `text` is unescaped, original field content — see `highlight()`'s JSDoc before
+ * rendering it as HTML.
+ */
 export type HighlightPart = {
   /** Whether this fragment overlapped a match range. */
   highlighted: boolean;
@@ -108,6 +112,7 @@ export type SearchState<T> = {
   /**
    * Resets `query` to `''` and cancels any pending debounce.
    * `results` and `isSearching` are updated synchronously.
+   * @throws {ScoutDisposedError} If called after `dispose()`.
    */
   clear(): void;
   /** `AbortSignal` aborted when `dispose()` is called. Use to tie other lifecycles to this search. */

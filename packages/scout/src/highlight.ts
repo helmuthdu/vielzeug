@@ -52,6 +52,12 @@ export function findMatchRanges(text: string, query: string): [number, number][]
  * Ranges must be sorted and non-overlapping (as produced by `SearchResult.matches[n].ranges`).
  * Use the returned parts to render highlighted text in a UI component.
  *
+ * **`part.text` is the original, unescaped field value** (e.g. a user's name, bio, or
+ * product title) — this function does no HTML escaping. Render each part via safe DOM APIs
+ * (`textContent`, a framework's text binding) and wrap `highlighted` parts in your own
+ * element (e.g. `<mark>`); never concatenate `part.text` into an HTML string for
+ * `innerHTML` — that reintroduces the XSS risk this structured return shape avoids.
+ *
  * @example
  * ```ts
  * highlight('Hello World', [[0, 5]]);

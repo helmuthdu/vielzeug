@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
 
+import { ScoutDisposedError } from '../errors';
 import { createReactiveSearch, createSearch } from '../reactive';
 import { createIndex } from '../scout-index';
 
@@ -160,6 +161,14 @@ describe('createSearch — clear()', () => {
     vi.useRealTimers();
     search.dispose();
   });
+
+  test('clear() after dispose() throws ScoutDisposedError', () => {
+    const search = makeSearch(0);
+
+    search.dispose();
+
+    expect(() => search.clear()).toThrow(ScoutDisposedError);
+  });
 });
 
 describe('createSearch — dispose', () => {
@@ -188,6 +197,77 @@ describe('createSearch — dispose', () => {
       search.dispose();
       search.dispose();
     }).not.toThrow();
+  });
+
+  test('disposalSignal is not aborted before dispose()', () => {
+    const search = makeSearch(0);
+
+    expect(search.disposalSignal.aborted).toBe(false);
+    search.dispose();
+  });
+
+  test('disposalSignal is aborted after dispose()', () => {
+    const search = makeSearch(0);
+
+    search.dispose();
+
+    expect(search.disposalSignal.aborted).toBe(true);
+  });
+});
+
+describe('createSearch — reactivity to index mutations', () => {
+  test('results recompute after index.add() with no query change', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const search = createSearch(index, { debounce: 0 });
+
+    expect(search.results.value).toHaveLength(3);
+
+    index.add({ name: 'Diana' });
+
+    expect(search.results.value).toHaveLength(4);
+    search.dispose();
+  });
+
+  test('results recompute after index.remove() with no query change', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const search = createSearch(index, { debounce: 0 });
+
+    index.remove(USERS[0]);
+
+    expect(search.results.value).toHaveLength(2);
+    search.dispose();
+  });
+
+  test('results recompute after index.reindex() with no query change', () => {
+    const item = { name: 'Alice' };
+    const index = createIndex([item], { fields: ['name'] });
+    const search = createSearch(index, { debounce: 0, threshold: 0.5 });
+
+    search.query.value = 'alice';
+    expect(search.results.value).toHaveLength(1);
+
+    item.name = 'Zebra';
+    index.reindex(item);
+
+    expect(search.results.value).toHaveLength(0);
+    search.dispose();
+  });
+
+  test('two createSearch() instances over the same index both react to mutations', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const searchA = createSearch(index, { debounce: 0 });
+    const searchB = createSearch(index, { debounce: 0 });
+
+    index.add({ name: 'Diana' });
+
+    expect(searchA.results.value).toHaveLength(4);
+    expect(searchB.results.value).toHaveLength(4);
+
+    searchA.dispose();
+    index.add({ name: 'Eve' });
+
+    expect(searchB.results.value).toHaveLength(5);
+    searchB.dispose();
   });
 });
 
@@ -262,6 +342,32 @@ describe('createReactiveSearch', () => {
     search.query.value = 'alic';
 
     expect(search.results.value).toHaveLength(0);
+    search.dispose();
+  });
+
+  test('respects minQueryLength option', () => {
+    const search = createReactiveSearch(USERS, { debounce: 0, fields: ['name'], minQueryLength: 10 });
+
+    search.query.value = 'alice';
+
+    // Below minQueryLength(10) forces the containment path — always score 1.0
+    expect(search.results.value.every((r) => r.score === 1)).toBe(true);
+    search.dispose();
+  });
+
+  test('respects debounce option (non-zero, timer-based)', () => {
+    vi.useFakeTimers();
+
+    const search = createReactiveSearch(USERS, { debounce: 100, fields: ['name'] });
+
+    search.query.value = 'alice';
+    expect(search.isSearching.value).toBe(true);
+
+    vi.advanceTimersByTime(100);
+    expect(search.isSearching.value).toBe(false);
+    expect(search.results.value[0].item.name).toBe('Alice');
+
+    vi.useRealTimers();
     search.dispose();
   });
 });

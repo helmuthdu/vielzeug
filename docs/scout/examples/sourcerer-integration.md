@@ -1,11 +1,17 @@
 ---
-title: Scout — Sourcerer Integration
-description: Use toSearchFn to plug a ScoutIndex into sourcerer's LocalSource as a searchFn drop-in.
+title: 'Scout Examples — Sourcerer Integration'
+description: "Use toSearchFn to plug a ScoutIndex into sourcerer's LocalSource as a searchFn drop-in."
 ---
 
-# Sourcerer Integration
+## Sourcerer Integration
 
-`toSearchFn()` adapts a `ScoutIndex` to the `searchFn` signature expected by `@vielzeug/sourcerer`'s `createLocalSource`.
+### Problem
+
+`sourcerer`'s `createLocalSource` accepts a `searchFn`, but writing your own means re-implementing ranking, weighting, and fuzzy matching from scratch.
+
+### Solution
+
+Pass `toSearchFn(index)` as `searchFn` — it delegates every query to the underlying `ScoutIndex` and returns plain items in score order, ignoring the `items` argument `sourcerer` normally passes in.
 
 ```ts
 import { createIndex, toSearchFn } from '@vielzeug/scout';
@@ -51,16 +57,24 @@ source.patch({ search: 'alice' });
 source.patch({ search: '' });
 // → 4 result(s): (all users)
 
-// Keep the index in sync with mutations
+// Keep the index in sync with mutations, then push the updated corpus to sourcerer
 const newUser: User = { email: 'eve@example.com', id: 5, name: 'Eve Adams', role: 'admin' };
 users.push(newUser);
 index.add(newUser);
-
-// Update the source with the new corpus
-const updatedSource = createLocalSource(users, { searchFn: toSearchFn(index) });
+await source.setData(users);
 
 // Cleanup
 sub.dispose();
 source.dispose();
-updatedSource.dispose();
 ```
+
+### Pitfalls
+
+- `toSearchFn()`'s returned function ignores its `items` argument — the `ScoutIndex` is always the source of truth. Keep the index in sync with `index.add()` / `remove()` / `reindex()` when the underlying array changes.
+- After mutating the index, call `source.setData(users)` to make `sourcerer` recompute against the updated corpus — creating a brand-new `LocalSource` per mutation (instead of reusing one) discards its existing subscriptions.
+- `toFilterPredicate()` is a snapshot, not reactive — re-call it if you need a `filter` predicate instead of a `searchFn`, and the query or corpus has changed.
+
+### Related
+
+- [Basic Search](./basic-search.md)
+- [Reactive Combobox](./reactive-combobox.md)

@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(scout): tokenize() now preserves non-ASCII text (CJK/Cyrillic were unsearchable), reactive results now update on index.add()/remove()/reindex() via new ScoutIndex.onMutate(), createIndex() throws ScoutIndexError on zero fields, SearchState.clear() throws ScoutDisposedError after dispose(), punctuation-only queries return no results instead of matching everything; adds segmentWords() and devtools debugSearch()",
+      "packageName": "@vielzeug/scout",
+      "type": "major"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}

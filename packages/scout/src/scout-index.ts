@@ -1,6 +1,6 @@
 import type { FieldDef, FieldMatch, ScoutIndexOptions, SearchConstraints, SearchResult } from './types';
 
-import { warn } from './_dev';
+import { ScoutIndexError } from './errors';
 import { findMatchRanges } from './highlight';
 import { defaultStringify, tokenize } from './tokenize';
 import { diceSimilarity, generateTrigrams } from './trigram';
@@ -45,10 +45,20 @@ export interface ScoutIndex<T> {
   /**
    * Searches the index for `query` and returns results sorted by score descending.
    *
-   * An empty `query` returns all indexed items with `score = 1`.
-   * Results below `threshold` are excluded. At most `limit` results are returned.
+   * An empty (or whitespace-only) `query` returns all indexed items with `score = 1`.
+   * A `query` with no indexable content after normalization (e.g. punctuation-only) returns
+   * no results. Results below `threshold` are excluded. At most `limit` results are returned.
    */
   search(query: string, options?: SearchConstraints): SearchResult<T>[];
+  /**
+   * Subscribes `listener` to be called after every `add()` / `remove()` / `reindex()` call
+   * that actually changes the index (no-ops — e.g. removing an unindexed item — don't fire
+   * it). Returns an unsubscribe function.
+   *
+   * Framework-agnostic extension point: `createSearch()` uses this internally to keep
+   * reactive `results` in sync with index mutations. Most callers won't need this directly.
+   */
+  onMutate(listener: () => void): () => void;
 }
 
 function resolveFields<T>(defs: ReadonlyArray<FieldDef<T>>): FieldConfig<T>[] {
@@ -81,10 +91,12 @@ function resolveFields<T>(defs: ReadonlyArray<FieldDef<T>>): FieldConfig<T>[] {
  *
  * const results = index.search('alice');
  * ```
+ *
+ * @throws {ScoutIndexError} If `options.fields` is empty.
  */
 export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): ScoutIndex<T> {
   if (options.fields.length === 0) {
-    warn('createIndex: at least one field is required. The index will be empty.');
+    throw new ScoutIndexError('createIndex: at least one field is required.');
   }
 
   const fields = resolveFields(options.fields);
@@ -97,6 +109,11 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
   const itemData = new Map<T, ItemRecord>();
   /** trigram → set of items that contain it */
   const invertedIndex = new Map<string, Set<T>>();
+  const mutationListeners = new Set<() => void>();
+
+  function notifyMutation(): void {
+    for (const listener of mutationListeners) listener();
+  }
 
   /** Single-entry cache for the most recent normalized query's trigrams (F2). */
   let cachedNormalized: string | null = null;
@@ -141,7 +158,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
     const values = new Map<string, string>();
 
     for (const { field, stringify } of fields) {
-      const raw = (item as Record<string, unknown>)[field];
+      const raw = item[field];
       const text = stringify(raw);
       const normalized = tokenize(text);
       const fieldTrigrams = normalized.length >= 1 ? generateTrigrams(normalized) : new Set<string>();
@@ -188,18 +205,13 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
     return candidates;
   }
 
-  function scoreCandidate(
-    normalized: string,
-    isShort: boolean,
-    queryTrigrams: Set<string> | null,
-    record: ItemRecord,
-  ): number {
+  function scoreCandidate(normalized: string, queryTrigrams: Set<string> | null, record: ItemRecord): number {
     let bestScore = 0;
 
     for (const { field, weight } of fields) {
       let fieldScore: number;
 
-      if (isShort) {
+      if (queryTrigrams === null) {
         const raw = record.values.get(field) ?? '';
 
         fieldScore = raw.toLowerCase().includes(normalized) ? 1.0 : 0;
@@ -208,7 +220,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
         if (!itemTrigrams || itemTrigrams.size === 0) continue;
 
-        fieldScore = diceSimilarity(queryTrigrams!, itemTrigrams);
+        fieldScore = diceSimilarity(queryTrigrams, itemTrigrams);
       }
 
       const weighted = fieldScore * (weight / maxWeight);
@@ -244,10 +256,19 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       if (itemData.has(item)) return;
 
       addItem(item);
+      notifyMutation();
     },
 
     get items(): readonly T[] {
       return [...itemData.keys()];
+    },
+
+    onMutate(listener: () => void): () => void {
+      mutationListeners.add(listener);
+
+      return () => {
+        mutationListeners.delete(listener);
+      };
     },
 
     reindex(item: T): void {
@@ -255,12 +276,16 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
       if (!record) return;
 
+      let changed = false;
+
       for (const { field, stringify } of fields) {
-        const raw = (item as Record<string, unknown>)[field];
+        const raw = item[field];
         const newText = stringify(raw);
         const oldText = record.values.get(field);
 
         if (newText === oldText) continue;
+
+        changed = true;
 
         const oldTrigrams = record.trigrams.get(field);
 
@@ -273,6 +298,8 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
         record.values.set(field, newText);
         addFieldToIndex(item, newTrigrams);
       }
+
+      if (changed) notifyMutation();
     },
 
     remove(item: T): void {
@@ -285,11 +312,12 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       }
 
       itemData.delete(item);
+      notifyMutation();
     },
 
     search(query: string, options?: SearchConstraints): SearchResult<T>[] {
       const threshold = options?.threshold ?? defaultThreshold;
-      const limit = options?.limit ?? defaultLimit;
+      const limit = Math.max(0, options?.limit ?? defaultLimit);
       const minQueryLength = options?.minQueryLength ?? defaultMinQueryLength;
 
       if (!query.trim()) {
@@ -297,9 +325,13 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
       }
 
       const normalized = tokenize(query);
+
+      // Query had no indexable content (e.g. punctuation-only) — no match, not "match all".
+      if (!normalized) return [];
+
       const isShort = normalized.length < minQueryLength;
       const queryTrigrams = isShort ? null : getQueryTrigrams(normalized);
-      const candidates = isShort ? containmentScan(normalized) : trigramCandidates(queryTrigrams!);
+      const candidates = queryTrigrams === null ? containmentScan(normalized) : trigramCandidates(queryTrigrams);
       const results: SearchResult<T>[] = [];
 
       for (const item of candidates) {
@@ -307,7 +339,7 @@ export function createIndex<T>(items: T[], options: ScoutIndexOptions<T>): Scout
 
         if (!record) continue;
 
-        const score = scoreCandidate(normalized, isShort, queryTrigrams, record);
+        const score = scoreCandidate(normalized, queryTrigrams, record);
 
         if (score >= threshold) {
           const matches = computeMatches(normalized, record.values);

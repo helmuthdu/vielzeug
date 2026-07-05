@@ -5,6 +5,7 @@ export { createReactiveSearch, createSearch } from './reactive';
 export type { ReactiveSearch } from './reactive';
 export type { ScoutIndex } from './scout-index';
 export { createIndex } from './scout-index';
+export { segmentWords } from './segment';
 export type {
   CreateSearchOptions,
   FieldDef,

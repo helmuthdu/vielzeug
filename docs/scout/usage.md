@@ -65,6 +65,24 @@ const index = createIndex(products, {
 });
 ```
 
+### Non-Latin scripts (CJK, Thai, ...)
+
+`tokenize()` indexes any script correctly — trigrams are generated per-character, so Chinese, Japanese, Cyrillic, and accented Latin text are all searchable out of the box. What it doesn't do is insert word boundaries for scripts that don't use spaces (Chinese, Japanese, Thai, ...), which affects `findMatchRanges()` / highlighting and multi-word query semantics. Pre-segment those fields with `segmentWords()`:
+
+```ts
+import { createIndex, segmentWords } from '@vielzeug/scout';
+
+const docs = [{ title: '日本語を勉強しています' }, { title: '我喜欢学习中文' }];
+
+const index = createIndex(docs, {
+  fields: [{ field: 'title', stringify: (v) => segmentWords(String(v)) }],
+});
+
+index.search('日本語'); // matches the first document
+```
+
+`segmentWords()` uses the runtime's native `Intl.Segmenter` — no dependency. It's opt-in per field rather than built into `tokenize()` because it benchmarks ~15x slower than the default regex path for ordinary whitespace-delimited text.
+
 ### Limiting results
 
 Pass `limit`, `threshold`, and `minQueryLength` in options to control result count and quality.
@@ -195,6 +213,22 @@ console.log(index.size);  // 42
 console.log(index.items); // [{ id: 1, title: ... }, ...]
 ```
 
+### Reacting to mutations directly
+
+`createSearch()` already keeps `results` in sync with `add()`/`remove()`/`reindex()` internally. If you're building your own reactivity on top of a plain `ScoutIndex` (no `ripple` involved), subscribe with `onMutate()`:
+
+```ts
+const unsubscribe = index.onMutate(() => {
+  rerenderResultsList();
+});
+
+index.add(newProduct); // triggers rerenderResultsList()
+
+unsubscribe(); // when done
+```
+
+`onMutate()` only fires for mutations that actually change the index — a duplicate `add()` or a `remove()` of an unindexed item is a no-op and doesn't notify listeners.
+
 ## Match Highlighting
 
 Every `SearchResult` carries `matches` — per-field character ranges where the query was found.
@@ -212,6 +246,33 @@ for (const result of index.search('alice')) {
   renderHighlightedText(parts);
 }
 ```
+
+::: warning `part.text` is unescaped
+`highlight()` / `highlightField()` return the **original, unescaped** field text split into
+fragments — never concatenate `part.text` into an HTML string for `innerHTML`. Render each
+part as text (`textContent`, a framework's text binding) and wrap `highlighted` parts in your
+own element:
+
+```ts
+function renderHighlightedText(parts: HighlightPart[]): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+
+  for (const part of parts) {
+    if (part.highlighted) {
+      const mark = document.createElement('mark');
+
+      mark.textContent = part.text; // textContent — never innerHTML
+      fragment.appendChild(mark);
+    } else {
+      fragment.appendChild(document.createTextNode(part.text));
+    }
+  }
+
+  return fragment;
+}
+```
+
+:::
 
 ### `findMatchRanges()` + `highlight()` — manual
 
@@ -232,6 +293,29 @@ Or use `highlight()` directly when you already have the ranges from `result.matc
 const [result] = index.search('alice');
 const nameMatch = result.matches.find(m => m.field === 'name');
 const parts = highlight(result.item.name, nameMatch?.ranges ?? []);
+```
+
+## Debug Logging
+
+Import `debugSearch` from the dedicated `/devtools` sub-path to log a `SearchState`'s `query` → `isSearching` → `results` transitions to `console.debug`. The sub-path is tree-shaken from production bundles when not imported.
+
+::: warning Development only
+`debugSearch()` logs the full, literal search query string — if your queries may carry PII (names, emails, medical/financial terms typed by end users), don't enable this in production.
+:::
+
+```ts
+import { debugSearch } from '@vielzeug/scout/devtools';
+
+const search = createSearch(index, { debounce: 150 });
+const stopDebugging = debugSearch(search);
+
+search.query.value = 'alice';
+// [scout:search] query -> "alice"
+// [scout:search] isSearching -> true
+// [scout:search] isSearching -> false
+// [scout:search] results -> 1 item(s)
+
+stopDebugging();
 ```
 
 ## Framework Integration
@@ -375,3 +459,4 @@ Call `toFilterPredicate` again whenever the query or corpus changes — the pred
 - **Set `minQueryLength` for your corpus size** — the default `3` works well for most cases. Lower it for small corpora where single-char queries are expected; raise it for large corpora to avoid expensive O(n) scans.
 - **Dispose reactive state** — always call `search.dispose()` or use `using` when the component unmounts.
 - **Weight by importance** — name/title fields should have weight `2–3`; secondary fields (description, tags) stay at `1`.
+- **Segment CJK/Thai fields explicitly** — `segmentWords()` is opt-in per field, not automatic, to keep `createIndex()` fast for the common whitespace-delimited case.

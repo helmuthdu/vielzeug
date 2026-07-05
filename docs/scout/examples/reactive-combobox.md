@@ -1,11 +1,17 @@
 ---
-title: Scout — Reactive Combobox
-description: Wire createSearch signals to a combobox input with debounce and isSearching state.
+title: 'Scout Examples — Reactive Combobox'
+description: 'Wire createSearch signals to a combobox input with debounce and isSearching state.'
 ---
 
-# Reactive Combobox
+## Reactive Combobox
 
-`createSearch()` wraps a `ScoutIndex` in `@vielzeug/ripple` signals with optional debounce — ideal for live search inputs.
+### Problem
+
+A live search input needs to show a loading state while the user types, debounce repeated keystrokes, and re-render only when results actually change. Wiring this by hand means manually tracking timers and discarding stale in-flight results.
+
+### Solution
+
+`createSearch()` wraps a `ScoutIndex` in `@vielzeug/ripple` signals with debounce built in. Set `search.query.value` and read `search.results` / `search.isSearching` reactively.
 
 ```ts
 import { createIndex, createSearch, highlight } from '@vielzeug/scout';
@@ -75,3 +81,35 @@ search.dispose();
   // s.dispose() called automatically at block exit
 }
 ```
+
+#### With debug logging (optional)
+
+```ts
+import { debugSearch } from '@vielzeug/scout/devtools';
+
+const stopDebugging = debugSearch(search);
+
+search.query.value = 'br';
+// [scout:search] query -> "br"
+// [scout:search] isSearching -> true
+// [scout:search] isSearching -> false
+// [scout:search] results -> 2 item(s)
+
+stopDebugging();
+```
+
+::: warning Development only
+`debugSearch()` logs the literal search query via `console.debug` — avoid enabling it in production if queries may contain PII.
+:::
+
+### Pitfalls
+
+- Always call `search.dispose()` (or use `using`) — an undisposed `SearchState` leaks its `ripple` subscriptions and any pending debounce timer.
+- `debounce: 0` skips the `isSearching` flash entirely — don't rely on it for a loading indicator when using synchronous updates.
+- `search.clear()` throws `ScoutDisposedError` if called after `dispose()` — don't call lifecycle methods after teardown.
+- `search.index.add()` / `.remove()` / `.reindex()` update `results` even without a query change — no need to also bump `search.query` to force a refresh.
+
+### Related
+
+- [Basic Search](./basic-search.md)
+- [Sourcerer Integration](./sourcerer-integration.md)

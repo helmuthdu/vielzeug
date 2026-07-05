@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ScoutDisposedError, ScoutError, ScoutIndexError } from '../errors';
 import { createIndex } from '../scout-index';
@@ -24,6 +24,10 @@ describe('createIndex', () => {
     const index = createIndex<User>([], { fields: ['name'] });
 
     expect(index.size).toBe(0);
+  });
+
+  test('throws ScoutIndexError when fields is empty', () => {
+    expect(() => createIndex(USERS, { fields: [] })).toThrow(ScoutIndexError);
   });
 });
 
@@ -195,6 +199,35 @@ describe('ScoutIndex.search', () => {
 
     expect(results).toHaveLength(0);
   });
+
+  test('punctuation-only query (no indexable content) returns no results', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const results = index.search('!!!');
+
+    expect(results).toHaveLength(0);
+  });
+
+  test('negative limit is clamped to 0', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+
+    expect(index.search('', { limit: -1 })).toHaveLength(0);
+    expect(index.search('alice', { limit: -5 })).toHaveLength(0);
+  });
+
+  test('negative limit set at createIndex() construction time is also clamped to 0', () => {
+    const index = createIndex(USERS, { fields: ['name'], limit: -5 });
+
+    expect(index.search('')).toHaveLength(0);
+  });
+
+  test('non-ASCII scripts are searchable (CJK, Cyrillic, accented Latin)', () => {
+    const items = [{ name: '日本語' }, { name: 'Явление' }, { name: 'café' }];
+    const index = createIndex(items, { fields: ['name'] });
+
+    expect(index.search('日本語').length).toBeGreaterThan(0);
+    expect(index.search('явление').length).toBeGreaterThan(0);
+    expect(index.search('café').length).toBeGreaterThan(0);
+  });
 });
 
 describe('ScoutIndex.add', () => {
@@ -340,6 +373,116 @@ describe('ScoutIndex.items', () => {
     index.remove(item);
     expect(index.items).not.toContain(item);
   });
+
+  test('returns a fresh array snapshot on each call', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+
+    expect(index.items).not.toBe(index.items);
+    expect(index.items).toEqual(index.items);
+  });
+});
+
+describe('ScoutIndex.onMutate', () => {
+  test('fires when add() inserts a new item', () => {
+    const index = createIndex<User>([], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.add({ age: 20, email: 'x@x.com', name: 'New' });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not fire when add() is a no-op (duplicate reference)', () => {
+    const item: User = { age: 20, email: 'x@x.com', name: 'New' };
+    const index = createIndex<User>([item], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.add(item);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('fires when remove() deletes an existing item', () => {
+    const item = USERS[0];
+    const index = createIndex([item], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.remove(item);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not fire when remove() is a no-op (unknown item)', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.remove({ age: 0, email: '', name: 'Ghost' });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('fires when reindex() actually changes a field value', () => {
+    const item: User = { age: 20, email: 'q@x.com', name: 'QuantumFox' };
+    const index = createIndex([item], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    item.name = 'ZebraVan';
+    index.reindex(item);
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not fire when reindex() has no field changes', () => {
+    const item = USERS[0];
+    const index = createIndex([item], { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.reindex(item);
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('does not fire when reindex() targets an item not in the index', () => {
+    const index = createIndex(USERS, { fields: ['name'] });
+    const listener = vi.fn();
+
+    index.onMutate(listener);
+    index.reindex({ age: 0, email: '', name: 'Ghost' });
+
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  test('notifies every subscribed listener', () => {
+    const index = createIndex<User>([], { fields: ['name'] });
+    const listenerA = vi.fn();
+    const listenerB = vi.fn();
+
+    index.onMutate(listenerA);
+    index.onMutate(listenerB);
+    index.add({ age: 20, email: 'x@x.com', name: 'New' });
+
+    expect(listenerA).toHaveBeenCalledTimes(1);
+    expect(listenerB).toHaveBeenCalledTimes(1);
+  });
+
+  test('the returned unsubscribe function stops future notifications', () => {
+    const index = createIndex<User>([], { fields: ['name'] });
+    const listener = vi.fn();
+
+    const unsubscribe = index.onMutate(listener);
+
+    index.add({ age: 20, email: 'a@x.com', name: 'A' });
+    unsubscribe();
+    index.add({ age: 21, email: 'b@x.com', name: 'B' });
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('tokenization — punctuation handling', () => {
@@ -389,5 +532,19 @@ describe('ScoutError — named subclasses', () => {
   it('ScoutError.is() returns true for any subclass', () => {
     expect(ScoutError.is(new ScoutDisposedError(''))).toBe(true);
     expect(ScoutError.is(new Error('plain'))).toBe(false);
+  });
+
+  it('ScoutError.is() returns false for non-Error values', () => {
+    expect(ScoutError.is(null)).toBe(false);
+    expect(ScoutError.is(undefined)).toBe(false);
+    expect(ScoutError.is('ScoutIndexError')).toBe(false);
+    expect(ScoutError.is({ name: 'ScoutIndexError' })).toBe(false);
+  });
+
+  it('preserves the cause via ErrorOptions', () => {
+    const cause = new Error('underlying failure');
+    const err = new ScoutIndexError('wrapped', { cause });
+
+    expect(err.cause).toBe(cause);
   });
 });

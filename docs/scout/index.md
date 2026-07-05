@@ -9,9 +9,11 @@ exports:
     createIndex,
     createReactiveSearch,
     createSearch,
+    debugSearch,
     findMatchRanges,
     highlight,
     highlightField,
+    segmentWords,
     toFilterPredicate,
     toSearchFn,
   ]
@@ -95,6 +97,9 @@ const results = index.search('alice');
 - `toSearchFn()` — Drop-in `searchFn` adapter for sourcerer's `LocalSource`
 - `toFilterPredicate()` — Snapshot `(item: T) => boolean` predicate for `Array.filter` or vault queries
 - Incremental updates — `add()` / `remove()` / `reindex()` patch the index in O(field_length); no full rebuild
+- `onMutate()` — Subscribe to index mutations; powers `createSearch()`'s reactivity to `add`/`remove`/`reindex`
+- `segmentWords()` — Split unsegmented-script text (CJK, Thai, ...) into words via native `Intl.Segmenter`
+- Debug logging via `debugSearch()` (`@vielzeug/scout/devtools`) — logs query/results transitions, tree-shaken from production bundles
 
 </div>
 
