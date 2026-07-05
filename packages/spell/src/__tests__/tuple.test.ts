@@ -44,4 +44,12 @@ describe('tuple parseAsync — optional / catch', () => {
         .parseAsync(42 as any),
     ).toEqual(['x']);
   });
+
+  it('parseAsync() runs async validate() on item schemas (does not silently skip)', async () => {
+    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+    const tupleSchema = s.tuple([asyncPositive]);
+
+    await expect(tupleSchema.safeParseAsync([1])).resolves.toMatchObject({ success: true });
+    await expect(tupleSchema.safeParseAsync([-1])).resolves.toMatchObject({ success: false });
+  });
 });

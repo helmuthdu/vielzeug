@@ -498,6 +498,14 @@ describe('toJsonSchema()', () => {
       expect((schema['$comment'] as string).length).toBeGreaterThan(0);
     });
 
+    it('set is otherwise representable as a unique-item array', () => {
+      const schema = s.set(s.number()).toJsonSchema() as Record<string, unknown>;
+
+      expect(schema['type']).toBe('array');
+      expect(schema['uniqueItems']).toBe(true);
+      expect(schema['items']).toEqual({ type: 'number' });
+    });
+
     it('map adds an explanatory $comment', () => {
       const schema = s.map(s.string(), s.number()).toJsonSchema() as Record<string, unknown>;
 

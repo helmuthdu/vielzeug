@@ -171,7 +171,8 @@ type BaseDescriptor = {
 
 export type SchemaDescriptor = BaseDescriptor &
   (
-    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' | 'instanceof' }
+    | { kind: 'any' | 'unknown' | 'never' | 'boolean' | 'bigint' | 'date' | 'lazy' }
+    | { className: string; kind: 'instanceof' }
     | {
         contentEncoding?: string;
         format?: string;

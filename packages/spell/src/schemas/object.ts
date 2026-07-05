@@ -312,8 +312,8 @@ export class ObjectSchema<T extends ObjectShape> extends Schema<InferObject<T>> 
   }
 
   merge<U extends ObjectShape>(other: ObjectSchema<U>): ObjectSchema<T & U> {
-    return new ObjectSchema(
-      objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as unknown as T & U,
+    return this._rebuildWith(
+      objectFromEntries([...Object.entries(this.shape), ...Object.entries(other.shape)]) as any,
       other._isRelaxed,
     );
   }

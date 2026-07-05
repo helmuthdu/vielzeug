@@ -14,7 +14,7 @@ A domain model may have multiple valid shapes. You need to express those branche
 Use unions for alternative shapes, intersections for merged constraints, and variants for discriminated object unions.
 
 ```ts
-import { ValidationError, s } from '@vielzeug/spell';
+import { SpellValidationError, s } from '@vielzeug/spell';
 
 const Timestamped = s.object({
   createdAt: s.date(),
@@ -39,7 +39,7 @@ const Article = s.variant('kind', {
 const AuditedArticle = s.and(Article, Timestamped);
 const result = AuditedArticle.safeParse({ kind: 'published', title: 'Docs', createdAt: new Date() });
 
-if (!result.success && ValidationError.is(result.error)) {
+if (!result.success && SpellValidationError.is(result.error)) {
   console.log(result.error.bestMatch());
 }
 ```

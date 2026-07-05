@@ -1,6 +1,6 @@
 import type { AnySchema, Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { ErrorCode, prependIssuePath, Schema, SpellValidationError, _makeCtx } from '../core';
 import { _messages } from '../messages';
 
 export type TupleSchemas = readonly [AnySchema, ...AnySchema[]];
@@ -104,6 +104,69 @@ export class TupleSchema<T extends TupleSchemas, R extends AnySchema | null = nu
     }
 
     return { data: output, issues, typeOk: true };
+  }
+
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<InferTuple<T, R>> {
+    const c = ctx ?? _makeCtx();
+
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
+
+      if (prepared.skip) return prepared.value as unknown as InferTuple<T, R>;
+
+      const raw = prepared.value;
+
+      if (!Array.isArray(raw)) {
+        throw new SpellValidationError([{ code: ErrorCode.invalid_type, message: c.messages.tuple.type(), path: [] }]);
+      }
+
+      const guarded = this._guardTupleInput(raw, c);
+
+      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
+
+      const tupleValue = guarded.value;
+      const issues: Issue[] = [];
+      const output: unknown[] = [];
+
+      const fixedResults = await Promise.all(this.items.map((schema, i) => schema._parseFullAsync(tupleValue[i], c)));
+
+      for (let i = 0; i < fixedResults.length; i++) {
+        const result = fixedResults[i];
+
+        if (result.issues.length === 0) {
+          output.push(result.data);
+        } else {
+          issues.push(...prependIssuePath(result.issues, i));
+          output.push(tupleValue[i]);
+        }
+      }
+
+      const rest = this.restSchema;
+
+      if (rest !== null) {
+        const restItems = tupleValue.slice(this.items.length);
+        const restResults = await Promise.all(restItems.map((item) => rest._parseFullAsync(item, c)));
+
+        for (let i = 0; i < restResults.length; i++) {
+          const result = restResults[i];
+          const idx = this.items.length + i;
+
+          if (result.issues.length === 0) {
+            output.push(result.data);
+          } else {
+            issues.push(...prependIssuePath(result.issues, idx));
+            output.push(tupleValue[idx]);
+          }
+        }
+      }
+
+      const validationIssues = await this._runValidatorsAsync(output, c);
+      const allIssues = [...issues, ...validationIssues];
+
+      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
+
+      return this._runPostprocessors(output) as InferTuple<T, R>;
+    });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

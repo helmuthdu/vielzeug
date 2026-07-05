@@ -14,7 +14,7 @@ An API handler receives unknown JSON. It must reject malformed input, keep typed
 Use one schema at the request boundary, then reuse the parsed value everywhere else.
 
 ```ts
-import { ValidationError, s } from '@vielzeug/spell';
+import { SpellValidationError, s } from '@vielzeug/spell';
 
 const CreateArticle = s
   .object({
@@ -44,7 +44,7 @@ try {
 
   console.log(article.id);
 } catch (error) {
-  if (ValidationError.is(error)) {
+  if (SpellValidationError.is(error)) {
     console.log(error.flattenFirst());
   }
 }

@@ -169,7 +169,7 @@ export class Schema<Output = unknown, Input = Output> {
         throw new SpellValidationError([
           {
             code: ErrorCode.custom,
-            message: '[@vielzeug/spell] parse() received an async schema. Use parseAsync() instead.',
+            message: 'parse() received an async schema. Use parseAsync() instead.',
             path: [],
           },
         ]);
@@ -241,7 +241,7 @@ export class Schema<Output = unknown, Input = Output> {
       throw new SpellValidationError([
         {
           code: ErrorCode.custom,
-          message: '[@vielzeug/spell] Sync parse path received an async schema.',
+          message: 'Sync parse path received an async schema. Use parseAsync() instead.',
           path: [],
         },
       ]);
@@ -621,7 +621,7 @@ export class Schema<Output = unknown, Input = Output> {
         throw new SpellValidationError([
           {
             code: ErrorCode.custom,
-            message: 'Type validator returned a Promise. Use checkAsync() for async validation.',
+            message: 'Type validator returned a Promise. Use parseAsync() for async validation.',
             path: [],
           },
         ]);
@@ -635,7 +635,13 @@ export class Schema<Output = unknown, Input = Output> {
     for (const validate of this.state.validators) {
       const result = validate(value, ctx);
 
-      if (result instanceof Promise) continue;
+      if (result instanceof Promise) {
+        _dev(
+          'An async validate() callback was skipped because parse()/safeParse() cannot await it. ' +
+            'The value passed this check unvalidated — use parseAsync()/safeParseAsync() instead.',
+        );
+        continue;
+      }
 
       if (result) issues.push(...result);
     }

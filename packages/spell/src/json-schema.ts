@@ -60,13 +60,15 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
       return { enum: [...d.values] };
 
     case 'instanceof':
-    // falls through
-
-    case 'lazy':
-      return {};
+      return {
+        $comment: `Instances of "${d.className}" are not representable in JSON Schema.`,
+      };
 
     case 'intersect':
       return { allOf: d.branches.map(descriptorToJsonSchema) };
+
+    case 'lazy':
+      return {};
 
     case 'literal':
       if (d.value === null) return { type: 'null' };
@@ -130,7 +132,12 @@ function _descriptorToBase(d: SchemaDescriptor): JsonSchema {
       };
 
     case 'set':
-      return { $comment: 'Set<T> — no standard JSON Schema equivalent; treated as an ordered unique-item array.' };
+      return {
+        $comment: 'Set<T> — no standard JSON Schema equivalent; treated as an ordered unique-item array.',
+        items: descriptorToJsonSchema(d.items),
+        type: 'array',
+        uniqueItems: true,
+      };
 
     case 'string': {
       const out: JsonSchema = { type: 'string' };

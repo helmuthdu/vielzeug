@@ -1,6 +1,6 @@
 import type { Issue, MessageFn, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema } from '../core';
+import { ErrorCode, fail, prependIssuePath, resolveMessage, Schema, SpellValidationError, _makeCtx } from '../core';
 import { _messages } from '../messages';
 
 export class SetSchema<T> extends Schema<Set<T>> {
@@ -41,6 +41,45 @@ export class SetSchema<T> extends Schema<Set<T>> {
     }
 
     return { data: parsed, issues, typeOk: true };
+  }
+
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Set<T>> {
+    const c = ctx ?? _makeCtx();
+
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
+
+      if (prepared.skip) return prepared.value as unknown as Set<T>;
+
+      const raw = prepared.value;
+
+      if (!(raw instanceof Set)) {
+        throw new SpellValidationError([{ code: ErrorCode.invalid_type, message: c.messages.set.type(), path: [] }]);
+      }
+
+      const items = [...raw];
+      const settled = await Promise.all(items.map((item) => this.itemSchema._parseFullAsync(item, c)));
+
+      const issues: Issue[] = [];
+      const parsed = new Set<T>();
+
+      for (let i = 0; i < settled.length; i++) {
+        const result = settled[i];
+
+        if (result.issues.length === 0) {
+          parsed.add(result.data as T);
+        } else {
+          issues.push(...prependIssuePath(result.issues, i));
+        }
+      }
+
+      const validationIssues = await this._runValidatorsAsync(parsed, c);
+      const allIssues = [...issues, ...validationIssues];
+
+      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
+
+      return this._runPostprocessors(parsed) as Set<T>;
+    });
   }
 
   min(

@@ -306,6 +306,23 @@ describe('equals()', () => {
   it('returns false when isOptional differs', () => {
     expect(s.string().optional().equals(s.string())).toBe(false);
   });
+
+  it('two different multi-.regex() string schemas can compare equal (documented limitation)', () => {
+    // Chaining more than one .regex() collapses the descriptor pattern to `null` (ambiguous),
+    // so schemas built from different pairs of regexes are indistinguishable via equals().
+    const a = s
+      .string()
+      .regex(/^[a-z]+$/)
+      .regex(/^.{3,}$/);
+    const b = s
+      .string()
+      .regex(/^[0-9]+$/)
+      .regex(/^.{5,}$/);
+
+    expect(a.equals(b)).toBe(true);
+    expect(a.parse('abc')).toBe('abc');
+    expect(() => b.parse('abc')).toThrow();
+  });
 });
 
 describe('walk() fallback', () => {

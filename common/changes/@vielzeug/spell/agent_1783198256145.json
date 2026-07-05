@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(spell): add min()/max()/size()/nonEmpty() constraints to s.map(), fix docs/string.regex() equals() limitation note",
+      "packageName": "@vielzeug/spell",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

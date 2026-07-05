@@ -1,4 +1,4 @@
-import { ErrorCode, s } from '../index';
+import { ErrorCode, s, setLogger } from '../index';
 
 describe('validate() sync', () => {
   it('accepts boolean/string shorthand (condition || message)', () => {
@@ -111,6 +111,18 @@ describe('validate() async', () => {
     const schema = s.string().validate(async () => 'Always fails');
 
     expect(schema.parse('x')).toBe('x');
+  });
+
+  it('warns via the logger when a sync parse() drops an async validate() result', () => {
+    const schema = s.string().validate(async () => 'Always fails');
+    const warnings: string[] = [];
+
+    setLogger((msg) => warnings.push(msg));
+    schema.parse('x');
+    setLogger(null);
+
+    expect(warnings.length).toBeGreaterThan(0);
+    expect(warnings[0]).toMatch(/async validate\(\) callback was skipped/i);
   });
 
   it('validate() works with parseAsync() for object cross-field checks', async () => {

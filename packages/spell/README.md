@@ -9,7 +9,7 @@
 
 **Package:** `@vielzeug/spell` &nbsp;·&nbsp; **Category:** Validation
 
-**Key exports:** `s`, `ValidationError`, `setMessages`, `setLogger`, `resetMessages`, `ErrorCode`, `errorsAt`, `descriptorToJsonSchema`
+**Key exports:** `s`, `SpellValidationError`, `setMessages`, `setLogger`, `resetMessages`, `ErrorCode`, `errorsAt`, `descriptorToJsonSchema`
 
 **When to use:** Zero-dependency schema validation library with strict-by-default objects, async refinements, coercion, flexible schema composition, and full TypeScript inference.
 
@@ -48,7 +48,7 @@ if (result.success) {
   const user: User = result.data;
   console.log(user.id); // 42
 
-  // Assertion form — narrows type, throws ValidationError on failure
+  // Assertion form — narrows type, throws SpellValidationError on failure
   UserSchema.assert(result.data, 'user');
 } else {
   const { fieldErrors, formErrors } = result.error.flattenFirst();

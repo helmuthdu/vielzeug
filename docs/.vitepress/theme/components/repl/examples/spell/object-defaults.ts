@@ -1,5 +1,5 @@
 export const objectDefaultsExample = {
-  code: `import { s, ValidationError } from '@vielzeug/spell';
+  code: `import { s } from '@vielzeug/spell';
 
 // Schema where all fields have defaults
 const ServerConfig = s.object({

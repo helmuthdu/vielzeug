@@ -10,7 +10,7 @@ exports:
     s,
     Schema,
     PipeSchema,
-    ValidationError,
+    SpellValidationError,
     ErrorCode,
     errorsAt,
     fail,

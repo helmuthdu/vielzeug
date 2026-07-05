@@ -1,6 +1,6 @@
 import type { Issue, ParseContext, ParseValue, SchemaDescriptor } from '../core';
 
-import { ErrorCode, prependIssuePath, Schema } from '../core';
+import { ErrorCode, prependIssuePath, Schema, SpellValidationError, _makeCtx } from '../core';
 import { _messages } from '../messages';
 import { isUnsafeObjectKey } from '../safe-object';
 
@@ -78,6 +78,65 @@ export class RecordSchema<K extends string, V> extends Schema<Record<K, V>> {
     const { issues, output } = this._parseRecordEntries(guarded.value, ctx);
 
     return { data: output, issues, typeOk: true };
+  }
+
+  override async parseAsync(value: unknown, ctx?: ParseContext): Promise<Record<K, V>> {
+    const c = ctx ?? _makeCtx();
+
+    return this._withCatchAsync(async () => {
+      const prepared = this._prepareInput(value);
+
+      if (prepared.skip) return prepared.value as unknown as Record<K, V>;
+
+      const guarded = this._guardRecordInput(prepared.value, c);
+
+      if (!guarded.ok) throw new SpellValidationError(guarded.issues);
+
+      const obj = guarded.value;
+      const keys = Object.keys(obj);
+      const settled = await Promise.all(
+        keys.map((key) =>
+          Promise.all([this.keySchema._parseFullAsync(key, c), this.valueSchema._parseFullAsync(obj[key], c)]),
+        ),
+      );
+
+      const issues: Issue[] = [];
+      const output: Record<string, unknown> = {};
+
+      for (let i = 0; i < keys.length; i++) {
+        const key = keys[i];
+        const [keyResult, valResult] = settled[i];
+
+        if (keyResult.issues.length > 0) {
+          issues.push(...prependIssuePath(keyResult.issues, key));
+          continue;
+        }
+
+        const parsedKey = keyResult.data as string;
+
+        // Skip keys that trigger inherited setters (e.g. __proto__) to prevent
+        // prototype mutation on the output object.
+        if (isUnsafeObjectKey(parsedKey)) continue;
+
+        if (valResult.issues.length === 0) {
+          Object.defineProperty(output, parsedKey, {
+            configurable: true,
+            enumerable: true,
+            value: valResult.data,
+            writable: true,
+          });
+        } else {
+          issues.push(...prependIssuePath(valResult.issues, key));
+        }
+      }
+
+      const validationIssues = await this._runValidatorsAsync(output, c);
+      const allIssues = [...issues, ...validationIssues];
+
+      if (allIssues.length > 0) throw new SpellValidationError(allIssues);
+
+      return this._runPostprocessors(output) as Record<K, V>;
+    });
   }
 
   protected override _toDescriptorImpl(): SchemaDescriptor {

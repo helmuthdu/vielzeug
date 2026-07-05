@@ -1,4 +1,4 @@
-import { s, SpellValidationError } from '../index';
+import { s, Schema, SpellValidationError } from '../index';
 
 describe('safeParse and safeParseAsync', () => {
   it('safeParse() returns parsed data on success', () => {
@@ -41,5 +41,29 @@ describe('safeParse and safeParseAsync', () => {
     const result = await s.string().safeParseAsync(42);
 
     expect(result.success).toBe(false);
+  });
+});
+
+describe('sync/async schema mismatch guardrails', () => {
+  class AsyncOnlySchema extends Schema<string> {
+    protected override _parse() {
+      return Promise.resolve({ data: 'x', issues: [], typeOk: true });
+    }
+  }
+
+  it('parse() throws a clear error when the schema resolves asynchronously', () => {
+    expect(() => new AsyncOnlySchema().parse('x')).toThrow('Use parseAsync() instead');
+  });
+
+  it('_parseFullSync() throws a clear error when a nested schema resolves asynchronously', () => {
+    expect(() => new AsyncOnlySchema()._parseFullSync('x')).toThrow('received an async schema');
+  });
+
+  it('sync parse() throws when a custom type validator returns a Promise', () => {
+    const schema = new Schema(async () => null);
+
+    expect(() => schema.parse('x')).toThrow(
+      'Type validator returned a Promise. Use parseAsync() for async validation.',
+    );
   });
 });

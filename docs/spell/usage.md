@@ -65,7 +65,7 @@ const Todo = s.object({
 
 Object schemas reject unknown keys by default. Call `.relaxed()` when you need to preserve extra properties.
 
-Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `ValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults — fields without a default are silently omitted instead of throwing.
+Call `.defaults()` to get a fully default-filled object without providing any input. Every required field must have a `.default()` set, or a `SpellValidationError` is thrown. Call `.partialDefaults()` when only some fields have defaults — fields without a default are silently omitted instead of throwing.
 
 ```ts
 const Config = s.object({
@@ -281,10 +281,10 @@ i18n.subscribe(() => setMessages(spellMessages[i18n.locale]));
 
 ## Working with Validation Errors
 
-Use `ValidationError` helpers when you need UI-ready error structures.
+Use `SpellValidationError` helpers when you need UI-ready error structures.
 
 ```ts
-import { ValidationError, errorsAt, s } from '@vielzeug/spell';
+import { SpellValidationError, errorsAt, s } from '@vielzeug/spell';
 
 const User = s.object({
   email: s.string().email(),
@@ -295,7 +295,7 @@ const User = s.object({
 
 const result = User.safeParse({ email: 'nope', profile: { name: '' } });
 
-if (!result.success && ValidationError.is(result.error)) {
+if (!result.success && SpellValidationError.is(result.error)) {
   const formatted = result.error.format();
   const profileErrors = errorsAt(formatted, 'profile', 'name');
   console.log(profileErrors);

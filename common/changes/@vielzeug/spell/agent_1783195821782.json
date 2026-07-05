@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(spell): propagate async validate() through map/set/record/tuple parseAsync(), fix InstanceOfSchema.equals()/toDescriptor(), preserve state in ObjectSchema.merge(), correct misleading internal error messages, fix ValidationError->SpellValidationError doc drift",
+      "packageName": "@vielzeug/spell",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/spell"
+}

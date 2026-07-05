@@ -336,6 +336,20 @@ describe('ObjectSchema.merge()', () => {
 
     expect(merged.safeParse({ extra: true, x: 'hi', y: 1 }).success).toBe(false);
   });
+
+  it('merge() preserves refinements from the receiver', () => {
+    const a = s.object({ x: s.string() }).validate((d) => d.x !== 'admin' || 'Reserved name');
+    const b = s.object({ y: s.number() });
+
+    expect(() => a.merge(b).parse({ x: 'admin', y: 1 })).toThrow('Reserved name');
+  });
+
+  it('merge() preserves default() and catch() from the receiver', () => {
+    const a = s.object({ x: s.string() }).catch({ x: 'fallback' });
+    const b = s.object({ y: s.number() });
+
+    expect(a.merge(b).parse('not-an-object' as any)).toEqual({ x: 'fallback' });
+  });
 });
 
 describe('ObjectSchema.strict() after relaxed()', () => {

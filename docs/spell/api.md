@@ -16,7 +16,7 @@ description: Complete API reference for spell schema builders, helpers, validato
 | `descriptorToJsonSchema()`                          | Convert a `SchemaDescriptor` to JSON Schema                                   | Sync setup          | Uses `toDescriptor()` output, not custom transforms.                |
 | `schemaToJsonSchema()`                              | Convert a `Schema` instance directly to JSON Schema                           | Sync setup          | Calls `toDescriptor()` internally; same limitations apply.          |
 | `setMessages()` / `setLogger()` / `resetMessages()` | Override validation messages and warning logger                               | Sync setup          | `setMessages()` replaces the active message set each call.          |
-| `ValidationError`                                   | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
+| `SpellValidationError`                                   | Inspect validation failures                                                   | Sync/async failures | `format()` returns nested objects, `flatten()` returns path arrays. |
 | `prependIssuePath()`                                | Prefix a path segment to an array of issues                                   | Sync                | Use inside custom parsers that delegate to inner schemas.           |
 
 ## Package Entry Point
@@ -31,7 +31,7 @@ Use this table to scan every runtime export.
 
 | Category                  | Exports                                                                                                                                                                                                                                                                                                                          |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Classes                   | `Schema`, `PipeSchema`, `ValidationError`                                                                                                                                                                                                                                                                                        |
+| Classes                   | `Schema`, `PipeSchema`, `SpellError`, `SpellValidationError`                                                                                                                                                                                                                                                                                        |
 | Message and error helpers | `ErrorCode`, `errorsAt`, `fail`, `prependIssuePath`, `setMessages`, `setLogger`, `resetMessages`                                                                                                                                                                                                                                 |
 | Descriptor helpers        | `descriptorToJsonSchema`, `schemaToJsonSchema`                                                                                                                                                                                                                                                                                   |
 | Pure validators           | `hasMaxLength`, `hasMinLength`, `isArray`, `isBoolean`, `isDate`, `isInteger`, `isMultipleOf`, `isNegative`, `isNonNegative`, `isNullOrUndefined`, `isNumber`, `isPositive`, `isString`, `isInRange`                                                                                                                             |
@@ -350,7 +350,7 @@ ProductKey.parse('price'); // 'price'
 
 ### `ObjectSchema.defaults()`
 
-Returns a fully default-filled object by parsing `{}` against the schema. Every required field must have a `.default()` value set; fields without defaults cause a `ValidationError` to be thrown.
+Returns a fully default-filled object by parsing `{}` against the schema. Every required field must have a `.default()` value set; fields without defaults cause a `SpellValidationError` to be thrown.
 
 ```ts
 defaults(): InferObject<T>
@@ -663,7 +663,7 @@ const nested = prependIssuePath(fail('custom', 'Missing field'), 'profile');
 
 ### `errorsAt()`
 
-Use `errorsAt()` to read nested messages from `ValidationError.format()` output.
+Use `errorsAt()` to read nested messages from `SpellValidationError.format()` output.
 
 ```ts
 errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[]
@@ -674,12 +674,12 @@ errorsAt(formatted: FormattedErrors, ...path: (string | number)[]): string[]
 Use it when UI code works with the nested `format()` result instead of flat arrays.
 
 ```ts
-import { ValidationError, errorsAt, s } from '@vielzeug/spell';
+import { SpellValidationError, errorsAt, s } from '@vielzeug/spell';
 
 const Schema = s.object({ profile: s.object({ name: s.string().min(2) }) });
 const result = Schema.safeParse({ profile: { name: '' } });
 
-if (!result.success && ValidationError.is(result.error)) {
+if (!result.success && SpellValidationError.is(result.error)) {
   console.log(errorsAt(result.error.format(), 'profile', 'name'));
 }
 ```
@@ -788,21 +788,36 @@ Use these exported types when Spell drives your public TypeScript API.
 | `Messages`                                                     | Full locale message catalog shape.                                                    |
 | `DeepPartial<Messages>`                                        | Deep-optional version of `Messages`; accepted by `setMessages()`.                     |
 | `Logger`                                                       | Warning logger signature used by `setLogger()`: `(msg: string) => void`.              |
-| `FormattedErrors`                                              | Nested error object returned by `ValidationError.format()`.                           |
+| `FormattedErrors`                                              | Nested error object returned by `SpellValidationError.format()`.                           |
 | `FlatError`                                                    | `{ path, messages }` entry returned by `flatten()`.                                   |
 | `FlatErrorFirst`                                               | `{ path, message }` entry returned by `flattenFirst()`.                               |
 
 ## Errors
 
-### `ValidationError`
+### `SpellError`
 
-Use `ValidationError` to inspect failures from throwing and safe parsing APIs.
+Base class for every error spell throws. Use `SpellError.is()` to catch anything spell-originated regardless of subtype.
 
 ```ts
-class ValidationError extends Error {
+class SpellError extends Error {
+  constructor(message: string, opts?: ErrorOptions);
+  static is(err: unknown): err is SpellError;
+}
+```
+
+`SpellValidationError` is currently the only subtype, but catching `SpellError` future-proofs error-handling code against new subtypes.
+
+---
+
+### `SpellValidationError`
+
+Use `SpellValidationError` to inspect failures from throwing and safe parsing APIs.
+
+```ts
+class SpellValidationError extends SpellError {
   readonly issues: Issue[];
   constructor(issues: Issue[], cause?: unknown);
-  static is(value: unknown): value is ValidationError;
+  static is(value: unknown): value is SpellValidationError;
   bestMatch(): Issue[] | null;
   flatten(): { fieldErrors: FlatError[]; formErrors: string[] };
   flattenFirst(): { fieldErrors: FlatErrorFirst[]; formErrors: string[] };
@@ -815,19 +830,19 @@ class ValidationError extends Error {
 Use the instance helpers to shape errors for logs, forms, or API responses.
 
 ```ts
-import { ValidationError, s } from '@vielzeug/spell';
+import { SpellValidationError, s } from '@vielzeug/spell';
 
 const Payload = s.object({ email: s.string().email() });
 const result = Payload.safeParse({ email: 'invalid' });
 
-if (!result.success && ValidationError.is(result.error)) {
+if (!result.success && SpellValidationError.is(result.error)) {
   console.log(result.error.flatten());
 }
 ```
 
 `format()` guards unsafe path keys when building nested objects. You can safely hand its result to UI code without letting hostile keys write through the prototype chain. Path segments named `'_errors'` are automatically remapped to `'_errors_'` to avoid colliding with the reserved `_errors` field in each `FormattedErrors` node. Use `errorsAt()` with the same path to retrieve messages consistently.
 
-> **Note:** `ValidationError.message` (the human-readable error string) may contain constraint parameter values such as string suffixes, pattern prefixes, or min/max bounds when those appear in your validation messages. For structured access to individual issue details, use `.issues` or the flattening helpers instead of serializing `.message` directly into API responses or logs.
+> **Note:** `SpellValidationError.message` (the human-readable error string) may contain constraint parameter values such as string suffixes, pattern prefixes, or min/max bounds when those appear in your validation messages. For structured access to individual issue details, use `.issues` or the flattening helpers instead of serializing `.message` directly into API responses or logs.
 
 ---
 

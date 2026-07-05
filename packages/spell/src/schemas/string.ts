@@ -171,6 +171,13 @@ export class StringSchema<Input = string> extends Schema<string, Input> {
    * `lastIndex`-based bugs. However, caller-supplied patterns with catastrophic backtracking
    * (e.g. `/(a+)+$/`) are a ReDoS risk when validating untrusted input in server-side contexts.
    * Prefer well-tested, bounded patterns for user-facing validation.
+   *
+   * **`.equals()` note:** `.equals()` only compares descriptor-level annotations, never runtime
+   * validator behavior. Chaining more than one `.regex()` collapses the descriptor `pattern` to
+   * `null` (ambiguous), so two schemas with *different* pairs of regexes can compare equal even
+   * though they accept different strings. This mirrors `.equals()`'s general limitation of
+   * ignoring custom `.validate()`/`.refine()` logic — avoid relying on `.equals()` for schemas
+   * with more than one `.regex()` constraint.
    */
   regex(pattern: RegExp, message: MessageFn<{ value: string }> = (ctx) => _messages().string.regex(ctx)): this {
     const safePattern = new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, ''));

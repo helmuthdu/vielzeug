@@ -41,6 +41,10 @@ export type Messages = {
     expected: (ctx: { expected: unknown }) => string;
   };
   map: {
+    max: (ctx: { max: number; value: Map<unknown, unknown> }) => string;
+    min: (ctx: { min: number; value: Map<unknown, unknown> }) => string;
+    nonEmpty: () => string;
+    size: (ctx: { exact: number; value: Map<unknown, unknown> }) => string;
     type: () => string;
   };
   never: {
@@ -160,6 +164,10 @@ const _builtinMessages: Messages = {
     expected: ({ expected }) => `Expected ${JSON.stringify(expected)}`,
   },
   map: {
+    max: ({ max }) => `Must contain at most ${max} entries`,
+    min: ({ min }) => `Must contain at least ${min} entries`,
+    nonEmpty: () => 'Cannot be empty',
+    size: ({ exact }) => `Must contain exactly ${exact} entries`,
     type: () => 'Expected map',
   },
   never: {

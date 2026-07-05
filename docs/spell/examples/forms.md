@@ -14,7 +14,7 @@ Form submissions often arrive as strings, optional fields, and checkboxes. You n
 Use coercion, wrappers, and formatted errors to normalize the form payload in one step.
 
 ```ts
-import { ValidationError, s } from '@vielzeug/spell';
+import { SpellValidationError, s } from '@vielzeug/spell';
 
 const SignupForm = s.object({
   age: s.coerce.number().int().min(18),
@@ -32,7 +32,7 @@ const result = SignupForm.safeParse({
 
 if (result.success) {
   console.log(result.data.referralCode);
-} else if (ValidationError.is(result.error)) {
+} else if (SpellValidationError.is(result.error)) {
   console.log(result.error.format());
 }
 ```

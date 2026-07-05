@@ -46,4 +46,24 @@ describe('record parseAsync — optional / catch', () => {
         .parseAsync('bad' as any),
     ).toEqual({});
   });
+
+  it('parseAsync() runs async validate() on the value schema (does not silently skip)', async () => {
+    const asyncPositive = s.number().validate(async (n) => n > 0 || 'must be positive');
+    const schema = s.record(s.string(), asyncPositive);
+
+    await expect(schema.safeParseAsync({ a: 1 })).resolves.toMatchObject({ success: true });
+    await expect(schema.safeParseAsync({ a: -1 })).resolves.toMatchObject({ success: false });
+  });
+
+  it('parseAsync() still guards __proto__-style keys', async () => {
+    const schema = s.record(s.string(), s.number());
+    const result = await schema.safeParseAsync(JSON.parse('{"__proto__": 1, "safe": 2}'));
+
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.data).toEqual({ safe: 2 });
+      expect(Object.getPrototypeOf(result.data)).toBe(Object.prototype);
+    }
+  });
 });
