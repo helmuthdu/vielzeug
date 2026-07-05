@@ -227,10 +227,10 @@ export function createWard<TAction extends string = string, TData = unknown>(
   // Conflict detection (lazy, cached)
   // -------------------------------------------------------------------------
 
-  let conflictsCache: WardConflict<TAction, TData>[] | undefined;
+  let conflictsCache: readonly WardConflict<TAction, TData>[] | undefined;
 
-  function detectConflicts(): WardConflict<TAction, TData>[] {
-    return (conflictsCache ??= computeConflicts(entries, maxConflicts));
+  function detectConflicts(): readonly WardConflict<TAction, TData>[] {
+    return (conflictsCache ??= Object.freeze(computeConflicts(entries, maxConflicts)));
   }
 
   if (options.strict || options.onConflict) {

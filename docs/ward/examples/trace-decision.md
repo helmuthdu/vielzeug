@@ -40,20 +40,23 @@ console.log('Decision:', decision.allowed ? 'allow' : `deny (${decision.reason})
 Example output:
 
 ```
-[      ] effect=allow role=* priority=0 score=0
-[      ] effect=allow role=editor priority=0 score=1
-[WINNER] effect=deny  role=blocked priority=5 score=1
+[      ] effect=allow role=* priority=0 score=4
+[      ] effect=allow role=editor priority=0 score=5
+[WINNER] effect=deny  role=blocked priority=5 score=5
 Decision: deny (explicit-deny)
 ```
 
+`blocked` wins here on `priority` alone (5 beats 0) — its score just happens to tie with `editor`'s. Priority is always checked before specificity.
+
 ### Candidate fields explained
 
-| Field      | Type       | Description                                                                                                                                                                                                              |
-| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `rule`     | `WardRule` | The compiled rule that matched. Frozen — mutations throw.                                                                                                                                                                |
-| `priority` | `number`   | The rule's `priority` value (default `0`).                                                                                                                                                                               |
-| `score`    | `number`   | Specificity score across role + resource + action (`exact=1`, `ns:*=0.5`, `*=0`). Higher is more specific. Deny rules gain an internal tiebreak advantage but it is not exposed here — use `rule.effect` to distinguish. |
-| `won`      | `boolean`  | `true` for exactly one candidate — the winner.                                                                                                                                                                           |
+| Field      | Type       | Description                                                                                                             |
+| ---------- | ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `index`    | `number`   | The rule's original index in the array passed to `createWard`.                                                          |
+| `rule`     | `WardRule` | The compiled rule that matched. Frozen — mutations throw.                                                                |
+| `priority` | `number`   | The rule's `priority` value (default `0`).                                                                              |
+| `score`    | `number`   | Specificity score (0–5): `roleScore(0\|1) + resourceScore(0\|1\|2) + actionScore(0\|1\|2)`. Higher is more specific.     |
+| `won`      | `boolean`  | `true` for exactly one candidate — the winner.                                                                          |
 
 ### Trace with `BoundWard`
 
@@ -67,18 +70,18 @@ const { decision, candidates } = bound.trace('posts', 'read');
 
 ### Audit safety
 
-`trace()` fires the logger with the same payload as `explain()`. Switching from `explain` to `trace` for richer diagnostics does not silently suppress audit records.
+Unlike `explain()`, `trace()` does **not** fire the logger — it is a side-channel-free inspection tool for debugging, not for auditing. If you need both the audit trail and the full candidate list, call `explain()` for the log and `trace()` for the diagnostics:
 
 ```ts
 const ward = createWard(rules, {
   logger: (ctx) => {
-    // ctx is the same shape whether you call explain() or trace()
-    console.log(ctx.decision, ctx.principal?.id, ctx.resource, ctx.action);
+    const outcome = ctx.allowed ? 'allow' : ctx.reason;
+    console.log(outcome, ctx.principal?.id, ctx.resource, ctx.action);
   },
 });
 
 ward.explain(principal, 'posts', 'read'); // logs once
-ward.trace(principal, 'posts', 'read'); // also logs once
+ward.trace(principal, 'posts', 'read'); // never logs
 ```
 
 ### Pitfalls

@@ -1,4 +1,4 @@
-export const fluentBuilderExample = {
+export const ruleFactoriesExample = {
   code: `import { allow, createWard, deny, predicate } from '@vielzeug/ward'
 
 // Rule factories with ownership predicate

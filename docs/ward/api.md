@@ -52,7 +52,7 @@ description: Complete API reference for @vielzeug/ward.
 | `resource` | `string`                      | <ore-icon name="check" size="16"></ore-icon> | Resource identifier. Use `WILDCARD` to match any resource.                                                                                                                                                  |
 | `action`   | `string`                      | <ore-icon name="check" size="16"></ore-icon> | Action identifier. Use `WILDCARD` to match any action.                                                                                                                                                      |
 | `effect`   | `'allow' \| 'deny'`           | <ore-icon name="check" size="16"></ore-icon> | Whether the rule grants or denies access.                                                                                                                                                                   |
-| `priority` | `number`                      | —                                          | Higher value wins. Optional in `WardRuleInput` (defaults to `0`); always a `number` on `WardRule`. Must be a finite number.                                                                                 |
+| `priority` | `number`                      | —                                          | Higher value wins. Optional when authoring a rule (defaults to `0`); always present on rules returned from decisions/trace/conflicts. Must be a finite number.                                              |
 | `when`     | `WardPredicate<TData>`        | —                                          | Runtime predicate evaluated only for authenticated principals.                                                                                                                                              |
 
 ### Multi-Role Rules
@@ -83,7 +83,7 @@ For specificity scoring, a multi-role rule is treated as specific (score 1) unle
 
 ```ts
 createWard<TAction extends string = string, TData = unknown>(
-  rules?: readonly WardRuleInput<TAction, TData>[],
+  rules?: readonly WardRule<TAction, TData>[],
   options?: WardOptions<TAction, TData>,
 ): Ward<TAction, TData>
 ```
@@ -94,7 +94,7 @@ Creates an immutable ward instance with the given rules. All rules are compiled 
 
 | Option         | Type                                   | Default     | Description                                                                                                              |
 | -------------- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `logger`       | `(context: WardLoggerContext) => void` | `undefined` | Called after every decision method (`can`, `checkAll`, `trace`, etc.). Not called by `allowedActions` or `rulesInScope`. |
+| `logger`       | `(context: WardLoggerContext) => void` | `undefined` | Called after every decision method (`explain`, `checkAll`, `trace`). Not called by `allowedActions` or `rulesInScope`. |
 | `onConflict`   | `(conflict: WardConflict) => void`     | `undefined` | Called synchronously for each conflict detected at creation time.                                                        |
 | `strict`       | `boolean`                              | `false`     | Throws immediately if any rule conflicts are detected.                                                                   |
 | `maxConflicts` | `number`                               | `Infinity`  | Caps the number of conflicts returned by `detectConflicts()`. Set to `0` to disable conflict detection entirely.         |
@@ -120,61 +120,6 @@ const ward = createWard<'read' | 'update', { authorId: string }>([
 ```
 
 ## Ward Methods
-
-### `can()`
-
-```ts
-ward.can(principal: Principal, resource: string, action: TAction, data?: TData): boolean
-```
-
-Returns `true` if the principal is allowed to perform `action` on `resource`.
-
-**Returns:** `boolean`
-
-**Example:**
-
-```ts
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read');
-ward.can(null, 'posts', 'read'); // anonymous check
-```
-
----
-
-### `canAll()`
-
-```ts
-ward.canAll(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean
-```
-
-Returns `true` only if every action in `actions` is allowed. Returns `true` for an empty array without validating the principal.
-
-**Returns:** `boolean`
-
-**Example:**
-
-```ts
-ward.canAll({ id: 'u1', roles: ['editor'] }, 'posts', ['read', 'update'], { authorId: 'u1' });
-```
-
----
-
-### `canAny()`
-
-```ts
-ward.canAny(principal: Principal, resource: string, actions: readonly TAction[], data?: TData): boolean
-```
-
-Returns `true` if at least one action in `actions` is allowed. Returns `false` for an empty array without validating the principal.
-
-**Returns:** `boolean`
-
-**Example:**
-
-```ts
-ward.canAny({ id: 'u1', roles: ['editor'] }, 'posts', ['update', 'delete'], { authorId: 'u1' });
-```
-
----
 
 ### `checkAll()`
 
@@ -301,12 +246,12 @@ ward.rulesInScope(
   principal: Principal,
   resource: string,
   data?: TData,
-): WardRule<TAction, TData>[]
+): ReadonlyArray<Readonly<WardRule<TAction, TData>>>
 ```
 
 Returns all rules matching the principal/resource combination regardless of action. When `data` is provided, predicate rules are also evaluated and excluded if they do not match. Without `data`, predicate-gated rules appear unfiltered. Does not invoke the logger.
 
-**Returns:** `WardRule<TAction, TData>[]`
+**Returns:** `ReadonlyArray<Readonly<WardRule<TAction, TData>>>`
 
 **Example:**
 
@@ -323,14 +268,14 @@ const narrowed = ward.rulesInScope({ id: 'u1', roles: ['editor'] }, 'posts', { a
 ward.detectConflicts(): WardConflict<TAction, TData>[]
 ```
 
-Returns all rule conflicts in the policy. Lazily computed and cached after the first call. O(n²) in the number of rules.
+Returns all rule conflicts in the policy. Lazily computed and cached — every call after the first returns the same array reference. O(n²) in the number of rules.
 
-Two conflict kinds:
+Two conflict kinds, narrowable by `kind`:
 
-- **`'duplicate'`** — two predicate-free rules share the same (role set, resource, action). The second can never fire.
-- **`'shadowed'`** — a higher-ranked predicate-free rule covers the narrower rule's patterns entirely. The narrower rule can never win.
+- **`'duplicate'`** — two predicate-free rules share the same (role set, resource, action). Fields: `ruleA`/`indexA` (first-declared, wins) and `ruleB`/`indexB` (unreachable).
+- **`'shadowed'`** — a higher-ranked predicate-free rule covers the narrower rule's patterns entirely. Fields: `shadowingRule`/`shadowingIndex` (always wins) and `shadowedRule`/`shadowedIndex` (can never win).
 
-Rules with a `when` predicate are excluded from both checks.
+Rules with a `when` predicate are excluded from both checks — their applicability can only be determined at runtime.
 
 **Returns:** `WardConflict<TAction, TData>[]`
 
@@ -339,8 +284,12 @@ Rules with a `when` predicate are excluded from both checks.
 ```ts
 const conflicts = ward.detectConflicts();
 
-conflicts.forEach(({ kind, ruleIndex, shadowedByIndex }) => {
-  console.warn(`Rule[${ruleIndex}] is ${kind} by Rule[${shadowedByIndex}]`);
+conflicts.forEach((c) => {
+  if (c.kind === 'duplicate') {
+    console.warn(`Rule[${c.indexB}] is an unreachable duplicate of Rule[${c.indexA}]`);
+  } else {
+    console.warn(`Rule[${c.shadowedIndex}] is shadowed by Rule[${c.shadowingIndex}]`);
+  }
 });
 ```
 
@@ -360,22 +309,22 @@ Creates a principal-bound view of the ward. The principal — including nested `
 
 | Method           | Signature                                      | Description                    |
 | ---------------- | ---------------------------------------------- | ------------------------------ |
-| `can`            | `(resource, action, data?) => boolean`         | Single action check            |
-| `canAll`         | `(resource, actions, data?) => boolean`        | All-actions check              |
-| `canAny`         | `(resource, actions, data?) => boolean`        | Any-action check               |
 | `checkAll`       | `(checks) => WardDecisionResult[]`             | Batch decisions                |
 | `allowedActions` | `(resource, knownActions, data?) => TAction[]` | Action enumeration (no logger) |
 | `explain`        | `(resource, action, data?) => WardDecision`    | Full decision with reason      |
-| `rulesInScope`   | `(resource, data?) => WardRule[]`              | Rule introspection (no logger) |
-| `trace`          | `(resource, action, data?) => WardTrace`       | Decision trace (fires logger)  |
+| `rulesInScope`   | `(resource, data?) => ReadonlyArray<Readonly<WardRule>>` | Rule introspection (no logger) |
+| `trace`          | `(resource, action, data?) => WardTrace`       | Decision trace (does not fire the logger) |
 
 **Example:**
 
 ```ts
 const bound = ward.forUser({ id: 'u1', roles: ['editor'] });
 
-bound.can('posts', 'read');
-bound.canAll('posts', ['read', 'update'], { authorId: 'u1' });
+bound.explain('posts', 'read').allowed;
+bound.checkAll([
+  { resource: 'posts', action: 'read' },
+  { resource: 'posts', action: 'update', data: { authorId: 'u1' } },
+]);
 bound.allowedActions('posts', ['read', 'update', 'delete']);
 bound.allowedActions('posts', ['read', 'update', 'delete'], { authorId: 'u1' });
 bound.explain('posts', 'delete');
@@ -385,87 +334,99 @@ bound.rulesInScope('posts');
 
 ## Helper Functions
 
-### `owns()`
+### `allow()` / `deny()`
+
+```ts
+allow<TAction extends string = string, TData = unknown>(
+  role: string | readonly string[],
+  resource: string | typeof WILDCARD,
+  actions: readonly (TAction | typeof WILDCARD)[],
+  options?: { priority?: number; when?: WardPredicate<TData> },
+): WardRule<TAction, TData>[]
+
+deny<TAction extends string = string, TData = unknown>(
+  role: string | readonly string[],
+  resource: string | typeof WILDCARD,
+  actions: readonly (TAction | typeof WILDCARD)[],
+  options?: { priority?: number; when?: WardPredicate<TData> },
+): WardRule<TAction, TData>[]
+```
+
+Ergonomic rule factories — one `WardRule` per action, with `effect` fixed to `'allow'` or `'deny'`. Spread the result into the array passed to `createWard`.
+
+**Returns:** `WardRule<TAction, TData>[]`
+
+**Example:**
+
+```ts
+import { WILDCARD, allow, createWard, deny, owns } from '@vielzeug/ward';
+
+const ward = createWard<'read' | 'update', { authorId: string }>([
+  ...allow(['viewer', 'editor'], 'posts', ['read']),
+  ...allow('editor', 'posts', ['update'], { when: owns('authorId'), priority: 5 }),
+  ...deny('blocked', WILDCARD, [WILDCARD], { priority: 100 }),
+]);
+```
+
+---
+
+### `ruleFor()`
+
+```ts
+ruleFor<TAction extends string = string, TData = unknown>(
+  effect: 'allow' | 'deny',
+  role: string | readonly string[],
+  resource: string | typeof WILDCARD,
+  actions: readonly (TAction | typeof WILDCARD)[],
+  options?: { priority?: number; when?: WardPredicate<TData> },
+): WardRule<TAction, TData>[]
+```
+
+Low-level rule factory with `effect` as the first argument. `allow()` and `deny()` are thin wrappers over `ruleFor()` — prefer them for readability; use `ruleFor()` when the effect is only known dynamically.
+
+**Returns:** `WardRule<TAction, TData>[]`
+
+**Example:**
+
+```ts
+import { ruleFor } from '@vielzeug/ward';
+
+ruleFor('allow', 'viewer', 'posts', ['read', 'update']);
+ruleFor('deny', ['blocked', 'suspended'], WILDCARD, [WILDCARD], { priority: 100 });
+```
+
+---
+
+### `owns()` / `predicate`
 
 ```ts
 owns<TData = unknown>(attributeKey: keyof TData & string): WardPredicate<TData>
+
+const predicate: {
+  and<TData = unknown>(...preds: WardPredicate<TData>[]): WardPredicate<TData>;
+  not<TData = unknown>(pred: WardPredicate<TData>): WardPredicate<TData>;
+  or<TData = unknown>(...preds: WardPredicate<TData>[]): WardPredicate<TData>;
+  owns<TData = unknown>(attributeKey: keyof TData & string): WardPredicate<TData>;
+};
 ```
 
-Returns a predicate that allows the action when `principal.id === data[attributeKey]`. Returns `false` when `data` is absent, not an object, or the attribute value does not match.
+`owns()` returns a predicate that allows the action when `principal.id === data[attributeKey]`. Returns `false` when `data` is absent, not an object, or the attribute is not an own property (guards against prototype-inherited values). `predicate.owns` is the same function, grouped under the `predicate` namespace alongside the combinators:
+
+- `predicate.and(...preds)` — all predicates must return `true`. Zero arguments → `true` (vacuously).
+- `predicate.or(...preds)` — at least one predicate must return `true`. Zero arguments → `false`.
+- `predicate.not(pred)` — inverts a predicate.
 
 ::: warning ANONYMOUS
-`owns()` must only be used with rules that require authentication (non-`ANONYMOUS` role). Predicates are skipped for unauthenticated requests — pairing `owns` with `ANONYMOUS` produces a rule that can never match.
+`owns()` (and any `when` predicate) must only be used with rules that require authentication (non-`ANONYMOUS` role). Predicates are skipped for unauthenticated requests — pairing `owns` with `ANONYMOUS` produces a rule that can never match.
 :::
 
 **Example:**
 
 ```ts
-import { owns, rule } from '@vielzeug/ward';
+import { allow, predicate } from '@vielzeug/ward';
 
-rule<'update', { authorId: string }>().allow('editor').on('posts:*').to('update').when(owns('authorId')).build();
-```
-
----
-
-### `rule()`
-
-```ts
-rule<TAction extends string = string, TData = unknown>(): {
-  allow(role: string | readonly string[]): RoleStep<TAction, TData>;
-  deny(role: string | readonly string[]): RoleStep<TAction, TData>;
-}
-```
-
-Fluent rule builder. Chain: `.allow()` / `.deny()` → `.on(resource)` → `.to(...actions)` → optionally `.priority(n)` and/or `.when(predicate)` → `.build()`. `.to()` accepts multiple actions and produces one `WardRuleInput` per action. `.priority(n)` is chainable before or after `.when()`.
-
-**Returns:** `WardRuleInput<TAction, TData>[]` from `.build()`
-
-**Example:**
-
-```ts
-import { WILDCARD, createWard, owns, rule } from '@vielzeug/ward';
-
-const ward = createWard<'read' | 'update', { authorId: string }>([
-  ...rule<'read' | 'update', { authorId: string }>().allow('viewer').on('posts').to('read').build(),
-  ...rule<'read' | 'update', { authorId: string }>()
-    .allow('editor')
-    .on('posts')
-    .to('read', 'update')
-    .when(owns('authorId'))
-    .priority(5)
-    .build(),
-  ...rule().deny('blocked').on('posts').to(WILDCARD).priority(100).build(),
-]);
-```
-
----
-
-### `defineRules()`
-
-```ts
-defineRules<TAction extends string = string, TData = unknown>(
-  rules: readonly WardRuleInput<TAction, TData>[],
-): readonly WardRuleInput<TAction, TData>[]
-```
-
-Type-safe rule slice factory for policy composition. Returns the input array unchanged; the value is purely in generic type inference.
-
-**Returns:** `readonly WardRuleInput<TAction, TData>[]`
-
-**Example:**
-
-```ts
-import { defineRules, rule, owns } from '@vielzeug/ward';
-
-type PostAction = 'read' | 'update' | 'delete';
-type Post = { authorId: string };
-
-export const postsRules = defineRules<PostAction, Post>([
-  ...rule<PostAction, Post>().allow(['viewer', 'editor']).on('posts:*').to('read').build(),
-  ...rule<PostAction, Post>().allow('editor').on('posts:*').to('update').when(owns('authorId')).build(),
-]);
-
-const ward = createWard([...postsRules, ...commentsRules]);
+allow('editor', 'posts:*', ['update'], { when: predicate.owns('authorId') });
+allow('user', 'posts:*', ['read'], { when: predicate.and(predicate.owns('authorId'), isBusinessHours) });
 ```
 
 ---
@@ -586,92 +547,6 @@ if (!result.granted) {
 }
 ```
 
----
-
-#### `createExpressGuard()`
-
-```ts
-createExpressGuard<TAction, TData, TReq>(
-  ward: Ward<TAction, TData>,
-  extractPrincipal: (req: TReq) => Principal | Promise<Principal>,
-  resource: string,
-  action: TAction,
-  options?: ExpressGuardOptions,
-): ExpressMiddleware
-```
-
-Creates an Express-style `(req, res, next)` middleware. Calls `next()` when access is granted. Returns `403` with `{ reason }` when denied, unless `options.onDenied` is provided.
-
-**`ExpressGuardOptions`:**
-
-| Option     | Type                                                | Description                                                                |
-| ---------- | --------------------------------------------------- | -------------------------------------------------------------------------- |
-| `data`     | `TData`                                             | Static data payload forwarded to `when` predicates.                        |
-| `onDenied` | `(req, res, next, result) => void \| Promise<void>` | Custom denial handler. When provided, the default 403 response is skipped. |
-
-**Example:**
-
-```ts
-import express from 'express';
-import { createWard, createExpressGuard } from '@vielzeug/ward';
-
-const ward = createWard([{ role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' }]);
-
-const requireEdit = createExpressGuard(ward, (req) => req.user ?? null, 'posts:*', 'update');
-
-// With static data forwarded to when predicates.
-// Note: options.data is a static value set at guard-creation time, not per-request.
-// For per-request data (e.g. req.params.id), resolve it inside the extractor or
-// create the guard inside the route handler:
-app.put('/posts/:id', async (req, res, next) => {
-  const guard = createExpressGuard(ward, () => req.user ?? null, `posts:${req.params.id}`, 'update');
-  return guard(req, res, next);
-});
-
-app.put('/posts/:id', requireEdit, handler);
-```
-
----
-
-#### `createHonoGuard()`
-
-```ts
-createHonoGuard<TAction, TData>(
-  ward: Ward<TAction, TData>,
-  extractPrincipal: (c: HonoContext) => Principal | Promise<Principal>,
-  resource: string,
-  action: TAction,
-  options?: HonoGuardOptions,
-): HonoMiddleware
-```
-
-Creates a Hono middleware. Returns `Response(403, { reason })` when denied. Errors thrown by `extractPrincipal` propagate to Hono's `app.onError` handler.
-
-**`HonoGuardOptions`:**
-
-| Option     | Type                                             | Description                                         |
-| ---------- | ------------------------------------------------ | --------------------------------------------------- |
-| `data`     | `TData`                                          | Static data payload forwarded to `when` predicates. |
-| `onDenied` | `(c, next, result) => Promise<Response \| void>` | Custom denial handler.                              |
-
-**Example:**
-
-```ts
-import { Hono } from 'hono';
-import { createWard, createHonoGuard } from '@vielzeug/ward';
-
-const ward = createWard([{ role: 'editor', resource: 'posts:*', action: 'update', effect: 'allow' }]);
-
-const requireEdit = createHonoGuard(ward, (c) => c.get('user') ?? null, 'posts:*', 'update');
-
-// With static data:
-const requireEditOwn = createHonoGuard(ward, (c) => c.get('user') ?? null, 'posts:*', 'update', {
-  data: { postId: c.req.param('id') },
-});
-
-app.put('/posts/:id', requireEdit, handler);
-```
-
 ## Types
 
 ### `UserPrincipal`
@@ -707,29 +582,22 @@ type RuleContext<TData = unknown> = {
 type WardPredicate<TData = unknown> = (ctx: RuleContext<TData>) => boolean;
 ```
 
-### `WardRuleInput` / `WardRule`
+### `WardRule`
 
-`WardRuleInput` is the shape accepted by `createWard` and the fluent `rule()` builder (`role` may be a string or array). `WardRule` is the normalized output shape: `role` is always `readonly string[]`, and `priority` is always a `number` (defaulted to `0` when not provided). Returned rules are **frozen** objects.
+The single rule shape — used both when authoring rules passed to `createWard` and when reading rules back from decisions, `trace()`, `rulesInScope()`, and `detectConflicts()`.
 
 ```ts
-type WardRuleInput<TAction extends string = string, TData = unknown> = {
+type WardRule<TAction extends string = string, TData = unknown> = {
   action: TAction | typeof WILDCARD;
   effect: 'allow' | 'deny';
-  priority?: number; // optional in input — defaults to 0
+  priority?: number; // defaults to 0
   resource: string | typeof WILDCARD;
   role: string | readonly string[];
   when?: WardPredicate<TData>;
 };
-
-type WardRule<TAction extends string = string, TData = unknown> = Readonly<{
-  action: TAction | typeof WILDCARD;
-  effect: 'allow' | 'deny';
-  priority: number; // always present — 0 when not authored
-  resource: string | typeof WILDCARD;
-  role: readonly string[];
-  when?: WardPredicate<TData>;
-}>;
 ```
+
+Internally, `createWard` normalizes each rule at compile time — `role` becomes a deduplicated `readonly string[]` and `priority` defaults to `0` — and freezes the result. Rules read back from `explain()`, `trace()`, `rulesInScope()`, or `detectConflicts()` are these normalized, frozen objects (`Readonly<WardRule<TAction, TData>>`); mutating them throws `TypeError`.
 
 ### `WardDecision`
 
@@ -769,25 +637,23 @@ type WardCheck<TAction extends string = string, TData = unknown> = {
 
 ### `WardLoggerContext`
 
-Discriminated union on `decision` — `rule` is only present when a rule matched:
+Structurally identical to `WardDecision` plus the request fields — narrow `rule` with the same `if (ctx.allowed)` pattern used for decisions:
 
 ```ts
-type WardLoggerContext<TAction extends string = string, TData = unknown> = {
+type WardLoggerContext<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
   action: TAction;
   data?: TData;
   principal: Principal;
   resource: string;
-} & (
-  | { decision: 'allow'; rule: WardRule<TAction, TData> }
-  | { decision: 'explicit-deny'; rule: WardRule<TAction, TData> }
-  | { decision: 'no-matching-rule' }
-);
+};
 ```
 
 ```ts
 logger: (ctx) => {
-  if (ctx.decision !== 'no-matching-rule') {
-    console.log(ctx.rule.role); // no ?. needed
+  if (ctx.allowed) {
+    console.log(ctx.rule.role); // no ?. needed — 'allowed: true' always carries a rule
+  } else if (ctx.reason === 'explicit-deny') {
+    console.log(ctx.rule.role); // 'explicit-deny' also carries a rule
   }
 },
 ```
@@ -805,24 +671,35 @@ type WardOptions<TAction extends string = string, TData = unknown> = {
 
 ### `ConflictKind` / `WardConflict`
 
+`WardConflict` is a discriminated union, narrowable by `kind`:
+
 ```ts
 type ConflictKind = 'duplicate' | 'shadowed';
 
-type WardConflict<TAction extends string = string, TData = unknown> = {
-  kind: ConflictKind;
-  rule: WardRule<TAction, TData>;
-  ruleIndex: number;
-  shadowedBy: WardRule<TAction, TData>;
-  shadowedByIndex: number;
-};
+type WardConflict<TAction extends string = string, TData = unknown> =
+  | {
+      kind: 'duplicate';
+      indexA: number; // first-declared rule (always wins)
+      indexB: number; // second-declared rule (unreachable)
+      ruleA: Readonly<WardRule<TAction, TData>>;
+      ruleB: Readonly<WardRule<TAction, TData>>;
+    }
+  | {
+      kind: 'shadowed';
+      shadowedIndex: number; // the rule that can never win
+      shadowedRule: Readonly<WardRule<TAction, TData>>;
+      shadowingIndex: number; // the rule that always wins instead
+      shadowingRule: Readonly<WardRule<TAction, TData>>;
+    };
 ```
 
 ### `WardTrace` / `WardTraceCandidate`
 
 ```ts
 type WardTraceCandidate<TAction extends string = string, TData = unknown> = {
+  index: number; // original index in the input array passed to createWard
   priority: number;
-  rule: WardRule<TAction, TData>;
+  rule: Readonly<WardRule<TAction, TData>>;
   score: number;
   won: boolean;
 };
@@ -840,57 +717,29 @@ import { debugWard } from '@vielzeug/ward/devtools';
 
 const permit = debugWard(rules);
 
-permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
+permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read');
 // [ward:decision] allow             (allow)   viewer  posts  read
 
-permit.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
+permit.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete');
 // [ward:decision] no-matching-rule            viewer  posts  delete
 ```
 
-Wraps `createWard()` with a `logger` pre-wired to `console.debug`. Returns the same `Ward` instance — all methods are identical to `createWard()`.
+Wraps `createWard()` with a `logger` pre-wired to `console.debug`. Returns the same `Ward` instance — all methods are identical to `createWard()`. Debug output fires on `explain()` and `checkAll()`; `trace()` never fires the logger (by design — see `trace()` above).
 
 Import from the dedicated sub-path so the `console.debug` reference is tree-shaken from production bundles when not imported.
 
-Accepts the same `options` as `createWard()` except `logger`, which is reserved for the debug output. All other options (`maxConflicts`, `onConflict`) pass through unchanged.
+Accepts the same `options` as `createWard()` except `logger`, which is reserved for the debug output. All other options (`maxConflicts`, `onConflict`, `strict`) pass through unchanged.
 
-### `WardDecisionAllowed` / `WardDecisionDenied` / `WardDecisionResult`
+### `WardDecisionResult`
 
 ```ts
-type WardDecisionAllowed<TAction, TData> = { allowed: true; rule: WardRule<TAction, TData> };
-
-type WardDecisionDenied<TAction, TData> =
-  | { allowed: false; reason: 'explicit-deny'; rule: WardRule<TAction, TData> }
-  | { allowed: false; reason: 'no-matching-rule' };
-
-type WardDecisionResult<TAction, TData> = WardDecision<TAction, TData> & {
+type WardDecisionResult<TAction extends string = string, TData = unknown> = WardDecision<TAction, TData> & {
   action: TAction;
   resource: string;
 };
 ```
 
-`WardDecisionAllowed` and `WardDecisionDenied` are named aliases for the two branches of `WardDecision` — use them to annotate variables that hold a pre-narrowed branch. `WardDecisionResult` is the return type of `checkAll()` — a `WardDecision` with the originating `resource` and `action` attached.
-
----
-
-### `RoleStep` / `ResourceStep` / `ActionStep` / `FinalStep`
-
-Intermediate types for the fluent `rule()` builder chain. Export these to annotate partially-constructed builder pipelines:
-
-```ts
-import type { ActionStep, FinalStep, ResourceStep, RoleStep } from '@vielzeug/ward';
-
-// Annotate a stored builder step
-const editorStep: RoleStep<'read' | 'update', { authorId: string }> = rule<
-  'read' | 'update',
-  { authorId: string }
->().allow('editor');
-
-const resourceStep: ResourceStep<'read' | 'update', { authorId: string }> = editorStep.on('posts');
-
-const actionStep: ActionStep<'read' | 'update', { authorId: string }> = resourceStep.to('update');
-
-const finalStep: FinalStep<'read' | 'update', { authorId: string }> = actionStep.when(owns('authorId'));
-```
+The return type of `checkAll()` — a `WardDecision` with the originating `resource` and `action` attached, so callers do not need to zip the result by index.
 
 ### `WardRequest`
 
@@ -898,7 +747,7 @@ const finalStep: FinalStep<'read' | 'update', { authorId: string }> = actionStep
 type WardRequest = Record<string, unknown>;
 ```
 
-Base constraint for the request object type used in `guardRequestWith` and `createExpressGuard`. Any object type satisfies this constraint.
+Base constraint for the request object type used in `guardRequestWith`. Any object type satisfies this constraint.
 
 ### `Ward` / `BoundWard`
 

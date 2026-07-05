@@ -29,9 +29,9 @@ export function usePostActions(user: { id: string; roles: string[] }) {
   return {
     // Returns the subset of KNOWN_ACTIONS the user is allowed to perform
     actions: bound.allowedActions('posts', KNOWN_ACTIONS),
-    canRead: bound.can('posts', 'read'),
-    canUpdate: bound.can('posts', 'update'),
-    canDelete: bound.can('posts', 'delete'),
+    canRead: bound.explain('posts', 'read').allowed,
+    canUpdate: bound.explain('posts', 'update').allowed,
+    canDelete: bound.explain('posts', 'delete').allowed,
     explainDelete: bound.explain('posts', 'delete'),
   };
 }

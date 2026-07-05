@@ -30,11 +30,11 @@ describe('post permissions', () => {
   });
 
   it('allows viewers to read posts', () => {
-    expect(ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read')).toBe(true);
+    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed).toBe(true);
   });
 
   it('denies viewers to delete posts', () => {
-    expect(ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete')).toBe(false);
+    expect(ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'delete').allowed).toBe(false);
   });
 });
 ```

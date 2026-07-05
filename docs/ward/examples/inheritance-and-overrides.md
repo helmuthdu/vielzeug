@@ -24,9 +24,9 @@ const ward = createWard([
 ]);
 
 // Result is deterministic regardless of role array ordering on the principal
-ward.can({ id: 'u1', roles: ['staff', 'suspended'] }, 'posts', 'read'); // false
-ward.can({ id: 'u1', roles: ['suspended', 'staff'] }, 'posts', 'read'); // false
-ward.can({ id: 'u2', roles: ['staff'] }, 'posts', 'read'); // true
+ward.explain({ id: 'u1', roles: ['staff', 'suspended'] }, 'posts', 'read').allowed; // false
+ward.explain({ id: 'u1', roles: ['suspended', 'staff'] }, 'posts', 'read').allowed; // false
+ward.explain({ id: 'u2', roles: ['staff'] }, 'posts', 'read').allowed; // true
 ```
 
 ### Pitfalls

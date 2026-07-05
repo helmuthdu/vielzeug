@@ -25,20 +25,20 @@ const ward = createWard<'read' | 'create' | 'update' | 'delete', { authorId: str
 ]);
 
 // Anonymous visitor can read
-ward.can(null, 'posts', 'read'); // true
+ward.explain(null, 'posts', 'read').allowed; // true
 
 // Editor can update their own post but not another's
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' }); // true
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' }); // false
+ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u1' }).allowed; // true
+ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'update', { authorId: 'u2' }).allowed; // false
 
 // Admin can delete, editor cannot
-ward.can({ id: 'u2', roles: ['admin'] }, 'posts', 'delete'); // true
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'delete'); // false
+ward.explain({ id: 'u2', roles: ['admin'] }, 'posts', 'delete').allowed; // true
+ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'delete').allowed; // false
 ```
 
 ### Pitfalls
 
-- Forgetting to pass `data` to `can()` when the rule has a `when` predicate causes the predicate to receive `data: undefined`. `owns()` returns `false` in that case, so the action is denied.
+- Forgetting to pass `data` to `explain()` when the rule has a `when` predicate causes the predicate to receive `data: undefined`. `owns()` returns `false` in that case, so the action is denied.
 - Role names are matched exactly. `'Editor'` does not match the rule with `role: 'editor'`.
 - If you add an admin allow rule for all resources with `WILDCARD`, place it at a higher `priority` than any specific deny rules if you want it to override them.
 

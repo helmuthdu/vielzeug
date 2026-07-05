@@ -142,8 +142,8 @@ export type Ward<TAction extends string = string, TData = unknown> = {
   allowedActions(principal: Principal, resource: string, knownActions: readonly TAction[], data?: TData): TAction[];
   /** Evaluates multiple checks and returns one `WardDecisionResult` per check. Invokes the logger for each. */
   checkAll(principal: Principal, checks: readonly WardCheck<TAction, TData>[]): WardDecisionResult<TAction, TData>[];
-  /** Returns all rule conflicts in the policy. Lazily computed and cached after first call. @complexity O(n²) */
-  detectConflicts(): WardConflict<TAction, TData>[];
+  /** Returns all rule conflicts in the policy. Lazily computed and cached (and frozen) after first call. @complexity O(n²) */
+  detectConflicts(): readonly WardConflict<TAction, TData>[];
   /** Returns the full `WardDecision` for the given principal, resource, and action. Invokes the logger. */
   explain(principal: Principal, resource: string, action: TAction, data?: TData): WardDecision<TAction, TData>;
   forUser(principal: UserPrincipal): BoundWard<TAction, TData>;

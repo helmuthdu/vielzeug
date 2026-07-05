@@ -24,8 +24,8 @@ const ward = createWard([
 ]);
 
 // Specific rule wins at equal priority
-ward.can({ id: 'u1', roles: ['editor'] }, 'posts', 'read'); // false
-ward.can({ id: 'u1', roles: ['editor'] }, 'comments', 'read'); // true
+ward.explain({ id: 'u1', roles: ['editor'] }, 'posts', 'read').allowed; // false
+ward.explain({ id: 'u1', roles: ['editor'] }, 'comments', 'read').allowed; // true
 ```
 
 ### Pitfalls

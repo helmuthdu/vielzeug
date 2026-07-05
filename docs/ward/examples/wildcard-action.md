@@ -21,9 +21,9 @@ const ward = createWard<'read' | 'update' | 'delete'>([
 ]);
 
 // All concrete checks pass for admin
-ward.can({ id: 'u1', roles: ['admin'] }, 'posts', 'read'); // true
-ward.can({ id: 'u1', roles: ['admin'] }, 'posts', 'delete'); // true
-ward.can({ id: 'u1', roles: ['admin'] }, 'posts', 'archive'); // true — any string action matches
+ward.explain({ id: 'u1', roles: ['admin'] }, 'posts', 'read').allowed; // true
+ward.explain({ id: 'u1', roles: ['admin'] }, 'posts', 'delete').allowed; // true
+ward.explain({ id: 'u1', roles: ['admin'] }, 'posts', 'archive').allowed; // true — any string action matches
 
 // Enumerate allowed actions against a known set
 ward.allowedActions({ id: 'u1', roles: ['admin'] }, 'posts', ['read', 'update', 'delete']); // ['read', 'update', 'delete']

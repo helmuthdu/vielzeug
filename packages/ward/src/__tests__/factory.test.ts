@@ -1170,6 +1170,19 @@ describe('ward: detectConflicts', () => {
     expect(permit.detectConflicts()).toBe(permit.detectConflicts());
   });
 
+  it('detectConflicts result is frozen — mutating it does not corrupt the cache', () => {
+    const permit = createWard([
+      { action: 'read', effect: 'allow', resource: 'posts', role: ['viewer'] },
+      { action: 'read', effect: 'deny', resource: 'posts', role: ['viewer'] },
+    ]);
+
+    const conflicts = permit.detectConflicts();
+
+    expect(Object.isFrozen(conflicts)).toBe(true);
+    expect(() => (conflicts as unknown as unknown[]).push({})).toThrow(TypeError);
+    expect(permit.detectConflicts()).toHaveLength(1);
+  });
+
   it('onConflict callback is invoked for each detected conflict', () => {
     const seen: string[] = [];
 

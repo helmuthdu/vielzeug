@@ -28,12 +28,16 @@ const ward = createWard([
 
 const conflicts = ward.detectConflicts();
 // [
-//   { kind: 'duplicate', ruleIndex: 1, shadowedByIndex: 0, rule: …, shadowedBy: … },
-//   { kind: 'shadowed',  ruleIndex: 3, shadowedByIndex: 2, rule: …, shadowedBy: … },
+//   { kind: 'duplicate', indexA: 0, indexB: 1, ruleA: …, ruleB: … },
+//   { kind: 'shadowed', shadowedIndex: 3, shadowedRule: …, shadowingIndex: 2, shadowingRule: … },
 // ]
 
-conflicts.forEach(({ kind, ruleIndex, shadowedByIndex }) => {
-  console.warn(`[ward] ${kind}: Rule[${ruleIndex}] unreachable (shadowed by Rule[${shadowedByIndex}])`);
+conflicts.forEach((c) => {
+  if (c.kind === 'duplicate') {
+    console.warn(`[ward] duplicate: Rule[${c.indexB}] unreachable (Rule[${c.indexA}] always wins)`);
+  } else {
+    console.warn(`[ward] shadowed: Rule[${c.shadowedIndex}] unreachable (shadowed by Rule[${c.shadowingIndex}])`);
+  }
 });
 ```
 
@@ -49,9 +53,10 @@ const ward = createWard(
   ],
   {
     // Called synchronously for each conflict at creation time:
-    onConflict: ({ kind, ruleIndex, shadowedByIndex }) => {
-      console.error(`Policy conflict: Rule[${ruleIndex}] ${kind} by Rule[${shadowedByIndex}]`);
-    },
+    onConflict: (c) =>
+      c.kind === 'duplicate'
+        ? console.error(`Policy conflict: Rule[${c.indexB}] duplicate of Rule[${c.indexA}]`)
+        : console.error(`Policy conflict: Rule[${c.shadowedIndex}] shadowed by Rule[${c.shadowingIndex}]`),
   },
 );
 ```

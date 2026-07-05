@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix(ward): correct pervasive docs API drift (can/canAll/canAny, rule()/defineRules, Express/Hono guards never existed) and freeze detectConflicts() cache against mutation",
+      "packageName": "@vielzeug/ward",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ward"
+}

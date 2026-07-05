@@ -23,10 +23,10 @@ const ward = createWard<'read' | 'update' | 'delete'>([
   { role: 'admin', resource: 'posts', action: 'delete', effect: 'allow' },
 ]);
 
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'update'); // false
-ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'update'); // true
-ward.can({ id: 'u3', roles: ['admin'] }, 'posts', 'delete'); // true
+ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed; // true
+ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'update').allowed; // false
+ward.explain({ id: 'u2', roles: ['editor'] }, 'posts', 'update').allowed; // true
+ward.explain({ id: 'u3', roles: ['admin'] }, 'posts', 'delete').allowed; // true
 ```
 
 #### With ANONYMOUS in a Multi-Role Array
@@ -38,9 +38,9 @@ import { ANONYMOUS, createWard } from '@vielzeug/ward';
 
 const ward = createWard([{ role: [ANONYMOUS, 'viewer'], resource: 'posts', action: 'read', effect: 'allow' }]);
 
-ward.can(null, 'posts', 'read'); // true — anonymous
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true
-ward.can({ id: 'u2', roles: ['editor'] }, 'posts', 'read'); // false — editor not listed
+ward.explain(null, 'posts', 'read').allowed; // true — anonymous
+ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed; // true
+ward.explain({ id: 'u2', roles: ['editor'] }, 'posts', 'read').allowed; // false — editor not listed
 ```
 
 #### With Priority and WILDCARD
@@ -55,8 +55,8 @@ const ward = createWard([
   { role: ['viewer', 'editor'], resource: 'posts', action: 'read', effect: 'allow', priority: 0 },
 ]);
 
-ward.can({ id: 'u1', roles: ['viewer'] }, 'posts', 'read'); // true — specific rule wins
-ward.can({ id: 'u2', roles: ['guest'] }, 'posts', 'read'); // false — wildcard deny applies
+ward.explain({ id: 'u1', roles: ['viewer'] }, 'posts', 'read').allowed; // true — specific rule wins
+ward.explain({ id: 'u2', roles: ['guest'] }, 'posts', 'read').allowed; // false — wildcard deny applies
 ```
 
 ### Pitfalls
