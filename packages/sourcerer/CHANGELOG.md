@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sourcerer
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.0.2
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Patches
+
+- fix(sourcerer): this-binding hazard breaks destructured methods, async filter/sort pipeline never ran on construction, immediate search()/patch() ignored a pending same-text debounce, LocalSource silently swallowed filterAsync/sortAsync errors
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

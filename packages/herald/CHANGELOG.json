@@ -2,6 +2,20 @@
   "name": "@vielzeug/herald",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/herald_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(herald): run every listener for an emission even without onError; fix __proto__ key hijacking snapshot()/allEmitted() results; dedupe safe-call helper; drop stray duplicate testing.test.ts and dead exports",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "5e17dfad127960c5057d88bc1ca280720c505665"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/herald_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

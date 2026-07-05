@@ -2,6 +2,20 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/ore_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(ore): fix XSS gaps in setAttr, matchMedia test env, dead code cleanup, test coverage, and docs accuracy",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "7d252dd4e5e37ed51365979f58602f4e8db7622f"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/ore_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

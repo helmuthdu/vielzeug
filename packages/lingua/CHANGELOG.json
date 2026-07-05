@@ -2,6 +2,20 @@
   "name": "@vielzeug/lingua",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/lingua_v1.1.0",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "fix(lingua): restore broken @vielzeug/lingua/validate subpath (vite entry-key/exports mismatch), throw LinguaNamespaceMissingError instead of a raw Error from loadNamespace(), wire up the documented ./format subpath, drop dead ssr.ts/testing.ts entries, dedupe has() logic, add exports smoke check",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "f9ff38505c5eac14b3176f083d67aa1da2d65adc"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/lingua_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

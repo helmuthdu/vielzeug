@@ -2,6 +2,20 @@
   "name": "@vielzeug/vault",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/vault_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(vault): correct IndexedDB keys() to exclude ad-hoc TTL-expired records; document custom-codec + secondary-index incompatibility",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "1681f481fd03166b1fa716c15ef63047679197ec"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/vault_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

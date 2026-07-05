@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/pulse",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Typed WebSocket client with channel multiplexing, presence tracking, auto-reconnect, and heartbeat",
   "type": "module",
   "files": [

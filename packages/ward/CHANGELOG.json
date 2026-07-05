@@ -2,6 +2,20 @@
   "name": "@vielzeug/ward",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/ward_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(ward): correct pervasive docs API drift (can/canAll/canAny, rule()/defineRules, Express/Hono guards never existed) and freeze detectConflicts() cache against mutation",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "36596e3d92a291fdedf14d82834bd02c004b08a6"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/ward_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

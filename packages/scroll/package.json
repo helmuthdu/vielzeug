@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/scroll",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Virtual list engine — variable-height rows, smooth scrolling, and zero-layout-thrash rendering",
   "type": "module",
   "files": [

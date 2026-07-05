@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/flux",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Composable stream primitive with hot/cold semantics, backpressure, and ecosystem adapters",
   "type": "module",
   "files": [

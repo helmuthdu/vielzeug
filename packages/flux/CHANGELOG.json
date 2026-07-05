@@ -2,6 +2,40 @@
   "name": "@vielzeug/flux",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/flux_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "harden flux operator error-forwarding, dedupe subject/pipe internals, fix withLatestFrom error swallow, add NaN/Infinity guard, cancellable toPromise/toArray",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "91af9ac312379b977026a36625b4e5fe303fb1b2"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/courier\" to `1.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/herald\" to `1.0.2`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/flux_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

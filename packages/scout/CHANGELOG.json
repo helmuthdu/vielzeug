@@ -2,6 +2,20 @@
   "name": "@vielzeug/scout",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/scout_v1.1.0",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "fix(scout): tokenize() now preserves non-ASCII text (CJK/Cyrillic were unsearchable), reactive results now update on index.add()/remove()/reindex() via new ScoutIndex.onMutate(), createIndex() throws ScoutIndexError on zero fields, SearchState.clear() throws ScoutDisposedError after dispose(), punctuation-only queries return no results instead of matching everything; adds segmentWords() and devtools debugSearch()",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "7a314aeb4051cee95c59227fba2a18adf3674fe2"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/scout_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

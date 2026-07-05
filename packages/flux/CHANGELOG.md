@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/flux
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.0.2
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Patches
+
+- harden flux operator error-forwarding, dedupe subject/pipe internals, fix withLatestFrom error swallow, add NaN/Infinity guard, cancellable toPromise/toArray
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scout
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.1.0
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Minor changes
+
+- fix(scout): tokenize() now preserves non-ASCII text (CJK/Cyrillic were unsearchable), reactive results now update on index.add()/remove()/reindex() via new ScoutIndex.onMutate(), createIndex() throws ScoutIndexError on zero fields, SearchState.clear() throws ScoutDisposedError after dispose(), punctuation-only queries return no results instead of matching everything; adds segmentWords() and devtools debugSearch()
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

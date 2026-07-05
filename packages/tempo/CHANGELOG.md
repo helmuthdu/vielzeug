@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/tempo
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.0.2
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Patches
+
+- fix: sync README/docs/REPL example with actual error hierarchy, drop dead _dev.ts and arsenal build config
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

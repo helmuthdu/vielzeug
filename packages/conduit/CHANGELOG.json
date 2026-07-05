@@ -2,6 +2,20 @@
   "name": "@vielzeug/conduit",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/conduit_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(conduit): widespread unprefixed error-class names and stale API references (createChild, 'scoped' lifetime, AggregateError) across docs and README; drop unused _dev.ts helpers; add resolveAll() concurrent-cycle regression test",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "10394e7f8f1eb7cd2087f1cbe71c644dfc5beb08"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/conduit_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

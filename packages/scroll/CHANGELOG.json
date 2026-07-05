@@ -2,6 +2,20 @@
   "name": "@vielzeug/scroll",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/scroll_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(scroll): fix ResizeObserver leak on dispose, stale README dispose() calls, reactive Proxy state visibility (has/ownKeys/getOwnPropertyDescriptor), and grouped-virtualizer Symbol.dispose binding; add error-class test coverage; rename axis1d.ts to _axis1d.ts; sync docs and add grid/reactive REPL examples",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b94cce730218f9c0c900c39084b8bd48e424aaca"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/scroll_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

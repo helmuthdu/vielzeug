@@ -2,6 +2,20 @@
   "name": "@vielzeug/arsenal",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/arsenal_v1.1.0",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat(arsenal): harden prototype-pollution guards, fix concurrency/caching edge cases, add error subclass hierarchy, and reorganize random utilities",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "0ecb131d06930dda3454f3c3be57df75f5fe38ee"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/arsenal_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

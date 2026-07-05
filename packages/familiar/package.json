@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/familiar",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Typed Web Worker pool with task queuing, streaming, AbortSignal cancellation, and heartbeat",
   "type": "module",
   "files": [

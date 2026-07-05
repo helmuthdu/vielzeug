@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/dnd
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.1.0
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Minor changes
+
+- chore(dnd): rework dnd disposal internals onto AbortSignal, drop unused resolveDisabled export, warn on duplicate getKey values
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

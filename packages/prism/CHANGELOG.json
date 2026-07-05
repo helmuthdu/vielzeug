@@ -2,6 +2,25 @@
   "name": "@vielzeug/prism",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/prism_v1.1.0",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "fix(prism): fix scale/axis/grid correctness (reversed domains, tick-count sync, band-axis centering), harden tooltip XSS default and easing prototype-key lookup, add a11y live regions and aria-hidden decorative elements, implement CrosshairConfig.snap, cancel in-flight chart animations on dispose, isolate plugin install()/dispose() failures, add resetTheme() and a working /devtools debugChart(), fix cross-realm container validation, make scale factories destructuring-safe, and sync docs with the current API",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "00ffdf6df66dfcf0633f8875db1a00651487c451"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.0.2`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/prism_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

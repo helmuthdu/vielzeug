@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/rune
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+
+## 1.1.0
+Sun, 05 Jul 2026 05:52:18 GMT
+
+### Minor changes
+
+- fix(rune): patch Node console format-string injection (log forging via namespace) and __proto__ bracket-assignment prototype hijack (serializeErrors/redactObject/resolveBindings); stop entry.data aliasing internal bindings, serialize Error values in pinned bindings (not just per-call context), isolate transport/middleware failures in dispatch() using RuneTransportError, export PRIORITY, fix README Rune/sample drift, drop unused devOnly()
 
 ## 1.0.1
 Fri, 03 Jul 2026 06:00:47 GMT

@@ -2,6 +2,20 @@
   "name": "@vielzeug/tempo",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/tempo_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix: sync README/docs/REPL example with actual error hierarchy, drop dead _dev.ts and arsenal build config",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "2a8eed3be15c6fa55496f3326d2048f861054ef4"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/tempo_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

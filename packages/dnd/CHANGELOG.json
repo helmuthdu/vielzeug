@@ -2,6 +2,20 @@
   "name": "@vielzeug/dnd",
   "entries": [
     {
+      "version": "1.1.0",
+      "tag": "@vielzeug/dnd_v1.1.0",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "chore(dnd): rework dnd disposal internals onto AbortSignal, drop unused resolveDisabled export, warn on duplicate getKey values",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "ae5ec8894e5d4070aec5409a1c779ef895f590a5"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/dnd_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

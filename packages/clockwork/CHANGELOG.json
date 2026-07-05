@@ -2,6 +2,20 @@
   "name": "@vielzeug/clockwork",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/clockwork_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(clockwork): scope invoke/after-timer restarts to exited paths, harden against prototype-key state/event names, fix stale MachineError docs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "686cc0d8e085d72e31f53978384cc31c9dbad6d8"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/clockwork_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",

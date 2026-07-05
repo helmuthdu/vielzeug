@@ -2,6 +2,20 @@
   "name": "@vielzeug/coins",
   "entries": [
     {
+      "version": "1.0.2",
+      "tag": "@vielzeug/coins_v1.0.2",
+      "date": "Sun, 05 Jul 2026 05:52:18 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(coins): widen dev-warning scientific-notation detection, wire CurrencyCode into signatures, accept number rate in exchange(), remove dead arsenal dep, fix error-class docs",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "3d270942971efe10e883c2ff1a90d33b822635c5"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.1",
       "tag": "@vielzeug/coins_v1.0.1",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",
