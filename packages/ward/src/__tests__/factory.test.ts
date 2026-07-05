@@ -1,15 +1,15 @@
 import { vi } from 'vitest';
 
-import type { BoundWard, WardLoggerContext, WardPredicate } from '../index';
+import type { BoundWard, Ward, WardLoggerContext, WardPredicate } from '../index';
 
 import { ANONYMOUS, createWard, owns, WardPredicateError, WILDCARD } from '../index';
 
-const can = (
-  ward: ReturnType<typeof createWard>,
-  principal: Parameters<typeof ward.explain>[0],
+const can = <TAction extends string, TData>(
+  ward: Ward<TAction, TData>,
+  principal: Parameters<Ward<TAction, TData>['explain']>[0],
   resource: string,
-  action: Parameters<typeof ward.explain>[2],
-  data?: Parameters<typeof ward.explain>[3],
+  action: TAction,
+  data?: TData,
 ) => ward.explain(principal, resource, action, data).allowed;
 
 // ---------------------------------------------------------------------------
@@ -656,7 +656,7 @@ describe('ward: logger behavior', () => {
 
     permit.explain(principal, 'posts', 'read'); // allow
     permit.explain(principal, 'posts', 'update'); // explicit-deny
-    permit.explain(principal, 'posts', 'delete'); // no-matching-rule
+    permit.explain(principal, 'posts', 'delete' as any); // no-matching-rule
 
     expect(calls[0].allowed).toBe(true);
     expect(calls[1].allowed).toBe(false);

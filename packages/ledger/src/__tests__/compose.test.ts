@@ -222,8 +222,8 @@ describe('compose()', () => {
 
     await ledger.do(
       compose([
-        { execute: (s) => executeSignals.push(s), rollback: (s) => rollbackSignals.push(s) },
-        { execute: (s) => executeSignals.push(s), rollback: (s) => rollbackSignals.push(s) },
+        { execute: (s) => void executeSignals.push(s), rollback: (s) => void rollbackSignals.push(s) },
+        { execute: (s) => void executeSignals.push(s), rollback: (s) => void rollbackSignals.push(s) },
       ]),
     );
     await ledger.undo();

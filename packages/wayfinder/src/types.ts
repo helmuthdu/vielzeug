@@ -253,8 +253,7 @@ type RedirectRouteDefinition<Path extends string = string> = RouteCommon &
 export type RouteChildren = Record<string, RouteDefinition<string>>;
 
 export type RouteDefinition<Path extends string = string> =
-  | ContentRouteDefinition<Path>
-  | RedirectRouteDefinition<Path>;
+  ContentRouteDefinition<Path> | RedirectRouteDefinition<Path>;
 
 // ─── Type-safe route traversal ─────────────────────────────────────────────────
 

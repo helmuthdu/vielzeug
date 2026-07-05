@@ -97,13 +97,7 @@ export type SpreadBinding = {
 };
 
 export type Binding =
-  | TextBinding
-  | AttrBinding
-  | EventBinding
-  | RefBinding
-  | HtmlBinding
-  | DirectiveBinding
-  | SpreadBinding;
+  TextBinding | AttrBinding | EventBinding | RefBinding | HtmlBinding | DirectiveBinding | SpreadBinding;
 
 // ─── BRAND UTILITY ───────────────────────────────────────────────────────────
 // Cross-realm–safe brand for branded types. Avoids repeating the symbol+guard boilerplate.

@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { flux } from '../core';
 import { of } from '../operators/creation';
-import { createSubject } from '../subject';
 
 describe('flux() — core factory', () => {
   it('emits values via observer.next', () => {

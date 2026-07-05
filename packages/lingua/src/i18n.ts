@@ -156,7 +156,7 @@ export type I18n<M extends Messages = Messages> = {
    *   import(`./locales/${locale}/settings.json`).then((m) => m.default),
    * );
    */
-  extend(ns: string, factory: NamespaceFactory<M>, locale?: Locale): Promise<void>;
+  extend(ns: string, factory: NamespaceFactory, locale?: Locale): Promise<void>;
   /** Intl formatter bound to this instance's locale. Follows locale changes automatically. */
   readonly fmt: Formatter;
   /**
@@ -250,7 +250,7 @@ export type I18n<M extends Messages = Messages> = {
    *
    * @throws `LinguaDisposedError` if called on a disposed instance.
    */
-  registerNamespace(ns: string, factory: NamespaceFactory<M>): void;
+  registerNamespace(ns: string, factory: NamespaceFactory): void;
   /**
    * Hydrates this instance with pre-loaded state (e.g. from a server-rendered payload).
    *
@@ -345,7 +345,7 @@ export function createI18n<M extends Messages = Messages>(config?: I18nOptions<M
 
 type I18nSeed<M extends Messages> = {
   catalogStore?: CatalogStore<M>;
-  nsStore?: NamespaceStore<M>;
+  nsStore?: NamespaceStore;
 };
 
 function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>, _seed?: I18nSeed<M>): I18n<M> {
@@ -364,7 +364,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
 
   // ─── Bounded stores ───────────────────────────────────────────────────────
   const catalogStore: CatalogStore<M> = createCatalogStore(() => disposed);
-  const nsStore: NamespaceStore<M> = createNamespaceStore(() => disposed);
+  const nsStore: NamespaceStore = createNamespaceStore(() => disposed);
 
   // ─── Locale state ─────────────────────────────────────────────────────────
   let state: LocaleState = buildState(canonL(cfg.locale ?? 'en'), fallback, caches);
@@ -583,7 +583,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       return disposed;
     },
 
-    extend(ns: string, factory: NamespaceFactory<M>, loc?: Locale): Promise<void> {
+    extend(ns: string, factory: NamespaceFactory, loc?: Locale): Promise<void> {
       checkDisposed(disposed);
 
       nsStore.registerNamespace(ns, factory);
@@ -608,7 +608,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
         },
         {
           catalogStore: catalogStore as CatalogStore<M>,
-          nsStore: nsStore as NamespaceStore<M>,
+          nsStore: nsStore as NamespaceStore,
         },
       );
     },
@@ -679,7 +679,7 @@ function _createI18nImpl<M extends Messages = Messages>(config?: I18nOptions<M>,
       return catalogStore.register(normalized, source, nsStore);
     },
 
-    registerNamespace(ns: string, factory: NamespaceFactory<M>): void {
+    registerNamespace(ns: string, factory: NamespaceFactory): void {
       nsStore.registerNamespace(ns, factory);
     },
 

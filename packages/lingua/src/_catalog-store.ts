@@ -28,7 +28,7 @@ export type CatalogStore<M extends Messages = Messages> = {
   /** Pre-load a locale catalog without switching. */
   preload(loc: Locale): Promise<void>;
   /** Register (or replace) a locale's source. Returns a Promise that resolves when the catalog is loaded. */
-  register(loc: Locale, source: LocaleSource<M>, nsStore: NamespaceStore<M>): Promise<void>;
+  register(loc: Locale, source: LocaleSource<M>, nsStore: NamespaceStore): Promise<void>;
   /** Resolve a compiled CatalogEntry for a locale (undefined if not loaded). */
   resolve(loc: Locale): CatalogEntry | undefined;
   /**

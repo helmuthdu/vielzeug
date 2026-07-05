@@ -3,11 +3,7 @@
  * No `Date`, `bigint`, `Map`, `Set`, or nested arrays — these are not reliably serialisable.
  */
 export type QueryKeyAtom =
-  | string
-  | number
-  | boolean
-  | null
-  | { readonly [k: string]: string | number | boolean | null };
+  string | number | boolean | null | { readonly [k: string]: string | number | boolean | null };
 
 /**
  * Identifies a cached query. Must be a non-empty flat array of `QueryKeyAtom` values.

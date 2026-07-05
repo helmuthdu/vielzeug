@@ -1173,18 +1173,20 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
                                 stroke-width="2"></ore-icon>
                             </ore-button>`
                           : col.label}
-                      ${col.resizable
-                        ? html`<span
-                            class="dg-col-resize"
-                            aria-hidden="true"
-                            ref="${(handleEl: HTMLElement | null) => {
-                              if (!handleEl) return;
+                      ${
+                        col.resizable
+                          ? html`<span
+                              class="dg-col-resize"
+                              aria-hidden="true"
+                              ref="${(handleEl: HTMLElement | null) => {
+                                if (!handleEl) return;
 
-                              const th = handleEl.closest('th') as HTMLElement | null;
+                                const th = handleEl.closest('th') as HTMLElement | null;
 
-                              if (th) handleEl.addEventListener('pointerdown', createColResizeHandler(col.key, th));
-                            }}"></span>`
-                        : html``}
+                                if (th) handleEl.addEventListener('pointerdown', createColResizeHandler(col.key, th));
+                              }}"></span>`
+                          : html``
+                      }
                     </div>
                   </th>`;
                 })}

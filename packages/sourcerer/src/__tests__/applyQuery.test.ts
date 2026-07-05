@@ -41,7 +41,7 @@ describe('applyQuery', () => {
   });
 
   it('CursorSource has no page concept — page is silently ignored by patch()', async () => {
-    const fetch = vi.fn(async () => ({ items: ['a'], total: 1 }));
+    const fetch = vi.fn(async (_q: { limit: number; search?: string }) => ({ items: ['a'], total: 1 }));
     const source = createCursorSource({ autoFetch: false, fetch, limit: 5 });
 
     await applyQuery(source, { limit: 10, page: 99, search: 'q' });

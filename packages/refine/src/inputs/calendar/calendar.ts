@@ -521,11 +521,13 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
                                     ${evt.label}
                                   </ore-badge>`,
                               )}
-                              ${overflow > 0
-                                ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
-                                    >+${overflow} more</span
-                                  >`
-                                : html``}
+                              ${
+                                overflow > 0
+                                  ? html`<span class="cal-event-pill-overflow" aria-hidden="true"
+                                      >+${overflow} more</span
+                                    >`
+                                  : html``
+                              }
                             </div>`;
                           }
 
@@ -544,9 +546,11 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
                                     '--badge-border-color': evt.color,
                                   })}"></ore-badge>`,
                             )}
-                            ${overflow > 0
-                              ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`
-                              : html``}
+                            ${
+                              overflow > 0
+                                ? html`<span class="cal-dot-overflow" aria-hidden="true">+${overflow}</span>`
+                                : html``
+                            }
                           </div>`;
                         }}
                       </div>`,

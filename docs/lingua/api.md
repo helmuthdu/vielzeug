@@ -94,11 +94,11 @@ Every `createI18n` call returns an `I18n<M>` instance.
 | ------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `t(key, vars?)`                 | `(key: MessageLeafKeys<M> \| string, vars?: TranslateVars) => string`                     | Translate a leaf key with optional variable interpolation.                                                                     |
 | `tp(key, count, options?)`      | `(key: MessageBranchKeys<M> \| string, count: number, options?: TpOptions) => string`     | Translate a plural branch key.                                                                                                 |
-| `extend(ns, factory, locale?)`  | `(ns: string, factory: NamespaceFactory<M>, locale?: Locale) => Promise<void>`            | Register a namespace factory and immediately load it for `locale` (defaults to active locale). Deduplicates per `ns + locale`. |
+| `extend(ns, factory, locale?)`  | `(ns: string, factory: NamespaceFactory, locale?: Locale) => Promise<void>`            | Register a namespace factory and immediately load it for `locale` (defaults to active locale). Deduplicates per `ns + locale`. |
 | `preload(locale)`               | `(locale: Locale) => Promise<void>`                                                       | Load a catalog without switching the active locale.                                                                            |
 | `setLocale(locale)`             | `(locale: Locale) => Promise<void>`                                                       | Load if needed, then switch and notify subscribers. On load failure, locale is unchanged.                                      |
 | `register(locale, source)`      | `(locale: Locale, source: LocaleSource<M>) => Promise<void>`                              | Register or replace a locale source. Returns a Promise that resolves when loading is complete. Async loaders start immediately. |
-| `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory<M>) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger, or `extend()` to do both.                     |
+| `registerNamespace(ns, factory)` | `(ns: string, factory: NamespaceFactory) => void`                                    | Register a namespace factory without loading. Use `loadNamespace()` to trigger, or `extend()` to do both.                     |
 | `loadNamespace(ns, locale?)`    | `(ns: string, locale?: Locale) => Promise<void>`                                          | Load a registered namespace for `locale` (defaults to active locale). Deduplicates concurrent and repeated calls.             |
 | `scope(prefix)`                 | `(prefix: MessageBranchKeys<M> \| string) => ScopedI18n`                                  | Return a prefix-bound `{ fmt, t, tp, has }` helper. Memoized per prefix — same object reference for the same prefix string.    |
 | `fork(overrides?)`              | `(overrides?: Omit<I18nOptions<M>, 'catalogs'>) => I18n<M>`                               | Create an isolated child instance from the current catalog snapshot.                                                           |
@@ -162,10 +162,10 @@ Any other count, or any part that is empty, is treated as a plain string and not
 ### `extend()`
 
 ```ts
-extend(ns: string, factory: NamespaceFactory<M>, locale?: Locale): Promise<void>
+extend(ns: string, factory: NamespaceFactory, locale?: Locale): Promise<void>
 ```
 
-Registers a namespace factory and immediately loads it for `locale` (defaults to the active locale). The factory receives the target locale string and must return `Promise<M>`. Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
+Registers a namespace factory and immediately loads it for `locale` (defaults to the active locale). The factory receives the target locale string and must return `Promise<Messages>` — namespace content is independent of the instance's catalog type `M`. Concurrent and repeated calls for the same `ns + locale` pair are deduplicated — the factory runs at most once per locale.
 
 > **Note:** Calling `extend()` with a **new factory** after the namespace is already loaded updates the registry for future reloads (e.g. after `register()` replaces the catalog) but does **not** reload the namespace immediately. The new factory takes effect the next time the namespace marker is cleared.
 
@@ -182,7 +182,7 @@ Throws `LinguaDisposedError` synchronously if called on a disposed instance.
 ### `registerNamespace()`
 
 ```ts
-registerNamespace(ns: string, factory: NamespaceFactory<M>): void
+registerNamespace(ns: string, factory: NamespaceFactory): void
 ```
 
 Registers a namespace factory without loading it. Use `loadNamespace()` to trigger loading when needed, or use `extend()` to register and load in one call.
@@ -611,13 +611,13 @@ type I18nState = {
 
 Produced by `getState()` / `serializeI18n()` and consumed by `restoreState()` / `hydrateI18n()`. Catalogs are stored as flat dot-notation maps.
 
-### `NamespaceFactory<M>`
+### `NamespaceFactory`
 
 ```ts
 type NamespaceFactory<M extends Messages = Messages> = (locale: Locale) => Promise<M>;
 ```
 
-Factory passed to `registerNamespace()` / `extend()`. Receives the target locale and must return a `Promise<M>` with the namespace messages for that locale.
+Factory passed to `registerNamespace()` / `extend()`. Receives the target locale and must return a `Promise<Messages>` with the namespace messages for that locale. Namespace content is independent of the instance's catalog type `M` — a namespace can introduce keys not present in the initial catalog shape.
 
 ### `TpOptions`
 

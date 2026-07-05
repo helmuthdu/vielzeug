@@ -232,6 +232,7 @@ export type RuneOptions = {
  *   Serialization is shallow only — an `Error` nested inside a nested object is left as-is.
  * - `log.error(err, { ...fields }, 'message')` — Error first, then optional context + message.
  *   Shorthand for the pattern where an Error is the primary subject of the log call.
+ *   The context object may be omitted entirely: `log.error(err, 'message')`.
  *
  * @example
  * log.error({ err: new Error('timeout'), requestId }, 'request failed')
@@ -239,7 +240,8 @@ export type RuneOptions = {
  */
 export type LogMethod = {
   (message: string): void;
-  (error: Error, context?: Bindings, message?: string): void;
+  (error: Error, message?: string): void;
+  (error: Error, context: Bindings, message?: string): void;
   (context: Bindings, message?: string): void;
 };
 

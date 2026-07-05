@@ -68,16 +68,7 @@ export interface DurationFormatOptions {
 
 /** Master set of all temporal units recognised by tempo. */
 export type TempoUnit =
-  | 'day'
-  | 'hour'
-  | 'microsecond'
-  | 'millisecond'
-  | 'minute'
-  | 'month'
-  | 'nanosecond'
-  | 'second'
-  | 'week'
-  | 'year';
+  'day' | 'hour' | 'microsecond' | 'millisecond' | 'minute' | 'month' | 'nanosecond' | 'second' | 'week' | 'year';
 
 /** Calendar-significant units (not sub-day). Used internally by CALENDAR_UNITS set. */
 export type CalendarUnit = Extract<TempoUnit, 'day' | 'month' | 'week' | 'year'>;

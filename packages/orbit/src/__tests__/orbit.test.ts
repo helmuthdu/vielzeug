@@ -1179,7 +1179,7 @@ describe('MIDDLEWARE_NAME symbol', () => {
     const arrowEl = makeArrow({ height: 10, width: 10 });
 
     for (const mw of [arrow({ element: arrowEl }), autoPlacement(), flip(), hide(), offset(8), shift(), size()]) {
-      expect((mw as Record<symbol, string>)[MIDDLEWARE_NAME]).toBeTypeOf('string');
+      expect((mw as unknown as Record<symbol, string>)[MIDDLEWARE_NAME]).toBeTypeOf('string');
     }
   });
 
@@ -1188,7 +1188,7 @@ describe('MIDDLEWARE_NAME symbol', () => {
     const userMw = Object.assign(() => ({}), { __name: 'flip' });
 
     // MIDDLEWARE_NAME symbol is not present, so ordering validation ignores it.
-    expect((userMw as Record<symbol, unknown>)[MIDDLEWARE_NAME]).toBeUndefined();
+    expect((userMw as unknown as Record<symbol, unknown>)[MIDDLEWARE_NAME]).toBeUndefined();
   });
 });
 

@@ -793,7 +793,10 @@ describe('Container — dependency injection', () => {
   });
 
   it('FactoryResolver type is exported and usable', () => {
-    const r: FactoryResolver = { resolve: (_tok) => Promise.resolve(undefined as any) };
+    const r: FactoryResolver = {
+      resolve: (_tok) => Promise.resolve(undefined as any),
+      resolveSync: (_tok) => undefined as any,
+    };
 
     expect(r).toBeDefined();
   });

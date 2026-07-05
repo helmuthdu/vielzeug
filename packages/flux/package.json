@@ -50,12 +50,12 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^25.9.3",
+    "@types/node": "^26.1.0",
     "@vielzeug/courier": "workspace:*",
     "@vielzeug/herald": "workspace:*",
     "@vielzeug/pulse": "workspace:*",
     "typescript": "~6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
+    "vite": "^8.1.3",
+    "vitest": "^4.1.9"
   }
 }

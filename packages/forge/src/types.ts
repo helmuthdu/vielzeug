@@ -50,8 +50,7 @@ export type ValidateResult = {
 };
 
 export type SubmitResult<TResult = void> =
-  | { ok: true; value: TResult }
-  | { errors: Record<string, string>; ok: false; type: 'validation' };
+  { ok: true; value: TResult } | { errors: Record<string, string>; ok: false; type: 'validation' };
 
 /* -------------------- Utility Types -------------------- */
 

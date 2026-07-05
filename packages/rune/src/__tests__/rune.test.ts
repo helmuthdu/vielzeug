@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { BatchHandle, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
+import type { Bindings, LogEntry, LogLevel, LogMiddleware, RuneOptions, Transport } from '../types';
 
 import { DEFAULT_THEME, consoleTransport, resolveTheme } from '../console';
 import { RuneError, RuneTransportError } from '../errors';
@@ -2125,7 +2125,9 @@ describe('batchTransport post-dispose no-ops', () => {
     const flushed: LogEntry[][] = [];
     const batch = batchTransport({
       interval: 10_000,
-      onFlush: (entries) => flushed.push(entries),
+      onFlush: (entries) => {
+        flushed.push(entries);
+      },
     });
     const log = createLogger({ transports: [batch.transport] });
 

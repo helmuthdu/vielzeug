@@ -26,6 +26,5 @@ export function chunk<T>(input: T[] | string, size = 2): string[] | T[][] {
   if (size < 1) throw new ArsenalValidationError('chunk: size must be at least 1');
 
   return Array.from({ length: Math.ceil(input.length / size) }, (_, i) => input.slice(i * size, i * size + size)) as
-    | string[]
-    | T[][];
+    string[] | T[][];
 }

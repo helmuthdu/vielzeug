@@ -121,8 +121,7 @@ export type PipeableKey<S extends EventMap, T extends EventMap> = {
  * - A `{ from, to }` object — forward the event under a different name on the target bus.
  */
 export type PipeEntry<S extends EventMap, T extends EventMap> =
-  | PipeableKey<S, T>
-  | { from: EventKey<S>; to: EventKey<T> };
+  PipeableKey<S, T> | { from: EventKey<S>; to: EventKey<T> };
 
 /**
  * An `AsyncGenerator` extended with `AsyncDisposable`. Returned by `bus.events()`.
