@@ -1652,6 +1652,11 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
+}
+
+.codex-ai-demo {
+  min-width: 0;
 }
 
 .codex-ai-title {
@@ -1879,6 +1884,19 @@ input.<span class="hl-fn">addEventListener</span>(<span class="hl-string">'input
   .footer-top {
     grid-template-columns: 1fr;
     gap: 2rem;
+  }
+
+  .why-stats {
+    flex-direction: column;
+  }
+
+  .why-stat {
+    padding: 1.5rem;
+  }
+
+  .why-stat-divider {
+    width: auto;
+    height: 1px;
   }
 }
 
