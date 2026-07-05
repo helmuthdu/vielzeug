@@ -2,6 +2,24 @@
   "name": "@vielzeug/flux",
   "entries": [
     {
+      "version": "1.0.3",
+      "tag": "@vielzeug/flux_v1.0.3",
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.3`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/pulse\" to `1.0.3`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.2",
       "tag": "@vielzeug/flux_v1.0.2",
       "date": "Sun, 05 Jul 2026 05:52:18 GMT",

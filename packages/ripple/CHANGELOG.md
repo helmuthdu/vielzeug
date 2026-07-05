@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ripple
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 06:22:27 GMT and should not be manually modified.
+
+## 1.2.0
+Sun, 05 Jul 2026 06:22:27 GMT
+
+### Minor changes
+
+- feat(ripple): store.replace()/reset() now remove omitted keys instead of nulling them, add resource().refresh() for manual refetch
 
 ## 1.1.0
 Fri, 03 Jul 2026 06:00:47 GMT

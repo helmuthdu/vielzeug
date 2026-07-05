@@ -2,6 +2,20 @@
   "name": "@vielzeug/ripple",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/ripple_v1.2.0",
+      "date": "Sun, 05 Jul 2026 06:22:27 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "feat(ripple): store.replace()/reset() now remove omitted keys instead of nulling them, add resource().refresh() for manual refetch",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e7a7d1b2263d8eb7d59e7fc578be2d2400113c28"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.0",
       "tag": "@vielzeug/ripple_v1.1.0",
       "date": "Fri, 03 Jul 2026 06:00:47 GMT",
