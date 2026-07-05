@@ -3,7 +3,7 @@
     <!-- IDE layout: sidebar + main -->
     <div class="ide-layout">
       <!-- Sidebar: library list -->
-      <aside class="ide-sidebar">
+      <aside class="ide-sidebar" :class="{ 'is-ref-open': showReference }">
         <div class="sidebar-header">
           <img :src="withBase(`/logo-${selectedLibrary}.svg`)" :alt="selectedLibrary" class="sidebar-active-logo" />
           <span class="sidebar-active-name"
@@ -17,7 +17,7 @@
             class="sidebar-item"
             :class="{ 'is-active': selectedLibrary === lib.id }"
             :title="lib.description"
-            @click="selectedLibrary = lib.id">
+            @click="selectLibrary(lib.id)">
             <img :src="withBase(`/logo-${lib.id}.svg`)" :alt="`${lib.id} logo`" class="sidebar-logo" />
             <span class="sidebar-info">
               <span class="sidebar-name">{{ lib.id }}</span>
@@ -25,10 +25,23 @@
             </span>
           </button>
         </nav>
-        <div class="sidebar-ref">
+        <button
+          type="button"
+          class="mobile-ref-toggle"
+          :aria-expanded="showReference"
+          aria-controls="mobile-ref-panel"
+          @click="showReference = !showReference">
+          <ore-icon name="book-open" size="14"></ore-icon>
+          <span>{{ showReference ? 'Hide' : 'Browse' }} exports</span>
+          <ore-icon :name="showReference ? 'chevron-down' : 'chevron-up'" size="14"></ore-icon>
+        </button>
+        <div id="mobile-ref-panel" class="sidebar-ref">
           <REPLReference :library="currentLibrary" @insert-function="insertFunction" />
         </div>
       </aside>
+
+      <!-- Backdrop for the mobile reference drawer -->
+      <div v-if="showReference" class="mobile-ref-backdrop" @click="showReference = false"></div>
 
       <!-- Main: editor + output -->
       <div class="ide-main">
@@ -58,6 +71,9 @@ import { LIBRARY_REGISTRY } from './repl/registry.generated';
 const editorRef = ref<InstanceType<typeof REPLEditor> | null>(null);
 const selectedLibrary = ref('arsenal');
 const isDark = ref(true);
+// Mobile-only: the exports reference is a bottom-sheet drawer there (see CSS `@media (max-width: 768px)`)
+// since the sidebar has no room to show the package list, search, and export chips all at once.
+const showReference = ref(false);
 
 const libraries = Object.values(LIBRARY_REGISTRY);
 const currentLibrary = computed(() => LIBRARY_REGISTRY[selectedLibrary.value]!);
@@ -68,6 +84,12 @@ const currentLibrary = computed(() => LIBRARY_REGISTRY[selectedLibrary.value]!);
 
 const insertFunction = (item: string): void => {
   editorRef.value?.insertTextAtCursor(item);
+  showReference.value = false;
+};
+
+const selectLibrary = (id: string): void => {
+  selectedLibrary.value = id;
+  showReference.value = false;
 };
 
 const syncTheme = (): void => {
@@ -78,6 +100,10 @@ const syncTheme = (): void => {
 // Lifecycle Hooks
 // ============================================================================
 
+const closeReferenceOnEscape = (e: KeyboardEvent): void => {
+  if (e.key === 'Escape' && showReference.value) showReference.value = false;
+};
+
 onMounted(() => {
   syncTheme();
 
@@ -87,7 +113,12 @@ onMounted(() => {
     attributes: true,
   });
 
-  onBeforeUnmount(() => observer.disconnect());
+  window.addEventListener('keydown', closeReferenceOnEscape);
+
+  onBeforeUnmount(() => {
+    observer.disconnect();
+    window.removeEventListener('keydown', closeReferenceOnEscape);
+  });
 });
 </script>
 
@@ -252,8 +283,23 @@ onMounted(() => {
   flex-direction: column;
 }
 
+.mobile-ref-toggle {
+  display: none;
+}
+
+.mobile-ref-backdrop {
+  display: none;
+}
+
 /* ── Responsive ────────────────────────────────────────── */
 @media (max-width: 768px) {
+  /* VitePress reserves an extra `--vp-nav-height` of top padding on mobile (normally used by
+     the doc-layout local nav bar), which this `layout: page` route never renders — cancel it out
+     so the IDE starts right below the nav instead of leaving a blank band above it. */
+  .repl-container {
+    margin-top: calc(-1 * var(--vp-nav-height, 64px));
+  }
+
   .ide-layout {
     grid-template-columns: 1fr;
   }
@@ -261,26 +307,111 @@ onMounted(() => {
   .ide-sidebar {
     border-left: none;
     border-bottom: var(--border) solid var(--color-contrast-300);
-    max-height: 180px;
+    max-height: none;
+  }
+
+  /* Active library is already highlighted in the strip below — drop the duplicate header row. */
+  .sidebar-header {
+    display: none;
   }
 
   .sidebar-nav {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    flex: none;
     gap: var(--size-1);
     padding: 0.5rem;
     overflow-x: auto;
     overflow-y: hidden;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar-item {
     width: auto;
+    flex: 0 0 auto;
+    align-items: center;
     padding: var(--size-1) var(--size-2-5);
     border-radius: var(--rounded-md);
   }
 
   .sidebar-item.is-active::before {
     display: none;
+  }
+
+  /* Description doesn't fit the compact horizontal strip — the logo + name are enough here. */
+  .sidebar-item .sidebar-desc {
+    display: none;
+  }
+
+  .sidebar-item .sidebar-logo {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+  }
+
+  .mobile-ref-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    width: 100%;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-top: var(--border) solid var(--color-contrast-300);
+    background: var(--color-contrast-100);
+    color: var(--text-color-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .mobile-ref-toggle:hover {
+    color: var(--text-color-body);
+  }
+
+  .mobile-ref-toggle span {
+    flex: 1;
+    text-align: left;
+  }
+
+  /* Reference browser has nowhere to live inline on a phone screen — surface it as a bottom-sheet
+     drawer that overlays the editor instead of permanently stealing space from it. */
+  .sidebar-ref {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    z-index: 30;
+    height: min(70vh, 32rem);
+    min-height: 0;
+    background: var(--color-contrast-100);
+    border-top: var(--border) solid var(--color-contrast-300);
+    box-shadow: 0 -8px 24px rgb(0 0 0 / 25%);
+    transform: translateY(100%);
+    transition: transform var(--transition-normal, 0.25s) ease;
+  }
+
+  .ide-sidebar.is-ref-open .sidebar-ref {
+    transform: translateY(0);
+  }
+
+  .mobile-ref-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: color-mix(in oklch, var(--color-canvas) 55%, transparent);
+    backdrop-filter: blur(2px);
+    opacity: 1;
+    transition: opacity var(--transition-normal, 0.2s) ease;
+  }
+
+  @starting-style {
+    .mobile-ref-backdrop {
+      opacity: 0;
+    }
   }
 
   .ide-main {
@@ -290,6 +421,14 @@ onMounted(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar-item {
+    transition: none;
+  }
+
+  .sidebar-ref {
+    transition: none;
+  }
+
+  .mobile-ref-backdrop {
     transition: none;
   }
 }
