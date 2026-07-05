@@ -2,6 +2,20 @@
   "name": "@vielzeug/ore",
   "entries": [
     {
+      "version": "1.0.4",
+      "tag": "@vielzeug/ore_v1.0.4",
+      "date": "Sun, 05 Jul 2026 21:33:33 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "fix(ore): parse string prop values assigned via pre-upgrade or post-upgrade property paths",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8824fdd48fd8405bab2c5bba8b99428f6b703d8c"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.3",
       "tag": "@vielzeug/ore_v1.0.3",
       "date": "Sun, 05 Jul 2026 06:22:27 GMT",

@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sun, 05 Jul 2026 06:22:27 GMT and should not be manually modified.
+This log was last generated on Sun, 05 Jul 2026 21:33:33 GMT and should not be manually modified.
+
+## 1.0.4
+Sun, 05 Jul 2026 21:33:33 GMT
+
+### Patches
+
+- fix(ore): parse string prop values assigned via pre-upgrade or post-upgrade property paths
 
 ## 1.0.3
 Sun, 05 Jul 2026 06:22:27 GMT
