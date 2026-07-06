@@ -1,279 +1,84 @@
 # Contributing to Vielzeug
 
-Thank you for your interest in contributing to Vielzeug! 🎉
-
-This guide will help you get started. We appreciate all contributions, from fixing typos to adding new features.
+Thanks for your interest in contributing! This guide covers the mechanics of getting a change merged. For engineering conventions (disposal, dev logging, error classes, file layout, package structure) see the root [`AGENTS.md`](../AGENTS.md) and `.ai/rules/code/conventions.md` — read those before writing code, this file won't repeat them.
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
-- [Development Workflow](#development-workflow)
-- [Making Changes](#making-changes)
-- [Code Guidelines](#code-guidelines)
-- [Submitting Your Work](#submitting-your-work)
+- [Setup](#setup)
+- [Making a Change](#making-a-change)
+- [Commit & Pull Request](#commit--pull-request)
+- [Project Layout](#project-layout)
 - [Need Help?](#need-help)
 
-## Quick Start
+## Setup
 
-### Prerequisites
-
-- **Node.js**: v22+ (use `nvm` to manage versions)
-- **pnpm**: v10+ (install via `npm install -g pnpm`)
-
-### Setup
+**Prerequisites:** Node 22+ (`.nvmrc`), pnpm 10+ (`npm install -g pnpm`).
 
 ```bash
-# 1. Fork and clone the repo
 git clone https://github.com/YOUR_USERNAME/vielzeug.git
 cd vielzeug
-
-# 2. Install dependencies
-pnpm install
-
-# 3. Build everything
-pnpm build
-
-# 4. Run tests to verify setup
-pnpm test
+pnpm setup   # rush install — installs all package dependencies
+pnpm build   # rush build — build every package
+pnpm test    # verify the setup works
 ```
 
-✅ You're ready to contribute!
+## Making a Change
 
-## Development Workflow
+1. **Pick or open an issue.** Browse [open issues](https://github.com/helmuthdu/vielzeug/issues) (`good first issue`/`help wanted` are good starting points) and comment to claim it, or open a new one for larger changes before you start.
 
-### Working on a Package
+2. **Branch:**
 
-```bash
-# Navigate to the package
-cd packages/vault
+   ```bash
+   git checkout -b feat/<package>-short-description
+   git checkout -b fix/<package>-short-description
+   ```
 
-# Run tests in watch mode
-pnpm test
+3. **Edit code** in `packages/<name>/`. Run `pnpm --filter @vielzeug/<name> fix` (or `pnpm fix` at the root) instead of hand-formatting or hand-sorting imports — ESLint Perfectionist + Prettier own that. Add or update tests in `packages/<name>/src/__tests__/`.
 
-# Build the package
-pnpm build
+4. **Add a change file.** Every PR that touches a package's published output needs one — CI (`rush change --verify`) fails without it:
 
-# Lint your code
-pnpm lint
-```
+   ```bash
+   node scripts/rush-change.mjs <name> <patch|minor|major> "<message>"
+   # e.g.: node scripts/rush-change.mjs vault minor "feat: add TTL support for records"
+   ```
 
-### Running Documentation Site
+   Use `patch` for fixes, `minor` for new features, `major` for breaking changes. Skip this step for docs-only or CI-only changes.
 
-```bash
-# Start dev server
-pnpm docs:dev
+5. **Verify before pushing:**
 
-# Build docs
-pnpm docs:build
-```
+   ```bash
+   cd packages/<name>
+   pnpm test && pnpm lint && pnpm build
+   ```
 
-### Common Commands
+   (Root-level `pnpm test` / `pnpm lint` / `pnpm build` also work but run the whole monorepo.)
 
-```bash
-# Build all packages
-pnpm build
+## Commit & Pull Request
 
-# Test everything
-pnpm test
+- Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(courier): add retry logic`, `fix(vault): correct TTL race`, `docs(forge): update validation examples`. Common types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`.
+- Push your branch and open a PR against `main`; fill out the PR template (summary, related issue, breaking changes, affected packages).
+- The pre-commit hook (lefthook) runs lint + related tests on staged files automatically — a clean `git commit` locally means CI is unlikely to surprise you.
+- Respond to review feedback by pushing more commits to the same branch.
 
-# Lint everything
-pnpm lint
-
-# Fix linting issues
-pnpm fix
-```
-
-## Making Changes
-
-### 1. Pick an Issue
-
-- Browse [open issues](https://github.com/helmuthdu/vielzeug/issues)
-- Look for `good first issue` or `help wanted` labels
-- Comment on the issue to claim it
-
-### 2. Create a Branch
-
-```bash
-git checkout -b feat/my-new-feature
-# or
-git checkout -b fix/bug-description
-```
-
-### 3. Make Your Changes
-
-**Keep it simple:**
-
-- Write clear, readable code
-- Add tests for new features
-- Update documentation if needed
-- Follow existing code style
-
-### 4. Test Your Changes
-
-```bash
-# Run tests
-pnpm test
-
-# Check types
-pnpm build
-
-# Lint code
-pnpm lint
-```
-
-## Code Guidelines
-
-### TypeScript Style
-
-```typescript
-// ✅ Good
-export function formatName(first: string, last: string): string {
-  return `${first} ${last}`;
-}
-
-// ❌ Avoid
-export function formatName(first: any, last: any) {
-  return first + ' ' + last;
-}
-```
-
-**Key points:**
-
-- Use TypeScript (no `any` types)
-- Add JSDoc comments for public APIs
-- Keep functions small and focused
-- Use descriptive names
-
-### Testing
-
-```typescript
-// Simple and clear
-describe('formatName', () => {
-  it('should combine first and last name', () => {
-    const result = formatName('John', 'Doe');
-    expect(result).toBe('John Doe');
-  });
-
-  it('should throw error for empty names', () => {
-    expect(() => formatName('', '')).toThrow();
-  });
-});
-```
-
-**Key points:**
-
-- Test new features
-- Use descriptive test names
-- Test edge cases
-
-### Documentation
-
-**When adding features:**
-
-1. Update the package README
-2. Add usage examples
-3. Update API docs if needed
-
-**Use the PackageInfo and PackageBadges components:**
-
-```markdown
-<!-- In docs -->
-<PackageBadges package="vault" />
-
-<!-- Inline usage -->
-
-Only <PackageInfo package="vault" type="size" /> gzipped!
-```
-
-## Submitting Your Work
-
-### 1. Commit Your Changes
-
-Use clear, descriptive commit messages:
-
-```bash
-# Format: <type>(<package>): <description>
-
-git commit -m "feat(vault): add TTL support for records"
-git commit -m "fix(courier): correct timeout handling"
-git commit -m "docs(forge): update validation examples"
-```
-
-**Common types:**
-
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `refactor`: Code cleanup
-- `test`: Tests
-- `chore`: Maintenance
-
-### 2. Push to Your Fork
-
-```bash
-git push origin your-branch-name
-```
-
-### 3. Open a Pull Request
-
-1. Go to the [Vielzeug repository](https://github.com/helmuthdu/vielzeug)
-2. Click "New Pull Request"
-3. Select your fork and branch
-4. Fill out the PR template:
-   - Describe your changes
-   - Link related issues
-   - Note any breaking changes
-
-### 4. Respond to Feedback
-
-- Check your PR for review comments
-- Make requested changes
-- Push updates to the same branch
-
-## Project Structure
+## Project Layout
 
 ```
 vielzeug/
-├── packages/          # All packages
-│   ├── block/       # UI Library
-│   ├── ore/         # Web components
-│   ├── vault/       # Client-side storage
-│   ├── courier/       # HTTP client
-│   ├── forge/        # Form management
-│   ├── lingua/        # Internationalization
-│   ├── rune/         # Logging
-│   ├── ward/        # Permissions
-│   ├── wayfinder/       # Routing
-│   ├── storeit/        # State management
-│   ├── arsenal/       # Utilities
-│   ├── sieve/       # Validation
-│   └── wired/        # Dependency injection
-└── docs/              # VitePress documentation
+├── packages/<name>/     # each package is self-contained — see .ai/rules/data/catalogue.md for the full list
+│   ├── src/
+│   │   ├── __tests__/   # vitest test files
+│   │   └── index.ts     # public API — all exports defined here
+│   ├── package.json
+│   └── vite.config.ts
+└── docs/<name>/         # VitePress documentation for that package
 ```
 
-**Each package has:**
-
-- `src/` - Source code
-- `src/*.test.ts` - Tests
-- `README.md` - Package documentation
-- `package.json` - Package config
+If you're adding new public API, update the package's docs under `docs/<name>/` (see `.ai/rules/docs/doc-template.md` for the expected structure) and its `README.md`.
 
 ## Need Help?
 
-- 💬 **Questions?** [Start a discussion](https://github.com/helmuthdu/vielzeug/discussions)
-- 🐛 **Found a bug?** [Open an issue](https://github.com/helmuthdu/vielzeug/issues)
-- 📖 **Documentation:** [vielzeug.dev](https://vielzeug.dev)
+- **Questions?** [Start a discussion](https://github.com/helmuthdu/vielzeug/discussions)
+- **Found a bug?** [Open an issue](https://github.com/helmuthdu/vielzeug/issues)
+- **Documentation:** [vielzeug.dev](https://vielzeug.dev)
 
-## Code of Conduct
-
-Be respectful and constructive in all interactions. We're all here to build something great together! 🤝
-
-## Recognition
-
-All contributors are recognized in:
-
-- Release notes
-- Package changelogs
-- GitHub contributors page
-
-Thank you for contributing! 🙏
+Be respectful and constructive — we're all here to build something great together.
