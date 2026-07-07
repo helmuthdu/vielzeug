@@ -1,6 +1,11 @@
 # Change Log - @vielzeug/courier
 
-This log was last generated on Sun, 05 Jul 2026 05:52:18 GMT and should not be manually modified.
+This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+
+## 1.1.1
+Tue, 07 Jul 2026 09:20:39 GMT
+
+_Version update only_
 
 ## 1.1.0
 Sun, 05 Jul 2026 05:52:18 GMT

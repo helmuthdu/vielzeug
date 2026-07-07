@@ -2,6 +2,21 @@
   "name": "@vielzeug/prism",
   "entries": [
     {
+      "version": "1.1.2",
+      "tag": "@vielzeug/prism_v1.1.2",
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/orbit\" to `1.0.4`"
+          },
+          {
+            "comment": "Updating dependency \"@vielzeug/ripple\" to `1.2.1`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.1",
       "tag": "@vielzeug/prism_v1.1.1",
       "date": "Sun, 05 Jul 2026 06:22:27 GMT",

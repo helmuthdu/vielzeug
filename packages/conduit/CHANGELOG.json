@@ -2,6 +2,20 @@
   "name": "@vielzeug/conduit",
   "entries": [
     {
+      "version": "1.0.3",
+      "tag": "@vielzeug/conduit_v1.0.3",
+      "date": "Tue, 07 Jul 2026 09:20:39 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "b9287321931e6d31178f475bf66c29b0dbb0b69e"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.0.2",
       "tag": "@vielzeug/conduit_v1.0.2",
       "date": "Sun, 05 Jul 2026 05:52:18 GMT",

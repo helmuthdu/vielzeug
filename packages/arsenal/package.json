@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/arsenal",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Tree-shakeable TypeScript utility library — array, object, string, async, cache, math, and more",
   "type": "module",
   "files": [

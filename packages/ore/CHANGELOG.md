@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/ore
 
-This log was last generated on Sun, 05 Jul 2026 21:33:33 GMT and should not be manually modified.
+This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+
+## 1.0.5
+Tue, 07 Jul 2026 09:20:39 GMT
+
+### Patches
+
+- chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.0.4
 Sun, 05 Jul 2026 21:33:33 GMT

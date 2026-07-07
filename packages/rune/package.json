@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/rune",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Structured logging — scoped loggers, pluggable transports, log levels, and remote log draining",
   "type": "module",
   "files": [

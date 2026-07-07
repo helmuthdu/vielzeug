@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/forge
 
-This log was last generated on Sun, 05 Jul 2026 06:22:27 GMT and should not be manually modified.
+This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+
+## 1.2.0
+Tue, 07 Jul 2026 09:20:39 GMT
+
+### Minor changes
+
+- chore: update debugForm for cross-package devtools naming/shape consistency
+
+### Patches
+
+- chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.1.2
 Sun, 05 Jul 2026 06:22:27 GMT

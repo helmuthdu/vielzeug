@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/sandbox
 
-This log was last generated on Fri, 03 Jul 2026 06:00:47 GMT and should not be manually modified.
+This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+
+## 1.2.1
+Tue, 07 Jul 2026 09:20:39 GMT
+
+### Patches
+
+- chore: declare minimum supported Node.js version (>=18) in package.json engines
 
 ## 1.2.0
 Fri, 03 Jul 2026 06:00:47 GMT

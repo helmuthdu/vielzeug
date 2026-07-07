@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/conduit",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Lightweight dependency injection container — singletons, transient instances, factories, and named scopes",
   "type": "module",
   "files": [
