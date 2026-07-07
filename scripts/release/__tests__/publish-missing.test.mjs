@@ -55,7 +55,11 @@ describe('publishMissing()', () => {
 
     expect(results.skipped).toEqual(['@vielzeug/ore@1.0.4']);
     expect(results.published).toEqual(['@vielzeug/orbit@2.0.0']);
-    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'orbit'), { dryRun: false });
+    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'orbit'), {
+      dryRun: false,
+      interactive: false,
+      otp: undefined,
+    });
   });
 
   it('passes dryRun through to the publish function', async () => {
@@ -65,7 +69,39 @@ describe('publishMissing()', () => {
 
     await publishMissing(repo, { checkVersion, dryRun: true, publish });
 
-    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), { dryRun: true });
+    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
+      dryRun: true,
+      interactive: false,
+      otp: undefined,
+    });
+  });
+
+  it('passes otp through to the publish function', async () => {
+    const repo = makeRepo([{ json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' }]);
+    const checkVersion = vi.fn(async () => false);
+    const publish = vi.fn(async () => {});
+
+    await publishMissing(repo, { checkVersion, otp: '123456', publish });
+
+    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
+      dryRun: false,
+      interactive: false,
+      otp: '123456',
+    });
+  });
+
+  it('passes interactive through to the publish function', async () => {
+    const repo = makeRepo([{ json: { name: '@vielzeug/ore', version: '1.0.4' }, slug: 'ore' }]);
+    const checkVersion = vi.fn(async () => false);
+    const publish = vi.fn(async () => {});
+
+    await publishMissing(repo, { checkVersion, interactive: true, publish });
+
+    expect(publish).toHaveBeenCalledWith(path.join(repo, 'packages', 'ore'), {
+      dryRun: false,
+      interactive: true,
+      otp: undefined,
+    });
   });
 
   it('records a failure without aborting the remaining packages', async () => {

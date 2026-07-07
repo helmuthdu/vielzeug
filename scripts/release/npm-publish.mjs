@@ -26,6 +26,27 @@
  * and produces `ENEEDAUTH` instead); it's never calling `actions/setup-node` with `registry-url`
  * at all. The repo-root `.npmrc`'s plain `registry=` line is all npm needs — Node/npm themselves
  * come from `.github/actions/setup`, which only sets `node-version-file`, never `registry-url`.
+ *
+ * ## EOTP / browser-trust prompts when running this outside CI
+ *
+ * A browser/password `npm login` session with 2FA-for-writes enabled needs a fresh step-up
+ * auth on *every* `npm publish` call — either a typed OTP (TOTP authenticator accounts) or npm
+ * opening a browser tab to approve the device (WebAuthn/passkey accounts). The `otp` option
+ * below only covers the first kind, and only for a one-or-two-package manual run — a TOTP code
+ * expires in ~30s, so it doesn't scale. For bulk local publishing, use an npm Automation token
+ * or a Granular Access Token instead of a browser-login session — both are designed by npm to
+ * publish without any step-up prompt even with 2FA-for-writes enabled. See
+ * `scripts/release/local-publish.mjs` for the exact setup.
+ *
+ * The WebAuthn/browser-trust flow specifically requires npm's own subprocess to see a real
+ * TTY on stdout to decide it's safe to open a browser and wait for the approval — the default
+ * `run()` below captures output through plain OS pipes (needed so CI can parse E409 conflicts
+ * and this module never has to guess at npm's error wording), which look like a non-interactive
+ * context to npm and make it fail straight to `EOTP` instead of opening a browser. Pass
+ * `interactive: true` (only meaningful for a human at a real terminal, e.g.
+ * `local-publish.mjs`) to run the publish step with `stdio: 'inherit'` so npm shares the
+ * caller's actual terminal and can do the browser-trust dance — the tradeoff is no captured
+ * output for that call, so no automatic E409 retry; just re-run by hand on a conflict.
  */
 
 import { execFileSync } from 'node:child_process';
@@ -42,9 +63,13 @@ function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function publishPackage(folder, { dryRun = false, run = defaultRun, sleep = defaultSleep } = {}) {
+export async function publishPackage(
+  folder,
+  { dryRun = false, interactive = false, otp, run = defaultRun, sleep = defaultSleep } = {},
+) {
   const [{ filename }] = JSON.parse(run('npm', ['pack', '--json'], { cwd: folder }));
   const tarballPath = path.join(folder, filename);
+  const publishArgs = ['publish', filename, '--access', 'public', ...(otp ? [`--otp=${otp}`] : [])];
 
   try {
     if (dryRun) {
@@ -52,9 +77,16 @@ export async function publishPackage(folder, { dryRun = false, run = defaultRun,
       return;
     }
 
+    if (interactive) {
+      // No captured output here (stdio is inherited, not piped) — so no E409 retry loop either;
+      // npm's own prompts (including a browser-trust tab) go straight to the real terminal.
+      run('npm', publishArgs, { cwd: folder, stdio: 'inherit' });
+      return;
+    }
+
     for (let attempt = 0; ; attempt++) {
       try {
-        process.stdout.write(run('npm', ['publish', filename, '--access', 'public'], { cwd: folder }));
+        process.stdout.write(run('npm', publishArgs, { cwd: folder }));
         return;
       } catch (error) {
         const output = `${error.stdout ?? ''}${error.stderr ?? ''}`;

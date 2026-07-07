@@ -16,8 +16,18 @@
  *   versions <pkg...>                       print pkg=version for each package (pre-bump snapshot)
  *   apply [pkg]                             apply pending rush version bump(s)
  *   plan --before-file <path> <pkg...>      print a JSON publish plan (for a matrix)
- *   publish <pkg> <version> <folder>        publish + tag + release one package
- *   publish-missing                         backfill any @vielzeug/* version missing from npm
+ *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
+ *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
+ *
+ * `publish` and `publish-missing` take two flags relevant only when running this locally
+ * rather than in CI (CI never needs either — see `npm-publish.mjs` for why):
+ *   --otp=<code>    for a TOTP-authenticator account, a one-off retry only — the code expires
+ *                   in ~30s, so it doesn't scale to publishing many packages in one run.
+ *   --interactive   for a WebAuthn/passkey account, where npm opens a browser tab to approve
+ *                   the publish instead of asking for a code — requires a real terminal (shares
+ *                   this process's stdio with npm) and disables automatic E409 retry.
+ * Either way, for more than one or two packages use an npm Automation token or Granular Access
+ * Token instead — see `scripts/release/local-publish.mjs`.
  */
 
 import { appendFileSync, readFileSync } from 'node:fs';
@@ -55,7 +65,8 @@ async function main([command, ...args]) {
 
     case 'project': {
       const [pkg] = args;
-      if (!listProjectNames().includes(pkg)) throw new Error(`Unknown package: ${pkg}\n\nValid packages:\n${listProjectNames().join('\n')}`);
+      if (!listProjectNames().includes(pkg))
+        throw new Error(`Unknown package: ${pkg}\n\nValid packages:\n${listProjectNames().join('\n')}`);
       const { folder, version } = findProject(pkg);
       console.log(`folder=${folder}\nversion=${version}`);
       return;
@@ -84,20 +95,25 @@ async function main([command, ...args]) {
 
     case 'publish': {
       const [pkg, version, folder] = args;
+      const otp = args.find((arg) => arg.startsWith('--otp='))?.slice('--otp='.length);
+      const interactive = args.includes('--interactive');
       if (await versionExists(pkg, version)) {
         console.log(`⚠️  ${pkg}@${version} already on npm — skipping`);
         return;
       }
-      await publishPackage(folder, { dryRun });
+      await publishPackage(folder, { dryRun, interactive, otp });
       tagAndRelease({ dryRun, folder, package: pkg, version });
       console.log(`✅ Published ${pkg}@${version}`);
       return;
     }
 
     case 'publish-missing': {
-      const results = await publishMissing(undefined, { dryRun });
+      const otp = args.find((arg) => arg.startsWith('--otp='))?.slice('--otp='.length);
+      const interactive = args.includes('--interactive');
+      const results = await publishMissing(undefined, { dryRun, interactive, otp });
       console.log(`\n${summaryMarkdown(results)}`);
-      if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summaryMarkdown(results)}\n`);
+      if (process.env.GITHUB_STEP_SUMMARY)
+        appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summaryMarkdown(results)}\n`);
       if (results.failed.length > 0) process.exitCode = 1;
       return;
     }

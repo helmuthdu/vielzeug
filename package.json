@@ -28,7 +28,8 @@
     "worktree:add": "node scripts/worktree.mjs add",
     "worktree:list": "node scripts/worktree.mjs list",
     "worktree:remove": "node scripts/worktree.mjs remove",
-    "ci:local": "act -W .github/workflows/ci.yml"
+    "ci:local": "act -W .github/workflows/ci.yml",
+    "release:publish-local": "node scripts/release/local-publish.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

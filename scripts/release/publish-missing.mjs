@@ -33,7 +33,7 @@ export function listPublishablePackages(root = repoRoot) {
 
 export async function publishMissing(
   root = repoRoot,
-  { checkVersion = versionExists, dryRun = false, publish = publishPackage } = {},
+  { checkVersion = versionExists, dryRun = false, interactive = false, otp, publish = publishPackage } = {},
 ) {
   const results = { failed: [], published: [], skipped: [] };
 
@@ -45,7 +45,7 @@ export async function publishMissing(
 
     console.log(`\n📦 Publishing ${name}@${version}`);
     try {
-      await publish(path.join(root, folder), { dryRun });
+      await publish(path.join(root, folder), { dryRun, interactive, otp });
       results.published.push(`${name}@${version}`);
     } catch (error) {
       console.error(error.message);
@@ -57,8 +57,13 @@ export async function publishMissing(
 }
 
 export function summaryMarkdown({ failed, published, skipped }) {
-  const section = (title, items) => `### ${title}\n${items.length ? items.map((item) => `- ${item}`).join('\n') : '_none_'}\n`;
-  return ['## Publish Missing Summary', '', section('Published ✅', published), section('Skipped ℹ️', skipped), section('Failed ❌', failed)].join(
-    '\n',
-  );
+  const section = (title, items) =>
+    `### ${title}\n${items.length ? items.map((item) => `- ${item}`).join('\n') : '_none_'}\n`;
+  return [
+    '## Publish Missing Summary',
+    '',
+    section('Published ✅', published),
+    section('Skipped ℹ️', skipped),
+    section('Failed ❌', failed),
+  ].join('\n');
 }

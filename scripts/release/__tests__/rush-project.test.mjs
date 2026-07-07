@@ -20,7 +20,10 @@ function makeRepo() {
     JSON.stringify({ projects: [{ packageName: '@vielzeug/ore', projectFolder: 'packages/ore' }] }),
   );
   mkdirSync(path.join(root, 'packages', 'ore'), { recursive: true });
-  writeFileSync(path.join(root, 'packages', 'ore', 'package.json'), JSON.stringify({ name: '@vielzeug/ore', version: '1.0.4' }));
+  writeFileSync(
+    path.join(root, 'packages', 'ore', 'package.json'),
+    JSON.stringify({ name: '@vielzeug/ore', version: '1.0.4' }),
+  );
   return root;
 }
 

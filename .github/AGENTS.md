@@ -52,6 +52,57 @@ actually runs `npm publish`). See `scripts/release/npm-publish.mjs` for why ther
 "configure npm registry" step anywhere in these workflows: writing an `.npmrc` auth line (even
 an empty one) makes npm skip OIDC entirely (`actions/setup-node#1440`).
 
+## Manual local publish fallback
+
+If CI itself can't run `publish-missing.yml` (workflow broken, Actions outage, or a version is
+needed on npm before a dispatch + required-reviewer approval can happen), `pnpm
+release:publish-local` (`scripts/release/local-publish.mjs`) reuses the exact same
+`publishMissing()` logic CI uses — it is a pre-flight-checked wrapper, not a second
+implementation. Read the header comment in that file before running it: it requires you to
+already have a real npm auth session (OIDC Trusted Publishing only exists inside a GitHub
+Actions runner, never on a laptop), and it deliberately does **not** create git tags or GitHub
+releases (same as `publish-missing` in CI) — tag manually from an up-to-date `main` afterward.
+
+```bash
+DRY_RUN=1 pnpm release:publish-local   # see what would publish, without touching npm
+pnpm release:publish-local             # prompts for confirmation, builds, then publishes
+pnpm release:publish-local -- --yes --skip-build   # non-interactive prompt, dist/ already fresh
+```
+
+`local-publish.mjs` always runs the actual `npm publish` step with this terminal's real stdio
+(not piped) — it's a human-at-a-terminal script, and npm's WebAuthn/browser-trust step-up flow
+needs that to work at all (see the `EOTP` section below).
+
+**`EOTP` / browser-trust prompts:** a browser/password `npm login` session with 2FA-for-writes
+enabled needs fresh step-up auth on every single `npm publish` call — either a typed OTP
+(TOTP-authenticator accounts) or npm opening a browser tab to approve the device
+(WebAuthn/passkey accounts). This hits `local-publish.mjs` and a plain
+`node scripts/release/cli.mjs publish ...` equally, since both eventually call `npm publish`
+under your local session. Options, in order of how much this happens to you:
+
+- **TOTP account, one package, right now:** append `--otp=<code>`. Get a fresh code right
+  before running the command — it's single-use and expires in ~30s, so build first (or
+  `--skip-build` if `dist/` is already fresh), *then* generate the code.
+  ```bash
+  node scripts/release/cli.mjs publish @vielzeug/ore 1.2.3 packages/ore --otp=123456
+  ```
+- **WebAuthn/passkey account (npm wants to open a browser, not a code field):** add
+  `--interactive`. This makes npm share this process's actual terminal (`stdio: 'inherit'`)
+  instead of the piped output CI-parity mode uses — required for npm to detect it can safely
+  pop a browser tab and wait for approval. Trade-off: no captured output for that publish call,
+  so no automatic E409 retry (just re-run by hand if that happens). `local-publish.mjs` always
+  runs this way — it's a script for a human at a terminal, never CI.
+  ```bash
+  node scripts/release/cli.mjs publish @vielzeug/ore 1.2.3 packages/ore --interactive
+  ```
+- **More than one package, or repeatedly, either 2FA method:** use an npm Automation token or a
+  Granular Access Token instead (npmjs.com → Account → Access Tokens); both publish without any
+  step-up prompt even with 2FA-for-writes on. Put it in your user `~/.npmrc` as
+  `//registry.npmjs.org/:_authToken=<token>` (or `${NODE_AUTH_TOKEN}` if you export that env var
+  yourself — npm does **not** read `NODE_AUTH_TOKEN` on its own outside of GitHub Actions'
+  `setup-node`; you must reference it explicitly in `.npmrc` for it to do anything locally). See
+  the header comment in `local-publish.mjs` for full detail.
+
 ## Manual approval
 
 `release.yml`, `release-all.yml`, and `publish-missing.yml` all gate their actual `npm publish`

@@ -88,8 +88,13 @@ describe('plan', () => {
 
     await main(['plan', '--before-file', beforeFile, '@vielzeug/ore', '@vielzeug/orbit']);
 
-    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit'], { '@vielzeug/orbit': '2.0.0', '@vielzeug/ore': '1.0.0' });
-    expect(log).toHaveBeenCalledWith(JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.1.0' }]));
+    expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit'], {
+      '@vielzeug/orbit': '2.0.0',
+      '@vielzeug/ore': '1.0.0',
+    });
+    expect(log).toHaveBeenCalledWith(
+      JSON.stringify([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.1.0' }]),
+    );
   });
 });
 
@@ -110,8 +115,29 @@ describe('publish', () => {
 
     await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
 
-    expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false });
-    expect(tagAndRelease).toHaveBeenCalledWith({ dryRun: false, folder: 'packages/ore', package: '@vielzeug/ore', version: '1.0.4' });
+    expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false, interactive: false, otp: undefined });
+    expect(tagAndRelease).toHaveBeenCalledWith({
+      dryRun: false,
+      folder: 'packages/ore',
+      package: '@vielzeug/ore',
+      version: '1.0.4',
+    });
+  });
+
+  it('forwards --otp to publishPackage (TOTP accounts)', async () => {
+    versionExists.mockResolvedValue(false);
+
+    await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore', '--otp=123456']);
+
+    expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false, interactive: false, otp: '123456' });
+  });
+
+  it('forwards --interactive to publishPackage (WebAuthn/browser-trust accounts)', async () => {
+    versionExists.mockResolvedValue(false);
+
+    await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore', '--interactive']);
+
+    expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false, interactive: true, otp: undefined });
   });
 });
 
@@ -124,6 +150,22 @@ describe('publish-missing', () => {
 
     expect(process.exitCode).toBe(1);
     process.exitCode = undefined;
+  });
+
+  it('forwards --otp to publishMissing', async () => {
+    publishMissing.mockResolvedValue({ failed: [], published: [], skipped: [] });
+
+    await main(['publish-missing', '--otp=123456']);
+
+    expect(publishMissing).toHaveBeenCalledWith(undefined, { dryRun: false, interactive: false, otp: '123456' });
+  });
+
+  it('forwards --interactive to publishMissing', async () => {
+    publishMissing.mockResolvedValue({ failed: [], published: [], skipped: [] });
+
+    await main(['publish-missing', '--interactive']);
+
+    expect(publishMissing).toHaveBeenCalledWith(undefined, { dryRun: false, interactive: true, otp: undefined });
   });
 
   it('leaves the exit code untouched when everything succeeds', async () => {
