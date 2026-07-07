@@ -1,12 +1,14 @@
-// ── DevTools — sub-path entry (@vielzeug/ripple/devtools) ────────────────────
-//
-// Import from the dedicated sub-path so this module is tree-shaken from
-// production bundles when DevTools is not used:
-//
-//   import { installDevTools, debugEffect } from '@vielzeug/ripple/devtools';
-//
-// The hot-path stub (getDevToolsHook) lives in devtools-hook.ts and is the only
-// part that ships in the core bundle.
+/**
+ * @vielzeug/ripple — debug utilities for reactivity visualisation.
+ *
+ * Import from the dedicated sub-path so it is tree-shaken from production bundles:
+ * ```ts
+ * import { installDevTools, debugEffect } from '@vielzeug/ripple/devtools';
+ * ```
+ *
+ * The hot-path stub (`getDevToolsHook`) lives in `devtools-hook.ts` and is the only
+ * part that ships in the core bundle.
+ */
 
 import type { DepEntry } from './tracking';
 import type { CleanupFn, EffectCallback, EffectHandle, EffectOptions, RippleDevToolsHook } from './types';

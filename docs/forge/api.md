@@ -36,7 +36,7 @@ description: Complete API reference for Forge form creation, validation, submiss
 | ---------------------------- | ---------------------------------------------------------------------------------- |
 | `@vielzeug/forge`            | `createForm`, `toFormData`, `ValidationModes`, `FORM_ERROR`, and all types          |
 | `@vielzeug/forge/validators` | `fieldValidator`, `composeValidators` — schema and validator composition helpers    |
-| `@vielzeug/forge/devtools`   | `attachForgeDevtools` — opt-in `console.debug` logging for form state transitions   |
+| `@vielzeug/forge/devtools`   | `debugForm` — opt-in `console.debug` logging for form state transitions   |
 
 ## createForm()
 
@@ -563,7 +563,7 @@ const form = createForm({
 Opt-in `console.debug` logging for form state transitions. Not exported from the main `@vielzeug/forge` entry point — import from this sub-path so the logging code is tree-shaken from production bundles.
 
 ```ts
-function attachForgeDevtools<TValues extends Record<string, unknown>>(
+function debugForm<TValues extends Record<string, unknown>>(
   form: Form<TValues>,
   options?: ForgeDevtoolsOptions,
 ): Unsubscribe;
@@ -579,10 +579,10 @@ Logs one line per observable state transition: per-field `value`/`error`/`touche
 
 ```ts
 import { createForm } from '@vielzeug/forge';
-import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+import { debugForm } from '@vielzeug/forge/devtools';
 
 const form = createForm({ defaultValues: { email: '' } });
-const detach = attachForgeDevtools(form, { label: 'signup' });
+const detach = debugForm(form, { label: 'signup' });
 // [forge:devtools:signup] field "email" value: "" → "a@b.com"
 
 detach(); // stop logging

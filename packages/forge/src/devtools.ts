@@ -3,7 +3,7 @@
  *
  * Import from the dedicated sub-path so it is tree-shaken from production bundles:
  * ```ts
- * import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+ * import { debugForm } from '@vielzeug/forge/devtools';
  * ```
  */
 
@@ -13,7 +13,7 @@ import { flattenValues, sanitizeForLog } from './_utils';
 
 const isDev = !(globalThis as { __FORGE_PROD__?: boolean }).__FORGE_PROD__;
 
-/** Options for {@link attachForgeDevtools}. */
+/** Options for {@link debugForm}. */
 export type ForgeDevtoolsOptions = {
   /** Label included in every log line, useful when debugging multiple forms at once. Default: `"form"`. */
   label?: string;
@@ -34,16 +34,16 @@ export type ForgeDevtoolsOptions = {
  * @example
  * ```ts
  * import { createForm } from '@vielzeug/forge';
- * import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+ * import { debugForm } from '@vielzeug/forge/devtools';
  *
  * const form = createForm({ defaultValues: { email: '' } });
- * const detach = attachForgeDevtools(form, { label: 'signup' });
+ * const detach = debugForm(form, { label: 'signup' });
  * // [forge:devtools:signup] field "email" value: "" → "a@b.com"
  *
  * detach(); // stop logging
  * ```
  */
-export function attachForgeDevtools<TValues extends Record<string, unknown>>(
+export function debugForm<TValues extends Record<string, unknown>>(
   form: Form<TValues>,
   options: ForgeDevtoolsOptions = {},
 ): Unsubscribe {

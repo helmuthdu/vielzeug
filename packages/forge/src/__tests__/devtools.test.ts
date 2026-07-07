@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { attachForgeDevtools } from '../devtools';
+import { debugForm } from '../devtools';
 import { createForm } from '../form';
 
-describe('attachForgeDevtools', () => {
+describe('debugForm', () => {
   let consoleSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -17,7 +17,7 @@ describe('attachForgeDevtools', () => {
   it('logs nothing on attach (baseline only, no spurious "changed from undefined" noise)', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
 
     expect(consoleSpy).not.toHaveBeenCalled();
 
@@ -27,7 +27,7 @@ describe('attachForgeDevtools', () => {
   it('logs a distinct line when a field value changes', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.set('email', 'a@b.com');
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" value:'), '', '→', 'a@b.com');
@@ -38,7 +38,7 @@ describe('attachForgeDevtools', () => {
   it('logs a distinct line when a field error changes', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.setError('email', 'Required');
 
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -54,7 +54,7 @@ describe('attachForgeDevtools', () => {
   it('logs a distinct line when a field touched status changes', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.touch('email');
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" touched:'), true);
@@ -65,7 +65,7 @@ describe('attachForgeDevtools', () => {
   it('logs a distinct line when a field dirty status changes', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.set('email', 'a@b.com');
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "email" dirty:'), true);
@@ -76,7 +76,7 @@ describe('attachForgeDevtools', () => {
   it('logs submit start and end via the isSubmitting edge', async () => {
     const form = createForm({ defaultValues: { email: 'a@b.com' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     await form.submit(() => {});
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('submit started (submitCount=1)'));
@@ -88,7 +88,7 @@ describe('attachForgeDevtools', () => {
   it('logs the isLoading edge for async defaultValues', async () => {
     const form = createForm({ defaultValues: () => Promise.resolve({ email: 'loaded@b.com' }) });
 
-    attachForgeDevtools(form);
+    debugForm(form);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -100,7 +100,7 @@ describe('attachForgeDevtools', () => {
   it('includes a custom label in the log prefix', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form, { label: 'signup' });
+    debugForm(form, { label: 'signup' });
     form.set('email', 'a@b.com');
 
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -116,7 +116,7 @@ describe('attachForgeDevtools', () => {
   it('defaults the label to "form" when not provided', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.set('email', 'a@b.com');
 
     expect(consoleSpy).toHaveBeenCalledWith(
@@ -132,11 +132,11 @@ describe('attachForgeDevtools', () => {
   it('tears down cleanly when the form is disposed without calling the returned detach first', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    attachForgeDevtools(form);
+    debugForm(form);
     form.set('email', 'a@b.com');
     consoleSpy.mockClear();
 
-    // form.dispose() alone (never the detach() returned by attachForgeDevtools) must clean up
+    // form.dispose() alone (never the detach() returned by debugForm) must clean up
     // the underlying form.subscribe() without throwing or leaking a dangling subscription.
     expect(() => form.dispose()).not.toThrow();
     expect(consoleSpy).not.toHaveBeenCalled();
@@ -150,7 +150,7 @@ describe('attachForgeDevtools', () => {
   it('stops logging once the returned unsubscribe is called', () => {
     const form = createForm({ defaultValues: { email: '' } });
 
-    const detach = attachForgeDevtools(form);
+    const detach = debugForm(form);
 
     detach();
     form.set('email', 'a@b.com');
@@ -164,7 +164,7 @@ describe('attachForgeDevtools', () => {
     const form = createForm({ defaultValues: { address: { city: '' } } });
     const scoped = form.scope('address');
 
-    attachForgeDevtools(scoped);
+    debugForm(scoped);
     scoped.set('city', 'Berlin');
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('field "city" value:'), '', '→', 'Berlin');
@@ -178,10 +178,10 @@ describe('attachForgeDevtools', () => {
 
     try {
       const { createForm: createFormProd } = await import('../form');
-      const { attachForgeDevtools: attachForgeDevtoolsProd } = await import('../devtools');
+      const { debugForm: debugFormProd } = await import('../devtools');
 
       const form = createFormProd({ defaultValues: { email: '' } });
-      const detach = attachForgeDevtoolsProd(form);
+      const detach = debugFormProd(form);
 
       form.set('email', 'a@b.com');
 

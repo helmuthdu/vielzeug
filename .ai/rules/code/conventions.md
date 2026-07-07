@@ -98,6 +98,10 @@ For opt-in structured debug logging consumers import explicitly. Tree-shaken in 
 - Uses `console.debug` (not `console.warn`).
 - Wraps the public API — does not duplicate internal logic.
 - No environment gate needed (consumers choose to import it).
+- **Naming: always `debug<Noun>`.** Never `attach*`, `enable*`, `with*Debug`, or similar. `<Noun>` is the thing being observed or created (`debugBus`, `debugForm`, `debugSearch`, `debugRouter`). The one sanctioned exception is a package that exposes a **global hook installer** for building an actual DevTools-extension-level inspector — a single process-wide hook, not scoped to one instance, so it takes no `<Noun>` (currently only `ripple`'s `installDevTools(hook)`). It must coexist with a normal `debug<Noun>` helper for the common case (`ripple` also has `debugEffect`), never replace it.
+- **Shape — pick the one matching how consumers normally obtain the primitive; do not mix both in one helper:**
+  - **Factory-wrap** — the primitive is normally obtained by calling `create<Noun>()` (or a bare factory function). `debug<Noun>` takes the **same arguments as that factory** and returns the **same instance type**, with logging pre-wired — equivalent to calling the real factory plus whatever `.use()`/`logger` hook it already exposes, never a parallel implementation. Examples: `debugCourier`, `debugBus`/`debugBehaviorBus`, `debugWard`, `debugRouter`, `debugMachine`, `debugFloat`, `debugEffect`.
+  - **Instance-attach** — the primitive is normally already a live instance by the time you'd want to observe it (created elsewhere, shared across scopes — forms, search state). `debug<Noun>(existingInstance, options?)` subscribes to that instance's own public API and returns a plain `() => void` to stop observing. It never creates or returns a new instance — recreating one risks drifting from the real, already-shared instance. Examples: `debugForm`, `debugSearch`.
 
 ### Rules
 

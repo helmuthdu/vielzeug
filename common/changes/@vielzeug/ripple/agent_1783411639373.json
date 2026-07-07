@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "docs: align devtools.ts header comment style with the rest of the ecosystem",
+      "packageName": "@vielzeug/ripple",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/ripple"
+}

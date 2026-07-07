@@ -227,6 +227,11 @@ export function devOnly(fn: () => void): void {
 
 Opt-in structured debug logging exported only from the `/devtools` sub-path. Uses `console.debug`. Tree-shaken in production. No environment gate needed — consumers choose to import it.
 
+**Naming: always `debug<Noun>`** (never `attach*`/`enable*`). Two sanctioned shapes, matching how consumers normally obtain the primitive — see `.ai/rules/code/conventions.md § Layer 2` for full detail:
+- **Factory-wrap** (`debugCourier`, `debugBus`, `debugWard`, `debugRouter`, `debugMachine`, `debugFloat`, `debugEffect`): same args/return type as the real `create<Noun>()` factory, logging pre-wired.
+- **Instance-attach** (`debugForm`, `debugSearch`): takes an already-live instance, subscribes to its public API, returns a plain `() => void`.
+- Exception: a global, process-wide hook installer for a real DevTools-extension inspector takes no `<Noun>` (it isn't instance-scoped) — `installDevTools(hook)` (currently only `ripple`, alongside its own `debugEffect`).
+
 ## Error Class Convention
 
 ```typescript

@@ -126,7 +126,7 @@ if (!submission.ok && submission.type === 'validation') {
 - Browser-first utility: `toFormData`
 - Framework-agnostic core — wire into React, Vue, Svelte, or vanilla JS with `subscribe()`/`connect()`, no dedicated adapter package
 - `@vielzeug/forge/validators` adapter: `fieldValidator` and `composeValidators`
-- `@vielzeug/forge/devtools`: opt-in `attachForgeDevtools()` for `console.debug` state-transition logging, tree-shaken from production
+- `@vielzeug/forge/devtools`: opt-in `debugForm()` for `console.debug` state-transition logging, tree-shaken from production
 
 </div>
 

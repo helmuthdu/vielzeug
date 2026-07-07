@@ -345,12 +345,12 @@ After `dispose()`, all mutating APIs throw.
 
 ## Debugging
 
-Import `attachForgeDevtools()` from the dedicated `/devtools` sub-path to log per-field value/error/touched/dirty changes and submit/loading transitions via `console.debug`:
+Import `debugForm()` from the dedicated `/devtools` sub-path to log per-field value/error/touched/dirty changes and submit/loading transitions via `console.debug`:
 
 ```ts
-import { attachForgeDevtools } from '@vielzeug/forge/devtools';
+import { debugForm } from '@vielzeug/forge/devtools';
 
-const detach = attachForgeDevtools(form, { label: 'signup' });
+const detach = debugForm(form, { label: 'signup' });
 // later, e.g. on unmount:
 detach();
 ```
