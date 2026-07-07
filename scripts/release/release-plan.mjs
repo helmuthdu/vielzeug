@@ -10,7 +10,11 @@
 import { versionExists } from './npm-version-exists.mjs';
 import { findProject } from './rush-project.mjs';
 
-export async function planReleases(packageNames, versionsBefore, { checkVersion = versionExists, resolve = findProject } = {}) {
+export async function planReleases(
+  packageNames,
+  versionsBefore,
+  { checkVersion = versionExists, resolve = findProject } = {},
+) {
   const plan = [];
 
   for (const pkg of packageNames) {

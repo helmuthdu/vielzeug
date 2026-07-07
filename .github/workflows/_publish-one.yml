@@ -1,11 +1,15 @@
 name: Publish one package (reusable)
 
 # The single canonical "publish + tag + release" path — every place that ships a package to
-# npm (release.yml for one package, release-all.yml as a matrix over many) calls this instead
-# of re-implementing pack/publish/tag/release inline. A composite action can't be used from a
-# bash loop or a matrix, so previously this logic drifted into three separate implementations;
-# a reusable workflow can be both a single `needs:` job (release.yml) and a matrix (release-
-# all.yml), which is what makes one real implementation possible here.
+# npm (publish.yml's mode=single as a single `needs:` job, mode=all as a matrix over many)
+# calls this instead of re-implementing pack/publish/tag/release inline. A composite action
+# can't be used from a bash loop or a matrix, so previously this logic drifted into three
+# separate implementations; a reusable workflow can be both a single job and a matrix, which is
+# what makes one real implementation possible here.
+#
+# npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename, not this
+# reusable one — see publish.yml's header comment for why every publish path lives behind that
+# one entry-point file. Don't register this filename as the Trusted Publisher on npmjs.com.
 #
 # Runs on a fresh runner, so it downloads the `built-packages` artifact the caller's prepare
 # job uploaded rather than assuming dist/ already exists on disk.

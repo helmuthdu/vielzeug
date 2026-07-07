@@ -1,0 +1,257 @@
+name: Publish
+
+# Single entry point for every flow that can run `npm publish` — one package (mode=single),
+# every package with a pending change file as a matrix (mode=all), or a missing-version
+# backfill with no version bump (mode=missing).
+#
+# npm's Trusted Publishing (OIDC) validates the *triggering* workflow's filename, not whichever
+# reusable workflow actually runs `npm publish`, and allows exactly one filename per package —
+# so every flow that can publish has to originate from this one file, even the ones (mode=single,
+# mode=all) that delegate the actual `npm publish` step to the reusable `_publish-one.yml`.
+# Register `publish.yml` (this file — not `_publish-one.yml`) as the Trusted Publisher on
+# npmjs.com for every @vielzeug/* package. Splitting this back into three separate dispatchable
+# files (as it used to be) would silently break Trusted Publishing for whichever two aren't
+# registered — see `.github/AGENTS.md` for the full story if you're tempted to.
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'single: one package (needs "package" input) · all: every package with a pending change file · missing: backfill any version already committed but missing from npm (no version bump)'
+        required: true
+        type: choice
+        options:
+          - single
+          - all
+          - missing
+      package:
+        description: 'mode=single only: package name (e.g. @vielzeug/coins). Must have a pending change file — run rush change locally first.'
+        required: false
+        type: string
+      build-first:
+        description: 'mode=missing only: build all packages before publishing'
+        required: false
+        default: true
+        type: boolean
+      dry-run:
+        description: 'Do everything except the actual npm publish / git tag / GitHub release'
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  prepare-single:
+    if: inputs.mode == 'single'
+    runs-on: ubuntu-latest
+    outputs:
+      folder: ${{ steps.project.outputs.folder }}
+      version: ${{ steps.project.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Node-only setup so a missing "package" input, a typo'd package name, or a missing
+      # change file fails in seconds instead of after paying for the full rush/pnpm install
+      # below.
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - name: Validate inputs and require a pending change file
+        run: |
+          if [ -z "${{ inputs.package }}" ]; then
+            echo "❌ mode=single requires the 'package' input."
+            exit 1
+          fi
+          node scripts/release/cli.mjs project "${{ inputs.package }}" > /dev/null
+          if ! node scripts/release/cli.mjs changed-packages | tr ' ' '\n' | grep -Fxq "${{ inputs.package }}"; then
+            echo "❌ No pending change file found for ${{ inputs.package }}."
+            echo "Run 'rush change' locally, commit the generated file, and re-trigger this workflow."
+            exit 1
+          fi
+
+      - uses: ./.github/actions/setup
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Build all packages
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      # "rush publish --apply" has no per-package filter — it always consumes every pending
+      # change file. This isolates the target package's change file(s), applies, and restores
+      # the rest. See scripts/release/rush-publish-apply.mjs for why.
+      - name: Apply version bump
+        run: node scripts/release/cli.mjs apply "${{ inputs.package }}"
+
+      - id: project
+        run: node scripts/release/cli.mjs project "${{ inputs.package }}" >> "$GITHUB_OUTPUT"
+
+      - name: Push version bump commit
+        if: ${{ !inputs.dry-run }}
+        run: |
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              echo "✅ Pushed version bump to main"
+              break
+            fi
+            [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
+            echo "🔄 Retry ${attempt}/3..."
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: built-packages
+          path: packages/
+          retention-days: 1
+
+  prepare-all:
+    if: inputs.mode == 'all'
+    runs-on: ubuntu-latest
+    outputs:
+      has-releases: ${{ steps.plan.outputs.has-releases }}
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Node-only setup so "nothing pending" fails in seconds instead of after the full
+      # rush/pnpm install below.
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+          rush-install: 'false'
+
+      - id: changes
+        run: echo "packages=$(node scripts/release/cli.mjs changed-packages)" >> "$GITHUB_OUTPUT"
+
+      - name: Record versions before bump
+        run: node scripts/release/cli.mjs versions ${{ steps.changes.outputs.packages }} > /tmp/versions-before.txt
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - uses: ./.github/actions/setup
+
+      - name: Build all packages
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      - name: Apply version bumps
+        run: node scripts/release/cli.mjs apply
+
+      - name: Push version bump commit
+        if: ${{ !inputs.dry-run }}
+        run: |
+          for attempt in 1 2 3; do
+            git fetch origin main
+            git rebase origin/main
+            if git push origin HEAD:main; then
+              echo "✅ Pushed version bumps to main"
+              break
+            fi
+            [ "$attempt" -eq 3 ] && { echo "❌ Push failed after 3 attempts"; exit 1; }
+            echo "🔄 Retry ${attempt}/3..."
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: built-packages
+          path: packages/
+          retention-days: 1
+
+      # Filters out anything already on npm or left unbumped by rush *before* the matrix is
+      # built, so the Actions UI only ever shows real publish jobs — no phantom "skipped"
+      # entries for a run where only 2 of 30 packages actually changed.
+      - id: plan
+        run: |
+          PLAN=$(node scripts/release/cli.mjs plan --before-file /tmp/versions-before.txt ${{ steps.changes.outputs.packages }})
+          echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
+          [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
+
+  publish-single:
+    needs: prepare-single
+    if: inputs.mode == 'single'
+    uses: ./.github/workflows/_publish-one.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      dry-run: ${{ inputs.dry-run }}
+      folder: ${{ needs.prepare-single.outputs.folder }}
+      package: ${{ inputs.package }}
+      version: ${{ needs.prepare-single.outputs.version }}
+
+  # One matrix entry per package that actually needs publishing — each gets its own job (own
+  # log, own pass/fail) instead of one long bash loop. `fail-fast: false` because one package's
+  # publish failing is not a reason to abort the others; E409 registry conflicts between
+  # different packages' matrix jobs are handled by the retry/backoff in
+  # scripts/release/npm-publish.mjs, not by serializing the matrix.
+  publish-all:
+    needs: prepare-all
+    if: inputs.mode == 'all' && needs.prepare-all.outputs.has-releases == 'true'
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-all.outputs.matrix) }}
+    uses: ./.github/workflows/_publish-one.yml
+    permissions:
+      contents: write
+      id-token: write
+    with:
+      dry-run: ${{ inputs.dry-run }}
+      folder: ${{ matrix.folder }}
+      package: ${{ matrix.package }}
+      version: ${{ matrix.version }}
+
+  publish-missing:
+    if: inputs.mode == 'missing'
+    runs-on: ubuntu-latest
+    # Requires manual approval — configure required reviewers under
+    # Settings > Environments > npm-publish. Every job that runs `npm publish` uses this same
+    # environment so there's exactly one place that grants "can publish to npm" access.
+    environment: npm-publish
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # required for npm Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      - uses: ./.github/actions/setup
+        with:
+          root-install: 'false'
+
+      - name: Build all packages
+        if: inputs.build-first != 'false'
+        run: node common/scripts/install-run-rush.js build --verbose
+
+      # See scripts/release/npm-publish.mjs for why there's no "configure npm registry" step
+      # here — writing an .npmrc auth line breaks OIDC trusted publishing
+      # (actions/setup-node#1440); the repo-root .npmrc's `registry=` line is all npm needs.
+      - name: Upgrade npm for trusted publishing
+        run: npm install -g npm@latest
+
+      - name: Publish versions missing on npm
+        env:
+          DRY_RUN: ${{ inputs.dry-run && '1' || '' }}
+        run: node scripts/release/cli.mjs publish-missing
