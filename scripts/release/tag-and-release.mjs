@@ -6,13 +6,16 @@
  * twice, and either way that's a bug worth surfacing loudly instead of silently rewriting.
  */
 
-import { execFileSync } from 'node:child_process';
 import { unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { run as sharedRun } from '../lib/cli.mjs';
+
+// This module's every real call is meant to be seen live (git/gh output, prompts) — inherit
+// stdio by default instead of the shared run()'s default of capturing it.
 function defaultRun(cmd, args, options) {
-  return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'inherit', ...options });
+  return sharedRun(cmd, args, { inherit: true, ...options });
 }
 
 function releaseNotes({ folder, package: pkg, tag, version }) {
@@ -31,7 +34,7 @@ function releaseNotes({ folder, package: pkg, tag, version }) {
 
 function tagExists(tag, run) {
   try {
-    run('git', ['rev-parse', tag], { stdio: 'ignore' });
+    run('git', ['rev-parse', tag], { quiet: true });
     return true;
   } catch {
     return false;
@@ -59,7 +62,16 @@ export function tagAndRelease({ dryRun = false, folder, package: pkg, run = defa
   const notesPath = path.join(tmpdir(), `release-notes-${process.pid}.md`);
   writeFileSync(notesPath, releaseNotes({ folder, package: pkg, tag, version }));
   try {
-    run('gh', ['release', 'create', tag, '--title', `${pkg} v${version}`, '--generate-notes', '--notes-file', notesPath]);
+    run('gh', [
+      'release',
+      'create',
+      tag,
+      '--title',
+      `${pkg} v${version}`,
+      '--generate-notes',
+      '--notes-file',
+      notesPath,
+    ]);
   } finally {
     unlinkSync(notesPath);
   }

@@ -14,10 +14,11 @@
  * a second source of truth that could in principle disagree with the directory it lives in.
  */
 
-import { execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { run as defaultRun } from '../lib/cli.mjs';
 
 const repoRoot = path.join(fileURLToPath(import.meta.url), '..', '..', '..');
 
@@ -50,10 +51,6 @@ export function listChangedPackageNames(root = repoRoot) {
   return [...new Set(names)].sort();
 }
 
-function defaultRun(cmd, args, options) {
-  return execFileSync(cmd, args, { encoding: 'utf8', ...options });
-}
-
 export function applyVersionBump(packageName, { root = repoRoot, run = defaultRun } = {}) {
   const changesDir = path.join(root, 'common', 'changes');
   const stagingDir = path.join(root, '.rush-publish-staging');
@@ -67,10 +64,14 @@ export function applyVersionBump(packageName, { root = repoRoot, run = defaultRu
   }
 
   try {
-    run('node', ['common/scripts/install-run-rush.js', 'publish', '--apply', '--target-branch', 'main', '--add-commit-details'], {
-      cwd: root,
-      stdio: 'inherit',
-    });
+    run(
+      'node',
+      ['common/scripts/install-run-rush.js', 'publish', '--apply', '--target-branch', 'main', '--add-commit-details'],
+      {
+        cwd: root,
+        inherit: true,
+      },
+    );
   } finally {
     if (otherFiles.length > 0) {
       for (const relFile of otherFiles) {
@@ -85,8 +86,11 @@ export function applyVersionBump(packageName, { root = repoRoot, run = defaultRu
       // already landed, so re-commit them when git still sees them as changed.
       const status = run('git', ['status', '--porcelain', '--', 'common/changes'], { cwd: root });
       if (status.trim().length > 0) {
-        run('git', ['add', 'common/changes'], { cwd: root, stdio: 'inherit' });
-        run('git', ['commit', '-m', 'chore: restore pending change files for other packages'], { cwd: root, stdio: 'inherit' });
+        run('git', ['add', 'common/changes'], { cwd: root, inherit: true });
+        run('git', ['commit', '-m', 'chore: restore pending change files for other packages'], {
+          cwd: root,
+          inherit: true,
+        });
       }
     }
   }

@@ -8,8 +8,9 @@
  * removing a package needs zero edits here.
  */
 
-import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+
+import { readPackageManifests } from './lib/packages.mjs';
 
 /** Packages that exist under `packages/` but are never resolved in a browser context. */
 const NON_BROWSER_PACKAGES = new Set(['codex']);
@@ -25,11 +26,7 @@ export const REPL_EXCLUDED_PACKAGES = new Set(['ore', 'prism', 'refine']);
  * (e.g. codex's data generator) should use this directly.
  */
 export function listPackageDirs(packagesDir: string): string[] {
-  return readdirSync(packagesDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .filter((name) => existsSync(join(packagesDir, name, 'package.json')))
-    .sort();
+  return readPackageManifests(packagesDir).map((manifest) => manifest.slug);
 }
 
 /** Returns every publishable, browser-resolvable package name under `packagesDir`, sorted alphabetically. */
@@ -42,7 +39,10 @@ export function listVielzeugPackages(packagesDir: string): string[] {
  * Aliasing to the directory (not `src/index.ts` directly) lets subpath imports
  * like `@vielzeug/orbit/presets` resolve through the same alias entry.
  */
-export function buildVielzeugSrcAliases(packagesDir: string, exclude: ReadonlySet<string> = new Set()): Record<string, string> {
+export function buildVielzeugSrcAliases(
+  packagesDir: string,
+  exclude: ReadonlySet<string> = new Set(),
+): Record<string, string> {
   return Object.fromEntries(
     listVielzeugPackages(packagesDir)
       .filter((name) => !exclude.has(name))

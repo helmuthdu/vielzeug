@@ -6,6 +6,9 @@
  * isn't on npm yet — same logic as CI, via the same tested `publishMissing()` (see
  * `publish-missing.mjs`), not a second implementation.
  *
+ * Usage:
+ *   node scripts/release/local-publish.mjs [--dry-run] [--skip-build] [--yes] [--otp=<code>]
+ *
  * ## Read this before running it
  *
  * CI never authenticates with a token — it relies entirely on npm Trusted Publishing (OIDC),
@@ -41,20 +44,15 @@
  *   gh release create @vielzeug/<pkg>@<version> --generate-notes
  */
 
-import { execFileSync } from 'node:child_process';
 import { createInterface } from 'node:readline';
-import { fileURLToPath } from 'node:url';
 
+import { isMain, parseArgs, run as defaultRun } from '../lib/cli.mjs';
 import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
-
-function defaultRun(cmd, args, options) {
-  return execFileSync(cmd, args, { encoding: 'utf8', stdio: 'inherit', ...options });
-}
 
 /** Fails fast with a clear message instead of letting every package fail publish one by one. */
 export function checkNpmAuth({ run = defaultRun } = {}) {
   try {
-    run('npm', ['whoami'], { stdio: 'pipe' });
+    run('npm', ['whoami']);
     return true;
   } catch {
     return false;
@@ -62,7 +60,7 @@ export function checkNpmAuth({ run = defaultRun } = {}) {
 }
 
 export function buildAllPackages({ run = defaultRun } = {}) {
-  run('node', ['common/scripts/install-run-rush.js', 'build', '--verbose']);
+  run('node', ['common/scripts/install-run-rush.js', 'build', '--verbose'], { inherit: true });
 }
 
 export function confirm(question, { readline = createInterface } = {}) {
@@ -120,23 +118,20 @@ export async function runLocalPublish({
   return results;
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-
-if (isMain) {
-  const args = process.argv.slice(2);
-  const otpArg = args.find((arg) => arg.startsWith('--otp='));
+if (isMain(import.meta.url)) {
+  const { flags } = parseArgs(process.argv.slice(2));
 
   runLocalPublish({
-    dryRun: process.env.DRY_RUN === '1' || args.includes('--dry-run'),
-    otp: otpArg?.slice('--otp='.length),
-    skipBuild: args.includes('--skip-build'),
-    yes: args.includes('--yes'),
+    dryRun: process.env.DRY_RUN === '1' || Boolean(flags['dry-run']),
+    otp: flags.otp,
+    skipBuild: Boolean(flags['skip-build']),
+    yes: Boolean(flags.yes),
   }).then(
     (results) => {
       if (results.failed.length > 0) process.exitCode = 1;
     },
     (error) => {
-      console.error(error.message);
+      console.error(error); // not error.message — this is the terminal fatal-error path, keep any cause chain
       process.exitCode = 1;
     },
   );

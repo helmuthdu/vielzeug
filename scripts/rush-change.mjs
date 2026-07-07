@@ -15,42 +15,52 @@
  * This script is scoped to exactly one package.
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const repoRoot = join(fileURLToPath(import.meta.url), '..', '..');
+import { isMain } from './lib/cli.mjs';
 
-const [, , name, type, message] = process.argv;
+export const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
 
 const VALID_TYPES = new Set(['major', 'minor', 'patch']);
 
-if (!name || !type || !message) {
+/** Writes `common/changes/@vielzeug/<name>/agent_<timestamp>.json` and returns its path. */
+export function writeChangeFile(name, type, message, { now = Date.now, root = ROOT } = {}) {
+  if (!VALID_TYPES.has(type)) {
+    throw new Error(`Invalid bump type "${type}". Must be one of: major, minor, patch`);
+  }
+
+  const packageName = name.startsWith('@vielzeug/') ? name : `@vielzeug/${name}`;
+  const dir = path.join(root, 'common', 'changes', packageName);
+  mkdirSync(dir, { recursive: true });
+
+  const filename = `agent_${now()}.json`;
+  const filepath = path.join(dir, filename);
+  const content = { changes: [{ comment: message, packageName, type }], email: 'agent@vielzeug', packageName };
+
+  writeFileSync(filepath, JSON.stringify(content, null, 2) + '\n');
+  return filepath;
+}
+
+function printUsage() {
   console.error('Usage: node scripts/rush-change.mjs <pkg-name> <patch|minor|major> "<message>"');
   console.error('Example: node scripts/rush-change.mjs orbit patch "fix: stop redundant DOM reads"');
-  process.exit(1);
 }
 
-if (!VALID_TYPES.has(type)) {
-  console.error(`Invalid bump type "${type}". Must be one of: major, minor, patch`);
-  process.exit(1);
+if (isMain(import.meta.url)) {
+  const [name, type, message] = process.argv.slice(2);
+
+  if (!name || !type || !message) {
+    printUsage();
+    process.exitCode = 1;
+  } else {
+    try {
+      const filepath = writeChangeFile(name, type, message);
+      console.log(`Written: ${path.relative(ROOT, filepath)}`);
+    } catch (err) {
+      console.error(err); // consistent with every other script's isMain catch — see scripts/AGENTS.md
+      process.exitCode = 1;
+    }
+  }
 }
-
-const packageName = name.startsWith('@vielzeug/') ? name : `@vielzeug/${name}`;
-const dir = join(repoRoot, 'common', 'changes', packageName);
-
-if (!existsSync(dir)) {
-  mkdirSync(dir, { recursive: true });
-}
-
-const filename = `agent_${Date.now()}.json`;
-const filepath = join(dir, filename);
-
-const content = {
-  changes: [{ comment: message, packageName, type }],
-  email: 'agent@vielzeug',
-  packageName,
-};
-
-writeFileSync(filepath, JSON.stringify(content, null, 2) + '\n');
-console.log(`Written: common/changes/${packageName}/${filename}`);

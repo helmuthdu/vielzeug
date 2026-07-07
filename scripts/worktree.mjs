@@ -30,39 +30,25 @@
 // exclusion; there is no way to enforce that from here, only to document it.
 //
 // Usage:
-//   node scripts/worktree.mjs add <pkg> [--branch <name>] [--force]
+//   node scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]
 //   node scripts/worktree.mjs list
 //   node scripts/worktree.mjs remove <pkg>
 
-import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { isMain, parseArgs, run as execRun } from './lib/cli.mjs';
+import { readPackageManifests } from './lib/packages.mjs';
+
 export const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
 
-/** Map of package name (e.g. "sandbox") -> Map of @vielzeug/* package name it
- * directly depends on -> whether that edge is an optional peer dependency.
+/** Map of package name (e.g. "sandbox") -> Map of @vielzeug/* package name it directly
+ * depends on (hard dependency or peer) -> whether that edge is an optional peer dependency.
  * Built from packages/*\/package.json at run time, not prose. */
 export function readDependencyGraph(root = ROOT) {
-  const graph = new Map();
-  const packagesDir = path.join(root, 'packages');
-  for (const dir of readdirSync(packagesDir)) {
-    const pkgJsonPath = path.join(packagesDir, dir, 'package.json');
-    if (!existsSync(pkgJsonPath)) continue;
-    const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf8'));
-    const optionalMeta = pkgJson.peerDependenciesMeta ?? {};
-    const allDeps = { ...pkgJson.peerDependencies, ...pkgJson.dependencies }; // dependencies wins if listed both ways
-    const edges = new Map();
-    for (const name of Object.keys(allDeps)) {
-      if (!name.startsWith('@vielzeug/')) continue;
-      const bareName = name.replace('@vielzeug/', '');
-      const isHardDependency = Boolean(pkgJson.dependencies?.[name]);
-      edges.set(bareName, !isHardDependency && Boolean(optionalMeta[name]?.optional));
-    }
-    graph.set(dir, edges);
-  }
-  return graph;
+  const manifests = readPackageManifests(path.join(root, 'packages'));
+  return new Map(manifests.map(({ peers, slug }) => [slug, new Map(peers.map((p) => [p.name, p.optional]))]));
 }
 
 /** { dependsOn, dependedOnBy }, each an array of { name, optional }. Both
@@ -84,31 +70,13 @@ export const isIndependent = (pkgName, graph) => {
 export const formatDep = ({ name, optional }) => (optional ? `${name} (optional)` : name);
 
 // ---------------------------------------------------------------------------
-// Argument parsing
-// ---------------------------------------------------------------------------
-
-/** Parses `add` subcommand flags. Throws on a missing/flag-shaped `--branch`
- * value instead of silently swallowing the next flag as the branch name. */
-export function parseAddArgs(rest) {
-  const force = rest.includes('--force');
-  const branchIndex = rest.indexOf('--branch');
-  if (branchIndex === -1) return { branch: undefined, force };
-
-  const value = rest[branchIndex + 1];
-  if (!value || value.startsWith('--')) {
-    throw new Error('--branch requires a value, e.g. --branch agent/sandbox-fix');
-  }
-  return { branch: value, force };
-}
-
-// ---------------------------------------------------------------------------
 // Commands — `run` is injectable so tests can assert on invocations without
 // spawning real git/rush processes.
 // ---------------------------------------------------------------------------
 
 export function defaultRun(cmd, args, cwd) {
   console.log(`$ ${cmd} ${args.join(' ')}`);
-  execFileSync(cmd, args, { cwd, stdio: 'inherit' });
+  execRun(cmd, args, { cwd, inherit: true });
 }
 
 function worktreePath(pkgName, root) {
@@ -123,9 +91,12 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
 
   const coupling = describeCoupling(pkgName, graph);
   if (!isIndependent(pkgName, graph) && !force) {
-    const lines = [`[REFUSED] "${pkgName}" has @vielzeug dependency edges — a worktree would hide breaking changes until merge:`];
+    const lines = [
+      `[REFUSED] "${pkgName}" has @vielzeug dependency edges — a worktree would hide breaking changes until merge:`,
+    ];
     if (coupling.dependsOn.length) lines.push(`  depends on:     ${coupling.dependsOn.map(formatDep).join(', ')}`);
-    if (coupling.dependedOnBy.length) lines.push(`  depended on by: ${coupling.dependedOnBy.map(formatDep).join(', ')}`);
+    if (coupling.dependedOnBy.length)
+      lines.push(`  depended on by: ${coupling.dependedOnBy.map(formatDep).join(', ')}`);
     lines.push('Work on this package in the shared checkout instead, or pass --force if you understand the tradeoff.');
     console.error(lines.join('\n'));
     return { created: false };
@@ -140,7 +111,9 @@ export function cmdAdd(pkgName, { branch, force = false, root = ROOT, run = defa
   run('git', ['worktree', 'prune'], root);
 
   if (existsSync(dir)) {
-    throw new Error(`${dir} already exists — remove it first (\`pnpm worktree:remove ${pkgName}\`) or pick a different package`);
+    throw new Error(
+      `${dir} already exists — remove it first (\`pnpm worktree:remove ${pkgName}\`) or pick a different package`,
+    );
   }
 
   const branchName = branch ?? `agent/${pkgName}-${Date.now()}`;
@@ -180,13 +153,13 @@ export function cmdRemove(pkgName, { root = ROOT, run = defaultRun } = {}) {
 // ---------------------------------------------------------------------------
 
 function main(argv) {
-  const [command, pkgName, ...rest] = argv;
+  const { flags, positionals } = parseArgs(argv);
+  const [command, pkgName] = positionals;
 
   switch (command) {
     case 'add': {
-      if (!pkgName) throw new Error('Usage: node scripts/worktree.mjs add <pkg> [--branch <name>] [--force]');
-      const { branch, force } = parseAddArgs(rest);
-      const result = cmdAdd(pkgName, { branch, force });
+      if (!pkgName) throw new Error('Usage: node scripts/worktree.mjs add <pkg> [--branch=<name>] [--force]');
+      const result = cmdAdd(pkgName, { branch: flags.branch, force: Boolean(flags.force) });
       if (!result.created) process.exitCode = 1;
       return;
     }
@@ -200,12 +173,11 @@ function main(argv) {
   }
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-if (isMain) {
+if (isMain(import.meta.url)) {
   try {
     main(process.argv.slice(2));
   } catch (err) {
-    console.error(`Error: ${err.message}`);
-    process.exit(1);
+    console.error(err); // not err.message — the git-worktree-add failure path wraps a real cause
+    process.exitCode = 1;
   }
 }

@@ -86,7 +86,7 @@ describe('plan', () => {
     planReleases.mockResolvedValue([{ folder: 'packages/ore', package: '@vielzeug/ore', version: '1.1.0' }]);
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
 
-    await main(['plan', '--before-file', beforeFile, '@vielzeug/ore', '@vielzeug/orbit']);
+    await main(['plan', `--before-file=${beforeFile}`, '@vielzeug/ore', '@vielzeug/orbit']);
 
     expect(planReleases).toHaveBeenCalledWith(['@vielzeug/ore', '@vielzeug/orbit'], {
       '@vielzeug/orbit': '2.0.0',
@@ -138,6 +138,22 @@ describe('publish', () => {
     await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore', '--interactive']);
 
     expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: false, interactive: true, otp: undefined });
+  });
+
+  it('reads DRY_RUN per call, not once at module import time', async () => {
+    // cli.mjs was already imported (at the top of this file) with DRY_RUN unset — if `dryRun`
+    // were captured at import time instead of inside main(), setting it now would have no effect.
+    versionExists.mockResolvedValue(false);
+    const originalDryRun = process.env.DRY_RUN;
+    process.env.DRY_RUN = '1';
+
+    try {
+      await main(['publish', '@vielzeug/ore', '1.0.4', 'packages/ore']);
+      expect(publishPackage).toHaveBeenCalledWith('packages/ore', { dryRun: true, interactive: false, otp: undefined });
+    } finally {
+      if (originalDryRun === undefined) delete process.env.DRY_RUN;
+      else process.env.DRY_RUN = originalDryRun;
+    }
   });
 });
 

@@ -6,7 +6,7 @@ describe('checkNpmAuth()', () => {
   it('returns true when `npm whoami` succeeds', () => {
     const run = vi.fn(() => 'some-user\n');
     expect(checkNpmAuth({ run })).toBe(true);
-    expect(run).toHaveBeenCalledWith('npm', ['whoami'], { stdio: 'pipe' });
+    expect(run).toHaveBeenCalledWith('npm', ['whoami']);
   });
 
   it('returns false when `npm whoami` throws (not logged in)', () => {

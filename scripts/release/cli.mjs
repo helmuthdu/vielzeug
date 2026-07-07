@@ -15,7 +15,7 @@
  *   project <pkg>                           print folder=/version= for one package
  *   versions <pkg...>                       print pkg=version for each package (pre-bump snapshot)
  *   apply [pkg]                             apply pending rush version bump(s)
- *   plan --before-file <path> <pkg...>      print a JSON publish plan (for a matrix)
+ *   plan --before-file=<path> <pkg...>      print a JSON publish plan (for a matrix)
  *   publish <pkg> <version> <folder> [--otp=<code>] [--interactive]   publish + tag + release one package
  *   publish-missing [--otp=<code>] [--interactive]                    backfill any @vielzeug/* version missing from npm
  *
@@ -31,8 +31,8 @@
  */
 
 import { appendFileSync, readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
+import { isMain, parseArgs } from '../lib/cli.mjs';
 import { publishPackage } from './npm-publish.mjs';
 import { versionExists } from './npm-version-exists.mjs';
 import { publishMissing, summaryMarkdown } from './publish-missing.mjs';
@@ -40,8 +40,6 @@ import { planReleases } from './release-plan.mjs';
 import { applyVersionBump, listChangedPackageNames } from './rush-publish-apply.mjs';
 import { findProject, listProjectNames } from './rush-project.mjs';
 import { tagAndRelease } from './tag-and-release.mjs';
-
-const dryRun = process.env.DRY_RUN === '1';
 
 function parseVersionsBeforeFile(filePath) {
   const versions = {};
@@ -52,7 +50,11 @@ function parseVersionsBeforeFile(filePath) {
   return versions;
 }
 
-async function main([command, ...args]) {
+async function main(argv) {
+  const { flags, positionals } = parseArgs(argv);
+  const [command, ...args] = positionals;
+  const dryRun = process.env.DRY_RUN === '1'; // read per-call, not at import time — see scripts/AGENTS.md
+
   switch (command) {
     case 'changed-packages': {
       const packages = listChangedPackageNames();
@@ -84,33 +86,31 @@ async function main([command, ...args]) {
     }
 
     case 'plan': {
-      const beforeFileIndex = args.indexOf('--before-file');
-      if (beforeFileIndex === -1) throw new Error('Usage: plan --before-file <path> <pkg...>');
-      const versionsBefore = parseVersionsBeforeFile(args[beforeFileIndex + 1]);
-      const packages = args.filter((_, i) => i !== beforeFileIndex && i !== beforeFileIndex + 1);
-      const plan = await planReleases(packages, versionsBefore);
+      if (!flags['before-file']) throw new Error('Usage: plan --before-file=<path> <pkg...>');
+      const versionsBefore = parseVersionsBeforeFile(flags['before-file']);
+      const plan = await planReleases(args, versionsBefore);
       console.log(JSON.stringify(plan));
       return;
     }
 
     case 'publish': {
       const [pkg, version, folder] = args;
-      const otp = args.find((arg) => arg.startsWith('--otp='))?.slice('--otp='.length);
-      const interactive = args.includes('--interactive');
       if (await versionExists(pkg, version)) {
         console.log(`⚠️  ${pkg}@${version} already on npm — skipping`);
         return;
       }
-      await publishPackage(folder, { dryRun, interactive, otp });
+      await publishPackage(folder, { dryRun, interactive: Boolean(flags.interactive), otp: flags.otp });
       tagAndRelease({ dryRun, folder, package: pkg, version });
       console.log(`✅ Published ${pkg}@${version}`);
       return;
     }
 
     case 'publish-missing': {
-      const otp = args.find((arg) => arg.startsWith('--otp='))?.slice('--otp='.length);
-      const interactive = args.includes('--interactive');
-      const results = await publishMissing(undefined, { dryRun, interactive, otp });
+      const results = await publishMissing(undefined, {
+        dryRun,
+        interactive: Boolean(flags.interactive),
+        otp: flags.otp,
+      });
       console.log(`\n${summaryMarkdown(results)}`);
       if (process.env.GITHUB_STEP_SUMMARY)
         appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summaryMarkdown(results)}\n`);
@@ -125,11 +125,9 @@ async function main([command, ...args]) {
 
 export { main };
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-
-if (isMain) {
+if (isMain(import.meta.url)) {
   main(process.argv.slice(2)).catch((error) => {
-    console.error(error.message);
+    console.error(error); // not error.message — several subcommands wrap a real cause, and this is the terminal fatal-error path
     process.exitCode = 1;
   });
 }

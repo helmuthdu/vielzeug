@@ -7,7 +7,6 @@ import {
   describeCoupling,
   formatDep,
   isIndependent,
-  parseAddArgs,
   readDependencyGraph,
   ROOT,
 } from '../worktree.mjs';
@@ -30,7 +29,7 @@ describe('readDependencyGraph()', () => {
     expect(graph.get('ore').get('ripple')).toBe(false);
   });
 
-  it('marks flux\'s optional peerDependencies as optional', () => {
+  it("marks flux's optional peerDependencies as optional", () => {
     const flux = graph.get('flux');
     expect(flux.get('ripple')).toBe(false); // hard dependency
     expect(flux.get('courier')).toBe(true); // optional peer
@@ -106,32 +105,8 @@ describe('describeCoupling() / isIndependent() / formatDep()', () => {
   });
 });
 
-describe('parseAddArgs()', () => {
-  it('parses no flags', () => {
-    expect(parseAddArgs([])).toEqual({ branch: undefined, force: false });
-  });
-
-  it('parses --force', () => {
-    expect(parseAddArgs(['--force'])).toEqual({ branch: undefined, force: true });
-  });
-
-  it('parses --branch with a value', () => {
-    expect(parseAddArgs(['--branch', 'agent/sandbox-fix'])).toEqual({ branch: 'agent/sandbox-fix', force: false });
-  });
-
-  it('parses --branch and --force together, in either order', () => {
-    expect(parseAddArgs(['--branch', 'my-branch', '--force'])).toEqual({ branch: 'my-branch', force: true });
-    expect(parseAddArgs(['--force', '--branch', 'my-branch'])).toEqual({ branch: 'my-branch', force: true });
-  });
-
-  it('rejects --branch with no value', () => {
-    expect(() => parseAddArgs(['--branch'])).toThrow(/requires a value/);
-  });
-
-  it('rejects --branch immediately followed by another flag (the original bug)', () => {
-    expect(() => parseAddArgs(['--branch', '--force'])).toThrow(/requires a value/);
-  });
-});
+// Flag parsing itself (--branch=<name>, bare --force) is covered by scripts/lib/__tests__/cli.test.mjs
+// — worktree.mjs's own main() just wires parseArgs()'s output into cmdAdd(), tested below.
 
 describe('cmdAdd() — dependency-graph gating, with a fake runner (no real git/rush spawned)', () => {
   function fakeRun() {
@@ -155,10 +130,20 @@ describe('cmdAdd() — dependency-graph gating, with a fake runner (no real git/
   it('proceeds for a coupled package with --force: prune, add, install, in order', () => {
     const { calls, run } = fakeRun();
     const result = cmdAdd('ripple', { branch: 'test-branch', force: true, run });
-    expect(result).toEqual({ branchName: 'test-branch', created: true, dir: expect.stringContaining('.worktrees/ripple') });
+    expect(result).toEqual({
+      branchName: 'test-branch',
+      created: true,
+      dir: expect.stringContaining('.worktrees/ripple'),
+    });
     expect(calls.map((c) => c.cmd)).toEqual(['git', 'git', 'rush']);
     expect(calls[0].args).toEqual(['worktree', 'prune']);
-    expect(calls[1].args).toEqual(['worktree', 'add', expect.stringContaining('.worktrees/ripple'), '-b', 'test-branch']);
+    expect(calls[1].args).toEqual([
+      'worktree',
+      'add',
+      expect.stringContaining('.worktrees/ripple'),
+      '-b',
+      'test-branch',
+    ]);
     expect(calls[2].args).toEqual(['install', '--to', 'ripple']);
   });
 
@@ -202,6 +187,8 @@ describe('cmdList() / cmdRemove() — thin wrappers over the injected runner', (
   it('cmdRemove runs `git worktree remove <dir>` with no --force', () => {
     const calls = [];
     cmdRemove('sandbox', { run: (cmd, args) => calls.push({ args, cmd }) });
-    expect(calls).toEqual([{ args: ['worktree', 'remove', expect.stringContaining('.worktrees/sandbox')], cmd: 'git' }]);
+    expect(calls).toEqual([
+      { args: ['worktree', 'remove', expect.stringContaining('.worktrees/sandbox')], cmd: 'git' },
+    ]);
   });
 });

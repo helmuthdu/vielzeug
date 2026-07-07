@@ -129,7 +129,7 @@ describe('publishPackage()', () => {
 
     expect(run).toHaveBeenNthCalledWith(2, 'npm', ['publish', 'pkg-1.0.0.tgz', '--access', 'public'], {
       cwd: '/repo/packages/pkg',
-      stdio: 'inherit',
+      inherit: true,
     });
   });
 

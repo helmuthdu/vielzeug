@@ -39,25 +39,22 @@
  * `scripts/release/local-publish.mjs` for the exact setup.
  *
  * The WebAuthn/browser-trust flow specifically requires npm's own subprocess to see a real
- * TTY on stdout to decide it's safe to open a browser and wait for the approval — the default
- * `run()` below captures output through plain OS pipes (needed so CI can parse E409 conflicts
- * and this module never has to guess at npm's error wording), which look like a non-interactive
- * context to npm and make it fail straight to `EOTP` instead of opening a browser. Pass
- * `interactive: true` (only meaningful for a human at a real terminal, e.g.
- * `local-publish.mjs`) to run the publish step with `stdio: 'inherit'` so npm shares the
- * caller's actual terminal and can do the browser-trust dance — the tradeoff is no captured
- * output for that call, so no automatic E409 retry; just re-run by hand on a conflict.
+ * TTY on stdout to decide it's safe to open a browser and wait for the approval — `run()`
+ * (see `scripts/lib/cli.mjs`) captures output through plain OS pipes by default (needed so CI
+ * can parse E409 conflicts and this module never has to guess at npm's error wording), which
+ * looks like a non-interactive context to npm and makes it fail straight to `EOTP` instead of
+ * opening a browser. Pass `interactive: true` (only meaningful for a human at a real terminal,
+ * e.g. `local-publish.mjs`) to run the publish step with inherited stdio instead, so npm
+ * shares the caller's actual terminal and can do the browser-trust dance — the tradeoff is no
+ * captured output for that call, so no automatic E409 retry; just re-run by hand on a conflict.
  */
 
-import { execFileSync } from 'node:child_process';
 import { existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 
-const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
+import { run as defaultRun } from '../lib/cli.mjs';
 
-function defaultRun(cmd, args, options) {
-  return execFileSync(cmd, args, { encoding: 'utf8', ...options });
-}
+const RETRY_DELAYS_MS = [5_000, 15_000, 30_000];
 
 function defaultSleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -80,7 +77,7 @@ export async function publishPackage(
     if (interactive) {
       // No captured output here (stdio is inherited, not piped) — so no E409 retry loop either;
       // npm's own prompts (including a browser-trust tab) go straight to the real terminal.
-      run('npm', publishArgs, { cwd: folder, stdio: 'inherit' });
+      run('npm', publishArgs, { cwd: folder, inherit: true });
       return;
     }
 

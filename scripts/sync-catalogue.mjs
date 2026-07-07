@@ -17,46 +17,21 @@
 // Side effects (reading packages/, writing the file) are guarded by the `isMain`
 // check at the bottom, same convention as scripts/sync-workflow-docs.mjs.
 
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-import { replaceBetweenMarkers, syncFile } from './sync-workflow-docs.mjs';
+import { isMain, parseArgs } from './lib/cli.mjs';
+import { ROOT, replaceBetweenMarkers, syncFile } from './lib/marker-sync.mjs';
+import { readPackageManifests } from './lib/packages.mjs';
 
-export const ROOT = path.resolve(fileURLToPath(import.meta.url), '../..');
-
-const SCOPE_PREFIX = '@vielzeug/';
-
-/** One entry per `packages/<slug>/package.json`, in an unspecified order —
- * callers sort as needed. Skips directories with no `package.json` (e.g. a
- * half-created scaffold). */
+/** One entry per `packages/<slug>/package.json`, sorted alphabetically by slug — thin view
+ * over `readPackageManifests()` in this module's own `{ deps, optionalPeers, slug }` shape. */
 export function readPackages(root = ROOT) {
-  const packagesDir = path.join(root, 'packages');
-  const slugs = readdirSync(packagesDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-
-  const packages = [];
-  for (const slug of slugs) {
-    const pkgJsonPath = path.join(packagesDir, slug, 'package.json');
-    let raw;
-    try {
-      raw = readFileSync(pkgJsonPath, 'utf8');
-    } catch {
-      continue;
-    }
-    const pkg = JSON.parse(raw);
-    const deps = Object.keys(pkg.dependencies ?? {})
-      .filter((name) => name.startsWith(SCOPE_PREFIX))
-      .map((name) => name.slice(SCOPE_PREFIX.length))
-      .sort();
-    const optionalPeers = Object.entries(pkg.peerDependenciesMeta ?? {})
-      .filter(([name, meta]) => meta?.optional && name.startsWith(SCOPE_PREFIX))
-      .map(([name]) => name.slice(SCOPE_PREFIX.length))
-      .sort();
-    packages.push({ deps, optionalPeers, slug });
-  }
-  return packages;
+  return readPackageManifests(path.join(root, 'packages')).map(({ dependencies, peers, slug }) => ({
+    deps: dependencies,
+    optionalPeers: peers.filter((p) => p.optional).map((p) => p.name),
+    slug,
+  }));
 }
 
 /** "a", "a and b", or "a, b, and c" (Oxford comma), each name backtick-quoted. */
@@ -97,7 +72,7 @@ export function dependencyGraphSection(packages) {
   return parts.join('\n');
 }
 
-export function run({ check = false } = {}) {
+export function main({ check = false } = {}) {
   const packages = readPackages();
   const content = dependencyGraphSection(packages);
 
@@ -133,8 +108,8 @@ export function run({ check = false } = {}) {
   return true;
 }
 
-const isMain = process.argv[1] === fileURLToPath(import.meta.url);
-if (isMain) {
-  const ok = run({ check: process.argv.includes('--check') });
-  if (!ok) process.exit(1);
+if (isMain(import.meta.url)) {
+  const { flags } = parseArgs(process.argv.slice(2));
+  const ok = main({ check: Boolean(flags.check) });
+  if (!ok) process.exitCode = 1;
 }

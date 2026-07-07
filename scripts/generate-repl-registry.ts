@@ -13,8 +13,18 @@
  *   - sandbox IIFE bundle          <- packages/<name>/dist/<name>.iife.js (real build)
  *   - dependency load order       <- packages/<name>/vite.bundle.config.ts `external`
  *
+ * Curated content that can't be derived (descriptions, arsenal's function categories) lives in
+ * `./repl-metadata.ts`, not here — this file owns AST extraction and assembly only.
+ *
  * Run via `pnpm gen:repl-registry` (wired into docs:dev / docs:build / docs:preview).
  * Requires packages to be built first (`rush build` / `pnpm -r build`) — dist/ must exist.
+ *
+ * Every function below except `main()` is pure or takes its filesystem root as a parameter —
+ * see scripts/__tests__/generate-repl-registry.test.ts. `main()` itself is guarded by the
+ * `isMain` check at the bottom so importing this module for tests never writes to disk. That
+ * check is inlined rather than imported from `scripts/lib/cli.mjs` — this file has no other
+ * use for that module, and importing it just for a one-line, three-token check would mean this
+ * `.ts` file's typechecking depends on `lib/cli.d.mts` staying in sync for zero real benefit.
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -22,109 +32,19 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 
+import { ARSENAL_CATEGORIES, DESCRIPTIONS } from './repl-metadata';
 import { listVielzeugPackages, REPL_EXCLUDED_PACKAGES } from './vielzeug-packages';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = join(__dirname, '..');
-const PACKAGES_DIR = join(ROOT, 'packages');
-const OUTPUT_FILE = join(
-  ROOT,
-  'docs/.vitepress/theme/components/repl/registry.generated.ts',
-);
-
-// ---------------------------------------------------------------------------
-// Curated metadata that genuinely can't be derived from source: a one-line human
-// description per package, and arsenal's fine-grained function categories (every other
-// package gets a single implicit "Exports" category — see REPLReference.vue).
-// ---------------------------------------------------------------------------
-
-const DESCRIPTIONS: Record<string, string> = {
-  arsenal: 'Utility library with functions for arrays, objects, and more.',
-  clockwork: 'Typed finite state machines with guards, async invokes, and more.',
-  coins: 'Currency formatting and exchange utilities for monetary arithmetic.',
-  conduit: 'Lightweight dependency injection container with IoC principles.',
-  courier: 'Advanced HTTP client with caching, retries, mutations, and more.',
-  dnd: 'Drag-and-drop primitives with file filtering and more.',
-  familiar: 'Web Worker pool abstraction with queuing, timeout, and more.',
-  flux: 'Composable reactive streams with a full operator library and ecosystem adapters.',
-  forge: 'Form state management with reactive fields and async validation.',
-  herald: 'Publish/Subscribe event bus with async support.',
-  keymap: 'Headless keyboard shortcut manager with chord sequences, context guards, and disposable bindings.',
-  ledger: 'Async undo/redo command stack with serialised queueing and Ripple reactive signals.',
-  lingua: 'Internationalization library with TypeScript support.',
-  orbit: 'Lightweight floating-element positioning for elements.',
-  pulse: 'WebSocket client with auto-reconnect, message buffering, and more.',
-  ripple: 'Reactive state based on signals, with stores, derived state, and more.',
-  rune: 'Structured logger with level filtering, scoped namespaces, and more.',
-  sandbox: 'Sandboxed iframe runtime with typed postMessage state bridge.',
-  scout: 'Trigram fuzzy-search index with match highlighting and reactive layer.',
-  scroll: 'Virtual list engine for performant rendering of large datasets.',
-  sourcerer: 'Reactive query sources with pagination and URL state sync.',
-  spell: 'Type-safe schema validation with advanced error handling.',
-  tempo: 'Timezone-aware date/time library built on Temporal.',
-  vault: 'Storage with schemas, TTL, and query building.',
-  ward: 'Role-based access control (RBAC) system for permissions.',
-  wayfinder: 'Routing library with nested routes and middleware support.',
-};
-
-const ARSENAL_CATEGORIES: ReadonlyArray<{ functions: readonly string[]; name: string }> = [
-  {
-    functions: [
-      'chunk', 'compact', 'contains', 'countBy', 'difference', 'drop', 'dropLast', 'filterMap', 'first', 'flatten',
-      'groupBy', 'indexBy', 'intersection', 'last', 'partition', 'replace', 'rotate', 'sample', 'search', 'sort',
-      'take', 'takeLast', 'toggle', 'union', 'uniq', 'unzip', 'zip',
-    ],
-    name: 'Array',
-  },
-  {
-    functions: ['abortable', 'attempt', 'defer', 'parallel', 'queue', 'retry', 'sleep', 'timeout', 'waitFor', 'Scheduler', 'polyfillScheduler'],
-    name: 'Async',
-  },
-  {
-    functions: [
-      'allOf', 'anyOf', 'assert', 'assertAll', 'compare', 'compareBy', 'compose', 'constant', 'curry', 'debounce',
-      'identity', 'memo', 'noneOf', 'once', 'partial', 'pipe', 'tap', 'throttle',
-    ],
-    name: 'Function',
-  },
-  {
-    functions: [
-      'abs', 'allocate', 'average', 'clamp', 'gcd', 'lcm', 'lerp', 'linspace', 'max', 'median', 'min', 'mod',
-      'normalize', 'percent', 'range', 'round', 'standardDeviation', 'sum', 'variance',
-    ],
-    name: 'Math',
-  },
-  { functions: ['currency', 'exchange'], name: 'Money' },
-  {
-    functions: [
-      'deepClone', 'deepMerge', 'defaults', 'diff', 'entries', 'filterValues', 'fromEntries', 'get', 'has', 'invert',
-      'keys', 'mapKeys', 'mapValues', 'omit', 'parseJSON', 'pick', 'prune', 'shallowMerge', 'stash', 'values',
-    ],
-    name: 'Object',
-  },
-  { functions: ['draw', 'random', 'shuffle', 'uuid'], name: 'Random' },
-  {
-    functions: [
-      'camelCase', 'endsWith', 'escape', 'kebabCase', 'pad', 'pascalCase', 'similarity', 'snakeCase', 'startsWith',
-      'titleCase', 'truncate', 'unescape', 'words',
-    ],
-    name: 'String',
-  },
-  {
-    functions: [
-      'is', 'isArray', 'isBoolean', 'isDate', 'isDefined', 'isEmpty', 'isEqual', 'isFunction', 'isGreaterThan',
-      'isGreaterThanOrEqual', 'isLessThan', 'isLessThanOrEqual', 'isMatch', 'isNil', 'isNumber', 'isObject',
-      'isPrimitive', 'isPromise', 'isRegex', 'isString', 'isWithin', 'typeOf',
-    ],
-    name: 'Typed',
-  },
-];
+export const ROOT = join(__dirname, '..');
+export const PACKAGES_DIR = join(ROOT, 'packages');
+const OUTPUT_FILE = join(ROOT, 'docs/.vitepress/theme/components/repl/registry.generated.ts');
 
 // ---------------------------------------------------------------------------
 // Global variable name + dependency order, parsed from each package's vite.bundle.config.ts
 // ---------------------------------------------------------------------------
 
-interface BundleMeta {
+export interface BundleMeta {
   externalDeps: string[];
   fileName: string;
   globalName: string;
@@ -137,7 +57,7 @@ interface BundleMeta {
 // argument. That's more robust to reformatting than pattern-matching the source text, and
 // keeps this generator's two source-reading paths (this one, extractApi() below) both using
 // the compiler API instead of one being regex and one being real AST.
-function findGetBundleConfigCall(node: ts.Node): ts.CallExpression | undefined {
+export function findGetBundleConfigCall(node: ts.Node): ts.CallExpression | undefined {
   if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'getBundleConfig') {
     return node;
   }
@@ -145,7 +65,7 @@ function findGetBundleConfigCall(node: ts.Node): ts.CallExpression | undefined {
   return ts.forEachChild(node, findGetBundleConfigCall);
 }
 
-function readStringProperty(obj: ts.ObjectLiteralExpression, name: string): string | undefined {
+export function readStringProperty(obj: ts.ObjectLiteralExpression, name: string): string | undefined {
   for (const prop of obj.properties) {
     if (ts.isPropertyAssignment(prop) && ts.isIdentifier(prop.name) && prop.name.text === name) {
       return ts.isStringLiteralLike(prop.initializer) ? prop.initializer.text : undefined;
@@ -155,7 +75,7 @@ function readStringProperty(obj: ts.ObjectLiteralExpression, name: string): stri
   return undefined;
 }
 
-function readExternalDeps(obj: ts.ObjectLiteralExpression): string[] {
+export function readExternalDeps(obj: ts.ObjectLiteralExpression): string[] {
   for (const prop of obj.properties) {
     if (!ts.isPropertyAssignment(prop) || !ts.isIdentifier(prop.name) || prop.name.text !== 'external') continue;
     if (!ts.isArrayLiteralExpression(prop.initializer)) return [];
@@ -170,11 +90,10 @@ function readExternalDeps(obj: ts.ObjectLiteralExpression): string[] {
   return [];
 }
 
-function readBundleMeta(pkg: string): BundleMeta {
-  const configPath = join(PACKAGES_DIR, pkg, 'vite.bundle.config.ts');
-  const source = readFileSync(configPath, 'utf8');
+/** Pure parse step, split out from `readBundleMeta()` so tests can feed it an in-memory source
+ * string instead of a real vite.bundle.config.ts on disk. */
+export function parseBundleMeta(configPath: string, source: string): BundleMeta {
   const sourceFile = ts.createSourceFile(configPath, source, ts.ScriptTarget.Latest, true);
-
   const call = findGetBundleConfigCall(sourceFile);
   const options = call?.arguments[1];
 
@@ -192,8 +111,17 @@ function readBundleMeta(pkg: string): BundleMeta {
   return { externalDeps: readExternalDeps(options), fileName, globalName };
 }
 
+export function readBundleMeta(pkg: string, packagesDir = PACKAGES_DIR): BundleMeta {
+  const configPath = join(packagesDir, pkg, 'vite.bundle.config.ts');
+  return parseBundleMeta(configPath, readFileSync(configPath, 'utf8'));
+}
+
 /** Depth-first, dependencies-before-dependents. `visiting` catches accidental cycles. */
-function resolveLoadOrder(pkg: string, metaByPkg: Map<string, BundleMeta>, visiting = new Set<string>()): string[] {
+export function resolveLoadOrder(
+  pkg: string,
+  metaByPkg: Map<string, BundleMeta>,
+  visiting = new Set<string>(),
+): string[] {
   if (visiting.has(pkg)) throw new Error(`Circular @vielzeug dependency detected involving "${pkg}"`);
   visiting.add(pkg);
 
@@ -223,19 +151,23 @@ function resolveLoadOrder(pkg: string, metaByPkg: Map<string, BundleMeta>, visit
 // `export * from './relative/chunk'` re-export chain is resolved by the compiler itself.
 // ---------------------------------------------------------------------------
 
-interface ExtractedApi {
+export interface ExtractedApi {
   typeDeclaration: string;
   valueExports: string[];
 }
 
 const VALUE_FLAGS =
-  ts.SymbolFlags.Value | ts.SymbolFlags.Function | ts.SymbolFlags.Class | ts.SymbolFlags.Enum | ts.SymbolFlags.ValueModule;
+  ts.SymbolFlags.Value |
+  ts.SymbolFlags.Function |
+  ts.SymbolFlags.Class |
+  ts.SymbolFlags.Enum |
+  ts.SymbolFlags.ValueModule;
 
 // A symbol's `getDeclarations()` for a `const foo = () => ...` export returns the inner
 // `VariableDeclaration` node ("foo: () => void") — the `export`/`declare` modifiers live
 // on its grandparent `VariableStatement`. Printing the declarator alone silently drops
 // them, producing invalid ambient syntax ("foo: () => void" with no keyword at all).
-function toPrintableNode(decl: ts.Node): ts.Node {
+export function toPrintableNode(decl: ts.Node): ts.Node {
   if (ts.isVariableDeclaration(decl) && ts.isVariableStatement(decl.parent.parent)) {
     return decl.parent.parent;
   }
@@ -246,7 +178,7 @@ function toPrintableNode(decl: ts.Node): ts.Node {
 // Printing a node includes its leading JSDoc as plain text ahead of the declaration
 // keywords, so a naive "does this start with 'export'" check on the whole string sees the
 // comment instead and wrongly prepends a second `export`. Check only the code portion.
-function normalizeAmbientText(printed: string): string {
+export function normalizeAmbientText(printed: string): string {
   const match = /^(\s*\/\*\*[\s\S]*?\*\/\s*)?([\s\S]*)$/.exec(printed);
   const [, comment = '', code = printed] = match ?? [];
 
@@ -259,8 +191,8 @@ function normalizeAmbientText(printed: string): string {
 // The generator's whole premise is "read real build output" — a missing dist/ almost always
 // means "forgot to build the package," not a bug in this script. A raw ENOENT stack trace
 // doesn't say that; this does.
-function readDistFile(pkg: string, relativePath: string): string {
-  const path = join(PACKAGES_DIR, pkg, 'dist', relativePath);
+export function readDistFile(pkg: string, relativePath: string, packagesDir = PACKAGES_DIR): string {
+  const path = join(packagesDir, pkg, 'dist', relativePath);
 
   if (!existsSync(path)) {
     throw new Error(`Missing ${path}. Run "pnpm --filter @vielzeug/${pkg} build" first.`);
@@ -269,10 +201,14 @@ function readDistFile(pkg: string, relativePath: string): string {
   return readFileSync(path, 'utf8');
 }
 
-function extractApi(pkg: string): ExtractedApi {
-  const entry = join(PACKAGES_DIR, pkg, 'dist/index.d.ts');
+export function extractApi(pkg: string, packagesDir = PACKAGES_DIR): ExtractedApi {
+  const entry = join(packagesDir, pkg, 'dist/index.d.ts');
 
-  readDistFile(pkg, 'index.d.ts'); // fail fast with a clear message before handing this to the compiler
+  // Fail fast with a clear message before handing this to the compiler — ts.createProgram()
+  // would otherwise report a missing entry point through a much less friendly diagnostic.
+  if (!existsSync(entry)) {
+    throw new Error(`Missing ${entry}. Run "pnpm --filter @vielzeug/${pkg} build" first.`);
+  }
 
   const program = ts.createProgram([entry], {
     module: ts.ModuleKind.ESNext,
@@ -320,23 +256,33 @@ function quote(value: string): string {
   return JSON.stringify(value);
 }
 
-function main(): void {
-  const packages = listVielzeugPackages(PACKAGES_DIR).filter((pkg) => !REPL_EXCLUDED_PACKAGES.has(pkg));
-  const metaByPkg = new Map(packages.map((pkg) => [pkg, readBundleMeta(pkg)]));
+/** Builds the full generated file's source text. Split from `main()` so tests can call it
+ * against a fake `packagesDir` without touching the real docs/ output file. */
+export function buildRegistrySource(packagesDir = PACKAGES_DIR): { output: string; packageCount: number } {
+  const packages = listVielzeugPackages(packagesDir).filter((pkg) => !REPL_EXCLUDED_PACKAGES.has(pkg));
+  const metaByPkg = new Map(packages.map((pkg) => [pkg, readBundleMeta(pkg, packagesDir)]));
 
-  const entries = packages.map((pkg) => {
-    const meta = metaByPkg.get(pkg)!;
-    const { typeDeclaration, valueExports } = extractApi(pkg);
+  // Iterating metaByPkg directly (instead of `packages.map(pkg => metaByPkg.get(pkg)!)`) means
+  // there's no separate lookup that could theoretically miss — a Map entry pair can't need a
+  // non-null assertion the way a second `.get()` on a related-but-distinct list would.
+  const entries = [...metaByPkg].map(([pkg, meta]) => {
+    const { typeDeclaration, valueExports } = extractApi(pkg, packagesDir);
     const loadOrder = resolveLoadOrder(pkg, metaByPkg);
     const dependencies = loadOrder.filter((name) => name !== pkg);
-    const iifeSource = readDistFile(pkg, `${meta.fileName}.iife.js`);
+    const iifeSource = readDistFile(pkg, `${meta.fileName}.iife.js`, packagesDir);
 
-    const categories =
-      pkg === 'arsenal'
-        ? ARSENAL_CATEGORIES
-        : [{ functions: valueExports, name: 'Exports' }];
+    const categories = pkg === 'arsenal' ? ARSENAL_CATEGORIES : [{ functions: valueExports, name: 'Exports' }];
 
-    return { categories, dependencies, description: DESCRIPTIONS[pkg] ?? '', exports: valueExports, globalName: meta.globalName, iifeSource, id: pkg, typeDeclaration };
+    return {
+      categories,
+      dependencies,
+      description: DESCRIPTIONS[pkg] ?? '',
+      exports: valueExports,
+      globalName: meta.globalName,
+      iifeSource,
+      id: pkg,
+      typeDeclaration,
+    };
   });
 
   // Every dependency resolveLoadOrder() found has to actually be one of the packages this
@@ -399,10 +345,17 @@ ${body}
 };
 `;
 
-  mkdirSync(dirname(OUTPUT_FILE), { recursive: true });
-  writeFileSync(OUTPUT_FILE, output, 'utf8');
-  // eslint-disable-next-line no-console
-  console.log(`Generated REPL registry for ${packages.length} packages -> ${OUTPUT_FILE}`);
+  return { output, packageCount: packages.length };
 }
 
-main();
+function main(): void {
+  const { output, packageCount } = buildRegistrySource();
+
+  mkdirSync(dirname(OUTPUT_FILE), { recursive: true });
+  writeFileSync(OUTPUT_FILE, output, 'utf8');
+  console.log(`Generated REPL registry for ${packageCount} packages -> ${OUTPUT_FILE}`);
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

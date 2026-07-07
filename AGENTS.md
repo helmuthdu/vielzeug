@@ -18,19 +18,19 @@ DOX is adopted in a **tiered** fashion: a child `AGENTS.md` exists only where a 
 
 Reach for the workflow that matches the task (full definitions in `.ai/workflows/`):
 
-| Situation | Workflow |
-| --- | --- |
-| Improve one package end-to-end | `/pkg-workflow` (default `analyse` mode; also proposes a lighter scope than the full pipeline where it fits — see `.ai/workflows/pkg-workflow.md § Scope selection`) |
-| Add a feature to an existing package | `/pkg-workflow mode:feature` |
-| Create a new package from scratch | `/pkg-workflow mode:new-package` |
-| Analyse and produce an improvement plan | `/pkg-plan` (mode `analyse`, converges — typically ~3 passes) |
-| Design a feature or new-package spec | `/pkg-plan` (mode `feature` / `new-package` — same file, different pass structure) |
-| Apply an existing plan | `/pkg-implement` (converges — as many rounds as needed) |
-| Suspected bug / quality concern | `/pkg-review` (Lens A correctness, B design, C types — all 3 mandatory) |
-| Security concern (injection, prototype pollution, leaks) | `/pkg-security` (3 fixed surfaces — all mandatory) |
-| Coverage gaps or messy tests | `/pkg-tests` |
-| Docs out of sync with the API | `/pkg-docs` |
-| REPL examples stale or missing | `/pkg-repl` |
+| Situation                                                | Workflow                                                                                                                                                             |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Improve one package end-to-end                           | `/pkg-workflow` (default `analyse` mode; also proposes a lighter scope than the full pipeline where it fits — see `.ai/workflows/pkg-workflow.md § Scope selection`) |
+| Add a feature to an existing package                     | `/pkg-workflow mode:feature`                                                                                                                                         |
+| Create a new package from scratch                        | `/pkg-workflow mode:new-package`                                                                                                                                     |
+| Analyse and produce an improvement plan                  | `/pkg-plan` (mode `analyse`, converges — typically ~3 passes)                                                                                                        |
+| Design a feature or new-package spec                     | `/pkg-plan` (mode `feature` / `new-package` — same file, different pass structure)                                                                                   |
+| Apply an existing plan                                   | `/pkg-implement` (converges — as many rounds as needed)                                                                                                              |
+| Suspected bug / quality concern                          | `/pkg-review` (Lens A correctness, B design, C types — all 3 mandatory)                                                                                              |
+| Security concern (injection, prototype pollution, leaks) | `/pkg-security` (3 fixed surfaces — all mandatory)                                                                                                                   |
+| Coverage gaps or messy tests                             | `/pkg-tests`                                                                                                                                                         |
+| Docs out of sync with the API                            | `/pkg-docs`                                                                                                                                                          |
+| REPL examples stale or missing                           | `/pkg-repl`                                                                                                                                                          |
 
 Cadence inside `/pkg-workflow`: plan → implement converge on their own evidence (no fixed count, ~3 passes/rounds typical); review's 3 lenses and security's 3 surfaces are a fixed enumeration, always all run; tests → docs → repl are single-pass. See `.ai/rules/process/agent-execution.md § Multi-pass convergence` for the exact rule.
 
@@ -54,4 +54,6 @@ Defer to `.ai/rules/code/conventions.md` for engineering conventions, `.ai/rules
 
 - `packages/AGENTS.md` — source work for all `@vielzeug/*` libraries; indexes packages with extra local rules.
 - `docs/AGENTS.md` — VitePress documentation site and REPL.
+- `scripts/AGENTS.md` — repo tooling: release automation, worktree helper, generated-doc sync, REPL codegen/validation, and the shared `scripts/lib/` primitives they're all built on. No top-level router/CLI entrypoint exists on purpose — run `pnpm run` (no args) to see every available command; see `scripts/AGENTS.md`'s Layout section for why a hand-maintained routing table was rejected.
+- `.github/AGENTS.md` — CI/CD workflow YAML and the `scripts/release/` automation it calls into; the npm Trusted Publishing constraints that shape `publish.yml`'s design.
 - `.ai/workflows/runs/AGENTS.md` — lifecycle contract for gitignored per-package workflow scratch state (plans, progress, findings). Not itself committed history — describes ephemeral state, not a package.

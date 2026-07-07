@@ -183,7 +183,7 @@ jobs:
       # entries for a run where only 2 of 30 packages actually changed.
       - id: plan
         run: |
-          PLAN=$(node scripts/release/cli.mjs plan --before-file /tmp/versions-before.txt ${{ steps.changes.outputs.packages }})
+          PLAN=$(node scripts/release/cli.mjs plan --before-file=/tmp/versions-before.txt ${{ steps.changes.outputs.packages }})
           echo "matrix={\"include\":${PLAN}}" >> "$GITHUB_OUTPUT"
           [ "$PLAN" = "[]" ] && echo "has-releases=false" >> "$GITHUB_OUTPUT" || echo "has-releases=true" >> "$GITHUB_OUTPUT"
 
