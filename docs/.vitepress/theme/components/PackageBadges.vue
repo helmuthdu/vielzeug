@@ -23,6 +23,7 @@ const packageInfo = computed(() => {
       version: '1.0.0',
       dependencies: 0,
       size: props.size || '0 KB',
+      minNode: null,
     }
   );
 });

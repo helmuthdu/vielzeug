@@ -54,6 +54,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@vielzeug/arsenal": "workspace:*",
     "@vielzeug/ripple": "workspace:*"

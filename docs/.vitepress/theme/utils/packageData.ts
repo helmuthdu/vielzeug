@@ -9,6 +9,7 @@ interface PackageInfo {
   version: string;
   dependencies: number;
   size: string;
+  minNode: string | null;
 }
 
 interface PackagesData {
@@ -68,6 +69,7 @@ export function getPackagesData(): PackagesData {
 
         packages[dir] = {
           dependencies,
+          minNode: packageJson.engines?.node ?? null,
           size,
           version: packageJson.version,
         };

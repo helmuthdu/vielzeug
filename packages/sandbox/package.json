@@ -36,6 +36,9 @@
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "@types/node": "^26.1.0",
     "jsdom": "^29.1.1",

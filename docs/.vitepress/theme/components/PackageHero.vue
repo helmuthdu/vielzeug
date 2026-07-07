@@ -11,7 +11,7 @@ const { site, frontmatter } = useData();
 
 const packageInfo = computed(() => {
   const packages = site.value.themeConfig?.packages || {};
-  return packages[props.package] || { version: null, size: null, dependencies: 0 };
+  return packages[props.package] || { version: null, size: null, dependencies: 0, minNode: null };
 });
 
 const category = computed(() => frontmatter.value.category || null);
@@ -19,14 +19,21 @@ const description = computed(() => frontmatter.value.description || null);
 const exports = computed(() => frontmatter.value.exports || []);
 const related = computed(() => frontmatter.value.related || []);
 const environments = computed(() => frontmatter.value.environments || []);
+const minNodeLabel = computed(() => (packageInfo.value.minNode ? packageInfo.value.minNode.replace(/^>=/, '≥') : null));
 
 const envLabel: Record<string, string> = {
   browser: 'Browser',
-  node: 'Node.js',
+  node: 'Node',
   ssr: 'SSR',
   deno: 'Deno',
   bun: 'Bun',
 };
+
+const environmentLabels = computed(() =>
+  environments.value.map((e: string) =>
+    e === 'node' && minNodeLabel.value ? `Node ${minNodeLabel.value}` : (envLabel[e] ?? e),
+  ),
+);
 
 const packageName = computed(() => {
   const title: string = frontmatter.value.title || props.package;
@@ -99,9 +106,7 @@ const categoryLabel = computed(() => {
             <ore-badge color="primary" size="xs" rounded="full">0 deps</ore-badge>
           </ore-tooltip>
           <ore-tooltip v-if="environments.length" content="Supported runtime environments" placement="top">
-            <ore-badge color="primary" size="xs" rounded="full">
-              {{ environments.map((e) => envLabel[e] ?? e).join(' · ') }}
-            </ore-badge>
+            <ore-badge color="primary" size="xs" rounded="full">{{ environmentLabels.join(' · ') }}</ore-badge>
           </ore-tooltip>
         </div>
         <div v-if="exports.length" class="pkg-exports-row">

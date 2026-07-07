@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "chore: declare minimum supported Node.js version (>=18) in package.json engines",
+      "packageName": "@vielzeug/scout",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scout"
+}
