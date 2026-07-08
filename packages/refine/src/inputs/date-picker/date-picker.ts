@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
@@ -123,7 +124,7 @@ export type OreDatePickerProps = {
  */
 export const DATE_PICKER_TAG = 'ore-date-picker' as const;
 
-define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
+define<OreDatePickerProps>(DATE_PICKER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -146,7 +147,10 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
     'weekend-days': prop.json([] as number[]),
   },
 
-  setup(props, { bind, el, emit, onMounted }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreDatePickerEvents>();
+
     // ── Signals ─────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
@@ -164,7 +168,7 @@ define<OreDatePickerProps, OreDatePickerEvents>(DATE_PICKER_TAG, {
     // ── Form context ────────────────────────────────────────────────────────
 
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     const isDisabled = fCtxProps.disabled;
     const locale = computed(() => props.locale.value || (typeof navigator !== 'undefined' ? navigator.language : 'en'));

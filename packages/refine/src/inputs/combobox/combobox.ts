@@ -1,4 +1,17 @@
-import { define, useField, html, inject, prop, ref } from '@vielzeug/ore';
+import {
+  define,
+  html,
+  inject,
+  prop,
+  ref,
+  bind,
+  getHost,
+  onCleanup,
+  onElement,
+  useEmit,
+  watchEffect,
+} from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { AddEventListeners, ComponentSize, RoundedSize, ThemeColor } from '../../types';
@@ -62,7 +75,7 @@ export type { OreComboboxEvents, OreComboboxProps } from './combobox.types';
  * ```
  */
 export const COMBOBOX_TAG = 'ore-combobox' as const;
-define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
+define<OreComboboxProps>(COMBOBOX_TAG, {
   formAssociated: true,
   props: {
     autoclose: prop.bool(false),
@@ -85,9 +98,13 @@ define<OreComboboxProps, OreComboboxEvents>(COMBOBOX_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el, emit, onCleanup, onElement, watch }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreComboboxEvents>();
+    const watch = watchEffect;
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const query = signal('');
 
     // Element refs needed by the composite option-list factory.

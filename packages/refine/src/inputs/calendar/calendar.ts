@@ -1,5 +1,6 @@
-import { define, useField, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, useEmit } from '@vielzeug/ore';
 import { styleMap } from '@vielzeug/ore/directives';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 import { Temporal, format } from '@vielzeug/tempo';
 
@@ -151,7 +152,7 @@ const MAX_EVENTS = 3;
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
+define<OreCalendarProps>(CALENDAR_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -170,7 +171,9 @@ define<OreCalendarProps, OreCalendarEvents>(CALENDAR_TAG, {
     'weekend-days': prop.json([] as number[]),
   },
 
-  setup(props, { bind, emit }) {
+  setup(props) {
+    const emit = useEmit<OreCalendarEvents>();
+
     // ── Derived flags ────────────────────────────────────────────────────────
 
     const isDisabled = computed(() => props.disabled.value === true);

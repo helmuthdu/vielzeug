@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, useEmit } from '@vielzeug/ore';
 import { when } from '@vielzeug/ore/directives';
 import { type Readable, signal } from '@vielzeug/ripple';
 
@@ -61,7 +61,7 @@ export type OreAsyncProps = {
  * ```
  */
 export const ASYNC_TAG = 'ore-async' as const;
-define<OreAsyncProps, OreAsyncEvents>(ASYNC_TAG, {
+define<OreAsyncProps>(ASYNC_TAG, {
   props: {
     'empty-description': prop.string(),
     'empty-label': prop.string('No content yet'),
@@ -70,7 +70,9 @@ define<OreAsyncProps, OreAsyncEvents>(ASYNC_TAG, {
     retryable: prop.bool(false),
     status: prop.oneOf(['idle', 'loading', 'empty', 'error', 'success'] as const, 'success'),
   },
-  setup(props, { bind, emit }) {
+  setup(props) {
+    const emit = useEmit<OreAsyncEvents>();
+
     const hasLoadingSlot = signal(false);
     const hasEmptySlot = signal(false);
     const hasErrorSlot = signal(false);

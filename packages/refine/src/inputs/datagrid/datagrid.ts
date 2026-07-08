@@ -1,5 +1,5 @@
 import { debounce } from '@vielzeug/arsenal';
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 import { raw } from '@vielzeug/ore/directives';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
@@ -318,7 +318,7 @@ export type DataGridSource<T = Record<string, unknown>> = {
 
 export const DATAGRID_TAG = 'ore-datagrid' as const;
 
-define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
+define<OreDataGridProps>(DATAGRID_TAG, {
   props: {
     activeView: prop.string(),
     density: prop.string<'compact' | 'cozy' | 'comfortable'>(),
@@ -344,7 +344,11 @@ define<OreDataGridProps, OreDataGridEvents>(DATAGRID_TAG, {
     views: prop.data<DataGridView[]>(),
   },
 
-  setup(props, { el, emit, onCleanup, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreDataGridEvents>();
+    const slots = useSlots();
+
     const isDisabled = computed(() => props.disabled.value === true);
     const selectionMode = computed(() => props.selectionMode.value ?? 'none');
 

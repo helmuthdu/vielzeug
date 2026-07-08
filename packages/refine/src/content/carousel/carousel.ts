@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ThemeColor } from '../../types';
@@ -190,7 +190,7 @@ const syncMarqueeSlides = (slides: HTMLElement[], current: number): void => {
 
 // ── ore-carousel ──────────────────────────────────────────────────────────────
 
-define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
+define<OreCarouselProps>(CAROUSEL_TAG, {
   props: {
     autoplay: prop.bool(false),
     'autoplay-interval': prop.number(5000),
@@ -205,7 +205,10 @@ define<OreCarouselProps, OreCarouselEvents>(CAROUSEL_TAG, {
     variant: prop.string<CarouselVariant>('default'),
   },
 
-  setup(props, { bind, el, emit, onMounted }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreCarouselEvents>();
+
     // ── State ────────────────────────────────────────────────────────────────
 
     const activeIndex = signal<number>(props['slide-index'].value ?? 0);

@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, useSlots, watchEffect } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
@@ -216,7 +216,11 @@ define<OreAvatarGroupProps>(AVATAR_GROUP_TAG, {
     max: prop.number(5),
     total: prop.number(),
   },
-  setup(props, { el, slots, watch }) {
+  setup(props) {
+    const el = getHost();
+    const slots = useSlots();
+    const watch = watchEffect;
+
     const overflowCount = signal(0);
 
     const updateVisibility = () => {

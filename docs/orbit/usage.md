@@ -538,11 +538,13 @@ function useFloat(referenceRef: { value: HTMLElement | null }, floatingRef: { va
 Use Orbit inside a Ore component to position tooltips and popovers reactively.
 
 ```ts
-import { define, html } from '@vielzeug/ore';
+import { define, getHost, html, onMounted } from '@vielzeug/ore';
 import { flip, float, offset, shift } from '@vielzeug/orbit';
 
 define('x-tooltip', {
-  setup(_props, { el, onMounted }) {
+  setup(_props) {
+    const el = getHost();
+
     onMounted(() => {
       const tooltipEl = el.querySelector<HTMLElement>('[role=tooltip]')!;
 

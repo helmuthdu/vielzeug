@@ -1,6 +1,19 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  prop,
+  aria,
+  bind,
+  getHost,
+  onCleanup,
+  onMounted,
+  useEmit,
+  useSlots,
+  watchEffect,
+} from '@vielzeug/ore';
 import { computed, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -201,7 +214,7 @@ const isCheckableItemType = (value: string | null): value is OreMenuItemType =>
  * ```
  */
 export const MENU_TAG = 'ore-menu' as const;
-define<OreMenuProps, OreMenuEvents>(MENU_TAG, {
+define<OreMenuProps>(MENU_TAG, {
   props: {
     ...sizableBundle,
     ...disablableBundle,
@@ -210,7 +223,12 @@ define<OreMenuProps, OreMenuEvents>(MENU_TAG, {
       'bottom-start',
     ),
   },
-  setup(props, { aria, bind, el, emit, onCleanup, onMounted, slots, watch }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreMenuEvents>();
+    const slots = useSlots();
+    const watch = watchEffect;
+
     const menuId = createStableId('menu');
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const abortSignal = lifecycleSignal(onCleanup);

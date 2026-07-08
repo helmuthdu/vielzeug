@@ -1,4 +1,4 @@
-import { define, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, watchEffect } from '@vielzeug/ore';
 import { styleMap, when } from '@vielzeug/ore/directives';
 import { computed, signal } from '@vielzeug/ripple';
 
@@ -56,7 +56,9 @@ define<OreTabPanelProps>(TAB_PANEL_TAG, {
     padding: prop.oneOf(['none', 'xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const, 'md'),
     value: prop.string(''),
   },
-  setup(props, { bind, watch }) {
+  setup(props) {
+    const watch = watchEffect;
+
     const tabsCtx = inject(TABS_CTX);
     const isActive = computed(() =>
       tabsCtx ? !!tabsCtx.value.value && tabsCtx.value.value === props.value.value : props.active.value,

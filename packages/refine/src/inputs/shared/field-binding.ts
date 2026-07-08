@@ -1,5 +1,6 @@
-import type { HostBindFn } from '@vielzeug/ore';
 import type { Readable, Signal } from '@vielzeug/ripple';
+
+import { bind } from '@vielzeug/ore';
 
 import type { ComponentSize } from '../../types';
 
@@ -31,7 +32,6 @@ export type CheckableBindingHandle = {
  * omit it for switch/radio.
  */
 export const applyCheckableBinding = (
-  bind: HostBindFn,
   fCtxSize: Readable<ComponentSize | undefined>,
   handle: CheckableBindingHandle,
   role: 'checkbox' | 'radio' | 'switch',

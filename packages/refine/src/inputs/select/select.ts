@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onCleanup, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, effect, signal, watch } from '@vielzeug/ripple';
 
 import type { ChoiceChangeDetail, DropdownCloseReason, OverlayOpenDetail, OverlayOpenReason } from '../../headless';
@@ -122,7 +123,7 @@ export type OreSelectProps = SelectableFieldProps<Exclude<VisualVariant, 'text' 
  * ```
  */
 export const SELECT_TAG = 'ore-select' as const;
-define<OreSelectProps, OreSelectEvents>(SELECT_TAG, {
+define<OreSelectProps>(SELECT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -143,7 +144,11 @@ define<OreSelectProps, OreSelectEvents>(SELECT_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, el, emit, onCleanup, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreSelectEvents>();
+    const slots = useSlots();
+
     const shadowRoot = el.shadowRoot;
     // ────────────────────────────────────────────────────────────────
     // State & Context
@@ -168,7 +173,7 @@ define<OreSelectProps, OreSelectEvents>(SELECT_TAG, {
       return Array.isArray(explicitOptions) ? explicitOptions.map(normalizeOption) : slottedOptions.value;
     });
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     let triggerEl: HTMLElement | null = null;
     let dropdownEl: HTMLElement | null = null;

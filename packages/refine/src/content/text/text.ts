@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { bind, define, html, prop } from '@vielzeug/ore';
 
 import styles from './text.css?inline';
 
@@ -95,7 +95,7 @@ define<OreTextProps>(TEXT_TAG, {
     variant: prop.string<'body' | 'heading' | 'label' | 'caption' | 'overline' | 'code'>(),
     weight: prop.string<'normal' | 'medium' | 'semibold' | 'bold'>(),
   },
-  setup(props, { bind, el: _el }) {
+  setup(props) {
     bind({
       attr: {
         'aria-level': () => {

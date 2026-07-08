@@ -1,4 +1,4 @@
-import { define, html, prop, ref } from '@vielzeug/ore';
+import { define, html, prop, ref, getHost, onCleanup, onEvent, onMounted, useEmit, useSlots } from '@vielzeug/ore';
 
 import type { OverlayCloseDetail, OverlayOpenDetail } from '../../headless';
 import type { PaddingSize, RoundedSize } from '../../types';
@@ -116,7 +116,7 @@ export type OreDialogProps = {
  */
 
 export const DIALOG_TAG = 'ore-dialog' as const;
-define<OreDialogProps, OreDialogEvents>(DIALOG_TAG, {
+define<OreDialogProps>(DIALOG_TAG, {
   props: {
     backdrop: prop.string<DialogBackdrop>(),
     dismissible: prop.bool(false),
@@ -130,7 +130,11 @@ define<OreDialogProps, OreDialogEvents>(DIALOG_TAG, {
     rounded: prop.string<RoundedSize | ''>(),
     size: prop.oneOf(['sm', 'md', 'lg', 'xl', 'full'] as const, 'md'),
   },
-  setup(props, { el, emit, onCleanup, onEvent, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreDialogEvents>();
+    const slots = useSlots();
+
     const dialogRef = ref<HTMLDialogElement>();
     const hasHeader = () => slots.has('header').value || !!props.label.value || props.dismissible.value;
     const hasFooter = () => slots.has('footer').value;

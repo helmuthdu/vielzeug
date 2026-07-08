@@ -1,4 +1,4 @@
-import { createContext, type HostBindFn } from '@vielzeug/ore';
+import { bind, createContext } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
@@ -58,13 +58,13 @@ export const mergeFormContext = (
  * state as a `disabled` attribute on the host element.
  *
  * The `use` prefix signals that calling this function performs a side-effect
- * (`host.bind`) in addition to returning the resolved props — similar to a
- * framework hook.
+ * (`bind()` on the current component's host) in addition to returning the
+ * resolved props — a real composable, since `bind` resolves the active
+ * component through implicit context rather than being passed in.
  *
  * Accepts `FormContext | undefined` directly — pass `inject(FORM_CTX)`.
  */
 export const useFormContext = (
-  bind: HostBindFn,
   props: Parameters<typeof mergeFormContext>[0],
   formCtx?: FormContext,
 ): FormContextResolvedProps => {

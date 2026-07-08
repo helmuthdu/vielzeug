@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize, ThemeColor, VisualVariant } from '../../types';
@@ -157,7 +157,7 @@ export type OreChipProps = ChipBaseProps &
  * ```
  */
 export const CHIP_TAG = 'ore-chip' as const;
-define<OreChipComponentProps, OreChipEvents>(CHIP_TAG, {
+define<OreChipComponentProps>(CHIP_TAG, {
   props: {
     checked: {
       default: undefined as OreChipComponentProps['checked'],
@@ -175,7 +175,9 @@ define<OreChipComponentProps, OreChipEvents>(CHIP_TAG, {
     variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
   },
 
-  setup(props, { bind, el: _el, emit }) {
+  setup(props) {
+    const emit = useEmit<OreChipEvents>();
+
     // ============================================
     // State Management
     // ============================================

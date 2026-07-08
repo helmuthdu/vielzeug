@@ -1,4 +1,4 @@
-import { createContext, define, html, prop } from '@vielzeug/ore';
+import { createContext, define, html, prop, bind, getHost, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant } from '../../types';
@@ -68,14 +68,17 @@ export type OreAccordionProps = {
  */
 
 export const ACCORDION_TAG = 'ore-accordion' as const;
-define<OreAccordionProps, OreAccordionEvents>(ACCORDION_TAG, {
+define<OreAccordionProps>(ACCORDION_TAG, {
   props: {
     selectionMode: prop.string<'single' | 'multiple'>(),
     size: prop.string<ComponentSize>(),
     variant: prop.string<SurfaceVariant>(),
   },
 
-  setup(props, { bind, el, emit, provide }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreAccordionEvents>();
+
     const handleSelectionMode = (expandedItem: HTMLElement) => {
       if (props.selectionMode.value !== 'single') return;
 

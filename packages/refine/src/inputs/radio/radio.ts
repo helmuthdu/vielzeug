@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onCleanup, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
@@ -73,7 +74,7 @@ export type OreRadioProps = CheckableProps & {
  * ```
  */
 export const RADIO_TAG = 'ore-radio' as const;
-define<OreRadioProps, OreRadioEvents>(RADIO_TAG, {
+define<OreRadioProps>(RADIO_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -85,10 +86,13 @@ define<OreRadioProps, OreRadioEvents>(RADIO_TAG, {
     name: prop.string(),
     value: prop.string(),
   },
-  setup(props, { bind, el, emit, onCleanup }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreRadioEvents>();
+
     const groupCtx = inject(RADIO_GROUP_CTX);
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     const effectiveName = computed(() => groupCtx?.name.value || props.name.value || '');
     const effectiveSize = computed(() => groupCtx?.size.value ?? fCtxProps.size.value);

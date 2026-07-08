@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -84,7 +85,7 @@ export type OreOtpInputProps = {
  * ```
  */
 export const OTP_INPUT_TAG = 'ore-otp-input' as const;
-define<OreOtpInputProps, OreOtpInputEvents>(OTP_INPUT_TAG, {
+define<OreOtpInputProps>(OTP_INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -99,9 +100,12 @@ define<OreOtpInputProps, OreOtpInputEvents>(OTP_INPUT_TAG, {
     value: prop.string(),
     variant: prop.string<Exclude<VisualVariant, 'text' | 'frost'>>(),
   },
-  setup(props, { bind, el, emit, onMounted }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreOtpInputEvents>();
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const lengthValue = computed(() => Number(props.length.value) || 6);
     const isDisabled = fCtxProps.disabled;
     const cells = computed(() => Array.from({ length: lengthValue.value }, (_, i) => i));

@@ -1,5 +1,5 @@
 import { uuid } from '@vielzeug/arsenal';
-import { define, html, prop, ref } from '@vielzeug/ore';
+import { define, html, prop, ref, getHost, onCleanup, onMounted, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { SwipeControl } from '../../headless';
@@ -180,7 +180,7 @@ function renderToastActions(entry: ToastEntry, onDismiss: () => void) {
 }
 
 export const TOAST_TAG = 'ore-toast' as const;
-define<OreToastProps, OreToastEvents>(TOAST_TAG, {
+define<OreToastProps>(TOAST_TAG, {
   props: {
     max: prop.number(5),
     position: prop.oneOf(
@@ -188,7 +188,10 @@ define<OreToastProps, OreToastEvents>(TOAST_TAG, {
       'bottom-right',
     ),
   },
-  setup(props, { el, emit, onCleanup, onMounted }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreToastEvents>();
+
     // Single source of truth for all toast state.
     const entries = signal<ToastEntry[]>([]);
     const containerRef = ref<HTMLDivElement>();

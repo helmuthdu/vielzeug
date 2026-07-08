@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, useEmit } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import '../icon/icon';
@@ -98,7 +98,7 @@ function buildPageRange(
  * ```
  */
 export const PAGINATION_TAG = 'ore-pagination' as const;
-define<OrePaginationProps, OrePaginationEvents>(PAGINATION_TAG, {
+define<OrePaginationProps>(PAGINATION_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -110,7 +110,10 @@ define<OrePaginationProps, OrePaginationEvents>(PAGINATION_TAG, {
     'total-pages': prop.number(1),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind: _bind, el, emit }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OrePaginationEvents>();
+
     function goTo(page: number) {
       const total = props['total-pages'].value || 1;
       const next = Math.min(Math.max(1, page), total);

@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, onMounted, watchEffect } from '@vielzeug/ore';
 
 import { reducedMotionMixin, tableBaseMixin } from '../../styles';
 import componentStyles from './table.css?inline';
@@ -252,7 +252,10 @@ define<OreTableProps>(TABLE_TAG, {
     striped: prop.bool(false),
   },
 
-  setup(props, { bind, el, onMounted, watch }) {
+  setup(props) {
+    const el = getHost();
+    const watch = watchEffect;
+
     bind({
       attr: {
         'aria-busy': props.loading,

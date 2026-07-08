@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, onMounted, watchEffect } from '@vielzeug/ore';
 import { resizeObserver } from '@vielzeug/ore/observers';
 
 import styles from './grid.css?inline';
@@ -163,7 +163,10 @@ define<OreGridProps>(GRID_TAG, {
     rows: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | '11' | '12' | 'auto'>(),
   },
 
-  setup(props, { el, onMounted, watch }) {
+  setup(props) {
+    const el = getHost();
+    const watch = watchEffect;
+
     const computeCols = (activeCols: string | undefined, responsive: boolean, minW: string): string | null => {
       if (activeCols === 'auto' || (!activeCols && responsive)) {
         return `repeat(auto-fit, minmax(${minW || '250px'}, 1fr))`;

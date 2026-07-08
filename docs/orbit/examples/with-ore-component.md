@@ -16,10 +16,11 @@ Usage inside a [@vielzeug/ore](/ore/) component with automatic `autoUpdate` clea
 ```ts
 import { autoUpdate, computePosition, flip, offset, shift } from '@vielzeug/orbit';
 import { signal } from '@vielzeug/ripple';
-import { define, html } from '@vielzeug/ore';
+import { define, getHost, html, onMounted } from '@vielzeug/ore';
 
 define('my-tooltip', {
-  setup(_props, { el, onMounted }) {
+  setup(_props) {
+    const el = getHost();
     const visible = signal(false);
     let tooltipEl: HTMLElement | null = null;
     let cleanup: (() => void) | null = null;
@@ -62,7 +63,7 @@ define('my-tooltip', {
 - `autoUpdate` must be called after the Ore element's shadow DOM is ready — inside `onMounted`, not the constructor. The floating element reference may not exist before that point.
 - Store the `autoUpdate` cleanup function in a local variable and return a cleanup closure from `onMounted` — Ore calls it automatically on disconnect.
 - The floating element must have `position: fixed` or `position: absolute`. Without explicit CSS positioning, the computed `top`/`left` values are applied but have no visual effect.
-- Ore does not re-export `@vielzeug/ripple` primitives or expose lifecycle hooks (`onMounted`, `onCleanup`, …) as module-level imports — `signal`/`effect`/`computed` come from `@vielzeug/ripple`, and lifecycle hooks come from the second `setup(props, ctx)` argument.
+- Ore does not re-export `@vielzeug/ripple` primitives — `signal`/`effect`/`computed` come from `@vielzeug/ripple`. Lifecycle hooks (`onMounted`, `onCleanup`, …) and `getHost()` are plain functions imported from `@vielzeug/ore` and called directly during `setup()`.
 
 ### Related
 

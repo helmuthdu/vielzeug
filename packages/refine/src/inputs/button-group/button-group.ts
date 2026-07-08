@@ -1,4 +1,4 @@
-import { createContext, define, html, prop } from '@vielzeug/ore';
+import { createContext, define, html, prop, provide } from '@vielzeug/ore';
 import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../shared';
@@ -80,7 +80,7 @@ define<OreButtonGroupProps>(BUTTON_GROUP_TAG, {
     orientation: prop.string<'horizontal' | 'vertical'>(),
     variant: prop.string(),
   },
-  setup(props, { provide }) {
+  setup(props) {
     provide(BUTTON_GROUP_CTX, {
       color: props.color!,
       size: props.size!,

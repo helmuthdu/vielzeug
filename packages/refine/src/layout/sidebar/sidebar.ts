@@ -1,4 +1,16 @@
-import { createContext, define, html, inject, prop } from '@vielzeug/ore';
+import {
+  createContext,
+  define,
+  html,
+  inject,
+  prop,
+  bind,
+  getHost,
+  onMounted,
+  provide,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { resizeObserver } from '@vielzeug/ore/observers';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
@@ -179,7 +191,7 @@ export type OreSidebarProps = {
  * ```
  */
 export const SIDEBAR_TAG = 'ore-sidebar' as const;
-define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
+define<OreSidebarProps>(SIDEBAR_TAG, {
   props: {
     'bottom-nav-at': prop.string(),
     collapsed: prop.bool(false),
@@ -190,7 +202,11 @@ define<OreSidebarProps, OreSidebarEvents>(SIDEBAR_TAG, {
     responsive: prop.string(),
     variant: prop.string<SidebarVariant>(),
   },
-  setup(props, { bind, el, emit, onMounted, provide, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreSidebarEvents>();
+    const slots = useSlots();
+
     const hasHeader = () => slots.has('header').value;
     const hasFooter = () => slots.has('footer').value;
     const hasLogo = () => slots.has('logo').value;
@@ -685,7 +701,7 @@ export type OreSidebarGroupProps = {
  * ```
  */
 export const SIDEBAR_GROUP_TAG = 'ore-sidebar-group' as const;
-define<OreSidebarGroupProps, OreSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
+define<OreSidebarGroupProps>(SIDEBAR_GROUP_TAG, {
   props: {
     collapsible: prop.bool(false),
     'default-open': prop.bool(true),
@@ -696,7 +712,9 @@ define<OreSidebarGroupProps, OreSidebarGroupEvents>(SIDEBAR_GROUP_TAG, {
       reflect: false,
     },
   },
-  setup(props, { bind, slots }) {
+  setup(props) {
+    const slots = useSlots();
+
     const hasIcon = () => slots.has('icon').value;
     const sidebarCtx = inject(SIDEBAR_CTX);
 
@@ -833,7 +851,9 @@ define<OreSidebarItemProps>(SIDEBAR_ITEM_TAG, {
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { bind, slots }) {
+  setup(props) {
+    const slots = useSlots();
+
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const sidebarCtx = inject(SIDEBAR_CTX);

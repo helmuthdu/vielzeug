@@ -1,5 +1,20 @@
-import { createContext, createStableId, define, useField, html, inject, prop } from '@vielzeug/ore';
+import {
+  createContext,
+  createStableId,
+  define,
+  html,
+  inject,
+  prop,
+  bind,
+  getHost,
+  onCleanup,
+  provide,
+  useEmit,
+  useSlots,
+  watchEffect,
+} from '@vielzeug/ore';
 import { when } from '@vielzeug/ore/directives';
+import { useField } from '@vielzeug/ore/forms';
 import { type Readable } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -91,7 +106,7 @@ export type OreRadioGroupEvents = {
  * ```
  */
 export const RADIO_GROUP_TAG = 'ore-radio-group' as const;
-define<OreRadioGroupProps, OreRadioGroupEvents>(RADIO_GROUP_TAG, {
+define<OreRadioGroupProps>(RADIO_GROUP_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -105,9 +120,14 @@ define<OreRadioGroupProps, OreRadioGroupEvents>(RADIO_GROUP_TAG, {
     required: prop.bool(false),
     value: prop.string(),
   },
-  setup(props, { bind, el, emit, onCleanup, provide, slots, watch }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreRadioGroupEvents>();
+    const slots = useSlots();
+    const watch = watchEffect;
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     let _formField: { reportValidity(): void } | null = null;
     const choice = createChoiceField({

@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, useSlots, watchEffect } from '@vielzeug/ore';
 
 import itemStyles from './breadcrumb-item.css?inline';
 import componentStyles from './breadcrumb.css?inline';
@@ -95,7 +95,11 @@ define<OreBreadcrumbProps>(BREADCRUMB_TAG, {
     label: prop.string('Breadcrumb'),
     separator: prop.string(),
   },
-  setup(props, { el, slots, watch }) {
+  setup(props) {
+    const el = getHost();
+    const slots = useSlots();
+    const watch = watchEffect;
+
     // ────────────────────────────────────────────────────────────────
     // Item & Separator Synchronization
     // ────────────────────────────────────────────────────────────────

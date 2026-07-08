@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, watchEffect } from '@vielzeug/ore';
 import { styleMap } from '@vielzeug/ore/directives';
 import { computed } from '@vielzeug/ripple';
 
@@ -89,7 +89,10 @@ define<OreProgressProps>(PROGRESS_TAG, {
     'value-text': prop.string(),
   },
 
-  setup(props, { el, watch }) {
+  setup(props) {
+    const el = getHost();
+    const watch = watchEffect;
+
     // The SVG circle circumference for a radius of 45 (viewBox 0 0 100 100)
     const RADIUS = 45;
     const CIRC = 2 * Math.PI * RADIUS; // ~282.7

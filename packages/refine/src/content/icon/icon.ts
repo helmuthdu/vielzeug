@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind } from '@vielzeug/ore';
 import { raw } from '@vielzeug/ore/directives';
 import { computed } from '@vielzeug/ripple';
 import * as lucideModule from 'lucide';
@@ -131,7 +131,7 @@ define<OreIconProps>(ICON_TAG, {
     solid: prop.bool(),
     strokeWidth: prop.number(DEFAULT_STROKE_WIDTH),
   },
-  setup(props, { bind }) {
+  setup(props) {
     bind({
       attr: {
         'aria-hidden': () => ((props.label.value ?? '').trim() ? null : 'true'),

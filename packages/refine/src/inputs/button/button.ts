@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed } from '@vielzeug/ripple';
 
 import type { ButtonType, ComponentSize, LinkTarget, RoundedSize, ThemeColor } from '../../types';
@@ -122,7 +123,9 @@ define<OreButtonProps>(BUTTON_TAG, {
     type: prop.oneOf(['button', 'submit', 'reset'] as const, 'button'),
     variant: prop.oneOf(BUTTON_VARIANTS, 'solid'),
   },
-  setup(props, { bind, el }) {
+  setup(props) {
+    const el = getHost();
+
     // Prefer group context over own props for color/size/variant.
     const groupCtx = inject(BUTTON_GROUP_CTX);
     const effectiveColor = computed(() => groupCtx?.color.value ?? props.color.value);

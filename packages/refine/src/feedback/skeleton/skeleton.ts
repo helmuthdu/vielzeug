@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, onMounted } from '@vielzeug/ore';
 import { intersectionObserver } from '@vielzeug/ore/observers';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
@@ -82,7 +82,9 @@ define<OreSkeletonProps>(SKELETON_TAG, {
     variant: prop.oneOf(['rect', 'circle', 'text'] as const, 'rect'),
     width: prop.string(),
   },
-  setup(props, { bind, el, onMounted }) {
+  setup(props) {
+    const el = getHost();
+
     const isPaused = signal(false);
     const lineCount = () => {
       const value = Math.floor(Number(props.lines.value));

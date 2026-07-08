@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { bind, define, html, prop } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import styles from './grid-item.css?inline';
@@ -67,7 +67,7 @@ define<OreGridItemProps>(GRID_ITEM_TAG, {
     row: prop.string(),
     rowSpan: prop.string<'1' | '2' | '3' | '4' | '5' | '6' | 'full'>(),
   },
-  setup(props, { bind, el: _el }) {
+  setup(props) {
     const gridColumn = computed(() => {
       const col = props.col.value;
       const span = props.colSpan.value;

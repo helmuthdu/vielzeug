@@ -1,4 +1,5 @@
-import { createStableId, define, useField, html, inject, prop } from '@vielzeug/ore';
+import { createStableId, define, html, inject, prop, bind, getHost, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -75,7 +76,7 @@ export type OreRatingProps = {
  * ```
  */
 export const RATING_TAG = 'ore-rating' as const;
-define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
+define<OreRatingProps>(RATING_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -90,9 +91,12 @@ define<OreRatingProps, OreRatingEvents>(RATING_TAG, {
     solid: prop.bool(false),
     value: prop.number(0),
   },
-  setup(props, { bind, el, emit }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreRatingEvents>();
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     const normalizedValue = computed(() => {
       const max = Math.max(1, Number(props.max!.value) || 5);

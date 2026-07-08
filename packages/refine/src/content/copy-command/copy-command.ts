@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, onCleanup, useEmit, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize, RoundedSize } from '../../types';
@@ -71,7 +71,7 @@ export type OreCopyCommandEvents = {
  */
 export const COPY_COMMAND_TAG = 'ore-copy-command' as const;
 
-define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
+define<OreCopyCommandProps>(COPY_COMMAND_TAG, {
   props: {
     rounded: prop.string<RoundedSize>('md'),
     size: prop.string<ComponentSize>('md'),
@@ -79,7 +79,10 @@ define<OreCopyCommandProps, OreCopyCommandEvents>(COPY_COMMAND_TAG, {
     variant: prop.string<'flat' | 'bordered' | 'ghost'>('flat'),
   },
 
-  setup(props, { emit, onCleanup, slots }) {
+  setup(props) {
+    const emit = useEmit<OreCopyCommandEvents>();
+    const slots = useSlots();
+
     const copied = signal(false);
     const copyFailed = signal(false);
     let resetTimer: ReturnType<typeof setTimeout> | null = null;

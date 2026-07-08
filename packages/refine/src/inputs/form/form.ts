@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, provide, useEmit } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ValidationTrigger } from '../../headless';
@@ -60,7 +60,7 @@ export type OreFormEvents = {
  * ```
  */
 export const FORM_TAG = 'ore-form' as const;
-define<OreFormProps, OreFormEvents>(FORM_TAG, {
+define<OreFormProps>(FORM_TAG, {
   props: {
     disabled: prop.bool(false),
     novalidate: prop.bool(false),
@@ -69,7 +69,10 @@ define<OreFormProps, OreFormEvents>(FORM_TAG, {
     validateOn: prop.oneOf(['submit', 'change', 'blur', 'input'] as const, 'submit'),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, el, emit, provide }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreFormEvents>();
+
     const shadowRoot = el.shadowRoot;
 
     // Reflect orientation to host so CSS and tests can read it

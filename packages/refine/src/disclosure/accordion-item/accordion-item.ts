@@ -1,4 +1,4 @@
-import { define, html, inject, prop, ref } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, getHost, onMounted, useEmit, watchEffect } from '@vielzeug/ore';
 
 import type { ComponentSize, SurfaceVariant } from '../../types';
 
@@ -74,7 +74,7 @@ export type OreAccordionItemProps = {
  */
 
 export const ACCORDION_ITEM_TAG = 'ore-accordion-item' as const;
-define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
+define<OreAccordionItemProps>(ACCORDION_ITEM_TAG, {
   props: {
     ...disablableBundle,
     expanded: prop.bool(false),
@@ -82,7 +82,11 @@ define<OreAccordionItemProps, OreAccordionItemEvents>(ACCORDION_ITEM_TAG, {
     variant: prop.string<SurfaceVariant>(),
   },
 
-  setup(props, { el, emit, onMounted, watch }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreAccordionItemEvents>();
+    const watch = watchEffect;
+
     // Inherit size/variant from a parent ore-accordion when present.
     const accordionCtx = inject(ACCORDION_CTX);
 

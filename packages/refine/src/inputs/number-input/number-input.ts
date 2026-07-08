@@ -1,5 +1,5 @@
 import { clamp } from '@vielzeug/arsenal';
-import { define, html, inject, prop, ref } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, onElement, useEmit, watchEffect } from '@vielzeug/ore';
 import { computed, signal, watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor, VisualVariant } from '../../types';
@@ -106,7 +106,7 @@ export type OreNumberInputProps = {
  * ```
  */
 export const NUMBER_INPUT_TAG = 'ore-number-input' as const;
-define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
+define<OreNumberInputProps>(NUMBER_INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -129,9 +129,12 @@ define<OreNumberInputProps, OreNumberInputEvents>(NUMBER_INPUT_TAG, {
     value: prop.json(undefined as number | undefined),
     variant: prop.string<VisualVariant>(),
   },
-  setup(props, { bind, emit, onElement, watch }) {
+  setup(props) {
+    const emit = useEmit<OreNumberInputEvents>();
+    const watch = watchEffect;
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const isDisabled = fCtxProps.disabled;
     const isReadonly = computed(() => Boolean(props.readonly.value));
 

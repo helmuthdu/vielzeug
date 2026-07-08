@@ -1,4 +1,20 @@
-import { createStableId, define, useField, html, inject, prop, ref } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  inject,
+  prop,
+  ref,
+  aria,
+  bind,
+  getHost,
+  onCleanup,
+  onEvent,
+  onMounted,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, ThemeColor } from '../../types';
@@ -104,7 +120,7 @@ export type OreSliderProps = {
  * ```
  */
 export const SLIDER_TAG = 'ore-slider' as const;
-define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
+define<OreSliderProps>(SLIDER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -124,7 +140,11 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
     value: prop.number(0),
     'value-text': prop.string(),
   },
-  setup(props, { aria, bind, el, emit, onCleanup, onEvent, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreSliderEvents>();
+    const slots = useSlots();
+
     // Treat `range` as static — determined at first render
     const isRange = props.range.value;
     // ── Shared helpers ────────────────────────────────────────────
@@ -135,7 +155,7 @@ define<OreSliderProps, OreSliderEvents>(SLIDER_TAG, {
     });
     // ── Single-value state ────────────────────────────────────────
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const isDragging = signal(false);
     const isDisabled = fCtxProps.disabled;
     const labelledById = signal<string | undefined>(undefined);

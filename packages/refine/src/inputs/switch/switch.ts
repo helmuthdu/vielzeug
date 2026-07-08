@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, onCleanup, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
 
@@ -65,7 +66,7 @@ export type OreSwitchProps = CheckableProps & {
  * ```
  */
 export const SWITCH_TAG = 'ore-switch' as const;
-define<OreSwitchProps, OreSwitchEvents>(SWITCH_TAG, {
+define<OreSwitchProps>(SWITCH_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -77,9 +78,11 @@ define<OreSwitchProps, OreSwitchEvents>(SWITCH_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, emit, onCleanup }) {
+  setup(props) {
+    const emit = useEmit<OreSwitchEvents>();
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     let _formField: { reportValidity(): void } | null = null;
     const checkable = createCheckable({
@@ -108,7 +111,6 @@ define<OreSwitchProps, OreSwitchEvents>(SWITCH_TAG, {
     const { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId } = checkable;
 
     applyCheckableBinding(
-      bind,
       fCtxProps.size,
       { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, labelId },
       'switch',

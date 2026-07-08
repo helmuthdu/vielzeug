@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, onMounted, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { VisualVariant } from '../../shared';
@@ -164,7 +165,7 @@ function clampTime(
  */
 export const TIME_PICKER_TAG = 'ore-time-picker' as const;
 
-define<OreTimePickerProps, OreTimePickerEvents>(TIME_PICKER_TAG, {
+define<OreTimePickerProps>(TIME_PICKER_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -187,7 +188,10 @@ define<OreTimePickerProps, OreTimePickerEvents>(TIME_PICKER_TAG, {
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
 
-  setup(props, { bind, el, emit, onMounted }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreTimePickerEvents>();
+
     // ── Signals ──────────────────────────────────────────────────────────────
 
     const isOpen = signal(false);
@@ -196,7 +200,7 @@ define<OreTimePickerProps, OreTimePickerEvents>(TIME_PICKER_TAG, {
     // ── Form context ─────────────────────────────────────────────────────────
 
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const isDisabled = fCtxProps.disabled;
 
     // ── Form value ────────────────────────────────────────────────────────────

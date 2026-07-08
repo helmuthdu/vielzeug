@@ -1,5 +1,16 @@
 import { type Placement } from '@vielzeug/orbit';
-import { createStableId, define, html, prop } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  prop,
+  aria,
+  getHost,
+  onCleanup,
+  onMounted,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { type DialogCloseReason, type OverlayOpenReason, parseStringTriggers } from '../../headless';
@@ -67,7 +78,7 @@ export type OrePopoverProps = {
  * ```
  */
 export const POPOVER_TAG = 'ore-popover' as const;
-define<OrePopoverProps, OrePopoverEvents>(POPOVER_TAG, {
+define<OrePopoverProps>(POPOVER_TAG, {
   props: {
     ...disablableBundle,
     label: prop.string(),
@@ -92,7 +103,11 @@ define<OrePopoverProps, OrePopoverEvents>(POPOVER_TAG, {
     ),
     trigger: prop.string('click'),
   },
-  setup(props, { aria, el, emit, onCleanup, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OrePopoverEvents>();
+    const slots = useSlots();
+
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const panelId = createStableId('popover');

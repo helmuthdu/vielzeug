@@ -1,4 +1,5 @@
-import { define, useField, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, onCleanup, useEmit } from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed } from '@vielzeug/ripple';
 
 import type { CheckableProps, ComponentSize, ThemeColor } from '../../types';
@@ -77,7 +78,7 @@ export type OreCheckboxProps = CheckableProps & {
  * ```
  */
 export const CHECKBOX_TAG = 'ore-checkbox' as const;
-define<OreCheckboxProps, OreCheckboxEvents>(CHECKBOX_TAG, {
+define<OreCheckboxProps>(CHECKBOX_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -90,9 +91,11 @@ define<OreCheckboxProps, OreCheckboxEvents>(CHECKBOX_TAG, {
     name: prop.string(),
     value: prop.string('on'),
   },
-  setup(props, { bind, emit, onCleanup }) {
+  setup(props) {
+    const emit = useEmit<OreCheckboxEvents>();
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const groupCtx = inject(CHECKBOX_GROUP_CTX);
 
     let _formField: { reportValidity(): void } | null = null;
@@ -139,7 +142,6 @@ define<OreCheckboxProps, OreCheckboxEvents>(CHECKBOX_TAG, {
     } = checkable;
 
     applyCheckableBinding(
-      bind,
       fCtxProps.size,
       { assistiveId, checked, disabled, errorText, handleClick, handleKeydown, helperText, indeterminate, labelId },
       'checkbox',

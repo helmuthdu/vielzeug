@@ -1,5 +1,6 @@
-import { define, useField, html, inject, prop, ref } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, useSlots } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
@@ -116,7 +117,7 @@ const VALID_INPUT_TYPES = [
  * ```
  */
 export const INPUT_TAG = 'ore-input' as const;
-define<OreInputProps, OreInputEvents>(INPUT_TAG, {
+define<OreInputProps>(INPUT_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -143,9 +144,12 @@ define<OreInputProps, OreInputEvents>(INPUT_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'text' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, emit, onCleanup, onElement, slots }) {
+  setup(props) {
+    const emit = useEmit<OreInputEvents>();
+    const slots = useSlots();
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const showPassword = signal(false);
     const inputRef = ref<HTMLInputElement>();
 

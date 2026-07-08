@@ -1,4 +1,4 @@
-import { createContext, define, html, prop, ref } from '@vielzeug/ore';
+import { createContext, define, html, prop, ref, bind, getHost, onMounted, provide, useEmit } from '@vielzeug/ore';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
@@ -81,7 +81,7 @@ export type OreTabsProps = {
  * ```
  */
 export const TABS_TAG = 'ore-tabs' as const;
-define<OreTabsProps, OreTabsEvents>(TABS_TAG, {
+define<OreTabsProps>(TABS_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -91,7 +91,10 @@ define<OreTabsProps, OreTabsEvents>(TABS_TAG, {
     value: prop.string(),
     variant: prop.string<SurfaceVariant>(),
   },
-  setup(props, { bind, el, emit, onMounted, provide }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreTabsEvents>();
+
     const shadowRoot = el.shadowRoot;
     const tablistRef = ref<HTMLElement>();
     const indicatorRef = ref<HTMLElement>();

@@ -1,4 +1,16 @@
-import { createContext, define, html, inject, prop } from '@vielzeug/ore';
+import {
+  createContext,
+  define,
+  html,
+  inject,
+  prop,
+  bind,
+  getHost,
+  onMounted,
+  provide,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { resizeObserver } from '@vielzeug/ore/observers';
 import { computed, type Readable, signal, watch } from '@vielzeug/ripple';
 
@@ -220,7 +232,7 @@ export type OreNavbarItemProps = {
  * ```
  */
 export const NAVBAR_TAG = 'ore-navbar' as const;
-define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
+define<OreNavbarProps>(NAVBAR_TAG, {
   props: {
     breakpoint: prop.string('(max-width: 768px)'),
     color: prop.string<ThemeColor>(),
@@ -234,7 +246,11 @@ define<OreNavbarProps, OreNavbarEvents>(NAVBAR_TAG, {
     sticky: prop.bool(false),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'frost'>(),
   },
-  setup(props, { bind, el, emit, onMounted, provide, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreNavbarEvents>();
+    const slots = useSlots();
+
     const hasLogo = () => slots.has('logo').value;
     const hasMobileMenu = () => slots.elements('mobile-menu').value.some(hasElementContent);
     const mobileSidebarTarget = signal<MobileSidebarElement | null>(null);
@@ -738,7 +754,9 @@ define<OreNavbarItemProps>(NAVBAR_ITEM_TAG, {
     rel: prop.string(),
     target: prop.string(),
   },
-  setup(props, { bind, slots }) {
+  setup(props) {
+    const slots = useSlots();
+
     const hasIcon = () => slots.has('icon').value;
     const hasEnd = () => slots.has('end').value;
     const navbarCtx = inject(NAVBAR_CTX);

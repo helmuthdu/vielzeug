@@ -1,5 +1,6 @@
-import { define, useField, html, inject, prop, ref } from '@vielzeug/ore';
+import { define, html, inject, prop, ref, bind, onCleanup, onElement, useEmit, watchEffect } from '@vielzeug/ore';
 import { live } from '@vielzeug/ore/directives';
+import { useField } from '@vielzeug/ore/forms';
 import { watch as rippleWatch } from '@vielzeug/ripple';
 
 import type { TextFieldProps } from '../../shared';
@@ -96,7 +97,7 @@ export type OreTextareaProps = TextFieldProps<Exclude<VisualVariant, 'frost' | '
  * ```
  */
 export const TEXTAREA_TAG = 'ore-textarea' as const;
-define<OreTextareaProps, OreTextareaEvents>(TEXTAREA_TAG, {
+define<OreTextareaProps>(TEXTAREA_TAG, {
   formAssociated: true,
   props: {
     ...themableBundle,
@@ -121,9 +122,12 @@ define<OreTextareaProps, OreTextareaEvents>(TEXTAREA_TAG, {
     value: prop.string(),
     variant: prop.string<'flat' | 'solid' | 'bordered' | 'outline' | 'ghost'>(),
   },
-  setup(props, { bind, emit, onCleanup, onElement, watch }) {
+  setup(props) {
+    const emit = useEmit<OreTextareaEvents>();
+    const watch = watchEffect;
+
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
 
     const textareaRef = ref<HTMLTextAreaElement>();
 

@@ -1,6 +1,6 @@
 import type { Placement } from '@vielzeug/orbit';
 
-import { createStableId, define, html, prop } from '@vielzeug/ore';
+import { createStableId, define, html, prop, aria, getHost, onCleanup, onMounted, useSlots } from '@vielzeug/ore';
 import { computed, signal } from '@vielzeug/ripple';
 
 import type { ComponentSize } from '../../types';
@@ -113,7 +113,10 @@ define<OreTooltipProps>(TOOLTIP_TAG, {
     trigger: prop.string('hover,focus'),
     variant: prop.string<'dark' | 'light'>(),
   },
-  setup(props, { aria, el, onCleanup, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const slots = useSlots();
+
     const shadowRoot = el.shadowRoot;
     const isDisabled = computed(() => Boolean(props.disabled.value));
     const isControlled = computed(() => props.open.value !== undefined);

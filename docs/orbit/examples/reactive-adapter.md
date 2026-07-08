@@ -49,13 +49,14 @@ function onHide() {
 
 ```ts
 import { effect, signal } from '@vielzeug/ripple';
-import { define, html, prop } from '@vielzeug/ore';
+import { define, getHost, html, onMounted, prop } from '@vielzeug/ore';
 import { flip, offset, shift } from '@vielzeug/orbit';
 import { createFloatState } from '@vielzeug/orbit/reactive';
 
 define('my-tooltip', {
   props: { text: prop.string('') },
-  setup(props, { el, onMounted }) {
+  setup(props) {
+    const el = getHost();
     const visible = signal(false);
 
     onMounted(() => {

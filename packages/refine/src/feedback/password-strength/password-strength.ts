@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { bind, define, html, prop } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import { reducedMotionMixin } from '../../styles';
@@ -80,7 +80,7 @@ define<OrePasswordStrengthProps>(PASSWORD_STRENGTH_TAG, {
     value: prop.string(),
   },
 
-  setup(props, { bind, el: _el }) {
+  setup(props) {
     const defaultLabels: Record<PasswordStrengthLevel, string> = {
       empty: '',
       fair: 'Fair',

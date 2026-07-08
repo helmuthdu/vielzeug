@@ -1,4 +1,4 @@
-import { define, html, inject, prop } from '@vielzeug/ore';
+import { define, html, inject, prop, bind, getHost, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ComponentSize, SurfaceVariant, ThemeColor } from '../../types';
@@ -65,7 +65,10 @@ define<OreTabItemProps>(TAB_ITEM_TAG, {
     value: prop.string(''),
     variant: prop.string<SurfaceVariant>(),
   },
-  setup(props, { bind, el, watch }) {
+  setup(props) {
+    const el = getHost();
+    const watch = watchEffect;
+
     const tabsCtx = inject(TABS_CTX);
 
     if (tabsCtx) {

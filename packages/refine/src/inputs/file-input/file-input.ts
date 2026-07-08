@@ -1,5 +1,19 @@
 import { createDropZone, matchesAccept } from '@vielzeug/dnd';
-import { createStableId, define, useField, html, inject, prop, ref } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  inject,
+  prop,
+  ref,
+  bind,
+  onCleanup,
+  onElement,
+  onEvent,
+  onMounted,
+  useEmit,
+} from '@vielzeug/ore';
+import { useField } from '@vielzeug/ore/forms';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import { createInteraction } from '../../headless';
@@ -102,7 +116,7 @@ export type OreFileInputEvents = {
  * ```
  */
 export const FILE_INPUT_TAG = 'ore-file-input' as const;
-define<OreFileInputProps, OreFileInputEvents>(FILE_INPUT_TAG, {
+define<OreFileInputProps>(FILE_INPUT_TAG, {
   formAssociated: true,
   props: {
     accept: prop.string(),
@@ -119,7 +133,9 @@ define<OreFileInputProps, OreFileInputEvents>(FILE_INPUT_TAG, {
     required: prop.bool(false),
     size: prop.string(),
   },
-  setup(props, { bind, emit, onCleanup, onElement, onEvent, onMounted }) {
+  setup(props) {
+    const emit = useEmit<OreFileInputEvents>();
+
     // ============================================
     // State
     // ============================================
@@ -127,7 +143,7 @@ define<OreFileInputProps, OreFileInputEvents>(FILE_INPUT_TAG, {
     const files = signal<File[]>([]);
     const isDragging = signal(false);
     const formCtx = inject(FORM_CTX);
-    const fCtxProps = useFormContext(bind, props, formCtx);
+    const fCtxProps = useFormContext(props, formCtx);
     const isDisabled = fCtxProps.disabled;
     const maxFilesLimit = computed(() => props['max-files'].value ?? 0);
     const maxSizeLimit = computed(() => props['max-size'].value ?? 0);

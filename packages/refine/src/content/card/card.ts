@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, bind, getHost, useEmit, useSlots, watchEffect } from '@vielzeug/ore';
 import { computed } from '@vielzeug/ripple';
 
 import type { ElevationLevel, PaddingSize, ThemeColor } from '../../types';
@@ -97,7 +97,7 @@ export type OreCardProps = {
  * ```
  */
 export const CARD_TAG = 'ore-card' as const;
-define<OreCardProps, OreCardEvents>(CARD_TAG, {
+define<OreCardProps>(CARD_TAG, {
   props: {
     ...themableBundle,
     ...disablableBundle,
@@ -109,7 +109,12 @@ define<OreCardProps, OreCardEvents>(CARD_TAG, {
     variant: prop.string<'solid' | 'flat' | 'glass' | 'frost'>(),
   },
 
-  setup(props, { bind, el, emit, slots, watch }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreCardEvents>();
+    const slots = useSlots();
+    const watch = watchEffect;
+
     bind({
       attr: {
         ariaBusy: () => (props.loading.value ? 'true' : 'false'),

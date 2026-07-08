@@ -1,4 +1,16 @@
-import { createStableId, define, html, prop, ref } from '@vielzeug/ore';
+import {
+  createStableId,
+  define,
+  html,
+  prop,
+  ref,
+  getHost,
+  onCleanup,
+  onEvent,
+  onMounted,
+  useEmit,
+  useSlots,
+} from '@vielzeug/ore';
 import { signal } from '@vielzeug/ripple';
 
 import type { OverlayCloseDetail, OverlayOpenDetail, SwipeAxis } from '../../headless';
@@ -146,7 +158,7 @@ export type OreDrawerProps = {
  */
 
 export const DRAWER_TAG = 'ore-drawer' as const;
-define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
+define<OreDrawerProps>(DRAWER_TAG, {
   props: {
     backdrop: prop.string<DrawerBackdrop>(),
     dismissible: prop.bool(true),
@@ -160,7 +172,11 @@ define<OreDrawerProps, OreDrawerEvents>(DRAWER_TAG, {
     size: prop.string<DrawerSize>(),
     title: prop.string(),
   },
-  setup(props, { el, emit, onCleanup, onEvent, onMounted, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreDrawerEvents>();
+    const slots = useSlots();
+
     const drawerLabelId = createStableId('drawer-label');
     const dialogRef = ref<HTMLDialogElement>();
     const panelRef = ref<HTMLDivElement>();

@@ -1,4 +1,4 @@
-import { define, html, prop } from '@vielzeug/ore';
+import { define, html, prop, getHost, useEmit, useSlots } from '@vielzeug/ore';
 
 import type { ComponentSize, RoundedSize, ThemeColor } from '../../types';
 
@@ -86,7 +86,7 @@ export type OreAlertProps = {
  * ```
  */
 export const ALERT_TAG = 'ore-alert' as const;
-define<OreAlertProps, OreAlertEvents>(ALERT_TAG, {
+define<OreAlertProps>(ALERT_TAG, {
   props: {
     ...themableBundle,
     ...sizableBundle,
@@ -97,7 +97,11 @@ define<OreAlertProps, OreAlertEvents>(ALERT_TAG, {
     horizontal: prop.bool(false),
     variant: prop.string<'solid' | 'flat' | 'bordered'>(),
   },
-  setup(props, { bind: _bind, el, emit, slots }) {
+  setup(props) {
+    const el = getHost();
+    const emit = useEmit<OreAlertEvents>();
+    const slots = useSlots();
+
     let announceEl: HTMLElement | null = null;
 
     const announce = (message: string) => {
