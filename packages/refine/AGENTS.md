@@ -12,6 +12,7 @@ Accessible, themeable web components built on `ore`. Largest package; one custom
 ## Local Contracts
 
 - **`lucide` is an allowed external runtime dependency** (icons). This is the one documented exception to the monorepo zero-dependency rule. Do not add other external deps.
+- **`vite.bundle.config.ts`'s `external`/`globals` must list every `@vielzeug/ore/<subpath>` refine imports from** (currently `directives`, `forms`, `observers`), each mapped to the `'Ore'` global — not just the bare `@vielzeug/ore` specifier. Missing one doesn't fail the build; Rollup silently inlines a second copy of ore's module graph into `refine.iife.js` instead of referencing the one `window.Ore` loaded alongside it, and every ore lifecycle hook resolved through that copy throws "outside setup" at runtime (its `runtime.ts` state is disconnected from the real one). If you add a new `@vielzeug/ore/<subpath>` import here, also confirm `packages/ore/src/iife.ts` re-exports it and add the corresponding `globals` entry here.
 - **Per-component sub-path exports are generated, not hand-edited.** The `exports` map in `package.json` is driven by `refine-manifest.mjs`:
   - `pnpm --filter @vielzeug/refine run sync:exports` regenerates the export map after adding/renaming/moving a component.
   - `check:manifest` runs in `build` and fails if exports are out of sync — run `sync:exports` to fix.
