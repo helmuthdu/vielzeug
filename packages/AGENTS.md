@@ -15,7 +15,7 @@ DOX contract for all source work under `packages/`. Each `packages/<name>/` is a
 Standard package shape: `src/index.ts` (the only public surface), `src/__tests__/` (Vitest), `vite.config.ts` (ESM+CJS), strict `tsconfig.json`.
 
 - All public exports go through `src/index.ts`, sorted (ESLint Perfectionist).
-- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine` and `prism` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.ai/rules/code/conventions.md` for the full documented exceptions list.
+- Zero external runtime dependencies; inter-package `@vielzeug/*` deps use `workspace:*`. **Exception: `refine` bundles `lucide`** — see its local contract. `refine`, `prism`, and `ore` also use `axe-core` as a devDependency for accessibility testing; it is not bundled. See `.ai/rules/code/conventions.md` for the full documented exceptions list.
 - Internal dev warnings go through `src/_dev.ts` (`warn()` / `error()`), never bare `console.*`. See the logging standard in `.ai/rules/code/conventions.md`.
 - Owned-resource teardown is `dispose()` + `[Symbol.dispose]`. Never `destroy()`/`close()`/`cleanup()`.
 

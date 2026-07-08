@@ -22,9 +22,9 @@ Functional web-component authoring primitives built on `ripple`. The foundation 
 
 `ore` is a **primitive authoring library**, not a component library. Its a11y contract is narrower than `refine`'s or `prism`'s:
 
-- **What to assert:** custom elements produced by `ore` primitives must not introduce structural violations — assert correct `role`, `tabindex`, `aria-*` attribute wiring, and slot/content projection plumbing. Use `axeCheck(element)` and assert zero violations on any test that mounts a real element into the DOM.
+- **What to assert:** custom elements produced by `ore` primitives must not introduce structural violations — assert correct `role`, `tabindex`, `aria-*` attribute wiring, and slot/content projection plumbing. Use the global `axeCheck(element)` (defined in `vitest.setup.ts`, same pattern as `packages/refine/vitest.setup.ts`). Adopt it at the representative test for each structurally-distinct primitive area (host attr/class bindings, `aria()`, prop→attribute reflection, `useSlots()`, `each()`/`when()` DOM insertion) rather than on every one of the hundreds of individual `it()`s in the suite — the goal is one regression tripwire per code path that can drop or corrupt real DOM structure, not exhaustive per-assertion coverage.
 - **What is out of scope here:** full ARIA pattern correctness (e.g. combobox state, dialog focus trap, roving tabindex) — those are the responsibility of the consuming component library (`refine`). Do not duplicate those assertions in `ore` tests.
-- Use the same `axeCheck` pattern from the repo (see `packages/refine/vitest.setup.ts` as a reference if adding it — `ore` does not currently ship an `axeCheck` helper but may add one if primitives require DOM-level a11y assertions).
+- `axeCheck` is test-infrastructure only — it lives in `vitest.setup.ts`, not `src/`, so it is never bundled into the published package (matches the `axe-core` devDependency exception documented in `.ai/rules/code/conventions.md`).
 - **Why the distinction matters:** breaking the primitive plumbing (e.g. a prop reflection bug that drops an `aria-*` attribute) would silently break all consuming components. The goal is to catch those regressions here, not to duplicate `refine`'s full-pattern tests.
 
 ## Work Guidance

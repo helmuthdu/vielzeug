@@ -119,7 +119,7 @@ packages/<name>/
 ## Key Conventions
 
 - **TypeScript strict mode** throughout; no `any`, no JS files in `src/`
-- **Zero external dependencies** per package (inter-package deps are allowed). Documented exceptions: `refine` bundles `lucide` as a runtime dep; `refine` and `prism` use `axe-core` as a devDependency for accessibility testing (not bundled).
+- **Zero external dependencies** per package (inter-package deps are allowed). Documented exceptions: `refine` bundles `lucide` as a runtime dep; `refine`, `prism`, and `ore` use `axe-core` as a devDependency for accessibility testing (not bundled).
 - **ESLint Perfectionist plugin** enforces sorted imports and object keys — run `pnpm fix` if linting fails on ordering
 - **Prettier**: 120-char line width, 2-space indent, trailing commas
 - **Commit style**: conventional commits, e.g. `feat(courier): add retry logic`

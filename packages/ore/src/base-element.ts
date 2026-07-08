@@ -31,6 +31,29 @@ const createComponentState = (): ComponentState => ({
 
 // ─── BaseElement ──────────────────────────────────────────────────────────────
 
+/**
+ * Phase transitions:
+ *
+ * ```
+ * UNINITIALIZED ──_runSetup()──┬─(sync result)──► SETUP_DONE
+ *                               └─(promise)──────► LOADING ──(resolves)──► SETUP_DONE
+ * SETUP_DONE / LOADING ──disconnectedCallback()──► UNMOUNTED ──(reset)──► UNINITIALIZED
+ * ```
+ *
+ * `generation` increments on every disconnect and is captured before an async
+ * `setup()` is awaited; if it no longer matches when the promise settles, the
+ * element was disconnected (and possibly reconnected) in the meantime and the
+ * result is discarded (see `_isStale`).
+ *
+ * Why this lives on the class instead of a standalone pure reducer: every
+ * transition here is triggered by running actual user code (`def.setup()`,
+ * `onMounted` callbacks) inside a reactive `scope.run()` + `runWithContext()`
+ * — there is no meaningful "decide the next phase" step that can be separated
+ * from "run the side-effecting thing that produces the phase change" without
+ * introducing a data-only effect-description layer that this package has no
+ * other use for. That's why the methods below stay as direct, readable
+ * procedural steps instead of a reducer + effect interpreter.
+ */
 export class BaseElement extends HTMLElement {
   static _definition: ComponentDefinition<any>;
   static _normalizedPropDefs: PropsDef<Record<never, never>> | undefined;
@@ -167,6 +190,15 @@ export class BaseElement extends HTMLElement {
     }
   }
 
+  /**
+   * True once the element has disconnected (and possibly reconnected) since
+   * `capturedGeneration` was recorded — an in-flight async `setup()` result
+   * arriving after that point is for an instance state that no longer exists.
+   */
+  private _isStale(capturedGeneration: number): boolean {
+    return this._component.generation !== capturedGeneration || !this.isConnected;
+  }
+
   private async _runSetupAsync(
     promise: Promise<HTMLResult | null>,
     pendingCallbacks: OnMountedCallback[],
@@ -175,8 +207,7 @@ export class BaseElement extends HTMLElement {
     try {
       const result = await promise;
 
-      // Discard stale results: element disconnected+reconnected since this setup started.
-      if (this._component.generation !== capturedGeneration || !this.isConnected) {
+      if (this._isStale(capturedGeneration)) {
         warn(`<${this.localName}> async setup result discarded — element disconnected before setup resolved.`);
 
         return;
@@ -190,7 +221,7 @@ export class BaseElement extends HTMLElement {
 
       this._scheduleMountCallbacks();
     } catch (error) {
-      if (this._component.generation !== capturedGeneration || !this.isConnected) {
+      if (this._isStale(capturedGeneration)) {
         warn(`<${this.localName}> async setup error discarded — element disconnected before setup resolved.`);
 
         return;
@@ -249,7 +280,7 @@ export class BaseElement extends HTMLElement {
     const capturedGeneration = this._component.generation;
 
     queueMicrotask(() => {
-      if (!this.isConnected || capturedGeneration !== this._component.generation) return;
+      if (this._isStale(capturedGeneration)) return;
 
       // Snapshot callbacks so in-loop registrations don't extend this iteration.
       const batch = this._component.mountCallbacks.splice(0);

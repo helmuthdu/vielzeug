@@ -393,12 +393,9 @@ describe('lifecycle hook aliases (R9)', () => {
 });
 
 describe('html template: dynamic tag-name guard (R5)', () => {
-  it('warns and skips replacement for an invalid dynamic tag name', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    await mount(() => html`<${'invalid tag name'}></${'invalid tag name'}>`);
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('not a valid HTML element name'));
-    warnSpy.mockRestore();
+  it('throws immediately for an invalid dynamic tag name, same as the each() duplicate-key guard', async () => {
+    await expect(mount(() => html`<${'invalid tag name'}></${'invalid tag name'}>`)).rejects.toThrow(
+      'not a valid HTML element name',
+    );
   });
 });

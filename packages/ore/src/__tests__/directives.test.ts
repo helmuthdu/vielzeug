@@ -12,7 +12,7 @@ import { register } from './test-utils';
 
 describe('Directive: each()', () => {
   it('should render list items', async () => {
-    const { queryAll } = await mount(() => {
+    const { element, queryAll } = await mount(() => {
       const items = signal([1, 2, 3]);
 
       return html`
@@ -29,6 +29,12 @@ describe('Directive: each()', () => {
 
     expect(items.length).toBe(3);
     expect(items[0].textContent).toBe('1');
+
+    // Structural a11y check: each() inserts/reorders real DOM nodes around
+    // comment anchors — must not corrupt list semantics (see AGENTS.md § Accessibility testing).
+    const results = await axeCheck(element);
+
+    expect(results.violations).toHaveLength(0);
   });
 
   it('should render fallback for empty list', async () => {
@@ -425,24 +431,6 @@ describe('Directive: each()', () => {
     expect(queryAll('.item')).toHaveLength(1);
     expect(queryAll('.item')[0]?.textContent).toBe('C');
 
-    warnSpy.mockRestore();
-  });
-
-  it('warns when key function returns only the index', async () => {
-    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-    await mount(
-      () =>
-        html`<ul>
-          ${each(
-            [1, 2, 3],
-            (_item, i) => i,
-            (n) => html`<li>${n}</li>`,
-          )}
-        </ul>`,
-    );
-
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('index'));
     warnSpy.mockRestore();
   });
 

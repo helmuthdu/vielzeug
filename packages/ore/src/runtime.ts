@@ -47,11 +47,12 @@ export const runWithContext = <T>(ctx: RuntimeContext, fn: () => T): T => {
   }
 };
 
-/** @internal Access to the current runtime context for context.ts caching. */
-export const getSetupContext = (): RuntimeContext | null => currentContext;
-
 /**
- * Returns the current runtime context, throwing if outside setup.
+ * Returns the current runtime context, throwing a consistently-worded error
+ * (naming the calling API) if called outside `setup()`. Every lifecycle/context
+ * hook below routes through this — it's the single place that decides both
+ * "are we inside setup?" and what the resulting error looks like, so the error
+ * message is never worse for one hook than another.
  * @internal
  */
 export const requireSetupContext = (api: string): RuntimeContext => {
@@ -65,11 +66,7 @@ export const requireSetupContext = (api: string): RuntimeContext => {
  * Only valid synchronously during component `setup()` (or inside a composable
  * called from it) — throws otherwise.
  */
-export const getHost = (): HTMLElement => {
-  if (currentContext) return currentContext.element;
-
-  throw new OreApiError(ORE_ERRORS.lifecycleOutsideSetup);
-};
+export const getHost = (): HTMLElement => requireSetupContext('getHost').element;
 
 export const tryRegisterCleanup = (fn: CleanupFn): boolean => {
   if (!currentContext) return false;
@@ -90,9 +87,7 @@ export const onCleanup = _onCleanup;
  * Multiple callbacks run in registration order.
  */
 export const onMounted = (fn: OnMountedCallback): void => {
-  if (!currentContext) throw new OreApiError(ORE_ERRORS.lifecycleOutsideSetup);
-
-  currentContext.mountCallbacks.push(fn);
+  requireSetupContext('onMounted').mountCallbacks.push(fn);
 };
 
 /**
@@ -129,7 +124,7 @@ export function onEvent(
   listener: EventListener,
   options?: AddEventListenerOptions,
 ): void {
-  if (!currentContext) throw new OreApiError(ORE_ERRORS.lifecycleOutsideSetup);
+  requireSetupContext('onEvent');
 
   if (!target) return;
 

@@ -1,7 +1,7 @@
 import { batch, computed, effect as rawEffect, type Readable, signal, type Signal, untrack } from '@vielzeug/ripple';
 
-import { devOnly, warn } from '../_dev';
-import { OreApiError, ORE_ERRORS } from '../errors';
+import { warn } from '../_dev';
+import { invariant, OreApiError, ORE_ERRORS } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
@@ -139,6 +139,12 @@ const reconcileItems = <T>(
  * tracked. Pass a `Signal<T[]>` or `() => T[]` for reactive lists.
  *
  * **Optional fallback:** the fourth argument renders when the list is empty.
+ *
+ * **Key choice:** pass a stable item identifier (e.g. `item.id`), never the
+ * array index — an index-based key reassigns to a different item whenever the
+ * list is reordered or an item is inserted/removed before it, causing full
+ * item teardown/recreation instead of the in-place update `each()` is built
+ * for. Duplicate keys within one render throw immediately (see `eachDuplicateKey`).
  */
 export function each<T>(
   list: MaybeReactiveArray<T>,
@@ -152,23 +158,11 @@ export function each<T>(
       ? computed(list as () => T[])
       : list;
 
-  devOnly(() => {
-    try {
-      const SENTINEL_IDX = 99999;
-      const testKey = keyFn({} as T, SENTINEL_IDX);
-
-      if (testKey === SENTINEL_IDX) {
-        warn(
-          'each(): key function returns only the index. Index keys cause full list re-renders on insert/remove — pass a stable item identifier (e.g. item.id) instead.',
-        );
-      }
-    } catch {
-      /* ignore — keyFn may throw on a non-item sentinel; that is fine */
-    }
-  });
-
   return createDirectiveResult((anchor, registerCleanup) => {
-    const parent = anchor.parentNode!;
+    const parent = anchor.parentNode;
+
+    invariant(parent, 'each() anchor comment has no parent node');
+
     const endMarker = document.createComment('each/end');
 
     parent.insertBefore(endMarker, anchor.nextSibling);

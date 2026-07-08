@@ -11,6 +11,7 @@
 import { computed, effect as rawEffect, isReactive, type Readable, untrack } from '@vielzeug/ripple';
 
 import { isLiveSignal } from '../directives/live';
+import { invariant } from '../errors';
 import { getPropMeta } from '../props';
 import {
   type AttrBinding,
@@ -196,7 +197,9 @@ const insertHtmlValues = (
   registerCleanup: RegisterCleanup,
 ): Node[] => {
   const nodes: Node[] = [];
-  const parent = insertBefore.parentNode!;
+  const parent = insertBefore.parentNode;
+
+  invariant(parent, 'html binding anchor has no parent node');
 
   for (const v of values) {
     if (isHtmlResult(v)) {

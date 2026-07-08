@@ -8,7 +8,7 @@
 
 import { computed, isReactive, type Readable } from '@vielzeug/ripple';
 
-import { warn } from '../_dev';
+import { invariant, ORE_ERRORS, OreApiError } from '../errors';
 import {
   type Binding,
   createHtmlResult,
@@ -22,7 +22,7 @@ import {
 } from '../types/bindings';
 import { applyModifiers } from '../utils/event-modifiers';
 import { applyBinding, createAttrBindingFromValue, resolveStaticText } from './bindings';
-import { followPath, getStaticTemplate } from './compiler';
+import { followPath, getStaticTemplate, SlotKind } from './compiler';
 
 // ─── Template instantiation ──────────────────────────────────────────────────
 
@@ -31,6 +31,8 @@ import { followPath, getStaticTemplate } from './compiler';
  * to each binding target using pre-recorded paths, and build bindings with
  * direct node references. Returns an HTMLResult whose fragment is ready to insert.
  */
+const NODE_SLOT_NO_PARENT_MSG = 'html`...`: node-slot comment anchor has no parent node';
+
 export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]): HTMLResult => {
   const compiled = getStaticTemplate(strings);
   const fragment = compiled.element.content.cloneNode(true) as DocumentFragment;
@@ -44,33 +46,39 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
   const boundSlots: BoundSlot[] = compiled.slots.map((slot, i) => {
     const value = values[i];
 
-    if (slot.kind === 'closeTag') {
+    if (slot.kind === SlotKind.CLOSE_TAG) {
       return { slot, value };
     }
 
-    if (slot.kind === 'node') {
-      const comment = followPath(fragment, compiled.commentPaths.get(slot.commentId!)!) as Comment;
+    if (slot.kind === SlotKind.NODE) {
+      const commentPath = compiled.commentPaths.get(slot.commentId!);
 
-      return { comment, slot, value };
+      invariant(commentPath, `compiled template is missing a comment path for node slot ${slot.commentId}`);
+
+      return { comment: followPath(fragment, commentPath) as Comment, slot, value };
     }
 
-    const el = followPath(fragment, compiled.elementPaths.get(slot.elementId!)!) as HTMLElement;
+    const elementPath = compiled.elementPaths.get(slot.elementId!);
 
-    return { el, slot, value };
+    invariant(elementPath, `compiled template is missing an element path for slot ${slot.elementId}`);
+
+    return { el: followPath(fragment, elementPath) as HTMLElement, slot, value };
   });
 
   // Phase 2a: Process tagname slots first — replace placeholders with real elements
   const tagReplacements = new Map<HTMLElement, HTMLElement>();
 
   for (const { el, slot, value } of boundSlots) {
-    if (slot.kind !== 'tagname') continue;
+    if (slot.kind !== SlotKind.TAG_NAME) continue;
 
     const tagName = String(value);
 
+    // Same "fail immediately, every build" treatment as each()'s duplicate-key
+    // guard: a malformed dynamic tag name is a programming bug in the template,
+    // not a runtime race — degrading to a silently-broken partial render would
+    // hide it instead of surfacing it at the call site.
     if (!/^[a-z][a-z0-9._-]*$/i.test(tagName)) {
-      warn(`html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name — skipping slot replacement.`);
-
-      continue;
+      throw new OreApiError(ORE_ERRORS.invalidDynamicTagName(tagName));
     }
 
     const realEl = document.createElement(tagName);
@@ -85,12 +93,12 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
   // Phase 2b: Build bindings (may modify DOM for static content)
   for (const { comment, el: rawEl, slot, value } of boundSlots) {
-    if (slot.kind === 'tagname' || slot.kind === 'closeTag') continue;
+    if (slot.kind === SlotKind.TAG_NAME || slot.kind === SlotKind.CLOSE_TAG) continue;
 
     // Resolve element through tagname replacements
     const el = rawEl ? (tagReplacements.get(rawEl) ?? rawEl) : rawEl;
 
-    if (slot.kind === 'node') {
+    if (slot.kind === SlotKind.NODE) {
       const anchor = comment!;
 
       if (isDirectiveResult(value)) {
@@ -100,7 +108,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
 
       if (isHtmlResult(value)) {
         // Static embed: move fragment children into place, chain apply
-        const parent = anchor.parentNode!;
+        const parent = anchor.parentNode;
+
+        invariant(parent, NODE_SLOT_NO_PARENT_MSG);
 
         while (value.fragment.firstChild) parent.insertBefore(value.fragment.firstChild, anchor);
 
@@ -135,7 +145,9 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       }
 
       if (Array.isArray(value)) {
-        const parent = anchor.parentNode!;
+        const parent = anchor.parentNode;
+
+        invariant(parent, NODE_SLOT_NO_PARENT_MSG);
 
         for (const item of value) {
           if (isHtmlResult(item)) {
@@ -158,7 +170,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
     // Element slot
     const target = el!;
 
-    if (slot.kind === 'event') {
+    if (slot.kind === SlotKind.EVENT) {
       if (typeof value === 'function') {
         const { handler, options } = applyModifiers(value as (e: Event) => void, slot.modifiers ?? []);
 
@@ -178,7 +190,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       continue;
     }
 
-    if (slot.kind === 'ref') {
+    if (slot.kind === SlotKind.REF) {
       if (value) {
         bindings.push({ el: target, ref: value as Ref<Element> | RefCallback<Element>, type: 'ref' });
       }
@@ -186,7 +198,7 @@ export const compileTemplate = (strings: TemplateStringsArray, values: unknown[]
       continue;
     }
 
-    if (slot.kind === 'spread') {
+    if (slot.kind === SlotKind.SPREAD) {
       if (isSpreadObject(value)) {
         bindings.push({ el: target, spread: value, type: 'spread' });
       }

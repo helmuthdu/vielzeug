@@ -8,8 +8,24 @@
  */
 
 // ─── Slot kinds ───────────────────────────────────────────────────────────────
+// Const object + derived union, same pattern as `ComponentPhase`/`LIFECYCLE_EVENTS`
+// in types.ts — used here (rather than plain string literals) because the kind
+// crosses a module boundary (compiler.ts produces it, instantiator.ts consumes
+// it): importing `SlotKind` gives autocomplete and a single rename point at the
+// consuming site, where a bare string literal wouldn't.
 
-export type DetectedSlotKind = 'event' | 'ref' | 'boolAttr' | 'attr' | 'spread' | 'node' | 'tagname' | 'closeTag';
+export const SlotKind = {
+  ATTR: 'attr',
+  BOOL_ATTR: 'boolAttr',
+  CLOSE_TAG: 'closeTag',
+  EVENT: 'event',
+  NODE: 'node',
+  REF: 'ref',
+  SPREAD: 'spread',
+  TAG_NAME: 'tagname',
+} as const;
+
+export type DetectedSlotKind = (typeof SlotKind)[keyof typeof SlotKind];
 
 type DetectedSlot = {
   kind: DetectedSlotKind;
@@ -61,38 +77,38 @@ const detectSlot = (str: string): DetectedSlot => {
 
   // Dynamic closing tag: interpolation is the closing tag name, e.g. strings[i] = "</"
   if (trimmed.endsWith('</')) {
-    return { kind: 'closeTag', prefix: str };
+    return { kind: SlotKind.CLOSE_TAG, prefix: str };
   }
 
   // Dynamic opening tag name: interpolation is the tag name itself, e.g. strings[i] = "<"
   if (trimmed.endsWith('<')) {
-    return { kind: 'tagname', prefix: str };
+    return { kind: SlotKind.TAG_NAME, prefix: str };
   }
 
   if ((m = EVENT_RE.exec(str))) {
     const prefix = str.slice(0, -m[0].length);
     const parts = m[1].split('.');
 
-    return { kind: 'event', modifiers: parts.slice(1), name: parts[0], prefix };
+    return { kind: SlotKind.EVENT, modifiers: parts.slice(1), name: parts[0], prefix };
   }
 
   if ((m = REF_RE.exec(str))) {
-    return { kind: 'ref', prefix: str.slice(0, -m[0].length) };
+    return { kind: SlotKind.REF, prefix: str.slice(0, -m[0].length) };
   }
 
   if ((m = BOOL_ATTR_RE.exec(str))) {
-    return { kind: 'boolAttr', name: m[1], prefix: str.slice(0, -m[0].length) };
+    return { kind: SlotKind.BOOL_ATTR, name: m[1], prefix: str.slice(0, -m[0].length) };
   }
 
   if ((m = ATTR_RE.exec(str))) {
-    return { kind: 'attr', name: m[1], prefix: str.slice(0, -m[0].length) };
+    return { kind: SlotKind.ATTR, name: m[1], prefix: str.slice(0, -m[0].length) };
   }
 
   if (isInsideStartTag(str)) {
-    return { kind: 'spread', prefix: str.trimEnd() };
+    return { kind: SlotKind.SPREAD, prefix: str.trimEnd() };
   }
 
-  return { kind: 'node', prefix: str };
+  return { kind: SlotKind.NODE, prefix: str };
 };
 
 // ─── Static template cache ────────────────────────────────────────────────────
@@ -174,7 +190,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
     const raw = normalized[i];
     const slot = detectSlot(raw);
 
-    if (slot.kind === 'tagname') {
+    if (slot.kind === SlotKind.TAG_NAME) {
       // Dynamic opening tag name: emit a placeholder custom element
       const id = elementCounter++;
 
@@ -185,18 +201,18 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       const prefixWithoutAngle = raw.replace(/<\s*$/, '');
 
       html += prefixWithoutAngle + `<ore-dyn-${id} u="${id}"`;
-      slots.push({ elementId: id, kind: 'tagname' });
-    } else if (slot.kind === 'closeTag') {
+      slots.push({ elementId: id, kind: SlotKind.TAG_NAME });
+    } else if (slot.kind === SlotKind.CLOSE_TAG) {
       // Dynamic closing tag: close the matching placeholder element
       const id = tagNameStack.pop() ?? 0;
       const prefixWithoutClose = raw.replace(/<\/\s*$/, '');
 
       html += prefixWithoutClose + `</ore-dyn-${id}>`;
-      slots.push({ kind: 'closeTag' });
+      slots.push({ kind: SlotKind.CLOSE_TAG });
       activeElementId = undefined;
-    } else if (slot.kind === 'node') {
+    } else if (slot.kind === SlotKind.NODE) {
       html += slot.prefix + `<!--${commentCounter}-->`;
-      slots.push({ commentId: commentCounter, kind: 'node' });
+      slots.push({ commentId: commentCounter, kind: SlotKind.NODE });
       commentCounter++;
       activeElementId = undefined;
     } else {
@@ -211,7 +227,7 @@ const buildStaticTemplate = (strings: TemplateStringsArray): CompiledStaticTempl
       }
 
       const mode: 'attr' | 'bool' | undefined =
-        slot.kind === 'boolAttr' ? 'bool' : slot.kind === 'attr' ? 'attr' : undefined;
+        slot.kind === SlotKind.BOOL_ATTR ? 'bool' : slot.kind === SlotKind.ATTR ? 'attr' : undefined;
 
       slots.push({ elementId: activeElementId, kind: slot.kind, mode, modifiers: slot.modifiers, name: slot.name });
     }

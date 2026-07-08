@@ -1,3 +1,4 @@
+import axe from 'axe-core';
 import { afterEach, vi } from 'vitest';
 
 import { install } from './src/testing';
@@ -5,6 +6,39 @@ import { install } from './src/testing';
 install(afterEach);
 
 globalThis.window.URL.createObjectURL = vi.fn();
+
+// ── Axe-core a11y helper ──────────────────────────────────────────────────────
+// Usage in any test:
+//   const results = await axeCheck(fixture.element);
+//   expect(results.violations).toHaveLength(0);
+//
+// axe-core targets real browsers. Under jsdom there is no CSS box model and
+// `getComputedStyle` is a stub, so rules that depend on layout, geometry, or
+// computed colour produce false positives/negatives. Disable those here so the
+// structural/ARIA/name/role checks jsdom CAN evaluate stay reliable — ore's a11y
+// contract (see AGENTS.md) is limited to that structural plumbing, not full
+// pattern correctness, so this is the complete set of checks it needs.
+const JSDOM_UNRELIABLE_RULES: Record<string, { enabled: false }> = {
+  'color-contrast': { enabled: false },
+  'color-contrast-enhanced': { enabled: false },
+  'scrollable-region-focusable': { enabled: false },
+  'target-size': { enabled: false },
+};
+
+export async function axeCheck(node: Element, options: axe.RunOptions = {}): Promise<axe.AxeResults> {
+  return axe.run(node, {
+    runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'best-practice'] },
+    ...options,
+    rules: { ...JSDOM_UNRELIABLE_RULES, ...options.rules },
+  });
+}
+
+// Make it globally available without imports in each test file
+(globalThis as any).axeCheck = axeCheck;
+
+declare global {
+  var axeCheck: (node: Element, options?: axe.RunOptions) => Promise<axe.AxeResults>;
+}
 
 // Polyfill ResizeObserver for JSDOM
 if (!('ResizeObserver' in globalThis)) {

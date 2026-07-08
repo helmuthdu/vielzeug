@@ -241,6 +241,12 @@ describe('core/host.ts', () => {
 
       expect(externalEl.getAttribute('aria-label')).toBe('Close dialog');
       expect(externalEl.getAttribute('role')).toBe('dialog');
+
+      // Structural a11y check: role + accessible name wiring must not introduce
+      // violations axe can detect in jsdom (see AGENTS.md § Accessibility testing).
+      const results = await axeCheck(externalEl);
+
+      expect(results.violations).toHaveLength(0);
     });
 
     it('applies reactive ARIA attributes and updates on signal change', async () => {

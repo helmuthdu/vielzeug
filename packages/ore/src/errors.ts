@@ -23,6 +23,17 @@ export class OreApiError extends OreError {
 }
 
 /**
+ * Thrown when an internal invariant fails — e.g. compiled template metadata no
+ * longer matching the DOM it was cloned from. Distinct from `OreApiError`: this
+ * is never the caller's fault, it signals a bug in ore itself. See `invariant()`.
+ */
+export class OreInternalError extends OreError {
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
  * The phase in which a component error occurred.
  * - `'setup'` — synchronous setup() threw
  * - `'async-setup'` — async setup() promise rejected
@@ -72,7 +83,24 @@ export const ORE_ERRORS = {
   defineRequiresTag: 'define() requires a tag name',
   eachDuplicateKey: (key: string, index: number): string => `each() received duplicate key "${key}" at index ${index}`,
   injectStrictFailed: (key: string, tag: string): string => `injectStrict() could not resolve key "${key}" in <${tag}>`,
+  invalidDynamicTagName: (tagName: string): string =>
+    `html\`...\`: dynamic tag name "${tagName}" is not a valid HTML element name`,
+  invariantViolated: (message: string): string => `invariant violated: ${message}`,
   lifecycleOutsideSetup: 'Lifecycle hooks must be called during component setup',
   propInvalidReflect: 'Structured props cannot use reflect:true — use prop.json() with reflect:false',
   validationFailed: (tag: string, errors: string[]): string => `Validation failed for <${tag}>:\n${errors.join('\n')}`,
 } as const;
+
+/**
+ * Assert an internal invariant that must always hold — e.g. compiled template
+ * metadata staying in sync with the DOM it was cloned from. A failed invariant
+ * means a bug in ore itself, never user input, so it throws `OreInternalError`
+ * unconditionally (every build, never gated like `_dev.ts`'s `warn()`).
+ *
+ * Narrowing caveat: `asserts condition` only narrows the exact expression
+ * passed in. Assign to a local `const` first — `invariant(el.parentNode, msg)`
+ * does not narrow later reads of `el.parentNode`.
+ */
+export function invariant(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new OreInternalError(ORE_ERRORS.invariantViolated(message));
+}

@@ -27,6 +27,13 @@ describe('component props', () => {
     expect(query('.count')?.textContent).toBe('42');
     expect(query('.size')?.textContent).toBe('lg');
     expect(element.hasAttribute('disabled')).toBe(true);
+
+    // Structural a11y check: this is the exact scenario AGENTS.md's a11y contract
+    // calls out — a prop-reflection bug that drops/mangles a boolean attribute
+    // (e.g. `disabled`) would silently break every consumer of this primitive.
+    const results = await axeCheck(element);
+
+    expect(results.violations).toHaveLength(0);
   });
 
   it('initializes prop signals from attributes', async () => {

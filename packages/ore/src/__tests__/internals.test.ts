@@ -1,5 +1,5 @@
 import { debugFlush } from '../devtools';
-import { OreLifecycleError, OreError, reportRuntimeError } from '../errors';
+import { invariant, OreInternalError, OreLifecycleError, OreError, reportRuntimeError } from '../errors';
 import { html } from '../index';
 import {
   createDirectiveResult,
@@ -72,6 +72,39 @@ describe('OreLifecycleError', () => {
       expect(OreError.is(undefined)).toBe(false);
       expect(OreError.is('string')).toBe(false);
     });
+  });
+});
+
+describe('invariant()', () => {
+  it('does not throw when the condition is truthy', () => {
+    expect(() => invariant(true, 'unreachable')).not.toThrow();
+    expect(() => invariant('non-empty', 'unreachable')).not.toThrow();
+    expect(() => invariant(1, 'unreachable')).not.toThrow();
+  });
+
+  it('throws OreInternalError with the given message when the condition is falsy', () => {
+    expect(() => invariant(false, 'compiled path missing')).toThrow(OreInternalError);
+    expect(() => invariant(null, 'compiled path missing')).toThrow(/compiled path missing/);
+    expect(() => invariant(undefined, 'compiled path missing')).toThrow(/invariant violated/);
+  });
+
+  it('is an OreError so callers can catch any ore-originated error with one type', () => {
+    try {
+      invariant(false, 'boom');
+      throw new Error('invariant() should have thrown');
+    } catch (err) {
+      expect(OreError.is(err)).toBe(true);
+    }
+  });
+
+  it('narrows the asserted value so callers can use it without further null checks', () => {
+    const value: string | null = Math.random() >= 0 ? 'always-a-string' : null;
+
+    invariant(value, 'value must be present');
+
+    // Compile-time check: `value` is narrowed to `string` here — `.length` would
+    // not type-check if the assertion signature were wrong.
+    expect(value.length).toBeGreaterThan(0);
   });
 });
 

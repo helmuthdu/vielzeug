@@ -7,7 +7,7 @@
 
 - **Zero external dependencies** per package. Inter-package `workspace:*` deps are fine. Documented exceptions:
   - `refine` — bundles `lucide` as a runtime dependency (icons).
-  - `refine`, `prism` — use `axe-core` as a devDependency for accessibility testing. It is not bundled and does not appear in production output.
+  - `refine`, `prism`, `ore` — use `axe-core` as a devDependency for accessibility testing. It is not bundled and does not appear in production output.
 - **TypeScript strict mode** everywhere. No `any`, no JS files in `src/`.
 - **ESLint Perfectionist** enforces sorted imports and object keys — run `pnpm fix` to auto-sort.
 

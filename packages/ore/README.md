@@ -30,7 +30,8 @@ yarn add @vielzeug/ore
 ## Quick Start
 
 ```ts
-import { bind, computed, css, define, html, onMounted, prop, signal } from '@vielzeug/ore';
+import { computed, signal } from '@vielzeug/ripple';
+import { bind, css, define, html, onMounted, prop } from '@vielzeug/ore';
 
 define('my-counter', {
   props: {
@@ -62,6 +63,36 @@ define('my-counter', {
 ```
 
 `setup()` takes only `props`. Everything else — lifecycle hooks (`onMounted`, `onCleanup`, `onEvent`, `onElement`, `watch`), host bindings (`bind`, `aria`), context (`inject`/`injectStrict`/`provide`), and per-instance factories (`useEmit<Emits>()`, `useSlots<SlotNames>()`) — are plain functions imported from `@vielzeug/ore`, resolved through the current component while `setup()` (or a composable it calls) is running. Form-association helpers (`useField`, `createFormContext`) live under `@vielzeug/ore/forms`.
+
+## Testing
+
+`@vielzeug/ore/testing` mounts real custom elements into jsdom/happy-dom and gives you `act`/query/dispose in one fixture — no separate render + flush + query steps to remember:
+
+```ts
+import { mount } from '@vielzeug/ore/testing';
+
+const { element, query, act, dispose } = await mount('my-counter');
+
+expect(query('button')?.textContent).toContain('Count: 0');
+
+await act(() => query('button')?.click());
+
+expect(query('button')?.textContent).toContain('Count: 1');
+
+dispose(); // or: use the fixture as `using fixture = await mount(...)`
+```
+
+Register `cleanup` once so mounted elements don't leak between tests:
+
+```ts
+// vitest.setup.ts
+import { afterEach } from 'vitest';
+import { install } from '@vielzeug/ore/testing';
+
+install(afterEach);
+```
+
+Also available from `@vielzeug/ore/testing`: `renderHook` (test a composable in isolation, without a full template), `fire`/`user` (dispatch DOM/user-interaction events), `waitFor`/`waitForEvent`, and `within` (scoped queries for slotted content). See the [Usage Guide](https://vielzeug.dev/ore/usage) for the full API.
 
 ## Documentation
 

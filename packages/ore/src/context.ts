@@ -8,7 +8,7 @@
 
 import { warn } from './_dev';
 import { OreApiError, ORE_ERRORS } from './errors';
-import { getHost, getSetupContext } from './runtime';
+import { getHost, requireSetupContext } from './runtime';
 
 const contextRegistry = new WeakMap<HTMLElement, Map<InjectionKey<unknown>, unknown>>();
 
@@ -83,9 +83,7 @@ const walkAndFind = <T>(element: HTMLElement, key: InjectionKey<T>): T | typeof 
 export function inject<T>(key: InjectionKey<T>): T | undefined;
 export function inject<T>(key: InjectionKey<T>, fallback: T): T;
 export function inject<T>(key: InjectionKey<T>, ...rest: [T?]): T | undefined {
-  const ctx = getSetupContext();
-
-  if (!ctx) throw new OreApiError(ORE_ERRORS.lifecycleOutsideSetup);
+  const ctx = requireSetupContext('inject');
 
   let cache = resolvedCache.get(ctx);
 

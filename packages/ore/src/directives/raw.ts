@@ -1,6 +1,7 @@
 import { computed, effect as rawEffect, isReactive, type Readable, type Signal } from '@vielzeug/ripple';
 
 import { warn } from '../_dev';
+import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult } from '../types/bindings';
 import { removeNodes } from '../utils/dom';
 
@@ -68,7 +69,10 @@ export function raw(value: (() => string) | string | Signal<string> | Readable<s
   }
 
   return createDirectiveResult((anchor, registerCleanup) => {
-    const parent = anchor.parentNode!;
+    const parent = anchor.parentNode;
+
+    invariant(parent, 'raw() anchor comment has no parent node');
+
     const endMarker = document.createComment('raw/end');
 
     parent.insertBefore(endMarker, anchor.nextSibling);

@@ -50,8 +50,8 @@
   "scripts": {
     "build": "vite build && pnpm run build:bundle && pnpm run build:types",
     "build:types": "tsc -p tsconfig.declarations.json",
-    "fix": "eslint --fix src",
-    "lint": "eslint src",
+    "fix": "eslint --fix src vitest.setup.ts",
+    "lint": "eslint src vitest.setup.ts",
     "prepublishOnly": "pnpm run build",
     "preview": "vite preview",
     "test": "vitest",
@@ -69,6 +69,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.1.0",
+    "axe-core": "^4.12.1",
     "jsdom": "^29.1.1",
     "typescript": "~6.0.3",
     "vite": "^8.1.3",

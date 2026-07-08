@@ -14,6 +14,12 @@ describe('component slots and emit', () => {
 
     expect(element.innerHTML).toContain('Header');
     expect(element.innerHTML).toContain('Content');
+
+    // Structural a11y check: slot/content projection plumbing must not introduce
+    // violations axe can detect in jsdom (see AGENTS.md § Accessibility testing).
+    const results = await axeCheck(element);
+
+    expect(results.violations).toHaveLength(0);
   });
 
   it('exposes setup slots context with accurate presence signals', async () => {

@@ -2,12 +2,15 @@ import { computed, effect as rawEffect, isReactive, type Readable, untrack } fro
 
 import type { RegisterCleanup } from '../template';
 
+import { invariant } from '../errors';
 import { createDirectiveResult, type DirectiveResult, type HTMLResult, isHtmlResult } from '../types/bindings';
 import { removeNodes, runAll } from '../utils/dom';
 
 type MaybeReactive<T> = T | (() => T) | Readable<T>;
 
 type WhenRenderable = HTMLResult | null | undefined | false;
+
+const NO_PARENT_MSG = 'when() anchor comment has no parent node';
 
 const mountBranch = (
   result: HTMLResult,
@@ -39,7 +42,10 @@ export function when(
 
       if (!branch || !isHtmlResult(branch)) return;
 
-      const parent = anchor.parentNode!;
+      const parent = anchor.parentNode;
+
+      invariant(parent, NO_PARENT_MSG);
+
       const nodes = mountBranch(branch, parent, anchor, registerCleanup);
 
       registerCleanup(() => removeNodes(nodes));
@@ -52,7 +58,10 @@ export function when(
 
     if (ownedComputed) registerCleanup(() => ownedComputed.dispose());
 
-    const parent = anchor.parentNode!;
+    const parent = anchor.parentNode;
+
+    invariant(parent, NO_PARENT_MSG);
+
     const endMarker = document.createComment('when/end');
 
     parent.insertBefore(endMarker, anchor.nextSibling);
