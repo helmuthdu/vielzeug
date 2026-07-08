@@ -40,11 +40,17 @@ export const getConfig = (
       lib: {
         entry,
         fileName: (format: string, entryName: string) => {
-          if (entryName === 'src/index') {
+          // Query-suffixed imports (e.g. `./foo.css?inline`) surface here as an entryName
+          // still carrying the `?inline` suffix — strip it, or the emitted file (and its
+          // sourcemap) end up with a literal "?" in the filename, which GitHub's
+          // upload-artifact action (and some filesystems) reject outright.
+          const cleanEntryName = entryName.split('?')[0];
+
+          if (cleanEntryName === 'src/index') {
             return `index.${format === 'es' ? 'js' : 'cjs'}`;
           }
 
-          return `${entryName}.${format === 'es' ? 'js' : 'cjs'}`;
+          return `${cleanEntryName}.${format === 'es' ? 'js' : 'cjs'}`;
         },
         formats: ['es', 'cjs'] as LibraryFormats[],
         name,

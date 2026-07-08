@@ -60,6 +60,19 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # A re-run (whether "re-run failed jobs" or "re-run all jobs") checks out the exact SHA
+      # the *original* dispatch pinned, not the current tip of main — so re-running a run whose
+      # earlier attempt already pushed a version-bump commit re-applies that same bump against
+      # a stale baseline. That produces a second, diverging "Bump versions" commit that conflicts
+      # with the one already on main the moment rush's internal `--target-branch main` merge
+      # fetches it. Force the checkout to the real current tip before doing anything else so a
+      # re-run is a no-op once main has already moved (no pending change files left to apply).
+      - name: Sync to latest main (guards against a re-run's stale pinned SHA)
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
+
       # Node-only setup so a missing "package" input, a typo'd package name, or a missing
       # change file fails in seconds instead of after paying for the full rush/pnpm install
       # below.
@@ -131,6 +144,14 @@ jobs:
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      # See the identical step in prepare-single for why this is needed: a re-run of this job
+      # checks out the SHA the original dispatch was pinned to, not main's current tip.
+      - name: Sync to latest main (guards against a re-run's stale pinned SHA)
+        run: |
+          git fetch origin main
+          git checkout main
+          git reset --hard origin/main
 
       # Node-only setup so "nothing pending" fails in seconds instead of after the full
       # rush/pnpm install below.
