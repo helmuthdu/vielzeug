@@ -54,7 +54,7 @@ orbit     → arsenal, ripple
 ore       → ripple
 prism     → orbit, ripple
 pulse     → ripple
-refine    → arsenal, dnd, orbit, ore, ripple, tempo
+refine    → arsenal, dnd, keymap, orbit, ore, ripple, tempo
 scout     → ripple
 scroll    → ripple
 sourcerer → arsenal

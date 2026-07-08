@@ -4,7 +4,7 @@ description: Accessible, themeable web components built with Ore for framework a
 package: refine
 category: ui-components
 keywords: [web-components, accessible, themeable, ui, components, design-system]
-related: [ore, orbit, forge]
+related: [ore, orbit, forge, keymap]
 exports:
   [
     ore-accordion,
@@ -26,6 +26,8 @@ exports:
     ore-checkbox-group,
     ore-chip,
     ore-combobox,
+    ore-command-palette,
+    ore-command-palette-item,
     ore-datagrid,
     ore-date-picker,
     ore-dialog,
@@ -205,7 +207,7 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 **Layout:** `ore-box`, `ore-grid`, `ore-grid-item`, `ore-navbar`, `ore-sidebar`
 
-**Overlay:** `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-tooltip`
+**Overlay:** `ore-command-palette`, `ore-command-palette-item`, `ore-dialog`, `ore-drawer`, `ore-menu`, `ore-popover`, `ore-tooltip`
 
 ## Features
 
@@ -243,6 +245,7 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 - [Ore](/ore/) — Web component runtime that powers Refine
 - [Orbit](/orbit/) — Floating UI positioning used in Refine's overlays
 - [Forge](/forge/) — Form state management for use with Refine inputs
+- [Keymap](/keymap/) — Keyboard shortcut manager that powers the command palette's global trigger
 
 </div>
 

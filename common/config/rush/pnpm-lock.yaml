@@ -353,6 +353,9 @@ importers:
       '@vielzeug/dnd':
         specifier: workspace:*
         version: link:../dnd
+      '@vielzeug/keymap':
+        specifier: workspace:*
+        version: link:../keymap
       '@vielzeug/orbit':
         specifier: workspace:*
         version: link:../orbit

@@ -213,6 +213,12 @@
       "require": "./dist/combobox.cjs",
       "types": "./dist/inputs/combobox/combobox.d.ts"
     },
+    "./command-palette": {
+      "source": "./src/overlay/command-palette/command-palette.ts",
+      "import": "./dist/command-palette.js",
+      "require": "./dist/command-palette.cjs",
+      "types": "./dist/overlay/command-palette/command-palette.d.ts"
+    },
     "./datagrid": {
       "source": "./src/inputs/datagrid/datagrid.ts",
       "import": "./dist/datagrid.js",
@@ -441,6 +447,7 @@
   "dependencies": {
     "@vielzeug/ore": "workspace:*",
     "@vielzeug/dnd": "workspace:*",
+    "@vielzeug/keymap": "workspace:*",
     "@vielzeug/orbit": "workspace:*",
     "@vielzeug/ripple": "workspace:*",
     "@vielzeug/arsenal": "workspace:*",

@@ -115,6 +115,7 @@ Before each minor release:
 
 | Component    | Role              | Keyboard                   | Key ARIA attrs                    | Notes                   |
 | ------------ | ----------------- | -------------------------- | --------------------------------- | ----------------------- |
+| `ore-command-palette` | `dialog` + `combobox` + `listbox` | Arrow / Enter / Escape, focus trap | `aria-modal`, `aria-activedescendant`, `aria-expanded` | Focus restored on close; global shortcut via keymap |
 | `ore-dialog`  | `dialog`          | Escape, focus trap         | `aria-modal`, `aria-labelledby`   | Focus restored on close |
 | `ore-drawer`  | `dialog`          | Escape, focus trap         | `aria-modal`, `aria-labelledby`   | Focus restored on close |
 | `ore-popover` | `dialog` / `menu` | Escape                     | `aria-expanded`, `aria-haspopup`  |                         |

@@ -1,3 +1,12 @@
+export { COMMAND_PALETTE_ITEM_TAG, COMMAND_PALETTE_TAG } from './command-palette/command-palette';
+export type {
+  CommandPaletteItem,
+  CommandPaletteItemInput,
+  CommandPaletteSelectDetail,
+  OreCommandPaletteEvents,
+  OreCommandPaletteItemProps,
+  OreCommandPaletteProps,
+} from './command-palette/command-palette.types';
 export { DIALOG_TAG } from './dialog/dialog';
 export type { OreDialogEvents, OreDialogProps } from './dialog/dialog';
 export { DRAWER_TAG } from './drawer/drawer';

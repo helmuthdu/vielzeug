@@ -15,6 +15,7 @@ const refineExternals = [
   '@vielzeug/ore/forms',
   '@vielzeug/ore/observers',
   '@vielzeug/dnd',
+  '@vielzeug/keymap',
   '@vielzeug/orbit',
   '@vielzeug/ripple',
   '@vielzeug/scroll',

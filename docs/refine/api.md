@@ -66,6 +66,7 @@ import '@vielzeug/refine/checkbox-group';
 import '@vielzeug/refine/chip';
 import '@vielzeug/refine/copy-command';
 import '@vielzeug/refine/combobox';
+import '@vielzeug/refine/command-palette';
 import '@vielzeug/refine/datagrid';
 import '@vielzeug/refine/date-picker';
 import '@vielzeug/refine/dialog';
@@ -175,6 +176,7 @@ Per-component API — attributes, events, slots, CSS custom properties:
 - [Text](./components/text.md)
 
 ### Overlay
+- [Command Palette](./components/command-palette.md)
 - [Dialog](./components/dialog.md)
 - [Drawer](./components/drawer.md)
 - [Menu](./components/menu.md)

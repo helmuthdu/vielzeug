@@ -29,6 +29,7 @@ export const componentManifest = [
   { name: 'code-window', source: './src/content/code-window/code-window' },
   { name: 'copy-command', source: './src/content/copy-command/copy-command' },
   { name: 'combobox', source: './src/inputs/combobox/combobox' },
+  { name: 'command-palette', source: './src/overlay/command-palette/command-palette' },
   { name: 'datagrid', source: './src/inputs/datagrid/datagrid' },
   { name: 'date-picker', source: './src/inputs/date-picker/date-picker' },
   { name: 'dialog', source: './src/overlay/dialog/dialog' },

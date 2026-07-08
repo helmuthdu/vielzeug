@@ -1468,6 +1468,7 @@ export default defineConfig({
             {
               collapsed: true,
               items: [
+                { link: '/refine/components/command-palette', text: 'Command Palette' },
                 { link: '/refine/components/dialog', text: 'Dialog' },
                 { link: '/refine/components/drawer', text: 'Drawer' },
                 { link: '/refine/components/menu', text: 'Menu' },
