@@ -1,6 +1,13 @@
 # Change Log - @vielzeug/scroll
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Wed, 08 Jul 2026 17:19:00 GMT and should not be manually modified.
+
+## 1.1.0
+Wed, 08 Jul 2026 17:19:00 GMT
+
+### Minor changes
+
+- feat(dom-virtual-list): add stickToBottom option and Virtualizer#isAtEnd for chat-style 'stick to bottom on new message' auto-scrolling
 
 ## 1.0.4
 Tue, 07 Jul 2026 09:20:39 GMT

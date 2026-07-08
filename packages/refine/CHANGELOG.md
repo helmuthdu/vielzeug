@@ -1,6 +1,17 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Wed, 08 Jul 2026 09:22:31 GMT and should not be manually modified.
+This log was last generated on Wed, 08 Jul 2026 17:19:00 GMT and should not be manually modified.
+
+## 1.3.0
+Wed, 08 Jul 2026 17:19:00 GMT
+
+### Minor changes
+
+- feat: add ore-chat-message and ore-typing-indicator components; add a gallery/preview-grid mode to ore-file-input for image thumbnails
+
+### Patches
+
+- fix: chat-message alignment/announce fixes, typing-indicator reliable announcement via shared live region, command-palette simplified slot handling + disabled-row Enter guard, file-input naming cleanup
 
 ## 1.2.0
 Wed, 08 Jul 2026 09:22:31 GMT
