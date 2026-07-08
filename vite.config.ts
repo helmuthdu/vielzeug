@@ -5,6 +5,8 @@ import { resolve } from 'node:path';
 type LibraryEntry = string | Record<string, string>;
 
 export type BundleOptions = {
+  /** Absolute path to the bundle entry point. Defaults to `src/index.ts`. */
+  entry?: string;
   /** Modules to mark as external in the bundled output. */
   external?: string[];
   /** Output file base name, without extension (e.g. "refine" → refine.js / refine.cjs / refine.iife.js). */
@@ -70,7 +72,7 @@ const toGlobalName = (id: string): string =>
     .join('');
 
 export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
-  const { external, fileName, globals: globalsOverride, name } = options;
+  const { entry, external, fileName, globals: globalsOverride, name } = options;
 
   const globals = {
     ...Object.fromEntries((external ?? []).map((id) => [id, toGlobalName(id)])),
@@ -81,7 +83,7 @@ export const getBundleConfig = (__dirname: string, options: BundleOptions) => {
     build: {
       emptyOutDir: false,
       lib: {
-        entry: resolve(__dirname, 'src/index.ts'),
+        entry: entry ?? resolve(__dirname, 'src/index.ts'),
         fileName: (format: string) => {
           if (format === 'es') return `${fileName}.js`;
 
