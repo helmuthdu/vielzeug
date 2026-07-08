@@ -951,6 +951,48 @@ describe('createVirtualizer – scrollToTop / scrollToBottom', () => {
   });
 });
 
+// ─── isAtEnd ────────────────────────────────────────────────────────────────────
+
+describe('createVirtualizer – isAtEnd', () => {
+  it('is true when scrolled to the very end', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
+
+    // `scrollToBottom()` writes via `el.scrollTo()`, which the test container mock doesn't
+    // wire back into a 'scroll' event — simulate the resulting scroll position directly.
+    scrollEl(el, 100 * 30 - 100);
+    expect(v.isAtEnd()).toBe(true);
+    v.dispose();
+  });
+
+  it('is false when scrolled to the top of a long list', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
+
+    expect(v.isAtEnd()).toBe(false);
+    v.dispose();
+  });
+
+  it('respects a custom threshold', () => {
+    const el = makeContainer({ clientHeight: 100 });
+    const v = createVirtualizer(el, { count: 100, estimateSize: 30 });
+    const maxOffset = 100 * 30 - 100; // totalSize - viewportSize
+
+    scrollEl(el, maxOffset - 20);
+    expect(v.isAtEnd()).toBe(false);
+    expect(v.isAtEnd(30)).toBe(true);
+    v.dispose();
+  });
+
+  it('is true for a list shorter than the viewport (nothing to scroll)', () => {
+    const el = makeContainer({ clientHeight: 400 });
+    const v = createVirtualizer(el, { count: 3, estimateSize: 30 });
+
+    expect(v.isAtEnd()).toBe(true);
+    v.dispose();
+  });
+});
+
 // ─── createMeasurementCache ───────────────────────────────────────────────────
 
 describe('createMeasurementCache', () => {

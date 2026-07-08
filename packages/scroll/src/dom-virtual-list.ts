@@ -39,6 +39,16 @@ export type DomVirtualListRenderArgs<T> = {
   totalSize: number;
 };
 
+export type StickToBottomOptions = {
+  /** Enable/disable the behavior. Default: `true` once this object is provided. */
+  enabled?: boolean;
+  /**
+   * Distance in pixels from the end still considered "at the end" — the bottom edge in
+   * vertical mode, the trailing edge in horizontal mode. Default: `48`.
+   */
+  threshold?: number;
+};
+
 export type DomVirtualListOptions<T> = {
   /** Custom teardown that clears listEl. Defaults to `listEl.textContent = ''`. */
   clear?: (listEl: HTMLElement) => void;
@@ -52,6 +62,14 @@ export type DomVirtualListOptions<T> = {
   overscan?: Overscan;
   render: (args: DomVirtualListRenderArgs<T>) => void;
   scrollElement: HTMLElement | Window;
+  /**
+   * Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the
+   * end just before the update — the chat "stick to bottom on new message" pattern. Fires on
+   * *any* update while at the end, not just growth, so it also follows a streaming last
+   * item that grows in place without changing `items.length`. Does nothing while the user
+   * has scrolled away from the end. Pass `true` for defaults, or an options object.
+   */
+  stickToBottom?: boolean | StickToBottomOptions;
   /** Mark items as sticky headers. Receives the item index and the item data. */
   sticky?: (index: number, item: T) => boolean;
 };
@@ -225,8 +243,20 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     listEl.style.contain = '';
   }
 
-  function spawnVirtualizer(): void {
-    virtualizer = createVirtualizer(options.scrollElement, {
+  const DEFAULT_STICK_THRESHOLD = 48;
+
+  function resolveStickToBottom(): { enabled: boolean; threshold: number } {
+    const opt = options.stickToBottom;
+
+    if (!opt) return { enabled: false, threshold: DEFAULT_STICK_THRESHOLD };
+
+    if (opt === true) return { enabled: true, threshold: DEFAULT_STICK_THRESHOLD };
+
+    return { enabled: opt.enabled ?? true, threshold: opt.threshold ?? DEFAULT_STICK_THRESHOLD };
+  }
+
+  function spawnVirtualizer(): Virtualizer {
+    const v = createVirtualizer(options.scrollElement, {
       count: currentItems.length,
       estimateSize: resolveEstimate,
       gap: options.gap,
@@ -244,8 +274,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
         : undefined,
     });
 
+    virtualizer = v;
     listEl.style.position = 'relative';
     listEl.style.contain = 'layout';
+
+    return v;
   }
 
   function _dispose(): void {
@@ -278,6 +311,10 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       if (isDestroyed) return;
 
       virtualizer?.invalidate();
+    },
+
+    isAtEnd(threshold) {
+      return virtualizer?.isAtEnd(threshold) ?? true;
     },
 
     get isScrolling() {
@@ -344,6 +381,11 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
     setItems(items) {
       if (isDestroyed) return;
 
+      // Read *before* mutating state — the "was the list already at the end?" check must
+      // reflect the pre-update layout, not the one `render()` is about to produce below.
+      const stick = resolveStickToBottom();
+      const wasAtEnd = stick.enabled && (virtualizer?.isAtEnd(stick.threshold) ?? true);
+
       currentItems = items;
 
       if (items.length === 0) {
@@ -355,7 +397,9 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
       }
 
       if (!virtualizer) {
-        spawnVirtualizer();
+        const v = spawnVirtualizer();
+
+        if (wasAtEnd) v.scrollToBottom();
 
         return;
       }
@@ -381,6 +425,8 @@ export function createDomVirtualList<T>(options: DomVirtualListOptions<T>): DomV
         // stale. Clear them so the next render remeasures from fresh estimates.
         virtualizer.invalidate();
       }
+
+      if (wasAtEnd) virtualizer.scrollToBottom();
     },
 
     get stickyItems() {

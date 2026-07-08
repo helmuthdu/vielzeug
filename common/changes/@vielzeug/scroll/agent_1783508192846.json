@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat(dom-virtual-list): add stickToBottom option and Virtualizer#isAtEnd for chat-style 'stick to bottom on new message' auto-scrolling",
+      "packageName": "@vielzeug/scroll",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/scroll"
+}

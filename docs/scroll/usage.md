@@ -376,6 +376,37 @@ virt.scrollToTop();
 virt.scrollToBottom({ behavior: 'smooth' });
 ```
 
+### Chat "stick to bottom on new message"
+
+`createDomVirtualList`'s `stickToBottom` option automates the common chat/log pattern: follow new messages while the user is at the bottom, but never yank them away from history they scrolled up to read.
+
+```ts
+import { createDomVirtualList } from '@vielzeug/scroll';
+
+const chat = createDomVirtualList<Message>({
+  estimateSize: 48,
+  getItemKey: (_, m) => m.id,
+  listElement: listEl,
+  render: renderMessages,
+  scrollElement: scrollEl,
+  stickToBottom: true, // or { threshold: 80 } to widen the "still at bottom" tolerance
+});
+
+chat.setItems(messages);
+
+// New message arrives — follows only if the user hasn't scrolled up.
+socket.on('message', (msg) => {
+  messages = [...messages, msg];
+  chat.setItems(messages);
+});
+```
+
+It also follows a **streaming** last message that grows in place (tokens appended to the same message object, array length unchanged) — every `setItems()` call re-checks "was the list at the end before this update?", not just count changes. Build `isAtEnd()` from `createVirtualizer` directly for custom cases (e.g. showing a "jump to latest" button only while scrolled away):
+
+```ts
+const showJumpButton = !virt.isAtEnd();
+```
+
 ## Shared Measurement Cache
 
 When the same items are displayed across multiple virtualizer instances (e.g. a list and a detail panel that share row heights), pass a shared `MeasurementCache` created by `createMeasurementCache()`. Measurements recorded by one virtualizer are immediately available to all others using the same cache.

@@ -108,6 +108,13 @@ export interface Virtualizer {
   readonly totalSize: number;
   dispose: () => void;
   invalidate: () => void;
+  /**
+   * `true` when scrolled to (or within `threshold` px of) the end — the bottom edge in
+   * vertical mode, the trailing edge in horizontal mode. Check this **before** appending
+   * items to decide whether to auto-follow them (e.g. a chat "stick to bottom" pattern) —
+   * `createDomVirtualList`'s `stickToBottom` option does exactly this. Default `threshold`: `0`.
+   */
+  isAtEnd: (threshold?: number) => boolean;
   measure: (index: number, size: number) => void;
   measureBatch: (entries: Array<{ index: number; size: number }>) => void;
   /** Attach a ResizeObserver to `el` and auto-measure `index` on resize. Returns a disconnect fn. */
@@ -563,6 +570,10 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
     scrollToOffset(Math.max(0, ax.totalSize - viewportSize), opts);
   }
 
+  function isAtEnd(threshold = 0): boolean {
+    return ax.totalSize - (scrollOffset + viewportSize) <= threshold;
+  }
+
   const ac = new AbortController();
 
   function _dispose(): void {
@@ -626,6 +637,7 @@ export function createVirtualizer(target: ScrollTarget, options: VirtualizerOpti
       return destroyed;
     },
     invalidate,
+    isAtEnd,
     get isScrolling() {
       return isScrolling;
     },

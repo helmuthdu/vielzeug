@@ -130,6 +130,7 @@ interface VirtualizerState {
 | `scrollToOffset`   | `(offset: number, options?: { behavior?: ScrollBehavior }) => void` | Scroll to a raw pixel offset                                         |
 | `scrollToTop`      | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to offset `0`                                                 |
 | `scrollToBottom`   | `(options?: { behavior?: ScrollBehavior }) => void`                 | Scroll to the end of the list                                        |
+| `isAtEnd`          | `(threshold?: number) => boolean`                                   | `true` when within `threshold` px (default `0`) of the end — check before appending items to decide whether to auto-follow (chat "stick to bottom") |
 | `invalidate`       | `() => void`                                                        | Clear all measurements and rebuild from estimates                    |
 | `dispose`          | `() => void`                                                        | Detach listeners; idempotent                                         |
 | `disposed`         | `boolean`                                                           | `true` after `dispose()` is called                                   |
@@ -265,8 +266,33 @@ ctrl.dispose();
 | `overscan`         | `number \| { start?: number; end?: number }`  | `3`      | Extra items outside the viewport; number = symmetric       |
 | `sticky`           | `(index: number, item: T) => boolean`         | —        | Mark items as sticky headers                               |
 | `clear`            | `(listEl: HTMLElement) => void`               | —        | Custom teardown for listEl; defaults to `textContent = ''` |
+| `stickToBottom`    | `boolean \| StickToBottomOptions`                       | —        | Auto-scroll to the end after `setItems()` whenever the list was already at (or near) the end — the chat "stick to bottom on new message" pattern |
 
 Without `getItemKey`, each `setItems()` call drops cached measurements.
+
+### `StickToBottomOptions`
+
+| Option      | Type      | Default | Description                                                                |
+| ----------- | --------- | ------- | --------------------------------------------------------------------------- |
+| `enabled`   | `boolean` | `true`  | Enable/disable at runtime — pass the object form to toggle without removing it |
+| `threshold` | `number`  | `48`    | Distance in pixels from the end still considered "at the end"              |
+
+`stickToBottom` fires on **any** `setItems()` call made while the list is at the end — not just when the item count grows. This also follows a streaming last item that grows in place (same array length, bigger content) without you needing to detect that case yourself. It never fires while the user has scrolled away from the end, so reading older messages is never interrupted.
+
+```ts
+const chat = createDomVirtualList<Message>({
+  estimateSize: 48,
+  getItemKey: (_, m) => m.id,
+  listElement: listEl,
+  render: renderMessages,
+  scrollElement: scrollEl,
+  stickToBottom: true, // or { threshold: 80 } for a larger "still at bottom" tolerance
+});
+
+chat.setItems(messages); // scrolls to bottom on first load
+// … later, a new message arrives (or the last one grows while streaming) …
+chat.setItems([...messages, newMessage]); // follows along only if the user was already at the bottom
+```
 
 ### `DomVirtualListRenderArgs<T>`
 
@@ -303,6 +329,9 @@ Extends `Virtualizer` (minus `prepend` and `update`) with `setItems()`. All virt
 | `invalidate`       | Clear measurements and rebuild from estimates                                               |
 | `scrollToIndex`    | Scroll to an item                                                                           |
 | `scrollToOffset`   | Scroll to a pixel offset                                                                    |
+| `scrollToTop`      | Scroll to offset `0`                                                                        |
+| `scrollToBottom`   | Scroll to the end of the list                                                                |
+| `isAtEnd`          | `true` when within `threshold` px of the end                                                |
 | `dispose`          | Teardown; idempotent                                                                        |
 | `disposed`         | `true` after `dispose()` is called (live getter)                                            |
 | `[Symbol.dispose]` | Delegates to `dispose()`                                                                    |

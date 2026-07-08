@@ -5,6 +5,7 @@ export type {
   DomVirtualListOptions,
   DomVirtualListRenderArgs,
   RecycleFn,
+  StickToBottomOptions,
   VirtualRenderItem,
   VirtualScrollerOptions,
 } from './dom-virtual-list';

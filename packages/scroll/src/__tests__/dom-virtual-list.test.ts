@@ -653,6 +653,131 @@ describe('createDomVirtualList – setItems double-render', () => {
   });
 });
 
+// ─── stickToBottom ──────────────────────────────────────────────────────────────
+
+describe('createDomVirtualList – stickToBottom', () => {
+  function simulateScroll(el: HTMLElement, top: number) {
+    el.scrollTop = top;
+    el.dispatchEvent(new Event('scroll'));
+  }
+
+  it('scrolls to the end on first population', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      stickToBottom: true,
+    });
+
+    ctrl.setItems(makeRows(10)); // totalSize 300, viewport 90 → maxOffset 210
+    expect(scrollEl.scrollTop).toBe(210);
+    ctrl.dispose();
+  });
+
+  it('follows new items appended while already at the end', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      stickToBottom: true,
+    });
+
+    ctrl.setItems(makeRows(10));
+    simulateScroll(scrollEl, scrollEl.scrollTop); // sync internal scrollOffset with the auto-scroll above
+
+    ctrl.setItems(makeRows(11)); // totalSize 330, viewport 90 → maxOffset 240
+    expect(scrollEl.scrollTop).toBe(240);
+    ctrl.dispose();
+  });
+
+  it('does not follow new items once the user has scrolled away from the end', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      stickToBottom: true,
+    });
+
+    ctrl.setItems(makeRows(10));
+    simulateScroll(scrollEl, 0); // user scrolls back up to read history
+
+    ctrl.setItems(makeRows(11));
+    expect(scrollEl.scrollTop).toBe(0);
+    ctrl.dispose();
+  });
+
+  it('follows in-place growth of the last item while at the end (streaming message)', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      stickToBottom: true,
+    });
+
+    const rows = makeRows(10);
+
+    ctrl.setItems(rows); // totalSize 300, viewport 90 → maxOffset 210
+    simulateScroll(scrollEl, scrollEl.scrollTop);
+
+    // Same count and keys — the last item's own size grows in place, like streamed tokens
+    // widening the final chat bubble.
+    const grown = rows.map((r, i) => (i === rows.length - 1 ? { ...r, size: 300 } : r));
+
+    ctrl.setItems(grown); // totalSize 570, viewport 90 → maxOffset 480
+    expect(scrollEl.scrollTop).toBe(480);
+    ctrl.dispose();
+  });
+
+  it('is opt-in — disabled unless `stickToBottom` is set', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+    });
+
+    ctrl.setItems(makeRows(10));
+    simulateScroll(scrollEl, scrollEl.scrollTop);
+
+    ctrl.setItems(makeRows(11));
+    expect(scrollEl.scrollTop).toBe(0);
+    ctrl.dispose();
+  });
+
+  it('respects a custom threshold', () => {
+    const { listEl, scrollEl } = makeList(90);
+    const ctrl = createDomVirtualList<Row>({
+      estimateSize: (_, r) => r.size,
+      getItemKey: (_, r) => r.id,
+      listElement: listEl,
+      render: () => {},
+      scrollElement: scrollEl,
+      stickToBottom: { threshold: 50 },
+    });
+
+    ctrl.setItems(makeRows(10)); // maxOffset 210
+    simulateScroll(scrollEl, 180); // 30px short of the end — outside the default 48px, inside 50px
+
+    ctrl.setItems(makeRows(11));
+    expect(scrollEl.scrollTop).toBe(240);
+    ctrl.dispose();
+  });
+});
+
 // ─── createVirtualScroller ────────────────────────────────────────────────────
 
 describe('createVirtualScroller', () => {
