@@ -177,6 +177,12 @@
       "require": "./dist/carousel.cjs",
       "types": "./dist/content/carousel/carousel.d.ts"
     },
+    "./chat-message": {
+      "source": "./src/content/chat-message/chat-message.ts",
+      "import": "./dist/chat-message.js",
+      "require": "./dist/chat-message.cjs",
+      "types": "./dist/content/chat-message/chat-message.d.ts"
+    },
     "./checkbox": {
       "source": "./src/inputs/checkbox/checkbox.ts",
       "import": "./dist/checkbox.js",
@@ -428,6 +434,12 @@
       "import": "./dist/tooltip.js",
       "require": "./dist/tooltip.cjs",
       "types": "./dist/overlay/tooltip/tooltip.d.ts"
+    },
+    "./typing-indicator": {
+      "source": "./src/feedback/typing-indicator/typing-indicator.ts",
+      "import": "./dist/typing-indicator.js",
+      "require": "./dist/typing-indicator.cjs",
+      "types": "./dist/feedback/typing-indicator/typing-indicator.d.ts"
     }
   },
   "scripts": {

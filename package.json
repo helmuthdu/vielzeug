@@ -25,6 +25,7 @@
     "check:workflow-docs": "node scripts/sync-workflow-docs.mjs --check",
     "gen:catalogue": "node scripts/sync-catalogue.mjs",
     "check:catalogue": "node scripts/sync-catalogue.mjs --check",
+    "verify:layout": "node scripts/verify-layout.mjs",
     "verify:scripts": "pnpm check:catalogue && pnpm check:workflow-docs",
     "worktree:add": "node scripts/worktree.mjs add",
     "worktree:list": "node scripts/worktree.mjs list",

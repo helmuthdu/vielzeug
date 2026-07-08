@@ -28,7 +28,7 @@ a11y is tested in **jsdom only** (no browser harness). Keep it reliable by asser
 - Each component test should call the global `axeCheck(element)` helper (`vitest.setup.ts`) and assert **zero violations**. It runs `wcag2a/2aa/best-practice` but **disables layout/style-dependent rules** (`color-contrast`, `target-size`, `scrollable-region-focusable`, …) that jsdom cannot compute — do **not** re-enable them in jsdom tests.
 - Assert roles, names, and ARIA state with `@vielzeug/refine/testing` helpers (`getAriaLabel`, `isAriaExpanded`, `getRole`, `queryPart`, …), and keyboard/focus behaviour via the `headless/` primitives (focus-trap, roving tabindex, announcer).
 - **Out of automated scope** — verify in a real browser or by manual/visual review: colour contrast, target size, focus-visible, reflow, and anything needing real layout.
-- Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle`, so the disabled rules produce false positives/negatives. (If a browser test harness is added later, move the visual rules there.)
+- Why: axe-core targets real browsers; jsdom has no CSS box model and a stubbed `getComputedStyle` (it doesn't even parse `@layer` — every rule in a layer-wrapped stylesheet is silently dropped), so the disabled rules produce false positives/negatives. `scripts/verify-layout.mjs` (`pnpm verify:layout`, repo root) covers a handful of concrete flexbox/box-model regressions in headless Chrome for exactly this reason — run it after touching layout-sensitive CSS. It's a manual dev-time check, not wired into `pnpm test`.
 
 ## Core Design Principles
 

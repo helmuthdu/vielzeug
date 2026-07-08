@@ -22,6 +22,7 @@ exports:
     ore-calendar,
     ore-card,
     ore-carousel,
+    ore-chat-message,
     ore-checkbox,
     ore-checkbox-group,
     ore-chip,
@@ -69,6 +70,7 @@ exports:
     ore-time-picker,
     ore-toast,
     ore-tooltip,
+    ore-typing-indicator,
   ]
 environments: [browser]
 ---
@@ -197,11 +199,11 @@ Headless widget controllers (`createTextField`, `createListControl`, `createOver
 
 ### Components
 
-**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-icon`, `ore-pagination`, `ore-separator`, `ore-table`, `ore-text`
+**Content:** `ore-avatar`, `ore-avatar-group`, `ore-breadcrumb`, `ore-card`, `ore-carousel`, `ore-carousel-slide`, `ore-chat-message`, `ore-icon`, `ore-pagination`, `ore-separator`, `ore-table`, `ore-text`
 
 **Disclosure:** `ore-accordion`, `ore-accordion-item`, `ore-tabs`, `ore-tab-item`, `ore-tab-panel`
 
-**Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`
+**Feedback:** `ore-alert`, `ore-async`, `ore-badge`, `ore-chip`, `ore-password-strength`, `ore-progress`, `ore-skeleton`, `ore-toast`, `ore-typing-indicator`
 
 **Inputs:** `ore-button`, `ore-button-group`, `ore-calendar`, `ore-checkbox`, `ore-checkbox-group`, `ore-column`, `ore-combobox`, `ore-datagrid`, `ore-date-picker`, `ore-file-input`, `ore-form`, `ore-input`, `ore-number-input`, `ore-otp-input`, `ore-radio`, `ore-radio-group`, `ore-rating`, `ore-select`, `ore-slider`, `ore-switch`, `ore-textarea`, `ore-time-picker`
 

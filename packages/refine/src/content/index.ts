@@ -10,6 +10,13 @@ export { BREADCRUMB_ITEM_TAG, BREADCRUMB_TAG } from './breadcrumb/breadcrumb';
 export type { OreBreadcrumbItemProps, OreBreadcrumbProps } from './breadcrumb/breadcrumb';
 export { CARD_TAG } from './card/card';
 export type { OreCardEvents, OreCardProps } from './card/card';
+export { CHAT_MESSAGE_TAG } from './chat-message/chat-message';
+export type {
+  ChatMessageSender,
+  ChatMessageStatus,
+  OreChatMessageEvents,
+  OreChatMessageProps,
+} from './chat-message/chat-message';
 export { ICON_TAG, registerIcons } from './icon/icon';
 export type { OreIconProps, IconNode } from './icon/icon';
 export { PAGINATION_TAG } from './pagination/pagination';

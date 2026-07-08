@@ -101,6 +101,7 @@ Before each minor release:
 | `ore-async`          | Dynamic            | —                 | `aria-busy`, `aria-live`, `role="alert"` in error |
 | `ore-progress`       | `progressbar`      | —                 | `aria-valuenow`, `aria-valuemin`, `aria-valuemax`, `aria-valuetext` |
 | `ore-skeleton`       | None (decorative)  | —                 | `aria-hidden="true"` on bones             |
+| `ore-typing-indicator` | `status` (on a visually-hidden label) | — | `aria-live="polite"`; dots are `aria-hidden="true"` |
 | `ore-badge`          | None               | —                 | `aria-label` if meaningful                |
 | `ore-chip`           | `button` (interactive) | Enter         | `aria-pressed`, `aria-label`              |
 
@@ -127,6 +128,7 @@ Before each minor release:
 | Component       | Role                      | Keyboard      | Key ARIA attrs               |
 | --------------- | ------------------------- | ------------- | ---------------------------- |
 | `ore-card`       | `button` (interactive)    | Enter / Space | `aria-disabled`, `aria-busy` |
+| `ore-chat-message` | `article` (on the bubble) | — | `aria-label` describing sender; failed sends also announced via an assertive live region |
 | `ore-table`      | `table` (native)          | Standard      | `aria-label`, `aria-busy`    |
 | `ore-pagination` | `navigation`              | Standard      | `aria-label`, `aria-current` |
 | `ore-breadcrumb` | `navigation`              | Standard      | `aria-label`, `aria-current` |

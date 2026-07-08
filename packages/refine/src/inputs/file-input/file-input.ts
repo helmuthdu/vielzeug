@@ -34,6 +34,8 @@ const formatBytes = (bytes: number) => {
 
 const isFileSizeAllowed = (file: File, maxSize?: number) => !maxSize || file.size <= maxSize;
 
+const isImageFile = (file: File): boolean => file.type.startsWith('image/');
+
 /** File input component properties */
 export type OreFileInputProps = {
   /** Accepted file types (comma-separated, e.g. '.jpg, .png, image/*') */
@@ -44,6 +46,11 @@ export type OreFileInputProps = {
   disabled?: boolean;
   /** Error message text */
   error?: string;
+  /**
+   * Render selected files as a grid of image thumbnails/previews instead of the default
+   * single-column list. Non-image files fall back to a generic file icon in the same grid.
+   */
+  gallery?: boolean;
   /** Helper text displayed below the input */
   helper?: string;
   /** Input label text */
@@ -84,6 +91,7 @@ export type OreFileInputEvents = {
  *
  * @attr {string} accept - Comma-separated file extensions or MIME types
  * @attr {boolean} multiple - Enable multiple files selection
+ * @attr {boolean} gallery - Show selected files as an image thumbnail/preview grid
  * @attr {number} max-files - Max number of files allowed
  * @attr {number} max-size - Max size of each file in bytes
  * @attr {boolean} disabled - Disable interaction
@@ -102,15 +110,18 @@ export type OreFileInputEvents = {
  * @cssprop --file-input-hover-border-color - Dropzone border on hover (flat/bordered variants)
  * @cssprop --file-input-focus-bg - Dropzone background when focused/drag-over (flat variant)
  * @cssprop --file-input-focus-border-color - Dropzone border when focused/drag-over (flat variant)
+ * @cssprop --file-input-thumb-size - Gallery thumbnail width/height
  * @part wrapper - Root wrapper around the file input field
  * @part label - Visible label rendered above the dropzone
  * @part dropzone - Interactive drag-and-drop target
  * @part input - Native file input element
+ * @part gallery - Gallery grid container (rendered instead of `file-list` when `gallery` is set)
  * @part helper - Helper text shown beneath the dropzone
  * @part error - Error message shown beneath the field
  * @example
  * ```html
  * <ore-file-input label="Upload files" accept="image/*" multiple />
+ * <ore-file-input label="Photos" accept="image/*" multiple gallery />
  * <ore-file-input label="Resume" accept=".pdf,.doc,.docx" max-size="5242880" />
  * <ore-file-input variant="bordered" color="primary" />
  * ```
@@ -123,6 +134,7 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     color: prop.string(),
     disabled: prop.bool(false),
     error: prop.string(),
+    gallery: prop.bool(false),
     helper: prop.string(),
     label: prop.string(),
     'max-files': prop.number(0),
@@ -252,6 +264,44 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
     }
 
     // ============================================
+    // Gallery Preview URLs
+    // ============================================
+    // Object URLs are created lazily (only while `gallery` is enabled) and revoked as soon
+    // as their file is no longer selected, plus unconditionally on disconnect — otherwise
+    // each preview leaks its backing blob for the life of the page.
+    const previewUrls = new Map<File, string>();
+
+    function getPreviewUrl(file: File): string {
+      let url = previewUrls.get(file);
+
+      if (!url) {
+        url = URL.createObjectURL(file);
+        previewUrls.set(file, url);
+      }
+
+      return url;
+    }
+
+    function revokeStalePreviewUrls(activeFiles: File[]): void {
+      const keep = new Set(activeFiles);
+
+      for (const [file, url] of previewUrls) {
+        if (!keep.has(file)) {
+          URL.revokeObjectURL(url);
+          previewUrls.delete(file);
+        }
+      }
+    }
+
+    watch(files, revokeStalePreviewUrls);
+
+    onCleanup(() => {
+      for (const url of previewUrls.values()) URL.revokeObjectURL(url);
+
+      previewUrls.clear();
+    });
+
+    // ============================================
     // Mount
     // ============================================
     // ============================================
@@ -354,27 +404,67 @@ define<OreFileInputProps>(FILE_INPUT_TAG, {
             <span class="dropzone-hint" ?hidden=${() => !hintText.value}>${hintText}</span>
           </div>
         </div>
-        <ul class="file-list" role="list" aria-label="Selected files" ?hidden=${() => files.value.length === 0}>
+        <ul
+          class="${() => (props.gallery.value ? 'file-grid' : 'file-list')}"
+          part="${() => (props.gallery.value ? 'gallery' : null)}"
+          role="list"
+          aria-label="Selected files"
+          ?hidden=${() => files.value.length === 0}>
           ${() =>
-            files.value.map(
-              (file: File) => html`
-                <li class="file-item">
-                  <span class="file-icon" aria-hidden="true">
-                    <ore-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></ore-icon>
-                  </span>
-                  <span class="file-meta">
-                    <span class="file-name" title="${file.name}">${file.name}</span>
-                    <span class="file-size">${formatBytes(file.size)}</span>
-                  </span>
-                  <button
-                    class="file-remove"
-                    type="button"
-                    aria-label="${`Remove ${file.name}`}"
-                    @click=${(e: Event) => removeFile(file, e)}>
-                    <ore-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
-                  </button>
-                </li>
-              `,
+            files.value.map((file: File) =>
+              props.gallery.value
+                ? html`
+                    <li class="file-card">
+                      ${
+                        // Decorative: the file name is already announced via the visible
+                        // `.file-card-name` caption below — repeating it as `alt` text would
+                        // duplicate it (and often trips redundant-alt checks, since real
+                        // filenames commonly contain words like "photo" or "image").
+                        isImageFile(file)
+                          ? // Object URLs use the `blob:` scheme, which ore's attribute-level
+                            // XSS guard blocks unconditionally on `src` (and other
+                            // URL-accepting attributes) — set it as a DOM property via `ref`
+                            // instead, bypassing that string-based check. Safe here: the value
+                            // comes from `URL.createObjectURL(file)` on a real `File` object we
+                            // control, never from untrusted text.
+                            html`<img
+                              class="file-thumb"
+                              alt=""
+                              ref="${(el: HTMLImageElement | null) => {
+                                if (el) el.src = getPreviewUrl(file);
+                              }}" />`
+                          : html`<span class="file-thumb file-thumb-generic" aria-hidden="true">
+                              <ore-icon name="file" size="28" stroke-width="1.5" aria-hidden="true"></ore-icon>
+                            </span>`
+                      }
+                      <span class="file-card-name" title="${file.name}">${file.name}</span>
+                      <button
+                        class="file-card-remove"
+                        type="button"
+                        aria-label="${`Remove ${file.name}`}"
+                        @click=${(e: Event) => removeFile(file, e)}>
+                        <ore-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                      </button>
+                    </li>
+                  `
+                : html`
+                    <li class="file-item">
+                      <span class="file-icon" aria-hidden="true">
+                        <ore-icon name="file" size="18" stroke-width="1.75" aria-hidden="true"></ore-icon>
+                      </span>
+                      <span class="file-meta">
+                        <span class="file-name" title="${file.name}">${file.name}</span>
+                        <span class="file-size">${formatBytes(file.size)}</span>
+                      </span>
+                      <button
+                        class="file-remove"
+                        type="button"
+                        aria-label="${`Remove ${file.name}`}"
+                        @click=${(e: Event) => removeFile(file, e)}>
+                        <ore-icon name="x" size="12" stroke-width="2.5" aria-hidden="true"></ore-icon>
+                      </button>
+                    </li>
+                  `,
             )}
         </ul>
         <div class="helper-text" id="${helperId}" part="helper" ?hidden=${() => isInvalid.value || !props.helper.value}>

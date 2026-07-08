@@ -232,6 +232,7 @@ if (typeof ResizeObserver === 'undefined') {
 }
 
 globalThis.window.URL.createObjectURL = vi.fn();
+globalThis.window.URL.revokeObjectURL = vi.fn();
 
 // jsdom does not implement IntersectionObserver — stub it
 if (typeof IntersectionObserver === 'undefined') {

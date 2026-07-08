@@ -112,6 +112,26 @@ Restrict accepted file types using MIME types or file extensions. The accepted t
 
 </ComponentPreview>
 
+### Gallery / Preview Grid
+
+Set `gallery` to render selected files as a grid of thumbnails instead of the default single-column list — a better fit for photo uploads. Image files render an actual preview; other file types fall back to a generic file icon in the same grid cell. Object URLs are created lazily and revoked automatically when a file is removed or the component disconnects.
+
+<ComponentPreview center>
+
+```html
+<ore-file-input
+  gallery
+  multiple
+  accept="image/*"
+  label="Upload photos"
+  helper="Selected photos appear as thumbnails below"
+  variant="bordered"
+  color="primary">
+</ore-file-input>
+```
+
+</ComponentPreview>
+
 ### File Size & Count Limits
 
 Use `max-size` (bytes) and `max-files` to enforce constraints. Files that don't meet the criteria are silently filtered out. The limits appear in the dropzone hint. Always validate these constraints on the server as well — client-side filtering alone is not sufficient.
@@ -244,6 +264,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | `disabled`  | `boolean`                                                                 | `false`   | Disable all interaction                             |
 | `error`     | `string`                                                                  | `''`      | Error message (replaces helper text)                |
 | `fullwidth` | `boolean`                                                                 | `false`   | Expand to full width                                |
+| `gallery`   | `boolean`                                                                 | `false`   | Show selected files as an image thumbnail/preview grid instead of a list |
 | `helper`    | `string`                                                                  | `''`      | Helper text below the dropzone                      |
 | `label`     | `string`                                                                  | `''`      | Label text displayed above the dropzone             |
 | `max-files` | `number`                                                                  | `0`       | Maximum number of files (0 = unlimited)             |
@@ -270,6 +291,7 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | `label`    | The `<label>` element above the dropzone |
 | `dropzone` | The interactive drag-and-drop zone       |
 | `input`    | The hidden native `<input type="file">`  |
+| `gallery`  | The preview grid `<ul>` (present instead of the plain file list when `gallery` is set) |
 | `helper`   | The helper text `<div>`                  |
 | `error`    | The error text `<div>`                   |
 
@@ -286,7 +308,10 @@ fileInput.addEventListener('remove', ({ detail }) => {
 | `--file-input-hover-border-color` | Dropzone border on hover (flat/bordered variants)  | Variant-dependent   |
 | `--file-input-focus-bg`           | Dropzone background when focused/drag-over (flat)  | Variant-dependent   |
 | `--file-input-focus-border-color` | Dropzone border when focused/drag-over (flat)      | Variant-dependent   |
+| `--file-input-thumb-size`         | Gallery thumbnail width/height (min column size)   | `var(--size-24)`    |
 
 ## Accessibility
 
 The file input component follows WCAG 2.1 Level AA standards. The dropzone uses `role="button"` with `aria-labelledby` linking the label and `aria-describedby` linking helper text. `Tab` focuses the dropzone; `Enter` / `Space` open the native file picker. Remove buttons inside the file list are individually focusable, each with a descriptive `aria-label` (e.g. `"Remove report.pdf"`). Error messages use `role="alert"` for live-region announcements. `aria-disabled` reflects the disabled state.
+
+In gallery mode, thumbnail `<img>` elements use `alt=""` (decorative) rather than the file name — the name is already shown as a visible caption directly below each thumbnail, so screen readers get it from the caption in reading order instead of a duplicate, often-redundant `alt` (real filenames frequently contain words like "photo" or "image", which trips automated redundant-alt checks for no benefit).

@@ -111,6 +111,112 @@ describe('ore-file-input', () => {
     });
   });
 
+  describe('Gallery', () => {
+    function selectFiles(input: HTMLInputElement, files: File[]): void {
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: { ...files, item: (i: number) => files[i] ?? null, length: files.length },
+      });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    it('renders the default single-column list when `gallery` is not set', async () => {
+      fixture = await mount('ore-file-input', { attrs: { multiple: '' } });
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+      ]);
+      await fixture.flush();
+
+      expect(fixture.query('.file-list')).toBeTruthy();
+      expect(fixture.query('.file-item')).toBeTruthy();
+      expect(fixture.query('.file-grid')).toBeFalsy();
+    });
+
+    it('renders a preview grid when `gallery` is set', async () => {
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', multiple: '' } });
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+      ]);
+      await fixture.flush();
+
+      expect(fixture.query('.file-grid')).toBeTruthy();
+      expect(fixture.query('.file-card')).toBeTruthy();
+      expect(fixture.query('.file-list')).toBeFalsy();
+      expect(fixture.query('[part="gallery"]')).toBeTruthy();
+    });
+
+    it('renders an <img> thumbnail with a real src for image files', async () => {
+      // Regression: object URLs use the `blob:` scheme, which ore's attribute-level XSS
+      // guard blocks unconditionally on `src` when set via a template attribute binding.
+      // The component must set `.src` as a DOM property (via `ref`) instead.
+      const createObjectURLSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
+
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', multiple: '' } });
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+      ]);
+      await fixture.flush();
+
+      const img = fixture.query<HTMLImageElement>('.file-thumb');
+
+      expect(img?.tagName).toBe('IMG');
+      expect(createObjectURLSpy).toHaveBeenCalled();
+      expect(img?.src).toBe('blob:mock-url');
+      createObjectURLSpy.mockRestore();
+      // Decorative — the name is already shown in the visible `.file-card-name` caption.
+      expect(img?.getAttribute('alt')).toBe('');
+    });
+
+    it('renders a generic icon (no <img>) for non-image files', async () => {
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', multiple: '' } });
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'resume.pdf', { type: 'application/pdf' }),
+      ]);
+      await fixture.flush();
+
+      expect(fixture.query('.file-card img')).toBeFalsy();
+      expect(fixture.query('.file-thumb-generic')).toBeTruthy();
+    });
+
+    it('removes a card and revokes its object URL when the remove button is clicked', async () => {
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', multiple: '' } });
+
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+      ]);
+      await fixture.flush();
+      expect(fixture.query('.file-card')).toBeTruthy();
+
+      await user.click(fixture.query<HTMLElement>('.file-card-remove')!);
+
+      expect(fixture.query('.file-card')).toBeFalsy();
+      expect(revokeSpy).toHaveBeenCalled();
+      revokeSpy.mockRestore();
+    });
+
+    it('revokes any outstanding object URLs on disconnect', async () => {
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', multiple: '' } });
+
+      const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
+
+      selectFiles(fixture.query<HTMLInputElement>('input[type="file"]')!, [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+      ]);
+      await fixture.flush();
+
+      fixture.dispose();
+
+      expect(revokeSpy).toHaveBeenCalled();
+      revokeSpy.mockRestore();
+    });
+  });
+
   describe('Colors', () => {
     for (const color of ['primary', 'secondary', 'success', 'warning', 'error']) {
       it(`applies ${color} color`, async () => {
@@ -273,6 +379,27 @@ describe('ore-file-input accessibility', () => {
   describe('Accessibility', () => {
     it('passes axe checks', async () => {
       fixture = await mount('ore-file-input', { attrs: { label: 'Upload file' } });
+
+      const results = await axeCheck(fixture.element);
+
+      expect(results.violations).toHaveLength(0);
+    });
+
+    it('passes axe checks with a populated gallery (image + non-image files)', async () => {
+      fixture = await mount('ore-file-input', { attrs: { gallery: '', label: 'Upload file', multiple: '' } });
+
+      const input = fixture.query<HTMLInputElement>('input[type="file"]')!;
+      const files = [
+        new File(['x'], 'photo.png', { type: 'image/png' }),
+        new File(['x'], 'resume.pdf', { type: 'application/pdf' }),
+      ];
+
+      Object.defineProperty(input, 'files', {
+        configurable: true,
+        value: { ...files, item: (i: number) => files[i] ?? null, length: files.length },
+      });
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      await fixture.flush();
 
       const results = await axeCheck(fixture.element);
 

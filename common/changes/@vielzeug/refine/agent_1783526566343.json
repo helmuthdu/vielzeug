@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "fix: chat-message alignment/announce fixes, typing-indicator reliable announcement via shared live region, command-palette simplified slot handling + disabled-row Enter guard, file-input naming cleanup",
+      "packageName": "@vielzeug/refine",
+      "type": "patch"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

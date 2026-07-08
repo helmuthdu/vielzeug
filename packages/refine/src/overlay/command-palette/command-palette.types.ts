@@ -11,7 +11,8 @@ export type CommandPaletteItemInput = {
   label?: string;
   /**
    * Display-only shortcut hint rendered at the end of the row, one `<kbd>` per key — separate
-   * keys with `+` (e.g. `"⌘+S"`). Purely visual — not bound to a live key handler.
+   * keys with `+` (e.g. `"⌘+S"`). Purely visual — not bound to a live key handler. A literal
+   * `+` key itself isn't representable this way — spell it out instead (e.g. `"Ctrl+Plus"`).
    */
   shortcut?: string;
   value: string;

@@ -23,6 +23,7 @@ export const componentManifest = [
   { name: 'calendar', source: './src/inputs/calendar/calendar' },
   { name: 'card', source: './src/content/card/card' },
   { name: 'carousel', source: './src/content/carousel/carousel' },
+  { name: 'chat-message', source: './src/content/chat-message/chat-message' },
   { name: 'checkbox', source: './src/inputs/checkbox/checkbox' },
   { name: 'checkbox-group', source: './src/inputs/checkbox-group/checkbox-group' },
   { name: 'chip', source: './src/feedback/chip/chip' },
@@ -65,6 +66,7 @@ export const componentManifest = [
   { name: 'time-picker', source: './src/inputs/time-picker/time-picker' },
   { name: 'toast', source: './src/feedback/toast/toast' },
   { name: 'tooltip', source: './src/overlay/tooltip/tooltip' },
+  { name: 'typing-indicator', source: './src/feedback/typing-indicator/typing-indicator' },
 ];
 
 export const componentNames = componentManifest.map(({ name }) => name);

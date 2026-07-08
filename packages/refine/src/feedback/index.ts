@@ -12,5 +12,7 @@ export { PASSWORD_STRENGTH_TAG } from './password-strength/password-strength';
 export type { OrePasswordStrengthProps, PasswordStrengthLevel } from './password-strength/password-strength';
 export { SKELETON_TAG } from './skeleton/skeleton';
 export type { OreSkeletonProps } from './skeleton/skeleton';
+export { TYPING_INDICATOR_TAG } from './typing-indicator/typing-indicator';
+export type { OreTypingIndicatorProps } from './typing-indicator/typing-indicator';
 export { createToastService, toast, TOAST_TAG } from './toast/toast';
 export type { OreToastEvents, OreToastProps, ToastItem, ToastService, ToastServiceConfig } from './toast/toast';

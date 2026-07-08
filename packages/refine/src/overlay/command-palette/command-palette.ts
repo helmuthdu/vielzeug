@@ -1,5 +1,5 @@
 import { createKeymap } from '@vielzeug/keymap';
-import { define, html, ref, prop, getHost, onCleanup, onEvent, onMounted, useEmit, useSlots } from '@vielzeug/ore';
+import { define, html, ref, prop, getHost, onCleanup, onEvent, onMounted, useEmit } from '@vielzeug/ore';
 import { computed, signal, watch } from '@vielzeug/ripple';
 
 import type { CommandPaletteItem, OreCommandPaletteEvents, OreCommandPaletteProps } from './command-palette.types';
@@ -23,7 +23,7 @@ export type { OreCommandPaletteEvents, OreCommandPaletteProps } from './command-
  * @attr {string} value - Value emitted by the `select` event and matched against the search query
  * @attr {string} label - Explicit label text; falls back to the element's text content
  * @attr {string} group - Group heading the item is clustered under
- * @attr {string} shortcut - Display-only keyboard hint rendered at the end of the row, one `<kbd>` per key (e.g. `"⌘+S"` renders two keycaps)
+ * @attr {string} shortcut - Display-only keyboard hint rendered at the end of the row, one `<kbd>` per `+`-separated key (e.g. `"⌘+S"` renders two keycaps; a literal `+` key isn't representable — spell it out, e.g. `"Ctrl+Plus"`)
  * @attr {boolean} disabled - Excludes the item from keyboard navigation and selection
  *
  * @slot icon - Optional leading icon content
@@ -104,7 +104,6 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
   setup(props) {
     const el = getHost();
     const emit = useEmit<OreCommandPaletteEvents>();
-    const slots = useSlots();
     const abortSignal = lifecycleSignal(onCleanup);
 
     const dialogRef = ref<HTMLDialogElement>();
@@ -116,20 +115,22 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
     const query = signal('');
 
     // ── Items: slotted <ore-command-palette-item> elements, merged with the `items` prop ──
+    // Items are pure data nodes (see `ore-command-palette-item`'s own doc comment) — they're
+    // never projected through a `<slot>`, just read directly off the host's light DOM. That
+    // sidesteps `useSlots()`/`slotchange` entirely: a plain MutationObserver on the host
+    // already covers everything `slotchange` would (an item added or removed) *and* the case
+    // it can't — an already-assigned item's own text/attributes changing. For items written
+    // as static, inline HTML, the browser's parser can insert the last item before appending
+    // its text-node child; without watching `characterData`, that would permanently cache an
+    // empty label, since nothing else re-triggers once the element itself stops changing.
     const slottedItems = signal<CommandPaletteItem[]>([]);
 
     const reparseSlottedItems = (): void => {
-      slottedItems.value = parseSlottedItems(slots.elements().value);
+      slottedItems.value = parseSlottedItems([...el.children]);
     };
 
-    watch(slots.elements(), reparseSlottedItems, { immediate: true });
+    reparseSlottedItems();
 
-    // `slotchange` fires only when the *set* of assigned elements changes, not when an
-    // already-assigned element's own content changes. For items written as static, inline
-    // HTML, the browser's parser can assign the last item to its slot before appending that
-    // item's text-node child — permanently caching an empty label, since no later
-    // `slotchange` ever fires to correct it. A light-DOM MutationObserver catches that
-    // follow-up text insertion and re-parses.
     const lightDomObserver = new MutationObserver(reparseSlottedItems);
 
     lightDomObserver.observe(el, { characterData: true, childList: true, subtree: true });
@@ -246,7 +247,12 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
       if (list.handleKeydown(e)) return;
 
       if (e.key === 'Enter') {
-        const active = list.getActiveItem() ?? filteredItems.value[0];
+        // `list.navigate('first')` (called on open and on every keystroke) already keeps
+        // the focused row off a disabled item, so this fallback is only ever reached when
+        // nothing has been focused yet — but it mirrors `selectItem`'s own disabled guard
+        // rather than blindly grabbing index 0, in case that navigate-on-open wiring ever
+        // changes.
+        const active = list.getActiveItem() ?? filteredItems.value.find((item) => !item.disabled);
 
         if (active) {
           e.preventDefault();
@@ -335,7 +341,6 @@ define<OreCommandPaletteProps>(COMMAND_PALETTE_TAG, {
           </div>
         </div>
       </dialog>
-      <slot style="display:none"></slot>
     `;
   },
   styles: [reducedMotionMixin, componentStyles],

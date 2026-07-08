@@ -72,6 +72,30 @@ describe('ore-command-palette', () => {
       expect(getRows()[0]?.textContent).toContain('New File');
     });
 
+    it('reads items directly off the host — no <slot> needed in the shadow tree', async () => {
+      // Items are pure data nodes, never projected for display — see `ore-command-palette-item`'s
+      // own doc comment. Reading `el.children` directly (instead of `useSlots()`) means there's
+      // no `<slot>` element backing this at all.
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: itemsHtml });
+
+      expect(fixture.query('slot')).toBeFalsy();
+      expect(getRows()).toHaveLength(4);
+    });
+
+    it('picks up items added to the light DOM after mount', async () => {
+      fixture = await mount('ore-command-palette', { attrs: { open: '' }, html: itemsHtml });
+
+      const extra = document.createElement('ore-command-palette-item');
+
+      extra.setAttribute('value', 'extra');
+      extra.textContent = 'Extra Item';
+      fixture.element.appendChild(extra);
+      await fixture.flush();
+
+      expect(getRows()).toHaveLength(5);
+      expect(getRows().at(-1)?.textContent).toContain('Extra Item');
+    });
+
     it('the `items` prop takes precedence over slotted items', async () => {
       fixture = await mount('ore-command-palette', {
         attrs: { open: '' },
@@ -213,6 +237,30 @@ describe('ore-command-palette', () => {
       await user.press(getInput()!, 'Enter');
 
       expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('new-file');
+    });
+
+    it('Enter never selects a disabled item, even with a disabled item first in the list', async () => {
+      // `list.navigate('first')` (open + every keystroke) already keeps focus off disabled
+      // rows in practice; this characterizes the end-to-end guarantee regardless of which
+      // layer provides it.
+      fixture = await mount('ore-command-palette', {
+        attrs: { open: '' },
+        props: {
+          items: [
+            { disabled: true, label: 'Close File', value: 'close-file' },
+            { label: 'Open File', value: 'open-file' },
+          ],
+        },
+      });
+
+      const onSelect = vi.fn();
+
+      fixture.element.addEventListener('select', onSelect);
+
+      await user.press(getInput()!, 'Enter');
+
+      expect(onSelect).toHaveBeenCalledTimes(1);
+      expect((onSelect.mock.calls[0]?.[0] as CustomEvent).detail.value).toBe('open-file');
     });
 
     it('ArrowDown navigation skips disabled items', async () => {

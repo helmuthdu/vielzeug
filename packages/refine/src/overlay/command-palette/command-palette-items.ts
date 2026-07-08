@@ -35,7 +35,8 @@ export function parseSlottedItems(elements: Element[]): CommandPaletteItem[] {
 /**
  * Splits a display-only shortcut hint into individual keys so each can be rendered in its
  * own `<kbd>`. Keys are separated with `+` (e.g. `"⌘+N"` → `["⌘", "N"]`); a shortcut with no
- * `+` renders as a single key, unchanged.
+ * `+` renders as a single key, unchanged. A literal `+` key can't be represented this way —
+ * spell it out instead (e.g. `"Ctrl+Plus"`).
  */
 export function splitShortcutKeys(shortcut: string): string[] {
   return shortcut

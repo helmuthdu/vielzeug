@@ -1,0 +1,11 @@
+{
+  "changes": [
+    {
+      "comment": "feat: add ore-chat-message and ore-typing-indicator components; add a gallery/preview-grid mode to ore-file-input for image thumbnails",
+      "packageName": "@vielzeug/refine",
+      "type": "minor"
+    }
+  ],
+  "email": "agent@vielzeug",
+  "packageName": "@vielzeug/refine"
+}

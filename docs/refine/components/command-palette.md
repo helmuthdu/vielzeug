@@ -200,7 +200,7 @@ Use `value` in a single `select` listener to dispatch commands rather than wirin
 | `label`    | `string`  | —       | Explicit label text; falls back to the element's text content |
 | `group`    | `string`  | —       | Group heading the item is clustered under                |
 | `icon`     | `string`  | —       | Lucide icon name rendered at the start of the row         |
-| `shortcut` | `string`  | —       | Display-only keyboard hint rendered at the end of the row — one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`) |
+| `shortcut` | `string`  | —       | Display-only keyboard hint rendered at the end of the row — one `<kbd>` per key, separated with `+` (e.g. `"⌘+S"`). A literal `+` key isn't representable this way — spell it out (e.g. `"Ctrl+Plus"`) |
 | `keywords` | `string`  | —       | Comma-separated extra search terms matched in addition to the label |
 | `disabled` | `boolean` | `false` | Excludes the item from keyboard navigation and selection  |
 

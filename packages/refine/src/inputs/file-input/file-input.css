@@ -190,6 +190,81 @@
   }
 
   /* ========================================
+       File Gallery (preview grid)
+       ======================================== */
+
+  .file-grid {
+    --_thumb-size: var(--file-input-thumb-size, var(--size-24));
+
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--_thumb-size), 1fr));
+    gap: var(--size-2);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+  }
+
+  .file-card {
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-1);
+  }
+
+  .file-thumb {
+    box-sizing: border-box;
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    background: var(--color-contrast-100);
+    border: var(--border) solid var(--color-contrast-200);
+    border-radius: var(--_radius);
+  }
+
+  .file-thumb-generic {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-contrast-400);
+  }
+
+  .file-card-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: var(--text-xs);
+    color: var(--color-contrast-600);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .file-card-remove {
+    position: absolute;
+    top: var(--size-1);
+    right: var(--size-1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--size-5);
+    height: var(--size-5);
+    padding: 0;
+    color: var(--color-contrast-50);
+    cursor: pointer;
+    background: color-mix(in oklch, var(--color-contrast-900) 55%, transparent);
+    border: none;
+    border-radius: var(--rounded-full);
+    transition:
+      background var(--transition-fast),
+      color var(--transition-fast);
+  }
+
+  .file-card-remove:hover {
+    color: var(--color-canvas);
+    background: var(--color-error);
+  }
+
+  /* ========================================
        Hover & Focus
        ======================================== */
 

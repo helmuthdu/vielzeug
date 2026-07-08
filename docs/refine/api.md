@@ -61,6 +61,7 @@ import '@vielzeug/refine/button-group';
 import '@vielzeug/refine/calendar';
 import '@vielzeug/refine/card';
 import '@vielzeug/refine/carousel';
+import '@vielzeug/refine/chat-message';
 import '@vielzeug/refine/checkbox';
 import '@vielzeug/refine/checkbox-group';
 import '@vielzeug/refine/chip';
@@ -103,6 +104,7 @@ import '@vielzeug/refine/textarea';
 import '@vielzeug/refine/time-picker';
 import '@vielzeug/refine/toast';
 import '@vielzeug/refine/tooltip';
+import '@vielzeug/refine/typing-indicator';
 ```
 
 ## Shared Exported Symbols
@@ -162,12 +164,14 @@ Per-component API — attributes, events, slots, CSS custom properties:
 - [Progress](./components/progress.md)
 - [Skeleton](./components/skeleton.md)
 - [Toast](./components/toast.md)
+- [Typing Indicator](./components/typing-indicator.md)
 
 ### Content
 - [Avatar](./components/avatar.md)
 - [Breadcrumb](./components/breadcrumb.md)
 - [Card](./components/card.md)
 - [Carousel](./components/carousel.md)
+- [Chat Message](./components/chat-message.md)
 - [Copy Command](./components/copy-command.md)
 - [Icon](./components/icon.md)
 - [Pagination](./components/pagination.md)
