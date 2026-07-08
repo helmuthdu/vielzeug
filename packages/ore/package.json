@@ -1,6 +1,6 @@
 {
   "name": "@vielzeug/ore",
-  "version": "1.0.5",
+  "version": "1.1.0",
   "description": "Custom element authoring primitives — reactive templates, signals, slots, and automatic lifecycle management",
   "type": "module",
   "files": [

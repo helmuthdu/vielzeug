@@ -1,6 +1,18 @@
 # Change Log - @vielzeug/refine
 
-This log was last generated on Tue, 07 Jul 2026 09:20:39 GMT and should not be manually modified.
+This log was last generated on Wed, 08 Jul 2026 09:22:31 GMT and should not be manually modified.
+
+## 1.2.0
+Wed, 08 Jul 2026 09:22:31 GMT
+
+### Minor changes
+
+- feat(command-palette): add ore-command-palette + ore-command-palette-item — searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut
+
+### Patches
+
+- chore(internal): migrate component setup() functions and shared form-context/checkable-binding helpers off ore's removed SetupContextBag onto the new free-function API (bind/emit/onMounted/.../useEmit/useSlots/getHost); no consumer-facing API change.
+- fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle — previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.
 
 ## 1.1.3
 Tue, 07 Jul 2026 09:20:39 GMT

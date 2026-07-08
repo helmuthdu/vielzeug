@@ -2,6 +2,37 @@
   "name": "@vielzeug/refine",
   "entries": [
     {
+      "version": "1.2.0",
+      "tag": "@vielzeug/refine_v1.2.0",
+      "date": "Wed, 08 Jul 2026 09:22:31 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "chore(internal): migrate component setup() functions and shared form-context/checkable-binding helpers off ore's removed SetupContextBag onto the new free-function API (bind/emit/onMounted/.../useEmit/useSlots/getHost); no consumer-facing API change.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "e02805143171c2ae97e2ebc968d22a15f305b4ef"
+          },
+          {
+            "comment": "fix: externalize @vielzeug/ore/directives, /forms, /observers (mapped to the same Ore global) in the IIFE bundle — previously only the bare @vielzeug/ore specifier was externalized, so Rollup silently inlined a second copy of ore's module graph into refine.iife.js, and any lifecycle hook (getHost, onMounted, etc.) resolved through it always threw 'outside setup'. Fixes broken docs component previews for every component using useField/when/live/raw/styleMap/resizeObserver/intersectionObserver.",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "8db093de02785883722ea70fbf1bf00aff87c723"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "feat(command-palette): add ore-command-palette + ore-command-palette-item — searchable, keyboard-driven command list built on refine headless primitives (native <dialog>, createListControl) and @vielzeug/keymap for the global open shortcut",
+            "author": "Helmuth Saatkamp <helmuthdu@gmail.com>",
+            "commit": "65ba6e2293ec6f8b2e57eb3b31ca8a2b0a4a6b84"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@vielzeug/ore\" to `1.1.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.1.3",
       "tag": "@vielzeug/refine_v1.1.3",
       "date": "Tue, 07 Jul 2026 09:20:39 GMT",
